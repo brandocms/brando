@@ -142,6 +142,21 @@ defmodule BrandoAdmin.Components.TextDiff.Highlight do
     end
   end
 
+  @doc """
+  `tokens` as safe HTML: each class in a span, every text escaped, and
+  nothing between them, so a line in `white-space: pre-wrap` reads as it is.
+  """
+  @spec to_html([token()]) :: Phoenix.HTML.safe()
+  def to_html(tokens) do
+    {:safe,
+     Enum.map(tokens, fn
+       {nil, text} -> escape(text)
+       {class, text} -> [~s(<span class="), escape(class), ~s(">), escape(text), "</span>"]
+     end)}
+  end
+
+  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
   # Plain text comes a character at a time: one token per run
   defp merge(tokens) do
     tokens

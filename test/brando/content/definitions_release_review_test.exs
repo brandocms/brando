@@ -320,10 +320,16 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
         assert [%{key: "tagline"}] = Repo.preload(text(c), :vars, force: true).vars
 
         assert %{changed_since: [], irreversible: []} = Batches.status(Batches.get(batch_id), c.user)
-        assert {:ok, %{reverted: [_], conflicts: []}} = Batches.revert(Batches.get(batch_id), c.user)
+
+        assert {:ok, %{reverted: [_], conflicts: [], leftovers: [%{uid: uid, blocks: blocks}]}} =
+                 Batches.revert(Batches.get(batch_id), c.user)
+
         assert [] = Repo.preload(text(c), :vars, force: true).vars
-        # Its blocks don't keep the var as a leftover
-        assert Brando.Content.StaleBlocks.count(text(c)) == 0
+        # Its blocks keep the var, for Blocks on older versions to resolve:
+        # one may have held it before the apply
+        assert uid == c.text_module.uid
+        assert blocks == Brando.Content.StaleBlocks.count(text(c))
+        assert blocks > 0
       end)
     end
 

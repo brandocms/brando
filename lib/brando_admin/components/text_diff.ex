@@ -146,16 +146,8 @@ defmodule BrandoAdmin.Components.TextDiff do
   end
 
   defp line_content(%{row: %{tokens: tokens}} = assigns) do
-    assigns = assign(assigns, :tokens, tokens)
-
-    ~H"""
-    <%= for {class, text} <- @tokens do %>
-      <span :if={class} class={class}>{text}</span>
-      <%= if !class do %>
-        {text}
-      <% end %>
-    <% end %>
-    """
+    assigns = assign(assigns, :html, Highlight.to_html(tokens))
+    ~H"{@html}"
   end
 
   defp line_content(assigns), do: ~H"{@row.text}"

@@ -1048,6 +1048,13 @@ msgstr[1] ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
+msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "1 can’t be reverted without a migration."
 msgid_plural "%{count} can’t be reverted without a migration."
 msgstr[0] ""

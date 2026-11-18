@@ -15,8 +15,6 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   import Ecto.Query, only: [from: 2]
 
-  require Logger
-
   alias Brando.Content.Definition.{Baselines, Plan, References, Snapshot}
   alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions, StaleBlocks}
   alias Brando.Content.Definitions.Release
@@ -226,7 +224,6 @@ defmodule Brando.Content.Definitions.Release.Batches do
     do: apply_revert(batch, preview, uids, revert_batch_id, user)
 
   defp reverted(batch, revert_batch, preview, run, user) do
-    drop_added_leftovers(batch, preview)
     revert_batch = %{revert_batch | run_id: run}
     Repo.update_all(from(b in DefinitionBatch, where: b.id == ^revert_batch.id), set: [run_id: run])
 
@@ -243,6 +240,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
        conflicts: preview.conflicts,
        irreversible: preview.irreversible,
        created: preview.created,
+       leftovers: leftovers(batch, preview),
        run: run
      }}
   end
@@ -299,23 +297,25 @@ defmodule Brando.Content.Definitions.Release.Batches do
   end
 
   # The blocks of a reverted module keep the refs and vars the apply added
-  # (a sync adds, never removes), which leaves them on an older version: drop
-  # exactly those, as Blocks on older versions would. Nothing else they hold.
-  defp drop_added_leftovers(batch, preview) do
+  # (a sync adds, never removes), so they stay on an older version until
+  # someone resolves them under Blocks on older versions. They aren't dropped
+  # here: a block may have held the same key before the apply, with content.
+  defp leftovers(batch, preview) do
     reverted = MapSet.new(preview.revert, & &1.uid)
 
     for row <- rows(batch),
         row.kind == "module" and MapSet.member?(reverted, row.uid),
         is_map(row.definition) and is_map(row.previous),
-        resolutions = added(row.definition, row.previous),
-        resolutions != %{} do
-      case StaleBlocks.apply(row.uid, resolutions, preview.actor) do
-        {:ok, _} ->
-          :ok
+        added(row.definition, row.previous) != %{},
+        count = stale_count(row.uid),
+        count > 0,
+        do: %{uid: row.uid, blocks: count}
+  end
 
-        {:error, reason} ->
-          Logger.warning("==> Brando >> Revert left blocks of #{row.uid} on an older version: #{reason}")
-      end
+  defp stale_count(uid) do
+    case Repo.get_by(Brando.Content.Module, uid: uid) do
+      nil -> 0
+      module -> StaleBlocks.count(module)
     end
   end
 

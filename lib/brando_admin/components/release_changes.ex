@@ -633,22 +633,12 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :type, :any, required: true
 
   defp three_cell(%{cell: {class, line}} = assigns) do
-    tokens =
-      if line,
-        do: TextDiff.Highlight.tokens(line, if(assigns.type in [:heex, "heex"], do: :heex, else: :liquid)),
-        else: []
-
-    assigns = assign(assigns, class: class, tokens: tokens)
+    language = if assigns.type in [:heex, "heex"], do: :heex, else: :liquid
+    html = if line, do: line |> TextDiff.Highlight.tokens(language) |> TextDiff.Highlight.to_html(), else: ""
+    assigns = assign(assigns, class: class, html: html)
 
     ~H"""
-    <div class={@class}>
-      <%= for {class, text} <- @tokens do %>
-        <span :if={class} class={class}>{text}</span>
-        <%= if !class do %>
-          {text}
-        <% end %>
-      <% end %>
-    </div>
+    <div class={@class}>{@html}</div>
     """
   end
 

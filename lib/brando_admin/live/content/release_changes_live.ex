@@ -595,7 +595,9 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp applied_text(%{result: result}, _keep_here),
     do: ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
 
-  defp reverted_text(%{reverted: reverted, conflicts: conflicts, irreversible: irreversible}) do
+  defp reverted_text(%{reverted: reverted, conflicts: conflicts, irreversible: irreversible} = result) do
+    blocks = result |> Map.get(:leftovers, []) |> Enum.map(& &1.blocks) |> Enum.sum()
+
     [
       ngettext("Reverted 1 module.", "Reverted %{count} modules.", length(reverted)),
       conflicts != [] &&
@@ -609,6 +611,12 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           "1 can’t be reverted without a migration.",
           "%{count} can’t be reverted without a migration.",
           length(irreversible)
+        ),
+      blocks > 0 &&
+        ngettext(
+          "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions.",
+          "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions.",
+          blocks
         )
     ]
     |> Enum.filter(& &1)
