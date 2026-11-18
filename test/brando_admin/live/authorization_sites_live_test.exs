@@ -231,6 +231,9 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
 
     # A delete the page does not offer, sent anyway, changes nothing.
     render_click(view, "delete_entry", %{"id" => "#{data.page.id}"})
+    # A delete would soft-delete the row, and the list drops it only after
+    # its refresh: the database says whether anything changed.
+    refute Repo.get!(Page, data.page.id, prefix: Tenant.prefix("auth-beta", "production")).deleted_at
     assert has_element?(view, "#list-row-#{data.page.id}")
     assert titles()["auth-beta/production"] == "Beta production page"
 
