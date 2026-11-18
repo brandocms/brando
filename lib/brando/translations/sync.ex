@@ -633,27 +633,117 @@ defmodule Brando.Translations.Sync do
   # The translation keeps its own gallery — galleries belong to their ref — but
   # its contents follow the source: same media, same order. Objects already in
   # it keep their ids; the rest are new. Captions and alt text live in the ref's
-  # overrides and stay the translation's.
+  # overrides and stay the translation's. Objects are matched in order first,
+  # so of a media the gallery holds more than once, the placement the source
+  # removed is the one the translation loses, and its overrides follow their
+  # placements (`GalleryObjectOverride.follow_objects/3`).
   defp merge_gallery(%{gallery: %{gallery_objects: target_objects} = gallery} = ref, %{
          gallery: %{gallery_objects: source_objects}
        })
        when is_list(target_objects) and is_list(source_objects) do
-    by_media = Map.new(target_objects, &{{&1.image_id, &1.video_id}, &1})
+    matches = match_gallery_objects(source_objects, target_objects)
 
     objects =
       source_objects
       |> Enum.with_index()
       |> Enum.map(fn {source_object, index} ->
-        case by_media[{source_object.image_id, source_object.video_id}] do
+        case matches[index] do
           nil -> %{clone(source_object) | gallery_id: gallery.id, sequence: index}
-          target_object -> %{target_object | sequence: index}
+          target_index -> %{Enum.at(target_objects, target_index) | sequence: index}
         end
       end)
 
+    before = target_objects |> Enum.with_index() |> Enum.map(fn {object, index} -> {index, object_media(object)} end)
+
+    after_objects =
+      Enum.map(Enum.with_index(objects), fn {object, index} ->
+        {Map.get(matches, index, make_ref()), object_media(object)}
+      end)
+
     %{ref | gallery: %{gallery | gallery_objects: objects}}
+    |> follow_gallery_overrides(before, after_objects)
   end
 
   defp merge_gallery(ref, _source_ref), do: ref
+
+  # `%{source_index => target_index}`: the longest run of objects holding the
+  # same media in the same order, then each remaining source object to an
+  # unmatched target object with its media, in order.
+  defp match_gallery_objects(source_objects, target_objects) do
+    source_keys = Enum.map(source_objects, &object_media/1)
+    target_keys = Enum.map(target_objects, &object_media/1)
+    aligned = align(source_keys, target_keys)
+
+    unmatched =
+      target_keys
+      |> Enum.with_index()
+      |> Enum.reject(fn {_key, index} -> index in Map.values(aligned) end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    {matches, _unmatched} =
+      source_keys
+      |> Enum.with_index()
+      |> Enum.reduce({aligned, unmatched}, fn {key, index}, {matches, unmatched} ->
+        case {Map.has_key?(matches, index), Map.get(unmatched, key, [])} do
+          {false, [target_index | rest]} -> {Map.put(matches, index, target_index), Map.put(unmatched, key, rest)}
+          _ -> {matches, unmatched}
+        end
+      end)
+
+    matches
+  end
+
+  # A longest common subsequence of two lists of media keys
+  defp align(source_keys, target_keys) do
+    source = List.to_tuple(source_keys)
+    target = List.to_tuple(target_keys)
+    {m, n} = {tuple_size(source), tuple_size(target)}
+
+    lengths =
+      for i <- (m - 1)..0//-1, j <- (n - 1)..0//-1, reduce: %{} do
+        lengths ->
+          length =
+            if elem(source, i) == elem(target, j),
+              do: Map.get(lengths, {i + 1, j + 1}, 0) + 1,
+              else: max(Map.get(lengths, {i + 1, j}, 0), Map.get(lengths, {i, j + 1}, 0))
+
+          Map.put(lengths, {i, j}, length)
+      end
+
+    walk(source, target, lengths, 0, 0, %{})
+  end
+
+  defp walk(source, target, _lengths, i, j, matches) when i >= tuple_size(source) or j >= tuple_size(target),
+    do: matches
+
+  defp walk(source, target, lengths, i, j, matches) do
+    cond do
+      elem(source, i) == elem(target, j) ->
+        walk(source, target, lengths, i + 1, j + 1, Map.put(matches, i, j))
+
+      Map.get(lengths, {i + 1, j}, 0) >= Map.get(lengths, {i, j + 1}, 0) ->
+        walk(source, target, lengths, i + 1, j, matches)
+
+      true ->
+        walk(source, target, lengths, i, j + 1, matches)
+    end
+  end
+
+  defp object_media(%{image_id: id}) when not is_nil(id), do: {:image, id}
+  defp object_media(%{video_id: id}) when not is_nil(id), do: {:video, id}
+  defp object_media(_object), do: nil
+
+  defp follow_gallery_overrides(
+         %{data: %{data: %{gallery_object_overrides: overrides} = data} = block} = ref,
+         before,
+         after_objects
+       )
+       when is_list(overrides) do
+    moved = GalleryObjectOverride.follow_objects(overrides, before, after_objects)
+    %{ref | data: %{block | data: %{data | gallery_object_overrides: moved}}}
+  end
+
+  defp follow_gallery_overrides(ref, _before, _after_objects), do: ref
 
   defp clone_ref(ref) do
     ref

@@ -817,6 +817,119 @@ defmodule Brando.TranslationsTest do
       assert Enum.map(gallery_ref.(load(en.id)).gallery.gallery_objects, & &1.image_id) == [image.id]
     end
 
+    # Each placement of a repeated image is its own gallery object in the translation too.
+    test "a gallery holding one image twice keeps a gallery object for each placement", c do
+      image = Factory.insert(:image, creator_id: c.user.id)
+
+      gallery =
+        Factory.insert(:gallery,
+          gallery_objects: [
+            Factory.build(:gallery_object, image: image, sequence: 0, creator: c.user),
+            Factory.build(:gallery_object, image: image, sequence: 1, creator: c.user)
+          ]
+        )
+
+      add_raw_block(
+        c.source,
+        c,
+        %{
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "gallery",
+              "gallery_id" => gallery.id,
+              "data" => %{"type" => "gallery", "data" => %{}}
+            }
+          ]
+        },
+        2
+      )
+
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      gallery_ref = fn entry ->
+        entry.entry_blocks |> Enum.flat_map(& &1.block.refs) |> Enum.find(&(&1.name == "gallery"))
+      end
+
+      copied = gallery_ref.(load(en.id))
+      assert [first, second] = copied.gallery.gallery_objects
+      assert first.id != second.id
+
+      # The source gallery gains an image; the translation's two placements keep their own rows.
+      other = Factory.insert(:image, creator_id: c.user.id)
+      Factory.insert(:gallery_object, gallery_id: gallery.id, image: other, sequence: 2, creator: c.user)
+      Translations.source_saved(load(c.source.id))
+
+      pending_ref = en |> pending() |> Translations.decode_payload() |> gallery_ref.()
+      objects = pending_ref.gallery.gallery_objects
+      assert Enum.map(objects, & &1.image_id) == [image.id, image.id, other.id]
+      assert Enum.map(Enum.take(objects, 2), & &1.id) == [first.id, second.id]
+    end
+
+    # The translation's captions stay with their placements when the source drops a repeat.
+    test "a translation's placement captions follow the source dropping a repeat", c do
+      image = Factory.insert(:image, creator_id: c.user.id)
+      other = Factory.insert(:image, creator_id: c.user.id)
+
+      gallery =
+        Factory.insert(:gallery,
+          gallery_objects:
+            for(
+              {media, sequence} <- Enum.with_index([image, other, image]),
+              do: Factory.build(:gallery_object, image: media, sequence: sequence, creator: c.user)
+            )
+        )
+
+      add_raw_block(
+        c.source,
+        c,
+        %{
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "gallery",
+              "gallery_id" => gallery.id,
+              "data" => %{"type" => "gallery", "data" => %{}}
+            }
+          ]
+        },
+        2
+      )
+
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      gallery_ref = fn entry ->
+        entry.entry_blocks |> Enum.flat_map(& &1.block.refs) |> Enum.find(&(&1.name == "gallery"))
+      end
+
+      ref = gallery_ref.(load(en.id))
+
+      captions =
+        for {placement, title} <- [{0, "First"}, {1, "Third"}] do
+          %Brando.Villain.Blocks.GalleryObjectOverride{
+            object_id: to_string(image.id),
+            object_type: :image,
+            placement: placement,
+            title: title,
+            use_default_title: false
+          }
+        end
+
+      ref
+      |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | gallery_object_overrides: captions}})
+      |> Repo.update!()
+
+      # The source removes the first placement of the image
+      [first | _] = Repo.preload(gallery, :gallery_objects, force: true).gallery_objects |> Enum.sort_by(& &1.sequence)
+      Repo.delete!(first)
+      Translations.source_saved(load(c.source.id))
+
+      pending_ref = en |> pending() |> Translations.decode_payload() |> gallery_ref.()
+      assert Enum.map(pending_ref.gallery.gallery_objects, & &1.image_id) == [other.id, image.id]
+
+      assert Enum.map(pending_ref.data.data.gallery_object_overrides, &{&1.placement, &1.title}) == [{nil, "Third"}]
+    end
+
     # Each placement of a repeated image has its own caption to translate.
     test "a gallery holding one image twice has a text path for each placement's caption", c do
       alias Brando.Translations.Sync

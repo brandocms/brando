@@ -42,7 +42,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   #   and follows the view switch; never written to the block.
   # data placements, :list — `{type, id, placement}` for each gallery object, in
   #   order (`GalleryObjectOverride.placements/1`); its override's key
-  # data text_editor, :map — the open caption/alt popover, `%{type, id, placement, kind}`
+  # data text_editor, :map — the open caption/alt popover, `%{type, id, placement, kind, object}`;
+  #   `object` is the gallery object's id, which the popover follows when the
+  #   placements change under it
   # data show_only_selected?, :boolean
   # data upload_formats, :string
 
@@ -171,6 +173,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:gallery, gallery)
      |> assign(:gallery_objects, gallery_objects)
      |> assign(:placements, placements)
+     |> assign(:text_editor, follow_text_editor(socket.assigns[:text_editor], gallery_objects, placements))
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
      |> assign(:upload_formats, upload_formats)
      |> assign(:display, Changeset.get_field(block_data_cs, :display))
@@ -428,9 +431,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     type = String.to_existing_atom(type)
     kind = String.to_existing_atom(kind)
     placement = GalleryObjectOverride.to_placement(params["placement"])
+    key = {type, id, placement}
 
-    if Map.has_key?(socket.assigns.override_data, {type, id, placement}) and not (type == :video and kind == :alt) do
-      {:noreply, assign(socket, :text_editor, %{type: type, id: id, placement: placement, kind: kind})}
+    if Map.has_key?(socket.assigns.override_data, key) and not (type == :video and kind == :alt) do
+      object = placed_object_id(socket.assigns.gallery_objects, socket.assigns.placements, key)
+      {:noreply, assign(socket, :text_editor, %{type: type, id: id, placement: placement, kind: kind, object: object})}
     else
       {:noreply, socket}
     end
@@ -447,7 +452,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       when type in ["image", "video"] and kind in ["caption", "alt"] and is_binary(id) and is_binary(value) do
     type = String.to_existing_atom(type)
     field = override_text_field(type, kind)
-    key = {type, id, GalleryObjectOverride.to_placement(params["placement"])}
+    key = save_key(socket.assigns.text_editor, type, id, kind, params["placement"])
 
     if field && Map.has_key?(socket.assigns.override_data, key) do
       text = override_text(kind, value)
@@ -570,6 +575,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   ## Private functions
+
+  # The open popover's placement, which follows its object: a save sent before
+  # the browser saw a reorder still names the placement it opened at.
+  defp save_key(%{type: type, id: id, kind: kind, placement: placement}, type, id, kind_param, _placement)
+       when kind_param == "caption" and kind == :caption
+       when kind_param == "alt" and kind == :alt,
+       do: {type, id, placement}
+
+  defp save_key(_text_editor, type, id, _kind, placement), do: {type, id, GalleryObjectOverride.to_placement(placement)}
+
+  defp placed_object_id(gallery_objects, placements, key) do
+    case Enum.find_index(placements, &(&1 == key)) do
+      nil -> nil
+      index -> gallery_objects |> Enum.at(index) |> Map.get(:id)
+    end
+  end
+
+  # Moves the open popover to its object's current placement; closes it when
+  # the object has left the gallery.
+  defp follow_text_editor(%{object: object} = text_editor, gallery_objects, placements) when not is_nil(object) do
+    case Enum.find_index(gallery_objects, &(Map.get(&1, :id) == object)) do
+      nil -> nil
+      index -> follow_placement(text_editor, Enum.at(placements, index))
+    end
+  end
+
+  defp follow_text_editor(text_editor, _gallery_objects, _placements), do: text_editor
+
+  defp follow_placement(%{type: type, id: id} = text_editor, {type, id, placement}),
+    do: %{text_editor | placement: placement}
+
+  defp follow_placement(_text_editor, _key), do: nil
 
   defp override_text_field(:image, "caption"), do: :title
   defp override_text_field(:video, "caption"), do: :caption

@@ -235,7 +235,9 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
          old_keys = Enum.map(indexes, &param_media_key(objects[&1])),
          true <- repeats?(old_keys) do
       order = form_order(indexes, gallery["sort_gallery_object_ids"], gallery["drop_gallery_object_ids"])
-      moves = placement_moves(indexes, old_keys, order, objects)
+      before = Enum.zip(indexes, old_keys)
+      after_order = Enum.map(order, &{&1 || make_ref(), &1 && param_media_key(objects[&1])})
+      moves = placement_moves(before, after_order)
       put_in(params, ["data", "data", "gallery_object_overrides"], move_overrides(overrides, moves))
     else
       _ -> params
@@ -243,6 +245,18 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   end
 
   def follow_order(params), do: params
+
+  @doc """
+  Moves placement overrides from one order of a gallery's objects to another,
+  as `follow_order/1` does for form params. `before` and `after_objects` list
+  the objects as `{identity, {type, id}}`, where `identity` names the same
+  object in both (an object only in `after_objects` needs one of its own).
+  """
+  def follow_objects(overrides, before, after_objects) do
+    if before |> Enum.map(&elem(&1, 1)) |> repeats?(),
+      do: move_overrides(overrides || [], placement_moves(before, after_objects)),
+      else: overrides
+  end
 
   defp form_indexes(objects) do
     indexes = Enum.map(Map.keys(objects), &form_index/1)
@@ -279,20 +293,21 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   end
 
   # `{type, id, old_placement}` => the placement in the new order, or `:removed`
-  defp placement_moves(indexes, old_keys, order, objects) do
+  defp placement_moves(before, after_objects) do
     new =
-      order
-      |> Enum.map(&(&1 && param_media_key(objects[&1])))
+      after_objects
+      |> Enum.map(&elem(&1, 1))
       |> placements()
-      |> then(&Enum.zip(order, &1))
+      |> then(&Enum.zip(Enum.map(after_objects, fn {identity, _key} -> identity end), &1))
       |> Map.new()
 
-    indexes
-    |> Enum.zip(placements(old_keys))
+    before
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.zip(placements(Enum.map(before, &elem(&1, 1))))
     |> Enum.flat_map(fn
-      {index, {type, id, placement}} when not is_nil(placement) ->
+      {identity, {type, id, placement}} when not is_nil(placement) ->
         moved =
-          case Map.fetch(new, index) do
+          case Map.fetch(new, identity) do
             {:ok, {_type, _id, new_placement}} -> new_placement
             _ -> :removed
           end

@@ -66,7 +66,10 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
         |> to_form(as: "data")
 
       {:ok, socket} = GalleryBlock.mount(%Phoenix.LiveView.Socket{})
+      update_gallery_block(socket, ref_form, block_form)
+    end
 
+    defp update_gallery_block(socket, ref_form, block_form) do
       {:ok, socket} =
         GalleryBlock.update(%{id: "gallery-block", block: block_form, ref_form: ref_form, form_id: "page_form"}, socket)
 
@@ -315,6 +318,60 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert Regex.scan(~r/name="[^"]*\[placement\]"[^>]*value="(\d)"/, html, capture: :all_but_first) == [["0"], ["1"]]
     end
 
+    # Another editor reorders the repeats while this one has a caption open: the
+    # open caption stays with its gallery object.
+    test "an open caption follows its object when the placements are reordered", ctx do
+      overrides = [placed(ctx.repeated_image, 0, "First"), placed(ctx.repeated_image, 1, "Second")]
+
+      socket =
+        ctx.repeated
+        |> update_gallery_block(overrides)
+        |> Phoenix.Component.assign(:target_ref, {Block, "block-galleryblk"})
+        |> Phoenix.Component.assign(:ref_name, "gallery")
+
+      id = to_string(ctx.repeated_image.id)
+
+      {:noreply, socket} =
+        GalleryBlock.handle_event(
+          "open_text_editor",
+          %{"type" => "image", "id" => id, "placement" => 1, "kind" => "caption"},
+          socket
+        )
+
+      # The second object is now first, and its caption with it
+      [first, second] = ctx.repeated.gallery_objects
+      reordered = %{ctx.repeated | gallery_objects: [second, first]}
+
+      ref_form =
+        %Brando.Content.Ref{uid: "galleryref", name: "gallery", gallery_id: reordered.id, gallery: reordered}
+        |> Changeset.change()
+        |> to_form(as: "ref")
+
+      block_form =
+        %GalleryBlockData{
+          type: "gallery",
+          data: %GalleryBlockData.Data{
+            type: :gallery,
+            gallery_object_overrides: [placed(ctx.repeated_image, 0, "Second"), placed(ctx.repeated_image, 1, "First")]
+          }
+        }
+        |> Changeset.change()
+        |> to_form(as: "data")
+
+      socket = update_gallery_block(socket, ref_form, block_form)
+      assert %{placement: 0} = socket.assigns.text_editor
+
+      # A save sent before the browser saw the reorder still names placement 1
+      GalleryBlock.handle_event(
+        "save_object_text",
+        %{"type" => "image", "id" => id, "placement" => 1, "kind" => "caption", "value" => "<p>Edited</p>"},
+        socket
+      )
+
+      assert_receive {:phoenix, :send_update, {{Block, "block-galleryblk"}, %{event: "update_ref_data", ref_data: data}}}
+      assert Enum.map(data.gallery_object_overrides, &{&1.placement, &1.title}) == [{0, "<p>Edited</p>"}, {1, "First"}]
+    end
+
     test "a caption saved for one placement leaves the other alone", ctx do
       socket =
         ctx.repeated
@@ -331,7 +388,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
           socket
         )
 
-      assert socket.assigns.text_editor == %{type: :image, id: id, placement: 1, kind: :caption}
+      assert %{type: :image, id: ^id, placement: 1, kind: :caption} = socket.assigns.text_editor
 
       GalleryBlock.handle_event(
         "save_object_text",
