@@ -1079,7 +1079,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         do: "",
         else:
           " · " <>
-            ngettext("1 entry", "%{count} entries", counts.entries) <> " · " <> gettext("%{live} live", live: counts.live)
+            pngettext("release", "1 entry", "%{count} entries", counts.entries) <> " · " <> gettext("%{live} live", live: counts.live)
 
     children <> entries
   end

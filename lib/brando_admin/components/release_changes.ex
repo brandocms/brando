@@ -302,7 +302,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp row_count_label(%{class: :metadata}, 0), do: gettext("No re-render")
   defp row_count_label(_row, n), do: entries_label(n)
 
-  defp entries_label(n), do: ngettext("1 entry", "%{count} entries", n)
+  defp entries_label(n), do: pngettext("release", "1 entry", "%{count} entries", n)
 
   @doc "Whether a rail row can be checked: ready, or a choice was made."
   def selectable?(%{group: :ready}, _choices, _replace), do: true
@@ -333,7 +333,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp when_label(_), do: ""
 
   @doc false
-  def status_label(:update), do: gettext("Update")
+  def status_label(:update), do: pgettext("release", "Update")
   def status_label(:create), do: gettext("New")
   def status_label(:conflict), do: gettext("Conflict")
   def status_label(:never_applied), do: gettext("Never applied")
@@ -396,7 +396,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
           phx-value-uid={@row.uid}
           data-testid="release-verify-row"
         >
-          <.icon name="play" />{gettext("Verify")}
+          <.icon name="play" />{pgettext("release", "Verify")}
         </button>
         <.link
           :if={@module_id}
@@ -983,7 +983,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         </span>
       </div>
       <button class="btn btn--sm" type="button" phx-click="verify_current" data-testid="release-verify-entries">
-        <.icon name="play" />{gettext("Verify")}
+        <.icon name="play" />{pgettext("release", "Verify")}
       </button>
     </div>
     """

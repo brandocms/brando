@@ -294,6 +294,11 @@ defmodule BrandoAdmin.Authorization.Events do
         ~w(blur export_module_files export_modules focus open_module_files open_sketches reset_import_vars validate_module_import),
       write: ~w(create_module import_modules start_sketches)
     ],
+    "BrandoAdmin.Content.ReleaseChangesLive" => [
+      read:
+        ~w(cancel_verify chip choose close_confirm close_diff filter focus_change full_screen open_confirm open_diff page preview_entry select_row sort tab toggle_marks toggle_ready toggle_replace toggle_row toggle_unchanged verify_all verify_current verify_row viewport),
+      write: ~w(apply keep_batch revert_batch share_preview)
+    ],
     "BrandoAdmin.Content.SharedLibraryLive" => [
       read: ~w(refresh select_environment select_site),
       write: ~w(accept_update create customize delete disable_all dismiss_update enable_all reset set_access update)

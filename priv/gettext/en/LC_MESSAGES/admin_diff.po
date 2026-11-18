@@ -28,6 +28,13 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} unchanged line"
+msgid_plural "%{count} unchanged lines"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/text_diff.ex
+#, elixir-autogen, elixir-format
 msgid "Added:"
 msgstr ""
 
