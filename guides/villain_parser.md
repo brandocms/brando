@@ -56,8 +56,8 @@ when it does not parse (Liquid) or compile (HEEx), or when it raises while it
 renders. Every failing block is named, not only the first. A list that is nil,
 such as a gallery with no images, is no failure: as in Liquid, a `for` loop
 over it runs zero times (its `else` branch renders), and the list filters
-(`sort`, `where`, `map`, `first`, `join` and the rest) read it as an empty
-list.
+`sort`, `sort_natural`, `where`, `map`, `compact`, `reverse`, `uniq`,
+`partition`, `concat`, `join`, `first` and `last` read it as an empty list.
 
 | Where the render runs | What happens |
 | --- | --- |

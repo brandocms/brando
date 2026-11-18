@@ -71,6 +71,27 @@ defmodule Brando.Villain.NilCollectionTest do
     assert render(template) == "none"
   end
 
+  test "the list filters give an empty list for nil, not nil" do
+    alias Brando.Villain.Filters
+
+    assert Filters.sort(nil, %{}) == []
+    assert Filters.sort(nil, "title", %{}) == []
+    assert Filters.sort_natural(nil, %{}) == []
+    assert Filters.sort_natural(nil, "title", %{}) == []
+    assert Filters.where(nil, "b", %{}) == []
+    assert Filters.where(nil, "b", 1, %{}) == []
+    assert Filters.map(nil, "image", %{}) == []
+    assert Filters.compact(nil, %{}) == []
+    assert Filters.reverse(nil, %{}) == []
+    assert Filters.uniq(nil, %{}) == []
+    assert Filters.partition(nil, 3, %{}) == []
+    assert Filters.concat(nil, [1], %{}) == [1]
+    assert Filters.concat([1], nil, %{}) == [1]
+    assert Filters.join(nil, ", ", %{}) == ""
+    assert Filters.first(nil, %{}) == nil
+    assert Filters.last(nil, %{}) == nil
+  end
+
   test "a value that is no list and not nil still raises" do
     assert_raise Protocol.UndefinedError, fn -> render("{% assign t = true %}{% for x in t %}{{ x }}{% endfor %}") end
     assert_raise Protocol.UndefinedError, fn -> render("{% assign t = false %}{{ t | sort }}") end
