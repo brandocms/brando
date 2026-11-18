@@ -48,10 +48,10 @@ defmodule Brando.Content.Definitions.Release.Entries do
   end
 
   @doc """
-  The entries that hold a block of the modules `module_ids` names (`%{id =>
-  uid}`), with what the admin shows of each: title, type, language, status
-  and links. `:modules` on each entry lists the UIDs of the modules it uses.
-  Sorted by type and title.
+  What the admin shows of each entry that holds a block of the modules
+  `module_ids` names (`%{id => uid}`): title, type, language, status and
+  links, sorted by type and title. `:modules` on each entry lists the UIDs of
+  the modules it uses, so a screen can tell which tree it re-renders for.
   """
   @spec list(%{integer() => String.t()}) :: [entry()]
   def list(module_ids) when map_size(module_ids) == 0, do: []
@@ -91,16 +91,14 @@ defmodule Brando.Content.Definitions.Release.Entries do
     keys
     |> Enum.reject(&Map.has_key?(stored, &1))
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.reduce(stored, fn {schema, ids}, acc ->
-      schema
-      |> load(ids)
-      |> Enum.reduce(acc, fn entry, acc ->
-        case Brando.Content.Identifier.Queries.identifier_for(entry) do
-          %Identifier{} = identifier -> Map.put(acc, {schema, entry.id}, identifier)
-          _ -> acc
-        end
-      end)
-    end)
+    |> Enum.reduce(stored, fn {schema, ids}, acc -> schema |> load(ids) |> Enum.reduce(acc, &put_made/2) end)
+  end
+
+  defp put_made(%{__struct__: schema, id: id} = entry, acc) do
+    case Brando.Content.Identifier.Queries.identifier_for(entry) do
+      %Identifier{} = identifier -> Map.put(acc, {schema, id}, identifier)
+      _ -> acc
+    end
   end
 
   defp load(schema, ids) do

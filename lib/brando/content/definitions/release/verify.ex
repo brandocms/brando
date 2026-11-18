@@ -228,21 +228,18 @@ defmodule Brando.Content.Definitions.Release.Verify do
       message: nil
     }
 
-    if uses?(block, proposed.changed) do
-      before = Villain.render_block(block, entry)
-
-      case render_proposed(block, entry, proposed) do
-        {:ok, html} ->
-          state = if normalize(html) == normalize(before), do: :same, else: :changed
-          %{base | before: before, after: html} |> Map.put(:state, state)
-
-        {:error, message} ->
-          %{base | before: before, message: message} |> Map.put(:state, :failed)
-      end
-    else
-      Map.put(base, :state, :untouched)
-    end
+    if uses?(block, proposed.changed),
+      do: compare(base, Villain.render_block(block, entry), render_proposed(block, entry, proposed)),
+      else: Map.put(base, :state, :untouched)
   end
+
+  defp compare(base, before, {:ok, html}) do
+    state = if normalize(html) == normalize(before), do: :same, else: :changed
+    Map.put(%{base | before: before, after: html}, :state, state)
+  end
+
+  defp compare(base, before, {:error, message}),
+    do: Map.put(%{base | before: before, message: message}, :state, :failed)
 
   # The one place a block's failure is caught: it is the block's verdict,
   # not the run's

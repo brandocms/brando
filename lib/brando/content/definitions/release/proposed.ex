@@ -14,8 +14,8 @@ defmodule Brando.Content.Definitions.Release.Proposed do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.Params
   alias Brando.Content.{Blocks, Module, Ref, TableTemplate}
+  alias Brando.Content.Definition.Params
   alias Brando.Repo
   alias Ecto.Changeset
 

@@ -9,8 +9,8 @@ defmodule Brando.Content.Definitions.Release.Review do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.DefinitionApply
   alias Brando.Content.Definition.Baselines
+  alias Brando.Content.DefinitionApply
   alias Brando.Repo
 
   @class_order [:metadata, :render, :compatible, :destructive]
@@ -296,10 +296,14 @@ defmodule Brando.Content.Definitions.Release.Review do
 
   # A base line one side dropped and replaced with lines inserted right
   # after it shows the first of them beside it
-  defp base_row(index, base, _ours, _theirs) when index >= length(base), do: []
-
   defp base_row(index, base, ours, theirs) do
-    line = Enum.at(base, index)
+    case Enum.at(base, index) do
+      nil -> []
+      line -> base_row_for(index, line, ours, theirs)
+    end
+  end
+
+  defp base_row_for(index, line, ours, theirs) do
     {ours_cell, ours_changed?} = side_cell(ours, index, line)
     {theirs_cell, theirs_changed?} = side_cell(theirs, index, line)
     base_class = if ours_changed? or theirs_changed?, do: "is-base-changed"
@@ -353,48 +357,36 @@ defmodule Brando.Content.Definitions.Release.Review do
   defp changed(false, false), do: nil
 
   defp hunks(rows) do
-    rows =
-      Enum.map(rows, fn row ->
-        %{
-          row
-          | ours: replaced(row.ours, "is-ours"),
-            theirs: replaced(row.theirs, "is-theirs")
-        }
-      end)
-
-    indexed = Enum.with_index(rows, 1)
-    changed = for {%{changed: c}, i} <- indexed, c, do: i
+    rows = Enum.map(rows, &%{&1 | ours: replaced(&1.ours, "is-ours"), theirs: replaced(&1.theirs, "is-theirs")})
+    changed = for {%{changed: side}, i} <- Enum.with_index(rows, 1), side, do: i
 
     changed
-    |> Enum.chunk_while(
-      [],
-      fn i, acc ->
-        case acc do
-          [] -> {:cont, [i]}
-          [last | _] when i - last <= 3 -> {:cont, [i | acc]}
-          _ -> {:cont, Enum.reverse(acc), [i]}
-        end
-      end,
-      fn
-        [] -> {:cont, []}
-        acc -> {:cont, Enum.reverse(acc), []}
-      end
-    )
-    |> Enum.map(fn group ->
-      from = max(List.first(group) - 1, 1)
-      to = min(List.last(group) + 1, length(rows))
-      hunk_rows = Enum.slice(rows, (from - 1)..(to - 1))
-      sides = hunk_rows |> Enum.map(& &1.changed) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+    |> Enum.chunk_while([], &close_group/2, &last_group/1)
+    |> Enum.map(&hunk(&1, rows))
+  end
 
-      where =
-        cond do
-          :both in sides or (:here in sides and :release in sides) -> :both
-          sides == [:here] -> :here
-          true -> :release
-        end
+  # Changes three lines or less apart share a hunk; groups are kept reversed
+  defp close_group(i, []), do: {:cont, [i]}
+  defp close_group(i, [last | _] = acc) when i - last <= 3, do: {:cont, [i | acc]}
+  defp close_group(i, acc), do: {:cont, Enum.reverse(acc), [i]}
 
-      %{from: from, to: to, where: where, rows: hunk_rows}
-    end)
+  defp last_group([]), do: {:cont, []}
+  defp last_group(acc), do: {:cont, Enum.reverse(acc), []}
+
+  defp hunk([first | _] = group, rows) do
+    from = max(first - 1, 1)
+    to = min(Enum.max(group) + 1, length(rows))
+    hunk_rows = Enum.slice(rows, (from - 1)..(to - 1))
+    sides = hunk_rows |> Enum.map(& &1.changed) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+    %{from: from, to: to, where: where(sides), rows: hunk_rows}
+  end
+
+  defp where(sides) do
+    cond do
+      :both in sides or (:here in sides and :release in sides) -> :both
+      sides == [:here] -> :here
+      true -> :release
+    end
   end
 
   defp replaced({:replaced, line}, class), do: {class, line}

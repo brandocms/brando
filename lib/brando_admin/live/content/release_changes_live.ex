@@ -111,21 +111,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     by_row =
       Map.new(rows, fn row -> {row.uid, Enum.filter(entries, &Enum.any?(&1.modules, fn uid -> uid in row.uids end))} end)
 
-    ready = for row <- rows, row.group == :ready, into: MapSet.new(), do: row.uid
-
-    selected =
-      case socket.assigns.selected do
-        nil -> ready
-        selected -> MapSet.intersection(selected, MapSet.new(rows, & &1.uid))
-      end
-
-    current =
-      cond do
-        socket.assigns.current && Enum.any?(rows, &(&1.uid == socket.assigns.current)) -> socket.assigns.current
-        String.starts_with?(socket.assigns.current || "", "applied:") -> socket.assigns.current
-        rows != [] -> hd(Enum.sort_by(rows, &(&1.group != :ready))).uid
-        true -> nil
-      end
+    selected = selected(socket.assigns.selected, rows)
+    current = current(socket.assigns.current, rows)
 
     socket
     |> assign(
@@ -142,6 +129,20 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       verify: Verify.get()
     )
     |> load_detail()
+  end
+
+  # The ready rows at first; afterwards what is still there of the selection
+  defp selected(nil, rows), do: for(row <- rows, row.group == :ready, into: MapSet.new(), do: row.uid)
+  defp selected(selected, rows), do: MapSet.intersection(selected, MapSet.new(rows, & &1.uid))
+
+  defp current("applied:" <> _ = current, _rows), do: current
+
+  defp current(current, rows) do
+    cond do
+      current && Enum.any?(rows, &(&1.uid == current)) -> current
+      rows != [] -> hd(Enum.sort_by(rows, &(&1.group != :ready))).uid
+      true -> nil
+    end
   end
 
   defp last_applied(report) do
@@ -597,22 +598,26 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   # The entries of the current row, filtered, searched and sorted
   defp shown_entries(assigns) do
-    all = assigns.entries_by_row[assigns.current] || []
     results = results(assigns)
     f = assigns.filters
-    q = String.downcase(String.trim(f.q))
 
-    all
-    |> Enum.filter(fn entry ->
-      (q == "" or String.contains?(String.downcase(entry.title), q) or
-         String.contains?(String.downcase(entry.url || ""), q)) and
-        (f.type == "" or entry.type == f.type) and
-        (f.language == "" or entry.language == f.language) and
-        (f.status == "" or to_string(entry.status) == f.status) and
-        verdict_match?(f.verdict, entry, results, assigns.renders)
-    end)
+    (assigns.entries_by_row[assigns.current] || [])
+    |> Enum.filter(&(matches?(&1, f) and verdict_match?(f.verdict, &1, results, assigns.renders)))
     |> Enum.sort_by(&sort_key(&1, f.sort, results), if(f.dir == :asc, do: :asc, else: :desc))
   end
+
+  defp matches?(entry, f) do
+    search?(entry, String.downcase(String.trim(f.q))) and
+      field?(f.type, entry.type) and field?(f.language, entry.language) and field?(f.status, to_string(entry.status))
+  end
+
+  defp search?(_entry, ""), do: true
+
+  defp search?(entry, q),
+    do: String.contains?(String.downcase(entry.title), q) or String.contains?(String.downcase(entry.url || ""), q)
+
+  defp field?("", _value), do: true
+  defp field?(wanted, value), do: wanted == value
 
   defp verdict_match?("", _entry, _results, _renders), do: true
   defp verdict_match?("r-failed", entry, _results, %{states: s}), do: s[entry.key] == :failed
@@ -1091,9 +1096,9 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp status_badge(_), do: nil
 
   defp split_name(name) do
-    case String.split(name, " › ") do
+    case name |> String.split(" › ") |> Enum.reverse() do
       [single] -> {nil, single}
-      parts -> {Enum.join(Enum.drop(parts, -1), " › "), List.last(parts)}
+      [last | rest] -> {rest |> Enum.reverse() |> Enum.join(" › "), last}
     end
   end
 end

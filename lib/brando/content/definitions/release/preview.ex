@@ -28,18 +28,20 @@ defmodule Brando.Content.Definitions.Release.Preview do
          {:ok, entry} <- Brando.Blueprint.EntryQuery.get(schema, id),
          {:ok, blocks} <- Verify.blocks(schema, id, proposed),
          {:ok, before} <- initialize(Ecto.Changeset.change(entry), user) do
-      after_key =
-        case Villain.with_modules(proposed.modules, fn ->
-               initialize(proposed_changeset(schema, entry, proposed), user)
-             end) do
-          {:ok, key} -> key
-          {:error, message} -> {:error, message}
-        end
-
-      {:ok, %{before: before, after: after_key, marks: marks(blocks)}}
+      {:ok, %{before: before, after: render_after(proposed, schema, entry, user), marks: marks(blocks)}}
     else
       {:error, _} = error -> error
       _ -> {:error, :forbidden}
+    end
+  end
+
+  # The proposed page's key, or why it can't be rendered
+  defp render_after(proposed, schema, entry, user) do
+    changeset = proposed_changeset(schema, entry, proposed)
+
+    case Villain.with_modules(proposed.modules, fn -> initialize(changeset, user) end) do
+      {:ok, key} -> key
+      {:error, message} -> {:error, message}
     end
   end
 
@@ -62,12 +64,12 @@ defmodule Brando.Content.Definitions.Release.Preview do
       scope = Boundary.actor_scope(user)
       user = Brando.Repo.get!(Brando.Users.User, user.id)
       changeset = proposed_changeset(schema, entry, proposed)
-
-      Boundary.with_scope(scope, fn ->
-        Villain.with_modules(proposed.modules, fn -> LivePreview.share(schema, changeset, user, %{}, nil) end)
-      end)
+      Boundary.with_scope(scope, fn -> share_proposed(proposed, schema, changeset, user) end)
     end
   end
+
+  defp share_proposed(proposed, schema, changeset, user),
+    do: Villain.with_modules(proposed.modules, fn -> LivePreview.share(schema, changeset, user, %{}, nil) end)
 
   # The entry with its blocks synced to the proposed modules, as applying
   # them would leave them

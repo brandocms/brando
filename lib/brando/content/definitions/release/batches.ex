@@ -108,27 +108,20 @@ defmodule Brando.Content.Definitions.Release.Batches do
       restorable = Enum.filter(rows, &(&1.action in [:updated, :replaced] and is_map(&1.previous)))
       created = for row <- rows, row.action == :created, do: row.uid
 
-      if restorable == [] do
-        {:ok, %{plan: nil, revert: [], conflicts: [], created: created, actor: actor, plan_opts: plan_opts}}
-      else
-        bundle = bundle(restorable)
-        uids = Enum.map(restorable, & &1.uid)
+      base = %{plan: nil, bundle: nil, revert: [], conflicts: [], created: created, actor: actor, plan_opts: plan_opts}
+      plan_revert(restorable, base)
+    end
+  end
 
-        with {:ok, plan} <- Definitions.plan(bundle, actor, plan_opts ++ [baseline: :database, select: uids]) do
-          {revert, conflicts} = split(plan, uids)
+  defp plan_revert([], base), do: {:ok, base}
 
-          {:ok,
-           %{
-             plan: plan,
-             bundle: bundle,
-             revert: revert,
-             conflicts: conflicts,
-             created: created,
-             actor: actor,
-             plan_opts: plan_opts
-           }}
-        end
-      end
+  defp plan_revert(restorable, base) do
+    bundle = bundle(restorable)
+    uids = Enum.map(restorable, & &1.uid)
+
+    with {:ok, plan} <- Definitions.plan(bundle, base.actor, base.plan_opts ++ [baseline: :database, select: uids]) do
+      {revert, conflicts} = split(plan, uids)
+      {:ok, %{base | plan: plan, bundle: bundle, revert: revert, conflicts: conflicts}}
     end
   end
 
@@ -171,26 +164,22 @@ defmodule Brando.Content.Definitions.Release.Batches do
           end
         end)
 
-      with {:ok, revert_batch} <- result do
-        revert_batch = %{revert_batch | run_id: run}
-        Repo.update_all(from(b in DefinitionBatch, where: b.id == ^revert_batch.id), set: [run_id: run])
-
-        Brando.Activity.setting_changed(:created, revert_batch, title(revert_batch), user,
-          details: %{"reverted" => batch.batch_id, "definitions" => length(uids)}
-        )
-
-        broadcast()
-
-        {:ok,
-         %{
-           batch: revert_batch,
-           reverted: preview.revert,
-           conflicts: preview.conflicts,
-           created: preview.created,
-           run: run
-         }}
-      end
+      with {:ok, revert_batch} <- result, do: reverted(batch, revert_batch, preview, run, user)
     end
+  end
+
+  defp reverted(batch, revert_batch, preview, run, user) do
+    revert_batch = %{revert_batch | run_id: run}
+    Repo.update_all(from(b in DefinitionBatch, where: b.id == ^revert_batch.id), set: [run_id: run])
+
+    Brando.Activity.setting_changed(:created, revert_batch, title(revert_batch), user,
+      details: %{"reverted" => batch.batch_id, "definitions" => length(preview.revert)}
+    )
+
+    broadcast()
+
+    {:ok,
+     %{batch: revert_batch, reverted: preview.revert, conflicts: preview.conflicts, created: preview.created, run: run}}
   end
 
   defp apply_revert(batch, preview, uids, revert_batch_id, user) do

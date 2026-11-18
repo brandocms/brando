@@ -148,13 +148,15 @@ defmodule Brando.Content.Definitions.Release do
         {:ok, :system, [creator: :none]}
 
       user ->
-        with {:ok, user} <- user(user) do
-          cond do
-            Boundary.superuser?(user) -> {:ok, user, []}
-            authorize(user) == :ok -> {:ok, :system, [creator: user.id]}
-            true -> {:ok, user, []}
-          end
-        end
+        with {:ok, user} <- user(user), do: user_actor(user)
+    end
+  end
+
+  defp user_actor(user) do
+    cond do
+      Boundary.superuser?(user) -> {:ok, user, []}
+      authorize(user) == :ok -> {:ok, :system, [creator: user.id]}
+      true -> {:ok, user, []}
     end
   end
 
@@ -314,11 +316,19 @@ defmodule Brando.Content.Definitions.Release do
         batch_id: batch_id,
         source: :release,
         release: report.version,
-        run_id: List.last(Brando.Content.RenderRun.current()),
+        run_id: newest_run(),
         definitions: %{"items" => items}
       },
       user.id
     )
+  end
+
+  # The run `track/3` started is the newest of the process's runs
+  defp newest_run do
+    case Enum.reverse(Brando.Content.RenderRun.current()) do
+      [run | _] -> run
+      [] -> nil
+    end
   end
 
   @doc """

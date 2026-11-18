@@ -215,14 +215,14 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :name, :string, required: true
 
   defp def_name(assigns) do
-    assigns = assign(assigns, :parts, String.split(assigns.name, " › "))
+    assigns = assign(assigns, :parts, assigns.name |> String.split(" › ") |> Enum.reverse())
 
     ~H"""
     <%= case @parts do %>
       <% [single] -> %>
         {single}
-      <% parts -> %>
-        <span>{Enum.join(Enum.drop(parts, -1), " › ")} ›</span> {List.last(parts)}
+      <% [last | rest] -> %>
+        <span>{rest |> Enum.reverse() |> Enum.join(" › ")} ›</span> {last}
     <% end %>
     """
   end
@@ -331,7 +331,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp when_label(%{applied_at: at}), do: Brando.Utils.Datetime.format_datetime(at, "%d.%m %H:%M")
   defp when_label(_), do: ""
 
-  @doc false
+  @doc "A rail row's status, as its badge says it."
   def status_label(:update), do: pgettext("release", "Update")
   def status_label(:create), do: gettext("New")
   def status_label(:conflict), do: gettext("Conflict")
@@ -344,7 +344,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp status_class(status) when status in [:blocked, :deleted], do: "badge--error"
   defp status_class(_), do: nil
 
-  @doc false
+  @doc "A `ModuleDiff` class, as its badge says it."
   def class_label(:metadata), do: gettext("Metadata")
   def class_label(:render), do: gettext("Render")
   def class_label(:compatible), do: gettext("Compatible")
@@ -356,7 +356,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp class_badge(:migration_required), do: "badge--error"
   defp class_badge(_), do: "badge--outline"
 
-  @doc false
+  @doc "What a `ModuleDiff` class does to the blocks, in a sentence."
   def class_help(:metadata), do: gettext("Name, help text or icon only. Nothing re-renders.")
   def class_help(:render), do: gettext("Blocks re-render; their content is untouched.")
 
@@ -663,12 +663,12 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     gettext("Lines %{from}–%{to} · %{where}", from: from, to: to, where: where)
   end
 
-  @doc false
+  @doc "A time as the screen shows it, in the site's time zone."
   def date(nil), do: ""
   def date(%NaiveDateTime{} = at), do: at |> DateTime.from_naive!("Etc/UTC") |> date()
   def date(at), do: Brando.Utils.Datetime.format_datetime(at, "%d %b %Y, %H:%M")
 
-  @doc false
+  @doc "Who made an edit (`edited` of a plan item), or someone."
   def person(%{by: %{name: name}}), do: name
   def person(_), do: gettext("Someone")
 
@@ -1099,7 +1099,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp types_count(all), do: all |> Enum.map(& &1.type) |> Enum.uniq() |> length()
   defp group_count(all, fun), do: all |> Enum.frequencies_by(fun) |> Enum.sort_by(fn {k, n} -> {-n, to_string(k)} end)
 
-  @doc false
+  @doc "An entry's status, as its badge says it."
   def status_text(:published), do: gettext("Live")
   def status_text(:draft), do: gettext("Draft")
   def status_text(:pending), do: gettext("Pending")
