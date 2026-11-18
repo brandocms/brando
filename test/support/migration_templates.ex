@@ -287,7 +287,12 @@ defmodule Brando.MigrationTemplates do
     for {table, names} <- Map.merge(environment_columns(), public_columns()) do
       query!(~s(ALTER TABLE "#{table}" ) <> Enum.map_join(names, ", ", &"DROP COLUMN #{&1} CASCADE"))
     end
+
+    for index <- environment_indexes(), do: query!(~s(DROP INDEX "#{index}"))
   end
+
+  @doc "What the 2xx migrations add in every environment: indexes on tables from before them"
+  def environment_indexes, do: ~w(translation_pending_versions_member_id_index)
 
   @doc """
   Copies the 2xx templates into `directory` under the versions

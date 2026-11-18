@@ -56,6 +56,8 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
     end)
   end
 
+  defp indexes_in(prefix), do: List.flatten(rows("SELECT indexname FROM pg_indexes WHERE schemaname = $1", [prefix]))
+
   defp page(prefix, id), do: rows(~s(SELECT title, content_modified_at FROM "#{prefix}".pages WHERE id = $1), [id])
   defp module_code(prefix, id), do: rows(~s(SELECT code FROM "#{prefix}".content_modules WHERE id = $1), [id])
 
@@ -80,6 +82,8 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
     assert {table_set("public", public_tables()), column_set("public", public_columns())} == expected_public
     assert table_set("public", environment_tables()) == expected_tables
     assert column_set("public", environment_columns()) == expected_columns
+
+    for prefix <- ["public" | @environments], do: assert(environment_indexes() -- indexes_in(prefix) == [])
 
     for prefix <- @environments do
       %{page: page_id, module: module_id} = content[prefix]
@@ -109,6 +113,7 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
 
     for prefix <- ["public" | @environments] do
       for table <- environment_tables(), do: refute(table?(prefix, table))
+      assert Enum.filter(environment_indexes(), &(&1 in indexes_in(prefix))) == []
       assert column_set(prefix, environment_columns()) == Map.new(environment_columns(), fn {table, _} -> {table, []} end)
     end
 
