@@ -50,13 +50,22 @@ defmodule Brando.MarkdownSources.Publication do
     end
   end
 
-  def render_consumers!(entries) do
+  # Renders the source's consumers, and the entries that embed a consumer
+  # fragment, rolling back the caller's transaction when one fails. A render
+  # refused because a block template failed keeps the entry's HTML
+  # (`Brando.Content.Blocks.render_entry/2` logs which blocks): with
+  # `refused: :skip`, as an import renders, it does not hold back the others
+  # or the new version. A publication refuses it (`:rollback`, the default):
+  # the entry still shows the version before.
+  def render_consumers!(entries, opts \\ []) do
+    refused = Keyword.get(opts, :refused, :rollback)
+
     Enum.reduce(entries, MapSet.new(), fn {schema, ids}, visited ->
-      Enum.reduce(ids, visited, &render_entry!({schema, &1}, &2))
+      Enum.reduce(ids, visited, &render_entry!({schema, &1}, &2, refused))
     end)
   end
 
-  defp render_entry!({schema, id} = key, visited) do
+  defp render_entry!({schema, id} = key, visited, refused) do
     if MapSet.member?(visited, key) do
       visited
     else
@@ -64,9 +73,12 @@ defmodule Brando.MarkdownSources.Publication do
 
       case Brando.Content.Blocks.render_entry(schema, id) do
         {:ok, %Brando.Pages.Fragment{}} ->
-          render_fragment_consumers!(id, visited)
+          render_fragment_consumers!(id, visited, refused)
 
         {:ok, _} ->
+          visited
+
+        {:error, {:render_failed, _failures}} when refused == :skip ->
           visited
 
         _ ->
@@ -75,11 +87,11 @@ defmodule Brando.MarkdownSources.Publication do
     end
   end
 
-  defp render_fragment_consumers!(id, visited) do
+  defp render_fragment_consumers!(id, visited, refused) do
     Brando.Content.Blocks.list_block_ids_using_fragment(id)
     |> Brando.Content.BlockReferences.reject_blocks_belonging_to_entry(nil)
     |> Enum.reduce(visited, fn {parent_schema, ids}, acc ->
-      Enum.reduce(ids, acc, &render_entry!({parent_schema, &1}, &2))
+      Enum.reduce(ids, acc, &render_entry!({parent_schema, &1}, &2, refused))
     end)
   end
 

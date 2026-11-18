@@ -92,7 +92,8 @@ defmodule Brando.Villain do
   def parse_checked(entry_blocks_list, entry \\ nil, opts \\ []) do
     case RenderFailures.collect(fn -> parse(entry_blocks_list, entry, opts) end) do
       {html, []} -> {:ok, html}
-      {_html, failures} -> {:error, failures}
+      # A block searched for a failure in the last pass renders again
+      {_html, failures} -> {:error, Enum.uniq(failures)}
     end
   end
 
@@ -215,7 +216,7 @@ defmodule Brando.Villain do
 
   # The Liquid left in the blocks' joined output (a container's template). A
   # failure there belongs to no one block: a render that collects failures
-  # looks for the root blocks whose own output fails, and names them.
+  # looks for the blocks whose own output fails, and names them.
   defp final_pass(chunks, context, opts_map) do
     html = Enum.map(chunks, &elem(&1, 1))
 
@@ -235,15 +236,50 @@ defmodule Brando.Villain do
     end
   end
 
+  # A root whose output fails is searched: its own template with its children
+  # left out, then each child rendered alone, down to the innermost blocks
+  # that fail. Each failing template is named, not only the first.
   defp failures_of({block, html}, context, opts_map) do
-    {_output, failures} =
-      RenderFailures.collect(
-        fn -> RenderFailures.with_block(block, opts_map, fn -> parse_and_render(html, context) end) end,
-        merge: false
-      )
+    case probe(block, opts_map, fn -> parse_and_render(html, context) end) do
+      [] ->
+        []
 
+      failures ->
+        case descend(block, context, opts_map) do
+          [] -> failures
+          found -> found
+        end
+    end
+  end
+
+  defp descend(block, context, opts_map) do
+    own = probe_alone(block, context, Map.put(opts_map, :skip_children, true))
+
+    own ++ Enum.flat_map(children(block), &failing_child(&1, context, opts_map))
+  end
+
+  defp failing_child(child, context, opts_map) do
+    case probe_alone(child, context, opts_map) do
+      [] -> []
+      failures -> with [] <- descend(child, context, opts_map), do: failures
+    end
+  end
+
+  defp probe_alone(block, context, opts_map) do
+    probe(block, opts_map, fn ->
+      opts_map.parser_module |> parse_node(block, opts_map) |> parse_and_render(context)
+    end)
+  end
+
+  defp probe(block, opts_map, fun) do
+    {_output, failures} = RenderFailures.collect(fn -> RenderFailures.with_block(block, opts_map, fun) end, merge: false)
     failures
   end
+
+  defp children(%{children: children}) when is_list(children),
+    do: Enum.reject(children, &(Map.get(&1, :active) == false or Map.get(&1, :marked_as_deleted) == true))
+
+  defp children(_block), do: []
 
   defp cached(opts) do
     if Application.get_env(:brando, :villain_query_cache, @query_cache_default),

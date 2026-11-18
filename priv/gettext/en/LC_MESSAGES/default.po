@@ -1147,6 +1147,11 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
+msgid "A block template failed, so the page has no content yet. Your changes are saved. Once the template is fixed, the page is rendered."
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
 msgid "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
 msgstr ""
 

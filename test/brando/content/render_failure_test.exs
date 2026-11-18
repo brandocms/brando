@@ -113,6 +113,23 @@ defmodule Brando.Content.RenderFailureTest do
     end
   end
 
+  describe "container templates that fail inside another container" do
+    test "name each failing container, not the root that holds them", c do
+      outer = container!(c.user, "Outer", "<section>{{ content }}</section>")
+      broken = container!(c.user, "Broken", ~s(<div>{{ "x" | no_such_filter }}{{ content }}</div>))
+
+      root = insert_block(%{"type" => "container", "container_id" => outer.id}, c.user, Page.Blocks)
+      struct(Page.Blocks, %{entry_id: c.identity.id, block_id: root.id, sequence: 3}) |> Repo.insert!()
+
+      first = nested_container(root, broken, c.user)
+      second = nested_container(root, broken, c.user)
+
+      assert {:error, {:render_failed, failures}} = Blocks.render_entry(Page, c.identity.id)
+      assert failures |> Enum.map(& &1.block_uid) |> Enum.sort() == Enum.sort([first.uid, second.uid])
+      assert Enum.all?(failures, &(&1.kind == :render and &1.message =~ "no_such_filter"))
+    end
+  end
+
   describe "rendering without storing" do
     test "render_fields/2 returns each field's HTML, or the failures, and stores nothing", c do
       entry = load(c.identity)
@@ -259,6 +276,19 @@ defmodule Brando.Content.RenderFailureTest do
   defp add_fragment_block(entry, fragment, user) do
     block = insert_block(%{"type" => "fragment", "fragment_id" => fragment.id}, user, Page.Blocks)
     struct(Page.Blocks, %{entry_id: entry.id, block_id: block.id, sequence: 3}) |> Repo.insert!()
+  end
+
+  defp container!(user, name, code) do
+    {:ok, container} = Brando.Content.create_container(%{name: name, namespace: "all", help_text: "x", code: code}, user)
+    container
+  end
+
+  defp nested_container(parent, container, user) do
+    insert_block(
+      %{"type" => "container", "container_id" => container.id, "parent_id" => parent.id},
+      user,
+      Page.Blocks
+    )
   end
 
   defp insert_block(params, user, join) do

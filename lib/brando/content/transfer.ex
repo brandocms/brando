@@ -834,6 +834,14 @@ defmodule Brando.Content.Transfer do
         do: {:ok, entry},
         else: Brando.Content.Blocks.render_entry(schema, entry.id)
 
+    # A render refused because a block template failed keeps the entry's
+    # HTML; the rest of the step runs, and the step is reported failed
+    {rendered, result} =
+      case rendered do
+        {:error, {:render_failed, _failures}} -> {{:ok, entry}, {:error, :render_failed}}
+        rendered -> {rendered, :ok}
+      end
+
     with {:ok, entry} <- rendered,
          {:ok, identifier} <- Brando.Content.update_identifier(entry.__struct__, entry),
          {:ok, _} <-
@@ -846,7 +854,7 @@ defmodule Brando.Content.Transfer do
          # synchronized source queues its translations' sync here,
          # and a synchronized translation its own recompute
          _ <- Brando.Translations.source_saved(entry),
-         do: :ok
+         do: result
   end
 
   defp remembered_mappings(bundle, actor) do

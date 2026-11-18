@@ -72,6 +72,8 @@ defmodule Brando.Notifications.JobFailures do
     error ->
       Logger.warning("[Brando.Notifications] Could not queue a failed-job notification: " <> Exception.message(error))
       :ok
+  catch
+    _kind, _reason -> :ok
   end
 
   @doc "The dispatch job's arguments for a given-up `job`."

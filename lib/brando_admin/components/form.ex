@@ -7134,9 +7134,15 @@ defmodule BrandoAdmin.Components.Form do
     Blocks.log_render_failure(save.schema, entry.id, failures)
 
     intro =
-      gettext(
-        "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
-      )
+      if save.mutation_type == :create,
+        do:
+          gettext(
+            "A block template failed, so the page has no content yet. Your changes are saved. Once the template is fixed, the page is rendered."
+          ),
+        else:
+          gettext(
+            "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
+          )
 
     lines = Enum.map(failures, &render_failure_line/1)
     items = Enum.map_join(lines, "", &("<li>" <> Alert.escape(&1) <> "</li>"))

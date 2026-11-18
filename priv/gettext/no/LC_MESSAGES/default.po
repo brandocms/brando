@@ -1147,6 +1147,11 @@ msgstr "En blokk"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
+msgid "A block template failed, so the page has no content yet. Your changes are saved. Once the template is fixed, the page is rendered."
+msgstr "En blokkmal feilet, så siden har ikke noe innhold ennå. Endringene dine er lagret. Når malen er rettet, blir siden gjengitt."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
 msgid "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
 msgstr "En blokkmal feilet, så den publiserte siden viser fortsatt det den viste før denne lagringen. Endringene dine er lagret. Når malen er rettet, blir siden gjengitt på nytt."
 

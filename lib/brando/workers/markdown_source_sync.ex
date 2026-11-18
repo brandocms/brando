@@ -120,7 +120,10 @@ defmodule Brando.Worker.MarkdownSourceSync do
   end
 
   defp publish!(source, updated, version, connection) do
-    source.id |> MarkdownSources.consumer_entries() |> Brando.MarkdownSources.Publication.render_consumers!()
+    source.id
+    |> MarkdownSources.consumer_entries()
+    |> Brando.MarkdownSources.Publication.render_consumers!(refused: :skip)
+
     MarkdownSources.audit(source, "source.imported", :system, %{version_id: version.id})
 
     case Brando.MarkdownSources.Publication.enqueue(updated, connection) do

@@ -933,6 +933,12 @@ server's database, or against a copy you then restore to the server
    run them against staging first and inspect counts and representative
    entries. All accept `--yes`, for a script.
 
+   An entry in which a block template fails keeps the HTML it had, and the
+   resave names it, its blocks and their errors at the end. A template that
+   iterates over a list that is nil fails too; the old release stored a
+   comment in its place. Fix each template it names, then run the resave
+   again ([Villain parser](villain_parser.md#when-a-block-template-fails)).
+
    In a release, the resave is `bin/my_app rpc "Brando.Content.Resave.run()"`,
    which also empties the running node's query cache when done (what it
    reloads is under
