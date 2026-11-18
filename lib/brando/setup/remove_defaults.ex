@@ -531,8 +531,12 @@ defmodule Brando.Setup.RemoveDefaults do
   end
 
   # The page tree first, as a page's delete or parent change takes it, then
-  # in the order an editor's save takes rows: the entry's, its blocks', then
-  # (for a block written with a module) a share of the module's
+  # the entry's row, its blocks', and the modules'. An editor's save in the
+  # admin writes the entry's row first (it sets `edited_at`), then its blocks,
+  # and a block written with a module takes a share of the module's row: the
+  # same order. A write that locks blocks before their entry (resolving stale
+  # blocks, a save that leaves the entry's row alone) can deadlock with it;
+  # Postgres then aborts one of the two, and nothing is lost.
   defp lock_candidates do
     Pages.lock_page_tree()
 
