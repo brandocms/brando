@@ -156,6 +156,31 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
     end
   end
 
+  describe "Verify's edges" do
+    test "a stored module that fails to render doesn't stop the run", c do
+      text(c)
+      |> Changeset.change(type: :heex, code: ~S|<p>{String.to_integer("not a number")}</p>|)
+      |> Repo.update!()
+
+      release!(c, "<p class=\"fixed\">{{ heading }}</p>{% ref refs.body %}")
+      report = report!(c)
+      proposed = Proposed.build(report, conflicts: [c.text_module.uid])
+
+      assert %{verdict: :changed} = Verify.check(Page, c.identity.id, proposed)
+
+      entries = Entries.list(Entries.module_ids([c.text_module.uid]))
+      {:ok, _} = Verify.start(report, entries, conflicts: [c.text_module.uid])
+      assert %{status: :done, done: 2} = await_run()
+    end
+
+    test "whitespace between tags that the release changes is a change", c do
+      release!(c, "<p>{{ heading }}</p> {% ref refs.body %}")
+      report = report!(c)
+
+      assert %{verdict: :changed} = Verify.check(Page, c.identity.id, Proposed.build(report))
+    end
+  end
+
   describe "the per-block diff" do
     test "renders each block both ways, and leaves the others alone", c do
       release!(c, "<p class=\"new\">{{ heading }}</p>{% ref refs.body %}")
@@ -210,6 +235,20 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
         assert {:ok, %{confirmed_how: :kept}} = Batches.keep(Batches.get(batch_id), c.user)
         assert Batches.pending() == nil
         assert {:error, :kept} = Batches.revert(Batches.get(batch_id), c.user)
+      end)
+    end
+
+    test "Keep and Revert on a batch another session already settled say so", c do
+      release!(c, "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
+
+      manual(fn ->
+        {:ok, %{batch_id: batch_id}} = Release.apply(:all, opts(c, user: c.user.id, wait: false))
+        stale = Batches.get(batch_id)
+        {:ok, _} = Batches.keep(Batches.get(batch_id), c.user)
+
+        assert {:error, :kept} = Batches.keep(stale, c.user)
+        assert {:error, :kept} = Batches.revert(stale, c.user)
+        assert %{reverted_at: nil} = Batches.get(batch_id)
       end)
     end
 

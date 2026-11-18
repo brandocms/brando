@@ -76,12 +76,8 @@ defmodule Brando.Content.Definitions.Release.Batches do
   """
   def keep(%DefinitionBatch{} = batch, user) do
     with :ok <- Release.authorize(user),
-         :ok <- open(batch) do
-      {1, _} =
-        Repo.update_all(from(b in DefinitionBatch, where: b.id == ^batch.id and is_nil(b.confirmed_at)),
-          set: [confirmed_at: DateTime.utc_now(), confirmed_by_id: user_id(user), confirmed_how: :kept]
-        )
-
+         :ok <- open(batch),
+         :ok <- settle(batch, confirmed_at: DateTime.utc_now(), confirmed_by_id: user_id(user), confirmed_how: :kept) do
       batch = get(batch.batch_id)
       Brando.Activity.setting_changed(:updated, batch, title(batch), user, details: %{"kept" => true})
       broadcast()
@@ -89,10 +85,32 @@ defmodule Brando.Content.Definitions.Release.Batches do
     end
   end
 
-  defp open(%DefinitionBatch{source: :release, confirmed_at: nil, reverted_at: nil}), do: :ok
-  defp open(%DefinitionBatch{reverted_at: %DateTime{}}), do: {:error, :reverted}
-  defp open(%DefinitionBatch{confirmed_at: %DateTime{}}), do: {:error, :kept}
-  defp open(_batch), do: {:error, :not_revertible}
+  # Kept or reverted only while it is neither: another session may have
+  # settled it since this one read it
+  defp settle(batch, set) do
+    query = from(b in DefinitionBatch, where: b.id == ^batch.id and is_nil(b.confirmed_at) and is_nil(b.reverted_at))
+
+    case Repo.update_all(query, set: set) do
+      {1, _} -> :ok
+      {0, _} -> open(get(batch.batch_id))
+    end
+  end
+
+  # As it is now, not as the caller read it
+  defp open(%DefinitionBatch{id: id, confirmed_at: nil, reverted_at: nil} = batch) when not is_nil(id) do
+    case Repo.get(DefinitionBatch, id) do
+      %DefinitionBatch{source: :release, confirmed_at: nil, reverted_at: nil} -> :ok
+      %DefinitionBatch{} = current -> open_state(current)
+      nil -> open_state(batch)
+    end
+  end
+
+  defp open(batch), do: open_state(batch)
+
+  defp open_state(%DefinitionBatch{source: :release, confirmed_at: nil, reverted_at: nil}), do: :ok
+  defp open_state(%DefinitionBatch{reverted_at: %DateTime{}}), do: {:error, :reverted}
+  defp open_state(%DefinitionBatch{confirmed_at: %DateTime{}}), do: {:error, :kept}
+  defp open_state(_batch), do: {:error, :not_revertible}
 
   @doc """
   What reverting `batch` would do, without doing it: `%{plan: plan, revert:
@@ -202,18 +220,18 @@ defmodule Brando.Content.Definitions.Release.Batches do
   # Nothing to apply (each definition was edited here since): the apply is
   # reverted all the same, so its banner goes
   defp transaction_only(batch, _preview, revert_batch_id, user) do
-    Repo.transaction(fn -> record_revert!(batch, nil, [], revert_batch_id, user) end)
-    {:ok, get(revert_batch_id)}
+    with {:ok, _} <- Repo.transaction(fn -> record_revert!(batch, nil, [], revert_batch_id, user) end),
+         do: {:ok, get(revert_batch_id)}
   end
 
   defp record_revert!(batch, _plan, changes, revert_batch_id, user) do
     now = DateTime.utc_now()
 
-    {1, _} =
-      Repo.update_all(
-        from(b in DefinitionBatch, where: b.id == ^batch.id and is_nil(b.reverted_at) and is_nil(b.confirmed_at)),
-        set: [reverted_at: now, reverted_by_id: user_id(user), revert_batch_id: revert_batch_id]
-      )
+    # Settled by another session since: nothing of the revert stays
+    case settle(batch, reverted_at: now, reverted_by_id: user_id(user), revert_batch_id: revert_batch_id) do
+      :ok -> :ok
+      {:error, reason} -> Repo.rollback(reason)
+    end
 
     insert!(
       %{

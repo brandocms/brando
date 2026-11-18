@@ -1362,7 +1362,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         </div>
       </div>
       <:footer>
-        <span class="modal-footer-note">{gettext("Whitespace between tags is ignored.")}</span>
+        <span class="modal-footer-note">{gettext("The HTML is shown one tag a line.")}</span>
         <button class="btn" type="button" phx-click="close_diff">{gettext("Close")}</button>
       </:footer>
     </Content.modal>

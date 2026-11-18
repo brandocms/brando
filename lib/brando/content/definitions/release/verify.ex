@@ -145,7 +145,7 @@ defmodule Brando.Content.Definitions.Release.Verify do
     delay = Keyword.get(opts, :delay, 0)
 
     Enum.each(entries, fn entry ->
-      result = check(entry.schema, entry.id, proposed)
+      result = safe_check(entry, proposed)
       if delay > 0, do: Process.sleep(delay)
 
       if updated = update(run.prefix, run.id, &record(&1, entry.key, result)),
@@ -154,6 +154,14 @@ defmodule Brando.Content.Definitions.Release.Verify do
 
     if finished = update(run.prefix, run.id, &%{&1 | status: :done, finished_at: DateTime.utc_now(), pid: nil}),
       do: broadcast(finished)
+  end
+
+  # Whatever goes wrong with one entry is its verdict, not the end of the run
+  defp safe_check(entry, proposed) do
+    check(entry.schema, entry.id, proposed)
+  rescue
+    error ->
+      %{verdict: :failed, changed: 0, failures: [%{index: 0, uid: nil, module: nil, message: Exception.message(error)}]}
   end
 
   defp record(%{status: :running} = run, key, result),
@@ -229,17 +237,30 @@ defmodule Brando.Content.Definitions.Release.Verify do
     }
 
     if uses?(block, proposed.changed),
-      do: compare(base, Villain.render_block(block, entry), render_proposed(block, entry, proposed)),
+      do: compare(base, render_stored(block, entry), render_proposed(block, entry, proposed)),
       else: Map.put(base, :state, :untouched)
   end
 
-  defp compare(base, before, {:ok, html}) do
+  # A block that fails with the stored definitions and renders with the
+  # release's is a change: the release fixes it
+  defp compare(base, {:ok, before}, {:ok, html}) do
     state = if normalize(html) == normalize(before), do: :same, else: :changed
     Map.put(%{base | before: before, after: html}, :state, state)
   end
 
+  defp compare(base, {:error, _}, {:ok, html}), do: Map.put(%{base | before: "", after: html}, :state, :changed)
+
   defp compare(base, before, {:error, message}),
-    do: Map.put(%{base | before: before, message: message}, :state, :failed)
+    do: Map.put(%{base | before: elem_ok(before), message: message}, :state, :failed)
+
+  defp elem_ok({:ok, html}), do: html
+  defp elem_ok(_), do: nil
+
+  defp render_stored(block, entry) do
+    {:ok, Villain.render_block(block, entry)}
+  rescue
+    error -> {:error, Exception.message(error)}
+  end
 
   # The one place a block's failure is caught: it is the block's verdict,
   # not the run's
@@ -263,9 +284,9 @@ defmodule Brando.Content.Definitions.Release.Verify do
     end
   end
 
-  # Whitespace between tags is not a difference anyone sees
+  # Only around the block: whitespace between tags can show on the page
   defp normalize(nil), do: ""
-  defp normalize(html), do: html |> String.replace(~r/>\s+</, "><") |> String.trim()
+  defp normalize(html), do: String.trim(html)
 
   defp module_names(%{modules: modules}), do: Map.new(modules, &{&1.id, label(&1)})
 
