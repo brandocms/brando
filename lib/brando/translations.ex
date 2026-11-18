@@ -31,6 +31,7 @@ defmodule Brando.Translations do
   alias Brando.Translations.Group
   alias Brando.Translations.Member
   alias Brando.Translations.PendingVersion
+  alias Brando.Translations.SharedGalleries
   alias Brando.Translations.Sync
   alias Brando.Translations.WorkItem
   alias Brando.Utils
@@ -278,8 +279,13 @@ defmodule Brando.Translations do
   Its content, pending edits and alternate link stay; structure and shared
   fields become editable. Pending versions are marked superseded. The source
   cannot be made independent — transfer the role first.
+
+  A synchronized target shows the source's gallery records (gallery variables
+  and assets point at them). Each one the target shares with another version
+  of its group is copied for it (`split_shared_galleries/3`), so its galleries
+  are its own from then on.
   """
-  def make_independent(schema, entry_id, _actor) do
+  def make_independent(schema, entry_id, actor) do
     case get_member(schema, entry_id) do
       nil ->
         {:error, :not_enrolled}
@@ -291,13 +297,92 @@ defmodule Brando.Translations do
         {:ok, member}
 
       member ->
-        Repo.transaction(fn ->
-          supersede_pending(member.id)
+        Repo.transaction(fn -> detach(schema, member, actor) end)
+    end
+  end
 
-          member
-          |> Changeset.change(synchronized: false, detached_at: now())
-          |> Repo.update!()
-        end)
+  defp detach(schema, member, actor) do
+    supersede_pending(member.id)
+    split_or_rollback(schema, member, actor)
+
+    member
+    |> Changeset.change(synchronized: false, detached_at: now())
+    |> Repo.update!()
+  end
+
+  defp split_or_rollback(schema, member, actor) do
+    case split_member_galleries(schema, member, actor) do
+      {:ok, copies} -> copies
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  @doc """
+  The rows of an entry that point at a gallery record another version of its
+  group points at too, as `Brando.Translations.SharedGalleries` holders. `[]`
+  for an entry outside a group.
+
+  While a translation follows the source that is expected. An independent one
+  that shares a gallery changes the other version when its gallery is edited:
+  `split_shared_galleries/3` repairs it.
+  """
+  def shared_galleries(schema, entry_id) do
+    with %Member{} = member <- get_member(schema, entry_id),
+         {:ok, entry, others} <- load_group_entries(schema, member) do
+      SharedGalleries.shared(entry, others)
+    else
+      _ -> []
+    end
+  end
+
+  @doc """
+  Gives an entry its own copy of every gallery record it shares with another
+  version of its group (`shared_galleries/2`). `make_independent/3` does this;
+  call it to repair a translation made independent before it did.
+
+  Returns `{:ok, copies}`, each holder (`Brando.Translations.SharedGalleries`)
+  with its new gallery, or `{:error, :not_enrolled}`.
+  """
+  def split_shared_galleries(schema, entry_id, actor) do
+    case get_member(schema, entry_id) do
+      %Member{} = member -> Repo.transaction(fn -> split_or_rollback(schema, member, actor) end)
+      nil -> {:error, :not_enrolled}
+    end
+  end
+
+  @doc """
+  `split_shared_galleries/3` for a member of a group, as `:system`: after an
+  independent translation is saved (`Brando.Worker.TranslationSync`), so a
+  save that wrote another version's gallery back (a form opened before Make
+  independent, a restored revision) gets its own copy again.
+  """
+  def split_member_shared_galleries(member_id) do
+    with %Member{role: :target, synchronized: false} = member <- Repo.get(Member, member_id),
+         schema when not is_nil(schema) <- Brando.Blueprint.from_name(member.entry_type) do
+      Repo.transaction(fn -> split_or_rollback(schema, member, :system) end)
+    else
+      _ -> {:ok, []}
+    end
+  end
+
+  defp split_member_galleries(schema, member, actor) do
+    case load_group_entries(schema, member) do
+      {:ok, entry, others} -> SharedGalleries.split(entry, others, actor)
+      {:error, _} -> {:ok, []}
+    end
+  end
+
+  # The member's entry and the entries of the other members of its group.
+  # Deleted versions count too: restored, they would share again.
+  defp load_group_entries(schema, member) do
+    with {:ok, entry} <- load_entry(schema, member.entry_id, with_deleted: true) do
+      others =
+        for %Member{entry_id: id} <- list_members(member.group_id),
+            id != member.entry_id,
+            {:ok, other} <- [load_entry(schema, id, with_deleted: true)],
+            do: other
+
+      {:ok, entry, others}
     end
   end
 
@@ -358,6 +443,21 @@ defmodule Brando.Translations do
   # saved, so applying it later keeps the new text.
   defp member_saved(%Member{role: :target, synchronized: true} = member, opts) do
     if Keyword.get(opts, :resync, true), do: enqueue_resync(member), else: :ok
+  end
+
+  # An independent translation's save may write a gallery another version
+  # uses (a form opened before Make independent, a restored revision): it
+  # gets its own copy again.
+  # One waiting split per translation: saves in a row queue one. Without
+  # tenancy the nil prefix gives the key a value to compare.
+  defp member_saved(%Member{role: :target, synchronized: false, id: member_id}, _opts) do
+    %{"split_galleries" => member_id}
+    |> Brando.Tenant.Job.attach()
+    |> Map.put_new("tenant_prefix", nil)
+    |> Brando.Worker.TranslationSync.new(
+      unique: [period: :infinity, keys: [:split_galleries, :tenant_prefix], states: [:available, :scheduled]]
+    )
+    |> Oban.insert()
   end
 
   defp member_saved(_member, _opts), do: :ok

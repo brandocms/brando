@@ -6994,9 +6994,23 @@ defmodule BrandoAdmin.Components.Form do
     %{schema: schema, current_user: user, entry: entry} = socket.assigns
 
     with :ok <- Brando.Authorization.Boundary.authorize(user, :update, entry),
+         # Copied only when it follows the source now
+         shared =
+           if(Translation.locked?(socket.assigns.translation),
+             do: Brando.Translations.shared_galleries(schema, entry.id),
+             else: []
+           ),
          {:ok, _member} <- Brando.Translations.make_independent(schema, entry.id, user) do
       BrandoAdmin.LiveView.Listing.update_list_entries(schema)
       send(self(), {:toast, gettext("This translation is now independent.")})
+
+      # Its galleries are copies now (`make_independent/3`). Gallery variables
+      # take theirs in the open form (`RenderVar`); a gallery block still
+      # holds the source's until the form is opened again.
+      if Enum.any?(shared, &match?({Brando.Content.Ref, _, _, _}, &1)),
+        do:
+          send(self(), {:toast, gettext("Open the translation again before you change the media in its gallery blocks.")})
+
       # The form keeps its unsaved changes; only the translation state changes.
       {:noreply, Translation.assign_state(socket)}
     else

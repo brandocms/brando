@@ -105,14 +105,20 @@ defmodule Brando.Galleries do
 
   @doc """
   Whether anything stored uses the gallery: a block var or ref, or an
-  entry's gallery field.
+  entry's gallery field. `except: {Brando.Content.Var, id}` (or a ref) leaves
+  that row out.
   """
-  def gallery_in_use?(gallery_id) do
-    used_by?(Brando.Content.Var, gallery_id) or used_by?(Brando.Content.Ref, gallery_id) or
+  def gallery_in_use?(gallery_id, opts \\ []) do
+    except = Keyword.get(opts, :except)
+
+    used_by?(Brando.Content.Var, gallery_id, except) or used_by?(Brando.Content.Ref, gallery_id, except) or
       list_gallery_asset_usage(gallery_id) != %{}
   end
 
-  defp used_by?(schema, gallery_id),
+  defp used_by?(schema, gallery_id, {schema, id}) when not is_nil(id),
+    do: Brando.Repo.one(from(s in schema, where: s.gallery_id == ^gallery_id and s.id != ^id, select: 1, limit: 1)) == 1
+
+  defp used_by?(schema, gallery_id, _except),
     do: Brando.Repo.one(from(s in schema, where: s.gallery_id == ^gallery_id, select: 1, limit: 1)) == 1
 
   @gallery_preloads [gallery_objects: [:image, video: [:thumbnail]]]
