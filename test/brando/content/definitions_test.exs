@@ -214,6 +214,18 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
   end
 
+  test "instructions moved to another language are a change", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    with = &String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions #{&1}))
+    File.write!(Path.join(c.path, "hero.exs"), with.(~s(%{"en" => "Pick one"})))
+    assert {:ok, bundle} = Definitions.read(c.path)
+    apply_bundle!(bundle, c.user)
+
+    File.write!(Path.join(c.path, "hero.exs"), with.(~s(%{"no" => "Pick one"})))
+    assert {:ok, moved} = Definitions.read(c.path)
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(moved, c.user)
+  end
+
   # Every copy of an empty link opens on the default tab, so the module var's
   # own link type there is no part of the definition
   test "an empty link left on the other tab exports and reimports unchanged", c do

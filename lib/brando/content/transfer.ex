@@ -1005,11 +1005,17 @@ defmodule Brando.Content.Transfer do
 
   @doc """
   Whether `entry` still has `fingerprint`, which `entry_fingerprint/1` may have
-  taken before it left a page's `breadcrumbs` out.
+  taken before it left a page's `breadcrumbs` out, or before brando_234 made
+  var instructions a language map.
   """
   def entry_fingerprint?(entry, fingerprint) do
     snapshot = Params.snapshot(entry)
-    fingerprint in [Value.digest(EntryCodec.without_derived(snapshot, entry)), Value.digest(snapshot)]
+
+    fingerprint in for(
+      snapshot <- [EntryCodec.without_derived(snapshot, entry), snapshot],
+      snapshot <- [snapshot, Contracts.with_plain_instructions(snapshot)],
+      do: Value.digest(snapshot)
+    )
   end
 
   defp recovery_bindings!(blocks, contracts, actor) do
