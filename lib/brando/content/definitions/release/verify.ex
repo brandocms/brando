@@ -243,31 +243,38 @@ defmodule Brando.Content.Definitions.Release.Verify do
     }
 
     if uses?(block, proposed.changed),
-      do: compare(base, render_stored(block, entry), render_proposed(block, entry, proposed)),
+      do: compare(base, render_stored(block, entry), render_proposed(block, entry, proposed), names),
       else: Map.put(base, :state, :untouched)
   end
 
   # A block that fails with the stored definitions and renders with the
   # release's is a change: the release fixes it
-  defp compare(base, {:ok, before}, {:ok, html}) do
+  defp compare(base, {:ok, before}, {:ok, html}, _names) do
     state = if normalize(html) == normalize(before), do: :same, else: :changed
     Map.put(%{base | before: before, after: html}, :state, state)
   end
 
-  defp compare(base, {:error, _}, {:ok, html}), do: Map.put(%{base | before: "", after: html}, :state, :changed)
+  defp compare(base, {:error, _}, {:ok, html}, _names), do: Map.put(%{base | before: "", after: html}, :state, :changed)
 
-  defp compare(base, before, {:error, failure}) do
-    base = %{base | before: elem_ok(before), message: failure_message(failure)}
-    base = if failure && failure.module_name, do: %{base | module: module_label(failure, base.module)}, else: base
+  defp compare(base, before, {:error, failure}, names) do
+    base = %{
+      base
+      | before: elem_ok(before),
+        message: failure_message(failure),
+        module: module_label(failure, base.module, names)
+    }
+
     Map.put(base, :state, :failed)
   end
 
   defp failure_message(%RenderFailure{} = failure), do: RenderFailure.describe(failure)
   defp failure_message(_), do: "the block failed to render"
 
-  # The failing block may be a child of the root: name its module then
-  defp module_label(%RenderFailure{module_name: name}, root) when is_binary(name), do: root || name
-  defp module_label(_failure, root), do: root
+  # The failing block may be a child of the root: its module is the one named
+  defp module_label(%RenderFailure{module_id: id, module_name: name}, root, names) when not is_nil(id),
+    do: names[id] || name || root
+
+  defp module_label(_failure, root, _names), do: root
 
   defp elem_ok({:ok, html}), do: html
   defp elem_ok(_), do: nil
