@@ -51,15 +51,17 @@
   function watchLayout() {
     if (observer || !page.body || !window.ResizeObserver) return
     let frame = null
-    observer = new ResizeObserver(() => {
+    // At most once a frame, however many images load or resize at once
+    const later = () => {
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = null
         highlight(false)
       })
-    })
+    }
+    observer = new ResizeObserver(later)
     observer.observe(page.body)
-    page.addEventListener('load', () => highlight(false), true)
+    page.addEventListener('load', later, true)
   }
 
   function highlight(scroll) {
@@ -75,12 +77,14 @@
 
     rects.forEach(({ rect, mark }) => {
       const colors = mark ? MARK_COLORS[mark.kind] || MARK_COLORS.changed : null
+      // Kept inside the viewport, so a full-width block shows its sides too.
+      // A block wholly beside it (a carousel's hidden slide) gets no outline.
+      const left = Math.max(rect.left + window.scrollX - 6, window.scrollX + LINE)
+      const right = Math.min(rect.right + window.scrollX + 6, window.scrollX + page.documentElement.clientWidth - LINE)
+      if (right <= left) return
       const box = page.createElement('div')
       box.className = OVERLAY_CLASS
       box.setAttribute('aria-hidden', 'true')
-      // Kept inside the viewport, so a full-width block shows its sides too
-      const left = Math.max(rect.left + window.scrollX - 6, window.scrollX + LINE)
-      const right = Math.min(rect.right + window.scrollX + 6, window.scrollX + page.documentElement.clientWidth - LINE)
       const outline = { top: rect.top + window.scrollY - 6, left, width: Math.max(right - left, 0), height: rect.height + 12 }
       Object.assign(box.style, {
         position: 'absolute',
@@ -121,7 +125,8 @@
           zIndex: '2147483647',
         })
         page.body.appendChild(label)
-        const spot = placeLabel(outline, label.offsetWidth, label.offsetHeight, taken)
+        const size = label.getBoundingClientRect()
+        const spot = placeLabel(outline, size.width, size.height, taken)
         taken.push(spot)
         Object.assign(label.style, { top: `${spot.top}px`, left: `${spot.left}px`, visibility: '' })
       }

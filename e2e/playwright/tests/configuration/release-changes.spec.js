@@ -55,7 +55,8 @@ test('reviews, verifies, applies and reverts a release’s module definitions', 
   const label = after.locator('.brando-proposal-highlight-label')
   await expect(label).toHaveCount(1)
   const afterFrame = await (await page.locator('#release-preview-after').elementHandle()).contentFrame()
-  const covered = await afterFrame.evaluate(() => {
+  // Polled: the labels are placed again a frame after the layout settles
+  const coveredText = () => afterFrame.evaluate(() => {
     const label = document.querySelector('.brando-proposal-highlight-label').getBoundingClientRect()
     const range = document.createRange()
     const lines = [...document.querySelectorAll('article h1, article h2, article .paragraph')].flatMap(text => {
@@ -64,10 +65,9 @@ test('reviews, verifies, applies and reverts a release’s module definitions', 
     })
     const apart = ({ line }) =>
       label.right <= line.left || line.right <= label.left || label.bottom <= line.top || line.bottom <= label.top
-    return { lines: lines.length, covered: lines.filter(line => !apart(line)).map(line => line.text) }
+    return { lines: lines.length > 2, covered: lines.filter(line => !apart(line)).map(line => line.text) }
   })
-  expect(covered.lines).toBeGreaterThan(2)
-  expect(covered.covered).toEqual([])
+  await expect.poll(coveredText).toEqual({ lines: true, covered: [] })
 
   await page.getByTestId('release-marks-toggle').click()
   await expect(after.locator('.brando-proposal-highlight')).toHaveCount(0)
