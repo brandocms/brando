@@ -5,9 +5,12 @@ defmodule Brando.Translations.ComputePendingTest do
   alias Brando.Content.Ref
   alias Brando.Content.TableRow
   alias Brando.Content.Var
+  alias Brando.Galleries.Gallery
+  alias Brando.Galleries.GalleryObject
   alias Brando.SyncTest.Article
   alias Brando.SyncTest.ArticleItem
   alias Brando.Translations.Sync
+  alias Brando.Villain.Blocks.GalleryBlock
   alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain.Blocks.TextBlock
 
@@ -575,6 +578,91 @@ defmodule Brando.Translations.ComputePendingTest do
       assert var.link_type == :url
       assert var.value == "/en/about"
       assert result.work_items == []
+    end
+  end
+
+  describe "gallery refs" do
+    defp gallery_ref(name, gallery) do
+      %Ref{
+        name: name,
+        uid: uid(),
+        gallery_id: gallery && gallery.id,
+        gallery: gallery,
+        data: %GalleryBlock{type: "gallery", data: %GalleryBlock.Data{}}
+      }
+    end
+
+    defp gallery(id, image_ids) do
+      %Gallery{
+        id: id,
+        config_target: "default",
+        gallery_objects:
+          for {image_id, index} <- Enum.with_index(image_ids) do
+            %GalleryObject{
+              id: id * 100 + index,
+              gallery_id: id,
+              image_id: image_id,
+              sequence: index,
+              config: %{"a" => index}
+            }
+          end
+      }
+    end
+
+    defp payload_ref(result, name) do
+      result.payload.entry_blocks |> Enum.flat_map(& &1.block.refs) |> Enum.find(&(&1.name == name))
+    end
+
+    # Unsaved: the translation's save inserts it as the ref's own
+    defp assert_unsaved_copy(ref, of) do
+      assert ref.gallery_id == nil
+      assert ref.gallery.id == nil
+      assert ref.gallery.config_target == of.config_target
+
+      assert Enum.map(ref.gallery.gallery_objects, &{&1.id, &1.gallery_id, &1.image_id, &1.sequence, &1.config}) ==
+               Enum.map(of.gallery_objects, &{nil, nil, &1.image_id, &1.sequence, &1.config})
+    end
+
+    test "a ref the source adds to a block the translation has comes with a copy of its gallery" do
+      slides = gallery(1, [10, 11])
+      source = article(:no, blocks: [block("b1", id: 1, refs: [text_ref("text", "Hei"), gallery_ref("slides", slides)])])
+      target = article(:en, id: 2, blocks: [block("b1", id: 2, refs: [text_ref("text", "Hi")])])
+
+      result = compute(source, target, baseline(source))
+      assert_unsaved_copy(payload_ref(result, "slides"), slides)
+    end
+
+    test "a ref of a block the source adds comes with a copy of its gallery" do
+      slides = gallery(1, [10])
+      source = article(:no, blocks: [block("b1", id: 1, refs: [gallery_ref("slides", slides)])])
+      target = article(:en, id: 2)
+
+      result = compute(source, target, baseline(source))
+      assert_unsaved_copy(payload_ref(result, "slides"), slides)
+    end
+
+    test "a ref with a gallery of its own keeps it, with the source's media" do
+      slides = gallery(1, [10, 11])
+      own = gallery(2, [10])
+      source = article(:no, blocks: [block("b1", id: 1, refs: [gallery_ref("slides", slides)])])
+      target = article(:en, id: 2, blocks: [block("b1", id: 2, refs: [gallery_ref("slides", own)])])
+
+      ref = payload_ref(compute(source, target, baseline(source)), "slides")
+      assert ref.gallery_id == own.id
+      assert ref.gallery.id == own.id
+      assert Enum.map(ref.gallery.gallery_objects, &{&1.gallery_id, &1.image_id}) == [{2, 10}, {2, 11}]
+    end
+
+    test "a stored payload's new ref with the source's gallery takes a copy" do
+      slides = gallery(1, [10, 11])
+      payload = article(:en, id: 2, blocks: [block("b1", refs: [gallery_ref("slides", slides)])])
+
+      [%{block: %{refs: [ref]}}] = Sync.own_new_ref_galleries(payload).entry_blocks
+      assert_unsaved_copy(ref, slides)
+
+      # A saved ref is the translation's own already
+      saved = article(:en, id: 2, blocks: [block("b1", refs: [%{gallery_ref("slides", slides) | id: 5}])])
+      assert Sync.own_new_ref_galleries(saved) == saved
     end
   end
 end
