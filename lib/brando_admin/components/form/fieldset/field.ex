@@ -31,6 +31,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       |> assign_new(:form_cid, fn -> nil end)
       |> assign_new(:form_id, fn -> nil end)
       |> assign_new(:read_generation, fn -> nil end)
+      |> assign_new(:source_locked, fn -> false end)
 
     ~H"""
     <%= unless @hidden do %>
@@ -48,6 +49,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
             form_cid={@form_cid}
             form_id={@form_id}
             read_generation={@read_generation}
+            source_locked={@source_locked}
             opts={[]}
           />
         <% else %>

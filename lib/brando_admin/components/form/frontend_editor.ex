@@ -224,6 +224,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
               form_cid={@myself}
               form_id={@id}
               read_generation={@read_generation}
+              source_locked={Translation.locked?(@translation)}
             />
           </.form>
 

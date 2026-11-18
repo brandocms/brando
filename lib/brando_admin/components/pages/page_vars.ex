@@ -31,6 +31,9 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     {:ok,
      socket
      |> assign(assigns)
+     # A synchronized translation's (`Fieldset.Field`): media in its
+     # variables follows the source (`RenderVar`)
+     |> assign_new(:source_locked, fn -> false end)
      |> assign(:row_keys, SubformHelpers.row_keys(assigns.field.form.source, assigns.subform.name))}
   end
 
@@ -82,7 +85,14 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
                   </button>
                 </div>
 
-                <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} edit />
+                <.live_component
+                  module={RenderVar}
+                  id={"#{@field.id}-render-var-#{var.index}"}
+                  var={var}
+                  render={:all}
+                  source_locked={@source_locked}
+                  edit
+                />
               </div>
             </Primitives.inputs_for_poly>
           </div>
@@ -98,7 +108,13 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
         <% else %>
           <%= unless Enum.empty?(inputs_for_poly(@field, [])) do %>
             <Primitives.inputs_for_poly :let={var} field={@field}>
-              <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} />
+              <.live_component
+                module={RenderVar}
+                id={"#{@field.id}-render-var-#{var.index}"}
+                var={var}
+                render={:all}
+                source_locked={@source_locked}
+              />
             </Primitives.inputs_for_poly>
           <% end %>
         <% end %>

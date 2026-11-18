@@ -395,8 +395,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign_new(:compact, fn -> true end)
     # A locked `:link` input (`Input.Link`): its link is shown, not edited
     |> assign_new(:locked, fn -> false end)
-    # A synchronized translation's block variable (set by `Block.Render`):
-    # its media follows the source, so its gallery is not written here
+    # A synchronized translation's variable, in a block (`Block.Render`) or
+    # the entry's own (`Fieldset.Field`): its media follows the source, so
+    # its gallery is not written here
     |> assign_new(:source_locked, fn -> false end)
     |> assign(:value_id, value)
     |> assign(:image_id, if(type == :image, do: value))
@@ -2012,10 +2013,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp persist_gallery(socket, objects, opts \\ [])
 
   # In a synchronized translation the variable holds the source's gallery
-  # (media in blocks follows the source, guides/i18n.md), and a write from
-  # here would reach the source and every translation without passing the
-  # save's check (`Brando.Translations.check_target_save/4`). The controls
-  # are hidden there; a stale or crafted event is refused.
+  # (`Brando.Translations.Sync` gives it the source's `gallery_id`), and a
+  # write from here would reach the source and every translation without
+  # passing the save's check (`Brando.Translations.check_target_save/4`).
   defp persist_gallery(%{assigns: %{source_locked: true}} = socket, _objects, _opts),
     do: refuse_gallery_change(socket, "gallery write")
 

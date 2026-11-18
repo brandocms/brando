@@ -142,22 +142,29 @@ defmodule BrandoAdmin.LockedGalleryVarTest do
     view
   end
 
+  defp var_cid(view), do: cid_of(view, ~s([id$="-gallery-media"]))
+
   # The gallery variable's component, as its own events reach it
-  defp var_component(view), do: with_target(view, cid_of(view, ~s([id$="-gallery-media"])))
+  defp var_component(view), do: with_target(view, var_cid(view))
 
   defp var_assigns(view) do
     {:ok, components} = Phoenix.LiveView.Debug.live_components(view.pid)
     Enum.find(components, &(&1.module == RenderVar and &1.assigns[:type] == :gallery)).assigns
   end
 
-  defp var_component_id(view), do: var_assigns(view).id
-
-  # A delivery to the component (an upload, or a video from the picker), and
-  # the render that follows it
+  # A delivery to the component (an upload, or a video from the picker, which
+  # addresses it by its CID), and the render that follows it
   defp send_var(view, message) do
-    Phoenix.LiveView.send_update(view.pid, RenderVar, [id: var_component_id(view)] ++ message)
+    Phoenix.LiveView.send_update(view.pid, %Phoenix.LiveComponent.CID{cid: var_cid(view)}, Map.new(message))
     _ = :sys.get_state(view.pid)
     render(view)
+  end
+
+  # Refused as a synchronized translation's: not for want of a gallery grant,
+  # which says so with another notice (`RenderVar.persist_gallery/3`)
+  defp assert_refused do
+    notice = Gettext.dgettext(Brando.Gettext, "default", "Media follows the source; choose it there.")
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: ^notice}}, 2_000
   end
 
   for placement <- @placements do
@@ -184,19 +191,21 @@ defmodule BrandoAdmin.LockedGalleryVarTest do
       test "choosing an image leaves the source's gallery as it was", c do
         before = media(c.gallery)
         c.view |> var_component() |> render_click("select_image", %{"id" => to_string(c.third.id)})
-        assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+        assert_refused()
         assert media(c.gallery) == before
       end
 
       test "choosing a video leaves the source's gallery as it was", c do
         before = media(c.gallery)
         c.view |> var_component() |> render_click("select_video", %{"id" => to_string(c.video.id)})
+        assert_refused()
         assert media(c.gallery) == before
       end
 
       test "choosing an image again, to take it out, leaves the source's gallery as it was", c do
         before = media(c.gallery)
         c.view |> var_component() |> render_click("select_image", %{"id" => to_string(c.first.id)})
+        assert_refused()
         assert media(c.gallery) == before
       end
 
@@ -204,6 +213,7 @@ defmodule BrandoAdmin.LockedGalleryVarTest do
         before = media(c.gallery)
         [object | _] = Repo.preload(c.gallery, :gallery_objects, force: true).gallery_objects
         c.view |> var_component() |> render_click("remove_gallery_object", %{"id" => to_string(object.id)})
+        assert_refused()
         assert media(c.gallery) == before
       end
 
@@ -212,7 +222,10 @@ defmodule BrandoAdmin.LockedGalleryVarTest do
         count = Repo.aggregate(Gallery, :count)
         component = var_component(c.view)
         render_click(component, "reset_gallery", %{})
+        assert_refused()
+        assert var_assigns(c.view).gallery_id == c.gallery.id
         render_click(component, "select_image", %{"id" => to_string(c.third.id)})
+        assert_refused()
         assert media(c.gallery) == before
         assert Repo.aggregate(Gallery, :count) == count
       end
@@ -220,13 +233,16 @@ defmodule BrandoAdmin.LockedGalleryVarTest do
       test "an upload delivered to the variable leaves the source's gallery as it was", c do
         before = media(c.gallery)
         send_var(c.view, event: "upload_complete", asset_type: :image, asset: c.third, expected_asset_id: nil)
+        assert_refused()
         assert media(c.gallery) == before
       end
 
       test "a video handed over by the picker leaves the source's gallery as it was", c do
         before = media(c.gallery)
         send_var(c.view, event: "select_video", id: c.video.id)
+        assert_refused()
         send_var(c.view, event: "video_created_from_url", video_data: %{id: c.video.id})
+        assert_refused()
         assert media(c.gallery) == before
       end
 
@@ -258,6 +274,16 @@ defmodule BrandoAdmin.LockedGalleryVarTest do
       test "an upload delivered to the variable is added to the gallery", c do
         send_var(c.view, event: "upload_complete", asset_type: :image, asset: c.third, expected_asset_id: nil)
         assert {c.third.id, nil} in media(c.gallery)
+      end
+
+      test "choosing a video adds it to the gallery", c do
+        c.view |> var_component() |> render_click("select_video", %{"id" => to_string(c.video.id)})
+        assert {nil, c.video.id} in media(c.gallery)
+      end
+
+      test "a video handed over by the picker is added to the gallery", c do
+        send_var(c.view, event: "video_created_from_url", video_data: %{id: c.video.id})
+        assert {nil, c.video.id} in media(c.gallery)
       end
     end
   end

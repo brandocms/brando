@@ -30,6 +30,9 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
     {:ok,
      socket
      |> assign(assigns)
+     # A synchronized translation's (`Fieldset.Field`): media in its
+     # variables follows the source (`RenderVar`)
+     |> assign_new(:source_locked, fn -> false end)
      |> BrandoAdmin.Utils.prepare_subform_component()
      |> assign(:empty_subform, entries == [])
      |> assign(:count, length(entries))}
@@ -88,6 +91,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
                   var={var}
                   render={:all}
                   form_id={@form_id}
+                  source_locked={@source_locked}
                   edit
                 />
 
