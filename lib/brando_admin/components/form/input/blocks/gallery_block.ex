@@ -706,26 +706,30 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # one stored without (or a copy of one shared by the placements) gets its
   # object's (`GalleryObjectOverride.object_uid/1`).
   defp initialize_gallery_overrides(gallery_objects, placements, block_data_cs) do
-    existing_overrides =
-      block_data_cs
-      |> Changeset.get_field(:gallery_object_overrides, [])
-      |> GalleryObjectOverride.index()
+    stored = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
+    existing_overrides = GalleryObjectOverride.index(stored)
+    stored_uids = MapSet.new(stored, &GalleryObjectOverride.uid/1)
 
     gallery_objects
     |> Enum.zip(placements)
     |> Enum.flat_map_reduce(MapSet.new(), fn
-      {obj, {object_type, object_id_str, placement}}, used ->
+      {obj, {object_type, object_id_str, placement}}, claimed ->
         override =
           existing_overrides
           |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
           |> placed_override(object_type, object_id_str, placement)
 
         uid = GalleryObjectOverride.uid(override)
-        uid = if uid in [nil, ""] or MapSet.member?(used, uid), do: GalleryObjectOverride.object_uid(obj), else: uid
-        {[put_uid(override, uid)], MapSet.put(used, uid)}
 
-      {_obj, nil}, used ->
-        {[], used}
+        uid =
+          if uid in [nil, ""] or MapSet.member?(claimed, uid),
+            do: GalleryObjectOverride.unique_uid(obj, MapSet.union(claimed, stored_uids)),
+            else: uid
+
+        {[put_uid(override, uid)], MapSet.put(claimed, uid)}
+
+      {_obj, nil}, claimed ->
+        {[], claimed}
     end)
     |> elem(0)
   end

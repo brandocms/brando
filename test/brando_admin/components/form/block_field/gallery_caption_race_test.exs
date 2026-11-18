@@ -70,12 +70,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
     |> Repo.preload(block: [:vars, :table_rows, :block_identifiers, :children, refs: Ref.preloads()])
   end
 
-  # The op the browser's change of the block's form makes: its params, as
-  # the form submits them, changed by `change`.
+  # The op the browser's change of the block's form makes: the form as it
+  # was rendered, and as it is with `change` made to its params.
   defp form_op(entry_block, user, change) do
-    before = Changeset.change(entry_block)
-    params = before |> Params.snapshot() |> update_in(["block", "refs"], fn [ref] -> [change.(as_form(ref))] end)
-    changeset = Brando.Pages.Page.Blocks.changeset(entry_block, params, user.id)
+    params = entry_block |> Changeset.change() |> Params.snapshot()
+    form = fn change -> update_in(params, ["block", "refs"], fn [ref] -> [change.(as_form(ref))] end) end
+    before = Brando.Pages.Page.Blocks.changeset(entry_block, form.(& &1), user.id)
+    changeset = Brando.Pages.Page.Blocks.changeset(entry_block, form.(change), user.id)
     {:ok, op} = Ops.field_op(before, changeset, entry_block.block.uid)
     op
   end
@@ -134,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
     |> GalleryObjectOverride.placements()
     |> Enum.zip(objects)
     |> Enum.map(fn {{type, id, placement}, object} ->
-      {object.id, GalleryObjectOverride.lookup(index, type, id, placement).title}
+      {object.id, index |> GalleryObjectOverride.lookup(type, id, placement) |> then(&(&1 && &1.title))}
     end)
   end
 
@@ -154,4 +155,46 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
     end
   end
 
+  defp remove_first(ref), do: put_in(ref, ["gallery", "drop_gallery_object_ids"], ["0"])
+
+  for order <- [:remove_first, :caption_first] do
+    test "a caption written for a copy another editor removes goes with it (#{order})", c do
+      rows = rows(c.page)
+      [row] = rows
+
+      remove = form_op(row, c.user, &remove_first/1)
+      caption = form_op(row, c.user, &edit_first_caption/1)
+
+      ops = if unquote(order) == :remove_first, do: [remove, caption], else: [caption, remove]
+      state = Enum.reduce(ops, Ops.from_entry_blocks(rows), &apply!(&2, &1))
+      save(c.page, rows, state, c.user)
+
+      assert captions(c.page) == [{c.second.id, "Second"}]
+    end
+  end
+
+  defp remove_second(ref), do: put_in(ref, ["gallery", "drop_gallery_object_ids"], ["1"])
+
+  # The reorder gives the first copy the second placement; the removal leaves
+  # it the only copy. Saved, its caption has the placement its copy has.
+  #
+  # Arriving after the removal, the reorder brings the removed copy back: it
+  # moved it, which the session's merge of the gallery's objects takes for a
+  # change. That copy's caption went with the removal.
+  for {order, expected} <- [reorder_first: [:first], remove_first: [:second, :first]] do
+    test "a copy left alone while another editor reordered keeps its caption (#{order})", c do
+      rows = rows(c.page)
+      [row] = rows
+
+      reorder = form_op(row, c.user, &reorder/1)
+      remove = form_op(row, c.user, &remove_second/1)
+
+      ops = if unquote(order) == :reorder_first, do: [reorder, remove], else: [remove, reorder]
+      state = Enum.reduce(ops, Ops.from_entry_blocks(rows), &apply!(&2, &1))
+      save(c.page, rows, state, c.user)
+
+      titles = %{first: {c.first.id, "First"}, second: {c.second.id, nil}}
+      assert captions(c.page) == Enum.map(unquote(expected), &titles[&1])
+    end
+  end
 end

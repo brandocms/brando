@@ -144,6 +144,23 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   def object_uid(_object), do: nil
 
   @doc """
+  `object_uid/1` for `object`, made unique among `taken` (a set of uids) by a
+  numbered suffix: an override keeps its uid when its media is replaced, so a
+  media added again afterwards would otherwise get the same one.
+  """
+  def unique_uid(object, taken) do
+    case object_uid(object) do
+      nil ->
+        nil
+
+      base ->
+        [base]
+        |> Stream.concat(Stream.map(Stream.iterate(2, &(&1 + 1)), &"#{base}-#{&1}"))
+        |> Enum.find(&(not MapSet.member?(taken, &1)))
+    end
+  end
+
+  @doc """
   Returns the override's `uid`, given as a struct, a plain map or a changeset.
   """
   def uid(%Ecto.Changeset{} = override), do: Ecto.Changeset.get_field(override, :uid)
@@ -272,6 +289,94 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   end
 
   def follow_order(params), do: params
+
+  @doc """
+  Settles a gallery ref's overrides in its params before they are saved.
+
+  Two editors' changes to one gallery meet in the edit session, which merges
+  each override's fields by its `uid`. A change to an override another editor
+  removed meanwhile arrives without the rest of it: an override without media
+  is dropped. And when one editor reorders a repeated image's copies while
+  another removes one, an override can be left with a placement its copy no
+  longer has. An override whose uid names one of the gallery's objects
+  (`object_uid/1`: the gallery's own, not one copied from another gallery)
+  takes that object's placement.
+  """
+  def settle(%{"data" => %{"data" => %{"gallery_object_overrides" => overrides}}} = params)
+      when is_map(overrides) or is_list(overrides) do
+    overrides = reject_overrides(overrides, &is_nil(media_key(&1)))
+
+    overrides =
+      case final_objects(params["gallery"]) do
+        {:ok, objects} -> place_by_uid(overrides, objects)
+        :error -> overrides
+      end
+
+    put_in(params, ["data", "data", "gallery_object_overrides"], overrides)
+  end
+
+  def settle(params), do: params
+
+  defp reject_overrides(overrides, fun) when is_list(overrides), do: Enum.reject(overrides, fun)
+
+  defp reject_overrides(overrides, fun),
+    do: overrides |> Enum.reject(fn {_index, override} -> fun.(override) end) |> Map.new()
+
+  defp final_objects(%{"gallery_objects" => objects}) when is_list(objects), do: {:ok, objects}
+
+  defp final_objects(%{"gallery_objects" => %{} = objects} = gallery) do
+    with {:ok, indexes} <- form_indexes(objects) do
+      order = form_order(indexes, gallery["sort_gallery_object_ids"], gallery["drop_gallery_object_ids"])
+      {:ok, Enum.map(order, &(&1 && objects[&1]))}
+    end
+  end
+
+  defp final_objects(_gallery), do: :error
+
+  defp place_by_uid(overrides, objects) do
+    keys = objects |> Enum.map(&param_media_key/1) |> placements()
+
+    by_uid =
+      objects
+      |> Enum.zip(keys)
+      |> Enum.flat_map(fn
+        {object, {_type, _id, _placement} = key} -> object |> param_object_uid() |> List.wrap() |> Enum.map(&{&1, key})
+        _ -> []
+      end)
+      |> Map.new()
+
+    place = fn override ->
+      with uid when is_binary(uid) <- uid(override),
+           {type, id, placement} <- Map.get(by_uid, uid),
+           true <- for_media?(override, type, id) do
+        put_param(override, "placement", placement)
+      else
+        _ -> override
+      end
+    end
+
+    if is_list(overrides),
+      do: Enum.map(overrides, place),
+      else: Map.new(overrides, fn {index, override} -> {index, place.(override)} end)
+  end
+
+  defp param_object_uid(%{} = object) do
+    id = object["id"]
+
+    if present_id?(id) do
+      case Integer.parse(to_string(id)) do
+        {id, ""} -> object_uid(%{id: id})
+        _ -> nil
+      end
+    else
+      case param_media_key(object) do
+        {type, id} -> "#{type}-#{id}"
+        nil -> nil
+      end
+    end
+  end
+
+  defp param_object_uid(_object), do: nil
 
   @doc """
   Moves placement overrides from one order of a gallery's objects to another,

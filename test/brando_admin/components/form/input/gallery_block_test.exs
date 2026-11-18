@@ -316,6 +316,18 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert Enum.map(socket.assigns.initialized_overrides, & &1.uid) == ["g#{first.id}", "g#{second.id}"]
     end
 
+    # An override keeps its uid when its media is replaced, so another
+    # override may already hold the uid an object would give.
+    test "an override given a uid gets one no other override holds", ctx do
+      [first, _second] = ctx.repeated.gallery_objects
+      taken = %{placed(ctx.repeated_image, 1, "Second") | uid: "g#{first.id}"}
+
+      socket = update_gallery_block(ctx.repeated, [placed(ctx.repeated_image, 0, "First"), taken])
+      assert Enum.map(socket.assigns.initialized_overrides, & &1.uid) == ["g#{first.id}-2", "g#{first.id}"]
+
+      assert GalleryObjectOverride.unique_uid(%{image_id: 5}, MapSet.new(["image-5", "image-5-2"])) == "image-5-3"
+    end
+
     test "each placement keeps its own caption", ctx do
       overrides = [placed(ctx.repeated_image, 1, "Second"), placed(ctx.repeated_image, 0, "First")]
       socket = update_gallery_block(ctx.repeated, overrides)
