@@ -16,14 +16,22 @@ defmodule BrandoAdmin.Components.Assets.VideoFromURLTest do
                "source" => "youtube",
                "remoteId" => "dQw4w9WgXcQ",
                "url" => "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-             }) == %{
-               type: :youtube,
-               source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-               remote_id: "dQw4w9WgXcQ",
-               width: 1280,
-               height: 720,
-               aspect_ratio: "16:9"
-             }
+             }) ==
+               {:ok,
+                %{
+                  type: :youtube,
+                  source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                  remote_id: "dQw4w9WgXcQ",
+                  width: 1280,
+                  height: 720,
+                  aspect_ratio: "16:9"
+                }}
+    end
+
+    test "an address the hook could not read gives no video" do
+      # `new URL()` throws without a scheme; the hook then sends no provider or id
+      assert VideoFromURL.video_params(%{"width" => 0, "height" => 0, "url" => "www.youtube.com/watch?v=x"}) == :error
+      assert VideoFromURL.video_params(%{}) == :error
     end
 
     test "a Vimeo address takes its id from the URL, not the parser's rest of the path" do
@@ -35,12 +43,12 @@ defmodule BrandoAdmin.Components.Assets.VideoFromURLTest do
         "url" => "https://vimeo.com/76979871/abcdef1234"
       }
 
-      assert %{type: :vimeo, remote_id: "76979871", aspect_ratio: "4:3"} = VideoFromURL.video_params(params)
+      assert {:ok, %{type: :vimeo, remote_id: "76979871", aspect_ratio: "4:3"}} = VideoFromURL.video_params(params)
     end
 
     test "anything else is an external file" do
       params = %{"width" => 0, "height" => 0, "source" => "file", "remoteId" => "x", "url" => "https://a.test/x.m3u8"}
-      assert %{type: :external_file, aspect_ratio: "16:9"} = VideoFromURL.video_params(params)
+      assert {:ok, %{type: :external_file, aspect_ratio: "16:9"}} = VideoFromURL.video_params(params)
     end
   end
 

@@ -159,6 +159,19 @@ defmodule BrandoAdmin.VideoLibraryAddTest do
       refute has_element?(view, @url_modal)
     end
 
+    # The hook sends no provider or id for an address the browser can't parse
+    test "an address the browser couldn't read is refused, and the page stays up", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
+      view |> element(@add_url) |> render_click()
+      view |> element(@parser) |> render_hook("url", %{"width" => 0, "height" => 0, "url" => "www.youtube.com/watch?v=x"})
+      render_async(view)
+
+      assert Process.alive?(view.pid)
+      assert has_element?(view, @url_modal)
+      refute has_element?(view, "#{@url_modal} .video-picker-analyzing:not(.hidden)")
+      assert Repo.aggregate(Video, :count) == 0
+    end
+
     test "is not offered when the default video config takes no URLs", %{conn: conn} do
       put_test_env(Brando.Videos, default_config: %Brando.Type.VideoConfig{allow_external_urls: false})
 
@@ -227,6 +240,29 @@ defmodule BrandoAdmin.VideoLibraryAddTest do
 
       assert Repo.aggregate(Video, :count) == 1
       assert Repo.get!(Video, existing.id).folder_id == elsewhere
+    end
+
+    test "a trashed record of the video comes back in the folder in view", %{conn: conn} do
+      archive = FolderBrowser.folder_id_for("videos/default/archive")
+
+      trashed =
+        Factory.insert(:video,
+          type: :vimeo_account,
+          folder_id: archive,
+          deleted_at: DateTime.utc_now(),
+          meta: %{"provider" => "vimeo", "imported" => true, "vimeo" => %{"video_id" => "11"}}
+        )
+
+      clips = FolderBrowser.folder_id_for("videos/default/clips")
+      {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=#{clips}")
+
+      open_vimeo(view)
+      view |> element(~s(#{@library_modal} [data-remote-id="11"] button), "Add") |> render_click()
+
+      restored = Repo.get!(Video, trashed.id)
+      assert is_nil(restored.deleted_at)
+      assert restored.folder_id == clips
+      assert has_element?(view, "#list-row-#{trashed.id}")
     end
 
     test "closing the dialog closes the library", %{conn: conn} do

@@ -80,6 +80,22 @@ defmodule BrandoAdmin.VideoPickerURLTest do
     refute has_element?(view, ".video-picker-analyzing:not(.hidden)")
   end
 
+  # Without a scheme the browser can't parse the address, and the hook sends
+  # no provider or id. That used to take the whole entry form down.
+  test "an address the hook could not read is refused, and the editor told", %{conn: conn, current_user: user} do
+    {:ok, view, _html} = live_isolated(conn, Host, session: %{"test_pid" => self(), "user" => user})
+    open_picker(view, "#video-field")
+
+    view
+    |> with_target(cid_of(view, "#video-picker"))
+    |> render_hook("url", %{"width" => 0, "height" => 0, "url" => "www.youtube.com/watch?v=x"})
+
+    assert Process.alive?(view.pid)
+    assert Brando.Repo.aggregate(Video, :count) == 0
+    assert_received {:toast, _message}
+    refute has_element?(view, ".video-picker-analyzing:not(.hidden)")
+  end
+
   test "a provider that cannot be reached is asked once, and the video is still created",
        %{conn: conn, current_user: user} do
     test_pid = self()

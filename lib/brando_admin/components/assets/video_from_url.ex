@@ -40,21 +40,29 @@ defmodule BrandoAdmin.Components.Assets.VideoFromURL do
   @doc """
   Looks the pasted video up and creates it once the provider has answered
   (`finish/3`). `params` are the hook's `url` event; `attrs` are stored on
-  the video as well, such as its `config_target` and `folder_id`.
+  the video as well, such as its `config_target` and `folder_id`. An address
+  the hook could not read is refused, and the editor told.
   """
   def start(socket, params, attrs \\ %{}) do
-    video_params = params |> video_params() |> Map.merge(attrs)
-    ref = make_ref()
+    case video_params(params) do
+      {:ok, video_params} ->
+        video_params = Map.merge(video_params, attrs)
+        ref = make_ref()
 
-    socket
-    |> assign(:creating_video, true)
-    |> assign(:url_video_ref, ref)
-    |> start_async(
-      :url_video,
-      Brando.Tenant.capture_context(fn ->
-        {ref, video_params, metadata(video_params.type, video_params.source_url)}
-      end)
-    )
+        socket
+        |> assign(:creating_video, true)
+        |> assign(:url_video_ref, ref)
+        |> start_async(
+          :url_video,
+          Brando.Tenant.capture_context(fn ->
+            {ref, video_params, metadata(video_params.type, video_params.source_url)}
+          end)
+        )
+
+      :error ->
+        send(self(), {:toast, gettext("This address can't be used for a video.")})
+        assign(socket, :creating_video, false)
+    end
   end
 
   @doc "Drops a lookup still running: its answer creates nothing."
@@ -120,20 +128,26 @@ defmodule BrandoAdmin.Components.Assets.VideoFromURL do
 
   @doc """
   The video the hook's `url` event describes: its type, address, the
-  provider's id and its size.
+  provider's id and its size. `:error` when the hook could not read the
+  address: it then sends no provider or id (an address without a scheme,
+  which the browser does not parse).
   """
-  def video_params(%{"width" => width, "height" => height, "source" => source, "remoteId" => remote_id, "url" => url}) do
+  def video_params(%{"width" => width, "height" => height, "source" => source, "remoteId" => remote_id, "url" => url})
+      when is_binary(source) and is_binary(remote_id) and is_binary(url) do
     video_type = video_type(source)
 
-    %{
-      type: video_type,
-      source_url: url,
-      remote_id: remote_id(video_type, url, remote_id),
-      width: width,
-      height: height,
-      aspect_ratio: aspect_ratio(width, height)
-    }
+    {:ok,
+     %{
+       type: video_type,
+       source_url: url,
+       remote_id: remote_id(video_type, url, remote_id),
+       width: width,
+       height: height,
+       aspect_ratio: aspect_ratio(width, height)
+     }}
   end
+
+  def video_params(_params), do: :error
 
   @doc "The video type for the hook's `source`."
   def video_type("vimeo"), do: :vimeo
