@@ -30,7 +30,7 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
     Map.put(c, :path, path)
   end
 
-  defp opts(c, extra \\ []), do: Keyword.merge([path: c.path, version: "2.0.0"], extra)
+  defp opts(c, extra), do: Keyword.merge([path: c.path, version: "2.0.0"], extra)
 
   defp template_path(c), do: Path.join(c.path, "content/text.liquid")
 
