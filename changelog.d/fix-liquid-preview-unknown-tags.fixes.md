@@ -1,0 +1,1 @@
+- The block editor's module preview no longer prints Liquid comments, `case` and `capture` regions, or tags such as `cycle` as text.

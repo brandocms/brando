@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
   use ExUnit.Case, async: true
 
+  alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
 
   @regions [
@@ -120,13 +121,35 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
       opaque = "{%- #{unquote(name)} -%}{% endif %}{% if fake %}an unmatched ' quote{% end#{unquote(name)} %}"
 
       assert LiquidPreview.strip_logic("{% if a %}<div>" <> opaque <> "</div>{% endif %}kept") == {:ok, "kept"}
-      assert LiquidPreview.strip_logic(opaque <> "{% if a %}hidden{% endif %}") == {:ok, opaque}
+      assert {:ok, _} = LiquidPreview.strip_logic(opaque <> "{% if a %}hidden{% endif %}")
     end
   end
 
-  test "inline comments may contain unmatched quotes and opening tag text" do
-    code = ~S({% # don't treat {% if fake as an opener %}<p>kept</p>)
-    assert LiquidPreview.strip_logic(code) == {:ok, code}
+  test "drops a comment with its body, whatever Liquid the body holds" do
+    code = """
+    <p>before</p>{% comment %}
+      Which image drops: "auto" keeps the layout's own.
+      {% if a %}{% case b %}{% when 1 %}{{ c }}{% ref refs.d %}{% picture e {} %}
+      {% endcomment %}<p>after</p>
+    """
+
+    assert LiquidPreview.strip_logic(code) == {:ok, "<p>before</p><p>after</p>\n"}
+    assert LiquidPreview.strip_logic("a{%- comment -%}{% endif %} ' {%- endcomment -%}b") == {:ok, "ab"}
+  end
+
+  test "drops inline comments, which may contain unmatched quotes and opening tag text" do
+    code = ~S({% # don't treat {% if fake as an opener %}<p>kept</p>{%- # trimmed -%})
+    assert LiquidPreview.strip_logic(code) == {:ok, "<p>kept</p>"}
+  end
+
+  test "raw keeps its body as printed text, without its tags or Liquid slots" do
+    code = ~S(<p>{%- raw -%}<b>{{ title }}</b> {% ref refs.x %} {% if a %}{%- endraw -%}</p>)
+
+    assert LiquidPreview.strip_logic(code) ==
+             {:ok, "<p><b>&#123;&#123; title }}</b> &#123;% ref refs.x %} &#123;% if a %}</p>"}
+
+    # No ref slot, variable or picture: the body is text the site prints.
+    assert code |> Block.liquid_splits([], nil) |> Enum.all?(&is_binary/1)
   end
 
   test "nested comments and raw regions cannot expose comment contents to the region stack" do
@@ -138,7 +161,162 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
     """
 
     assert LiquidPreview.strip_logic("{% if a %}<div>" <> comment <> "</div>{% endif %}kept") == {:ok, "kept"}
-    assert LiquidPreview.strip_logic(comment) == {:ok, comment}
+    assert LiquidPreview.strip_logic(comment) == {:ok, "\n"}
+  end
+
+  @issue_example """
+  {% comment %}
+    Which image drops: "auto" keeps the layout's own.
+  {% endcomment %}
+  {% assign lowered = "" %}
+  {% case lower %}
+    {% when "first" %}{% assign lowered = "1" %}
+    {% when "second" %}{% assign lowered = "2" %}
+    {% else %}
+      {% case layout %}
+        {% when "pair" %}{% assign lowered = "2" %}
+      {% endcase %}
+  {% endcase %}
+  <article b-tpl="media-row" data-lowered="{{ lowered }}">
+    <div class="inner">{{ content }}</div>
+  </article>
+  """
+
+  test "shows none of the logic in the issue's module template" do
+    assert LiquidPreview.strip_logic(@issue_example) ==
+             {:ok,
+              """
+
+
+
+              <article b-tpl="media-row" data-lowered="{{ lowered }}">
+                <div class="inner">{{ content }}</div>
+              </article>
+              """}
+
+    splits = Block.liquid_splits(@issue_example, [], nil)
+    assert {:content, "content"} in splits
+    refute splits |> Enum.filter(&is_binary/1) |> Enum.join() |> String.contains?(["{%", "comment", "when"])
+  end
+
+  @hidden_regions [
+    {"case", "case layout", "endcase"},
+    {"capture", "capture label", "endcapture"},
+    {"tablerow", "tablerow row in rows cols: 2", "endtablerow"}
+  ]
+
+  for {name, opening, closing} <- @hidden_regions do
+    test "strips #{name} regions with their branches, as it does if" do
+      open = "{%- #{unquote(opening)} -%}"
+      close = "{% #{unquote(closing)} %}"
+
+      code =
+        "<article>{% ref refs.text %}" <>
+          open <>
+          "{% when 'a' %}<div>" <>
+          open <>
+          "<span>{{ hidden }}</span>" <>
+          close <>
+          "</div>{% else %}b" <>
+          close <> "</article>"
+
+      assert LiquidPreview.strip_logic(code) == {:ok, "<article>{% ref refs.text %}</article>"}
+    end
+
+    test "names a ref inside #{name} as one the editor cannot show" do
+      code = "{% ref refs.visible %}{% #{unquote(opening)} %}{% ref refs.hidden %}{% #{unquote(closing)} %}"
+      assert LiquidPreview.stripped_refs(code) == ["hidden"]
+    end
+  end
+
+  test "balances case and if regions nested in each other" do
+    code = """
+    a{% case x %}{% when 1 %}{% if y %}{% case z %}{% when 2 %}{% endcase %}{% else %}{% unless w %}u{% endunless %}{% endif %}{% else %}{% for i in is %}{% case i %}{% endcase %}{% endfor %}{% endcase %}b
+    {% if y %}{% case x %}{% when 1 %}{% if z %}z{% endif %}{% endcase %}{% endif %}c
+    """
+
+    assert LiquidPreview.strip_logic(code) == {:ok, "ab\nc\n"}
+  end
+
+  test "drops tags the preview has no part for, keeping the markup around and between them" do
+    code = """
+    <ul class="{% cycle 'odd', 'even' %}">{%- increment n -%}{% decrement m %}{% echo title %}
+    {% liquid
+      assign x = 1
+      echo x
+    %}{% editable entry.cover %}<li>{% t en: "Hi", no: "Hei" %}</li>{% endeditable %}
+    <a href="{% route_i18n 'en' 'page' { entry.uri } %}">{% render_palette %}</a>{% when 'stray' %}{% else %}{% elsif q %}
+    {% endcomment %}{% endraw %}{% %}</ul>
+    """
+
+    assert LiquidPreview.strip_logic(code) ==
+             {:ok,
+              """
+              <ul class="">
+              <li></li>
+              <a href=""></a>
+              </ul>
+              """}
+  end
+
+  test "keeps every tag the preview renders" do
+    code =
+      ~S(<div>{% ref refs.a %}{% headless_ref refs.b %}{% picture entry.cover { size: 'auto' } %}{{ title }}) <>
+        ~S({% datasource %}x{% enddatasource %}{%- ref refs.c -%}</div>)
+
+    assert LiquidPreview.strip_logic(code) == {:ok, code}
+  end
+
+  test "new regions return the same errors for unclosed and mismatched tags" do
+    assert LiquidPreview.strip_logic("{% case a %}{% when 1 %}x") == {:error, {:unclosed_tag, "case"}}
+    assert LiquidPreview.strip_logic("{% capture a %}x") == {:error, {:unclosed_tag, "capture"}}
+    assert LiquidPreview.strip_logic("x{% endcase %}") == {:error, {:unexpected_end, "endcase"}}
+    assert LiquidPreview.strip_logic("{% endcapture %}") == {:error, {:unexpected_end, "endcapture"}}
+
+    assert LiquidPreview.strip_logic("{% case a %}{% if b %}{% endcase %}{% endif %}") ==
+             {:error, {:mismatched_end, "endif", "endcase"}}
+
+    assert LiquidPreview.strip_logic("{% if b %}{% case a %}{% endif %}") ==
+             {:error, {:mismatched_end, "endcase", "endif"}}
+
+    assert LiquidPreview.strip_logic("{% case a %}{% comment %}{% endcase %}") == {:error, {:unclosed_tag, "comment"}}
+    assert LiquidPreview.strip_logic("{% case a") == {:error, :unterminated_tag}
+    assert LiquidPreview.strip_logic("{% cycle 'a, 'b' %}") == {:error, :unterminated_tag}
+  end
+
+  test "never raises on any arrangement of tags, however malformed" do
+    fragments = [
+      "<p>",
+      "{{ x }}",
+      "{{ x",
+      "{% if a %}",
+      "{% endif %}",
+      "{% case a %}",
+      "{% when 1 %}",
+      "{% else %}",
+      "{% endcase %}",
+      "{% capture c %}",
+      "{% endcapture %}",
+      "{% comment %}",
+      "{% endcomment %}",
+      "{% raw %}",
+      "{% endraw %}",
+      "{% # note %}",
+      "{% cycle 'a' %}",
+      "{% ref refs.r %}",
+      "{% '",
+      "{%",
+      "%}",
+      "}}"
+    ]
+
+    for a <- fragments, b <- fragments, c <- fragments do
+      code = a <> b <> c
+      assert {status, _} = LiquidPreview.strip_logic(code)
+      assert status in [:ok, :error], code
+      assert is_list(LiquidPreview.stripped_refs(code))
+      assert is_list(Block.liquid_splits(code, [], nil))
+    end
   end
 
   test "retains the existing image and attribute cleanup" do

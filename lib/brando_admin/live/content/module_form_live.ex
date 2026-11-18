@@ -706,8 +706,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     |> to_form([])
   end
 
-  # `LiquidPreview.strip_logic/1` removes `{% if %}`, `{% unless %}`, `{% for %}`
-  # and `{% hide %}` regions before the block editor splits module code into
+  # `LiquidPreview.strip_logic/1` removes `{% if %}`, `{% case %}`, `{% for %}`,
+  # `{% hide %}` and other regions before the block editor splits module code into
   # ref slots, so a `{% ref %}` inside one of them never gets an input. The
   # module still saves and the front end still renders it — nothing else would
   # tell the author. This is a lint, not an error: it never blocks saving.
