@@ -67,7 +67,12 @@ defmodule BrandoAdmin.Components.Assets.VideoFromURLTest do
     test "asks the provider's oEmbed endpoint" do
       Req.Test.stub(Brando.OEmbed, fn conn ->
         assert conn.host == "www.youtube.com"
-        Req.Test.json(conn, %{"title" => "Never gonna", "description" => "A classic", "thumbnail_url" => "https://i.test/t.jpg"})
+
+        Req.Test.json(conn, %{
+          "title" => "Never gonna",
+          "description" => "A classic",
+          "thumbnail_url" => "https://i.test/t.jpg"
+        })
       end)
 
       assert VideoFromURL.metadata(:youtube, "https://www.youtube.com/watch?v=dQw4w9WgXcQ") ==

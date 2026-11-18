@@ -123,13 +123,19 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
     end
 
     test "offers Add, Select for a video Brando holds, and the state of one not ready", %{items: items} do
-      html = render_component(&ProviderLibraryPanel.panel/1, id: "p", library: %{@library | items: items, loading?: false})
+      html =
+        render_component(&ProviderLibraryPanel.panel/1, id: "p", library: %{@library | items: items, loading?: false})
 
-      assert [_] = Floki.find(Floki.parse_fragment!(html), ~s([data-remote-id="new"] button[phx-click="add_from_library"]))
+      assert [_] =
+               Floki.find(Floki.parse_fragment!(html), ~s([data-remote-id="new"] button[phx-click="add_from_library"]))
+
       held = html |> Floki.parse_fragment!() |> Floki.find(~s([data-remote-id="held"]))
       assert Floki.text(held) =~ "In library"
       assert Floki.text(Floki.find(held, "button")) =~ "Select"
-      assert html |> Floki.parse_fragment!() |> Floki.find(~s([data-remote-id="encoding"])) |> Floki.text() =~ "Processing"
+
+      assert html |> Floki.parse_fragment!() |> Floki.find(~s([data-remote-id="encoding"])) |> Floki.text() =~
+               "Processing"
+
       assert html =~ "video-picker-library-header"
     end
 

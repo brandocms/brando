@@ -17,7 +17,7 @@ defmodule BrandoAdmin.VideoLibraryAddTest do
   @add_vimeo ~s(button[phx-click="open_library"][phx-value-strategy="vimeo"])
   @url_modal "#video-add-url"
   @library_modal "#video-add-library"
-  @parser "#video-url-parser-video-library"
+  @parser "#video-add-url [phx-hook='Brando.VideoURLParser']"
 
   @url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
   @params %{"width" => 1280, "height" => 720, "source" => "youtube", "remoteId" => "dQw4w9WgXcQ", "url" => @url}
@@ -73,15 +73,19 @@ defmodule BrandoAdmin.VideoLibraryAddTest do
 
   defp root_ids, do: FolderBrowser.root_folder_ids("videos/default")
 
+  defp attribute(view, selector, name) do
+    view |> render() |> Floki.parse_document!() |> Floki.find(selector) |> Floki.attribute(name) |> List.first()
+  end
+
   describe "Add from URL" do
     test "at the root, creates the video with its title in the root's folder", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
       assert has_element?(view, @add_url, "Add from URL")
 
       view |> element(@add_url) |> render_click()
-      assert has_element?(view, "#{@url_modal} #{@parser}[phx-hook='Brando.VideoURLParser']")
       # The hook pushes to its own element, which no component encloses: the LiveView
-      assert has_element?(view, ~s(#{@parser}[data-target="#{@parser}"]))
+      parser_id = attribute(view, @parser, "id")
+      assert attribute(view, @parser, "data-target") == "#" <> parser_id
 
       paste_url(view)
 
@@ -117,6 +121,21 @@ defmodule BrandoAdmin.VideoLibraryAddTest do
       })
 
       assert %{title: "launch reel 01", type: :external_file} = Repo.one!(Video)
+    end
+
+    # The hook reads a file's size in the browser before it pushes, for up to
+    # ten seconds. A push from a dialog closed meanwhile finds no element to
+    # go to: each opening has its own.
+    test "each opening of the dialog has its own URL input", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
+      view |> element(@add_url) |> render_click()
+      first = attribute(view, @parser, "data-target")
+
+      view |> element("#{@url_modal} button.modal-close") |> render_click()
+      view |> element(@add_url) |> render_click()
+
+      refute attribute(view, @parser, "data-target") == first
+      refute has_element?(view, first)
     end
 
     test "closing the dialog before the answer creates nothing", %{conn: conn} do
