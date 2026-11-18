@@ -4,6 +4,8 @@ defmodule Brando.Cache do
   """
   use Brando.Tracing.Decorator
 
+  require Logger
+
   alias Brando.Authorization.Boundary
   alias Brando.Cache.Freshness
   alias Brando.CacheSync
@@ -88,8 +90,8 @@ defmodule Brando.Cache do
 
   A script run in its own VM (`mix run`) clears that VM's caches, and those
   of the nodes its PubSub reaches. A server it cannot reach keeps its own:
-  clear them from Configuration → Utilities → Clear content caches, which
-  runs this on that server, or with `bin/my_app rpc
+  clear them from Configuration → Utilities → Clear caches, which runs
+  `clear_all/0` on that server, or with `bin/my_app rpc
   "Brando.Cache.clear_content()"` on a release. A data migration runs where
   neither cache is running (`Ecto.Migrator` starts the repo alone), and
   there it clears nothing: clear the server's caches once the migration has
@@ -154,26 +156,106 @@ defmodule Brando.Cache do
   defp in_site(context, fun), do: in_context(context, fun)
 
   @doc """
+  What Configuration → Utilities → Clear caches runs: `clear_content/1` for
+  every site and environment (`all_sites: true`), and, with tenancy, the
+  site structure: it reloads the site and environment registry
+  (`Brando.Tenant.Cache`), and on a multi-site install drops every site's
+  shared-library allowlists, which the next read loads again. On every node,
+  as `clear_content/1` does.
+
+  The registry and the allowlists are kept up to date by the screens that
+  change them. A row written outside them (a seed, a data migration, SQL)
+  reaches no node: a domain changed that way, say, is not served until the
+  registry is reloaded.
+
+  It leaves the caches that hold no rows that change outside their screens,
+  or whose loss costs something: the frontend asset sets (uploaded files,
+  refreshed on every node when one is activated), compiled redirect patterns
+  (cached under the rule they compile, whose rules come from the SEO cache
+  this rebuilds), editors' copied blocks, live previews, rate limits and
+  sign-in lockouts.
+
+  An environment whose tables cannot be read (one being created, or whose
+  setup failed) is skipped and logged, and the others are cleared.
+
+  Returns `{:ok, summary}`: `clear_content/1`'s summary with
+  `:site_structure`, what of the site structure it reloaded
+  (`[:registry, :shared_library]`, `[:registry]` on a single-site install,
+  none without tenancy), and `:skipped`, the schema prefixes of the
+  environments it skipped.
+  """
+  @spec clear_all() ::
+          {:ok,
+           %{
+             query_entries: non_neg_integer(),
+             site_caches: [atom()],
+             scope: :all,
+             site_structure: [:registry | :shared_library],
+             skipped: [String.t()]
+           }}
+  @decorate span("brando.cache.clear_all")
+  def clear_all do
+    if caches_running?() do
+      registry = if Tenant.enabled?(), do: [:registry], else: []
+      if registry != [], do: :ok = Tenant.Cache.invalidate()
+
+      {entries, skipped} = Enum.reduce(contexts(), {0, []}, &clear_context/2)
+
+      shared_library = if Tenant.mode() == :multi, do: [:shared_library], else: []
+      if shared_library != [], do: :ok = Brando.Content.SharedLibrary.forget_allowlists()
+
+      {:ok,
+       %{
+         query_entries: entries + Brando.Cache.Query.clear_all(),
+         site_caches: site_cache_names(),
+         scope: :all,
+         site_structure: registry ++ shared_library,
+         skipped: Enum.reverse(skipped)
+       }}
+    else
+      {:ok, %{query_entries: 0, site_caches: [], scope: :all, site_structure: [], skipped: []}}
+    end
+  end
+
+  # An environment whose tables cannot be read (one being created, or whose
+  # setup failed) must not keep the others' caches: its rebuild reads in a
+  # transaction of its own (a savepoint inside one), so the failed read
+  # aborts nothing around it, and it is skipped and logged. Its query cache
+  # is emptied all the same.
+  defp clear_context(context, {entries, skipped}) do
+    case clear_context(context) do
+      {:ok, count} -> {entries + count, skipped}
+      :skipped -> {entries, [context_name(context) | skipped]}
+    end
+  end
+
+  defp clear_context(context) do
+    Brando.Repo.repo().transaction(fn -> in_site(context, &clear_site_content/0) end)
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.Cache] Did not rebuild the site caches of #{context_name(context)}: " <> Exception.message(error)
+      )
+
+      :skipped
+  end
+
+  defp context_name(nil), do: "public"
+  defp context_name(:public), do: "public"
+  defp context_name(prefix), do: prefix
+
+  @doc """
   Empties every cache and reloads the site-wide ones: the query cache (pages,
   fragments, modules, …) and the identity, SEO, globals, palettes and
   navigation caches, on this node. For changes made where no node hears
   about them: a seed, a mix task, SQL. A save on another node reaches this
   one by itself (`Brando.CacheSync`); each node has its own caches, so on
-  several nodes run this on each, or restart them.
+  several nodes run this on each, restart them, or use `clear_all/0`, which
+  reaches every node.
   """
   @decorate span("brando.cache.reload_all")
   def reload_all do
     Cachex.clear(:query)
-    reload_site_caches()
-  end
-
-  @doc """
-  As `reload_all/0`, but empties only the given query cache keys: for a user
-  who may not empty other sites' entries.
-  """
-  @decorate span("brando.cache.reload_all")
-  def reload_all(query_keys) when is_list(query_keys) do
-    Enum.each(query_keys, &Cachex.del(:query, &1))
     reload_site_caches()
   end
 

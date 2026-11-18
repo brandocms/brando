@@ -977,7 +977,7 @@ server's database, or against a copy you then restore to the server
    Configuration → Utilities → Recreate changed images recreates the images
    of fields whose sizes or formats changed (Image configs counts them).
 
-3. **Restart the server**, or use Configuration → Cache → Empty all caches in
+3. **Restart the server**, or use Configuration → Utilities → Clear caches in
    its admin (with Florist, `florist prod cache:clear`). The tasks write to the
    database, and a server that ran meanwhile keeps serving the pages it cached
    before (pages are cached without expiry). A site with static delivery keeps

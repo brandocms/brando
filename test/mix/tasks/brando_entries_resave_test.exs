@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
     assert_received {:mix_shell, :info,
                      ["Servers that were already running keep serving what they cached before." <> _ = note]}
 
-    assert note =~ "Configuration → Cache → Empty all caches"
+    assert note =~ "Configuration → Utilities → Clear caches"
   end
 
   test "ends with one line per image config target that no longer resolves" do

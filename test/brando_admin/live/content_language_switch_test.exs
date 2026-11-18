@@ -48,7 +48,7 @@ defmodule BrandoAdmin.ContentLanguageSwitchViewsTest do
     assert html =~ "Content in <strong>#{name}</strong>"
   end
 
-  for path <- ["/admin/calendar", "/admin/config/cache"] do
+  for path <- ["/admin/calendar", "/admin/config/activity"] do
     test "saves the language and keeps #{path} running", %{conn: conn, current_user: user} do
       {:ok, view, _html} = live(conn, unquote(path))
       language = switch(view, user)

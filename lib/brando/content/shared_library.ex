@@ -95,6 +95,20 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
+  @doc """
+  Drops every site's cached allowlists on every node, for allowlist rows
+  written outside `set_enabled/4` (a seed, a data migration, SQL): this
+  node's once the transaction around the caller has committed (at once
+  outside one), the other nodes' through `Brando.CacheSync`, a site and kind
+  at a time as `set_enabled/4` sends them. The next read loads them again.
+  """
+  @spec forget_allowlists() :: :ok
+  def forget_allowlists do
+    Repo.after_commit({Cache, :all}, &Cache.clear/0)
+    for site <- Registry.list_sites(), kind <- @kinds, do: Brando.CacheSync.broadcast_gathered(Cache, {site.id, kind})
+    :ok
+  end
+
   def enable(%Site{} = site, kind, id, user \\ :system) when kind in @kinds do
     ids = [normalize_id!(id) | MapSet.to_list(enabled_ids(site, kind))]
     set_enabled(site, kind, ids, user)

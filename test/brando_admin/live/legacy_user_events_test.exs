@@ -301,20 +301,14 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       assert render_click(view, "refresh_jobs", %{}) =~ "</"
     end
 
-    test "emptying the caches is refused for a :user, not for an editor", c do
+    test "clearing the caches is refused for a :user", c do
       preserve_query_cache(Page)
-      # Another test's tenant keys aren't this screen's: it reads every key.
-      Cachex.clear(:query)
       key = {:list, Page.__schema__(:source), "legacy-events-#{System.unique_integer([:positive])}"}
       Brando.Cache.Query.put(key, :held)
 
-      {:ok, view, _} = live(c.user_conn, "/admin/config/cache")
-      render_click(view, "empty_caches", %{})
+      {:ok, view, _} = live(c.user_conn, "/admin/config/utils")
+      render_click(view, "clear_caches", %{})
       assert Brando.Cache.Query.get(key) == :held
-
-      {:ok, view, _} = live(c.editor_conn, "/admin/config/cache")
-      render_click(view, "empty_caches", %{})
-      assert Brando.Cache.Query.get(key) == nil
     end
 
     test "syncing identifiers is refused for a :user", c do

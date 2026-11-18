@@ -13,7 +13,7 @@ defmodule BrandoAdmin.HooksPageTitleTest do
           name: "Configuration",
           url: nil,
           items: [
-            %{name: "Cache", url: "/admin/config/cache"},
+            %{name: "Utilities", url: "/admin/config/utils"},
             %{name: "Navigation", url: "/admin/config/navigation/menus"}
           ]
         }
@@ -24,7 +24,7 @@ defmodule BrandoAdmin.HooksPageTitleTest do
 
   test "matches a menu item's URL, ignoring its query" do
     assert Hooks.menu_title(@sections, "/admin") == "Dashboard"
-    assert Hooks.menu_title(@sections, "/admin/config/cache") == "Cache"
+    assert Hooks.menu_title(@sections, "/admin/config/utils") == "Utilities"
     assert Hooks.menu_title(@sections, "/admin/cases/cases") == "Cases"
   end
 

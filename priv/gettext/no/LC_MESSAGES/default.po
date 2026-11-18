@@ -216,7 +216,6 @@ msgstr[1] "%{count} redigerer"
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-format, elixir-autogen
 msgid "%{count} entry"
@@ -1768,7 +1767,6 @@ msgstr "Handling"
 #: lib/brando_admin/live/forms/inbox_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/asset_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -3572,26 +3570,16 @@ msgstr "CSS-klasse"
 msgid "CSS class(es)"
 msgstr "CSS-klasse(r)"
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#: lib/brando_admin/menu.ex
+#: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Cache"
-msgstr "Mellomlagring"
+msgid "Caches"
+msgstr "Buffere"
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Cache entries"
-msgstr "Mellomlagrede oppføringer"
-
-#: lib/brando_admin/live/sites/cache_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Cache key"
-msgstr "Mellomlagringsnøkkel"
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-autogen, elixir-format
-msgid "Caches cleared!"
-msgstr "Mellomlagringene ble tømt!"
+msgid "Caches cleared."
+msgstr "Bufferne er tømt."
 
 #: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/menu.ex
@@ -4311,7 +4299,6 @@ msgstr "Claude, ChatGPT og andre MCP-klienter leser innhold og foreslår endring
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Clear"
@@ -4322,20 +4309,15 @@ msgstr "Tøm"
 msgid "Clear all"
 msgstr "Fjern alle"
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Clear cache %{key}"
-msgstr "Tøm hurtigbuffer %{key}"
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Clear caches"
+msgstr "Tøm buffere"
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Clear clipboard"
 msgstr "Tøm utklippstavle"
-
-#: lib/brando_admin/live/sites/utils_live.ex
-#, elixir-autogen, elixir-format
-msgid "Clear content caches"
-msgstr "Tøm innholdsbuffere"
 
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/components/form/input/entries.ex
@@ -4356,11 +4338,6 @@ msgstr "Nullstill søk"
 msgid "Clear selection"
 msgstr "Nullstill utvalg"
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Clear the cache if saved changes are not appearing on the website. Content is rebuilt on the next request."
-msgstr "Tøm hurtigbufferen hvis lagrede endringer ikke vises på nettstedet. Innholdet bygges opp på nytt ved neste forespørsel."
-
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
@@ -4372,7 +4349,6 @@ msgstr "Tømt"
 msgid "Cleared caches"
 msgstr "Tømte hurtigbuffere"
 
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-format, elixir-autogen
 msgid "Clearing…"
@@ -4934,17 +4910,6 @@ msgstr "Innholds-SEO"
 #, elixir-autogen, elixir-format
 msgid "Content Templates"
 msgstr "Innholdsmaler"
-
-#: lib/brando_admin/components/activity.ex
-#: lib/brando_admin/live/sites/utils_live.ex
-#, elixir-autogen, elixir-format
-msgid "Content caches"
-msgstr "Innholdsbuffere"
-
-#: lib/brando_admin/live/sites/utils_live.ex
-#, elixir-autogen, elixir-format
-msgid "Content caches cleared."
-msgstr "Innholdsbufferne er tømt."
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen
@@ -7362,15 +7327,20 @@ msgstr[1] "Tømte %{count} mellomlagrede oppføringer"
 msgid "Empty"
 msgstr "Tom"
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-autogen, elixir-format
-msgid "Empty all caches"
-msgstr "Tøm alle lagre"
-
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Empty choice"
 msgstr "Tomt valg"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty every environment's cached pages, fragments and modules on every server, and reload their identity, SEO, globals, palettes and menus, and the list of sites and environments."
+msgstr "Tøm alle miljøers mellomlagrede sider, fragmenter og moduler på alle servere, og last inn identitet, SEO, globaler, paletter og menyer på nytt, sammen med listen over nettsteder og miljøer."
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty every site's cached pages, fragments and modules on every server, and reload their identity, SEO, globals, palettes and menus, the list of sites and environments, and each site's access to the shared library."
+msgstr "Tøm alle nettsteders mellomlagrede sider, fragmenter og moduler på alle servere, og last inn identitet, SEO, globaler, paletter og menyer på nytt, sammen med listen over nettsteder og miljøer og hvert nettsteds tilgang til det delte biblioteket."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -7384,8 +7354,8 @@ msgstr "Tomt filnavn"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Empty this site's cached pages, fragments and modules on every server, and reload its identity, SEO, globals, palettes and menus. Use it after a script or data migration changed content outside the admin. Entries are not rendered again: they keep the HTML stored when they were last rendered."
-msgstr "Tøm nettstedets mellomlagrede sider, fragmenter og moduler på alle servere, og last inn identitet, SEO, globaler, paletter og menyer på nytt. Bruk dette etter at et skript eller en datamigrering har endret innhold utenfor admin. Oppføringene gjengis ikke på nytt: de beholder HTML-en som ble lagret sist de ble gjengitt."
+msgid "Empty the cached pages, fragments and modules on every server, and reload identity, SEO, globals, palettes and menus."
+msgstr "Tøm mellomlagrede sider, fragmenter og moduler på alle servere, og last inn identitet, SEO, globaler, paletter og menyer på nytt."
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
@@ -7553,11 +7523,6 @@ msgstr "Oppføring"
 #, elixir-format, elixir-autogen
 msgid "Entry #%{id}"
 msgstr "Oppføring #%{id}"
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-autogen, elixir-format
-msgid "Entry ID"
-msgstr "Oppførings-ID"
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
@@ -9453,11 +9418,6 @@ msgstr "Sett inn variabel"
 msgid "Inspect accounts, site assignments, and legacy application rules."
 msgstr "Se gjennom kontoer, nettstedstilknytninger og tidligere applikasjonsregler."
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Inspect cached content and clear outdated entries."
-msgstr "Se mellomlagret innhold og tøm utdatert hurtigbuffer."
-
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Inspecting…"
@@ -10194,7 +10154,6 @@ msgstr "Liquid"
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/video_picker.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #, elixir-autogen, elixir-format
 msgid "List"
 msgstr "Liste"
@@ -10974,7 +10933,6 @@ msgstr "Modelltrening"
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/outline.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #, elixir-autogen, elixir-format
 msgid "Module"
 msgstr "Modul"
@@ -11663,11 +11621,6 @@ msgstr "Ingen blokker er ulike."
 #, elixir-autogen, elixir-format
 msgid "No blocks yet"
 msgstr "Ingen blokker ennå"
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "No cached entries"
-msgstr "Hurtigbufferen er tom"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -14460,7 +14413,6 @@ msgid "Rebuild search index"
 msgstr "Bygg søkeindeksen på nytt"
 
 #: lib/brando_admin/components/activity.ex
-#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Rebuilt %{caches}"
 msgstr "Bygget %{caches} på nytt"
@@ -14880,6 +14832,11 @@ msgstr "Sammendrag av releasen"
 #, elixir-autogen, elixir-format
 msgid "Reload"
 msgstr "Last inn på nytt"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reloaded %{caches}"
+msgstr "Lastet inn %{caches} på nytt"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -17518,7 +17475,6 @@ msgid "Signing secret"
 msgstr "Signeringshemmelighet"
 
 #: lib/brando_admin/components/form/module_props.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #, elixir-autogen, elixir-format
 msgid "Single"
 msgstr "Enkeltstående"
@@ -17541,7 +17497,6 @@ msgstr "Hurtigtaster med én tast"
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/nav.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Site"
@@ -17614,6 +17569,11 @@ msgstr "Nettsteder"
 #, elixir-autogen, elixir-format
 msgid "Sketches with AI"
 msgstr "Skisser med KI"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Skipped %{environments}, whose tables could not be read"
+msgstr "Hoppet over %{environments}, der tabellene ikke kunne leses"
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -17925,11 +17885,6 @@ msgstr "Stopper alle varsler på den og fjerner leveringsloggen."
 #, elixir-autogen, elixir-format
 msgid "Store current editor state"
 msgstr "Lagre gjeldende editortilstand"
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Stored results used to serve your website."
-msgstr "Lagrede resultater som brukes til å vise nettstedet."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -18630,11 +18585,6 @@ msgstr "Blueprinten kobler ingen forfatter. En utvikler kan legge til en med fel
 #, elixir-autogen, elixir-format
 msgid "The blueprint maps no image. A developer can add one with the :image field type."
 msgstr "Blueprinten kobler ikke noe bilde. En utvikler kan legge til et med felttypen :image."
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "The cache fills automatically as content is requested."
-msgstr "Hurtigbufferen fylles automatisk når innhold blir hentet."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -20627,7 +20577,6 @@ msgstr "Tofaktorautentisering ble slått på"
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Type"
@@ -21206,6 +21155,11 @@ msgstr "Bruk eksisterende"
 #, elixir-autogen, elixir-format
 msgid "Use for model training"
 msgstr "Bruk til modelltrening"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use it after a script or data migration changed content outside the admin. Entries are not rendered again: they keep the HTML stored when they were last rendered. Copied blocks, open previews and frontend assets are kept."
+msgstr "Bruk dette etter at et skript eller en datamigrering har endret innhold utenfor admin. Oppføringene gjengis ikke på nytt: de beholder HTML-en som ble lagret sist de ble gjengitt. Kopierte blokker, åpne forhåndsvisninger og frontend-ressurser beholdes."
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
 #, elixir-autogen, elixir-format
@@ -23444,6 +23398,11 @@ msgstr "levert av denne installasjonen"
 msgid "shared"
 msgstr "delt"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "shared library access"
+msgstr "tilgangen til det delte biblioteket"
+
 msgid "should be at most %{count} character(s)"
 msgstr "kan ha høyst %{count} tegn"
 
@@ -23466,6 +23425,11 @@ msgstr "oppføringens felter"
 #, elixir-autogen, elixir-format
 msgid "the module has no %{kind} %{key}"
 msgstr "modulen har ingen %{kind} %{key}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "the site list"
+msgstr "nettstedslisten"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format

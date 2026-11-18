@@ -151,7 +151,7 @@ VM clears only that VM's caches, and those of the nodes its PubSub reaches.
 A data migration runs without the caches (`Ecto.Migrator` starts the repo
 alone), and there the call clears nothing. For a server neither reaches, a
 superuser clears the server's caches under **Configuration → Utilities →
-Clear content caches** once the script or migration has run.
+Clear caches** once the script or migration has run.
 
 Do not combine cached list queries with pagination or streaming. Cached list
 results are materialized as a plain list.

@@ -45,7 +45,6 @@ defmodule BrandoAdmin.Authorization do
     "Elixir.BrandoAdmin.Sites.IdentityLive" => {:update, Brando.Sites.Identity},
     "Elixir.BrandoAdmin.Sites.SEOLive" => {:update, Brando.Sites.SEO},
     "Elixir.BrandoAdmin.Images.AltTextLive" => {:update, Brando.Images.Image},
-    "Elixir.BrandoAdmin.Sites.CacheLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Sites.UtilsLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Sites.BlockAuditLive" => {:read, :utilities},
     "Elixir.BrandoAdmin.Sites.ScheduledPublishingLive" => {:read, :utilities},

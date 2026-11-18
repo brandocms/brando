@@ -1,0 +1,2 @@
+- The Configuration → Cache screen is gone, and `/admin/config/cache` redirects to Utilities. Its "Empty all caches" is now Configuration → Utilities → Clear caches, for superusers only: it clears every site's content caches on every server, reloads the site and environment registry and the shared-library allowlists, and is recorded in Activity. `Brando.Cache.reload_all/1` is removed.
+  Call `Brando.Cache.clear_all/0` in place of `Brando.Cache.reload_all/1`.

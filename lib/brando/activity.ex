@@ -350,11 +350,12 @@ defmodule Brando.Activity do
   end
 
   @doc """
-  Record that `user` cleared the content caches (`Brando.Cache.clear_content/1`),
-  with its summary: how many query cache entries went, the site caches
-  rebuilt and the scope. Names no entry; sends no content event.
+  Record that `user` cleared the caches (`Brando.Cache.clear_all/0`, or
+  `Brando.Cache.clear_content/1`), with its summary: how many query cache
+  entries went, the site caches rebuilt, the scope, what of the site
+  structure it reloaded and the environments it skipped. Names no entry; sends no content event.
   """
-  def caches_cleared(user, %{query_entries: entries, site_caches: caches, scope: scope}) do
+  def caches_cleared(user, %{query_entries: entries, site_caches: caches, scope: scope} = summary) do
     insert(%{
       action: :caches_cleared,
       source: source(user),
@@ -364,6 +365,8 @@ defmodule Brando.Activity do
         Map.merge(source_details(), %{
           "entries" => entries,
           "caches" => Enum.map(caches, &to_string/1),
+          "site_structure" => Enum.map(Map.get(summary, :site_structure, []), &to_string/1),
+          "skipped" => Map.get(summary, :skipped, []),
           "scope" => to_string(scope)
         }),
       batch_id: Process.get(@batch_key)

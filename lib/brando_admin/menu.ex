@@ -556,7 +556,6 @@ defmodule BrandoAdmin.Menu do
            developer_items(current_user, [
              assistant_guidance_menu_item(current_user),
              frontend_assets_menu_item(current_user),
-             %{name: gettext("Cache"), icon: "database-zap", url: "/admin/config/cache"},
              %{name: gettext("Utilities"), icon: "wrench", url: "/admin/config/utils"}
            ])
          ]}

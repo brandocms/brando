@@ -864,8 +864,8 @@ still changed). When done it empties the node's whole query cache (every site's
 and environment's pages and fragments) and rebuilds the site caches of the
 context it runs in, which with tenancy is none: each environment's identity,
 globals and menus were rebuilt as its pass began, and its SEO and palettes
-are left as they were. Other nodes keep their caches, so empty them in their
-admin or restart them. With blue/green, run it from the active environment's
+are left as they were. Other nodes keep their caches: clear them under
+Configuration → Utilities → Clear caches, or restart them. With blue/green, run it from the active environment's
 release. A closed `rpc` session does not stop it: lines it can no longer
 print are dropped, and it reloads the caches when done.
 

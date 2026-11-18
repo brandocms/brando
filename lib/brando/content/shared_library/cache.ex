@@ -34,7 +34,11 @@ defmodule Brando.Content.SharedLibrary.Cache do
   # read loads it again.
   def refresh_node_cache({site_id, kind}), do: invalidate(site_id, kind)
 
+  # Every site's: a fill that read before it drops what it stores, as after
+  # `invalidate/2`
   def clear do
+    move_fence()
+
     @keys_key
     |> :persistent_term.get(MapSet.new())
     |> Enum.each(&:persistent_term.erase/1)
