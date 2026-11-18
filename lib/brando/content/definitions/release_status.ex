@@ -88,15 +88,28 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
     {:noreply, %{state | pending: pending, first_at: first_at, timer: Process.send_after(self(), :run, max(wait, 0))}}
   end
 
+  # Another node's result for an environment this node has none for yet (a
+  # new one): kept when it is for this node's release
+  def handle_cast({:received, prefix, %{release: release} = value}, state) do
+    if release_digest(prefix, plan_opts(state)) == release do
+      store_newer(prefix, value)
+      {:noreply, state}
+    else
+      handle_cast({:changed, prefix, false}, state)
+    end
+  end
+
   @impl GenServer
   def handle_info(:boot, state) do
     Enum.each(Release.prefixes(), &refresh(&1, plan_opts(state)))
     {:noreply, state}
   end
 
+  # What a change found is sent even when this node had planned it already
+  # (its boot plan ran after the change): the other nodes haven't
   def handle_info(:run, state) do
     Enum.each(state.pending, fn {prefix, broadcast?} ->
-      if refresh(prefix, plan_opts(state)) == :planned and broadcast?, do: broadcast(prefix)
+      if refresh(prefix, plan_opts(state)) in [:planned, :unchanged] and broadcast?, do: broadcast(prefix)
     end)
 
     {:noreply, %{state | pending: %{}, timer: nil, first_at: nil}}
@@ -119,12 +132,13 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
   @doc """
   Keeps a result another node planned (`Brando.CacheSync`), unless this node
   has a newer one. One planned for another release than this node's is
-  planned again here instead.
+  planned again here instead. For an environment this node has no result for
+  yet, the server reads this node's release first.
   """
   def refresh_node_cache({:planned, prefix, %{release: release} = value}) do
     case lookup(prefix) do
       nil ->
-        store_newer(prefix, value)
+        GenServer.cast(__MODULE__, {:received, prefix, value})
 
       %{release: ^release} ->
         store_newer(prefix, value)
@@ -168,6 +182,19 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
       false -> off(prefix, nil)
       {:error, message} -> off(prefix, message)
     end
+  end
+
+  defp release_digest(prefix, opts) do
+    Tenant.with_prefix(prefix, fn ->
+      path = Release.path(opts)
+
+      with true <- is_binary(path) and File.dir?(path),
+           {:ok, bundle} <- Definitions.read(path),
+           do: Value.digest(bundle),
+           else: (_ -> nil)
+    end)
+  rescue
+    _ -> nil
   end
 
   defp cached?(prefix, release_digest, database) do

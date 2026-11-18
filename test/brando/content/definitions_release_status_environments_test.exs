@@ -150,6 +150,17 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
       refute_planned()
     end
 
+    test "made before the boot plan is still sent once it is planned", %{user: user} do
+      pid = start_supervised!({ReleaseStatus, delay: 100, debounce: 400})
+      Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), self(), pid)
+
+      # The boot plan sees the save first; the change's own check then finds
+      # nothing new here, but the other nodes still need the result
+      save!(@production, user, "before-boot")
+
+      assert %{states: %{"hero-test" => :changed_in_admin}} = planned(@production)
+    end
+
     test "saves in a transaction that rolls back plan nothing", %{user: user} do
       pid = start_server!()
 
@@ -237,6 +248,30 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
       planned(@production)
       send_remote({ReleaseStatus, {:planned, @production, %{remote | taken_at: remote.taken_at - 1, pending: 7}}})
       refute match?(%{pending: 7}, ReleaseStatus.summary(@production))
+    end
+
+    test "for an environment this node hasn't planned is checked against its own release", c do
+      pid = start_server!()
+      File.write!(Path.join(c.release, "hero.exs"), String.replace(c.source, ~s(class "hero"), ~s(class "file")))
+      # A new environment's first result
+      :ets.delete(ReleaseStatus, @production)
+
+      remote = %{
+        release: "another-release",
+        database: "elsewhere",
+        taken_at: System.os_time(:microsecond),
+        version: "0.0.1",
+        pending: 9,
+        states: %{},
+        error: nil
+      }
+
+      send_remote({ReleaseStatus, {:planned, @production, remote}})
+
+      eventually(fn -> ReleaseStatus.state("hero-test", @production) == :changed_in_release end)
+      assert %{pending: 1} = ReleaseStatus.summary(@production)
+      settle(pid)
+      refute_planned()
     end
 
     test "for another release is planned again here, and not sent back", %{release: release} = c do
