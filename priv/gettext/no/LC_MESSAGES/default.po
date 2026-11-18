@@ -17572,6 +17572,13 @@ msgstr "Skisser med KI"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
+msgid "Skipped %{count} environment whose tables could not be read"
+msgid_plural "Skipped %{count} environments whose tables could not be read"
+msgstr[0] "Hoppet over %{count} miljø der tabellene ikke kunne leses"
+msgstr[1] "Hoppet over %{count} miljøer der tabellene ikke kunne leses"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
 msgid "Skipped %{environments}, whose tables could not be read"
 msgstr "Hoppet over %{environments}, der tabellene ikke kunne leses"
 

@@ -278,7 +278,8 @@ defmodule BrandoAdmin.Components.Activity do
   @doc """
   The environments `Brando.Cache.clear_all/0` skipped, by their schema
   prefixes, as one line naming each site and environment: `Skipped Acme ·
-  Staging, whose tables could not be read`. `nil` for none.
+  Staging, whose tables could not be read`. `nil` for none. For the
+  superuser who cleared the caches: Activity records only how many.
   """
   def skipped_phrase(prefixes) do
     case prefixes |> Enum.map(&environment_label/1) |> sentence() do
@@ -286,6 +287,17 @@ defmodule BrandoAdmin.Components.Activity do
       phrase -> gettext("Skipped %{environments}, whose tables could not be read", environments: phrase)
     end
   end
+
+  defp skipped_count_phrase(count) when is_integer(count) and count > 0,
+    do:
+      ngettext(
+        "Skipped %{count} environment whose tables could not be read",
+        "Skipped %{count} environments whose tables could not be read",
+        count,
+        count: count
+      )
+
+  defp skipped_count_phrase(_none), do: nil
 
   # By the registry's names while it holds the environment, else its prefix
   defp environment_label(prefix) do
@@ -666,7 +678,7 @@ defmodule BrandoAdmin.Components.Activity do
       ngettext("Emptied %{count} cached entry", "Emptied %{count} cached entries", count, count: count),
       rebuilt_phrase(details["caches"] || []),
       reloaded_phrase(details["site_structure"] || []),
-      skipped_phrase(details["skipped"] || [])
+      skipped_count_phrase(details["skipped"])
     ]
     |> Enum.filter(&is_binary/1)
   end

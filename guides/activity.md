@@ -32,10 +32,13 @@ Every Blueprint entry that changes through Brando records an event:
 Media (images, files, videos, galleries) and Brando's internal records (blocks,
 variables, revisions, identifiers, previews) are not logged.
 
-A superuser clearing the content caches under **Configuration → Utilities**
-records **Cleared** on **Content caches**, with how many cached entries went and which site
-caches were rebuilt. With group authorization it shows to those who may use
-Utilities.
+A superuser clearing the caches under **Configuration → Utilities → Clear
+caches** records **Cleared** on **Caches**, for every site, with how many
+cached entries went, which site caches were rebuilt, whether the site list
+and shared library access were reloaded, and how many environments were
+skipped because their tables could not be read. It is recorded in the site
+the superuser was working in, and with group authorization it shows to those
+who may use Utilities there.
 
 ## Who did it
 

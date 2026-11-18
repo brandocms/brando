@@ -176,7 +176,10 @@ defmodule Brando.Cache do
   sign-in lockouts.
 
   An environment whose tables cannot be read (one being created, or whose
-  setup failed) is skipped and logged, and the others are cleared.
+  setup failed) is skipped and logged, and the others are cleared. It
+  raises `ArgumentError` inside a transaction: there the rebuilds would wait
+  for the commit, where a failure is no longer the summary's to report, and
+  a failed read would abort the caller's transaction.
 
   Returns `{:ok, summary}`: `clear_content/1`'s summary with
   `:site_structure`, what of the site structure it reloaded
@@ -195,6 +198,9 @@ defmodule Brando.Cache do
            }}
   @decorate span("brando.cache.clear_all")
   def clear_all do
+    if Brando.Repo.repo().in_transaction?(),
+      do: raise(ArgumentError, "Brando.Cache.clear_all/0 runs outside a transaction")
+
     if caches_running?() do
       registry = if Tenant.enabled?(), do: [:registry], else: []
       if registry != [], do: :ok = Tenant.Cache.invalidate()
@@ -219,9 +225,9 @@ defmodule Brando.Cache do
 
   # An environment whose tables cannot be read (one being created, or whose
   # setup failed) must not keep the others' caches: its rebuild reads in a
-  # transaction of its own (a savepoint inside one), so the failed read
-  # aborts nothing around it, and it is skipped and logged. Its query cache
-  # is emptied all the same.
+  # transaction of its own (`clear_all/0` runs outside one), which the failed
+  # read rolls back, and it is skipped and logged. Its query cache is
+  # emptied all the same.
   defp clear_context(context, {entries, skipped}) do
     case clear_context(context) do
       {:ok, count} -> {entries + count, skipped}

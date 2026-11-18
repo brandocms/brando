@@ -17572,6 +17572,13 @@ msgstr "Sketches with AI"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
+msgid "Skipped %{count} environment whose tables could not be read"
+msgid_plural "Skipped %{count} environments whose tables could not be read"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
 msgid "Skipped %{environments}, whose tables could not be read"
 msgstr ""
 

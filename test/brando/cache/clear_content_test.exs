@@ -234,11 +234,25 @@ defmodule Brando.Cache.ClearContentTest do
       assert Brando.Sites.global("en", "system", "text").value == "New"
     end
 
-    test "tells the other nodes, once committed" do
-      {:ok, _} = Repo.transaction(fn -> {:ok, _} = Cache.clear_all() end)
+    test "tells the other nodes" do
+      {:ok, _} = Cache.clear_all()
 
-      assert_received {:brando_cache_sync, _, {QueryCache, {:clear, :all}}}
+      assert_received {:brando_cache_sync, origin, {QueryCache, {:clear, :all}}}
+      assert origin == CacheSync.origin()
       for cache <- @site_caches, do: assert_received({:brando_cache_sync, _, {Cache, {^cache, nil}}})
+    end
+
+    # Inside one, the rebuilds wait for the commit, where a failure is no
+    # longer the summary's to report, and a failed read would abort the
+    # caller's transaction
+    test "refuses to run inside a transaction, and clears nothing" do
+      key = {:list, Page.__schema__(:source), "a"}
+      Cachex.put(:query, key, :cached)
+
+      assert_raise ArgumentError, ~r/outside a transaction/, fn -> Repo.transaction(fn -> Cache.clear_all() end) end
+      assert_raise ArgumentError, fn -> Repo.repo().transaction(fn -> Cache.clear_all() end) end
+
+      assert cached([key]) == [true]
     end
 
     test "keeps what editors and sign-ins hold in the main cache: copied blocks, lockouts" do
@@ -376,9 +390,15 @@ defmodule Brando.Cache.ClearContentTest do
       assert log =~ "tenant_acme_broken"
       assert stale_globals?() == [false, false]
 
-      # Utilities and Activity name it by the registry, which the call reloaded
+      # Utilities names it by the registry, which the call reloaded
       assert BrandoAdmin.Components.Activity.skipped_phrase(["tenant_acme_broken"]) ==
                "Skipped Acme · Broken, whose tables could not be read"
+
+      # Activity, which those who may use one site's Utilities read, only counts it
+      {:ok, event} =
+        Brando.Tenant.with_prefix(production, fn -> Brando.Activity.caches_cleared(:system, elem(result, 1)) end)
+
+      assert event.details["skipped"] == 1
     end
 
     test "outside every site, clears the unprefixed query cache and rebuilds no site cache" do
