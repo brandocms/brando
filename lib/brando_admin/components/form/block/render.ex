@@ -65,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <.module
         form={@form}
         focus_role={@focus_role}
+        source_locked={@source_locked}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -159,6 +160,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <.module
         form={@form}
         focus_role={@focus_role}
+        source_locked={@source_locked}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -220,6 +222,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <.module
         form={@form}
         focus_role={@focus_role}
+        source_locked={@source_locked}
         dirty={@form_has_changes}
         new={@form_is_new}
         level={@level}
@@ -854,6 +857,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :entry_language, :string, default: nil
   attr :hidden_block_fields, :list, default: []
   attr :focus_role, :atom, default: nil
+  # A synchronized translation's: media in its variables follows the source
+  # (`RenderVar`)
+  attr :source_locked, :boolean, default: false
   # Write with AI in the module's text blocks (`Brando.Content.Module`)
   attr :module_write_with_ai, :boolean, default: false
   # Whether HTML and SVG refs show their markup for editing
@@ -942,6 +948,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
             <.module_config
               open={@config_open == @uid}
+              source_locked={@source_locked}
               uid={@uid}
               block_form={@block_form}
               target={@target}
@@ -950,6 +957,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             />
             <.module_content
               config_open={@config_open}
+              source_locked={@source_locked}
               uid={@uid}
               block_form={@block_form}
               liquid_splits={@liquid_splits}
@@ -997,6 +1005,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
             <.module_config
               open={@config_open == @uid}
+              source_locked={@source_locked}
               uid={@uid}
               block_form={@form}
               target={@target}
@@ -1005,6 +1014,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             />
             <.module_content
               config_open={@config_open}
+              source_locked={@source_locked}
               uid={@uid}
               block_form={@form}
               liquid_splits={@liquid_splits}
@@ -1076,6 +1086,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <div b-editor-tpl={@module_class}>
         <.vars
           vars={@block_form[:vars]}
+          source_locked={@source_locked}
           uid={@uid}
           target={@target}
           form_id={@form_id}
@@ -1098,6 +1109,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
           <.table
             block_data={@block_form}
+            source_locked={@source_locked}
             uid={@uid}
             target={@target}
             table_template_name={@table_template_name}
@@ -1145,6 +1157,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <div b-editor-tpl={@module_class}>
         <.vars
           vars={@block_form[:vars]}
+          source_locked={@source_locked}
           uid={@uid}
           target={@target}
           form_id={@form_id}
@@ -1167,6 +1180,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
           <.table
             block_data={@block_form}
+            source_locked={@source_locked}
             uid={@uid}
             target={@target}
             table_template_name={@table_template_name}
@@ -1261,6 +1275,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :form_id, :any, default: nil
   attr :open, :boolean, default: false
   attr :language, :string, default: nil
+  attr :source_locked, :boolean, default: false
 
   @doc """
   The block's configure surface.
@@ -1301,6 +1316,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <input type="hidden" name={@block_form[:description].name} value={@block_form[:description].value} />
       <.vars
         vars={@block_form[:vars]}
+        source_locked={@source_locked}
         uid={@uid}
         placement={:config}
         carry_persisted
@@ -1332,6 +1348,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <Input.text field={@block_form[:anchor]} instructions={gettext("Anchor available to block.")} />
           <.vars
             vars={@block_form[:vars]}
+            source_locked={@source_locked}
             uid={@uid}
             placement={:config}
             target={@target}
@@ -2488,6 +2505,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :current_user_id, :any, default: nil
   attr :language, :string, default: nil, doc: "the entry's language; link pickers offer entries in it"
 
+  attr :source_locked, :boolean,
+    default: false,
+    doc: "a synchronized translation's: media in its variables follows the source"
+
   @doc """
   Renders the vars belonging to one editing surface.
 
@@ -2551,6 +2572,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             form_id={@form_id}
             current_user_id={@current_user_id}
             language={@language}
+            source_locked={@source_locked}
             publish
           />
         </div>
@@ -2968,6 +2990,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :target, :any, required: true
   attr :table_template_name, :string
   attr :form_id, :any, default: nil
+  attr :source_locked, :boolean, default: false
 
   def table(assigns) do
     table_rows_value = assigns.block_data[:table_rows].value
@@ -3068,6 +3091,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                           render={:all}
                           form_id={@form_id}
                           provider_upload={false}
+                          source_locked={@source_locked}
                           publish
                         />
                       </.inputs_for>
