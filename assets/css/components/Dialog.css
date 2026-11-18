@@ -79,6 +79,98 @@
   }
 }
 
+/* A part of the message after its first sentence: what a page's delete
+   takes with it (BrandoAdmin.LiveView.Listing.DeleteDescription). */
+.admin-dialog-section {
+  padding-top: 12px;
+}
+
+.admin-dialog-list {
+  max-height: 168px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--dialog-line);
+  border-radius: 6px;
+
+  li {
+    padding: 6px 10px;
+    color: var(--dialog-ink);
+    overflow-wrap: anywhere;
+
+    & + li {
+      border-top: 1px solid var(--dialog-line);
+    }
+  }
+
+  strong {
+    font-weight: 500;
+  }
+}
+
+.admin-dialog-meta {
+  margin-left: 4px;
+  color: var(--dialog-muted);
+  font-family: var(--brando-font-mono);
+  font-size: var(--brando-text-sm);
+}
+
+/* The choice a confirmation asks for (alerts.js buildChoice) */
+.admin-dialog-choice {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px 0 0;
+  border: 0;
+
+  legend {
+    float: left;
+    width: 100%;
+    margin: 0 0 -4px;
+    padding: 0;
+    color: var(--dialog-ink);
+    font-size: var(--brando-text-md);
+    font-weight: 500;
+    line-height: 20px;
+  }
+}
+
+.admin-dialog-option {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 6px;
+  align-items: center;
+  font-size: var(--brando-text-md);
+  line-height: 20px;
+
+  input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--dialog-green);
+  }
+
+  label {
+    color: var(--dialog-ink);
+    cursor: pointer;
+  }
+
+  select.admin-select,
+  .admin-dialog-hint {
+    grid-column: 2;
+  }
+}
+
+.admin-dialog .admin-dialog-hint {
+  margin: 0 !important;
+  color: var(--dialog-muted);
+  font-size: var(--brando-text-sm);
+  line-height: 18px;
+}
+
 /* The layout owns the gap: global paragraph resets would cancel a margin. */
 .admin-dialog-actions {
   display: flex;

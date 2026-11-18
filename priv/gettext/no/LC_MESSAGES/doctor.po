@@ -149,6 +149,13 @@ msgid_plural "%{count} files"
 msgstr[0] "%{count} fil"
 msgstr[1] "%{count} filer"
 
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} fragment on a page that is in the trash or gone"
+msgid_plural "%{count} fragments on pages that are in the trash or gone"
+msgstr[0] "%{count} fragment på en side som er i papirkurven eller ikke finnes lenger"
+msgstr[1] "%{count} fragmenter på sider som er i papirkurven eller ikke finnes lenger"
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} hour"
@@ -239,6 +246,13 @@ msgid "%{count} module reads its entries through .data.vars or .data.refs, which
 msgid_plural "%{count} modules read their entries through .data.vars or .data.refs, which renders nothing"
 msgstr[0] "%{count} modul leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
 msgstr[1] "%{count} moduler leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more"
+msgid_plural "%{count} more"
+msgstr[0] "%{count} til"
+msgstr[1] "%{count} til"
 
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
@@ -388,6 +402,16 @@ msgstr "%{file} heter nå %{template}"
 #, elixir-autogen, elixir-format
 msgid "%{file}: no PHX_HOST"
 msgstr "%{file}: ingen PHX_HOST"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{fragment}: the page is gone"
+msgstr "%{fragment}: siden finnes ikke lenger"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{fragment}: the page is in the trash"
+msgstr "%{fragment}: siden er i papirkurven"
 
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
@@ -684,6 +708,11 @@ msgstr "Feil"
 #, elixir-autogen, elixir-format
 msgid "EuropaCSS %{version}"
 msgstr "EuropaCSS %{version}"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "Fragment pages"
+msgstr "Fragmentsider"
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
@@ -1235,6 +1264,18 @@ msgstr "alle aktive nettsteder har en frontend"
 #, elixir-autogen, elixir-format
 msgid "every block has a uid of the expected shape"
 msgstr "alle blokker har en uid på forventet form"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "every fragment's page is live"
+msgstr "alle fragmenters side er aktiv"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "every fragment's page is live; %{count} fragment has no page, listed under Fragments without a page"
+msgid_plural "every fragment's page is live; %{count} fragments have no page, listed under Fragments without a page"
+msgstr[0] "alle fragmenters side er aktiv; %{count} fragment har ingen side og vises under Fragmenter uten side"
+msgstr[1] "alle fragmenters side er aktiv; %{count} fragmenter har ingen side og vises under Fragmenter uten side"
 
 #: lib/brando/doctor/checks/media_paths.ex
 #, elixir-autogen, elixir-format
@@ -1847,6 +1888,11 @@ msgstr "den låste commiten er ikke den nyeste på %{branch} (%{commit}): mix de
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
 msgstr "releasen inneholder %{apps}"
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "the site still shows them, but no page lists them in the admin. Open Pages: they are under Fragments without a page. Edit each one to choose its page, or delete it."
+msgstr "nettstedet viser dem fortsatt, men ingen side lister dem i admin. Åpne Sider: de ligger under Fragmenter uten side. Rediger hvert av dem for å velge side, eller slett det."
 
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format

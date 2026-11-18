@@ -979,6 +979,40 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "FragmentPages" do
+    test "names the fragments on a trashed page, and counts those with no page as a note" do
+      assert %Result{status: :ok, summary: "every fragment's page is live"} = Checks.FragmentPages.run(context())
+
+      live = Factory.insert(:page, uri: "live")
+      Factory.insert(:fragment, page_id: live.id, key: "attached")
+      Factory.insert(:fragment, page_id: nil, key: "loose")
+
+      assert %Result{status: :ok, summary: summary} = Checks.FragmentPages.run(context())
+      assert summary =~ "1 fragment has no page, listed under Fragments without a page"
+
+      trashed = Factory.insert(:page, uri: "trashed")
+      Factory.insert(:fragment, page_id: trashed.id, parent_key: "partials", key: "footer", language: :no)
+      Factory.insert(:fragment, page_id: trashed.id, key: "in-trash", deleted_at: DateTime.utc_now())
+      {:ok, _} = Brando.Repo.soft_delete(trashed)
+
+      result = Checks.FragmentPages.run(context())
+      assert result.status == :warning
+      assert result.summary == "1 fragment on a page that is in the trash or gone"
+      assert result.fix =~ "Fragments without a page"
+      assert [item] = result.items
+      assert item =~ "partials/footer [no]"
+      assert item =~ "the page is in the trash"
+    end
+
+    test "names the environment with tenancy, and counts past the first ones" do
+      found = %{orphaned: [{"partials/footer [en] (id 1, page 2)", :page_missing}], orphaned_count: 3, no_page: 0}
+      result = Checks.FragmentPages.evaluate([{"site/live", found}])
+
+      assert result.summary == "3 fragments on pages that are in the trash or gone"
+      assert result.items == ["[site/live] partials/footer [en] (id 1, page 2): the page is gone", "[site/live] 2 more"]
+    end
+  end
+
   describe "Module entry paths" do
     test "module code reading entries through .data.vars or .data.refs is a warning" do
       assert %Result{status: :ok} = Checks.ModuleEntryPaths.run(context())

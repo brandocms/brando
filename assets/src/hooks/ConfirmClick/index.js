@@ -13,7 +13,22 @@ import { alertConfirm } from '../../alerts'
  * All of it is text. A reply may carry `html` instead of `message`: markup the
  * server built and escaped (BrandoAdmin.LiveView.Listing.DeleteDescription
  * links the places a media file is used).
+ *
+ * A reply may also carry a `choice` (see `alertConfirm`): the values chosen
+ * are added to the event's push, as a page's delete says where its
+ * fragments go.
  */
+// The chosen values join each push of the JS command
+function withValues(event, values) {
+  if (!values || typeof values !== 'object') return event
+
+  const commands = JSON.parse(event).map(([kind, args]) =>
+    kind === 'push' ? [kind, { ...args, value: { ...(args.value || {}), ...values } }] : [kind, args]
+  )
+
+  return JSON.stringify(commands)
+}
+
 export default app => ({
   mounted() {
     this.el.addEventListener('click', e => {
@@ -31,16 +46,16 @@ export default app => ({
       this.el.closest('.dropdown-content')?.classList.add('hidden')
       const destructive = this.el.hasAttribute('phx-confirm-click-destructive')
 
-      const confirm = ({ title, message, html, confirm, cancel }) =>
+      const confirm = ({ title, message, html, confirm, cancel, choice }) =>
         alertConfirm(
           title,
           typeof html === 'string' ? { html } : message,
           confirmed => {
             if (confirmed !== false) {
-              app.liveSocket.execJS(this.el, event)
+              app.liveSocket.execJS(this.el, withValues(event, confirmed))
             }
           },
-          { confirmText: confirm, cancelText: cancel, destructive }
+          { confirmText: confirm, cancelText: cancel, destructive, choice }
         )
 
       const fromElement = {

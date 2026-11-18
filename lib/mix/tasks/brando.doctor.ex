@@ -14,7 +14,7 @@ defmodule Mix.Tasks.Brando.Doctor do
   It checks versions, pending migrations, Oban, required configuration, the
   admin route helpers Blueprints link to, the admin's BrandoJS, image
   configs, module versions, module code reading its entries as Villain
-  stored them, the sitemap and robots.txt, the identity behind JSON-LD, alt
+  stored them, fragments whose page is in the trash or gone, the sitemap and robots.txt, the identity behind JSON-LD, alt
   text, calls to deprecated Brando functions in `lib/`, Brando or its npm
   packages taken from a local checkout, the installer's placeholder
   `PHX_HOST` in `.envrc.prod` and `.envrc.staging`, and whether `mix test`

@@ -196,10 +196,18 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   defp process_actions(actions, schema, language, entry_id) do
     Enum.map(actions, fn action ->
       action
+      |> describe_delete()
       |> push_action_event(language, entry_id)
       |> translate_confirm(schema)
     end)
   end
+
+  # A listing's own delete action (a page's "Delete sub page") asks as the
+  # default Delete does: by name, with what goes with the entry
+  defp describe_delete(%{event: "delete_entry", confirm: confirm} = action) when is_binary(confirm),
+    do: action |> Map.from_struct() |> Map.merge(%{describe: "describe_delete", destructive: true})
+
+  defp describe_delete(action), do: action
 
   defp push_action_event(%{event: event} = action, language, entry_id) when is_binary(event),
     do: %{action | event: JS.push(event, value: %{language: language, id: entry_id})}
@@ -392,13 +400,15 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </.action_button>
       <% end %>
       <.action_button
-        :for={%{event: event, label: label, confirm: confirm} <- @processed_actions}
+        :for={%{event: event, label: label, confirm: confirm} = action <- @processed_actions}
         :key={event}
         id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
         entry_id={@entry.id}
         language={@language}
         event={event}
         confirm={confirm}
+        describe={Map.get(action, :describe)}
+        destructive={Map.get(action, :destructive, false)}
       >
         {g(@schema, label)}
       </.action_button>
