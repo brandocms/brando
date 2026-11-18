@@ -19,9 +19,10 @@ defmodule Brando.Translations.Sync do
     * a text path the target lacks → `:translate` (skipped when empty); with
       `translate_all: true`, every text path of the payload (a new
       translation's copy)
+    * a text path in `:untranslated` → `:translate`, against the source text
+      the payload takes (skipped when empty)
     * a text path whose source digest moved from the baseline → `:review`,
-      unless the save was a minor correction; `:translate` for a path in
-      `:untranslated`
+      unless the save was a minor correction
     * a shared path the target holds a different value for → `:shared_update`,
       or `:relinked` when the source value is the one last synchronized and
       only its links were mapped onto this language's versions
@@ -86,8 +87,7 @@ defmodule Brando.Translations.Sync do
 
   `:untranslated` holds the text paths still to translate whose text in the
   target is a copy of the source's: the payload takes the source's text as it
-  is now, and a change to it in the source is still `:translate`, not
-  `:review`.
+  is now, and the path is `:translate` against it, not `:review`.
 
   `:module_uids` maps `{module_origin, module_id}` to the module's `uid`, for
   `{:module, uid, vars}` selectors in `source_controlled_fields`; a block
@@ -665,14 +665,7 @@ defmodule Brando.Translations.Sync do
         put_text(data, :text, texts, prefix <> "/text")
 
       wrapper == HtmlBlock ->
-        values = data.values || %{}
-
-        values =
-          for {key, :text} <- HtmlBlock.params_by_key(data), reduce: values do
-            acc -> put_text(acc, key, texts, "#{prefix}/values/#{key}")
-          end
-
-        if values == (data.values || %{}), do: data, else: %{data | values: values}
+        put_html_values(data, prefix, texts)
 
       wrapper == PictureBlock ->
         Enum.reduce([:title, :credits, :alt], data, &put_text(&2, &1, texts, "#{prefix}/#{&1}"))
@@ -680,15 +673,24 @@ defmodule Brando.Translations.Sync do
       wrapper == VideoBlock ->
         put_text(data, :title, texts, prefix <> "/title")
 
-      wrapper == GalleryBlock and is_list(data.gallery_object_overrides) ->
-        %{
-          data
-          | gallery_object_overrides: Enum.map(data.gallery_object_overrides, &put_override_texts(&1, prefix, texts))
-        }
+      wrapper == GalleryBlock ->
+        update_loaded(data, :gallery_object_overrides, &put_override_texts(&1, prefix, texts))
 
       true ->
         data
     end
+  end
+
+  # Only the values of the template's `text` parameters
+  defp put_html_values(data, prefix, texts) do
+    values = data.values || %{}
+
+    updated =
+      for {key, :text} <- HtmlBlock.params_by_key(data), reduce: values do
+        acc -> put_text(acc, key, texts, "#{prefix}/values/#{key}")
+      end
+
+    if updated == values, do: data, else: %{data | values: updated}
   end
 
   defp put_override_texts(override, prefix, texts) do
@@ -1315,11 +1317,16 @@ defmodule Brando.Translations.Sync do
       (ctx.translate_all? or not Map.has_key?(ctx.target, path)) and not blank?(value) ->
         [item(path, :translate, source_digest)]
 
+      # Raised again against the text the payload now holds, a minor
+      # correction's included
+      MapSet.member?(ctx.untranslated, path) ->
+        if blank?(value), do: [], else: [item(path, :translate, source_digest)]
+
       not Map.has_key?(ctx.target, path) or ctx.minor? ->
         []
 
       Map.has_key?(ctx.baseline, path) and ctx.baseline[path] != source_digest ->
-        [item(path, if(MapSet.member?(ctx.untranslated, path), do: :translate, else: :review), source_digest)]
+        [item(path, :review, source_digest)]
 
       true ->
         []

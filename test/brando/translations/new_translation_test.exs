@@ -170,6 +170,17 @@ defmodule Brando.Translations.NewTranslationTest do
     assert {:translate, "vars/tagline/value"} in items
     refute Enum.any?(items, fn {_kind, path} -> path == "meta_description" end)
     assert Enum.all?(items, &match?({:translate, _}, &1))
+
+    # Changed in the source before they are translated, they take its new text
+    {:ok, _} = Brando.Pages.update_page(source.id, %{meta_title: "Om oss | Firmaet"}, c.user)
+    Repo.update_all(Ecto.Query.from(v in Var, where: v.page_id == ^source.id), set: [value: "Hei igjen"])
+    {:ok, source} = Brando.Pages.get_page(%{matches: %{id: source.id}, preload: Brando.Blueprint.preloads_for(Page)})
+    Translations.source_saved(source)
+
+    assert open_items(Page, target) == items
+    payload = Translations.decode_payload(Translations.get_pending_version(Page, target.id))
+    assert payload.meta_title == "Om oss | Firmaet"
+    assert [%{value: "Hei igjen"}] = payload.vars
   end
 
   test "translating an item, or marking it reviewed, resolves it", c do
@@ -204,6 +215,45 @@ defmodule Brando.Translations.NewTranslationTest do
         # The form gets the source's new text to translate, not the old copy
         assert payload_body(target) == text
       end
+    end
+
+    test "keeps an untranslated text to translate across minor saves, resyncs and older editor saves", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      loaded = Translations.get_pending_version(Article, target.id)
+
+      change = fn text, opts ->
+        set_text(c.source.id, text)
+        Translations.source_saved(load(c.source.id), opts)
+      end
+
+      # A minor correction, then a change
+      change.("Første avsnitt.", minor: true)
+      assert payload_body(target) == "Første avsnitt."
+      change.("Første avsnitt, endret", [])
+      assert {:translate, body_path(c)} in open_items(target)
+      assert payload_body(target) == "Første avsnitt, endret"
+
+      # A recompute of the saved translation in between
+      Translations.target_saved(Article, target.id)
+      change.("Første avsnitt, endret igjen", [])
+      assert {:translate, body_path(c)} in open_items(target)
+      assert payload_body(target) == "Første avsnitt, endret igjen"
+
+      # The editor saves the version opened at the start, translating only the title
+      {:ok, _} =
+        target.id
+        |> load()
+        |> Article.changeset(%{title: "Title"}, c.user)
+        |> SyncTest.update_article(c.user, editor_review: true)
+
+      Translations.target_saved(Article, target.id, %{version_id: loaded.id})
+      assert payload_body(target) == "Første avsnitt, endret igjen"
+
+      change.("Første avsnitt, for tredje gang", [])
+      assert {:translate, body_path(c)} in open_items(target)
+      refute {:review, body_path(c)} in open_items(target)
+      assert payload_body(target) == "Første avsnitt, for tredje gang"
+      assert item(target, body_path(c)).source_digest == Sync.digest("Første avsnitt, for tredje gang")
     end
 
     test "text written past the editor is the translation's own: a change in the source asks for review", c do

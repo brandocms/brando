@@ -934,7 +934,7 @@ defmodule Brando.Translations do
             module_uids: uids,
             minor: minor?,
             translate_all: Keyword.get(opts, :translate_all, false),
-            untranslated: untranslated(schema, target, member.baseline, previous, uids),
+            untranslated: untranslated(member, schema, target, previous, uids),
             identifiers: identifier_map(source, schema, member.language),
             entries: entry_map(source, schema, member.language)
           )
@@ -1198,37 +1198,39 @@ defmodule Brando.Translations do
 
   # The text paths still to translate whose text in the translation is a copy
   # of the source's (`Sync.compute_pending/4`'s `:untranslated`): open
-  # `:translate` work, holding either the source's text as of the last sync
-  # (as created, or saved unchanged) or, with the translation unchanged since
-  # the previous version, the source's text that version held there. Text
-  # written past the editor, which resolves nothing, is the translation's own.
-  defp untranslated(_schema, _target, _baseline, nil, _uids), do: MapSet.new()
+  # `:translate` work whose text is one the translation was given to
+  # translate. Every such text was raised as a `:translate` item against its
+  # digest; usually it is the source's text as of the last sync (as created,
+  # or saved unchanged), else an earlier one (the source changed it again, or
+  # the editor saved a version computed before). Text written past the
+  # editor, which resolves nothing, is the translation's own.
+  defp untranslated(_member, _schema, _target, nil, _uids), do: MapSet.new()
 
-  defp untranslated(schema, target, baseline, %PendingVersion{work_items: items} = previous, uids) do
-    open = for %{kind: :translate, resolved_at: nil} = item <- items, into: %{}, do: {item.path, item.source_digest}
+  defp untranslated(member, schema, target, %PendingVersion{work_items: items}, uids) do
+    case for(%{kind: :translate, resolved_at: nil, path: path} <- items, uniq: true, do: path) do
+      [] ->
+        MapSet.new()
 
-    if open == %{} do
-      MapSet.new()
-    else
-      held = texts(target, schema, uids)
-      copies = for {path, _} <- open, Map.has_key?(held, path), Sync.digest(held[path]) == baseline[path], do: path
-
-      earlier =
-        case Map.drop(open, copies) do
-          rest when rest == %{} ->
-            []
-
-          rest ->
-            if Sync.base_fingerprint(target, schema, uids) == previous.base_fingerprint do
-              seeded = texts(decode_payload(previous), schema, uids)
-              for {path, digest} <- rest, Map.has_key?(held, path), Sync.digest(seeded[path]) == digest, do: path
-            else
-              []
-            end
-        end
-
-      MapSet.new(copies ++ earlier)
+      open ->
+        held = for {path, value} <- texts(target, schema, uids), path in open, into: %{}, do: {path, Sync.digest(value)}
+        {copies, rest} = Enum.split_with(Map.keys(held), &(held[&1] == member.baseline[&1]))
+        seeded = seeded_digests(member.id, rest)
+        MapSet.new(copies ++ Enum.filter(rest, &MapSet.member?(seeded, {&1, held[&1]})))
     end
+  end
+
+  defp seeded_digests(_member_id, []), do: MapSet.new()
+
+  defp seeded_digests(member_id, paths) do
+    from(w in WorkItem,
+      join: v in PendingVersion,
+      on: v.id == w.pending_version_id,
+      where: v.member_id == ^member_id and w.kind == :translate and w.path in ^paths,
+      distinct: true,
+      select: {w.path, w.source_digest}
+    )
+    |> Repo.all()
+    |> MapSet.new()
   end
 
   defp texts(entry, schema, uids),

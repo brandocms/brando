@@ -12,8 +12,10 @@ defmodule Brando.Translations.ComputePendingTest do
   alias Brando.Translations.Sync
   alias Brando.Villain.Blocks.GalleryBlock
   alias Brando.Villain.Blocks.GalleryObjectOverride
+  alias Brando.Villain.Blocks.HtmlBlock
   alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain.Blocks.TextBlock
+  alias Brando.Villain.Blocks.VideoBlock
 
   # --- Builders -------------------------------------------------------------
 
@@ -684,9 +686,33 @@ defmodule Brando.Translations.ComputePendingTest do
         alt: t.("Bilde")
       }
 
+      # The image's second placement in the gallery has a caption of its own
+      second = %GalleryObjectOverride{object_id: "10", object_type: :image, placement: 1, title: t.("Andre")}
+
       slides = %{
-        gallery_ref("slides", gallery(1, [10]))
-        | data: %GalleryBlock{type: "gallery", data: %GalleryBlock.Data{gallery_object_overrides: [override]}}
+        gallery_ref("slides", gallery(1, [10, 10]))
+        | data: %GalleryBlock{type: "gallery", data: %GalleryBlock.Data{gallery_object_overrides: [override, second]}}
+      }
+
+      clip = %Ref{
+        name: "clip",
+        uid: uid(),
+        video_id: 3,
+        data: %VideoBlock{type: "video", data: %VideoBlock.Data{title: t.("Film")}}
+      }
+
+      # Only the template's `text` parameters are text
+      embed = %Ref{
+        name: "embed",
+        uid: uid(),
+        data: %HtmlBlock{
+          type: "html",
+          data: %HtmlBlock.Data{
+            text: "<p>{{ lead }}</p>",
+            params: [%HtmlBlock.Param{key: "lead", type: :text}, %HtmlBlock.Param{key: "id", type: :id}],
+            values: %{"lead" => t.("Ingress i mal"), "id" => "x1"}
+          }
+        }
       }
 
       photo = %Ref{
@@ -718,11 +744,15 @@ defmodule Brando.Translations.ComputePendingTest do
           %ArticleItem{uid: "i2", label: "", link: nil}
         ],
         blocks: [
-          block("a",
-            refs: [text_ref("body", t.("Avsnitt")), text_ref("blank", " "), photo, slides],
-            vars: vars,
-            table_rows: [cell]
-          )
+          %{
+            block("a",
+              refs: [text_ref("body", t.("Avsnitt")), text_ref("blank", " "), photo, slides, clip, embed],
+              vars: vars,
+              table_rows: [cell],
+              children: [block("child", refs: [text_ref("body", t.("Barn"))])]
+            )
+            | identifier_metas: %{"5" => %{"title" => t.("Lenketittel")}}
+          }
         ]
       )
     end
@@ -743,7 +773,7 @@ defmodule Brando.Translations.ComputePendingTest do
       payload = texts_by_path(result.payload)
       edited_texts = texts_by_path(edited)
 
-      assert MapSet.size(untranslated) == 14
+      assert MapSet.size(untranslated) == 19
       for path <- untranslated, do: assert({path, payload[path]} == {path, edited_texts[path]})
       # Still to translate, not to review
       assert Enum.all?(result.work_items, &(&1.kind == :translate))
@@ -769,6 +799,11 @@ defmodule Brando.Translations.ComputePendingTest do
                  {:translate, "entry_blocks/a/refs/photo/alt"},
                  {:translate, "entry_blocks/a/refs/slides/gallery/image:10/title"},
                  {:translate, "entry_blocks/a/refs/slides/gallery/image:10/alt"},
+                 {:translate, "entry_blocks/a/refs/slides/gallery/image:10@1/title"},
+                 {:translate, "entry_blocks/a/refs/clip/title"},
+                 {:translate, "entry_blocks/a/refs/embed/values/lead"},
+                 {:translate, "entry_blocks/a/identifier_metas/5/title"},
+                 {:translate, "entry_blocks/child/refs/body/text"},
                  {:translate, "entry_blocks/a/vars/heading/value"},
                  {:translate, "entry_blocks/a/vars/intro/value"},
                  {:translate, "entry_blocks/a/vars/body/value"},

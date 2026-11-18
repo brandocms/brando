@@ -207,9 +207,13 @@ defmodule BrandoAdmin.Components.Form.Translation do
   # Whether applying the pending version would change the translation: a new
   # translation's first version holds only work, no changes, until the source
   # is saved again.
+  # A payload stored by an earlier Brando that cannot be read is applied, as
+  # before.
   defp changes?(schema, payload, pending) do
     Brando.Translations.Sync.base_fingerprint(payload, schema, Translations.module_uids([payload], schema)) !=
       pending.base_fingerprint
+  rescue
+    _ -> true
   end
 
   @doc "Whether the form should load the pending version now."
