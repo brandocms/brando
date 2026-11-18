@@ -304,7 +304,7 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   """
   def settle(%{"data" => %{"data" => %{"gallery_object_overrides" => overrides}}} = params)
       when is_map(overrides) or is_list(overrides) do
-    overrides = reject_overrides(overrides, &is_nil(media_key(&1)))
+    overrides = reject_overrides(overrides, &partial?/1)
 
     overrides =
       case final_objects(params["gallery"]) do
@@ -316,6 +316,18 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   end
 
   def settle(params), do: params
+
+  # No media, or a uid (given by the editor, which also gives the type)
+  # without a type: the fields one editor changed, merged after another
+  # removed the override. An override stored without a type and a uid is
+  # from before types, and keeps matching its media by id.
+  defp partial?(override) do
+    case media_key(override) do
+      nil -> true
+      {nil, _id} -> uid(override) not in [nil, ""]
+      _key -> false
+    end
+  end
 
   defp reject_overrides(overrides, fun) when is_list(overrides), do: Enum.reject(overrides, fun)
 
@@ -336,11 +348,17 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   defp place_by_uid(overrides, objects) do
     keys = objects |> Enum.map(&param_media_key/1) |> placements()
 
+    # A uid two objects give (two unsaved copies of one media) names neither
     by_uid =
       objects
       |> Enum.zip(keys)
       |> Enum.flat_map(fn
         {object, {_type, _id, _placement} = key} -> object |> param_object_uid() |> List.wrap() |> Enum.map(&{&1, key})
+        _ -> []
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.flat_map(fn
+        {uid, [key]} -> [{uid, key}]
         _ -> []
       end)
       |> Map.new()

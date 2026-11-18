@@ -708,26 +708,40 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   defp initialize_gallery_overrides(gallery_objects, placements, block_data_cs) do
     stored = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
     existing_overrides = GalleryObjectOverride.index(stored)
-    stored_uids = MapSet.new(stored, &GalleryObjectOverride.uid/1)
+    placed = gallery_objects |> Enum.zip(placements) |> Enum.with_index()
 
-    gallery_objects
-    |> Enum.zip(placements)
-    |> Enum.flat_map_reduce(MapSet.new(), fn
-      {obj, {object_type, object_id_str, placement}}, claimed ->
+    # The object each uid names, when one object gives it (`settle/1` moves
+    # an override to the placement of the object its uid names)
+    object_uids =
+      placed
+      |> Enum.map(fn {{obj, _key}, index} -> {GalleryObjectOverride.object_uid(obj), index} end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    found =
+      for {{obj, {object_type, object_id_str, placement}}, index} <- placed do
         found = GalleryObjectOverride.lookup(existing_overrides, object_type, object_id_str, placement)
-        override = placed_override(found, object_type, object_id_str, placement)
+        {obj, index, found, placed_override(found, object_type, object_id_str, placement)}
+      end
 
+    # Uids kept: the override's own, unless an earlier object kept it or it
+    # names another object
+    {kept, _claimed} =
+      Enum.map_reduce(found, MapSet.new(), fn {_obj, index, _found, override}, claimed ->
         uid = GalleryObjectOverride.uid(override)
 
-        uid =
-          if uid in [nil, ""] or MapSet.member?(claimed, uid),
-            do: GalleryObjectOverride.unique_uid(obj, MapSet.union(claimed, stored_uids)),
-            else: uid
+        if uid in [nil, ""] or MapSet.member?(claimed, uid) or Map.get(object_uids, uid, [index]) != [index],
+          do: {nil, claimed},
+          else: {uid, MapSet.put(claimed, uid)}
+      end)
 
-        {[{put_uid(override, uid), found && Enum.find_index(stored, &(&1 == found))}], MapSet.put(claimed, uid)}
+    # Only the kept uids are taken: an override no object kept is dropped
+    taken = kept |> Enum.reject(&is_nil/1) |> MapSet.new()
 
-      {_obj, nil}, claimed ->
-        {[], claimed}
+    found
+    |> Enum.zip(kept)
+    |> Enum.map_reduce(taken, fn {{obj, _index, found, override}, uid}, taken ->
+      uid = uid || GalleryObjectOverride.unique_uid(obj, taken)
+      {{put_uid(override, uid), found && Enum.find_index(stored, &(&1 == found))}, MapSet.put(taken, uid)}
     end)
     |> elem(0)
     |> in_stored_order()
