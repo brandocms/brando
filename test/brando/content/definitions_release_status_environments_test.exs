@@ -181,7 +181,7 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
     end
 
     test "made before the boot plan is still sent once it is planned", %{user: user} do
-      pid = start_supervised!({ReleaseStatus, delay: 100, debounce: 400})
+      pid = start_supervised!({ReleaseStatus, delay: 500, debounce: 1_000})
       Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), self(), pid)
 
       # The boot plan sees the save first; the change's own check then finds
@@ -316,6 +316,22 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
       planned(@production)
       send_remote({ReleaseStatus, {:planned, @production, %{remote | taken_at: remote.taken_at - 1, pending: 7}}})
       refute match?(%{pending: 7}, ReleaseStatus.summary(@production))
+    end
+
+    test "for an environment this node hasn't planned, for this node's release, is kept without planning" do
+      pid = start_server!()
+      remote = :ets.lookup_element(ReleaseStatus, @production, 2)
+      # A new environment's first result
+      :ets.delete(ReleaseStatus, @production)
+
+      :erlang.trace_pattern({ReleaseStatus, :refresh, 2}, true, [:call_count])
+      on_exit(fn -> :erlang.trace_pattern({ReleaseStatus, :refresh, 2}, false, [:call_count]) end)
+
+      send_remote({ReleaseStatus, {:planned, @production, %{remote | pending: 4, database: "elsewhere"}}})
+
+      assert %{pending: 4} = ReleaseStatus.summary(@production)
+      settle(pid)
+      assert :erlang.trace_info({ReleaseStatus, :refresh, 2}, :call_count) == {:call_count, 0}
     end
 
     test "for an environment this node hasn't planned is checked against its own release", c do
