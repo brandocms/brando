@@ -469,9 +469,10 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Videos.VideoListLive" => [
       read:
-        ~w(assets_cancel_new_folder_form assets_clear_clipboard assets_cut_selected assets_go_folder assets_go_parent assets_go_recent assets_go_root assets_show_new_folder_form close_video play_video sweep_close sweep_dismiss sweep_open),
+        ~w(assets_cancel_new_folder_form assets_clear_clipboard assets_cut_selected assets_go_folder assets_go_parent assets_go_recent assets_go_root assets_show_new_folder_form close_video play_video sweep_close sweep_dismiss sweep_open upload_error video_upload_progress),
+      checked: ~w(video_upload_complete),
       write:
-        ~w(assets_create_folder assets_move_selected_to_folder assets_paste_selected delete_unused fetch_metadata rename_video sweep_apply sweep_undo)
+        ~w(assets_create_folder assets_move_selected_to_folder assets_paste_selected delete_unused fetch_metadata get_video_upload_url rename_video sweep_apply sweep_undo)
     ]
   }
 

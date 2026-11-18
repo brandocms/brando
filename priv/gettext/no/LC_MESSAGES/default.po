@@ -19846,6 +19846,7 @@ msgstr "Oppdaterte tillatelser gjelder umiddelbart for eksisterende medlemmer."
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr "Last opp"
@@ -19931,6 +19932,11 @@ msgstr "Last opp erstatning"
 #, elixir-autogen, elixir-format
 msgid "Upload to %{folder}"
 msgstr "Last opp til %{folder}"
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Upload videos"
+msgstr "Last opp videoer"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format

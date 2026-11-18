@@ -180,7 +180,8 @@ defmodule Brando.Videos.Uploader do
   ## Parameters
   - filename: Original filename from client
   - user: Current user initiating upload
-  - opts: Options including `:config` (required for routing)
+  - opts: `:config` (required for routing), and optionally `:config_target`,
+    `:file_meta` and `:folder_id` (the library folder the video goes in)
 
   ## Returns
   - `{:ok, upload_result}` with upload_url and created video record

@@ -337,6 +337,8 @@ defmodule Brando.Videos.Uploaders.Vimeo do
       remote_id: video_id,
       source_url: created["link"],
       config_target: Keyword.get(opts, :config_target),
+      # The folder the upload was started in (the Videos library's)
+      folder_id: Keyword.get(opts, :folder_id),
       meta: %{
         "provider" => "vimeo",
         "vimeo" => vimeo_meta(created)

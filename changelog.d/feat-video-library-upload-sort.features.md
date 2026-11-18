@@ -1,0 +1,1 @@
+- The Videos library has an Upload button in its header, as Images has: it uploads into the folder in view, through the upload manager or the video provider, and shows only when video uploads are available and the editor may add videos.

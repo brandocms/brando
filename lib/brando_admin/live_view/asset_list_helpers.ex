@@ -245,12 +245,20 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   # (the open preview) and `:sweep_result` (what Undo puts back), and redraws
   # its folder state after each call.
 
-  @doc "Opens the preview of sorting the current folder's `asset_type` assets."
+  @doc """
+  Opens the preview of sorting the current folder's `asset_type` assets. At
+  the root, the root's loose assets (`Sweep.plan/2` with `:root`), which the
+  image library does not sort.
+  """
   def open_sweep(socket, asset_type) do
     # A preview moves nothing, and a folder not stored yet has nothing to sort
-    folder_id = FolderBrowser.find_folder_id(socket.assigns.current_folder, socket.assigns.upload_root)
+    folder =
+      case socket.assigns.current_folder do
+        "" -> :root
+        current -> FolderBrowser.find_folder_id(current, socket.assigns.upload_root)
+      end
 
-    case Sweep.plan(asset_type, folder_id) do
+    case Sweep.plan(asset_type, folder) do
       {:ok, plan} -> Component.assign(socket, :sweep, %{plan: plan, samples: Sweep.samples(plan)})
       {:error, _} -> socket
     end

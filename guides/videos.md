@@ -108,6 +108,8 @@ This setting affects:
 - Video fields whose `cfg` doesn't set `upload_strategy`
 - Video blocks in the Villain editor
 - Any video picker without a specific config target
+- The **Upload** button in **Resources → Videos**, which uploads into the
+  folder in view and shows only to editors who may create videos
 
 A field that sets its own `upload_strategy` keeps it. A provider strategy
 without credentials offers no upload either, the same as `:none`.
