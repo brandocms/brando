@@ -624,7 +624,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class={["variable", @var[:type].value]} data-size={@var[:width].value} data-id={@var[:id].value}>
+    <div
+      id={@id}
+      class={["variable", @var[:type].value, @source_locked && "is-source-locked"]}
+      data-size={@var[:width].value}
+      data-id={@var[:id].value}
+    >
       <%= if @inner_block do %>
         {render_slot(@inner_block)}
       <% end %>

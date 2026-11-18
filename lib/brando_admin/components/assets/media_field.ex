@@ -290,9 +290,9 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   @doc """
   Says that media follows the source, in a synchronized translation. Media in
   blocks (refs and variables) is the source's there: the controls that change
-  it carry `media-source-control`, and under the block field's
-  `.is-source-locked` (`Blocks.css`) those are hidden and this note shown in
-  their place. Anywhere else the note is hidden. `empty` says the source has
+  it carry `media-source-control`, and under `.is-source-locked` (`Blocks.css`;
+  the block field's, or a locked `RenderVar`'s for an entry's own variables)
+  those are hidden and this note shown in their place. Anywhere else the note is hidden. `empty` says the source has
   chosen none.
   """
   attr :empty, :boolean, default: false

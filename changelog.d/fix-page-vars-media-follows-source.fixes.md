@@ -1,0 +1,1 @@
+- In a synchronized translation, an entry's own image, file, video and gallery variables (a page's "Page variables") show their media with the note that it follows the source, without the controls to upload, choose, replace or remove it, as the same variables in blocks already do; their text variables stay editable.
