@@ -1,0 +1,1 @@
+- The Images, Videos and Files libraries no longer offer **Sort by use** while a search narrows the list, since it would sort the whole folder; clearing the search offers it again.

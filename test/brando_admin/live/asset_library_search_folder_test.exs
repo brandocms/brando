@@ -15,28 +15,14 @@ defmodule BrandoAdmin.AssetLibrarySearchFolderTest do
 
   import Brando.Test.Users
 
-  alias Brando.Content.Block
-  alias Brando.Pages.Page
   alias Brando.Repo
   alias BrandoAdmin.Images.FolderBrowser
 
   @videos "/admin/assets/videos"
   @images "/admin/assets/images"
   @heading ".image-picker-main-header h3"
-  @sort "button[phx-click=sweep_open]"
   @video_search "#listing-filter-form-Elixir\\.Brando\\.Videos\\.Video-path"
   @image_search "#listing-filter-form-Elixir\\.Brando\\.Images\\.Image-path"
-
-  defp show(videos, title) do
-    page = Factory.insert(:page, title: title, uri: Brando.Utils.slugify(title), language: "en")
-    Brando.Content.create_identifier(Page, page)
-
-    block =
-      Repo.insert!(%Block{type: :module, source: "Elixir.Brando.Pages.Page.Blocks", uid: Brando.Utils.generate_uid()})
-
-    Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
-    Enum.each(videos, &Factory.insert(:ref, block_id: block.id, video_id: &1.id))
-  end
 
   defp reader(conn), do: log_in_as(conn, permissions: ~w(brando.images.read))
 
@@ -89,28 +75,6 @@ defmodule BrandoAdmin.AssetLibrarySearchFolderTest do
       assert heading(view) == "Intervjuer"
       assert has_element?(view, "#list-row-#{c.filed.id}")
       assert has_element?(view, "#list-row-#{other.id}")
-    end
-
-    test "a search names no folder for Sort by use: the root's sort sorts the root", %{conn: conn} = c do
-      show([c.loose], "Root page")
-      show([c.filed], "Folder page")
-
-      {:ok, view, _html} = live(conn, @videos <> "?filter:path=Intervjuer")
-      assert has_element?(view, @sort)
-
-      view |> element(@sort) |> render_click()
-      assert has_element?(view, "#video-sweep .media-sweep-entry", "Root page")
-      refute has_element?(view, "#video-sweep .media-sweep-entry", "Folder page")
-    end
-
-    test "a search inside a folder keeps that folder's sort", %{conn: conn} = c do
-      show([c.loose], "Root page")
-      show([c.filed], "Folder page")
-
-      {:ok, view, _html} = live(conn, @videos <> "?filter:folder_id=#{c.folder_id}&filter:path=Filed")
-      view |> element(@sort) |> render_click()
-      assert has_element?(view, "#video-sweep .media-sweep-entry", "Folder page")
-      refute has_element?(view, "#video-sweep .media-sweep-entry", "Root page")
     end
 
     test "a folder link in the old shape still opens the folder, with no search", %{conn: conn} = c do
