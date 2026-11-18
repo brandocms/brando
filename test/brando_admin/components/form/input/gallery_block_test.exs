@@ -82,8 +82,8 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
                {{:video, id}, "Video caption"}
              ]
 
-      assert socket.assigns.override_data[{:image, id}].current_title == "Image caption"
-      assert socket.assigns.override_data[{:video, id}].current_title == "Video caption"
+      assert socket.assigns.override_data[{:image, id, nil}].current_title == "Image caption"
+      assert socket.assigns.override_data[{:video, id, nil}].current_title == "Video caption"
     end
 
     test "gives an override stored without a type the type of its media", ctx do
@@ -107,6 +107,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
             <Object.render
               gallery_object_form={gallery_object_form}
               gallery_objects={@gallery_objects}
+              placements={@placements}
               display={@display}
               text_editor={assigns[:text_editor]}
               myself={@myself}
@@ -131,9 +132,9 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
           Map.put(socket.assigns, :myself, %Phoenix.LiveComponent.CID{cid: 1})
         )
 
-      id = ctx.shared_id
-      assert html =~ ~s(id="gallery-object-galleryref-image-#{id}")
-      assert html =~ ~s(id="gallery-object-galleryref-video-#{id}")
+      [image_object, video_object] = ctx.gallery.gallery_objects
+      assert html =~ ~s(id="gallery-object-galleryref-#{image_object.id}")
+      assert html =~ ~s(id="gallery-object-galleryref-#{video_object.id}")
       assert html =~ "Image caption"
       assert html =~ "Video caption"
       assert length(Regex.scan(~r/name="[^"]*\[object_type\]"[^>]*value="image"/, html)) == 1
@@ -184,7 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
         socket.assigns
         |> Map.put(:myself, %Phoenix.LiveComponent.CID{cid: 1})
         |> Map.put(:display, :grid)
-        |> Map.put(:text_editor, %{type: :image, id: id, kind: :alt})
+        |> Map.put(:text_editor, %{type: :image, id: id, placement: nil, kind: :alt})
 
       html = render_component(&render_objects/1, assigns)
       doc = Floki.parse_fragment!(html)
@@ -261,6 +262,89 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert socket.assigns.view == :list
       assert socket.assigns.display == :grid
       refute_receive {:phoenix, :send_update, _}
+    end
+  end
+
+  # A gallery may hold one image twice (#3617): each placement is its own
+  # object with its own override.
+  describe "a repeated image" do
+    setup ctx do
+      gallery = Factory.insert(:gallery)
+      image = Factory.insert(:image, creator: ctx.user, title: "Library caption")
+
+      for sequence <- 0..1,
+          do: Factory.insert(:gallery_object, gallery_id: gallery.id, image_id: image.id, sequence: sequence)
+
+      gallery = Brando.Repo.preload(gallery, [gallery_objects: [:image, video: [:thumbnail]]], force: true)
+      {:ok, repeated: gallery, repeated_image: image}
+    end
+
+    defp placed(image, placement, title) do
+      %{override(image.id, :image, title) | placement: placement}
+    end
+
+    defp captions(socket) do
+      Enum.map(socket.assigns.initialized_overrides, &{&1.placement, &1.title})
+    end
+
+    test "a caption stored for the image is copied into each placement", ctx do
+      socket = update_gallery_block(ctx.repeated, [override(ctx.repeated_image.id, :image, "Shared")])
+
+      assert captions(socket) == [{0, "Shared"}, {1, "Shared"}]
+      id = to_string(ctx.repeated_image.id)
+      assert socket.assigns.override_data[{:image, id, 0}].current_title == "Shared"
+      assert socket.assigns.override_data[{:image, id, 1}].current_title == "Shared"
+    end
+
+    test "each placement keeps its own caption", ctx do
+      overrides = [placed(ctx.repeated_image, 1, "Second"), placed(ctx.repeated_image, 0, "First")]
+      socket = update_gallery_block(ctx.repeated, overrides)
+
+      assert captions(socket) == [{0, "First"}, {1, "Second"}]
+
+      html =
+        render_component(
+          &render_objects/1,
+          socket.assigns |> Map.put(:myself, %Phoenix.LiveComponent.CID{cid: 1}) |> Map.put(:display, :list)
+        )
+
+      assert html |> Floki.parse_fragment!() |> Floki.find(".gallery-block-list-title") |> Enum.map(&Floki.text/1) ==
+               ["First", "Second"]
+
+      # One override form per object, each with its own placement
+      assert Regex.scan(~r/name="[^"]*\[placement\]"[^>]*value="(\d)"/, html, capture: :all_but_first) == [["0"], ["1"]]
+    end
+
+    test "a caption saved for one placement leaves the other alone", ctx do
+      socket =
+        ctx.repeated
+        |> update_gallery_block([placed(ctx.repeated_image, 0, "First"), placed(ctx.repeated_image, 1, "Second")])
+        |> Phoenix.Component.assign(:target_ref, {Block, "block-galleryblk"})
+        |> Phoenix.Component.assign(:ref_name, "gallery")
+
+      id = to_string(ctx.repeated_image.id)
+
+      {:noreply, socket} =
+        GalleryBlock.handle_event(
+          "open_text_editor",
+          %{"type" => "image", "id" => id, "placement" => 1, "kind" => "caption"},
+          socket
+        )
+
+      assert socket.assigns.text_editor == %{type: :image, id: id, placement: 1, kind: :caption}
+
+      GalleryBlock.handle_event(
+        "save_object_text",
+        %{"type" => "image", "id" => id, "placement" => 1, "kind" => "caption", "value" => "<p>Edited</p>"},
+        socket
+      )
+
+      assert_receive {:phoenix, :send_update, {{Block, "block-galleryblk"}, %{event: "update_ref_data", ref_data: data}}}
+
+      assert Enum.map(data.gallery_object_overrides, &{&1.placement, &1.title}) == [
+               {0, "First"},
+               {1, "<p>Edited</p>"}
+             ]
     end
   end
 

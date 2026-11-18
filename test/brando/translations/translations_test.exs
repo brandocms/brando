@@ -816,6 +816,59 @@ defmodule Brando.TranslationsTest do
       assert Enum.map(pending_ref.gallery.gallery_objects, & &1.image_id) == [image.id, second.id]
       assert Enum.map(gallery_ref.(load(en.id)).gallery.gallery_objects, & &1.image_id) == [image.id]
     end
+
+    # Each placement of a repeated image has its own caption to translate.
+    test "a gallery holding one image twice has a text path for each placement's caption", c do
+      alias Brando.Translations.Sync
+
+      image = Factory.insert(:image, creator_id: c.user.id)
+      other = Factory.insert(:image, creator_id: c.user.id)
+
+      gallery =
+        Factory.insert(:gallery,
+          gallery_objects: [
+            Factory.build(:gallery_object, image: image, sequence: 0, creator: c.user),
+            Factory.build(:gallery_object, image: other, sequence: 1, creator: c.user),
+            Factory.build(:gallery_object, image: image, sequence: 2, creator: c.user)
+          ]
+        )
+
+      overrides =
+        for {media, placement, title} <- [{image, 0, "Første"}, {other, nil, "Tredje"}, {image, 1, "Andre"}] do
+          %{
+            "object_id" => to_string(media.id),
+            "object_type" => "image",
+            "placement" => placement,
+            "title" => title,
+            "use_default_title" => false
+          }
+        end
+
+      add_raw_block(
+        c.source,
+        c,
+        %{
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "gallery",
+              "gallery_id" => gallery.id,
+              "data" => %{"type" => "gallery", "data" => %{"gallery_object_overrides" => overrides}}
+            }
+          ]
+        },
+        2
+      )
+
+      titles =
+        c.source.id
+        |> load()
+        |> Sync.flatten_entry(Article)
+        |> Enum.filter(fn {path, class, _} -> class == :text and path =~ ~r"/gallery/.+/title$" end)
+
+      assert titles |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length() == 3
+      assert titles |> Enum.map(&elem(&1, 2)) |> Enum.sort() == ["Andre", "Første", "Tredje"]
+    end
   end
 
   describe "copying a batch to a language" do

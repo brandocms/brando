@@ -181,6 +181,61 @@ defmodule BrandoAdmin.ContentPreviewTest do
            ]
   end
 
+  test "a gallery holding one image twice shows each placement with its own caption" do
+    image = %Brando.Images.Image{id: 7, path: "images/still.jpg"}
+
+    gallery = %Brando.Galleries.Gallery{
+      id: 3,
+      gallery_objects: [
+        %Brando.Galleries.GalleryObject{id: 90, sequence: 0, image_id: 7, image: image},
+        %Brando.Galleries.GalleryObject{id: 91, sequence: 1, image_id: 7, image: image}
+      ]
+    }
+
+    overrides =
+      for {placement, title} <- [{0, "First"}, {1, "Second"}] do
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: "7",
+          object_type: :image,
+          placement: placement,
+          title: title,
+          use_default_title: false
+        }
+      end
+
+    saved = %Brando.Content.Block{
+      description: "Collection",
+      refs: [
+        %Brando.Content.Ref{
+          name: "Photos",
+          gallery_id: 3,
+          gallery: gallery,
+          data: %Brando.Villain.Blocks.GalleryBlock{
+            data: %Brando.Villain.Blocks.GalleryBlock.Data{gallery_object_overrides: overrides}
+          }
+        }
+      ],
+      vars: [],
+      table_rows: [],
+      children: []
+    }
+
+    lines = ContentPreview.lines([saved])
+
+    assert text(lines) == [
+             "Collection",
+             "Gallery · Photos",
+             "Image: still.jpg",
+             "Title: First",
+             "Image: still.jpg",
+             "Title: Second"
+           ]
+
+    # Each placement is its own line to compare, not one image named twice
+    keys = lines |> Enum.filter(&(&1.type == :media)) |> Enum.map(& &1.key)
+    assert keys == Enum.uniq(keys)
+  end
+
   test "files, uploaded and external videos, posters, table vars and nested blocks are readable" do
     deps = %{
       "file:1" => %{"kind" => "file", "data" => %{"filename" => "collection.pdf"}},

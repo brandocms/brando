@@ -912,6 +912,83 @@ defmodule Brando.Content.TransferTest do
     assert Enum.all?(ref.gallery.gallery_objects, &(&1.image_id != image.id && &1.video_id != video.id))
   end
 
+  # A gallery that holds one image twice keeps a caption for each placement.
+  test "each placement of a repeated image keeps its own override", c do
+    image = c.user.avatar
+
+    gallery =
+      %Brando.Galleries.Gallery{}
+      |> Brando.Galleries.Gallery.changeset(
+        %{
+          "config_target" => "default",
+          "gallery_objects" => [%{"image_id" => image.id, "sequence" => 0}, %{"image_id" => image.id, "sequence" => 1}]
+        },
+        c.user
+      )
+      |> Repo.insert!()
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          name: %{"en" => "Gallery"},
+          namespace: %{},
+          help_text: %{},
+          code: "Gallery",
+          refs: [%{name: "gallery", uid: Utils.generate_uid(), data: %{type: "gallery", data: %{}}}]
+        ),
+        c.user
+      )
+
+    overrides =
+      for {placement, title} <- [{0, "First"}, {1, "Second"}] do
+        %{
+          "object_id" => to_string(image.id),
+          "object_type" => "image",
+          "placement" => placement,
+          "title" => title,
+          "use_default_title" => false
+        }
+      end
+
+    params = %{
+      "uid" => Utils.generate_uid(),
+      "type" => "module",
+      "module_id" => module.id,
+      "source" => to_string(Page.Blocks),
+      "creator_id" => c.user.id,
+      "refs" => [
+        %{
+          "uid" => Utils.generate_uid(),
+          "name" => "gallery",
+          "gallery_id" => gallery.id,
+          "data" => %{"type" => "gallery", "data" => %{"gallery_object_overrides" => overrides}}
+        }
+      ]
+    }
+
+    block = %Block{} |> Block.recursive_block_changeset(params, c.user) |> Repo.insert!()
+    Repo.insert!(struct(Page.Blocks, %{entry_id: c.source.id, block_id: block.id, sequence: 1}))
+
+    archive = export(c)
+
+    assert Enum.map(archive_overrides(archive), &{&1["object_id"], &1["placement"], &1["title"]}) == [
+             {"image:#{image.id}", 0, "First"},
+             {"image:#{image.id}", 1, "Second"}
+           ]
+
+    plan = preview(c, archive)
+    assert plan.problems == []
+    assert {:ok, _} = Transfer.apply(plan, c.user)
+
+    [_text, imported] = blocks(c.target, c.user)
+    [ref] = imported.refs
+    [first, second] = ref.gallery.gallery_objects
+    assert first.image_id == second.image_id
+    index = GalleryObjectOverride.index(ref.data.data.gallery_object_overrides)
+    assert GalleryObjectOverride.lookup(index, :image, first.image_id, 0).title == "First"
+    assert GalleryObjectOverride.lookup(index, :image, second.image_id, 1).title == "Second"
+  end
+
   test "archives exported before overrides were tokenized by media still import", c do
     %{image: image, video: video} = colliding_gallery_block(c)
     archive = export(c)

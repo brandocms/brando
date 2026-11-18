@@ -1213,6 +1213,43 @@ defmodule Brando.Villain.RefRenderingTest do
       assert html =~ "[video:Video caption]"
     end
 
+    # A gallery may hold one image twice; each placement keeps its own caption,
+    # and a caption stored for the image without a placement applies to both.
+    test "apply each placement's override when a gallery holds one image twice", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      other = Factory.insert(:image, creator: user)
+      gallery = gallery_with([{:image, image}, {:image, other}, {:image, image}])
+      titles = fn html -> ~r/\[image:([^|]*)\|/ |> Regex.scan(html, capture: :all_but_first) |> List.flatten() end
+
+      caption = fn text, placement ->
+        %Brando.Villain.Blocks.GalleryObjectOverride{
+          object_id: to_string(image.id),
+          object_type: :image,
+          placement: placement,
+          title: text,
+          use_default_title: false
+        }
+      end
+
+      html =
+        render_gallery_titles(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: [caption.("First", 0), caption.("Second", 1)]
+        })
+
+      assert [first, _other, second] = titles.(html)
+      assert {first, second} == {"First", "Second"}
+
+      html =
+        render_gallery_titles(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: [caption.("Shared", nil), caption.("Second", 1)]
+        })
+
+      assert [first, _other, second] = titles.(html)
+      assert {first, second} == {"Shared", "Second"}
+    end
+
     # Gallery block captions are rich text: an image's is its override `title`,
     # a video's its override `caption`. Both render as markup.
     test "render rich-text caption overrides as markup", %{user: user} do

@@ -549,7 +549,10 @@ defmodule Brando.Content.Block do
   end
 
   def ref_changeset(ref, attrs, user) do
-    attrs = drop_vanished_gallery_objects(attrs, ref)
+    attrs =
+      attrs
+      |> drop_vanished_gallery_objects(ref)
+      |> Brando.Villain.Blocks.GalleryObjectOverride.follow_order()
 
     ref
     |> cast(attrs, [

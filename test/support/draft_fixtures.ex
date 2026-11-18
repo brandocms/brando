@@ -35,8 +35,14 @@ defmodule Brando.DraftFixtures do
     |> put_in(
       ["blocks", "blocks", Access.at(0), "block", "refs", Access.at(1), "data", "data", "gallery_object_overrides"],
       [
-        %{"object_id" => "595", "object_type" => "image", "title" => nil, "use_default_title" => true},
-        %{"object_id" => "596", "object_type" => "video", "muted" => nil, "use_default_muted" => true}
+        %{
+          "object_id" => "595",
+          "object_type" => "image",
+          "placement" => nil,
+          "title" => nil,
+          "use_default_title" => true
+        },
+        %{"object_id" => "596", "object_type" => "video", "placement" => nil, "muted" => nil, "use_default_muted" => true}
       ]
     )
   end

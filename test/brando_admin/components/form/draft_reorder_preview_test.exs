@@ -123,6 +123,18 @@ defmodule BrandoAdmin.Components.Form.DraftReorderPreviewTest do
     assert changed_rows(preview) == []
   end
 
+  test "a caption added to one placement of a repeated image shows as that caption alone" do
+    objects = [%{"id" => 10, "image_id" => 1}, %{"id" => 20, "image_id" => 1}]
+    placed = fn placement -> %{"object_id" => "1", "object_type" => "image", "placement" => placement} end
+    before = [placed.(0)]
+    changed = before ++ [Map.merge(placed.(1), %{"title" => "Second", "use_default_title" => false})]
+
+    preview = DraftPreview.comparisons(gallery(objects, before), gallery(objects, changed), references: refs())
+    assert orders(preview) == []
+    assert Enum.map(changed_rows(preview), & &1.text) |> Enum.any?(&(&1 =~ "Second"))
+    refute Enum.any?(changed_rows(preview), &(&1.text =~ ~r/placement/i))
+  end
+
   test "gallery additions and replacement images are retained as changes, not moves" do
     before = [%{"id" => 10, "image_id" => 1}]
     after_rows = [%{"id" => 10, "image_id" => 2}]

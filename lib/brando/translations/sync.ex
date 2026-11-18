@@ -47,6 +47,7 @@ defmodule Brando.Translations.Sync do
   alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Query.Mutations
   alias Brando.Villain.Blocks.GalleryBlock
+  alias Brando.Villain.Blocks.GalleryObjectOverride
   alias Brando.Villain.Blocks.HtmlBlock
   alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain.Blocks.VideoBlock
@@ -409,10 +410,11 @@ defmodule Brando.Translations.Sync do
   defp flatten_gallery(ref, data, prefix) do
     overrides =
       for override <- data.gallery_object_overrides || [],
-          key = Brando.Villain.Blocks.GalleryObjectOverride.media_key(override),
+          key = GalleryObjectOverride.media_key(override),
           key != nil,
           field <- [:title, :credits, :alt, :caption] do
-        {"#{prefix}/gallery/#{media_key_string(key)}/#{field}", :text, Map.get(override, field)}
+        path = media_key_string(key, GalleryObjectOverride.placement(override))
+        {"#{prefix}/gallery/#{path}/#{field}", :text, Map.get(override, field)}
       end
 
     [{prefix <> "/gallery", :shared, gallery_media(ref)} | overrides]
@@ -424,7 +426,9 @@ defmodule Brando.Translations.Sync do
 
   defp gallery_media(_), do: nil
 
-  defp media_key_string({type, id}), do: "#{type || "any"}:#{id}"
+  # A media the gallery holds more than once has an override per placement
+  defp media_key_string({type, id}, nil), do: "#{type || "any"}:#{id}"
+  defp media_key_string({type, id}, placement), do: "#{type || "any"}:#{id}@#{placement}"
 
   defp flatten_var(var, parent_prefix, controlled? \\ false) do
     prefix = "#{parent_prefix}/#{var.key}"

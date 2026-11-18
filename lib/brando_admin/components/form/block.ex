@@ -3406,10 +3406,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  # A gallery holds each image or video once: its caption override is keyed by
-  # the media, and removing it removes every copy. A second add (a double
-  # click, or a picker selection racing another editor's) is a no-op rather
-  # than a duplicate the editor cannot render.
+  # The picker adds an image or video once: selecting one the gallery holds
+  # removes it (every placement of it). A second add (a double click, or a
+  # picker selection racing another editor's) is a no-op rather than a second
+  # placement. A gallery may still hold one media more than once (imported or
+  # written by code); each placement then has its own object and override.
   defp gallery_contains_media?(nil, _media_type, _media_id), do: false
 
   defp gallery_contains_media?(gallery, media_type, media_id) do

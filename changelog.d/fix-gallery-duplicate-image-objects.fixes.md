@@ -1,0 +1,1 @@
+- An entry whose gallery block holds the same image or video more than once opens in the editor, and each placement has its own caption and settings.

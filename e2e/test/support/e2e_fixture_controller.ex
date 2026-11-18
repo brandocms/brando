@@ -63,6 +63,9 @@ defmodule E2EFixtureController do
         "content-transfer-media" ->
           create_content_transfer_media()
 
+        "gallery-repeated-image" ->
+          create_repeated_gallery_page()
+
         "gallery-preview" ->
           {_filename, image} = create_directory_avatar()
           [gallery | _] = Brando.Repo.all(Brando.Galleries.Gallery)
@@ -949,6 +952,69 @@ defmodule E2EFixtureController do
       })
 
     {:ok, _} = Brando.Authorization.Migration.run()
+    user
+  end
+
+  # A page whose gallery block holds one image twice, each placement with its
+  # own caption (#3617).
+  defp create_repeated_gallery_page do
+    user = get_admin_user()
+    {_filename, image} = create_directory_avatar()
+    module = Brando.Repo.get_by!(Brando.Content.Module, class: "gallery-controls")
+
+    gallery =
+      Brando.Repo.insert!(%Brando.Galleries.Gallery{
+        config_target: "ref:gallery",
+        gallery_objects:
+          for(sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence})
+      })
+
+    overrides =
+      for {placement, caption} <- [{0, "First placement"}, {1, "Second placement"}] do
+        %{
+          "object_id" => to_string(image.id),
+          "object_type" => "image",
+          "placement" => placement,
+          "title" => "<p>#{caption}</p>",
+          "use_default_title" => false
+        }
+      end
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Repeated gallery",
+        uri: "repeated-gallery",
+        language: :en,
+        status: :published,
+        template: "default.html",
+        creator_id: user.id
+      })
+
+    block =
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "source" => to_string(Brando.Pages.Page.Blocks),
+          "creator_id" => user.id,
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "gallery",
+              "description" => "Image gallery",
+              "gallery_id" => gallery.id,
+              "data" => %{"type" => "gallery", "data" => %{"gallery_object_overrides" => overrides}}
+            }
+          ]
+        },
+        user
+      )
+      |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(%Brando.Pages.Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+    {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
     user
   end
 
