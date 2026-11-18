@@ -66,20 +66,36 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
 
     Brando.Pages.Page.Blocks
     |> where([eb], eb.entry_id == ^page.id)
-    |> order_by([eb], eb.sequence)
+    |> order_by([eb], asc: eb.sequence, asc: eb.id)
     |> Repo.all()
     |> Repo.preload(block: [:vars, :table_rows, :block_identifiers, :children, refs: Ref.preloads()])
   end
 
   # The op the browser's change of the block's form makes: the form as it
   # was rendered, and as it is with `change` made to its params.
-  defp form_op(entry_block, user, change) do
+  # `second_apart: true` casts the rendered form a second before the change.
+  defp form_op(entry_block, user, change, opts \\ []) do
     params = entry_block |> Changeset.change() |> Params.snapshot()
     form = fn change -> update_in(params, ["block", "refs"], fn [ref] -> [change.(as_form(ref))] end) end
     before = Brando.Pages.Page.Blocks.changeset(entry_block, form.(& &1), user.id)
+    before = if opts[:second_apart], do: a_second_earlier(before), else: before
     changeset = Brando.Pages.Page.Blocks.changeset(entry_block, form.(change), user.id)
     {:ok, op} = Ops.field_op(before, changeset, entry_block.block.uid)
     op
+  end
+
+  # A form cast a second earlier: `Brando.Trait.Creator` stamps each row the
+  # cast edits with the second it was cast in (`edited_at`).
+  defp a_second_earlier(%Changeset{changes: changes} = changeset) do
+    changes =
+      Map.new(changes, fn
+        {:edited_at, %DateTime{} = at} -> {:edited_at, DateTime.add(at, -1)}
+        {key, %Changeset{} = nested} -> {key, a_second_earlier(nested)}
+        {key, [%Changeset{} | _] = nested} -> {key, Enum.map(nested, &a_second_earlier/1)}
+        change -> change
+      end)
+
+    %{changeset | changes: changes}
   end
 
   # The form names gallery objects by their index, as a map
@@ -126,7 +142,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
     [row] = rows(page)
     [ref] = row.block.refs
     gallery = Repo.preload(Repo.get!(Gallery, ref.gallery_id), :gallery_objects, force: true)
-    objects = Enum.sort_by(gallery.gallery_objects, & &1.sequence)
+    objects = Enum.sort_by(gallery.gallery_objects, &{&1.sequence, &1.id})
     index = GalleryObjectOverride.index(ref.data.data.gallery_object_overrides)
 
     objects
@@ -163,6 +179,27 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
 
       remove = form_op(row, c.user, &remove_first/1)
       caption = form_op(row, c.user, &edit_first_caption/1)
+
+      ops = if unquote(order) == :remove_first, do: [remove, caption], else: [caption, remove]
+      state = Enum.reduce(ops, Ops.from_entry_blocks(rows), &apply!(&2, &1))
+      save(c.page, rows, state, c.user)
+
+      assert captions(c.page) == [{c.second.id, "Second"}]
+    end
+  end
+
+  # A form is cast when its event arrives, and the copies get a creator,
+  # which they lack, with that second's stamp. The editor writing the
+  # caption cast the form they started from a second before: the stamps
+  # differ, and are no change to the copies, so the removed one stays
+  # removed.
+  for order <- [:remove_first, :caption_first] do
+    test "a caption written a second after its form was cast lets a removal stand (#{order})", c do
+      rows = rows(c.page)
+      [row] = rows
+
+      remove = form_op(row, c.user, &remove_first/1)
+      caption = form_op(row, c.user, &edit_first_caption/1, second_apart: true)
 
       ops = if unquote(order) == :remove_first, do: [remove, caption], else: [caption, remove]
       state = Enum.reduce(ops, Ops.from_entry_blocks(rows), &apply!(&2, &1))

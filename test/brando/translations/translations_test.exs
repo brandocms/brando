@@ -1017,7 +1017,9 @@ defmodule Brando.TranslationsTest do
       |> Repo.update!()
 
       # The source removes the first placement of the image
-      [first | _] = Repo.preload(gallery, :gallery_objects, force: true).gallery_objects |> Enum.sort_by(& &1.sequence)
+      [first | _] =
+        Repo.preload(gallery, :gallery_objects, force: true).gallery_objects |> Enum.sort_by(&{&1.sequence, &1.id})
+
       Repo.delete!(first)
       Translations.source_saved(load(c.source.id))
 

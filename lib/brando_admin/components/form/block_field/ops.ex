@@ -1422,6 +1422,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   @render_artifacts ~w(rendered_html rendered_at)
 
+  # What `Brando.Trait.Creator` stamps on each row a changeset edits: the
+  # second the changeset was cast in. Two forms an event apart differ there
+  # for every row they edit (a gallery object without a creator is edited
+  # whenever its block's form is cast). The save stamps them again, and as
+  # a change one would keep a row another editor removed (`merge_list/4`).
+  @edit_stamps ~w(edited_at updated_by_id)
+
   @doc """
   The op for what one event changed in a block's form: `{:set_field, ...}`
   for one field, `{:set_fields, ...}` for several, `nil` for nothing, or
@@ -1433,7 +1440,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   identity (`id`, `uid`, `key` or `sync_uid`) rather than index, and a list
   whose items have none, or whose items were added, removed or reordered,
   is one field, set whole. `"children"` is left out: the tree is the
-  store's.
+  store's. Render artifacts and the editor's stamps (`edited_at`,
+  `updated_by_id`) are not fields.
 
   `target` is the input the event names (LiveView's `_target`): its field
   is always a change.
@@ -1505,7 +1513,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # The block's own fields. Its children are left out before the snapshot
   # (they are other blocks, with their own forms): on a block with many
   # children the snapshot is otherwise most of a keystroke's cost.
-  defp fields_snapshot(changeset), do: changeset |> without_children() |> snapshot_params() |> drop_artifacts()
+  defp fields_snapshot(changeset),
+    do: changeset |> without_children() |> snapshot_params() |> drop_keys(@render_artifacts ++ @edit_stamps)
 
   defp without_children(%Changeset{changes: changes, data: data} = changeset) do
     changes =
@@ -1592,11 +1601,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp dom_get(_value, _path), do: :error
 
-  defp drop_artifacts(%{} = map) when not is_struct(map),
-    do: map |> Map.drop(@render_artifacts) |> Map.new(fn {k, v} -> {k, drop_artifacts(v)} end)
+  defp drop_keys(%{} = map, keys) when not is_struct(map),
+    do: map |> Map.drop(keys) |> Map.new(fn {k, v} -> {k, drop_keys(v, keys)} end)
 
-  defp drop_artifacts(list) when is_list(list), do: Enum.map(list, &drop_artifacts/1)
-  defp drop_artifacts(other), do: other
+  defp drop_keys(list, keys) when is_list(list), do: Enum.map(list, &drop_keys(&1, keys))
+  defp drop_keys(other, _keys), do: other
 
   # What names a list item whatever its index: its row id, its uid, its key
   # (a var), its sync uid (a table row). An item with none of them cannot be

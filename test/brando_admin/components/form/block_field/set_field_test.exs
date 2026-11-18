@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
 
     Brando.Pages.Page.Blocks
     |> where([eb], eb.entry_id == ^page.id)
-    |> order_by([eb], eb.sequence)
+    |> order_by([eb], asc: eb.sequence, asc: eb.id)
     |> Brando.Repo.all()
     |> Brando.Repo.preload(
       block: [:vars, :refs, :table_rows, :block_identifiers, children: &Brando.Content.Blocks.preload_child_trees/1]
@@ -205,6 +205,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
 
     stamped = Changeset.change(intro, block: Changeset.change(intro.block, rendered_html: "<p>x</p>"))
     assert Ops.field_op(before, stamped, intro.block.uid) == {:ok, nil}
+  end
+
+  # Each form is cast when its event arrives, and `Brando.Trait.Creator`
+  # stamps the rows it edits with that second: two forms a second apart
+  # differ there, though the editor changed nothing.
+  test "the editor's stamps of two forms cast a second apart are not fields", c do
+    [intro | _] = rows(c.work)
+    at = DateTime.truncate(DateTime.utc_now(), :second)
+    cast = &Changeset.change(intro, block: Changeset.change(intro.block, edited_at: &1, updated_by_id: c.user.id))
+    assert Ops.field_op(cast.(at), cast.(DateTime.add(at, 1)), intro.block.uid) == {:ok, nil}
   end
 
   # #12: a list whose items have no identity was named by index, so an item
