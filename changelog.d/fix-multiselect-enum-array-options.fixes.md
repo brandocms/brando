@@ -1,0 +1,1 @@
+- A gallery's "Allowed media" setting (on a gallery variable, a gallery ref and a media template's gallery) no longer warns "Unavailable options: image, video" while both are allowed, shows its choices' labels instead of "Missing option", and can be narrowed to images or videos: unticking a stored choice used to add it again.
