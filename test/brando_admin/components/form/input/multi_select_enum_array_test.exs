@@ -60,6 +60,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectEnumArrayTest do
     assert has_element?(view, ".selected-label", "Videos")
   end
 
+  test "unticking a stored value removes it", %{conn: conn} do
+    view = mount_host(conn, %Var{}.gallery_allowed_types, @both)
+    view |> element(".multiselect > .button-edit") |> render_click()
+
+    # The click names the option by its string value
+    view |> element(~s(.multiselect-option[value="video"])) |> render_click(%{"value" => "video"})
+
+    assert_push_event(view, "b:validate", %{target: "var[gallery_allowed_types][]", values: [:image]})
+    refute has_element?(view, ".selected-label", "Videos")
+  end
+
   test "a selected value the options no longer offer is still unavailable", %{conn: conn} do
     view = mount_host(conn, [:image, :video], [%{label: "Images", value: :image}])
 

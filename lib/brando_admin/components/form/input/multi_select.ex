@@ -1358,11 +1358,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       ) do
     current_selected_options = socket.assigns.selected_options
 
-    exists_at_idx =
-      Enum.find_index(
-        current_selected_options,
-        &(&1 == value)
-      )
+    # The click sends a string; an `{:array, Ecto.Enum}` field holds atoms
+    exists_at_idx = Enum.find_index(current_selected_options, &(to_string(&1) == value))
 
     updated_selected_options =
       if exists_at_idx do
