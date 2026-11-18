@@ -294,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             />
 
             <div class="gallery-toolbar-row">
-              <div class="gallery-buttons segmented-buttons">
+              <div class="gallery-buttons segmented-buttons media-source-control">
                 <button type="button" class="media-button primary upload-trigger">
                   <.icon name="upload" />{gettext("Upload")}
                 </button>
@@ -311,6 +311,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
                 />
               </div>
+              <MediaField.source_note :if={@has_objects?} />
               <Tile.view_switch
                 :if={@has_objects?}
                 id={"block-#{@uid}-gallery-view"}
@@ -368,8 +369,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
             <div :if={!@has_objects?} class="media-gallery-empty">
               <.icon name="image" />
-              <span>{gettext("Drop media here to build your gallery")}</span>
-              <span class="media-field-meta">{gettext("You can reorder and configure each item afterwards.")}</span>
+              <span class="media-source-control">{gettext("Drop media here to build your gallery")}</span>
+              <span class="media-field-meta media-source-control">
+                {gettext("You can reorder and configure each item afterwards.")}
+              </span>
+              <MediaField.source_note empty />
             </div>
             <div
               id={"block-#{@uid}-gallery-progress"}

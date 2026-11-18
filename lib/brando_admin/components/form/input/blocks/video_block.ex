@@ -294,7 +294,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               <:section id="video" label={gettext("Video")} icon="film">
                 <div class="media-section-heading">
                   <h3 class="modal-section-title">{gettext("Selected video")}</h3>
-                  <p class="modal-muted">{gettext("Replace the video while keeping this reference’s settings.")}</p>
+                  <p class="modal-muted media-source-control">
+                    {gettext("Replace the video while keeping this reference’s settings.")}
+                  </p>
                 </div>
                 <MediaField.field
                   id={"block-#{@uid}-video-modal-upload"}

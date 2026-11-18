@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
@@ -157,9 +158,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
               <%!-- Shown instead of the two above in a synchronized translation
                     (`.is-source-locked`, MediaBlock.css), where media follows
                     the source and the type cannot be chosen --%>
-              <p class="media-block-source-note">
-                {gettext("No media chosen in the source. Media follows the source; choose it there.")}
-              </p>
+              <MediaField.source_note empty class="media-block-source-note" />
             </div>
           </div>
         </Block.block>

@@ -10156,6 +10156,11 @@ msgstr "Kanskje den var utdatert og har blitt slettet?"
 msgid "Media"
 msgstr "Medier"
 
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Media follows the source; choose it there."
+msgstr "Mediene følger kilden; velg dem der."
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Medical specialty"
@@ -11179,10 +11184,10 @@ msgstr "Ingen tillatelser samsvarer med søket"
 msgid "No matching users"
 msgstr "Ingen brukere funnet"
 
-#: lib/brando_admin/components/form/input/blocks/media_block.ex
+#: lib/brando_admin/components/assets/media_field.ex
 #, elixir-autogen, elixir-format
-msgid "No media chosen in the source. Media follows the source; choose it there."
-msgstr "Ingen medier valgt i kilden. Mediene følger kilden; velg dem der."
+msgid "No media chosen in the source."
+msgstr "Ingen medier valgt i kilden."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format

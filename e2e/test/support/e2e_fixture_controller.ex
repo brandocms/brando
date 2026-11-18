@@ -1912,10 +1912,13 @@ defmodule E2EFixtureController do
   # A Norwegian source article with one block whose media refs are all empty
   # but one picture, and an English synchronized translation of it. The block
   # also has a one-line and a multi-line variable with the default layout.
-  def synchronized_translation_refs(conn, _params) do
+  # With `filled=true` the gallery and file refs hold media too, and
+  # the block has an image, a file and a gallery variable, all filled.
+  def synchronized_translation_refs(conn, params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     user = get_admin_user()
+    filled? = params["filled"] == "true"
     alias E2eProject.SyncTest
     alias E2eProject.SyncTest.Article
 
@@ -1948,6 +1951,17 @@ defmodule E2EFixtureController do
       }
     ]
 
+    media_var_specs =
+      if filled? do
+        for {{type, key, label}, sequence} <- Enum.with_index([{"image", "hero", "Hero"}, {"file", "brochure", "Brochure"}, {"gallery", "album", "Album"}], 2) do
+          %{"type" => type, "key" => key, "label" => %{"en" => label}, "sequence" => sequence}
+        end
+      else
+        []
+      end
+
+    var_specs = var_specs ++ media_var_specs
+
     {:ok, module} =
       Brando.Content.create_module(
         %{
@@ -1965,6 +1979,9 @@ defmodule E2EFixtureController do
       )
 
     {_name, image} = create_directory_avatar()
+    # Every size a block or a variable shows, so their previews load
+    sizes = Map.new(~w(largest large medium small smallest thumb), &{&1, image.path})
+    image = Brando.Repo.update!(Ecto.Changeset.change(image, sizes: sizes))
 
     {:ok, source} =
       SyncTest.create_article(
@@ -1972,12 +1989,41 @@ defmodule E2EFixtureController do
         user
       )
 
+    gallery = fn ->
+      Brando.Repo.insert!(%Brando.Galleries.Gallery{
+        config_target: "default",
+        gallery_objects: for(sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence})
+      })
+    end
+
+    file = fn ->
+      Brando.Repo.insert!(%Brando.Files.File{
+        filename: "harbour-guide.pdf",
+        mime_type: "application/pdf",
+        filesize: 120_000,
+        config_target: "default",
+        creator_id: user.id
+      })
+    end
+
     refs =
       Enum.map(ref_specs, fn {name, _, _, _} = spec ->
-        Map.put(ref.(spec), "image_id", if(name == "chosen", do: image.id))
+        ref = Map.put(ref.(spec), "image_id", if(name == "chosen", do: image.id))
+
+        case {filled?, name} do
+          {true, "slides"} -> Map.put(ref, "gallery_id", gallery.().id)
+          {true, "attachment"} -> Map.put(ref, "file_id", file.().id)
+          _ -> ref
+        end
       end)
 
-    vars = var_specs
+    vars =
+      Enum.map(var_specs, fn
+        %{"key" => "hero"} = var -> Map.put(var, "image_id", image.id)
+        %{"key" => "brochure"} = var -> Map.put(var, "file_id", file.().id)
+        %{"key" => "album"} = var -> Map.put(var, "gallery_id", gallery.().id)
+        var -> var
+      end)
 
     block =
       %Brando.Content.Block{}

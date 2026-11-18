@@ -947,3 +947,28 @@ section.alert.danger {
     display: none;
   }
 }
+
+/* Media in blocks follows the source too. The controls that change a ref's or
+   a variable's media carry `media-source-control` and go; the note
+   (`MediaField.source_note/1`) says why. Configure stays: a use's caption,
+   alt text and other text are the translation's own. Dropping files is off
+   as well (UploadTrigger), and the save refuses a change. */
+.media-source-note {
+  display: none;
+}
+
+.blocks-wrapper.is-source-locked {
+  /* Important: the controls' own rules set their display with more
+     specificity (`.media-gallery :is(.gallery-buttons, …).segmented-buttons`) */
+  .media-source-control {
+    display: none !important;
+  }
+
+  .media-source-note {
+    display: block;
+    margin: 0;
+    color: var(--brando-muted);
+    font-size: var(--brando-text-sm);
+    line-height: 18px;
+  }
+}

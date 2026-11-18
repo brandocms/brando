@@ -1,0 +1,1 @@
+- In a synchronized translation, picture, video, file and gallery refs and image, file, video and gallery variables show their media with a note that it follows the source, without Upload, Replace, Remove, Edit/Crop or dropping files; Configure stays for the caption, alt text and title each language keeps.

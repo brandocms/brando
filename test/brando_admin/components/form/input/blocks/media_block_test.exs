@@ -39,7 +39,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlockTest do
     {:ok, doc} = Floki.parse_fragment(html)
 
     assert [note] = Floki.find(doc, ".media-block .empty .media-block-source-note")
-    assert Floki.text(note) =~ "No media chosen in the source. Media follows the source; choose it there."
+
+    assert note |> Floki.text() |> String.split() |> Enum.join(" ") ==
+             "No media chosen in the source. Media follows the source; choose it there."
 
     # The source's controls are still rendered beside it; the stylesheet
     # chooses. The available types round-trip either way.

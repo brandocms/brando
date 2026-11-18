@@ -1268,12 +1268,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <Input.input type={:hidden} field={@var[:gallery_id]} value={@gallery_id || ""} publish />
           <div class="media-field-copy">
             <span class="media-field-name">{gettext("Gallery")}</span>
-            <span class="media-field-meta">{ngettext("%{count} item", "%{count} items", length(@gallery_objects))} · {gettext(
-              "Drop media here to add"
-            )}</span>
+            <span class="media-field-meta">
+              {ngettext("%{count} item", "%{count} items", length(@gallery_objects))}<span class="media-source-control"> · {gettext(
+                "Drop media here to add"
+              )}</span>
+            </span>
+            <MediaField.source_note empty={@gallery_objects == []} />
           </div>
           <MediaField.action_menu
             id={"#{@var.id}-gallery-actions"}
+            class="media-source-control"
             label={if @gallery_objects == [], do: gettext("Add"), else: gettext("Change")}
           >
             <button type="button" class="menu-item upload-trigger"><.icon name="upload" />{gettext("Upload media")}</button>
