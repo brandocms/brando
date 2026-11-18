@@ -23,7 +23,8 @@ defmodule Brando.Videos.ProviderConfigCheck do
   CI, and any site whose video fields are unused or `:local`. The failure this
   guards is already non-destructive: `validate_provider_video_intake/2` rejects
   the pick with a message. What was missing was *visibility*, and that is what
-  this adds.
+  this adds. Boot logs are rarely read, so Utilities lists the same problems
+  in its System check (`Brando.Doctor.Checks.VideoProviders`).
 
   Sites that want the strict reading can opt in:
 
@@ -31,7 +32,11 @@ defmodule Brando.Videos.ProviderConfigCheck do
 
   which raises at boot instead. That is off by default because it changes
   whether an application starts, which is not a default anyone should inherit
-  silently.
+  silently. It stays off in production too: a Florist `:single` deployment
+  restarts the service on the new release before anything checks it, so a
+  release that refuses to boot is an outage there. With blue/green, a release
+  that fails to boot never passes the health check and the old colour keeps
+  serving, so strict mode is safe to turn on.
 
   ## What counts as a problem
 

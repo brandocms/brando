@@ -158,13 +158,26 @@ file pick. It reports only:
 A provider with no configuration at all is not reported; that is simply a
 provider the site does not use.
 
-Problems are logged as errors and boot continues, since refusing to start would
-turn a misconfiguration into an outage and break dev, test and CI environments
-that legitimately have no credentials. To fail the boot instead:
+Problems are logged as errors and boot continues, in production too, since
+refusing to start would turn a misconfiguration into an outage and break dev,
+test and CI environments that legitimately have no credentials. The same
+problems, in the same words, are listed under Video providers in the System
+check on **Configuration → Utilities** and by `mix brando.doctor`, as a
+warning, so an admin sees them without reading the boot log.
+
+To fail the boot instead, on any of the three problems:
 
 ```elixir
 config :brando, :strict_video_provider_config, true
 ```
+
+Whether that is safe depends on how the release is deployed. With Florist's
+blue/green layout, a release that fails to boot never passes the health check:
+the deploy is aborted and the old colour keeps serving, so strict mode stops a
+misconfigured release. With the `:single` layout (what `mix brando.migrate55`
+generates), the deploy restarts the service on the new release first, and a
+release that refuses to boot takes the site down until it is fixed or rolled
+back.
 
 <!-- usage-rules:start topic="media" -->
 
