@@ -513,6 +513,60 @@ allowed types and link identifier schema restrictions. Export emits all of them.
 instead of URL (`:url`, the default); a link the editor has set keeps its own
 type, and the editor can still switch tabs.
 
+<!-- usage-rules:start topic="module-definitions" -->
+
+### Var layout
+
+The block editor lays out a block's vars in rows of twelve units, in
+declaration order. `width` is the share of a row a var takes: `:full` (12
+units, the default), `:half` (6), `:third` (4) or `:fourth` (3); `:auto` is as
+wide as its control and `:fill` takes what the row has left. A var joins the
+row before it when it fits there, up to four vars a row, and starts a new row
+otherwise. `new_row true` starts a new row even when the var would fit.
+
+A var without `width` is full width, so it has a row of its own. Leave text and
+rich-text vars that way: a one-line field beside a multi-line one is hard to
+read. Give short controls such as selects, colours and booleans a width to put
+them side by side:
+
+```elixir
+vars do
+  var :heading, :string do
+    label "Heading"
+  end
+
+  var :size, :select do
+    label "Size"
+    width :third
+    options [{"Small", "small"}, {"Large", "large"}]
+  end
+
+  var :align, :select do
+    label "Alignment"
+    width :third
+    options [{"Left", "left"}, {"Centre", "centre"}]
+  end
+
+  var :tone, :select do
+    label "Tone"
+    width :third
+    options [{"Light", "light"}, {"Dark", "dark"}]
+  end
+
+  var :intro, :text do
+    label "Introduction"
+  end
+end
+```
+
+The heading takes the first row, the three selects share the second, and the
+introduction takes the third. Vars with `placement :config` are laid out the
+same way in the block's configuration dialog. In the module editor, the Editor
+layout panel shows these rows: drag vars between rows and set their widths
+there.
+
+<!-- usage-rules:end -->
+
 ## Children and table templates
 
 Define dependencies in separate `.exs` files within the same directory tree.

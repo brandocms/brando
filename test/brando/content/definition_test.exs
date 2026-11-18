@@ -279,6 +279,62 @@ defmodule Brando.Content.DefinitionTest do
     assert message =~ "symlinks"
   end
 
+  describe "var layout" do
+    # Rows the block editor derives from a definition's vars
+    defp var_rows(spec, path, vars) do
+      [module] = Model.from_specs!([%{spec | vars: vars}], path)["modules"]
+
+      module["vars"]
+      |> Enum.map(fn var ->
+        %{
+          key: var["key"],
+          width: String.to_existing_atom(var["width"]),
+          new_row: var["new_row"],
+          sequence: var["sequence"],
+          placement: :content
+        }
+      end)
+      |> Brando.Content.Var.Layout.pack_placement(:content)
+      |> Enum.map(fn row -> Enum.map(row, & &1.key) end)
+    end
+
+    defp layout_var(key, type, layout \\ %{}),
+      do: Map.merge(%{key: key, type: type, label: key, settings: %{}, assets: []}, layout)
+
+    test "text and rich text vars are full width on rows of their own by default", %{path: path} do
+      spec = fixture_spec(path)
+
+      vars = [
+        layout_var(:title, :string),
+        layout_var(:meta, :text),
+        layout_var(:caption, :string),
+        layout_var(:body, :rich_text),
+        layout_var(:theme, :select)
+      ]
+
+      assert var_rows(spec, path, vars) == [["title"], ["meta"], ["caption"], ["body"], ["theme"]]
+
+      [module] = Model.from_specs!([%{spec | vars: vars}], path)["modules"]
+      assert Enum.all?(module["vars"], &(&1["width"] == "full"))
+    end
+
+    test "explicit width and new_row are kept", %{path: path} do
+      spec = fixture_spec(path)
+
+      vars = [
+        layout_var(:title, :string, %{width: :half}),
+        layout_var(:meta, :text, %{width: :half}),
+        layout_var(:size, :select, %{width: :third, new_row: true}),
+        layout_var(:align, :select, %{width: :third}),
+        layout_var(:tone, :select, %{width: :third}),
+        layout_var(:body, :rich_text, %{width: :half, new_row: true}),
+        layout_var(:note, :string, %{width: :half, new_row: true})
+      ]
+
+      assert var_rows(spec, path, vars) == [["title", "meta"], ["size", "align", "tone"], ["body"], ["note"]]
+    end
+  end
+
   defp fixture_spec(path) do
     file = Path.join(path, "hero.exs")
     File.write!(file, @source)

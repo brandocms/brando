@@ -11087,6 +11087,11 @@ msgstr ""
 msgid "No matching users"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/media_block.ex
+#, elixir-autogen, elixir-format
+msgid "No media chosen in the source. Media follows the source; choose it there."
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "No members yet"

@@ -154,6 +154,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
               <div class="buttons">
                 <.select_block block_data={block_data} target={@myself} uid={@uid} available_blocks={@available_blocks} />
               </div>
+              <%!-- Shown instead of the two above in a synchronized translation
+                    (`.is-source-locked`, MediaBlock.css), where media follows
+                    the source and the type cannot be chosen --%>
+              <p class="media-block-source-note">
+                {gettext("No media chosen in the source. Media follows the source; choose it there.")}
+              </p>
             </div>
           </div>
         </Block.block>

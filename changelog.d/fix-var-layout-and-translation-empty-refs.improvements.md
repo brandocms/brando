@@ -1,0 +1,1 @@
+- The module definitions guide and usage rules describe var layout (`width`, `new_row`), with an example of a typical block.

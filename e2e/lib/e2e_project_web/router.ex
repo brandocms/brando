@@ -61,6 +61,7 @@ defmodule E2eProjectWeb.Router do
       post "/video-quality-fixtures", E2EFixtureController, :video_quality
       post "/video-processing-fixtures", E2EFixtureController, :video_processing
       post "/synchronized-translation", E2EFixtureController, :synchronized_translation
+      post "/synchronized-translation-refs", E2EFixtureController, :synchronized_translation_refs
       post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
       post "/masked-entries-fixtures", E2EFixtureController, :masked_entries
