@@ -208,25 +208,32 @@ defmodule Brando.Translations do
   sync identity, linked as an alternate and added to the group. An entry not
   yet in a group becomes its source.
 
+  Every text the copy holds that is not empty is marked `:translate`, as if
+  it were new: until it is translated or marked reviewed, the copy is still
+  the source's text. Pass `mark_translate: false` for a translation meant to
+  start from the source's text as it is, such as a language variant that
+  differs in a few places; nothing is marked then.
+
   Returns `{:error, :language_exists}` when the group already has that
   language, or when the source is linked to an independent version in it.
   """
-  def create_target(schema, source_id, language, actor) do
+  def create_target(schema, source_id, language, actor, opts \\ []) do
     language = to_string(language)
+    mark_translate? = Keyword.get(opts, :mark_translate, true)
 
     with :ok <- ensure_duplicable(schema),
          :ok <- ensure_language_known(schema, language),
          :ok <- ensure_no_linked_version(schema, source_id, language) do
       # One transaction, enrolment included: a failed copy leaves no group
       # with a source and no translation behind.
-      Repo.transaction(fn -> enrol_target(schema, source_id, language, actor) end)
+      Repo.transaction(fn -> enrol_target(schema, source_id, language, actor, mark_translate?) end)
     end
   end
 
-  defp enrol_target(schema, source_id, language, actor) do
+  defp enrol_target(schema, source_id, language, actor, mark_translate?) do
     with {:ok, source_member} <- source_member(schema, source_id, actor),
          :ok <- ensure_language_free(source_member, language),
-         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor) do
+         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
       target
     else
       {:error, reason} -> Repo.rollback(reason)
@@ -247,7 +254,7 @@ defmodule Brando.Translations do
 
   defp ensure_duplicable(schema), do: if(duplicable?(schema), do: :ok, else: {:error, :not_duplicable})
 
-  defp insert_target(schema, source_member, source_id, language, actor) do
+  defp insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
     with {:ok, target} <- duplicate_to_language(schema, source_id, language, actor),
          {:ok, source} <- load_entry(schema, source_id) do
       if schema.has_alternates?(), do: Module.concat(schema, Alternate).add(source_id, target.id)
@@ -266,8 +273,9 @@ defmodule Brando.Translations do
         })
 
       # The copy still links to the source language's content; its first
-      # pending version points those links at this language's versions.
-      sync_member(schema, source, member, group.source_generation, false)
+      # pending version points those links at this language's versions, and
+      # marks the text it copied to translate.
+      sync_member(schema, source, member, group.source_generation, false, translate_all: mark_translate?)
 
       {:ok, target}
     end
@@ -896,7 +904,8 @@ defmodule Brando.Translations do
 
   # `previous`: the version the new one supersedes (the current one by
   # default). `with_deleted`: also a translation in the trash, which only its
-  # own save recomputes.
+  # own save recomputes. `translate_all`: mark every text to translate, for a
+  # new translation (`create_target/5`).
   defp sync_member(schema, source, member, generation, minor?, opts \\ []) do
     previous = Keyword.get(opts, :previous, :current)
 
@@ -907,6 +916,7 @@ defmodule Brando.Translations do
             schema: schema,
             module_uids: module_uids([source, target], schema),
             minor: minor?,
+            translate_all: Keyword.get(opts, :translate_all, false),
             identifiers: identifier_map(source, schema, member.language),
             entries: entry_map(source, schema, member.language)
           )
@@ -1117,10 +1127,13 @@ defmodule Brando.Translations do
 
   Unresolved work items of the previous version are carried over when their
   path still exists and the new computation did not raise its own item for it.
-  Nothing is recorded when the result changes nothing and no work carries over.
+  A review the computation raises for text still to translate stays
+  `:translate`. Nothing is recorded when the result changes nothing and no work carries over.
   """
   def record_pending(member, result, previous, generation, schema) do
     new_paths = MapSet.new(result.work_items, & &1.path)
+    untranslated = untranslated(previous)
+    work_items = Enum.map(result.work_items, &still_to_translate(&1, untranslated))
 
     carried =
       case previous do
@@ -1160,7 +1173,7 @@ defmodule Brando.Translations do
       timestamp = naive_now()
 
       items =
-        Enum.map(result.work_items ++ carried, fn item ->
+        Enum.map(work_items ++ carried, fn item ->
           Map.merge(item, %{pending_version_id: version.id, inserted_at: timestamp, updated_at: timestamp})
         end)
 
@@ -1168,6 +1181,20 @@ defmodule Brando.Translations do
       version
     end
   end
+
+  # Text still to translate when the source changes it again: the
+  # translation holds no translation of it to review, so it stays to
+  # translate, raised against the new source text.
+  defp untranslated(%PendingVersion{work_items: items}),
+    do: for(%{kind: :translate, resolved_at: nil, path: path} <- items, into: MapSet.new(), do: path)
+
+  defp untranslated(_previous), do: MapSet.new()
+
+  defp still_to_translate(%{kind: :review, path: path} = item, untranslated) do
+    if MapSet.member?(untranslated, path), do: %{item | kind: :translate}, else: item
+  end
+
+  defp still_to_translate(item, _untranslated), do: item
 
   @doc "Returns the pending version of an entry with its work items, or nil."
   def get_pending_version(schema, entry_id) do

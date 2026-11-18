@@ -1,0 +1,1 @@
+- A new synchronized translation lists every text it copied from the source under **Needs translation**, instead of saying nothing needs translating; `Brando.Translations.create_target/5` takes `mark_translate: false` to start with nothing marked.

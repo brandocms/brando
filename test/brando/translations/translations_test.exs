@@ -101,6 +101,11 @@ defmodule Brando.TranslationsTest do
     |> Enum.each(fn {join, text} -> set_text(join.block, text) end)
   end
 
+  # A translation as these tests use it, translated past the editor or not
+  # at all: they look at the work later saves raise, so it starts with none of
+  # the copied text marked to translate (`NewTranslationTest` covers those).
+  defp translated_target(c), do: Translations.create_target(Article, c.source.id, :en, c.user, mark_translate: false)
+
   defp pending(entry) do
     case Translations.get_pending_version(Article, entry.id) do
       nil -> nil
@@ -164,7 +169,7 @@ defmodule Brando.TranslationsTest do
   end
 
   test "a shared update that no longer applies is not carried to the next version", c do
-    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    {:ok, target} = translated_target(c)
 
     {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.user)
     assert Enum.any?(pending(target).work_items, &(&1.kind == :shared_update and &1.path == "year"))
@@ -201,7 +206,7 @@ defmodule Brando.TranslationsTest do
   end
 
   test "saving the source records pending work without touching the translation", c do
-    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    {:ok, target} = translated_target(c)
     translate(target, ["First paragraph", "Second paragraph"])
 
     [first, _second] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
@@ -226,7 +231,7 @@ defmodule Brando.TranslationsTest do
   end
 
   test "a later save supersedes the pending version and carries its open work", c do
-    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    {:ok, target} = translated_target(c)
     translate(target, ["First paragraph", "Second paragraph"])
 
     TranslationFixtures.add_block(c.source, c.module, c.user, "Tredje avsnitt", 2)
@@ -245,7 +250,7 @@ defmodule Brando.TranslationsTest do
   end
 
   test "a save with nothing new records nothing", c do
-    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    {:ok, target} = translated_target(c)
     Translations.source_saved(load(c.source.id))
 
     assert pending(target) == nil
@@ -255,7 +260,7 @@ defmodule Brando.TranslationsTest do
     # The source changes block 1's text and the shared year: the target gets a
     # review item for block 1 and a shared update for the year.
     defp reviewed_change(c) do
-      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      {:ok, target} = translated_target(c)
       translate(target, ["First paragraph", "Second paragraph"])
       [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
       set_text(first, "Første avsnitt, endret")
@@ -523,7 +528,7 @@ defmodule Brando.TranslationsTest do
 
   describe "listing status" do
     test "a structural update without text work is still pending", c do
-      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+      {:ok, en} = translated_target(c)
       [_, second] = load(c.source.id).entry_blocks
       Repo.delete!(second)
       Translations.source_saved(load(c.source.id))
@@ -533,7 +538,7 @@ defmodule Brando.TranslationsTest do
     end
 
     test "counts each language's open work in one batch", c do
-      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+      {:ok, en} = translated_target(c)
       translate(en, ["First paragraph", "Second paragraph"])
       [first, _] = Enum.map(load(c.source.id).entry_blocks, & &1.block)
       set_text(first, "Første avsnitt, endret")
@@ -1322,9 +1327,12 @@ defmodule Brando.TranslationsTest do
       {:ok, other_en} = Translations.create_target(Article, c.other.id, :en, c.user)
       {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
 
-      # Nothing changed in the source: the copy's link moved, it was not updated
+      # Nothing changed in the source: the copy's link moved, it was not
+      # updated. Beside it, the copied text is to translate.
       version = pending(en)
-      assert Enum.map(version.work_items, & &1.kind) == [:relinked]
+      {translate, others} = version.work_items |> Enum.map(& &1.kind) |> Enum.split_with(&(&1 == :translate))
+      assert others == [:relinked]
+      assert translate != []
       assert linked_ids(Translations.decode_payload(version)) == [identifier_id!(other_en)]
     end
   end

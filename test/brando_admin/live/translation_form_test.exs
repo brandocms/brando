@@ -33,7 +33,9 @@ defmodule BrandoAdmin.TranslationFormTest do
       )
 
     TranslationFixtures.add_block(source, module, user, "Første avsnitt", 0)
-    {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+    # A translation that has been translated: its text is written below,
+    # past the editor, so none of it is marked to translate.
+    {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)
     translate(target, ["First paragraph"])
 
     %{module: module, source: source, target: target}
@@ -128,6 +130,25 @@ defmodule BrandoAdmin.TranslationFormTest do
     # The pending year is in the form, not yet saved.
     assert has_element?(view, "input[name='article[year]'][value='2024']")
     assert load(c.target.id).year == 2020
+  end
+
+  test "a new translation lists every text it copied as needing translation", %{conn: conn, current_user: user} = c do
+    {:ok, source} =
+      SyncTest.create_article(
+        %{title: "Ny kilde", slug: "ny-kilde", language: "no", status: "published", year: 2020},
+        user
+      )
+
+    TranslationFixtures.add_block(source, c.module, user, "Avsnitt", 0)
+    {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+
+    view = open(conn, target.id)
+    await_selector(view, "#translation-panel .translation-work")
+
+    refute has_element?(view, ".translation-done")
+    assert has_element?(view, ".translation-summary", "2 items need attention")
+    assert has_element?(view, ".translation-group", "Needs translation")
+    assert has_element?(view, ".translation-item-label", "Title")
   end
 
   test "saving the translation writes the pending version and resolves what was done", %{conn: conn} = c do

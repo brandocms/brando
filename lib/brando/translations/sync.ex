@@ -16,7 +16,9 @@ defmodule Brando.Translations.Sync do
   source's order and nesting. Items only in the source are copied in; items
   only in the target are dropped. Work is then read off the flattened rows:
 
-    * a text path the target lacks → `:translate` (skipped when empty)
+    * a text path the target lacks → `:translate` (skipped when empty); with
+      `translate_all: true`, every text path of the payload (a new
+      translation's copy)
     * a text path whose source digest moved from the baseline → `:review`,
       unless the save was a minor correction
     * a shared path the target holds a different value for → `:shared_update`,
@@ -75,7 +77,11 @@ defmodule Brando.Translations.Sync do
 
   `baseline` maps paths to the source digests this target was last synchronized
   with. Options: `:schema` (required), `:config` (defaults to the schema's
-  `__translatable_config__/0`), `:minor` and `:identifiers`.
+  `__translatable_config__/0`), `:minor`, `:translate_all` and `:identifiers`.
+
+  `:translate_all` marks every text that is not empty `:translate`, as if it
+  were new: the first version of a new translation, whose text is still the
+  copy of the source's.
 
   `:module_uids` maps `{module_origin, module_id}` to the module's `uid`, for
   `{:module, uid, vars}` selectors in `source_controlled_fields`; a block
@@ -109,7 +115,13 @@ defmodule Brando.Translations.Sync do
     target_rows = flatten(target, spec)
     payload_rows = flatten(payload, spec)
 
-    work_items = work_items(source_rows, target_rows, payload_rows, baseline || %{}, minor?) ++ awaiting
+    work =
+      work_items(source_rows, target_rows, payload_rows, baseline || %{},
+        minor?: minor?,
+        translate_all?: Keyword.get(opts, :translate_all, false)
+      )
+
+    work_items = work ++ awaiting
     fingerprint = fingerprint(payload_rows)
     base_fingerprint = fingerprint(target_rows)
 
@@ -1102,12 +1114,13 @@ defmodule Brando.Translations.Sync do
 
   # --- Work -------------------------------------------------------------------
 
-  defp work_items(source_rows, target_rows, payload_rows, baseline, minor?) do
+  defp work_items(source_rows, target_rows, payload_rows, baseline, flags) do
     ctx = %{
       source: Map.new(source_rows, fn {path, _class, value} -> {path, value} end),
       target: Map.new(target_rows, fn {path, class, value} -> {path, {class, value}} end),
       baseline: baseline,
-      minor?: minor?
+      minor?: flags[:minor?],
+      translate_all?: flags[:translate_all?]
     }
 
     Enum.flat_map(payload_rows, &work_item(&1, ctx))
@@ -1117,10 +1130,17 @@ defmodule Brando.Translations.Sync do
     source_digest = digest(Map.get(ctx.source, path, value))
 
     cond do
-      not Map.has_key?(ctx.target, path) and not blank?(value) -> [item(path, :translate, source_digest)]
-      not Map.has_key?(ctx.target, path) or ctx.minor? -> []
-      Map.has_key?(ctx.baseline, path) and ctx.baseline[path] != source_digest -> [item(path, :review, source_digest)]
-      true -> []
+      (ctx.translate_all? or not Map.has_key?(ctx.target, path)) and not blank?(value) ->
+        [item(path, :translate, source_digest)]
+
+      not Map.has_key?(ctx.target, path) or ctx.minor? ->
+        []
+
+      Map.has_key?(ctx.baseline, path) and ctx.baseline[path] != source_digest ->
+        [item(path, :review, source_digest)]
+
+      true ->
+        []
     end
   end
 

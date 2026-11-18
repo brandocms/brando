@@ -1831,6 +1831,8 @@ defmodule E2EFixtureController do
   # translation of both, and a source change that leaves the translation a
   # pending version: a new block to translate and a new year.
   # The source changes again while its translation is open in the editor.
+  # With `source_only`, just the source with its block, for the admin to
+  # translate.
   def synchronized_translation(conn, %{"source_id" => source_id, "year" => year}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
@@ -1854,7 +1856,7 @@ defmodule E2EFixtureController do
     json(conn, %{ok: true})
   end
 
-  def synchronized_translation(conn, _params) do
+  def synchronized_translation(conn, params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     user = get_admin_user()
@@ -1920,7 +1922,19 @@ defmodule E2EFixtureController do
     end
 
     add_sync_block.(source, "Første avsnitt", 0)
-    {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, user)
+
+    if params["source_only"],
+      do: json(conn, %{source_id: source.id}),
+      else: translate_synchronized(conn, source, user, add_sync_block)
+  end
+
+  defp translate_synchronized(conn, source, user, add_sync_block) do
+    alias E2eProject.SyncTest
+    alias E2eProject.SyncTest.Article
+
+    # Translated below, past the editor: nothing of the copy is marked to
+    # translate, so only the source's changes raise work.
+    {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, user, mark_translate: false)
 
     # Translate the copy.
     {:ok, loaded} =
