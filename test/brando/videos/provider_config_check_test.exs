@@ -143,6 +143,27 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
       assert_raise RuntimeError, ~r/access_token_secret/, fn -> Check.run() end
     end
 
+    # A Florist :single deployment restarts the service on the new release
+    # before anything checks it, so a release that refuses to boot takes the
+    # site down. Production stays opt-in, and says so in the log at error level.
+    test "a production boot with an unusable default strategy logs an error and boots" do
+      put_test_env(:env, :prod)
+      put_test_env(:default_video_upload_strategy, :bunny)
+
+      log = capture_log([level: :error], fn -> assert Check.run() == :ok end)
+
+      assert log =~ "[error]"
+      assert log =~ "default_video_upload_strategy is :bunny"
+    end
+
+    test "strict mode raises on a production boot with an unusable default strategy" do
+      put_test_env(:env, :prod)
+      put_test_env(:strict_video_provider_config, true)
+      put_test_env(:default_video_upload_strategy, :bunny)
+
+      assert_raise RuntimeError, ~r/default_video_upload_strategy is :bunny/, fn -> Check.run() end
+    end
+
     test "strict mode does not raise on a clean configuration" do
       put_test_env(:strict_video_provider_config, true)
 

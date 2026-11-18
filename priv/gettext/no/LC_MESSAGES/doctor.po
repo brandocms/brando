@@ -366,6 +366,13 @@ msgid_plural "%{count} upgrade migrations differ from Brando's templates"
 msgstr[0] "%{count} oppgraderingsmigrering avviker fra Brandos mal"
 msgstr[1] "%{count} oppgraderingsmigreringer avviker fra Brandos maler"
 
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} video provider problem: video uploads can fail"
+msgid_plural "%{count} video provider problems: video uploads can fail"
+msgstr[0] "%{count} problem med videoleverandør: videoopplasting kan feile"
+msgstr[1] "%{count} problemer med videoleverandører: videoopplasting kan feile"
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} warning"
@@ -1028,6 +1035,11 @@ msgstr "Variabel"
 msgid "Versions"
 msgstr "Versjoner"
 
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Videoleverandører"
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Warning"
@@ -1077,6 +1089,11 @@ msgstr "legg hver størrelse til i default_config, eller i feltets egne sizes; t
 #, elixir-autogen, elixir-format
 msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
 msgstr "legg til use Brando.SoftDelete.Repo i %{repo}, etter use Ecto.Repo"
+
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "add what the details say is missing and restart, or change default_video_upload_strategy"
+msgstr "legg til det detaljene sier mangler og start på nytt, eller endre default_video_upload_strategy"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -1559,6 +1576,11 @@ msgstr "ingen assets/backend/package.json"
 #, elixir-autogen, elixir-format
 msgid "no config/config.exs"
 msgstr "ingen config/config.exs"
+
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "no credential problems"
+msgstr "ingen problemer med tilgangsnøkler"
 
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format

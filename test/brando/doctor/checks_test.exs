@@ -1176,6 +1176,35 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "VideoProviders" do
+    setup do
+      put_test_env(Brando.Videos.Uploaders.Mux, [])
+      put_test_env(Brando.Videos.Uploaders.Bunny, [])
+      put_test_env(Brando.Videos.Uploaders.Cloudflare, [])
+      put_test_env(Brando.Videos.Uploaders.Vimeo, [])
+      put_test_env(:default_video_upload_strategy, :local)
+      :ok
+    end
+
+    test "no provider problems is OK, with nothing listed" do
+      assert %Result{status: :ok, items: []} = Checks.VideoProviders.run(context())
+    end
+
+    test "each problem the boot check finds is listed, in the log's words" do
+      put_test_env(:default_video_upload_strategy, :bunny)
+      put_test_env(Brando.Videos.Uploaders.Mux, access_token_id: "id")
+
+      result = Checks.VideoProviders.run(context())
+
+      assert result.status == :warning
+      assert result.summary == "2 video provider problems: video uploads can fail"
+      assert result.items == Brando.Videos.ProviderConfigCheck.problems()
+      assert Enum.any?(result.items, &(&1 =~ "default_video_upload_strategy is :bunny"))
+      assert Enum.any?(result.items, &(&1 =~ "access_token_secret"))
+      assert result.fix =~ "restart"
+    end
+  end
+
   describe "Node" do
     test "an even LTS major from the tested one on passes" do
       assert %Result{status: :ok, summary: "v24.9.0"} = Checks.Node.evaluate("v24.9.0")

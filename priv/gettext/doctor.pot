@@ -365,6 +365,13 @@ msgid_plural "%{count} upgrade migrations differ from Brando's templates"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} video provider problem: video uploads can fail"
+msgid_plural "%{count} video provider problems: video uploads can fail"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} warning"
@@ -1027,6 +1034,11 @@ msgstr ""
 msgid "Versions"
 msgstr ""
 
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr ""
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Warning"
@@ -1075,6 +1087,11 @@ msgstr ""
 #: lib/brando/doctor/checks/soft_delete_repo.ex
 #, elixir-autogen, elixir-format
 msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
+msgstr ""
+
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "add what the details say is missing and restart, or change default_video_upload_strategy"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -1557,6 +1574,11 @@ msgstr ""
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "no config/config.exs"
+msgstr ""
+
+#: lib/brando/doctor/checks/video_providers.ex
+#, elixir-autogen, elixir-format
+msgid "no credential problems"
 msgstr ""
 
 #: lib/brando/doctor/checks/test_database.ex

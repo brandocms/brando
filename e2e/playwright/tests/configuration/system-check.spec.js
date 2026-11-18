@@ -15,6 +15,7 @@ test('Utilities runs the system check beside the page and links fixes', async ({
     'migrations',
     'oban',
     'configuration',
+    'video_providers',
     'admin_assets',
     'image_configs',
     'modules',
@@ -31,6 +32,8 @@ test('Utilities runs the system check beside the page and links fixes', async ({
   // The server runs from the project, so the source checks run.
   await expect(card.locator('li[data-check="admin_assets"]')).toHaveAttribute('data-status', 'ok')
   await expect(card.locator('li[data-check="deprecations"]')).toHaveAttribute('data-status', 'ok')
+  // Bunny is fully configured and the default strategy is :local.
+  await expect(card.locator('li[data-check="video_providers"]')).toHaveAttribute('data-status', 'ok')
 
   // The E2E app has no sitemap module, and two seeded Kulturslider blocks are on an older version.
   await expect(card.locator('li[data-check="sitemap"]')).toHaveAttribute('data-status', 'warning')

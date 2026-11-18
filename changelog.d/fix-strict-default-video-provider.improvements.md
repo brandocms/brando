@@ -1,0 +1,1 @@
+- Utilities' System check, and `mix brando.doctor`, list the video provider problems the boot log reports: partial credentials, a missing webhook secret, and a `default_video_upload_strategy` whose provider has no usable credentials.

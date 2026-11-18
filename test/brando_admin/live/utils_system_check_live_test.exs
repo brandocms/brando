@@ -50,6 +50,43 @@ defmodule BrandoAdmin.UtilsSystemCheckLiveTest do
     assert has_element?(view, "li[data-check=modules] a[href$='/config/content/modules/stale-blocks']", "Resolve blocks")
   end
 
+  describe "video providers" do
+    setup do
+      put_test_env(Brando.Doctor, skip: Brando.Doctor.default_checks() -- [Brando.Doctor.Checks.VideoProviders])
+      put_test_env(Brando.Videos.Uploaders.Mux, [])
+      put_test_env(Brando.Videos.Uploaders.Bunny, [])
+      put_test_env(Brando.Videos.Uploaders.Cloudflare, [])
+      put_test_env(Brando.Videos.Uploaders.Vimeo, [])
+      put_test_env(:default_video_upload_strategy, :local)
+      :ok
+    end
+
+    test "lists each problem the boot check finds as a warning", %{conn: conn} do
+      put_test_env(:default_video_upload_strategy, :bunny)
+      put_test_env(Brando.Videos.Uploaders.Mux, access_token_id: "id")
+
+      {:ok, view, _html} = live(conn, "/admin/config/utils")
+      render_async(view)
+
+      assert has_element?(view, "li[data-check=video_providers][data-status=warning]")
+
+      problems = Brando.Videos.ProviderConfigCheck.problems()
+      assert length(problems) == 2
+
+      for problem <- problems do
+        assert has_element?(view, "li[data-check=video_providers] details li", problem)
+      end
+    end
+
+    test "lists nothing when there are no problems", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/config/utils")
+      render_async(view)
+
+      assert has_element?(view, "li[data-check=video_providers][data-status=ok]")
+      refute has_element?(view, "li[data-check=video_providers] details")
+    end
+  end
+
   test "Brando's own checks render", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/admin/config/utils")
     render_async(view, 30_000)

@@ -32,6 +32,7 @@ defmodule Brando.Doctor do
     Checks.Migrations,
     Checks.Oban,
     Checks.Configuration,
+    Checks.VideoProviders,
     Checks.SoftDeleteRepo,
     Checks.SiteFrontends,
     Checks.PageTemplates,
