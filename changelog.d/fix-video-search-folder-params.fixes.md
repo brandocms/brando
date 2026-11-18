@@ -1,0 +1,1 @@
+- In the Videos and Images libraries, a search that matches a folder's name no longer opens that folder: the search and the folder in view have URL parameters of their own, and links in the old shape still open the folder or search they named.

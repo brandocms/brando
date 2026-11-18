@@ -69,13 +69,18 @@ defmodule Brando.Videos do
               ilike(q.title, ^encoded_pattern) or ilike(q.source_url, ^encoded_pattern) or
               ilike(q.remote_id, ^encoded_pattern) or q.file_id in subquery(file_ids)
 
-      # The root: entries without a folder, and those in a folder that is the root itself.
+      # A folder known only by its videos' paths (`filter:folder_path`): an
+      # uploaded video's is its stored file's (`remote_id`)
+      {:folder_path, path}, query ->
+        from q in query, where: ilike(q.remote_id, ^"%#{path}%")
+
       {:unused, value}, query when value in [true, "true"] ->
         from(t in query, where: t.id not in ^Brando.Content.Usage.used_ids(:video))
 
       {:unused, _}, query ->
         query
 
+      # The root: entries without a folder, and those in a folder that is the root itself.
       {:folder_id, {:root, root_folder_ids}}, query ->
         from(t in query, where: is_nil(t.folder_id) or t.folder_id in ^root_folder_ids)
 

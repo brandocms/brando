@@ -53,7 +53,14 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    folder_filter = params["filter:folder_id"] || params["filter:path"]
+    case AssetListHelpers.upgrade_folder_link(socket, params) do
+      {:patched, socket} -> {:noreply, socket}
+      {:ok, socket} -> {:noreply, assign_listing(socket, params)}
+    end
+  end
+
+  defp assign_listing(socket, params) do
+    folder_filter = AssetListHelpers.folder_filter(params)
 
     socket =
       socket
@@ -63,12 +70,13 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
     # Arriving without a folder at an empty root (uploads land in the default
     # config's folder, e.g. images/site/default) shows nothing. Open that
-    # folder instead, on arrival only: "Root" must still show the root.
-    if is_nil(folder_filter) and !socket.assigns.arrived? and connected?(socket) and
-         socket.assigns.visible_image_count == 0 do
-      {:noreply, socket |> assign(:arrived?, true) |> open_default_upload_folder()}
+    # folder instead, on arrival only: "Root" must still show the root, and a
+    # search searches the root it arrived at.
+    if is_nil(folder_filter) and params["filter:path"] in [nil, ""] and !socket.assigns.arrived? and
+         connected?(socket) and socket.assigns.visible_image_count == 0 do
+      socket |> assign(:arrived?, true) |> open_default_upload_folder()
     else
-      {:noreply, assign(socket, :arrived?, connected?(socket))}
+      assign(socket, :arrived?, connected?(socket))
     end
   end
 
@@ -402,7 +410,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
           params={AssetListHelpers.list_params(@params, @root_folder_ids)}
           listing={:default}
           saved_views={false}
-          hidden_filters={[:folder_id]}
+          hidden_filters={[:folder_id, :folder_path]}
           empty_title={gettext("No images in this view")}
           empty_description={gettext("Choose a folder, upload an image, or adjust your search.")}
           extra_selection_actions={
