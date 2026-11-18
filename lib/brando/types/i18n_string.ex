@@ -80,20 +80,24 @@ defmodule Brando.Type.I18nString do
   end
 
   @doc """
-  Text in the default language alone as that text, any other value as it
-  is: a value stored before it was translated (a plain string) compares
-  equal to it. The default is the installation's, which an upgrade
-  migration keeps old text under, or the current site's, which `cast/1`
-  reads a plain string as.
+  Text in the default language alone (other languages blank) as that
+  text, any other value as it is: a value stored before it was translated
+  (a plain string) compares equal to it. The default is the
+  installation's, which an upgrade migration keeps old text under, or the
+  current site's, which `cast/1` reads a plain string as.
   """
   @spec plain(term()) :: term()
-  def plain(map) when is_map(map) and map_size(map) == 1 and not is_struct(map) do
-    [{language, text}] = Map.to_list(map)
-    installation = to_string(Application.get_env(:brando, :default_language) || "en")
-    if to_string(language) in [installation, default_language()], do: text, else: map
+  def plain(map) when is_map(map) and not is_struct(map) do
+    case Enum.filter(map, fn {_language, text} -> present(text) end) do
+      [{language, text}] -> if to_string(language) in default_languages(), do: text, else: map
+      _ -> map
+    end
   end
 
   def plain(value), do: value
+
+  defp default_languages,
+    do: [to_string(Application.get_env(:brando, :default_language) || "en"), default_language()]
 
   defp default_language, do: to_string(Brando.Languages.default_language() || "en")
 

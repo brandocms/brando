@@ -214,6 +214,30 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
   end
 
+  test "instructions saved in the admin with other languages left blank equal the file's text", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+
+    File.write!(
+      Path.join(c.path, "hero.exs"),
+      String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions "Pick one"))
+    )
+
+    assert {:ok, bundle} = Definitions.read(c.path)
+    apply_bundle!(bundle, c.user)
+
+    # As the module editor saves them: one input per admin language
+    [var] = hero().vars
+    var |> Changeset.change(instructions: %{"en" => "Pick one", "no" => ""}) |> Repo.update!()
+    assert [%{instructions: %{"en" => "Pick one", "no" => nil}}] = hero().vars
+
+    assert {:ok, %{items: [%{action: :noop}]}} = Definitions.plan(bundle, c.user)
+
+    # and digests as the text did before brando_234, as the baselines compare
+    [stored] = snapshot()["modules"]
+    before_upgrade = put_in(stored, ["vars", Access.at(0), "instructions"], "Pick one")
+    assert Snapshot.digest(stored) == Snapshot.digest(before_upgrade)
+  end
+
   test "instructions moved to another language are a change", c do
     source = File.read!(Path.join(c.path, "hero.exs"))
     with = &String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions #{&1}))
