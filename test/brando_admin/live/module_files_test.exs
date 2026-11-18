@@ -174,6 +174,33 @@ defmodule BrandoAdmin.ModuleFilesTest do
     assert Repo.get!(Module, c.module.id).version == c.module.version
   end
 
+  # brandocms/brando#3541
+  test "an invalid definition in a ZIP shows each problem on its own line, naming the file and var", c do
+    source =
+      "test/fixtures/definitions/hero.exs.txt"
+      |> File.read!()
+      |> String.replace("width :half", ~s(width :huge\n      placeholder %{"no" => "Velg"}))
+
+    {:ok, binary} = Archive.pack(%{"sections/hero.exs" => source})
+    {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
+    upload(view, binary)
+
+    lines =
+      view
+      |> render()
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#module-files .module-files-feedback.error p")
+      |> Enum.map(&LazyHTML.text/1)
+
+    # The archive's single top folder is left out, as the import reads it
+    assert Enum.sort(lines) == [
+             ~s|hero.exs: var "theme": placeholder must be a string (got a map)|,
+             ~s|hero.exs: var "theme": width must be one of full, half, third, fourth, auto, fill (got "huge")|
+           ]
+
+    assert Repo.get!(Module, c.module.id).version == c.module.version
+  end
+
   test "a viewer cannot forge component export or import events", c do
     put_test_env(:authorization_mode, :groups)
     alias Brando.Authorization.{Catalog, Groups, Migration, Scope}

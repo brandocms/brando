@@ -47,7 +47,7 @@ defmodule Brando.Content.Definitions.Release do
   import Kernel, except: [apply: 2]
 
   alias Brando.Authorization.{Boundary, Engine}
-  alias Brando.Content.Definition.{Baselines, Plan}
+  alias Brando.Content.Definition.{Baselines, Error, Plan}
   alias Brando.Content.{DefinitionApply, Definitions}
   alias Brando.Content.Definitions.Release.Batches
   alias Brando.Tenant
@@ -268,16 +268,11 @@ defmodule Brando.Content.Definitions.Release do
 
       {:ok, %{report: report, result: result, renders: renders, waited?: wait?, run: run, batch_id: result.batch_id}}
     else
-      {{:error, reason}, _run} -> {:error, error_message(reason)}
+      # A definition's save that failed in the transaction names the definition
+      {{:error, reason}, _run} -> {:error, Error.describe(reason)}
       error -> error
     end
   end
-
-  # A definition's save that failed in the transaction names the definition
-  defp error_message(message) when is_binary(message), do: message
-  defp error_message(%{uid: uid, error: %Ecto.Changeset{} = changeset}), do: "#{uid}: #{inspect(changeset.errors)}"
-  defp error_message(%{uid: uid, error: error}), do: "#{uid}: #{inspect(error)}"
-  defp error_message(other), do: inspect(other)
 
   # The apply, its rows and its batch in one transaction; the batch confirms
   # the apply before it, and Activity records it as the person's

@@ -226,6 +226,26 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     assert %DefinitionApply{action: :replaced} = Repo.one(from(a in DefinitionApply, order_by: [desc: a.id], limit: 1))
   end
 
+  # brandocms/brando#3541
+  test "an invalid release file is named, with each problem on its own line", %{conn: conn} = c do
+    [file] = c.path |> Path.join("content/text.exs") |> Path.wildcard()
+    source = File.read!(file)
+    broken = String.replace(source, "multi false", ~s(multi "often"))
+    refute broken == source
+    File.write!(file, broken)
+
+    {:ok, view, _html} = live(conn, @path)
+
+    lines =
+      view
+      |> render()
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(".release-notice.is-error .release-notice-text p")
+      |> Enum.map(&LazyHTML.text/1)
+
+    assert lines == [~s|content/text.exs: multi must be true or false (got "often")|]
+  end
+
   test "only superusers, without groups", %{conn: conn} do
     admin = Factory.insert(:random_user, role: :admin)
     conn = Brando.Test.log_in_user(conn, admin)

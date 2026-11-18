@@ -952,8 +952,14 @@ defmodule Brando.Content.Transfer do
     field = Catalog.field!(entry.__struct__, expected["field"])
     current = Map.fetch!(entry, field.association) |> Params.snapshot()
 
-    # A receipt from before brando_225 digested rich_text vars as html
-    unless expected["fingerprint"] in [Value.digest(current), Value.digest(Contracts.with_html_vars(current))],
+    # A receipt from before brando_234 digested var instructions as text,
+    # and one from before brando_225 rich_text vars as html
+    fingerprints =
+      for current <- [current, Contracts.with_plain_instructions(current)],
+          current <- [current, Contracts.with_html_vars(current)],
+          do: Value.digest(current)
+
+    unless expected["fingerprint"] in fingerprints,
       do:
         Error.fail!(
           dgettext(
@@ -999,11 +1005,17 @@ defmodule Brando.Content.Transfer do
 
   @doc """
   Whether `entry` still has `fingerprint`, which `entry_fingerprint/1` may have
-  taken before it left a page's `breadcrumbs` out.
+  taken before it left a page's `breadcrumbs` out, or before brando_234 made
+  var instructions a language map.
   """
   def entry_fingerprint?(entry, fingerprint) do
     snapshot = Params.snapshot(entry)
-    fingerprint in [Value.digest(EntryCodec.without_derived(snapshot, entry)), Value.digest(snapshot)]
+
+    fingerprint in for(
+      snapshot <- [EntryCodec.without_derived(snapshot, entry), snapshot],
+      snapshot <- [snapshot, Contracts.with_plain_instructions(snapshot)],
+      do: Value.digest(snapshot)
+    )
   end
 
   defp recovery_bindings!(blocks, contracts, actor) do

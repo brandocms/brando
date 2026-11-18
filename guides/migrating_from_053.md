@@ -623,6 +623,14 @@ sender first, before the first compile.
   authorization, grant **Release module definitions · Apply** to the groups
   that should apply them; superusers always may. See
   [Review and apply in the admin](module_definitions.md#review-and-apply-in-the-admin).
+- **Var instructions in each language.** `brando_234` turns
+  `content_vars.instructions` into a language map, as `brando_190` did for
+  `label`, keeping each existing text under the default language, in every
+  environment. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate` and, with named environments,
+  `mix brando.migrate --tenants`. Code that reads a var's `instructions`
+  gets a map: read it with `Brando.Type.I18nString.localized/1`. See
+  [Vars: values, controls and layout](module_definitions.md#vars-values-controls-and-layout).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

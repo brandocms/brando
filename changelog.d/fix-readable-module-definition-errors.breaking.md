@@ -1,0 +1,4 @@
+- A var's instructions are translated, a map of admin language → text, as its label is (`brando_234`): `instructions %{"en" => "Keep it short", "no" => "Hold den kort"}` in a definition file, set per language in the module editor and shown to editors in their admin language. A plain string still works, read as the default language; `mix brando.modules export` writes the map.
+  Run `mix brando.gen.migrations` for `brando_234`, then `mix brando.migrate` and `mix brando.migrate --tenants` before the new release starts.
+  In a release, run `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` and `bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"` from the new release.
+  Code reading `var.instructions` as a string uses `Brando.Type.I18nString.localized(var.instructions)`.

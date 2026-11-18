@@ -46,7 +46,7 @@ defmodule Brando.Content.Definitions do
       paths = Reader.files!(root)
       lock_path = Path.join(root, "modules.lock.json")
       if paths == [] and not File.exists?(lock_path), do: Error.raise!(root, "no .exs definitions found")
-      bundle = paths |> Enum.map(&Reader.read!/1) |> Model.from_specs!(root)
+      bundle = paths |> Enum.map(&Reader.read!(&1, Error.file_label(&1, root))) |> Model.from_specs!(root)
       Map.merge(bundle, read_lock!(lock_path))
     end)
   end

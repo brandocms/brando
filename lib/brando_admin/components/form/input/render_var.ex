@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data should_render?, :boolean
   # data label, :string
   # data type, :string
-  # data instructions, :string
+  # data instructions, :string (in the editor's language)
   # data placeholder, :string
   # data value, :any
   # data visible, :boolean
@@ -543,7 +543,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign_new(:own_gallery_ids, fn -> MapSet.new(List.wrap(if(type == :gallery, do: value))) end)
     |> assign_form_options(type)
     |> assign(:identifier_id, get_field(changeset, :identifier_id))
-    |> assign(:instructions, get_field(changeset, :instructions))
+    |> assign(:instructions, I18nString.localized(get_field(changeset, :instructions)))
     |> assign(:placeholder, get_field(changeset, :placeholder))
     |> assign(:palette_colors, if(type == :color, do: Input.palette_colors(get_field(changeset, :palette_id))))
     |> assign(:var, var)
@@ -811,7 +811,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       />
                     </div>
                     <div class="variable-grid">
-                      <Input.text field={@var[:instructions]} label={gettext("Instructions")} />
+                      <Input.i18n_text field={@var[:instructions]} label={gettext("Instructions")} />
                       <Input.text field={@var[:placeholder]} label={gettext("Placeholder")} />
                     </div>
                   </section>
@@ -1037,7 +1037,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               <Input.input type={:hidden} field={@var[:type]} />
               <Input.input type={:hidden} field={@var[:placement]} />
               <Input.input type={:hidden} field={@var[:new_row]} />
-              <Input.input type={:hidden} field={@var[:instructions]} />
+              <Input.hidden_i18n field={@var[:instructions]} />
               <Input.input type={:hidden} field={@var[:placeholder]} />
               <Input.input type={:hidden} field={@var[:width]} />
             <% end %>

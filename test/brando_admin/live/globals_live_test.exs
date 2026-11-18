@@ -40,8 +40,8 @@ defmodule BrandoAdmin.GlobalsLiveTest do
 
     fields =
       Map.merge(
-        %{"key" => var.key, "label" => %{"en" => var.label}},
-        Map.take(var, [:instructions, :placeholder]) |> Map.new(fn {k, v} -> {to_string(k), v} end)
+        %{"key" => var.key, "label" => %{"en" => var.label}, "instructions" => %{"en" => var[:instructions]}},
+        Map.take(var, [:placeholder]) |> Map.new(fn {k, v} -> {to_string(k), v} end)
       )
 
     view
@@ -99,11 +99,11 @@ defmodule BrandoAdmin.GlobalsLiveTest do
                key: "reservation",
                type: :string,
                width: :half,
-               instructions: "URL to booking agent",
+               instructions: %{"en" => "URL to booking agent"},
                placeholder: "https://url.here.com"
              },
-             %{key: "boolean", type: :boolean, width: :half, instructions: "Instructions for boolean"},
-             %{key: "color", type: :color, width: :half, instructions: "Instructions for color"}
+             %{key: "boolean", type: :boolean, width: :half, instructions: %{"en" => "Instructions for boolean"}},
+             %{key: "color", type: :color, width: :half, instructions: %{"en" => "Instructions for color"}}
            ] = Enum.sort_by(set.vars, & &1.sequence)
 
     assert Enum.map(Enum.sort_by(set.vars, & &1.sequence), & &1.label["en"]) ==

@@ -79,6 +79,26 @@ defmodule Brando.Type.I18nString do
       if is_map(value), do: value |> Map.values() |> Enum.find_value(&present/1)
   end
 
+  @doc """
+  Text in the default language alone (other languages blank) as that
+  text, any other value as it is: a value stored before it was translated
+  (a plain string) compares equal to it. The default is the
+  installation's, which an upgrade migration keeps old text under, or the
+  current site's, which `cast/1` reads a plain string as.
+  """
+  @spec plain(term()) :: term()
+  def plain(map) when is_map(map) and not is_struct(map) do
+    case Enum.filter(map, fn {_language, text} -> present(text) end) do
+      [{language, text}] -> if to_string(language) in default_languages(), do: text, else: map
+      _ -> map
+    end
+  end
+
+  def plain(value), do: value
+
+  defp default_languages,
+    do: [to_string(Application.get_env(:brando, :default_language) || "en"), default_language()]
+
   defp default_language, do: to_string(Brando.Languages.default_language() || "en")
 
   defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)

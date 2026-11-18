@@ -163,7 +163,10 @@ and a `:rich_text` default is sanitized rich text. `default` writes
 `value_boolean` for booleans, an asset token for media vars, and `value` for the
 remaining types.
 
-Use `label`, `placeholder`, `instructions` and `options` for controls. Options
+Use `label`, `placeholder`, `instructions` and `options` for controls.
+`label` and `instructions` (the help text editors see under the field) take a
+string or a per-language map, `%{"en" => "Keep it short", "no" => "Hold den kort"}`;
+`placeholder` takes a string. Options
 accept `{label, value}` pairs or maps with `label` and `value`. Layout declarations
 are `width` (`:full`, `:half`, `:third`, `:fourth`, `:auto`, `:fill`), `new_row`
 and `placement` (`:content`, `:config`, `:hidden`). Var order is declaration order.
@@ -227,3 +230,20 @@ introduction takes the third. Vars with `placement :config` are laid out the
 same way in the block's configuration dialog. In the module editor, the Editor
 layout panel shows these rows: drag vars between rows and set their widths
 there.
+
+#### When a definition is invalid
+
+An import, a dry run, the development watcher, a ZIP import in the admin and the
+release review all read the files the same way, and refuse a bundle with an
+invalid definition. Each problem is one line: the file (relative to the
+application, or within the ZIP), the var or ref, the field, what it takes and
+what it got:
+
+```text
+priv/modules/sections/hero.exs: var "theme": width must be one of full, half, third, fourth, auto, fill (got "huge")
+priv/modules/sections/hero.exs: var "theme": placeholder must be a string (got a map)
+priv/modules/sections/hero.exs: ref "embed": params[0].key is required
+```
+
+A problem found when planning against the database, with no file to name,
+names the definition instead: `module "hero-test": var "theme": …`.

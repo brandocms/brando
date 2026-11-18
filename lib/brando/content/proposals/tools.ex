@@ -890,7 +890,7 @@ defmodule Brando.Content.Proposals.Tools do
             key: var.key,
             type: to_string(var.type),
             label: I18nString.localized(var.label),
-            instructions: var.instructions,
+            instructions: I18nString.localized(var.instructions),
             options: if(var.type == :select, do: Enum.map(var.options || [], &option/1)),
             settable: settable(var)
           }

@@ -38,6 +38,14 @@ defmodule Brando.Content.DefinitionWatcherTest do
     assert hero().class == "third-class"
   end
 
+  # brandocms/brando#3541
+  test "an invalid file is reported with the file, var, expected type and what it got", c do
+    write!(c, String.replace(c.source, "width :half", "width :huge"))
+
+    assert Watcher.sync(c.path, c.user.id) ==
+             {:error, ~s|hero.exs: var "theme": width must be one of full, half, third, fourth, auto, fill (got "huge")|}
+  end
+
   test "a module changed in the admin since the baseline is a conflict, and nothing is written", c do
     assert {:ok, _} = Watcher.sync(c.path, c.user.id)
     hero() |> Changeset.change(class: "admin-class") |> Repo.update!()

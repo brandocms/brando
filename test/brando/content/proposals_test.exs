@@ -1484,6 +1484,53 @@ defmodule Brando.Content.ProposalsTest do
       assert Repo.get!(Page, c.work.id).title == "Work"
     end
 
+    # brando_234 made var instructions a language map after the digest was taken
+    test "a digest taken while var instructions were text is still accepted", c do
+      alias Brando.Content.Proposals.{Receipt, Record}
+
+      [%{block: block} | _] = load(c.work, c.user).entry_blocks
+
+      Brando.Content.Var.changeset(
+        %Brando.Content.Var{block_id: block.id},
+        %{type: :string, key: "intro_note", label: "Intro", instructions: "Keep it short", value: "Hi"},
+        c.user
+      )
+      |> Repo.insert!()
+
+      # The page as it was digested before brando_234: the var's instructions as text
+      legacy = fn page ->
+        page = load(page, c.user)
+
+        entry_blocks =
+          Enum.map(page.entry_blocks, fn entry_block ->
+            vars =
+              Enum.map(entry_block.block.vars, fn
+                %{key: "intro_note", instructions: %{"en" => text}} = var -> %{var | instructions: text}
+                var -> var
+              end)
+
+            put_in(entry_block.block.vars, vars)
+          end)
+
+        refute entry_blocks == page.entry_blocks
+        Brando.Content.Transfer.entry_fingerprint(%{page | entry_blocks: entry_blocks})
+      end
+
+      key = Brando.Content.Proposals.Proposal.key({Page, c.work.id})
+      {:ok, _} = Brando.Revisions.create_revision(load(c.work, c.user), c.user)
+      ops = [%SetFields{target: {Page, c.work.id}, fields: %{title: "Work, renamed"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      record = Repo.get!(Record, proposal.id)
+      assert record.fingerprints[key] != legacy.(c.work)
+      Repo.update!(Changeset.change(record, fingerprints: %{key => legacy.(c.work)}))
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      receipt = Repo.get!(Receipt, proposal.id)
+      Repo.update!(Changeset.change(receipt, after: put_in(receipt.after, [key, "fingerprint"], legacy.(c.work))))
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+      assert Repo.get!(Page, c.work.id).title == "Work"
+    end
+
     test "a colleague reviews a shared proposal and previews its pages", c do
       ops = [%SetBlockValues{target: {Page, c.work.id}, block_uid: hd(c.child_uids), values: %{size: "50"}}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user)

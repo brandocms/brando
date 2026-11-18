@@ -28,7 +28,11 @@ defmodule Brando.Content.Definition.Model do
     Value.unique!(Enum.map(specs, & &1.module), "source module names")
     Value.unique!(Enum.map(specs, & &1.options.uid), "definition UIDs")
 
-    definitions = Enum.map(specs, &definition!(&1, root, names))
+    definitions =
+      Enum.map(specs, fn spec ->
+        Error.in_file(Error.file_label(spec.source, root), fn -> definition!(spec, root, names) end)
+      end)
+
     {tables, modules} = Enum.split_with(definitions, &(&1["kind"] == "table_template"))
     bundle = canonicalize(%{"format_version" => 1, "modules" => modules, "table_templates" => tables})
     validate_graph!(bundle)
@@ -37,17 +41,17 @@ defmodule Brando.Content.Definition.Model do
 
   defp definition!(spec, root, names) do
     opts = spec.options
-    uid = Value.nonempty!(opts.uid, spec.source || spec.module)
+    uid = Value.nonempty!(opts.uid, "uid")
     kind = Map.get(opts, :kind, :module) || :module
     vars = spec.vars |> Enum.with_index() |> Enum.map(fn {var, index} -> var!(var, index, uid) end)
 
     if kind == :table_template do
       if spec.refs != [] or spec.templates != [] or spec.children != [],
-        do: Error.raise!(uid, "table templates only declare uid, name and vars")
+        do: Error.raise!("table templates only declare uid, name and vars")
 
       extra = Map.keys(Map.reject(opts, fn {_k, v} -> v == nil end)) -- [:kind, :uid, :name]
-      if extra != [], do: Error.raise!(uid, "unsupported table-template options #{inspect(extra)}")
-      %{"kind" => "table_template", "uid" => uid, "name" => Value.nonempty!(opts.name, uid <> ".name"), "vars" => vars}
+      if extra != [], do: Error.raise!("unsupported table-template options #{inspect(extra)}")
+      %{"kind" => "table_template", "uid" => uid, "name" => Value.nonempty!(opts.name, "name"), "vars" => vars}
     else
       fields =
         struct(Module)
@@ -72,7 +76,7 @@ defmodule Brando.Content.Definition.Model do
         "table_template" => resolve!(opts[:table_template], names),
         "kind" => "module"
       })
-      |> normalize_module!()
+      |> normalize_module!(nil)
     end
   end
 
@@ -80,7 +84,7 @@ defmodule Brando.Content.Definition.Model do
     do: {engine, Reader.template_file!(source, file, root)}
 
   defp template!([%{engine: engine, source: source}], _, _), do: {engine, source}
-  defp template!(_, file, _), do: Error.raise!(file, "declare exactly one template or template_file")
+  defp template!(_, _file, _), do: Error.raise!("declare exactly one template or template_file")
 
   defp resolve!(nil, _names), do: nil
 
@@ -92,19 +96,20 @@ defmodule Brando.Content.Definition.Model do
   defp ref!(spec, index, uid) do
     name = to_string(spec.name)
     type = to_string(spec.type)
-    block_schema = block_schema!(type)
+    subject = ~s(ref "#{name}")
+    block_schema = block_schema!(type, subject)
     config = Value.object(spec[:config])
     defaults = Value.object(spec[:default])
 
     if Enum.any?(Map.keys(config), &Map.has_key?(defaults, &1)),
-      do: Error.raise!(uid <> "." <> name, "config and default overlap")
+      do: Error.raise!(subject, "config and default overlap")
 
     data = Map.merge(config, defaults)
-    validate_fields!(Elixir.Module.concat(block_schema, Data), data, uid <> "." <> name)
+    validate_fields!(Elixir.Module.concat(block_schema, Data), data, subject)
     references = if type == "markdown_source", do: Map.take(data, ~w(source_id version_id)), else: %{}
 
     Enum.each(references, fn {field, token} ->
-      if token != nil, do: Value.nonempty!(token, uid <> "." <> name <> "." <> field)
+      if token != nil, do: Value.nonempty!(token, subject <> ": " <> field)
     end)
 
     # External tokens are resolved only at the destination. Validate the rest
@@ -123,17 +128,18 @@ defmodule Brando.Content.Definition.Model do
 
     params
     |> then(&Ref.changeset(struct(Ref), &1, :system))
-    |> apply_valid!(uid <> ".refs." <> name)
+    |> apply_valid!(nil)
     |> ref_record()
     |> update_in(["data", "data"], &Map.merge(&1, references))
-    |> Map.put("assets", assets!(spec[:assets], @ref_assets, uid))
+    |> Map.put("assets", assets!(spec[:assets], @ref_assets, subject))
   end
 
-  defp var!(spec, index, uid) do
+  defp var!(spec, index, _uid) do
     fields = var_fields()
-    settings = Value.object(spec[:settings])
-    Value.keys!(settings, fields -- [:key, :type], uid <> ".vars.settings")
     key = to_string(spec.key)
+    subject = ~s(var "#{key}")
+    settings = Value.object(spec[:settings])
+    Value.keys!(settings, fields -- [:key, :type], subject <> ": settings")
     type = to_string(spec.type)
 
     attributes =
@@ -148,8 +154,12 @@ defmodule Brando.Content.Definition.Model do
       |> Map.merge(%{"key" => key, "type" => type, "sequence" => index})
       |> Map.put_new("label", key)
 
-    params = if spec[:options] in [nil, :__unset__], do: params, else: Map.put(params, "options", options!(spec.options))
-    assets = assets!(spec[:assets], @var_assets, uid)
+    params =
+      if spec[:options] in [nil, :__unset__],
+        do: params,
+        else: Map.put(params, "options", options!(spec.options, subject))
+
+    assets = assets!(spec[:assets], @var_assets, subject)
 
     {params, assets} =
       case Map.get(spec, :default, :__unset__) do
@@ -158,14 +168,14 @@ defmodule Brando.Content.Definition.Model do
         default -> {Map.put(params, if(type == "boolean", do: "value_boolean", else: "value"), default), assets}
       end
 
-    validate_fields!(Var, params, uid <> ".vars." <> key)
+    validate_fields!(Var, params, subject)
 
     params
     |> legacy_link_default(assets["identifier"])
     # Creator is persistence metadata, supplied by the import actor. A sentinel
     # satisfies that required field while normalizing without any database I/O.
     |> then(&Var.changeset(struct(Var), &1, %{id: 0}, nil, validate_var_values: false))
-    |> apply_valid!(uid <> ".vars." <> key)
+    |> apply_valid!(nil)
     |> var_record(assets["identifier"])
     |> Map.put("assets", assets)
   end
@@ -186,19 +196,19 @@ defmodule Brando.Content.Definition.Model do
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(value), do: is_nil(value)
 
-  defp options!(options) when is_list(options) do
+  defp options!(options, _subject) when is_list(options) do
     Enum.map(options, fn
       {label, value} -> %{"label" => label, "value" => value}
       option -> Value.object(option)
     end)
   end
 
-  defp options!(_), do: Error.raise!("options", "expected a list")
+  defp options!(_, subject), do: Error.raise!(subject, "options must be a list")
 
   defp assets!(value, allowed, path) do
     assets = Value.object(value)
-    Value.keys!(assets, allowed, path <> ".assets")
-    Enum.each(assets, fn {key, value} -> if value != nil, do: Value.nonempty!(value, path <> ".assets." <> key) end)
+    Value.keys!(assets, allowed, path <> ": assets")
+    Enum.each(assets, fn {key, value} -> if value != nil, do: Value.nonempty!(value, path <> ": assets." <> key) end)
     Map.merge(Map.new(allowed, &{&1, nil}), assets)
   end
 
@@ -243,23 +253,24 @@ defmodule Brando.Content.Definition.Model do
 
   # Compare persisted definitions using the same schema normalization as the
   # literal reader. Legacy empty strings must not become edits on reimport.
-  def stored_ref_record(record) do
+  # `subject` names the module holding it in errors
+  def stored_ref_record(record, subject \\ nil) do
     struct(Ref)
     |> Ref.changeset(Map.delete(ref_record(record), "assets"), :system)
-    |> apply_valid!(record.uid)
+    |> apply_valid!(subject)
     |> ref_record()
   end
 
   # A stored value predating a validation is read as it is: one old colour
   # must not stop every snapshot, export and import.
-  def stored_var_record(record) do
+  def stored_var_record(record, subject \\ nil) do
     struct(Var)
     |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil,
       validate_colors: false,
       validate_var_values: false,
       sanitize_rich_text: false
     )
-    |> apply_valid!(record.key)
+    |> apply_valid!(subject)
     |> var_record(Map.get(record, :identifier_id))
   end
 
@@ -270,7 +281,8 @@ defmodule Brando.Content.Definition.Model do
     |> Enum.map(fn {r, i} -> Map.put(fun.(r), "sequence", i) end)
   end
 
-  def normalize_module!(definition) do
+  # Errors name the module, or nothing more than its file (`nil`) as it is read
+  def normalize_module!(definition, subject \\ :uid) do
     attrs =
       definition
       |> Map.take(Enum.map(@module_fields, &to_string/1))
@@ -284,7 +296,7 @@ defmodule Brando.Content.Definition.Model do
 
     normalized =
       Module.changeset(struct(Module), attrs, :system)
-      |> apply_valid!(definition["uid"])
+      |> apply_valid!(if(subject == :uid, do: ~s(module "#{definition["uid"]}"), else: subject))
       |> Map.take(@module_fields)
       |> Value.plain()
 
@@ -363,15 +375,20 @@ defmodule Brando.Content.Definition.Model do
     Enum.each(Map.fetch!(graph, uid), &visit!(&1, graph, MapSet.put(seen, uid)))
   end
 
-  def block_schema!(type) do
+  def block_schema!(type, subject \\ nil) do
     case Enum.find(Blocks.list_blocks(), fn {key, _} -> to_string(key) == type end) do
       {_, schema} ->
-        if Code.ensure_loaded?(schema), do: schema, else: Error.raise!(type, "unsupported ref type")
+        if Code.ensure_loaded?(schema),
+          do: schema,
+          else: Error.raise!(subject || type, ref_type(subject, type, "unsupported"))
 
       nil ->
-        Error.raise!(type, "unknown ref type")
+        Error.raise!(subject || type, ref_type(subject, type, "unknown"))
     end
   end
+
+  defp ref_type(nil, _type, problem), do: problem <> " ref type"
+  defp ref_type(_subject, type, problem), do: "#{problem} ref type #{inspect(type)}"
 
   def validate_fields!(schema, attrs, path) do
     Value.keys!(attrs, schema.__schema__(:fields) -- schema.__schema__(:primary_key), path)
@@ -388,9 +405,11 @@ defmodule Brando.Content.Definition.Model do
     end)
   end
 
-  def apply_valid!(changeset, path) do
+  # `subject` names what holds the changeset in errors (`module "uid"`), or
+  # is nil within a definition's file; a var or ref names itself
+  def apply_valid!(changeset, subject) do
     if changeset.valid?,
       do: Changeset.apply_changes(changeset),
-      else: Error.raise!(path, inspect(PolymorphicEmbed.traverse_errors(changeset, fn {msg, opts} -> {msg, opts} end)))
+      else: Error.changeset!(changeset, subject)
   end
 end

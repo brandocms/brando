@@ -312,7 +312,7 @@ defmodule Mix.Tasks.Brando.Modules do
 
       {:error, reason} ->
         Mix.raise(
-          "Definitions committed, but the baseline could not be saved: #{inspect(reason)}. Export the target to a new directory before the next edit."
+          "Definitions committed, but the baseline could not be saved: #{Brando.Content.Definition.Error.describe(reason)}. Export the target to a new directory before the next edit."
         )
     end
 
@@ -571,5 +571,5 @@ defmodule Mix.Tasks.Brando.Modules do
   end
 
   defp unwrap!({:ok, value}), do: value
-  defp unwrap!({:error, reason}), do: Mix.raise("Module definitions: #{inspect(reason)}")
+  defp unwrap!({:error, reason}), do: Mix.raise("Module definitions: #{Brando.Content.Definition.Error.describe(reason)}")
 end

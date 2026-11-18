@@ -193,6 +193,63 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
   end
 
+  # brando_234 made var instructions a language map
+  test "instructions recorded as a string before brando_234 don't make the definition a conflict", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+
+    File.write!(
+      Path.join(c.path, "hero.exs"),
+      String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions "Pick one"))
+    )
+
+    assert {:ok, bundle} = Definitions.read(c.path)
+    result = apply_bundle!(bundle, c.user)
+
+    [current] = snapshot()["modules"]
+    assert [%{"instructions" => %{"en" => "Pick one"}}] = current["vars"]
+    before_upgrade = put_in(current, ["vars", Access.at(0), "instructions"], "Pick one")
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    stale = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
+  end
+
+  test "instructions saved in the admin with other languages left blank equal the file's text", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+
+    File.write!(
+      Path.join(c.path, "hero.exs"),
+      String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions "Pick one"))
+    )
+
+    assert {:ok, bundle} = Definitions.read(c.path)
+    apply_bundle!(bundle, c.user)
+
+    # As the module editor saves them: one input per admin language
+    [var] = hero().vars
+    var |> Changeset.change(instructions: %{"en" => "Pick one", "no" => ""}) |> Repo.update!()
+    assert [%{instructions: %{"en" => "Pick one", "no" => nil}}] = hero().vars
+
+    assert {:ok, %{items: [%{action: :noop}]}} = Definitions.plan(bundle, c.user)
+
+    # and digests as the text did before brando_234, as the baselines compare
+    [stored] = snapshot()["modules"]
+    before_upgrade = put_in(stored, ["vars", Access.at(0), "instructions"], "Pick one")
+    assert Snapshot.digest(stored) == Snapshot.digest(before_upgrade)
+  end
+
+  test "instructions moved to another language are a change", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    with = &String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions #{&1}))
+    File.write!(Path.join(c.path, "hero.exs"), with.(~s(%{"en" => "Pick one"})))
+    assert {:ok, bundle} = Definitions.read(c.path)
+    apply_bundle!(bundle, c.user)
+
+    File.write!(Path.join(c.path, "hero.exs"), with.(~s(%{"no" => "Pick one"})))
+    assert {:ok, moved} = Definitions.read(c.path)
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(moved, c.user)
+  end
+
   # Every copy of an empty link opens on the default tab, so the module var's
   # own link type there is no part of the definition
   test "an empty link left on the other tab exports and reimports unchanged", c do
@@ -635,6 +692,56 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
     [file] = Path.wildcard(Path.join(exported.directory, "**/*.exs"))
     assert File.read!(file) =~ ~s(label %{"en" => "Theme", "no" => "Tema"})
+  end
+
+  # brandocms/brando#3541
+  test "var instructions take a plain string or a language map, through import and export", c do
+    import_args = ["import", "--from", c.path, "--user", to_string(c.user.id)]
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    plain = String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions "Pick one"))
+    File.write!(Path.join(c.path, "hero.exs"), plain)
+    assert {:ok, bundle} = Definitions.read(c.path)
+    assert [%{"vars" => [%{"instructions" => %{"en" => "Pick one"}}]}] = bundle["modules"]
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{instructions: %{"en" => "Pick one"}}] = hero().vars
+
+    translated =
+      String.replace(plain, ~s(instructions "Pick one"), ~s(instructions %{"en" => "Pick one", "no" => "Velg én"}))
+
+    File.write!(Path.join(c.path, "hero.exs"), translated)
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{instructions: %{"en" => "Pick one", "no" => "Velg én"}}] = hero().vars
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+    [file] = Path.wildcard(Path.join(exported.directory, "**/*.exs"))
+    assert File.read!(file) =~ ~s(instructions %{"en" => "Pick one", "no" => "Velg én"})
+    assert {:ok, reread} = Definitions.read(exported.directory)
+    assert reread == exported.bundle
+    assert {:ok, plan} = Definitions.plan(reread, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
+  test "a bundle's invalid var names the module and the var when planning", c do
+    bad =
+      edit(c.bundle, fn module ->
+        update_in(module["vars"], fn [var] -> [Map.put(var, "placeholder", %{"no" => "x"})] end)
+      end)
+
+    assert Definitions.plan(bad, c.user) ==
+             {:error, ~s|module "hero-test": var "theme": placeholder must be a string (got a map)|}
+  end
+
+  test "mix brando.modules import prints the readable error, not an inspected one", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    File.write!(Path.join(c.path, "hero.exs"), String.replace(source, "width :half", "width :huge"))
+
+    error =
+      assert_raise Mix.Error, fn ->
+        Mix.Tasks.Brando.Modules.run(["import", "--from", c.path, "--user", to_string(c.user.id)])
+      end
+
+    assert error.message ==
+             ~s|Module definitions: hero.exs: var "theme": width must be one of full, half, third, fourth, auto, fill (got "huge")|
   end
 
   test "a module without `multi` can be imported again after the database stores false", c do

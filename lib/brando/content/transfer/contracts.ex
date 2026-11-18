@@ -5,6 +5,7 @@ defmodule Brando.Content.Transfer.Contracts do
   alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Drafts.Params
   alias Brando.Repo
+  alias Brando.Type.I18nString
 
   @settings ~w(type multi datasource datasource_module datasource_type datasource_query)
   def capture(module) do
@@ -49,7 +50,7 @@ defmodule Brando.Content.Transfer.Contracts do
 
   @doc "Whether `module` is the definition a bundle names, which may be from before brando_225."
   def same_definition?(module, definition) when is_map(definition),
-    do: normalized(module) == rename_html_vars(definition)
+    do: with_plain_instructions(normalized(module)) == definition |> rename_html_vars() |> with_plain_instructions()
 
   def same_definition?(_module, _definition), do: false
 
@@ -71,6 +72,28 @@ defmodule Brando.Content.Transfer.Contracts do
   defp html_var(%{"type" => "rich_text"} = var), do: var |> with_html_vars() |> Map.put("type", "html")
   defp html_var(var), do: with_html_vars(var)
 
+  @doc """
+  `value` (a definition or a snapshot of blocks) with each var's
+  instructions in one language as plain text, as they were stored before
+  brando_234: for comparing with a definition or a digest from then.
+  """
+  def with_plain_instructions(%{"vars" => vars} = map) when is_list(vars) do
+    map
+    |> Map.new(fn {key, value} -> {key, with_plain_instructions(value)} end)
+    |> Map.put("vars", Enum.map(vars, &plain_instructions/1))
+  end
+
+  def with_plain_instructions(map) when is_map(map) and not is_struct(map),
+    do: Map.new(map, fn {key, value} -> {key, with_plain_instructions(value)} end)
+
+  def with_plain_instructions(list) when is_list(list), do: Enum.map(list, &with_plain_instructions/1)
+  def with_plain_instructions(other), do: other
+
+  defp plain_instructions(%{"instructions" => instructions} = var),
+    do: var |> with_plain_instructions() |> Map.put("instructions", I18nString.plain(instructions))
+
+  defp plain_instructions(var), do: with_plain_instructions(var)
+
   def normalized(module) do
     module |> Params.snapshot() |> Map.take(@settings ++ ~w(code class refs vars)) |> unset_multi() |> normalize()
   end
@@ -88,8 +111,8 @@ defmodule Brando.Content.Transfer.Contracts do
   defp normalize(value), do: value
 
   def differences(%{"kind" => "module", "definition" => source}, %Brando.Content.Module{} = module) do
-    source = rename_html_vars(source)
-    destination = normalized(module)
+    source = source |> rename_html_vars() |> with_plain_instructions()
+    destination = module |> normalized() |> with_plain_instructions()
     for key <- ~w(code class refs vars), source[key] != destination[key], do: key
   end
 
