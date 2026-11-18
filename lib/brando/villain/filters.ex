@@ -214,6 +214,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.concat([1,2], [3,4], %{})
       [1,2,3,4]
   """
+  def concat(nil, other, context), do: concat([], other, context)
+  def concat(value, nil, context), do: concat(value, [], context)
   def concat(value, other, _) when is_list(value) and is_list(other), do: value ++ other
 
   @doc """
@@ -431,6 +433,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.partition(["a", "b", "c", "d", "e"], 3, %{})
       [["a", "b", "c"], ["d", "e"]]
   """
+  def partition(nil, _size, _ctx), do: []
+
   def partition(arr, size, _ctx) when is_list(arr) do
     Enum.chunk_every(arr, size)
   end

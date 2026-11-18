@@ -59,6 +59,11 @@ defmodule Brando.Villain.NilCollectionTest do
     assert render("[{{ missing | uniq | size }}]") == "[0]"
     assert render(~s([{{ missing | join: ", " }}])) == "[]"
     assert render("[{{ missing | first }}][{{ missing | last }}]") == "[][]"
+    assert render("[{{ missing | partition: 3 | size }}]") == "[0]"
+
+    assert render(
+             ~s({% assign xs = "a,b" | split: "," %}[{{ missing | concat: xs | join: "" }}]{{ xs | concat: missing | size }})
+           ) == "[ab]2"
 
     template =
       ~s({% assign images = missing.gallery_objects | map: "image" %}{% for x in images %}{{ x }}{% else %}none{% endfor %})
