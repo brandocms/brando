@@ -378,7 +378,8 @@ defmodule BrandoAdmin.Files.FileListLive do
               </div>
               <SortByUse.sort_button
                 :if={
-                  @current_folder != "" and @visible_file_count > 0 and !AssetListHelpers.unused_filter?(@params) and
+                  @visible_file_count > 0 and AssetListHelpers.folder_listed?(@params, @current_folder) and
+                    !AssetListHelpers.unused_filter?(@params) and
                     BrandoAdmin.Authorization.allowed?(:update, @schema)
                 }
                 asset_type={:file}
