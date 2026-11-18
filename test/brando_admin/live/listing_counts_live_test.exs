@@ -77,9 +77,12 @@ defmodule BrandoAdmin.ListingCountsLiveTest do
     [dropdown_id] = Floki.attribute(dropdown, "id")
     view |> element("##{dropdown_id} button", "Published") |> render_click()
 
+    # The list refreshes two messages after the click: the view handles the
+    # listing's broadcast, then the `send_update` that handler queues for
+    # the list. A render can land between them, so wait for the new counts.
+    await_selector(view, status_button("published") <> ":not(.is-empty)")
     assert count(view, "draft") == "1"
     assert count(view, "published") == "1"
-    refute has_element?(view, status_button("published") <> ".is-empty")
   end
 
   test "the footer shows the range and changes the page size", %{conn: conn} do

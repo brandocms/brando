@@ -43,8 +43,9 @@ defmodule BrandoAdmin.Pages.PageListFragmentsTest do
 
     render_click(view, "delete_entry", %{"id" => to_string(page.id), "fragments" => "move", "fragments_page" => ""})
 
-    html = render(view)
-    assert html =~ ~s(id="fragments-without-page-title")
+    # The section reloads two messages after the click: the view handles the
+    # listing's broadcast, then the `send_update` that handler queues for it
+    await_selector(view, "#fragments-without-page-title")
     assert view |> element("#fragments-without-page .child-chip") |> render() =~ "partials/footer"
   end
 
