@@ -57,16 +57,19 @@ test('creates a simple page', async ({ page }) => {
   // Click Create video button
   await videoPicker.getByRole('button', { name: 'Create video' }).click()
 
-  // Wait for "Analyzing video..." to appear and then disappear
-  await expect(videoPicker.getByText('Analyzing video...')).toBeVisible({ timeout: 10000 })
-  await expect(videoPicker.getByText('Analyzing video...')).not.toBeVisible({ timeout: 30000 })
+  // Wait for the created video, not for "Analyzing video...": the E2E server
+  // answers Vimeo's oEmbed itself (E2EFakeOEmbed), at once, so that message can
+  // come and go before a check sees it. video_picker_url_test.exs covers it.
+  const createdVideo = videoPicker.locator('.video-picker__video.selected')
+  await expect(createdVideo).toHaveCount(1)
+  await expect(createdVideo.locator('.video-picker__title')).toHaveText('Fake oEmbed title')
 
   // Close the drawer
   await videoPicker.getByRole('button', { name: 'Close' }).click()
   await page.waitForSelector('#video-picker', { state: 'hidden' })
 
-  // Verify video was added (video block should now show video content)
-  await expect(page.locator('[data-block-type="video"]')).toBeVisible()
+  // The video block now holds the video
+  await expect(page.locator('.video-block')).toContainText('Vimeo: 347119375 — Fake oEmbed title')
 
   // add text block
   await page.getByRole('button', { name: 'Add block' }).nth(2).click()
