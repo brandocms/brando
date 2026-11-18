@@ -100,14 +100,342 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Moves a page to the trash, deciding what becomes of its fragments in the
+  same transaction. A fragment is found by its parent key, key and language,
+  not through its page, so one left on a trashed page would keep showing on
+  the site while the admin, which lists fragments under their page, no longer
+  shows it.
+
+  `:fragments` takes:
+
+    * `:move`, the default: to `fragment_target/1`, the nearest ancestor not
+      in the trash, or else the homepage in the page's language. With
+      neither, the fragments keep showing on the site with no page, listed
+      under "Fragments without a page" (`list_fragments_without_page/1`).
+    * `{:move, page_id}`: to that page, which must exist, be out of the trash
+      and not be the page deleted. `{:move, nil}` leaves them with no page.
+    * `:delete`: to the trash with the page, at its `deleted_at`. Restoring
+      the page from the trash brings them back.
+
+  A fragment already in the trash stays there, on the page. Moving takes the
+  right to update each fragment, and deleting the right to delete it (and to
+  publish it, for a published one), as `delete_fragment/2` asks; a fragment
+  refused leaves the page where it was.
+
+  Returns `{:error, {:fragments, :target_not_found}}` for a target page that
+  can't take them, and `{:error, {:fragments, :invalid_choice}}` for another
+  value of `:fragments`.
+  """
+  @spec delete_page(id, user, keyword) :: {:ok, page} | {:error, term}
+  def delete_page(id, user \\ :system, opts \\ []) do
+    choice = Keyword.get(opts, :fragments, :move)
+
+    with :ok <- valid_fragments_choice(choice),
+         {:ok, {page, trashed}} <- delete_page_with_fragments(id, user, choice) do
+      fragments_changed(trashed)
+      {:ok, page}
+    end
+  end
+
+  defp valid_fragments_choice(choice) when choice in [:move, :delete], do: :ok
+  defp valid_fragments_choice({:move, _target}), do: :ok
+  defp valid_fragments_choice(_), do: {:error, {:fragments, :invalid_choice}}
+
+  # `Boundary.run` gives the fragments' work the delete's scope and
+  # environment, and with group authorization its transaction. Without one
+  # (legacy mode, `:system`) the transaction here holds it together.
+  defp delete_page_with_fragments(id, user, choice) do
+    Brando.Repo.transaction(fn ->
+      user
+      |> Brando.Authorization.Boundary.run(:delete, Page, fn _ -> delete_locked_page(id, user, choice) end)
+      |> ok_or_rollback()
+    end)
+  end
+
+  defp ok_or_rollback({:ok, result}), do: result
+  defp ok_or_rollback({:error, reason}), do: Brando.Repo.rollback(reason)
+
+  # Page deletes take the page tree's lock (`Brando.Pages.Page.PreventParentCycles`
+  # takes it for a parent change) before anything else, so they run one at a
+  # time: a second delete of the page finds it in the trash, and a delete of
+  # the page the fragments go to finds them on it, or is found first. Holding
+  # no row while it waits, it can't deadlock with them or with a save.
+  #
+  # The fragments are moved, or cleared for the trash, before the generated
+  # delete runs: a fragment refused stops it before it tells anyone.
+  defp delete_locked_page(id, user, choice) do
+    lock_page_tree()
+
+    with %Page{} = page <- live_page(id) || {:error, {:page, :not_found}},
+         {:ok, prepared} <- prepare_fragments(lock_fragments(page), page, user, choice) do
+      Brando.Query.Mutations.delete(__MODULE__, Page, "page", page.id,
+        user: user,
+        callback: &page_deleted(&1, user, prepared)
+      )
+    end
+  end
+
+  defp lock_fragments(page) do
+    Brando.Repo.all(
+      from f in Fragment,
+        where: f.page_id == ^page.id and is_nil(f.deleted_at),
+        order_by: [asc: f.id],
+        lock: "FOR UPDATE"
+    )
+  end
+
   # A trail leaves out a deleted parent: the live descendants' trails drop
   # the trashed page
-  mutation :delete, Page do
-    fn entry ->
-      update_descendant_breadcrumbs(entry)
+  defp page_deleted(page, user, {kind, fragments}) do
+    keep_apart_from_page(page)
+
+    with {:ok, trashed} <- if(kind == :trash, do: trash_fragments(fragments, page, user), else: {:ok, []}) do
+      update_descendant_breadcrumbs(page)
       Brando.Cache.Query.evict_all(Page)
-      {:ok, entry}
+      fragments_left(kind, fragments, trashed)
+      {:ok, {page, trashed}}
     end
+  end
+
+  defp fragments_left(_kind, [], _trashed), do: :ok
+
+  defp fragments_left(kind, fragments, trashed) do
+    Brando.Cache.Query.evict_all(Fragment)
+    if kind == :trash, do: broadcast_fragments(trashed, :deleted), else: broadcast_fragments(fragments, :updated)
+  end
+
+  # As a fragment's own save or delete tells its open forms and frontend
+  # edit, once committed
+  defp broadcast_fragments(fragments, action) do
+    topic = Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(Fragment)}")
+
+    Enum.each(fragments, fn fragment ->
+      Brando.Repo.after_commit(fn ->
+        Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:mutation, Fragment, fragment, action})
+      end)
+    end)
+  end
+
+  # A restore brings back the fragments on the page trashed at its own
+  # `deleted_at`, stored to the second. One trashed on its own in that second
+  # is set a second earlier, with its notes, so it stays in the trash.
+  defp keep_apart_from_page(%Page{id: id, deleted_at: deleted_at}) do
+    earlier = DateTime.add(deleted_at, -1)
+
+    {_, ids} =
+      Brando.Repo.update_all(
+        from(f in Fragment, where: f.page_id == ^id and f.deleted_at == ^deleted_at, select: f.id),
+        set: [deleted_at: earlier]
+      )
+
+    Brando.Notes.entries_trash_moved(Fragment, ids, deleted_at, earlier)
+  end
+
+  # `{:moved, fragments}` once moved, `{:trash, fragments}` once each may be
+  # trashed: that waits for the page's `deleted_at`
+  defp prepare_fragments([], _page, _user, _choice), do: {:ok, {:moved, []}}
+  defp prepare_fragments(fragments, page, user, :move), do: move_fragments(fragments, fragment_target(page), user)
+  defp prepare_fragments(fragments, _page, user, {:move, nil}), do: move_fragments(fragments, nil, user)
+
+  defp prepare_fragments(fragments, page, user, {:move, target_id}) do
+    case Ecto.Type.cast(:id, target_id) do
+      {:ok, id} when id != page.id -> move_fragments(fragments, id, user)
+      _ -> {:error, {:fragments, :target_not_found}}
+    end
+  end
+
+  defp prepare_fragments(fragments, _page, user, :delete) do
+    fragments
+    |> each_fragment(fn fragment ->
+      with :ok <- Brando.Authorization.Boundary.authorize(user, :delete, fragment),
+           :ok <- authorize_fragment_publish(user, fragment),
+           do: {:ok, fragment}
+    end)
+    |> case do
+      {:ok, fragments} -> {:ok, {:trash, fragments}}
+      error -> error
+    end
+  end
+
+  defp lock_page_tree do
+    prefix = Brando.Tenant.current_prefix() || "public"
+
+    Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-page-tree:" <> prefix
+    ])
+  end
+
+  defp live_page(id) do
+    case Ecto.Type.cast(:id, id) do
+      {:ok, id} -> Brando.Repo.one(from p in Page, where: p.id == ^id and is_nil(p.deleted_at))
+      :error -> nil
+    end
+  end
+
+  # To no page (`nil`); to the default target, which with the page trashed
+  # meanwhile is no page; or to the page `id`, refused when it can't take them
+  defp move_fragments(fragments, nil, user), do: move_fragments_to(fragments, nil, user)
+
+  defp move_fragments(fragments, %Page{id: id}, user),
+    do: move_fragments_to(fragments, live_page(id), user)
+
+  defp move_fragments(fragments, id, user) do
+    case live_page(id) do
+      nil -> {:error, {:fragments, :target_not_found}}
+      target -> move_fragments_to(fragments, target, user)
+    end
+  end
+
+  # A move changes the page the admin lists them under, and the fragments a
+  # page loaded with its own (`get_fragment/2`) holds; templates find them
+  # by their keys as before
+  defp move_fragments_to(fragments, target, user) do
+    target_id = target && target.id
+
+    fragments
+    |> each_fragment(fn fragment ->
+      changeset = Changeset.change(fragment, page_id: target_id)
+
+      with :ok <- Brando.Authorization.Boundary.authorize(user, :update, fragment),
+           :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
+           {:ok, moved} <- Brando.Repo.update(changeset) do
+        # In its history, and as the save open editors are told of
+        Brando.Activity.saved(changeset, moved, user)
+        {:ok, moved}
+      end
+    end)
+    |> case do
+      {:ok, moved} -> {:ok, {:moved, moved}}
+      error -> error
+    end
+  end
+
+  # At the page's own `deleted_at`, which `restore_fragments/2` matches on
+  defp trash_fragments(fragments, page, user) do
+    each_fragment(fragments, fn fragment ->
+      with {:ok, trashed} <- fragment |> Changeset.change(deleted_at: page.deleted_at) |> Brando.Repo.update() do
+        Brando.Activity.deleted(trashed, user, true)
+        Brando.Notes.entry_deleted(Fragment, trashed, true)
+        {:ok, trashed}
+      end
+    end)
+  end
+
+  defp authorize_fragment_publish(user, %Fragment{status: :published} = fragment),
+    do: Brando.Authorization.Boundary.authorize(user, :publish, fragment)
+
+  defp authorize_fragment_publish(_user, _fragment), do: :ok
+
+  defp each_fragment(fragments, fun) do
+    fragments
+    |> Enum.reduce_while({:ok, []}, fn fragment, {:ok, acc} ->
+      case fun.(fragment) do
+        {:ok, done} -> {:cont, {:ok, [done | acc]}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, done} -> {:ok, Enum.reverse(done)}
+      error -> error
+    end
+  end
+
+  # Entries embedding a fragment that left the site or came back render
+  # again, as after `delete_fragment/2`
+  defp fragments_changed(fragments) do
+    Enum.each(fragments, &ContentBlocks.render_entries_with_fragment_id(&1.id))
+  end
+
+  @doc """
+  Where `delete_page/3` moves the fragments of `page` by default: its nearest
+  ancestor that is not in the trash, or else the homepage in its language
+  (when that is another page). `nil` when there is neither.
+  """
+  @spec fragment_target(page) :: page | nil
+  def fragment_target(%Page{} = page) do
+    nearest_live_ancestor(page, MapSet.new([page.id])) || other_homepage(page)
+  end
+
+  # `seen` ends the walk at a parent cycle stored before they were refused
+  defp nearest_live_ancestor(%Page{parent_id: nil}, _seen), do: nil
+
+  defp nearest_live_ancestor(%Page{parent_id: parent_id}, seen) do
+    if MapSet.member?(seen, parent_id) do
+      nil
+    else
+      case Brando.Repo.get(Page, parent_id) do
+        nil -> nil
+        %Page{deleted_at: nil} = parent -> parent
+        parent -> nearest_live_ancestor(parent, MapSet.put(seen, parent.id))
+      end
+    end
+  end
+
+  defp other_homepage(%Page{id: id, language: language}) do
+    Brando.Repo.one(
+      from p in Page,
+        where: p.is_homepage and p.language == ^language and is_nil(p.deleted_at) and p.id != ^id,
+        order_by: [asc: p.id],
+        limit: 1
+    )
+  end
+
+  @doc """
+  Brings back from the trash the fragments trashed with `page` (by
+  `delete_page/3` with `fragments: :delete`): those still on it with the
+  page's `deleted_at` (a fragment trashed on its own in that second was set
+  a second earlier). `page` is the page as it was in the trash.
+  `Brando.Authorization.Boundary.restore/2` calls this in the page's
+  restore. Each fragment takes the right to restore it.
+  """
+  def restore_fragments(%Page{id: id, deleted_at: %{} = deleted_at}, user) do
+    fragments =
+      Brando.Repo.all(
+        from f in Fragment,
+          where: f.page_id == ^id and f.deleted_at == ^deleted_at,
+          order_by: [asc: f.id]
+      )
+
+    result =
+      each_fragment(fragments, fn fragment ->
+        with :ok <- Brando.Authorization.Boundary.authorize(user, :restore, fragment),
+             {:ok, restored} <- Brando.Repo.restore(fragment) do
+          Brando.Activity.restored(restored, user)
+          Brando.Notes.entry_restored(Fragment, fragment)
+          {:ok, restored}
+        end
+      end)
+
+    with {:ok, restored} <- result do
+      if restored != [], do: Brando.Cache.Query.evict_all(Fragment)
+      fragments_changed(restored)
+      {:ok, restored}
+    end
+  end
+
+  def restore_fragments(%Page{}, _user), do: {:ok, []}
+
+  @doc """
+  The fragments not in the trash that no page in the admin lists: their page
+  is in the trash or gone, or they never had one. They still render on the
+  site. The pages listing shows them under "Fragments without a page", in
+  its content language: pass `language` for those in one language.
+  """
+  @spec list_fragments_without_page(String.t() | atom | nil) :: [fragment]
+  def list_fragments_without_page(language \\ nil) do
+    query =
+      from f in Fragment,
+        left_join: p in Page,
+        on: p.id == f.page_id,
+        where: is_nil(f.deleted_at) and (is_nil(p.id) or not is_nil(p.deleted_at)),
+        order_by: [asc: f.parent_key, asc: f.key, asc: f.language, asc: f.id]
+
+    query = if language, do: where(query, [f], f.language == ^to_string(language)), else: query
+
+    query
+    |> Brando.Authorization.Boundary.query(Fragment)
+    |> Brando.Repo.all()
   end
 
   mutation :duplicate,

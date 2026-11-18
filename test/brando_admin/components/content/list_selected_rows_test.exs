@@ -22,8 +22,15 @@ defmodule BrandoAdmin.Components.Content.ListSelectedRowsTest do
     assert html =~ "delete_selected"
   end
 
-  test "deleting anything else goes on without asking" do
+  test "deleting pages asks first, saying where their fragments go" do
     html = rendered(Brando.Pages.Page)
+
+    assert html =~ "phx-confirm-click-message"
+    assert html =~ "nearest page above them"
+  end
+
+  test "deleting anything else goes on without asking" do
+    html = rendered(Brando.Pages.Fragment)
 
     refute html =~ "phx-confirm-click-message"
     assert html =~ ~s(phx-click="delete_selected")

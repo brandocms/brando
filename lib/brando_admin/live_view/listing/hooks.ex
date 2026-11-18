@@ -123,7 +123,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   defp handle_listing_event(
          "delete_entry",
-         %{"id" => entry_id},
+         %{"id" => entry_id} = params,
          %{assigns: %{current_user: user}} = socket,
          schema
        ) do
@@ -135,7 +135,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     context = schema.__modules__().context
     translated_singular = translated_singular(schema)
 
-    case apply(context, :"delete_#{singular}", [entry_id, user]) do
+    case apply(context, :"delete_#{singular}", [entry_id, user | delete_opts(schema, params)]) do
       {:ok, _} ->
         send(
           self(),
@@ -143,6 +143,12 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
         )
 
         update_list_entries(schema)
+
+      {:error, {:fragments, :target_not_found}} ->
+        send(
+          self(),
+          {:toast, gettext("The page chosen for the fragments is gone or in the trash. Nothing was deleted.")}
+        )
 
       {:error, _error} ->
         send(
@@ -497,7 +503,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
           action: :update_entries
         )
 
-        {:halt, socket}
+        {:halt, entries_updated(socket)}
 
       {:translation_progress, schema, dialog_state}, socket ->
         send_update(BrandoAdmin.Components.Content.List,
@@ -588,4 +594,23 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       end
     end)
   end
+
+  # A listing view that shows more than its list refreshes it in
+  # `entries_updated/1` (the pages listing's fragments without a page)
+  defp entries_updated(%{view: view} = socket) do
+    if function_exported?(view, :entries_updated, 1), do: view.entries_updated(socket), else: socket
+  end
+
+  # A page's fragments go where the editor chose in the delete dialog
+  # (`DeleteDescription`); without a choice, `Brando.Pages.delete_page/3`'s default
+  defp delete_opts(Brando.Pages.Page, %{"fragments" => "delete"}), do: [[fragments: :delete]]
+
+  defp delete_opts(Brando.Pages.Page, %{"fragments" => "move"} = params) do
+    case Map.get(params, "fragments_page") do
+      page_id when page_id in [nil, ""] -> [[fragments: {:move, nil}]]
+      page_id -> [[fragments: {:move, page_id}]]
+    end
+  end
+
+  defp delete_opts(_schema, _params), do: []
 end

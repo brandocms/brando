@@ -32,8 +32,23 @@ defmodule BrandoAdmin.Pages.PageListLive do
         empty_title={gettext("No pages in this view")}
         empty_description={gettext("Adjust your search or create a new entry.")}
       />
+
+      <.live_component
+        module={BrandoAdmin.Pages.FragmentsWithoutPage}
+        id="fragments-without-page"
+        schema={@schema}
+        current_user={@current_user}
+        content_language={@current_user.config.content_language}
+      />
     </div>
     """
+  end
+
+  # Called by the listing when its entries change (a page or a fragment
+  # deleted, restored or duplicated, here or by another editor)
+  def entries_updated(socket) do
+    send_update(BrandoAdmin.Pages.FragmentsWithoutPage, id: "fragments-without-page", action: :reload)
+    socket
   end
 
   def handle_event("create_subpage", %{"id" => parent_id, "language" => language}, socket) do

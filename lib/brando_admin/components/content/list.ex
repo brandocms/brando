@@ -1491,6 +1491,14 @@ defmodule BrandoAdmin.Components.Content.List do
     gettext("Deleting the last language of a form also deletes its submissions. This can't be undone.")
   end
 
+  # Brando.Pages.delete_page/3's default for the fragments, which a bulk
+  # delete has no dialog to ask about
+  defp delete_selected_confirm(Brando.Pages.Page) do
+    gettext(
+      "The fragments of the pages deleted move to the nearest page above them that is not deleted, or to the homepage in their language. With neither, they stay on the site with no page."
+    )
+  end
+
   defp delete_selected_confirm(_schema), do: false
 
   # Selection action button component

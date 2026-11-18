@@ -15,28 +15,158 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   """
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.Authorization.Boundary
   alias Brando.Blueprint
   alias Brando.Blueprint.Relations
   alias Brando.Content.Usage
+  alias Brando.Pages.Fragment
   alias Brando.Trait.SoftDelete
 
   @doc """
   `%{title, html, confirm, cancel}` for deleting `entry`. `html` is the
   message as markup (it links the places media is used), with the entry's
   name and every place escaped; the rest is text.
+
+  A page with fragments adds `choice`: a radio group the dialog shows under
+  the message, with a page select in its move option, whose values go with
+  the delete event.
   """
   def describe(schema, entry) do
     singular = schema |> Blueprint.get_singular() |> String.downcase()
     name = entry_name(schema, entry)
     owned = owned_counts(schema, entry)
 
-    %{
+    description = %{
       title: gettext("Delete %{singular}?", singular: singular),
       html: message(schema, name, owned) <> submissions(schema, entry) <> usage(schema, entry),
       confirm: gettext("Delete"),
       cancel: gettext("Cancel")
     }
+
+    with_fragments(description, schema, entry)
   end
+
+  # A page's fragments are found by key, not through the page, so they would
+  # outlive it on the site: the dialog lists them and asks where they go
+  # (`Brando.Pages.delete_page/3`). The choice's values are pushed with the
+  # delete event, as `fragments` and `fragments_page`. A choice the viewer may
+  # not take is left out.
+  #
+  # The fragments and pages are those the viewer may read; the others are
+  # counted, not named.
+  defp with_fragments(description, Brando.Pages.Page, %{deleted_at: nil} = page) do
+    query =
+      from(f in Fragment,
+        where: f.page_id == ^page.id and is_nil(f.deleted_at),
+        order_by: [asc: f.sequence, asc: f.key, asc: f.id]
+      )
+
+    case Brando.Repo.aggregate(query, :count) do
+      0 ->
+        description
+
+      count ->
+        fragments = query |> Boundary.query(Fragment) |> Brando.Repo.all()
+        options = fragment_options(page)
+
+        description
+        |> Map.update!(:html, &(&1 <> fragment_list(fragments, count) <> refused(options)))
+        |> Map.put(:choice, %{name: "fragments", legend: gettext("Its fragments"), options: options})
+    end
+  end
+
+  defp with_fragments(description, _schema, _entry), do: description
+
+  defp fragment_options(page) do
+    [
+      BrandoAdmin.Authorization.allowed?(:update, Fragment) && move_option(page),
+      BrandoAdmin.Authorization.allowed?(:delete, Fragment) &&
+        %{
+          value: "delete",
+          label: gettext("Delete them with the page"),
+          hint: gettext("They are moved to the trash, and come back if the page is restored."),
+          checked: false
+        }
+    ]
+    |> Enum.filter(& &1)
+    |> check_first()
+  end
+
+  defp move_option(page) do
+    target = Brando.Pages.fragment_target(page)
+
+    pages =
+      from(p in Brando.Pages.Page,
+        where: is_nil(p.deleted_at) and p.id != ^page.id,
+        order_by: [asc: p.language, asc: p.title, asc: p.id],
+        select: %{id: p.id, title: p.title, language: p.language}
+      )
+      |> Boundary.query(Brando.Pages.Page)
+      |> Brando.Repo.all()
+
+    # A default the viewer may not read is not chosen for them
+    selected = if target && Enum.any?(pages, &(&1.id == target.id)), do: to_string(target.id), else: ""
+
+    %{
+      value: "move",
+      label: gettext("Move them to"),
+      hint: gettext("They stay on the site. With no page, they are listed under Fragments without a page."),
+      checked: true,
+      select: %{
+        name: "fragments_page",
+        label: gettext("Page"),
+        selected: selected,
+        options: [
+          %{value: "", label: gettext("No page")}
+          | Enum.map(pages, &%{value: to_string(&1.id), label: "[#{language(&1.language)}] #{&1.title}"})
+        ]
+      }
+    }
+  end
+
+  defp check_first([first | rest]), do: [%{first | checked: true} | Enum.map(rest, &%{&1 | checked: false})]
+  defp check_first([]), do: []
+
+  defp refused([]),
+    do:
+      ~s(<div class="admin-dialog-section"><p>) <>
+        gettext("You may not move or delete these fragments, so the page can't be deleted.") <> "</p></div>"
+
+  defp refused(_options), do: ""
+
+  defp fragment_list(fragments, count) do
+    items =
+      Enum.map_join(fragments, fn fragment ->
+        key = "#{fragment.parent_key}/#{fragment.key}"
+        lang = "[#{language(fragment.language)}]"
+
+        case fragment.title do
+          title when is_binary(title) and title != "" ->
+            ~s(<li><strong>#{escape(title)}</strong> <span class="admin-dialog-meta">#{escape(key)} #{lang}</span></li>)
+
+          _ ->
+            ~s(<li>#{escape(key)} <span class="admin-dialog-meta">#{lang}</span></li>)
+        end
+      end)
+
+    hidden = count - length(fragments)
+
+    items =
+      if hidden > 0,
+        do: items <> "<li>" <> ngettext("One more you may not see", "%{count} more you may not see", hidden) <> "</li>",
+        else: items
+
+    ~s(<div class="admin-dialog-section"><p>) <>
+      ngettext(
+        "It has a fragment, which templates find by its key:",
+        "It has %{count} fragments, which templates find by their keys:",
+        count
+      ) <> ~s(</p><ul class="admin-dialog-list">#{items}</ul></div>)
+  end
+
+  defp language(language), do: language |> to_string() |> String.upcase() |> escape()
 
   # Without a name the subject is "This entry": splicing the schema's noun
   # into "This %{singular}" cannot agree with its gender ("Denne bilde").

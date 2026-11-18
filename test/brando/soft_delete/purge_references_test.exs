@@ -35,6 +35,10 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     Repo.update_all(from(t in schema, where: t.id in ^ids), set: [deleted_at: old])
   end
 
+  # A fragment left on its trashed page, as a delete before #3621 left it
+  defp left_on(fragment, page),
+    do: Repo.update_all(from(f in Fragment, where: f.id == ^fragment.id), set: [page_id: page.id])
+
   defp trail(page), do: Enum.map(Repo.get!(Page, page.id).breadcrumbs, & &1["title"])
 
   test "an expired page's remaining children and fragments lose the reference, and the rest is purged", %{user: user} do
@@ -48,6 +52,7 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
 
     {:ok, _} = Pages.delete_page(jobs.id, user)
     {:ok, _} = Pages.delete_page(about.id, user)
+    left_on(fragment, about)
     expire(Page, [about.id])
     expire(User, [stale_user.id])
     assert trail(team) == [app_name, "Home", "Team"]
@@ -72,6 +77,7 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     {:ok, fragment_revision} = Brando.Revisions.create_revision(Repo.get!(Fragment, fragment.id), user)
 
     {:ok, _} = Pages.delete_page(about.id, user)
+    left_on(fragment, about)
     expire(Page, [about.id])
     refute Enum.any?(Query.clean_up_soft_deletions(), &match?({:error, _}, &1))
 

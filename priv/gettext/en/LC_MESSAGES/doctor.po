@@ -149,6 +149,13 @@ msgid_plural "%{count} files"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} fragment on a page that is in the trash or gone"
+msgid_plural "%{count} fragments on pages that are in the trash or gone"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} hour"
@@ -237,6 +244,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} module reads its entries through .data.vars or .data.refs, which renders nothing"
 msgid_plural "%{count} modules read their entries through .data.vars or .data.refs, which renders nothing"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more"
+msgid_plural "%{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -387,6 +401,16 @@ msgstr ""
 #: lib/brando/doctor/checks/deploy_hosts.ex
 #, elixir-autogen, elixir-format
 msgid "%{file}: no PHX_HOST"
+msgstr ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{fragment}: the page is gone"
+msgstr ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "%{fragment}: the page is in the trash"
 msgstr ""
 
 #: lib/brando/doctor/checks/site_frontends.ex
@@ -683,6 +707,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_css.ex
 #, elixir-autogen, elixir-format
 msgid "EuropaCSS %{version}"
+msgstr ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "Fragment pages"
 msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
@@ -1235,6 +1264,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "every block has a uid of the expected shape"
 msgstr ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "every fragment's page is live"
+msgstr ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "every fragment's page is live; %{count} fragment has no page, listed under Fragments without a page"
+msgid_plural "every fragment's page is live; %{count} fragments have no page, listed under Fragments without a page"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando/doctor/checks/media_paths.ex
 #, elixir-autogen, elixir-format
@@ -1846,6 +1887,11 @@ msgstr ""
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
+msgstr ""
+
+#: lib/brando/doctor/checks/fragment_pages.ex
+#, elixir-autogen, elixir-format
+msgid "the site still shows them, but no page lists them in the admin. Open Pages: they are under Fragments without a page. Edit each one to choose its page, or delete it."
 msgstr ""
 
 #: lib/brando/doctor/checks/static_paths.ex

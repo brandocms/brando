@@ -184,7 +184,7 @@ content SEO audit leaves it out. Filter the flag in your controllers, and use
 <!-- usage-rules:end -->
 
 Page context creates and updates recompute `breadcrumbs` for the page and its
-non-deleted descendants, those under a trashed page included. Trashing a page (`Pages.delete_page/2`) recomputes its
+non-deleted descendants, those under a trashed page included. Trashing a page (`Pages.delete_page/3`) recomputes its
 descendants' trails, and restoring it (`Brando.Authorization.Boundary.restore/2`)
 recomputes its own and its descendants'. So does restoring one of its revisions
 (`Brando.Revisions.set_entry_to_revision/5`, which the revisions drawer and a
@@ -197,8 +197,9 @@ loop already stored ends the trail where it closes. Each element has string keys
 The stored trail starts with the configured app name at `/`, followed by the
 ancestors and current page; a deleted ancestor is left out. When the trash
 purge deletes a page for good, its remaining children move to the top
-(`parent_id` is cleared) and their trails are recomputed, and its fragments
-lose their `page_id`. It stores
+(`parent_id` is cleared) and their trails are recomputed. Fragments still on
+it lose their `page_id`: those trashed with it are purged with it, and live ones
+are listed under Fragments without a page. It stores
 `"/" <> page.uri`; it does **not** add a
 language prefix. Localize those URLs in a multilingual breadcrumb component,
 and verify both languages. Raw `Repo` writes bypass this recomputation; after a
@@ -286,6 +287,40 @@ pass does not evaluate its text a second time.
 Saving or deleting a fragment through its context queues affected block entries
 for rendering. Check the direct footer and a page that references the fragment
 as a block after saving; both should reflect the change once rendering finishes.
+
+## Delete a page that has fragments
+
+A fragment is found by its keys and language, not through its page, so a page's
+fragments would keep showing on the site after the page is gone. Deleting a page
+in the admin lists its fragments and asks where they go:
+
+- **Move them to** a page, by default the nearest page above it that is not in
+  the trash, or else the homepage in its language. Choosing **No page** keeps
+  them on the site with no page.
+- **Delete them with the page**: they go to the trash with it, and restoring the
+  page brings them back.
+
+A page without fragments asks as any other entry does. A bulk delete from the
+listing, and `Brando.Pages.delete_page/2` from code, move them as the dialog
+does by default; pass `fragments:` for another choice:
+
+```elixir
+Brando.Pages.delete_page(page.id, user)                                   # to the page above, or the homepage
+Brando.Pages.delete_page(page.id, user, fragments: {:move, other_page.id})
+Brando.Pages.delete_page(page.id, user, fragments: {:move, nil})          # no page
+Brando.Pages.delete_page(page.id, user, fragments: :delete)
+```
+
+The fragments change in the page delete's transaction, and a refused fragment
+leaves the page where it was: moving takes the right to update each fragment,
+and deleting the right to delete it (and to publish it, when it is published).
+A fragment already in the trash stays there. Entries embedding a fragment that
+is deleted, or restored with its page, are queued for rendering.
+
+The pages listing shows the fragments no page holds, in its content language,
+under **Fragments without a page**: their page is in the trash or gone, or they
+never had one. Edit one to choose its page. `Brando.Pages.list_fragments_without_page/1` returns them, and
+`mix brando.doctor` warns about those on a trashed or missing page.
 
 ## Check the result
 

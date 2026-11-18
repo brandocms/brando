@@ -589,6 +589,26 @@ defmodule Brando.Notes do
 
   def entry_restored(_schema, _entry), do: :ok
 
+  @doc """
+  The entries `ids` of `schema` in the trash since `from` were set to `to`
+  (`Brando.Pages.delete_page/3` keeps a fragment's time apart from its
+  page's): the notes trashed with them move too, so they still come back
+  with them.
+  """
+  def entries_trash_moved(_schema, [], _from, _to), do: :ok
+
+  def entries_trash_moved(schema, ids, from, to) do
+    type = entry_type(schema)
+    ids = Enum.map(ids, &to_integer/1)
+
+    from(n in Note, where: n.entry_type == ^type and n.entry_id in ^ids and n.deleted_at == ^to_utc_usec(from))
+    |> Repo.update_all([set: [deleted_at: to_utc_usec(to)]], guarded())
+
+    :ok
+  rescue
+    error -> log_lifecycle_error(error)
+  end
+
   @doc "Removes the notes of entries deleted for good."
   def entries_purged(_schema, []), do: :ok
 

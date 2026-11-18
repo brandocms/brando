@@ -21,7 +21,86 @@ function empty(message) {
   return message && typeof message === 'object' ? !message.html : !message
 }
 
-function openDialog({ title, message, tone, buttons }) {
+// A radio group under the message (`choice`: `{ name, legend, options }`),
+// as a delete dialog asks what becomes of what the entry holds. An option
+// may carry a `select` (`{ name, label, selected, options }`), enabled while
+// its option is checked. All of it is text.
+function buildChoice({ name, legend, options }) {
+  const $fieldset = document.createElement('fieldset')
+  $fieldset.className = 'admin-dialog-choice'
+
+  const $legend = document.createElement('legend')
+  $legend.textContent = legend || ''
+  $fieldset.appendChild($legend)
+
+  const selects = []
+  const groupName = `admin-dialog-choice-${Math.random().toString(36).slice(2)}`
+
+  for (const option of options || []) {
+    const id = `${groupName}-${option.value}`
+    const $option = document.createElement('div')
+    $option.className = 'admin-dialog-option'
+
+    const $radio = document.createElement('input')
+    $radio.type = 'radio'
+    $radio.name = groupName
+    $radio.id = id
+    $radio.value = option.value
+    $radio.checked = !!option.checked
+    $radio.dataset.choiceName = name
+
+    const $label = document.createElement('label')
+    $label.htmlFor = id
+    $label.textContent = option.label
+
+    $option.append($radio, $label)
+
+    if (option.select) {
+      const $select = document.createElement('select')
+      $select.className = 'admin-select'
+      $select.name = option.select.name
+      $select.setAttribute('aria-label', option.select.label || option.label)
+
+      for (const { value, label } of option.select.options || []) {
+        const $opt = document.createElement('option')
+        $opt.value = value
+        $opt.textContent = label
+        $opt.selected = value === option.select.selected
+        $select.appendChild($opt)
+      }
+
+      selects.push({ $radio, $select })
+      $option.appendChild($select)
+    }
+
+    if (option.hint) {
+      const $hint = document.createElement('p')
+      $hint.className = 'admin-dialog-hint'
+      $hint.textContent = option.hint
+      $option.appendChild($hint)
+    }
+
+    $fieldset.appendChild($option)
+  }
+
+  const sync = () => selects.forEach(({ $radio, $select }) => ($select.disabled = !$radio.checked))
+  $fieldset.addEventListener('change', sync)
+  sync()
+
+  const values = () => {
+    const checked = $fieldset.querySelector('input[type=radio]:checked')
+    if (!checked) return {}
+    const result = { [name]: checked.value }
+    for (const { $radio, $select } of selects) {
+      if ($radio === checked) result[$select.name] = $select.value
+    }
+    return result
+  }
+
+  return { $fieldset, values }
+}
+
+function openDialog({ title, message, tone, buttons, choice }) {
   const dialog = document.createElement('dialog')
   dialog.className = `admin-dialog${tone ? ` admin-dialog--${tone}` : ''}`
 
@@ -45,6 +124,9 @@ function openDialog({ title, message, tone, buttons }) {
     dialog.appendChild($body)
   }
 
+  const built = choice && choice.options && choice.options.length ? buildChoice(choice) : null
+  if (built) dialog.appendChild(built.$fieldset)
+
   const $actions = document.createElement('div')
   $actions.className = 'admin-dialog-actions'
   dialog.appendChild($actions)
@@ -66,7 +148,8 @@ function openDialog({ title, message, tone, buttons }) {
       button.className = `admin-dialog-button${kind ? ` ${kind}` : ''}`
       button.textContent = label
       button.autofocus = !!focus
-      button.addEventListener('click', () => close(value))
+      // With a choice, confirming answers with its values
+      button.addEventListener('click', () => close(value && built ? built.values() : value))
       $actions.appendChild(button)
     }
 
@@ -111,13 +194,15 @@ const alertWarning = alert('warning')
 const alertInfo = alert(null)
 
 // `destructive`: a red confirm button, and focus on Cancel, so Enter doesn't
-// delete by accident.
-function alertConfirm(title, message, callback = () => {}, { confirmText, cancelText, destructive } = {}) {
+// delete by accident. With a `choice`, the callback is given its values
+// (an object) when confirmed, and `false` when not.
+function alertConfirm(title, message, callback = () => {}, { confirmText, cancelText, destructive, choice } = {}) {
   const { ok, cancel } = labels()
 
   openDialog({
     title,
     message,
+    choice,
     tone: destructive ? 'destructive' : null,
     buttons: [
       { label: cancelText || cancel, value: false, focus: !!destructive },

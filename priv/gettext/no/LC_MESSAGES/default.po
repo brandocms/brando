@@ -5638,6 +5638,11 @@ msgstr "Slett valgte"
 msgid "Delete the job?"
 msgstr "Slette jobben?"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Delete them with the page"
+msgstr "Slett dem sammen med siden"
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Delete this block"
@@ -7880,6 +7885,11 @@ msgstr "Fragment slettet"
 msgid "Fragment duplicated"
 msgstr "Fragment duplisert"
 
+#: lib/brando_admin/live/pages/fragments_without_page.ex
+#, elixir-autogen, elixir-format
+msgid "Fragments without a page"
+msgstr "Fragmenter uten side"
+
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Free"
@@ -9049,6 +9059,13 @@ msgid_plural "It has %{count} rows now."
 msgstr[0] "Den har %{count} rad nå."
 msgstr[1] "Den har %{count} rader nå."
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "It has a fragment, which templates find by its key:"
+msgid_plural "It has %{count} fragments, which templates find by their keys:"
+msgstr[0] "Den har et fragment, som maler finner ved nøkkelen:"
+msgstr[1] "Den har %{count} fragmenter, som maler finner ved nøklene:"
+
 #: lib/brando_admin/components/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "It holds references or variables this module no longer defines, so saving the module cannot bring it up to date."
@@ -9128,6 +9145,11 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] "Også %{count} underliggende blokk fjernes."
 msgstr[1] "Også %{count} underliggende blokker fjernes."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Its fragments"
+msgstr "Fragmentene"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -10512,6 +10534,11 @@ msgstr "Flytt bildene"
 msgid "Move the videos"
 msgstr "Flytt videoene"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Move them to"
+msgstr "Flytt dem til"
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Move these"
@@ -11264,6 +11291,11 @@ msgstr "Ingen valg fantes"
 #, elixir-autogen, elixir-format
 msgid "No other site is in this group yet."
 msgstr "Ingen andre nettsteder er i denne gruppen ennå."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "No page"
+msgstr "Ingen side"
 
 #: lib/brando_admin/live/pages/page_list_live.ex
 #, elixir-autogen, elixir-format
@@ -12166,6 +12198,13 @@ msgid_plural "%{count} modules have no sketch. The AI draws each from its templa
 msgstr[0] "Én modul mangler skisse. KI-en tegner den ut fra malen, referansene og variablene, og den lagres med én gang. Du kan tegne den på nytt eller redigere den i modulen etterpå."
 msgstr[1] "%{count} moduler mangler skisse. KI-en tegner hver av dem ut fra malen, referansene og variablene, én om gangen, og hver lagres med én gang. Du kan tegne dem på nytt eller redigere dem i modulen etterpå."
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "One more you may not see"
+msgid_plural "%{count} more you may not see"
+msgstr[0] "Ett til som du ikke har tilgang til"
+msgstr[1] "%{count} til som du ikke har tilgang til"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "One of these revisions is no longer kept, so they can't be compared."
@@ -12627,6 +12666,7 @@ msgstr "Egen profil"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
+#: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "Page"
 msgstr "Side"
@@ -17840,6 +17880,11 @@ msgstr "Skjemaet har ingen mottakere."
 msgid "The form's default markup, live from the fields beside it."
 msgstr "Skjemaets standardoppmerking, oppdatert fra feltene ved siden av."
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "The fragments of the pages deleted move to the nearest page above them that is not deleted, or to the homepage in their language. With neither, they stay on the site with no page."
+msgstr "Fragmentene til sidene som slettes, flyttes til nærmeste side over dem som ikke er slettet, eller til forsiden på samme språk. Finnes ingen av delene, blir de på nettstedet uten side."
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -18067,6 +18112,11 @@ msgstr "Originalen blir værende her."
 #, elixir-autogen, elixir-format
 msgid "The other tab was closed"
 msgstr "Den andre fanen ble lukket"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "The page chosen for the fragments is gone or in the trash. Nothing was deleted."
+msgstr "Siden som ble valgt for fragmentene, finnes ikke lenger eller er i papirkurven. Ingenting ble slettet."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -18449,6 +18499,11 @@ msgstr "Webhooken ble lagret."
 msgid "The whole library. An image set up for another field is copied and cut to this field's sizes when you pick it."
 msgstr "Hele biblioteket. Et bilde som er satt opp for et annet felt, kopieres og beskjæres til dette feltets størrelser når du velger det."
 
+#: lib/brando_admin/live/pages/fragments_without_page.ex
+#, elixir-autogen, elixir-format
+msgid "Their page is in the trash or gone, or they never had one. They still show on the site. Edit one to choose its page."
+msgstr "Siden deres er i papirkurven eller finnes ikke lenger, eller de har aldri hatt en. De vises fortsatt på nettstedet. Rediger et fragment for å velge siden det hører til."
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "There are no empty compatible regions on this block."
@@ -18518,6 +18573,16 @@ msgstr "Disse innstillingene gjelder for denne bruken av filen."
 #, elixir-autogen, elixir-format
 msgid "They are logged out everywhere, and log in with their password alone until they set it up again."
 msgstr "Brukeren logges ut overalt, og logger inn med bare passordet til det er satt opp igjen."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "They are moved to the trash, and come back if the page is restored."
+msgstr "De flyttes til papirkurven, og kommer tilbake hvis siden gjenopprettes."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "They stay on the site. With no page, they are listed under Fragments without a page."
+msgstr "De blir på nettstedet. Uten side vises de under Fragmenter uten side."
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
@@ -21109,6 +21174,11 @@ msgstr "Du har valgt for mange filer"
 #, elixir-autogen, elixir-format
 msgid "You have this entry open in another tab (opened %{time})"
 msgstr "Du har dette elementet åpent i en annen fane (åpnet %{time})"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "You may not move or delete these fragments, so the page can't be deleted."
+msgstr "Du har ikke tilgang til å flytte eller slette disse fragmentene, så siden kan ikke slettes."
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
