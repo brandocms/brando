@@ -1105,7 +1105,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   defp choice_body(%{row: %{status: :deleted}} = assigns) do
     ~H"""
-    <RC.notice tone="error" icon="trash-2" headline={gettext("In the trash here")}>
+    <RC.notice tone="error" icon="trash" headline={gettext("In the trash here")}>
       {gettext("Restore the module to apply the release’s version.")}
     </RC.notice>
     """
