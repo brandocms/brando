@@ -108,6 +108,8 @@ defmodule Brando.Assets.Vite do
     }
     `
     """
+    require Logger
+
     @legacy_extension "-legacy"
     defstruct entries: %{}, critical: %{}, legacy: %{}
 
@@ -162,6 +164,69 @@ defmodule Brando.Assets.Vite do
 
     def refresh(scope, opts) do
       refresh_release_manifest(scope, opts)
+    end
+
+    @doc """
+    Reads the manifest afresh, with the critical CSS for `:app`, when the
+    manifest file changed on disk since the last read here, and otherwise
+    only stats it. For development, where `pnpm build` rewrites the manifest
+    while the server runs; production keeps what it read first and never
+    calls this.
+
+    A manifest that a build is still writing, or that is briefly gone, leaves
+    the cached one in place, and is checked again on the next call, as is a
+    manifest that names a critical stylesheet the build has not written yet.
+    Returns whether it read.
+    """
+    @spec refresh_if_changed(atom) :: boolean()
+    def refresh_if_changed(scope \\ :app) do
+      stamp_key = Brando.Tenant.cache_key({:vite, {"manifest_stamp", scope}})
+
+      stamp = manifest_stamp(config(scope).manifest_file)
+
+      if stamp == nil or :persistent_term.get(stamp_key, nil) == stamp do
+        false
+      else
+        refresh_stamped(scope, stamp_key, stamp)
+      end
+    rescue
+      e in [Jason.DecodeError, File.Error] ->
+        Logger.debug("(!) Could not read vite manifest for #{inspect(scope)}: #{Exception.message(e)}")
+        false
+    end
+
+    # Seconds are all the modification time has, so the size helps tell two
+    # builds in one second apart. Nil when there is no manifest to read.
+    defp manifest_stamp(file) do
+      case File.stat(file, time: :posix) do
+        {:ok, %File.Stat{mtime: mtime, size: size}} -> {mtime, size}
+        {:error, _reason} -> nil
+      end
+    end
+
+    defp refresh_stamped(scope, stamp_key, stamp) do
+      manifest = refresh(scope)
+      if scope == :app, do: refresh_critical_css_fenced(scope)
+      if critical_css_written?(manifest), do: :persistent_term.put(stamp_key, stamp)
+      true
+    end
+
+    # An activation meanwhile may have erased the key before this stores it,
+    # as `fill_critical_css/2` guards against: the next read fills it afresh
+    defp refresh_critical_css_fenced(scope) do
+      fence = Brando.Assets.SiteAssets.fence()
+      refresh_critical_css(scope)
+
+      if Brando.Assets.SiteAssets.fence() != fence do
+        :persistent_term.erase(Brando.Tenant.cache_key(config(scope).critical_css_cache_key))
+      end
+    end
+
+    defp critical_css_written?(manifest) do
+      manifest
+      |> get_in([Access.key(:critical), Access.key(:css_files, [])])
+      |> Kernel.||([])
+      |> Enum.all?(&File.exists?(critical_css_path(Brando.env(), &1)))
     end
 
     defp refresh_release_manifest(scope, opts) do
@@ -275,12 +340,7 @@ defmodule Brando.Assets.Vite do
 
     def critical_css(:prod, critical_css_files) do
       Enum.reduce(critical_css_files, "", fn file, acc ->
-        full_path =
-          Brando.Assets.SiteAssets.current_file(file) ||
-            Application.app_dir(
-              Brando.endpoint().config(:otp_app),
-              Path.join("priv/static", file)
-            )
+        full_path = critical_css_path(:prod, file)
 
         if File.exists?(full_path) do
           acc <> File.read!(full_path)
@@ -294,9 +354,9 @@ defmodule Brando.Assets.Vite do
       "/* no critical css */"
     end
 
-    def critical_css(_, critical_css_files) do
+    def critical_css(env, critical_css_files) do
       Enum.reduce(critical_css_files, "", fn file, acc ->
-        full_path = Brando.Assets.SiteAssets.current_file(file) || Path.join("priv/static", file)
+        full_path = critical_css_path(env, file)
 
         if File.exists?(full_path) do
           acc <> File.read!(full_path)
@@ -304,6 +364,15 @@ defmodule Brando.Assets.Vite do
           ""
         end
       end)
+    end
+
+    defp critical_css_path(:prod, file) do
+      Brando.Assets.SiteAssets.current_file(file) ||
+        Application.app_dir(Brando.endpoint().config(:otp_app), Path.join("priv/static", file))
+    end
+
+    defp critical_css_path(_env, file) do
+      Brando.Assets.SiteAssets.current_file(file) || Path.join("priv/static", file)
     end
 
     @spec prepend_slash(binary()) :: binary()

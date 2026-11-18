@@ -710,7 +710,7 @@ defmodule Brando.Assets.DevSiteTest do
     :persistent_term.erase({Brando.Vite, :start_failure, :site})
 
     for prefix <- [nil, "tenant_acme_production", "tenant_beta_production", "tenant_gamma_production"],
-        name <- ["cache_manifest", "critical_css"] do
+        name <- ["cache_manifest", "critical_css", {"manifest_stamp", :app}] do
       :persistent_term.erase(Tenant.cache_key({:vite, name}, prefix))
     end
   end

@@ -31,6 +31,8 @@ import configureHeader from './config/HEADER'
 import configureMobileMenu from './config/MOBILE_MENU'
 import configureMoonwalk from './config/MOONWALK'
 
+// In development Brando's <.head> also loads css/app.css from the Vite dev
+// server, render-blocking, so the first render is styled: keep its path
 import '../css/app.css'
 
 const app = new Application({
