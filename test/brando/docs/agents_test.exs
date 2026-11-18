@@ -29,9 +29,18 @@ defmodule Brando.Docs.AgentsTest do
 
       assert byte_size(rules) < 36_000, "usage-rules.md is #{byte_size(rules)} bytes; move rules into a topic"
 
-      for {key, _title, _when} <- Agents.topics() do
-        assert rules =~ "`brando:#{key}` (`deps/brando/usage-rules/#{key}.md`)"
-      end
+      # It ends with the index, which names exactly the topic files.
+      [_, index] = String.split(rules, "\n## More rules by topic\n", parts: 2)
+      refute index =~ "\n## "
+
+      listed =
+        for [_, key, path, path] <- Regex.scan(~r/^- `brando:([a-z0-9-]+)` \(\[([^\]]+)\]\(([^)]+)\)\)/m, index),
+            do: {key, path}
+
+      assert listed == for({key, _title, _when} <- Agents.topics(), do: {key, "usage-rules/#{key}.md"})
+
+      assert Enum.map(listed, &elem(&1, 1)) |> Enum.sort() ==
+               Agents.rules_files(guides) |> Map.keys() |> List.delete("usage-rules.md") |> Enum.sort()
     end
 
     test "is reproducible", %{guides: guides} do
@@ -45,11 +54,13 @@ defmodule Brando.Docs.AgentsTest do
     test "points every section at a guide that ships with the package", %{guides: guides} do
       rules = guides |> Agents.rules_files() |> Map.values() |> Enum.join("\n")
 
-      for [_, file] <- Regex.scan(~r{^Guide: `deps/brando/guides/([a-z0-9_]+\.md)`$}m, rules) do
+      assert rules =~ ~r{^Guide: \[}m
+
+      for [_, file] <- Regex.scan(~r{^Guide: \[[^\]]+\]\((?:\.\./)?guides/([a-z0-9_]+\.md)\)$}m, rules) do
         assert File.exists?(Path.join([@root, "guides", file]))
       end
 
-      for [_, file] <- Regex.scan(~r{\]\(deps/brando/guides/([a-z0-9_]+\.md)}, rules) do
+      for [_, file] <- Regex.scan(~r{\]\((?:\.\./)?guides/([a-z0-9_]+\.md)}, rules) do
         assert File.exists?(Path.join([@root, "guides", file])), "usage-rules.md links to a missing guide: #{file}"
       end
     end

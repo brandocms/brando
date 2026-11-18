@@ -106,6 +106,15 @@ migration against that application's own schema and data.
 
 <!-- usage-rules:start topic="generators" -->
 
+Without a terminal, as when a coding agent or a script runs it, the task
+cannot ask you to accept the plan: pass `--yes`, after reading the plan with
+`--dry-run`:
+
+```shell
+mix brando.gen.blueprint_migration MyApp.Projects.Project --dry-run < /dev/null
+mix brando.gen.blueprint_migration MyApp.Projects.Project --yes
+```
+
 Deployment uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 never changes a database, and reads one only for warnings or with `--reconcile`.
 

@@ -728,7 +728,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
 
     assert installed.issues == []
     assert @robots in installed.rms
-    assert IgniterCase.source(installed, "lib/studio_web.ex") =~ ~s(def static_paths, do: ["assets"])
+    assert IgniterCase.source(installed, "lib/studio_web.ex") =~ ~s(def static_paths, do: ["assets", "ico"])
   end
 
   test "a changed robots.txt is kept with a notice" do
@@ -786,6 +786,57 @@ defmodule Mix.Brando.Igniter.SiteTest do
     assert result.moves[@robots] == "assets/frontend/public/robots.txt"
     assert IgniterCase.source(result, "lib/studio_web.ex") =~ "robots.txt"
   end
+
+  describe "the site's icons" do
+    @icon "assets/frontend/public/ico/favicon.ico"
+
+    test "the root layout links the icon the installer copies, and ico is in static_paths/0" do
+      result = install(fresh(%{@robots => @phx_robots, "lib/studio_web.ex" => @web_module}))
+      assert result.issues == []
+
+      layout = IgniterCase.source(result, "lib/studio_web/cms/layouts.ex")
+      copied = for {:copy, _source, target} <- Mix.Brando.Install.Templates.manifest(), do: target
+      assert @icon in copied
+
+      # Every icon the layout links outside comments is one the installer copies.
+      linked = for [_, path] <- Regex.scan(~r/href="\/(ico\/[^"]+)"/, strip_heex_comments(layout)), do: path
+      assert linked == ["ico/favicon.ico"]
+      for path <- linked, do: assert(("assets/frontend/public/" <> path) in copied)
+
+      # The other kinds, as commented examples.
+      for example <- ~w(favicon.svg favicon-dark.svg favicon-32.png apple-touch-icon.png) do
+        assert layout =~ ~s(href="/ico/#{example}")
+      end
+
+      assert layout =~ "Map.merge"
+
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~
+               "def static_paths, do: ~w(assets fonts images favicon.ico ico)"
+
+      rerun = result |> IgniterCase.apply_and_reload() |> install()
+      Igniter.Test.assert_unchanged(rerun, "lib/studio_web.ex")
+    end
+
+    test "ico goes into static_paths/0 written as a list, and without the public site" do
+      listed = String.replace(@web_module, "~w(assets fonts images favicon.ico robots.txt)", ~s(["assets", "ico"]))
+      result = install(fresh(%{"lib/studio_web.ex" => listed}), ["--yes", "--no-public-site"])
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~ ~s(def static_paths, do: ["assets", "ico"]\n)
+
+      listed = String.replace(@web_module, "~w(assets fonts images favicon.ico robots.txt)", ~s(["assets"]))
+      result = install(fresh(%{"lib/studio_web.ex" => listed}), ["--yes", "--no-public-site"])
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~ ~s(def static_paths, do: ["assets", "ico"])
+    end
+
+    test "a static_paths/0 the installer cannot read is left alone, with a warning" do
+      computed = String.replace(@web_module, "~w(assets fonts images favicon.ico robots.txt)", "paths()")
+      result = install(fresh(%{"lib/studio_web.ex" => computed}), ["--yes", "--no-public-site"])
+
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~ "def static_paths, do: paths()\n"
+      assert Enum.any?(result.warnings, &(&1 =~ "static_paths/0 in StudioWeb is not a list" and &1 =~ "restart"))
+    end
+  end
+
+  defp strip_heex_comments(source), do: Regex.replace(~r/<%!--.*?--%>/s, source, "")
 
   test "only static paths returned as a literal list lose robots.txt" do
     computed = """

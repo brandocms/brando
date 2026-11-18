@@ -15,7 +15,9 @@ if Code.ensure_loaded?(Igniter) do
     Adds what `mix brando.install` gives coding agents and the application
     lacks: Brando's skills in `.claude/skills/`, the `brando` section and the
     site section in `AGENTS.md`, and a `CLAUDE.md` that imports `AGENTS.md`.
-    Existing files are kept.
+    Existing files are kept, except that a `brando` section as Brando wrote
+    it is pointed at where the application has the dependency now
+    (`deps/brando`, or the checkout of a `path:` dependency).
 
     `--refresh` replaces existing skill files with the versions this Brando
     ships; the diff shows what changes. `AGENTS.md` and `CLAUDE.md` are still

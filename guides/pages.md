@@ -114,6 +114,54 @@ site's `PageHTML`, so each site needs the templates its pages name.
 
 <!-- usage-rules:start topic="rendering" -->
 
+## The root layout
+
+The CMS site renders its pages in `YourWeb.CMS.Layouts.root/1`, and a site
+with a [frontend](tenancy_and_environments.md#per-site-layouts-and-templates)
+in its own `Layouts.root/1`. A root layout gets the conn's assigns as a plain
+map, not a LiveView's, so `assign/3` raises (`assign/3 expects a socket`).
+Add to the map with `Map.merge/2`:
+
+<!-- usage-rules:no-compile -->
+```elixir
+def root(assigns) do
+  assigns = Map.merge(assigns, %{year: Date.utc_today().year})
+
+  ~H"""
+  ...
+  """
+end
+```
+
+### Site icons
+
+`<.head>` writes no icon links. The root layout has them, inside `<.head>`,
+after the tags Brando writes:
+
+```heex
+<.head conn={@conn}>
+  <link rel="icon" href="/ico/favicon.ico" sizes="any" />
+</.head>
+```
+
+`mix brando.install` puts a `favicon.ico` in `assets/frontend/public/`, for
+browsers that ask for `/favicon.ico` whatever a page links, and one in
+`assets/frontend/public/ico/`, and adds `ico` to the web module's
+`static_paths/0`. The frontend build copies `public/` to `priv/static`. To use
+the site's own icons, replace both `favicon.ico` files, put the others in
+`public/ico/`, and edit the `<link>` lines to match. The generated layout has
+commented lines for an SVG icon, a dark-mode SVG (`media="(prefers-color-scheme:
+dark)"`), a 32-pixel PNG and an Apple touch icon. A site's frontend made with
+`mix brando.gen.site --site KEY` gets the same lines, and in `:multi` its Vite
+project in `assets/sites/KEY/` has its own `public/ico/`.
+
+The endpoint reads `static_paths/0` when it starts, so restart the server
+after adding a directory to it: the code reloader does not pick that up.
+
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start topic="rendering" -->
+
 ## Homepage, hierarchy, and breadcrumbs
 
 The root path resolves to URI `"index"`, with one record per language. Set

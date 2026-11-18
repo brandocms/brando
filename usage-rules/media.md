@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:media`) for image sizes and srcsets, rendering media, galleries, video providers and their webhooks. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Images, files, and galleries
 
-Guide: `deps/brando/guides/media.md`
+Guide: [media.md](../guides/media.md)
 
 ### Configure a cover image
 
@@ -159,7 +159,7 @@ conn = Plug.Conn.assign(conn, :gallery_media, media)
 
 ## Videos
 
-Guide: `deps/brando/guides/videos.md`
+Guide: [videos.md](../guides/videos.md)
 
 ### Video Fields in Blueprints
 

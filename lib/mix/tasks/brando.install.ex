@@ -63,7 +63,9 @@ if Code.ensure_loaded?(Igniter) do
     phx.new's `favicon.ico` there is removed and its `images/logo.svg` moves
     to `assets/frontend/public/images`, and with the public site its
     `robots.txt` is removed, with `robots.txt` in `static_paths/0`. A file
-    changed since phx.new wrote it is kept, with a notice.
+    changed since phx.new wrote it is kept, with a notice. `ico` goes into
+    `static_paths/0`, for the icons in `assets/frontend/public/ico/` that the
+    CMS root layout links.
 
     `--ai` adds the optional `req_llm` dependency that Brando's AI features
     (field AI actions, alt text drafts, the content assistant) need. Without

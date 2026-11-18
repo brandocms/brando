@@ -388,6 +388,24 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
       assert Enum.any?(result.notices, &(&1 =~ "Studio.ReleaseTasks has no resave_entries/1"))
     end
 
+    test "ico goes into the web module's static_paths/0, once" do
+      web = """
+      defmodule StudioWeb do
+        def static_paths, do: ~w(assets fonts images favicon.ico)
+      end
+      """
+
+      result = version_change(%{"lib/studio_web.ex" => web})
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~ "~w(assets fonts images favicon.ico ico)"
+
+      rerun =
+        result
+        |> IgniterCase.apply_and_reload()
+        |> Igniter.compose_task(Mix.Tasks.Brando.Upgrade, ["0.54.0", installed_version()])
+
+      Igniter.Test.assert_unchanged(rerun, "lib/studio_web.ex")
+    end
+
     test "mix brando.migrate55 adds the soft-delete functions too" do
       result = IgniterCase.phoenix_project() |> Igniter.compose_task("brando.migrate55", [])
 

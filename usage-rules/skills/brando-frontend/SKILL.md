@@ -29,7 +29,8 @@ asked.
 | `js/index.js` | The Jupiter `Application`. |
 | `js/config/*.js` | One config per Jupiter module (`MOONWALK.js`, `HEADER.js`…). |
 | `js/modules/` | The site's own JS modules. |
-| `public/` | Copied to `priv/static` by `pnpm build`. Phoenix serves only the web module's `static_paths/0` (`assets fonts images favicon.ico`), so files go under `public/fonts/` or `public/images/`, or their directory goes into `static_paths/0`. |
+| `public/` | Copied to `priv/static` by `pnpm build`. Phoenix serves only the web module's `static_paths/0` (`assets fonts images favicon.ico ico`), so files go under `public/fonts/`, `public/images/` or `public/ico/`, or their directory goes into `static_paths/0` (then restart the server). |
+| `public/ico/` | The site's icons. The root layout links each one inside `<.head>`, with commented lines for an SVG, a dark-mode SVG, a PNG and an Apple touch icon: replace `favicon.ico` here and in `public/`, add files, and edit those lines to match. |
 
 A new module's styles go in `modules.css`; a new partial gets its own file in
 `css/includes/`, imported from `app.css`.

@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:querying`) for writing a context with `Brando.Query`: filters, matches, pagination, caching and mutations. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Querying
 
-Guide: `deps/brando/guides/querying.md`
+Guide: [querying.md](../guides/querying.md)
 
 ### Defining a context
 
@@ -123,7 +123,7 @@ offset. Omitting `limit` while pagination is enabled raises an error.
 The complete query argument map is part of the cache key. Generated Brando
 mutations and the `Brando.Query.insert/2`, `update/2`, and `delete/1` helpers
 evict affected query entries, on every node (see
-[Several nodes](deps/brando/guides/tenancy_and_environments.md#several-nodes)). Direct
+[Several nodes](../guides/tenancy_and_environments.md#several-nodes)). Direct
 `Brando.Repo` writes do not automatically evict this cache.
 
 Do not combine cached list queries with pagination or streaming. Cached list

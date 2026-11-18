@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:generators`) for running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Installation
 
-Guide: `deps/brando/guides/installation.md`
+Guide: [installation.md](../guides/installation.md)
 
 ### Run setup
 
@@ -20,7 +20,7 @@ mix brando.setup
 
 `brando.gen.mail` reuses the application's Swoosh mailer or creates
 `MyApp.Mailer`, and points Brando at it for password resets and form
-notifications; [Auxiliary generators](deps/brando/guides/generators.md#auxiliary-generators) has
+notifications; [Auxiliary generators](../guides/generators.md#auxiliary-generators) has
 the details. An application that already had a mailer before installing can
 skip it.
 
@@ -44,16 +44,21 @@ content then. Setup says which in its output, and that `--base-url` and
 `--description` are unused when they are given; `--no-seeds` skips the site
 too.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
-with `Setup complete.`; [Running the steps separately](deps/brando/guides/installation.md#running-the-steps-separately)
+with `Setup complete.`; [Running the steps separately](../guides/installation.md#running-the-steps-separately)
 describes each step as its own task.
 
 `mix brando.install` gives coding agents Brando's rules and skills:
 
-* `AGENTS.md` gets a `brando` section linking `deps/brando/usage-rules.md`,
+* `AGENTS.md` gets a `brando` section linking Brando's `usage-rules.md`,
   inside the `<!-- usage-rules-start -->` block Phoenix writes, or in a new
-  file. `mix usage_rules.sync` from the `usage_rules` package can take that
-  section over; it loads the topic files in `deps/brando/usage-rules/` as
-  `brando:<topic>`.
+  file. Its links lead to where the application has the package:
+  `deps/brando/` for a Hex or Git dependency, the checkout for a `path:` one,
+  relative to the application when the two share a directory below the
+  filesystem root and absolute otherwise. The skills below name the
+  package's files the same way, and the rules files link relative to
+  themselves. `mix usage_rules.sync` from the `usage_rules` package can take
+  that section over; it loads the topic files in the package's
+  `usage-rules/` as `brando:<topic>`.
 * `AGENTS.md` also gets a short site section, between
   `<!-- brando-site-start -->` and `<!-- brando-site-end -->` and before the
   usage-rules block, so a sync never rewrites it. It has a placeholder for
@@ -70,8 +75,11 @@ describes each step as its own task.
 
 A versioned `mix brando.upgrade` adds the ones that are missing, and
 `mix brando.gen.agents` adds them on its own, for a site installed before
-they existed. None of these replaces a skill file, the `brando` section, the
-site section or `CLAUDE.md` once it exists, so edit them freely.
+they existed. None of these replaces a skill file, the site section or
+`CLAUDE.md` once it exists, or a `brando` section you edited, so edit them
+freely. A `brando` section as Brando wrote it follows the dependency: rerun
+`mix brando.gen.agents` after moving Brando between a Hex and a `path:`
+dependency.
 
 To take the skills Brando ships now over the copies in `.claude/skills/`,
 run `mix brando.gen.agents --refresh` and review the diff before accepting
@@ -81,7 +89,7 @@ Skills the application added itself are left alone, and `AGENTS.md` and
 
 ## Blueprint migrations
 
-Guide: `deps/brando/guides/blueprint_migrations.md`
+Guide: [blueprint_migrations.md](../guides/blueprint_migrations.md)
 
 Before committing a generated migration:
 
@@ -91,6 +99,15 @@ Before committing a generated migration:
 3. Roll it back and run it forward again. This is especially important for foreign keys, unique indexes, block fields,
    entries relations, and alternates.
 4. Run the affected application tests.
+
+Without a terminal, as when a coding agent or a script runs it, the task
+cannot ask you to accept the plan: pass `--yes`, after reading the plan with
+`--dry-run`:
+
+```shell
+mix brando.gen.blueprint_migration MyApp.Projects.Project --dry-run < /dev/null
+mix brando.gen.blueprint_migration MyApp.Projects.Project --yes
+```
 
 Deployment uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 never changes a database, and reads one only for warnings or with `--reconcile`.
@@ -126,7 +143,7 @@ database has been verified to match the current Blueprint.
 
 ## Generators
 
-Guide: `deps/brando/guides/generators.md`
+Guide: [generators.md](../guides/generators.md)
 
 ### Generate a content type
 
@@ -152,5 +169,5 @@ are reported. Add a navigation entry and review the authorization policy explici
 
 For setup failures, fix the first compiler, migration or asset error before
 continuing. After an upgrade, `mix brando.doctor` lists what is still out of
-date (see [System check](deps/brando/guides/doctor.md)). Do not mark a migration applied to skip an error. Keep historical
+date (see [System check](../guides/doctor.md)). Do not mark a migration applied to skip an error. Keep historical
 migrations and snapshots in version control.

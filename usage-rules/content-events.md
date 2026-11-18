@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:content-events`) for reacting to content changes in code, webhooks, and the admin search index. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Webhooks and content events
 
-Guide: `deps/brando/guides/webhooks.md`
+Guide: [webhooks.md](../guides/webhooks.md)
 
 ### Events
 
@@ -31,7 +31,7 @@ internal records) send no events, and neither do changes to users.
 
 ### Subscribing in code
 
-Brando's webhooks, [IndexNow](deps/brando/guides/identity_and_seo.md#indexnow)
+Brando's webhooks, [IndexNow](../guides/identity_and_seo.md#indexnow)
 (`Brando.IndexNow`) and the admin search index (`Brando.Search`) are
 subscribers. A search index of your own or another integration
 subscribes with a module:
@@ -66,7 +66,7 @@ delivery twice.
 
 The dispatcher runs on the `:content_events` queue, deliveries on
 `:webhooks`, updates to the admin search index on `:search_index`, and
-[notifications](deps/brando/guides/notifications.md) on `:notifications`. Brando's default Oban
+[notifications](../guides/notifications.md) on `:notifications`. Brando's default Oban
 configuration has all four. **An application that sets `config :brando, Oban`
 itself must declare them, or no events, webhook deliveries, search updates or
 notifications ever run**: the jobs are queued and wait

@@ -1,0 +1,1 @@
+- The usage rules say how to add to a root layout's assigns (`Map.merge/2`; `assign/3` raises there), where the site's icons are linked, and that `mix brando.gen.blueprint_migration` needs `--yes` without a terminal.
