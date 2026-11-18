@@ -211,6 +211,34 @@ defmodule BrandoAdmin.AssetLibrarySearchFolderTest do
     end
   end
 
+  # An editor's first view files the legacy image into its folder, which
+  # leaves the root empty
+  describe "the Images library, for an editor" do
+    setup do
+      Factory.insert(:image, status: :processed, path: "images/legacy/pics/a.jpg", folder_id: nil)
+      :ok
+    end
+
+    # Starting with the library's root doesn't make a search a folder link:
+    # an image's own path names no folder
+    test "a link searching for an image's path still searches", %{conn: conn} do
+      {:ok, view, html} = live(conn, @images <> "?filter:path=images/legacy/pics/a.jpg")
+
+      assert heading(view) == "Root folder"
+      assert html =~ "Path: images/legacy/pics/a.jpg"
+      refute Repo.get_by(Brando.Media.Folder, scope: "images", path: "legacy/pics/a.jpg")
+    end
+
+    # The root has no loose images, which on a bare arrival opens the default
+    # upload folder: a search searches the root it names instead
+    test "a search link at an empty root stays at the root", %{conn: conn} do
+      {:ok, view, html} = live(conn, @images <> "?filter:path=legacy")
+
+      assert heading(view) == "Root folder"
+      assert html =~ "Path: legacy"
+    end
+  end
+
   # Files search by `filter:filename`, so a `filter:path` was only ever a
   # folder link
   describe "the Files library" do

@@ -134,9 +134,10 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   folder had parameters of their own up to date: a folder known by its path
   was `filter:path`, which is also the Images and Videos search. Such a link
   is `filter:path` alone, with the absolute path of a folder under the
-  upload root (`open_folder/3` wrote nothing else there), and opens that
-  folder as `open_folder/3` does, replacing the URL. A search inside a
-  folder, or one that doesn't start with the upload root, stays a search.
+  upload root (`open_folder/3` wrote nothing else there) that the library
+  knows (`:folders`), and opens that folder as `open_folder/3` does,
+  replacing the URL. A search inside a folder, or for anything else (an
+  asset's own path), stays a search.
 
   Only the URL the library opens at is read so: a search typed in the
   library that happens to start with the upload root is a search. Returns
@@ -149,15 +150,16 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     with true <- first?,
          path when is_binary(path) <- params["filter:path"],
          nil <- folder_filter(params),
-         true <- legacy_folder_path?(path, socket.assigns.upload_root) do
-      folder = FolderBrowser.relative_folder(path, socket.assigns.upload_root)
+         true <- under_root?(path, socket.assigns.upload_root),
+         folder = FolderBrowser.relative_folder(path, socket.assigns.upload_root),
+         true <- folder in socket.assigns.folders do
       {:patched, open_folder(socket, folder, drop: ["filter:path"], replace: true)}
     else
       _ -> {:ok, socket}
     end
   end
 
-  defp legacy_folder_path?(path, upload_root) do
+  defp under_root?(path, upload_root) do
     root = FolderBrowser.normalize_folder(upload_root)
     folder = FolderBrowser.normalize_folder(path)
     is_binary(root) and is_binary(folder) and String.starts_with?(folder, root <> "/")

@@ -70,9 +70,10 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
     # Arriving without a folder at an empty root (uploads land in the default
     # config's folder, e.g. images/site/default) shows nothing. Open that
-    # folder instead, on arrival only: "Root" must still show the root.
-    if is_nil(folder_filter) and !socket.assigns.arrived? and connected?(socket) and
-         socket.assigns.visible_image_count == 0 do
+    # folder instead, on arrival only: "Root" must still show the root, and a
+    # search searches the root it arrived at.
+    if is_nil(folder_filter) and params["filter:path"] in [nil, ""] and !socket.assigns.arrived? and
+         connected?(socket) and socket.assigns.visible_image_count == 0 do
       socket |> assign(:arrived?, true) |> open_default_upload_folder()
     else
       assign(socket, :arrived?, connected?(socket))
