@@ -253,10 +253,35 @@ defmodule BrandoAdmin.VideoLibraryUploadTest do
     assert folder_of(in_root) == nil
   end
 
+  # The page falls back to the root, but the listing filters on the folder
+  # named: a sort would move root videos it isn't showing. All folders sorts
+  # no one folder.
+  test "a folder filter that doesn't resolve, and All folders, offer no sort", %{conn: conn} do
+    Factory.insert(:video)
+    hidden = Brando.Media.Folders.hidden_folder_id("uploads")
+    gone = FolderBrowser.folder_id_for("videos/default/gone")
+    Repo.delete!(Repo.get!(Folder, gone))
+
+    for folder_id <- [hidden, gone, FolderBrowser.folder_id_for("files/default/terms"), "all"] do
+      {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=#{folder_id}")
+      refute has_element?(view, @sort)
+    end
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=root")
+    assert has_element?(view, @sort)
+  end
+
+  # Its sort is offered only inside a folder, so a folder filter that
+  # doesn't resolve, which heads the page as the root, offers none either
   test "the image library's root still offers no sort", %{conn: conn} do
     Factory.insert(:image, folder_id: nil, path: "images/loose.jpg")
-    {:ok, _view, html} = live(conn, "/admin/assets/images?filter:folder_id=root")
-    refute html =~ "sweep_open"
+    hidden = Brando.Media.Folders.hidden_folder_id("uploads")
+    other = FolderBrowser.folder_id_for("videos/default/clips")
+
+    for folder_id <- ["root", hidden, other] do
+      {:ok, _view, html} = live(conn, "/admin/assets/images?filter:folder_id=#{folder_id}")
+      refute html =~ "sweep_open"
+    end
   end
 
   # Each test signs in a member of one group with its `keys`

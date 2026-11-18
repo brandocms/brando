@@ -605,7 +605,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
               </button>
               <SortByUse.sort_button
                 :if={
-                  @visible_video_count > 0 and !@all_folders? and !AssetListHelpers.unused_filter?(@params) and
+                  @visible_video_count > 0 and AssetListHelpers.folder_listed?(@params, @current_folder) and
+                    !AssetListHelpers.unused_filter?(@params) and
                     BrandoAdmin.Authorization.allowed?(:update, @schema)
                 }
                 asset_type={:video}
