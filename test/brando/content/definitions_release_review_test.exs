@@ -323,7 +323,10 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
         for table <-
               ~w(content_modules content_table_templates content_refs content_vars content_blocks
                  content_definition_applies content_definition_batches activity_events) do
-          Ecto.Adapters.SQL.query!(Repo.repo(), ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+          Ecto.Adapters.SQL.query!(
+            Repo.repo(),
+            ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|
+          )
         end
       end
 
@@ -333,7 +336,9 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
       on_exit(fn -> File.rm_rf!(hero) end)
 
       Brando.Tenant.with_prefix("tenant_review_staging", fn ->
-        assert {:ok, %{batch_id: batch_id}} = Release.apply(:all, path: hero, version: "1.0.0", user: c.user.id, wait: false)
+        assert {:ok, %{batch_id: batch_id}} =
+                 Release.apply(:all, path: hero, version: "1.0.0", user: c.user.id, wait: false)
+
         assert Batches.pending().batch_id == batch_id
         Verify.start(report!(%{c | path: hero}), [])
         assert %{prefix: "tenant_review_staging"} = Verify.get()

@@ -200,7 +200,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                   />
                   <span>
                     <strong>{gettext("Replace the version here with the file’s")}</strong>
-                    {gettext("It was never imported from files here and differs from the file. Nothing records which is newer, so it isn’t imported unless you replace it.")}
+                    {gettext(
+                      "It was never imported from files here and differs from the file. Nothing records which is newer, so it isn’t imported unless you replace it."
+                    )}
                   </span>
                 </label>
                 <p :if={item.diff == []}>{gettext("The definition is unchanged.")}</p>
@@ -300,7 +302,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   end
 
   def handle_event("toggle_replace", %{"uid" => uid}, socket) do
-    replace = if uid in socket.assigns.replace, do: List.delete(socket.assigns.replace, uid), else: [uid | socket.assigns.replace]
+    replace =
+      if uid in socket.assigns.replace, do: List.delete(socket.assigns.replace, uid), else: [uid | socket.assigns.replace]
+
     handle_event("preview", %{}, assign(socket, :replace, replace))
   end
 

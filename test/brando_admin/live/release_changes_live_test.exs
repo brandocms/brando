@@ -72,7 +72,10 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     assert html =~ "3 blocks differ"
     assert Repo.all(from(p in Brando.Pages.Page, order_by: p.id, select: {p.id, p.rendered_blocks})) == before
 
-    view |> element("[data-testid=release-open-diff][phx-value-key='Brando.Pages.Page:#{c.identity.id}']") |> render_click()
+    view
+    |> element("[data-testid=release-open-diff][phx-value-key='Brando.Pages.Page:#{c.identity.id}']")
+    |> render_click()
+
     assert has_element?(view, "#release-block-diff")
     assert render(view) =~ "class=&quot;v2&quot;" or render(view) =~ ~s(<span class="tok-str">&quot;v2&quot;</span>)
   end
@@ -225,7 +228,12 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     editor = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
     assert {:error, :forbidden} = Release.authorize(editor)
 
-    {:ok, group} = Brando.Authorization.Groups.create(scope, %{name: "Release appliers"}, ["brando.admin.access", "brando.module_definitions.apply"])
+    {:ok, group} =
+      Brando.Authorization.Groups.create(scope, %{name: "Release appliers"}, [
+        "brando.admin.access",
+        "brando.module_definitions.apply"
+      ])
+
     {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, editor.id)
     assert :ok = Release.authorize(editor)
 
