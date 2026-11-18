@@ -5110,6 +5110,7 @@ defmodule BrandoAdmin.Components.Form do
               form_id={@id}
               schema={@schema}
               read_generation={@read_generation}
+              source_locked={Translation.locked?(@translation)}
             />
           </.form>
 
@@ -5446,6 +5447,7 @@ defmodule BrandoAdmin.Components.Form do
           form_cid={@form_cid}
           form_id={@form_id}
           read_generation={@read_generation}
+          source_locked={@source_locked}
         />
       </div>
     </div>
@@ -5512,6 +5514,7 @@ defmodule BrandoAdmin.Components.Form do
           form_cid={@form_cid}
           form_id={@form_id}
           read_generation={@read_generation}
+          source_locked={@source_locked}
         />
       <% end %>
     <% end %>

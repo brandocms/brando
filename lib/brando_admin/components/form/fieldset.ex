@@ -14,8 +14,14 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
   #   a change draws the fields again, so inputs that keep read decisions
   #   (`Input.Entries`, in a subform's rows too) decide anew
 
+  # prop source_locked, :boolean — a synchronized translation's form
+  #   (`Form.Translation.locked?/1`): media in its variables follows the source
+
   def render(assigns) do
-    assigns = assign_new(assigns, :read_generation, fn -> nil end)
+    assigns =
+      assigns
+      |> assign_new(:read_generation, fn -> nil end)
+      |> assign_new(:source_locked, fn -> false end)
 
     ~H"""
     <fieldset
@@ -39,6 +45,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
         form_cid={@form_cid}
         form_id={@form_id}
         read_generation={@read_generation}
+        source_locked={@source_locked}
       />
     </fieldset>
     """

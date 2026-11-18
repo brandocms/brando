@@ -1,0 +1,1 @@
+- A gallery variable in a synchronized translation, in a block or among a page's own variables, no longer writes its gallery when an image or video is chosen, uploaded or removed there: it holds the source's gallery, so these edits changed the source and every other translation without passing the save's check.

@@ -19,6 +19,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Phoenix.HTML
 
+  require Logger
+
   # prop var, :any
   # prop render, :atom, values: [:all, :content, :config], default: :all
   # prop edit, :boolean, default: false
@@ -393,6 +395,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign_new(:compact, fn -> true end)
     # A locked `:link` input (`Input.Link`): its link is shown, not edited
     |> assign_new(:locked, fn -> false end)
+    # A synchronized translation's variable, in a block (`Block.Render`) or
+    # the entry's own (`Fieldset.Field`): its media follows the source, so
+    # its gallery is not written here
+    |> assign_new(:source_locked, fn -> false end)
     |> assign(:value_id, value)
     |> assign(:image_id, if(type == :image, do: value))
     |> assign(:file_id, if(type == :file, do: value))
@@ -1925,6 +1931,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def handle_event("video_upload_progress", _params, socket), do: {:noreply, socket}
   def handle_event("upload_error", _params, socket), do: {:noreply, socket}
 
+  def handle_event("reset_gallery", _, %{assigns: %{source_locked: true}} = socket),
+    do: {:noreply, refuse_gallery_change(socket, "reset_gallery")}
+
   def handle_event("reset_gallery", _, socket) do
     socket
     |> assign(:gallery, nil)
@@ -2001,7 +2010,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     persist_gallery(socket, objects)
   end
 
-  defp persist_gallery(socket, objects, opts \\ []) do
+  defp persist_gallery(socket, objects, opts \\ [])
+
+  # In a synchronized translation the variable holds the source's gallery
+  # (`Brando.Translations.Sync` gives it the source's `gallery_id`), and a
+  # write from here would reach the source and every translation without
+  # passing the save's check (`Brando.Translations.check_target_save/4`).
+  defp persist_gallery(%{assigns: %{source_locked: true}} = socket, _objects, _opts),
+    do: refuse_gallery_change(socket, "gallery write")
+
+  defp persist_gallery(socket, objects, opts) do
     gallery = socket.assigns.gallery
     current_user_id = normalize_id(socket.assigns.current_user_id)
 
@@ -2049,6 +2067,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       {:error, changeset} ->
         put_flash(socket, :error, gettext("Could not update gallery: %{error}", error: inspect(changeset.errors)))
     end
+  end
+
+  defp refuse_gallery_change(socket, what) do
+    Logger.warning("RenderVar (#{socket.assigns.key}) refused #{what} in a synchronized translation")
+    send(self(), {:toast, gettext("Media follows the source; choose it there.")})
+    socket
   end
 
   # `gallery_id` round-trips through the form, so a crafted payload could
