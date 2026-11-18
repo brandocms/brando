@@ -1160,10 +1160,7 @@ defmodule Brando.Content do
   """
   def import_modules(modules, user) do
     Brando.Authorization.Boundary.run(user, :create, Module, fn user ->
-      Brando.Repo.transaction(fn ->
-        Brando.Content.Definitions.changed()
-        Enum.map(modules, &do_import_module_with_children(&1, user))
-      end)
+      Brando.Repo.transaction(fn -> Enum.map(modules, &do_import_module_with_children(&1, user)) end)
     end)
   end
 

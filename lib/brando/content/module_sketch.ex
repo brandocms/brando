@@ -95,7 +95,9 @@ defmodule Brando.Content.ModuleSketch do
   @doc """
   Store `svg` as `module`'s sketch. Only the sketch changes: the module's
   output doesn't, so its entries aren't rendered again (unlike
-  `Brando.Content.update_module/3`). Open pickers are told to refresh.
+  `Brando.Content.update_module/3`). Open pickers are told to refresh. The
+  sketch is part of the module's definition, so what a release would change
+  is worked out again (`Brando.Content.Definitions.changed/1`).
   """
   @spec save(Module.t(), String.t()) :: {:ok, Module.t()} | {:error, Ecto.Changeset.t()}
   def save(%Module{} = module, svg) when is_binary(svg) do
@@ -103,8 +105,12 @@ defmodule Brando.Content.ModuleSketch do
     |> Ecto.Changeset.change(svg: Base.encode64(svg, padding: false))
     |> Brando.Query.Runtime.update()
     |> tap(fn
-      {:ok, updated} -> Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {updated, [:module, :updated]})
-      _ -> :ok
+      {:ok, updated} ->
+        Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {updated, [:module, :updated]})
+        Brando.Content.Definitions.changed()
+
+      _ ->
+        :ok
     end)
   end
 

@@ -23,6 +23,21 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
     def migrate(_site, _environment), do: {:ok, []}
   end
 
+  # Writes a module as the seeds do, without the module's own mutation
+  defmodule Seeder do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(_site, _environment, _creator) do
+      :module |> Brando.Factory.build(uid: "hero-test") |> Brando.Repo.insert!()
+      send(self(), :seeded)
+      :ok
+    end
+
+    @impl true
+    def seed_language(_site, _environment, _language, _creator), do: :ok
+  end
+
   setup do
     root = Path.join(System.tmp_dir!(), "brando-release-environments-#{System.unique_integer([:positive])}")
     release = Path.join(root, "release")
@@ -117,6 +132,15 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
     end
   end
 
+  defp drain_until(message) do
+    receive do
+      ^message -> :ok
+      _earlier -> drain_until(message)
+    after
+      0 -> flunk("never received #{inspect(message)}")
+    end
+  end
+
   defp eventually(fun, tries \\ 100) do
     if fun.() || tries == 0 do
       assert fun.()
@@ -132,16 +156,22 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
       assert %{pending: 0} = ReleaseStatus.summary(@production)
       assert %{pending: 1} = ReleaseStatus.summary(@staging)
 
+      # Counted across processes: an environment that didn't change isn't
+      # even checked
+      :erlang.trace_pattern({ReleaseStatus, :refresh, 2}, true, [:call_count])
+      on_exit(fn -> :erlang.trace_pattern({ReleaseStatus, :refresh, 2}, false, [:call_count]) end)
+
       save!(@production, user, "admin-class")
 
       assert %{pending: 0, states: %{"hero-test" => :changed_in_admin}} = planned(@production)
       settle(pid)
       refute_planned(@staging)
+      assert :erlang.trace_info({ReleaseStatus, :refresh, 2}, :call_count) == {:call_count, 1}
       assert ReleaseStatus.state("hero-test", @production) == :changed_in_admin
     end
 
     test "a burst of saves plans once", %{user: user} do
-      pid = start_server!()
+      pid = start_server!(debounce: 300)
 
       for n <- 1..5, do: save!(@production, user, "class-#{n}")
 
@@ -157,6 +187,25 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
       # The boot plan sees the save first; the change's own check then finds
       # nothing new here, but the other nodes still need the result
       save!(@production, user, "before-boot")
+
+      assert %{states: %{"hero-test" => :changed_in_admin}} = planned(@production)
+    end
+
+    test "a stream of saves is planned within max_wait", %{user: user} do
+      start_server!(debounce: 10_000, max_wait: 100)
+
+      save!(@production, user, "streamed")
+
+      assert %{states: %{"hero-test" => :changed_in_admin}} = planned(@production)
+    end
+
+    test "a sketch saved for a module plans its environment again" do
+      start_server!()
+
+      Tenant.with_prefix(@production, fn ->
+        module = Brando.Repo.get_by!(Module, uid: "hero-test")
+        {:ok, _} = Brando.Content.ModuleSketch.save(module, "<svg></svg>")
+      end)
 
       assert %{states: %{"hero-test" => :changed_in_admin}} = planned(@production)
     end
@@ -199,6 +248,25 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
 
       assert %{pending: 1, states: %{"hero-test" => :new}} = planned(prefix)
       assert %{pending: 1} = ReleaseStatus.summary(prefix)
+    end
+
+    # On a server, the environment's first plan (after its create) can run
+    # while the seeds write modules on the setup's own connection. The
+    # sandbox shares one connection, so this checks the order of the notices.
+    test "a new site's environment is announced again once it is seeded", %{user: user} do
+      put_test_env(:tenant_seeder, __MODULE__.Seeder)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Definitions.topic())
+
+      {:ok, _beta} =
+        Brando.Tenant.Setup.create_site(
+          %{name: "Beta", key: "beta", languages: ["en"], default_language: "en", status: :active},
+          user,
+          environments: [%{name: "Production", key: "production", live: true}]
+        )
+
+      # What came before the seed is not what this is about
+      drain_until(:seeded)
+      assert_received {:definitions_changed, "tenant_beta_production"}
     end
 
     test "a new environment is planned", %{site: site} do
@@ -300,5 +368,7 @@ defmodule Brando.Content.DefinitionsReleaseStatusEnvironmentsTest do
   defp send_remote(refresh) do
     Phoenix.PubSub.broadcast(Brando.pubsub(), CacheSync.topic(), {:brando_cache_sync, @other_node, refresh})
     CacheSync.sync()
+    # The server keeps what CacheSync hands it
+    :sys.get_state(ReleaseStatus)
   end
 end

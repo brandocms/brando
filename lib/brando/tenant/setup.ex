@@ -317,8 +317,12 @@ defmodule Brando.Tenant.Setup do
       seed = fn -> seeder.seed(site, environment, creator) end
 
       # The admin's own scope (an installation scope at `/admin/sites`) does
-      # not decide what the seeder may write in the new site
-      Brando.Authorization.Boundary.with_scope(nil, fn -> Tenant.with_prefix(prefix, seed) end)
+      # not decide what the seeder may write in the new site. The seeds write
+      # modules without their mutations: what a release would change there is
+      # worked out again once they are in.
+      with :ok <- Brando.Authorization.Boundary.with_scope(nil, fn -> Tenant.with_prefix(prefix, seed) end) do
+        Brando.Content.Definitions.changed(prefix)
+      end
     else
       :ok
     end

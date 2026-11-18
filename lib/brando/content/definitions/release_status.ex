@@ -20,8 +20,8 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
   and sends it to the others through `Brando.CacheSync`, which keep it
   without planning. A node running another release (during a rolling deploy)
   plans that environment itself instead, and keeps the result to itself.
-  Results are ordered by when their database digest was taken: an older one
-  never replaces a newer.
+  Results are ordered by when their database digest was taken, by the
+  database's clock: an older one never replaces a newer.
   """
   use GenServer
 
@@ -88,10 +88,17 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
     {:noreply, %{state | pending: pending, first_at: first_at, timer: Process.send_after(self(), :run, max(wait, 0))}}
   end
 
-  # Another node's result for an environment this node has none for yet (a
-  # new one): kept when it is for this node's release
+  # Another node's result, kept here (in this process, as this node's own
+  # are) when it is for this node's release. For an environment this node
+  # has none for yet (a new one), the release is read first.
   def handle_cast({:received, prefix, %{release: release} = value}, state) do
-    if release_digest(prefix, plan_opts(state)) == release do
+    known =
+      case lookup(prefix) do
+        nil -> release_digest(prefix, plan_opts(state))
+        %{release: known} -> known
+      end
+
+    if known == release do
       store_newer(prefix, value)
       {:noreply, state}
     else
@@ -132,22 +139,11 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
   @doc """
   Keeps a result another node planned (`Brando.CacheSync`), unless this node
   has a newer one. One planned for another release than this node's is
-  planned again here instead. For an environment this node has no result for
-  yet, the server reads this node's release first.
+  planned again here instead. The server does both; without one here there
+  is nothing to keep it for.
   """
-  def refresh_node_cache({:planned, prefix, %{release: release} = value}) do
-    case lookup(prefix) do
-      nil ->
-        GenServer.cast(__MODULE__, {:received, prefix, value})
-
-      %{release: ^release} ->
-        store_newer(prefix, value)
-
-      _other_release ->
-        GenServer.cast(__MODULE__, {:changed, prefix, false})
-    end
-
-    :ok
+  def refresh_node_cache({:planned, prefix, %{release: _release} = value}) do
+    GenServer.cast(__MODULE__, {:received, prefix, value})
   end
 
   def refresh_node_cache(_refresh), do: :ok
@@ -172,7 +168,7 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
       release_digest = Value.digest(bundle)
       # Taken before planning: a change committed while it plans makes the
       # next check plan again rather than keep this result
-      taken_at = System.os_time(:microsecond)
+      taken_at = database_clock()
       database = database_digest()
 
       if cached?(prefix, release_digest, database),
@@ -236,6 +232,19 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
         store_newer(prefix, Map.merge(digests, %{error: message, pending: 0, states: %{}}))
         :planned
     end
+  end
+
+  # When the database digest was taken, by the database's clock, which every
+  # node shares: the order of two nodes' results doesn't depend on theirs
+  defp database_clock do
+    %{rows: [[microseconds]]} =
+      Ecto.Adapters.SQL.query!(
+        Brando.Repo.repo(),
+        "SELECT (extract(epoch FROM clock_timestamp()) * 1000000)::bigint",
+        []
+      )
+
+    microseconds
   end
 
   # Everything planning compares: the stored definitions and what was last
