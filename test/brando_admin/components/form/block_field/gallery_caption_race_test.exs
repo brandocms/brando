@@ -197,4 +197,28 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
       assert captions(c.page) == Enum.map(unquote(expected), &titles[&1])
     end
   end
+
+  # The copies were reordered and saved before: the overrides are stored in
+  # the order they had, not the copies'. Reordered back while a caption is
+  # written, each copy keeps its own.
+  for order <- [:reorder_first, :caption_first] do
+    test "a second reorder meets a caption edit (#{order})", c do
+      rows = rows(c.page)
+      [row] = rows
+      save(c.page, rows, apply!(Ops.from_entry_blocks(rows), form_op(row, c.user, &reorder/1)), c.user)
+      assert captions(c.page) == [{c.second.id, "Second"}, {c.first.id, "First"}]
+
+      rows = rows(c.page)
+      [row] = rows
+      reorder = form_op(row, c.user, &reorder/1)
+      caption = form_op(row, c.user, &edit_first_caption/1)
+
+      ops = if unquote(order) == :reorder_first, do: [reorder, caption], else: [caption, reorder]
+      state = Enum.reduce(ops, Ops.from_entry_blocks(rows), &apply!(&2, &1))
+      save(c.page, rows, state, c.user)
+
+      # The caption written at placement 0, which was the second copy
+      assert captions(c.page) == [{c.first.id, "First"}, {c.second.id, "First, edited"}]
+    end
+  end
 end

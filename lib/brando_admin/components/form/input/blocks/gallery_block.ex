@@ -714,10 +714,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     |> Enum.zip(placements)
     |> Enum.flat_map_reduce(MapSet.new(), fn
       {obj, {object_type, object_id_str, placement}}, claimed ->
-        override =
-          existing_overrides
-          |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
-          |> placed_override(object_type, object_id_str, placement)
+        found = GalleryObjectOverride.lookup(existing_overrides, object_type, object_id_str, placement)
+        override = placed_override(found, object_type, object_id_str, placement)
 
         uid = GalleryObjectOverride.uid(override)
 
@@ -726,12 +724,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             do: GalleryObjectOverride.unique_uid(obj, MapSet.union(claimed, stored_uids)),
             else: uid
 
-        {[put_uid(override, uid)], MapSet.put(claimed, uid)}
+        {[{put_uid(override, uid), found && Enum.find_index(stored, &(&1 == found))}], MapSet.put(claimed, uid)}
 
       {_obj, nil}, claimed ->
         {[], claimed}
     end)
     |> elem(0)
+    |> in_stored_order()
+  end
+
+  # The overrides in the block's order (each where the one it was made from
+  # is), new ones after. A reorder renumbers placements and leaves the list as
+  # it is; sent in the objects' order, the list would look reordered to the
+  # edit session (`Ops.field_op/5`), which then sends whole overrides instead
+  # of the fields that changed.
+  defp in_stored_order(overrides) do
+    overrides
+    |> Enum.with_index()
+    |> Enum.sort_by(fn
+      {{_override, nil}, index} -> {1, index}
+      {{_override, position}, index} -> {0, position, index}
+    end)
+    |> Enum.map(fn {{override, _position}, _index} -> override end)
   end
 
   defp put_uid(%Changeset{} = override, uid), do: Changeset.put_change(override, :uid, uid)

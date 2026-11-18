@@ -328,11 +328,29 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert GalleryObjectOverride.unique_uid(%{image_id: 5}, MapSet.new(["image-5", "image-5-2"])) == "image-5-3"
     end
 
+    # A reorder renumbers the placements and leaves the list as it was. The
+    # edit session sends a change to an override by its uid only while the
+    # list keeps its order: the overrides the gallery sends stay in the
+    # block's order, not the objects'.
+    test "the overrides keep the block's order after the copies were reordered", ctx do
+      stored = [
+        %{placed(ctx.repeated_image, 1, "Second") | uid: "a"},
+        %{placed(ctx.repeated_image, 0, "First") | uid: "b"}
+      ]
+
+      socket = update_gallery_block(ctx.repeated, stored)
+
+      assert Enum.map(socket.assigns.initialized_overrides, &{&1.uid, &1.placement, &1.title}) == [
+               {"a", 1, "Second"},
+               {"b", 0, "First"}
+             ]
+    end
+
     test "each placement keeps its own caption", ctx do
       overrides = [placed(ctx.repeated_image, 1, "Second"), placed(ctx.repeated_image, 0, "First")]
       socket = update_gallery_block(ctx.repeated, overrides)
 
-      assert captions(socket) == [{0, "First"}, {1, "Second"}]
+      assert Enum.sort(captions(socket)) == [{0, "First"}, {1, "Second"}]
 
       html =
         render_component(
