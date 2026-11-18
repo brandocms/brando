@@ -387,7 +387,8 @@ defmodule BrandoAdmin.Authorization.Events do
       read: ~w(add_select_var_option)
     ],
     "BrandoAdmin.Sites.MCPLive" => [
-      write: ~w(disable enable revoke)
+      read: ~w(cancel_figma_token replace_figma_token),
+      write: ~w(disable enable remove_figma_token revoke save_figma_token)
     ],
     "BrandoAdmin.Sites.MarkdownSourcesLive" => [
       read: ~w(edit history new select_documents source_mode validate),

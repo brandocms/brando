@@ -6,7 +6,11 @@ defmodule Brando.Migrations.Brando213AddMCPConnectionsTest do
 
   alias BrandoIntegration.Repo
 
-  @template Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations/brando_213_add_mcp_connections.exs")
+  # brando_232 adds the Figma token to mcp_settings
+  @templates Enum.map(
+               ~w(brando_213_add_mcp_connections.exs brando_232_add_figma_token_to_mcp_settings.exs),
+               &Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations/" <> &1)
+             )
   @tables %{
     "mcp_settings" => Brando.MCP.Setting,
     "mcp_grants" => Brando.MCP.Grant,
@@ -14,8 +18,8 @@ defmodule Brando.Migrations.Brando213AddMCPConnectionsTest do
     "mcp_authorization_codes" => Brando.MCP.AuthorizationCode
   }
 
-  defp run_template do
-    [{module, _bytecode}] = Code.compile_file(@template)
+  defp run_template(template) do
+    [{module, _bytecode}] = Code.compile_file(template)
 
     try do
       Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false, migration_lock: false)
@@ -34,11 +38,11 @@ defmodule Brando.Migrations.Brando213AddMCPConnectionsTest do
     |> Enum.sort()
   end
 
-  test "creates the MCP tables with the columns the schemas use" do
+  test "creates the MCP tables with the columns the schemas use, with the migrations after it" do
     expected = Map.new(@tables, fn {table, _} -> {table, columns(table)} end)
     Repo.query!("DROP TABLE public.mcp_authorization_codes, public.mcp_tokens, public.mcp_grants, public.mcp_settings")
 
-    run_template()
+    Enum.each(@templates, &run_template/1)
 
     for {table, schema} <- @tables do
       assert columns(table) == expected[table]

@@ -609,6 +609,11 @@ sender first, before the first compile.
   to `config/config.exs` (with several sites, `"priv/modules/{site_key}"`); a
   new install has it. See
   [Applying a release's definitions](module_definitions.md#applying-a-release-s-definitions).
+- **A Figma token for connected AI tools.** `brando_232` adds the encrypted
+  Figma access token to `mcp_settings`, for the tools that read a Figma frame
+  and import its images. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`. Nothing else changes until an administrator adds a
+  token. See [Build from Figma](mcp.md#build-from-figma).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

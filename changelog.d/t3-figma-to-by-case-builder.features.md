@@ -1,0 +1,3 @@
+- Connected AI tools can read a Figma frame from its link (its sections with their component, texts, images and videos) and import its images into the media library, in a folder named after the frame, to build an entry from a design: `brando_figma_read_frame` and `brando_figma_import_images` over MCP, with a Figma access token an administrator adds under Configuration → Integrations → Connected AI tools.
+  Run `mix brando.gen.migrations` for `brando_232`, then `mix brando.migrate` before the new release starts.
+  In a release, run `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` from the new release.

@@ -9,7 +9,8 @@ defmodule Brando.Webhooks.Client do
   #
   # `request/5` sends any request the same way, for other requests to
   # addresses an editor chooses, and `run/1` makes it a Req adapter
-  # (Brando.Videos.Metadata).
+  # (Brando.Videos.Metadata). With `into:`, it writes the body to a file
+  # instead of keeping it (Brando.Figma's image downloads).
 
   alias Mint.HTTP
 
@@ -44,6 +45,11 @@ defmodule Brando.Webhooks.Client do
   Options: `:timeout` for the whole exchange (default `timeout/0`), and
   `:body_limit`, the bytes read (default `body_limit/0`). With
   `whole_body: true`, a longer body is the error `:body_too_large`.
+
+  With `into: path`, the body is written to the file at `path` (created or
+  truncated) instead of returned, and the result's body is `""`; the body
+  must be whole, as with `whole_body: true`. A failed request can leave part
+  of a body there: the caller removes the file.
   """
   @spec request(Brando.Webhooks.URLGuard.target(), String.t(), [{String.t(), String.t()}], binary(), keyword()) ::
           map()
@@ -51,18 +57,39 @@ defmodule Brando.Webhooks.Client do
     started = System.monotonic_time(:millisecond)
     deadline = started + Keyword.get(opts, :timeout, timeout())
 
+    into = Keyword.get(opts, :into)
+
     limits = %{
       body_limit: Keyword.get(opts, :body_limit, @body_limit),
-      whole_body: Keyword.get(opts, :whole_body, false)
+      whole_body: Keyword.get(opts, :whole_body, false) or not is_nil(into),
+      into: nil
     }
 
     result =
-      case connect(target, deadline) do
-        {:ok, conn} -> request(conn, target, method, headers, body, deadline, limits)
-        {:error, reason} -> %{status: nil, headers: [], body: "", error: reason}
-      end
+      with_sink(into, fn device ->
+        case connect(target, deadline) do
+          {:ok, conn} -> request(conn, target, method, headers, body, deadline, %{limits | into: device})
+          {:error, reason} -> %{status: nil, headers: [], body: "", error: reason}
+        end
+      end)
 
     Map.put(result, :duration_ms, System.monotonic_time(:millisecond) - started)
+  end
+
+  defp with_sink(nil, fun), do: fun.(nil)
+
+  defp with_sink(path, fun) when is_binary(path) do
+    case File.open(path, [:write, :binary, :raw]) do
+      {:ok, device} ->
+        try do
+          fun.(device)
+        after
+          File.close(device)
+        end
+
+      {:error, _} ->
+        %{status: nil, headers: [], body: "", error: :unwritable}
+    end
   end
 
   @doc """
@@ -155,6 +182,17 @@ defmodule Brando.Webhooks.Client do
   defp consume([{:headers, ref, headers} | rest], ref, state),
     do: consume(rest, ref, %{state | headers: state.headers ++ headers})
 
+  # Written to the file as it arrives, never more than the limit
+  defp consume([{:data, ref, bytes} | rest], ref, %{into: device} = state) when not is_nil(device) do
+    size = state.size + byte_size(bytes)
+
+    cond do
+      size > state.body_limit -> {:done, Map.put(state, :too_large, true)}
+      :file.write(device, bytes) != :ok -> {:done, Map.put(state, :unwritable, true)}
+      true -> consume(rest, ref, %{state | size: size})
+    end
+  end
+
   defp consume([{:data, ref, bytes} | rest], ref, state) do
     room = state.body_limit - state.size
     kept = binary_part(bytes, 0, min(room, byte_size(bytes)))
@@ -174,6 +212,9 @@ defmodule Brando.Webhooks.Client do
 
   defp finish(%{too_large: true} = state, _error),
     do: %{status: state.status, headers: state.headers, body: "", error: :body_too_large}
+
+  defp finish(%{unwritable: true} = state, _error),
+    do: %{status: state.status, headers: state.headers, body: "", error: :unwritable}
 
   defp finish(state, error) do
     body = IO.iodata_to_binary(state.body)

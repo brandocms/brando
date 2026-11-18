@@ -5,6 +5,9 @@ Brando can let people connect Claude, ChatGPT, Claude Code, VS Code and other
 reads content and prepares proposals, as the person who connected it; the
 person reviews and applies the proposals in the Assistant, under **From
 connected tools**. Nothing a tool does saves, publishes or deletes content.
+With a Figma token, a tool can also read a Figma frame and import its images
+into the media library, to build an entry from a design (see
+[Build from Figma](#build-from-figma)).
 
 The endpoint is off until an administrator turns it on, per site and
 environment, and only people with the **Connected AI tools → Connect**
@@ -171,10 +174,61 @@ result. Proposals
 are marked with the tool's name, "From Claude via MCP", and wait under
 **Assistant → From connected tools**.
 
+With a Figma token (below), two more: `brando_figma_read_frame` and
+`brando_figma_import_images`.
+
 Every call is written to Activity: the person, the tool's name, the tool it
 called, whether it worked and the id of the token's database row (never the
 token). People who manage connected tools see these under **Configuration →
 Activity**.
+
+## Build from Figma
+
+A tool can rebuild a Figma frame as an entry: the person gives it the
+frame's link (in Figma, select the frame and copy its link, which has
+`?node-id=…`), and it reads the frame, imports its images and prepares a
+proposal with the modules that match.
+
+- `brando_figma_read_frame` lists the frame's sections in reading order. A
+  section is an outermost component instance, with its component (and
+  variant) name, its texts, its images and its videos; a text, image or
+  video outside every instance is a section of its own. Hidden layers are
+  left out. The component names are what the tool matches to modules, so
+  frames built from components named like the site's modules ("Case/Image
+  full" for a module named "Case image full") rebuild most faithfully.
+- `brando_figma_import_images` imports the frame's image fills, the originals
+  placed in Figma rather than renders, into the library folder
+  `Figma/<frame name>` under the default image config's upload path, and
+  answers with each image's asset for the proposal and the layers that show
+  it. An image the library
+  already has (the same file, for the same config) is reused, so importing a
+  frame twice adds nothing. It imports at most eight images per call; the
+  tool calls again for the rest. The images are added when the tool imports
+  them, before anyone applies the proposal, and stay in the library if the
+  proposal is discarded. Importing needs permission to upload images.
+- Figma's API cannot download videos. Upload them to the media library
+  yourself, named so the tool can tell where each goes (after the Figma
+  layer, for instance), and tell the tool the folder: it finds them with
+  `brando_content_find_media_folders`.
+
+### Add the token
+
+The tools call Figma with one access token per site environment, under
+**Configuration → Integrations → Connected AI tools → Figma**, which takes
+the same **Connected AI tools → Manage** permission as the switch. Create it
+in Figma under **Settings → Security → Personal access tokens**, with read
+access to file content (`file_content:read`), on the account of someone who
+can open the files to import. Figma limits how often its API answers by the
+owner's seat and plan: use the account of someone with a Full or Dev seat,
+since other seats get far fewer calls.
+
+The token is stored encrypted with `Brando.Crypto`, bound to its site
+environment, and never shown again: the screen shows its last four
+characters, when it was added and by whom. Adding, replacing and removing it
+asks for the password or a code when the session has not given one lately,
+and is recorded in Activity (without the token). Without a token, the Figma
+tools answer that an administrator adds one. Removing it keeps the images
+already imported.
 
 ## Revoke
 
@@ -314,7 +368,12 @@ What the endpoint does about each requirement in
 4. **Read and propose only.** A fixed list of the registry's tools, none of
    which approves, applies or deletes; `prepare_proposal` stores a proposal
    that only a person's click in the admin applies (the Assistant's version
-   check and transaction).
+   check and transaction). The one exception is
+   `brando_figma_import_images`, which adds images to the media library
+   before a proposal is applied, as an upload by the person would: only for
+   someone who may upload images, into the frame's own folder, checked like
+   an upload (type, contents, size, pixels), at most eight a call, and never
+   replacing or deleting an image.
 5. **Scoped per site and environment.** The endpoint URL names the site
    environment; it is the token's audience, and every token, code and
    connection records its site and environment. A token is looked up only
@@ -398,6 +457,16 @@ And the attacks the review asked about:
   whatever the module's datasource returns, and `entry_outline` gives no
   title for an entry the outlined one chooses or links to that the person
   may not read, and leaves out such language versions.
+- **Figma downloads (SSRF).** The Figma API is called at its fixed address.
+  The image URLs it answers with are fetched through the webhooks' address
+  guard (public `https` addresses only, the checked address connected to, no
+  redirects), with a time limit and the image config's size limit, written to
+  a temporary file and checked as an upload before anything is stored.
+- **The Figma token.** Encrypted at rest and bound to its site environment, so
+  a copy of the column, or a ciphertext moved to another row, does not give
+  the token. It reaches only Figma's API, in a header, and is never shown,
+  logged or returned to a tool. It gives a tool what its owner can open in
+  Figma; a token for a narrow account limits that.
 - **Prompt injection.** A tool following instructions from content can only
   read what the person can read and prepare proposals; a person reviews
   every change before it is applied.

@@ -11,12 +11,17 @@ defmodule Brando.MCP.Tools do
   `prepare_proposal` stores a proposal for the person to review in the admin,
   marked as coming from the connected client.
 
+  With them, the Figma tools (`Brando.Figma.Tools`, `brando_figma_…`): read
+  a Figma frame, and import its images into the media library, the one
+  thing a tool adds before a person applies a proposal.
+
   Every call runs as the connection's user, in its site environment's schema
   and authorization scope, and is written to Activity with the user, the
   client and the token's row id. Results are bounded like the Assistant's.
   """
 
   alias Brando.Content.Proposals.Tools, as: Registry
+  alias Brando.Figma.Tools, as: FigmaTools
   alias Brando.MCP
 
   require Logger
@@ -41,19 +46,38 @@ defmodule Brando.MCP.Tools do
   @doc "The MCP tool definitions."
   @spec list() :: [map()]
   def list do
-    for %{name: name} = definition <- Registry.definitions(), name in @offered do
-      %{
-        name: @prefix <> name,
-        description: definition.description,
-        inputSchema: definition.parameters,
-        annotations: %{
-          readOnlyHint: name in @reads,
-          destructiveHint: false,
-          idempotentHint: name in @reads,
-          openWorldHint: false
+    content =
+      for %{name: name} = definition <- Registry.definitions(), name in @offered do
+        %{
+          name: @prefix <> name,
+          description: definition.description,
+          inputSchema: definition.parameters,
+          annotations: %{
+            readOnlyHint: name in @reads,
+            destructiveHint: false,
+            idempotentHint: name in @reads,
+            openWorldHint: false
+          }
         }
-      }
-    end
+      end
+
+    # They call Figma; importing again reuses what the library has
+    figma =
+      for definition <- FigmaTools.definitions() do
+        %{
+          name: FigmaTools.prefix() <> definition.name,
+          description: definition.description,
+          inputSchema: definition.parameters,
+          annotations: %{
+            readOnlyHint: definition.read_only,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+          }
+        }
+      end
+
+    content ++ figma
   end
 
   @doc """
@@ -63,11 +87,29 @@ defmodule Brando.MCP.Tools do
   """
   @spec call(String.t(), map(), map(), MCP.tenant()) :: {:ok, map()} | {:error, :unknown}
   def call(@prefix <> name, args, auth, tenant) when name in @offered and is_map(args) do
+    context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
+    args = Map.delete(args, "_meta")
+    called(name, auth, tenant, fn -> run(name, context, tenant, fn -> Registry.call(name, args, context) end) end)
+  end
+
+  def call("brando_figma_" <> name = full_name, args, auth, tenant) when is_map(args) do
+    if name in FigmaTools.names() do
+      context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
+      args = Map.delete(args, "_meta")
+      call = fn -> FigmaTools.call(name, args, auth.user, tenant) end
+      called(full_name, auth, tenant, fn -> run(full_name, context, tenant, call) end)
+    else
+      {:error, :unknown}
+    end
+  end
+
+  def call(_name, _args, _auth, _tenant), do: {:error, :unknown}
+
+  # Encoded, and written to Activity with the person, client and token
+  defp called(name, auth, tenant, fun) do
     started = System.monotonic_time(:millisecond)
     %{user: user, grant: grant} = auth
-
-    context = %Registry.Context{actor: user, origin: :mcp, client: grant.client_name}
-    {ok?, payload} = name |> run(Map.delete(args, "_meta"), context, tenant) |> encode()
+    {ok?, payload} = encode(fun.())
 
     MCP.in_tenant(tenant, fn ->
       Brando.Activity.tool_called(grant, user, name,
@@ -80,13 +122,10 @@ defmodule Brando.MCP.Tools do
     {:ok, payload}
   end
 
-  def call(_name, _args, _auth, _tenant), do: {:error, :unknown}
-
   # In the connection's schema prefix and authorization scope, with anything
   # it records attributed to the client.
-  defp run(name, args, context, tenant) do
+  defp run(name, context, tenant, call) do
     scope = MCP.authorization_scope(context.actor, tenant)
-    call = fn -> Registry.call(name, args, context) end
     attributed = fn -> Brando.Activity.with_source(:mcp, %{"client" => context.client}, call) end
     scoped = fn -> Brando.Authorization.Boundary.with_scope(scope, attributed) end
     MCP.in_tenant(tenant, scoped)

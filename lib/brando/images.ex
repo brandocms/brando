@@ -304,6 +304,31 @@ defmodule Brando.Images do
   defp effective_cdn(%{cdn: %{enabled: true} = cdn}), do: cdn
   defp effective_cdn(_cfg), do: Brando.CDN.config(Brando.Images)
 
+  @doc """
+  Runs `fun` in a transaction holding the lock `for_config_target/3` takes
+  on the file with `hash` for `config_target`, so two processes that store
+  the same file for the same config one after the other find each other's
+  image rather than both storing it (`Brando.Figma.Import`). Returns what
+  `fun` returns; an exception rolls back and is raised again.
+  """
+  @spec with_file_lock(String.t(), String.t() | nil, (-> result)) :: result when result: var
+  def with_file_lock(hash, config_target, fun) when is_binary(hash) do
+    {:ok, result} =
+      Repo.transaction(fn ->
+        lock_copy(hash, config_target)
+        fun.()
+      end)
+
+    result
+  end
+
+  @doc """
+  Queues processing for `image` when it is unprocessed and nothing is
+  queued for it yet: an image found again whose first queueing failed.
+  """
+  @spec ensure_processing_queued(Image.t(), user) :: {:ok, Image.t()} | {:error, term()}
+  def ensure_processing_queued(%Image{} = image, user), do: requeue_unqueued(image, user)
+
   defp lock_copy(hash, config_target) do
     key = :erlang.phash2({Brando.Tenant.current_prefix(), hash, config_target}, 4_294_967_296)
     Repo.repo().query!("SELECT pg_advisory_xact_lock($1)", [key])
