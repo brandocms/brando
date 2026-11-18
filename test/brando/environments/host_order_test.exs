@@ -234,7 +234,9 @@ defmodule Brando.Environments.HostOrderTest do
         File.rm_rf(root)
       end)
 
-      creator = Sandbox.unboxed_run(Repo, fn -> Brando.Factory.insert(:random_user, role: :superuser) end)
+      # Committed, so no avatar: deleting the user would leave its image row
+      # behind for every later test in this database
+      creator = Sandbox.unboxed_run(Repo, fn -> Brando.Factory.insert(:random_user, role: :superuser, avatar: nil) end)
       on_exit(fn -> Sandbox.unboxed_run(Repo, fn -> Repo.delete_all(from(u in User, where: u.id == ^creator.id)) end) end)
 
       %{creator: creator}
