@@ -403,6 +403,8 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   object's position. Its override (its placement's own, or a copy of the one
   for every placement) takes `new_key`'s media and the placement the object
   has after; the media's other placements are renumbered and keep theirs.
+  `overrides` are structs or atom-keyed maps, as a block's applied data holds
+  them.
   """
   def replace_media(overrides, media_keys, index, {new_type, new_id} = new_key) do
     overrides = overrides || []
@@ -437,9 +439,6 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
         overrides
     end
   end
-
-  defp put_media(%Ecto.Changeset{} = override, type, id, placement),
-    do: Ecto.Changeset.change(override, object_id: id, object_type: type, placement: placement)
 
   defp put_media(%{} = override, type, id, placement),
     do: Map.merge(override, %{object_id: id, object_type: type, placement: placement})
