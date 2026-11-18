@@ -166,6 +166,12 @@ config :brando, :markdown_sources,
 
 config :brando, :markdown_sources_provider, E2E.MarkdownProvider
 
+# YouTube's and Vimeo's oEmbed, answered by `E2EFakeOEmbed`: a video added
+# from a URL gets its title, and the lookup queued after it, without the
+# network.
+config :brando, Brando.OEmbed, req_options: [plug: E2EFakeOEmbed]
+config :brando, Brando.Videos.Metadata, req_options: [plug: E2EFakeOEmbed]
+
 # Bunny Stream with fake credentials, answered by the E2E app itself: its API
 # by `E2EFakeBunny` and its tus endpoint under `/e2e/bunny/tus`, which reports
 # each upload's encode finished. Only fields that ask for `upload_strategy:

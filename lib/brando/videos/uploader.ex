@@ -140,7 +140,7 @@ defmodule Brando.Videos.Uploader do
   Creates a Video record for a video already in the provider's library.
 
   The record carries `meta["imported"] = true`, which keeps it out of
-  `delete_remote/1`. Takes `:config_target` in `opts`.
+  `delete_remote/1`. Takes `:config_target` and `:folder_id` in `opts`.
   """
   @callback import_remote(remote_id :: String.t(), user :: user(), opts :: keyword()) ::
               {:ok, video()} | {:error, any()}

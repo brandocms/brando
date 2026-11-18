@@ -5,10 +5,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
   use BrandoAdmin.Components.PickerHelpers, schema: Brando.Videos.Video
 
   alias Brando.Uploads.AssetIntent
-  alias Brando.Videos.ProviderLibrary
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.Assets.FileBrowser
+  alias BrandoAdmin.Components.Assets.ProviderLibraryPanel
   alias BrandoAdmin.Components.Assets.ProviderVideoUpload
+  alias BrandoAdmin.Components.Assets.VideoFromURL
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.PickerFolders
   alias BrandoAdmin.Images.FolderBrowser
@@ -157,15 +158,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
   # video is linking an external video, so it follows `allow_external_urls`
   # — which also keeps it out of `config_target: :all` pickers.
   defp assign_library_providers(socket) do
-    providers =
-      with true <- socket.assigns.allow_external_urls?,
-           :ok <- Brando.Authorization.Media.authorize(socket.assigns.current_user, :video) do
-        ProviderLibrary.providers()
-      else
-        _ -> []
-      end
-
-    assign(socket, :library_providers, providers)
+    assign(
+      socket,
+      :library_providers,
+      ProviderLibraryPanel.providers(socket.assigns.current_user, socket.assigns.allow_external_urls?)
+    )
   end
 
   # `config_target: :all` browses every video without adding any, for pickers
@@ -493,52 +490,25 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("open_library", %{"strategy" => strategy}, socket) do
-    case Enum.find(socket.assigns.library_providers, &(Atom.to_string(&1.strategy) == strategy)) do
-      nil ->
-        {:noreply, socket}
-
-      provider ->
-        library = %{
-          strategy: provider.strategy,
-          label: provider.label,
-          search?: provider.search?,
-          query: "",
-          items: [],
-          next: nil,
-          loading?: false,
-          error: nil,
-          ref: nil
-        }
-
-        {:noreply,
-         socket
-         |> assign(:show_url_input, false)
-         |> assign(:library, library)
-         |> load_library_page(nil)}
+    case ProviderLibraryPanel.open(socket, strategy) do
+      {:ok, socket} -> {:noreply, assign(socket, :show_url_input, false)}
+      :error -> {:noreply, socket}
     end
   end
 
   def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
 
-  def handle_event("search_library", %{"query" => query}, %{assigns: %{library: %{} = library}} = socket) do
-    {:noreply,
-     socket
-     |> assign(:library, %{library | query: String.trim(query), items: [], next: nil})
-     |> load_library_page(nil)}
+  def handle_event("search_library", %{"query" => query}, socket) do
+    {:noreply, ProviderLibraryPanel.search(socket, query)}
   end
 
-  def handle_event("more_library", _, %{assigns: %{library: %{next: next}}} = socket) when not is_nil(next) do
-    {:noreply, load_library_page(socket, next)}
-  end
+  def handle_event("more_library", _, socket), do: {:noreply, ProviderLibraryPanel.more(socket)}
 
-  # Synchronous, unlike the listing: it creates a record, and runs under the
-  # editor's authorization and tenant context, which an async task would not
-  # carry.
-  def handle_event("add_from_library", %{"remote-id" => remote_id}, %{assigns: %{library: %{} = library}} = socket) do
+  def handle_event("add_from_library", %{"remote-id" => remote_id}, socket) do
     opts = [config_target: normalize_video_config_target(socket.assigns.config_target)]
 
-    case ProviderLibrary.import(library.strategy, remote_id, socket.assigns.current_user, opts) do
-      {:ok, video} ->
+    case ProviderLibraryPanel.add(socket, remote_id, socket.assigns.current_user, opts) do
+      {:ok, video, socket} ->
         # Handed over the way "Add from URL" hands over a new video. A picker
         # opened without a field (nothing to select into) just gains it.
         if target = socket.assigns.event_target do
@@ -549,26 +519,19 @@ defmodule BrandoAdmin.Components.VideoPicker do
           })
         end
 
-        items =
-          Enum.map(library.items, fn
-            %{remote_id: ^remote_id} = item -> %{item | video_id: video.id}
-            item -> item
-          end)
-
         {:noreply,
          socket
-         |> assign(:library, %{library | items: items, error: nil})
          |> update(:selected_videos, &Enum.uniq([video.id | &1]))
          |> list_added(video)
          |> push_selection_state()}
 
-      {:error, reason} ->
-        {:noreply, assign(socket, :library, %{library | error: library_error(reason, library.label)})}
+      {:error, socket} ->
+        {:noreply, socket}
     end
   end
 
   def handle_event(event, _params, socket)
-      when event in ["search_library", "more_library", "add_from_library"],
+      when event in ["search_library", "add_from_library"],
       do: {:noreply, socket}
 
   # From the video drawer, which opens this picker already configured for its
@@ -638,38 +601,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("url", params, socket) do
-    %{
-      "width" => width,
-      "height" => height,
-      "source" => source,
-      "remoteId" => remote_id,
-      "url" => url
-    } = params
-
-    video_type = url_video_type(source)
-    ref = make_ref()
-
-    video_params = %{
-      type: video_type,
-      source_url: url,
-      remote_id: url_remote_id(video_type, url, remote_id),
-      width: width,
-      height: height,
-      aspect_ratio: calculate_aspect_ratio(width, height),
-      config_target: normalize_video_config_target(socket.assigns.config_target)
-    }
-
-    # The title comes from the provider's oEmbed endpoint. Asked from here, a
-    # slow provider would hold up the whole editor, so it is asked off the
-    # LiveView process.
-    {:noreply,
-     socket
-     |> assign(:creating_video, true)
-     |> assign(:url_video_ref, ref)
-     |> start_async(
-       :url_video,
-       Brando.Tenant.capture_context(fn -> {ref, video_params, url_video_metadata(video_type, url)} end)
-     )}
+    config_target = normalize_video_config_target(socket.assigns.config_target)
+    {:noreply, VideoFromURL.start(socket, params, %{config_target: config_target})}
   end
 
   def handle_event(
@@ -802,45 +735,13 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   # -- Render --
 
-  def handle_async(:library_page, {:ok, {ref, cursor, result}}, socket) do
-    case socket.assigns.library do
-      %{ref: ^ref} = library -> {:noreply, assign(socket, :library, apply_library_page(library, cursor, result))}
-      # Closed, or superseded by a newer search.
-      _ -> {:noreply, socket}
-    end
-  end
+  def handle_async(:library_page, result, socket), do: {:noreply, ProviderLibraryPanel.page_loaded(socket, result)}
 
-  def handle_async(:library_page, {:exit, _reason}, %{assigns: %{library: %{} = library}} = socket) do
-    {:noreply,
-     assign(socket, :library, %{library | loading?: false, error: library_error(:provider_error, library.label)})}
-  end
-
-  def handle_async(:library_page, _result, socket), do: {:noreply, socket}
-
-  def handle_async(:url_video, {:ok, {ref, video_params, {title, description, _thumbnail_url}}}, socket) do
-    case socket.assigns do
-      %{url_video_ref: ^ref} -> create_url_video(socket, Map.merge(video_params, %{title: title, caption: description}))
-      # The picker was opened for another field since (`update/2` clears the
-      # ref). A newer URL needs no check: LiveView drops a replaced task's reply.
-      _ -> {:noreply, socket}
-    end
-  end
-
-  def handle_async(:url_video, {:exit, reason}, socket) do
-    require Logger
-    Logger.warning("Video from URL failed: #{inspect(reason)}")
-    {:noreply, assign(socket, :creating_video, false)}
-  end
-
-  defp create_url_video(socket, video_params) do
-    user = Map.get(socket.assigns, :current_user)
-
-    result =
-      with :ok <- Brando.Authorization.Media.authorize(user, :video),
-           do: Brando.Videos.create_video(video_params, user)
-
-    case result do
-      {:ok, video} ->
+  # The picker opened for another field since the paste (`update/2` clears
+  # the ref): the answer is dropped.
+  def handle_async(:url_video, result, socket) do
+    case VideoFromURL.finish(socket, result, Map.get(socket.assigns, :current_user)) do
+      {:ok, video, socket} ->
         send_update(socket.assigns.event_target, %{
           event: "video_created_from_url",
           video_data: Map.from_struct(video),
@@ -849,99 +750,21 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
         {:noreply,
          socket
-         |> assign(:creating_video, false)
          |> assign(:show_url_input, false)
          |> update(:selected_videos, &Enum.uniq([video.id | &1]))
          |> list_added(video)
          |> push_selection_state()}
 
-      {:error, message} when is_binary(message) ->
-        {:noreply, socket |> not_permitted() |> assign(:creating_video, false)}
+      {:error, :forbidden, socket} ->
+        {:noreply, not_permitted(socket)}
 
-      {:error, changeset} ->
-        error_msg =
-          Enum.map_join(changeset.errors, ", ", fn {field, {msg, _}} -> "#{field}: #{msg}" end)
+      {:error, _reason, socket} ->
+        {:noreply, socket}
 
-        require Logger
-        Logger.warning("Video changeset error: #{error_msg}")
-
-        if Keyword.has_key?(changeset.errors, :source_url),
-          do: send(self(), {:toast, gettext("This address can't be used for a video.")})
-
-        {:noreply, assign(socket, :creating_video, false)}
+      {:ignore, socket} ->
+        {:noreply, socket}
     end
   end
-
-  defp apply_library_page(library, cursor, {:ok, %{items: items, next: next}}) do
-    items = if cursor, do: library.items ++ items, else: items
-    %{library | items: items, next: next, loading?: false}
-  end
-
-  defp apply_library_page(library, _cursor, {:error, reason}),
-    do: %{library | loading?: false, error: library_error(reason, library.label)}
-
-  defp load_library_page(socket, cursor) do
-    library = socket.assigns.library
-    ref = make_ref()
-    strategy = library.strategy
-    opts = [cursor: cursor, query: library.query]
-
-    socket
-    |> assign(:library, %{library | loading?: true, error: nil, ref: ref})
-    |> start_async(
-      :library_page,
-      Brando.Tenant.capture_context(fn -> {ref, cursor, ProviderLibrary.list(strategy, opts)} end)
-    )
-  end
-
-  # The client parser hands back everything after `vimeo.com/` — including an
-  # unlisted video's hash — so a Vimeo id is taken from the URL instead.
-  defp url_remote_id(:vimeo, url, remote_id) do
-    case Brando.Videos.VimeoURL.parse(url) do
-      {:ok, %{id: id}} -> id
-      :error -> remote_id
-    end
-  end
-
-  defp url_remote_id(_video_type, _url, remote_id), do: remote_id
-
-  defp library_error(:signed_playback_not_supported, _provider),
-    do: gettext("This video needs signed playback, which Brando does not support.")
-
-  defp library_error(:holdings_unavailable, _provider),
-    do: gettext("Could not check which sites use these videos. Try again in a moment.")
-
-  defp library_error(:busy, _provider),
-    do: gettext("This video is being added or deleted elsewhere. Try again in a moment.")
-
-  defp library_error(:not_found, provider), do: gettext("%{provider} no longer has this video.", provider: provider)
-
-  defp library_error(reason, _provider) when is_binary(reason), do: reason
-
-  defp library_error(_reason, provider),
-    do: gettext("Could not reach %{provider}. Try again in a moment.", provider: provider)
-
-  defp library_item_meta(item) do
-    [
-      library_duration(item.duration),
-      item.width && item.height && "#{item.width} × #{item.height}",
-      is_binary(item.created_at) && String.slice(item.created_at, 0, 10)
-    ]
-    |> Enum.filter(&is_binary/1)
-    |> Enum.join(" · ")
-  end
-
-  defp library_duration(seconds) when is_number(seconds) and seconds > 0 do
-    total = round(seconds)
-    minutes = div(total, 60)
-    "#{minutes}:#{total |> rem(60) |> Integer.to_string() |> String.pad_leading(2, "0")}"
-  end
-
-  defp library_duration(_seconds), do: nil
-
-  defp library_status(%{status: :processing}), do: gettext("Processing")
-  defp library_status(%{status: :errored}), do: gettext("Failed")
-  defp library_status(_item), do: gettext("Signed playback")
 
   def render(assigns) do
     ~H"""
@@ -1142,149 +965,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
               </div>
             </div>
             <div :if={@allow_external_urls? && @show_url_input} class="video-picker-url-input">
-              <div
-                class="video-url-parser"
-                phx-hook="Brando.VideoURLParser"
-                data-target={@myself}
-                id={"video-url-parser-#{@id}"}
-              >
-                <div class="video-picker-url-field">
-                  <label for={"#{@id}-source-url"}>{gettext("Video URL")}</label>
-                  <input
-                    id={"#{@id}-source-url"}
-                    type="text"
-                    class="text"
-                    placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
-                    phx-mounted={JS.focus()}
-                  />
-                  <button type="button" class="btn">
-                    <%= if @creating_video do %>
-                      {gettext("Creating...")}
-                    <% else %>
-                      {gettext("Create video")}
-                    <% end %>
-                  </button>
-                  <%!-- The hook shows this while it reads the URL; from then on the
-                       server keeps it up until the provider has answered. --%>
-                  <div class={["video-picker-analyzing", !@creating_video && "hidden"]}>
-                    <div class="spinner"></div>
-                    <span>{gettext("Analyzing video...")}</span>
-                  </div>
-                </div>
-              </div>
+              <VideoFromURL.input id={@id} target={@myself} creating={@creating_video} />
             </div>
 
-            <section
-              :if={@library}
-              id={"#{@id}-library"}
-              class="video-picker-library"
-              aria-label={gettext("%{provider} library", provider: @library.label)}
-            >
-              <div class="video-picker-library-header">
-                <div>
-                  <h4>{gettext("%{provider} library", provider: @library.label)}</h4>
-                  <p>
-                    {gettext(
-                      "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}.",
-                      provider: @library.label
-                    )}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="video-picker-library-close"
-                  aria-label={gettext("Close")}
-                  phx-click="close_library"
-                  phx-target={@myself}
-                >
-                  <.icon name="x" />
-                </button>
-              </div>
-
-              <form
-                :if={@library.search?}
-                class="video-picker-library-search"
-                phx-submit="search_library"
-                phx-target={@myself}
-              >
-                <input
-                  id={"#{@id}-library-query"}
-                  type="search"
-                  name="query"
-                  class="text"
-                  value={@library.query}
-                  aria-label={gettext("Search %{provider}", provider: @library.label)}
-                  placeholder={gettext("Search %{provider} by title", provider: @library.label)}
-                />
-                <button type="submit" class="btn">{gettext("Search")}</button>
-              </form>
-
-              <p :if={@library.error} class="video-picker-library-error" role="alert">{@library.error}</p>
-
-              <ul :if={@library.items != []} class="video-picker-library-items">
-                <li :for={item <- @library.items} class="video-picker-library-item" data-remote-id={item.remote_id}>
-                  <div class="video-picker-library-thumb">
-                    <img :if={item.thumbnail_url} src={item.thumbnail_url} alt="" loading="lazy" />
-                    <.icon :if={!item.thumbnail_url} name="film" />
-                  </div>
-                  <div class="video-picker-library-info">
-                    <span class="video-picker-library-title">{item.title || gettext("Untitled video")}</span>
-                    <span class="video-picker-library-meta">{library_item_meta(item)}</span>
-                  </div>
-                  <div class="video-picker-library-action">
-                    <%= cond do %>
-                      <% item.video_id -> %>
-                        <span class="video-picker-library-status">{gettext("In library")}</span>
-                        <button
-                          type="button"
-                          class="btn btn--sm"
-                          phx-click="add_from_library"
-                          phx-value-remote-id={item.remote_id}
-                          phx-target={@myself}
-                        >
-                          {gettext("Select")}
-                        </button>
-                      <% item.playable? -> %>
-                        <button
-                          type="button"
-                          class="btn btn--sm"
-                          phx-click="add_from_library"
-                          phx-value-remote-id={item.remote_id}
-                          phx-target={@myself}
-                          phx-disable-with={gettext("Adding…")}
-                        >
-                          {gettext("Add")}
-                        </button>
-                      <% true -> %>
-                        <span class="video-picker-library-status">{library_status(item)}</span>
-                    <% end %>
-                  </div>
-                </li>
-              </ul>
-
-              <p :if={@library.loading?} class="video-picker-library-note" role="status">
-                {gettext("Loading videos…")}
-              </p>
-              <p
-                :if={!@library.loading? && !@library.error && @library.items == []}
-                class="video-picker-library-note"
-              >
-                <%= if @library.query != "" do %>
-                  {gettext("No videos match “%{query}”.", query: @library.query)}
-                <% else %>
-                  {gettext("No videos in this %{provider} account.", provider: @library.label)}
-                <% end %>
-              </p>
-              <button
-                :if={@library.next && !@library.loading?}
-                type="button"
-                class="image-picker-more"
-                phx-click="more_library"
-                phx-target={@myself}
-              >
-                {gettext("Load more")}
-              </button>
-            </section>
+            <ProviderLibraryPanel.panel :if={@library} id={@id} library={@library} target={@myself} />
 
             <div :if={@upload_progress} class="video-picker-upload-progress">
               <div class="progress-bar">
@@ -1650,53 +1334,6 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   defp get_aspect_ratio(_), do: "56.25%"
-
-  defp url_video_type("vimeo"), do: :vimeo
-  defp url_video_type("youtube"), do: :youtube
-  defp url_video_type(_source), do: :external_file
-
-  defp url_video_metadata(:youtube, url), do: fetch_oembed_metadata("youtube", url)
-  defp url_video_metadata(:vimeo, url), do: fetch_oembed_metadata("vimeo", url)
-  defp url_video_metadata(_video_type, url), do: {extract_title_from_url(url), nil, nil}
-
-  defp fetch_oembed_metadata(provider, url) do
-    case Brando.OEmbed.get(provider, url) do
-      {:ok, data} ->
-        {
-          Map.get(data, "title", "#{String.capitalize(provider)} Video"),
-          Map.get(data, "description"),
-          Map.get(data, "thumbnail_url")
-        }
-
-      {:error, _} ->
-        {"#{String.capitalize(provider)} Video", nil, nil}
-    end
-  end
-
-  defp extract_title_from_url(url) do
-    URI.parse(url).path
-    |> Path.basename()
-    |> Path.rootname()
-    |> String.replace(~r/[_-]/, " ")
-    |> String.trim()
-    |> case do
-      "" -> "Video"
-      title -> title
-    end
-  end
-
-  @named_aspect_ratios [{16 / 9, "16:9"}, {4 / 3, "4:3"}, {21 / 9, "21:9"}, {1, "1:1"}, {9 / 16, "9:16"}]
-
-  defp calculate_aspect_ratio(width, height)
-       when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
-    ratio = width / height
-
-    Enum.find_value(@named_aspect_ratios, "#{width}:#{height}", fn {named_ratio, label} ->
-      if abs(ratio - named_ratio) < 0.01, do: label
-    end)
-  end
-
-  defp calculate_aspect_ratio(_, _), do: "16:9"
 
   defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
   defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"

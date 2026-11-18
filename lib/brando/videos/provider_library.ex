@@ -166,6 +166,8 @@ defmodule Brando.Videos.ProviderLibrary do
   ## Options
 
     * `:config_target` — stored on a new record, as an upload would
+    * `:folder_id` — the library folder a new or restored record goes
+      into. A live record that already holds the video stays where it is.
   """
   @spec import(atom(), String.t(), Brando.Users.User.t(), keyword()) :: {:ok, Video.t()} | {:error, term()}
   def import(strategy, remote_id, user, opts \\ []) when is_binary(remote_id) do
@@ -248,7 +250,7 @@ defmodule Brando.Videos.ProviderLibrary do
     path = module.library_meta_path()
 
     with nil <- existing_video(path, remote_id, keys),
-         nil <- restore_deleted(path, remote_id, user) do
+         nil <- restore_deleted(path, remote_id, user, Keyword.get(opts, :folder_id)) do
       guarded(fn -> module.import_remote(remote_id, user, opts) end)
     else
       %Video{} = video -> {:ok, video}
@@ -263,7 +265,8 @@ defmodule Brando.Videos.ProviderLibrary do
   # made, which that purge leaves alone. Nor one the user may not restore:
   # the second record then keeps the video at the provider, as a live record
   # of the environment does (`Brando.Videos.Uploader.delete_remote/1`).
-  defp restore_deleted(path, remote_id, user) do
+  # Restored, it goes into `folder_id`, the folder it was added to, if given.
+  defp restore_deleted(path, remote_id, user, folder_id) do
     keys = String.split(path, ".")
 
     from(v in Video,
@@ -277,9 +280,20 @@ defmodule Brando.Videos.ProviderLibrary do
         nil
 
       video ->
-        restore(user, video)
+        user |> restore(video) |> into_folder(folder_id)
     end
   end
+
+  defp into_folder(%Video{folder_id: folder_id} = video, folder_id), do: video
+
+  defp into_folder(%Video{} = video, folder_id) when is_integer(folder_id) do
+    case video |> Ecto.Changeset.change(folder_id: folder_id) |> Brando.Repo.update() do
+      {:ok, moved} -> moved
+      {:error, _changeset} -> video
+    end
+  end
+
+  defp into_folder(video, _folder_id), do: video
 
   # A record never deleted at the provider (imported, or `delete_remote_on:
   # false`) is purged without the video's lock, so it may be gone since it

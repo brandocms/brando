@@ -194,6 +194,13 @@ source URL, provider id or the uploaded file's name. A provider's own library
 has a separate search in its panel (below). In Resources → Videos, the "Title
 or source" filter matches the same fields.
 
+The header of Resources → Videos adds videos the way the picker does:
+**Upload**, **Add from URL**, and **Add from …** for each provider library
+(below). Each puts the video into the folder in view, and at the root into
+the default video folder. They use the default video config, so the URL and
+provider buttons follow its `allow_external_urls`, and all of them need
+permission to create videos.
+
 ### Add webhook to your endpoint
 
 Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification. They read at most 1 MiB of it and answer 413 for a larger body.

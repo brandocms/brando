@@ -51,9 +51,16 @@ defmodule E2EFakeBunny do
     })
   end
 
-  # The provider library tab lists Bunny's videos; the fake keeps none.
-  def call(%Plug.Conn{method: "GET", path_info: ["library", _library_id, "videos"]} = conn, _opts) do
-    json(conn, %{"items" => [], "currentPage" => 1, "itemsPerPage" => 24, "totalItems" => 0})
+  # The account's own library, for "Add from Bunny Stream": two finished
+  # videos, as if uploaded in Bunny's dashboard. Fetching either answers a
+  # finished encode (above).
+  def call(%Plug.Conn{method: "GET", path_info: ["library", library_id, "videos"]} = conn, _opts) do
+    items = [
+      library_video(library_id, "5d6c1b0e-0000-4000-8000-000000000001", "Harbour at dawn", 94, "2026-10-02T08:15:00Z"),
+      library_video(library_id, "5d6c1b0e-0000-4000-8000-000000000002", "Night ferry", 212, "2026-09-18T19:40:00Z")
+    ]
+
+    json(conn, %{"items" => items, "currentPage" => 1, "itemsPerPage" => 24, "totalItems" => length(items)})
   end
 
   def call(
@@ -64,6 +71,20 @@ defmodule E2EFakeBunny do
   end
 
   def call(conn, _opts), do: json(conn, 404, %{"Message" => "Not Found"})
+
+  defp library_video(library_id, guid, title, length, uploaded) do
+    %{
+      "guid" => guid,
+      "videoLibraryId" => String.to_integer(library_id),
+      "title" => title,
+      # Finished
+      "status" => 3,
+      "length" => length,
+      "width" => 1920,
+      "height" => 1080,
+      "dateUploaded" => uploaded
+    }
+  end
 
   # The tus uploads in flight, by id: `%{length:, offset:, video_guid:, library_id:}`.
   def put_upload(id, upload), do: Agent.update(store(), &Map.put(&1, id, upload))

@@ -151,6 +151,7 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
              title: get_in(payload, ["meta", "name"]),
              remote_id: uid,
              config_target: Keyword.get(opts, :config_target),
+             folder_id: Keyword.get(opts, :folder_id),
              meta: %{"provider" => "cloudflare", "imported" => true, "cloudflare" => %{"uid" => uid}},
              creator_id: user.id
            }) do

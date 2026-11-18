@@ -863,12 +863,12 @@ msgstr ""
 msgid "%{property}: required by Google"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} library"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} no longer has this video."
 msgstr ""
@@ -1126,6 +1126,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A URL or content link"
+msgstr ""
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "A YouTube or Vimeo address, or the address of a video file or stream. The title, thumbnail and duration are looked up at the source."
 msgstr ""
 
 #: lib/brando/notifications/message.ex
@@ -1690,8 +1695,8 @@ msgid "Activity views"
 msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/form/input/render_var.ex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
@@ -1809,6 +1814,7 @@ msgid "Add fragment"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add from %{provider}"
 msgstr ""
@@ -1816,6 +1822,7 @@ msgstr ""
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add from URL"
 msgstr ""
@@ -1940,6 +1947,11 @@ msgstr ""
 msgid "Added %{date}"
 msgstr ""
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{title}"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Added a note"
@@ -1960,7 +1972,7 @@ msgstr ""
 msgid "Added the Figma access token"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Adding…"
@@ -2378,7 +2390,7 @@ msgstr ""
 msgid "An update is available for review. Preview a commit and use the displayed version to accept it."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Analyzing video..."
 msgstr ""
@@ -4022,6 +4034,7 @@ msgstr ""
 msgid "Clicks"
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/children_button.ex
 #: lib/brando_admin/components/content.ex
 #: lib/brando_admin/components/content/list.ex
@@ -4032,7 +4045,6 @@ msgstr ""
 #: lib/brando_admin/components/form/tab_notice.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/shortcut_sheet.ex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
@@ -4775,7 +4787,7 @@ msgstr ""
 msgid "Could not check whether the recipient may read the entry"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Could not check which sites use these videos. Try again in a moment."
 msgstr ""
@@ -4832,7 +4844,7 @@ msgstr ""
 msgid "Could not queue the static build."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Could not reach %{provider}. Try again in a moment."
 msgstr ""
@@ -5145,7 +5157,7 @@ msgstr ""
 msgid "Create user"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #: lib/brando_admin/live/videos/video_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create video"
@@ -5221,7 +5233,7 @@ msgstr ""
 msgid "Creating redirect..."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr ""
@@ -7474,8 +7486,8 @@ msgstr ""
 msgid "Facebook, LinkedIn"
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/layouts/root.html.heex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
@@ -8160,6 +8172,11 @@ msgstr ""
 msgid "Go to the dashboard"
 msgstr ""
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Goes into %{folder}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Google has not shown this page for any search in the period."
@@ -8790,7 +8807,7 @@ msgstr ""
 msgid "In a recovery copy"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "In library"
 msgstr ""
@@ -9709,7 +9726,7 @@ msgstr ""
 msgid "Load latest version"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Load more"
 msgstr ""
@@ -9771,7 +9788,7 @@ msgstr ""
 msgid "Loading video..."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Loading videos…"
 msgstr ""
@@ -11532,7 +11549,7 @@ msgstr ""
 msgid "No videos are missing details"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "No videos in this %{provider} account."
 msgstr ""
@@ -11547,6 +11564,7 @@ msgstr ""
 msgid "No videos in this view"
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No videos match “%{query}”."
@@ -12826,7 +12844,7 @@ msgstr ""
 msgid "Paste"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Paste YouTube, Vimeo or direct video URL"
 msgstr ""
@@ -13294,7 +13312,7 @@ msgid "Price range"
 msgstr ""
 
 #: lib/brando/images/image.ex
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-format, elixir-autogen
 msgid "Processing"
 msgstr ""
@@ -15533,7 +15551,7 @@ msgstr ""
 msgid "Score %{score} of 100"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -15541,12 +15559,12 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Search %{provider}"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Search %{provider} by title"
 msgstr ""
@@ -15763,12 +15781,12 @@ msgstr ""
 msgid "Seeding queued."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/input/select.ex
 #: lib/brando_admin/components/form/module_props.ex
-#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Select"
 msgstr ""
@@ -16545,7 +16563,7 @@ msgstr ""
 msgid "Sign-in policy changed"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Signed playback"
 msgstr ""
@@ -18613,7 +18631,7 @@ msgstr ""
 msgid "This SVG declares entities, which are not allowed."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "This address can't be used for a video."
 msgstr ""
@@ -19106,12 +19124,12 @@ msgstr ""
 msgid "This video cannot be played here."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "This video is being added or deleted elsewhere. Try again in a moment."
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "This video needs signed playback, which Brando does not support."
 msgstr ""
@@ -19800,10 +19818,10 @@ msgid "Untitled section"
 msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/form/input/gallery/video_config.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/video_drawer.ex
-#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled video"
 msgstr ""
@@ -20342,7 +20360,7 @@ msgstr ""
 msgid "Video Preview"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Video URL"
 msgstr ""
@@ -20432,7 +20450,7 @@ msgstr ""
 msgid "Videos"
 msgstr ""
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}."
 msgstr ""
