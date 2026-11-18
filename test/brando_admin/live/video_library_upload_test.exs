@@ -242,8 +242,9 @@ defmodule BrandoAdmin.VideoLibraryUploadTest do
     refute html =~ "sweep_open"
   end
 
+  # Each test signs in a member of one group with its `keys`
   describe "with group authorization" do
-    setup do
+    setup %{keys: keys} do
       put_test_env(:default_video_upload_strategy, :local)
       put_test_env(:authorization_mode, :groups)
       Boundary.put_scope(nil)
@@ -251,37 +252,38 @@ defmodule BrandoAdmin.VideoLibraryUploadTest do
       {:ok, _} = Migration.run()
       Factory.insert(:video)
 
-      %{scope: Scope.standalone(owner)}
+      scope = Scope.standalone(owner)
+      member = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      {:ok, group} = Groups.create(scope, %{name: "Library members"}, ~w(brando.admin.access brando.videos.read) ++ keys)
+      {:ok, :ok} = Groups.add_member(scope, group.id, member.id)
+
+      %{conn: log_in_user(Phoenix.ConnTest.build_conn(), member)}
     end
 
-    defp member(c, keys) do
-      user = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
-      {:ok, group} = Groups.create(c.scope, %{name: "Group #{System.unique_integer([:positive])}"}, keys)
-      {:ok, :ok} = Groups.add_member(c.scope, group.id, user.id)
-      log_in_user(Phoenix.ConnTest.build_conn(), user)
-    end
-
-    test "reading alone offers neither", c do
-      {:ok, view, _html} = live(member(c, ~w(brando.admin.access brando.videos.read)), "/admin/assets/videos")
+    @tag keys: []
+    test "reading alone offers neither", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
       refute has_element?(view, @upload)
       refute has_element?(view, @sort)
     end
 
-    test "creating offers the upload, updating the sort", c do
-      conn = member(c, ~w(brando.admin.access brando.videos.read brando.videos.create))
+    @tag keys: ~w(brando.videos.create)
+    test "creating offers the upload", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
       assert has_element?(view, @upload)
       refute has_element?(view, @sort)
+    end
 
-      conn = member(c, ~w(brando.admin.access brando.videos.read brando.videos.update))
+    @tag keys: ~w(brando.videos.update)
+    test "updating offers the sort", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
       refute has_element?(view, @upload)
       assert has_element?(view, @sort)
     end
 
-    test "a provider upload asked for without the right to create makes no video", c do
+    @tag keys: []
+    test "a provider upload asked for without the right to create makes no video", %{conn: conn} do
       bunny()
-      conn = member(c, ~w(brando.admin.access brando.videos.read))
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
       before = Repo.aggregate(Video, :count)
 
