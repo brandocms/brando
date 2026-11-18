@@ -1,0 +1,1 @@
+- "Sort by use" in the Files library also shows at the root, as in the Videos library, and sorts the files there that have no folder.

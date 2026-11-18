@@ -454,9 +454,9 @@ years each becomes one long list. The image, video and file libraries can sort
 it from where the assets are used.
 
 Open the folder under **Resources → Images**, **Videos** or **Files** and
-choose **Sort by use**. The Videos library's root is the default video
-folder, so its loose videos are sorted from the root; that includes those
-with no folder. The preview lists a folder per entry that uses images,
+choose **Sort by use**. The Videos and Files libraries' roots are the default
+video and file folders, so their loose videos and files are sorted from the
+root; that includes those with no folder. The preview lists a folder per entry that uses images,
 videos or files from this one, named by type and title (`cases/example-hotel`,
 `pages/about`), with a few of them: images as they are, videos by their
 thumbnail, files by an icon for their type. Untick the ones to leave, rename
