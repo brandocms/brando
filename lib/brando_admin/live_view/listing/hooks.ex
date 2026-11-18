@@ -144,6 +144,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
         update_list_entries(schema)
 
+      {:error, :forbidden} ->
+        send(self(), {:toast, gettext("You do not have permission to do this.")})
+
       {:error, {:fragments, :target_not_found}} ->
         send(
           self(),

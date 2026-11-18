@@ -7885,7 +7885,7 @@ msgstr "Fragment slettet"
 msgid "Fragment duplicated"
 msgstr "Fragment duplisert"
 
-#: lib/brando_admin/live/pages/page_list_live.ex
+#: lib/brando_admin/live/pages/fragments_without_page.ex
 #, elixir-autogen, elixir-format
 msgid "Fragments without a page"
 msgstr "Fragmenter uten side"
@@ -12192,6 +12192,13 @@ msgid "One module has no sketch. The AI draws it from its template, references a
 msgid_plural "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards."
 msgstr[0] "Én modul mangler skisse. KI-en tegner den ut fra malen, referansene og variablene, og den lagres med én gang. Du kan tegne den på nytt eller redigere den i modulen etterpå."
 msgstr[1] "%{count} moduler mangler skisse. KI-en tegner hver av dem ut fra malen, referansene og variablene, én om gangen, og hver lagres med én gang. Du kan tegne dem på nytt eller redigere dem i modulen etterpå."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "One more you may not see"
+msgid_plural "%{count} more you may not see"
+msgstr[0] "Ett til som du ikke har tilgang til"
+msgstr[1] "%{count} til som du ikke har tilgang til"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -18487,7 +18494,7 @@ msgstr "Webhooken ble lagret."
 msgid "The whole library. An image set up for another field is copied and cut to this field's sizes when you pick it."
 msgstr "Hele biblioteket. Et bilde som er satt opp for et annet felt, kopieres og beskjæres til dette feltets størrelser når du velger det."
 
-#: lib/brando_admin/live/pages/page_list_live.ex
+#: lib/brando_admin/live/pages/fragments_without_page.ex
 #, elixir-autogen, elixir-format
 msgid "Their page is in the trash or gone, or they never had one. They still show on the site. Edit one to choose its page."
 msgstr "Siden deres er i papirkurven eller finnes ikke lenger, eller de har aldri hatt en. De vises fortsatt på nettstedet. Rediger et fragment for å velge siden det hører til."

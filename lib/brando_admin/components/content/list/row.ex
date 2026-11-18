@@ -205,7 +205,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   # A listing's own delete action (a page's "Delete sub page") asks as the
   # default Delete does: by name, with what goes with the entry
   defp describe_delete(%{event: "delete_entry", confirm: confirm} = action) when is_binary(confirm),
-    do: action |> Map.from_struct() |> Map.merge(%{describe: "describe_delete", destructive: true})
+    do: action |> Map.drop([:__struct__]) |> Map.merge(%{describe: "describe_delete", destructive: true})
 
   defp describe_delete(action), do: action
 
@@ -923,6 +923,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :schema, :atom, required: true
   attr :content_language, :string
   attr :current_user, :any, default: nil
+  attr :listing, :any, default: nil, doc: "the child listing, when not the schema's own by name (its DOM ids)"
 
   # A `child_listing … style: :chips`: one line of small cards under the
   # parent, each the child listing's component with its state and menu, and
@@ -934,7 +935,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     assigns =
       assigns
-      |> assign(:listing, Enum.find(assigns.schema.__listings__(), &(&1.name == assigns.child_listing.name)))
+      |> assign(
+        :listing,
+        assigns.listing || Enum.find(assigns.schema.__listings__(), &(&1.name == assigns.child_listing.name))
+      )
       |> assign(:label, Brando.Blueprint.get_plural(child_schema))
       |> assign(:icon, Brando.Blueprint.get_icon(child_schema))
       |> assign(:add_action, add_action(assigns.parent_listing, add, assigns.schema, assigns.parent))

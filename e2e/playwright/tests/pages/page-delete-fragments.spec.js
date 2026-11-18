@@ -81,7 +81,7 @@ test('a sub page asks where its fragments go, and they move to the page chosen',
 test('with no page chosen, the fragments are listed under Fragments without a page', async ({ page }) => {
   await row(page, 'About').getByTestId('children-button').click()
   const teamRow = row(page, 'About').locator('.child-row').filter({ hasText: 'Team' })
-  await expect(page.locator('#fragments-without-page')).toHaveCount(0)
+  await expect(page.locator('#fragments-without-page')).toBeHidden()
 
   const dialog = await openDeleteDialog(page, teamRow, 'Delete sub page')
   await dialog.getByRole('combobox').selectOption('')
@@ -107,7 +107,7 @@ test('deleting them with the page takes them out of the listing', async ({ page 
   await syncLV(page)
 
   await expect(row(page, 'About').locator('.child-row')).toHaveCount(0)
-  await expect(page.locator('#fragments-without-page')).toHaveCount(0)
+  await expect(page.locator('#fragments-without-page')).toBeHidden()
 })
 
 test('a page without fragments has the plain confirmation', async ({ page }) => {

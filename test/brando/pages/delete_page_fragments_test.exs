@@ -97,6 +97,35 @@ defmodule Brando.Pages.DeletePageFragmentsTest do
     end
   end
 
+  describe "editors with a fragment open" do
+    test "are told it moved, or went to the trash, once the delete commits", %{user: user} do
+      parent = page!(user, %{title: "Parent", uri: "parent"})
+      page = page!(user, %{title: "Child", uri: "parent/child", parent_id: parent.id})
+      other = page!(user, %{title: "Other", uri: "other"})
+      header = fragment!(user, page, "header")
+      footer = fragment!(user, other, "footer")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:mutations:Brando.Pages.Fragment"))
+
+      {:ok, _} = Pages.delete_page(page.id, user)
+      assert_receive {:mutation, Fragment, %{id: id, page_id: page_id}, :updated}
+      assert {id, page_id} == {header.id, parent.id}
+
+      {:ok, _} = Pages.delete_page(other.id, user, fragments: :delete)
+      assert_receive {:mutation, Fragment, %{id: id, deleted_at: %DateTime{}}, :deleted}
+      assert id == footer.id
+    end
+  end
+
+  test "a page already in the trash is not deleted again", %{user: user} do
+    page = page!(user, %{title: "Page", uri: "page"})
+    header = fragment!(user, page, "header")
+    {:ok, deleted} = Pages.delete_page(page.id, user, fragments: :delete)
+
+    assert {:error, {:page, :not_found}} = Pages.delete_page(page.id, user)
+    assert reload(page).deleted_at == deleted.deleted_at
+    assert reload(header).deleted_at == deleted.deleted_at
+  end
+
   describe "delete_page/3, fragments: {:move, page_id}" do
     test "moves them to the page given", %{user: user} do
       parent = page!(user, %{title: "Parent", uri: "parent"})
@@ -168,6 +197,28 @@ defmodule Brando.Pages.DeletePageFragmentsTest do
       assert is_nil(reload(footer).deleted_at)
       # Trashed on its own, before the page: it stays in the trash
       assert reload(trashed_before).deleted_at == trashed_before_at
+    end
+
+    test "a fragment trashed on its own in the same second as the page stays in the trash", %{user: user} do
+      # deleted_at is stored to the second: tried until both fall in one
+      {page, alone, with_page} =
+        Enum.find_value(1..5, fn n ->
+          page = page!(user, %{title: "Page #{n}", uri: "page-#{n}"})
+          alone = fragment!(user, page, "alone-#{n}")
+          with_page = fragment!(user, page, "with-#{n}")
+          at = Brando.SoftDelete.Repo.utc_now()
+          Repo.update_all(from(f in Fragment, where: f.id == ^alone.id), set: [deleted_at: at])
+          {:ok, deleted} = Pages.delete_page(page.id, user, fragments: :delete)
+          if deleted.deleted_at == at, do: {deleted, alone, with_page}
+        end)
+
+      assert reload(alone).deleted_at == DateTime.add(page.deleted_at, -1)
+      assert reload(with_page).deleted_at == page.deleted_at
+
+      assert {:ok, _} = Boundary.restore(user, reload(page))
+
+      assert reload(alone).deleted_at
+      assert is_nil(reload(with_page).deleted_at)
     end
 
     test "a fragment restored on its own, while its page is in the trash, is listed without a page", %{user: user} do

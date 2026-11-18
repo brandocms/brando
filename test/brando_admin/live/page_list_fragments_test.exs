@@ -39,13 +39,23 @@ defmodule BrandoAdmin.Pages.PageListFragmentsTest do
 
   test "moving them to no page lists them under Fragments without a page", %{conn: conn, page: page} do
     {:ok, view, html} = live(conn, "/admin/pages")
-    refute html =~ "fragments-without-page"
+    refute html =~ "fragments-without-page-title"
 
     render_click(view, "delete_entry", %{"id" => to_string(page.id), "fragments" => "move", "fragments_page" => ""})
 
     html = render(view)
-    assert html =~ ~s(id="fragments-without-page")
+    assert html =~ ~s(id="fragments-without-page-title")
     assert view |> element("#fragments-without-page .child-chip") |> render() =~ "partials/footer"
+  end
+
+  test "Fragments without a page follows the content language", %{conn: conn} do
+    Factory.insert(:fragment, page_id: nil, parent_key: "partials", key: "bunntekst", language: :no)
+    {:ok, view, html} = live(conn, "/admin/pages")
+    refute html =~ "partials/bunntekst"
+
+    send(view.pid, {:set_content_language, "no"})
+
+    assert render(view) =~ "partials/bunntekst"
   end
 
   test "a target page in the trash leaves the page where it was", %{conn: conn, page: page, other: other} = ctx do

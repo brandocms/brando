@@ -7885,7 +7885,7 @@ msgstr ""
 msgid "Fragment duplicated"
 msgstr ""
 
-#: lib/brando_admin/live/pages/page_list_live.ex
+#: lib/brando_admin/live/pages/fragments_without_page.ex
 #, elixir-autogen, elixir-format
 msgid "Fragments without a page"
 msgstr ""
@@ -12192,6 +12192,13 @@ msgid "One module has no sketch. The AI draws it from its template, references a
 msgid_plural "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards."
 msgstr[0] "One module has no sketch. The AI draws it from its template, references and variables, and it is saved at once. You can redraw or edit it in the module afterwards."
 msgstr[1] "%{count} modules have no sketch. The AI draws each from its template, references and variables, one at a time, and each is saved as it arrives. You can redraw or edit any of them in the module afterwards."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "One more you may not see"
+msgid_plural "%{count} more you may not see"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -18485,7 +18492,7 @@ msgstr ""
 msgid "The whole library. An image set up for another field is copied and cut to this field's sizes when you pick it."
 msgstr ""
 
-#: lib/brando_admin/live/pages/page_list_live.ex
+#: lib/brando_admin/live/pages/fragments_without_page.ex
 #, elixir-autogen, elixir-format
 msgid "Their page is in the trash or gone, or they never had one. They still show on the site. Edit one to choose its page."
 msgstr ""

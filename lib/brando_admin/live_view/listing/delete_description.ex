@@ -17,6 +17,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Blueprint
   alias Brando.Blueprint.Relations
   alias Brando.Content.Usage
@@ -52,21 +53,26 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   # (`Brando.Pages.delete_page/3`). The choice's values are pushed with the
   # delete event, as `fragments` and `fragments_page`. A choice the viewer may
   # not take is left out.
+  #
+  # The fragments and pages are those the viewer may read; the others are
+  # counted, not named.
   defp with_fragments(description, Brando.Pages.Page, %{deleted_at: nil} = page) do
-    case Brando.Repo.all(
-           from(f in Fragment,
-             where: f.page_id == ^page.id and is_nil(f.deleted_at),
-             order_by: [asc: f.sequence, asc: f.key, asc: f.id]
-           )
-         ) do
-      [] ->
+    query =
+      from(f in Fragment,
+        where: f.page_id == ^page.id and is_nil(f.deleted_at),
+        order_by: [asc: f.sequence, asc: f.key, asc: f.id]
+      )
+
+    case Brando.Repo.aggregate(query, :count) do
+      0 ->
         description
 
-      fragments ->
+      count ->
+        fragments = query |> Boundary.query(Fragment) |> Brando.Repo.all()
         options = fragment_options(page)
 
         description
-        |> Map.update!(:html, &(&1 <> fragment_list(fragments) <> refused(options)))
+        |> Map.update!(:html, &(&1 <> fragment_list(fragments, count) <> refused(options)))
         |> Map.put(:choice, %{name: "fragments", legend: gettext("Its fragments"), options: options})
     end
   end
@@ -92,13 +98,16 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
     target = Brando.Pages.fragment_target(page)
 
     pages =
-      Brando.Repo.all(
-        from(p in Brando.Pages.Page,
-          where: is_nil(p.deleted_at) and p.id != ^page.id,
-          order_by: [asc: p.language, asc: p.title, asc: p.id],
-          select: %{id: p.id, title: p.title, language: p.language}
-        )
+      from(p in Brando.Pages.Page,
+        where: is_nil(p.deleted_at) and p.id != ^page.id,
+        order_by: [asc: p.language, asc: p.title, asc: p.id],
+        select: %{id: p.id, title: p.title, language: p.language}
       )
+      |> Boundary.query(Brando.Pages.Page)
+      |> Brando.Repo.all()
+
+    # A default the viewer may not read is not chosen for them
+    selected = if target && Enum.any?(pages, &(&1.id == target.id)), do: to_string(target.id), else: ""
 
     %{
       value: "move",
@@ -108,7 +117,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
       select: %{
         name: "fragments_page",
         label: gettext("Page"),
-        selected: if(target, do: to_string(target.id), else: ""),
+        selected: selected,
         options: [
           %{value: "", label: gettext("No page")}
           | Enum.map(pages, &%{value: to_string(&1.id), label: "[#{language(&1.language)}] #{&1.title}"})
@@ -127,7 +136,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
   defp refused(_options), do: ""
 
-  defp fragment_list(fragments) do
+  defp fragment_list(fragments, count) do
     items =
       Enum.map_join(fragments, fn fragment ->
         key = "#{fragment.parent_key}/#{fragment.key}"
@@ -142,11 +151,18 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         end
       end)
 
+    hidden = count - length(fragments)
+
+    items =
+      if hidden > 0,
+        do: items <> "<li>" <> ngettext("One more you may not see", "%{count} more you may not see", hidden) <> "</li>",
+        else: items
+
     ~s(<div class="admin-dialog-section"><p>) <>
       ngettext(
         "It has a fragment, which templates find by its key:",
         "It has %{count} fragments, which templates find by their keys:",
-        length(fragments)
+        count
       ) <> ~s(</p><ul class="admin-dialog-list">#{items}</ul></div>)
   end
 
