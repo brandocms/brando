@@ -9,7 +9,9 @@ defmodule Brando.Doctor.Checks.DeployHosts do
   domain the site does not have.
 
   Only a file's last uncommented `PHX_HOST` line counts, and only an exact
-  match: a site whose domain really is `<app>.com` can skip the check.
+  match: a site whose domain really is `<app>.com` can skip the check. A file
+  with no `PHX_HOST`, or an empty one, is a warning too: a Phoenix
+  `config/runtime.exs` then falls back to its own default host.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -41,26 +43,38 @@ defmodule Brando.Doctor.Checks.DeployHosts do
           {:ok, contents} <- [File.read(Path.join(root, file))],
           do: {file, phx_host(contents), prefix <> placeholder}
 
-    case for({file, host, expected} <- found, host == expected, do: {file, host}) do
-      [] when found == [] ->
+    placeholders = for {file, host, expected} <- found, host == expected, do: {file, host}
+    # Without one, a Phoenix runtime.exs falls back to its own default host
+    missing = for {file, host, _expected} <- found, host in [nil, ""], do: file
+
+    cond do
+      found == [] ->
         skipped(dgettext("doctor", "no .envrc.prod or .envrc.staging"))
 
-      [] ->
-        ok(dgettext("doctor", "%{files} set their own PHX_HOST", files: Enum.map_join(found, " and ", &elem(&1, 0))))
+      placeholders == [] and missing == [] ->
+        ok(dgettext("doctor", "PHX_HOST set in %{files}", files: files(found)))
 
-      placeholders ->
-        warning(
-          dgettext("doctor", "%{files} still set PHX_HOST to the installer's placeholder",
-            files: Enum.map_join(placeholders, " and ", &elem(&1, 0))
-          ),
-          fix:
-            dgettext(
-              "doctor",
-              "set PHX_HOST in them to the host each release serves before deploying; the installer writes it from --domain only when the files are new"
-            ),
-          items: Enum.map(placeholders, fn {file, host} -> "#{file}: PHX_HOST=#{host}" end)
-        )
+      true ->
+        summary =
+          if placeholders == [],
+            do: dgettext("doctor", "no PHX_HOST: %{files}", files: files(missing)),
+            else: dgettext("doctor", "PHX_HOST still the installer's placeholder: %{files}", files: files(placeholders))
+
+        items =
+          Enum.map(placeholders, fn {file, host} -> "#{file}: PHX_HOST=#{host}" end) ++
+            Enum.map(missing, &dgettext("doctor", "%{file}: no PHX_HOST", file: &1))
+
+        warning(summary, fix: fix(), items: items)
     end
+  end
+
+  defp files(found), do: Enum.map_join(found, ", ", fn file -> if is_tuple(file), do: elem(file, 0), else: file end)
+
+  defp fix do
+    dgettext(
+      "doctor",
+      "set PHX_HOST in them to the host each release serves before deploying; the installer writes it from --domain only when the files are new"
+    )
   end
 
   # The last assignment wins when the file is sourced

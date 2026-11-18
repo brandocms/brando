@@ -11,7 +11,9 @@ defmodule Brando.Doctor.Checks.DependencySources do
       it too.
     * An `@brandocms` package in an asset project's `package.json`
       (`assets/backend`, `assets/frontend`, `assets/sites/*`) whose version is
-      a `link:`, `file:` or `portal:` path outside the project.
+      a `link:`, `file:` or `portal:` path other than a Yalc copy. The Docker
+      build installs from the asset project's `package.json`, lockfile and
+      `.yalc` copy alone, before it copies the rest.
     * A Yalc copy (`file:.yalc/…`). The build copies it in, so a deploy ships
       whatever the copy holds. A `-dev` Brando has no npm release, and its
       installer sets the admin up with one, so it is only listed then;
@@ -155,7 +157,7 @@ defmodule Brando.Doctor.Checks.DependencySources do
   defp path_fix do
     dgettext(
       "doctor",
-      "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build cannot see a path outside the project"
+      "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build installs from package.json, the lockfile and the Yalc copy alone"
     )
   end
 

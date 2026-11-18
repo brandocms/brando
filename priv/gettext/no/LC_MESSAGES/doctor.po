@@ -374,16 +374,6 @@ msgstr "%{entry}: i static_paths/0, men ikke i endepunktets only:"
 msgid "%{entry}: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page"
 msgstr "%{entry}: i endepunktets only:, men ikke i static_paths/0, filene der svarer med byggets 404-side"
 
-#: lib/brando/doctor/checks/deploy_hosts.ex
-#, elixir-autogen, elixir-format
-msgid "%{files} set their own PHX_HOST"
-msgstr "%{files} setter sin egen PHX_HOST"
-
-#: lib/brando/doctor/checks/deploy_hosts.ex
-#, elixir-autogen, elixir-format
-msgid "%{files} still set PHX_HOST to the installer's placeholder"
-msgstr "%{files} setter fortsatt PHX_HOST til installasjonens plassholder"
-
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -393,6 +383,11 @@ msgstr "%{file} avviker fra %{template}"
 #, elixir-autogen, elixir-format
 msgid "%{file} is now %{template}"
 msgstr "%{file} heter nå %{template}"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{file}: no PHX_HOST"
+msgstr "%{file}: ingen PHX_HOST"
 
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
@@ -856,6 +851,16 @@ msgstr "Åpne identitet"
 #, elixir-autogen, elixir-format
 msgid "Open images"
 msgstr "Åpne bilder"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "PHX_HOST set in %{files}"
+msgstr "PHX_HOST satt i %{files}"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "PHX_HOST still the installer's placeholder: %{files}"
+msgstr "PHX_HOST er fortsatt installasjonens plassholder: %{files}"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
@@ -1348,8 +1353,8 @@ msgstr "gi hvert nettsted i kartet over publiseringsmål mål som er adskilt fra
 
 #: lib/brando/doctor/checks/dependency_sources.ex
 #, elixir-autogen, elixir-format
-msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build cannot see a path outside the project"
-msgstr "gi @brandocms-pakkene en npm-versjon i package.json, eller en Yalc-kopi for en utviklingsversjon av Brando (mix brando.assets.setup --npm eller --local for BrandoJS), og kjør pnpm install: release-bygget ser ingen sti utenfor prosjektet"
+msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build installs from package.json, the lockfile and the Yalc copy alone"
+msgstr "gi @brandocms-pakkene en npm-versjon i package.json, eller en Yalc-kopi for en utviklingsversjon av Brando (mix brando.assets.setup --npm eller --local for BrandoJS), og kjør pnpm install: release-bygget installerer bare fra package.json, låsefilen og Yalc-kopien"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
@@ -1480,6 +1485,11 @@ msgstr "ingen API-nøkkel for assistenten"
 #, elixir-autogen, elixir-format
 msgid "no HEEx template uses a link global as a string"
 msgstr "ingen HEEx-mal bruker en lenkeglobal som tekst"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "no PHX_HOST: %{files}"
+msgstr "ingen PHX_HOST: %{files}"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #: lib/brando/doctor/checks/admin_css.ex

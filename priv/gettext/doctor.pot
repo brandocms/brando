@@ -373,16 +373,6 @@ msgstr ""
 msgid "%{entry}: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page"
 msgstr ""
 
-#: lib/brando/doctor/checks/deploy_hosts.ex
-#, elixir-autogen, elixir-format
-msgid "%{files} set their own PHX_HOST"
-msgstr ""
-
-#: lib/brando/doctor/checks/deploy_hosts.ex
-#, elixir-autogen, elixir-format
-msgid "%{files} still set PHX_HOST to the installer's placeholder"
-msgstr ""
-
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -391,6 +381,11 @@ msgstr ""
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} is now %{template}"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{file}: no PHX_HOST"
 msgstr ""
 
 #: lib/brando/doctor/checks/site_frontends.ex
@@ -854,6 +849,16 @@ msgstr ""
 #: lib/brando/doctor/checks/media_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Open images"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "PHX_HOST set in %{files}"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "PHX_HOST still the installer's placeholder: %{files}"
 msgstr ""
 
 #: lib/brando/doctor/checks/colors.ex
@@ -1347,7 +1352,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/dependency_sources.ex
 #, elixir-autogen, elixir-format
-msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build cannot see a path outside the project"
+msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build installs from package.json, the lockfile and the Yalc copy alone"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -1478,6 +1483,11 @@ msgstr ""
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
 msgid "no HEEx template uses a link global as a string"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "no PHX_HOST: %{files}"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex

@@ -51,6 +51,29 @@ defmodule Brando.Doctor.DeployHostsTest do
   end
 
   @tag :tmp_dir
+  test "a file without a PHX_HOST, or with an empty one, warns rather than passing", %{tmp_dir: root} do
+    File.write!(Path.join(root, ".envrc.prod"), "# export PHX_HOST=\"my-app.com\"\nexport PHX_SERVER=true\n")
+    File.write!(Path.join(root, ".envrc.staging"), "export PHX_HOST=\"\"\n")
+
+    assert %Result{status: :warning, summary: summary, items: items} = DeployHosts.evaluate(root, :my_app)
+    assert summary == "no PHX_HOST: .envrc.prod, .envrc.staging"
+    assert items == [".envrc.prod: no PHX_HOST", ".envrc.staging: no PHX_HOST"]
+  end
+
+  @tag :tmp_dir
+  test "the summary lists the files without joining them in English", %{tmp_dir: root} do
+    File.write!(Path.join(root, ".envrc.prod"), "export PHX_HOST=\"my-app.com\"\n")
+    File.write!(Path.join(root, ".envrc.staging"), "export PHX_HOST=\"staging.my-app.com\"\n")
+
+    assert %Result{summary: "PHX_HOST still the installer's placeholder: .envrc.prod, .envrc.staging"} =
+             DeployHosts.evaluate(root, :my_app)
+
+    File.rm!(Path.join(root, ".envrc.staging"))
+    File.write!(Path.join(root, ".envrc.prod"), "export PHX_HOST=\"example.org\"\n")
+    assert %Result{status: :ok, summary: "PHX_HOST set in .envrc.prod"} = DeployHosts.evaluate(root, :my_app)
+  end
+
+  @tag :tmp_dir
   test "without the environment files, there is nothing to check", %{tmp_dir: root} do
     assert %Result{status: :skipped} = DeployHosts.evaluate(root, :my_app)
   end
