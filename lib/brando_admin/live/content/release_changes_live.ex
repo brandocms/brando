@@ -106,7 +106,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp derive(socket, report) do
     rows = Review.rows(report)
     module_ids = rows |> Enum.flat_map(& &1.uids) |> Entries.module_ids()
-    entries = Entries.list(module_ids)
+    entries = readable(Entries.list(module_ids))
 
     by_row =
       Map.new(rows, fn row -> {row.uid, Enum.filter(entries, &Enum.any?(&1.modules, fn uid -> uid in row.uids end))} end)
@@ -129,6 +129,12 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       verify: Verify.get()
     )
     |> load_detail()
+  end
+
+  # Only the entries this person may read are named, verified or diffed
+  defp readable(entries) do
+    allowed = entries |> Enum.map(&{&1.schema, &1.id}) |> Brando.Authorization.Boundary.readable_entries()
+    Enum.filter(entries, &MapSet.member?(allowed, {&1.schema, &1.id}))
   end
 
   # The ready rows at first; afterwards what is still there of the selection
@@ -174,18 +180,28 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp load_batch(socket) do
     case Batches.pending() do
       nil ->
-        assign(socket, batch: nil, batch_status: nil, renders: nil, applied_entries: [])
+        socket = assign(socket, batch: nil, batch_status: nil, renders: nil, applied_entries: [])
+
+        # An applied row's selection goes with the banner
+        if String.starts_with?(socket.assigns.current || "", "applied:"),
+          do: socket |> assign(:current, current(nil, socket.assigns.rows)) |> load_detail(),
+          else: socket
 
       batch ->
         status = Batches.status(batch, socket.assigns.current_user)
         names = Map.new(batch.definitions["items"] || [], &{&1["uid"], &1["name"]})
         changed = Enum.map(status.changed_since, &Map.put(&1, :name, names[&1.uid]))
+        irreversible = Enum.map(status.irreversible, &Map.put(&1, :name, names[&1.uid]))
 
         uids = Enum.map(batch.definitions["items"] || [], & &1["uid"])
-        applied_entries = uids |> Entries.module_ids() |> Entries.list()
+        applied_entries = uids |> Entries.module_ids() |> Entries.list() |> readable()
 
         socket
-        |> assign(batch: batch, batch_status: %{status | changed_since: changed}, applied_entries: applied_entries)
+        |> assign(
+          batch: batch,
+          batch_status: %{status | changed_since: changed, irreversible: irreversible},
+          applied_entries: applied_entries
+        )
         |> assign_renders(status.renders)
         |> schedule_tick()
     end
@@ -555,7 +571,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   defp apply_rows(rows, assigns, user) do
     uids = Enum.map(rows, & &1.uid)
-    replace = for row <- rows, row.status == :never_applied, item <- row.items, item.state == :never_applied, do: item.uid
+
+    replace =
+      for row <- rows,
+          assigns.choices[row.uid] == "release" or MapSet.member?(assigns.replace, row.uid),
+          item <- row.items,
+          item.state == :never_applied,
+          do: item.uid
 
     discard =
       for row <- rows,
@@ -573,25 +595,33 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp applied_text(%{result: result}, _keep_here),
     do: ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
 
-  defp reverted_text(%{reverted: reverted, conflicts: conflicts}) do
-    text = ngettext("Reverted 1 module.", "Reverted %{count} modules.", length(reverted))
-
-    if conflicts == [],
-      do: text,
-      else:
-        text <>
-          " " <>
-          ngettext(
-            "1 changed here since was left as it is.",
-            "%{count} changed here since were left as they are.",
-            length(conflicts)
-          )
+  defp reverted_text(%{reverted: reverted, conflicts: conflicts, irreversible: irreversible}) do
+    [
+      ngettext("Reverted 1 module.", "Reverted %{count} modules.", length(reverted)),
+      conflicts != [] &&
+        ngettext(
+          "1 changed here since was left as it is.",
+          "%{count} changed here since were left as they are.",
+          length(conflicts)
+        ),
+      irreversible != [] &&
+        ngettext(
+          "1 can’t be reverted without a migration.",
+          "%{count} can’t be reverted without a migration.",
+          length(irreversible)
+        )
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" ")
   end
 
   defp error_text(:forbidden), do: gettext("You do not have permission for this action.")
   defp error_text(:kept), do: gettext("This apply is already kept.")
   defp error_text(:reverted), do: gettext("This apply is already reverted.")
-  defp error_text(:not_revertible), do: gettext("This can’t be reverted.")
+
+  defp error_text(:not_revertible),
+    do: gettext("Nothing in this apply can be reverted without a migration. Keep it instead.")
+
   defp error_text(:no_preview_target), do: gettext("This content type has no preview target.")
   defp error_text(message) when is_binary(message), do: message
   defp error_text(other), do: inspect(other)
@@ -723,7 +753,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             {@error}
           </RC.notice>
         <% :ready -> %>
-          <RC.banner :if={@batch} batch={@batch} renders={@renders} changed_since={@batch_status.changed_since} />
+          <RC.banner
+            :if={@batch}
+            batch={@batch}
+            renders={@renders}
+            changed_since={@batch_status.changed_since}
+            irreversible={@batch_status.irreversible}
+          />
           <RC.summary
             report={@report}
             counts={@counts}

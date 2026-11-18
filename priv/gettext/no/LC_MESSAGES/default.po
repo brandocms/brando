@@ -817,6 +817,11 @@ msgstr "%{name}-blueprint"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} can’t be reverted without a migration"
+msgstr "%{name} kan ikke tilbakestilles uten en migrering"
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} changed here after the apply"
 msgstr "%{name} ble endret her etter at releasen ble tatt i bruk"
 
@@ -1040,6 +1045,13 @@ msgid "1 block differs"
 msgid_plural "%{count} blocks differ"
 msgstr[0] "1 blokk er ulik"
 msgstr[1] "%{count} blokker er ulike"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 can’t be reverted without a migration."
+msgid_plural "%{count} can’t be reverted without a migration."
+msgstr[0] "1 kan ikke tilbakestilles uten en migrering."
+msgstr[1] "%{count} kan ikke tilbakestilles uten en migrering."
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -12541,6 +12553,11 @@ msgstr "Ingenting har skjedd i denne perioden."
 msgid "Nothing hidden."
 msgstr "Ingenting er skjult."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing in this apply can be reverted without a migration. Keep it instead."
+msgstr "Ingenting av endringene kan tilbakestilles uten en migrering. Behold dem i stedet."
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing is planned this month."
@@ -15612,6 +15629,11 @@ msgstr "Tilbakestill lar den være og viser den som en konflikt."
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
+msgid "Revert leaves it as the apply left it."
+msgstr "Tilbakestill lar den være slik endringene etterlot den."
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
 msgid "Revert restores the versions this apply replaced and re-renders their entries. It stays available until someone keeps the changes or applies the next release."
 msgstr "Tilbakestill henter tilbake versjonene som ble erstattet, og gjengir oppføringene deres på nytt. Det er mulig til noen beholder endringene eller tar i bruk neste release."
 
@@ -18336,6 +18358,11 @@ msgstr "Figma-tokenet ble fjernet."
 msgid "The Figma token was saved."
 msgstr "Figma-tokenet ble lagret."
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The HTML is shown one tag a line."
+msgstr "HTML-en vises med én tagg per linje."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The IPv4 and IPv6 lookups failed."
@@ -19648,11 +19675,6 @@ msgstr "Denne pakken inneholder ingen definisjoner."
 #, elixir-autogen
 msgid "This can't be undone."
 msgstr "Dette kan ikke angres."
-
-#: lib/brando_admin/live/content/release_changes_live.ex
-#, elixir-autogen, elixir-format
-msgid "This can’t be reverted."
-msgstr "Dette kan ikke tilbakestilles."
 
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
@@ -21807,11 +21829,6 @@ msgstr "Hvilke globale felt som finnes, og hvor. Verdiene redigeres under Global
 #, elixir-autogen, elixir-format
 msgid "Which version should the site use?"
 msgstr "Hvilken versjon skal nettstedet bruke?"
-
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Whitespace between tags is ignored."
-msgstr "Mellomrom mellom tagger regnes ikke med."
 
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format

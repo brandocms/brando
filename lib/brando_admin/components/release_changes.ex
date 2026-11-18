@@ -1493,6 +1493,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :batch, :map, required: true
   attr :renders, :any, default: nil
   attr :changed_since, :list, default: []
+  attr :irreversible, :list, default: []
 
   def banner(assigns) do
     renders = assigns.renders || %{total: 0, pending: 0, failed: 0, rendered: 0, failures: []}
@@ -1541,6 +1542,13 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             "Revert restores the versions this apply replaced and re-renders their entries. It stays available until someone keeps the changes or applies the next release."
           )}
         </p>
+        <div :for={item <- @irreversible} class="release-banner-conflict" data-testid="release-irreversible">
+          <.icon name="triangle-alert" />
+          <span>
+            <strong>{gettext("%{name} can’t be reverted without a migration", name: item.name || item.uid)}</strong>
+            ({item.reason}). {gettext("Revert leaves it as the apply left it.")}
+          </span>
+        </div>
         <div :for={item <- @changed_since} class="release-banner-conflict">
           <.icon name="triangle-alert" />
           <span>

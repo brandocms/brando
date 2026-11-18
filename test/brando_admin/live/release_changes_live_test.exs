@@ -156,6 +156,17 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     assert text(c).code =~ "edited"
   end
 
+  test "the applied row on screen goes with the banner when the apply is kept", %{conn: conn} = c do
+    release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
+    {:ok, _} = Release.apply([c.text_module.uid], user: c.user.id, wait: false)
+
+    {:ok, view, _html} = live(conn, @path)
+    view |> element("[data-testid=release-applied-row]") |> render_click()
+    view |> element("[data-testid=release-keep]") |> render_click()
+    refute has_element?(view, "[data-testid=release-banner]")
+    assert render(view) =~ "Release changes"
+  end
+
   describe "a conflict" do
     setup c do
       release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
@@ -219,6 +230,28 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     admin = Factory.insert(:random_user, role: :admin)
     conn = Brando.Test.log_in_user(conn, admin)
     assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, @path)
+  end
+
+  test "with groups, entries the person may not read are not listed", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    scope = Brando.Authorization.Scope.standalone(c.user)
+    applier = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+
+    {:ok, group} =
+      Brando.Authorization.Groups.create(scope, %{name: "Appliers"}, [
+        "brando.admin.access",
+        "brando.module_definitions.apply"
+      ])
+
+    {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, applier.id)
+    release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
+
+    conn = Brando.Test.log_in_user(Brando.Test.Support.admin_conn(), applier)
+    {:ok, view, _html} = live(conn, @path)
+    view |> element("[data-testid=release-row][data-uid=#{c.text_module.uid}]") |> render_click()
+    view |> element("[data-testid=release-tab-entries]") |> render_click()
+    refute has_element?(view, "[data-testid=release-entry]")
   end
 
   test "with groups, a member granted brando.module_definitions.apply may apply release code", c do

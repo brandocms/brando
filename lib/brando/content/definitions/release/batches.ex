@@ -15,7 +15,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.{Plan, References, Snapshot}
+  alias Brando.Content.Definition.{Baselines, Plan, References, Snapshot}
   alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions}
   alias Brando.Content.Definitions.Release
   alias Brando.Repo
@@ -114,10 +114,13 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   @doc """
   What reverting `batch` would do, without doing it: `%{plan: plan, revert:
-  [item], conflicts: [item], created: [uid]}`. `revert` are the plan items it
-  applies again; `conflicts` those edited here since the apply (each with
-  `edited`, who and when), which it leaves as they are; `created` the
-  definitions the apply created, which stay.
+  [item], conflicts: [item], irreversible: [item], created: [uid]}`.
+  `revert` are the plan items it applies again (the refs and vars the apply
+  added are taken off); `conflicts` those changed here since the apply, by an
+  edit or a later import (each with `edited`, who and when), which it leaves
+  as they are; `irreversible` those it can't undo without a migration (a child
+  the apply moved or removed, a ref it retyped); `created` the definitions the
+  apply created, which stay.
   """
   def preview(%DefinitionBatch{} = batch, user) do
     with :ok <- Release.authorize(user),
@@ -126,7 +129,17 @@ defmodule Brando.Content.Definitions.Release.Batches do
       restorable = Enum.filter(rows, &(&1.action in [:updated, :replaced] and is_map(&1.previous)))
       created = for row <- rows, row.action == :created, do: row.uid
 
-      base = %{plan: nil, bundle: nil, revert: [], conflicts: [], created: created, actor: actor, plan_opts: plan_opts}
+      base = %{
+        plan: nil,
+        bundle: nil,
+        revert: [],
+        conflicts: [],
+        irreversible: [],
+        created: created,
+        actor: actor,
+        plan_opts: plan_opts
+      }
+
       plan_revert(restorable, base)
     end
   end
@@ -137,20 +150,40 @@ defmodule Brando.Content.Definitions.Release.Batches do
     bundle = bundle(restorable)
     uids = Enum.map(restorable, & &1.uid)
 
-    with {:ok, plan} <- Definitions.plan(bundle, base.actor, base.plan_opts ++ [baseline: :database, select: uids]) do
-      {revert, conflicts} = split(plan, uids)
-      {:ok, %{base | plan: plan, bundle: bundle, revert: revert, conflicts: conflicts}}
+    with {:ok, plan} <-
+           Definitions.plan(bundle, base.actor, base.plan_opts ++ [baseline: :database, select: uids, revert: true]) do
+      {revert, conflicts, irreversible} = split(plan, uids, superseded(restorable))
+      {:ok, %{base | plan: plan, bundle: bundle, revert: revert, conflicts: conflicts, irreversible: irreversible}}
     end
   end
 
-  # The items to restore, and those edited here since the apply. A tree with
-  # a conflict in it is left out whole: an apply writes whole trees.
-  defp split(plan, uids) do
+  # The items to restore; those changed here since the apply (conflicts), by
+  # an edit or a later import; and those a revert can't undo without a
+  # migration. A tree with either in it is left out whole: an apply writes
+  # whole trees.
+  defp split(plan, uids, superseded) do
     items = Enum.filter(plan.items, &(&1.uid in uids))
-    conflicts = Enum.filter(items, &(&1.action not in [:update, :noop]))
-    blocked = MapSet.new(conflicts, &tree_root(&1.uid, plan.bundle))
-    revert = Enum.filter(items, &(&1.action == :update and not MapSet.member?(blocked, tree_root(&1.uid, plan.bundle))))
-    {revert, conflicts}
+
+    {conflicts, rest} =
+      Enum.split_with(items, &(&1.action == :conflict or Map.has_key?(superseded, &1.uid)))
+
+    conflicts = Enum.map(conflicts, &Map.update!(&1, :edited, fn edited -> edited || superseded[&1.uid] end))
+    irreversible = Enum.filter(rest, &(&1.action not in [:update, :noop]))
+    blocked = MapSet.new(conflicts ++ irreversible, &tree_root(&1.uid, plan.bundle))
+    revert = Enum.filter(rest, &(&1.action == :update and not MapSet.member?(blocked, tree_root(&1.uid, plan.bundle))))
+    {revert, conflicts, irreversible}
+  end
+
+  # Definitions applied again after this batch (a later import): what the
+  # batch wrote is gone, so a revert would overwrite the later version
+  defp superseded(rows) do
+    latest = Baselines.latest()
+
+    for row <- rows,
+        later = latest[{row.kind, row.uid}],
+        later && later.id != row.id,
+        into: %{},
+        do: {row.uid, %{at: later.applied_at, by: later.applied_by}}
   end
 
   defp tree_root(uid, bundle) do
@@ -170,7 +203,8 @@ defmodule Brando.Content.Definitions.Release.Batches do
   def revert(%DefinitionBatch{} = batch, user) do
     with :ok <- Release.authorize(user),
          :ok <- open(batch),
-         {:ok, preview} <- preview(batch, user) do
+         {:ok, preview} <- preview(batch, user),
+         :ok <- revertible(preview) do
       revert_batch_id = Ecto.UUID.generate()
       uids = Enum.map(preview.revert, & &1.uid)
 
@@ -179,6 +213,10 @@ defmodule Brando.Content.Definitions.Release.Batches do
       with {:ok, revert_batch} <- result, do: reverted(batch, revert_batch, preview, run, user)
     end
   end
+
+  # Nothing it could restore, only what needs a migration: it stays, to keep
+  defp revertible(%{revert: [], conflicts: [], irreversible: [_ | _]}), do: {:error, :not_revertible}
+  defp revertible(_preview), do: :ok
 
   defp run_revert(batch, preview, [], revert_batch_id, user), do: transaction_only(batch, preview, revert_batch_id, user)
 
@@ -196,11 +234,18 @@ defmodule Brando.Content.Definitions.Release.Batches do
     broadcast()
 
     {:ok,
-     %{batch: revert_batch, reverted: preview.revert, conflicts: preview.conflicts, created: preview.created, run: run}}
+     %{
+       batch: revert_batch,
+       reverted: preview.revert,
+       conflicts: preview.conflicts,
+       irreversible: preview.irreversible,
+       created: preview.created,
+       run: run
+     }}
   end
 
   defp apply_revert(batch, preview, uids, revert_batch_id, user) do
-    opts = preview.plan_opts ++ [baseline: :database, select: uids]
+    opts = preview.plan_opts ++ [baseline: :database, select: uids, revert: true]
 
     with {:ok, plan} <- Definitions.plan(preview.bundle, preview.actor, opts),
          true <- Plan.applicable?(plan) || {:error, "edited while reverting; try again"},
@@ -289,20 +334,22 @@ defmodule Brando.Content.Definitions.Release.Batches do
   end
 
   @doc """
-  How `batch` stands: its renders (`Brando.Content.Definitions.refresh_status/1`)
-  and the definitions edited here since it applied them (`changed_since`,
-  each with the plan item's `edited`). Takes the user as `preview/2` does.
+  How `batch` stands: its renders (`Brando.Content.Definitions.refresh_status/1`),
+  the definitions changed here since it applied them, by an edit or a later
+  import (`changed_since`, each with the plan item's `edited`), and those a
+  revert can't undo without a migration (`irreversible`, with `reason`).
+  Takes the user as `preview/2` does.
   """
   def status(%DefinitionBatch{} = batch, user) do
     renders = if batch.run_id, do: Definitions.refresh_status(batch.run_id)
 
-    conflicts =
-      case preview(batch, user) do
-        {:ok, %{conflicts: conflicts}} -> conflicts
-        _ -> []
-      end
+    case preview(batch, user) do
+      {:ok, %{conflicts: conflicts, irreversible: irreversible}} ->
+        %{renders: renders, changed_since: conflicts, irreversible: irreversible}
 
-    %{renders: renders, changed_since: conflicts}
+      _ ->
+        %{renders: renders, changed_since: [], irreversible: []}
+    end
   end
 
   @doc "The batch's title in Activity: the release it applied."

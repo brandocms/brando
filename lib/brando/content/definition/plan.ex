@@ -26,6 +26,7 @@ defmodule Brando.Content.Definition.Plan do
     selection: nil,
     replace: MapSet.new(),
     discard: MapSet.new(),
+    revert: false,
     snapshot_bindings: %{},
     items: [],
     references: %{}

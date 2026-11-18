@@ -320,7 +320,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
            {:ok, plan} <-
              Definitions.plan(source.bundle, socket.assigns.current_user,
                references: references,
-               replace: socket.assigns.replace
+               replace: replaceable(socket.assigns.replace, source.bundle)
              ) do
         {:noreply, assign(socket, plan: plan)}
       else
@@ -404,6 +404,12 @@ defmodule BrandoAdmin.Components.ModuleFiles do
       _ ->
         {:error, gettext("Choose a ZIP file and wait for the upload to finish.")}
     end
+  end
+
+  # Named for an earlier file: only those this one has
+  defp replaceable(replace, bundle) do
+    uids = Enum.map(bundle["modules"] ++ bundle["table_templates"], & &1["uid"])
+    Enum.filter(replace, &(&1 in uids))
   end
 
   defp authorize_import(actor) do

@@ -817,6 +817,11 @@ msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} can’t be reverted without a migration"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} changed here after the apply"
 msgstr ""
 
@@ -1038,6 +1043,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 block differs"
 msgid_plural "%{count} blocks differ"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 can’t be reverted without a migration."
+msgid_plural "%{count} can’t be reverted without a migration."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -12541,6 +12553,11 @@ msgstr ""
 msgid "Nothing hidden."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing in this apply can be reverted without a migration. Keep it instead."
+msgstr ""
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing is planned this month."
@@ -15612,6 +15629,11 @@ msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
+msgid "Revert leaves it as the apply left it."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
 msgid "Revert restores the versions this apply replaced and re-renders their entries. It stays available until someone keeps the changes or applies the next release."
 msgstr ""
 
@@ -18336,6 +18358,11 @@ msgstr ""
 msgid "The Figma token was saved."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The HTML is shown one tag a line."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The IPv4 and IPv6 lookups failed."
@@ -19645,11 +19672,6 @@ msgstr ""
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
 msgid "This can't be undone."
-msgstr ""
-
-#: lib/brando_admin/live/content/release_changes_live.ex
-#, elixir-autogen, elixir-format
-msgid "This can’t be reverted."
 msgstr ""
 
 #: lib/brando_admin/live/content/module_form_live.ex
@@ -21804,11 +21826,6 @@ msgstr "Which global fields exist and where. Their values are edited under Globa
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "Which version should the site use?"
-msgstr ""
-
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Whitespace between tags is ignored."
 msgstr ""
 
 #: lib/brando_admin/live/sites/activity_live.ex

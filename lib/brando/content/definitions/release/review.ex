@@ -90,6 +90,9 @@ defmodule Brando.Content.Definitions.Release.Review do
     cond do
       blocked = Enum.find(items, &(&1.action == :migration_required)) -> {:blocked, :blocked, blocked.reason}
       deleted = Enum.find(items, &(&1.state == :deleted)) -> {:blocked, :deleted, deleted.reason}
+      # Changed on both sides takes the choice, which covers the never-applied
+      # items of the tree too
+      Enum.any?(items, &(&1.state == :changed_in_both)) -> {:choice, :conflict, nil}
       Enum.any?(items, &(&1.state == :never_applied)) -> {:choice, :never_applied, nil}
       Enum.any?(items, &(&1.action == :conflict)) -> {:choice, :conflict, nil}
       Enum.all?(items, &(&1.action == :create)) -> {:ready, :create, nil}

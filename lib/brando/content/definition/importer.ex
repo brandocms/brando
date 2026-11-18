@@ -61,7 +61,13 @@ defmodule Brando.Content.Definition.Importer do
         selected -> select_trees!(bundle, Enum.uniq(selected ++ replace ++ discard))
       end
 
-    %{mode: mode, replace: MapSet.new(replace), discard: MapSet.new(discard), selection: selection}
+    %{
+      mode: mode,
+      replace: MapSet.new(replace),
+      discard: MapSet.new(discard),
+      selection: selection,
+      revert: Keyword.get(opts, :revert, false)
+    }
   end
 
   # A selected module brings its whole tree (root, siblings and descendants)
@@ -111,7 +117,15 @@ defmodule Brando.Content.Definition.Importer do
     if plan.scope != References.scope(), do: Error.raise!("scope", "plan belongs to another installation or environment")
     unless Plan.applicable?(plan), do: Error.raise!("plan", "resolve conflicts and migrations before applying")
     creator = creator!(actor, creator: plan.creator_id)
-    settings = %{mode: plan.mode, replace: plan.replace, discard: plan.discard, selection: plan.selection}
+
+    settings = %{
+      mode: plan.mode,
+      replace: plan.replace,
+      discard: plan.discard,
+      selection: plan.selection,
+      revert: plan.revert
+    }
+
     opts = Keyword.put_new_lazy(opts, :batch_id, &Ecto.UUID.generate/0)
 
     result =
@@ -173,6 +187,7 @@ defmodule Brando.Content.Definition.Importer do
       mode: settings.mode,
       replace: settings.replace,
       discard: settings.discard,
+      revert: settings.revert,
       latest: latest,
       snapshot_references: snapshot["references"],
       parents: parents(bundle["modules"]),
@@ -201,6 +216,7 @@ defmodule Brando.Content.Definition.Importer do
        mode: settings.mode,
        replace: settings.replace,
        discard: settings.discard,
+       revert: settings.revert,
        selection: settings.selection,
        # How the target's records were written as tokens, generated ones too
        snapshot_bindings: snapshot["references"]
@@ -270,6 +286,7 @@ defmodule Brando.Content.Definition.Importer do
           {ctx.parents[uid], ctx.current_parents[uid]}
         )
       end)
+      |> reverting(ctx, record, changeset, definition, old)
 
     %{
       kind: kind,
@@ -553,6 +570,24 @@ defmodule Brando.Content.Definition.Importer do
         {:update, nil}
     end
   end
+
+  # A revert takes off the refs and vars the apply added: undoing it is the
+  # point. Only plain removals; anything else still needs a migration.
+  defp reverting({:migration_required, _} = result, %{revert: true} = ctx, record, cs, new, old)
+       when not is_nil(record) and not is_nil(old) do
+    diff = ModuleDiff.diff(record, cs)
+
+    plain_removal? =
+      new["kind"] == "module" and ModuleDiff.destructive?(diff) and
+        ctx.parents[new["uid"]] == ctx.current_parents[new["uid"]] and old["children"] -- new["children"] == [] and
+        not changed_ref_identity?(old, new) and not changed_ref_type?(old, new) and
+        new["table_template"] == old["table_template"] and diff.retyped_refs == [] and diff.retyped_vars == [] and
+        diff.contract_changes == []
+
+    if plain_removal?, do: {:update, nil}, else: result
+  end
+
+  defp reverting(result, _ctx, _record, _cs, _new, _old), do: result
 
   defp changed_ref_identity?(old, new) do
     by_name = Map.new(old["refs"], &{&1["name"], &1["uid"]})

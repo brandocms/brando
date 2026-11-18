@@ -301,6 +301,51 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
     end
   end
 
+  describe "reverting what can't simply be applied backwards" do
+    test "a var the release added is taken off again", c do
+      exs = Path.join(c.path, "content/text.exs")
+      source = File.read!(exs)
+
+      File.write!(
+        exs,
+        String.replace(
+          source,
+          "  template_file",
+          "  vars do\n    var :tagline, :string do\n      label \"Tagline\"\n    end\n  end\n\n  template_file"
+        )
+      )
+
+      manual(fn ->
+        {:ok, %{batch_id: batch_id}} = Release.apply(:all, opts(c, user: c.user.id, wait: false))
+        assert [%{key: "tagline"}] = Repo.preload(text(c), :vars, force: true).vars
+
+        assert %{changed_since: [], irreversible: []} = Batches.status(Batches.get(batch_id), c.user)
+        assert {:ok, %{reverted: [_], conflicts: []}} = Batches.revert(Batches.get(batch_id), c.user)
+        assert [] = Repo.preload(text(c), :vars, force: true).vars
+      end)
+    end
+
+    test "a later import of the same module makes it a conflict, not something to overwrite", c do
+      release!(c, "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
+
+      manual(fn ->
+        {:ok, %{batch_id: batch_id}} = Release.apply(:all, opts(c, user: c.user.id, wait: false))
+
+        release!(c, "<p class=\"v3\">{{ heading }}</p>{% ref refs.body %}")
+        {:ok, bundle} = Definitions.read(c.path)
+        {:ok, plan} = Definitions.plan(bundle, c.user, baseline: :database)
+        {:ok, _} = Definitions.apply(plan, c.user)
+        assert text(c).code =~ "v3"
+
+        batch = Batches.get(batch_id)
+        assert %{changed_since: [%{uid: uid}]} = Batches.status(batch, c.user)
+        assert uid == c.text_module.uid
+        assert {:ok, %{reverted: [], conflicts: [_]}} = Batches.revert(batch, c.user)
+        assert text(c).code =~ "v3"
+      end)
+    end
+  end
+
   describe "a conflict" do
     setup c do
       release!(c, "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
