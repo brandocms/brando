@@ -910,14 +910,16 @@ defmodule Brando.HTML do
       DevSite.other_site?() -> other_site_build()
       pinned_dev_site?() -> :manifest
       failure = Brando.Vite.start_failure(:site) -> vite_failed(:app, failure)
-      true -> :dev_server
+      true -> dev_server()
     end
   end
 
   # The manifest, and the site's critical CSS, are cached at their first read,
   # perhaps before the build that `pnpm build` writes while the page runs on
-  # it, so development reads them afresh. `:persistent_term.put/2` with an
-  # unchanged value does nothing.
+  # it. Production keeps them: `site_assets_source/0` returns `:manifest` for
+  # it before anything here runs. In development, the page that falls back on
+  # the build reads them afresh on every render, and `:persistent_term.put/2`
+  # with an unchanged value does nothing.
   defp vite_failed(scope, failure) do
     if Brando.env() == :dev do
       Vite.Manifest.refresh(scope, keep_cached: true)
@@ -925,6 +927,16 @@ defmodule Brando.HTML do
     end
 
     {:vite_failed, failure}
+  end
+
+  # The dev server serves the site's styles and scripts, but the head still
+  # inlines the critical CSS from the build, which Vite does not serve: stat
+  # the manifest, once per render of the head, and read the build afresh when
+  # a `pnpm build` rewrote it. `site_assets_source/0` comes here only outside
+  # production.
+  defp dev_server do
+    if Brando.env() == :dev, do: Vite.Manifest.refresh_if_changed(:app)
+    :dev_server
   end
 
   # A site other than the dev site renders from its build, which a `pnpm build`
@@ -960,12 +972,22 @@ defmodule Brando.HTML do
   # before the installer added it) would request it, get a 404 and show the
   # notice with its dev server running fine. Relative to the working
   # directory, the application's, like the manifests development reads.
+  #
+  # Vite adds the styles that `js/index.js` imports from JavaScript, after the
+  # first render: a cross-document view transition would animate the page
+  # unstyled. `css/app.css`, the stylesheet `js/index.js` imports in the
+  # installer's frontend, is loaded first as a render-blocking module. It is
+  # the same module as the import, so it loads once and hot-reloads. A site
+  # without one gets no such script, as for `js/critical.js`.
   defp frontend_dev_scripts(assigns) do
+    frontend_dir = DevSite.frontend_dir()
+
     assigns =
       assign(assigns,
         vite_origin: vite_dev_server_origin("FRONTEND", 3000),
         notice?: Brando.env() == :dev,
-        critical?: File.exists?(Path.join(DevSite.frontend_dir(), "js/critical.js"))
+        critical?: File.exists?(Path.join(frontend_dir, "js/critical.js")),
+        app_css?: File.exists?(Path.join(frontend_dir, "css/app.css"))
       )
 
     ~H"""
@@ -974,6 +996,15 @@ defmodule Brando.HTML do
     <script
       type="module"
       src={@vite_origin <> "/@vite/client"}
+      onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
+      phx-no-format
+    >
+    </script>
+    <script
+      :if={@app_css?}
+      type="module"
+      blocking="render"
+      src={@vite_origin <> "/css/app.css"}
       onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
       phx-no-format
     >

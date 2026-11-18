@@ -20,8 +20,8 @@ asked.
 
 | File | Holds |
 | --- | --- |
-| `css/critical.css` | First-paint hidden states only. Loaded by `js/critical.js` in dev, and inlined in production from the Vite manifest (`Brando.HTML.inject_critical_css`). |
-| `css/app.css` | The imports, then site-wide rules and the Moonwalk walk styles. |
+| `css/critical.css` | First-paint hidden states only. Inlined in the head from the last build (`Brando.HTML.inject_critical_css`); in dev, `js/critical.js` also loads it from Vite, so edits hot-reload after the first render. |
+| `css/app.css` | The imports, then site-wide rules and the Moonwalk walk styles. In dev, `<.head>` loads it from Vite render-blocking, so keep its name and path. |
 | `css/includes/bundles.css` | `@europa base` and `@europa arrows`; imported first, so the site's rules follow the reset. |
 | `css/includes/common.css` | Element styles, `.label`, `.button`, `.textlink`, `--nav-height`. |
 | `css/includes/modules.css` | The page rhythm, then one `[b-tpl="…"]` block per module. |
@@ -101,6 +101,29 @@ attribute, a named walk, a run, or `MOONWALK.js`.
 Give a Jupiter module its options from a `js/config/NAME.js` that exports a
 function of the app, as the existing ones do. The modules Jupiter exports are
 listed in `node_modules/@brandocms/jupiter/src/index.js`.
+
+## View transitions
+
+Cross-document view transitions need no JavaScript:
+`@view-transition { navigation: auto; }` in `critical.css`, and a
+`view-transition-name` on what should stay in place across pages, such as the
+header. Jupiter's `Links` fades the page out before it navigates, which the
+transition replaces.
+
+A page reached by a transition should show at once, or it animates a blank
+`body.unloaded`. Optionally, a script at the top of `<body>` handles that, and
+skips the transition when the site's CSS has not applied yet (here a
+`--site-styles: 1` the site sets on `:root` in `app.css`):
+
+```js
+addEventListener('pagereveal', function (e) {
+  if (!e.viewTransition) return
+  var styled = getComputedStyle(document.documentElement)
+    .getPropertyValue('--site-styles').trim() === '1'
+  if (styled) document.body.classList.remove('unloaded')
+  else e.viewTransition.skipTransition()
+})
+```
 
 ## Fonts
 

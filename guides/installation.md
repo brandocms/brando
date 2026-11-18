@@ -785,6 +785,24 @@ When a dev server's scripts fail to load, because it is not running or cannot
 compile a module, the admin or the site shows a notice naming the address it
 tried. Copy `strictPort` into the Vite configs of existing applications.
 
+The site's stylesheet comes from its dev server before the page first
+renders: `<.head>` loads `css/app.css` from it as a render-blocking module,
+`<script type="module" blocking="render">`. Without it, Vite adds the styles
+from JavaScript after the first render, and a cross-document view transition
+animates an unstyled page. It is the module `js/index.js` imports, so it loads
+once and still hot-reloads. A frontend without a `css/app.css` gets no such
+script, and its styles arrive from JavaScript as before. A build never loads
+it: production and `hmr: false` link the built stylesheets.
+
+The critical CSS (`css/critical.css`) reaches the page in two ways in
+development. `js/critical.js` imports it from the dev server, so an edit
+hot-reloads, but only after the first render. The first render inlines it from
+the last build, as production does. Development checks the build's
+`priv/static/manifest.json` on each page load and reads the build again when a
+`pnpm build` has rewritten it, so the inlined copy follows the next build
+without a restart. Production reads the manifest and the critical CSS once,
+and keeps them until the release restarts or a site asset set is activated.
+
 To run two Brando sites at once, give one of them other ports. Export them in
 that project's shell environment, for example its `.envrc`, so that Phoenix,
 which renders the script tags, and the Vite servers its watchers start read the

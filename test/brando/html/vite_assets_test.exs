@@ -14,6 +14,8 @@ defmodule Brando.HTML.ViteAssetsTest do
   <!-- dev/test -->
   <script type="module" src="http://localhost:3000/@vite/client" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
   </script>
+  <script type="module" blocking="render" src="http://localhost:3000/css/app.css" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
+  </script>
   <script type="module" src="http://localhost:3000/js/critical.js" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
   </script>
   <script type="module" src="http://localhost:3000/js/index.js" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
@@ -30,12 +32,15 @@ defmodule Brando.HTML.ViteAssetsTest do
   """
 
   # Development reads the site's files from the working directory: here an
-  # application whose frontend has a `js/critical.js`, as the installer's does
+  # application whose frontend has a `js/critical.js` and a `css/app.css`, as
+  # the installer's does
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
     File.mkdir_p!(Path.join(tmp_dir, "assets/frontend/js"))
+    File.mkdir_p!(Path.join(tmp_dir, "assets/frontend/css"))
     File.write!(Path.join(tmp_dir, "assets/frontend/js/critical.js"), "")
+    File.write!(Path.join(tmp_dir, "assets/frontend/css/app.css"), "")
     cwd = File.cwd!()
     File.cd!(tmp_dir)
     on_exit(fn -> File.cd!(cwd) end)
@@ -91,6 +96,109 @@ defmodule Brando.HTML.ViteAssetsTest do
       refute html =~ "critical.js"
       assert html =~ ~s(src="http://localhost:3000/@vite/client")
       assert html =~ ~s(src="http://localhost:3000/js/index.js")
+    end
+  end
+
+  test "a site without css/app.css does not request it from its dev server" do
+    File.rm!("assets/frontend/css/app.css")
+
+    for html <- [frontend_scripts(), frontend_scripts(only_css: true)] do
+      refute html =~ "css/app.css"
+      refute html =~ "blocking"
+      assert html =~ ~s(src="http://localhost:3000/js/index.js")
+    end
+  end
+
+  describe "the head's site styles" do
+    setup do
+      Application.put_env(@host_app, :hmr, true)
+      cache(Brando.Tenant.cache_key({:vite, "critical_css"}), "/* built critical css */")
+      allow_head_render()
+    end
+
+    # Vite injects the site CSS from JavaScript after the first render, so a
+    # cross-document view transition would animate an unstyled page
+    test "block the first render on the dev server's CSS entry in development" do
+      html = render_head()
+
+      assert html =~
+               ~s(<script type="module" blocking="render" src="http://localhost:3000/css/app.css")
+
+      # Before the scripts that import it, so the module loads once
+      [before_index, _] = String.split(html, "/js/index.js", parts: 2)
+      assert before_index =~ "/css/app.css"
+    end
+
+    test "follow the dev server's host and port" do
+      System.put_env("BRANDO_VITE_FRONTEND_HOST", "frontend.localhost")
+      System.put_env("BRANDO_VITE_FRONTEND_PORT", "4300")
+
+      assert render_head() =~
+               ~s(<script type="module" blocking="render" src="http://frontend.localhost:4300/css/app.css")
+    end
+
+    test "are the build's stylesheets in production" do
+      Application.put_env(:brando, :env, :prod)
+      html = render_head()
+
+      assert html =~ "/assets/app.css"
+      refute html =~ "blocking"
+      refute html =~ "css/app.css"
+      refute html =~ "@vite/client"
+    end
+  end
+
+  describe "the critical CSS with the dev server running" do
+    # A `pnpm build` rewrites the manifest and the critical CSS while the
+    # server runs; development reads them from the application's directory
+    setup %{tmp_dir: tmp_dir} do
+      Application.put_env(@host_app, :hmr, true)
+      cache(Brando.Tenant.cache_key({:vite, "cache_manifest"}), nil)
+      cache(Brando.Tenant.cache_key({:vite, "critical_css"}), nil)
+      cache(Brando.Tenant.cache_key({:vite, {"manifest_stamp", :app}}), nil)
+      build_critical(tmp_dir, "first", ".first{color:red}")
+      allow_head_render()
+    end
+
+    test "is read afresh in development once a build changed the manifest", %{tmp_dir: tmp_dir} do
+      assert render_head() =~ ".first{color:red}"
+
+      build_critical(tmp_dir, "second", ".second{color:blue}")
+      html = render_head()
+      assert html =~ ".second{color:blue}"
+      refute html =~ ".first{color:red}"
+    end
+
+    test "is not read again while the manifest is unchanged" do
+      assert render_head() =~ ".first{color:red}"
+
+      # The file changes, the manifest does not: no build ran
+      File.write!("priv/static/assets/critical-first.css", ".edited{color:green}")
+      assert render_head() =~ ".first{color:red}"
+    end
+
+    test "keeps the last read while a build is still writing the manifest", %{tmp_dir: tmp_dir} do
+      assert render_head() =~ ".first{color:red}"
+
+      File.write!("priv/static/manifest.json", ~s({"js/critical.js": {"file": "assets/))
+      bump_mtime("priv/static/manifest.json")
+      assert render_head() =~ ".first{color:red}"
+
+      # and reads the finished one on the next request
+      build_critical(tmp_dir, "second", ".second{color:blue}")
+      assert render_head() =~ ".second{color:blue}"
+    end
+
+    test "is cached at its first read in production", %{tmp_dir: tmp_dir} do
+      Application.put_env(:brando, :env, :prod)
+      cache(Brando.Tenant.cache_key({:vite, "cache_manifest"}), %{entries: %{css_files: ["/assets/app.css"]}})
+      cache(Brando.Tenant.cache_key({:vite, "critical_css"}), "/* production critical css */")
+
+      build_critical(tmp_dir, "second", ".second{color:blue}")
+      html = render_head()
+      assert html =~ "/* production critical css */"
+      refute html =~ ".second{color:blue}"
+      assert :persistent_term.get(Brando.Tenant.cache_key({:vite, {"manifest_stamp", :app}})) == nil
     end
   end
 
@@ -378,6 +486,52 @@ defmodule Brando.HTML.ViteAssetsTest do
       refute html =~ "localhost:3333"
       refute html =~ "assets-notice"
     end
+  end
+
+  # The head reads the palettes, from the database
+  defp allow_head_render do
+    owner = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo)
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(owner) end)
+    Ecto.Adapters.SQL.Sandbox.allow(BrandoIntegration.Repo, owner, self())
+    :ok
+  end
+
+  # Rendered as a controller renders a layout, without LiveView's diff
+  defp render_head do
+    %{__changed__: nil, conn: head_conn()}
+    |> head_assigns()
+    |> HTML.head()
+    |> Phoenix.HTML.Safe.to_iodata()
+    |> IO.iodata_to_binary()
+  end
+
+  # What `pnpm build` writes: a critical stylesheet named by its hash, and a
+  # manifest that names it, with a later modification time than the last
+  defp build_critical(dir, hash, css) do
+    File.mkdir_p!(Path.join(dir, "priv/static/assets"))
+    File.write!(Path.join(dir, "priv/static/assets/critical-#{hash}.css"), css)
+    manifest = Path.join(dir, "priv/static/manifest.json")
+
+    File.write!(
+      manifest,
+      Jason.encode!(%{
+        "js/critical.js" => %{
+          "file" => "assets/critical-#{hash}.js",
+          "css" => ["assets/critical-#{hash}.css"],
+          "isEntry" => true
+        }
+      })
+    )
+
+    bump_mtime(manifest)
+  end
+
+  # The modification time has whole seconds, and the test writes faster
+  defp bump_mtime(path) do
+    %{mtime: mtime} = File.stat!(path, time: :posix)
+    stamp = max(mtime, System.os_time(:second)) + Process.get(:mtime_bumps, 1)
+    Process.put(:mtime_bumps, Process.get(:mtime_bumps, 1) + 1)
+    File.touch!(path, stamp)
   end
 
   defp vite_failed(role, reason) do

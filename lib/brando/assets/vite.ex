@@ -108,6 +108,8 @@ defmodule Brando.Assets.Vite do
     }
     `
     """
+    require Logger
+
     @legacy_extension "-legacy"
     defstruct entries: %{}, critical: %{}, legacy: %{}
 
@@ -162,6 +164,44 @@ defmodule Brando.Assets.Vite do
 
     def refresh(scope, opts) do
       refresh_release_manifest(scope, opts)
+    end
+
+    @doc """
+    Reads the manifest afresh, with the critical CSS for `:app`, when the
+    manifest file changed on disk since the last read here, and otherwise
+    only stats it. For development, where `pnpm build` rewrites the manifest
+    while the server runs; production keeps what it read first and never
+    calls this.
+
+    A manifest that a build is still writing leaves the cached one in place,
+    and is read again on the next call. Returns whether it read.
+    """
+    @spec refresh_if_changed(atom) :: boolean()
+    def refresh_if_changed(scope \\ :app) do
+      stamp_key = Brando.Tenant.cache_key({:vite, {"manifest_stamp", scope}})
+      stamp = manifest_stamp(config(scope).manifest_file)
+
+      if :persistent_term.get(stamp_key, nil) == stamp do
+        false
+      else
+        refresh(scope)
+        if scope == :app, do: refresh_critical_css(scope)
+        :persistent_term.put(stamp_key, stamp)
+        true
+      end
+    rescue
+      e in [Jason.DecodeError, File.Error] ->
+        Logger.debug("(!) Could not read vite manifest for #{inspect(scope)}: #{Exception.message(e)}")
+        false
+    end
+
+    # Seconds are all the modification time has, so the size helps tell two
+    # builds in one second apart. Never nil, the unread stamp.
+    defp manifest_stamp(file) do
+      case File.stat(file, time: :posix) do
+        {:ok, %File.Stat{mtime: mtime, size: size}} -> {mtime, size}
+        {:error, reason} -> {:error, reason}
+      end
     end
 
     defp refresh_release_manifest(scope, opts) do
