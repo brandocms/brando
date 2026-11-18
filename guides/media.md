@@ -343,7 +343,9 @@ Add `input :gallery, :gallery, label: t("Gallery")`. Insert an image and a video
 change their order, edit their per-use metadata, and save/reopen the product.
 A legacy flat gallery config is interpreted as image configuration; it does not
 configure videos. Gallery block refs also expose `allowed_types` to limit the
-picker to images, videos, or both. For hosted/transcoded video, configure one of
+picker to images, videos, or both. The picker adds an image or video to a gallery
+block once; a gallery that holds one more than once (imported content, or rows
+written by code) shows each placement as its own object, with its own caption. For hosted/transcoded video, configure one of
 the supported strategies in [Videos](videos.md); choosing a provider also requires
 its credentials and webhook integration.
 

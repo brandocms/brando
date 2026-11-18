@@ -16,6 +16,7 @@ defmodule Brando.Search.Text do
 
   alias Brando.Type.I18nString
   alias Brando.Villain.Blocks
+  alias Brando.Villain.Blocks.GalleryObjectOverride
 
   @max_bytes 200_000
   @text_inputs [:text, :textarea, :rich_text]
@@ -175,9 +176,14 @@ defmodule Brando.Search.Text do
 
     case loaded(Map.get(ref, :gallery)) do
       %{gallery_objects: objects} when is_list(objects) ->
+        objects = Enum.sort_by(objects, &(Map.get(&1, :sequence) || 0))
+        index = GalleryObjectOverride.index(overrides)
+        # A gallery may hold one image or video more than once, each placement with its own override
+        placements = objects |> Enum.map(&object_media_key/1) |> GalleryObjectOverride.placements()
+
         objects
-        |> Enum.sort_by(&(Map.get(&1, :sequence) || 0))
-        |> Enum.flat_map(&gallery_object(&1, overrides, language))
+        |> Enum.zip(placements)
+        |> Enum.flat_map(fn {object, placement_key} -> gallery_object(object, index, placement_key, language) end)
 
       _ ->
         Enum.flat_map(overrides, fn override ->
@@ -201,10 +207,22 @@ defmodule Brando.Search.Text do
     end
   end
 
-  defp gallery_object(object, overrides, language) do
+  defp object_media_key(object) do
+    cond do
+      image = loaded(Map.get(object, :image)) -> {:image, image.id}
+      video = loaded(Map.get(object, :video)) -> {:video, video.id}
+      true -> nil
+    end
+  end
+
+  defp gallery_object(object, index, placement_key, language) do
     media = loaded(Map.get(object, :image)) || loaded(Map.get(object, :video))
-    media_id = media && to_string(media.id)
-    override = Enum.find(overrides, &(to_string(Map.get(&1, :object_id)) == media_id)) || %{}
+
+    override =
+      case placement_key do
+        {type, id, placement} -> GalleryObjectOverride.lookup(index, type, id, placement)
+        nil -> nil
+      end || %{}
 
     Enum.flat_map([:title, :caption, :alt, :credits], fn key ->
       value =

@@ -94,10 +94,16 @@ defmodule BrandoAdmin.ContentPreview do
     location = location ++ [{:gallery, label}]
     index = GalleryObjectOverride.index(overrides["gallery_object_overrides"])
 
+    # A gallery may hold one image or video more than once: each placement
+    # takes its own override and is its own line.
+    placements = objects |> Enum.map(&object_media_key/1) |> GalleryObjectOverride.placements()
+
     [line(media_label("gallery", label), location, :media)] ++
-      Enum.flat_map(objects, fn object ->
-        config = gallery_object_config(object, gallery_object_override(index, object))
-        media_lines(object, config, nil, assets, location)
+      Enum.flat_map(Enum.zip(objects, placements), fn {object, placement_key} ->
+        placement = placement_key && elem(placement_key, 2)
+        config = gallery_object_config(object, gallery_object_override(index, object, placement))
+        object_location = if placement, do: location ++ [{:placement, placement}], else: location
+        media_lines(object, config, nil, assets, object_location)
       end)
   end
 
@@ -113,12 +119,19 @@ defmodule BrandoAdmin.ContentPreview do
 
   # Saved objects hold media ids and bundle objects hold media tokens;
   # overrides carry the same kind of value in `object_id`.
-  defp gallery_object_override(index, object) do
-    cond do
-      id = object["image_id"] -> GalleryObjectOverride.lookup(index, :image, id)
-      id = object["video_id"] -> GalleryObjectOverride.lookup(index, :video, id)
-      true -> nil
+  defp gallery_object_override(index, object, placement) do
+    case object_media_key(object) do
+      {type, id} -> GalleryObjectOverride.lookup(index, type, id, placement)
+      nil -> nil
     end || %{}
+  end
+
+  defp object_media_key(object) do
+    cond do
+      id = object["image_id"] -> {:image, id}
+      id = object["video_id"] -> {:video, id}
+      true -> nil
+    end
   end
 
   defp gallery_object_config(object, override) do

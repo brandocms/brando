@@ -40,7 +40,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # data display, :atom — the block's saved `display`, which the site's templates may read
   # data view, :atom — what the admin shows, :grid or :list. Starts at `display`
   #   and follows the view switch; never written to the block.
-  # data text_editor, :map — the open caption/alt popover, `%{type, id, kind}`
+  # data placements, :list — `{type, id, placement}` for each gallery object, in
+  #   order (`GalleryObjectOverride.placements/1`); its override's key
+  # data text_editor, :map — the open caption/alt popover, `%{type, id, placement, kind, object}`;
+  #   `object` is the gallery object's id, which the popover follows when the
+  #   placements change under it
   # data show_only_selected?, :boolean
   # data upload_formats, :string
 
@@ -116,6 +120,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     socket
     |> Block.commit_ref_data([ref_data: new_block_data] ++ [gallery_action])
     |> assign(:gallery_objects, updated_gallery_objects)
+    |> assign(:placements, placement_keys(updated_gallery_objects))
     |> assign(:indexed_objects, Enum.with_index(updated_gallery_objects))
     |> assign(:has_objects?, !Enum.empty?(updated_gallery_objects))
     |> then(&{:ok, &1})
@@ -147,9 +152,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     block_data_cs = Block.get_block_data_changeset(assigns.block)
     upload_formats = upload_formats(Changeset.get_field(block_data_cs, :formats))
 
+    placements = placement_keys(gallery_objects)
+
     # Recompute overrides from current gallery objects + current form state.
     # This keeps overrides in sync when objects are added/removed after mount.
-    initialized_overrides = initialize_gallery_overrides(gallery_objects, block_data_cs)
+    initialized_overrides = initialize_gallery_overrides(placements, block_data_cs)
 
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
     updated_block_data_cs = Block.get_block_data_changeset(updated_block)
@@ -165,11 +172,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:form_id, form_id)
      |> assign(:gallery, gallery)
      |> assign(:gallery_objects, gallery_objects)
+     |> assign(:placements, placements)
+     |> assign(:text_editor, follow_text_editor(socket.assigns[:text_editor], gallery_objects, placements))
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
      |> assign(:upload_formats, upload_formats)
      |> assign(:display, Changeset.get_field(block_data_cs, :display))
      |> assign(:view, socket.assigns[:view] || initial_view(Changeset.get_field(block_data_cs, :display)))
-     |> assign(:sheet_counts, sheet_counts(gallery_objects, updated_block_data_cs))
+     |> assign(:sheet_counts, sheet_counts(gallery_objects, placements, updated_block_data_cs))
      |> assign(:selected_ids, selected_ids)
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))
      |> assign(:block, updated_block)
@@ -185,7 +194,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
          compatible_gallery_target(gallery_config_target, :video)
      )
      |> assign(:allowed_types, Changeset.get_field(block_data_cs, :allowed_types) || [:image, :video])
-     |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
+     |> assign(:override_data, precompute_override_data(gallery_objects, placements, updated_block_data_cs))}
   end
 
   defp put_processed_image(obj, image) do
@@ -322,6 +331,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     <Object.render
                       gallery_object_form={gallery_object_form}
                       gallery_objects={@gallery_objects}
+                      placements={@placements}
                       display={@view}
                       text_editor={@text_editor}
                       myself={@myself}
@@ -416,13 +426,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     end
   end
 
-  def handle_event("open_text_editor", %{"type" => type, "id" => id, "kind" => kind}, socket)
+  def handle_event("open_text_editor", %{"type" => type, "id" => id, "kind" => kind} = params, socket)
       when type in ["image", "video"] and kind in ["caption", "alt"] and is_binary(id) do
     type = String.to_existing_atom(type)
     kind = String.to_existing_atom(kind)
+    placement = GalleryObjectOverride.to_placement(params["placement"])
+    key = {type, id, placement}
 
-    if Map.has_key?(socket.assigns.override_data, {type, id}) and not (type == :video and kind == :alt) do
-      {:noreply, assign(socket, :text_editor, %{type: type, id: id, kind: kind})}
+    if Map.has_key?(socket.assigns.override_data, key) and not (type == :video and kind == :alt) do
+      object = placed_object_id(socket.assigns.gallery_objects, socket.assigns.placements, key)
+      {:noreply, assign(socket, :text_editor, %{type: type, id: id, placement: placement, kind: kind, object: object})}
     else
       {:noreply, socket}
     end
@@ -435,16 +448,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # Writes the override the object's settings dialog edits (`OverrideForm`),
   # with its `use_default_*` flag, through the block's ref data. An image's
   # caption is `title`, a video's is `caption`; alt text stays plain.
-  def handle_event("save_object_text", %{"type" => type, "id" => id, "kind" => kind, "value" => value}, socket)
+  def handle_event("save_object_text", %{"type" => type, "id" => id, "kind" => kind, "value" => value} = params, socket)
       when type in ["image", "video"] and kind in ["caption", "alt"] and is_binary(id) and is_binary(value) do
     type = String.to_existing_atom(type)
     field = override_text_field(type, kind)
+    key = save_key(socket.assigns.text_editor, type, id, kind, params["placement"])
 
-    if field && Map.has_key?(socket.assigns.override_data, {type, id}) do
+    if field && Map.has_key?(socket.assigns.override_data, key) do
       text = override_text(kind, value)
 
       socket
-      |> Block.commit_ref_data(ref_data: put_override_text(socket.assigns.block, type, id, field, text))
+      |> Block.commit_ref_data(ref_data: put_override_text(socket.assigns.block, key, field, text))
       |> assign(:text_editor, nil)
       |> then(&{:noreply, &1})
     else
@@ -562,6 +576,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   ## Private functions
 
+  # The open popover's placement, which follows its object: a save sent before
+  # the browser saw a reorder still names the placement it opened at.
+  defp save_key(%{type: type, id: id, kind: kind, placement: placement}, type, id, kind_param, _placement)
+       when kind_param == "caption" and kind == :caption
+       when kind_param == "alt" and kind == :alt,
+       do: {type, id, placement}
+
+  defp save_key(_text_editor, type, id, _kind, placement), do: {type, id, GalleryObjectOverride.to_placement(placement)}
+
+  defp placed_object_id(gallery_objects, placements, key) do
+    case Enum.find_index(placements, &(&1 == key)) do
+      nil -> nil
+      index -> gallery_objects |> Enum.at(index) |> Map.get(:id)
+    end
+  end
+
+  # Moves the open popover to its object's current placement; closes it when
+  # the object has left the gallery.
+  defp follow_text_editor(%{object: object} = text_editor, gallery_objects, placements) when not is_nil(object) do
+    case Enum.find_index(gallery_objects, &(Map.get(&1, :id) == object)) do
+      nil -> nil
+      index -> follow_placement(text_editor, Enum.at(placements, index))
+    end
+  end
+
+  defp follow_text_editor(text_editor, _gallery_objects, _placements), do: text_editor
+
+  defp follow_placement(%{type: type, id: id} = text_editor, {type, id, placement}),
+    do: %{text_editor | placement: placement}
+
+  defp follow_placement(_text_editor, _key), do: nil
+
   defp override_text_field(:image, "caption"), do: :title
   defp override_text_field(:video, "caption"), do: :caption
   defp override_text_field(:image, "alt"), do: :alt
@@ -577,14 +623,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     end
   end
 
-  defp put_override_text(block, type, id, field, text) do
+  # Writes to this placement's override only: the block's overrides were
+  # initialized with one for each placement (`initialize_gallery_overrides/2`).
+  defp put_override_text(block, {type, id, placement}, field, text) do
     data = Block.current_block_data_map(block)
     overrides = data.gallery_object_overrides || []
     changes = %{field => text, :"use_default_#{field}" => is_nil(text)}
 
     {updated, found?} =
       Enum.map_reduce(overrides, false, fn override, found? ->
-        if GalleryObjectOverride.for_media?(override, type, id),
+        if GalleryObjectOverride.for_placement?(override, type, id, placement),
           do: {override |> Map.merge(changes) |> Map.put(:object_type, type), true},
           else: {override, found?}
       end)
@@ -592,24 +640,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     updated =
       if found?,
         do: updated,
-        else: updated ++ [Map.merge(%GalleryObjectOverride{object_id: id, object_type: type}, changes)]
+        else:
+          updated ++
+            [Map.merge(%GalleryObjectOverride{object_id: id, object_type: type, placement: placement}, changes)]
 
     Map.put(data, :gallery_object_overrides, updated)
   end
 
   # Images and how many have no alt text, neither for this block nor in the
   # library. Videos have no alt text and are not counted.
-  defp sheet_counts(gallery_objects, block_data_cs) do
+  defp sheet_counts(gallery_objects, placements, block_data_cs) do
     overrides =
       block_data_cs
       |> Changeset.get_field(:gallery_object_overrides, [])
       |> GalleryObjectOverride.index()
 
-    images = Enum.filter(gallery_objects, &loaded_assoc?(&1, :image))
+    images =
+      gallery_objects
+      |> Enum.zip(placements)
+      |> Enum.filter(fn {obj, _key} -> loaded_assoc?(obj, :image) end)
 
     missing =
-      Enum.count(images, fn %{image: image} ->
-        override = GalleryObjectOverride.lookup(overrides, :image, image.id)
+      Enum.count(images, fn {%{image: image}, {:image, id, placement}} ->
+        override = GalleryObjectOverride.lookup(overrides, :image, id, placement)
         alt = if override && Map.get(override, :use_default_alt) != true, do: Map.get(override, :alt)
         not Tile.alt_state(alt, Brando.Images.text(image, :alt, nil)).set?
       end)
@@ -643,34 +696,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     %{block_form | source: updated_changeset}
   end
 
-  defp initialize_gallery_overrides(gallery_objects, block_data_cs) do
+  # One override for each gallery object, under the object's placement key.
+  # A media the gallery holds more than once gets an override for each of its
+  # placements; one stored for every placement (as before placements existed)
+  # is copied into each, so each placement keeps its caption and can change it
+  # alone. Saving the block stores them that way.
+  defp initialize_gallery_overrides(placements, block_data_cs) do
     existing_overrides =
       block_data_cs
       |> Changeset.get_field(:gallery_object_overrides, [])
       |> GalleryObjectOverride.index()
 
-    # Create override entries for all gallery objects
-    gallery_objects
-    |> Enum.map(fn obj ->
-      case gallery_object_media(obj) do
-        {object_type, object_id_str, _media} ->
-          existing_overrides
-          |> GalleryObjectOverride.lookup(object_type, object_id_str)
-          |> typed_override(object_type, object_id_str)
-
-        nil ->
-          nil
-      end
-    end)
-    |> Enum.filter(& &1)
+    for {object_type, object_id_str, placement} <- placements do
+      existing_overrides
+      |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
+      |> placed_override(object_type, object_id_str, placement)
+    end
   end
 
   # An override stored without a type takes the type of the media it is found
   # for, so image N and video N never end up sharing one override entry.
-  defp typed_override(nil, object_type, object_id_str) do
+  defp placed_override(nil, object_type, object_id_str, placement) do
     %GalleryObjectOverride{
       object_id: object_id_str,
       object_type: object_type,
+      placement: placement,
       title: nil,
       credits: nil,
       alt: nil,
@@ -680,10 +730,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     }
   end
 
-  defp typed_override(%Changeset{} = override, object_type, _object_id_str),
-    do: Changeset.put_change(override, :object_type, object_type)
+  defp placed_override(%Changeset{} = override, object_type, _object_id_str, placement) do
+    override
+    |> Changeset.put_change(:object_type, object_type)
+    |> Changeset.put_change(:placement, placement)
+  end
 
-  defp typed_override(override, object_type, _object_id_str), do: Map.put(override, :object_type, object_type)
+  defp placed_override(override, object_type, _object_id_str, placement),
+    do: Map.merge(override, %{object_type: object_type, placement: placement})
+
+  defp placement_keys(gallery_objects) do
+    gallery_objects
+    |> Enum.map(fn obj ->
+      case gallery_object_media(obj) do
+        {object_type, object_id_str, _media} -> {object_type, object_id_str}
+        nil -> nil
+      end
+    end)
+    |> GalleryObjectOverride.placements()
+  end
 
   defp gallery_object_media(obj) do
     cond do
@@ -834,30 +899,33 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   defp refetch_image?(assoc_field, assoc, media_map, media_id),
     do: assoc_field == :image && Map.get(assoc, :status) != :processed && Map.has_key?(media_map, media_id)
 
-  # Keyed by `{object_type, object_id}`: an image and a video may share an id.
-  defp precompute_override_data(gallery_objects, block_data_cs) do
+  # Keyed by `{object_type, object_id, placement}`: an image and a video may
+  # share an id, and a gallery may hold one media more than once.
+  defp precompute_override_data(gallery_objects, placements, block_data_cs) do
     overrides =
       block_data_cs
       |> Changeset.get_field(:gallery_object_overrides, [])
       |> GalleryObjectOverride.index()
 
     # Gallery objects should already have media loaded via batch_load_media
-    Enum.reduce(gallery_objects, %{}, fn obj, acc ->
-      case gallery_object_media(obj) do
-        {object_type, object_id_str, media_object} ->
-          override_info =
-            build_override_info(
-              object_id_str,
-              object_type,
-              media_object,
-              GalleryObjectOverride.lookup(overrides, object_type, object_id_str)
-            )
+    gallery_objects
+    |> Enum.zip(placements)
+    |> Enum.reduce(%{}, fn
+      {obj, {object_type, object_id_str, placement} = key}, acc ->
+        {_type, _id, media_object} = gallery_object_media(obj)
 
-          Map.put(acc, {object_type, object_id_str}, override_info)
+        override_info =
+          build_override_info(
+            object_id_str,
+            object_type,
+            media_object,
+            GalleryObjectOverride.lookup(overrides, object_type, object_id_str, placement)
+          )
 
-        nil ->
-          acc
-      end
+        Map.put(acc, key, override_info)
+
+      {_obj, nil}, acc ->
+        acc
     end)
   end
 

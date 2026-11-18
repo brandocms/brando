@@ -107,19 +107,24 @@ defmodule Brando.Content.Transfer.Portable do
   # with `object_type`. In a bundle it is that media's dependency token, so it
   # follows whatever the media becomes at the destination. `media` lists
   # `{type, id, token}` for each gallery item; overrides for media that is no
-  # longer in the gallery have no effect and are left out.
+  # longer in the gallery have no effect and are left out. A media the gallery
+  # holds more than once keeps an override for each placement (`placement`),
+  # which the gallery's order carries to the destination.
   defp place_overrides(overrides, media) do
     index = GalleryObjectOverride.index(overrides)
+    placements = index |> Map.keys() |> Enum.map(&elem(&1, 2)) |> Enum.uniq() |> Enum.sort_by(&(&1 || -1))
 
     media
     |> Enum.uniq_by(&elem(&1, 2))
     |> Enum.flat_map(fn {type, id, token} ->
-      case GalleryObjectOverride.lookup(index, type, id) do
-        nil -> []
-        override -> [Map.merge(override, %{"object_id" => token, "object_type" => to_string(type)})]
-      end
+      for placement <- placements,
+          override = placed_override(index, type, to_string(id), placement),
+          do: Map.merge(override, %{"object_id" => token, "object_type" => to_string(type)})
     end)
   end
+
+  defp placed_override(index, type, id, placement),
+    do: Map.get(index, {type, id, placement}) || Map.get(index, {nil, id, placement})
 
   @doc """
   Reads bundles exported before gallery overrides were tokenized by media. Their

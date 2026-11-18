@@ -187,7 +187,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.Structure do
   defp gallery_content(value, "gallery_object_overrides") do
     settings =
       value
-      |> Map.drop(~w(object_id object_type _gallery_preview))
+      |> Map.drop(~w(object_id object_type placement _gallery_preview))
       |> Map.reject(fn {key, value} -> is_nil(value) || (String.starts_with?(key, "use_default_") && value == true) end)
 
     if settings == %{}, do: %{}, else: Map.put(settings, "media", reference(value))

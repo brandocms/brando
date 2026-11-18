@@ -16,8 +16,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
   # prop gallery_object_form, :any, required: true
   # prop gallery_objects, :list, required: true
+  # prop placements, :list, required: true — `{type, id, placement}` for each gallery object
   # prop display, :atom, required: true — the admin's view (:grid/:list), not the block's saved `display`
-  # prop text_editor, :map — the open caption/alt popover, `%{type, id, kind}`
+  # prop text_editor, :map — the open caption/alt popover, `%{type, id, placement, kind}`
   # prop myself, :any, required: true
   # prop uid, :string, required: true
   # prop gallery_form, :any, required: true
@@ -28,9 +29,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   def render(assigns) do
     # Find the corresponding object for display - use index for new objects without IDs
     obj = Enum.at(assigns.gallery_objects, assigns.gallery_object_form.index)
+    placement_key = obj && Enum.at(assigns.placements, assigns.gallery_object_form.index)
     object_modal_id = "gallery-object-modal-#{assigns.uid}-#{assigns.gallery_object_form.index}"
 
-    current_override = get_current_override_from_form(assigns.block_data, media_key(obj))
+    current_override = get_current_override_from_form(assigns.block_data, placement_key)
 
     # Determine the actual display values (considering current form overrides)
     display_values =
@@ -39,14 +41,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
       |> Map.put(:caption, override_value(current_override, :caption))
 
     assigns = assign(assigns, :obj, obj)
+    assigns = assign(assigns, :placement_key, placement_key)
+    assigns = assign(assigns, :object_key, gallery_object_key(assigns.gallery_object_form))
     assigns = assign(assigns, :object_modal_id, object_modal_id)
     assigns = assign(assigns, :display_values, display_values)
     assigns = assign(assigns, :list_row, list_row(obj, assigns.gallery_object_form, display_values))
-    assigns = assign_tile(assigns, obj, current_override)
+    assigns = assign_tile(assigns, placement_key, current_override)
 
     ~H"""
     <div
-      id={"gallery-object-#{@uid}-#{gallery_object_dom_key(@gallery_object_form)}"}
+      id={"gallery-object-#{@uid}-#{@object_key}"}
       class="gallery-object preview sort-handle-gallery-object draggable"
       data-id={@gallery_object_form.index}
     >
@@ -132,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
             target={@myself}
             save_event="save_object_text"
             close_event="close_text_editor"
-            params={%{type: @tile.object_type, id: @tile.object_id, kind: @tile.editing}}
+            params={%{type: @tile.object_type, id: @tile.object_id, placement: @tile.placement, kind: @tile.editing}}
           />
         </:editor>
       </Tile.tile>
@@ -157,7 +161,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           </div>
           <div class="panel">
             <.gallery_caption_overrides
-              obj={@obj}
+              placement_key={@placement_key}
+              object_key={@object_key}
               uid={@uid}
               override_data={@override_data}
               block_data={@block_data}
@@ -174,18 +179,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   defp open_text_editor(%{object_type: nil}, _kind, _myself), do: nil
 
   defp open_text_editor(tile, kind, myself),
-    do: JS.push("open_text_editor", target: myself, value: %{type: tile.object_type, id: tile.object_id, kind: kind})
+    do:
+      JS.push("open_text_editor",
+        target: myself,
+        value: %{type: tile.object_type, id: tile.object_id, placement: tile.placement, kind: kind}
+      )
 
   # What the grid square shows. A caption or alt text applies when its
   # `use_default_*` flag is off, as on the site (`Brando.Villain.Parser`). An
   # image's caption is the override's `title`; a video's is its `caption`.
-  defp assign_tile(%{display: :grid} = assigns, obj, override) do
-    {object_type, object_id} = media_key(obj) || {nil, nil}
+  defp assign_tile(%{display: :grid} = assigns, placement_key, override) do
+    {object_type, object_id, placement} = placement_key || {nil, nil, nil}
+    obj = assigns.obj
     caption_field = if object_type == :video, do: :caption, else: :title
     caption_override = override_value(override, caption_field)
     alt_override = override_value(override, :alt)
 
-    editing = text_editor_kind(assigns[:text_editor], object_type, object_id)
+    editing = text_editor_kind(assigns[:text_editor], placement_key)
 
     tile =
       case object_type do
@@ -198,6 +208,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
       Map.merge(tile, %{
         object_type: object_type,
         object_id: object_id,
+        placement: placement,
         editing: editing,
         caption_override: caption_override,
         alt_override: alt_override
@@ -208,12 +219,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
   defp assign_tile(assigns, _obj, _override), do: assign(assigns, :tile, nil)
 
-  defp text_editor_kind(text_editor, object_type, object_id) do
-    case text_editor do
-      %{type: ^object_type, id: ^object_id, kind: kind} when not is_nil(object_type) -> kind
-      _ -> nil
-    end
-  end
+  defp text_editor_kind(%{type: type, id: id, placement: placement, kind: kind}, {type, id, placement}), do: kind
+  defp text_editor_kind(_text_editor, _placement_key), do: nil
 
   defp image_tile(image, caption_override, alt_override) do
     alt_library = Images.text(image, :alt, nil)
@@ -269,34 +276,33 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
   defp get_current_override_from_form(_block_data_form, nil), do: nil
 
-  defp get_current_override_from_form(block_data_form, {object_type, object_id_str}) do
+  defp get_current_override_from_form(block_data_form, {object_type, object_id_str, placement}) do
     block_data_form.source
     |> Changeset.get_field(:gallery_object_overrides, [])
-    |> Enum.find(&GalleryObjectOverride.for_media?(&1, object_type, object_id_str))
+    |> GalleryObjectOverride.index()
+    |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
   end
 
-  # Images and videos are numbered separately, so the id alone is not unique
-  # within a gallery.
-  defp media_key(obj) do
-    cond do
-      obj && loaded_assoc?(obj, :image) -> {:image, to_string(obj.image.id)}
-      obj && loaded_assoc?(obj, :video) -> {:video, to_string(obj.video.id)}
-      true -> nil
+  # Names the gallery object, not its media: a gallery may hold one image twice.
+  # A saved object by its id; one not saved yet by its position in the form.
+  defp gallery_object_key(gallery_object_form) do
+    case gallery_object_form[:id].value do
+      id when is_integer(id) -> to_string(id)
+      id when is_binary(id) and id != "" -> id
+      _ -> "new-#{gallery_object_form.index}"
     end
   end
 
-  defp gallery_object_dom_key(gallery_object_form) do
-    case gallery_object_form[:image_id].value do
-      nil -> "video-#{gallery_object_form[:video_id].value}"
-      image_id -> "image-#{image_id}"
-    end
-  end
-
-  defp override_form_for_media?(override_form, {object_type, object_id_str}) do
-    GalleryObjectOverride.for_media?(
-      %{object_id: override_form[:object_id].value, object_type: override_form[:object_type].value},
+  defp override_form_for_placement?(override_form, {object_type, object_id_str, placement}) do
+    GalleryObjectOverride.for_placement?(
+      %{
+        object_id: override_form[:object_id].value,
+        object_type: override_form[:object_type].value,
+        placement: override_form[:placement].value
+      },
       object_type,
-      object_id_str
+      object_id_str,
+      placement
     )
   end
 
@@ -468,31 +474,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     """
   end
 
-  attr :obj, :map, required: true
+  attr :placement_key, :any, required: true, doc: "`{type, id, placement}` of the gallery object, or nil"
+  attr :object_key, :string, required: true, doc: "Names the gallery object (`gallery_object_key/1`)"
   attr :uid, :string, required: true
   attr :override_data, :map, required: true
   attr :block_data, :any, required: true
 
   def gallery_caption_overrides(assigns) do
-    media_key = media_key(assigns.obj)
-
-    override_info = media_key && Map.get(assigns.override_data, media_key)
+    override_info = assigns.placement_key && Map.get(assigns.override_data, assigns.placement_key)
 
     if override_info do
-      {object_type, object_id_str} = media_key
-
       assigns =
         assign(assigns,
           override_info: override_info,
-          media_key: media_key,
-          component_id: "override-inline-#{assigns.uid}-#{object_type}-#{object_id_str}"
+          component_id: "override-inline-#{assigns.uid}-#{assigns.object_key}"
         )
 
       ~H"""
       <div>
         {# With initialized overrides, we can always use standard inputs_for}
         <.inputs_for :let={override_form} field={@block_data[:gallery_object_overrides]}>
-          <%= if override_form_for_media?(override_form, @media_key) do %>
+          <%= if override_form_for_placement?(override_form, @placement_key) do %>
             <.live_component
               module={OverrideForm}
               id={@component_id}

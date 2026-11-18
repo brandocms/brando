@@ -2233,16 +2233,39 @@ defmodule Brando.Villain.Parser do
       |> Map.get(:gallery_object_overrides, [])
       |> GalleryObjectOverride.index()
 
+    gallery_objects = gallery.gallery_objects || []
+
+    # A gallery may hold one image or video more than once; each placement
+    # takes its own override (`GalleryObjectOverride.placements/1`).
+    placements =
+      gallery_objects
+      |> Enum.map(&gallery_object_media_key/1)
+      |> GalleryObjectOverride.placements()
+
     updated_gallery_objects =
-      Enum.map(gallery.gallery_objects || [], &apply_gallery_object_overrides(&1, overrides_index))
+      gallery_objects
+      |> Enum.zip(placements)
+      |> Enum.map(fn {gallery_object, placement_key} ->
+        apply_gallery_object_overrides(gallery_object, overrides_index, placement_key)
+      end)
 
     %{gallery | gallery_objects: updated_gallery_objects}
   end
 
-  defp apply_gallery_object_overrides(gallery_object, overrides_index) do
+  defp gallery_object_media_key(gallery_object) do
+    case gallery_object do
+      %{image_id: id} when not is_nil(id) -> {:image, id}
+      %{video_id: id} when not is_nil(id) -> {:video, id}
+      %{image: %Brando.Images.Image{id: id}} -> {:image, id}
+      %{video: %Brando.Videos.Video{id: id}} -> {:video, id}
+      _ -> nil
+    end
+  end
+
+  defp apply_gallery_object_overrides(gallery_object, overrides_index, placement_key) do
     image = get_loaded_assoc(gallery_object, :image)
     video = get_loaded_assoc(gallery_object, :video)
-    object_override = gallery_object_override(overrides_index, image, video)
+    object_override = gallery_object_override(overrides_index, image, video, placement_key)
 
     gallery_object =
       gallery_object
@@ -2269,10 +2292,16 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  defp gallery_object_override(overrides_index, image, video) do
+  defp gallery_object_override(overrides_index, image, video, placement_key) do
+    placement =
+      case placement_key do
+        {_type, _id, placement} -> placement
+        nil -> nil
+      end
+
     cond do
-      image -> GalleryObjectOverride.lookup(overrides_index, :image, image.id)
-      video -> GalleryObjectOverride.lookup(overrides_index, :video, video.id)
+      image -> GalleryObjectOverride.lookup(overrides_index, :image, image.id, placement)
+      video -> GalleryObjectOverride.lookup(overrides_index, :video, video.id, placement)
       true -> nil
     end
   end

@@ -160,6 +160,48 @@ defmodule Brando.SearchTest do
       refute Search.searchable?(Brando.BlueprintTest.Project)
     end
 
+    test "each placement of a repeated gallery image adds its own caption", %{user: user} do
+      page = Factory.insert(:page, title: "Hotel", creator: user)
+      image = Factory.insert(:image, title: %{"en" => "Library caption"})
+      gallery = Factory.insert(:gallery)
+
+      for sequence <- 0..1,
+          do: Factory.insert(:gallery_object, gallery_id: gallery.id, image_id: image.id, sequence: sequence)
+
+      overrides =
+        for {placement, title} <- [{0, "Lobby at dawn"}, {1, "Lobby at night"}] do
+          %Blocks.GalleryObjectOverride{
+            object_id: to_string(image.id),
+            object_type: :image,
+            placement: placement,
+            title: title,
+            use_default_title: false
+          }
+        end
+
+      insert_block(page, user, %{
+        sequence: 0,
+        refs: [
+          %{
+            name: "gallery",
+            uid: "g1",
+            sequence: 0,
+            gallery_id: gallery.id,
+            data: %Blocks.GalleryBlock{
+              type: "gallery",
+              data: %Blocks.GalleryBlock.Data{gallery_object_overrides: overrides}
+            }
+          }
+        ]
+      })
+
+      :ok = Search.index_entry(Page, page.id)
+      body = Repo.one(from(d in Document, where: d.entry_id == ^page.id, select: d.body))
+
+      assert body =~ "Lobby at dawn"
+      assert body =~ "Lobby at night"
+    end
+
     test "the body has the text fields and every kind of block text", %{user: user} do
       page = Factory.insert(:page, title: "Hotel", creator: user)
       image = Factory.insert(:image, alt: %{"en" => "A balcony at dusk"}, title: %{"en" => "Caption of the balcony"})

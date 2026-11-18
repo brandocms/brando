@@ -4,7 +4,7 @@ defmodule Brando.Drafts.Content do
   @override_fields ~w(title credits alt caption autoplay loop muted controls preload)
   # Fields without a `use_default_*` flag: nil is the default
   @flagless_override_fields ~w(quality)
-  @override_keys ["object_id", "object_type"] ++
+  @override_keys ["object_id", "object_type", "placement"] ++
                    @override_fields ++ @flagless_override_fields ++ Enum.map(@override_fields, &("use_default_" <> &1))
 
   def checksum(payload), do: payload |> normalize_payload() |> Brando.Drafts.checksum()
