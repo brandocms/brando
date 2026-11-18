@@ -122,6 +122,8 @@ defmodule BrandoAdmin.ModuleFilesTest do
     {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
     upload(view, hero)
     view |> element("[data-testid=module-files-replace]") |> render_click()
+    refute has_element?(view, "#module-files-apply[disabled]")
+    # Another file, then the first again
     view |> element("#module-files button[phx-click=reset]") |> render_click()
     upload(view, other)
     view |> element("#module-files button[phx-click=reset]") |> render_click()

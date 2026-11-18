@@ -277,7 +277,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
     # settled by another session: nothing of the revert stays. The importer's
     # lock holds off other applies until this commits.
     unless still_the_batchs?(batch, changes, revert_batch_id),
-      do: Repo.rollback("applied again since; review the revert again")
+      do: Repo.rollback(:applied_again)
 
     case settle(batch, reverted_at: now, reverted_by_id: user_id(user), revert_batch_id: revert_batch_id) do
       :ok -> :ok

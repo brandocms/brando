@@ -312,14 +312,13 @@ defmodule BrandoAdmin.Components.ModuleFiles do
     mappings = params["references"] || socket.assigns.mappings
     socket = assign(socket, mappings: mappings, plan: nil, error: nil)
 
+    # A new file starts without Replace: it is chosen for each file
+    fresh? = match?({[_], []}, uploaded_entries(socket, :definition_zip))
+
     with :ok <- authorize_import(socket.assigns.current_user),
          {:ok, source, filename} <- source(socket) do
-      socket =
-        assign(socket,
-          source: source,
-          filename: filename,
-          replace: replaceable(socket.assigns.replace, source.bundle)
-        )
+      replace = if fresh?, do: [], else: replaceable(socket.assigns.replace, source.bundle)
+      socket = assign(socket, source: source, filename: filename, replace: replace)
 
       with {:ok, references} <- references(mappings),
            {:ok, plan} <-

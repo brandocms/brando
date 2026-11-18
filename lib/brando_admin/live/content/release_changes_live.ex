@@ -226,9 +226,15 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       end)
 
     # Entries this person may not read are counted, not named
+    failed_keys = for job <- renders.failed, job.worker == :render, do: {schema_module(job.schema), job.entry_id}
+    readable = Brando.Authorization.Boundary.readable_entries(failed_keys)
+
     failures =
-      for job <- renders.failed, job.worker == :render, label = labels[{schema_module(job.schema), job.entry_id}] do
-        %{label: label, error: job.error}
+      for job <- renders.failed,
+          job.worker == :render,
+          key = {schema_module(job.schema), job.entry_id},
+          MapSet.member?(readable, key) do
+        %{label: labels[key] || "#{job.schema} ##{job.entry_id}", error: job.error}
       end
 
     total = renders.rendered + length(renders.failed) + Enum.count(renders.pending, &(&1.worker == :render))
@@ -626,6 +632,9 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp error_text(:forbidden), do: gettext("You do not have permission for this action.")
   defp error_text(:kept), do: gettext("This apply is already kept.")
   defp error_text(:reverted), do: gettext("This apply is already reverted.")
+
+  defp error_text(:applied_again),
+    do: gettext("A definition in this apply was applied again since. Review the revert again.")
 
   defp error_text(:needs_migration),
     do: gettext("Nothing in this apply can be reverted without a migration. Keep it instead.")

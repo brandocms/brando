@@ -1361,6 +1361,11 @@ msgstr "En dato og et klokkeslett"
 msgid "A date, picked from a calendar"
 msgstr "En dato, valgt fra en kalender"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "A definition in this apply was applied again since. Review the revert again."
+msgstr "En definisjon i endringene er tatt i bruk på nytt siden. Se gjennom tilbakestillingen igjen."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
