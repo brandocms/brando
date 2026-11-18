@@ -1550,8 +1550,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   @doc """
   Hidden identity inputs for refs the module code does not render.
 
-  `LiquidPreview.strip_logic/1` removes `{% if %}` / `{% for %}` / `{% hide %}` regions
-  before the code is split into ref slots, so a `{% ref refs.x %}` inside one
+  `LiquidPreview.strip_logic/1` removes `{% if %}` / `{% case %}` / `{% for %}` /
+  `{% hide %}` regions before the code is split into ref slots, so a `{% ref refs.x %}` inside one
   produces no inputs at all. `refs` is `on_replace: :delete_if_exists`, so once
   *any* ref renders, the params carry a shortened list and `cast_assoc(:refs)`
   **deletes** every ref missing from it — on the first keystroke, silently.

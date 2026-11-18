@@ -13769,10 +13769,10 @@ msgstr "Referanse #%{id}"
 
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
-msgid "Reference %{refs} sits inside a conditional, loop or hide region, so the block editor cannot show an input for it."
-msgid_plural "References %{refs} sit inside conditional, loop or hide regions, so the block editor cannot show inputs for them."
-msgstr[0] "Referansen %{refs} ligger inne i en betingelse, løkke eller skjult del, så blokkeditoren kan ikke vise et felt for den."
-msgstr[1] "Referansene %{refs} ligger inne i betingelser, løkker eller skjulte deler, så blokkeditoren kan ikke vise felter for dem."
+msgid "Reference %{refs} sits inside a Liquid region the block editor hides (such as if, case, for, capture or hide), so it gets no input there."
+msgid_plural "References %{refs} sit inside Liquid regions the block editor hides (such as if, case, for, capture or hide), so they get no inputs there."
+msgstr[0] "Referansen %{refs} ligger inne i en Liquid-del som blokkeditoren skjuler (som if, case, for, capture eller hide), så den får ikke et felt der."
+msgstr[1] "Referansene %{refs} ligger inne i Liquid-deler som blokkeditoren skjuler (som if, case, for, capture eller hide), så de får ikke felter der."
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format

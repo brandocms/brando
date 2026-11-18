@@ -53,6 +53,10 @@ test('nested Liquid regions keep following blocks in their container after patch
       {% for row in rows %}<div>{% for col in row.cols %}<span>hidden loop</span>{% endfor %}</div>{% endfor %}
       {% unless false %}<div>{% unless false %}<span>hidden unless</span>{% endunless %}</div>{% endunless %}
       {% hide %}<div>{% hide %}<span>hidden hide</span>{% endhide %}</div>{% endhide %}
+      {% comment %}<span>hidden comment</span>{{ caption }}{% endcomment %}{% # hidden inline comment %}
+      {% case caption %}{% when "x" %}<span>hidden case</span>{% else %}{% if true %}{% case caption %}{% when "y" %}<span>hidden case</span>{% endcase %}{% endif %}{% endcase %}
+      {% capture label %}<span>hidden capture</span>{% endcapture %}<i class="{% cycle 'odd', 'even' %}"></i>
+      <p data-liquid-test="raw">{% raw %}{{ printed }}{% endraw %}</p>
     </article>
   `)
   await createModule(page, 'Following block', '<article data-liquid-test="following">{% ref refs.heading %}{{ caption }}</article>')
@@ -75,7 +79,9 @@ test('nested Liquid regions keep following blocks in their container after patch
     await expect(following.locator('.entry-block')).toHaveCount(0)
     await expect(page.locator('.block-liquex-preview > .alert[role="alert"]')).toHaveCount(0)
     await expect(nested.locator('.block-liquex-preview')).not.toContainText('hidden')
-    await expect(page.locator('#block-field-blocks')).not.toContainText(/\{%\s*end(?:if|for|unless|hide)/)
+    await expect(page.locator('#block-field-blocks')).not.toContainText('{%')
+    // A raw body prints as written, not as a variable.
+    await expect(nested.locator('[data-liquid-test="raw"]')).toHaveText('{{ printed }}')
   }
 
   await assertStructure()

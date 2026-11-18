@@ -97,7 +97,7 @@ defmodule BrandoAdmin.VarLabelTranslationsTest do
     refute has_element?(view, ".module-code-lint")
 
     change_code(view, "{% if show %}{% ref refs.text %}{% endif %}")
-    assert has_element?(view, ".module-code-lint", "Reference text sits inside a conditional")
+    assert has_element?(view, ".module-code-lint", "Reference text sits inside a Liquid region")
     assert has_element?(view, ".module-code-lint", "headless_ref refs.text")
 
     change_code(view, "{% headless_ref refs.text %}{% if refs.text.active %}shown{% endif %}")
