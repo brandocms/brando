@@ -83,7 +83,7 @@ defmodule Brando.Villain do
   Renders as `parse/3` does, and returns `{:ok, html}` when every block
   template rendered, or `{:error, failures}`, a
   `Brando.Villain.RenderFailure` for each block whose template failed to
-  parse, iterated over nil or raised. Stores nothing, and logs nothing.
+  parse or raised. Stores nothing, and logs nothing.
 
   What a stored render uses (`Brando.Content.Blocks.render_fields/3`):
   output with an error in it is never stored.

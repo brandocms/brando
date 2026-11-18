@@ -202,7 +202,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.compact([1, 2, 3], %{})
       [1,2,3]
   """
-  @spec compact([any], map()) :: [any]
+  @spec compact([any] | nil, map()) :: [any]
+  def compact(nil, _), do: []
   def compact(value, _) when is_list(value), do: Enum.reject(value, &is_nil/1)
 
   @doc """
@@ -311,6 +312,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.first([], %{})
       nil
   """
+  def first(nil, _), do: nil
   def first([], _), do: nil
   def first([f | _], _), do: f
 
@@ -336,6 +338,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.join(~w(John Paul George Ringo), " and ", %{})
       "John and Paul and George and Ringo"
   """
+  def join(nil, _joiner, _), do: ""
   def join(values, joiner, _), do: Enum.join(values, joiner)
 
   @doc """
@@ -349,7 +352,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.first([], %{})
       nil
   """
-  @spec last(list, Liquex.Context.t()) :: any
+  @spec last(list | nil, Liquex.Context.t()) :: any
+  def last(nil, _), do: nil
   def last(arr, context), do: arr |> Enum.reverse() |> first(context)
 
   @doc """
@@ -372,7 +376,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.map([%{"a" => 1}, %{"a" => 2, "b" => 1}], "a", %{})
       [1, 2]
   """
-  @spec map([any], term, Context.t()) :: [any]
+  @spec map([any] | nil, term, Context.t()) :: [any]
+  def map(nil, _key, _), do: []
   def map(arr, key, _), do: Enum.map(arr, &Liquex.Indifferent.get(&1, key, nil))
 
   @doc """
@@ -517,6 +522,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.reverse(~w(apples oranges peaches plums), %{})
       ["plums", "peaches", "oranges", "apples"]
   """
+  def reverse(nil, _), do: []
   def reverse(arr, _) when is_list(arr), do: Enum.reverse(arr)
 
   @doc """
@@ -833,6 +839,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.uniq(~w(ants bugs bees bugs ants), %{})
       ["ants", "bugs", "bees"]
   """
+  def uniq(nil, _), do: []
   def uniq(list, _), do: Enum.uniq(list)
 
   @doc """

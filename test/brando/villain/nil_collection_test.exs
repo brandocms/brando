@@ -52,6 +52,20 @@ defmodule Brando.Villain.NilCollectionTest do
     assert render(~s({% assign xs = missing | sort %}{% for x in xs %}{{ x }}{% else %}none{% endfor %})) == "none"
   end
 
+  test "the list filters read nil as an empty list" do
+    assert render(~s([{{ missing | map: "image" | size }}])) == "[0]"
+    assert render("[{{ missing | compact | size }}]") == "[0]"
+    assert render("[{{ missing | reverse | size }}]") == "[0]"
+    assert render("[{{ missing | uniq | size }}]") == "[0]"
+    assert render(~s([{{ missing | join: ", " }}])) == "[]"
+    assert render("[{{ missing | first }}][{{ missing | last }}]") == "[][]"
+
+    template =
+      ~s({% assign images = missing.gallery_objects | map: "image" %}{% for x in images %}{{ x }}{% else %}none{% endfor %})
+
+    assert render(template) == "none"
+  end
+
   test "a value that is no list and not nil still raises" do
     assert_raise Protocol.UndefinedError, fn -> render("{% assign t = true %}{% for x in t %}{{ x }}{% endfor %}") end
     assert_raise Protocol.UndefinedError, fn -> render("{% assign t = false %}{{ t | sort }}") end
