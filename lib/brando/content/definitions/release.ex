@@ -358,7 +358,8 @@ defmodule Brando.Content.Definitions.Release do
           applied_at: DateTime.utc_now()
         })
 
-      Phoenix.PubSub.broadcast(Brando.pubsub(), Definitions.topic(), {:definitions_applied, Tenant.current_prefix()})
+      # The status planned again, and open screens told
+      Definitions.changed()
       {:ok, row}
     end
   end
