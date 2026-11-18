@@ -156,17 +156,16 @@ defmodule Brando.Content.Definitions.Release.Batches do
       revert_batch_id = Ecto.UUID.generate()
       uids = Enum.map(preview.revert, & &1.uid)
 
-      {result, run} =
-        Definitions.track_refresh(fn ->
-          case uids do
-            [] -> transaction_only(batch, preview, revert_batch_id, user)
-            uids -> apply_revert(batch, preview, uids, revert_batch_id, user)
-          end
-        end)
+      {result, run} = Definitions.track_refresh(fn -> run_revert(batch, preview, uids, revert_batch_id, user) end)
 
       with {:ok, revert_batch} <- result, do: reverted(batch, revert_batch, preview, run, user)
     end
   end
+
+  defp run_revert(batch, preview, [], revert_batch_id, user), do: transaction_only(batch, preview, revert_batch_id, user)
+
+  defp run_revert(batch, preview, uids, revert_batch_id, user),
+    do: apply_revert(batch, preview, uids, revert_batch_id, user)
 
   defp reverted(batch, revert_batch, preview, run, user) do
     revert_batch = %{revert_batch | run_id: run}
