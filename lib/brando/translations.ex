@@ -208,25 +208,32 @@ defmodule Brando.Translations do
   sync identity, linked as an alternate and added to the group. An entry not
   yet in a group becomes its source.
 
+  Every text the copy holds that is not empty is marked `:translate`, as if
+  it were new: until it is translated or marked reviewed, the copy is still
+  the source's text. Pass `mark_translate: false` for a translation meant to
+  start from the source's text as it is, such as a language variant that
+  differs in a few places; nothing is marked then.
+
   Returns `{:error, :language_exists}` when the group already has that
   language, or when the source is linked to an independent version in it.
   """
-  def create_target(schema, source_id, language, actor) do
+  def create_target(schema, source_id, language, actor, opts \\ []) do
     language = to_string(language)
+    mark_translate? = Keyword.get(opts, :mark_translate, true)
 
     with :ok <- ensure_duplicable(schema),
          :ok <- ensure_language_known(schema, language),
          :ok <- ensure_no_linked_version(schema, source_id, language) do
       # One transaction, enrolment included: a failed copy leaves no group
       # with a source and no translation behind.
-      Repo.transaction(fn -> enrol_target(schema, source_id, language, actor) end)
+      Repo.transaction(fn -> enrol_target(schema, source_id, language, actor, mark_translate?) end)
     end
   end
 
-  defp enrol_target(schema, source_id, language, actor) do
+  defp enrol_target(schema, source_id, language, actor, mark_translate?) do
     with {:ok, source_member} <- source_member(schema, source_id, actor),
          :ok <- ensure_language_free(source_member, language),
-         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor) do
+         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
       target
     else
       {:error, reason} -> Repo.rollback(reason)
@@ -247,7 +254,7 @@ defmodule Brando.Translations do
 
   defp ensure_duplicable(schema), do: if(duplicable?(schema), do: :ok, else: {:error, :not_duplicable})
 
-  defp insert_target(schema, source_member, source_id, language, actor) do
+  defp insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
     with {:ok, target} <- duplicate_to_language(schema, source_id, language, actor),
          {:ok, source} <- load_entry(schema, source_id) do
       if schema.has_alternates?(), do: Module.concat(schema, Alternate).add(source_id, target.id)
@@ -266,8 +273,9 @@ defmodule Brando.Translations do
         })
 
       # The copy still links to the source language's content; its first
-      # pending version points those links at this language's versions.
-      sync_member(schema, source, member, group.source_generation, false)
+      # pending version points those links at this language's versions, and
+      # marks the text it copied to translate.
+      sync_member(schema, source, member, group.source_generation, false, translate_all: mark_translate?)
 
       {:ok, target}
     end
@@ -764,19 +772,33 @@ defmodule Brando.Translations do
     saved_rows = rows_by_path(saved, schema, module_uids)
     reviewed_rows = rows_by_path(payload, schema, module_uids)
     reviewed_work = MapSet.new(reviewed.work_items, &{&1.path, &1.source_digest})
+
+    reviewed_translate =
+      for %{kind: :translate} = item <- reviewed.work_items, into: %{}, do: {item.path, item.source_digest}
+
     acknowledged = MapSet.new(List.wrap(review[:acknowledged]))
     left = unapplied(saved, payload, schema, module_uids)
     timestamp = now()
 
     items =
       Enum.map(current.work_items, fn item ->
-        if is_nil(item.resolved_at) and MapSet.member?(reviewed_work, {item.path, item.source_digest}) and
-             not within?(item.path, left) and done?(item, saved_rows, reviewed_rows, acknowledged) do
-          item
-          |> Changeset.change(resolved_at: timestamp, resolved_generation: reviewed.source_generation)
-          |> Repo.update!()
-        else
-          item
+        completed? =
+          is_nil(item.resolved_at) and not within?(item.path, left) and
+            done?(item, saved_rows, reviewed_rows, acknowledged)
+
+        cond do
+          completed? and MapSet.member?(reviewed_work, {item.path, item.source_digest}) ->
+            item
+            |> Changeset.change(resolved_at: timestamp, resolved_generation: reviewed.source_generation)
+            |> Repo.update!()
+
+          # Translated from an older source text: the source changed it while
+          # the editor worked, so the translation is to review now.
+          completed? and item.kind == :translate and Map.has_key?(reviewed_translate, item.path) ->
+            item |> Changeset.change(kind: :review) |> Repo.update!()
+
+          true ->
+            item
         end
       end)
 
@@ -896,22 +918,27 @@ defmodule Brando.Translations do
 
   # `previous`: the version the new one supersedes (the current one by
   # default). `with_deleted`: also a translation in the trash, which only its
-  # own save recomputes.
+  # own save recomputes. `translate_all`: mark every text to translate, for a
+  # new translation (`create_target/5`).
   defp sync_member(schema, source, member, generation, minor?, opts \\ []) do
     previous = Keyword.get(opts, :previous, :current)
 
     case load_entry(schema, member.entry_id, Keyword.take(opts, [:with_deleted])) do
       {:ok, target} ->
+        previous = if previous == :current, do: current_pending(member.id), else: previous
+        uids = module_uids([source, target], schema)
+
         result =
           Sync.compute_pending(source, target, member.baseline,
             schema: schema,
-            module_uids: module_uids([source, target], schema),
+            module_uids: uids,
             minor: minor?,
+            translate_all: Keyword.get(opts, :translate_all, false),
+            untranslated: untranslated(member, schema, target, previous, uids),
             identifiers: identifier_map(source, schema, member.language),
             entries: entry_map(source, schema, member.language)
           )
 
-        previous = if previous == :current, do: current_pending(member.id), else: previous
         record_pending(member, result, previous, generation, schema)
 
         member
@@ -1168,6 +1195,46 @@ defmodule Brando.Translations do
       version
     end
   end
+
+  # The text paths still to translate whose text in the translation is a copy
+  # of the source's (`Sync.compute_pending/4`'s `:untranslated`): open
+  # `:translate` work whose text is one the translation was given to
+  # translate. Every such text was raised as a `:translate` item against its
+  # digest; usually it is the source's text as of the last sync (as created,
+  # or saved unchanged), else an earlier one (the source changed it again, or
+  # the editor saved a version computed before). Text written past the
+  # editor, which resolves nothing, is the translation's own.
+  defp untranslated(_member, _schema, _target, nil, _uids), do: MapSet.new()
+
+  defp untranslated(member, schema, target, %PendingVersion{work_items: items}, uids) do
+    case for(%{kind: :translate, resolved_at: nil, path: path} <- items, uniq: true, do: path) do
+      [] ->
+        MapSet.new()
+
+      open ->
+        held = for {path, value} <- texts(target, schema, uids), path in open, into: %{}, do: {path, Sync.digest(value)}
+        {copies, rest} = Enum.split_with(Map.keys(held), &(held[&1] == member.baseline[&1]))
+        seeded = seeded_digests(member.id, rest)
+        MapSet.new(copies ++ Enum.filter(rest, &MapSet.member?(seeded, {&1, held[&1]})))
+    end
+  end
+
+  defp seeded_digests(_member_id, []), do: MapSet.new()
+
+  defp seeded_digests(member_id, paths) do
+    from(w in WorkItem,
+      join: v in PendingVersion,
+      on: v.id == w.pending_version_id,
+      where: v.member_id == ^member_id and w.kind == :translate and w.path in ^paths,
+      distinct: true,
+      select: {w.path, w.source_digest}
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp texts(entry, schema, uids),
+    do: for({path, :text, value} <- Sync.flatten_entry(entry, schema, nil, uids), into: %{}, do: {path, value})
 
   @doc "Returns the pending version of an entry with its work items, or nil."
   def get_pending_version(schema, entry_id) do

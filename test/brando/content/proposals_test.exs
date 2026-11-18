@@ -1532,9 +1532,10 @@ defmodule Brando.Content.ProposalsTest do
       assert [%{languages: [%{language: "en", state: :follows}]}] = Review.entries(proposal)
       assert {:ok, _} = approve_and_apply(proposal, c.user)
 
+      # The inserted block's text is to translate, beside the copied title
       pending = Brando.Translations.get_pending_version(Article, english.id)
       assert pending
-      assert Enum.any?(pending.work_items, &(&1.kind == :translate))
+      assert Enum.any?(pending.work_items, &(&1.kind == :translate and &1.path =~ ~r"^entry_blocks/"))
     end
   end
 

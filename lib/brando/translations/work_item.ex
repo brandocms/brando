@@ -2,7 +2,10 @@ defmodule Brando.Translations.WorkItem do
   @moduledoc """
   One field or item of a pending version that needs attention.
 
-    * `:translate` — new content, seeded with the source text
+    * `:translate` — new content, seeded with the source text, or text a new
+      translation copied from the source (`Brando.Translations.create_target/5`).
+      It stays `:translate` when the source changes the text before it is
+      translated.
     * `:review` — the source text changed; the translation was kept
     * `:shared_update` — a source-controlled value or media changed
     * `:relinked` — the source is unchanged, but a link it holds now points

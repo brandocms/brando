@@ -66,6 +66,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       payload: nil,
       items: [],
       structure_changed?: false,
+      changes?: false,
       applied_version_id: nil,
       acknowledged: [],
       stale?: false
@@ -91,6 +92,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       payload: payload,
       items: items(schema, pending, payload, member.language),
       structure_changed?: payload != nil and structure(payload, schema) != structure(entry, schema),
+      changes?: payload != nil and changes?(schema, payload, pending),
       # The version whose changes are in the form. Kept across refreshes of
       # the same entry, so a reconnecting form does not apply it twice.
       applied_version_id: previous && previous.entry_id == entry_id && previous.applied_version_id,
@@ -202,9 +204,33 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   def locks(_state, _form_name), do: %{inert: [], structure: []}
 
+  # Whether applying the pending version would change the translation: a new
+  # translation's first version holds only work, no changes, until the source
+  # is saved again.
+  # A payload stored by an earlier Brando that cannot be read is applied, as
+  # before.
+  defp changes?(schema, payload, pending) do
+    Brando.Translations.Sync.base_fingerprint(payload, schema, Translations.module_uids([payload], schema)) !=
+      pending.base_fingerprint
+  rescue
+    _ -> true
+  end
+
   @doc "Whether the form should load the pending version now."
   def apply?(%{translation: %{pending: %{id: id}, applied_version_id: applied}}) when applied != id, do: true
   def apply?(_assigns), do: false
+
+  @doc """
+  Whether the pending version changes what the form holds. One that does not
+  is only marked as applied (`mark_applied/1`), so its work is resolved on
+  save, without loading it into the form as unsaved changes.
+  """
+  def changes?(%{translation: %{changes?: changes?}}), do: changes?
+  def changes?(_assigns), do: false
+
+  @doc "Marks the pending version as the one the form holds, without loading it."
+  def mark_applied(%{assigns: %{translation: state}} = socket),
+    do: assign(socket, :translation, %{state | applied_version_id: state.pending.id})
 
   @doc """
   Builds the changeset that puts the pending version into the form, on top of
@@ -613,7 +639,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
       <div :if={@count > 0} class="translation-work">
         <p class="translation-summary">
           {ngettext("%{count} item needs attention", "%{count} items need attention", @count)}
-          <span :if={@state.applied_version_id}>{gettext("The changes from the source are in the form and are saved with it.")}</span>
+          <span :if={@state.applied_version_id && @state.changes?}>
+            {gettext("The changes from the source are in the form and are saved with it.")}
+          </span>
         </p>
 
         <.work_group

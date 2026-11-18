@@ -11,8 +11,11 @@ defmodule Brando.Translations.ComputePendingTest do
   alias Brando.SyncTest.ArticleItem
   alias Brando.Translations.Sync
   alias Brando.Villain.Blocks.GalleryBlock
+  alias Brando.Villain.Blocks.GalleryObjectOverride
+  alias Brando.Villain.Blocks.HtmlBlock
   alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain.Blocks.TextBlock
+  alias Brando.Villain.Blocks.VideoBlock
 
   # --- Builders -------------------------------------------------------------
 
@@ -663,6 +666,166 @@ defmodule Brando.Translations.ComputePendingTest do
       # A saved ref is the translation's own already
       saved = article(:en, id: 2, blocks: [block("b1", refs: [%{gallery_ref("slides", slides) | id: 5}])])
       assert Sync.own_new_ref_galleries(saved) == saved
+    end
+  end
+
+  describe "a new translation" do
+    # The copy `create_target/4` makes: the source's text, the source's ids
+    # in its blocks' sync identities.
+    defp copy(source), do: %{source | id: 2, language: :en}
+
+    # Every kind of text; `t` rewrites the texts that are not empty.
+    defp new_translation(t \\ & &1) do
+      t = fn text -> if String.trim(text || "") == "", do: text, else: t.(text) end
+
+      override = %GalleryObjectOverride{
+        object_id: "10",
+        object_type: :image,
+        title: t.("Bildetittel"),
+        credits: "",
+        alt: t.("Bilde")
+      }
+
+      # The image's second placement in the gallery has a caption of its own
+      second = %GalleryObjectOverride{object_id: "10", object_type: :image, placement: 1, title: t.("Andre")}
+
+      slides = %{
+        gallery_ref("slides", gallery(1, [10, 10]))
+        | data: %GalleryBlock{type: "gallery", data: %GalleryBlock.Data{gallery_object_overrides: [override, second]}}
+      }
+
+      clip = %Ref{
+        name: "clip",
+        uid: uid(),
+        video_id: 3,
+        data: %VideoBlock{type: "video", data: %VideoBlock.Data{title: t.("Film")}}
+      }
+
+      # Only the template's `text` parameters are text
+      embed = %Ref{
+        name: "embed",
+        uid: uid(),
+        data: %HtmlBlock{
+          type: "html",
+          data: %HtmlBlock.Data{
+            text: "<p>{{ lead }}</p>",
+            params: [%HtmlBlock.Param{key: "lead", type: :text}, %HtmlBlock.Param{key: "id", type: :id}],
+            values: %{"lead" => t.("Ingress i mal"), "id" => "x1"}
+          }
+        }
+      }
+
+      photo = %Ref{
+        name: "photo",
+        uid: uid(),
+        image_id: 5,
+        data: %PictureBlock{
+          type: "picture",
+          data: %PictureBlock.Data{title: t.("Tittel"), credits: "  ", alt: t.("Alt-tekst")}
+        }
+      }
+
+      vars = [
+        %Var{key: "heading", type: :string, value: t.("Overskrift"), label: "heading"},
+        %Var{key: "intro", type: :text, value: t.("Ingress"), label: "intro"},
+        %Var{key: "body", type: :rich_text, value: t.("<p>Brødtekst</p>"), label: "body"},
+        %Var{key: "empty", type: :string, value: "", label: "empty"},
+        %Var{key: "cta", type: :link, link_type: :url, value: t.("/no/om-oss"), link_text: t.("Les mer"), label: "cta"},
+        %Var{key: "flag", type: :boolean, value_boolean: true, label: "flag"}
+      ]
+
+      cell = %TableRow{sync_uid: "r1", vars: [%Var{key: "cell", type: :string, value: t.("Celle"), label: "cell"}]}
+
+      article(:no,
+        title: t.("Tittel"),
+        subtitle: nil,
+        items: [
+          %ArticleItem{uid: "i1", label: t.("Punkt"), link: t.("/a")},
+          %ArticleItem{uid: "i2", label: "", link: nil}
+        ],
+        blocks: [
+          %{
+            block("a",
+              refs: [text_ref("body", t.("Avsnitt")), text_ref("blank", " "), photo, slides, clip, embed],
+              vars: vars,
+              table_rows: [cell],
+              children: [block("child", refs: [text_ref("body", t.("Barn"))])]
+            )
+            | identifier_metas: %{"5" => %{"title" => t.("Lenketittel")}}
+          }
+        ]
+      )
+    end
+
+    defp texts_by_path(entry) do
+      for {path, :text, value} <- Sync.flatten_entry(entry, Article), into: %{}, do: {path, value}
+    end
+
+    test "text still to translate takes the source's new text, of every kind" do
+      source = new_translation()
+      copy = copy(source)
+      edited = new_translation(&(&1 <> " (endret)"))
+
+      untranslated =
+        for {path, value} <- texts_by_path(source), String.trim(value || "") != "", into: MapSet.new(), do: path
+
+      result = compute(edited, copy, baseline(source), untranslated: untranslated)
+      payload = texts_by_path(result.payload)
+      edited_texts = texts_by_path(edited)
+
+      assert MapSet.size(untranslated) == 19
+      for path <- untranslated, do: assert({path, payload[path]} == {path, edited_texts[path]})
+      # Still to translate, not to review
+      assert Enum.all?(result.work_items, &(&1.kind == :translate))
+      assert length(result.work_items) == MapSet.size(untranslated)
+
+      # Text not to translate keeps the translation's own
+      result = compute(edited, copy, baseline(source), untranslated: MapSet.delete(untranslated, "title"))
+      assert result.payload.title == "Tittel"
+      assert texts_by_path(result.payload)["items/i1/label"] == "Punkt (endret)"
+
+      assert texts_by_path(compute(edited, copy, baseline(source)).payload) == texts_by_path(copy)
+    end
+
+    test "every copied text that is not empty is to translate, of every kind" do
+      source = new_translation()
+      result = compute(source, copy(source), baseline(source), translate_all: true)
+
+      assert kinds(result) ==
+               Enum.sort([
+                 {:translate, "title"},
+                 {:translate, "entry_blocks/a/refs/body/text"},
+                 {:translate, "entry_blocks/a/refs/photo/title"},
+                 {:translate, "entry_blocks/a/refs/photo/alt"},
+                 {:translate, "entry_blocks/a/refs/slides/gallery/image:10/title"},
+                 {:translate, "entry_blocks/a/refs/slides/gallery/image:10/alt"},
+                 {:translate, "entry_blocks/a/refs/slides/gallery/image:10@1/title"},
+                 {:translate, "entry_blocks/a/refs/clip/title"},
+                 {:translate, "entry_blocks/a/refs/embed/values/lead"},
+                 {:translate, "entry_blocks/a/identifier_metas/5/title"},
+                 {:translate, "entry_blocks/child/refs/body/text"},
+                 {:translate, "entry_blocks/a/vars/heading/value"},
+                 {:translate, "entry_blocks/a/vars/intro/value"},
+                 {:translate, "entry_blocks/a/vars/body/value"},
+                 {:translate, "entry_blocks/a/vars/cta/link_text"},
+                 {:translate, "entry_blocks/a/vars/cta/url"},
+                 {:translate, "entry_blocks/a/rows/r1/vars/cell/value"},
+                 {:translate, "items/i1/label"},
+                 {:translate, "items/i1/link"}
+               ])
+
+      # Each item is raised against the source's text
+      assert Enum.find(result.work_items, &(&1.path == "title")).source_digest == Sync.digest("Tittel")
+      # Exactly the text the sync keeps per language
+      text_paths =
+        for {path, :text, value} <- Sync.flatten_entry(source, Article), String.trim(value || "") != "", do: path
+
+      assert Enum.sort(text_paths) == Enum.sort(Enum.map(result.work_items, & &1.path))
+    end
+
+    test "without the option, the copy has nothing to translate" do
+      source = new_translation()
+      assert compute(source, copy(source), baseline(source)).work_items == []
     end
   end
 end

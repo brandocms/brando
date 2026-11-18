@@ -16,7 +16,11 @@ defmodule Brando.Translations.Sync do
   source's order and nesting. Items only in the source are copied in; items
   only in the target are dropped. Work is then read off the flattened rows:
 
-    * a text path the target lacks → `:translate` (skipped when empty)
+    * a text path the target lacks → `:translate` (skipped when empty); with
+      `translate_all: true`, every text path of the payload (a new
+      translation's copy)
+    * a text path in `:untranslated` → `:translate`, against the source text
+      the payload takes (skipped when empty)
     * a text path whose source digest moved from the baseline → `:review`,
       unless the save was a minor correction
     * a shared path the target holds a different value for → `:shared_update`,
@@ -75,7 +79,15 @@ defmodule Brando.Translations.Sync do
 
   `baseline` maps paths to the source digests this target was last synchronized
   with. Options: `:schema` (required), `:config` (defaults to the schema's
-  `__translatable_config__/0`), `:minor` and `:identifiers`.
+  `__translatable_config__/0`), `:minor`, `:translate_all` and `:identifiers`.
+
+  `:translate_all` marks every text that is not empty `:translate`, as if it
+  were new: the first version of a new translation, whose text is still the
+  copy of the source's.
+
+  `:untranslated` holds the text paths still to translate whose text in the
+  target is a copy of the source's: the payload takes the source's text as it
+  is now, and the path is `:translate` against it, not `:review`.
 
   `:module_uids` maps `{module_origin, module_id}` to the module's `uid`, for
   `{:module, uid, vars}` selectors in `source_controlled_fields`; a block
@@ -104,12 +116,20 @@ defmodule Brando.Translations.Sync do
     {payload, notes} = merge(source, target, spec)
     {payload, awaiting} = resolve_identifiers(payload, spec, Keyword.get(opts, :identifiers))
     {payload, awaiting} = resolve_tree(payload, target, spec, Keyword.get(opts, :entries), awaiting)
+    payload = reseed(payload, source, spec, Keyword.get(opts, :untranslated, MapSet.new()))
 
     source_rows = flatten(source, spec)
     target_rows = flatten(target, spec)
     payload_rows = flatten(payload, spec)
 
-    work_items = work_items(source_rows, target_rows, payload_rows, baseline || %{}, minor?) ++ awaiting
+    work =
+      work_items(source_rows, target_rows, payload_rows, baseline || %{},
+        minor?: minor?,
+        translate_all?: Keyword.get(opts, :translate_all, false),
+        untranslated: Keyword.get(opts, :untranslated, MapSet.new())
+      )
+
+    work_items = work ++ awaiting
     fingerprint = fingerprint(payload_rows)
     base_fingerprint = fingerprint(target_rows)
 
@@ -539,6 +559,181 @@ defmodule Brando.Translations.Sync do
   end
 
   defp own_block_galleries(block), do: block
+
+  # --- Reseed ---------------------------------------------------------------
+
+  # Text still to translate takes the source's current text: what the
+  # translation holds there is an earlier copy of it. Writes the same paths
+  # `flatten/2` reads; a path the payload lacks is left alone.
+  defp reseed(payload, source, spec, untranslated) do
+    texts =
+      for {path, :text, value} <- flatten(source, spec), MapSet.member?(untranslated, path), into: %{}, do: {path, value}
+
+    if texts == %{}, do: payload, else: put_texts(payload, spec, texts)
+  end
+
+  defp put_texts(entry, spec, texts) do
+    entry =
+      Enum.reduce(spec.fields, entry, fn
+        {name, :text}, acc -> put_text(acc, name, texts, to_string(name))
+        _field, acc -> acc
+      end)
+
+    entry =
+      Enum.reduce(spec.blocks_fields, entry, fn field, acc ->
+        case Map.get(acc, field) do
+          joins when is_list(joins) ->
+            identities = identities(Enum.map(joins, & &1.block))
+            ctx = %{identities: identities, texts: texts, spec: spec}
+            Map.put(acc, field, Enum.map(joins, &%{&1 | block: put_block_texts(&1.block, to_string(field), ctx)}))
+
+          _ ->
+            acc
+        end
+      end)
+
+    Enum.reduce(spec.subforms, entry, &put_subform_texts(&2, &1, texts))
+  end
+
+  defp put_text(struct, field, texts, path) do
+    case Map.fetch(texts, path) do
+      {:ok, value} -> Map.put(struct, field, value)
+      :error -> struct
+    end
+  end
+
+  defp put_block_texts(block, parent_prefix, ctx) do
+    prefix = "#{parent_prefix}/#{ctx.identities[block.uid]}"
+    controlled = ctx.spec.controlled_vars.(block)
+
+    block
+    |> update_loaded(:refs, &put_ref_texts(&1, prefix, ctx.texts))
+    |> update_loaded(:vars, &put_var_texts(&1, "#{prefix}/vars", ctx.texts, &1.key in controlled))
+    |> update_rows(prefix, ctx.texts)
+    |> put_identifier_metas(prefix, ctx.texts)
+    |> update_loaded(:children, &put_block_texts(&1, parent_prefix, ctx))
+  end
+
+  defp update_loaded(struct, field, fun) do
+    case Map.get(struct, field) do
+      list when is_list(list) -> Map.put(struct, field, Enum.map(list, fun))
+      _ -> struct
+    end
+  end
+
+  defp update_rows(%{table_rows: rows} = block, prefix, texts) when is_list(rows) do
+    ids = row_identities(rows)
+
+    rows =
+      Enum.map(rows, fn row ->
+        update_loaded(row, :vars, &put_var_texts(&1, "#{prefix}/rows/#{ids[row]}/vars", texts, false))
+      end)
+
+    %{block | table_rows: rows}
+  end
+
+  defp update_rows(block, _prefix, _texts), do: block
+
+  defp put_identifier_metas(%{identifier_metas: metas} = block, prefix, texts) when is_map(metas) do
+    metas =
+      Map.new(metas, fn
+        {identifier, fields} when is_map(fields) ->
+          {identifier,
+           Map.new(fields, fn {field, value} ->
+             {field, Map.get(texts, "#{prefix}/identifier_metas/#{identifier}/#{field}", value)}
+           end)}
+
+        other ->
+          other
+      end)
+
+    %{block | identifier_metas: metas}
+  end
+
+  defp put_identifier_metas(block, _prefix, _texts), do: block
+
+  defp put_ref_texts(%{data: %wrapper{data: data} = wrapped} = ref, block_prefix, texts) when is_map(data) do
+    prefix = "#{block_prefix}/refs/#{ref.name}"
+    %{ref | data: %{wrapped | data: put_ref_data_texts(wrapper, data, prefix, texts)}}
+  end
+
+  defp put_ref_texts(ref, _block_prefix, _texts), do: ref
+
+  defp put_ref_data_texts(wrapper, data, prefix, texts) do
+    cond do
+      wrapper in Translation.text_ref_wrapper_types() ->
+        put_text(data, :text, texts, prefix <> "/text")
+
+      wrapper == HtmlBlock ->
+        put_html_values(data, prefix, texts)
+
+      wrapper == PictureBlock ->
+        Enum.reduce([:title, :credits, :alt], data, &put_text(&2, &1, texts, "#{prefix}/#{&1}"))
+
+      wrapper == VideoBlock ->
+        put_text(data, :title, texts, prefix <> "/title")
+
+      wrapper == GalleryBlock ->
+        update_loaded(data, :gallery_object_overrides, &put_override_texts(&1, prefix, texts))
+
+      true ->
+        data
+    end
+  end
+
+  # Only the values of the template's `text` parameters
+  defp put_html_values(data, prefix, texts) do
+    values = data.values || %{}
+
+    updated =
+      for {key, :text} <- HtmlBlock.params_by_key(data), reduce: values do
+        acc -> put_text(acc, key, texts, "#{prefix}/values/#{key}")
+      end
+
+    if updated == values, do: data, else: %{data | values: updated}
+  end
+
+  defp put_override_texts(override, prefix, texts) do
+    case GalleryObjectOverride.media_key(override) do
+      nil ->
+        override
+
+      key ->
+        path = "#{prefix}/gallery/#{media_key_string(key, GalleryObjectOverride.placement(override))}"
+        Enum.reduce([:title, :credits, :alt, :caption], override, &put_text(&2, &1, texts, "#{path}/#{&1}"))
+    end
+  end
+
+  defp put_var_texts(var, _parent_prefix, _texts, true = _controlled?), do: var
+
+  defp put_var_texts(var, parent_prefix, texts, _controlled?) do
+    prefix = "#{parent_prefix}/#{var.key}"
+
+    cond do
+      var.type in Translation.translatable_var_types() ->
+        put_text(var, :value, texts, prefix <> "/value")
+
+      var.type == :link and (var.link_type == :url or FollowLinkDefault.empty_link?(var)) ->
+        var |> put_text(:link_text, texts, prefix <> "/link_text") |> put_text(:value, texts, prefix <> "/url")
+
+      var.type == :link ->
+        put_text(var, :link_text, texts, prefix <> "/link_text")
+
+      true ->
+        var
+    end
+  end
+
+  defp put_subform_texts(entry, %{key: nil}, _texts), do: entry
+
+  defp put_subform_texts(entry, %{name: name, key: :key}, texts),
+    do: update_loaded(entry, name, &put_var_texts(&1, to_string(name), texts, false))
+
+  defp put_subform_texts(entry, %{name: name, key: key, text: text}, texts) do
+    update_loaded(entry, name, fn row ->
+      Enum.reduce(text, row, &put_text(&2, &1, texts, "#{name}/#{Map.get(row, key)}/#{&1}"))
+    end)
+  end
 
   # --- Merge ------------------------------------------------------------------
 
@@ -1102,12 +1297,14 @@ defmodule Brando.Translations.Sync do
 
   # --- Work -------------------------------------------------------------------
 
-  defp work_items(source_rows, target_rows, payload_rows, baseline, minor?) do
+  defp work_items(source_rows, target_rows, payload_rows, baseline, flags) do
     ctx = %{
       source: Map.new(source_rows, fn {path, _class, value} -> {path, value} end),
       target: Map.new(target_rows, fn {path, class, value} -> {path, {class, value}} end),
       baseline: baseline,
-      minor?: minor?
+      minor?: flags[:minor?],
+      translate_all?: flags[:translate_all?],
+      untranslated: flags[:untranslated]
     }
 
     Enum.flat_map(payload_rows, &work_item(&1, ctx))
@@ -1117,10 +1314,22 @@ defmodule Brando.Translations.Sync do
     source_digest = digest(Map.get(ctx.source, path, value))
 
     cond do
-      not Map.has_key?(ctx.target, path) and not blank?(value) -> [item(path, :translate, source_digest)]
-      not Map.has_key?(ctx.target, path) or ctx.minor? -> []
-      Map.has_key?(ctx.baseline, path) and ctx.baseline[path] != source_digest -> [item(path, :review, source_digest)]
-      true -> []
+      (ctx.translate_all? or not Map.has_key?(ctx.target, path)) and not blank?(value) ->
+        [item(path, :translate, source_digest)]
+
+      # Raised again against the text the payload now holds, a minor
+      # correction's included
+      MapSet.member?(ctx.untranslated, path) ->
+        if blank?(value), do: [], else: [item(path, :translate, source_digest)]
+
+      not Map.has_key?(ctx.target, path) or ctx.minor? ->
+        []
+
+      Map.has_key?(ctx.baseline, path) and ctx.baseline[path] != source_digest ->
+        [item(path, :review, source_digest)]
+
+      true ->
+        []
     end
   end
 
