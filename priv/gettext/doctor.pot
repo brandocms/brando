@@ -383,6 +383,11 @@ msgstr ""
 msgid "%{file} is now %{template}"
 msgstr ""
 
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{file}: no PHX_HOST"
+msgstr ""
+
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
 msgid "%{key}: names no site"
@@ -604,6 +609,11 @@ msgid_plural "Blocks of module %{module} (%{uid}): var %{key} in %{count} blocks
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "Brando from %{source}, no local checkouts"
+msgstr ""
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Checking…"
@@ -612,6 +622,16 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Configuration"
+msgstr ""
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "Dependency sources"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy hosts"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -831,6 +851,16 @@ msgstr ""
 msgid "Open images"
 msgstr ""
 
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "PHX_HOST set in %{files}"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "PHX_HOST still the installer's placeholder: %{files}"
+msgstr ""
+
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
 msgid "Page"
@@ -971,6 +1001,11 @@ msgstr ""
 msgid "Write alt text"
 msgstr ""
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "a deploy ships whatever the Yalc copy holds: switch to the npm release with mix brando.assets.setup --npm, or give the package its npm version in package.json and run pnpm install"
+msgstr ""
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "a static robots.txt may stand in front of the SEO text"
@@ -1024,6 +1059,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}"
+msgstr ""
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "brando in mix.exs: path %{path}"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -1250,6 +1290,21 @@ msgstr ""
 msgid "fill in the identity's name and logo"
 msgstr ""
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "from a Yalc copy, as a development Brando has no npm release: %{names}"
+msgstr ""
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "from a Yalc copy: %{names}"
+msgstr ""
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "from a local checkout: %{names}"
+msgstr ""
+
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
 msgid "generate one with mix brando.gen.site --site KEY, or register the module that renders the site in config :brando, site_frontends"
@@ -1280,6 +1335,11 @@ msgstr ""
 msgid "git %{commit}, tag %{tag}"
 msgstr ""
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "give :brando a git ref or a Hex version in mix.exs before deploying: the release build sees only the project, and a path dependency recompiles every dependency when its checkout moves"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "give config :brando, Oban its queues (see Brando.Supervisor)"
@@ -1288,6 +1348,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "give each site in the deploy target map destinations apart from the other sites'"
+msgstr ""
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build installs from package.json, the lockfile and the Yalc copy alone"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -1405,6 +1470,11 @@ msgstr ""
 msgid "no %{queues} queue"
 msgstr ""
 
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "no .envrc.prod or .envrc.staging"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no API key for the Assistant"
@@ -1413,6 +1483,11 @@ msgstr ""
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
 msgid "no HEEx template uses a link global as a string"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "no PHX_HOST: %{files}"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -1444,6 +1519,11 @@ msgstr ""
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "no image files under %{path} (is the media synced?)"
+msgstr ""
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "no local checkouts"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -1690,6 +1770,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "served from SEO settings"
+msgstr ""
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "set PHX_HOST in them to the host each release serves before deploying; the installer writes it from --domain only when the files are new"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

@@ -448,6 +448,7 @@ if Code.ensure_loaded?(Igniter) do
       envrc = """
       No --domain was given. #{Enum.map_join(created, " and ", &elem(&1, 1))} set PHX_HOST to the
       placeholder #{hosts.domain} (staging: #{hosts.staging}); replace it before deploying.
+      mix brando.doctor warns while it is there.
       """
 
       Igniter.add_notice(igniter, envrc <> (origin || ""))

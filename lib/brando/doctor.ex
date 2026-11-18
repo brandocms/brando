@@ -54,6 +54,8 @@ defmodule Brando.Doctor do
     Checks.MediaPaths,
     Checks.Deprecations,
     Checks.ReleaseDependencies,
+    Checks.DependencySources,
+    Checks.DeployHosts,
     Checks.TestDatabase
   ]
 

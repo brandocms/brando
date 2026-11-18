@@ -26,7 +26,10 @@ plug Brando.Plug.Health
 router, returning `200` when healthy and `503` otherwise. Without it, the health
 check never passes and the deploy stalls on the new colour.
 
-Florist builds a standard Mix release in Docker, copies
+Florist builds a standard Mix release in Docker, from the project's files
+only, so Brando and its npm packages cannot come from a path outside the
+project: `mix brando.doctor --strict` fails on one (see
+[Dependency sources](deps/brando/guides/doctor.md#what-is-checked)). It copies
 `/opt/app/_build/prod/<app>-<version>.tar.gz` out of the image and migrates
 with `bin/<app> eval "MyApp.ReleaseTasks.migrate"`. `mix brando.install`
 creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`,

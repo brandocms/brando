@@ -293,7 +293,8 @@ the password in the `DATABASE_URL`.
 Without `--domain`, no `check_origin` is written, so Phoenix keeps checking
 origins against the endpoint's URL host, which `PHX_HOST` sets. The
 environment files get placeholder hosts built from the application name
-(`my-app.com`, `staging.my-app.com`) and the installer says so. With
+(`my-app.com`, `staging.my-app.com`) and the installer says so;
+`mix brando.doctor` warns while they are there. With
 `--interactive` and no `--domain`, it asks for the domain, then the staging
 host and, when `check_origin` is still to be written, the extra origins
 (comma-separated), skipping any an option answers, and asks again after an
