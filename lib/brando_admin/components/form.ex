@@ -1335,6 +1335,10 @@ defmodule BrandoAdmin.Components.Form do
       not Translation.apply?(socket.assigns) ->
         {:ok, socket}
 
+      # Nothing to load, only work to list: the form stays as it was saved
+      not Translation.changes?(socket.assigns) ->
+        {:ok, Translation.mark_applied(socket)}
+
       not socket.assigns.blocks_ready? or socket.assigns.entry_loading? ->
         send_update_after(__MODULE__, [id: socket.assigns.id, action: :apply_translation], 100)
         {:ok, socket}

@@ -109,6 +109,13 @@ defmodule Brando.Translations.NewTranslationTest do
     ref |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: text}}) |> Repo.update!()
   end
 
+  defp payload_body(target) do
+    [join | _] =
+      Translations.get_pending_version(Article, target.id) |> Translations.decode_payload() |> Map.get(:entry_blocks)
+
+    hd(join.block.refs).data.data.text
+  end
+
   defp body_path(c), do: "entry_blocks/#{c.text_uid}/refs/body/text"
 
   defp expected(c) do
@@ -188,11 +195,47 @@ defmodule Brando.Translations.NewTranslationTest do
     test "keeps an untranslated text to translate, raised against the new source text", c do
       {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
 
+      for text <- ["Første avsnitt, endret", "Første avsnitt, endret igjen"] do
+        set_text(c.source.id, text)
+        Translations.source_saved(load(c.source.id))
+
+        assert open_items(target) == expected(c)
+        assert item(target, body_path(c)).source_digest == Sync.digest(text)
+        # The form gets the source's new text to translate, not the old copy
+        assert payload_body(target) == text
+      end
+    end
+
+    test "text written past the editor is the translation's own: a change in the source asks for review", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      # A save that is not the editor's resolves nothing
+      set_text(target.id, "First paragraph")
+      Translations.target_saved(Article, target.id)
+      assert {:translate, body_path(c)} in open_items(target)
+
       set_text(c.source.id, "Første avsnitt, endret")
       Translations.source_saved(load(c.source.id))
 
-      assert open_items(target) == expected(c)
-      assert item(target, body_path(c)).source_digest == Sync.digest("Første avsnitt, endret")
+      assert {:review, body_path(c)} in open_items(target)
+      refute {:translate, body_path(c)} in open_items(target)
+      assert payload_body(target) == "First paragraph"
+    end
+
+    test "an editor who translated while the source changed the text is asked to review it", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      loaded = Translations.get_pending_version(Article, target.id)
+
+      # The source changes the text while the editor translates the old one
+      set_text(c.source.id, "Første avsnitt, endret")
+      Translations.source_saved(load(c.source.id))
+      set_text(target.id, "First paragraph")
+
+      assert {:ok, %{stale: true}} = Translations.target_saved(Article, target.id, %{version_id: loaded.id})
+
+      assert {:review, body_path(c)} in open_items(target)
+      refute {:translate, body_path(c)} in open_items(target)
+      assert payload_body(target) == "First paragraph"
     end
 
     test "still asks for review of a text that was translated", c do

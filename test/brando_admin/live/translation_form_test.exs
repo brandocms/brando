@@ -141,14 +141,33 @@ defmodule BrandoAdmin.TranslationFormTest do
 
     TranslationFixtures.add_block(source, c.module, user, "Avsnitt", 0)
     {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+    version = Translations.get_pending_version(Article, target.id)
 
     view = open(conn, target.id)
-    await_selector(view, "#translation-panel .translation-work")
+    await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
 
     refute has_element?(view, ".translation-done")
     assert has_element?(view, ".translation-summary", "2 items need attention")
     assert has_element?(view, ".translation-group", "Needs translation")
     assert has_element?(view, ".translation-item-label", "Title")
+    # The version changes nothing yet: the form opens as it was saved, not
+    # with the version loaded as unsaved changes.
+    refute has_element?(view, ".translation-summary", "The changes from the source are in the form")
+    refute_push_event(view, "b:draft-dirty", _, 200)
+
+    # Marked reviewed, the title is done; the block's text stays open.
+    view
+    |> element("#article_form_form")
+    |> render_change(%{"translation_review" => %{"acknowledged" => ["title"]}})
+
+    save(view)
+
+    assert [{:translate, "entry_blocks/" <> _}] =
+             for(
+               item <- Translations.get_pending_version(Article, target.id).work_items,
+               is_nil(item.resolved_at),
+               do: {item.kind, item.path}
+             )
   end
 
   test "saving the translation writes the pending version and resolves what was done", %{conn: conn} = c do

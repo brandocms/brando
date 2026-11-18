@@ -672,13 +672,16 @@ defmodule Brando.Translations.ComputePendingTest do
     # in its blocks' sync identities.
     defp copy(source), do: %{source | id: 2, language: :en}
 
-    defp new_translation do
+    # Every kind of text; `t` rewrites the texts that are not empty.
+    defp new_translation(t \\ & &1) do
+      t = fn text -> if String.trim(text || "") == "", do: text, else: t.(text) end
+
       override = %GalleryObjectOverride{
         object_id: "10",
         object_type: :image,
-        title: "Bildetittel",
+        title: t.("Bildetittel"),
         credits: "",
-        alt: "Bilde"
+        alt: t.("Bilde")
       }
 
       slides = %{
@@ -690,32 +693,68 @@ defmodule Brando.Translations.ComputePendingTest do
         name: "photo",
         uid: uid(),
         image_id: 5,
-        data: %PictureBlock{type: "picture", data: %PictureBlock.Data{title: "Tittel", credits: "  ", alt: "Alt-tekst"}}
+        data: %PictureBlock{
+          type: "picture",
+          data: %PictureBlock.Data{title: t.("Tittel"), credits: "  ", alt: t.("Alt-tekst")}
+        }
       }
 
       vars = [
-        %Var{key: "heading", type: :string, value: "Overskrift", label: "heading"},
-        %Var{key: "intro", type: :text, value: "Ingress", label: "intro"},
-        %Var{key: "body", type: :rich_text, value: "<p>Brødtekst</p>", label: "body"},
+        %Var{key: "heading", type: :string, value: t.("Overskrift"), label: "heading"},
+        %Var{key: "intro", type: :text, value: t.("Ingress"), label: "intro"},
+        %Var{key: "body", type: :rich_text, value: t.("<p>Brødtekst</p>"), label: "body"},
         %Var{key: "empty", type: :string, value: "", label: "empty"},
-        %Var{key: "cta", type: :link, link_type: :url, value: "/no/om-oss", link_text: "Les mer", label: "cta"},
+        %Var{key: "cta", type: :link, link_type: :url, value: t.("/no/om-oss"), link_text: t.("Les mer"), label: "cta"},
         %Var{key: "flag", type: :boolean, value_boolean: true, label: "flag"}
       ]
 
-      cell = %TableRow{sync_uid: "r1", vars: [%Var{key: "cell", type: :string, value: "Celle", label: "cell"}]}
+      cell = %TableRow{sync_uid: "r1", vars: [%Var{key: "cell", type: :string, value: t.("Celle"), label: "cell"}]}
 
       article(:no,
-        title: "Tittel",
+        title: t.("Tittel"),
         subtitle: nil,
-        items: [%ArticleItem{uid: "i1", label: "Punkt", link: "/a"}, %ArticleItem{uid: "i2", label: "", link: nil}],
+        items: [
+          %ArticleItem{uid: "i1", label: t.("Punkt"), link: t.("/a")},
+          %ArticleItem{uid: "i2", label: "", link: nil}
+        ],
         blocks: [
           block("a",
-            refs: [text_ref("body", "Avsnitt"), text_ref("blank", " "), photo, slides],
+            refs: [text_ref("body", t.("Avsnitt")), text_ref("blank", " "), photo, slides],
             vars: vars,
             table_rows: [cell]
           )
         ]
       )
+    end
+
+    defp texts_by_path(entry) do
+      for {path, :text, value} <- Sync.flatten_entry(entry, Article), into: %{}, do: {path, value}
+    end
+
+    test "text still to translate takes the source's new text, of every kind" do
+      source = new_translation()
+      copy = copy(source)
+      edited = new_translation(&(&1 <> " (endret)"))
+
+      untranslated =
+        for {path, value} <- texts_by_path(source), String.trim(value || "") != "", into: MapSet.new(), do: path
+
+      result = compute(edited, copy, baseline(source), untranslated: untranslated)
+      payload = texts_by_path(result.payload)
+      edited_texts = texts_by_path(edited)
+
+      assert MapSet.size(untranslated) == 14
+      for path <- untranslated, do: assert({path, payload[path]} == {path, edited_texts[path]})
+      # Still to translate, not to review
+      assert Enum.all?(result.work_items, &(&1.kind == :translate))
+      assert length(result.work_items) == MapSet.size(untranslated)
+
+      # Text not to translate keeps the translation's own
+      result = compute(edited, copy, baseline(source), untranslated: MapSet.delete(untranslated, "title"))
+      assert result.payload.title == "Tittel"
+      assert texts_by_path(result.payload)["items/i1/label"] == "Punkt (endret)"
+
+      assert texts_by_path(compute(edited, copy, baseline(source)).payload) == texts_by_path(copy)
     end
 
     test "every copied text that is not empty is to translate, of every kind" do
