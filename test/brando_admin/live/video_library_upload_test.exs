@@ -271,6 +271,24 @@ defmodule BrandoAdmin.VideoLibraryUploadTest do
     assert has_element?(view, @sort)
   end
 
+  # The path's root and Up open the root by name, not by its folder record's
+  # id: that would list only the record's videos, not the loose ones
+  test "the root reached from a folder lists its loose videos and sorts them", %{conn: conn} do
+    clips = FolderBrowser.folder_id_for("videos/default/clips")
+    Factory.insert(:video)
+    Factory.insert(:video, folder_id: clips)
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=#{clips}")
+    view |> element(".image-picker-path button.path-link:first-child") |> render_click()
+    assert_patch(view, "/admin/assets/videos?filter%3Afolder_id=root")
+    assert has_element?(view, @sort)
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=#{clips}")
+    view |> element("button.folder-action.icon-only[phx-click*=assets_go_parent]") |> render_click()
+    assert_patch(view, "/admin/assets/videos?filter%3Afolder_id=root")
+    assert has_element?(view, @sort)
+  end
+
   # Its sort is offered only inside a folder, so a folder filter that
   # doesn't resolve, which heads the page as the root, offers none either
   test "the image library's root still offers no sort", %{conn: conn} do
