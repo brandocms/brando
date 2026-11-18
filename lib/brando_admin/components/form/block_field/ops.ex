@@ -1427,6 +1427,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # for every row they edit (a gallery object without a creator is edited
   # whenever its block's form is cast). The save stamps them again, and as
   # a change one would keep a row another editor removed (`merge_list/4`).
+  # Only a saved row (one with an id) is stamped: a map below it, such as a
+  # datasource's metas, may have a field of that name.
   @edit_stamps ~w(edited_at updated_by_id)
 
   @doc """
@@ -1514,7 +1516,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # (they are other blocks, with their own forms): on a block with many
   # children the snapshot is otherwise most of a keystroke's cost.
   defp fields_snapshot(changeset),
-    do: changeset |> without_children() |> snapshot_params() |> drop_keys(@render_artifacts ++ @edit_stamps)
+    do: changeset |> without_children() |> snapshot_params() |> drop_unedited()
 
   defp without_children(%Changeset{changes: changes, data: data} = changeset) do
     changes =
@@ -1601,11 +1603,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp dom_get(_value, _path), do: :error
 
-  defp drop_keys(%{} = map, keys) when not is_struct(map),
-    do: map |> Map.drop(keys) |> Map.new(fn {k, v} -> {k, drop_keys(v, keys)} end)
+  # Render artifacts, and a saved row's edit stamps
+  defp drop_unedited(%{} = map) when not is_struct(map) do
+    keys = if is_map_key(map, "id"), do: @render_artifacts ++ @edit_stamps, else: @render_artifacts
+    map |> Map.drop(keys) |> Map.new(fn {k, v} -> {k, drop_unedited(v)} end)
+  end
 
-  defp drop_keys(list, keys) when is_list(list), do: Enum.map(list, &drop_keys(&1, keys))
-  defp drop_keys(other, _keys), do: other
+  defp drop_unedited(list) when is_list(list), do: Enum.map(list, &drop_unedited/1)
+  defp drop_unedited(other), do: other
 
   # What names a list item whatever its index: its row id, its uid, its key
   # (a var), its sync uid (a table row). An item with none of them cannot be
