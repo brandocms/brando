@@ -253,23 +253,24 @@ defmodule Brando.Content.Definition.Model do
 
   # Compare persisted definitions using the same schema normalization as the
   # literal reader. Legacy empty strings must not become edits on reimport.
-  def stored_ref_record(record) do
+  # `subject` names the module holding it in errors
+  def stored_ref_record(record, subject \\ nil) do
     struct(Ref)
     |> Ref.changeset(Map.delete(ref_record(record), "assets"), :system)
-    |> apply_valid!(nil)
+    |> apply_valid!(subject)
     |> ref_record()
   end
 
   # A stored value predating a validation is read as it is: one old colour
   # must not stop every snapshot, export and import.
-  def stored_var_record(record) do
+  def stored_var_record(record, subject \\ nil) do
     struct(Var)
     |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil,
       validate_colors: false,
       validate_var_values: false,
       sanitize_rich_text: false
     )
-    |> apply_valid!(nil)
+    |> apply_valid!(subject)
     |> var_record(Map.get(record, :identifier_id))
   end
 

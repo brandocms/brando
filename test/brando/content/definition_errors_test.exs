@@ -209,6 +209,21 @@ defmodule Brando.Content.DefinitionErrorsTest do
              Archive.read(zip.([{"modules/01-tekst/tekst.exs", source}]))
   end
 
+  test "a changeset invalid without errors of its own still says so" do
+    changeset = %{Changeset.change(%Var{key: "intro"}) | valid?: false}
+
+    assert_raise Error, ~s(module "x": is invalid), fn -> Error.changeset!(changeset, ~s(module "x")) end
+  end
+
+  test "a stored var that no longer reads names the module holding it" do
+    # A type the schema no longer has, say
+    var = %Var{key: "intro", type: nil, label: %{"en" => "Intro"}}
+
+    assert_raise Error, ~s(module "parrot-text": var "intro": type is required), fn ->
+      Brando.Content.Definition.Model.stored_var_record(var, ~s(module "parrot-text"))
+    end
+  end
+
   describe "describe/1" do
     test "names a saved definition and its var, with the schema's expected type" do
       changeset =

@@ -202,6 +202,37 @@ defmodule Brando.Content.TransferTest do
     assert is_nil(Repo.get(Page, id))
   end
 
+  # brando_234 made var instructions a language map after the import was recorded
+  test "a whole entry imported before var instructions were translated can still be recovered", c do
+    Brando.Content.Var.changeset(
+      %Brando.Content.Var{page_id: c.source.id},
+      %{type: :string, key: "intro", label: "Intro", instructions: "Keep it short", value: "Hi"},
+      c.user
+    )
+    |> Repo.insert!()
+
+    archive = entry_archive(c)
+    [entry] = archive.bundle["entries"]
+    targets = %{entry["key"] => %{"attributes" => %{"uri" => "plain-instructions"}}}
+    assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+
+    %{"schema" => schema, "id" => id} = receipt.after[entry["key"]]
+    saved = Brando.Content.Transfer.EntryCodec.load!(schema, id, c.user)
+    assert [%{instructions: %{"en" => "Keep it short"}}] = saved.vars
+    before = %{saved | vars: Enum.map(saved.vars, &%{&1 | instructions: "Keep it short"})}
+    old_fingerprint = Brando.Content.Transfer.EntryCodec.fingerprint(before)
+    refute old_fingerprint == Brando.Content.Transfer.EntryCodec.fingerprint(saved)
+    assert Brando.Content.Transfer.EntryCodec.fingerprint?(saved, old_fingerprint)
+
+    receipt
+    |> Changeset.change(after: put_in(receipt.after, [entry["key"], "fingerprint"], old_fingerprint))
+    |> Repo.update!()
+
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    assert is_nil(Repo.get(Page, id))
+  end
+
   test "whole entry updates preserve publication, review conflicts and recover metadata", c do
     archive = entry_archive(c)
     [entry] = archive.bundle["entries"]

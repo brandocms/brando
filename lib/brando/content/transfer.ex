@@ -952,8 +952,14 @@ defmodule Brando.Content.Transfer do
     field = Catalog.field!(entry.__struct__, expected["field"])
     current = Map.fetch!(entry, field.association) |> Params.snapshot()
 
-    # A receipt from before brando_225 digested rich_text vars as html
-    unless expected["fingerprint"] in [Value.digest(current), Value.digest(Contracts.with_html_vars(current))],
+    # A receipt from before brando_234 digested var instructions as text,
+    # and one from before brando_225 rich_text vars as html
+    fingerprints =
+      for current <- [current, Contracts.with_plain_instructions(current)],
+          current <- [current, Contracts.with_html_vars(current)],
+          do: Value.digest(current)
+
+    unless expected["fingerprint"] in fingerprints,
       do:
         Error.fail!(
           dgettext(

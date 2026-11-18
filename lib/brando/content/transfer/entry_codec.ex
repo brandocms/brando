@@ -436,14 +436,16 @@ defmodule Brando.Content.Transfer.EntryCodec do
 
   @doc """
   Whether `entry` still has the `fingerprint` recorded when it was imported:
-  a fingerprint from before brando_225 digested its `rich_text` vars as
-  `html`, and an earlier one a page's `breadcrumbs`.
+  a fingerprint from before brando_234 digested its vars' instructions as
+  text, one from before brando_225 its `rich_text` vars as `html`, and an
+  earlier one a page's `breadcrumbs`.
   """
   def fingerprint?(entry, fingerprint) do
     snapshot = snapshot(entry)
 
     fingerprint in for(
       snapshot <- [without_derived(snapshot, entry), snapshot],
+      snapshot <- [snapshot, Brando.Content.Transfer.Contracts.with_plain_instructions(snapshot)],
       snapshot <- [snapshot, Brando.Content.Transfer.Contracts.with_html_vars(snapshot)],
       do: Value.digest(snapshot)
     )

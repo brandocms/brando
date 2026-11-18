@@ -5,6 +5,7 @@ defmodule Brando.Content.Definition.Snapshot do
   alias Brando.Content.Definition.{Error, Model, References, Value}
   alias Brando.Content.{Module, TableTemplate}
   alias Brando.Repo
+  alias Brando.Type.I18nString
 
   def take!(opts \\ []) do
     ensure_scope!()
@@ -36,8 +37,9 @@ defmodule Brando.Content.Definition.Snapshot do
         if module.table_template_id && not Map.has_key?(table_uids, module.table_template_id),
           do: Error.raise!(module.uid, "table template is outside the local definition scope")
 
-        {refs, bindings} = associations(module.refs, &Model.stored_ref_record/1, Model.ref_assets(), bindings)
-        {vars, bindings} = associations(module.vars, &Model.stored_var_record/1, Model.var_assets(), bindings)
+        subject = ~s(module "#{module.uid}")
+        {refs, bindings} = associations(module.refs, &Model.stored_ref_record(&1, subject), Model.ref_assets(), bindings)
+        {vars, bindings} = associations(module.vars, &Model.stored_var_record(&1, subject), Model.var_assets(), bindings)
         children = Enum.filter(modules, &(&1.parent_id == module.id)) |> Enum.map(& &1.uid)
 
         definition =
@@ -55,7 +57,8 @@ defmodule Brando.Content.Definition.Snapshot do
     {table_definitions, bindings} =
       Enum.map_reduce(selected_tables, bindings, fn table, bindings ->
         Value.nonempty!(table.uid, "table-template UID; run framework migrations")
-        {vars, bindings} = associations(table.vars, &Model.stored_var_record/1, Model.var_assets(), bindings)
+        subject = ~s(table template "#{table.uid}")
+        {vars, bindings} = associations(table.vars, &Model.stored_var_record(&1, subject), Model.var_assets(), bindings)
         {Model.table_record(table) |> Map.put("vars", vars), bindings}
       end)
 
@@ -92,11 +95,30 @@ defmodule Brando.Content.Definition.Snapshot do
   def baseline_digest(bundle, definition) do
     if get_in(bundle, ["baseline", "version"]) == @baseline_version,
       do: version_2_digest(definition),
-      else: definition |> with_html_vars() |> Value.digest()
+      else: definition |> with_html_vars() |> with_plain_instructions() |> Value.digest()
   end
 
   defp version_2_digest(definition),
-    do: definition |> drop_implied_link_defaults() |> with_html_vars() |> Value.baseline_digest()
+    do:
+      definition
+      |> drop_implied_link_defaults()
+      |> with_html_vars()
+      |> with_plain_instructions()
+      |> Value.baseline_digest()
+
+  # A var's instructions were text before brando_234 made them a language
+  # map, and a baseline from before the upgrade was digested with the text:
+  # digests use it for instructions in one language, so the upgrade is no
+  # change to the definition.
+  defp with_plain_instructions(%{"vars" => vars} = definition) when is_list(vars),
+    do: %{definition | "vars" => Enum.map(vars, &plain_instructions/1)}
+
+  defp with_plain_instructions(definition), do: definition
+
+  defp plain_instructions(%{"instructions" => instructions} = var),
+    do: %{var | "instructions" => I18nString.plain(instructions)}
+
+  defp plain_instructions(var), do: var
 
   # A `rich_text` var was an `html` var before brando_225, and a baseline from
   # before the upgrade was digested with that name: digests use it, so the

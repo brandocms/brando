@@ -79,6 +79,14 @@ defmodule Brando.Type.I18nString do
       if is_map(value), do: value |> Map.values() |> Enum.find_value(&present/1)
   end
 
+  @doc """
+  Text in one language as that text, any other value as it is: a value
+  stored before it was translated (a plain string) compares equal to it.
+  """
+  @spec plain(term()) :: term()
+  def plain(map) when is_map(map) and map_size(map) == 1 and not is_struct(map), do: map |> Map.values() |> hd()
+  def plain(value), do: value
+
   defp default_language, do: to_string(Brando.Languages.default_language() || "en")
 
   defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)

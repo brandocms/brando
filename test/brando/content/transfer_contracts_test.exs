@@ -74,4 +74,27 @@ defmodule Brando.Content.TransferContractsTest do
     assert Contracts.with_html_vars(blocks) ==
              [%{"block" => %{"vars" => [%{"key" => "intro", "type" => "html"}], "children" => []}}]
   end
+
+  # A bundle exported before brando_234 has a var's instructions as text
+  test "a bundle with plain instructions matches a module with translated ones" do
+    module = module!(false)
+
+    Repo.insert!(%Brando.Content.Var{
+      module_id: module.id,
+      key: "intro",
+      type: :string,
+      label: %{"en" => "Intro"},
+      instructions: %{"en" => "Keep it short"}
+    })
+
+    module = Repo.preload(module, :vars, force: true)
+
+    definition =
+      update_in(Contracts.normalized(module), ["vars"], fn vars ->
+        Enum.map(vars, &%{&1 | "instructions" => "Keep it short"})
+      end)
+
+    assert Contracts.differences(%{"kind" => "module", "definition" => definition}, module) == []
+    assert Contracts.same_definition?(module, definition)
+  end
 end

@@ -193,6 +193,27 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
   end
 
+  # brando_234 made var instructions a language map
+  test "instructions recorded as a string before brando_234 don't make the definition a conflict", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+
+    File.write!(
+      Path.join(c.path, "hero.exs"),
+      String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions "Pick one"))
+    )
+
+    assert {:ok, bundle} = Definitions.read(c.path)
+    result = apply_bundle!(bundle, c.user)
+
+    [current] = snapshot()["modules"]
+    assert [%{"instructions" => %{"en" => "Pick one"}}] = current["vars"]
+    before_upgrade = put_in(current, ["vars", Access.at(0), "instructions"], "Pick one")
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    stale = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
+  end
+
   # Every copy of an empty link opens on the default tab, so the module var's
   # own link type there is no part of the definition
   test "an empty link left on the other tab exports and reimports unchanged", c do

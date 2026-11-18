@@ -30,7 +30,13 @@ defmodule Brando.Content.Definition.Error do
   """
   @spec changeset!(Changeset.t(), String.t() | nil) :: no_return()
   def changeset!(changeset, subject) do
-    raise(__MODULE__, message: Enum.join(changeset_lines(changeset, subject), "\n"))
+    lines =
+      case changeset_lines(changeset, subject) do
+        [] -> [Enum.join(Enum.reject([subject], &is_nil/1) ++ ["is invalid"], ": ")]
+        lines -> lines
+      end
+
+    raise(__MODULE__, message: Enum.join(lines, "\n"))
   end
 
   @doc """
