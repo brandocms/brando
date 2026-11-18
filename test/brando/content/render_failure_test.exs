@@ -19,6 +19,11 @@ defmodule Brando.Content.RenderFailureTest do
 
   @moduletag :capture_log
 
+  # A gallery the block does not have: a loop and a filter over a list that is nil
+  @nil_loop """
+  {% ref refs.body %}{% for img in refs.gallery.gallery_objects %}<i>{{ forloop.index }}</i>{% else %}<em>No images</em>{% endfor %}[{{ refs.gallery.gallery_objects | sort | size }}]
+  """
+
   setup do
     c = ProposalFixtures.context()
     {:ok, _} = Blocks.render_entry(Page, c.identity.id)
@@ -43,16 +48,6 @@ defmodule Brando.Content.RenderFailureTest do
         assert is_integer(failure.line)
         assert failure.message =~ ~r/\S/
       end
-    end
-
-    test "iterating over nil: nothing is stored", c do
-      set_code(c.text_module, "<p>{{ missing_list | sort }}</p>")
-
-      assert {:error, {:render_failed, [failure | _] = failures}} = Blocks.render_entry(Page, c.identity.id)
-      assert length(failures) == 3
-      assert rendered(c.identity) == c.stored
-      assert %RenderFailure{kind: :iterate_over_nil, module_name: "Text", field: :blocks} = failure
-      assert failure.message =~ "nil"
     end
 
     test "at runtime in Liquid: nothing is stored", c do
@@ -91,6 +86,23 @@ defmodule Brando.Content.RenderFailureTest do
       assert {:error, {:render_failed, [failure]}} = Blocks.render_entry(Page, c.identity.id)
       assert failure.block_uid == child.uid
       assert failure.module_name == "Broken"
+    end
+  end
+
+  describe "a module template that loops over a list that is nil" do
+    test "renders the rest of the block, and the entry is stored", c do
+      set_code(c.text_module, @nil_loop)
+
+      assert {:ok, _} = Blocks.render_entry(Page, c.identity.id)
+      html = rendered(c.identity)
+
+      for n <- 0..2 do
+        assert html =~ "<p>Identity #{n}</p>"
+      end
+
+      assert html =~ "<em>No images</em>[0]"
+      refute html =~ "<i>"
+      refute html =~ "Liquex"
     end
   end
 
@@ -160,10 +172,19 @@ defmodule Brando.Content.RenderFailureTest do
       # As `Brando.LivePreview` renders it
       html = Brando.Villain.parse(entry.entry_blocks, entry, cache_modules: true, annotate_blocks: true)
       assert html =~ "!!! Error parsing liquex template !!!"
+    end
 
-      set_code(c.text_module, "<p>{{ missing_list | sort }}</p>")
+    test "renders a loop over nil as the stored render does", c do
+      set_code(c.text_module, @nil_loop)
+      entry = load(c.identity)
+
+      assert {:ok, %{blocks: stored}} = Blocks.render_fields(Page, entry)
+      assert stored =~ "<em>No images</em>[0]"
+
       html = Brando.Villain.parse(entry.entry_blocks, entry, cache_modules: true, annotate_blocks: true)
-      assert html =~ "Liquex template error: trying to iterate over nil collection"
+      assert html =~ "<em>No images</em>[0]"
+      assert html =~ "<p>Identity 0</p>"
+      assert Brando.Villain.parse(entry.entry_blocks, entry) == stored
     end
   end
 

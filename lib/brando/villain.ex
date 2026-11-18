@@ -511,7 +511,7 @@ defmodule Brando.Villain do
         liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
         case liquex_parse(html_string, liquex_parser) do
-          {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
+          {:ok, parsed_doc} -> render_parsed_doc(parsed_doc, context)
           error -> parse_error(html, error)
         end
       else
@@ -551,7 +551,7 @@ defmodule Brando.Villain do
 
     case fetch_cached_doc(key) do
       {:ok, parsed_doc} ->
-        render_parsed_doc(html_string, parsed_doc, context)
+        render_parsed_doc(parsed_doc, context)
 
       :miss ->
         parsed =
@@ -562,7 +562,7 @@ defmodule Brando.Villain do
         case parsed do
           {:ok, parsed_doc} ->
             put_cached_doc(key, parsed_doc)
-            render_parsed_doc(html_string, parsed_doc, context)
+            render_parsed_doc(parsed_doc, context)
 
           error ->
             parse_error(template, error)
@@ -570,8 +570,8 @@ defmodule Brando.Villain do
     end
   end
 
-  defp render_parsed_doc(html_string, parsed_doc, context) do
-    {result, _} = liquex_render(html_string, [], parsed_doc, context)
+  defp render_parsed_doc(parsed_doc, context) do
+    {result, _} = liquex_render(parsed_doc, context)
     Enum.join(result)
   end
 
@@ -643,76 +643,19 @@ defmodule Brando.Villain do
     Brando.Villain.EmptyKeywords.parse(html, liquex_parser)
   end
 
-  @nil_collection_mark "<!-- Liquex template error: trying to iterate over nil collection -->"
-
   # A render that collects failures records what the template raised, and
   # carries on to find the other blocks that fail; its output is not used.
-  # Any other render prints a mark for a nil collection and raises the rest.
-  defp liquex_render(html_string, [], parsed_doc, context) do
+  # Any other render raises it.
+  defp liquex_render(parsed_doc, context) do
     Liquex.Render.render!([], parsed_doc, Brando.Villain.Tags.Output.reset(context))
   rescue
     error ->
-      cond do
-        RenderFailures.transient?(error) ->
-          reraise error, __STACKTRACE__
-
-        nil_collection?(error) and RenderFailures.collecting?() ->
-          RenderFailures.record(:iterate_over_nil, "trying to iterate over a nil collection")
-          {[@nil_collection_mark], context}
-
-        nil_collection?(error) ->
-          log_nil_collection(html_string, parsed_doc, context)
-          {[@nil_collection_mark], context}
-
-        RenderFailures.collecting?() ->
-          RenderFailures.record(:render, Exception.message(error))
-          {["<!-- Liquex template error -->"], context}
-
-        true ->
-          reraise error, __STACKTRACE__
+      if RenderFailures.collecting?() and not RenderFailures.transient?(error) do
+        RenderFailures.record(:render, Exception.message(error))
+        {["<!-- Liquex template error -->"], context}
+      else
+        reraise error, __STACKTRACE__
       end
-  end
-
-  defp nil_collection?(%Protocol.UndefinedError{protocol: Liquex.Collection, value: nil}), do: true
-  defp nil_collection?(_error), do: false
-
-  defp log_nil_collection(html_string, parsed_doc, context) do
-    require Logger
-
-    for_lines = extract_for_lines(html_string)
-
-    Logger.error("""
-
-    >>> Liquex.Collection error: trying to iterate over nil <<<
-
-    This usually happens when a template tries to iterate over a collection that doesn't exist.
-    Common causes:
-    - Gallery refs using old syntax: `refs.*.images` instead of `refs.*.gallery_objects`
-    - For loops over nil collections: `{% for item in nil_collection %}`
-
-    For loops in template:
-    #{for_lines}
-
-    Context variables:
-    #{inspect(context.scope.stack, pretty: true, limit: :infinity)}
-
-    Parsed template:
-    #{inspect(parsed_doc, pretty: true, limit: 10)}
-
-    """)
-  end
-
-  defp extract_for_lines(html_string) do
-    html_string
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.filter(fn {line, _idx} -> String.contains?(line, "{% for") end)
-    |> Enum.map(fn {line, idx} -> {idx, String.trim(line)} end)
-    |> Enum.map_join("\n", fn {idx, line} -> "  line #{idx}: #{line}" end)
-    |> case do
-      "" -> "  (none found)"
-      lines -> lines
-    end
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do

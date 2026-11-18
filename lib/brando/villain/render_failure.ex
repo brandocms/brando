@@ -5,9 +5,9 @@ defmodule Brando.Villain.RenderFailure do
   return, and what a stored render that refused to store returns as
   `{:error, {:render_failed, failures}}`.
 
-    * `:kind`: `:parse` (the template does not parse or compile),
-      `:iterate_over_nil` (it reads a list that is nil) or `:render` (it raised
-      while it rendered)
+    * `:kind`: `:parse` (the template does not parse or compile) or `:render`
+      (it raised while it rendered). A loop or collection filter over a list
+      that is nil is no failure: it reads as an empty list, as in Liquid
     * `:message`: what Liquex or HEEx said
     * `:line`: the template line, when the error gives one
     * `:block_uid`, `:block_id`, `:block_type`: the block whose template failed,
@@ -19,7 +19,7 @@ defmodule Brando.Villain.RenderFailure do
       `Brando.Content.Blocks.render_fields/3`
   """
 
-  @type kind :: :parse | :iterate_over_nil | :render
+  @type kind :: :parse | :render
 
   @type t :: %__MODULE__{
           kind: kind,

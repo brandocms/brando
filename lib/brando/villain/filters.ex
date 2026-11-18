@@ -599,8 +599,17 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.sort(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
       ["Sally Snake", "giraffe", "octopus", "zebra"]
+
+  A list that is nil sorts as an empty list, as in Liquid: a ref or field with
+  nothing in it is content, not a broken template.
+
+      iex> Brando.Villain.Filters.sort(nil, %{})
+      []
   """
+  def sort(nil, _), do: []
   def sort(list, _), do: Liquex.Collection.sort(list)
+
+  def sort(nil, _field_name, _), do: []
   def sort(list, field_name, _), do: Liquex.Collection.sort(list, field_name)
 
   @doc """
@@ -626,9 +635,13 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.sort_natural(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
       ["giraffe", "octopus", "Sally Snake", "zebra"]
+
+  A list that is nil sorts as an empty list, as in Liquid.
   """
+  def sort_natural(nil, _), do: []
   def sort_natural(list, _), do: Liquex.Collection.sort_case_insensitive(list)
 
+  def sort_natural(nil, _field_name, _), do: []
   def sort_natural(list, field_name, _), do: Liquex.Collection.sort_case_insensitive(list, field_name)
 
   @doc """
@@ -882,7 +895,13 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.where([%{"b" => 2}, %{"b" => 1}], "b", 1, %{})
       [%{"b" => 1}]
+
+  A list that is nil gives an empty list, as in Liquid.
+
+      iex> Brando.Villain.Filters.where(nil, "b", 1, %{})
+      []
   """
+  def where(nil, _key, _value, _), do: []
   def where(list, key, value, _), do: Liquex.Collection.where(list, key, value)
 
   @doc """
@@ -893,6 +912,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.where([%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}, %{"b" => false, "value" => 3}], "b", %{})
       [%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}]
   """
+  def where(nil, _key, _), do: []
   def where(list, key, _), do: Liquex.Collection.where(list, key)
 
   def zero_pad(number, length \\ 3, _) do
