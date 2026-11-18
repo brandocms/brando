@@ -1,9 +1,9 @@
 defmodule Brando.Pages.RestorePageFragmentsTest do
   # Restoring a page brings back the fragments trashed with it (#3621), in
-  # one transaction with either authorization mode, and queues the entries
-  # embedding them for rendering once it commits. Not async: the failure is
-  # a constraint added to the fragments table, which locks it until the test
-  # ends.
+  # one transaction with either authorization mode. The entries embedding
+  # them render once it commits, as after the page's delete. Not async: the
+  # failure is a constraint added to the fragments table, which locks it
+  # until the test ends.
   use Brando.ConnCase
 
   alias Brando.Authorization.{Boundary, Migration}
@@ -51,6 +51,46 @@ defmodule Brando.Pages.RestorePageFragmentsTest do
         assert is_nil(reload(footer).deleted_at)
       end
 
+      test "each restore of the page in one transaction renders the entries of its own fragments", %{user: user} do
+        %{page: page, header: header} = trashed_page!(user)
+        entry = page!(user, %{title: "Embeds", uri: "embeds"})
+        embed_fragment(entry, header, user)
+        other_entry = page!(user, %{title: "Embeds aside", uri: "embeds-aside"})
+
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, _} =
+            Brando.Repo.transaction(fn ->
+              {:ok, _} = Boundary.restore(user, reload(page))
+              aside = fragment!(user, page, "aside")
+              {:ok, _} = Pages.delete_page(page.id, user, fragments: :delete)
+              # Embedded once in the trash: only the second restore renders it
+              embed_fragment(other_entry, aside, user)
+              {:ok, _} = Boundary.restore(user, reload(page))
+            end)
+
+          assert render_queued?(entry)
+          assert render_queued?(other_entry)
+        end)
+      end
+
+      test "deleting the page with its fragments renders their entries once it commits", %{user: user} do
+        page = page!(user, %{title: "Page", uri: "page"})
+        header = fragment!(user, page, "header")
+        entry = page!(user, %{title: "Embeds", uri: "embeds"})
+        embed_fragment(entry, header, user)
+
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          assert {:ok, queued_before_commit?} =
+                   Brando.Repo.transaction(fn ->
+                     {:ok, _} = Pages.delete_page(page.id, user, fragments: :delete)
+                     render_queued?(entry)
+                   end)
+
+          refute queued_before_commit?
+          assert render_queued?(entry)
+        end)
+      end
+
       test "a fragment that can't be restored leaves the page and the others in the trash", %{user: user} do
         %{page: page, header: header, footer: footer} = trashed_page!(user)
 
@@ -67,6 +107,25 @@ defmodule Brando.Pages.RestorePageFragmentsTest do
         assert reload(footer).deleted_at == page.deleted_at
       end
     end
+  end
+
+  test "maintenance code restores the page with its fragments, all or nothing", %{user: user} do
+    %{page: page, header: header, footer: footer} = trashed_page!(user)
+
+    Ecto.Adapters.SQL.query!(
+      Brando.Repo.repo(),
+      "ALTER TABLE pages_fragments ADD CONSTRAINT reject_restore_test CHECK (deleted_at IS NOT NULL OR key <> 'footer') NOT VALID"
+    )
+
+    assert_raise Ecto.ConstraintError, fn -> Boundary.restore(:system, reload(page)) end
+    assert reload(page).deleted_at == page.deleted_at
+    assert reload(header).deleted_at == page.deleted_at
+
+    Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "ALTER TABLE pages_fragments DROP CONSTRAINT reject_restore_test")
+
+    assert {:ok, _} = Boundary.restore(:system, reload(page))
+    assert is_nil(reload(header).deleted_at)
+    assert is_nil(reload(footer).deleted_at)
   end
 
   # A page in the trash with two fragments trashed with it, the header first

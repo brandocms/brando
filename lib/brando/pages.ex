@@ -133,7 +133,7 @@ defmodule Brando.Pages do
 
     with :ok <- valid_fragments_choice(choice),
          {:ok, {page, trashed}} <- delete_page_with_fragments(id, user, choice) do
-      fragments_changed(trashed)
+      render_after_commit(trashed)
       {:ok, page}
     end
   end
@@ -410,22 +410,23 @@ defmodule Brando.Pages do
       end)
 
     with {:ok, restored} <- result do
-      if restored != [] do
-        Brando.Cache.Query.evict_all(Fragment)
-        render_after_commit(id, restored)
-      end
-
+      if restored != [], do: Brando.Cache.Query.evict_all(Fragment)
+      render_after_commit(restored)
       {:ok, restored}
     end
   end
 
   def restore_fragments(%Page{}, _user), do: {:ok, []}
 
-  # The restore's transaction may still roll back: its renders wait for the
-  # commit, in its site and environment, after the caches it evicts
-  defp render_after_commit(page_id, fragments) do
+  # A page's delete or restore, or a transaction around it, may still roll
+  # back: its renders wait for the commit, in its site and environment, after
+  # the caches it evicts. Keyed per call: a page id repeats across sites, and
+  # in a second restore of the page in the transaction.
+  defp render_after_commit([]), do: :ok
+
+  defp render_after_commit(fragments) do
     render = Brando.Tenant.capture_context(fn -> fragments_changed(fragments) end)
-    Brando.Repo.after_commit({__MODULE__, :fragments_restored, page_id}, render, late: true)
+    Brando.Repo.after_commit({__MODULE__, :fragments_restored, make_ref()}, render, late: true)
   end
 
   @doc """
