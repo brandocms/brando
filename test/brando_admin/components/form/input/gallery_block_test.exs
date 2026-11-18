@@ -643,8 +643,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
 
       gallery = Brando.Repo.preload(gallery, [gallery_objects: [:image, video: [:thumbnail]]], force: true)
 
-      {:ok,
-       repeated_block: entry_block, repeated: gallery, repeated_image: image, copy: copy, repeated_objects: objects}
+      {:ok, repeated_block: entry_block, repeated: gallery, repeated_image: image, copy: copy, repeated_objects: objects}
     end
 
     defp placed_titles(socket) do
@@ -765,7 +764,9 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
                  BrandoAdmin.Components.Form.refocus_image_editor_copy(socket, ctx.copy)
                end)
 
-      assert_receive {:phoenix, :send_update, {{GalleryBlock, "gallery-block"}, %{event: "image_editor_new_copy"} = assigns}}
+      assert_receive {:phoenix, :send_update,
+                      {{GalleryBlock, "gallery-block"}, %{event: "image_editor_new_copy"} = assigns}}
+
       assert assigns.old_image_id == ctx.repeated_image.id
       assert assigns.gallery_object == target
     end

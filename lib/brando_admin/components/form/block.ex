@@ -3536,31 +3536,26 @@ defmodule BrandoAdmin.Components.Form.Block do
     objects = (gallery && gallery.gallery_objects) || []
     media_keys = Enum.map(objects, &gallery_object_media_key/1)
 
-    case target_object_index(objects, media_keys, target) do
-      index when is_integer(index) ->
-        if Map.get(Enum.at(objects, index), :image_id) == old_image_id do
-          updated_objects =
-            objects
-            |> Enum.with_index()
-            |> Enum.map(fn
-              {_obj, ^index} -> put_media_fields(%{creator_id: current_user.id}, :image, new_image.id, new_image)
-              {obj, _i} -> preserve_gallery_object(obj)
-            end)
+    index = target_object_index(objects, media_keys, target)
 
-          updated_gallery = %{
-            id: Map.get(gallery, :id),
-            config_target: Map.get(gallery, :config_target, "ref:gallery"),
-            gallery_objects: sequence_gallery_objects(updated_objects)
-          }
+    if index && Map.get(Enum.at(objects, index), :image_id) == old_image_id do
+      new_object = put_media_fields(%{creator_id: current_user.id}, :image, new_image.id, new_image)
 
-          {Changeset.put_assoc(ref_changeset, :gallery, updated_gallery),
-           replace_gallery_object_override(block_changeset, media_keys, index, {:image, new_image.id})}
-        else
-          {ref_changeset, block_changeset}
-        end
+      updated_objects =
+        objects
+        |> Enum.map(&preserve_gallery_object/1)
+        |> List.replace_at(index, new_object)
 
-      nil ->
-        {ref_changeset, block_changeset}
+      updated_gallery = %{
+        id: Map.get(gallery, :id),
+        config_target: Map.get(gallery, :config_target, "ref:gallery"),
+        gallery_objects: sequence_gallery_objects(updated_objects)
+      }
+
+      {Changeset.put_assoc(ref_changeset, :gallery, updated_gallery),
+       replace_gallery_object_override(block_changeset, media_keys, index, {:image, new_image.id})}
+    else
+      {ref_changeset, block_changeset}
     end
   end
 

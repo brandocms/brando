@@ -406,39 +406,37 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   `overrides` are structs or atom-keyed maps, as a block's applied data holds
   them.
   """
-  def replace_media(overrides, media_keys, index, {new_type, new_id} = new_key) do
-    overrides = overrides || []
-
+  def replace_media(overrides, media_keys, index, new_key) do
     case media_keys |> placements() |> Enum.at(index) do
-      {type, id, placement} = old ->
-        identities = media_keys |> Enum.with_index() |> Enum.map(fn {key, i} -> {i, key} end)
-        after_objects = List.replace_at(identities, index, {make_ref(), new_key})
-        {_type, _id, new_placement} = after_objects |> Enum.map(&elem(&1, 1)) |> placements() |> Enum.at(index)
-        moves = placement_moves(identities, after_objects) |> Map.delete(old)
-        retarget = &put_media(&1, new_type, to_string(new_id), new_placement)
-
-        # A media held once: each override for it is the object's
-        own? =
-          if is_nil(placement),
-            do: &for_media?(&1, type, id),
-            else: &for_placement?(&1, type, id, placement)
-
-        moved =
-          Enum.flat_map(overrides, fn override ->
-            if own?.(override), do: [retarget.(override)], else: move_override(override, moves)
-          end)
-
-        # The override for every placement stays with the others; the object
-        # takes a copy of it
-        case placement && !Enum.any?(overrides, own?) && lookup(index(overrides), type, id, placement) do
-          shared when shared not in [nil, false] -> moved ++ [retarget.(shared)]
-          _ -> moved
-        end
-
-      nil ->
-        overrides
+      {_type, _id, _placement} = old -> replace_placement(overrides || [], media_keys, index, old, new_key)
+      nil -> overrides || []
     end
   end
+
+  defp replace_placement(overrides, media_keys, index, {type, id, placement} = old, {new_type, new_id} = new_key) do
+    identities = media_keys |> Enum.with_index() |> Enum.map(fn {key, i} -> {i, key} end)
+    after_objects = List.replace_at(identities, index, {make_ref(), new_key})
+    {_type, _id, new_placement} = after_objects |> Enum.map(&elem(&1, 1)) |> placements() |> Enum.at(index)
+    moves = identities |> placement_moves(after_objects) |> Map.delete(old)
+    retarget = &put_media(&1, new_type, to_string(new_id), new_placement)
+    own? = own_override?(type, id, placement)
+
+    moved =
+      Enum.flat_map(overrides, fn override ->
+        if own?.(override), do: [retarget.(override)], else: move_override(override, moves)
+      end)
+
+    # The override for every placement stays with the others; the object
+    # takes a copy of it
+    case placement && !Enum.any?(overrides, own?) && lookup(index(overrides), type, id, placement) do
+      shared when shared not in [nil, false] -> moved ++ [retarget.(shared)]
+      _ -> moved
+    end
+  end
+
+  # A media held once: each override for it is the object's
+  defp own_override?(type, id, nil), do: &for_media?(&1, type, id)
+  defp own_override?(type, id, placement), do: &for_placement?(&1, type, id, placement)
 
   defp put_media(%{} = override, type, id, placement),
     do: Map.merge(override, %{object_id: id, object_type: type, placement: placement})

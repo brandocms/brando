@@ -106,32 +106,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     gallery_objects = socket.assigns[:gallery_objects] || []
 
     updated_gallery_objects =
-      cond do
-        old_image_id && target ->
-          index = target_index(gallery_objects, socket.assigns[:placements] || [], target)
+      copied_objects(gallery_objects, socket.assigns[:placements] || [], old_image_id, new_image, target)
 
-          gallery_objects
-          |> Enum.with_index()
-          |> Enum.map(fn
-            {obj, ^index} -> replace_object_image(obj, old_image_id, new_image)
-            {obj, _i} -> obj
-          end)
-
-        old_image_id ->
-          Enum.map(gallery_objects, &replace_object_image(&1, old_image_id, new_image))
-
-        true ->
-          # Adding new image — append a temporary gallery object
-          new_obj = %{image_id: new_image.id, image: new_image, video_id: nil, video: nil}
-          gallery_objects ++ [new_obj]
-      end
-
-    gallery_action =
-      cond do
-        old_image_id && target -> {:replace_gallery_image, {old_image_id, new_image, target}}
-        old_image_id -> {:replace_gallery_image, {old_image_id, new_image}}
-        true -> {:add_gallery_image_id, new_image.id}
-      end
+    gallery_action = copy_action(old_image_id, new_image, target)
 
     socket
     |> Block.commit_ref_data([ref_data: new_block_data] ++ [gallery_action])
@@ -216,6 +193,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   defp put_processed_image(obj, image) do
     if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
   end
+
+  defp copied_objects(gallery_objects, placements, old_image_id, new_image, target) when not is_nil(old_image_id) do
+    case target && target_index(gallery_objects, placements, target) do
+      nil when not is_nil(target) ->
+        gallery_objects
+
+      nil ->
+        Enum.map(gallery_objects, &replace_object_image(&1, old_image_id, new_image))
+
+      index ->
+        List.update_at(gallery_objects, index, &replace_object_image(&1, old_image_id, new_image))
+    end
+  end
+
+  # Adding new image — append a temporary gallery object
+  defp copied_objects(gallery_objects, _placements, nil, new_image, _target),
+    do: gallery_objects ++ [%{image_id: new_image.id, image: new_image, video_id: nil, video: nil}]
+
+  defp copy_action(nil, new_image, _target), do: {:add_gallery_image_id, new_image.id}
+  defp copy_action(old_image_id, new_image, nil), do: {:replace_gallery_image, {old_image_id, new_image}}
+  defp copy_action(old_image_id, new_image, target), do: {:replace_gallery_image, {old_image_id, new_image, target}}
 
   defp replace_object_image(obj, old_image_id, new_image) do
     if obj.image_id == old_image_id do
