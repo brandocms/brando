@@ -407,10 +407,25 @@ defmodule Brando.TranslationsTest do
 
       var = &Map.merge(%{"type" => &2, "key" => &1, "label" => %{"en" => &1}}, &3)
 
+      # A block's variables are the ones its module defines (`VarGuard`)
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module,
+            name: %{"en" => "Media"},
+            namespace: %{"en" => "Content"},
+            help_text: %{},
+            code: "{% ref refs.photo %}{% ref refs.attachment %}{% ref refs.slides %}",
+            refs: [ref.("photo", "picture", %{}), ref.("attachment", "file", %{}), ref.("slides", "gallery", %{})],
+            vars: [var.("hero", "image", %{}), var.("brochure", "file", %{}), var.("album", "gallery", %{})]
+          ),
+          c.user
+        )
+
       add_raw_block(
         c.source,
         c,
         %{
+          "module_id" => module.id,
           "refs" => [
             ref.("photo", "picture", %{"image_id" => image.id}),
             ref.("attachment", "file", %{"file_id" => file.().id}),
@@ -429,7 +444,8 @@ defmodule Brando.TranslationsTest do
       target = load(target.id)
       check = &Translations.check_target_save(Article, target.id, Ecto.Changeset.change(&1))
 
-      media_block = fn entry -> Enum.find(entry.entry_blocks, &(&1.block.refs != [] and length(&1.block.refs) == 3)) end
+      media_block = fn entry -> Enum.find(entry.entry_blocks, &(&1.block.module_id == module.id)) end
+      assert length(media_block.(target).block.vars) == 3
 
       edit_block = fn fun ->
         joins =
@@ -458,8 +474,8 @@ defmodule Brando.TranslationsTest do
             {"file variable", edit_var.("brochure", &%{&1 | file_id: new_file.id})},
             {"gallery variable", edit_var.("album", &%{&1 | gallery_id: nil})}
           ] do
-        assert {:error, {:source_controlled, [path | _]}} = check.(changed), label
-        assert path =~ ~r"^entry_blocks/", label
+        result = check.(changed)
+        assert match?({:error, {:source_controlled, ["entry_blocks/" <> _ | _]}}, result), "#{label}: #{inspect(result)}"
       end
 
       # A picture's alt text and caption are the translation's own
