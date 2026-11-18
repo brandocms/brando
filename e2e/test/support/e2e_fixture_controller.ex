@@ -1843,6 +1843,98 @@ defmodule E2EFixtureController do
     json(conn, %{source_id: source.id, target_id: target.id})
   end
 
+  # A Norwegian source article with one block whose media refs are all empty
+  # but one picture, and an English synchronized translation of it. The block
+  # also has a one-line and a multi-line variable with the default layout.
+  def synchronized_translation_refs(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+    alias E2eProject.SyncTest
+    alias E2eProject.SyncTest.Article
+
+    ref_specs = [
+      {"cover", "Override image", "media", %{"available_blocks" => ["picture", "video"]}},
+      {"photo", "Photo", "picture", %{}},
+      {"chosen", "Chosen photo", "picture", %{}},
+      {"slides", "Slides", "gallery", %{}},
+      {"attachment", "Attachment", "file", %{}},
+      {"icon", "Icon", "svg", %{}}
+    ]
+
+    ref = fn {name, description, type, data} ->
+      %{
+        "name" => name,
+        "description" => description,
+        "uid" => Brando.Utils.generate_uid(),
+        "data" => %{"type" => type, "data" => data}
+      }
+    end
+
+    var_specs = [
+      %{"type" => "string", "key" => "title", "label" => %{"en" => "Title"}, "sequence" => 0, "value" => "Harbour at dawn"},
+      %{
+        "type" => "text",
+        "key" => "meta",
+        "label" => %{"en" => "Meta"},
+        "sequence" => 1,
+        "value" => "Shot from the north pier.\nFilm, 35 mm."
+      }
+    ]
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        %{
+          name: %{"en" => "Sync media", "no" => "Synk-media"},
+          namespace: %{"en" => "Sync", "no" => "Synk"},
+          help_text: %{"en" => "", "no" => ""},
+          class: "sync-media",
+          code: """
+          <div>{{ title }}{% ref refs.cover %}{% ref refs.photo %}{% ref refs.chosen %}{% ref refs.slides %}{% ref refs.attachment %}{% ref refs.icon %}</div>
+          """,
+          refs: Enum.map(ref_specs, ref),
+          vars: var_specs
+        },
+        user
+      )
+
+    {_name, image} = create_directory_avatar()
+
+    {:ok, source} =
+      SyncTest.create_article(
+        %{title: "Mediakilden", slug: "mediakilden", language: "no", status: "published", year: 2020},
+        user
+      )
+
+    refs =
+      Enum.map(ref_specs, fn {name, _, _, _} = spec ->
+        Map.put(ref.(spec), "image_id", if(name == "chosen", do: image.id))
+      end)
+
+    vars = var_specs
+
+    block =
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "creator_id" => user.id,
+          "source" => to_string(Article.Blocks),
+          "refs" => refs,
+          "vars" => vars
+        },
+        user
+      )
+      |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}))
+    {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, user)
+
+    json(conn, %{source_id: source.id, target_id: target.id})
+  end
+
   def admin_workspaces(conn, _params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

@@ -1,0 +1,1 @@
+- In a synchronized translation, a media ref that is empty in the source says that media follows the source, instead of showing an empty box with no buttons.

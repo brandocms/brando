@@ -38,5 +38,36 @@
         margin-top: 10px;
       }
     }
+
+    .media-block-source-note {
+      display: none;
+      max-width: 280px;
+      margin: 0;
+      font-size: var(--brando-text-md);
+    }
+  }
+}
+
+/* A synchronized translation: media follows the source, so an empty ref
+   says so instead of offering media types (Blocks.css hides the buttons) */
+.blocks-wrapper.is-source-locked .media-block .empty {
+  padding: 24px;
+
+  figure {
+    margin-bottom: 12px;
+
+    :is(svg, [data-icon]) {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .instructions,
+  .buttons {
+    display: none;
+  }
+
+  .media-block-source-note {
+    display: block;
   }
 }
