@@ -140,7 +140,9 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   asset's own path), stays a search.
 
   Only the URL the library opens at is read so: a search typed in the
-  library that happens to start with the upload root is a search. Returns
+  library that happens to be a folder's absolute path is a search, until a
+  reload or reconnect opens that URL again, which can't be told from an old
+  link. Returns
   `{:patched, socket}`, or `{:ok, socket}` for a URL that is up to date.
   """
   def upgrade_folder_link(socket, params) do

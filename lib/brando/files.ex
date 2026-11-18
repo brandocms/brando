@@ -51,8 +51,11 @@ defmodule Brando.Files do
         target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
 
-      {:path, path}, query ->
-        from q in query, where: ilike(q.path, ^"%#{path}%")
+      # An old folder link to a folder the library no longer knows
+      # (`BrandoAdmin.LiveView.AssetListHelpers.upgrade_folder_link/2`): a
+      # file has no path of its own, so the library heads and lists the root
+      {:path, _path}, query ->
+        query
 
       # A folder known only by its assets' paths (`filter:folder_path`): a
       # file has no path of its own, so none is in one

@@ -265,6 +265,13 @@ defmodule BrandoAdmin.AssetLibrarySearchFolderTest do
       assert has_element?(view, "#list-row-#{c.terms.id}")
     end
 
+    # Not upgraded, as the library no longer knows the folder: the root
+    test "an old link to a folder that is gone opens the root", %{conn: conn} = c do
+      {:ok, view, _html} = live(conn, "/admin/assets/files?filter:path=files/default/gone")
+      assert heading(view) == "Library root"
+      refute has_element?(view, "#list-row-#{c.terms.id}")
+    end
+
     test "a folder known by its path holds no files", %{conn: conn} = c do
       {:ok, view, _html} = live(conn, "/admin/assets/files?filter:folder_path=files/default/made/up")
       refute has_element?(view, "#list-row-#{c.terms.id}")
