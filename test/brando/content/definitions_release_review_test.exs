@@ -312,4 +312,40 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
       refute text(c).code =~ "v2"
     end
   end
+
+  describe "environments" do
+    test "batches and verify runs belong to the environment they ran in", c do
+      put_test_env(:tenancy_mode, :multi)
+
+      for prefix <- ["tenant_review_staging", "tenant_review_production"] do
+        Ecto.Adapters.SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
+
+        for table <-
+              ~w(content_modules content_table_templates content_refs content_vars content_blocks
+                 content_definition_applies content_definition_batches activity_events) do
+          Ecto.Adapters.SQL.query!(Repo.repo(), ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+        end
+      end
+
+      hero = Path.join(System.tmp_dir!(), "brando-review-tenant-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(hero)
+      File.write!(Path.join(hero, "hero.exs"), File.read!("test/fixtures/definitions/hero.exs.txt"))
+      on_exit(fn -> File.rm_rf!(hero) end)
+
+      Brando.Tenant.with_prefix("tenant_review_staging", fn ->
+        assert {:ok, %{batch_id: batch_id}} = Release.apply(:all, path: hero, version: "1.0.0", user: c.user.id, wait: false)
+        assert Batches.pending().batch_id == batch_id
+        Verify.start(report!(%{c | path: hero}), [])
+        assert %{prefix: "tenant_review_staging"} = Verify.get()
+      end)
+
+      Brando.Tenant.with_prefix("tenant_review_production", fn ->
+        assert Batches.pending() == nil
+        assert Verify.get() == nil
+        assert Repo.aggregate(Module, :count) == 0
+      end)
+
+      Verify.clear("tenant_review_staging")
+    end
+  end
 end
