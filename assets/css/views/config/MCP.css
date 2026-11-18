@@ -53,6 +53,17 @@
     color: var(--brando-ink); font-family: var(--brando-font-mono); font-size: var(--brando-text-md);
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   }
+  /* The Figma token: the field and its buttons on a line, the help under them */
+  .mcp-figma-form {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px;
+    input {
+      flex: 1 1 280px; min-width: 0; height: 30px; padding: 0 10px;
+      border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
+      color: var(--brando-ink); font-family: var(--brando-font-mono); font-size: var(--brando-text-md);
+      &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
+    }
+    small { flex: 1 1 100%; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 1.5; }
+  }
   .mcp-grants { margin-top: 24px; }
 
   /* On a phone each connection is a block: who and when, then Revoke */

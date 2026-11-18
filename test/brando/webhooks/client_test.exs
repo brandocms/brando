@@ -24,6 +24,18 @@ defmodule Brando.Webhooks.ClientTest do
     assert %{status: 200, body: "xxxxxxxxxx", error: nil} = get(target, "/11", body_limit: 10)
   end
 
+  test "into: writes the body to a file, and refuses one past the limit", %{target: target} do
+    path = Path.join(System.tmp_dir!(), "client_into_#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm(path) end)
+
+    assert %{status: 200, body: "", error: nil} = get(target, "/10", body_limit: 10, into: path)
+    assert File.read!(path) == "xxxxxxxxxx"
+
+    assert %{error: :body_too_large} = get(target, "/11", body_limit: 10, into: path)
+
+    assert %{error: :unwritable} = get(target, "/1", into: Path.join(path <> "-missing", "file"))
+  end
+
   test "a body that must be whole is an error when the connection closes before its end" do
     {:ok, socket} = :gen_tcp.listen(0, [:binary, active: false, reuseaddr: true, ip: {127, 0, 0, 1}])
     {:ok, port} = :inet.port(socket)

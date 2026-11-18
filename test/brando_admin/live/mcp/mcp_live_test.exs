@@ -67,6 +67,49 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       assert rpc(tenant, tokens["access_token"], "ping").status == 401
     end
 
+    test "adds, replaces and removes the Figma token, showing only its last four characters",
+         %{conn: conn, tenant: tenant} do
+      {:ok, view, html} = live(conn, "/admin/config/mcp")
+      assert html =~ ~s(data-testid="mcp-figma-form")
+      refute html =~ ~s(data-testid="mcp-figma-status")
+
+      view |> form("[data-testid=mcp-figma-form]", %{token: "figd_first-token-1111"}) |> render_submit()
+      assert {:ok, "figd_first-token-1111"} = MCP.figma_token(tenant)
+
+      html = render(view)
+      assert html =~ "1111"
+      refute html =~ "figd_first-token"
+      refute html =~ ~s(data-testid="mcp-figma-form")
+      # Adding a token does not turn the endpoint on
+      refute MCP.enabled?(tenant)
+
+      view |> element("[data-testid=mcp-figma-replace]") |> render_click()
+      view |> form("[data-testid=mcp-figma-form]", %{token: "not a token"}) |> render_submit()
+      assert {:ok, "figd_first-token-1111"} = MCP.figma_token(tenant)
+
+      view |> form("[data-testid=mcp-figma-form]", %{token: "figd_second-token-2222"}) |> render_submit()
+      assert {:ok, "figd_second-token-2222"} = MCP.figma_token(tenant)
+
+      view |> element("[data-testid=mcp-figma-remove]") |> render_click()
+      assert MCP.figma_token(tenant) == :error
+      assert render(view) =~ ~s(data-testid="mcp-figma-form")
+
+      details =
+        Repo.all(
+          from e in Brando.Activity.Event,
+            where: e.schema == "Elixir.Brando.MCP.Setting",
+            order_by: e.id,
+            select: e.details
+        )
+
+      assert [%{"figma_token" => "added"}, %{"figma_token" => "added"}, %{"figma_token" => "removed"}] = details
+      refute inspect(details) =~ "figd_"
+
+      {:ok, _view, html} = live(conn, "/admin/config/activity")
+      assert html =~ "Added the Figma access token"
+      assert html =~ "Removed the Figma access token"
+    end
+
     test "is for those who may manage connections", %{tenant: tenant} do
       editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
       conn = log_in_user(build_conn(), editor)

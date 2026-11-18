@@ -300,6 +300,119 @@ defmodule Brando.MCP do
     end
   end
 
+  ## Figma
+
+  @doc """
+  What the admin shows about `tenant`'s Figma token: nil without one, else
+  its last four characters (`hint`), when it was added and by whom, and
+  whether it can still be decrypted (`readable`: false after the encryption
+  secret changed, and the tools then have no token).
+  """
+  @spec figma_token_status(tenant()) ::
+          nil | %{hint: String.t(), set_at: DateTime.t() | nil, set_by: User.t() | nil, readable: boolean()}
+  def figma_token_status(tenant) do
+    query = tenant |> setting_query() |> where([s], not is_nil(s.figma_token)) |> preload(:figma_token_set_by)
+
+    case Repo.one(query) do
+      nil ->
+        nil
+
+      setting ->
+        %{
+          hint: setting.figma_token_hint,
+          set_at: setting.figma_token_set_at,
+          set_by: setting.figma_token_set_by,
+          readable: Brando.Crypto.decrypt(setting.figma_token, figma_context(tenant)) != :error
+        }
+    end
+  end
+
+  @doc """
+  `tenant`'s Figma access token, decrypted, for `Brando.Figma` to call
+  Figma's API with. `:error` without one, or when it cannot be decrypted
+  (the encryption secret changed).
+  """
+  @spec figma_token(tenant()) :: {:ok, String.t()} | :error
+  def figma_token(tenant) do
+    case tenant |> setting_query() |> select([s], s.figma_token) |> Repo.one() do
+      ciphertext when is_binary(ciphertext) -> Brando.Crypto.decrypt(ciphertext, figma_context(tenant))
+      _ -> :error
+    end
+  end
+
+  @doc """
+  Stores `token` as `tenant`'s Figma access token, as `actor`, who must be
+  allowed to manage connections (`can_manage?/2`). It replaces any token
+  before it, and does not turn the endpoint on. Recorded in Activity without
+  the token.
+  """
+  @spec put_figma_token(tenant(), String.t(), User.t()) :: :ok | {:error, :forbidden | :invalid_token}
+  def put_figma_token(tenant, token, actor) when is_binary(token) do
+    token = String.trim(token)
+
+    cond do
+      not can_manage?(actor, tenant) -> {:error, :forbidden}
+      not valid_figma_token?(token) -> {:error, :invalid_token}
+      true -> store_figma_token(tenant, token, actor)
+    end
+  end
+
+  @doc "Removes `tenant`'s Figma token, as `actor` (`can_manage?/2`)."
+  @spec delete_figma_token(tenant(), User.t()) :: :ok | {:error, :forbidden}
+  def delete_figma_token(tenant, actor) do
+    if can_manage?(actor, tenant) do
+      store_figma_token(tenant, nil, actor)
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  # Figma's personal access tokens are printable ASCII without spaces
+  defp valid_figma_token?(token),
+    do: byte_size(token) in 16..512 and String.match?(token, ~r/\A[\x21-\x7E]+\z/)
+
+  defp store_figma_token(tenant, token, actor) do
+    now = DateTime.utc_now()
+
+    fields =
+      if token,
+        do: [
+          figma_token: Brando.Crypto.encrypt(token, figma_context(tenant)),
+          figma_token_hint: String.slice(token, -4, 4),
+          figma_token_set_at: now,
+          figma_token_set_by_id: actor.id
+        ],
+        else: [figma_token: nil, figma_token_hint: nil, figma_token_set_at: nil, figma_token_set_by_id: nil]
+
+    setting =
+      struct(
+        %Setting{
+          site_id: tenant.site && tenant.site.id,
+          environment_id: tenant.environment && tenant.environment.id,
+          inserted_at: now,
+          updated_at: now
+        },
+        fields
+      )
+
+    {:ok, setting} =
+      Repo.insert(setting,
+        on_conflict: [set: Keyword.put(fields, :updated_at, now)],
+        conflict_target: {:unsafe_fragment, "(coalesce(site_id, 0), coalesce(environment_id, 0))"},
+        returning: true
+      )
+
+    details = %{"figma_token" => if(token, do: "added", else: "removed")}
+    in_tenant(tenant, fn -> Brando.Activity.setting_changed(:updated, setting, "MCP", actor, details: details) end)
+
+    :ok
+  end
+
+  # Binds the ciphertext to its site environment: copied to another row, it
+  # does not decrypt.
+  defp figma_context(tenant),
+    do: "mcp.figma_token:#{(tenant.site && tenant.site.id) || 0}:#{(tenant.environment && tenant.environment.id) || 0}"
+
   defp revoke_tenant_grants(tenant, actor) do
     grants = tenant |> grant_query() |> where([g], is_nil(g.revoked_at)) |> Repo.all()
     Enum.each(grants, &revoke_grant(&1, actor, "endpoint_off"))

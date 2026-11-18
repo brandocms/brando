@@ -582,6 +582,12 @@ defmodule BrandoAdmin.Components.Activity do
   defp lines(%{schema: @mcp_setting, details: %{"mcp" => "disabled"}}, _fields, _states),
     do: [gettext("Turned the MCP endpoint off")]
 
+  defp lines(%{schema: @mcp_setting, details: %{"figma_token" => "added"}}, _fields, _states),
+    do: [gettext("Added the Figma access token")]
+
+  defp lines(%{schema: @mcp_setting, details: %{"figma_token" => "removed"}}, _fields, _states),
+    do: [gettext("Removed the Figma access token")]
+
   defp lines(%{schema: schema}, _fields, _states) when schema in [@mcp_grant, @mcp_setting], do: []
 
   defp lines(%{action: :created} = event, _fields, _states), do: [status_saved(event.details)]

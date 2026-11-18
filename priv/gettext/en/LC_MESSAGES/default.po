@@ -1932,6 +1932,11 @@ msgstr ""
 msgid "Add webhook"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Added %{date}"
@@ -1950,6 +1955,11 @@ msgstr ""
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Added for this field"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Added the Figma access token"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex
@@ -3292,6 +3302,7 @@ msgstr ""
 #: lib/brando_admin/live/content/module_form_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/upload_manager.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -3329,6 +3340,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Cancelled"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot be read"
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
@@ -4412,6 +4428,16 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Connected tools (MCP)"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools can then no longer read Figma. Images already imported stay in the media library."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame. They see the Figma files the token's owner can open."
 msgstr ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -6921,9 +6947,20 @@ msgstr ""
 msgid "Enable synchronization"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Ends in %{hint}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ends in %{hint}. Added %{date} by %{name}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ends in %{hint}. Added %{date}."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/map_block.ex
@@ -7515,6 +7552,16 @@ msgstr ""
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Fields"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma access token"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_preview_references.ex
@@ -8725,6 +8772,11 @@ msgstr ""
 msgid "Impressions"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "In Figma: Settings → Security → Personal access tokens, with read access to file content. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
+msgstr ""
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "In a recovery copy"
@@ -8968,6 +9020,11 @@ msgstr ""
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
 msgid "It can be restored from there."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "It can no longer be decrypted, as after a change of the encryption secret, so the tools cannot reach Figma. Replace it."
 msgstr ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -13977,6 +14034,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/select.ex
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/form/video_drawer.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -14079,6 +14137,11 @@ msgstr ""
 msgid "Remove text formatting"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove the Figma token?"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Remove the passkey %{name}?"
@@ -14114,6 +14177,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Removed from the trash after %{days} days"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed the Figma access token"
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
@@ -14206,6 +14274,7 @@ msgstr ""
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/image_drawer.ex
 #: lib/brando_admin/components/form/video_drawer.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replace"
 msgstr ""
@@ -15155,6 +15224,11 @@ msgstr ""
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "Save these recovery codes somewhere safe, away from your phone, such as a password manager. Each one signs you in once if you lose your authenticator app. They are not shown again."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save token"
 msgstr ""
 
 #: lib/brando_admin/components/content/list/saved_views.ex
@@ -17239,6 +17313,11 @@ msgstr ""
 msgid "That did not work. Reload the page and try again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "That does not look like a Figma access token."
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "That environment is not one of %{name}’s."
@@ -17314,6 +17393,26 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "The CSS and JavaScript packaged with the current application release are being served."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma token could not be removed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma token could not be saved."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma token was removed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma token was saved."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex

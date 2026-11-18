@@ -1,13 +1,15 @@
 defmodule BrandoAdmin.Sites.MCPLive do
   @moduledoc """
   Configuration → Integrations → Connected AI tools: the switch for the
-  remote MCP endpoint of the current site environment, its URL, and every
-  connection people have made to it, with a revoke button for each.
+  remote MCP endpoint of the current site environment, its URL, the Figma
+  token its tools read Figma with (`Brando.Figma`), and every connection
+  people have made to it, with a revoke button for each.
 
   For people who may manage connections (`Brando.MCP.can_manage?/2`).
-  Turning the endpoint on or off and revoking ask for the password, a code
-  or a passkey when the session has not given one lately
-  (`BrandoAdmin.Reauth`).
+  Turning the endpoint on or off, adding or removing the Figma token and
+  revoking ask for the password, a code or a passkey when the session has
+  not given one lately (`BrandoAdmin.Reauth`). The token is never shown
+  again once saved: only its last four characters.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
@@ -17,7 +19,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
   alias BrandoAdmin.Toast
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
-  on_mount({BrandoAdmin.Reauth, events: ~w(enable disable revoke)})
+  on_mount({BrandoAdmin.Reauth, events: ~w(enable disable revoke save_figma_token remove_figma_token)})
 
   def __authorization__, do: {:manage, :mcp}
 
@@ -128,6 +130,95 @@ defmodule BrandoAdmin.Sites.MCPLive do
             </div>
           </article>
         </section>
+
+        <section aria-labelledby="mcp-figma-heading">
+          <h2 id="mcp-figma-heading" class="integrations-group">{gettext("Figma")}</h2>
+          <article class="integrations-row" id="mcp-figma" data-testid="mcp-figma">
+            <span class="integrations-icon" aria-hidden="true"><.icon name="frame" /></span>
+            <div class="integrations-text">
+              <h3>
+                {gettext("Figma access token")}
+                <span :if={@figma && @figma.readable} class="badge badge--success" data-testid="mcp-figma-status">
+                  {gettext("Added")}
+                </span>
+                <span
+                  :if={@figma && !@figma.readable}
+                  class="badge badge--attention"
+                  data-testid="mcp-figma-unreadable"
+                >
+                  {gettext("Cannot be read")}
+                </span>
+              </h3>
+              <p>
+                {gettext(
+                  "Connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame. They see the Figma files the token's owner can open."
+                )}
+              </p>
+              <p :if={@figma} data-testid="mcp-figma-hint">
+                {figma_added(@figma)}
+              </p>
+              <p :if={@figma && !@figma.readable}>
+                {gettext(
+                  "It can no longer be decrypted, as after a change of the encryption secret, so the tools cannot reach Figma. Replace it."
+                )}
+              </p>
+              <form
+                :if={!@figma or @figma_form?}
+                class="mcp-figma-form"
+                phx-submit="save_figma_token"
+                data-testid="mcp-figma-form"
+              >
+                <input
+                  type="password"
+                  name="token"
+                  autocomplete="off"
+                  spellcheck="false"
+                  required
+                  placeholder="figd_…"
+                  aria-label={gettext("Figma access token")}
+                  aria-describedby="mcp-figma-help"
+                  data-testid="mcp-figma-token"
+                />
+                <button type="submit" class="btn btn--primary" data-testid="mcp-figma-save">
+                  {gettext("Save token")}
+                </button>
+                <button
+                  :if={@figma}
+                  type="button"
+                  class="btn"
+                  phx-click="cancel_figma_token"
+                  data-testid="mcp-figma-cancel"
+                >
+                  {gettext("Cancel")}
+                </button>
+                <small id="mcp-figma-help">
+                  {gettext(
+                    "In Figma: Settings → Security → Personal access tokens, with read access to file content. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
+                  )}
+                </small>
+              </form>
+            </div>
+            <div :if={@figma && !@figma_form?} class="integrations-actions">
+              <button type="button" class="btn" phx-click="replace_figma_token" data-testid="mcp-figma-replace">
+                {gettext("Replace")}
+              </button>
+              <button
+                type="button"
+                class="btn btn--danger"
+                phx-click="remove_figma_token"
+                data-testid="mcp-figma-remove"
+                data-confirm-title={gettext("Remove the Figma token?")}
+                data-confirm={
+                  gettext("Connected tools can then no longer read Figma. Images already imported stay in the media library.")
+                }
+                data-confirm-ok={gettext("Remove")}
+                data-confirm-destructive
+              >
+                {gettext("Remove")}
+              </button>
+            </div>
+          </article>
+        </section>
       </div>
 
       <section class="workspace-panel mcp-grants" data-testid="mcp-grants">
@@ -210,7 +301,8 @@ defmodule BrandoAdmin.Sites.MCPLive do
          page_title: gettext("Connected AI tools"),
          tenant: tenant,
          mounted?: MCP.mounted?(),
-         secure?: MCP.secure_base?()
+         secure?: MCP.secure_base?(),
+         figma_form?: false
        )
        |> load()}
     else
@@ -220,11 +312,48 @@ defmodule BrandoAdmin.Sites.MCPLive do
 
   defp load(socket) do
     tenant = socket.assigns.tenant
-    assign(socket, enabled?: MCP.enabled?(tenant), grants: MCP.list_grants(tenant))
+
+    assign(socket,
+      enabled?: MCP.enabled?(tenant),
+      grants: MCP.list_grants(tenant),
+      figma: MCP.figma_token_status(tenant)
+    )
   end
 
   def handle_event("enable", _params, socket), do: {:noreply, toggle(socket, true)}
   def handle_event("disable", _params, socket), do: {:noreply, toggle(socket, false)}
+
+  def handle_event("replace_figma_token", _params, socket), do: {:noreply, assign(socket, :figma_form?, true)}
+  def handle_event("cancel_figma_token", _params, socket), do: {:noreply, assign(socket, :figma_form?, false)}
+
+  def handle_event("save_figma_token", %{"token" => token}, socket) do
+    %{current_user: user, tenant: tenant} = socket.assigns
+
+    case MCP.put_figma_token(tenant, token, user) do
+      :ok ->
+        Toast.send_to(user, gettext("The Figma token was saved."))
+        {:noreply, socket |> assign(:figma_form?, false) |> load()}
+
+      {:error, :invalid_token} ->
+        Toast.send_to(user, gettext("That does not look like a Figma access token."), %{level: :error})
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        Toast.send_to(user, gettext("The Figma token could not be saved."), %{level: :error})
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("remove_figma_token", _params, socket) do
+    %{current_user: user, tenant: tenant} = socket.assigns
+
+    case MCP.delete_figma_token(tenant, user) do
+      :ok -> Toast.send_to(user, gettext("The Figma token was removed."))
+      {:error, _reason} -> Toast.send_to(user, gettext("The Figma token could not be removed."), %{level: :error})
+    end
+
+    {:noreply, socket |> assign(:figma_form?, false) |> load()}
+  end
 
   def handle_event("revoke", %{"id" => id}, socket) do
     user = socket.assigns.current_user
@@ -256,6 +385,19 @@ defmodule BrandoAdmin.Sites.MCPLive do
 
   defp site_label(%{site: nil}), do: Brando.config(:app_name) || "Brando"
   defp site_label(%{site: site, environment: environment}), do: "#{site.name} · #{environment.name}"
+
+  defp figma_added(%{hint: hint, set_at: set_at, set_by: set_by}) do
+    cond do
+      set_by && set_at ->
+        gettext("Ends in %{hint}. Added %{date} by %{name}.", hint: hint, date: date(set_at), name: set_by.name)
+
+      set_at ->
+        gettext("Ends in %{hint}. Added %{date}.", hint: hint, date: date(set_at))
+
+      true ->
+        gettext("Ends in %{hint}.", hint: hint)
+    end
+  end
 
   defp date(datetime), do: Brando.Utils.Datetime.format_datetime(datetime, "%-d %B %Y, %H:%M")
 end
