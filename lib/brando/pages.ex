@@ -156,11 +156,18 @@ defmodule Brando.Pages do
   defp ok_or_rollback({:ok, result}), do: result
   defp ok_or_rollback({:error, reason}), do: Brando.Repo.rollback(reason)
 
-  # The page is locked, so a second delete of it waits and then finds it in
-  # the trash. The fragments are moved, or cleared for the trash, before the
-  # generated delete runs: a fragment refused stops it before it tells anyone.
+  # Page deletes take the page tree's lock (`Brando.Pages.Page.PreventParentCycles`
+  # takes it for a parent change) before anything else, so they run one at a
+  # time: a second delete of the page finds it in the trash, and a delete of
+  # the page the fragments go to finds them on it, or is found first. Holding
+  # no row while it waits, it can't deadlock with them or with a save.
+  #
+  # The fragments are moved, or cleared for the trash, before the generated
+  # delete runs: a fragment refused stops it before it tells anyone.
   defp delete_locked_page(id, user, choice) do
-    with %Page{} = page <- lock_live_page(id) || {:error, {:page, :not_found}},
+    lock_page_tree()
+
+    with %Page{} = page <- live_page(id) || {:error, {:page, :not_found}},
          {:ok, prepared} <- prepare_fragments(lock_fragments(page), page, user, choice) do
       Brando.Query.Mutations.delete(__MODULE__, Page, "page", page.id,
         user: user,
@@ -251,12 +258,17 @@ defmodule Brando.Pages do
     end
   end
 
-  # The page the fragments go to is locked until the delete commits: a delete
-  # of that page waits, and then finds them on it. One deleted first is not
-  # found here (the lock reads the row as committed).
-  defp lock_live_page(id) do
+  defp lock_page_tree do
+    prefix = Brando.Tenant.current_prefix() || "public"
+
+    Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-page-tree:" <> prefix
+    ])
+  end
+
+  defp live_page(id) do
     case Ecto.Type.cast(:id, id) do
-      {:ok, id} -> Brando.Repo.one(from p in Page, where: p.id == ^id and is_nil(p.deleted_at), lock: "FOR UPDATE")
+      {:ok, id} -> Brando.Repo.one(from p in Page, where: p.id == ^id and is_nil(p.deleted_at))
       :error -> nil
     end
   end
@@ -266,10 +278,10 @@ defmodule Brando.Pages do
   defp move_fragments(fragments, nil, user), do: move_fragments_to(fragments, nil, user)
 
   defp move_fragments(fragments, %Page{id: id}, user),
-    do: move_fragments_to(fragments, lock_live_page(id), user)
+    do: move_fragments_to(fragments, live_page(id), user)
 
   defp move_fragments(fragments, id, user) do
-    case lock_live_page(id) do
+    case live_page(id) do
       nil -> {:error, {:fragments, :target_not_found}}
       target -> move_fragments_to(fragments, target, user)
     end
@@ -286,8 +298,11 @@ defmodule Brando.Pages do
       changeset = Changeset.change(fragment, page_id: target_id)
 
       with :ok <- Brando.Authorization.Boundary.authorize(user, :update, fragment),
-           :ok <- Brando.Authorization.Boundary.change(user, :update, changeset) do
-        Brando.Repo.update(changeset)
+           :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
+           {:ok, moved} <- Brando.Repo.update(changeset) do
+        # In its history, and as the save open editors are told of
+        Brando.Activity.saved(changeset, moved, user)
+        {:ok, moved}
       end
     end)
     |> case do

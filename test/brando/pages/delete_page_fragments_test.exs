@@ -45,6 +45,10 @@ defmodule Brando.Pages.DeletePageFragmentsTest do
       assert %{page_id: page_id, deleted_at: nil} = reload(header)
       assert page_id == parent.id
       assert reload(footer).page_id == parent.id
+
+      # Recorded as the deleting editor's change of the fragment
+      assert [%{action: :updated, user_id: user_id}] = Brando.Activity.for_entry(Fragment, header.id)
+      assert user_id == user.id
     end
 
     test "passes over a trashed parent to the nearest live ancestor", %{user: user} do
