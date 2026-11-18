@@ -212,6 +212,13 @@ msgid_plural "%{count} in sizes"
 msgstr[0] "%{count} i størrelser"
 msgstr[1] "%{count} i størrelser"
 
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} independent translation shares a gallery with another language version"
+msgid_plural "%{count} independent translations share a gallery with another language version"
+msgstr[0] "%{count} selvstendig oversettelse deler et galleri med en annen språkversjon"
+msgstr[1] "%{count} selvstendige oversettelser deler et galleri med en annen språkversjon"
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} language"
@@ -986,6 +993,11 @@ msgstr "Kontrollene kunne ikke kjøres. Se i applikasjonsloggene, eller kjør mi
 msgid "Tidewave is for development: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
 msgstr "Tidewave er for utvikling: gi den only: :dev i mix.exs og plugg den inn i if Mix.env() == :dev i endpointet"
 
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "Translation galleries"
+msgstr "Gallerier i oversettelser"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "URL, mailer and media settings in place"
@@ -1244,6 +1256,11 @@ msgstr "publiseringsmål som deles mellom nettsteder"
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
 msgstr "publiseringsmål som deles av alle nettsteder"
+
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "editing such a gallery changes the other version too. Run mix brando.translations.split_galleries to give each translation its own copy"
+msgstr "å redigere et slikt galleri endrer den andre versjonen også. Kjør mix brando.translations.split_galleries for å gi hver oversettelse sin egen kopi"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -1562,6 +1579,11 @@ msgstr "ingen identitet"
 #, elixir-autogen, elixir-format
 msgid "no image files under %{path} (is the media synced?)"
 msgstr "ingen bildefiler under %{path} (er mediene synkronisert?)"
+
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "no independent translation shares a gallery with another language version"
+msgstr "ingen selvstendig oversettelse deler et galleri med en annen språkversjon"
 
 #: lib/brando/doctor/checks/dependency_sources.ex
 #, elixir-autogen, elixir-format

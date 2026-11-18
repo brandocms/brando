@@ -839,6 +839,7 @@ server. These have a release form:
 | `mix brando.entries.resave` | `bin/my_app rpc "Brando.Content.Resave.run()"` |
 | `mix brando.modules plan --release` / `apply --release` | `bin/my_app rpc "Brando.Content.Definitions.Release.status()"` / `"Brando.Content.Definitions.Release.apply!([\"uid\"], user: 1)"` ([Applying a release's definitions](module_definitions.md#applying-a-release-s-definitions)) |
 | `mix brando.identifiers.sync` | Configuration → Utilities → Sync identifiers, in each environment with tenancy |
+| `mix brando.translations.split_galleries` | `bin/my_app rpc "Brando.Translations.SharedGalleries.repair()"` |
 | `mix brando.doctor` | Configuration → Utilities, the System check card |
 
 `Brando.Content.Resave.run/1` re-renders and stores every entry's blocks, as

@@ -45,6 +45,7 @@ defmodule Brando.Doctor do
     Checks.HeexLinkGlobals,
     Checks.EditorLiquid,
     Checks.BlockUids,
+    Checks.TranslationGalleries,
     Checks.FragmentPages,
     Checks.Colors,
     Checks.Sitemap,

@@ -319,6 +319,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   defp assemble_socket({assigns, socket}, lookups) do
+    was_locked? = socket.assigns[:source_locked] == true
+
     socket
     |> refresh_asset_assign(:image, :image_id, lookups.images, assigns)
     |> refresh_asset_assign(:file, :file_id, lookups.files, assigns)
@@ -326,7 +328,65 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> refresh_asset_assign(:gallery, :gallery_id, lookups.galleries, assigns)
     |> assign(:identifier, lookup_asset(lookups.identifiers, assigns.id))
     |> assign_var_fields(assigns)
+    |> take_own_gallery(was_locked?)
   end
+
+  # Made independent, a translation gets its own copy of each gallery it
+  # shared with the source (`Brando.Translations.make_independent/3`), in
+  # the database. The form still holds the source's. When the lock lifts, the
+  # var takes a gallery of its own, so the edits that follow and the save use
+  # it: the one its row now stores, when nothing else uses that one and it
+  # holds what the form shows, or else a copy of what the form shows (a
+  # source change it has not saved yet). Made the source instead, the row
+  # stores what the form holds, or a gallery the others still use, and
+  # nothing changes.
+  defp take_own_gallery(
+         %{assigns: %{type: :gallery, source_locked: false, gallery_id: current, gallery: %Brando.Galleries.Gallery{}}} =
+           socket,
+         true
+       )
+       when not is_nil(current) do
+    var_id = socket.assigns.var[:id].value
+
+    case stored_gallery_id(socket) do
+      stored when stored in [nil, current] ->
+        socket
+
+      stored ->
+        if Brando.Galleries.gallery_in_use?(stored, except: {Brando.Content.Var, normalize_id(var_id)}),
+          do: socket,
+          else: take_gallery(socket, stored)
+    end
+  end
+
+  defp take_own_gallery(socket, _was_locked?), do: socket
+
+  @own_gallery_preload [gallery_objects: [:image, video: [:thumbnail, :file]]]
+
+  defp take_gallery(socket, stored) do
+    shown = socket.assigns.gallery
+    # The block's changeset ignores a value equal to the one it loaded
+    loaded = socket.assigns.var.source.data.gallery_id
+
+    with {:ok, own} <- Brando.Galleries.get_gallery(%{matches: %{id: stored}, preload: @own_gallery_preload}),
+         {:ok, own} <-
+           if(stored != loaded and media_of(own) == media_of(shown),
+             do: {:ok, own},
+             else: Brando.Galleries.duplicate_gallery(shown, gallery_actor(socket))
+           ) do
+      own = Repo.preload(own, @own_gallery_preload, force: true)
+
+      socket
+      |> assign(:own_gallery_ids, MapSet.put(Map.get(socket.assigns, :own_gallery_ids, MapSet.new()), own.id))
+      |> assign(:gallery, own)
+      |> assign(:gallery_id, own.id)
+      |> on_change(%{gallery: own, gallery_id: own.id})
+    else
+      _ -> socket
+    end
+  end
+
+  defp media_of(gallery), do: gallery |> gallery_objects() |> Enum.map(&{&1.image_id, &1.video_id})
 
   # Keep @image/@file in sync with the changeset FK. `assign_new` would strand a
   # stale nil after an upload/select changed the FK (blank card); a plain `assign`

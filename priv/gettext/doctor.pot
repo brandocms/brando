@@ -211,6 +211,13 @@ msgid_plural "%{count} in sizes"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} independent translation shares a gallery with another language version"
+msgid_plural "%{count} independent translations share a gallery with another language version"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} language"
@@ -985,6 +992,11 @@ msgstr ""
 msgid "Tidewave is for development: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
 msgstr ""
 
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "Translation galleries"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "URL, mailer and media settings in place"
@@ -1242,6 +1254,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
+msgstr ""
+
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "editing such a gallery changes the other version too. Run mix brando.translations.split_galleries to give each translation its own copy"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -1560,6 +1577,11 @@ msgstr ""
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "no image files under %{path} (is the media synced?)"
+msgstr ""
+
+#: lib/brando/doctor/checks/translation_galleries.ex
+#, elixir-autogen, elixir-format
+msgid "no independent translation shares a gallery with another language version"
 msgstr ""
 
 #: lib/brando/doctor/checks/dependency_sources.ex

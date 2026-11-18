@@ -31,6 +31,7 @@ defmodule Brando.Translations do
   alias Brando.Translations.Group
   alias Brando.Translations.Member
   alias Brando.Translations.PendingVersion
+  alias Brando.Translations.SharedGalleries
   alias Brando.Translations.Sync
   alias Brando.Translations.WorkItem
   alias Brando.Utils
@@ -278,8 +279,13 @@ defmodule Brando.Translations do
   Its content, pending edits and alternate link stay; structure and shared
   fields become editable. Pending versions are marked superseded. The source
   cannot be made independent — transfer the role first.
+
+  A synchronized target shows the source's gallery records (gallery variables
+  and assets point at them). Each one the target shares with another version
+  of its group is copied for it (`split_shared_galleries/3`), so its galleries
+  are its own from then on.
   """
-  def make_independent(schema, entry_id, _actor) do
+  def make_independent(schema, entry_id, actor) do
     case get_member(schema, entry_id) do
       nil ->
         {:error, :not_enrolled}
@@ -294,10 +300,78 @@ defmodule Brando.Translations do
         Repo.transaction(fn ->
           supersede_pending(member.id)
 
+          case split_member_galleries(schema, member, actor) do
+            {:ok, _copies} -> :ok
+            {:error, reason} -> Repo.rollback(reason)
+          end
+
           member
           |> Changeset.change(synchronized: false, detached_at: now())
           |> Repo.update!()
         end)
+    end
+  end
+
+  @doc """
+  The rows of an entry that point at a gallery record another version of its
+  group points at too, as `Brando.Translations.SharedGalleries` holders. `[]`
+  for an entry outside a group.
+
+  While a translation follows the source that is expected. An independent one
+  that shares a gallery changes the other version when its gallery is edited:
+  `split_shared_galleries/3` repairs it.
+  """
+  def shared_galleries(schema, entry_id) do
+    case get_member(schema, entry_id) do
+      %Member{} = member ->
+        with {:ok, entry, others} <- load_group_entries(schema, member), do: SharedGalleries.shared(entry, others)
+
+      nil ->
+        []
+    end
+  end
+
+  @doc """
+  Gives an entry its own copy of every gallery record it shares with another
+  version of its group (`shared_galleries/2`). `make_independent/3` does this;
+  call it to repair a translation made independent before it did.
+
+  Returns `{:ok, copies}`, the new galleries by the id of the gallery they
+  replace, or `{:error, :not_enrolled}`.
+  """
+  def split_shared_galleries(schema, entry_id, actor) do
+    case get_member(schema, entry_id) do
+      %Member{} = member ->
+        Repo.transaction(fn ->
+          case split_member_galleries(schema, member, actor) do
+            {:ok, copies} -> copies
+            {:error, reason} -> Repo.rollback(reason)
+          end
+        end)
+
+      nil ->
+        {:error, :not_enrolled}
+    end
+  end
+
+  defp split_member_galleries(schema, member, actor) do
+    case load_group_entries(schema, member) do
+      {:ok, entry, others} -> SharedGalleries.split(entry, others, actor)
+      {:error, _} -> {:ok, %{}}
+    end
+  end
+
+  # The member's entry and the entries of the other members of its group.
+  # Deleted versions count too: restored, they would share again.
+  defp load_group_entries(schema, member) do
+    with {:ok, entry} <- load_entry(schema, member.entry_id, with_deleted: true) do
+      others =
+        for %Member{entry_id: id} <- list_members(member.group_id),
+            id != member.entry_id,
+            {:ok, other} <- [load_entry(schema, id, with_deleted: true)],
+            do: other
+
+      {:ok, entry, others}
     end
   end
 
