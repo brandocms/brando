@@ -50,8 +50,28 @@ test('reviews, verifies, applies and reverts a release’s module definitions', 
   await expect(after.locator('article[b-tpl="example"].from-the-release')).toHaveCount(1)
   await expect(page.frameLocator('#release-preview-before').locator('article[b-tpl="example"].from-the-release')).toHaveCount(0)
 
+  // The module's label sits outside the outline, clear of the page's text:
+  // the block's own and the block right above it
+  const label = after.locator('.brando-proposal-highlight-label')
+  await expect(label).toHaveCount(1)
+  const afterFrame = await (await page.locator('#release-preview-after').elementHandle()).contentFrame()
+  const covered = await afterFrame.evaluate(() => {
+    const label = document.querySelector('.brando-proposal-highlight-label').getBoundingClientRect()
+    const range = document.createRange()
+    const lines = [...document.querySelectorAll('article h1, article h2, article .paragraph')].flatMap(text => {
+      range.selectNodeContents(text)
+      return [...range.getClientRects()].map(line => ({ text: text.textContent.trim(), line }))
+    })
+    const apart = ({ line }) =>
+      label.right <= line.left || line.right <= label.left || label.bottom <= line.top || line.bottom <= label.top
+    return { lines: lines.length, covered: lines.filter(line => !apart(line)).map(line => line.text) }
+  })
+  expect(covered.lines).toBeGreaterThan(2)
+  expect(covered.covered).toEqual([])
+
   await page.getByTestId('release-marks-toggle').click()
   await expect(after.locator('.brando-proposal-highlight')).toHaveCount(0)
+  await expect(label).toHaveCount(0)
   await page.getByTestId('release-marks-toggle').click()
   await expect(after.locator('.brando-proposal-highlight').first()).toBeVisible()
 
