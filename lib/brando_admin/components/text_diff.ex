@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.TextDiff do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.TextDiff.Highlight
+
   @max_characters 12_000
   @max_lines 400
 
@@ -15,6 +17,15 @@ defmodule BrandoAdmin.Components.TextDiff do
   attr :empty_text, :string, default: nil
   attr :monospace, :boolean, default: false
 
+  attr :highlight, :atom,
+    default: nil,
+    values: [nil, :liquid, :heex, :html],
+    doc: "colours a template's or HTML's tags, attributes and expressions (implies monospace)"
+
+  attr :context, :integer,
+    default: nil,
+    doc: "keeps this many unchanged lines around each change and folds the rest into a gap row"
+
   @doc """
   A bounded line diff for plain text or lists of `%{text: text, key: identity}`.
   Optional line types (`:heading`, `:media`, `:detail`) provide visual hierarchy.
@@ -25,12 +36,19 @@ defmodule BrandoAdmin.Components.TextDiff do
 
   def diff(assigns) do
     comparison = compare(assigns.before, assigns.after)
-    assigns = assign(assigns, :comparison, Map.update!(comparison, :rows, &mark_changed_headings/1))
+
+    rows =
+      comparison.rows
+      |> mark_changed_headings()
+      |> fold(assigns.context)
+      |> highlight(assigns.highlight)
+
+    assigns = assign(assigns, :comparison, %{comparison | rows: rows})
 
     ~H"""
     <section
       id={@id}
-      class={["admin-text-diff", @monospace && "is-code"]}
+      class={["admin-text-diff", (@monospace || @highlight) && "is-code"]}
       aria-labelledby={@id <> "-title"}
       data-changed={to_string(@comparison.added > 0 || @comparison.removed > 0)}
       data-truncated={to_string(@comparison.truncated?)}
@@ -71,23 +89,31 @@ defmodule BrandoAdmin.Components.TextDiff do
         aria-label={dgettext("admin_diff", "Changes in %{field}", field: @label)}
         tabindex="0"
       >
-        <div
-          :for={row <- @comparison.rows}
-          class={[
-            "text-diff-line",
-            "is-#{row.kind}",
-            row[:type] && "is-#{row.type}",
-            row.change_heading? && "is-change-heading"
-          ]}
-        >
-          <span class="text-diff-number" aria-hidden="true">{row.before}</span>
-          <span class="text-diff-number" aria-hidden="true">{row.after}</span>
-          <span class="text-diff-marker" aria-hidden="true">{marker(row.kind)}</span>
-          <span class="sr-only">{line_label(row.kind)}</span>
-          <del :if={row.kind == :del} class="text-diff-text"><.line_content row={row} /></del>
-          <ins :if={row.kind == :ins} class="text-diff-text"><.line_content row={row} /></ins>
-          <span :if={row.kind == :eq} class="text-diff-text"><.line_content row={row} /></span>
-        </div>
+        <%= for row <- @comparison.rows do %>
+          <div :if={row.kind == :gap} class="text-diff-gap">
+            <span aria-hidden="true">⋯</span>
+            <span>
+              {dngettext("admin_diff", "%{count} unchanged line", "%{count} unchanged lines", row.count)}
+            </span>
+          </div>
+          <div
+            :if={row.kind != :gap}
+            class={[
+              "text-diff-line",
+              "is-#{row.kind}",
+              row[:type] && "is-#{row.type}",
+              row.change_heading? && "is-change-heading"
+            ]}
+          >
+            <span class="text-diff-number" aria-hidden="true">{row.before}</span>
+            <span class="text-diff-number" aria-hidden="true">{row.after}</span>
+            <span class="text-diff-marker" aria-hidden="true">{marker(row.kind)}</span>
+            <span class="sr-only">{line_label(row.kind)}</span>
+            <del :if={row.kind == :del} class="text-diff-text"><.line_content row={row} /></del>
+            <ins :if={row.kind == :ins} class="text-diff-text"><.line_content row={row} /></ins>
+            <span :if={row.kind == :eq} class="text-diff-text"><.line_content row={row} /></span>
+          </div>
+        <% end %>
       </div>
       <p :if={@comparison.rows == []} class="text-diff-empty">{@empty_text || dgettext("admin_diff", "No content")}</p>
       <footer :if={@note || @comparison.truncated?}>
@@ -119,7 +145,48 @@ defmodule BrandoAdmin.Components.TextDiff do
     """
   end
 
+  defp line_content(%{row: %{tokens: tokens}} = assigns) do
+    assigns = assign(assigns, :html, Highlight.to_html(tokens))
+    ~H"{@html}"
+  end
+
   defp line_content(assigns), do: ~H"{@row.text}"
+
+  # Runs of unchanged lines longer than twice `context`, past the context
+  # kept around each change, become one gap row
+  defp fold(rows, nil), do: rows
+
+  defp fold(rows, context) when is_integer(context) and context >= 0 do
+    chunks = Enum.chunk_by(rows, &(&1.kind == :eq))
+    last = length(chunks) - 1
+
+    if Enum.all?(rows, &(&1.kind == :eq)) do
+      rows
+    else
+      chunks
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {chunk, index} -> fold_chunk(chunk, index == 0, index == last, context) end)
+    end
+  end
+
+  # Before the first change only the lines leading up to it are kept, after
+  # the last only those that follow it
+  defp fold_chunk([%{kind: :eq} | _] = chunk, first?, last?, context) do
+    head = if first?, do: 0, else: context
+    tail = if last?, do: 0, else: context
+    hidden = length(chunk) - head - tail
+
+    if hidden > 1,
+      do: Enum.take(chunk, head) ++ [%{kind: :gap, count: hidden}] ++ Enum.take(chunk, -tail),
+      else: chunk
+  end
+
+  defp fold_chunk(chunk, _first?, _last?, _context), do: chunk
+
+  defp highlight(rows, nil), do: rows
+
+  defp highlight(rows, language),
+    do: Enum.map(rows, &if(&1.kind == :gap, do: &1, else: Map.put(&1, :tokens, Highlight.tokens(&1.text, language))))
 
   defp reference_icon(:image), do: "image"
   defp reference_icon(:video), do: "film"

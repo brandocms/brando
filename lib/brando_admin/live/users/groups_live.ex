@@ -1068,6 +1068,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp action_label(:reorder), do: gettext("Reorder")
   defp action_label(:manage), do: gettext("Manage")
   defp action_label(:connect), do: gettext("Connect")
+  defp action_label(:apply), do: gettext("Apply")
   defp action_label(action), do: action |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp permission_label(catalog, key) do
@@ -1100,6 +1101,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(%{subject: :notifications}), do: gettext("Notifications")
   defp resource_label(%{subject: :mcp}), do: gettext("Connected AI tools")
   defp resource_label(%{subject: :listing_views}), do: gettext("Shared listing views")
+  defp resource_label(%{subject: :module_definitions}), do: gettext("Release module definitions")
   defp resource_label(permission), do: permission.label
 
   # What a permission gives that its name does not say
@@ -1119,6 +1121,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
     do:
       gettext(
         "Connect lets a person with two-factor authentication connect Claude, ChatGPT and other MCP clients, which read content and propose changes as them. Manage turns the endpoint on and off, and revokes anyone's connections."
+      )
+
+  defp resource_note(%{subject: :module_definitions}),
+    do:
+      gettext(
+        "Review the module definitions a release brings, apply them, and keep or revert an apply. It writes the release's templates, which are code, without making the person a superuser."
       )
 
   defp resource_note(%{subject: :listing_views}),

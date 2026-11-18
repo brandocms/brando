@@ -19,6 +19,7 @@ defmodule Brando.Supervisor do
     Brando.Villain.HeexRenderer.init_cache()
     Brando.Villain.init_parse_cache()
     Brando.Content.Definitions.ReleaseStatus.init_cache()
+    Brando.Content.Definitions.Release.Verify.init_table()
 
     # A misconfigured video provider says so here, at boot, rather than to the
     # first editor who picks a file. Logs by default and never blocks boot —
@@ -44,6 +45,8 @@ defmodule Brando.Supervisor do
       # Archive restores the admin starts, so they finish (or are undone)
       # when the page that started them is closed
       {Task.Supervisor, name: Brando.Environments.TaskSupervisor},
+      # Release Verify's dry runs, which outlive the page that started them
+      Brando.Content.Definitions.Release.Verify,
       %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
       %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},
       %{

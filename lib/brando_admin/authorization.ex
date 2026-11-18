@@ -57,7 +57,12 @@ defmodule BrandoAdmin.Authorization do
     "Elixir.BrandoAdmin.CommandPaletteLive" => {:access, :backend}
   }
 
-  @legacy_superuser_views [BrandoAdmin.Sites.GlobalSetListLive, BrandoAdmin.Sites.GlobalSetFormLive]
+  # Release changes applies module code: without groups, only superusers may
+  @legacy_superuser_views [
+    BrandoAdmin.Sites.GlobalSetListLive,
+    BrandoAdmin.Sites.GlobalSetFormLive,
+    BrandoAdmin.Content.ReleaseChangesLive
+  ]
 
   def requirement(view, params, live_action) do
     Code.ensure_loaded?(view)
@@ -358,6 +363,8 @@ defmodule BrandoAdmin.Authorization do
   # Every event on the webhook screens needs the one permission they have.
   defp event_action(:webhooks, _event), do: :manage
   defp event_action(:notifications, _event), do: :manage
+  # Release changes has the one permission
+  defp event_action(:module_definitions, _event), do: :apply
   defp event_action(_, event) when event in ["refresh", "refresh_jobs"], do: :read
 
   defp event_action(:environments, event) do

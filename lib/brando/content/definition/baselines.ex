@@ -51,8 +51,10 @@ defmodule Brando.Content.Definition.Baselines do
   yet (an adoption).
 
   `changes` are the importer's persisted changes; `items` the plan's items;
-  `snapshots` the definitions as they were before the apply, by UID. Returns
-  how many rows it wrote.
+  `snapshots` the definitions as they were before the apply, by UID. Options:
+  `:source`, `:release`, `:batch_id`, `:action` (for every row it writes, in
+  place of what the plan says) and `adopt: false` (no adoptions). Returns how
+  many rows it wrote.
   """
   def record!(plan, changes, snapshots, actor, opts) do
     latest = latest()
@@ -76,9 +78,11 @@ defmodule Brando.Content.Definition.Baselines do
 
         cond do
           MapSet.member?(written, item.uid) ->
-            [row(base, item, definition, digest, snapshots[item.uid], action(item), plan)]
+            action = Keyword.get(opts, :action) || action(item)
+            [row(base, item, definition, digest, snapshots[item.uid], action, plan)]
 
-          item.state == :in_sync and stale?(row, digest, references(definition, plan)) ->
+          Keyword.get(opts, :adopt, true) and item.state == :in_sync and
+              stale?(row, digest, references(definition, plan)) ->
             [row(base, item, definition, digest, nil, :adopted, plan)]
 
           true ->
@@ -144,7 +148,7 @@ defmodule Brando.Content.Definition.Baselines do
   end
 
   defp action(%{action: :create}), do: :created
-  defp action(%{baseline: :replaced}), do: :replaced
+  defp action(%{baseline: baseline}) when baseline in [:replaced, :discarded], do: :replaced
   defp action(_item), do: :updated
 
   defp row(base, item, definition, digest, previous, action, plan) do
@@ -153,7 +157,10 @@ defmodule Brando.Content.Definition.Baselines do
       uid: item.uid,
       digest: digest,
       previous_digest: previous && digest(previous, plan.snapshot_bindings),
-      previous: previous,
+      # Its tokens written as the records they name (`"image:42"`), so a
+      # revert can apply it again without the bindings of this plan
+      previous: previous && References.canonical(previous, plan.snapshot_bindings),
+      definition: References.canonical(definition, plan.references),
       action: action,
       references: references(definition, plan)
     })

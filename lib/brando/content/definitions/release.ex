@@ -46,8 +46,10 @@ defmodule Brando.Content.Definitions.Release do
 
   import Kernel, except: [apply: 2]
 
+  alias Brando.Authorization.{Boundary, Engine}
   alias Brando.Content.Definition.{Baselines, Plan}
-  alias Brando.Content.Definitions
+  alias Brando.Content.{DefinitionApply, Definitions}
+  alias Brando.Content.Definitions.Release.Batches
   alias Brando.Tenant
   alias Brando.Tenant.Registry
 
@@ -135,10 +137,44 @@ defmodule Brando.Content.Definitions.Release do
     end
   end
 
-  defp actor(opts) do
+  @doc false
+  # Who plans and applies: a superuser as themselves; someone else who may
+  # apply release definitions (`authorize/1`) as the system, for them. What
+  # they write is code the release ships, or what it replaced, never their
+  # own: module code is otherwise a superuser's alone.
+  def actor(opts) do
     case Keyword.get(opts, :user) do
-      nil -> {:ok, :system, [creator: :none]}
-      user -> with {:ok, user} <- user(user), do: {:ok, user, []}
+      nil ->
+        {:ok, :system, [creator: :none]}
+
+      user ->
+        with {:ok, user} <- user(user), do: user_actor(user)
+    end
+  end
+
+  defp user_actor(user) do
+    cond do
+      Boundary.superuser?(user) -> {:ok, user, []}
+      authorize(user) == :ok -> {:ok, :system, [creator: user.id]}
+      true -> {:ok, user, []}
+    end
+  end
+
+  @doc """
+  Whether `user` may review and apply the release's module definitions, and
+  keep or revert an apply: a superuser, or, with groups authorization, a
+  member of a group granted `brando.module_definitions.apply` in this scope.
+  Returns `:ok` or `{:error, :forbidden}`.
+  """
+  @spec authorize(term()) :: :ok | {:error, :forbidden}
+  def authorize(nil), do: {:error, :forbidden}
+  def authorize(:system), do: :ok
+
+  def authorize(user) do
+    cond do
+      Boundary.superuser?(user) -> :ok
+      Engine.enabled?() and Boundary.authorize(user, :apply, :module_definitions) == :ok -> :ok
+      true -> {:error, :forbidden}
     end
   end
 
@@ -157,6 +193,7 @@ defmodule Brando.Content.Definitions.Release do
     [baseline: :database]
     |> put_option(:references, opts[:references])
     |> put_option(:replace, opts[:replace])
+    |> put_option(:discard, opts[:discard])
     |> put_option(:select, opts[:select])
   end
 
@@ -207,10 +244,10 @@ defmodule Brando.Content.Definitions.Release do
   `:on_applied` is called with `%{report: report, result: result}` once the
   definitions are committed, before the wait.
 
-  Returns `{:ok, %{report: report, result: result, renders: renders, waited?: boolean}}`
-  with the plan's report, the apply's result (`Brando.Content.Definitions.apply/3`)
-  and what became of the renders (`t:Brando.Content.Definitions.refresh_result/0`),
-  or `{:error, message}`.
+  Returns `{:ok, %{report: report, result: result, renders: renders, waited?: boolean, run: run, batch_id: batch_id}}`
+  with the plan's report, the apply's result (`Brando.Content.Definitions.apply/3`),
+  what became of the renders (`t:Brando.Content.Definitions.refresh_result/0`)
+  and the run that follows them, or `{:error, message}`.
   """
   @spec apply(:all | [String.t()], keyword()) :: {:ok, map()} | {:error, String.t()}
   def apply(selection, opts) do
@@ -218,8 +255,9 @@ defmodule Brando.Content.Definitions.Release do
          :ok <- require_user(opts),
          {:ok, %{} = report} <- plan(Keyword.put(opts, :select, uids)) |> on(:off),
          :ok <- applicable(report),
+         {:ok, actor, _plan_opts} <- actor(opts),
          {:ok, user} <- user(opts[:user]),
-         {{:ok, result}, run} <- track(report, user) do
+         {{:ok, result}, run} <- track(report, actor, user) do
       wait? = Keyword.get(opts, :wait, true)
       if on_applied = opts[:on_applied], do: on_applied.(%{report: report, result: result})
 
@@ -228,7 +266,7 @@ defmodule Brando.Content.Definitions.Release do
           do: Definitions.await_refresh(run, Keyword.take(opts, [:timeout, :on_progress, :interval])),
           else: Definitions.refresh_status(run)
 
-      {:ok, %{report: report, result: result, renders: renders, waited?: wait?}}
+      {:ok, %{report: report, result: result, renders: renders, waited?: wait?, run: run, batch_id: result.batch_id}}
     else
       {{:error, reason}, _run} -> {:error, error_message(reason)}
       error -> error
@@ -241,9 +279,108 @@ defmodule Brando.Content.Definitions.Release do
   defp error_message(%{uid: uid, error: error}), do: "#{uid}: #{inspect(error)}"
   defp error_message(other), do: inspect(other)
 
-  defp track(report, user),
-    do:
-      Definitions.track_refresh(fn -> Definitions.apply(report.plan, user, source: :release, release: report.version) end)
+  # The apply, its rows and its batch in one transaction; the batch confirms
+  # the apply before it, and Activity records it as the person's
+  defp track(report, actor, user) do
+    batch_id = Ecto.UUID.generate()
+
+    Definitions.track_refresh(fn ->
+      result =
+        Definitions.apply(report.plan, actor,
+          source: :release,
+          release: report.version,
+          batch_id: batch_id,
+          in_transaction: fn plan, changes -> record_batch!(report, plan, changes, batch_id, user) end
+        )
+
+      with {:ok, _} <- result, %{} = batch <- Batches.get(batch_id) do
+        Brando.Activity.setting_changed(:created, batch, Batches.title(batch), user,
+          details: %{"release" => report.version, "definitions" => length(batch.definitions["items"] || [])}
+        )
+      end
+
+      result
+    end)
+  end
+
+  defp record_batch!(report, _plan, changes, batch_id, user) do
+    names = display_names(report.plan.bundle)
+
+    items =
+      Enum.map(changes, fn change ->
+        %{"uid" => change.uid, "kind" => change.kind, "action" => to_string(change.action), "name" => names[change.uid]}
+      end)
+
+    Batches.insert!(
+      %{
+        batch_id: batch_id,
+        source: :release,
+        release: report.version,
+        run_id: newest_run(),
+        definitions: %{"items" => items}
+      },
+      user.id
+    )
+  end
+
+  # The run `track/3` started is the newest of the process's runs
+  defp newest_run do
+    case Enum.reverse(Brando.Content.RenderRun.current()) do
+      [run | _] -> run
+      [] -> nil
+    end
+  end
+
+  @doc """
+  Keeps the version of `uid` edited here over the release's: the release's
+  file is recorded as applied (`:kept`), so it no longer waits, and the edit
+  stays. The release's file is out of date until a developer exports the
+  module and commits it. Takes `:user` (`authorize/1`), and refuses a
+  definition that isn't in conflict. Returns `{:ok, row}` or `{:error, reason}`.
+  """
+  def keep_here(uid, opts) do
+    with :ok <- require_user(opts),
+         {:ok, user} <- user(opts[:user]),
+         :ok <- authorize(user),
+         {:ok, %{} = report} <- plan(Keyword.put(opts, :adopt, false)) |> on(:off),
+         {:ok, item} <- conflict_item(report, uid) do
+      definitions = report.plan.bundle["modules"] ++ report.plan.bundle["table_templates"]
+      definition = Enum.find(definitions, &(&1["uid"] == uid))
+
+      references =
+        Map.take(
+          report.plan.references,
+          Map.keys(Brando.Content.Definition.References.declared(%{"modules" => [definition], "table_templates" => []}))
+        )
+
+      row =
+        Brando.Repo.insert!(%DefinitionApply{
+          kind: item.kind,
+          uid: uid,
+          digest: item.after,
+          previous_digest: item.before,
+          action: :kept,
+          source: :release,
+          release: report.version,
+          references: references,
+          batch_id: Ecto.UUID.generate(),
+          applied_by_id: user.id,
+          applied_at: DateTime.utc_now()
+        })
+
+      # The status planned again, and open screens told
+      Definitions.changed()
+      {:ok, row}
+    end
+  end
+
+  defp conflict_item(report, uid) do
+    case Enum.find(report.items, &(&1.uid == uid)) do
+      %{action: :conflict, state: state} = item when state in [:changed_in_both, :never_applied] -> {:ok, item}
+      nil -> {:error, "#{uid} is not among the release's definitions"}
+      _ -> {:error, "#{uid} is not in conflict"}
+    end
+  end
 
   defp selection(:all), do: {:ok, nil}
   defp selection([_ | _] = uids), do: if(Enum.all?(uids, &is_binary/1), do: {:ok, uids}, else: selection(nil))
@@ -578,6 +715,17 @@ defmodule Brando.Content.Definitions.Release do
 
   defp prefixed(nil, text), do: text
   defp prefixed(label, text), do: "#{label}: #{text}"
+
+  # As the review screen names them: namespace › name
+  defp display_names(bundle) do
+    language = to_string(Brando.config(:default_admin_language) || "en")
+
+    Map.new(bundle["modules"] ++ bundle["table_templates"], fn definition ->
+      namespace = definition["namespace"] && name(%{"name" => definition["namespace"], "uid" => nil}, language)
+      title = name(definition, language)
+      {definition["uid"], if(namespace in [nil, ""], do: title, else: "#{namespace} › #{title}")}
+    end)
+  end
 
   # How the admin names definitions: in the admin language, a child after
   # its parent

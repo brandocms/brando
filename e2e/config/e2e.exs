@@ -123,6 +123,12 @@ config :brando,
      end),
   site_key: "auth-alpha"
 
+# Block modules → Release changes reads the release's module definitions
+# here: the `release-review` fixture writes them for each test, one worker per
+# instance (test_e2e_parallel.sh). ReleaseStatus doesn't run on the sandbox.
+release_instance = String.replace(System.get_env("BRANDO_E2E_INSTANCE", "default"), ~r/[^a-zA-Z0-9_]/, "_")
+config :brando, Brando.Content.Definitions, release_path: "/tmp/brando_e2e_#{release_instance}/release_modules"
+
 # Screenshots of multi-site screens: `BRANDO_E2E_MULTI_SITE=1 scripts/server.sh
 # start` serves two sites (with the `multi-site-hosts` fixture) and keeps a
 # served hosts file whose lookups `E2E.MultiSiteHosts` answers, so no DNS

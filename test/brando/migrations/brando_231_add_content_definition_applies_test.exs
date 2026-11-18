@@ -11,6 +11,8 @@ defmodule Brando.Migrations.Brando231AddContentDefinitionAppliesTest do
   @table "content_definition_applies"
 
   test "creates the definition applies table in public and every environment, with the columns the schema uses" do
+    # As brando_231 left it: brando_233 adds `definition`
+    query!("ALTER TABLE public.content_definition_applies DROP COLUMN definition")
     expected = {column_definitions("public", @table), indexes("public", @table)}
     query!("DROP TABLE public.content_definition_applies")
     create_environment(@tenant)
@@ -21,8 +23,11 @@ defmodule Brando.Migrations.Brando231AddContentDefinitionAppliesTest do
       assert {column_definitions(schema, @table), indexes(schema, @table)} == expected
       assert references(schema, @table) == [{"applied_by_id", "public", "users"}]
 
+      # brando_233 adds `definition`
       assert columns(schema, @table) ==
-               Brando.Content.DefinitionApply.__schema__(:fields) |> Enum.map(&to_string/1) |> Enum.sort()
+               (Brando.Content.DefinitionApply.__schema__(:fields) -- [:definition])
+               |> Enum.map(&to_string/1)
+               |> Enum.sort()
     end
 
     # Applies belong to an environment's content: never pinned to public

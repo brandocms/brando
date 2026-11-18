@@ -150,6 +150,13 @@
   --brando-switch-on: theme(colors.switch.on);
   --brando-switch-off: theme(colors.switch.off);
   --brando-tabbar-bg: theme(colors.tabbar);
+
+  /* Syntax highlighting in template and HTML diffs (TextDiff `highlight`) */
+  --brando-code-tag: theme(colors.code.tag);
+  --brando-code-attr: theme(colors.code.attr);
+  --brando-code-string: theme(colors.code.string);
+  --brando-code-liquid: theme(colors.code.liquid);
+  --brando-code-comment: var(--brando-muted);
   --brando-chip-hover-bg: var(--brando-surface-hover);
   --brando-chip-active-bg: var(--brando-surface-selected);
   --brando-chip-active-fg: var(--brando-accent);

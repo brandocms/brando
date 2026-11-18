@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   def mount(_, _session, socket) do
     {:ok,
      socket
+     |> assign(:release_changes, release_changes(socket.assigns[:current_user]))
      |> assign(:base64_modules, nil)
      |> assign(:imported_modules, nil)
      |> assign(:import_invalid?, false)
@@ -25,10 +26,35 @@ defmodule BrandoAdmin.Content.ModuleListLive do
      })}
   end
 
+  # How many of the release's module changes wait, for those who may apply
+  # them; nil hides the link (no release definitions, or no permission)
+  defp release_changes(nil), do: nil
+
+  defp release_changes(user) do
+    with true <- Brando.Content.Definitions.Release.enabled?(),
+         :ok <- Brando.Content.Definitions.Release.authorize(user) do
+      case Brando.Content.Definitions.ReleaseStatus.summary() do
+        %{pending: pending} -> pending
+        nil -> 0
+      end
+    else
+      _ -> nil
+    end
+  end
+
   def render(assigns) do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace modules-workspace">
       <Workspace.header icon={@page_icon} title={gettext("Block modules")}>
+        <.link
+          :if={@release_changes}
+          navigate="/admin/config/content/modules/release"
+          class="btn release-changes-link"
+          data-testid="release-changes-link"
+        >
+          <.icon name="package" />{gettext("Release changes")}
+          <span :if={@release_changes > 0} class="badge badge--count badge--attention">{@release_changes}</span>
+        </.link>
         <%!-- One way in to both: modules as files (DSL), and pasted module copies. --%>
         <details id="module-transfer-menu" class="workspace-menu">
           <summary class="btn">

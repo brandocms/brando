@@ -115,12 +115,6 @@
     > [data-icon] { width: 18px; height: 18px; }
     h2 { font-size: var(--brando-text-lg); letter-spacing: 0; color: var(--brando-ink); }
     p { margin-top: 2px; font-size: var(--brando-text-md); }
-    /* The command a developer runs on the server (release module definitions) */
-    .dashboard-alert-command {
-      display: inline-block; max-width: 100%; margin-top: 8px; padding: 2px 7px; border: 1px solid var(--brando-note-line);
-      border-radius: 4px; background: var(--brando-surface); color: var(--brando-ink);
-      font: var(--brando-text-xs)/18px var(--brando-font-mono); overflow-wrap: anywhere;
-    }
     @media (max-width: 600px) { grid-template-columns: auto minmax(0, 1fr); .btn { grid-column: 2; justify-self: start; } }
   }
   .dashboard-heading { margin: 0 0 14px; font-size: var(--brando-text-2xl); line-height: 24px; font-weight: 500; }

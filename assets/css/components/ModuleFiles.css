@@ -56,3 +56,12 @@
     .module-files-change-body { padding: 14px; }
   }
 }
+
+/* A definition never imported from files here: replacing it is a choice */
+.module-files-replace {
+  display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 10px; align-items: start; margin: 0;
+  padding: 10px 12px; border: 1px solid var(--brando-attention-line); border-radius: 6px;
+  background: var(--brando-attention); color: var(--brando-attention-ink); font-size: var(--brando-text-sm); line-height: 18px;
+  input { margin: 2px 0 0; }
+  strong { display: block; color: var(--brando-ink); font-weight: 500; }
+}

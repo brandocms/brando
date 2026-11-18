@@ -35,6 +35,13 @@ defmodule Brando.Authorization.Catalog do
     {:shared_library, "brando.shared_library", "Shared content library", "Installation", [:read, :update],
      [:installation]},
     {:utilities, "brando.utilities", "Utilities & caches", "Settings", [:read, :update], [:standalone, :site]},
+    # Reviewing and applying the module definitions a release ships, and
+    # keeping or reverting an apply (`Brando.Content.Definitions.Release`).
+    # What it writes is the release's code or what an apply replaced, never
+    # the holder's own, so it isn't a superuser's alone as module code is.
+    # No preset grants it.
+    {:module_definitions, "brando.module_definitions", "Release module definitions", "Settings", [:apply],
+     [:standalone, :site]},
     {:activity, "brando.activity", "Activity", "Settings", [:read], [:standalone, :site]},
     # Everyone's sign-ins, failed attempts and changes to passwords and
     # two-factor settings, with IP addresses (`Brando.Users.SecurityLog`). With
@@ -200,6 +207,7 @@ defmodule Brando.Authorization.Catalog do
 
   # Connecting tools over MCP is granted to people one group at a time.
   defp in_preset?(_preset, %{subject: :mcp, action: :connect}), do: false
+  defp in_preset?(_preset, %{subject: :module_definitions}), do: false
   defp in_preset?(_preset, %{superuser_only: true}), do: false
   defp in_preset?(:admin, permission), do: permission.delegable
 

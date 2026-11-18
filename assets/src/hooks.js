@@ -71,6 +71,7 @@ import VideoPickerGridHook from './hooks/VideoPickerGrid'
 import VideoDimensionsHook from './hooks/VideoDimensions'
 import VideoURLParserHook from './hooks/VideoURLParser'
 import VideoPlayerHook from './hooks/VideoPlayer'
+import { ReleaseChanges, ReleaseDialog, ReleasePreview } from './hooks/ReleaseChanges'
 
 // Brando hooks
 export default (app) => {
@@ -80,6 +81,9 @@ export default (app) => {
     'Brando.AssistantComposer': AssistantComposerHook(app),
     'Brando.AssistantMessages': AssistantMessagesHook(app),
     'Brando.ProposalPreview': ProposalPreviewHook(app),
+    'Brando.ReleaseChanges': ReleaseChanges(app),
+    'Brando.ReleaseDialog': ReleaseDialog(app),
+    'Brando.ReleasePreview': ReleasePreview(app),
     'Brando.TranslationWork': TranslationWorkHook(app),
     'Brando.ModulePickerKeys': ModulePickerKeysHook(app),
     'Brando.WorkStatus': WorkStatusHook(app),

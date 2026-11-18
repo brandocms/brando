@@ -260,7 +260,7 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(delete_image_from_picker pick_library_image picker_move_to_folder)
     ],
     "BrandoAdmin.Components.ModuleFiles" => [
-      read: ~w(cancel_upload export preview reset validate),
+      read: ~w(cancel_upload export preview reset toggle_replace validate),
       write: ~w(apply refresh)
     ],
     "BrandoAdmin.Components.Pages.PageVars" => [
@@ -293,6 +293,11 @@ defmodule BrandoAdmin.Authorization.Events do
       read:
         ~w(blur export_module_files export_modules focus open_module_files open_sketches reset_import_vars validate_module_import),
       write: ~w(create_module import_modules start_sketches)
+    ],
+    "BrandoAdmin.Content.ReleaseChangesLive" => [
+      read:
+        ~w(cancel_verify chip choose close_confirm close_diff filter focus_change full_screen open_confirm open_diff page preview_entry select_row sort tab toggle_marks toggle_ready toggle_replace toggle_row toggle_unchanged verify_all verify_current verify_row viewport),
+      write: ~w(apply keep_batch revert_batch share_preview)
     ],
     "BrandoAdmin.Content.SharedLibraryLive" => [
       read: ~w(refresh select_environment select_site),

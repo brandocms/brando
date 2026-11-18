@@ -12,6 +12,11 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid " and %{count} failed"
+msgstr ""
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
@@ -443,6 +448,11 @@ msgstr[1] ""
 msgid "%{count} of %{max} characters"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} of %{total} entries verified"
+msgstr ""
+
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} open"
@@ -690,6 +700,11 @@ msgstr ""
 msgid "%{environment}, the live environment, serves this build of its own."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{failed} of %{total} entries fail to render"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{field} · Block %{number}"
@@ -759,6 +774,12 @@ msgstr[1] ""
 msgid "%{language} is not one of %{name}’s languages."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{live} live"
+msgstr ""
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."
@@ -794,6 +815,16 @@ msgstr ""
 msgid "%{name} blueprint"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} can’t be reverted without a migration"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} changed here after the apply"
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} copy"
@@ -802,6 +833,11 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} deleted this page."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} edited this module on %{when}, after it was last applied. The release changes it too. It isn’t applied until you choose which version to keep."
 msgstr ""
 
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
@@ -845,14 +881,34 @@ msgstr ""
 msgid "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} · definition"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} · editing on the website"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} · template"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}’s account will be deleted after the transfer."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s edit stays and this module is left out of the apply. The release file is then out of date: Block modules marks it until a developer exports the module (Block modules → Export, or mix brando.modules export) and commits it to priv/modules."
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
@@ -888,6 +944,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{selected} / %{total} selected"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{selected} of %{total} selected"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -971,6 +1032,62 @@ msgstr ""
 msgid "/cookies"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block"
+msgid_plural "%{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block differs"
+msgid_plural "%{count} blocks differ"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
+msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 can’t be reverted without a migration."
+msgid_plural "%{count} can’t be reverted without a migration."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 changed here since was left as it is."
+msgid_plural "%{count} changed here since were left as they are."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 changed region"
+msgid_plural "%{count} changed regions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 child module"
+msgid_plural "%{count} child modules"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 differs"
+msgid_plural "%{count} differ"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/form/subform.ex
 #, elixir-autogen, elixir-format
 msgid "1 entry"
@@ -978,10 +1095,33 @@ msgid_plural "%{count} entries"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "release"
+msgid "1 entry"
+msgid_plural "%{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry fails to render in Verify."
+msgid_plural "%{count} entries fail to render in Verify."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
 msgid "1 entry published as scheduled"
 msgid_plural "%{count} entries published as scheduled"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry re-rendered"
+msgid_plural "%{count} entries re-rendered"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -996,6 +1136,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 error"
 msgid_plural "%{count} errors"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 fails"
+msgid_plural "%{count} fail"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1064,6 +1211,13 @@ msgid_plural "%{count} submissions"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 type"
+msgid_plural "%{count} types"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/form/input/vars.ex
 #, elixir-autogen, elixir-format
 msgid "1 variable"
@@ -1075,6 +1229,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 variable has no key yet and cannot be placed."
 msgid_plural "%{count} variables have no key yet and cannot be placed."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 waiting"
+msgid_plural "%{count} waiting"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1200,9 +1361,19 @@ msgstr ""
 msgid "A date, picked from a calendar"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "A definition in this apply was applied again since. Review the revert again."
+msgstr ""
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "A developer moves the content with a data migration in a later release. When it has run, the blocks show up under Blocks on older versions, and this module can be applied."
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -1593,6 +1764,7 @@ msgstr ""
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/components/form/input/gallery.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/forms/inbox_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/asset_live.ex
@@ -1939,6 +2111,7 @@ msgstr ""
 msgid "Add webhook"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Added"
@@ -1978,6 +2151,18 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Adding…"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Adds 1 module"
+msgid_plural "Adds %{count} modules"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Adds refs or vars. Existing blocks get the defaults and keep their content, then re-render."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/multi_select.ex
@@ -2066,6 +2251,7 @@ msgid "Alignment"
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "All"
 msgstr ""
@@ -2142,6 +2328,7 @@ msgstr ""
 msgid "All kept activity"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -2166,6 +2353,16 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "All permissions for %{resource}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "All statuses"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "All types (%{count})"
 msgstr ""
 
 #: lib/brando_admin/components/crawler_policy.ex
@@ -2492,12 +2689,54 @@ msgstr ""
 msgid "Application rules"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "Applied"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Applied %{when}"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applied (%{applied}) → release %{version}"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applied (%{version}) → edited here"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Applied 1 module change"
+msgid_plural "Applied %{count} module changes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applied 1 module change."
+msgid_plural "Applied %{count} module changes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Applied by %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Applied · rendering"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
+#: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Apply"
 msgstr ""
@@ -2506,6 +2745,32 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Apply %{count} entry change"
 msgid_plural "Apply %{count} entry changes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Apply %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Apply 1 change"
+msgid_plural "Apply %{count} changes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Apply 1 change…"
+msgid_plural "Apply %{count} changes…"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Apply 1 module change?"
+msgid_plural "Apply %{count} module changes?"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -2524,6 +2789,13 @@ msgstr ""
 msgid "Apply link"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Apply with 1 failure"
+msgid_plural "Apply with %{count} failures"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Applying translations..."
@@ -2531,9 +2803,15 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Applying…"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Apply…"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -2873,6 +3151,11 @@ msgstr ""
 msgid "Before resolving blocks on older versions of %{module}"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Before → applied (%{version})"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Behavior"
@@ -2889,6 +3172,7 @@ msgstr ""
 #: lib/brando_admin/components/form/notes_drawer.ex
 #: lib/brando_admin/components/form/translation.ex
 #: lib/brando_admin/components/form/var_layout.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -2909,6 +3193,11 @@ msgstr ""
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Block #%{id} could not be saved: %{errors}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Block %{index}"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_preview.ex
@@ -2951,6 +3240,7 @@ msgid "Block module sets"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_list_live.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
@@ -2982,6 +3272,11 @@ msgstr ""
 msgid "Block variables"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Blockquote"
@@ -2995,10 +3290,21 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/module_props.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Blocks"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks get the default"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks get the ref, empty or with its default"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -3011,6 +3317,7 @@ msgstr ""
 msgid "Blocks no entry links to any more. A block removed from an entry is kept so that an older version of the entry can be restored with it; once no version holds it, nothing can bring it back, and it only keeps its images looking used."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Blocks on older versions"
@@ -3021,9 +3328,24 @@ msgstr ""
 msgid "Blocks or rows were added, removed or moved in the source. The form has the new structure."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks re-render"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks re-render; their content is untouched."
+msgstr ""
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Blocks that a module save could not bring up to date. They hold references or variables their module no longer defines; choose what happens to them, module by module."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks that differ are outlined in both."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -3309,6 +3631,7 @@ msgstr ""
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/content/module_form_live.ex
@@ -3348,6 +3671,11 @@ msgstr ""
 msgid "Cancel this pending environment operation?"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel verify"
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
@@ -3377,6 +3705,16 @@ msgstr ""
 #: lib/brando_admin/components/form/meta_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Canonical URL"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Can’t be applied until the content is migrated"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Can’t be applied yet"
 msgstr ""
 
 #: lib/brando_admin/components/two_factor.ex
@@ -3414,6 +3752,7 @@ msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen
 msgid "Change"
 msgstr ""
@@ -3426,6 +3765,11 @@ msgstr ""
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Change choices"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Change classes"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -3476,8 +3820,14 @@ msgid "Changed here and in the file"
 msgstr ""
 
 #: lib/brando_admin/components/definition_file.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "Changed here and in this release"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here since"
 msgstr ""
 
 #: lib/brando_admin/components/definition_file.ex
@@ -3500,10 +3850,20 @@ msgstr ""
 msgid "Changed in this release"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Changed: %{fields}"
+msgstr ""
+
 #: lib/brando_admin/live/content/module_form_live.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
 msgid "Changelog note"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Changes"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -3571,6 +3931,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Changes to permissions and membership will appear here."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Changes what blocks hold content in. It can’t be applied until a migration has moved that content."
 msgstr ""
 
 #: lib/brando/users/user.ex
@@ -3908,6 +4273,11 @@ msgstr ""
 msgid "Choose which to show, and in what order."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Choose which version to keep"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Choose who will own %{name}’s content."
@@ -3921,6 +4291,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex
 #: lib/brando_admin/components/form/input/blocks/svg_block.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr ""
@@ -4046,6 +4417,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/select.ex
 #: lib/brando_admin/components/form/tab_notice.ex
 #: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
@@ -4226,6 +4598,11 @@ msgstr ""
 msgid "Compare with #%{revision}"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Compatible"
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Complete!"
@@ -4364,6 +4741,7 @@ msgid "Confirm with your passkey: your fingerprint, face, PIN or security key."
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Conflict"
 msgstr ""
@@ -5521,6 +5899,7 @@ msgid "Default value"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Definition"
 msgstr ""
@@ -5967,6 +6346,7 @@ msgstr ""
 msgid "Descriptions are ready for review"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Desktop"
@@ -5975,6 +6355,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #, elixir-autogen, elixir-format
 msgid "Destination"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Destructive"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -5999,6 +6384,7 @@ msgid "Disable all"
 msgstr ""
 
 #: lib/brando_admin/components/content/identifier.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -6268,6 +6654,7 @@ msgstr ""
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/components/form/entry_header.ex
 #: lib/brando_admin/components/form/input.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -6825,6 +7212,16 @@ msgstr ""
 msgid "Edited by"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Edited here"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edited here → release %{version}. The version last applied isn’t recorded."
+msgstr ""
+
 #: lib/brando/frontend_edit/text.ex
 #, elixir-autogen, elixir-format
 msgid "Editing"
@@ -6875,6 +7272,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Editors' channel"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Effect on blocks"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -7078,9 +7480,15 @@ msgstr ""
 
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/components/content/select_identifier.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Entries"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Entries affected"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -7097,6 +7505,7 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/outline.ex
 #: lib/brando_admin/components/form/draft_recovery.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -7374,6 +7783,11 @@ msgstr ""
 msgid "Existing modules keep their identities. Editor content follows the normal synchronization rules."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Exit full screen"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Expand editor"
@@ -7490,6 +7904,7 @@ msgstr ""
 
 #: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
@@ -7523,6 +7938,16 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to load revisions."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Fails"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Fails to render with this release."
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -7562,6 +7987,7 @@ msgid "Fetching thumbnails and titles"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Field"
 msgstr ""
@@ -7987,6 +8413,11 @@ msgstr ""
 msgid "Full row"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Full screen"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "GMaps"
@@ -8355,6 +8786,11 @@ msgstr ""
 msgid "HTML"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "HTML diff"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -8403,6 +8839,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/module_props.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Help text"
 msgstr ""
@@ -8415,6 +8852,11 @@ msgstr ""
 #: lib/brando/notes/mention_email.ex
 #, elixir-autogen, elixir-format
 msgid "Here is what you were mentioned in:"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Here → release %{version}"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/form_fields.ex
@@ -8780,6 +9222,7 @@ msgid "Import/Export"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Imported"
 msgstr ""
@@ -8825,9 +9268,15 @@ msgstr ""
 msgid "In the block"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "In the trash"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "In the trash here"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -9139,6 +9588,11 @@ msgstr ""
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
 msgstr ""
 
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "It was never imported from files here and differs from the file. Nothing records which is newer, so it isn’t imported unless you replace it."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "It will be tried again."
@@ -9215,6 +9669,16 @@ msgstr ""
 msgid "Jump Anchor"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Keep"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Keep and Revert are available when every entry has rendered."
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Keep at least one active superuser. Add another before removing this person."
@@ -9243,6 +9707,38 @@ msgstr ""
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Keep my version"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep the version edited here"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Keep this apply?"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Keeps the version edited here"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Keeps the version here"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept 1 version here."
+msgid_plural "Kept %{count} versions here."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Kept as it is unless you replace it"
 msgstr ""
 
 #: lib/brando_admin/live/sites/activity_live.ex
@@ -9288,6 +9784,7 @@ msgstr ""
 msgid "Label"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/search_live.ex
@@ -9327,6 +9824,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Last 7 days"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Last applied"
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -9540,6 +10042,11 @@ msgstr ""
 msgid "Limit"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Lines %{from}–%{to} · %{where}"
+msgstr ""
+
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Lines written to robots.txt"
@@ -9671,6 +10178,7 @@ msgstr ""
 msgid "Listing"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -9708,9 +10216,19 @@ msgstr ""
 msgid "Live updates are unavailable, so the preview does not follow your changes."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Live · %{version}"
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Live, from the layout beside it."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Live, the block keeps the HTML it has now until the template or its content is fixed."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -10130,6 +10648,11 @@ msgstr ""
 msgid "Mark as nofollow"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Mark changes"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -10315,6 +10838,11 @@ msgstr ""
 msgid "Meta title length"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Metadata"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Metadata, indexing and redirects for the site, and a review of its content."
@@ -10391,6 +10919,7 @@ msgstr ""
 msgid "Missing redirects"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Mobile"
@@ -10412,6 +10941,16 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Module definitions ZIP"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Module definitions in this release"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Module definitions in this site’s release that differ from the ones it uses. Review them, verify that the affected entries render, then apply. Nothing changes until you apply."
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
@@ -10731,6 +11270,7 @@ msgstr ""
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/components/form/module_props.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -10756,6 +11296,11 @@ msgstr ""
 msgid "Name → ID (JSON)"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Name, help text or icon only. Nothing re-renders."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Names the value in submissions. Lowercase letters, digits and underscores."
@@ -10763,6 +11308,7 @@ msgstr ""
 
 #: lib/brando/content/container.ex
 #: lib/brando_admin/components/form/module_props.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
 msgid "Namespace"
@@ -10784,6 +11330,16 @@ msgstr ""
 msgid "Navigation"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Needs a choice"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Needs a migration"
+msgstr ""
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "Needs at least %{count} impressions on Google's first page."
@@ -10799,6 +11355,11 @@ msgstr ""
 msgid "Needs https"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Needs migration"
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Needs translation"
@@ -10807,6 +11368,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Never"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Never applied"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Never applied from the release’s files"
 msgstr ""
 
 #: lib/brando/users/user.ex
@@ -10819,6 +11390,7 @@ msgstr "Never logged in"
 msgid "Never rebuilt"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "New"
@@ -10873,6 +11445,11 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "New image created."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "New in release %{version}"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -10930,6 +11507,16 @@ msgstr ""
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format
 msgid "Newest first. Open a submission to read all of it."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Next changed block"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex
@@ -11026,6 +11613,11 @@ msgstr ""
 msgid "No available people match. Existing members are excluded."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "No block differs."
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field/outline.ex
 #, elixir-autogen, elixir-format
 msgid "No blocks yet"
@@ -11091,6 +11683,16 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "No effective permissions in this scope. Check that the account is active and has backend access."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "No entries match."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "No entry uses this module yet."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
@@ -11249,6 +11851,11 @@ msgstr ""
 msgid "No missing URLs recorded"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "No module definitions in this release"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "No module with id %{id}."
@@ -11363,6 +11970,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "No published entries in the selected content types for this language."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "No re-render"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -11496,6 +12108,11 @@ msgstr ""
 msgid "No submissions yet"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "No template"
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "No templates for %{name} yet."
@@ -11585,6 +12202,7 @@ msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "None"
@@ -11722,6 +12340,11 @@ msgstr ""
 msgid "Not in use anywhere yet."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Not included: %{rows}."
+msgstr ""
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not moved"
@@ -11845,6 +12468,7 @@ msgstr ""
 msgid "Not shared: the video picker offers no provider library on this site."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not used yet"
@@ -11853,6 +12477,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Not valid: %{fields}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Not verified yet"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -11936,6 +12565,11 @@ msgstr ""
 msgid "Nothing hidden."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing in this apply can be reverted without a migration. Keep it instead."
+msgstr ""
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing is planned this month."
@@ -12011,6 +12645,11 @@ msgstr ""
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing that holds a value is dropped or replaced."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to apply: this site has every definition in the release."
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -12096,9 +12735,15 @@ msgstr ""
 msgid "Notifications show here when they are sent, or when you send a test."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Now"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Now → with this release"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
@@ -12419,6 +13064,7 @@ msgstr ""
 msgid "Open Publishing"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open entry"
@@ -12459,6 +13105,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Open link in new window/tab"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Open module"
 msgstr ""
 
 #: lib/brando_admin/components/shortcut_sheet.ex
@@ -12511,6 +13162,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "Open the list without a view"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Open the public page"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -12663,6 +13319,11 @@ msgstr ""
 msgid "Outline"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Output unchanged"
+msgstr ""
+
 #: lib/brando_admin/live/content/container_list_live.ex
 #: lib/brando_admin/live/content/module_form_live.ex
 #: lib/brando_admin/live/content/module_set_list_live.ex
@@ -12688,6 +13349,11 @@ msgstr ""
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "Page"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Page %{page} of %{pages}"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
@@ -12954,6 +13620,7 @@ msgstr ""
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/components/form/entry_header.ex
 #: lib/brando_admin/components/form/input.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -13236,6 +13903,7 @@ msgstr ""
 msgid "Presence details"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -13257,10 +13925,20 @@ msgstr ""
 msgid "Preview as"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Preview before and after"
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Preview import"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Preview link copied · expires in %{days} days"
 msgstr ""
 
 #: lib/brando/sites/seo.ex
@@ -13283,9 +13961,19 @@ msgstr ""
 msgid "Previews"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Previous"
+msgstr ""
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Previous build archived"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Previous changed block"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex
@@ -13591,6 +14279,7 @@ msgstr ""
 msgid "Queue copy now"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -13616,9 +14305,28 @@ msgstr ""
 msgid "Re-render"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Re-rendered 1 entry"
+msgid_plural "Re-rendered %{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Re-rendering 1 entry"
+msgid_plural "Re-rendering %{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Re-rendering entry..."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Re-rendering its entries."
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -13687,6 +14395,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Ready for your review"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Ready to apply"
 msgstr ""
 
 #: lib/brando_admin/live/search_live.ex
@@ -14027,6 +14740,16 @@ msgstr ""
 msgid "Refreshing…"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Refs & vars"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Refs, vars and metadata as the plan compares them. The template diff is under Template."
+msgstr ""
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate the sitemap from published content."
@@ -14055,14 +14778,50 @@ msgstr ""
 msgid "Related entry"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Release"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Release %{version}"
+msgstr ""
+
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
-msgid "Release %{version} brings module definitions that differ from this site's. Block modules marks each one. A developer reviews and applies them on the server:"
+msgid "Release %{version} brings module definitions that differ from this site's. Review what they change, then apply them."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Release %{version}, applied by %{name} %{when}."
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Release assets"
+msgstr ""
+
+#: lib/brando_admin/live/content/module_list_live.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Release changes"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Release file"
+msgstr ""
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Release module definitions"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Release summary"
 msgstr ""
 
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
@@ -14216,6 +14975,11 @@ msgstr ""
 msgid "Remove the redirect hosts first, or keep a domain: they redirect to it."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Removed"
+msgstr ""
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Removed %{count} loose block tree (%{blocks} blocks). It is in the archive below."
@@ -14248,6 +15012,11 @@ msgstr ""
 msgid "Removed the Figma access token"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Removes a var that blocks hold values for. Those values are dropped when the blocks re-render."
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again."
@@ -14273,14 +15042,45 @@ msgstr ""
 msgid "Rename, update and delete the listing views other people share. Everyone manages their own without it."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Render"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Rendered"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Rendered HTML"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Rendered HTML per block · %{type} · nothing is saved"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Rendering"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Rendering, nesting and editor presentation"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Rendering…"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Renders"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -14384,9 +15184,19 @@ msgstr ""
 msgid "Replace the table in %{block}"
 msgstr ""
 
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the version here with the file’s"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Replace the video while keeping this reference’s settings."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace with the release’s version"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
@@ -14412,6 +15222,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Replaced revision #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced with the release’s version"
 msgstr ""
 
 #: lib/brando_admin/live/files/file_list_live.ex
@@ -14677,6 +15492,11 @@ msgstr ""
 msgid "Restore reference"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restore the module to apply the release’s version."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Restore the newest archive as a new non-live environment?"
@@ -14728,6 +15548,7 @@ msgstr ""
 msgid "Restoring the archive. This can take a while."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Result"
@@ -14808,11 +15629,54 @@ msgstr ""
 msgid "Returns to"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Revert"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Revert leaves it as it is and lists it as a conflict."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Revert leaves it as the apply left it."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Revert restores the versions this apply replaced and re-renders their entries. It stays available until someone keeps the changes or applies the next release."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Revert this apply?"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revert would leave this module as it is."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reverted 1 module."
+msgid_plural "Reverted %{count} modules."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Reverted to release assets"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Revert…"
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Review"
@@ -14852,11 +15716,6 @@ msgstr ""
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
-msgid "Review modules"
-msgstr ""
-
-#: lib/brando_admin/components/dashboard.ex
-#, elixir-autogen, elixir-format
 msgid "Review notifications"
 msgstr ""
 
@@ -14868,6 +15727,11 @@ msgstr ""
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Review recovery copy"
+msgstr ""
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review the module definitions a release brings, apply them, and keep or revert an apply. It writes the release's templates, which are code, without making the person a superuser."
 msgstr ""
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
@@ -15572,6 +16436,13 @@ msgstr ""
 msgid "Search %{provider} by title"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Search 1 entry"
+msgid_plural "Search %{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Search all content"
@@ -15613,6 +16484,7 @@ msgstr ""
 msgid "Search engines show no text from this page under its title, and Google leaves it out of AI Overviews and AI Mode."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Search entries"
@@ -16293,6 +17165,7 @@ msgid "Share for review"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Share preview"
 msgstr ""
@@ -16489,9 +17362,19 @@ msgid_plural "Show thread (%{count} messages)"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Show unchanged blocks"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen
 msgid "Show unchanged content"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Showing %{from}–%{to} of %{total}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/activity_live.ex
@@ -16729,6 +17612,7 @@ msgstr ""
 msgid "Somebody asked to reset the password for %{email}."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Someone"
@@ -16917,6 +17801,7 @@ msgstr ""
 #: lib/brando_admin/components/form/entry_header.ex
 #: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -17205,6 +18090,11 @@ msgstr ""
 msgid "Table template"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Tablet"
+msgstr ""
+
 #: lib/brando_admin/components/form/block/events.ex
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -17247,6 +18137,7 @@ msgstr ""
 msgid "Tells Bing, Copilot, Yandex and the search engines that use Bing's index when entries are published, changed, unpublished or deleted, so they visit those pages again soon. Google doesn't take part."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Template"
@@ -17479,6 +18370,11 @@ msgstr ""
 msgid "The Figma token was saved."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The HTML is shown one tag a line."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The IPv4 and IPv6 lookups failed."
@@ -17607,6 +18503,11 @@ msgstr ""
 msgid "The application rules module could not be inspected. Review your application’s authorization code manually."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The apply is kept."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The assistant asks for images"
@@ -17697,6 +18598,11 @@ msgstr ""
 msgid "The changes from the source could not be loaded into the form."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The changes stay, and this apply can no longer be reverted."
+msgstr ""
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "The configured AI model cannot read images"
@@ -17745,6 +18651,16 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "The definition is unchanged."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The definitions are saved. Entries re-render in the background, and this keeps counting if you leave the page."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The definitions this apply replaced are applied again, and their entries re-render. Definitions changed here since are left as they are."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -18130,6 +19046,16 @@ msgstr ""
 msgid "The other tab was closed"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The output is unchanged."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The page can’t be rendered with this release: %{error}"
+msgstr ""
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "The page chosen for the fragments is gone or in the trash. Nothing was deleted."
@@ -18220,6 +19146,11 @@ msgstr ""
 msgid "The proposed content in the site's own templates. Nothing is saved."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The proposed side is rendered by the server with the release’s definitions; nothing is saved."
+msgstr ""
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The publishing date must be in the future."
@@ -18233,6 +19164,21 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "The recipient is inactive or may not read the entry"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The release changes what blocks hold content in. Applying it would drop that content, so this module is shown but not applied."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The release has no priv/modules, or release_path isn't configured."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The release’s definitions can’t be planned"
 msgstr ""
 
 #: lib/brando_admin/live/users/user_form_live.ex
@@ -18476,6 +19422,11 @@ msgstr ""
 msgid "The value is stored with each submission; the label is what visitors see."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The version here is replaced when you apply; the apply keeps it, and Revert brings it back. From then on this module follows the release’s files."
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The video is in the library. The form could not add it to the field it was uploaded for."
@@ -18596,6 +19547,11 @@ msgstr ""
 msgid "They are moved to the trash, and come back if the page is restored."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "They keep the HTML they have now until the template or their content is fixed."
+msgstr ""
+
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "They stay on the site. With no page, they are listed under Fragments without a page."
@@ -18648,6 +19604,16 @@ msgstr ""
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "This app cannot be connected"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This apply is already kept."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This apply is already reverted."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -18720,6 +19686,11 @@ msgstr ""
 msgid "This can't be undone."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This can’t be reverted."
+msgstr ""
+
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This change affects existing content"
@@ -18752,6 +19723,11 @@ msgstr ""
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "This content type has no block content to read."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This content type has no preview target."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -18939,6 +19915,11 @@ msgstr ""
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This module was changed by someone else while you were editing. Reload to see their version before saving yours."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This module was made or changed here before the site applied releases, and it differs from the release’s file. Nothing records which one is newer, so it’s kept as it is unless you replace it."
 msgstr ""
 
 #: lib/brando_admin/components/content/list/saved_views.ex
@@ -19151,6 +20132,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "This workspace"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Three versions"
 msgstr ""
 
 #: lib/brando_admin/components/form/video_drawer.ex
@@ -19384,6 +20370,11 @@ msgstr ""
 msgid "Translations can't be created: this content type can't be copied."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Trashed"
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Try a resource name, such as Pages, or an action, such as Publish."
@@ -19578,6 +20569,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #: lib/brando_admin/live/sites/cache_live.ex
@@ -19594,6 +20586,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Type and placement"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Type · language"
 msgstr ""
 
 #: lib/brando/seo/checks.ex
@@ -19630,6 +20627,7 @@ msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unchanged"
@@ -19872,6 +20870,12 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgctxt "release"
+msgid "Update"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
 #, elixir-autogen, elixir-format
 msgid "Update policy"
@@ -19920,6 +20924,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Updated grants will apply immediately to existing members."
 msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Updates 1 module"
+msgid_plural "Updates %{count} modules"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/file_drawer.ex
@@ -20173,6 +21184,11 @@ msgstr ""
 msgid "Use the frontend assets included in the current release?"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the release’s version"
+msgstr ""
+
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Use the saved version"
@@ -20267,6 +21283,11 @@ msgstr ""
 msgid "Users with the roles or in the groups you choose."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Uses the release’s version"
+msgstr ""
+
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -20292,6 +21313,11 @@ msgstr ""
 msgid "Value"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Values are dropped when blocks re-render"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Variable"
@@ -20309,9 +21335,36 @@ msgstr ""
 msgid "Variables expose reusable values to the template and the block editor."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/user_two_factor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Verify"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgctxt "release"
+msgid "Verify"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Verify again"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Verify all"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Verify renders each entry with the release’s definitions and writes nothing."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Verifying %{done} of %{total} entries"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -20534,6 +21587,7 @@ msgstr ""
 msgid "View updated"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Viewport"
@@ -20563,6 +21617,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/integrations_live.ex
 #, elixir-autogen, elixir-format
 msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -20781,6 +21840,11 @@ msgstr ""
 msgid "Which global fields exist and where. Their values are edited under Globals."
 msgstr "Which global fields exist and where. Their values are edited under Globals."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Which version should the site use?"
+msgstr ""
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Who created, changed, published and deleted content, and when. Changes that saved a revision can be compared with the one before."
@@ -20821,6 +21885,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "With errors"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "With this release"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -21042,6 +22111,11 @@ msgstr ""
 msgid "You can reorder and configure each item afterwards."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "You can revert this apply until it is kept."
+msgstr ""
+
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "You can't add notes to this entry."
@@ -21083,6 +22157,7 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/content/module_list_live.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
@@ -21431,6 +22506,11 @@ msgid_plural "and %{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "and adds %{count}"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "another leftover in this block is moved into %{key}"
@@ -21533,9 +22613,24 @@ msgid_plural "changed blocks"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "changed here only"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "changed in the release only"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "changed in this proposal too"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "changed on both sides"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -21548,6 +22643,11 @@ msgstr ""
 msgid "choose"
 msgstr "choose"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "choose a version first"
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format
 msgid "close"
@@ -21556,6 +22656,11 @@ msgstr "close"
 #: lib/brando_admin/live/command_palette_live.ex
 #, elixir-autogen, elixir-format
 msgid "commands"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "compatible"
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
@@ -21567,6 +22672,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "confirm"
 msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "conflict"
+msgid_plural "conflicts"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -21603,6 +22715,16 @@ msgid "deletion"
 msgid_plural "deletions"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "destructive"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "differs"
+msgstr ""
 
 #: lib/brando/types/status.ex
 #, elixir-autogen, elixir-format
@@ -21662,6 +22784,21 @@ msgstr ""
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen
 msgid "entry"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "fail"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "failed"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "fails"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -21741,6 +22878,11 @@ msgid_plural "in %{count} blocks"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "in the trash here"
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format
 msgid "insert"
@@ -21812,6 +22954,11 @@ msgstr ""
 msgid "last active %{date}"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "last applied %{version}"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "last used %{date}"
@@ -21842,6 +22989,11 @@ msgstr ""
 #: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "menu items"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "metadata"
 msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex
@@ -21942,9 +23094,19 @@ msgstr ""
 msgid "must use s3://bucket/optional-prefix"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "needs a migration"
+msgstr ""
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "needs an absolute URL"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "needs migration"
 msgstr ""
 
 #: lib/brando/sites/deploy_config.ex
@@ -21952,7 +23114,13 @@ msgstr ""
 msgid "needs this installation's config to list its deploy destinations"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "never applied"
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "new"
 msgstr ""
@@ -22031,6 +23199,16 @@ msgstr ""
 msgid "not mapped"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "not replaced"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "not selected"
+msgstr ""
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "not set"
@@ -22041,9 +23219,19 @@ msgstr ""
 msgid "not used yet"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "nothing is written"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "of %{impressions}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "of %{total} rendered"
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -22086,6 +23274,11 @@ msgstr ""
 msgid "or drop it here · up to 1 MB"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "output unchanged"
+msgstr ""
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "page URL"
@@ -22120,6 +23313,16 @@ msgstr ""
 msgid "published"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "queued"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "re-rendering entries"
+msgstr ""
+
 #: lib/brando_admin/live/content/module_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "references"
@@ -22133,6 +23336,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "removed %{date}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "render"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "render with changes"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -22168,6 +23381,11 @@ msgstr ""
 msgid "still held"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "the definitions changed since"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "the entry's fields"
@@ -22178,9 +23396,24 @@ msgstr ""
 msgid "the module has no %{kind} %{key}"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "the system"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "the template is unchanged"
+msgstr ""
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "then"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "then re-renders %{count} entries, %{live} of them live."
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
@@ -22199,6 +23432,7 @@ msgid "together with %{children}"
 msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex
+#: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "unchanged"
 msgstr ""
@@ -22213,6 +23447,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "unknown"
 msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "update"
+msgid_plural "updates"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -22247,6 +23488,11 @@ msgstr ""
 msgid "variables"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "verified %{when}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "version %{number}"
@@ -22265,6 +23511,11 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "video provider"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "waiting"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -22286,6 +23537,13 @@ msgstr ""
 #, elixir-autogen
 msgid "will be deleted"
 msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "with child %{names}"
+msgid_plural "with children %{names}"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen

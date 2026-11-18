@@ -45,6 +45,8 @@ defmodule Brando.Villain do
   # (`Brando.Villain.TemplateView`).
   @view_keys ~w(entry identity configs navigation request url)
 
+  @modules_override {__MODULE__, :modules}
+
   @doc """
   Parse blocks
 
@@ -55,6 +57,9 @@ defmodule Brando.Villain do
   as `!!! Error parsing liquex template !!!`), or raises: what the live
   preview and the editor show. A render that is stored uses
   `parse_checked/3`, which returns the failures instead.
+
+  `modules:` renders with these module definitions instead of the stored
+  ones (`with_modules/2` sets them for a whole render).
   """
   def parse(entry_blocks_list, entry \\ nil, opts \\ [])
 
@@ -102,7 +107,7 @@ defmodule Brando.Villain do
     opts_map = Enum.into(opts, %{})
     parser = RuntimeConfig.get(Brando.Villain)[:parser]
 
-    {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
+    modules = render_modules(opts_map)
     {:ok, containers} = RenderSourceQuery.list_containers(cached(%{preload: [:palette]}))
     {:ok, palettes} = RenderSourceQuery.list_palettes(cached(%{}))
     {:ok, fragments} = FragmentQuery.list_for_rendering(cached(%{}))
@@ -281,6 +286,42 @@ defmodule Brando.Villain do
 
   defp children(_block), do: []
 
+  @doc """
+  Runs `fun` with `modules`, a list of module definitions as
+  `Brando.Villain.RenderSourceQuery.list_modules/1` returns them (refs and
+  vars preloaded), in place of the stored ones for every render in this
+  process: a dry run of definitions that aren't saved, such as a release's
+  (`Brando.Content.Definitions.Release.Verify`). A render's own `modules:`
+  option comes first.
+  """
+  @spec with_modules([struct()], (-> result)) :: result when result: term
+  def with_modules(modules, fun) when is_list(modules) and is_function(fun, 0) do
+    previous = Process.get(@modules_override)
+    Process.put(@modules_override, modules)
+
+    try do
+      fun.()
+    after
+      if previous, do: Process.put(@modules_override, previous), else: Process.delete(@modules_override)
+    end
+  end
+
+  @doc "The module definitions renders read, with the refs and vars they render."
+  @spec render_modules(map() | keyword()) :: [struct()]
+  def render_modules(opts \\ %{}) do
+    case opts[:modules] || Process.get(@modules_override) do
+      modules when is_list(modules) ->
+        modules
+
+      nil ->
+        {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
+        modules
+    end
+  end
+
+  @doc "The preloads a module needs to render: its vars, and its refs' media."
+  def module_preloads, do: @module_preloads
+
   defp cached(opts) do
     if Application.get_env(:brando, :villain_query_cache, @query_cache_default),
       do: Map.put(opts, :cache, {:ttl, :infinite}),
@@ -294,7 +335,7 @@ defmodule Brando.Villain do
   # palettes for container blocks, fragments for fragment blocks. The
   # `{% fragment %}` liquid tag fetches its own fragment and does not use opts.
   defp put_render_sources(opts_map, %{type: type}) when type in [:module, :module_entry] do
-    {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
+    modules = render_modules(opts_map)
 
     Map.merge(opts_map, %{modules: modules, containers: [], palettes: [], fragments: []})
   end
@@ -306,7 +347,7 @@ defmodule Brando.Villain do
   end
 
   defp put_render_sources(opts_map, _block) do
-    {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
+    modules = render_modules(opts_map)
     {:ok, containers} = RenderSourceQuery.list_containers(cached(%{preload: [:palette]}))
     {:ok, palettes} = RenderSourceQuery.list_palettes(cached(%{}))
     {:ok, fragments} = FragmentQuery.list_for_rendering(cached(%{}))
