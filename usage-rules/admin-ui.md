@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:admin-ui`) for listing components and menu items, custom and selection actions, live updates, the form LiveView, select options, multi-selects and block editors. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Blueprint listings
 
-Guide: `deps/brando/guides/blueprint_listings.md`
+Guide: [blueprint_listings.md](../guides/blueprint_listings.md)
 
 `Content.List`, aliased from `BrandoAdmin.Components`, is a LiveComponent.
 Pass it:
@@ -71,7 +71,7 @@ its current page, keeping filters, sort and selection.
 
 ## Blueprint forms
 
-Guide: `deps/brando/guides/blueprint_forms.md`
+Guide: [blueprint_forms.md](../guides/blueprint_forms.md)
 
 ### The form LiveView
 
@@ -142,7 +142,7 @@ They show only on top-level inputs of an entry form and on the meta fields
 in its Meta drawer, not in subforms or blocks, not on inputs that are
 `readonly` or `disabled` for the editor, and only when `Brando.AI` is
 configured for the action's model (which needs the optional `req_llm`
-dependency, see [Content assistant](deps/brando/guides/content_assistant.md#configure-a-model));
+dependency, see [Content assistant](../guides/content_assistant.md#configure-a-model));
 anyone else who can edit the entry can run them. The prompt, the model and its key stay on the server.
 
 The options are checked when the Blueprint compiles: a missing prompt or
@@ -152,7 +152,7 @@ compilation, and a field in `from` that the schema does not have, or that is
 an association or an embed, is reported with the other form errors.
 
 Write new per-field AI as `ai_actions:`: `ai:` on an input is
-[deprecated](deps/brando/guides/blueprint_forms.md#ai-on-an-input-deprecated). Write with AI in rich text is off
+[deprecated](../guides/blueprint_forms.md#ai-on-an-input-deprecated). Write with AI in rich text is off
 unless the input asks for it with `write_with_ai: true` or its options, and
 in block text unless the module turns it on in the module editor.
 
@@ -188,9 +188,9 @@ where to move it. The schema needs `trait :blocks`, and the name must be a
   namespace to start from. Without it, the namespace named after the schema
   is used. See `Brando.Content.StartingTemplates`.
 * `starts_with`: module classes an empty editor offers first. See
-  [Starting modules](deps/brando/guides/blueprint_fields.md#starting-modules).
+  [Starting modules](../guides/blueprint_fields.md#starting-modules).
 * `hidden`: as for inputs: `true`, `{field, value}` or a function of the
   form. A hidden editor stays mounted.
 
 `label` and `palette_namespace` are accepted and not used. See the
-[Block editor](deps/brando/guides/block_editor.md) guide.
+[Block editor](../guides/block_editor.md) guide.

@@ -63,6 +63,7 @@ if Code.ensure_loaded?(Igniter) do
         |> AgentFiles.plan()
         |> Assets.plan(project)
         |> PhoenixStatic.plan()
+        |> PhoenixStatic.icons(project)
         |> Mix.Brando.Igniter.Install.Migrations.plan(project)
         |> application(project)
         |> endpoint(project, tenancy.mode)
@@ -549,6 +550,8 @@ if Code.ensure_loaded?(Igniter) do
     defp setup_content(_none), do: "seeds default content"
 
     defp instructions(igniter, tenancy) do
+      brando = AgentFiles.package_link(igniter)
+
       Igniter.add_notice(igniter, """
       Brando source setup prepared (tenancy: #{tenancy.mode}). Review the diff before applying it.
       No database, account, asset build, or deployment was run.
@@ -570,12 +573,12 @@ if Code.ensure_loaded?(Igniter) do
 
       For deploying with Florist the plan adds what the release build needs: a Dockerfile
       and .dockerignore when there are none, ReleaseTasks and a release that writes the
-      tarball. See Brando's deployment guide (deps/brando/guides/deployment.md).
+      tarball. See Brando's deployment guide (#{brando}/guides/deployment.md).
 
       For coding agents, AGENTS.md links Brando's usage rules
-      (deps/brando/usage-rules.md), and .claude/skills has Brando's site skills.
+      (#{brando}/usage-rules.md), and .claude/skills has Brando's site skills.
 
-      #{igniter |> Igniter.Project.Deps.has_dep?(:req_llm) |> ai_instructions() |> String.trim_trailing()}
+      #{igniter |> Igniter.Project.Deps.has_dep?(:req_llm) |> ai_instructions(brando) |> String.trim_trailing()}
       #{site_frontend_instructions(tenancy.mode)}\
       """)
     end
@@ -591,21 +594,21 @@ if Code.ensure_loaded?(Igniter) do
     defp site_frontend_instructions(_mode), do: ""
 
     # From mix.exs as planned: with --ai, or a req_llm the application had.
-    defp ai_instructions(true) do
+    defp ai_instructions(true, brando) do
       """
       AI: mix.exs has the req_llm dependency. Set a model and an API key in
       config :brando, Brando.AI to turn on AI actions, alt text drafts and the
-      Assistant (deps/brando/guides/content_assistant.md).
+      Assistant (#{brando}/guides/content_assistant.md).
       """
     end
 
-    defp ai_instructions(false) do
+    defp ai_instructions(false, brando) do
       """
       AI (field actions, alt text drafts, the Assistant) needs the req_llm
       dependency, which was not added. To use it later, run
       mix brando.install --ai, or add #{inspect(Brando.AI.dependency())} to deps in mix.exs,
       then set a model and an API key in config :brando, Brando.AI
-      (deps/brando/guides/content_assistant.md).
+      (#{brando}/guides/content_assistant.md).
       """
     end
   end

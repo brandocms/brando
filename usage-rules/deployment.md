@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:deployment`) for deploying with Florist and checking a site with `mix brando.doctor`. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Deployment
 
-Guide: `deps/brando/guides/deployment.md`
+Guide: [deployment.md](../guides/deployment.md)
 
 ### Health endpoint
 
@@ -29,7 +29,7 @@ check never passes and the deploy stalls on the new colour.
 Florist builds a standard Mix release in Docker, from the project's files
 only, so Brando and its npm packages cannot come from a path outside the
 project: `mix brando.doctor --strict` fails on one (see
-[Dependency sources](deps/brando/guides/doctor.md#what-is-checked)). It copies
+[Dependency sources](../guides/doctor.md#what-is-checked)). It copies
 `/opt/app/_build/prod/<app>-<version>.tar.gz` out of the image and migrates
 with `bin/<app> eval "MyApp.ReleaseTasks.migrate"`. `mix brando.install`
 creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`,
@@ -76,7 +76,7 @@ config :brando, media_path: "./media", log_dir: "./log"
 
 They resolve at runtime in the release's working directory, the `current`
 directory the systemd unit starts in, where Florist links the persistent
-`media/` (see [Server directory structure](deps/brando/guides/deployment.md#server-directory-structure)). A
+`media/` (see [Server directory structure](../guides/deployment.md#server-directory-structure)). A
 literal path in the base configuration, a value in `config/prod.exs` or one
 set in `config/runtime.exs` is the application's own and is kept.
 
@@ -95,7 +95,7 @@ Media reaches visitors through `Brando.Plug.Media`, which sends
 `X-Content-Type-Options: nosniff` and a `sandbox` Content Security Policy so
 an uploaded SVG or HTML file cannot run as a page of the site. A web server
 set up to serve `/media` itself must send them too: see
-[How media is served](deps/brando/guides/media.md#how-media-is-served).
+[How media is served](../guides/media.md#how-media-is-served).
 
 > #### Do not set PORT for blue/green {: .warning}
 >
@@ -223,7 +223,7 @@ whatever that copy holds.
 
 ## System check
 
-Guide: `deps/brando/guides/doctor.md`
+Guide: [doctor.md](../guides/doctor.md)
 
 ### Options and exit status
 

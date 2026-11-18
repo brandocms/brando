@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:seo`) for site identity, robots.txt and the AI crawler policy, IndexNow, page metadata, JSON-LD, sitemaps and Markdown alternates. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Identity, SEO settings, and redirects
 
-Guide: `deps/brando/guides/identity_and_seo.md`
+Guide: [identity_and_seo.md](../guides/identity_and_seo.md)
 
 For a new language, create defaults once in that environment:
 
@@ -53,14 +53,14 @@ language's record, or `%{}` if absent. It does not fall back to another language
 `Brando.Sites.get_link("en", "instagram")` returns the URL of the link named
 `Instagram` (any case) in that language's identity, or `""` when there is none.
 Links also become `og:see_also` tags, and a link to an X profile
-(`https://x.com/example`) gives pages their `twitter:site` handle; see [Page metadata](deps/brando/guides/meta.md#x-cards).
+(`https://x.com/example`) gives pages their `twitter:site` handle; see [Page metadata](../guides/meta.md#x-cards).
 
 Creating, copying and updating an identity through the context refresh the
 cache and enqueue block content referencing identity, configs, or links for
 rendering. Inside a transaction begun with
 `Brando.Repo.transaction/2`, the cache is refreshed once it commits, and not at
 all if it rolls back. With several nodes, each refreshes its own copy (see
-[Several nodes](deps/brando/guides/tenancy_and_environments.md#several-nodes)). Direct `Repo` writes skip those callbacks. During
+[Several nodes](../guides/tenancy_and_environments.md#several-nodes)). Direct `Repo` writes skip those callbacks. During
 a controlled import, refresh the cache in each affected environment and invoke
 `Brando.Sites.update_villains_referencing_identity({:ok, identity})` afterwards.
 
@@ -77,7 +77,7 @@ the AI crawler policy below, then a `Sitemap:` line once a sitemap has been
 generated (unless the robots text names one). It does not add an environment-specific crawl block
 for you; inspect the intended deployment and configure its policy explicitly.
 The base URL field is the identity's and the website's `url` in JSON-LD; it does
-not decide the host of canonical URLs, metadata and [sitemaps](deps/brando/guides/sitemaps.md).
+not decide the host of canonical URLs, metadata and [sitemaps](../guides/sitemaps.md).
 Those start with the site's base URL (`Brando.Utils.hostname/0`): with tenancy,
 the domain of the environment being rendered, else the endpoint's URL, so set
 that too.
@@ -91,7 +91,7 @@ robots text, in the SEO entry's `crawler_policy`.
 Blocking is a request: the user-fetch crawlers say robots.txt may not apply to
 them. Google's AI Overviews use Googlebot, not `Google-Extended`; keep a page
 out of them with the entry's **No snippet** and **Snippet length** settings
-([Page metadata](deps/brando/guides/meta.md#snippet-limits)).
+([Page metadata](../guides/meta.md#snippet-limits)).
 
 It is off by default. Only the live environment submits, so a staging copy
 never does. Without tenancy the deployment is the site; on a server that is
@@ -107,7 +107,7 @@ crontab and must add `{"25 5 * * *", Brando.Worker.NotFoundPurger}` to its own.
 
 ## Page metadata
 
-Guide: `deps/brando/guides/meta.md`
+Guide: [meta.md](../guides/meta.md)
 
 ### Define the metadata schema
 
@@ -171,7 +171,7 @@ end
 ```
 
 The `News` context must define the `slug` and `language` matches used here; see
-[Querying](deps/brando/guides/querying.md). The browser pipeline must establish `conn.assigns.language`
+[Querying](../guides/querying.md). The browser pipeline must establish `conn.assigns.language`
 and the appropriate tenant before the query and SEO lookup.
 
 `put_title/3` sets the document title. `Brando.Utils.get_page_title(conn)` applies
@@ -201,7 +201,7 @@ application crash or proof that your page schema ran.
 
 ## JSON-LD
 
-Guide: `deps/brando/guides/jsonld.md`
+Guide: [jsonld.md](../guides/jsonld.md)
 
 ### Blueprint DSL
 
@@ -243,12 +243,12 @@ rather than `updated_at`, which moves on every save, block re-render and
 | Type | Description |
 |------|-------------|
 | `:identity` | Creates `{"@id": "hostname/#identity"}` reference to site identity |
-| `:person` | A Brando user, a People entry, a name, or a list of them, as linked `Person` nodes (see [Authors](deps/brando/guides/jsonld.md#authors)) |
+| `:person` | A Brando user, a People entry, a name, or a list of them, as linked `Person` nodes (see [Authors](../guides/jsonld.md#authors)) |
 | `:datetime` | Converts to ISO 8601 string |
 | `:date` | Converts to `YYYY-MM-DD` string |
 | `:duration` | Converts whole minutes, a `Duration` or `"HH:MM:SS"` to ISO 8601 (`90` is `"PT1H30M"`); an ISO 8601 duration is kept |
 | `:image` | Builds an `ImageObject` with url, width, height |
-| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`, without a trailing slash (see [Canonical URL](deps/brando/guides/meta.md#canonical-url)) |
+| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`, without a trailing slash (see [Canonical URL](../guides/meta.md#canonical-url)) |
 | `:language` | Extracts the language from the entry or meta |
 | `:string` | Direct string value via `value_fn` |
 | `:integer` | Direct integer value via `value_fn` |
@@ -318,7 +318,7 @@ after `put_json_ld/4`, or the entity call resets it.
 
 ## Sitemaps
 
-Guide: `deps/brando/guides/sitemaps.md`
+Guide: [sitemaps.md](../guides/sitemaps.md)
 
 ### Declare public URLs
 
@@ -384,7 +384,7 @@ want it to remain scheduled.
 
 ## Markdown alternates
 
-Guide: `deps/brando/guides/markdown_alternates.md`
+Guide: [markdown_alternates.md](../guides/markdown_alternates.md)
 
 ### Which entries
 

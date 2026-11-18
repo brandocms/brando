@@ -66,6 +66,25 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert length(Regex.scan(~r/\|> Brando\.Site\.Frontend\.put_page_assigns\(page\)\n\s+\|> render/, controller)) == 2
   end
 
+  test "--site adds ico to static_paths/0 for the icons its layout links", %{multi: multi} do
+    web = """
+    defmodule StudioWeb do
+      def static_paths, do: ~w(assets fonts images favicon.ico)
+      def router, do: quote(do: use(Phoenix.Router, helpers: true))
+      defmacro __using__(which), do: apply(__MODULE__, which, [])
+    end
+    """
+
+    result =
+      multi
+      |> Igniter.update_file("lib/studio_web.ex", &Rewrite.Source.update(&1, :content, web))
+      |> generate(["--site", "acme-travel"])
+
+    assert result.issues == []
+    assert IgniterCase.source(result, @layouts) =~ ~s(href="/ico/favicon.ico")
+    assert IgniterCase.source(result, "lib/studio_web.ex") =~ "~w(assets fonts images favicon.ico ico)"
+  end
+
   test "--site writes the frontend, its layouts and templates, and registers it", %{multi: multi} do
     result = generate(multi, ["--site", "acme-travel"])
     assert result.issues == []

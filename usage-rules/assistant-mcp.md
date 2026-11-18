@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:assistant-mcp`) for configuring the assistant's model and guidance, proposals, and connecting AI tools over MCP: the remote endpoint and `mix brando.mcp`. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Content assistant
 
-Guide: `deps/brando/guides/content_assistant.md`
+Guide: [content_assistant.md](../guides/content_assistant.md)
 
 ### Configure a model
 
@@ -59,7 +59,7 @@ calling may work, but have not been checked with the assistant.
 
 Tools connected over MCP can prepare proposals too: Claude, ChatGPT or Claude
 Code through the remote endpoint, once an administrator turns it on and the
-person connects them ([Connected AI tools](deps/brando/guides/mcp.md)), and a coding agent in
+person connects them ([Connected AI tools](../guides/mcp.md)), and a coding agent in
 development through BrandoMCP's stdio server (`mix brando.mcp`, as a named
 Brando user; see the BrandoMCP README). The tools read content and prepare
 proposals; a person reviews and applies them in the Assistant.
@@ -111,11 +111,11 @@ alias Brando.Content.Proposals
 the site's live-preview targets without saving it. BrandoMCP exposes the same
 tools in-process, for an actor the host provides, and over stdio to local
 coding agents in development; their proposals are reviewed under
-[From connected tools](deps/brando/guides/content_assistant.md#proposals-from-connected-tools).
+[From connected tools](../guides/content_assistant.md#proposals-from-connected-tools).
 
 ## Connected AI tools (remote MCP)
 
-Guide: `deps/brando/guides/mcp.md`
+Guide: [mcp.md](../guides/mcp.md)
 
 ### Enable the endpoint
 

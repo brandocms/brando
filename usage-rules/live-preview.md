@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:live-preview`) for configuring preview targets, their assigns and refreshes. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Live preview
 
-Guide: `deps/brando/guides/live_preview.md`
+Guide: [live_preview.md](../guides/live_preview.md)
 
 ### Configure a view
 
@@ -35,7 +35,7 @@ view opens immediately from the editor's eye button.
 `layout`, like `template`, takes a `{module, template}` tuple or a function of
 the entry returning one. On an installation whose sites have their own
 frontend modules (see
-[Per-site layouts and templates](deps/brando/guides/tenancy_and_environments.md#per-site-layouts-and-templates)),
+[Per-site layouts and templates](../guides/tenancy_and_environments.md#per-site-layouts-and-templates)),
 let the previewed site pick both, and set `site_assigns true` to give the
 preview the assigns a request gets:
 
@@ -69,7 +69,7 @@ with no registered frontend cannot be previewed.
   rendering. It changes preview data only; it cannot prepare input for an
   earlier callback or persist changes.
 - `rerender_on_change [[:field]]` renders the whole `<body>` again when the
-  field changes; see [Fields the layout shows](deps/brando/guides/live_preview.md#fields-the-layout-shows).
+  field changes; see [Fields the layout shows](../guides/live_preview.md#fields-the-layout-shows).
 - `template_section` and `template_css_classes` accept a string or an entry
   callback for layout context.
 

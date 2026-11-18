@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:module-definitions`) for exporting, editing and importing modules and their templates as files. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Module definitions as files
 
-Guide: `deps/brando/guides/module_definitions.md`
+Guide: [module_definitions.md](../guides/module_definitions.md)
 
 From your Brando application's directory:
 
@@ -125,7 +125,7 @@ for Liquid, or an inline literal such as
 `template :liquid, "<h1>{{ title }}</h1>"`. Relative template paths must stay
 inside the definition directory; symlinks are rejected. Liquid prints values
 without escaping them: see
-[Writing templates safely](deps/brando/guides/block_editor.md#writing-templates-safely).
+[Writing templates safely](../guides/block_editor.md#writing-templates-safely).
 
 The file reader accepts one `defmodule` per `.exs` file, literal values, DSL
 declarations and `use Brando.Content.Definition`. Maps, keyword lists, lists,
@@ -169,7 +169,7 @@ entry (`{% assign e = card.identifier | get_entry %}`) gets it on the site only
 while it is published, and in live preview whatever its status; publishing,
 unpublishing or deleting the entry renders the pages that link to it again,
 its own included
-([Liquid tags and context](deps/brando/guides/block_editor.md#liquid-tags-and-context)).
+([Liquid tags and context](../guides/block_editor.md#liquid-tags-and-context)).
 
 #### Var layout
 

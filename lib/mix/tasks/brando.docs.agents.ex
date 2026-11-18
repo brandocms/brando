@@ -34,10 +34,9 @@ defmodule Mix.Tasks.Brando.Docs.Agents do
 
   An Elixir example inside a region is compiled by a test. Put
   `<!-- usage-rules:no-compile -->` on the line before a fence that cannot be.
-  Links in the rules point at `deps/brando/guides/`, where the guides are in
-  an application that depends on the Hex package or a git checkout. With a
-  `path:` dependency they don't resolve; the guides are in the Brando
-  checkout instead.
+  Links in the rules are relative to the file they are in, so they resolve
+  wherever an application has the package: `deps/brando` for a Hex or Git
+  dependency, the checkout for a `path:` one.
 
   A guide's description in `llms.txt` is its first sentence, or the text of a
   `<!-- llms-description: ... -->` comment in the guide.

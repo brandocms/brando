@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:blueprint-reference`) for absolute URLs for only some entries, Blueprint translations, enums, uniqueness, relation types, asset configs and deprecated declarations. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Blueprints
 
-Guide: `deps/brando/guides/blueprints.md`
+Guide: [blueprints.md](../guides/blueprints.md)
 
 #### Only some entries have a URL
 
@@ -71,7 +71,7 @@ nothing; use `datasource` entries.
 
 ## Attributes, relations, and assets
 
-Guide: `deps/brando/guides/blueprint_fields.md`
+Guide: [blueprint_fields.md](../guides/blueprint_fields.md)
 
 ### Uniqueness
 
@@ -104,12 +104,12 @@ Every relation needs `module:`. The types:
 * `:embeds_one` and `:embeds_many`: embedded schemas stored in a `jsonb`
   column, usually Blueprints with `data_layer :embedded`.
 * `:entries`: a sorted list of entries of any Blueprint, picked with the
-  [`:entries` input](deps/brando/guides/blueprint_forms.md#related-entries).
+  [`:entries` input](../guides/blueprint_forms.md#related-entries).
 
 Two special forms use `:has_many`:
 
 * `relation :blocks, :has_many, module: :blocks`: a block field. See
-  [Block relations](deps/brando/guides/blueprint_fields.md#block-relations).
+  [Block relations](../guides/blueprint_fields.md#block-relations).
 * `relation :alternates, :has_many, module: :alternates`: translation links,
   added by `trait :translatable`. Don't declare it yourself.
 
@@ -128,7 +128,7 @@ Two special forms use `:has_many`:
 
 An image config's `sizes` replaces the default sizes; name the
 `{:standard, %{...}}` preset to extend them, as described in
-[Images, files, and galleries](deps/brando/guides/media.md#configure-a-cover-image). A declared
+[Images, files, and galleries](../guides/media.md#configure-a-cover-image). A declared
 `srcset` replaces the default `srcset`, except that a keyed one
 (`%{cropped: [...]}`) adds its keys to the default's in an image config
 without its own `sizes`, and in any gallery, whose sizes merge over the

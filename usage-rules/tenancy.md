@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:tenancy`) for sites and environments, tenant migrations, static builds, groups, policies and permission checks. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Tenancy and named environments
 
-Guide: `deps/brando/guides/tenancy_and_environments.md`
+Guide: [tenancy_and_environments.md](../guides/tenancy_and_environments.md)
 
 Tenancy is opt-in. Projects in the default `:none` mode read and write content
 in `public`. They apply the ordinary Brando-owned public database migrations,
@@ -84,7 +84,7 @@ Two lists of content languages have different jobs:
   `default_language:`, are what the installation can hold. The `language`
   field accepts these, a site is checked against them, and every language's
   label (`text:`) comes from here. Adding one recompiles Brando: see
-  [Configure content and interface languages](deps/brando/guides/i18n.md#configure-content-and-interface-languages).
+  [Configure content and interface languages](../guides/i18n.md#configure-content-and-interface-languages).
 - **A site's languages**, `languages` and `default_language` on its registry
   row, are what that site uses: a subset of the installation's, in the site's
   own order.
@@ -103,7 +103,7 @@ loading the site logs a warning.
 A language added to an existing site gets the starting content a new site
 gets, in each of the site's environments: once the change is saved, a job per
 environment (`Brando.Worker.SiteLanguageSeed`) runs the seeder's
-`seed_language/4` (see [Provision sites](deps/brando/guides/tenancy_and_environments.md#provision-sites-and-initial-environments)).
+`seed_language/4` (see [Provision sites](../guides/tenancy_and_environments.md#provision-sites-and-initial-environments)).
 What already exists in that language is left alone. A language added as the
 new default in the same save is seeded in every environment before the save
 instead, so the site's `/` has a homepage the moment it moves to that
@@ -152,7 +152,7 @@ the installation configures, the installation's default included
 (`scope "/en", as: :en`), for `Brando.I18n.Helpers.localized_path/3`,
 `route_i18n` and absolute URLs to give each language its own URL on every
 site. `mix brando.gen` writes these scopes for a translatable resource on a
-multi-site installation, and [Route the requested language](deps/brando/guides/i18n.md#route-the-requested-language)
+multi-site installation, and [Route the requested language](../guides/i18n.md#route-the-requested-language)
 shows them for your own routes. A route's translated path segments in the
 unprefixed scope are the same for every site: a `get "/news"` there is the path
 of each site's default language, English or not. Without the scope of a
@@ -216,7 +216,7 @@ prefix in process context without a database query. In `:multi` it answers
 404 on a host that resolves to no site, except for a shared preview's link
 (`/__p__/:preview_key`), which opens under the site and environment the
 preview was shared from ([Where a shared preview link
-opens](deps/brando/guides/tenancy_and_environments.md#where-a-shared-preview-link-opens)). A response for an environment
+opens](../guides/tenancy_and_environments.md#where-a-shared-preview-link-opens)). A response for an environment
 that is not live carries `X-Robots-Tag: noindex, nofollow`, in `:single` and
 `:multi`, so a working environment on a public host such as
 `staging.example.com` stays out of search results.
@@ -311,7 +311,7 @@ swap and the public base URL stays). The renders are queued once the change has
 committed, each environment searched as the system; a search that fails is
 logged and leaves the change saved. A render job run on a node that has not
 heard of the change yet refreshes its registry cache first
-([Several nodes](deps/brando/guides/tenancy_and_environments.md#several-nodes)). The sitemap follows at its next generation.
+([Several nodes](../guides/tenancy_and_environments.md#several-nodes)). The sitemap follows at its next generation.
 
 Build a site's own absolute URLs with `Brando.Utils.hostname/1` too. Phoenix's
 `url/1` and `*_url` route helpers name the endpoint's host, which in `:multi`
@@ -388,7 +388,7 @@ mix brando.gen.site --site acme
 This writes `MyAppWeb.Sites.Acme`, its `Layouts` and its `PageHTML` under
 `lib/my_app_web/sites/`, and gives the CMS page controller the plug and the
 page assigns described below while it is as generated. See
-[Site frontends](deps/brando/guides/generators.md#site-frontends) for its options and what it
+[Site frontends](../guides/generators.md#site-frontends) for its options and what it
 leaves alone. The generator creates no site record, content or assets.
 
 The registry maps a site key to its frontend module in config:
@@ -448,7 +448,7 @@ files `Brando.Plug.SiteAssets` serves on the environment's host, the script
 and style tags, Vite manifest and critical CSS a page renders with, a live
 preview of the environment being edited, a shared preview (which pins the
 set of the environment it was shared from), and a static build of the
-environment. See [A set per environment](deps/brando/guides/tenancy_and_environments.md#a-set-per-environment).
+environment. See [A set per environment](../guides/tenancy_and_environments.md#a-set-per-environment).
 
 A path the host's own sets miss (the set its environment uses, and the
 sets its site's shared previews pin) answers from the own set of another
@@ -468,7 +468,7 @@ put both live, on a `:dynamic` site:
 1. Add `{"acme", "staging"} => MyAppWeb.Sites.AcmeNext` to `site_frontends`
    and deploy. Production keeps rendering with `MyAppWeb.Sites.Acme`.
 2. Build the new frontend, upload it to the site's `sets` root and register
-   it, as in [Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
+   it, as in [Uploading a site's build by hand](../guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
 3. With Staging selected, open `/admin/config/assets` and choose
    "Activate for Staging" on the new build. Staging's host now serves it
    and Staging's pages, previews and builds render with it; Production
@@ -564,14 +564,14 @@ follow the site:
   in the admin has `data-site="<site key>"`, so rules for one site's modules
   go inside its block; rules outside one apply to every site, as a module
   from the shared library needs. See
-  [Admin and site CSS](deps/brando/guides/installation.md#admin-and-site-css).
+  [Admin and site CSS](../guides/installation.md#admin-and-site-css).
 
 ### Each site's frontend source
 
 A site's layouts are compiled into the release, but its scripts and styles
 need not be. In `:multi`, each site's frontend source can be a Vite project
 of its own in `assets/sites/<key>/`, whose build is uploaded as that site's
-[asset set](deps/brando/guides/tenancy_and_environments.md#uploadable-frontend-asset-sets). `assets/frontend` stays the
+[asset set](../guides/tenancy_and_environments.md#uploadable-frontend-asset-sets). `assets/frontend` stays the
 release's default frontend, which a site without an active set gets.
 `mix brando.gen.site --site acme` creates `assets/sites/acme/` from the
 templates that give a new installation `assets/frontend`. Its Vite config
@@ -621,7 +621,7 @@ With `tenancy_mode: :multi` and HMR on:
   request so a new build shows without a restart. A site with neither
   shows a notice saying so. Give the other sites a build with the steps
   under
-  [Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
+  [Uploading a site's build by hand](../guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
 - Live preview follows the same rule for the site it renders. A shared
   preview never loads from the dev server, as its link outlives it: one of
   the dev site renders from the set it pins, as any site's does. That is
@@ -631,11 +631,11 @@ With `tenancy_mode: :multi` and HMR on:
   `priv/static` the admin says to run `pnpm build` in `assets/frontend`). A dev site with a project
   of its own and no set cannot be shared: the admin says to build and
   upload a set first
-  ([Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand)).
+  ([Uploading a site's build by hand](../guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand)).
 
 The admin answers on the endpoint's host: with the endpoint on `localhost`,
 `localhost:4000/admin` opens it and `acme.localhost:4000/admin` is a 404
-([Where the admin answers](deps/brando/guides/tenancy_and_environments.md#where-the-admin-answers)).
+([Where the admin answers](../guides/tenancy_and_environments.md#where-the-admin-answers)).
 
 Without `dev_site`, every site loads from the dev server, as on a
 single-site installation. Set in `:none` or `:single`, or naming a site that
@@ -702,7 +702,7 @@ creates anything.
 
 ## Groups and authorization
 
-Guide: `deps/brando/guides/authorization.md`
+Guide: [authorization.md](../guides/authorization.md)
 
 The default mode remains `:legacy` until that explicit switch
 (`authorization_mode: :groups`). Old

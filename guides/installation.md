@@ -508,8 +508,12 @@ Those sections also say what an existing file keeps. The release does not copy
 `priv/static`, so phx.new's `favicon.ico` there is removed and its
 `images/logo.svg` moves to `assets/frontend/public/images`; with the public
 site, its `robots.txt` is removed too, so Brando answers `/robots.txt`, and
-without it `robots.txt` moves to `assets/frontend/public`. Florist's own
-configuration, like sample content, remains separate.
+without it `robots.txt` moves to `assets/frontend/public`. The site's icon,
+`favicon.ico`, goes to `assets/frontend/public/` and `public/ico/`, and `ico`
+goes into the web module's `static_paths/0`, so `/ico/favicon.ico`, which the
+CMS root layout links, is served (see
+[Site icons](pages.md#site-icons)). Florist's own configuration, like sample
+content, remains separate.
 
 The installer adds `use Brando.SoftDelete.Repo` to the application's Repo,
 after its `use Ecto.Repo`: every delete and restore calls the functions it
@@ -557,11 +561,18 @@ Otherwise a notice shows the file's contents to add yourself.
 
 `mix brando.install` gives coding agents Brando's rules and skills:
 
-* `AGENTS.md` gets a `brando` section linking `deps/brando/usage-rules.md`,
+* `AGENTS.md` gets a `brando` section linking Brando's `usage-rules.md`,
   inside the `<!-- usage-rules-start -->` block Phoenix writes, or in a new
-  file. `mix usage_rules.sync` from the `usage_rules` package can take that
-  section over; it loads the topic files in `deps/brando/usage-rules/` as
-  `brando:<topic>`.
+  file. Its links lead to where the application has the package:
+  `deps/brando/` for a Hex or Git dependency, the checkout for a `path:` one,
+  relative to the application when the two share a directory below the
+  filesystem root and absolute otherwise. The skills below name the
+  package's files the same way, and the rules files link relative to
+  themselves. `mix usage_rules.sync` from the `usage_rules` package can take
+  that section over; it loads the topic files in the package's
+  `usage-rules/` as `brando:<topic>`. Have it link to Brando's rules rather
+  than copy them into `AGENTS.md`, where their relative links would resolve
+  from the application's root.
 * `AGENTS.md` also gets a short site section, between
   `<!-- brando-site-start -->` and `<!-- brando-site-end -->` and before the
   usage-rules block, so a sync never rewrites it. It has a placeholder for
@@ -578,8 +589,11 @@ Otherwise a notice shows the file's contents to add yourself.
 
 A versioned `mix brando.upgrade` adds the ones that are missing, and
 `mix brando.gen.agents` adds them on its own, for a site installed before
-they existed. None of these replaces a skill file, the `brando` section, the
-site section or `CLAUDE.md` once it exists, so edit them freely.
+they existed. None of these replaces the site section or `CLAUDE.md` once it
+exists, or a skill file or `brando` section you edited, so edit them freely.
+A skill or `brando` section as Brando wrote it follows the dependency: rerun
+`mix brando.gen.agents` after moving Brando between a Hex and a `path:`
+dependency.
 
 To take the skills Brando ships now over the copies in `.claude/skills/`,
 run `mix brando.gen.agents --refresh` and review the diff before accepting
@@ -856,6 +870,5 @@ older publish in the store, from another checkout, is kept out with a warning
 at startup. Without it, rerun
 `mix brando.assets.setup --backend-only` to rebuild.
 
-The rules `mix brando.install` gives coding agents link to
-`deps/brando/guides/`. With a `path:` dependency those links don't resolve;
-the guides are in the Brando checkout.
+The `brando` section `mix brando.install` writes to `AGENTS.md` links to the
+checkout's `usage-rules.md`, which links on to its guides.

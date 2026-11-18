@@ -84,6 +84,64 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
+    Adds `ico` to `static_paths/0` in the web module, so `Plug.Static` serves
+    the icons the installer puts in `assets/frontend/public/ico/`, which the
+    frontend build copies to `priv/static/ico/`. Only a returned literal, a
+    word sigil or a list of strings, is changed; any other `static_paths/0`
+    gets a notice.
+    """
+    def icons(igniter, project) do
+      case ProjectModule.find_and_update_module(igniter, project.web_module, &with_icons(&1, project)) do
+        {:ok, igniter} -> igniter
+        {:error, igniter} -> igniter
+      end
+    end
+
+    defp with_icons(zipper, project) do
+      case CodeFunction.move_to_def(zipper, :static_paths, 0) do
+        {:ok, body} ->
+          case add_icons(Zipper.node(body)) do
+            :unread -> {:warning, icons_warning(project)}
+            node -> {:ok, Zipper.replace(body, node)}
+          end
+
+        :error ->
+          {:ok, zipper}
+      end
+    end
+
+    defp icons_warning(project) do
+      """
+      static_paths/0 in #{inspect(project.web_module)} is not a list this task can read, so `ico` was not added
+      to it. Add it, so Plug.Static serves the icons in assets/frontend/public/ico/ that the root layout
+      links, and restart the server: the endpoint reads static_paths/0 when it starts.
+      """
+    end
+
+    defp add_icons({:sigil_w, meta, [{:<<>>, string_meta, [words]}, modifiers]} = node) when is_binary(words) do
+      if "ico" in String.split(words),
+        do: node,
+        else: {:sigil_w, meta, [{:<<>>, string_meta, [String.trim_trailing(words) <> " ico"]}, modifiers]}
+    end
+
+    defp add_icons({:__block__, meta, [items]}) when is_list(items) do
+      case add_icons(items) do
+        :unread -> :unread
+        items -> {:__block__, meta, [items]}
+      end
+    end
+
+    defp add_icons(items) when is_list(items) do
+      cond do
+        not Enum.all?(items, &match?({:__block__, _, [string]} when is_binary(string), &1)) -> :unread
+        Enum.any?(items, &match?({:__block__, _, ["ico"]}, &1)) -> items
+        true -> items ++ [{:__block__, [], ["ico"]}]
+      end
+    end
+
+    defp add_icons(_node), do: :unread
+
+    @doc """
     Moves the `priv/static/robots.txt` `mix phx.new` writes to
     `assets/frontend/public/robots.txt` in an application without the CMS site
     (no `:page_html_module`), where `Plug.Static` answers `/robots.txt`. The

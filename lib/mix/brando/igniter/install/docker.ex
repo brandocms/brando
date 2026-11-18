@@ -85,7 +85,7 @@ if Code.ensure_loaded?(Igniter) do
       and copies /opt/app/_build/prod/#{project.otp_app}-<version>.tar.gz out of the image, and Brando's
       build also needs what this Dockerfile lacks:
       #{Enum.map_join(missing, "\n", &"  * #{&1}")}
-      Brando's template is deps/brando/priv/templates/brando.install/Dockerfile; to use it, move this
+      Brando's template is #{Mix.Brando.Igniter.AgentFiles.package_link(igniter)}/priv/templates/brando.install/Dockerfile; to use it, move this
       Dockerfile aside and rerun mix brando.install.
       """)
     end

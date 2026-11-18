@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:rendering`) for page controllers and templates, fragments, menus, site forms, and changing the HTML blocks render to. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Block editor
 
-Guide: `deps/brando/guides/block_editor.md`
+Guide: [block_editor.md](../guides/block_editor.md)
 
 `empty` matches a var with no value: `nil`, `""`, `[]` and `{}`. `blank`
 matches those and `false`. So `{% if caption != empty %}` hides the markup
@@ -31,7 +31,7 @@ as the form has it.
 
 ## Villain parser
 
-Guide: `deps/brando/guides/villain_parser.md`
+Guide: [villain_parser.md](../guides/villain_parser.md)
 
 The parser turns block data into HTML. `mix brando.install` generates one for
 your project:
@@ -147,7 +147,7 @@ implementation, not yours — silently.
 
 ## Pages and fragments
 
-Guide: `deps/brando/guides/pages.md`
+Guide: [pages.md](../guides/pages.md)
 
 ### Resolve and render public pages
 
@@ -201,7 +201,7 @@ In `lib/my_app_web/controllers/page_html/default.html.heex`:
 It does not perform a fresh block render on every request. Context saves and
 content dependency changes drive rendering; keep the configured rendering queue
 running. For request-dependent data, use the dynamic rendering recipe in
-[Datasources](deps/brando/guides/datasources.md#request-dependent-content).
+[Datasources](../guides/datasources.md#request-dependent-content).
 
 The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy
 `PageView` templates). Add a HEEx template and expose it through the usual
@@ -209,11 +209,55 @@ The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy
 `"default.html"`; a stored template without a matching function cannot render.
 
 Once a site has a frontend module (see
-[Per-site layouts and templates](deps/brando/guides/tenancy_and_environments.md#per-site-layouts-and-templates)),
+[Per-site layouts and templates](../guides/tenancy_and_environments.md#per-site-layouts-and-templates)),
 its templates come from that module's `page_html/0` instead, both in the
 selector, which lists the selected site's templates, and when the page and its
 404 and 410 pages render. A page's `template` is resolved against the current
 site's `PageHTML`, so each site needs the templates its pages name.
+
+### The root layout
+
+The CMS site renders its pages in `YourWeb.CMS.Layouts.root/1`, and a site
+with a [frontend](../guides/tenancy_and_environments.md#per-site-layouts-and-templates)
+in its own `Layouts.root/1`. A root layout gets the conn's assigns as a plain
+map, not a LiveView's, so `assign/3` raises (`assign/3 expects a socket`).
+Add to the map with `Map.merge/2`:
+
+<!-- usage-rules:no-compile -->
+```elixir
+def root(assigns) do
+  assigns = Map.merge(assigns, %{year: Date.utc_today().year})
+
+  ~H"""
+  ...
+  """
+end
+```
+
+#### Site icons
+
+`<.head>` writes no icon links. The root layout has them, inside `<.head>`,
+after the tags Brando writes:
+
+```heex
+<.head conn={@conn}>
+  <link rel="icon" href="/ico/favicon.ico" sizes="any" />
+</.head>
+```
+
+`mix brando.install` puts a `favicon.ico` in `assets/frontend/public/`, for
+browsers that ask for `/favicon.ico` whatever a page links, and one in
+`assets/frontend/public/ico/`, and it and `mix brando.gen.site` add `ico` to
+the web module's `static_paths/0`. The frontend build copies `public/` to `priv/static`. To use
+the site's own icons, replace both `favicon.ico` files, put the others in
+`public/ico/`, and edit the `<link>` lines to match. The generated layout has
+commented lines for an SVG icon, a dark-mode SVG (`media="(prefers-color-scheme:
+dark)"`), a 32-pixel PNG and an Apple touch icon. A site's frontend made with
+`mix brando.gen.site --site KEY` gets the same lines, and in `:multi` its Vite
+project in `assets/sites/KEY/` has its own `public/ico/`.
+
+The endpoint reads `static_paths/0` when it starts, so restart the server
+after adding a directory to it: the code reloader does not pick that up.
 
 ### Homepage, hierarchy, and breadcrumbs
 
@@ -232,7 +276,7 @@ choices to the page's language; keep that boundary in programmatic writes too.
 Use `has_url: false` for organizational content that should not be public. Such
 a page has no URL: `Page.__absolute_url__/1` returns `nil` for it, and the
 content SEO audit leaves it out. Filter the flag in your controllers, and use
-`Page.__url_filter__/0` in your [sitemap](deps/brando/guides/sitemaps.md).
+`Page.__url_filter__/0` in your [sitemap](../guides/sitemaps.md).
 
 Query the current language explicitly:
 
@@ -257,7 +301,7 @@ This empty state omits an absent footer. For an unknown key, the
 nothing and log a warning. Rendering a fragment struct directly also applies its
 optional wrapper, which accepts `{{ content }}`, `{{ parent_key }}`, `{{ key }}`,
 and `{{ language }}` substitutions. The wrapper is printed as it is, so only a
-superuser sets it (see [Authorization](deps/brando/guides/authorization.md)); editors edit the
+superuser sets it (see [Authorization](../guides/authorization.md)); editors edit the
 rest of the fragment, and the keys it prints are HTML-escaped.
 `render_fragment/1` outputs the stored content without that wrapper.
 
@@ -266,7 +310,7 @@ parentheses, and can't start or end with a space, so `about/team`, `/about`,
 `site-footer` and a copy's `footer (copy)` all work. A save that changes one to
 anything else is refused, with a message that says which rule it breaks. A
 content transfer that creates a fragment holds its keys to the same rules. The `{% fragment %}` tag still takes only bare words
-(see [the block editor guide](deps/brando/guides/block_editor.md)), so it can't name the others.
+(see [the block editor guide](../guides/block_editor.md)), so it can't name the others.
 
 Only a published fragment renders. An unpublished one stays in the map with no
 content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,
@@ -288,7 +332,7 @@ pass does not evaluate its text a second time.
 
 ## Navigation
 
-Guide: `deps/brando/guides/navigation.md`
+Guide: [navigation.md](../guides/navigation.md)
 
 For a seed or import, the equivalent literal-link menu is:
 
@@ -374,10 +418,10 @@ it does not implement a dropdown interaction for you.
 
 ## Forms
 
-Guide: `deps/brando/guides/forms.md`
+Guide: [forms.md](../guides/forms.md)
 
 A form is addressed by **key and language**. Each language has its own form,
-linked to the others as a [synchronized translation](deps/brando/guides/i18n.md): the source form
+linked to the others as a [synchronized translation](../guides/i18n.md): the source form
 decides which fields there are, and each translation words them in its own
 language.
 
@@ -418,7 +462,7 @@ config :brando, Brando.Forms, component: {MyAppWeb.Forms, :site_form}
 
 Render its `@csrf_token` as the value of a hidden input named `_csrf_token`,
 as `site_form/1` does: that input is the only place the token is filled in
-(see [Protection](deps/brando/guides/forms.md#protection)).
+(see [Protection](../guides/forms.md#protection)).
 
 ### In a template
 

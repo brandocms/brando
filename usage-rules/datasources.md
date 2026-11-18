@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:datasources`) for feeding a module entries from a query or an editor's selection, and keeping them fresh. The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Datasources
 
-Guide: `deps/brando/guides/datasources.md`
+Guide: [datasources.md](../guides/datasources.md)
 
 ### Declare automatic and selected pages
 

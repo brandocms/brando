@@ -289,8 +289,10 @@ then invoke migrations explicitly as described in [Deployment](deployment.md).
 Florist; it does not modify existing Fabric files.
 
 `mix brando.gen.agents` adds the files for coding agents that `brando.install`
-writes and the application lacks, and keeps the ones it has; `--refresh`
-replaces the skill files with the versions this Brando ships. See
+writes and the application lacks, and keeps the ones it has, except that
+skills and the `brando` section in `AGENTS.md` that you have not edited
+follow the dependency's location; `--refresh` replaces the skill files with the versions
+this Brando ships. See
 [Files for coding agents](installation.md#files-for-coding-agents).
 
 ```sh

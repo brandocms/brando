@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Migrations
+    alias Mix.Brando.Igniter.Install.PhoenixStatic
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.Release
     alias Mix.Brando.Igniter.SoftDeleteRepo
@@ -190,8 +191,8 @@ if Code.ensure_loaded?(Igniter) do
 
     # What `mix brando.install` writes today and an application installed
     # earlier may lack: Brando's soft-delete functions in the repo, which
-    # every delete calls, and a notice for each function the ReleaseTasks
-    # template has gained. Brando's repo is found without the rest of
+    # every delete calls, `ico` in `static_paths/0` for the installed icons,
+    # and a notice for each function the ReleaseTasks template has gained. Brando's repo is found without the rest of
     # discovery, which a second router or endpoint can stop; when discovery
     # fails, `migrations/1` reports it.
     defp installed_files(igniter) do
@@ -199,7 +200,9 @@ if Code.ensure_loaded?(Igniter) do
 
       with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Project.discover(igniter, options) do
-        Release.resave_notice(igniter, project)
+        igniter
+        |> Release.resave_notice(project)
+        |> PhoenixStatic.icons(project)
       else
         _ -> igniter
       end

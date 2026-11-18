@@ -7,65 +7,67 @@ Brando is a CMS for Phoenix applications: Blueprints declare content types,
 editors compose entries from blocks and modules in a LiveView admin, and
 the application renders them. These are the core rules for building a
 site; the topic files listed at the end cover the rest. They are the short
-version of the guides that ship with the package in `deps/brando/guides/`.
-Each section names its guide; read it before changing code in that area,
-and prefer what the guide says over conventions from other CMSs or older
-Brando versions.
+version of the guides that ship with the package, in `guides/` next to
+this file. Links here and in the topic files are relative to where the
+file is in the Brando package (`deps/brando/` for a Hex dependency), also
+in a copy of them elsewhere. Each section names its guide; read it before
+changing code in that area, and prefer what the guide says over
+conventions from other CMSs or older Brando versions.
 
 ## Brando 0.55 guides
 
-Guide: `deps/brando/guides/overview.md`
+Guide: [overview.md](guides/overview.md)
 
 ### Start with your task
 
 | I want to… | Start here | Then read |
 | --- | --- | --- |
-| Start a new site | [Installation](deps/brando/guides/installation.md) | [Pages and fragments](deps/brando/guides/pages.md) |
-| Upgrade an existing application | [Migrating from 0.53 or 0.54](deps/brando/guides/migrating_from_053.md) | [Blueprint migrations](deps/brando/guides/blueprint_migrations.md) |
-| Define a content type and its admin screens | [Blueprints](deps/brando/guides/blueprints.md) | [Querying and mutations](deps/brando/guides/querying.md) |
-| Build translated pages and menus | [Languages and translations](deps/brando/guides/i18n.md) | [Navigation](deps/brando/guides/navigation.md) |
-| Build reusable page content | [Block editor](deps/brando/guides/block_editor.md) | [Datasources](deps/brando/guides/datasources.md) |
-| Render images, downloads, or a gallery | [Images, files, and galleries](deps/brando/guides/media.md) | [Videos](deps/brando/guides/videos.md), [CDN](deps/brando/guides/cdn.md) |
-| Preview an edit or schedule a release | [Live preview](deps/brando/guides/live_preview.md) | [Revisions](deps/brando/guides/revisions.md), [Scheduled publishing](deps/brando/guides/scheduled_publishing.md) |
-| Set up search and sharing output | [Identity, SEO, and redirects](deps/brando/guides/identity_and_seo.md) | [Metadata](deps/brando/guides/meta.md), [Sitemaps](deps/brando/guides/sitemaps.md) |
-| Delete, restore, or reorder content | [Content lifecycle](deps/brando/guides/content_lifecycle.md) | [Querying](deps/brando/guides/querying.md) |
-| Manage accounts and editing permissions | [Users and sessions](deps/brando/guides/users.md) | [Authorization](deps/brando/guides/authorization.md) |
-| Configure environments or publish a static build | [Sites and environments](deps/brando/guides/tenancy_and_environments.md) | [Deployment](deps/brando/guides/deployment.md) |
+| Start a new site | [Installation](guides/installation.md) | [Pages and fragments](guides/pages.md) |
+| Upgrade an existing application | [Migrating from 0.53 or 0.54](guides/migrating_from_053.md) | [Blueprint migrations](guides/blueprint_migrations.md) |
+| Define a content type and its admin screens | [Blueprints](guides/blueprints.md) | [Querying and mutations](guides/querying.md) |
+| Build translated pages and menus | [Languages and translations](guides/i18n.md) | [Navigation](guides/navigation.md) |
+| Build reusable page content | [Block editor](guides/block_editor.md) | [Datasources](guides/datasources.md) |
+| Render images, downloads, or a gallery | [Images, files, and galleries](guides/media.md) | [Videos](guides/videos.md), [CDN](guides/cdn.md) |
+| Preview an edit or schedule a release | [Live preview](guides/live_preview.md) | [Revisions](guides/revisions.md), [Scheduled publishing](guides/scheduled_publishing.md) |
+| Set up search and sharing output | [Identity, SEO, and redirects](guides/identity_and_seo.md) | [Metadata](guides/meta.md), [Sitemaps](guides/sitemaps.md) |
+| Delete, restore, or reorder content | [Content lifecycle](guides/content_lifecycle.md) | [Querying](guides/querying.md) |
+| Manage accounts and editing permissions | [Users and sessions](guides/users.md) | [Authorization](guides/authorization.md) |
+| Configure environments or publish a static build | [Sites and environments](guides/tenancy_and_environments.md) | [Deployment](guides/deployment.md) |
 
 ### Rules that bite
 
 The mistakes that cost the most time, each explained in its guide:
 
 * Build with `mix compile --warnings-as-errors`. Form mistakes in a Blueprint
-  are only warnings otherwise ([Blueprints](deps/brando/guides/blueprints.md#compile-time-checks)).
+  are only warnings otherwise ([Blueprints](guides/blueprints.md#compile-time-checks)).
 * After changing a Blueprint's stored fields, run
   `mix brando.gen.blueprint_migration` and commit the Blueprint, migration and
   snapshot together. Never edit a snapshot by hand
-  ([Blueprint migrations](deps/brando/guides/blueprint_migrations.md)).
+  ([Blueprint migrations](guides/blueprint_migrations.md)).
 * A `has_one` or `has_many` relation is only cast with `cast: true`
-  ([Attributes, relations, and assets](deps/brando/guides/blueprint_fields.md)).
+  ([Attributes, relations, and assets](guides/blueprint_fields.md)).
 * A trait's `before_save/2` and `after_save/3` run when the admin saves an
   entry, not when the context's `create_*` and `update_*` functions do
-  ([Traits](deps/brando/guides/blueprint_traits.md#when-trait-hooks-run)).
+  ([Traits](guides/blueprint_traits.md#when-trait-hooks-run)).
 * Every listing filter needs a `filters` clause in the context; a missing one
   raises `Brando.Exception.QueryFilterClauseError`
-  ([Blueprint listings](deps/brando/guides/blueprint_listings.md)).
+  ([Blueprint listings](guides/blueprint_listings.md)).
 * Associations an `identifier` or `absolute_url` template reads must be
-  declared relations ([Blueprints](deps/brando/guides/blueprints.md#identifier)).
+  declared relations ([Blueprints](guides/blueprints.md#identifier)).
 * Blocks are rendered when an entry is saved. A changed parser does not change
   existing entries until `mix brando.entries.resave`
-  ([Villain parser](deps/brando/guides/villain_parser.md#when-it-runs)).
+  ([Villain parser](guides/villain_parser.md#when-it-runs)).
 * HEEx module templates run as server-side Elixir; only superusers may edit
-  modules and containers ([Block editor](deps/brando/guides/block_editor.md#modules-refs-and-vars)).
+  modules and containers ([Block editor](guides/block_editor.md#modules-refs-and-vars)).
 * Keep `page_routes()` after the application's own routes; its catch-all
-  would take their requests ([Pages and fragments](deps/brando/guides/pages.md)).
+  would take their requests ([Pages and fragments](guides/pages.md)).
 * Preload media before rendering it. A size missing from `image.sizes` is a
   configuration or processing error, not a fallback
-  ([Images, files, and galleries](deps/brando/guides/media.md#render-responsive-images)).
+  ([Images, files, and galleries](guides/media.md#render-responsive-images)).
 
 ## Blueprints
 
-Guide: `deps/brando/guides/blueprints.md`
+Guide: [blueprints.md](guides/blueprints.md)
 
 ### A Blueprint
 
@@ -236,7 +238,7 @@ and `route` otherwise.
 #### Drafts
 
 When `status` is `:draft`, the changeset only requires the required fields
-the [identifier](deps/brando/guides/blueprints.md#identifier) shows, usually the title. A draft can be saved
+the [identifier](guides/blueprints.md#identifier) shows, usually the title. A draft can be saved
 half done, but never without the name it is listed by. Collision handling for
 unique fields is also skipped for drafts.
 
@@ -280,11 +282,11 @@ Brando checks a Blueprint in three stages:
   so form mistakes fail too.
 
 The checks need no database. Fix declarations reported after an upgrade; if
-a fix changes stored columns, follow [Blueprint migrations](deps/brando/guides/blueprint_migrations.md).
+a fix changes stored columns, follow [Blueprint migrations](guides/blueprint_migrations.md).
 
 ## Attributes, relations, and assets
 
-Guide: `deps/brando/guides/blueprint_fields.md`
+Guide: [blueprint_fields.md](guides/blueprint_fields.md)
 
 ```elixir
 attributes do
@@ -306,7 +308,7 @@ end
 Each section may appear more than once; traits use that to add fields. A
 field name may be declared once across all three. After changing stored
 fields, generate a migration as described in
-[Blueprint migrations](deps/brando/guides/blueprint_migrations.md).
+[Blueprint migrations](guides/blueprint_migrations.md).
 
 #### Rules
 
@@ -314,9 +316,9 @@ fields, generate a migration as described in
   `:decimal`, `:boolean`, `:map`, `:id`, `:date`, `:time`, `:datetime` (UTC),
   `:naive_datetime`, `:uuid`, `:status`, `:enum`, `:language`, `:i18n_string`, `:string_list`,
   `{:array, type}`, or an `Ecto.Type` module. A bare `:array` is rejected, and
-  `:file` does not compile; use a [file asset](deps/brando/guides/blueprint_fields.md#assets).
+  `:file` does not compile; use a [file asset](guides/blueprint_fields.md#assets).
 * A `:slug` attribute does not slugify itself; the form's
-  [`:slug` input](deps/brando/guides/blueprint_forms.md#slugs) builds the value.
+  [`:slug` input](guides/blueprint_forms.md#slugs) builds the value.
 * `required: true` validates presence in the changeset only; add `null: false`
   for a `NOT NULL` column.
 * `default:` is both the new struct's value and the column default.
@@ -361,8 +363,8 @@ Brando generates the join schema `<Schema>.Blocks` and table
 association; templates read the rendered HTML. A Blueprint can have several
 block fields under different names. Blocks are cast by the block editor, not
 by `cast:`; don't set it. Add `trait :blocks` and a
-[`blocks` editor](deps/brando/guides/blueprint_forms.md#block-editors). See
-[Block editor](deps/brando/guides/block_editor.md).
+[`blocks` editor](guides/blueprint_forms.md#block-editors). See
+[Block editor](guides/block_editor.md).
 
 ### Assets
 
@@ -384,7 +386,7 @@ set by ID like a foreign key; galleries are cast with their objects.
 
 ## Traits
 
-Guide: `deps/brando/guides/blueprint_traits.md`
+Guide: [blueprint_traits.md](guides/blueprint_traits.md)
 
 A trait adds a capability to a Blueprint: fields, changeset steps, save
 hooks, and the admin features that come with them. Declare traits at the top
@@ -421,12 +423,12 @@ trait's runtime module, so prefer it.
 `trait :status` adds `attribute :status, :status, required: true`. The status
 is `:draft`, `:pending`, `:published` or `:disabled` (shown as
 "Deactivated"). Context queries filter on it with `status:`; see
-[Querying](deps/brando/guides/querying.md#status-language-and-soft-deletion).
+[Querying](guides/querying.md#status-language-and-soft-deletion).
 
 In the admin, listings get status buttons and a status menu on each row. The
 form gets no status input by itself: add `input :status, :status`. Drafts are
-validated more loosely; see [Drafts](deps/brando/guides/blueprints.md#drafts). See
-[Content status, deletion, and ordering](deps/brando/guides/content_lifecycle.md).
+validated more loosely; see [Drafts](guides/blueprints.md#drafts). See
+[Content status, deletion, and ordering](guides/content_lifecycle.md).
 
 ### When trait hooks run
 
@@ -442,7 +444,7 @@ A trait acts at three points:
 
 ## Blueprint listings
 
-Guide: `deps/brando/guides/blueprint_listings.md`
+Guide: [blueprint_listings.md](guides/blueprint_listings.md)
 
 ### A complete example
 
@@ -536,11 +538,11 @@ end
 ```
 
 `mix brando.gen` writes the LiveView, routes and context for a new Blueprint;
-see [Generators](deps/brando/guides/generators.md#generate-a-content-type).
+see [Generators](guides/generators.md#generate-a-content-type).
 
 The listing passes the values as `filter: %{key: value}` to
 `list_<plural>/1`, and the context runs each pair through its `filters`
-clauses ([Querying](deps/brando/guides/querying.md#filtering-and-matching)). A missing clause
+clauses ([Querying](guides/querying.md#filtering-and-matching)). A missing clause
 raises `Brando.Exception.QueryFilterClauseError`. Values from the URL are
 always strings:
 
@@ -558,7 +560,7 @@ Put the order the listing should open with first.
 
 ## Blueprint forms
 
-Guide: `deps/brando/guides/blueprint_forms.md`
+Guide: [blueprint_forms.md](guides/blueprint_forms.md)
 
 ### A complete example
 
@@ -670,7 +672,7 @@ code that needs markup, such as a colour swatch, is passed as
 
 ## Blueprint migrations
 
-Guide: `deps/brando/guides/blueprint_migrations.md`
+Guide: [blueprint_migrations.md](guides/blueprint_migrations.md)
 
 ### Normal workflow
 
@@ -704,7 +706,7 @@ mix brando.gen.blueprint_migration --all
 
 ## Block editor
 
-Guide: `deps/brando/guides/block_editor.md`
+Guide: [block_editor.md](guides/block_editor.md)
 
 ### Wiring blocks into a blueprint
 
@@ -757,7 +759,7 @@ runtime-dynamic content), use `Brando.Villain.parse(entry.entry_blocks, entry)`
 or the `render_data/1` component.
 
 The HTML itself comes from your project's parser module, where each block
-type's markup can be overridden — see the [Villain parser](deps/brando/guides/villain_parser.md)
+type's markup can be overridden — see the [Villain parser](guides/villain_parser.md)
 guide.
 
 ### Modules, refs and vars
@@ -797,7 +799,7 @@ context: `entry`, `language`, `identity` (`{{ identity.name }}`), `globals`
 (`{{ globals.<set key>.<global key> }}`), `navigation`
 (`navigation.<menu key>.<language>`), `configs`, and `links` (the identity's
 links by lowercased name, `{{ links.instagram.url }}`). A module with a
-datasource also gets `entries` (see [Datasources](deps/brando/guides/datasources.md)).
+datasource also gets `entries` (see [Datasources](guides/datasources.md)).
 
 Besides `{% ref %}` and `{% headless_ref %}`:
 
@@ -871,21 +873,22 @@ So:
 
 ## More rules by topic
 
-Load a topic's rules before working in that area:
+Load a topic's rules before working in that area. These are all the topic
+files:
 
-- `brando:blueprint-reference` (`deps/brando/usage-rules/blueprint-reference.md`): absolute URLs for only some entries, Blueprint translations, enums, uniqueness, relation types, asset configs and deprecated declarations.
-- `brando:admin-ui` (`deps/brando/usage-rules/admin-ui.md`): listing components and menu items, custom and selection actions, live updates, the form LiveView, select options, multi-selects and block editors.
-- `brando:generators` (`deps/brando/usage-rules/generators.md`): running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents.
-- `brando:module-definitions` (`deps/brando/usage-rules/module-definitions.md`): exporting, editing and importing modules and their templates as files.
-- `brando:rendering` (`deps/brando/usage-rules/rendering.md`): page controllers and templates, fragments, menus, site forms, and changing the HTML blocks render to.
-- `brando:datasources` (`deps/brando/usage-rules/datasources.md`): feeding a module entries from a query or an editor's selection, and keeping them fresh.
-- `brando:live-preview` (`deps/brando/usage-rules/live-preview.md`): configuring preview targets, their assigns and refreshes.
-- `brando:media` (`deps/brando/usage-rules/media.md`): image sizes and srcsets, rendering media, galleries, video providers and their webhooks.
-- `brando:seo` (`deps/brando/usage-rules/seo.md`): site identity, robots.txt and the AI crawler policy, IndexNow, page metadata, JSON-LD, sitemaps and Markdown alternates.
-- `brando:content-events` (`deps/brando/usage-rules/content-events.md`): reacting to content changes in code, webhooks, and the admin search index.
-- `brando:assistant-mcp` (`deps/brando/usage-rules/assistant-mcp.md`): configuring the assistant's model and guidance, proposals, and connecting AI tools over MCP: the remote endpoint and `mix brando.mcp`.
-- `brando:tenancy` (`deps/brando/usage-rules/tenancy.md`): sites and environments, tenant migrations, static builds, groups, policies and permission checks.
-- `brando:i18n` (`deps/brando/usage-rules/i18n.md`): content languages, localized routes, hreflang and Gettext.
-- `brando:querying` (`deps/brando/usage-rules/querying.md`): writing a context with `Brando.Query`: filters, matches, pagination, caching and mutations.
-- `brando:testing` (`deps/brando/usage-rules/testing.md`): factories for any blueprint, rendering blocks, admin form tests, users with rights, and recorded AI calls (cassettes).
-- `brando:deployment` (`deps/brando/usage-rules/deployment.md`): deploying with Florist and checking a site with `mix brando.doctor`.
+- `brando:blueprint-reference` ([usage-rules/blueprint-reference.md](usage-rules/blueprint-reference.md)): absolute URLs for only some entries, Blueprint translations, enums, uniqueness, relation types, asset configs and deprecated declarations.
+- `brando:admin-ui` ([usage-rules/admin-ui.md](usage-rules/admin-ui.md)): listing components and menu items, custom and selection actions, live updates, the form LiveView, select options, multi-selects and block editors.
+- `brando:generators` ([usage-rules/generators.md](usage-rules/generators.md)): running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents.
+- `brando:module-definitions` ([usage-rules/module-definitions.md](usage-rules/module-definitions.md)): exporting, editing and importing modules and their templates as files.
+- `brando:rendering` ([usage-rules/rendering.md](usage-rules/rendering.md)): page controllers and templates, fragments, menus, site forms, and changing the HTML blocks render to.
+- `brando:datasources` ([usage-rules/datasources.md](usage-rules/datasources.md)): feeding a module entries from a query or an editor's selection, and keeping them fresh.
+- `brando:live-preview` ([usage-rules/live-preview.md](usage-rules/live-preview.md)): configuring preview targets, their assigns and refreshes.
+- `brando:media` ([usage-rules/media.md](usage-rules/media.md)): image sizes and srcsets, rendering media, galleries, video providers and their webhooks.
+- `brando:seo` ([usage-rules/seo.md](usage-rules/seo.md)): site identity, robots.txt and the AI crawler policy, IndexNow, page metadata, JSON-LD, sitemaps and Markdown alternates.
+- `brando:content-events` ([usage-rules/content-events.md](usage-rules/content-events.md)): reacting to content changes in code, webhooks, and the admin search index.
+- `brando:assistant-mcp` ([usage-rules/assistant-mcp.md](usage-rules/assistant-mcp.md)): configuring the assistant's model and guidance, proposals, and connecting AI tools over MCP: the remote endpoint and `mix brando.mcp`.
+- `brando:tenancy` ([usage-rules/tenancy.md](usage-rules/tenancy.md)): sites and environments, tenant migrations, static builds, groups, policies and permission checks.
+- `brando:i18n` ([usage-rules/i18n.md](usage-rules/i18n.md)): content languages, localized routes, hreflang and Gettext.
+- `brando:querying` ([usage-rules/querying.md](usage-rules/querying.md)): writing a context with `Brando.Query`: filters, matches, pagination, caching and mutations.
+- `brando:testing` ([usage-rules/testing.md](usage-rules/testing.md)): factories for any blueprint, rendering blocks, admin form tests, users with rights, and recorded AI calls (cassettes).
+- `brando:deployment` ([usage-rules/deployment.md](usage-rules/deployment.md)): deploying with Florist and checking a site with `mix brando.doctor`.

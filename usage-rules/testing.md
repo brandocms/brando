@@ -4,11 +4,11 @@
 Brando's guides/*.md. Edit the guides, then run the task again. -->
 
 Load these rules (`brando:testing`) for factories for any blueprint, rendering blocks, admin form tests, users with rights, and recorded AI calls (cassettes). The core rules
-are in `deps/brando/usage-rules.md`.
+are in [usage-rules.md](../usage-rules.md).
 
 ## Testing
 
-Guide: `deps/brando/guides/testing.md`
+Guide: [testing.md](../guides/testing.md)
 
 ### Setting up
 
