@@ -1189,10 +1189,11 @@ defmodule Brando.Translations do
   for, as its form loads it. The fields the trash obfuscates (a page's `uri`)
   stay as `entry` has them when either is in the trash: a version taken
   before the trash holds the names it freed, which another entry may have
-  taken since, and one taken in the trash holds their trash form.
+  taken since, and one taken in the trash holds their trash form. A new
+  gallery ref gets a copy of its gallery (`Sync.own_new_ref_galleries/1`).
   """
   def pending_content(%PendingVersion{} = version, entry) do
-    payload = decode_payload(version)
+    payload = version |> decode_payload() |> Sync.own_new_ref_galleries()
 
     case obfuscated_fields(entry) do
       [] -> payload

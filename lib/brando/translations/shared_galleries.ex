@@ -5,10 +5,11 @@ defmodule Brando.Translations.SharedGalleries do
   A synchronized translation shows the source's media. For a gallery variable
   (in a block, a table row or among the entry's own variables)
   `Brando.Translations.Sync` gives the translation the source's `gallery_id`:
-  both point at one gallery record. So does a gallery ref that a source save
-  added after the translation was created, and a gallery asset when the
-  pending version is saved outside the admin form (the form keeps the asset's
-  own record and copies its contents). While the translation follows the
+  both point at one gallery record. So does a gallery asset when the pending
+  version is saved outside the admin form (the form keeps the asset's own
+  record and copies its contents), and a gallery ref that a source save added
+  after the translation was created, when an earlier Brando saved it: `Sync`
+  now gives such a ref a copy, which the translation's save inserts. While the translation follows the
   source that is the point: its media is the source's.
 
   An independent translation keeps its content but no longer follows, so it

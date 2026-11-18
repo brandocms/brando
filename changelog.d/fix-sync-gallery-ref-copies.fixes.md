@@ -1,0 +1,1 @@
+- A gallery block that a source save adds to a synchronized translation gets its own gallery when the translation is saved, with the source's media, instead of failing the save; its media keep following the source.
