@@ -17,7 +17,8 @@ defmodule Brando.Migrations.Brando235IndexTranslationPendingVersionsByMemberTest
   @bare "tenant_acme_preview"
   @tables ~w(translation_groups translation_group_members translation_pending_versions translation_work_items)
 
-  defp index?(schema), do: rows("SELECT 1 FROM pg_indexes WHERE schemaname = $1 AND indexname = $2", [schema, @index]) != []
+  defp index?(schema),
+    do: rows("SELECT 1 FROM pg_indexes WHERE schemaname = $1 AND indexname = $2", [schema, @index]) != []
 
   test "indexes the pending versions by member in public and every environment that has them" do
     query!("DROP INDEX public.#{@index}")
@@ -81,15 +82,24 @@ defmodule Brando.Migrations.Brando235IndexTranslationPendingVersionsByMemberTest
     WHERE m.entry_type = 'Elixir.History'
     """)
 
-    for table <- @tables, do: query!("ANALYZE #{table}")
+    analyze()
 
-    [[member_id]] = rows("SELECT min(id) FROM translation_group_members WHERE entry_type = 'Elixir.History'", [])
-    query = history_query(member_id, ["title1", "title2"])
+    try do
+      [[member_id]] = rows("SELECT min(id) FROM translation_group_members WHERE entry_type = 'Elixir.History'", [])
+      query = history_query(member_id, ["title1", "title2"])
 
-    plan = Ecto.Adapters.SQL.explain(Repo, :all, query)
+      plan = Ecto.Adapters.SQL.explain(Repo, :all, query)
 
-    assert plan =~ @index
-    refute plan =~ "Seq Scan on translation_pending_versions"
-    assert length(Repo.all(query)) == 60
+      assert plan =~ @index
+      refute plan =~ "Seq Scan on translation_pending_versions"
+      assert length(Repo.all(query)) == 60
+    after
+      # ANALYZE writes the row estimates outside the transaction, so they
+      # would outlive the sandbox: estimate the tables empty again
+      query!("DELETE FROM translation_groups WHERE entry_type = 'Elixir.History'")
+      analyze()
+    end
   end
+
+  defp analyze, do: Enum.each(@tables, &query!("ANALYZE #{&1}"))
 end
