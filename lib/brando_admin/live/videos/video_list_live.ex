@@ -611,6 +611,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
                 :if={
                   @visible_video_count > 0 and AssetListHelpers.folder_listed?(@params, @current_folder) and
                     !AssetListHelpers.unused_filter?(@params) and
+                    !AssetListHelpers.search_active?(@params, @schema) and
                     BrandoAdmin.Authorization.allowed?(:update, @schema)
                 }
                 asset_type={:video}

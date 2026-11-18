@@ -365,6 +365,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
               <SortByUse.sort_button
                 :if={
                   @current_folder != "" and @visible_image_count > 0 and !AssetListHelpers.unused_filter?(@params) and
+                    !AssetListHelpers.search_active?(@params, @schema) and
                     BrandoAdmin.Authorization.allowed?(:update, @schema)
                 }
                 asset_type={:image}

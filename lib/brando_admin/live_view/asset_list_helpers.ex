@@ -347,6 +347,22 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   def unused_filter?(params), do: Map.get(params || %{}, "filter:unused") in ["true", true]
 
   @doc """
+  Whether `params` search the listing: a text filter of `schema`'s listing
+  (the Images "Path" and "Config target", the Videos "Title or source", the
+  Files "Filename") holds something. The listing then shows only the
+  matching assets, while Sort by use would sort the whole folder.
+  """
+  def search_active?(params, schema) do
+    params = params || %{}
+    Enum.any?(search_keys(schema), &(Map.get(params, &1) not in [nil, ""]))
+  end
+
+  defp search_keys(schema) do
+    listing = Enum.find(schema.__listings__(), &(&1.name == :default))
+    for %{key: key, type: :text} <- listing.filters, do: "filter:" <> key
+  end
+
+  @doc """
   Whether the listing shows the folder the header names (`current_folder`,
   "" for the root). A folder filter the library can't resolve (deleted,
   hidden, another library's) heads the page as the root, while the listing

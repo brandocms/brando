@@ -465,6 +465,8 @@ the folders you want different, and move them. The bar above the list offers
 
 - Only assets directly in the folder are sorted; what is already in a subfolder
   stays, so a later run takes only what has arrived since.
+- It sorts the whole folder, so it is not offered while a search narrows the
+  list (or while **Not in use** is on). Clear the search to sort.
 - An entry and its translations share a folder, named after the entry in the
   default language.
 - Assets no entry uses stay where they are. Switch on **Not in use** to see
