@@ -128,6 +128,12 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
   @doc "Tells the editor's LiveView the save of `entry` succeeded. Returns the socket."
   def saved(socket, entry), do: tap(socket, fn _ -> notify({:saved, entry}) end)
 
+  @doc """
+  Tells the editor's LiveView the save stored the entry but not its HTML: a
+  block template failed. `lines` name each block and its error. Returns the socket.
+  """
+  def render_failed(socket, lines), do: tap(socket, fn _ -> notify({:render_failed, lines}) end)
+
   @doc "Tells the editor's LiveView the save failed with `reason`. Returns the socket."
   def save_failed(socket, reason), do: tap(socket, fn _ -> notify({:save_failed, reason}) end)
 

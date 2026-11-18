@@ -17,6 +17,8 @@ defmodule Brando.Villain do
   alias Brando.Tracing
   alias Brando.Villain.ContextCache
   alias Brando.Villain.Parser
+  alias Brando.Villain.RenderFailure
+  alias Brando.Villain.RenderFailures
   alias Brando.Villain.RenderScope
   alias Brando.Villain.RenderSourceQuery
   alias Brando.Villain.TemplateView
@@ -48,6 +50,11 @@ defmodule Brando.Villain do
 
   Delegates to the parser module configured in the otp_app's brando.exs.
   Renders to HTML.
+
+  A block template that fails prints its error in the page (a parse error
+  as `!!! Error parsing liquex template !!!`), or raises: what the live
+  preview and the editor show. A render that is stored uses
+  `parse_checked/3`, which returns the failures instead.
   """
   def parse(entry_blocks_list, entry \\ nil, opts \\ [])
 
@@ -70,6 +77,23 @@ defmodule Brando.Villain do
     RenderScope.run(fn ->
       FrontendEdit.annotation_scope(annotate?, fn -> do_parse(entry_blocks_list, entry, opts) end)
     end)
+  end
+
+  @doc """
+  Renders as `parse/3` does, and returns `{:ok, html}` when every block
+  template rendered, or `{:error, failures}`, a
+  `Brando.Villain.RenderFailure` for each block whose template failed to
+  parse, iterated over nil or raised. Stores nothing, and logs nothing.
+
+  What a stored render uses (`Brando.Content.Blocks.render_fields/3`):
+  output with an error in it is never stored.
+  """
+  @spec parse_checked(term, map | nil, keyword) :: {:ok, String.t()} | {:error, [RenderFailure.t()]}
+  def parse_checked(entry_blocks_list, entry \\ nil, opts \\ []) do
+    case RenderFailures.collect(fn -> parse(entry_blocks_list, entry, opts) end) do
+      {html, []} -> {:ok, html}
+      {_html, failures} -> {:error, failures}
+    end
   end
 
   defp do_parse(entry_blocks_list, entry, opts) do
@@ -99,16 +123,21 @@ defmodule Brando.Villain do
       |> Map.put(:palettes, palettes)
       |> Map.put(:fragments, fragments)
 
-    html =
+    chunks =
       entry_blocks_list
       |> Enum.reduce([], fn
-        nil, acc -> acc
-        %{block: %{marked_as_deleted: true}}, acc -> acc
-        %{block: block}, acc -> [parser |> parse_node(block, opts_map) |> Brando.Villain.InertLiquid.close_end() | acc]
+        nil, acc ->
+          acc
+
+        %{block: %{marked_as_deleted: true}}, acc ->
+          acc
+
+        %{block: block}, acc ->
+          [{block, parser |> parse_node(block, opts_map) |> Brando.Villain.InertLiquid.close_end()} | acc]
       end)
       |> Enum.reverse()
 
-    output = parse_and_render(html, context)
+    output = final_pass(chunks, context, opts_map)
 
     output =
       if opts_map[:footnotes] == false do
@@ -177,9 +206,43 @@ defmodule Brando.Villain do
       |> Map.put(:parser_module, parser)
       |> put_render_sources(block)
 
-    parser
-    |> parse_node(block, opts_map)
-    |> parse_and_render(context)
+    RenderFailures.with_block(block, opts_map, fn ->
+      parser
+      |> parse_node(block, opts_map)
+      |> parse_and_render(context)
+    end)
+  end
+
+  # The Liquid left in the blocks' joined output (a container's template). A
+  # failure there belongs to no one block: a render that collects failures
+  # looks for the root blocks whose own output fails, and names them.
+  defp final_pass(chunks, context, opts_map) do
+    html = Enum.map(chunks, &elem(&1, 1))
+
+    if RenderFailures.collecting?() do
+      {output, failures} = RenderFailures.collect(fn -> parse_and_render(html, context) end, merge: false)
+      if failures != [], do: RenderFailures.add(trace(failures, chunks, context, opts_map))
+      output
+    else
+      parse_and_render(html, context)
+    end
+  end
+
+  defp trace(failures, chunks, context, opts_map) do
+    case Enum.flat_map(chunks, &failures_of(&1, context, opts_map)) do
+      [] -> failures
+      traced -> traced
+    end
+  end
+
+  defp failures_of({block, html}, context, opts_map) do
+    {_output, failures} =
+      RenderFailures.collect(
+        fn -> RenderFailures.with_block(block, opts_map, fn -> parse_and_render(html, context) end) end,
+        merge: false
+      )
+
+    failures
   end
 
   defp cached(opts) do
@@ -236,9 +299,13 @@ defmodule Brando.Villain do
   end
 
   defp parse_node(_parser, %{type: :slot} = block, opts_map),
-    do: Parser.render_block_slot(block, opts_map)
+    do: RenderFailures.with_block(block, opts_map, fn -> Parser.render_block_slot(block, opts_map) end)
 
   defp parse_node(parser, block, opts_map) do
+    RenderFailures.with_block(block, opts_map, fn -> do_parse_node(parser, block, opts_map) end)
+  end
+
+  defp do_parse_node(parser, block, opts_map) do
     type_atom = if block.type == :module_entry, do: :module, else: block.type
 
     if not is_atom(type_atom) or is_nil(type_atom) do
@@ -409,7 +476,7 @@ defmodule Brando.Villain do
 
         case liquex_parse(html_string, liquex_parser) do
           {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
-          error -> log_liquex_parse_error(html, error)
+          error -> parse_error(html, error)
         end
       else
         html_string
@@ -462,7 +529,7 @@ defmodule Brando.Villain do
             render_parsed_doc(html_string, parsed_doc, context)
 
           error ->
-            log_liquex_parse_error(template, error)
+            parse_error(template, error)
         end
     end
   end
@@ -472,7 +539,15 @@ defmodule Brando.Villain do
     Enum.join(result)
   end
 
-  defp log_liquex_parse_error(html, {:error, reason, line}) do
+  defp parse_error(html, {:error, reason, line}) do
+    if RenderFailures.collecting?(),
+      do: RenderFailures.record(:parse, to_string(reason), line),
+      else: log_parse_error(html, reason, line)
+
+    "!!! Error parsing liquex template !!!"
+  end
+
+  defp log_parse_error(html, reason, line) do
     require Logger
 
     Logger.error("""
@@ -484,8 +559,6 @@ defmodule Brando.Villain do
     --> #{reason} (line #{line})
 
     """)
-
-    "!!! Error parsing liquex template !!!"
   end
 
   # the table is created at application start; fall back to uncached parsing
@@ -534,41 +607,63 @@ defmodule Brando.Villain do
     Brando.Villain.EmptyKeywords.parse(html, liquex_parser)
   end
 
+  @nil_collection_mark "<!-- Liquex template error: trying to iterate over nil collection -->"
+
+  # A render that collects failures records what the template raised, and
+  # carries on to find the other blocks that fail; its output is not used.
+  # Any other render prints a mark for a nil collection and raises the rest.
   defp liquex_render(html_string, [], parsed_doc, context) do
     Liquex.Render.render!([], parsed_doc, Brando.Villain.Tags.Output.reset(context))
   rescue
-    error in Protocol.UndefinedError ->
-      case error do
-        %{protocol: Liquex.Collection, value: nil} ->
-          require Logger
+    error ->
+      cond do
+        RenderFailures.transient?(error) ->
+          reraise error, __STACKTRACE__
 
-          for_lines = extract_for_lines(html_string)
+        nil_collection?(error) and RenderFailures.collecting?() ->
+          RenderFailures.record(:iterate_over_nil, "trying to iterate over a nil collection")
+          {[@nil_collection_mark], context}
 
-          Logger.error("""
+        nil_collection?(error) ->
+          log_nil_collection(html_string, parsed_doc, context)
+          {[@nil_collection_mark], context}
 
-          >>> Liquex.Collection error: trying to iterate over nil <<<
+        RenderFailures.collecting?() ->
+          RenderFailures.record(:render, Exception.message(error))
+          {["<!-- Liquex template error -->"], context}
 
-          This usually happens when a template tries to iterate over a collection that doesn't exist.
-          Common causes:
-          - Gallery refs using old syntax: `refs.*.images` instead of `refs.*.gallery_objects`
-          - For loops over nil collections: `{% for item in nil_collection %}`
-
-          For loops in template:
-          #{for_lines}
-
-          Context variables:
-          #{inspect(context.scope.stack, pretty: true, limit: :infinity)}
-
-          Parsed template:
-          #{inspect(parsed_doc, pretty: true, limit: 10)}
-
-          """)
-
-          {["<!-- Liquex template error: trying to iterate over nil collection -->"], context}
-
-        _ ->
+        true ->
           reraise error, __STACKTRACE__
       end
+  end
+
+  defp nil_collection?(%Protocol.UndefinedError{protocol: Liquex.Collection, value: nil}), do: true
+  defp nil_collection?(_error), do: false
+
+  defp log_nil_collection(html_string, parsed_doc, context) do
+    require Logger
+
+    for_lines = extract_for_lines(html_string)
+
+    Logger.error("""
+
+    >>> Liquex.Collection error: trying to iterate over nil <<<
+
+    This usually happens when a template tries to iterate over a collection that doesn't exist.
+    Common causes:
+    - Gallery refs using old syntax: `refs.*.images` instead of `refs.*.gallery_objects`
+    - For loops over nil collections: `{% for item in nil_collection %}`
+
+    For loops in template:
+    #{for_lines}
+
+    Context variables:
+    #{inspect(context.scope.stack, pretty: true, limit: :infinity)}
+
+    Parsed template:
+    #{inspect(parsed_doc, pretty: true, limit: 10)}
+
+    """)
   end
 
   defp extract_for_lines(html_string) do

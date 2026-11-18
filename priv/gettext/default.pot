@@ -31,6 +31,16 @@ msgstr ""
 msgid "%{blocks} blocks · %{entries} entries affected"
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{block}, line %{line}: %{error}"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{block}: %{error}"
+msgstr ""
+
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "%{browser} on %{system}"
@@ -762,6 +772,11 @@ msgstr ""
 msgid "%{model} is not in the model catalogue Brando reads, so its price and whether it reads images are unknown. Check with your provider before describing many images."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} block"
+msgstr ""
+
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
 msgid "%{names} was mentioned in a note on %{title}"
@@ -901,6 +916,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "%{types} usually start with one of these."
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{type} block"
 msgstr ""
 
 #: lib/brando_admin/components/form/var_layout.ex
@@ -1116,6 +1136,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "A background job is given up, or a webhook is paused after its deliveries kept failing."
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "A block"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -15211,6 +15241,16 @@ msgstr ""
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Saved with the page"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved, but the page was not updated"
+msgstr ""
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saved, but the page was not updated: a block template failed, so visitors see the page as it was."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex

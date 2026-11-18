@@ -91,6 +91,10 @@ defmodule Brando.Content.Blocks do
   the entry before the save sees that and renders again (`render_entry/2`).
   A writer that renders outside the entry's row lock also stores with
   `store_fenced/3`.
+
+  When a block template fails (`render_fields/3`), no `rendered_*` column is
+  changed: the entry keeps the HTML it had, the rest of the changeset saves,
+  and the failure is logged.
   """
   @spec render_block_fields(changeset) :: changeset
   @decorate span("brando.blocks.render_fields", schema: :schema, entry_id: [:changeset, :data, :id])
@@ -103,13 +107,86 @@ defmodule Brando.Content.Blocks do
 
     entry = changeset |> Changeset.apply_changes() |> Map.drop(dropped)
 
-    Enum.reduce(fields, changeset, fn %{name: name}, acc ->
-      blocks = changeset |> Changeset.get_assoc(:"entry_#{name}") |> Utils.apply_changes_recursively()
+    fields
+    |> Enum.map(&{&1.name, changeset |> Changeset.get_assoc(:"entry_#{&1.name}") |> Utils.apply_changes_recursively()})
+    |> render_field_blocks(entry)
+    |> case do
+      {:ok, rendered} ->
+        put_rendered(changeset, rendered, :always)
 
-      acc
-      |> Changeset.put_change(:"rendered_#{name}", Villain.parse(blocks, entry, []))
-      |> Changeset.force_change(:"rendered_#{name}_at", DateTime.truncate(DateTime.utc_now(), :second))
+      {:error, {:render_failed, failures}} ->
+        log_render_failure(schema, changeset.data.id, failures)
+        changeset
+    end
+  end
+
+  @doc """
+  Renders every block field of `entry` without storing anything. `entry` is
+  loaded with its blocks, as `Brando.Blueprint.EntryQuery.get/2` loads it.
+
+  Returns `{:ok, %{field_name => html}}`, or
+  `{:error, {:render_failed, failures}}` when a block template in any field
+  failed: a `Brando.Villain.RenderFailure` for each block, with its field.
+  `opts` go to `Brando.Villain.parse_checked/3`.
+
+  The stored render (`render_entry/2`) is this, then the store.
+  """
+  @spec render_fields(module, map, keyword) ::
+          {:ok, %{atom => String.t()}} | {:error, {:render_failed, [Brando.Villain.RenderFailure.t()]}}
+  def render_fields(schema, entry, opts \\ []) do
+    schema.__blocks_fields__()
+    |> Enum.map(&{&1.name, Map.get(entry, :"entry_#{&1.name}")})
+    |> render_field_blocks(entry, opts)
+  end
+
+  @doc """
+  `render_fields/3` for blocks given apart from the entry: `fields` is
+  `[{field_name, entry_blocks}]`, as the admin form renders the blocks its
+  block fields hold rather than the entry's.
+  """
+  @spec render_field_blocks([{atom, term}], map, keyword) ::
+          {:ok, %{atom => String.t()}} | {:error, {:render_failed, [Brando.Villain.RenderFailure.t()]}}
+  def render_field_blocks(fields, entry, opts \\ []) do
+    {rendered, failures} =
+      Enum.reduce(fields, {%{}, []}, fn {name, blocks}, {rendered, failures} ->
+        case Villain.parse_checked(blocks, entry, opts) do
+          {:ok, html} -> {Map.put(rendered, name, html), failures}
+          {:error, failed} -> {rendered, failures ++ Enum.map(failed, &%{&1 | field: name})}
+        end
+      end)
+
+    if failures == [], do: {:ok, rendered}, else: {:error, {:render_failed, failures}}
+  end
+
+  # Each `rendered_*_at` is written `:always`, or `:if_changed`: when its HTML is
+  defp put_rendered(changeset, rendered, stamp) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    Enum.reduce(rendered, changeset, fn {name, html}, acc ->
+      acc = Changeset.put_change(acc, :"rendered_#{name}", html)
+
+      cond do
+        stamp == :always -> Changeset.force_change(acc, :"rendered_#{name}_at", now)
+        Changeset.get_change(acc, :"rendered_#{name}") -> Changeset.put_change(acc, :"rendered_#{name}_at", now)
+        true -> acc
+      end
     end)
+  end
+
+  @doc """
+  Logs, at error level, that a render of the entry `id` of `schema` was not
+  stored, and each failure. Called once per render, by whichever caller gave
+  up storing it.
+  """
+  @spec log_render_failure(module, term, [Brando.Villain.RenderFailure.t()]) :: :ok
+  def log_render_failure(schema, id, failures) do
+    require Logger
+
+    Logger.error("""
+    ==> Rendering #{inspect(schema)} #{inspect(id)} failed: its stored HTML is kept
+
+    #{Enum.map_join(failures, "\n", &("  * " <> Brando.Villain.RenderFailure.describe(&1)))}
+    """)
   end
 
   # --- Block Queries ---
@@ -863,9 +940,16 @@ defmodule Brando.Content.Blocks do
   editor's save, which renders inline, may have stored newer blocks while it
   rendered (`store_render/5`). After #{@render_attempts} renders that each
   lost to a write it returns `{:error, :entry_changed}`.
+
+  When a block template fails (`render_fields/3`), nothing is stored: the
+  entry keeps the HTML it had, a fragment's embedding entries are not
+  rendered again, and it returns `{:error, {:render_failed, failures}}`, a
+  `Brando.Villain.RenderFailure` for each failing block, after logging them
+  once.
   """
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
-          {:ok, map} | {:error, changeset | :entry_changed | term}
+          {:ok, map}
+          | {:error, changeset | :entry_changed | {:render_failed, [Brando.Villain.RenderFailure.t()]} | term}
   @decorate span("brando.blocks.render_entry", schema: :schema, entry_id: :id)
   def render_entry(schema, id) do
     case render_and_store(schema, id) do
@@ -881,6 +965,10 @@ defmodule Brando.Content.Blocks do
       {:error, %Changeset{}} = err ->
         err
 
+      {:error, {:render_failed, failures}} = err ->
+        log_render_failure(schema, id, failures)
+        err
+
       {:error, _} = err ->
         log_render_error(schema, id, err)
     end
@@ -891,8 +979,11 @@ defmodule Brando.Content.Blocks do
   # `render_entry/2` describes, and nothing after: no cache eviction, no
   # fragment cascade. For `mix brando.entries.resave`, which stores each
   # entry with `prepare: fun` applied to the rendered changeset and
-  # `force: true` passed to the update.
-  @spec render_and_store(module, term, keyword) :: {:ok, map} | {:error, changeset | :entry_changed | term}
+  # `force: true` passed to the update. A render with a failing block template
+  # stores nothing and returns `{:error, {:render_failed, failures}}`, unlogged.
+  @spec render_and_store(module, term, keyword) ::
+          {:ok, map}
+          | {:error, changeset | :entry_changed | {:render_failed, [Brando.Villain.RenderFailure.t()]} | term}
   def render_and_store(schema, id, opts \\ []), do: render_and_store(schema, id, opts, @render_attempts)
 
   defp render_and_store(schema, id, opts, attempts) do
@@ -902,11 +993,12 @@ defmodule Brando.Content.Blocks do
 
     prepare = Keyword.get(opts, :prepare, & &1)
 
-    with {:ok, entry} <- Brando.Blueprint.EntryQuery.get(schema, id) do
+    with {:ok, entry} <- Brando.Blueprint.EntryQuery.get(schema, id),
+         {:ok, rendered} <- render_fields(schema, entry) do
       changeset =
         entry
         |> Changeset.change()
-        |> render_all_block_fields_and_add_to_changeset(schema, entry)
+        |> put_rendered(rendered, :if_changed)
         |> prepare.()
 
       case store_render(schema, id, version, changeset, Keyword.take(opts, [:force])) do
@@ -1031,39 +1123,6 @@ defmodule Brando.Content.Blocks do
       do: Repo.after_commit(fn -> enqueue_entry_for_render(%{schema: to_string(schema), entry_id: id}, refresh: :all) end)
 
     result
-  end
-
-  @doc """
-  Renders all block fields for an entry and adds them to changeset
-  """
-  @decorate span("brando.blocks.render_fields", schema: :schema, entry_id: [:entry, :id])
-  def render_all_block_fields_and_add_to_changeset(changeset, schema, entry) do
-    fields = schema.__blocks_fields__()
-    Tracing.set_attributes(%{"brando.field_count": length(fields)})
-
-    Enum.reduce(fields, changeset, fn field, updated_changeset ->
-      rendered_field = :"rendered_#{field.name}"
-      rendered_at_field = :"rendered_#{field.name}_at"
-      entry_blocks_field = :"entry_#{field.name}"
-      entry_blocks = Map.get(entry, entry_blocks_field)
-      rendered_html = Villain.parse(entry_blocks, entry)
-
-      updated_changeset
-      |> Changeset.put_change(rendered_field, rendered_html)
-      |> update_rendered_at_field_if_changed(rendered_field, rendered_at_field)
-    end)
-  end
-
-  defp update_rendered_at_field_if_changed(changeset, rendered_field, rendered_at_field) do
-    if Changeset.get_change(changeset, rendered_field) do
-      Changeset.put_change(
-        changeset,
-        rendered_at_field,
-        DateTime.truncate(DateTime.utc_now(), :second)
-      )
-    else
-      changeset
-    end
   end
 
   # --- Module Sync ---

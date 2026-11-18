@@ -15,6 +15,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   alias Brando.Datasource
   alias Brando.Villain.HeexRenderer
+  alias Brando.Villain.RenderFailures
   alias Brando.Villain.TemplateAdapter
 
   @context_assign_defaults %{
@@ -32,39 +33,35 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   @impl true
   def render_module(module, block, processed_vars, processed_refs, opts) do
-    HeexRenderer.get_or_compile!(module.id, module.code)
-    assigns = build_assigns(module, block, processed_vars, processed_refs, opts)
-    assigns = maybe_add_datasource_entries(assigns, module, block)
-
-    module.id |> HeexRenderer.render_to_string(module.code, assigns) |> own_liquid(opts)
+    render(module.id, module.code, opts, fn ->
+      module
+      |> build_assigns(block, processed_vars, processed_refs, opts)
+      |> maybe_add_datasource_entries(module, block)
+    end)
   end
 
   @impl true
   def render_multi_module(module, block, base_vars, base_refs, children, content, opts) do
-    HeexRenderer.get_or_compile!(module.id, module.code)
-
-    assigns =
-      build_assigns(module, block, base_vars, base_refs, opts)
+    render(module.id, module.code, opts, fn ->
+      module
+      |> build_assigns(block, base_vars, base_refs, opts)
       |> Map.put(:entries, children)
       |> Map.put(:content, content)
-
-    module.id |> HeexRenderer.render_to_string(module.code, assigns) |> own_liquid(opts)
+    end)
   end
 
   @impl true
   def render_child_module(child_module, child_block, vars, refs, forloop, _parent_module_id, opts) do
-    id = "child_#{child_module.id}"
-    HeexRenderer.get_or_compile!(id, child_module.code)
-
-    assigns = build_assigns(child_module, child_block, vars, refs, opts)
-    assigns = Map.put(assigns, :forloop, forloop)
-
-    id |> HeexRenderer.render_to_string(child_module.code, assigns) |> own_liquid(opts)
+    render("child_#{child_module.id}", child_module.code, opts, fn ->
+      child_module
+      |> build_assigns(child_block, vars, refs, opts)
+      |> Map.put(:forloop, forloop)
+    end)
   end
 
   @impl true
   def render_container(container, children_html, block, opts) do
-    assigns =
+    render("container_#{container.id}", container.code, opts, fn ->
       opts[:context]
       |> context_assigns()
       |> Map.merge(%{
@@ -72,8 +69,27 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
         content: children_html,
         render_context: render_context(opts)
       })
+    end)
+  end
 
-    "container_#{container.id}" |> HeexRenderer.render_to_string(container.code, assigns) |> own_liquid(opts)
+  # Compiled before its assigns are built (see the moduledoc). In a render
+  # that collects failures (`Brando.Villain.parse_checked/3`), a template that
+  # does not compile or raises is recorded and renders nothing; any other
+  # render raises, as the editor has always seen it.
+  defp render(id, code, opts, assigns) do
+    compiled? =
+      RenderFailures.guard(:parse, false, fn ->
+        HeexRenderer.get_or_compile!(id, code)
+        true
+      end)
+
+    if compiled? do
+      RenderFailures.guard(:render, "", fn ->
+        id |> HeexRenderer.render_to_string(code, assigns.()) |> own_liquid(opts)
+      end)
+    else
+      ""
+    end
   end
 
   # -- Private --

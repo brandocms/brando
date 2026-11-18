@@ -3,7 +3,9 @@ defmodule Brando.Notifications.JobFailures do
   Notifies the `failed_job` routes when Oban gives a job up: it used every
   attempt, or returned `{:discard, reason}`. A job the worker cancelled is
   not a failure (a webhook delivery that failed for good cancels itself, and
-  `Brando.Webhooks` notifies it on its own).
+  `Brando.Webhooks` notifies it on its own), unless the worker says it is
+  (`notify/2`): an entry render whose block template failed cancels itself,
+  since trying again cannot help, and is notified.
 
   The handler only queues a `Brando.Worker.NotificationDispatch` job, in the
   failed job's site and environment, carrying the worker, queue, attempts
@@ -54,6 +56,23 @@ defmodule Brando.Notifications.JobFailures do
   end
 
   def handle_event(_event, _measurements, _meta, _config), do: :ok
+
+  @doc """
+  Queues a dispatch for `job`, which gives up on its own with `error` (it
+  returns `{:cancel, reason}`) although it failed: a render whose block
+  template fails (an entry render). Never raises.
+  """
+  def notify(%Oban.Job{} = job, error) do
+    if Brando.Notifications.Routing.failed_jobs?() and job.worker not in @ignored do
+      job |> args(%{error: error}) |> queue()
+    end
+
+    :ok
+  rescue
+    error ->
+      Logger.warning("[Brando.Notifications] Could not queue a failed-job notification: " <> Exception.message(error))
+      :ok
+  end
 
   @doc "The dispatch job's arguments for a given-up `job`."
   def args(%Oban.Job{} = job, meta) do

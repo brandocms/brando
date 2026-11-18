@@ -5919,7 +5919,7 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Rendering blocks for entry..."})
 
-    rendered_changeset = render_blocks_for_save(block_map, new_changeset)
+    {rendered_changeset, render_failures} = render_blocks_for_save(block_map, new_changeset)
 
     send(self(), {:progress_popup, "Saving entry..."})
 
@@ -5933,7 +5933,8 @@ defmodule BrandoAdmin.Components.Form do
       save_redirect_target: save_redirect_target,
       mutation_type: mutation_type,
       entry_or_default: entry_or_default,
-      changeset: rendered_changeset
+      changeset: rendered_changeset,
+      render_failures: render_failures
     }
 
     # A background render that stored while this one rendered gets another
@@ -7098,6 +7099,7 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Entry saved."})
     if FrontendEditor.frontend?(socket), do: FrontendEditor.saved(socket, entry)
+    {socket, save} = render_failed_after_save(socket, entry, save)
 
     Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
@@ -7121,6 +7123,48 @@ defmodule BrandoAdmin.Components.Form do
      |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
        redirect_after_save_with_blocks(socket, entry, stale?, save)
      end)}
+  end
+
+  # The entry saved, but a block template failed, so its stored HTML is
+  # what it was (`render_blocks_for_save/2`). The editor stays on the entry
+  # to read why, whatever the save would have gone on to.
+  defp render_failed_after_save(socket, _entry, %{render_failures: []} = save), do: {socket, save}
+
+  defp render_failed_after_save(socket, entry, %{render_failures: failures} = save) do
+    Blocks.log_render_failure(save.schema, entry.id, failures)
+
+    intro =
+      gettext(
+        "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
+      )
+
+    lines = Enum.map(failures, &render_failure_line/1)
+    items = Enum.map_join(lines, "", &("<li>" <> Alert.escape(&1) <> "</li>"))
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.render_failed(socket, lines)
+
+    socket =
+      push_event(socket, "b:alert", %{
+        title: gettext("Saved, but the page was not updated"),
+        html: "<p>" <> Alert.escape(intro) <> "</p><ul>" <> items <> "</ul>",
+        type: "error"
+      })
+
+    {socket, %{save | save_redirect_target: :self}}
+  end
+
+  defp render_failure_line(%Brando.Villain.RenderFailure{} = failure) do
+    block =
+      case failure do
+        %{module_name: name} when is_binary(name) -> gettext("%{module} block", module: name)
+        %{block_type: type} when not is_nil(type) -> gettext("%{type} block", type: type)
+        _ -> gettext("A block")
+      end
+
+    message = failure.message |> to_string() |> String.split("\n", parts: 2) |> hd()
+
+    if failure.line,
+      do: gettext("%{block}, line %{line}: %{error}", block: block, line: failure.line, error: message),
+      else: gettext("%{block}: %{error}", block: block, error: message)
   end
 
   defp redirect_after_save_with_blocks(socket, entry, stale?, save) do
@@ -8747,7 +8791,11 @@ defmodule BrandoAdmin.Components.Form do
 
   @doc """
   Renders the block fields of `changeset`, which the form is about to save,
-  with the entry as the save stores it.
+  with the entry as the save stores it. Returns `{changeset, failures}`.
+
+  When a block template fails (`Brando.Content.Blocks.render_fields/3`), no
+  `rendered_*` column is changed and `failures` lists the blocks: the entry
+  keeps the HTML it had, and the rest of the save goes ahead.
   """
   def render_blocks_for_save(block_map, changeset) do
     # The save sets the status the dates call for (a cleared `publish_at`
@@ -8755,7 +8803,28 @@ defmodule BrandoAdmin.Components.Form do
     # (`get_entry`) show it with that status
     changeset = Brando.Publisher.maybe_override_status(changeset)
     entry = changeset |> build_entry_for_blocks(block_map) |> with_stored_fields(changeset)
-    render_blocks_for_entry(block_map, changeset, entry)
+
+    block_map
+    |> Enum.map(fn {name, _schema, _entry_blocks, _opts} ->
+      {name, changeset |> get_assoc(:"entry_#{name}") |> Brando.Utils.apply_changes_recursively()}
+    end)
+    |> Blocks.render_field_blocks(entry)
+    |> case do
+      {:ok, rendered} ->
+        rendered_changeset =
+          Enum.reduce(rendered, changeset, fn {name, html}, acc ->
+            acc
+            |> put_change(:"rendered_#{name}", html)
+            # Written even when unchanged: a background render checks the row
+            # (`Brando.Content.Blocks.render_entry/2`)
+            |> force_change(:"rendered_#{name}_at", DateTime.truncate(DateTime.utc_now(), :second))
+          end)
+
+        {rendered_changeset, []}
+
+      {:error, {:render_failed, failures}} ->
+        {changeset, failures}
+    end
   end
 
   # The save writes its changes over the row as it is then. A field it leaves

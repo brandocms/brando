@@ -72,6 +72,37 @@ Because output is persisted, **changing your parser does not change existing
 entries** until they are re-rendered. `mix brando.entries.resave` re-renders
 everything.
 
+#### When a block template fails
+
+A stored render in which any block template fails is **not stored**: the
+entry keeps the HTML it had, and the failure is reported. A template fails
+when it does not parse (Liquid) or compile (HEEx), when it iterates over a
+list that is nil, or when it raises while it renders. Every failing block is
+named, not only the first.
+
+| Where the render runs | What happens |
+| --- | --- |
+| Editor's save | The entry's fields and blocks save; its HTML does not. The editor stays on the entry, and an alert names each block's module and error |
+| Background render (the `EntryRenderer` job) | The job is cancelled, not retried, with the failures as its error: `Brando.Content.Definitions.await_refresh/2` lists it under `failed`, and the failed-job notification routes are told. A fragment that fails does not re-render the entries that embed it |
+| `mix brando.entries.resave` | The entry is reported as failed, with its blocks and errors, and named again at the end |
+
+Each render logs the failures once, at error level, with the entry and the
+blocks. Once the template is fixed, saving the module or container renders
+the entries that use it again.
+
+The live preview and the editor's own block previews still render the page
+with the error in it (`!!! Error parsing liquex template !!!`, or a comment
+for a nil list), so the editor sees where it is.
+
+To render without storing, `Brando.Content.Blocks.render_fields/3` takes an
+entry loaded with its blocks and returns `{:ok, %{field => html}}` or
+`{:error, {:render_failed, failures}}`, a `Brando.Villain.RenderFailure` for
+each block with its uid, id, module, field, kind (`:parse`,
+`:iterate_over_nil` or `:render`), message and template line where known.
+`Brando.Content.Blocks.render_entry/2` returns the same error when it refuses
+to store; `Brando.Villain.parse_checked/3` is the same check for one list of
+blocks.
+
 #### What the media callbacks receive
 
 The media callbacks do **not** get the raw block data. Before dispatch, the

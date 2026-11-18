@@ -41,6 +41,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
       |> assign(:saved?, false)
       |> assign(:stale, nil)
       |> assign(:save_error, nil)
+      |> assign(:render_failed, nil)
       |> assign(:expect_own_mutation, false)
       |> assign(:presences, %{})
 
@@ -212,9 +213,12 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
 
   defp frontend_edit({:saved, _entry}, socket) do
     socket
-    |> assign(dirty?: false, saved?: true, save_error: nil)
+    |> assign(dirty?: false, saved?: true, save_error: nil, render_failed: nil)
     |> push_event("b:frontend-edit", %{type: "saved"})
   end
+
+  # Saved, but a block template failed: the page keeps the HTML it had
+  defp frontend_edit({:render_failed, lines}, socket), do: assign(socket, :render_failed, lines)
 
   defp frontend_edit({:save_failed, reason}, socket) do
     socket
@@ -338,6 +342,23 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
             <button :if={!@stale.deleted?} type="button" class="frontend-editor-notice-action" phx-click="reload">
               {gettext("Reload")}
             </button>
+          </div>
+        </div>
+
+        <div
+          :if={@render_failed}
+          class="frontend-editor-notice is-error"
+          role="alert"
+          data-testid="frontend-edit-render-failed"
+        >
+          <.icon name="triangle-alert" />
+          <div>
+            <p>
+              {gettext("Saved, but the page was not updated: a block template failed, so visitors see the page as it was.")}
+            </p>
+            <ul>
+              <li :for={line <- @render_failed}>{line}</li>
+            </ul>
           </div>
         </div>
 
