@@ -11,13 +11,12 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
   # The trash purge, for an expired row that rows not expired still refer to
   use Brando.ConnCase, async: true
 
-  import ExUnit.CaptureLog
-
   alias Brando.Factory
   alias Brando.Pages
   alias Brando.Pages.Fragment
   alias Brando.Pages.Page
   alias Brando.SoftDelete.Query
+  alias Brando.Test.OwnLog
   alias Brando.Users.User
 
   setup do
@@ -131,8 +130,10 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     Logger.put_module_level(Query, :info)
     on_exit(fn -> Logger.delete_module_level(Query) end)
 
+    # `OwnLog.capture/1`: in an async test, `capture_log/1` also gets what
+    # other tests log, a concurrent purge's "failed" among them
     log =
-      capture_log([level: :info], fn ->
+      OwnLog.capture(fn ->
         assert :ok = Brando.Worker.SoftDeletePurger.perform(%Oban.Job{args: %{}})
       end)
 
@@ -155,7 +156,7 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     end)
 
     log =
-      capture_log(fn ->
+      OwnLog.capture(fn ->
         assert {:error, _} = Brando.Worker.SoftDeletePurger.perform(%Oban.Job{args: %{}})
       end)
 
@@ -172,7 +173,7 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
       _schema, _ids -> :ok
     end)
 
-    log = capture_log(fn -> Query.clean_up_soft_deletions() end)
+    log = OwnLog.capture(fn -> Query.clean_up_soft_deletions() end)
 
     assert log =~ "Purging Brando.MigrationTest.Profile failed: ** (RuntimeError) the hook gave up"
     assert log =~ "purge_references_test.exs"
@@ -195,7 +196,7 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     expire(User, [stale_user.id])
 
     log =
-      capture_log(fn ->
+      OwnLog.capture(fn ->
         assert {:error, Brando.MigrationTest.Profile} in Query.clean_up_soft_deletions()
       end)
 
@@ -205,7 +206,7 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     refute Repo.get(User, stale_user.id)
 
     # The job tries every schema, then fails, so the failure shows
-    assert capture_log(fn ->
+    assert OwnLog.capture(fn ->
              assert {:error, _} = Brando.Worker.SoftDeletePurger.perform(%Oban.Job{args: %{}})
            end) =~ "Purging Brando.MigrationTest.Profile failed"
   end
