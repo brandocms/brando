@@ -160,6 +160,7 @@ defmodule Brando.Content.Definition.Baselines do
       # Its tokens written as the records they name (`"image:42"`), so a
       # revert can apply it again without the bindings of this plan
       previous: previous && References.canonical(previous, plan.snapshot_bindings),
+      definition: References.canonical(definition, plan.references),
       action: action,
       references: references(definition, plan)
     })

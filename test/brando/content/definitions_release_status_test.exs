@@ -123,8 +123,8 @@ defmodule Brando.Content.DefinitionsReleaseStatusTest do
       assert html =~ "dashboard-release-modules"
       assert html =~ "This release has 1 module change that isn&#39;t applied yet"
       assert html =~ "Release 2.0.0"
-      assert html =~ ~s(href="/admin/config/content/modules")
-      assert html =~ "Brando.Content.Definitions.Release.status()"
+      assert html =~ ~s(href="/admin/config/content/modules/release")
+      refute html =~ "Brando.Content.Definitions.Release.status()"
 
       admin = Factory.insert(:random_user, role: :admin)
       html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: admin)

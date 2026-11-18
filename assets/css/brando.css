@@ -122,6 +122,7 @@
 @import "./components/ModuleFiles.css";
 @import "./components/DefinitionFile.css";
 @import "./views/config/Cache.css";
+@import "./views/config/ReleaseChanges.css";
 @import "./views/config/Authorization.css";
 @import "./views/config/Environments.css";
 @import "./views/config/FrontendAssets.css";

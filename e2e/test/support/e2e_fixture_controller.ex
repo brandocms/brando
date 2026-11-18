@@ -119,6 +119,12 @@ defmodule E2EFixtureController do
         "release-module-changes" ->
           create_release_module_changes()
 
+        # Block modules → Release changes: the release updates the Example
+        # module's template (the Index page uses it), changes a module edited
+        # here since (a conflict), and one never applied from files
+        "release-review" ->
+          create_release_review()
+
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor
         "write-with-ai-module" ->
@@ -195,6 +201,48 @@ defmodule E2EFixtureController do
     true = status in [:planned, :unchanged]
     File.rm_rf!(dir)
     user
+  end
+
+  defp create_release_review do
+    import Ecto.Query, only: [from: 2]
+
+    user = get_admin_user()
+    dir = Brando.Content.Definitions.Release.path()
+    File.rm_rf!(dir)
+    {:ok, _} = Brando.Content.Definitions.export(dir, user)
+    File.rm(Path.join(dir, "modules.lock.json"))
+    {:ok, _} = Brando.Content.Definitions.Release.plan(version: "2026.11.16-1")
+
+    example = Brando.Repo.get_by!(Brando.Content.Module, class: "example")
+    edit_release_template!(dir, example, ~s(<article b-tpl="example">), ~s(<article b-tpl="example" class="from-the-release">))
+
+    [conflict, never] =
+      from(m in Brando.Content.Module,
+        where: is_nil(m.parent_id) and is_nil(m.deleted_at) and is_nil(m.source_module_id) and m.id != ^example.id,
+        order_by: [asc: m.sequence, asc: m.id],
+        limit: 2
+      )
+      |> Brando.Repo.all()
+
+    conflict |> Ecto.Changeset.change(class: "edited-here") |> Brando.Repo.update!()
+    Brando.Activity.record(:updated, conflict, user, fields: ["class"])
+    edit_release_class!(dir, conflict)
+
+    never |> Ecto.Changeset.change(class: "made-here") |> Brando.Repo.update!()
+    Brando.Repo.delete_all(from(a in Brando.Content.DefinitionApply, where: a.uid == ^never.uid))
+    user
+  end
+
+  defp edit_release_template!(dir, module, from, to) do
+    [file] =
+      dir
+      |> Path.join("**/*.exs")
+      |> Path.wildcard()
+      |> Enum.filter(&(File.read!(&1) =~ ~s(uid "#{module.uid}")))
+
+    [_, template] = Regex.run(~r/template_file :\w+, "([^"]+)"/, File.read!(file))
+    path = Path.join(Path.dirname(file), template)
+    File.write!(path, String.replace(File.read!(path), from, to))
   end
 
   defp edit_release_class!(dir, module) do

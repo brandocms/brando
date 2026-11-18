@@ -7,6 +7,10 @@
  *
  *   { source: 'brando-admin', type: 'highlight', uids: [...], show: true, scroll: true }
  *
+ * The release review (`Brando.ReleasePreview`) sends `marks` instead of
+ * plain uids: `[{uid, kind: 'changed' | 'failed', label}]`, drawn in amber or
+ * red with the label above, and `focus`, a uid to scroll to.
+ *
  * Blocks are delimited by `[+:B<uid>]` … `[-:B<uid>]` comments. The outlines
  * are drawn over them, outside the page's content and layout, and follow
  * them as lazy images and embeds change the layout. `scroll` brings the first
@@ -29,7 +33,13 @@
     if (!data || data.source !== 'brando-admin' || data.type !== 'highlight') return
 
     page.documentElement.classList.add('is-updated-live-preview')
-    state = { uids: Array.isArray(data.uids) ? data.uids.map(String) : [], show: data.show === true }
+    const marks = Array.isArray(data.marks) ? data.marks : null
+    state = {
+      uids: marks ? marks.map(mark => String(mark.uid)) : Array.isArray(data.uids) ? data.uids.map(String) : [],
+      marks,
+      show: data.show === true,
+      focus: data.focus ? String(data.focus) : null,
+    }
     highlight(data.scroll === true)
     watchLayout()
   })
@@ -53,9 +63,11 @@
     page.querySelectorAll(`.${OVERLAY_CLASS}`).forEach(node => node.remove())
     if (!state.show) return
 
-    const rects = state.uids.map(blockRect).filter(Boolean)
+    const found = state.uids.map((uid, index) => ({ uid, rect: blockRect(uid), mark: state.marks && state.marks[index] }))
+    const rects = found.filter(item => item.rect)
 
-    rects.forEach(rect => {
+    rects.forEach(({ rect, mark }) => {
+      const colors = mark ? MARK_COLORS[mark.kind] || MARK_COLORS.changed : null
       const box = page.createElement('div')
       box.className = OVERLAY_CLASS
       box.setAttribute('aria-hidden', 'true')
@@ -65,19 +77,46 @@
         left: `${rect.left + window.scrollX - 6}px`,
         width: `${rect.width + 12}px`,
         height: `${rect.height + 12}px`,
-        outline: '3px solid #2f7d5b',
+        outline: `3px solid ${colors ? colors.line : '#2f7d5b'}`,
         outlineOffset: '0',
         borderRadius: '6px',
-        background: 'rgba(47, 125, 91, 0.06)',
+        background: colors ? 'transparent' : 'rgba(47, 125, 91, 0.06)',
         pointerEvents: 'none',
         zIndex: '2147483647',
       })
+
+      if (mark && mark.label) {
+        const label = page.createElement('div')
+        label.textContent = mark.label
+        Object.assign(label.style, {
+          position: 'absolute',
+          top: '-24px',
+          left: '-3px',
+          padding: '3px 8px',
+          borderRadius: '3px',
+          background: colors.line,
+          color: colors.ink,
+          font: '600 11px/1.3 system-ui, sans-serif',
+          whiteSpace: 'nowrap',
+        })
+        box.appendChild(label)
+      }
+
       page.body.appendChild(box)
     })
 
-    if (scroll && rects.length > 0) {
-      window.scrollTo({ top: Math.max(rects[0].top + window.scrollY - 80, 0), behavior: 'instant' })
+    const focused = state.focus && rects.find(item => item.uid === state.focus)
+    const target = focused || rects[0]
+
+    if ((scroll || focused) && target) {
+      window.scrollTo({ top: Math.max(target.rect.top + window.scrollY - 80, 0), behavior: 'instant' })
     }
+  }
+
+  // The release review's marks, on the site's own page (not the admin's palette)
+  const MARK_COLORS = {
+    changed: { line: '#e4b866', ink: '#3c2c0c' },
+    failed: { line: '#d9a092', ink: '#4a1d12' },
   }
 
   // The bounding box of the elements between a block's start and end comments.

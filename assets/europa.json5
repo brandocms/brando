@@ -157,6 +157,14 @@
         off: '#c0c0c0',
       },
       tabbar: '#fcfcfd',
+      // Syntax highlighting in template and HTML diffs (TextDiff `highlight`):
+      // each at least 5.8:1 on white and on the added, removed and attention tints
+      code: {
+        tag: '#2d5b7d',
+        attr: '#6d5a2a',
+        string: '#8a4a2b',
+        liquid: '#6b3f63',
+      },
       shadow: '#13251c',
       legacy: {
         shaded: '#fcfcfd',

@@ -467,6 +467,7 @@ defmodule Brando.Router do
 
       live "/content/modules", BrandoAdmin.Content.ModuleListLive
       live "/content/modules/stale-blocks", BrandoAdmin.Content.StaleBlocksLive, :index
+      live "/content/modules/release", BrandoAdmin.Content.ReleaseChangesLive
       live "/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleFormLive, :update
       live "/content/modules/update/:entry_id/stale-blocks", BrandoAdmin.Content.StaleBlocksLive, :module
       live "/content/shared_library", BrandoAdmin.Content.SharedLibraryLive

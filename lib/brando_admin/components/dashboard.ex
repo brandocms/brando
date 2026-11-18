@@ -23,9 +23,10 @@ defmodule BrandoAdmin.Components.Dashboard do
   end
 
   # The release's module definitions that aren't applied yet
-  # (`Brando.Content.Definitions.ReleaseStatus`): superusers apply them
+  # (`Brando.Content.Definitions.ReleaseStatus`), for those who may apply
+  # them (`Brando.Content.Definitions.Release.authorize/1`)
   defp release_changes(user) do
-    with true <- Brando.Authorization.Boundary.superuser?(user),
+    with :ok <- Brando.Content.Definitions.Release.authorize(user),
          %{pending: pending} = changes when pending > 0 <- Brando.Content.Definitions.ReleaseStatus.summary() do
       changes
     else
@@ -35,8 +36,8 @@ defmodule BrandoAdmin.Components.Dashboard do
 
   @doc """
   The notice that the release brings module definitions that aren't applied
-  yet. Until the admin can apply them, it points to the marked modules and
-  the command that applies them on the server.
+  yet, with a link to Block modules → Release changes, where they are
+  reviewed and applied.
   """
   attr :changes, :map, required: true
 
@@ -54,14 +55,13 @@ defmodule BrandoAdmin.Components.Dashboard do
         </h2>
         <p>
           {gettext(
-            "Release %{version} brings module definitions that differ from this site's. Block modules marks each one. A developer reviews and applies them on the server:",
+            "Release %{version} brings module definitions that differ from this site's. Review what they change, then apply them.",
             version: @changes.version
           )}
         </p>
-        <code class="dashboard-alert-command">bin/{Brando.otp_app()} rpc 'Brando.Content.Definitions.Release.status()'</code>
       </div>
-      <.link navigate="/admin/config/content/modules" class="btn" data-testid="dashboard-release-modules-review">
-        {gettext("Review modules")}
+      <.link navigate="/admin/config/content/modules/release" class="btn" data-testid="dashboard-release-modules-review">
+        {gettext("Review")}
       </.link>
     </div>
     """

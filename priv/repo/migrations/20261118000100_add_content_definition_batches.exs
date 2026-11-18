@@ -26,5 +26,9 @@ defmodule BrandoIntegration.Repo.Migrations.AddContentDefinitionBatches do
     end
 
     create unique_index(:content_definition_batches, [:batch_id])
+
+    alter table(:content_definition_applies) do
+      add :definition, :map
+    end
   end
 end

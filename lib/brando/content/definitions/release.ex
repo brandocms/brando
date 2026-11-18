@@ -302,7 +302,7 @@ defmodule Brando.Content.Definitions.Release do
   end
 
   defp record_batch!(report, _plan, changes, batch_id, user) do
-    names = Map.new(report.items, &{&1.uid, &1.name})
+    names = display_names(report.plan.bundle)
 
     items =
       Enum.map(changes, fn change ->
@@ -704,6 +704,17 @@ defmodule Brando.Content.Definitions.Release do
 
   defp prefixed(nil, text), do: text
   defp prefixed(label, text), do: "#{label}: #{text}"
+
+  # As the review screen names them: namespace › name
+  defp display_names(bundle) do
+    language = to_string(Brando.config(:default_admin_language) || "en")
+
+    Map.new(bundle["modules"] ++ bundle["table_templates"], fn definition ->
+      namespace = definition["namespace"] && name(%{"name" => definition["namespace"], "uid" => nil}, language)
+      title = name(definition, language)
+      {definition["uid"], if(namespace in [nil, ""], do: title, else: "#{namespace} › #{title}")}
+    end)
+  end
 
   # How the admin names definitions: in the admin language, a child after
   # its parent

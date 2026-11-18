@@ -13,8 +13,10 @@ defmodule Brando.Content.Definitions.Release.Verify do
 
   `start/3` runs it in the background, one run per environment at a time,
   cancellable with `cancel/1`, and announces its progress on `topic/0` as
-  `{:release_verify, prefix, run}`. `blocks/3` renders one entry's blocks
-  both ways for a per-block diff.
+  `{:release_verify, prefix, run}`. A run of the same plan keeps what the run
+  before it found for entries it doesn't render, so verifying one
+  definition after all of them adds to the results. `blocks/3` renders one
+  entry's blocks both ways for a per-block diff.
 
   The runs are kept on the node that ran them, until the next one.
   """
@@ -37,6 +39,7 @@ defmodule Brando.Content.Definitions.Release.Verify do
           total: non_neg_integer(),
           done: non_neg_integer(),
           results: %{{module(), integer()} => result()},
+          keys: MapSet.t(),
           started_at: DateTime.t(),
           finished_at: DateTime.t() | nil,
           pid: pid() | nil
@@ -51,22 +54,35 @@ defmodule Brando.Content.Definitions.Release.Verify do
   @doc """
   Starts a dry run of `report` (`Brando.Content.Definitions.Release.plan/1`)
   for `entries` (`Brando.Content.Definitions.Release.Entries.list/1`), in the
-  current environment, cancelling one already running there. Returns
-  `{:ok, run}`.
+  current environment, cancelling one already running there. `conflicts:`
+  as `Proposed.build/2` takes it. Returns `{:ok, run}`.
   """
   @spec start(map(), [Entries.entry()], keyword()) :: {:ok, run()}
   def start(report, entries, opts \\ []) do
     prefix = Tenant.current_prefix()
-    cancel(prefix)
+    previous = cancel(prefix)
+    keys = MapSet.new(entries, & &1.key)
+    fingerprint = fingerprint(report, opts)
+
+    # What an earlier run of the same plan found for other entries stays
+    carried =
+      case previous do
+        %{fingerprint: ^fingerprint, results: results} ->
+          Map.reject(results, fn {key, _} -> MapSet.member?(keys, key) end)
+
+        _ ->
+          %{}
+      end
 
     run = %{
       id: Ecto.UUID.generate(),
       prefix: prefix,
       status: :running,
-      fingerprint: report.plan.fingerprint,
+      fingerprint: fingerprint,
       total: length(entries),
       done: 0,
-      results: %{},
+      results: carried,
+      keys: keys,
       started_at: DateTime.utc_now(),
       finished_at: nil,
       pid: nil
@@ -115,8 +131,17 @@ defmodule Brando.Content.Definitions.Release.Verify do
     :ok
   end
 
+  @doc """
+  What a run's results hold for: the plan, and the conflicts it proposes the
+  release's version of (`conflicts:`, as `Proposed.build/2` takes it).
+  """
+  def fingerprint(report, opts \\ []) do
+    conflicts = opts |> Keyword.get(:conflicts, []) |> Enum.sort() |> Enum.join(",")
+    report.plan.fingerprint <> ":" <> conflicts
+  end
+
   defp work(run, report, entries, opts) do
-    proposed = Proposed.build(report)
+    proposed = Proposed.build(report, Keyword.take(opts, [:conflicts]))
     delay = Keyword.get(opts, :delay, 0)
 
     Enum.each(entries, fn entry ->

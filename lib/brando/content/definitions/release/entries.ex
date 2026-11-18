@@ -77,13 +77,36 @@ defmodule Brando.Content.Definitions.Release.Entries do
 
   defp identifiers([]), do: %{}
 
+  # Stored identifiers, and for an entry without one (a schema that doesn't
+  # persist them), the identifier its Blueprint makes of the entry
   defp identifiers(keys) do
+    stored =
+      keys
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.flat_map(fn {schema, ids} ->
+        Repo.all(from(i in Identifier, where: i.schema == ^schema and i.entry_id in ^ids))
+      end)
+      |> Map.new(&{{&1.schema, &1.entry_id}, &1})
+
     keys
+    |> Enum.reject(&Map.has_key?(stored, &1))
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.flat_map(fn {schema, ids} ->
-      Repo.all(from(i in Identifier, where: i.schema == ^schema and i.entry_id in ^ids))
+    |> Enum.reduce(stored, fn {schema, ids}, acc ->
+      schema
+      |> load(ids)
+      |> Enum.reduce(acc, fn entry, acc ->
+        case Brando.Content.Identifier.Queries.identifier_for(entry) do
+          %Identifier{} = identifier -> Map.put(acc, {schema, entry.id}, identifier)
+          _ -> acc
+        end
+      end)
     end)
-    |> Map.new(&{{&1.schema, &1.entry_id}, &1})
+  end
+
+  defp load(schema, ids) do
+    Repo.all(from(e in schema, where: e.id in ^ids))
+  rescue
+    _ -> []
   end
 
   defp describe(key, identifier, schema, id, uids) do

@@ -11,6 +11,10 @@ defmodule Brando.Repo.Migrations.Brando232AddContentDefinitionBatches do
   apply confirms it: `confirmed_at` says when, `reverted_at` when it was
   reverted instead. `run_id` follows the entry renders the apply queued.
   Users live in `public`, so the user columns name that schema.
+
+  `content_definition_applies` gets `definition`: the definition as each
+  apply wrote it, which the review screen compares with an edit made here
+  since (the three-way view of a conflict).
   """
 
   def up do
@@ -33,12 +37,20 @@ defmodule Brando.Repo.Migrations.Brando232AddContentDefinitionBatches do
       end
 
       create_if_not_exists unique_index(:content_definition_batches, [:batch_id], prefix: prefix)
+
+      alter table(:content_definition_applies, prefix: prefix) do
+        add_if_not_exists :definition, :map
+      end
     end
   end
 
   def down do
     for prefix <- prefixes() do
       drop_if_exists table(:content_definition_batches, prefix: prefix)
+
+      alter table(:content_definition_applies, prefix: prefix) do
+        remove_if_exists :definition, :map
+      end
     end
   end
 

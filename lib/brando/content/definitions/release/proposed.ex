@@ -4,11 +4,12 @@ defmodule Brando.Content.Definitions.Release.Proposed do
   nothing is saved. A dry run renders with them through
   `Brando.Villain.with_modules/2` (`Brando.Content.Definitions.Release.Verify`).
 
-  `build/1` takes a `Brando.Content.Definitions.Release.plan/1` report and
-  proposes the release's version of each module it would update, and of each
-  one in conflict (so a reviewer sees what the release's version does before
-  choosing it). New modules are left out: no block uses them yet. Modules
-  that need a migration are left out too: applying them is refused.
+  `build/2` takes a `Brando.Content.Definitions.Release.plan/1` report and
+  proposes the release's version of each module it would update, and of the
+  modules in conflict that `conflicts:` names (those the reviewer chose the
+  release's version of, or is looking at). New modules are left out: no block
+  uses them yet. Modules that need a migration are left out too: applying
+  them is refused.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -24,21 +25,21 @@ defmodule Brando.Content.Definitions.Release.Proposed do
           uids: %{integer() => String.t()}
         }
 
-  @proposable [:update, :conflict]
-
   @doc """
   The modules renders read (`Brando.Villain.render_modules/1`), with each
   proposed module in place of the stored one: `%{modules: list, changed:
-  %{module_id => module}, uids: %{module_id => uid}}`.
+  %{module_id => module}, uids: %{module_id => uid}}`. Options: `conflicts:`,
+  the UIDs of conflicts to propose the release's version of.
   """
-  @spec build(map()) :: t()
-  def build(%{plan: plan, items: items}) do
+  @spec build(map(), keyword()) :: t()
+  def build(%{plan: plan, items: items}, opts \\ []) do
     definitions = Map.new(plan.bundle["modules"], &{&1["uid"], &1})
+    conflicts = MapSet.new(Keyword.get(opts, :conflicts, []))
 
     uids =
       for item <- items,
           item.kind == "module",
-          item.action in @proposable,
+          item.action == :update or (item.action == :conflict and MapSet.member?(conflicts, item.uid)),
           item.state not in [:deleted, :new],
           Map.has_key?(definitions, item.uid),
           do: item.uid
