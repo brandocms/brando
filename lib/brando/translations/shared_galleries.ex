@@ -28,6 +28,8 @@ defmodule Brando.Translations.SharedGalleries do
   alias Brando.Blueprint.Relations
   alias Brando.Content.Ref
   alias Brando.Content.Var
+  alias Brando.Doctor.Context
+  alias Brando.Galleries.Gallery
   alias Brando.Repo
   alias Brando.Translations.Member
 
@@ -54,32 +56,48 @@ defmodule Brando.Translations.SharedGalleries do
   @spec shared(struct(), [struct()]) :: [holder()]
   def shared(entry, others) do
     taken = for other <- others, {_, _, _, gallery_id} <- holders(other), into: MapSet.new(), do: gallery_id
-    Enum.filter(holders(entry), fn {_, _, _, gallery_id} -> MapSet.member?(taken, gallery_id) end)
+    shared = Enum.filter(holders(entry), fn {_, _, _, gallery_id} -> MapSet.member?(taken, gallery_id) end)
+    live = live_galleries(Enum.map(shared, &elem(&1, 3)))
+    Enum.filter(shared, fn {_, _, _, gallery_id} -> MapSet.member?(live, gallery_id) end)
+  end
+
+  # A gallery in the trash is not copied: it shows nowhere, and restored it
+  # is the source's again
+  defp live_galleries([]), do: MapSet.new()
+
+  defp live_galleries(ids) do
+    from(g in Gallery, where: g.id in ^Enum.uniq(ids) and is_nil(g.deleted_at), select: g.id)
+    |> Repo.all()
+    |> MapSet.new()
   end
 
   @doc """
   Gives every holder of `entry` that shares a gallery with `others` a copy of
-  it. Holders of one gallery get one copy between them. Returns the copies by
-  the id of the gallery they replace: `{:ok, %{old_id => %Gallery{}}}`.
+  it, one copy per holder: a gallery belongs to the row that points at it.
+  Returns each holder with its copy: `{:ok, [{holder, %Gallery{}}]}`. A
+  gallery in the trash, or gone, is left as it is.
 
   Run it in a transaction: a failed copy leaves earlier holders pointing at
   theirs.
   """
-  @spec split(struct(), [struct()], term()) :: {:ok, %{integer() => struct()}} | {:error, term()}
+  @spec split(struct(), [struct()], term()) :: {:ok, [{holder(), struct()}]} | {:error, term()}
   def split(entry, others, actor) do
     entry
     |> shared(others)
-    |> Enum.group_by(&elem(&1, 3))
-    |> Enum.reduce_while({:ok, %{}}, fn {gallery_id, holders}, {:ok, copies} ->
+    |> Enum.reduce_while({:ok, []}, fn {_, _, _, gallery_id} = holder, {:ok, copies} ->
       case Brando.Galleries.duplicate_gallery(gallery_id, actor) do
         {:ok, copy} ->
-          Enum.each(holders, &repoint(&1, copy.id))
-          {:cont, {:ok, Map.put(copies, gallery_id, copy)}}
+          repoint(holder, copy.id)
+          {:cont, {:ok, [{holder, copy} | copies]}}
 
         {:error, reason} ->
           {:halt, {:error, {:gallery, gallery_id, reason}}}
       end
     end)
+    |> case do
+      {:ok, copies} -> {:ok, Enum.reverse(copies)}
+      error -> error
+    end
   end
 
   @doc """
@@ -112,17 +130,17 @@ defmodule Brando.Translations.SharedGalleries do
   def repair do
     results =
       [mode: :mix]
-      |> Brando.Doctor.Context.new()
-      |> Brando.Doctor.Context.each_environment(fn ->
+      |> Context.new()
+      |> Context.each_environment(fn ->
         for {schema, id, language} <- independent_sharing(),
             do: {schema, id, language, Brando.Translations.split_shared_galleries(schema, id, :system)}
       end)
 
     for {label, found} <- results, {schema, id, language, result} <- found do
-      name = Brando.Doctor.Context.label_item(label, "#{inspect(schema)} ##{id} (#{language})")
+      name = Context.label_item(label, "#{inspect(schema)} ##{id} (#{language})")
 
       case result do
-        {:ok, copies} -> IO.puts("#{name}: #{map_size(copies)} gallery copies")
+        {:ok, copies} -> IO.puts("#{name}: #{length(copies)} gallery copies")
         {:error, reason} -> IO.puts("#{name}: failed, #{inspect(reason)}")
       end
     end
@@ -187,10 +205,13 @@ defmodule Brando.Translations.SharedGalleries do
         do: row
   end
 
+  # A row's own relations and blocks: the entry's preloads reach one level
+  # into its subforms
   defp load_rows(rows, row_module) do
-    rows = loaded(rows)
-    preloads = Brando.Content.BlockPreloads.for_schema(row_module)
-    if rows != [] and preloads != [], do: Repo.preload(rows, preloads), else: rows
+    case loaded(rows) do
+      [] -> []
+      rows -> Repo.preload(rows, Brando.Blueprint.preloads_for(row_module))
+    end
   end
 
   defp loaded(%Ecto.Association.NotLoaded{}), do: []

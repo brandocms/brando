@@ -12523,6 +12523,11 @@ msgstr "Åpne lagret versjon"
 msgid "Open the source"
 msgstr "Åpne kilden"
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Open the translation again before you change the media in its gallery blocks."
+msgstr "Åpne oversettelsen på nytt før du endrer mediene i galleriblokkene."
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Open translated entry"

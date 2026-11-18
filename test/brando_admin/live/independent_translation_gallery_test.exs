@@ -382,4 +382,175 @@ defmodule BrandoAdmin.IndependentTranslationGalleryTest do
       assert Enum.map(media(newer.id), &elem(&1, 0)) == [third.id]
     end
   end
+
+  # A synchronized Article whose block has a gallery variable at `placement`,
+  # and its translation, saved as an editor does: its variable stores the
+  # source's gallery
+  defp synchronized_album(conn, user, placement, gallery) do
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(
+          :module,
+          [name: %{"en" => "Album"}, namespace: %{"en" => "Content"}, help_text: %{}, code: "<div></div>", refs: []] ++
+            module_attrs(placement)
+        ),
+        user
+      )
+
+    {:ok, source} =
+      SyncTest.create_article(%{title: "Album", slug: "album", language: "no", status: "published", year: 2020}, user)
+
+    add_album_block(source, module, user, placement, gallery, 0)
+    {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+    Translations.source_saved(load(source.id))
+
+    {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}", "article_form")
+    await_selector(view, "input[name='translation_review[version_id]']")
+    save(view)
+
+    %{source: source, target: target, module: module}
+  end
+
+  defp add_album_block(article, module, user, placement, gallery, sequence) do
+    block =
+      %Block{}
+      |> Block.recursive_block_changeset(
+        Map.merge(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => module.id,
+            "creator_id" => user.id,
+            "source" => to_string(Article.Blocks)
+          },
+          block_attrs(placement, gallery)
+        ),
+        user
+      )
+      |> Repo.insert!()
+
+    struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
+  end
+
+  defp gallery_ids(id) do
+    for %{block: block} <- load(id).entry_blocks, var <- block.vars, do: var.gallery_id
+  end
+
+  defp gallery_var(view) do
+    {:ok, components} = Phoenix.LiveView.Debug.live_components(view.pid)
+    Enum.find(components, &(&1.module == RenderVar and &1.assigns[:type] == :gallery)).assigns
+  end
+
+  describe "a gallery variable in a settings dialog that is closed at Make independent" do
+    setup %{conn: conn, current_user: user} do
+      [first, second, third] = for _ <- 1..3, do: Factory.insert(:image, creator: user, status: :processed)
+      gallery = gallery([first, second])
+      Map.merge(synchronized_album(conn, user, :config, gallery), %{gallery: gallery, third: third})
+    end
+
+    defp open_closed(c) do
+      {view, _html} = live_form(c.conn, "/admin/articles/update/#{c.target.id}", "article_form")
+      await_selector(view, "[data-block-uid]")
+      view
+    end
+
+    defp open_dialog(view, c) do
+      [%{block: %{uid: uid}}] = load(c.target.id).entry_blocks
+      view |> element(~s(button.menu-item[phx-click="open_block_config"][phx-value-uid="#{uid}"])) |> render_click()
+      await_selector(view, ~s([id$="-gallery-media"]))
+      view
+    end
+
+    test "choosing an image once the dialog is open changes the translation's gallery only", c do
+      before = media(c.gallery.id)
+      view = open_closed(c)
+      make_independent(view)
+      [own] = gallery_ids(c.target.id)
+      refute own == c.gallery.id
+
+      view = open_dialog(view, c)
+      view |> with_target(gallery_var(view).myself.cid) |> render_click("select_image", %{"id" => to_string(c.third.id)})
+
+      assert media(c.gallery.id) == before
+      assert c.third.id in Enum.map(media(own), &elem(&1, 0))
+
+      save(view)
+      assert gallery_ids(c.target.id) == [own]
+    end
+
+    test "a save without opening it leaves the translation on a gallery of its own", c do
+      before = media(c.gallery.id)
+      view = open_closed(c)
+      make_independent(view)
+      save(view)
+
+      [own] = gallery_ids(c.target.id)
+      refute own == c.gallery.id
+      assert media(own) == before
+      assert gallery_ids(c.source.id) == [c.gallery.id]
+    end
+  end
+
+  describe "a gallery variable the translation has not saved yet" do
+    test "gets a copy when the translation is made independent", %{conn: conn, current_user: user} do
+      [first, second, third] = for _ <- 1..3, do: Factory.insert(:image, creator: user, status: :processed)
+      gallery = gallery([first])
+      c = synchronized_album(conn, user, :content, gallery)
+
+      # The source adds a block with another gallery after the translation was saved
+      added = gallery([second, third])
+      add_album_block(c.source, c.module, user, :content, added, 1)
+      Translations.source_saved(load(c.source.id))
+
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]']")
+      await_selector(view, ~s([id$="-gallery-media"]))
+      make_independent(view)
+      save(view)
+
+      [_, added_copy] = ids = gallery_ids(c.target.id)
+      refute Enum.any?(ids, &(&1 in [gallery.id, added.id]))
+      assert gallery_ids(c.source.id) == [gallery.id, added.id]
+      assert Enum.map(media(added_copy), &elem(&1, 0)) == [second.id, third.id]
+    end
+  end
+
+  describe "a gallery block that shows the source's gallery" do
+    test "gets a copy, and the editor is told to open the translation again", %{conn: conn, current_user: user} do
+      [first] = for _ <- 1..1, do: Factory.insert(:image, creator: user, status: :processed)
+      c = synchronized_album(conn, user, :content, gallery([first]))
+      slides = gallery([first])
+
+      # As a source save leaves a gallery ref it added after the translation
+      # was created (`Mutations.duplicate_refs/1` keeps its gallery)
+      for id <- [c.source.id, c.target.id] do
+        [%{block: block}] = load(id).entry_blocks
+
+        Repo.insert!(%Brando.Content.Ref{
+          block_id: block.id,
+          name: "slides",
+          uid: Brando.Utils.generate_uid(),
+          gallery_id: slides.id,
+          data: %Brando.Villain.Blocks.GalleryBlock{type: "gallery", data: %Brando.Villain.Blocks.GalleryBlock.Data{}}
+        })
+      end
+
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}", "article_form")
+      await_selector(view, "[data-block-uid]")
+      Brando.endpoint().subscribe("user:#{user.id}")
+      make_independent(view)
+
+      notice =
+        Gettext.dgettext(
+          Brando.Gettext,
+          "default",
+          "Open the translation again before you change the media in its gallery blocks."
+        )
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: ^notice}}, 2_000
+
+      [%{block: block}] = load(c.target.id).entry_blocks
+      refute hd(block.refs).gallery_id == slides.id
+    end
+  end
 end

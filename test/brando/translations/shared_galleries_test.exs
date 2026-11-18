@@ -177,6 +177,49 @@ defmodule Brando.Translations.SharedGalleriesTest do
     end
   end
 
+  test "each holder gets its own copy, two that showed one gallery included", c do
+    share_with_source(c)
+    # A second gallery variable of the translation shows the same gallery
+    [%{id: block_id} | _] = load_blocks(c.target)
+
+    Repo.insert!(%Var{
+      type: :gallery,
+      key: "extra",
+      label: %{"en" => "Extra"},
+      block_id: block_id,
+      gallery_id: c.album.id
+    })
+
+    {:ok, _} = Translations.make_independent(Article, c.target.id, c.user)
+
+    ids = for %Var{type: :gallery, gallery_id: id} <- block(c.target).vars, do: id
+    assert length(ids) == 2
+    assert length(Enum.uniq(ids)) == 2
+    refute c.album.id in ids
+  end
+
+  test "a gallery in the trash does not stop make_independent", c do
+    share_with_source(c)
+    Repo.update_all(from(g in Gallery, where: g.id == ^c.slides.id), set: [deleted_at: DateTime.utc_now()])
+
+    assert {:ok, _} = Translations.make_independent(Article, c.target.id, c.user)
+    assert ref_gallery_id(c.target) == c.slides.id
+    refute var_gallery_id(c.target) == c.album.id
+  end
+
+  test "a save of an independent translation that points back at the source's gallery gets a copy again", c do
+    {:ok, _} = Translations.make_independent(Article, c.target.id, c.user)
+    # A form opened before, or a restored revision, writes the source's gallery
+    share_with_source(c)
+
+    Translations.source_saved(load(c.target.id))
+
+    refute var_gallery_id(c.target) == c.album.id
+    refute photos_id(c.target) == c.photos.id
+    assert contents(var_gallery_id(c.target)) == contents(c.album.id)
+    assert var_gallery_id(c.source) == c.album.id
+  end
+
   test "make_independent copies nothing for a translation whose galleries are already its own", c do
     # Never saved since it was created: the copy's galleries are its own
     count = Repo.aggregate(Gallery, :count)
@@ -208,7 +251,7 @@ defmodule Brando.Translations.SharedGalleriesTest do
              Enum.sort([c.album.id, c.slides.id, c.photos.id])
 
     assert {:ok, copies} = Translations.split_shared_galleries(Article, c.target.id, c.user)
-    assert map_size(copies) == 3
+    assert length(copies) == 3
     assert Translations.shared_galleries(Article, c.target.id) == []
     assert contents(var_gallery_id(c.target)) == contents(c.album.id)
   end
@@ -252,6 +295,19 @@ defmodule Brando.Translations.SharedGalleriesTest do
       assert %Result{status: :ok} = doctor()
       assert contents(var_gallery_id(c.target)) == contents(c.album.id)
       assert {:ok, 0} = Brando.Translations.SharedGalleries.repair()
+    end
+
+    test "leaves out a member whose entry is gone", c do
+      Repo.insert!(%Brando.Translations.Member{
+        group_id: Translations.get_member(Article, c.source.id).group_id,
+        entry_type: to_string(Article),
+        entry_id: c.target.id + 10_000,
+        language: "sv",
+        role: :target,
+        synchronized: false
+      })
+
+      assert %Result{status: :ok} = doctor()
     end
   end
 

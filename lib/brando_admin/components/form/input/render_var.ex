@@ -334,59 +334,115 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # Made independent, a translation gets its own copy of each gallery it
   # shared with the source (`Brando.Translations.make_independent/3`), in
   # the database. The form still holds the source's. When the lock lifts, the
-  # var takes a gallery of its own, so the edits that follow and the save use
-  # it: the one its row now stores, when nothing else uses that one and it
-  # holds what the form shows, or else a copy of what the form shows (a
-  # source change it has not saved yet). Made the source instead, the row
-  # stores what the form holds, or a gallery the others still use, and
+  # var takes a gallery of its own (`own_gallery/2`) if the one it shows is
+  # used elsewhere, so the edits that follow and the save use it. Made the
+  # source instead, the row stores a gallery the others still use, and
   # nothing changes.
   defp take_own_gallery(
-         %{assigns: %{type: :gallery, source_locked: false, gallery_id: current, gallery: %Brando.Galleries.Gallery{}}} =
-           socket,
+         %{assigns: %{type: :gallery, source_locked: false, gallery: %Brando.Galleries.Gallery{id: shown}}} = socket,
          true
-       )
-       when not is_nil(current) do
-    var_id = socket.assigns.var[:id].value
+       ) do
+    stored = stored_gallery_id(socket)
 
-    case stored_gallery_id(socket) do
-      stored when stored in [nil, current] ->
-        socket
-
-      stored ->
-        if Brando.Galleries.gallery_in_use?(stored, except: {Brando.Content.Var, normalize_id(var_id)}),
-          do: socket,
-          else: take_gallery(socket, stored)
+    cond do
+      stored == shown -> socket
+      not shown_elsewhere?(socket, shown) -> socket
+      stored && used_by_others?(socket, stored) -> socket
+      true -> take_gallery(socket, stored)
     end
   end
 
   defp take_own_gallery(socket, _was_locked?), do: socket
 
+  # Before a gallery write: a var whose row now stores another gallery than
+  # the one it shows, which other rows use, writes its own instead (a form
+  # opened before Make independent, or a settings dialog that mounted
+  # since). `objects`, built from the shown gallery, are moved onto it.
+  defp own_gallery_first(%{assigns: %{gallery: %Brando.Galleries.Gallery{id: shown} = gallery}} = socket, objects) do
+    stored = stored_gallery_id(socket)
+
+    if stored && stored != shown && shown_elsewhere?(socket, shown) do
+      case own_gallery(socket, stored) do
+        {:ok, own} -> {adopt_gallery(socket, own, false), move_objects(objects, gallery, own)}
+        _ -> {socket, objects}
+      end
+    else
+      {socket, objects}
+    end
+  end
+
+  defp own_gallery_first(socket, objects), do: {socket, objects}
+
+  defp shown_elsewhere?(socket, gallery_id),
+    do: Brando.Galleries.gallery_in_use?(gallery_id, except: {Brando.Content.Var, var_id(socket)})
+
+  defp used_by_others?(socket, gallery_id),
+    do: Brando.Galleries.gallery_in_use?(gallery_id, except: {Brando.Content.Var, var_id(socket)})
+
+  defp var_id(socket) do
+    case socket.assigns.var[:id].value do
+      id when id in [nil, ""] -> nil
+      id -> normalize_id(id)
+    end
+  end
+
   @own_gallery_preload [gallery_objects: [:image, video: [:thumbnail, :file]]]
 
   defp take_gallery(socket, stored) do
-    shown = socket.assigns.gallery
-    # The block's changeset ignores a value equal to the one it loaded
-    loaded = socket.assigns.var.source.data.gallery_id
-
-    with {:ok, own} <- Brando.Galleries.get_gallery(%{matches: %{id: stored}, preload: @own_gallery_preload}),
-         {:ok, own} <-
-           if(stored != loaded and media_of(own) == media_of(shown),
-             do: {:ok, own},
-             else: Brando.Galleries.duplicate_gallery(shown, gallery_actor(socket))
-           ) do
-      own = Repo.preload(own, @own_gallery_preload, force: true)
-
-      socket
-      |> assign(:own_gallery_ids, MapSet.put(Map.get(socket.assigns, :own_gallery_ids, MapSet.new()), own.id))
-      |> assign(:gallery, own)
-      |> assign(:gallery_id, own.id)
-      |> on_change(%{gallery: own, gallery_id: own.id})
-    else
+    case own_gallery(socket, stored) do
+      {:ok, own} -> adopt_gallery(socket, own, true)
       _ -> socket
     end
   end
 
-  defp media_of(gallery), do: gallery |> gallery_objects() |> Enum.map(&{&1.image_id, &1.video_id})
+  # The gallery the row stores, when nothing else uses it and it holds what
+  # the form shows (media, order and each item's settings), or else a copy of
+  # what the form shows (a source change it has not saved yet). The block's
+  # changeset ignores a value equal to the one it loaded, so that one is
+  # copied too.
+  defp own_gallery(socket, stored) do
+    shown = socket.assigns.gallery
+    loaded = socket.assigns.var.source.data.gallery_id
+
+    reusable =
+      with true <- not is_nil(stored) and stored != loaded and not used_by_others?(socket, stored),
+           {:ok, own} <- Brando.Galleries.get_gallery(%{matches: %{id: stored}, preload: @own_gallery_preload}),
+           true <- contents_of(own) == contents_of(shown) do
+        own
+      else
+        _ -> nil
+      end
+
+    result = if reusable, do: {:ok, reusable}, else: Brando.Galleries.duplicate_gallery(shown, gallery_actor(socket))
+
+    with {:ok, own} <- result, do: {:ok, Repo.preload(own, @own_gallery_preload, force: true)}
+  end
+
+  defp adopt_gallery(socket, own, notify?) do
+    socket =
+      socket
+      |> assign(:own_gallery_ids, MapSet.put(Map.get(socket.assigns, :own_gallery_ids, MapSet.new()), own.id))
+      |> assign(:gallery, own)
+      |> assign(:gallery_id, own.id)
+
+    if notify?, do: on_change(socket, %{gallery: own, gallery_id: own.id}), else: socket
+  end
+
+  # The shown gallery's objects in the order they were given, as the own
+  # copy's: it holds the same items in the same order
+  defp move_objects(objects, shown, own) do
+    ids = Enum.zip(Enum.map(gallery_objects(shown), & &1.id), Enum.map(gallery_objects(own), & &1.id)) |> Map.new()
+
+    Enum.map(objects, fn object ->
+      case Map.get(object, :id) do
+        nil -> object
+        id -> object |> Map.put(:id, Map.get(ids, id)) |> Map.put(:gallery_id, own.id)
+      end
+    end)
+  end
+
+  defp contents_of(gallery),
+    do: gallery |> gallery_objects() |> Enum.map(&{&1.image_id, &1.video_id, &1.config})
 
   # Keep @image/@file in sync with the changeset FK. `assign_new` would strand a
   # stale nil after an upload/select changed the FK (blank card); a plain `assign`
@@ -2080,6 +2136,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     do: refuse_gallery_change(socket, "gallery write")
 
   defp persist_gallery(socket, objects, opts) do
+    {socket, objects} = own_gallery_first(socket, objects)
     gallery = socket.assigns.gallery
     current_user_id = normalize_id(socket.assigns.current_user_id)
 
