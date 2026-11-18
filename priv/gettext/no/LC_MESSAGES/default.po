@@ -9564,6 +9564,11 @@ msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
 msgstr "Den ble endret etter at kalenderen ble lastet inn. Kalenderen viser nå det som er planlagt."
 
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "It was never imported from files here and differs from the file. Nothing records which is newer, so it isn’t imported unless you replace it."
+msgstr "Den er aldri importert fra filer her og er ulik filen. Ingenting viser hvilken som er nyest, så den importeres ikke med mindre du erstatter den."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "It will be tried again."
@@ -15149,6 +15154,11 @@ msgstr "Erstatt live-innholdet, hvis målet er live-miljøet"
 #, elixir-autogen, elixir-format
 msgid "Replace the table in %{block}"
 msgstr "Erstatt tabellen i %{block}"
+
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the version here with the file’s"
+msgstr "Erstatt versjonen her med filens"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format

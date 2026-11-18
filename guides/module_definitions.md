@@ -199,8 +199,12 @@ operator names it with `--replace UID` (`replace: ["uid"]`): its database copy
 is then replaced with the release's, and the record says so. `replace` never
 overrides a conflict on a definition applied here. A definition deleted here
 after it was applied is a conflict too, which `replace` creates again; one in
-the trash stays a conflict until it is restored. The record of each apply
-keeps the definition it replaced.
+the trash stays a conflict until it is restored. A conflict on a definition
+applied here is settled by keeping the version here (`Release.keep_here/2`,
+recorded as `kept`: the release's file waits no longer, and stays out of date
+until a developer exports the module and commits it) or by taking the
+release's (`discard: ["uid"]`, recorded as `replaced`). The record of each
+apply keeps the definition it replaced, and the one it wrote.
 
 The admin's ZIP import and `mix brando.modules import` use the same records
 when the bundle's lockfile was written for another database, or the bundle
@@ -208,7 +212,13 @@ has none: an update development already imported is an update here, not a
 conflict. Without a record, the lockfile's baseline counts when the database
 equals it.
 
-### Superusers see what waits
+### Who sees what waits
+
+Superusers review and apply a release's definitions. With groups
+authorization, so may a group granted **Release module definitions · Apply**
+(`brando.module_definitions.apply`): what they write is the release's code,
+or what an apply replaced, never their own, so it isn't a superuser's alone as
+module code is. No preset grants it.
 
 On a node that serves, a few seconds after boot, Brando plans the release's
 definitions against every environment in the background. Nothing is applied
@@ -225,10 +235,63 @@ change plans and sends the result to the other nodes, which keep it without
 planning (`Brando.CacheSync`); a node running another release plans for
 itself.
 
-When anything isn't a `noop`, the dashboard tells superusers how many module
-changes the release has that aren't applied yet. Block modules marks each
-module that differs: changed in this release, changed here since the
-release's version was applied, both, or never applied from the release.
+When anything isn't a `noop`, the dashboard tells them how many module
+changes the release has that aren't applied yet, with a link to **Block
+modules → Release changes**. Block modules marks each module that differs:
+changed in this release, changed here since the release's version was
+applied, both, or never applied from the release.
+
+### Review and apply in the admin
+
+**Block modules → Release changes** lists the release's definitions that
+differ from this environment's, one row per module tree (a module with its
+children and the table templates it uses), and a summary: the release, the
+changes by action and by kind (`ModuleDiff` class) and the entries they
+re-render. Each row has four tabs:
+
+- **Template**: the template's diff, highlighted, or the definition's when
+  only its fields change.
+- **Refs & vars**: what changes in the refs, vars and fields, and what that
+  does to the blocks that use them.
+- **Entries**: the entries that use the tree, with their type, language,
+  status and links, searchable and sortable.
+- **Preview**: an entry's page as it is and with the release's definitions,
+  side by side in the browser, at mobile, tablet or desktop width. The
+  blocks that differ are outlined in both (**Mark changes** turns that off),
+  **Full screen** gives the pair the whole window, and **Share preview**
+  copies a shared preview link of the proposed page.
+
+**Verify** (per tree, or **Verify all**) is a dry run: every affected entry
+is rendered with the release's definitions, in the background on the node
+that serves the page, and nothing is written. Each entry renders with
+changes, renders the same, or fails, with the error and the block. **HTML
+diff** shows each block's rendered HTML both ways. A run can be cancelled,
+and the next one keeps what it found for the entries it doesn't render.
+
+The rows that are ready are checked; one **Apply N changes** covers them.
+Some need something first:
+
+- **Conflict** (changed here and in the release): a three-way view of the
+  version last applied, the one edited here (who and when) and the
+  release's. **Keep the version edited here** leaves the module out and
+  records the release's file as applied; Block modules marks the file out of
+  date until a developer exports the module (**Block modules → Export**, or
+  `mix brando.modules export`) and commits it to `priv/modules`. **Use the
+  release's version** replaces the edit, which the apply's record keeps.
+- **Never applied** from files: **Replace with the release's version**.
+- **Needs a migration**: shown, locked, with what blocks it.
+
+The confirmation repeats what the apply covers, the entries it re-renders,
+what it leaves out, and the entries that failed in Verify. After the apply, a
+banner follows the renders until every entry has rendered, and names those
+that failed. Activity records the apply with the release version.
+
+**Keep** and **Revert** wait for the renders. Revert applies again the
+definitions the apply replaced, through the same plan and apply, and
+re-renders their entries; a module edited here after the apply is left as
+it is and listed as a conflict, and a module the apply created stays. An
+apply can be reverted, with no time limit, until someone keeps it or the
+next release apply confirms it. Each environment has its own applies.
 
 ### Review and apply on the server
 
@@ -242,10 +305,15 @@ In a release, without Mix, `rpc` runs on the running node:
 bin/my_app rpc 'Brando.Content.Definitions.Release.status()'
 
 # Apply module trees by UID (children and table templates go with them),
-# or :all; --replace's counterpart is replace:
+# or :all; --replace's counterpart is replace:, and discard: takes the
+# release's version over an edit made here
 bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(["acme-hero"], user: 1)'
 bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(:all, user: 1)'
 ```
+
+Each apply is a batch that can be kept or reverted
+(`Brando.Content.Definitions.Release.Batches.keep/2` and `revert/2`, as the
+admin's banner does) until the next apply confirms it.
 
 In development, against the development database:
 
@@ -259,8 +327,9 @@ mix brando.modules apply --release --all --replace acme-card --user 1
 
 Tenant applications pass `site: "acme", environment: "production"` (or
 `--site` and `--environment`); `status/1` without them reports every
-environment, and `apply!/2` needs them. `user:` is an active account whose
-normal permissions apply. Its ID is the record's `applied_by`. Apply refuses,
+environment, and `apply!/2` needs them. `user:` is an active account that may apply
+release definitions (a superuser, or with groups a member granted
+`brando.module_definitions.apply`). Its ID is the record's `applied_by`. Apply refuses,
 writing nothing, while a selected definition is a conflict or needs a
 migration; `:all` names them, so they can be left out or resolved. Media and
 content tokens an earlier apply bound here are reused; map new ones with

@@ -325,7 +325,7 @@ defmodule Brando.Content.Definition.Importer do
   defp state(_record, _digest, _old_digest, _base, _matches), do: :changed_in_both
 
   defp never_applied_reason(:database),
-    do: "never applied from files, and the database copy differs; name it to replace it with the files' version"
+    do: "never applied from files, and the database copy differs; replace it to use the files' version"
 
   defp never_applied_reason(:lockfile), do: "missing baseline; export the target before editing it"
 

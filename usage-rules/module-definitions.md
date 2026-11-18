@@ -58,10 +58,15 @@ In a release, without Mix, `rpc` runs on the running node:
 bin/my_app rpc 'Brando.Content.Definitions.Release.status()'
 
 # Apply module trees by UID (children and table templates go with them),
-# or :all; --replace's counterpart is replace:
+# or :all; --replace's counterpart is replace:, and discard: takes the
+# release's version over an edit made here
 bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(["acme-hero"], user: 1)'
 bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(:all, user: 1)'
 ```
+
+Each apply is a batch that can be kept or reverted
+(`Brando.Content.Definitions.Release.Batches.keep/2` and `revert/2`, as the
+admin's banner does) until the next apply confirms it.
 
 In development, against the development database:
 

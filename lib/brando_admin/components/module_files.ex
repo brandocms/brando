@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
        source: nil,
        filename: nil,
        mappings: "",
+       replace: [],
        plan: nil,
        result: nil,
        updated_download: nil,
@@ -187,7 +188,21 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                     entries: item.entry_count
                   )}
                 </p>
-                <p :if={item.reason}>{item.reason}</p>
+                <p :if={item.reason && item.state != :never_applied}>{item.reason}</p>
+                <label :if={item.state == :never_applied or item.uid in @replace} class="module-files-replace">
+                  <input
+                    type="checkbox"
+                    checked={item.uid in @replace}
+                    phx-click="toggle_replace"
+                    phx-value-uid={item.uid}
+                    phx-target={@myself}
+                    data-testid="module-files-replace"
+                  />
+                  <span>
+                    <strong>{gettext("Replace the version here with the file’s")}</strong>
+                    {gettext("It was never imported from files here and differs from the file. Nothing records which is newer, so it isn’t imported unless you replace it.")}
+                  </span>
+                </label>
                 <p :if={item.diff == []}>{gettext("The definition is unchanged.")}</p>
                 <TextDiff.diff
                   :for={change <- item.diff}
@@ -284,6 +299,11 @@ defmodule BrandoAdmin.Components.ModuleFiles do
     {:noreply, socket |> cancel_upload(:definition_zip, ref) |> assign(plan: nil, error: nil)}
   end
 
+  def handle_event("toggle_replace", %{"uid" => uid}, socket) do
+    replace = if uid in socket.assigns.replace, do: List.delete(socket.assigns.replace, uid), else: [uid | socket.assigns.replace]
+    handle_event("preview", %{}, assign(socket, :replace, replace))
+  end
+
   def handle_event("preview", params, socket) do
     mappings = params["references"] || socket.assigns.mappings
     socket = assign(socket, mappings: mappings, plan: nil, error: nil)
@@ -293,7 +313,11 @@ defmodule BrandoAdmin.Components.ModuleFiles do
       socket = assign(socket, source: source, filename: filename)
 
       with {:ok, references} <- references(mappings),
-           {:ok, plan} <- Definitions.plan(source.bundle, socket.assigns.current_user, references: references) do
+           {:ok, plan} <-
+             Definitions.plan(source.bundle, socket.assigns.current_user,
+               references: references,
+               replace: socket.assigns.replace
+             ) do
         {:noreply, assign(socket, plan: plan)}
       else
         {:error, reason} -> error(socket, reason)
@@ -345,7 +369,16 @@ defmodule BrandoAdmin.Components.ModuleFiles do
       Enum.reduce(socket.assigns.uploads.definition_zip.entries, socket, &cancel_upload(&2, :definition_zip, &1.ref))
 
     {:noreply,
-     assign(socket, source: nil, filename: nil, mappings: "", plan: nil, result: nil, updated_download: nil, error: nil)}
+     assign(socket,
+       source: nil,
+       filename: nil,
+       mappings: "",
+       replace: [],
+       plan: nil,
+       result: nil,
+       updated_download: nil,
+       error: nil
+     )}
   end
 
   defp source(socket) do

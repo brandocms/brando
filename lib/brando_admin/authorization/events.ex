@@ -260,7 +260,7 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(delete_image_from_picker pick_library_image picker_move_to_folder)
     ],
     "BrandoAdmin.Components.ModuleFiles" => [
-      read: ~w(cancel_upload export preview reset validate),
+      read: ~w(cancel_upload export preview reset toggle_replace validate),
       write: ~w(apply refresh)
     ],
     "BrandoAdmin.Components.Pages.PageVars" => [

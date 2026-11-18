@@ -9562,6 +9562,11 @@ msgstr ""
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
 msgstr ""
 
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "It was never imported from files here and differs from the file. Nothing records which is newer, so it isn’t imported unless you replace it."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "It will be tried again."
@@ -15146,6 +15151,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replace the table in %{block}"
+msgstr ""
+
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the version here with the file’s"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex

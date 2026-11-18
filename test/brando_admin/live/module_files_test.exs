@@ -91,6 +91,22 @@ defmodule BrandoAdmin.ModuleFilesTest do
     assert Repo.get!(Module, c.module.id).class == "concurrent"
   end
 
+  test "a definition never imported from files here is imported only when replaced", c do
+    Repo.delete_all(Brando.Content.DefinitionApply)
+    c.module |> Changeset.change(class: "made-here") |> Repo.update!()
+    source = File.read!("test/fixtures/definitions/hero.exs.txt")
+    {:ok, binary} = Archive.pack(%{"hero.exs" => String.replace(source, ~s(class "hero"), ~s(class "from-zip"))})
+
+    {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
+    upload(view, binary)
+    assert has_element?(view, "#module-files-apply[disabled]")
+
+    view |> element("[data-testid=module-files-replace]") |> render_click()
+    refute has_element?(view, "#module-files-apply[disabled]")
+    view |> element("#module-files-apply") |> render_click()
+    assert Repo.get!(Module, c.module.id).class == "from-zip"
+  end
+
   test "selected export includes only the selected module tree", c do
     %Module{}
     |> Module.changeset(

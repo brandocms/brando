@@ -614,6 +614,15 @@ sender first, before the first compile.
   and import its images. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. Nothing else changes until an administrator adds a
   token. See [Build from Figma](mcp.md#build-from-figma).
+- **Release changes in the admin.** `brando_233` adds
+  `content_definition_batches`, each environment's record of the release
+  applies made from **Block modules → Release changes** (or `rpc`), which can
+  be kept or reverted, and the definition each apply wrote. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate` and, with
+  named environments, `mix brando.migrate --tenants`. With groups
+  authorization, grant **Release module definitions · Apply** to the groups
+  that should apply them; superusers always may. See
+  [Review and apply in the admin](module_definitions.md#review-and-apply-in-the-admin).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
