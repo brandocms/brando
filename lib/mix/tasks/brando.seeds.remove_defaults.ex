@@ -30,8 +30,9 @@ defmodule Mix.Tasks.Brando.Seeds.RemoveDefaults do
 
   With tenancy it works in every environment of every site, each on its own.
 
-  A server that is already running keeps what it cached before: restart it,
-  or use Configuration → Cache → Empty all caches in its admin. In a release,
+  A server that is already running, and that this task's VM cannot reach,
+  keeps what it cached before: use Configuration → Utilities → Clear content
+  caches in its admin, or restart it. In a release,
   where there is no Mix, run it on the running node, which updates its
   caches itself:
 
@@ -71,8 +72,8 @@ defmodule Mix.Tasks.Brando.Seeds.RemoveDefaults do
       {:ok, reports} ->
         if opts[:yes] && Enum.any?(reports, &removed?/1) do
           Mix.shell().info(
-            "\nA server that was already running keeps serving what it cached before. " <>
-              "Restart it, or empty its caches in the admin under Configuration → Cache → Empty all caches."
+            "\nA server that was already running keeps serving what it cached before: " <>
+              "clear its caches in its admin under Configuration → Utilities → Clear content caches, or restart it."
           )
         end
 
@@ -80,7 +81,9 @@ defmodule Mix.Tasks.Brando.Seeds.RemoveDefaults do
 
       {:error, message} ->
         if opts[:yes] && message =~ "Already moved to the trash" do
-          Mix.shell().info("\nA server that was already running keeps serving what it cached before: restart it.")
+          Mix.shell().info(
+            "\nA server that was already running keeps serving what it cached before: clear its caches in its admin, or restart it."
+          )
         end
 
         Mix.raise("mix brando.seeds.remove_defaults: " <> message)

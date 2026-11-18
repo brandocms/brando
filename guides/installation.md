@@ -713,7 +713,7 @@ it removed: a rerun of setup leaves modules in the trash there, and a language
 seeded later gets a homepage without their blocks. With tenancy it works in
 every environment of every site, each on its own; narrow it with `--site KEY`
 and `--environment KEY`. A server that is already running keeps what it
-cached: restart it, or use Configuration → Cache → Empty all caches. In a
+cached: use Configuration → Utilities → Clear content caches, or restart it. In a
 release, run it on the running node, which updates its own caches:
 `bin/my_app rpc "Brando.Setup.Seeds.remove_defaults(yes: true)"`.
 

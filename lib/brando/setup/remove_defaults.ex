@@ -54,12 +54,13 @@ defmodule Brando.Setup.RemoveDefaults do
 
   ## Caches
 
-  The removals go through the content contexts, which evict the cached
-  pages, fragments and modules, and render again the entries that embed a
-  removed fragment. On a running node (`bin/my_app rpc`) that covers the
-  node's caches, and other nodes hear of it as of an editor's delete. The Mix
-  task's own VM holds no server's caches: it says to restart the server, or
-  empty its caches in the admin.
+  The removals go through the content contexts, which render again the
+  entries that embed a removed fragment. Once an environment's removal has
+  committed, its content caches are cleared (`Brando.Cache.clear_content/1`):
+  on this node at once, and on the other nodes its PubSub reaches. On a
+  running node (`bin/my_app rpc`) that covers the server. The Mix task's own
+  VM reaches no server that is not in its cluster: it says to clear the
+  server's caches, or restart it.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -600,10 +601,11 @@ defmodule Brando.Setup.RemoveDefaults do
   defp removed(entry, {:ok, _deleted}), do: %{entry | status: :removed}
   defp removed(_entry, {:error, reason}), do: Repo.rollback(reason)
 
-  # The contexts' deletes evict what they remove; the lists that hold them
-  # are emptied here too, as the admin's Empty all caches would
+  # The contexts' deletes evict what they remove; the environment's lists and
+  # site caches are cleared too, as Clear content caches in the admin does
   defp evict do
-    Enum.each([Content.Module, Pages.Page, Pages.Fragment], &Brando.Cache.Query.evict_all/1)
+    {:ok, _summary} = Brando.Cache.clear_content()
+    :ok
   end
 
   # ── The report ────────────────────────────────────────────────────────────

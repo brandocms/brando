@@ -19,7 +19,7 @@ defmodule Brando.Setup.RemoveDefaultsTest do
   # The seeds and the removal refill the identity, SEO and navigation caches
   # from this test's sandboxed rows, which roll back
   setup do
-    cached = Map.new(~w(identity seo navigation)a, &{&1, Brando.Cache.get(&1)})
+    cached = Map.new(~w(identity seo navigation globals palettes)a, &{&1, Brando.Cache.get(&1)})
 
     on_exit(fn ->
       Enum.each(cached, fn
@@ -290,7 +290,7 @@ defmodule Brando.Setup.RemoveDefaultsTest do
       Mix.Tasks.Brando.Seeds.RemoveDefaults.run(["--yes"])
       output = shell_output()
       assert output =~ "moved to the trash"
-      assert output =~ "Restart"
+      assert output =~ "Clear content caches"
       assert live_modules() == []
     end
   end
