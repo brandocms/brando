@@ -1080,6 +1080,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:heex_assigns, heex_assigns)
       |> assign(:heex_render_fn, heex_render_fn)
       |> assign_new(:entry_language, fn -> nil end)
+      |> assign_new(:source_locked, fn -> false end)
 
     ~H"""
     <div class="block-content">
@@ -1151,6 +1152,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign_new(:entry_language, fn -> nil end)
       |> assign_new(:write_with_ai, fn -> false end)
       |> assign_new(:superuser, fn -> false end)
+      |> assign_new(:source_locked, fn -> false end)
 
     ~H"""
     <div class="block-content">
