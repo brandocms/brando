@@ -46,12 +46,28 @@ defmodule Brando.Tenant.Seeder do
   """
   @callback seed_language(Site.t(), Environment.t(), language :: String.t(), User.t()) :: :ok | {:error, term()}
 
-  @optional_callbacks seed_language: 4
+  @doc """
+  As `c:seed/3`, with options: `demo: false` asks for the content without the
+  demo modules (`mix brando.setup --no-demo`). Optional: provisioning calls
+  it only for `demo: false`, and calls `c:seed/3` of a seeder without it.
+  """
+  @callback seed(Site.t(), Environment.t(), User.t(), keyword()) :: :ok | {:error, term()}
+
+  @optional_callbacks seed_language: 4, seed: 4
 
   @behaviour __MODULE__
 
   @impl true
-  def seed(%Site{} = site, %Environment{}, %User{} = creator), do: seed_languages(site, site.languages, creator, [])
+  def seed(%Site{} = site, %Environment{} = environment, %User{} = creator), do: seed(site, environment, creator, [])
+
+  @doc """
+  Seeds every one of `site`'s languages, as `seed/3`; with `demo: false`
+  without the demo modules: the homepage and the footer fragment have no
+  blocks (`Brando.Setup.Seeds`).
+  """
+  @impl true
+  def seed(%Site{} = site, %Environment{}, %User{} = creator, opts) when is_list(opts),
+    do: seed_languages(site, site.languages, creator, Keyword.take(opts, [:demo]))
 
   @doc """
   The default `c:seed_language/4`: the identity, SEO record, footer fragment

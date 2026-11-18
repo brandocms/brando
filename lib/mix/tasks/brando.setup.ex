@@ -10,6 +10,7 @@ defmodule Mix.Tasks.Brando.Setup do
       mix brando.setup --email me@domain.tld --name "Me" --password secret
       mix brando.setup --base-url https://example.com --description "What the site is"
       mix brando.setup --no-assets --no-seeds
+      mix brando.setup --no-demo
 
   Composes the steps a freshly installed application needs before its first
   request, in order:
@@ -30,7 +31,12 @@ defmodule Mix.Tasks.Brando.Setup do
        content (`Brando.Tenant.Seeder`). A site that exists is left alone.
        With `:multi` nothing is seeded: sites are created at `/admin/sites`,
        and each gets the content then. With either, nothing is asked, and
-       `--base-url` and `--description` are unused
+       `--base-url` and `--description` are unused.
+       The modules and the page's blocks are a demo: with `--no-demo` the
+       `index` page and the footer fragment are created empty, and no
+       modules are, in every configured language (or the site's). `--no-demo`
+       is unused with `:multi`. `mix brando.seeds.remove_defaults` takes the
+       demo away later
 
   Each step is skipped when its result already exists, so rerunning after a
   failure resumes rather than duplicates. Nothing is removed or rewritten.
@@ -48,6 +54,7 @@ defmodule Mix.Tasks.Brando.Setup do
     db: :boolean,
     account: :boolean,
     seeds: :boolean,
+    demo: :boolean,
     email: :string,
     name: :string,
     password: :string,
@@ -146,7 +153,7 @@ defmodule Mix.Tasks.Brando.Setup do
       # brando.gen.seeds says so, and that the SEO flags are unused
       Brando.Tenant.enabled?() ->
         step("Seeding default content")
-        Mix.Task.run("brando.gen.seeds", seo_args(opts[:base_url], opts[:description]))
+        Mix.Task.run("brando.gen.seeds", seo_args(opts[:base_url], opts[:description]) ++ demo_args(opts))
 
       true ->
         seed_content(opts)
@@ -161,7 +168,7 @@ defmodule Mix.Tasks.Brando.Setup do
       Brando.Setup.Account.superuser() ||
         Mix.raise("No active superuser found. The site needs an account to create it: run mix brando.gen.admin.")
 
-    case Brando.Setup.Site.provision(creator) do
+    case Brando.Setup.Site.provision(creator, demo: Keyword.get(opts, :demo, true)) do
       {:created, site} ->
         Mix.shell().info([
           :green,
@@ -227,8 +234,10 @@ defmodule Mix.Tasks.Brando.Setup do
 
     description = Keyword.get_lazy(opts, :description, fn -> prompt("Short description of the site:", "") end)
 
-    Mix.Task.run("brando.gen.seeds", seo_args(base_url, description))
+    Mix.Task.run("brando.gen.seeds", seo_args(base_url, description) ++ demo_args(opts))
   end
+
+  defp demo_args(opts), do: if(Keyword.get(opts, :demo, true), do: [], else: ["--no-demo"])
 
   defp seo_args(base_url, description) do
     [{"--base-url", base_url}, {"--description", description}]

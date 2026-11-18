@@ -158,6 +158,22 @@ defmodule Brando.Setup.SiteTest do
       refute Registry.get_site_by_key("acme")
     end
 
+    test "with --no-demo, gives the site its homepage, footer and menu without the demo modules" do
+      Mix.Tasks.Brando.Setup.run(~w(--no-assets --no-db --no-account --no-demo))
+
+      assert shell_output() =~ ~s(Created the site "acme")
+
+      for environment <- ~w(production staging) do
+        in_environment(environment, fn ->
+          assert Brando.Repo.aggregate(Brando.Content.Module, :count) == 0
+          page = Pages.Page |> Brando.Repo.get_by!(uri: "index", language: :en) |> Brando.Repo.preload(:entry_blocks)
+          assert {page.status, page.entry_blocks} == {:published, []}
+          assert Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
+          assert Brando.Repo.get_by(Brando.Navigation.Menu, key: "main", language: :en)
+        end)
+      end
+    end
+
     test "names the site's identity after it, with no placeholder title" do
       setup!()
 

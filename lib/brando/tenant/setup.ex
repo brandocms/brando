@@ -314,7 +314,7 @@ defmodule Brando.Tenant.Setup do
     if Keyword.get(opts, :seed, true) do
       prefix = Tenant.prefix(site, environment)
       seeder = Brando.config(:tenant_seeder) || Brando.Tenant.Seeder
-      seed = fn -> seeder.seed(site, environment, creator) end
+      seed = fn -> run_seeder(seeder, site, environment, creator, Keyword.get(opts, :demo, true)) end
 
       # The admin's own scope (an installation scope at `/admin/sites`) does
       # not decide what the seeder may write in the new site
@@ -326,6 +326,18 @@ defmodule Brando.Tenant.Setup do
     end
   rescue
     exception -> {:error, {:seeding_failed, exception}}
+  end
+
+  # `demo: false` reaches a seeder that takes options (`c:Brando.Tenant.Seeder.seed/4`);
+  # one that does not decides its content itself
+  defp run_seeder(seeder, site, environment, creator, true), do: seeder.seed(site, environment, creator)
+
+  defp run_seeder(seeder, site, environment, creator, demo) do
+    Code.ensure_loaded(seeder)
+
+    if function_exported?(seeder, :seed, 4),
+      do: seeder.seed(site, environment, creator, demo: demo),
+      else: seeder.seed(site, environment, creator)
   end
 
   # The seeds write modules without their mutations: what a release would

@@ -292,9 +292,12 @@ defmodule Brando.Content.Resave do
     Logger.configure(level: :error)
   end
 
+  @doc false
   # `[nil]` without tenancy: the application's own tables. With tenancy, every
-  # `{site, environment}`, narrowed by `:site` and `:environment`.
-  defp environments(opts) do
+  # `{site, environment}`, narrowed by `:site` and `:environment`. Also
+  # `Brando.Setup.RemoveDefaults`'s.
+  @spec environments(keyword()) :: {:ok, [nil | {Brando.Sites.Site.t(), term()}]} | {:error, String.t()}
+  def environments(opts) do
     case Brando.Tenant.mode() do
       :none ->
         if opts[:site] || opts[:environment],

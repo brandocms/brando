@@ -565,6 +565,10 @@ if Code.ensure_loaded?(Igniter) do
       mix brando.setup builds assets, creates and migrates the database, prompts
       for a superuser and #{setup_content(tenancy.mode)}. Each step is skipped when its
       result already exists; run the individual tasks instead to control them.
+      The seeded homepage and footer are a demo built from brando-default-* modules:
+      mix brando.setup --no-demo leaves them empty, and once the site has its own
+      content, mix brando.seeds.remove_defaults lists what still uses the demo and
+      removes the rest with --yes.
 
       Review migrations before applying them. Asset setup uses the selected Brando
       checkout's JS via Yalc; pass --source /path/to/matching/brando/assets when
