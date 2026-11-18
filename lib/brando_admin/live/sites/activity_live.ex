@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
 
   alias Brando.Activity
   alias Brando.Users.SecurityLog
+  alias BrandoAdmin.Authorization, as: AdminAuthorization
   alias BrandoAdmin.Components.Activity, as: Events
   alias BrandoAdmin.Components.Activity.Comparison
   alias BrandoAdmin.Components.Content
@@ -87,24 +88,31 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   end
 
   # Events of schemas the user may not read stay out of the log; changes to
-  # webhooks and notification routes show to those who manage them.
+  # webhooks and notification routes show to those who manage them, and
+  # cleared caches to those who may use Utilities.
   defp readable_schemas do
     if Brando.Authorization.enabled?() do
-      readable = Enum.filter(Activity.schemas(), &BrandoAdmin.Authorization.allowed?(:read, &1))
+      readable = Enum.filter(Activity.schemas(), &AdminAuthorization.allowed?(:read, &1))
 
       readable =
-        if BrandoAdmin.Authorization.allowed?(:manage, :webhooks),
+        if AdminAuthorization.allowed?(:manage, :webhooks),
           do: [Brando.Webhooks.Webhook | readable],
           else: readable
 
       readable =
-        if BrandoAdmin.Authorization.allowed?(:manage, :notifications),
+        if AdminAuthorization.allowed?(:manage, :notifications),
           do: [Brando.Notifications.Route | readable],
           else: readable
 
       # Connected AI tools: connections, their tool calls and the switch
-      if BrandoAdmin.Authorization.allowed?(:manage, :mcp),
-        do: [Brando.MCP.Grant, Brando.MCP.Setting | readable],
+      readable =
+        if AdminAuthorization.allowed?(:manage, :mcp),
+          do: [Brando.MCP.Grant, Brando.MCP.Setting | readable],
+          else: readable
+
+      # Clearing the content caches, from Utilities
+      if AdminAuthorization.allowed?(:read, :utilities),
+        do: [Brando.Cache | readable],
         else: readable
     end
   end
@@ -220,9 +228,9 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   end
 
   # A record read policy hides some entries of a type the user may read: their
-  # events go too. Webhooks, notification routes and MCP connections are not
-  # content, and stay with the permission that manages them.
-  @not_content [Brando.Webhooks.Webhook, Brando.Notifications.Route, Brando.MCP.Grant, Brando.MCP.Setting]
+  # events go too. Webhooks, notification routes, MCP connections and the
+  # caches are not content, and stay with the permission that manages them.
+  @not_content [Brando.Webhooks.Webhook, Brando.Notifications.Route, Brando.MCP.Grant, Brando.MCP.Setting, Brando.Cache]
 
   defp readable_entries(nil), do: nil
   defp readable_entries(readable), do: {Brando.Authorization.Boundary.current_scope(), readable -- @not_content}

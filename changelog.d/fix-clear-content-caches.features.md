@@ -1,0 +1,1 @@
+- `Brando.Cache.clear_content/1` empties the cached pages, fragments and modules and rebuilds identity, SEO, globals, palettes and menus after content written outside `Brando.Query` (a seed, a data migration, `Repo.update_all`), on every node; superusers can do the same for a running server under Configuration → Utilities → Clear content caches, recorded in Activity.

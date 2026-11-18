@@ -489,6 +489,33 @@ evict affected query entries, on every node (see
 [Several nodes](tenancy_and_environments.md#several-nodes)). Direct
 `Brando.Repo` writes do not automatically evict this cache.
 
+Pages and fragments are read with `cache: {:ttl, :infinite}`, so content
+written any other way (a seed or `mix run` script, a data migration,
+`Repo.update_all`, SQL) stays as it was cached until the server restarts.
+After such a write, call `Brando.Cache.clear_content/1`. It empties the
+current site's query cache and rebuilds its identity, SEO, globals, palettes
+and menus, on this node and the others it reaches; `all_sites: true` does
+every site:
+
+```elixir
+MyApp.Repo.update_all(
+  from(p in Brando.Pages.Page, where: p.template == "old.html"),
+  set: [template: "default.html"]
+)
+
+{:ok, _summary} = Brando.Cache.clear_content()
+```
+
+It does not render anything again: entries keep the HTML stored when they
+were last rendered. When the write changed blocks, or what blocks render,
+render the entries with `Brando.Content.Blocks.render_entry/2` after the
+clear, so the renders read the new content. A script that runs in its own
+VM clears only that VM's caches, and those of the nodes its PubSub reaches.
+A data migration runs without the caches (`Ecto.Migrator` starts the repo
+alone), and there the call clears nothing. For a server neither reaches, a
+superuser clears the server's caches under **Configuration → Utilities →
+Clear content caches** once the script or migration has run.
+
 Do not combine cached list queries with pagination or streaming. Cached list
 results are materialized as a plain list.
 

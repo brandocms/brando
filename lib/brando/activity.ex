@@ -13,6 +13,8 @@ defmodule Brando.Activity do
 
   Notes on an entry record `:note_added`, `:note_resolved` and
   `:note_reopened` (`Brando.Notes`), with the note's opening words.
+  Clearing the content caches from Utilities records `:caches_cleared`
+  (`caches_cleared/2`), which names no entry.
 
   The person is the user the change was made as. `source` says how it was
   made when that wasn't by hand in the admin: `:scheduler` (scheduled
@@ -343,6 +345,27 @@ defmodule Brando.Activity do
       title: title,
       fields: Keyword.get(opts, :fields, []),
       details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
+      batch_id: Process.get(@batch_key)
+    })
+  end
+
+  @doc """
+  Record that `user` cleared the content caches (`Brando.Cache.clear_content/1`),
+  with its summary: how many query cache entries went, the site caches
+  rebuilt and the scope. Names no entry; sends no content event.
+  """
+  def caches_cleared(user, %{query_entries: entries, site_caches: caches, scope: scope}) do
+    insert(%{
+      action: :caches_cleared,
+      source: source(user),
+      user_id: user_id(user),
+      schema: "Elixir.Brando.Cache",
+      details:
+        Map.merge(source_details(), %{
+          "entries" => entries,
+          "caches" => Enum.map(caches, &to_string/1),
+          "scope" => to_string(scope)
+        }),
       batch_id: Process.get(@batch_key)
     })
   end

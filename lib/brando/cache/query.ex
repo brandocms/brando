@@ -4,7 +4,7 @@ defmodule Brando.Cache.Query do
 
   ## Evict after commit
 
-  `evict/1`, `evict_entry/2`, `evict_schema/1` and `evict_all/1` (and so `Brando.Query`'s
+  `evict/1`, `evict_entry/2`, `evict_schema/1`, `evict_all/1` and `clear/0` (and so `Brando.Query`'s
   `insert/2`, `update/2` and `delete/1`) evict at once. Inside a transaction
   (with group authorization a generated context mutation always runs in one)
   that is before the commit, and a read by another process in between still
@@ -198,10 +198,88 @@ defmodule Brando.Cache.Query do
   end
 
   @doc """
-  Evicts this node's lists and entries of the source another node wrote,
-  under its tenant prefix (`Brando.CacheSync`).
+  Evicts every cached list and entry under the caller's site (with no
+  tenant prefix, the unprefixed ones), whatever its schema: for content
+  written outside `Brando.Query`, which evicts nothing
+  (`Brando.Cache.clear_content/1`). Returns how many this node held.
+
+  It evicts at once, and again once the transaction around the caller has
+  committed, as the other evictions do. The other nodes evict theirs once
+  it has committed (`Brando.CacheSync`), and a render job this node queues
+  after it evicts the lists renders read on a node that has not heard yet
+  (`Brando.Cache.ensure_fresh/1`).
   """
-  @spec refresh_node_cache({String.t() | nil, String.t()}) :: :ok
+  @spec clear() :: non_neg_integer()
+  def clear do
+    prefix = Brando.Tenant.current_prefix()
+    tokens = Enum.map(Freshness.query_inputs(), &{&1, Freshness.make(&1)})
+    known = fn -> Enum.each(tokens, fn {input, token} -> Freshness.known(input, token) end) end
+    count = clear_scope(prefix)
+
+    committed = fn ->
+      clear_scope(prefix)
+      known.()
+    end
+
+    if Brando.Repo.repo().in_transaction?(),
+      do: Brando.Repo.after_commit({__MODULE__, prefix, :clear}, fn -> Brando.Tenant.with_prefix(prefix, committed) end),
+      else: known.()
+
+    CacheSync.broadcast(__MODULE__, {:clear, prefix})
+    count
+  end
+
+  @doc """
+  As `clear/0`, for every site: empties the whole query cache, on this
+  node and on the others. Returns how many entries this node held.
+  `Brando.Cache.clear_content/1` runs `clear/0` under each site first, for
+  their render jobs' tokens, and this for the entries of sites no longer in
+  the registry.
+  """
+  @spec clear_all() :: non_neg_integer()
+  def clear_all do
+    count = clear_scope(:all)
+    if Brando.Repo.repo().in_transaction?(), do: Brando.Repo.after_commit({__MODULE__, :all, :clear}, &clear_all_now/0)
+    CacheSync.broadcast(__MODULE__, {:clear, :all})
+    count
+  end
+
+  defp clear_all_now do
+    clear_scope(:all)
+    :ok
+  end
+
+  # `:all`, a site's prefix, or nil for the unprefixed entries
+  defp clear_scope(:all) do
+    case Cachex.clear(:query) do
+      {:ok, count} -> count
+      _ -> 0
+    end
+  end
+
+  defp clear_scope(prefix) do
+    {:ok, keys} = Cachex.keys(:query)
+    keys = Enum.filter(keys, &(prefix_of(&1) == prefix))
+    Enum.each(keys, &Cachex.del(:query, &1))
+    length(keys)
+  end
+
+  defp prefix_of({:tenant, prefix, _key}), do: prefix
+  defp prefix_of(_key), do: nil
+
+  @doc """
+  Evicts this node's lists and entries of the source another node wrote,
+  under its tenant prefix, or all of a site's or of every site that another
+  node cleared (`clear/0`, `clear_all/0`), for `Brando.CacheSync`.
+  """
+  @spec refresh_node_cache({String.t() | nil, String.t()} | {:clear, String.t() | nil | :all}) :: :ok
+  def refresh_node_cache({:clear, :all}), do: clear_all_now()
+
+  def refresh_node_cache({:clear, prefix}) do
+    clear_scope(prefix)
+    :ok
+  end
+
   def refresh_node_cache({nil, source}), do: evict_source(source)
   def refresh_node_cache({prefix, source}), do: Brando.Tenant.with_prefix(prefix, fn -> evict_source(source) end)
 

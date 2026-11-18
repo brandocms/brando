@@ -4330,6 +4330,11 @@ msgstr ""
 msgid "Clear clipboard"
 msgstr ""
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Clear content caches"
+msgstr ""
+
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/components/form/input/entries.ex
 #: lib/brando_admin/components/form/input/multi_select.ex
@@ -4354,12 +4359,19 @@ msgstr ""
 msgid "Clear the cache if saved changes are not appearing on the website. Content is rebuilt on the next request."
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cleared"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Cleared caches"
+msgstr ""
+
 #: lib/brando_admin/live/sites/cache_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-format, elixir-autogen
 msgid "Clearing…"
 msgstr ""
@@ -4919,6 +4931,17 @@ msgstr ""
 #: lib/brando_admin/live/content/template_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Content Templates"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Content caches"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Content caches cleared."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -7322,6 +7345,14 @@ msgstr ""
 msgid "Emerald"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Emptied %{count} cached entry"
+msgid_plural "Emptied %{count} cached entries"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/structured_data.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -7347,6 +7378,11 @@ msgstr ""
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
 msgid "Empty filename"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty this site's cached pages, fragments and modules on every server, and reload its identity, SEO, globals, palettes and menus. Use it after a script or data migration changed content outside the admin. Entries are not rendered again: they keep the HTML stored when they were last rendered."
 msgstr ""
 
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -7723,6 +7759,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Every site"
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
@@ -14416,6 +14457,12 @@ msgstr ""
 msgid "Rebuild search index"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rebuilt %{caches}"
+msgstr ""
+
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -15991,6 +16038,7 @@ msgstr ""
 msgid "Running in the background"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
@@ -22834,6 +22882,11 @@ msgstr ""
 msgid "gallery"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "globals"
+msgstr ""
+
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
 msgid "has a host that could not be looked up. Try again in a moment"
@@ -22869,6 +22922,7 @@ msgstr ""
 msgid "i.e: `video:Elixir.MyApp.Schema:function:fn_name`"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "identity"
@@ -22992,6 +23046,11 @@ msgstr ""
 #: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "menu items"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "menus"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
@@ -23285,6 +23344,11 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "page URL"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "palettes"
 msgstr ""
 
 #: lib/brando/types/status.ex

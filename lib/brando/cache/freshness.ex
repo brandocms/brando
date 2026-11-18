@@ -55,6 +55,10 @@ defmodule Brando.Cache.Freshness do
   def input(:site_cache, cache), do: if(cache in @site_caches, do: {:site_cache, cache})
   def input(:query_source, source), do: if(source in sources(), do: {:query_source, source})
 
+  @doc "The query cache sources renders list, as render inputs."
+  @spec query_inputs() :: [input()]
+  def query_inputs, do: Enum.map(sources(), &{:query_source, &1})
+
   @doc """
   Makes a token for a refresh of `input` about to run: this node's latest,
   at once outside a transaction, once it commits inside one.

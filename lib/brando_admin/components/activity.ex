@@ -20,6 +20,8 @@ defmodule BrandoAdmin.Components.Activity do
   # Connected AI tools (`Brando.MCP`): a connection, and the endpoint's switch
   @mcp_grant "Elixir.Brando.MCP.Grant"
   @mcp_setting "Elixir.Brando.MCP.Setting"
+  # Utilities → Clear content caches (`Brando.Cache.clear_content/1`)
+  @cache "Elixir.Brando.Cache"
   # A schedule whose user's account is gone (`Brando.Worker.EntryPublisher`)
   @gone_schedulers ["scheduler_missing", "scheduler_inactive"]
 
@@ -164,6 +166,7 @@ defmodule BrandoAdmin.Components.Activity do
   def action_label(%{action: :note_resolved}), do: gettext("Resolved a note")
   def action_label(%{action: :note_reopened}), do: gettext("Reopened a note")
   def action_label(%{action: :tool_called}), do: gettext("Used a tool")
+  def action_label(%{action: :caches_cleared}), do: gettext("Cleared")
 
   @doc "The filter options for actions: `[{label, value}]`."
   def action_options do
@@ -182,7 +185,8 @@ defmodule BrandoAdmin.Components.Activity do
       {gettext("Added a note"), "note_added"},
       {gettext("Resolved a note"), "note_resolved"},
       {gettext("Reopened a note"), "note_reopened"},
-      {gettext("Used a tool"), "tool_called"}
+      {gettext("Used a tool"), "tool_called"},
+      {gettext("Cleared caches"), "caches_cleared"}
     ]
   end
 
@@ -243,6 +247,25 @@ defmodule BrandoAdmin.Components.Activity do
   defp setting_label(@mcp_grant), do: gettext("Connected app")
   defp setting_label(@mcp_setting), do: gettext("MCP endpoint")
   defp setting_label(_schema), do: nil
+
+  # What an event that names no entry happened to
+  defp subject_label(@cache), do: gettext("Content caches")
+  defp subject_label(_schema), do: nil
+
+  @doc """
+  The site caches `Brando.Cache.clear_content/1` rebuilt, as one phrase:
+  `identity, SEO, globals, palettes and menus`. `nil` for none.
+  """
+  def site_caches_phrase(caches) do
+    caches |> Enum.map(&site_cache_label(to_string(&1))) |> sentence()
+  end
+
+  defp site_cache_label("identity"), do: gettext("identity")
+  defp site_cache_label("seo"), do: gettext("SEO")
+  defp site_cache_label("globals"), do: gettext("globals")
+  defp site_cache_label("palettes"), do: gettext("palettes")
+  defp site_cache_label("navigation"), do: gettext("menus")
+  defp site_cache_label(cache), do: cache
 
   @doc "A content type's name in the admin's language."
   def type_label(nil), do: nil
@@ -480,7 +503,7 @@ defmodule BrandoAdmin.Components.Activity do
         gone?:
           assigns.event.schema not in [@webhook, @route, @mcp_grant, @mcp_setting] && assigns.event.entry_id &&
             is_nil(assigns.states[{assigns.event.schema, assigns.event.entry_id}]),
-        title: assigns.event.title || plural_label(schema) || assigns.event.schema,
+        title: assigns.event.title || subject_label(assigns.event.schema) || plural_label(schema) || assigns.event.schema,
         type: if(assigns.event.entry_id, do: type_label(schema) || setting_label(assigns.event.schema)),
         language: assigns.event.language && String.upcase(assigns.event.language)
       )
@@ -589,6 +612,18 @@ defmodule BrandoAdmin.Components.Activity do
     do: [gettext("Removed the Figma access token")]
 
   defp lines(%{schema: schema}, _fields, _states) when schema in [@mcp_grant, @mcp_setting], do: []
+
+  defp lines(%{action: :caches_cleared, details: details}, _fields, _states) do
+    count = details["entries"] || 0
+    rebuilt = site_caches_phrase(details["caches"] || [])
+
+    [
+      details["scope"] == "all" && gettext("Every site"),
+      ngettext("Emptied %{count} cached entry", "Emptied %{count} cached entries", count, count: count),
+      rebuilt && gettext("Rebuilt %{caches}", caches: rebuilt)
+    ]
+    |> Enum.filter(&is_binary/1)
+  end
 
   defp lines(%{action: :created} = event, _fields, _states), do: [status_saved(event.details)]
 

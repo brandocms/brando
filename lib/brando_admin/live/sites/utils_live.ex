@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
   import Phoenix.Component
 
-  alias Brando.Authorization.{Configuration, Engine, Scope}
+  alias Brando.Authorization.{Boundary, Configuration, Engine, Scope}
   alias Brando.Images
   alias Brando.Search
   alias BrandoAdmin.Components.AuthorizationTools
@@ -28,6 +28,8 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> set_admin_locale()
        |> assign_info()
        |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
+       |> assign(:superuser?, Boundary.superuser?(socket.assigns[:current_user]))
+       |> assign(:content_caches_cleared, nil)
        |> assign_search_index()
        |> subscribe_image_tasks()
        |> assign_image_tasks()
@@ -168,6 +170,26 @@ defmodule BrandoAdmin.Sites.UtilsLive do
             <button type="button" class="btn" phx-click="sync_identifiers" phx-disable-with={gettext("Syncing…")}>{gettext(
               "Sync identifiers"
             )}</button>
+          </article>
+          <article :if={@superuser?} id="utils-content-caches">
+            <div>
+              <h3>{gettext("Content caches")}</h3><p>
+                {gettext(
+                  "Empty this site's cached pages, fragments and modules on every server, and reload its identity, SEO, globals, palettes and menus. Use it after a script or data migration changed content outside the admin. Entries are not rendered again: they keep the HTML stored when they were last rendered."
+                )}
+              </p>
+              <small :if={@content_caches_cleared} id="utils-content-caches-cleared">
+                {content_caches_cleared(@content_caches_cleared)}
+              </small>
+            </div>
+            <button
+              type="button"
+              class="btn"
+              phx-click="clear_content_caches"
+              phx-disable-with={gettext("Clearing…")}
+            >
+              {gettext("Clear content caches")}
+            </button>
           </article>
           <article id="utils-search-index">
             <div>
@@ -365,6 +387,21 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, socket}
   end
 
+  # Superusers only: it empties every visitor's cached pages on every server
+  def handle_event("clear_content_caches", _, socket) do
+    user = socket.assigns.current_user
+
+    if Boundary.superuser?(user) do
+      {:ok, summary} = Brando.Cache.clear_content()
+      Brando.Activity.caches_cleared(user, summary)
+      send(self(), {:toast, gettext("Content caches cleared.")})
+      {:noreply, assign(socket, :content_caches_cleared, summary)}
+    else
+      send(self(), {:toast, gettext("You do not have permission for this action.")})
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("rebuild_search_index", _, socket) do
     case Search.queue_rebuild(socket.assigns.current_user) do
       {:ok, _job} ->
@@ -433,6 +470,15 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp sitemap_generated(_no_live_environment), do: gettext("Generated sitemap.")
+
+  defp content_caches_cleared(%{query_entries: count, site_caches: caches}) do
+    emptied = ngettext("Emptied %{count} cached entry", "Emptied %{count} cached entries", count, count: count)
+
+    case BrandoAdmin.Components.Activity.site_caches_phrase(caches) do
+      nil -> emptied
+      rebuilt -> emptied <> " · " <> gettext("Rebuilt %{caches}", caches: rebuilt)
+    end
+  end
 
   # In a test, the checks' tasks join the page's SQL sandbox (`Brando.Doctor.run/1`).
   defp sandbox_owner(socket) do
