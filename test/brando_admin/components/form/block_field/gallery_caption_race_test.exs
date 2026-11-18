@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias Ecto.Changeset
 
-  setup do
+  setup tags do
     user = Factory.insert(:random_user)
 
     {:ok, module} =
@@ -45,7 +45,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
     overrides =
       for {object, placement, title} <- [{first, 0, "First"}, {second, 1, "Second"}] do
         %GalleryObjectOverride{
-          uid: GalleryObjectOverride.object_uid(object),
+          # A copied gallery's overrides keep the uids of the gallery they were copied from
+          uid: if(tags[:copied], do: "copied-#{placement}", else: GalleryObjectOverride.object_uid(object)),
           object_id: to_string(image.id),
           object_type: :image,
           placement: placement,
@@ -217,6 +218,26 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
 
       # The caption written at placement 0, which was the second copy
       assert captions(c.page) == [{c.first.id, "First"}, {c.second.id, "First, edited"}]
+    end
+  end
+
+  # A copied gallery keeps its overrides' uids, which name the objects of the
+  # gallery it was copied from. The removal leaves one copy, whose caption
+  # goes with it whatever placement the reorder gave it.
+  for order <- [:reorder_first, :remove_first] do
+    @tag copied: true
+    test "in a copied gallery, a copy left alone while another editor reordered keeps its caption (#{order})", c do
+      rows = rows(c.page)
+      [row] = rows
+
+      reorder = form_op(row, c.user, &reorder/1)
+      remove = form_op(row, c.user, &remove_second/1)
+
+      ops = if unquote(order) == :reorder_first, do: [reorder, remove], else: [remove, reorder]
+      state = Enum.reduce(ops, Ops.from_entry_blocks(rows), &apply!(&2, &1))
+      save(c.page, rows, state, c.user)
+
+      assert {c.first.id, "First"} in captions(c.page)
     end
   end
 end
