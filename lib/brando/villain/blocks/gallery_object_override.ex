@@ -14,6 +14,10 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   persist_identifier false
 
   attributes do
+    # Names the override in the edit session (`BlockField.Ops`), so two
+    # editors' changes to it meet however the gallery was reordered meanwhile;
+    # see `object_uid/1`. Not a key: the media and `placement` are.
+    attribute :uid, :string
     attribute :object_id, :string, required: true
     attribute :object_type, :enum, values: [:image, :video], required: true
     # Which placement of the media the override is for, when the gallery
@@ -123,6 +127,29 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
       nil -> false
     end
   end
+
+  @doc """
+  The `uid` for a new override of a gallery object: `g` and the object's id,
+  or the media's type and id when the object is not saved yet (a gallery adds
+  each media once, so no two unsaved objects share one). The same gallery
+  object gives the same uid in each editor's browser, so two editors opening
+  a gallery stored without uids name its overrides alike.
+
+  The uid stays with its override when the object moves, is copied or has its
+  media replaced. It only has to be unique within the gallery's overrides.
+  """
+  def object_uid(%{id: id}) when is_integer(id), do: "g#{id}"
+  def object_uid(%{image_id: id}) when not is_nil(id), do: "image-#{id}"
+  def object_uid(%{video_id: id}) when not is_nil(id), do: "video-#{id}"
+  def object_uid(_object), do: nil
+
+  @doc """
+  Returns the override's `uid`, given as a struct, a plain map or a changeset.
+  """
+  def uid(%Ecto.Changeset{} = override), do: Ecto.Changeset.get_field(override, :uid)
+  def uid(%{uid: uid}), do: uid
+  def uid(%{"uid" => uid}), do: uid
+  def uid(_), do: nil
 
   @doc """
   Returns the override's `placement`, given as a struct, a plain map (atom or

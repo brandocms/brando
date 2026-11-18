@@ -156,7 +156,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     # Recompute overrides from current gallery objects + current form state.
     # This keeps overrides in sync when objects are added/removed after mount.
-    initialized_overrides = initialize_gallery_overrides(placements, block_data_cs)
+    initialized_overrides = initialize_gallery_overrides(gallery_objects, placements, block_data_cs)
 
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
     updated_block_data_cs = Block.get_block_data_changeset(updated_block)
@@ -624,7 +624,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   # Writes to this placement's override only: the block's overrides were
-  # initialized with one for each placement (`initialize_gallery_overrides/2`).
+  # initialized with one for each placement (`initialize_gallery_overrides/3`).
   defp put_override_text(block, {type, id, placement}, field, text) do
     data = Block.current_block_data_map(block)
     overrides = data.gallery_object_overrides || []
@@ -701,18 +701,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # placements; one stored for every placement (as before placements existed)
   # is copied into each, so each placement keeps its caption and can change it
   # alone. Saving the block stores them that way.
-  defp initialize_gallery_overrides(placements, block_data_cs) do
+  #
+  # Each override has a `uid` of its own, which names it in the edit session:
+  # one stored without (or a copy of one shared by the placements) gets its
+  # object's (`GalleryObjectOverride.object_uid/1`).
+  defp initialize_gallery_overrides(gallery_objects, placements, block_data_cs) do
     existing_overrides =
       block_data_cs
       |> Changeset.get_field(:gallery_object_overrides, [])
       |> GalleryObjectOverride.index()
 
-    for {object_type, object_id_str, placement} <- placements do
-      existing_overrides
-      |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
-      |> placed_override(object_type, object_id_str, placement)
-    end
+    gallery_objects
+    |> Enum.zip(placements)
+    |> Enum.flat_map_reduce(MapSet.new(), fn
+      {obj, {object_type, object_id_str, placement}}, used ->
+        override =
+          existing_overrides
+          |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
+          |> placed_override(object_type, object_id_str, placement)
+
+        uid = GalleryObjectOverride.uid(override)
+        uid = if uid in [nil, ""] or MapSet.member?(used, uid), do: GalleryObjectOverride.object_uid(obj), else: uid
+        {[put_uid(override, uid)], MapSet.put(used, uid)}
+
+      {_obj, nil}, used ->
+        {[], used}
+    end)
+    |> elem(0)
   end
+
+  defp put_uid(%Changeset{} = override, uid), do: Changeset.put_change(override, :uid, uid)
+  defp put_uid(override, uid), do: Map.put(override, :uid, uid)
 
   # An override stored without a type takes the type of the media it is found
   # for, so image N and video N never end up sharing one override entry.

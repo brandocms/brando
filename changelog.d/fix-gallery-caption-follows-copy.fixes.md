@@ -1,0 +1,1 @@
+- When one editor reorders the copies of an image a gallery block holds more than once while another edits a copy's caption, the caption stays with the copy it was written for.

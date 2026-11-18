@@ -4,7 +4,7 @@ defmodule Brando.Drafts.Content do
   @override_fields ~w(title credits alt caption autoplay loop muted controls preload)
   # Fields without a `use_default_*` flag: nil is the default
   @flagless_override_fields ~w(quality)
-  @override_keys ["object_id", "object_type", "placement"] ++
+  @override_keys ["uid", "object_id", "object_type", "placement"] ++
                    @override_fields ++ @flagless_override_fields ++ Enum.map(@override_fields, &("use_default_" <> &1))
 
   def checksum(payload), do: payload |> normalize_payload() |> Brando.Drafts.checksum()
@@ -28,8 +28,11 @@ defmodule Brando.Drafts.Content do
 
   defp normalize_field({"vars", vars}) when is_list(vars), do: {"vars", Enum.map(vars, &variable/1)}
 
+  # An override's `uid` names it for the edit session; it is not content
   defp normalize_field({"gallery_object_overrides", overrides}) when is_list(overrides),
-    do: {"gallery_object_overrides", overrides |> Enum.reject(&default_override?/1) |> normalize()}
+    do:
+      {"gallery_object_overrides",
+       overrides |> Enum.map(&without_uid/1) |> Enum.reject(&default_override?/1) |> normalize()}
 
   defp normalize_field({key, child}), do: {key, normalize(child)}
 
@@ -80,6 +83,9 @@ defmodule Brando.Drafts.Content do
   end
 
   defp default_override?(_), do: false
+
+  defp without_uid(%{} = override), do: Map.delete(override, "uid")
+  defp without_uid(override), do: override
 
   defp valid_object_id?(id) when is_integer(id), do: id > 0
 

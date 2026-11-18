@@ -299,6 +299,23 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       assert socket.assigns.override_data[{:image, id, 1}].current_title == "Shared"
     end
 
+    # The edit session names each override by its uid, so two editors'
+    # changes meet on the same copy. Both editors give a gallery stored
+    # without uids the same ones: each object's.
+    test "an override stored without a uid takes its object's, and a copied one gets its own", ctx do
+      [first, second] = ctx.repeated.gallery_objects
+      stored = %{placed(ctx.repeated_image, 0, "First") | uid: "kept"}
+
+      socket = update_gallery_block(ctx.repeated, [stored, placed(ctx.repeated_image, 1, "Second")])
+      assert Enum.map(socket.assigns.initialized_overrides, & &1.uid) == ["kept", "g#{second.id}"]
+
+      socket = update_gallery_block(ctx.repeated, [%{override(ctx.repeated_image.id, :image, "Shared") | uid: "shared"}])
+      assert Enum.map(socket.assigns.initialized_overrides, & &1.uid) == ["shared", "g#{second.id}"]
+
+      socket = update_gallery_block(ctx.repeated, [])
+      assert Enum.map(socket.assigns.initialized_overrides, & &1.uid) == ["g#{first.id}", "g#{second.id}"]
+    end
+
     test "each placement keeps its own caption", ctx do
       overrides = [placed(ctx.repeated_image, 1, "Second"), placed(ctx.repeated_image, 0, "First")]
       socket = update_gallery_block(ctx.repeated, overrides)
