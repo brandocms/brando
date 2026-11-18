@@ -148,4 +148,34 @@ defmodule Brando.Content.GalleryPlacementOrderTest do
                [legacy]
     end
   end
+
+  describe "replace_media/4" do
+    defp titled(id, placement, title),
+      do: %GalleryObjectOverride{object_id: id, object_type: :image, placement: placement, title: title}
+
+    defp summary(overrides), do: overrides |> Enum.map(&{&1.object_id, &1.placement, &1.title}) |> Enum.sort()
+
+    test "the replaced placement takes its caption, the others are renumbered" do
+      keys = [{:image, "1"}, {:image, "2"}, {:image, "1"}, {:image, "1"}]
+      overrides = [titled("1", 0, "A"), titled("2", nil, "Other"), titled("1", 1, "B"), titled("1", 2, "C")]
+
+      assert overrides |> GalleryObjectOverride.replace_media(keys, 2, {:image, "9"}) |> summary() ==
+               Enum.sort([{"1", 0, "A"}, {"1", 1, "C"}, {"2", nil, "Other"}, {"9", nil, "B"}])
+    end
+
+    test "an override for every placement stays with the others, and the copy gets one like it" do
+      keys = [{:image, "1"}, {:image, "1"}]
+
+      assert [titled("1", nil, "Shared")] |> GalleryObjectOverride.replace_media(keys, 0, {:image, "9"}) |> summary() ==
+               [{"1", nil, "Shared"}, {"9", nil, "Shared"}]
+    end
+
+    test "a media held once takes its overrides along" do
+      keys = [{:image, "1"}, {:image, "2"}]
+
+      assert [titled("1", nil, "One"), titled("2", nil, "Two")]
+             |> GalleryObjectOverride.replace_media(keys, 0, {:image, "9"})
+             |> summary() == [{"2", nil, "Two"}, {"9", nil, "One"}]
+    end
+  end
 end

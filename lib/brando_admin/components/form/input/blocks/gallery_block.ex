@@ -94,27 +94,43 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
+  # The copy replaces the image of the gallery object the editor was opened
+  # from (`gallery_object`, see `open_image_editor`), not every object that
+  # holds it: a gallery may hold one image more than once.
+  def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id} = params, socket) do
     new_block_data = Block.current_block_data_map(socket.assigns.block)
+    target = params[:gallery_object]
 
     # Update gallery_objects locally so image_processed can match on the new
     # image_id immediately, even before the propagation cascade completes.
     gallery_objects = socket.assigns[:gallery_objects] || []
 
     updated_gallery_objects =
-      if old_image_id do
-        Enum.map(gallery_objects, &replace_object_image(&1, old_image_id, new_image))
-      else
-        # Adding new image — append a temporary gallery object
-        new_obj = %{image_id: new_image.id, image: new_image, video_id: nil, video: nil}
-        gallery_objects ++ [new_obj]
+      cond do
+        old_image_id && target ->
+          index = target_index(gallery_objects, socket.assigns[:placements] || [], target)
+
+          gallery_objects
+          |> Enum.with_index()
+          |> Enum.map(fn
+            {obj, ^index} -> replace_object_image(obj, old_image_id, new_image)
+            {obj, _i} -> obj
+          end)
+
+        old_image_id ->
+          Enum.map(gallery_objects, &replace_object_image(&1, old_image_id, new_image))
+
+        true ->
+          # Adding new image — append a temporary gallery object
+          new_obj = %{image_id: new_image.id, image: new_image, video_id: nil, video: nil}
+          gallery_objects ++ [new_obj]
       end
 
     gallery_action =
-      if old_image_id do
-        {:replace_gallery_image, {old_image_id, new_image}}
-      else
-        {:add_gallery_image_id, new_image.id}
+      cond do
+        old_image_id && target -> {:replace_gallery_image, {old_image_id, new_image, target}}
+        old_image_id -> {:replace_gallery_image, {old_image_id, new_image}}
+        true -> {:add_gallery_image_id, new_image.id}
       end
 
     socket
@@ -564,17 +580,56 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
-  def handle_event("open_image_editor", %{"image_id" => image_id}, socket) do
+  # `index` is the gallery object's position in the form: the copy the editor
+  # may save goes back to that object (`image_editor_new_copy`), named by its
+  # id, or by its placement when it has not been saved yet.
+  def handle_event("open_image_editor", %{"image_id" => image_id} = params, socket) do
     {:ok, image} = Brando.Images.get_image(image_id)
 
     {:noreply,
      Block.push_image_editor_init(socket, image,
        block_target: {__MODULE__, socket.assigns.id},
-       old_image_id: image.id
+       old_image_id: image.id,
+       gallery_object: edited_object(socket.assigns, image.id, params["index"])
      )}
   end
 
   ## Private functions
+
+  # The object at `index` when it holds the image, else the first that does
+  defp edited_object(assigns, image_id, index) do
+    objects = assigns[:gallery_objects] || []
+    index = parse_index(index)
+
+    index =
+      if index && match?(%{image_id: ^image_id}, Enum.at(objects, index)),
+        do: index,
+        else: Enum.find_index(objects, &(&1.image_id == image_id))
+
+    if index do
+      %{
+        gallery_object_id: Map.get(Enum.at(objects, index), :id),
+        placement: Enum.at(assigns[:placements] || [], index)
+      }
+    end
+  end
+
+  defp target_index(gallery_objects, _placements, %{gallery_object_id: id}) when not is_nil(id),
+    do: Enum.find_index(gallery_objects, &(Map.get(&1, :id) == id))
+
+  defp target_index(_gallery_objects, placements, %{placement: placement}),
+    do: Enum.find_index(placements, &(&1 == placement))
+
+  defp parse_index(index) when is_integer(index), do: index
+
+  defp parse_index(index) when is_binary(index) do
+    case Integer.parse(index) do
+      {index, ""} -> index
+      _ -> nil
+    end
+  end
+
+  defp parse_index(_index), do: nil
 
   # The open popover's placement, which follows its object: a save sent before
   # the browser saw a reorder still names the placement it opened at.

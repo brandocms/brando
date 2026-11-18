@@ -483,7 +483,8 @@ defmodule BrandoAdmin.Components.Form do
        relation_field: nil,
        image: image,
        block_target: params[:block_target],
-       old_image_id: params[:old_image_id]
+       old_image_id: params[:old_image_id],
+       gallery_object: params[:gallery_object]
      })}
   end
 
@@ -8599,7 +8600,8 @@ defmodule BrandoAdmin.Components.Form do
         id: id,
         event: "image_editor_new_copy",
         new_image: updated_image,
-        old_image_id: Map.get(edit_image, :old_image_id)
+        old_image_id: Map.get(edit_image, :old_image_id),
+        gallery_object: Map.get(edit_image, :gallery_object)
       )
 
       send(self(), {:toast, gettext("New image created.")})

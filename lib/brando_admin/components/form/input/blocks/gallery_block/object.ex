@@ -440,7 +440,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         phx-click={
           JS.push("open_image_editor",
             target: @myself,
-            value: %{image_id: @gallery_object_form[:image_id].value}
+            value: %{image_id: @gallery_object_form[:image_id].value, index: @gallery_object_form.index}
           )
           |> open_image_editor_drawer()
         }

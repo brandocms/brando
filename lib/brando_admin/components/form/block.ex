@@ -1059,6 +1059,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   # Handle replacing a gallery image (remove old, add new in same position)
   defp replace_gallery_ref_image({updated_ref, updated_block}, params, assigns) do
     cond do
+      # One gallery object's image (an image editor's new copy): a gallery may
+      # hold the image more than once, and the other placements keep it
+      match?({_, _, _}, params[:replace_gallery_image]) ->
+        {old_image_id, new_image, target} = params.replace_gallery_image
+        current_user = %{id: assigns.current_user_id}
+        replace_gallery_object_image({updated_ref, updated_block}, old_image_id, new_image, target, current_user)
+
       Map.has_key?(params, :replace_gallery_image) ->
         {old_image_id, new_image} = params.replace_gallery_image
         current_user = %{id: assigns.current_user_id}
@@ -3249,6 +3256,9 @@ defmodule BrandoAdmin.Components.Form.Block do
   Options:
     * `:block_target` — `{module, id}` of the editing component (required)
     * `:old_image_id` — pass when the edit replaces an existing image ref
+    * `:gallery_object` — the gallery object the edit replaces the image of,
+      `%{gallery_object_id: id | nil, placement: {type, id, placement}}`;
+      handed back with the new copy (`image_editor_new_copy`)
   """
   def push_image_editor_init(socket, image, opts) do
     form_update =
@@ -3257,7 +3267,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         action: :set_edit_image_from_block,
         image: image,
         block_target: Keyword.fetch!(opts, :block_target)
-      ] ++ Keyword.take(opts, [:old_image_id])
+      ] ++ Keyword.take(opts, [:old_image_id, :gallery_object])
 
     Phoenix.LiveView.send_update(BrandoAdmin.Components.Form, form_update)
 
@@ -3516,6 +3526,67 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
     end
+  end
+
+  # The object `target` names (`GalleryBlock`'s `open_image_editor`): by its id
+  # when it has been saved, else by its placement. Nothing changes when it is
+  # gone or holds another image by now.
+  defp replace_gallery_object_image({ref_changeset, block_changeset}, old_image_id, new_image, target, current_user) do
+    gallery = Changeset.get_field(ref_changeset, :gallery)
+    objects = (gallery && gallery.gallery_objects) || []
+    media_keys = Enum.map(objects, &gallery_object_media_key/1)
+
+    case target_object_index(objects, media_keys, target) do
+      index when is_integer(index) ->
+        if Map.get(Enum.at(objects, index), :image_id) == old_image_id do
+          updated_objects =
+            objects
+            |> Enum.with_index()
+            |> Enum.map(fn
+              {_obj, ^index} -> put_media_fields(%{creator_id: current_user.id}, :image, new_image.id, new_image)
+              {obj, _i} -> preserve_gallery_object(obj)
+            end)
+
+          updated_gallery = %{
+            id: Map.get(gallery, :id),
+            config_target: Map.get(gallery, :config_target, "ref:gallery"),
+            gallery_objects: sequence_gallery_objects(updated_objects)
+          }
+
+          {Changeset.put_assoc(ref_changeset, :gallery, updated_gallery),
+           replace_gallery_object_override(block_changeset, media_keys, index, {:image, new_image.id})}
+        else
+          {ref_changeset, block_changeset}
+        end
+
+      nil ->
+        {ref_changeset, block_changeset}
+    end
+  end
+
+  defp target_object_index(objects, media_keys, target) do
+    object_id = target[:gallery_object_id]
+
+    if object_id do
+      Enum.find_index(objects, &(Map.get(&1, :id) == object_id))
+    else
+      media_keys |> GalleryObjectOverride.placements() |> Enum.find_index(&(&1 == target[:placement]))
+    end
+  end
+
+  defp gallery_object_media_key(obj) do
+    cond do
+      Map.get(obj, :image_id) -> {:image, to_string(obj.image_id)}
+      Map.get(obj, :video_id) -> {:video, to_string(obj.video_id)}
+      true -> nil
+    end
+  end
+
+  defp replace_gallery_object_override(block_changeset, media_keys, index, new_key) do
+    current_data = Changeset.get_field(block_changeset, :data)
+    {current_overrides, data_map} = extract_gallery_data(current_data)
+    updated_overrides = GalleryObjectOverride.replace_media(current_overrides, media_keys, index, new_key)
+    Changeset.put_change(block_changeset, :data, Map.put(data_map, :gallery_object_overrides, updated_overrides))
   end
 
   defp replace_gallery_object(obj, media_type, id_field, old_media_id, new_media, current_user) do

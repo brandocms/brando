@@ -1,0 +1,1 @@
+- "Save as new copy" in the image editor, on one placement of an image a gallery block holds more than once, replaces that placement only; it keeps its caption, and the other placements keep the image.

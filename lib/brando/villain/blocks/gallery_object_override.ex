@@ -397,6 +397,54 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   defp param_object_uid(_object), do: nil
 
   @doc """
+  Moves overrides with a gallery object whose media is replaced by another
+  (an image editor's new copy). `media_keys` lists the gallery's objects in
+  order as `{type, id}` before the replacement, and `index` is the replaced
+  object's position. Its override (its placement's own, or a copy of the one
+  for every placement) takes `new_key`'s media and the placement the object
+  has after; the media's other placements are renumbered and keep theirs.
+  """
+  def replace_media(overrides, media_keys, index, {new_type, new_id} = new_key) do
+    overrides = overrides || []
+
+    case media_keys |> placements() |> Enum.at(index) do
+      {type, id, placement} = old ->
+        identities = media_keys |> Enum.with_index() |> Enum.map(fn {key, i} -> {i, key} end)
+        after_objects = List.replace_at(identities, index, {make_ref(), new_key})
+        {_type, _id, new_placement} = after_objects |> Enum.map(&elem(&1, 1)) |> placements() |> Enum.at(index)
+        moves = placement_moves(identities, after_objects) |> Map.delete(old)
+        retarget = &put_media(&1, new_type, to_string(new_id), new_placement)
+
+        # A media held once: each override for it is the object's
+        own? =
+          if is_nil(placement),
+            do: &for_media?(&1, type, id),
+            else: &for_placement?(&1, type, id, placement)
+
+        moved =
+          Enum.flat_map(overrides, fn override ->
+            if own?.(override), do: [retarget.(override)], else: move_override(override, moves)
+          end)
+
+        # The override for every placement stays with the others; the object
+        # takes a copy of it
+        case placement && !Enum.any?(overrides, own?) && lookup(index(overrides), type, id, placement) do
+          shared when shared not in [nil, false] -> moved ++ [retarget.(shared)]
+          _ -> moved
+        end
+
+      nil ->
+        overrides
+    end
+  end
+
+  defp put_media(%Ecto.Changeset{} = override, type, id, placement),
+    do: Ecto.Changeset.change(override, object_id: id, object_type: type, placement: placement)
+
+  defp put_media(%{} = override, type, id, placement),
+    do: Map.merge(override, %{object_id: id, object_type: type, placement: placement})
+
+  @doc """
   Moves placement overrides from one order of a gallery's objects to another,
   as `follow_order/1` does for form params. `before` and `after_objects` list
   the objects as `{identity, {type, id}}`, where `identity` names the same

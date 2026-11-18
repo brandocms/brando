@@ -590,4 +590,184 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
       put_in(entry_block.block.refs, [ref])
     end
   end
+
+  # "Edit image" → "Save as new copy" on one placement of a repeated image:
+  # the copy takes that placement's place, with its caption; the other
+  # placement keeps the original image and its own caption.
+  describe "save as new copy on a repeated image" do
+    setup ctx do
+      image = Factory.insert(:image, creator: ctx.user, title: "Library caption")
+      copy = Factory.insert(:image, creator: ctx.user)
+      gallery = Factory.insert(:gallery)
+
+      objects =
+        for sequence <- 0..1,
+            do: Factory.insert(:gallery_object, gallery_id: gallery.id, image_id: image.id, sequence: sequence)
+
+      overrides =
+        for {placement, title} <- [{0, "First"}, {1, "Second"}] do
+          %{
+            "object_id" => to_string(image.id),
+            "object_type" => "image",
+            "placement" => placement,
+            "title" => title,
+            "use_default_title" => false
+          }
+        end
+
+      params = %{
+        "uid" => "galleryblk1",
+        "type" => "module",
+        "source" => "Elixir.Brando.Pages.Page.Blocks",
+        "creator_id" => ctx.user.id,
+        "refs" => [
+          %{
+            "uid" => "galleryref1",
+            "name" => "gallery",
+            "gallery_id" => gallery.id,
+            "data" => %{"type" => "gallery", "data" => %{"gallery_object_overrides" => overrides}}
+          }
+        ]
+      }
+
+      block = %ContentBlock{} |> ContentBlock.recursive_block_changeset(params, ctx.user) |> Brando.Repo.insert!()
+      page = Factory.insert(:page, creator: ctx.user)
+
+      entry_block =
+        %Brando.Pages.Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0}
+        |> Brando.Repo.insert!()
+        |> Brando.Repo.preload([
+          :entry,
+          block: [:vars, :table_rows, :block_identifiers, :children, refs: Brando.Content.Ref.preloads()]
+        ])
+
+      gallery = Brando.Repo.preload(gallery, [gallery_objects: [:image, video: [:thumbnail]]], force: true)
+
+      {:ok,
+       repeated_block: entry_block, repeated: gallery, repeated_image: image, copy: copy, repeated_objects: objects}
+    end
+
+    defp placed_titles(socket) do
+      [ref] =
+        socket.assigns.form.source
+        |> Changeset.apply_changes()
+        |> Map.fetch!(:block)
+        |> Map.fetch!(:refs)
+
+      data =
+        case ref.data do
+          %Changeset{} = changeset -> Changeset.apply_changes(changeset)
+          data -> data
+        end
+
+      data.data.gallery_object_overrides
+      |> Enum.map(&{&1.object_id, &1.placement, &1.title})
+      |> Enum.sort()
+    end
+
+    test "the copy replaces the edited placement only, which keeps its caption", ctx do
+      socket = block_socket(ctx.repeated_block, ctx.user)
+      [_first, second] = ctx.repeated_objects
+      image_id = ctx.repeated_image.id
+      target = %{gallery_object_id: second.id, placement: {:image, to_string(image_id), 1}}
+
+      {:ok, socket} =
+        Block.update(
+          %{event: "update_ref_data", ref_name: "gallery", replace_gallery_image: {image_id, ctx.copy, target}},
+          socket
+        )
+
+      assert resulting_media(socket) == [{:image, image_id}, {:image, ctx.copy.id}]
+
+      # The image is now held once, so neither override needs a placement
+      assert placed_titles(socket) ==
+               Enum.sort([{to_string(image_id), nil, "First"}, {to_string(ctx.copy.id), nil, "Second"}])
+    end
+
+    test "an object not saved yet is found by its placement", ctx do
+      socket = block_socket(ctx.repeated_block, ctx.user)
+      image_id = ctx.repeated_image.id
+      target = %{gallery_object_id: nil, placement: {:image, to_string(image_id), 0}}
+
+      {:ok, socket} =
+        Block.update(
+          %{event: "update_ref_data", ref_name: "gallery", replace_gallery_image: {image_id, ctx.copy, target}},
+          socket
+        )
+
+      assert resulting_media(socket) == [{:image, ctx.copy.id}, {:image, image_id}]
+
+      assert placed_titles(socket) ==
+               Enum.sort([{to_string(ctx.copy.id), nil, "First"}, {to_string(image_id), nil, "Second"}])
+    end
+
+    test "the editor opens for the placement it was opened from, and the copy goes back to it", ctx do
+      socket =
+        ctx.repeated
+        |> update_gallery_block([placed(ctx.repeated_image, 0, "First"), placed(ctx.repeated_image, 1, "Second")])
+        |> Phoenix.Component.assign(:target_ref, {Block, "block-galleryblk"})
+        |> Phoenix.Component.assign(:ref_name, "gallery")
+
+      [first, second] = ctx.repeated.gallery_objects
+      image_id = ctx.repeated_image.id
+
+      {:noreply, socket} =
+        GalleryBlock.handle_event("open_image_editor", %{"image_id" => to_string(image_id), "index" => 1}, socket)
+
+      assert_receive {:phoenix, :send_update, {{BrandoAdmin.Components.Form, "page_form"}, assigns}}
+      assert assigns.action == :set_edit_image_from_block
+      assert assigns.old_image_id == image_id
+      target = assigns.gallery_object
+      assert target == %{gallery_object_id: second.id, placement: {:image, to_string(image_id), 1}}
+
+      {:ok, socket} =
+        GalleryBlock.update(
+          %{event: "image_editor_new_copy", new_image: ctx.copy, old_image_id: image_id, gallery_object: target},
+          socket
+        )
+
+      assert Enum.map(socket.assigns.gallery_objects, &{&1.id, &1.image_id}) == [
+               {first.id, image_id},
+               {second.id, ctx.copy.id}
+             ]
+
+      assert_receive {:phoenix, :send_update, {{Block, "block-galleryblk"}, %{event: "update_ref_data"} = commit}}
+      assert commit.replace_gallery_image == {image_id, ctx.copy, target}
+    end
+
+    # The editor closes as the copy starts uploading; the copy goes back to
+    # the object the editor was opened from.
+    test "the form hands the copy back with the object it was made for", ctx do
+      [_first, second] = ctx.repeated_objects
+      target = %{gallery_object_id: second.id, placement: {:image, to_string(ctx.repeated_image.id), 1}}
+
+      {:ok, socket} =
+        BrandoAdmin.Components.Form.update(
+          %{
+            action: :set_edit_image_from_block,
+            image: ctx.repeated_image,
+            block_target: {GalleryBlock, "gallery-block"},
+            old_image_id: ctx.repeated_image.id,
+            gallery_object: target
+          },
+          Component.assign(%Phoenix.LiveView.Socket{}, :current_user, ctx.user)
+        )
+
+      assert {:noreply, socket} =
+               BrandoAdmin.Components.Form.handle_event(
+                 "image_editor_save",
+                 %{"mode" => "new_copy", "focal_x" => 50, "focal_y" => 50},
+                 socket
+               )
+
+      assert {:noreply, _socket} =
+               Oban.Testing.with_testing_mode(:manual, fn ->
+                 BrandoAdmin.Components.Form.refocus_image_editor_copy(socket, ctx.copy)
+               end)
+
+      assert_receive {:phoenix, :send_update, {{GalleryBlock, "gallery-block"}, %{event: "image_editor_new_copy"} = assigns}}
+      assert assigns.old_image_id == ctx.repeated_image.id
+      assert assigns.gallery_object == target
+    end
+  end
 end
