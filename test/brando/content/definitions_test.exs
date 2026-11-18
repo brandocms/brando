@@ -637,6 +637,56 @@ defmodule Brando.Content.DefinitionsTest do
     assert File.read!(file) =~ ~s(label %{"en" => "Theme", "no" => "Tema"})
   end
 
+  # brandocms/brando#3541
+  test "var instructions take a plain string or a language map, through import and export", c do
+    import_args = ["import", "--from", c.path, "--user", to_string(c.user.id)]
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    plain = String.replace(source, ~s(label "Theme"), ~s(label "Theme"\n      instructions "Pick one"))
+    File.write!(Path.join(c.path, "hero.exs"), plain)
+    assert {:ok, bundle} = Definitions.read(c.path)
+    assert [%{"vars" => [%{"instructions" => %{"en" => "Pick one"}}]}] = bundle["modules"]
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{instructions: %{"en" => "Pick one"}}] = hero().vars
+
+    translated =
+      String.replace(plain, ~s(instructions "Pick one"), ~s(instructions %{"en" => "Pick one", "no" => "Velg én"}))
+
+    File.write!(Path.join(c.path, "hero.exs"), translated)
+    ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)
+    assert [%{instructions: %{"en" => "Pick one", "no" => "Velg én"}}] = hero().vars
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+    [file] = Path.wildcard(Path.join(exported.directory, "**/*.exs"))
+    assert File.read!(file) =~ ~s(instructions %{"en" => "Pick one", "no" => "Velg én"})
+    assert {:ok, reread} = Definitions.read(exported.directory)
+    assert reread == exported.bundle
+    assert {:ok, plan} = Definitions.plan(reread, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
+  test "a bundle's invalid var names the module and the var when planning", c do
+    bad =
+      edit(c.bundle, fn module ->
+        update_in(module["vars"], fn [var] -> [Map.put(var, "placeholder", %{"no" => "x"})] end)
+      end)
+
+    assert Definitions.plan(bad, c.user) ==
+             {:error, ~s|module "hero-test": var "theme": placeholder must be a string (got a map)|}
+  end
+
+  test "mix brando.modules import prints the readable error, not an inspected one", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+    File.write!(Path.join(c.path, "hero.exs"), String.replace(source, "width :half", "width :huge"))
+
+    error =
+      assert_raise Mix.Error, fn ->
+        Mix.Tasks.Brando.Modules.run(["import", "--from", c.path, "--user", to_string(c.user.id)])
+      end
+
+    assert error.message ==
+             ~s|Module definitions: hero.exs: var "theme": width must be one of full, half, third, fourth, auto, fill (got "huge")|
+  end
+
   test "a module without `multi` can be imported again after the database stores false", c do
     # content_modules.multi defaults to false in a real database, so `multi`
     # left out of a definition must normalise to false too. Normalised to nil,

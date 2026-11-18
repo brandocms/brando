@@ -33,7 +33,7 @@ defmodule Brando.Content.Var do
     attribute :label, :i18n_string, required: true
     attribute :placeholder, :string
     attribute :key, :string, required: true
-    attribute :instructions, :string
+    attribute :instructions, :i18n_string
     attribute :value, :text
     attribute :config_target, :text
     attribute :gallery_image_config_target, :text

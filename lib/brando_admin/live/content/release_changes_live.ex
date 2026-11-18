@@ -769,7 +769,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           />
         <% :error -> %>
           <RC.notice tone="error" icon="circle-x" headline={gettext("The release’s definitions can’t be planned")}>
-            {@error}
+            <p :for={line <- String.split(@error, "\n")}>{line}</p>
           </RC.notice>
         <% :ready -> %>
           <RC.banner

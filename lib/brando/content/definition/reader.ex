@@ -18,13 +18,19 @@ defmodule Brando.Content.Definition.Reader do
     end
   end
 
-  def read!(path) do
-    source = regular_file!(path)
+  @doc """
+  Reads the literal definition in `path`. Errors name the file as `label`
+  (`Brando.Content.Definition.Error.file_label/2`), the path by default.
+  """
+  def read!(path, label \\ nil) do
+    source = regular_file!(path, label)
+    real = path
+    path = label || path
 
     case Code.string_to_quoted(source, file: path) do
       {:ok, {:defmodule, _, [name, [do: body]]}} ->
         spec = %{
-          source: Path.expand(path),
+          source: Path.expand(real),
           module: module_name!(name),
           options: %{},
           refs: [],
@@ -45,20 +51,20 @@ defmodule Brando.Content.Definition.Reader do
     end
   end
 
-  def regular_file!(path) do
+  def regular_file!(path, label \\ nil) do
     case File.lstat(path) do
       {:ok, %{type: :regular}} -> File.read!(path)
-      _ -> Error.raise!(path, "expected a regular file (symlinks are not supported)")
+      _ -> Error.raise!(label || path, "expected a regular file (symlinks are not supported)")
     end
   end
 
   def template_file!(file, source, root) do
-    unless Path.type(file) == :relative, do: Error.raise!(source, "template_file must be relative")
+    unless Path.type(file) == :relative, do: Error.raise!("template_file must be relative")
     target = Path.expand(file, Path.dirname(source))
     root = Path.expand(root)
 
     unless String.starts_with?(target, root <> "/"),
-      do: Error.raise!(source, "template_file escapes the definition directory")
+      do: Error.raise!("template_file escapes the definition directory")
 
     # Reject symlinked parent directories as well as the final file.
     target
@@ -69,10 +75,10 @@ defmodule Brando.Content.Definition.Reader do
 
       case File.lstat(path) do
         {:ok, %{type: type}} when type in [:directory, :regular] -> path
-        _ -> Error.raise!(path, "expected a regular template path")
+        _ -> Error.raise!("template_file #{inspect(file)}: expected a regular file (symlinks are not supported)")
       end
     end)
-    |> regular_file!()
+    |> regular_file!("template_file #{inspect(file)}")
   end
 
   defp declaration!({:use, _, [name]}, {spec, false}, path) do

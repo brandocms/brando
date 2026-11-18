@@ -264,7 +264,7 @@ defmodule Brando.Content.Definition.Importer do
     kind = definition["kind"]
     parent_id = parent_record_id(ctx.parents[uid], ctx.records)
     changeset = Params.changeset(definition, record, ctx.bindings, ctx.creator, ctx.table_ids, parent_id)
-    Model.apply_valid!(changeset, uid)
+    Model.apply_valid!(changeset, definition_subject(kind, uid))
     validate_ref_placements!(kind, changeset, uid, ctx.actor)
     validate_ref_uids!(definition, record)
     validate_template!(definition, ctx.actor)
@@ -413,10 +413,13 @@ defmodule Brando.Content.Definition.Importer do
   defp validate_ref_placements!(kind, changeset, uid, actor) do
     if kind == "module" do
       Enum.each(Changeset.get_assoc(changeset, :refs), fn ref ->
-        ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(uid <> ".refs")
+        ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(definition_subject(kind, uid))
       end)
     end
   end
+
+  defp definition_subject("table_template", uid), do: ~s(table template "#{uid}")
+  defp definition_subject(_kind, uid), do: ~s(module "#{uid}")
 
   # The baseline a definition is compared with, where it came from, and
   # whether it equals the target and the file. Each baseline is recorded in

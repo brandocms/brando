@@ -1,0 +1,1 @@
+- An invalid module definition is reported one problem per line, naming the file, the var or ref, the field, what it takes and what it got (`priv/modules/sections/hero.exs: var "theme": placeholder must be a string (got a map)`), in `mix brando.modules`, the development watcher, the admin's ZIP import and Release changes, in place of the raw changeset errors.

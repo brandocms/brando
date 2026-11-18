@@ -56,7 +56,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
         wide
       >
         <div class="module-files">
-          <div :if={@error} class="module-files-feedback error" role="alert">{@error}</div>
+          <div :if={@error} class="module-files-feedback error" role="alert">
+            <p :for={line <- String.split(@error, "\n")}>{line}</p>
+          </div>
           <div :if={!@plan && !@result} class="module-files-grid">
             <section class="module-files-card module-files-export">
               <h3>{gettext("Export definitions")}</h3>
@@ -455,7 +457,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   defp error(socket, :forbidden), do: error(socket, gettext("You do not have permission for this action."))
 
   defp error(socket, reason),
-    do: {:noreply, assign(socket, error: if(is_binary(reason), do: reason, else: inspect(reason)))}
+    do: {:noreply, assign(socket, error: Brando.Content.Definition.Error.describe(reason))}
 
   defp data_url(binary), do: "data:application/zip;base64," <> Base.encode64(binary)
   defp counts(plan), do: plan.items |> Enum.frequencies_by(& &1.action) |> Enum.sort()
