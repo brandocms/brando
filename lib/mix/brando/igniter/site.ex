@@ -42,6 +42,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Config.configure_new("brando.exs", :brando, [:page_html_module], html)
         |> routes(project, state, controller)
         |> PhoenixStatic.robots(project)
+        |> PhoenixStatic.icons(project)
         |> home_test(project, state)
         |> lockdown_notice(state.lockdown)
         |> ErrorPages.plan(project)

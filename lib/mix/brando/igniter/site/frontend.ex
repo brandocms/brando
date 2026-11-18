@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Assets
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
+    alias Mix.Brando.Igniter.Install.PhoenixStatic
     alias Mix.Brando.Igniter.Site.PageController
     alias Mix.Brando.Igniter.Template
 
@@ -32,6 +33,7 @@ if Code.ensure_loaded?(Igniter) do
         {igniter, wired?} =
           igniter
           |> files(project, key, module)
+          |> PhoenixStatic.icons(project)
           |> site_project(project, key, mode)
           |> register(key, module, mode)
           |> PageController.ensure_frontend(project)

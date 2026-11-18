@@ -712,7 +712,9 @@ defmodule Mix.Brando.Igniter.SiteTest do
     assert result.issues == []
     assert @robots in result.rms
     assert IgniterCase.source(result, "lib/studio_web/router.ex") =~ ~s("/robots.txt", BrandoWeb.SEOController, :robots)
-    assert IgniterCase.source(result, "lib/studio_web.ex") =~ "def static_paths, do: ~w(assets fonts images favicon.ico)"
+
+    assert IgniterCase.source(result, "lib/studio_web.ex") =~
+             "def static_paths, do: ~w(assets fonts images favicon.ico ico)"
 
     rerun = result |> IgniterCase.apply_and_reload() |> generate()
     assert rerun.issues == []
@@ -759,7 +761,8 @@ defmodule Mix.Brando.Igniter.SiteTest do
       |> generate(["--yes"])
 
     assert result.rms == []
-    Igniter.Test.assert_unchanged(result, [@robots, "assets/frontend/public/robots.txt", "lib/studio_web.ex"])
+    Igniter.Test.assert_unchanged(result, [@robots, "assets/frontend/public/robots.txt"])
+    assert IgniterCase.source(result, "lib/studio_web.ex") =~ "robots.txt"
     refute Enum.any?(result.notices, &(&1 =~ "is not the file mix phx.new writes"))
   end
 
@@ -774,7 +777,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
       assert Enum.sort(result.rms) == Enum.sort(Map.keys(files))
 
       assert IgniterCase.source(result, "lib/studio_web.ex") =~
-               "def static_paths, do: ~w(assets fonts images favicon.ico)"
+               "def static_paths, do: ~w(assets fonts images favicon.ico ico)"
     end
   end
 
@@ -825,6 +828,15 @@ defmodule Mix.Brando.Igniter.SiteTest do
       listed = String.replace(@web_module, "~w(assets fonts images favicon.ico robots.txt)", ~s(["assets"]))
       result = install(fresh(%{"lib/studio_web.ex" => listed}), ["--yes", "--no-public-site"])
       assert IgniterCase.source(result, "lib/studio_web.ex") =~ ~s(def static_paths, do: ["assets", "ico"])
+    end
+
+    test "mix brando.gen.site adds ico to static_paths/0 with the layout that links it" do
+      result = project("", %{@robots => @phx_robots, "lib/studio_web.ex" => @web_module}) |> generate(["--yes"])
+      assert result.issues == []
+      assert IgniterCase.source(result, "lib/studio_web/cms/layouts.ex") =~ ~s(href="/ico/favicon.ico")
+
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~
+               "def static_paths, do: ~w(assets fonts images favicon.ico ico)"
     end
 
     test "a static_paths/0 the installer cannot read is left alone, with a warning" do

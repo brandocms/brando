@@ -8,10 +8,11 @@ editors compose entries from blocks and modules in a LiveView admin, and
 the application renders them. These are the core rules for building a
 site; the topic files listed at the end cover the rest. They are the short
 version of the guides that ship with the package, in `guides/` next to
-this file. Links here and in the topic files are relative to the file they
-are in. Each section names its guide; read it before changing code in that
-area, and prefer what the guide says over conventions from other CMSs or
-older Brando versions.
+this file. Links here and in the topic files are relative to where the
+file is in the Brando package (`deps/brando/` for a Hex dependency), also
+in a copy of them elsewhere. Each section names its guide; read it before
+changing code in that area, and prefer what the guide says over
+conventions from other CMSs or older Brando versions.
 
 ## Brando 0.55 guides
 

@@ -63,7 +63,9 @@ if Code.ensure_loaded?(Igniter) do
     @section_start "<!-- brando-start -->"
     @section_end "<!-- brando-end -->"
     # What earlier versions wrote, replaced by a rerun while unedited: with a
-    # `path:` dependency its links lead nowhere.
+    # `path:` dependency its links lead nowhere. When you reword `section/1`,
+    # add its old text here too (`generated_section?/1` matches only these and
+    # the current wording), or sections it wrote stay on their old link.
     @legacy_section """
     <!-- brando-start -->
     ## brando usage
@@ -155,11 +157,19 @@ if Code.ensure_loaded?(Igniter) do
     # Not `create_new_file(..., on_exists: :skip)`: Igniter reads a file that
     # exists on disk but no task has loaded yet, and adds it with the new
     # contents, replacing it.
+    #
+    # A skill still as shipped, naming `deps/brando/`, which an application
+    # with a `path:` dependency lacks, takes the dependency's location.
     defp skills(igniter, link, refresh?) do
-      Enum.reduce(skill_files(link), igniter, fn {path, contents}, igniter ->
+      skill_files(link)
+      |> Enum.zip(skill_files())
+      |> Enum.reduce(igniter, fn {{path, contents}, {_path, shipped}}, igniter ->
         cond do
           refresh? ->
             Igniter.create_or_update_file(igniter, path, contents, &Rewrite.Source.update(&1, :content, contents))
+
+          Igniter.exists?(igniter, path) and contents != shipped ->
+            Igniter.update_file(igniter, path, &relink_shipped(&1, shipped, contents))
 
           Igniter.exists?(igniter, path) ->
             igniter
@@ -168,6 +178,12 @@ if Code.ensure_loaded?(Igniter) do
             Igniter.create_new_file(igniter, path, contents)
         end
       end)
+    end
+
+    defp relink_shipped(source, shipped, contents) do
+      if Rewrite.Source.get(source, :content) == shipped,
+        do: Rewrite.Source.update(source, :content, contents),
+        else: source
     end
 
     defp agents_md(igniter, link) do

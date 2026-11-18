@@ -570,7 +570,9 @@ Otherwise a notice shows the file's contents to add yourself.
   package's files the same way, and the rules files link relative to
   themselves. `mix usage_rules.sync` from the `usage_rules` package can take
   that section over; it loads the topic files in the package's
-  `usage-rules/` as `brando:<topic>`.
+  `usage-rules/` as `brando:<topic>`. Have it link to Brando's rules rather
+  than copy them into `AGENTS.md`, where their relative links would resolve
+  from the application's root.
 * `AGENTS.md` also gets a short site section, between
   `<!-- brando-site-start -->` and `<!-- brando-site-end -->` and before the
   usage-rules block, so a sync never rewrites it. It has a placeholder for
@@ -587,9 +589,9 @@ Otherwise a notice shows the file's contents to add yourself.
 
 A versioned `mix brando.upgrade` adds the ones that are missing, and
 `mix brando.gen.agents` adds them on its own, for a site installed before
-they existed. None of these replaces a skill file, the site section or
-`CLAUDE.md` once it exists, or a `brando` section you edited, so edit them
-freely. A `brando` section as Brando wrote it follows the dependency: rerun
+they existed. None of these replaces the site section or `CLAUDE.md` once it
+exists, or a skill file or `brando` section you edited, so edit them freely.
+A skill or `brando` section as Brando wrote it follows the dependency: rerun
 `mix brando.gen.agents` after moving Brando between a Hex and a `path:`
 dependency.
 

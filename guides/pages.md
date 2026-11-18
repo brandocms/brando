@@ -146,8 +146,8 @@ after the tags Brando writes:
 
 `mix brando.install` puts a `favicon.ico` in `assets/frontend/public/`, for
 browsers that ask for `/favicon.ico` whatever a page links, and one in
-`assets/frontend/public/ico/`, and adds `ico` to the web module's
-`static_paths/0`. The frontend build copies `public/` to `priv/static`. To use
+`assets/frontend/public/ico/`, and it and `mix brando.gen.site` add `ico` to
+the web module's `static_paths/0`. The frontend build copies `public/` to `priv/static`. To use
 the site's own icons, replace both `favicon.ico` files, put the others in
 `public/ico/`, and edit the `<link>` lines to match. The generated layout has
 commented lines for an SVG icon, a dark-mode SVG (`media="(prefers-color-scheme:

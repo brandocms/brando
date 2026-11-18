@@ -265,6 +265,24 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
       end
     end
 
+    test "a copied skill as Brando shipped it follows the dependency on a rerun, an edited one is kept" do
+      [{shipped_skill, shipped} | _] =
+        Enum.filter(AgentFiles.skill_files(), fn {_path, contents} -> contents =~ "deps/brando/" end)
+
+      [{edited_skill, _} | _] = AgentFiles.skill_files() -- [{shipped_skill, shipped}]
+      relinked = List.keyfind(AgentFiles.skill_files("../brando"), shipped_skill, 0)
+
+      result =
+        project(%{shipped_skill => shipped, edited_skill => "edited\n"})
+        |> Igniter.assign(:brando_package_link, "../brando")
+        |> gen_agents()
+
+      assert result.issues == []
+      assert IgniterCase.source(result, shipped_skill) == elem(relinked, 1)
+      refute IgniterCase.source(result, shipped_skill) =~ "deps/brando/"
+      Igniter.Test.assert_unchanged(result, edited_skill)
+    end
+
     test "an unedited brando section follows the dependency on a rerun, an edited one is kept" do
       legacy = """
       <!-- brando-start -->
