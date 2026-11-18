@@ -1,0 +1,1 @@
+- A gallery copy one editor removes no longer comes back when another editor changes the same block in the meantime.
