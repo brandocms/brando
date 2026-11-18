@@ -163,6 +163,7 @@ defmodule Mix.Tasks.Brando.Setup do
   defp site(opts) do
     step("Provisioning the site")
     key = Brando.config(:site_key)
+    if opts[:demo] == false, do: custom_seeder_notice(Brando.Tenant.Seeder.configured())
 
     creator =
       Brando.Setup.Account.superuser() ||
@@ -178,12 +179,33 @@ defmodule Mix.Tasks.Brando.Setup do
       {:exists, site} ->
         Mix.shell().info([:yellow, ~s|    = The site "#{site.key}" exists, and is left as it is\n|])
 
+        if opts[:demo] == false do
+          Mix.shell().info([
+            :yellow,
+            "--no-demo is unused: the site exists, with its content. " <>
+              "mix brando.seeds.remove_defaults takes the demo out of it."
+          ])
+        end
+
       {:error, reason} ->
         Mix.raise(~s|The site "#{key}" was not created. | <> failure(key, reason))
     end
 
     for {key, flag} <- [base_url: "--base-url", description: "--description"], opts[key] do
       Mix.shell().info([:yellow, "#{flag} is unused with tenancy: set it in the site's SEO settings."])
+    end
+  end
+
+  # An application's seeder decides its content: `--no-demo` reaches only one
+  # with `seed/4`
+  defp custom_seeder_notice(seeder) do
+    Code.ensure_loaded(seeder)
+
+    unless function_exported?(seeder, :seed, 4) do
+      Mix.shell().info([
+        :yellow,
+        "--no-demo does not reach #{inspect(seeder)}, which has no seed/4: it seeds the site as it does without it."
+      ])
     end
   end
 

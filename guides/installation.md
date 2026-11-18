@@ -701,7 +701,8 @@ any more. Everything else stays: content anyone has edited, and every module
 still in use, which it lists with what to change first. Edits count however
 they were made: a word in a ref, the title, the status, a block added, hidden,
 moved or taken out. A homepage with other fragments or pages under it stays
-too, until those are moved. An entry in the trash still uses its modules. It
+too, until those are moved, and so does a homepage or footer with a revision
+waiting to be published. An entry in the trash still uses its modules. It
 compares each homepage and footer with what the seeds create from the seeded
 modules, field by field, leaving out only what saving sets by itself (ids,
 timestamps, the rendered HTML) and the Brando version in the hero's eyebrow;

@@ -29,8 +29,15 @@ defmodule Brando.Setup.RemoveDefaults do
   version still counts. Any edit, in the admin or not, is a difference: a
   word in a ref, the title, a block hidden, taken out, added or moved, the
   status. A homepage with another fragment or a page under it is kept too:
-  move those first. Content the seeds of another Brando version wrote
+  move those first. So is a homepage or footer with a revision that waits to
+  be published (stored for later, or scheduled). Content the seeds of another Brando version wrote
   differently counts as changed, and is kept.
+
+  With `yes: true` each environment is planned again inside the transaction
+  that removes, once the homepages, footers and modules are locked, so an
+  edit or a new use committed after a dry run is seen. An environment that
+  fails is rolled back; the error names it, and the environments changed
+  before it.
 
   An entry in the trash counts as using its modules, so restoring it finds
   them, except the seeded homepage and footer as they were. Blocks no entry
@@ -195,27 +202,47 @@ defmodule Brando.Setup.RemoveDefaults do
   end
 
   defp remove(targets, yes?, info) do
-    with {:ok, reports} <- Enum.reduce_while(targets, {:ok, []}, &remove_in(&1, &2, yes?, info)) do
-      reports = Enum.reverse(reports)
-      finish(reports, yes?, info)
-      {:ok, reports}
+    case Enum.reduce_while(targets, {:ok, []}, &remove_in(&1, &2, yes?, info)) do
+      {:ok, reports} ->
+        reports = Enum.reverse(reports)
+        finish(reports, yes?, info)
+        {:ok, reports}
+
+      {:error, message, target, reports} ->
+        {:error, failed(message, target, reports)}
     end
   end
 
   defp remove_in(target, {:ok, reports}, yes?, info) do
     case in_environment(target, info, fn -> remove_here(yes?, info) end) do
       {:ok, report} -> {:cont, {:ok, [Map.merge(report, keys(target)) | reports]}}
-      {:error, _message} = error -> {:halt, error}
+      {:error, message} -> {:halt, {:error, message, target, Enum.reverse(reports)}}
     end
   end
 
-  defp keys(nil), do: %{site: nil, environment: nil}
-  defp keys({site, environment}), do: %{site: site.key, environment: environment.key}
+  # The environments before the one that failed are changed: say which
+  defp failed(message, target, reports) do
+    changed = for report <- reports, removed?(report), do: report.name
+    where = if target, do: " in #{name(target)}", else: ""
+
+    "nothing was removed#{where}: #{message}" <>
+      case changed do
+        [] -> ""
+        changed -> ". Already moved to the trash, as listed above: #{Enum.join(changed, ", ")}"
+      end
+  end
+
+  defp removed?(report), do: Enum.any?(report.modules ++ report.entries, &(&1.status == :removed))
+
+  defp keys(nil), do: %{site: nil, environment: nil, name: nil}
+  defp keys({site, environment} = target), do: %{site: site.key, environment: environment.key, name: name(target)}
+
+  defp name({site, environment}), do: "#{site.name} (#{site.key}) → #{environment.name} (#{environment.key})"
 
   defp in_environment(nil, _info, fun), do: fun.()
 
-  defp in_environment({site, environment}, info, fun) do
-    info.([:yellow, "\n==> #{site.name} (#{site.key}) → #{environment.name} (#{environment.key})"])
+  defp in_environment({site, environment} = target, info, fun) do
+    info.([:yellow, "\n==> #{name(target)}"])
 
     Boundary.with_scope(nil, fn ->
       Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fun)
@@ -337,13 +364,14 @@ defmodule Brando.Setup.RemoveDefaults do
     footer_results =
       Map.new(footers, fn footer ->
         unchanged? = same?(footer, Seeds.footer_entry(footer.language, modules))
-        {{Pages.Fragment, footer.id}, result(footer, unchanged?, nil)}
+        {{Pages.Fragment, footer.id}, result(footer, unchanged?, unchanged? && waiting_revision(footer))}
       end)
 
     page_results =
       Map.new(pages, fn page ->
         unchanged? = same?(page, Seeds.index_page_entry(page.language, modules))
-        {{Pages.Page, page.id}, result(page, unchanged?, unchanged? && held_by(page, footer_results))}
+        held_by = unchanged? && (waiting_revision(page) || held_by(page, footer_results))
+        {{Pages.Page, page.id}, result(page, unchanged?, held_by)}
       end)
 
     Map.merge(footer_results, page_results)
@@ -390,6 +418,23 @@ defmodule Brando.Setup.RemoveDefaults do
       fragments != [] -> "fragments are on it (#{titles(fragments)}): move them to another page first"
       true -> nil
     end
+  end
+
+  # A revision stored to publish later, scheduled or not, is the editor's
+  # next version of the entry: newer than the active one, or with none active
+  defp waiting_revision(%schema{id: id}) do
+    revisions =
+      Repo.all(
+        from(r in Brando.Revisions.Revision,
+          where: r.entry_type == ^to_string(schema) and r.entry_id == ^id,
+          select: %{revision: r.revision, active: r.active, scheduled: r.scheduled}
+        )
+      )
+
+    active = revisions |> Enum.filter(& &1.active) |> Enum.map(& &1.revision) |> Enum.max(fn -> -1 end)
+
+    if Enum.any?(revisions, &(&1.scheduled or &1.revision > active)),
+      do: "a revision of it waits to be published: publish or delete it first"
   end
 
   defp titles(entries), do: Enum.map_join(entries, ", ", &"#{&1.title || Map.get(&1, :key)} (#{&1.language})")
@@ -471,13 +516,16 @@ defmodule Brando.Setup.RemoveDefaults do
         {:ok, plan}
 
       {:error, reason} ->
-        {:error, "nothing was removed here: #{inspect(reason)}"}
+        {:error, inspect(reason)}
     end
+  rescue
+    exception -> {:error, Exception.message(exception)}
   end
 
+  # In the order an editor's save takes them: the entry's row, then (for a
+  # block written with a module) a share of the module's
   defp lock_candidates do
-    module_ids = Enum.map(Map.values(Seeds.seeded_modules()), & &1.id)
-    Repo.all(from(m in Content.Module, where: m.id in ^module_ids, select: m.id, lock: "FOR UPDATE"))
+    Repo.all(from(p in Pages.Page, where: p.uri == "index" and is_nil(p.deleted_at), select: p.id, lock: "FOR UPDATE"))
 
     Repo.all(
       from(f in Pages.Fragment,
@@ -487,7 +535,8 @@ defmodule Brando.Setup.RemoveDefaults do
       )
     )
 
-    Repo.all(from(p in Pages.Page, where: p.uri == "index" and is_nil(p.deleted_at), select: p.id, lock: "FOR UPDATE"))
+    module_ids = Enum.map(Map.values(Seeds.seeded_modules()), & &1.id)
+    Repo.all(from(m in Content.Module, where: m.id in ^module_ids, select: m.id, lock: "FOR UPDATE"))
   end
 
   # Fragments before pages: a page's delete moves the fragments still on it
@@ -534,7 +583,7 @@ defmodule Brando.Setup.RemoveDefaults do
   end
 
   defp show_module(%{module: module, status: :in_use, users: users}, info) do
-    info.([:red, "    #{name(module)} (#{module.uid}): still used, kept"])
+    info.([:red, "    #{module_name(module)} (#{module.uid}): still used, kept"])
 
     for user <- users do
       notes = [blocks(user.blocks)] ++ if(user.trashed, do: ["in the trash"], else: [])
@@ -550,14 +599,14 @@ defmodule Brando.Setup.RemoveDefaults do
 
   defp show_module(%{module: module, status: status, seeded_users: seeded_users}, info) do
     used = if seeded_users > 0, do: "used only by the homepage and footer as seeded", else: "not used"
-    info.([colour(status), "    #{name(module)} (#{module.uid}): #{used}, #{removal(status)}"])
+    info.([colour(status), "    #{module_name(module)} (#{module.uid}): #{used}, #{removal(status)}"])
   end
 
   # A module's name is per admin language
-  defp name(%{name: %{} = names}),
+  defp module_name(%{name: %{} = names}),
     do: names[Gettext.get_locale(Brando.Gettext)] || names["en"] || names |> Map.values() |> List.first()
 
-  defp name(%{name: name}), do: name
+  defp module_name(%{name: name}), do: name
 
   defp entry_line(entry), do: "#{String.capitalize(entry.type)} #{inspect(entry.label)}#{language(entry.language)}"
 

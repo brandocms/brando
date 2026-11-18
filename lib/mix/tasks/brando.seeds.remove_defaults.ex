@@ -79,6 +79,10 @@ defmodule Mix.Tasks.Brando.Seeds.RemoveDefaults do
         :ok
 
       {:error, message} ->
+        if opts[:yes] && message =~ "Already moved to the trash" do
+          Mix.shell().info("\nA server that was already running keeps serving what it cached before: restart it.")
+        end
+
         Mix.raise("mix brando.seeds.remove_defaults: " <> message)
     end
   end

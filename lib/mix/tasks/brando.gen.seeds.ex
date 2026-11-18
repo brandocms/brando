@@ -57,13 +57,7 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
         Mix.shell().info([:yellow, "#{flag} is unused with tenancy: set it in the site's SEO settings once it exists."])
       end
 
-      if opts[:demo] == false do
-        Mix.shell().info([
-          :yellow,
-          "--no-demo is unused here: a site created at /admin/sites gets the demo. " <>
-            "Remove it with mix brando.seeds.remove_defaults --site KEY --yes."
-        ])
-      end
+      if opts[:demo] == false, do: Mix.shell().info([:yellow, no_demo_notice(Brando.Tenant.mode())])
     else
       seed(opts)
     end
@@ -83,6 +77,14 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     gets its content when it is created: the identity and SEO, the modules, a homepage,
     the footer fragment and a main menu, in each of its languages.
     """
+  end
+
+  defp no_demo_notice(:single),
+    do: "--no-demo is unused here: mix brando.setup --no-demo creates the site without the demo."
+
+  defp no_demo_notice(:multi) do
+    "--no-demo is unused here: a site created at /admin/sites gets the demo. " <>
+      "Remove it with mix brando.seeds.remove_defaults --site KEY --yes."
   end
 
   defp seed(opts) do

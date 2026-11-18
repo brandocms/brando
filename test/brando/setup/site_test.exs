@@ -174,6 +174,22 @@ defmodule Brando.Setup.SiteTest do
       end
     end
 
+    test "--no-demo says so when the site exists, which keeps its content" do
+      setup!()
+      _first = shell_output()
+
+      Mix.Tasks.Brando.Setup.run(~w(--no-assets --no-db --no-account --no-demo))
+
+      assert shell_output() =~ "--no-demo is unused: the site exists"
+    end
+
+    test "brando.gen.seeds --no-demo points to brando.setup --no-demo" do
+      Mix.Task.reenable("brando.gen.seeds")
+      Mix.Task.run("brando.gen.seeds", ["--no-demo"])
+
+      assert shell_output() =~ "mix brando.setup --no-demo"
+    end
+
     test "names the site's identity after it, with no placeholder title" do
       setup!()
 

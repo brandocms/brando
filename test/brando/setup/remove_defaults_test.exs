@@ -191,6 +191,42 @@ defmodule Brando.Setup.RemoveDefaultsTest do
       end
     end
 
+    test "a homepage with a revision waiting to be published is kept", %{user: user} do
+      {:ok, _} = Seeds.run(user, languages: [:en])
+      page = Repo.get_by!(Pages.Page, uri: "index", language: :en)
+
+      # Stored, not activated: the editor's next homepage, for launch day
+      {:ok, _revision} = Brando.Revisions.create_revision(page, user, false)
+
+      {{:ok, [report]}, output} = remove(yes: true)
+
+      assert Repo.get!(Pages.Page, page.id).deleted_at == nil
+      assert %{status: :kept} = Enum.find(report.entries, &(&1.type == "page"))
+      assert output =~ "revision"
+    end
+
+    test "a homepage with a scheduled revision is kept", %{user: user} do
+      {:ok, _} = Seeds.run(user, languages: [:en])
+      page = Repo.get_by!(Pages.Page, uri: "index", language: :en)
+      {:ok, _revision} = Brando.Revisions.create_revision(page, user, true)
+      Repo.update_all(from(r in Brando.Revisions.Revision, where: r.entry_id == ^page.id), set: [scheduled: true])
+
+      {{:ok, [report]}, _output} = remove(yes: true)
+
+      assert Repo.get!(Pages.Page, page.id).deleted_at == nil
+      assert %{status: :kept} = Enum.find(report.entries, &(&1.type == "page"))
+    end
+
+    test "a homepage saved without changes still counts as seeded", %{user: user} do
+      {:ok, _} = Seeds.run(user, languages: [:en])
+      page = Repo.get_by!(Pages.Page, uri: "index", language: :en)
+      {:ok, _} = Pages.update_page(page.id, %{title: "Index"}, user)
+
+      {{:ok, _report}, _output} = remove(yes: true)
+
+      refute Repo.get!(Pages.Page, page.id).deleted_at == nil
+    end
+
     test "a footer an editor changed is kept, with its module, and the homepage it is on", %{user: user} do
       {:ok, _} = Seeds.run(user, languages: [:en, :no])
       footer = Repo.get_by!(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
@@ -324,6 +360,20 @@ defmodule Brando.Setup.RemoveDefaultsTest do
         assert length(in_prefix(prefix, &live_modules/0)) == 7, prefix
         assert in_prefix(prefix, fn -> Enum.any?(live_pages(), &(&1.uri == "index")) end), prefix
       end
+    end
+
+    test "a failure in one environment names it, and the ones changed before it" do
+      Repo.repo().query!(
+        ~s|ALTER TABLE "tenant_beta_production".pages_fragments ADD CONSTRAINT refuse_trash CHECK (deleted_at IS NULL)|
+      )
+
+      {{:error, message}, output} = remove(yes: true)
+
+      assert message =~ "Beta (beta) → Production (production)"
+      assert message =~ "Acme (acme) → Staging (staging)"
+      assert output =~ "moved to the trash"
+      assert in_prefix("tenant_acme_production", &live_modules/0) == []
+      assert length(in_prefix("tenant_beta_production", &live_modules/0)) == 7
     end
 
     test "names a site or environment that does not exist" do
