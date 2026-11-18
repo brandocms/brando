@@ -214,7 +214,7 @@ before the clear it would store what they held. Clearing the caches renders
 nothing: an entry shows its stored HTML until it is rendered. A script in its
 own VM reaches only the nodes its PubSub reaches, and a data migration runs
 without the caches, so it clears nothing; for a running server, a superuser
-uses **Configuration → Utilities → Clear content caches** once the script or
+uses **Configuration → Utilities → Clear caches** once the script or
 migration has run.
 
 The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy

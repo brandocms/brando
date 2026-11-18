@@ -604,7 +604,6 @@ test/brando_admin/live/block_audit_live_test.exs	0.2
 test/brando_admin/live/block_editor_escape_test.exs	0.2
 test/brando_admin/live/block_form_var_test.exs	0.2
 test/brando_admin/live/block_move_menu_test.exs	2.5
-test/brando_admin/live/cache_live_test.exs	9.2
 test/brando_admin/live/calendar_live_test.exs	6.4
 test/brando_admin/live/chrome_presence_order_test.exs	0.0
 test/brando_admin/live/chrome_socket_tokens_test.exs	0.0

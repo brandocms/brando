@@ -29,8 +29,8 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   application's own tables.
 
   A server that is already running keeps serving the pages it cached before
-  (pages are cached without expiry): restart it, or use Configuration → Cache
-  → Empty all caches in its admin. The task says so when it is done.
+  (pages are cached without expiry): restart it, or use Configuration →
+  Utilities → Clear caches in its admin. The task says so when it is done.
 
   A release has no Mix: there, `bin/my_app rpc "Brando.Content.Resave.run()"`
   does the same on the running node (as does `MyApp.ReleaseTasks.resave_entries/1`

@@ -249,15 +249,68 @@ defmodule BrandoAdmin.Components.Activity do
   defp setting_label(_schema), do: nil
 
   # What an event that names no entry happened to
-  defp subject_label(@cache), do: gettext("Content caches")
+  defp subject_label(@cache), do: gettext("Caches")
   defp subject_label(_schema), do: nil
 
   @doc """
-  The site caches `Brando.Cache.clear_content/1` rebuilt, as one phrase:
-  `identity, SEO, globals, palettes and menus`. `nil` for none.
+  The site caches `Brando.Cache.clear_all/0` rebuilt, as one line:
+  `Rebuilt identity, SEO, globals, palettes and menus`. `nil` for none.
   """
-  def site_caches_phrase(caches) do
-    caches |> Enum.map(&site_cache_label(to_string(&1))) |> sentence()
+  def rebuilt_phrase(caches) do
+    case caches |> Enum.map(&site_cache_label(to_string(&1))) |> sentence() do
+      nil -> nil
+      phrase -> gettext("Rebuilt %{caches}", caches: phrase)
+    end
+  end
+
+  @doc """
+  What of the site structure `Brando.Cache.clear_all/0` reloaded, as one
+  line: `Reloaded the site list and shared library access`.
+  `nil` for none.
+  """
+  def reloaded_phrase(structure) do
+    case structure |> Enum.map(&structure_label(to_string(&1))) |> sentence() do
+      nil -> nil
+      phrase -> gettext("Reloaded %{caches}", caches: phrase)
+    end
+  end
+
+  @doc """
+  The environments `Brando.Cache.clear_all/0` skipped, by their schema
+  prefixes, as one line naming each site and environment: `Skipped Acme ·
+  Staging, whose tables could not be read`. `nil` for none. For the
+  superuser who cleared the caches: Activity records only how many.
+  """
+  def skipped_phrase(prefixes) do
+    case prefixes |> Enum.map(&environment_label/1) |> sentence() do
+      nil -> nil
+      phrase -> gettext("Skipped %{environments}, whose tables could not be read", environments: phrase)
+    end
+  end
+
+  defp skipped_count_phrase(count) when is_integer(count) and count > 0,
+    do:
+      ngettext(
+        "Skipped %{count} environment whose tables could not be read",
+        "Skipped %{count} environments whose tables could not be read",
+        count,
+        count: count
+      )
+
+  defp skipped_count_phrase(_none), do: nil
+
+  # By the registry's names while it holds the environment, else its prefix
+  defp environment_label(prefix) do
+    site_key = Brando.Tenant.site_key_of(prefix)
+    environment_key = Brando.Tenant.environment_key_of(prefix)
+
+    with true <- is_binary(site_key) and is_binary(environment_key),
+         %{name: site} <- Brando.Tenant.Cache.get_site(site_key),
+         %{name: environment} <- Brando.Tenant.Cache.get_env(site_key, environment_key) do
+      "#{site} · #{environment}"
+    else
+      _ -> prefix
+    end
   end
 
   defp site_cache_label("identity"), do: gettext("identity")
@@ -266,6 +319,10 @@ defmodule BrandoAdmin.Components.Activity do
   defp site_cache_label("palettes"), do: gettext("palettes")
   defp site_cache_label("navigation"), do: gettext("menus")
   defp site_cache_label(cache), do: cache
+
+  defp structure_label("registry"), do: gettext("the site list")
+  defp structure_label("shared_library"), do: gettext("shared library access")
+  defp structure_label(cache), do: cache
 
   @doc "A content type's name in the admin's language."
   def type_label(nil), do: nil
@@ -615,12 +672,13 @@ defmodule BrandoAdmin.Components.Activity do
 
   defp lines(%{action: :caches_cleared, details: details}, _fields, _states) do
     count = details["entries"] || 0
-    rebuilt = site_caches_phrase(details["caches"] || [])
 
     [
       details["scope"] == "all" && gettext("Every site"),
       ngettext("Emptied %{count} cached entry", "Emptied %{count} cached entries", count, count: count),
-      rebuilt && gettext("Rebuilt %{caches}", caches: rebuilt)
+      rebuilt_phrase(details["caches"] || []),
+      reloaded_phrase(details["site_structure"] || []),
+      skipped_count_phrase(details["skipped"])
     ]
     |> Enum.filter(&is_binary/1)
   end

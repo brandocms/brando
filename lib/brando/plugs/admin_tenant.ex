@@ -51,6 +51,8 @@ defmodule Brando.Plug.AdminTenant do
   @open_controllers [
     BrandoAdmin.AccessDeniedController,
     BrandoAdmin.EnvironmentController,
+    # Sends the request on to a LiveView, which decides
+    BrandoAdmin.MovedController,
     BrandoAdmin.UserSessionController
   ]
 

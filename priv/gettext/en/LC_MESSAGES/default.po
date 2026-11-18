@@ -216,7 +216,6 @@ msgstr[1] ""
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-format, elixir-autogen
 msgid "%{count} entry"
@@ -1768,7 +1767,6 @@ msgstr ""
 #: lib/brando_admin/live/forms/inbox_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/asset_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -3572,25 +3570,15 @@ msgstr ""
 msgid "CSS class(es)"
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#: lib/brando_admin/menu.ex
+#: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Cache"
+msgid "Caches"
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Cache entries"
-msgstr ""
-
-#: lib/brando_admin/live/sites/cache_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Cache key"
-msgstr ""
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-autogen, elixir-format
-msgid "Caches cleared!"
+msgid "Caches cleared."
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex
@@ -4311,7 +4299,6 @@ msgstr ""
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Clear"
@@ -4322,19 +4309,14 @@ msgstr ""
 msgid "Clear all"
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Clear cache %{key}"
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Clear caches"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Clear clipboard"
-msgstr ""
-
-#: lib/brando_admin/live/sites/utils_live.ex
-#, elixir-autogen, elixir-format
-msgid "Clear content caches"
 msgstr ""
 
 #: lib/brando_admin/components/content/select_identifier.ex
@@ -4356,11 +4338,6 @@ msgstr ""
 msgid "Clear selection"
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Clear the cache if saved changes are not appearing on the website. Content is rebuilt on the next request."
-msgstr ""
-
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
@@ -4372,7 +4349,6 @@ msgstr ""
 msgid "Cleared caches"
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-format, elixir-autogen
 msgid "Clearing…"
@@ -4933,17 +4909,6 @@ msgstr ""
 #: lib/brando_admin/live/content/template_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Content Templates"
-msgstr ""
-
-#: lib/brando_admin/components/activity.ex
-#: lib/brando_admin/live/sites/utils_live.ex
-#, elixir-autogen, elixir-format
-msgid "Content caches"
-msgstr ""
-
-#: lib/brando_admin/live/sites/utils_live.ex
-#, elixir-autogen, elixir-format
-msgid "Content caches cleared."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -7362,14 +7327,19 @@ msgstr[1] ""
 msgid "Empty"
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-autogen, elixir-format
-msgid "Empty all caches"
-msgstr ""
-
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Empty choice"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty every environment's cached pages, fragments and modules on every server, and reload their identity, SEO, globals, palettes and menus, and the list of sites and environments."
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty every site's cached pages, fragments and modules on every server, and reload their identity, SEO, globals, palettes and menus, the list of sites and environments, and each site's access to the shared library."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -7384,7 +7354,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Empty this site's cached pages, fragments and modules on every server, and reload its identity, SEO, globals, palettes and menus. Use it after a script or data migration changed content outside the admin. Entries are not rendered again: they keep the HTML stored when they were last rendered."
+msgid "Empty the cached pages, fragments and modules on every server, and reload identity, SEO, globals, palettes and menus."
 msgstr ""
 
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -7552,11 +7522,6 @@ msgstr ""
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Entry #%{id}"
-msgstr ""
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-autogen, elixir-format
-msgid "Entry ID"
 msgstr ""
 
 #: lib/brando_admin/components/shortcut_sheet.ex
@@ -9453,11 +9418,6 @@ msgstr ""
 msgid "Inspect accounts, site assignments, and legacy application rules."
 msgstr ""
 
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Inspect cached content and clear outdated entries."
-msgstr ""
-
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Inspecting…"
@@ -10194,7 +10154,6 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/video_picker.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #, elixir-autogen, elixir-format
 msgid "List"
 msgstr ""
@@ -10974,7 +10933,6 @@ msgstr ""
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/outline.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #, elixir-autogen, elixir-format
 msgid "Module"
 msgstr ""
@@ -11662,11 +11620,6 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field/outline.ex
 #, elixir-autogen, elixir-format
 msgid "No blocks yet"
-msgstr ""
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "No cached entries"
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
@@ -14460,7 +14413,6 @@ msgid "Rebuild search index"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
-#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Rebuilt %{caches}"
 msgstr ""
@@ -14879,6 +14831,11 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Reload"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reloaded %{caches}"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -17518,7 +17475,6 @@ msgid "Signing secret"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #, elixir-autogen, elixir-format
 msgid "Single"
 msgstr ""
@@ -17541,7 +17497,6 @@ msgstr ""
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/nav.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Site"
@@ -17614,6 +17569,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Sketches with AI"
 msgstr "Sketches with AI"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Skipped %{count} environment whose tables could not be read"
+msgid_plural "Skipped %{count} environments whose tables could not be read"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Skipped %{environments}, whose tables could not be read"
+msgstr ""
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -17924,11 +17891,6 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Store current editor state"
-msgstr ""
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "Stored results used to serve your website."
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -18629,11 +18591,6 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "The blueprint maps no image. A developer can add one with the :image field type."
-msgstr ""
-
-#: lib/brando_admin/live/sites/cache_live.ex
-#, elixir-format, elixir-autogen
-msgid "The cache fills automatically as content is requested."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -20625,7 +20582,6 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
-#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Type"
@@ -21203,6 +21159,11 @@ msgstr ""
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Use for model training"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use it after a script or data migration changed content outside the admin. Entries are not rendered again: they keep the HTML stored when they were last rendered. Copied blocks, open previews and frontend assets are kept."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
@@ -23442,6 +23403,11 @@ msgstr ""
 msgid "shared"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "shared library access"
+msgstr ""
+
 msgid "should be at most %{count} character(s)"
 msgstr ""
 
@@ -23463,6 +23429,11 @@ msgstr ""
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "the module has no %{kind} %{key}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "the site list"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex

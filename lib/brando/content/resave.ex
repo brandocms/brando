@@ -109,8 +109,8 @@ defmodule Brando.Content.Resave do
   When done, with `:reload_caches` it empties this
   node's whole query cache (every site's and environment's pages,
   fragments, …) and rebuilds the site caches (identity, SEO, globals,
-  palettes, menus) of the context it runs in, as Configuration → Cache →
-  Empty all caches does. With tenancy that context is outside every site,
+  palettes, menus) of the context it runs in (`Brando.Cache.reload_all/0`).
+  With tenancy that context is outside every site,
   so no environment's site caches are rebuilt then: each environment's
   identity, globals and menus were rebuilt as its pass began, and its SEO
   and palettes are left as they were (re-saving does not change them).
@@ -435,14 +435,15 @@ defmodule Brando.Content.Resave do
 
     info.(
       "Emptied this node's query cache and reloaded its site caches. " <>
-        "Other nodes keep theirs: empty them in their admin, or restart them."
+        "Other nodes keep theirs: clear them in the admin under Configuration → Utilities → Clear caches, " <>
+        "or restart them."
     )
   end
 
   defp caches(false, started_here?, info) do
     info.(
       "Servers that were already running keep serving what they cached before. " <>
-        "Restart them, or empty their caches in the admin under Configuration → Cache → Empty all caches."
+        "Restart them, or clear their caches in the admin under Configuration → Utilities → Clear caches."
     )
 
     # Started for this, from `eval`: the server is another node

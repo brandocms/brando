@@ -175,7 +175,7 @@ defmodule BrandoAdmin.MenuTest do
       assert editor =~ url
     end
 
-    for url <- ["/admin/config/global_sets", "/admin/config/cache", "/admin/config/content/modules"] do
+    for url <- ["/admin/config/global_sets", "/admin/config/utils", "/admin/config/content/modules"] do
       refute editor =~ url
       assert superuser =~ url
     end
@@ -257,10 +257,16 @@ defmodule BrandoAdmin.MenuTest do
                   "/admin/config/integrations",
                   "/admin/config/assistant",
                   "/admin/config/assets",
-                  "/admin/config/cache",
                   "/admin/config/utils"
                 ]}
              ] = configuration_groups(%{role: :superuser})
+    end
+
+    # Its one action is Utilities → Clear caches; the address redirects there
+    test "lists no Cache screen, for any role" do
+      for role <- [:superuser, :admin, :editor] do
+        refute %{role: role} |> BrandoAdmin.Menu.get_menu() |> menu_urls() =~ "/admin/config/cache"
+      end
     end
 
     test "the flat item list keeps every item, in group order" do

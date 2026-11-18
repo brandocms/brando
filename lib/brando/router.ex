@@ -227,6 +227,8 @@ defmodule Brando.Router do
         pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
         get "/access-denied", BrandoAdmin.AccessDeniedController, :show
+        # The Cache screen's address: its action moved to Utilities
+        get "/config/cache", BrandoAdmin.MovedController, :utilities
         get "/content-transfer/download/:token", BrandoAdmin.ContentTransferDownloadController, :show
         get "/forms/:key/submissions/export", BrandoAdmin.FormSubmissionsExportController, :export
 
@@ -422,7 +424,6 @@ defmodule Brando.Router do
       live "/environments", BrandoAdmin.Sites.EnvironmentLive
       live "/publishing", BrandoAdmin.Sites.PublishingLive
       live "/markdown-sources", BrandoAdmin.Sites.MarkdownSourcesLive
-      live "/cache", BrandoAdmin.Sites.CacheLive
       live "/forms", BrandoAdmin.Forms.FormListLive
       live "/forms/create", BrandoAdmin.Forms.FormFormLive, :create
       live "/forms/update/:entry_id", BrandoAdmin.Forms.FormFormLive, :update

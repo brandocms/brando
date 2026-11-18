@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
   exits with status 1.
 
   A server that is already running keeps serving what it cached before:
-  restart it, or use Configuration → Cache → Empty all caches in its admin.
+  restart it, or use Configuration → Utilities → Clear caches in its admin.
   The task says so when it is done.
   """
   use Mix.Task

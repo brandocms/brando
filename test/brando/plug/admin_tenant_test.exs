@@ -78,4 +78,21 @@ defmodule Brando.Plug.AdminTenantTest do
     refute conn.assigns[:current_site]
     assert Tenant.current_prefix() == nil
   end
+
+  # The Cache screen's bookmark goes on to Utilities, whose LiveView decides
+  # where a user with no site to enter goes, as the screen's did
+  test "lets a user with no site through to a moved screen's address" do
+    conn =
+      :get
+      |> build_conn("/admin/config/cache")
+      # The admin's host, where its routes answer in multi-site mode
+      |> Map.put(:host, Brando.endpoint().host())
+      |> init_test_session(%{})
+      |> Plug.Conn.put_private(:phoenix_router, BrandoIntegrationWeb.Router)
+      |> Plug.Conn.assign(:current_user, Brando.Factory.insert(:random_user, role: :admin))
+      |> AdminTenant.call([])
+
+    refute conn.assigns[:current_site]
+    refute conn.halted
+  end
 end

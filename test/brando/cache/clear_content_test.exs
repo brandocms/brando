@@ -14,6 +14,7 @@ defmodule Brando.Cache.ClearContentTest do
   alias Brando.Cache.Query, as: QueryCache
   alias Brando.CacheSync
   alias Brando.Content.Module
+  alias Brando.Content.SharedLibrary
   alias Brando.{Factory, Repo}
   alias Brando.Pages.{Fragment, Page}
 
@@ -218,6 +219,63 @@ defmodule Brando.Cache.ClearContentTest do
     end
   end
 
+  describe "clear_all/0, Utilities → Clear caches" do
+    test "clears every site's content caches and no site structure without tenancy", c do
+      {:ok, set} = Brando.Sites.create_global_set(global_set("system", "Old", c.user), c.user)
+      set.vars |> hd() |> Ecto.Changeset.change(value: "New") |> Repo.update!()
+      key = {:tenant, "tenant_gone_production", {:list, Page.__schema__(:source), "a"}}
+      Cachex.put(:query, key, :cached)
+
+      assert {:ok, %{scope: :all, site_caches: caches, query_entries: entries, site_structure: []}} = Cache.clear_all()
+
+      assert Enum.sort(caches) == Enum.sort(@site_caches)
+      assert entries >= 1
+      assert cached([key]) == [false]
+      assert Brando.Sites.global("en", "system", "text").value == "New"
+    end
+
+    test "tells the other nodes" do
+      {:ok, _} = Cache.clear_all()
+
+      assert_received {:brando_cache_sync, origin, {QueryCache, {:clear, :all}}}
+      assert origin == CacheSync.origin()
+      for cache <- @site_caches, do: assert_received({:brando_cache_sync, _, {Cache, {^cache, nil}}})
+    end
+
+    # Inside one, the rebuilds wait for the commit, where a failure is no
+    # longer the summary's to report, and a failed read would abort the
+    # caller's transaction
+    test "refuses to run inside a transaction, and clears nothing" do
+      key = {:list, Page.__schema__(:source), "a"}
+      Cachex.put(:query, key, :cached)
+
+      assert_raise ArgumentError, ~r/outside a transaction/, fn -> Repo.transaction(fn -> Cache.clear_all() end) end
+      assert_raise ArgumentError, fn -> Repo.repo().transaction(fn -> Cache.clear_all() end) end
+
+      assert cached([key]) == [true]
+    end
+
+    test "keeps what editors and sign-ins hold in the main cache: copied blocks, lockouts" do
+      clipboard = {:block_clipboard, System.unique_integer([:positive])}
+      lockout = {Brando.Users.Throttle, :unknown_locked, "clear-all@example.com"}
+      preserve_cache([clipboard, lockout])
+      Cache.put(clipboard, %{type: :module}, :timer.minutes(5))
+      Cache.put(lockout, :held, :timer.minutes(5))
+
+      {:ok, _} = Cache.clear_all()
+
+      assert Cache.get(clipboard) == %{type: :module}
+      assert Cache.get(lockout) == :held
+    end
+
+    test "where the caches are not running, clears nothing and says so" do
+      stop_child(:query_cache)
+      stop_child(:main_cache)
+
+      assert {:ok, %{query_entries: 0, site_caches: [], scope: :all, site_structure: []}} = Cache.clear_all()
+    end
+  end
+
   describe "on a multi-site install" do
     defmodule Migrator do
       @behaviour Brando.Environments.Migrator
@@ -281,6 +339,68 @@ defmodule Brando.Cache.ClearContentTest do
       assert cached([{:tenant, staging, {:list, pages, "a"}}]) == [false]
     end
 
+    test "clear_all/0 reloads the registry and drops the shared-library allowlists, here and on the other nodes" do
+      [production, staging] = @prefixes
+      site = Brando.Tenant.Registry.get_site_by_key("acme")
+      site_id = site.id
+
+      # A script moves a host and changes an allowlist with the repo
+      {1, _} =
+        Repo.update_all(
+          from(e in Brando.Environments.Environment, where: e.domain == "acme.test"),
+          [set: [domain: "moved.acme.test"]],
+          prefix: "public"
+        )
+
+      SharedLibrary.Cache.put(site.id, :module, [123])
+      on_exit(&SharedLibrary.Cache.clear/0)
+      assert Brando.Tenant.Cache.get_env_by_domain("acme.test")
+
+      Brando.Tenant.with_prefix(staging, fn -> Cache.put(:globals, :stale, :infinite) end)
+
+      assert {:ok, %{scope: :all, site_structure: [:registry, :shared_library]}} =
+               Brando.Tenant.with_prefix(production, &Cache.clear_all/0)
+
+      refute Brando.Tenant.Cache.get_env_by_domain("acme.test")
+      assert {%{key: "acme"}, %{key: "production"}} = Brando.Tenant.Cache.get_env_by_domain("moved.acme.test")
+      refute SharedLibrary.Cache.get(site.id, :module)
+      assert stale_globals?() == [false, false]
+
+      assert_received {:brando_cache_sync, _, {Brando.Tenant.Cache, :registry}}
+      CacheSync.sync()
+      refreshes = gathered()
+      for kind <- [:module, :container, :palette], do: assert({SharedLibrary.Cache, {site_id, kind}} in refreshes)
+    end
+
+    test "clear_all/0 skips an environment whose tables cannot be read, clears the rest and says which" do
+      [production, staging] = @prefixes
+      site = Brando.Tenant.Registry.get_site_by_key("acme")
+
+      # In the registry with no schema yet: being created, or a setup that failed
+      Repo.insert!(%Brando.Environments.Environment{site_id: site.id, name: "Broken", key: "broken", live: false},
+        prefix: "public"
+      )
+
+      Brando.Tenant.with_prefix(staging, fn -> Cache.put(:globals, :stale, :infinite) end)
+
+      {result, log} =
+        ExUnit.CaptureLog.with_log(fn -> Brando.Tenant.with_prefix(production, &Cache.clear_all/0) end)
+
+      assert {:ok, %{scope: :all, skipped: ["tenant_acme_broken"]}} = result
+      assert log =~ "tenant_acme_broken"
+      assert stale_globals?() == [false, false]
+
+      # Utilities names it by the registry, which the call reloaded
+      assert BrandoAdmin.Components.Activity.skipped_phrase(["tenant_acme_broken"]) ==
+               "Skipped Acme · Broken, whose tables could not be read"
+
+      # Activity, which those who may use one site's Utilities read, only counts it
+      {:ok, event} =
+        Brando.Tenant.with_prefix(production, fn -> Brando.Activity.caches_cleared(:system, elem(result, 1)) end)
+
+      assert event.details["skipped"] == 1
+    end
+
     test "outside every site, clears the unprefixed query cache and rebuilds no site cache" do
       key = {:list, Page.__schema__(:source), "a"}
       Cachex.put(:query, key, :cached)
@@ -295,6 +415,15 @@ defmodule Brando.Cache.ClearContentTest do
   defp stop_child(id) do
     :ok = Supervisor.terminate_child(Brando.Supervisor, id)
     on_exit(fn -> {:ok, _} = Supervisor.restart_child(Brando.Supervisor, id) end)
+  end
+
+  # Every gathered refresh this node has sent so far
+  defp gathered do
+    receive do
+      {:brando_cache_sync, _, {:batch, refreshes}} -> refreshes ++ gathered()
+    after
+      0 -> []
+    end
   end
 
   defp clear_all_sites, do: Cache.clear_content(all_sites: true)

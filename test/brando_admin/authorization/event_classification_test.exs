@@ -267,8 +267,8 @@ defmodule BrandoAdmin.Authorization.EventClassificationTest do
     end
 
     test "a write is refused to a :user only, a read to nobody" do
-      assert Events.refused_to_role?(BrandoAdmin.Sites.CacheLive, "empty_caches", :user)
-      refute Events.refused_to_role?(BrandoAdmin.Sites.CacheLive, "empty_caches", :editor)
+      assert Events.refused_to_role?(BrandoAdmin.Sites.UtilsLive, "clear_caches", :user)
+      refute Events.refused_to_role?(BrandoAdmin.Sites.UtilsLive, "clear_caches", :editor)
       refute Events.refused_to_role?(BrandoAdmin.Sites.UtilsLive, "refresh", :user)
     end
 

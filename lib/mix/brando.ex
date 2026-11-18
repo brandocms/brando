@@ -47,7 +47,7 @@ defmodule Mix.Brando do
   def running_server_note do
     Mix.shell().info(
       "Servers that were already running keep serving what they cached before. " <>
-        "Restart them, or empty their caches in the admin under Configuration → Cache → Empty all caches."
+        "Restart them, or clear their caches in the admin under Configuration → Utilities → Clear caches."
     )
   end
 
