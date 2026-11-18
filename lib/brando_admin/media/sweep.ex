@@ -13,6 +13,11 @@ defmodule BrandoAdmin.Media.Sweep do
     * Only assets directly in the folder are sorted. Whatever an editor has
       already put in a subfolder stays there, so a second run only takes what
       has arrived since.
+    * The video and file libraries' root is their default config's upload
+      folder, where uploads without a folder land (`plan(type, :root)`): its
+      assets are those with no folder and those in the folder stored for the
+      root. Undo puts them back with no folder. The image library's root
+      holds the folders of its configs, and is not sorted.
     * An entry and its translations share one folder, named after the entry
       in the default language.
     * An asset several entries use goes to one of them: by the site's order
@@ -61,7 +66,8 @@ defmodule BrandoAdmin.Media.Sweep do
         }
   @type plan :: %{
           asset_type: asset_type(),
-          folder_id: integer(),
+          folder_id: integer() | nil,
+          sources: [integer()],
           folder: String.t(),
           total: non_neg_integer(),
           unused: non_neg_integer(),
@@ -97,23 +103,39 @@ defmodule BrandoAdmin.Media.Sweep do
   entry with assets in it, largest first, and how many assets no entry uses.
   `{:error, :not_found}` without the folder, or for a folder outside the
   type's library (another type's, or a hidden one).
+
+  `:root` sorts the root of the video or file library, the default config's
+  upload folder: the assets with no folder, and those in the root's own
+  folder. The plan's `folder_id` is then nil.
   """
-  @spec plan(asset_type(), integer() | nil) :: {:ok, plan()} | {:error, :not_found}
+  @spec plan(asset_type(), integer() | :root | nil) :: {:ok, plan()} | {:error, :not_found}
+  def plan(asset_type, :root) when asset_type in [:video, :file] do
+    root = library_root(asset_type)
+    {:ok, build_plan(asset_type, nil, FolderBrowser.root_folder_ids(root), root)}
+  end
+
   def plan(asset_type, folder_id) when asset_type in @types do
-    with %Folder{library: true} = folder <- folder_id && Repo.get(Folder, folder_id),
+    with %Folder{library: true} = folder <- is_integer(folder_id) && Repo.get(Folder, folder_id),
          root = FolderBrowser.absolute_folder(folder.path, folder.scope),
          true <- under?(root, library_root(asset_type)) do
-      {:ok, build_plan(asset_type, folder, root)}
+      {:ok, build_plan(asset_type, folder.id, [folder.id], root)}
     else
       _ -> {:error, :not_found}
     end
   end
 
-  defp build_plan(asset_type, folder, root) do
+  # The assets in the swept folder: in one of `sources`, or for the root
+  # (`folder_id` nil) in no folder at all.
+  defp in_swept(query, nil, sources), do: where(query, [a], is_nil(a.folder_id) or a.folder_id in ^sources)
+  defp in_swept(query, _folder_id, sources), do: where(query, [a], a.folder_id in ^sources)
+
+  defp build_plan(asset_type, folder_id, sources, root) do
     schema = schema(asset_type)
 
     ids =
-      Repo.all(from a in schema, where: a.folder_id == ^folder.id and is_nil(a.deleted_at), order_by: a.id, select: a.id)
+      from(a in schema, where: is_nil(a.deleted_at), order_by: a.id, select: a.id)
+      |> in_swept(folder_id, sources)
+      |> Repo.all()
 
     owners = Usage.owners(asset_type, ids)
     families = families(owners |> Map.values() |> List.flatten() |> Enum.uniq())
@@ -157,7 +179,8 @@ defmodule BrandoAdmin.Media.Sweep do
 
     %{
       asset_type: asset_type,
-      folder_id: folder.id,
+      folder_id: folder_id,
+      sources: sources,
       folder: root,
       total: length(ids),
       unused: length(ids) - map_size(owned),
@@ -226,10 +249,9 @@ defmodule BrandoAdmin.Media.Sweep do
           target = FolderBrowser.folder_id_for(group.path)
 
           {_count, ids} =
-            Repo.update_all(
-              from(a in schema, where: a.id in ^group.ids and a.folder_id == ^plan.folder_id, select: a.id),
-              set: [folder_id: target, updated_at: now]
-            )
+            from(a in schema, where: a.id in ^group.ids, select: a.id)
+            |> in_swept(plan.folder_id, plan.sources)
+            |> Repo.update_all(set: [folder_id: target, updated_at: now])
 
           {target, ids}
         end)

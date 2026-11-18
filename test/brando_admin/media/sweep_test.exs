@@ -178,6 +178,51 @@ defmodule BrandoAdmin.Media.SweepTest do
       assert {:error, :not_found} = Sweep.plan(:video, 0)
     end
 
+    # The video library's root is the default config's upload folder, so the
+    # videos uploaded without a folder lie loose there: with no folder, or in
+    # the folder stored for the root itself.
+    test "the root sorts the loose videos, with or without the root's folder, and nothing below it", c do
+      root = FolderBrowser.folder_id_for("videos/default")
+      [no_folder, in_root, unused] = [video(nil), video(root), video(nil)]
+      filed = video(c.videos)
+      show(page("About us"), [no_folder, in_root, filed])
+
+      assert {:ok, plan} = Sweep.plan(:video, :root)
+      assert plan.folder == "videos/default"
+      assert plan.folder_id == nil
+      assert plan.total == 3
+      assert plan.unused == 1
+      assert [%{key: "pages/about-us", path: "videos/default/pages/about-us", ids: ids}] = plan.groups
+      assert Enum.sort(ids) == Enum.sort([no_folder.id, in_root.id])
+
+      assert {:ok, %{moved: 2} = result} = Sweep.apply(plan)
+      assert path_of(folder_of(no_folder)) == "default/pages/about-us"
+      assert folder_of(in_root) == folder_of(no_folder)
+      assert folder_of(filed) == c.videos
+      assert folder_of(unused) == nil
+
+      # Back to the root, loose.
+      assert {:ok, 2} = Sweep.undo(result)
+      assert folder_of(no_folder) == nil
+      assert folder_of(in_root) == nil
+      refute Repo.get_by(Folder, scope: "videos", path: "default/pages/about-us")
+    end
+
+    test "a video that left the root since the preview stays where it went", c do
+      a = video(nil)
+      show(page("About us"), [a])
+
+      {:ok, plan} = Sweep.plan(:video, :root)
+      Repo.update_all(from(v in Video, where: v.id == ^a.id), set: [folder_id: c.videos])
+
+      assert {:ok, %{moved: 0}} = Sweep.apply(plan)
+      assert folder_of(a) == c.videos
+    end
+
+    test "the image library's root is not sorted" do
+      assert {:error, :not_found} = Sweep.plan(:image, :root)
+    end
+
     test "samples carry the video's thumbnail", c do
       thumbnail = Factory.insert(:image)
       a = Factory.insert(:video, folder_id: c.videos, thumbnail_id: thumbnail.id)

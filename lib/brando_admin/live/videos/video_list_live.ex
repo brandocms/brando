@@ -5,10 +5,13 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   on_mount BrandoAdmin.Work
 
+  alias Brando.Media.Folder
   alias Brando.Videos
   alias Brando.Videos.Video
   alias Brando.Worker.VideoMetadataSweep
   alias BrandoAdmin.Components.Assets.FileBrowser
+  alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.VideoPlayer
@@ -23,8 +26,19 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     {:ok, default_cfg} = Videos.get_config_for(%{config_target: "default"})
     upload_root = FolderBrowser.scope_for((default_cfg && default_cfg.upload_path) || "videos/default")
 
+    # Uploads go through the upload manager, which delivers here
+    deliver_topic = "form:" <> Ecto.UUID.generate()
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), deliver_topic)
+
+    # The library uploads with the default config, as the root is its folder
+    {upload_cfg, _target} = Brando.Uploads.resolve_video_config("default")
+
     socket =
       socket
+      |> assign(:deliver_topic, deliver_topic)
+      |> assign(:upload_strategy, upload_cfg.upload_strategy)
+      |> assign(:video_upload_available?, Brando.Uploads.video_upload_available?(upload_cfg))
+      |> assign(:current_folder_id, nil)
       |> assign(:recent_folders, [])
       |> assign(:custom_folders, [])
       |> assign(:folders, [""])
@@ -193,6 +207,37 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_event("sweep_dismiss", _, socket), do: {:noreply, assign(socket, :sweep_result, nil)}
 
+  # A provider (Mux, Bunny, Cloudflare, Vimeo) takes the file from the
+  # browser itself: its hook asks for a destination, then reports the file
+  # sent. The upload drawer shows the progress. The video goes into the
+  # folder the file was picked in, which the hook sends as `opening` (the
+  # element's `data-ref` when the file was queued).
+  def handle_event("get_video_upload_url", params, socket) do
+    folder_id = provider_folder_id(params["opening"], socket.assigns.upload_root)
+
+    {:noreply, ProviderVideoUpload.initiate(socket, socket.assigns.current_user, "default", params, folder_id: folder_id)}
+  end
+
+  # Only a completion with the token signed for this user's request counts
+  # (`ProviderVideoUpload.complete/3`).
+  def handle_event("video_upload_complete", params, socket) do
+    case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
+      {:ok, _video} ->
+        AssetListHelpers.update_list_entries(socket.assigns.schema)
+        {:noreply, refresh(socket)}
+
+      {:error, reason} ->
+        send(self(), {:toast, Brando.Uploads.video_upload_error_message(reason)})
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("video_upload_progress", _params, socket), do: {:noreply, socket}
+  def handle_event("upload_error", _params, socket), do: {:noreply, socket}
+
   # With the "Not in use" filter on: delete every unused video in view, this
   # folder's or, at the root, the whole library's, as the listing's Delete does.
   def handle_event("delete_unused", _, socket) do
@@ -268,6 +313,26 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(title), do: title
+
+  # A folder of this library, or none: the browser names it.
+  defp provider_folder_id(folder_id, upload_root) do
+    with {id, ""} <- Integer.parse(to_string(folder_id || "")),
+         %Folder{library: true, scope: scope, path: path} <- Brando.Repo.get(Folder, id),
+         true <- AssetListHelpers.folder_under_root?(FolderBrowser.absolute_folder(path, scope), upload_root) do
+      id
+    else
+      _ -> nil
+    end
+  end
+
+  # A video the upload manager stored (`:local`, `:s3`)
+  @impl true
+  def handle_info({:asset_ready, %{"kind" => "asset_library"}, %Video{}}, socket) do
+    AssetListHelpers.update_list_entries(socket.assigns.schema)
+    {:noreply, refresh(socket)}
+  end
+
+  def handle_info({:asset_ready, _target, _asset}, socket), do: {:noreply, socket}
 
   @impl true
   def handle_async(:delete_unused, result, socket) do
@@ -351,9 +416,49 @@ defmodule BrandoAdmin.Videos.VideoListLive do
               <span :if={@clipboard_ids != []} class="clipboard-status">
                 {gettext("Cut queue")}: {length(@clipboard_ids)}
               </span>
+              <%!-- Into the folder in view; at the root, the default config's
+                    folder, which the root is. --%>
+              <div
+                :if={
+                  @video_upload_available? and @upload_strategy in [:local, :s3] and
+                    BrandoAdmin.Authorization.allowed?(:create, @schema)
+                }
+                id="library-video-upload"
+                phx-hook="Brando.UploadTrigger"
+                data-kind="asset_library"
+                data-component-id="assets-video-browser"
+                data-asset-type="video"
+                data-deliver-topic={@deliver_topic}
+                data-config-target="default"
+                data-folder={@current_folder_abs}
+                data-folder-id={@current_folder_id}
+                data-click-mode="trigger"
+                data-accept=".mp4,.webm,.mov,.avi,.ogv"
+                class="library-upload-trigger"
+              >
+                <button type="button" class="folder-action upload-trigger"><.icon name="upload" />{gettext("Upload")}</button>
+                <input type="file" class="file-input" accept="video/*" multiple aria-label={gettext("Upload videos")} />
+              </div>
+              <div
+                :if={
+                  @video_upload_available? and @upload_strategy not in [:local, :s3] and
+                    BrandoAdmin.Authorization.allowed?(:create, @schema)
+                }
+                id="library-video-provider-upload"
+                phx-hook={MediaField.video_uploader_hook(@upload_strategy)}
+                data-ref={@current_folder_id}
+                class="library-upload-trigger"
+              >
+                <button
+                  type="button"
+                  class="folder-action"
+                  onclick="this.closest('[phx-hook]').querySelector('.file-input').click()"
+                ><.icon name="upload" />{gettext("Upload")}</button>
+                <input type="file" class="file-input" accept="video/*" multiple aria-label={gettext("Upload videos")} />
+              </div>
               <SortByUse.sort_button
                 :if={
-                  @current_folder != "" and @visible_video_count > 0 and !AssetListHelpers.unused_filter?(@params) and
+                  @visible_video_count > 0 and !@all_folders? and !AssetListHelpers.unused_filter?(@params) and
                     BrandoAdmin.Authorization.allowed?(:update, @schema)
                 }
                 asset_type={:video}
@@ -478,6 +583,16 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     |> assign(:current_folder_abs, current_folder_abs)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders, recent_folders)
+    # The folder uploads go into: the root's own at the root
+    |> assign(
+      :current_folder_id,
+      FolderBrowser.folder_id_for(
+        current_folder,
+        socket.assigns.upload_root,
+        socket.assigns.current_user,
+        socket.assigns.schema
+      )
+    )
     |> assign(
       :visible_video_count,
       if(current_folder == "",

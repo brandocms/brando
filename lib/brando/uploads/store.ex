@@ -180,6 +180,7 @@ defmodule Brando.Uploads.Store do
                status: :ready,
                title: upload.upload_entry.client_name,
                file_id: file.id,
+               folder_id: upload_folder_id(upload),
                config_target: upload.meta.config_target
              },
              user

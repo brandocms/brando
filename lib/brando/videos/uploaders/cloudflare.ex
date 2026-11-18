@@ -258,6 +258,8 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
       title: filename |> Path.rootname() |> Brando.Utils.humanize(),
       remote_id: upload_data.uid,
       config_target: Keyword.get(opts, :config_target),
+      # The folder the upload was started in (the Videos library's)
+      folder_id: Keyword.get(opts, :folder_id),
       meta: %{
         "provider" => "cloudflare",
         "cloudflare" => %{"uid" => upload_data.uid}

@@ -454,7 +454,9 @@ years each becomes one long list. The image, video and file libraries can sort
 it from where the assets are used.
 
 Open the folder under **Resources → Images**, **Videos** or **Files** and
-choose **Sort by use**. The preview lists a folder per entry that uses images,
+choose **Sort by use**. The Videos library's root is the default video
+folder, so its loose videos are sorted from the root; that includes those
+with no folder. The preview lists a folder per entry that uses images,
 videos or files from this one, named by type and title (`cases/example-hotel`,
 `pages/about`), with a few of them: images as they are, videos by their
 thumbnail, files by an icon for their type. Untick the ones to leave, rename
@@ -498,7 +500,9 @@ config :brando, Brando.Files, sweep_priority: [MyApp.Projects.Project]
 ```
 
 From code, `BrandoAdmin.Media.Sweep.plan(:video, folder_id)` returns the
-preview, `apply/2` moves and `undo/1` moves back.
+preview, `apply/2` moves and `undo/1` moves back. `plan(:video, :root)` (or
+`:file`) plans the library's root: the assets with no folder and those in the
+root's own folder. Undo puts those back with no folder.
 
 ## What happens to a deleted image's files
 

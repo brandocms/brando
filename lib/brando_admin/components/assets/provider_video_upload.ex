@@ -46,20 +46,24 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   @doc """
   Creates the video for a `get_video_upload_url` request, with the config
   target's config, and pushes the provider's destination to the hook, or why
-  there is none.
+  there is none. `folder_id:` puts the video in that library folder.
   """
+  def initiate(socket, user, config_target, params, opts \\ [])
+
   def initiate(
         socket,
         user,
         config_target,
-        %{"request_ref" => request_ref, "filename" => filename, "size" => size, "mime_type" => mime_type}
+        %{"request_ref" => request_ref, "filename" => filename, "size" => size, "mime_type" => mime_type},
+        opts
       ) do
     {cfg, config_target} = Brando.Uploads.resolve_video_config(config_target)
 
     case Brando.Videos.Uploader.initiate_upload(filename, user,
            config: cfg,
            config_target: config_target,
-           file_meta: %{name: filename, size: size, type: mime_type}
+           file_meta: %{name: filename, size: size, type: mime_type},
+           folder_id: Keyword.get(opts, :folder_id)
          ) do
       {:ok, result} ->
         push_event(socket, "video_upload_url_ready", ready_payload(result, user, filename, request_ref))
@@ -73,7 +77,7 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
     end
   end
 
-  def initiate(socket, _user, _config_target, params) do
+  def initiate(socket, _user, _config_target, params, _opts) do
     push_event(socket, "video_upload_url_error", %{
       error: gettext("Invalid video upload request"),
       filename: Map.get(params, "filename", ""),

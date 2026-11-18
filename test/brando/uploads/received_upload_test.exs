@@ -366,6 +366,25 @@ defmodule Brando.Uploads.ReceivedUploadTest do
       assert {:ok, video} = Uploads.store_upload(meta(temp(dir, mp4)), entry("a.mp4", "video/mp4"), cfg, user)
       assert video.status == :ready
     end
+
+    # The Videos library uploads into the folder in view: the video goes
+    # there, not only its file.
+    test "a video goes into the folder chosen for it", %{dir: dir, user: user} do
+      cfg = %VideoConfig{
+        upload_path: @upload_path,
+        allowed_mimetypes: ["video/mp4"],
+        upload_strategy: :local,
+        allow_uploads: true
+      }
+
+      folder_id = BrandoAdmin.Images.FolderBrowser.folder_id_for("videos/default/clips")
+      mp4 = File.read!(Path.expand("../../../e2e/playwright/fixtures/video.mp4", __DIR__))
+      meta = Map.put(meta(temp(dir, mp4)), :folder_id, folder_id)
+
+      assert {:ok, video} = Uploads.store_upload(meta, entry("a.mp4", "video/mp4"), cfg, user)
+      assert video.folder_id == folder_id
+      assert Brando.Repo.get!(Brando.Files.File, video.file_id).folder_id == folder_id
+    end
   end
 
   describe "video type, read from the bytes that arrived" do

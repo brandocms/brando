@@ -254,7 +254,9 @@ defmodule Brando.Videos.Uploaders.Bunny do
           "library_id" => bunny_video["videoLibraryId"]
         }
       },
-      creator_id: user.id
+      creator_id: user.id,
+      # The folder the upload was started in (the Videos library's)
+      folder_id: Keyword.get(opts, :folder_id)
     }
 
     # Add config_target if provided

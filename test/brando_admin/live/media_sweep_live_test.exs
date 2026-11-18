@@ -170,7 +170,7 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
       assert has_element?(view, ".image-picker-main-actions span", "2 videos")
     end
 
-    test "the root offers no sort", %{conn: conn} do
+    test "a root with no loose videos offers no sort", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/admin/assets/videos")
       refute html =~ "sweep_open"
     end
