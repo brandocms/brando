@@ -315,6 +315,35 @@ defmodule Brando.MarkdownSources.SyncTest do
       end
     end
 
+    # The consumer keeps the HTML it had (Blocks.render_entry/2), and the
+    # other consumers and the source's new version are not held back by it
+    @tag :capture_log
+    test "a consumer whose other block template fails does not stop the import", c do
+      [broken_page, page] = c.pages
+      broken = Brando.Factory.insert(:module, type: :liquid, code: "<p>{% if %}</p>")
+      join = Brando.Pages.Page.__schema__(:association, :entry_blocks).queryable
+
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: broken.id,
+          source: join,
+          creator_id: broken_page.creator_id,
+          vars: [],
+          refs: []
+        })
+
+      Repo.insert!(struct(join, %{entry_id: broken_page.id, block_id: block.id, sequence: 1}))
+      kept = Repo.get!(Brando.Pages.Page, broken_page.id).rendered_blocks
+
+      sync_markdown(c, "b", "Second version")
+
+      assert markdown_html(c) =~ "Second version"
+      assert Repo.get!(Brando.Pages.Page, page.id).rendered_blocks =~ "Second version"
+      assert Repo.get!(Brando.Pages.Page, broken_page.id).rendered_blocks == kept
+    end
+
     test "versions stored before the encoding render inert too", c do
       version =
         Repo.insert!(%Version{

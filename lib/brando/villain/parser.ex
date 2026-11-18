@@ -257,6 +257,7 @@ defmodule Brando.Villain.Parser do
   alias Brando.RuntimeConfig
   alias Brando.Utils
   alias Brando.Villain.Blocks.GalleryObjectOverride
+  alias Brando.Villain.RenderFailures
   alias Brando.Villain.TemplateAdapter
   alias Ecto.Changeset
 
@@ -455,6 +456,12 @@ defmodule Brando.Villain.Parser do
   end
 
   defp render_multi_child(child_block, index, count, parent_module_id, opts) do
+    RenderFailures.with_block(child_block, opts, fn ->
+      do_render_multi_child(child_block, index, count, parent_module_id, opts)
+    end)
+  end
+
+  defp do_render_multi_child(child_block, index, count, parent_module_id, opts) do
     case Content.find_module(
            opts.modules,
            child_block.module_id,
@@ -517,7 +524,10 @@ defmodule Brando.Villain.Parser do
 
   defp render_slot_child(child, opts) do
     type = if child.type == :module_entry, do: :module, else: child.type
-    opts |> parser_module() |> apply(type, [child, opts]) |> Brando.Villain.InertLiquid.close_end()
+
+    RenderFailures.with_block(child, opts, fn ->
+      opts |> parser_module() |> apply(type, [child, opts]) |> Brando.Villain.InertLiquid.close_end()
+    end)
   end
 
   def text(%{text: text}, _) when text in [nil, ""], do: ""
@@ -1389,10 +1399,16 @@ defmodule Brando.Villain.Parser do
     |> Enum.reduce([], fn
       %{active: false}, acc -> acc
       %{marked_as_deleted: true}, acc -> acc
-      d, acc -> [parser_module(opts) |> apply(d.type, [d, opts]) |> Brando.Villain.InertLiquid.close_end() | acc]
+      d, acc -> [render_child(d, opts) | acc]
     end)
     |> Enum.reverse()
     |> maybe_annotate_children(block.uid, opts)
+  end
+
+  defp render_child(child, opts) do
+    RenderFailures.with_block(child, opts, fn ->
+      opts |> parser_module() |> apply(child.type, [child, opts]) |> Brando.Villain.InertLiquid.close_end()
+    end)
   end
 
   def timeline(items, _) do

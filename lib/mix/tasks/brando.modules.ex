@@ -477,7 +477,8 @@ defmodule Mix.Tasks.Brando.Modules do
     else
       Mix.raise(
         "#{length(failed)} entries failed to render. Oban retries a failed render on a node that runs its " <>
-          "queue; fix the cause, then run refresh for the module."
+          "queue, except one whose block template failed: those keep the HTML they had. Fix the cause, then " <>
+          "run refresh for the module."
       )
     end
   end

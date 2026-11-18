@@ -532,6 +532,26 @@ defmodule Brando.Content.TransferTest do
     assert blocks(c.target, c.user) == []
   end
 
+  # The render keeps the entry's HTML (Blocks.render_entry/2). The identifier,
+  # cascade and translations still run, and the refresh is reported failed,
+  # to retry once the template is fixed
+  @tag :capture_log
+  test "an import whose block template fails still refreshes the entry's identifier", c do
+    {:ok, identifier} = Brando.Content.create_identifier(Page, c.target)
+    Repo.update!(Changeset.change(identifier, title: "Stale"))
+
+    {1, _} =
+      Repo.update_all(Ecto.Query.from(m in Brando.Content.Module, where: m.id == ^c.module.id),
+        set: [code: "<p>{% if %}</p>"]
+      )
+
+    plan = preview(c, export(c))
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+    assert [%{"id" => id, "status" => "failed"}] = Enum.filter(receipt.refresh, &(&1["schema"] == to_string(Page)))
+    assert id == c.target.id
+    assert Repo.get!(Brando.Content.Identifier, identifier.id).title == "Destination"
+  end
+
   # The entry's open editors follow an import and its recovery, instead of
   # saving their stale blocks over it (#2992).
   test "an import and its recovery move the destination's open editors onto the new rows", c do

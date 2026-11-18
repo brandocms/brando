@@ -33,6 +33,16 @@ msgstr "%{author} nevnte %{names} i et notat på %{title}"
 msgid "%{blocks} blocks · %{entries} entries affected"
 msgstr "%{blocks} blokker · %{entries} oppføringer berørt"
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{block}, line %{line}: %{error}"
+msgstr "%{block}, linje %{line}: %{error}"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{block}: %{error}"
+msgstr "%{block}: %{error}"
+
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "%{browser} on %{system}"
@@ -764,6 +774,11 @@ msgstr "%{model} kan ikke lese bilder. Angi en som kan, som bildemodell (models:
 msgid "%{model} is not in the model catalogue Brando reads, so its price and whether it reads images are unknown. Check with your provider before describing many images."
 msgstr "%{model} står ikke i modellkatalogen Brando leser, så prisen og om den kan lese bilder, er ukjent. Sjekk hos leverandøren før du beskriver mange bilder."
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} block"
+msgstr "%{module}-blokk"
+
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
 msgid "%{names} was mentioned in a note on %{title}"
@@ -904,6 +919,11 @@ msgstr "%{tool}, som feilet"
 #, elixir-autogen, elixir-format
 msgid "%{types} usually start with one of these."
 msgstr "%{types} starter som regel med en av disse."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "%{type} block"
+msgstr "%{type}-blokk"
 
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -1119,6 +1139,21 @@ msgstr "En bakgrunnsjobb feilet: %{worker}"
 #, elixir-autogen, elixir-format
 msgid "A background job is given up, or a webhook is paused after its deliveries kept failing."
 msgstr "En bakgrunnsjobb blir gitt opp, eller en webhook settes på pause etter at leveransene feilet gang på gang."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "A block"
+msgstr "En blokk"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "A block template failed, so the page has no content yet. Your changes are saved. Once the template is fixed, the page is rendered."
+msgstr "En blokkmal feilet, så siden har ikke noe innhold ennå. Endringene dine er lagret. Når malen er rettet, blir siden gjengitt."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "A block template failed, so the published page still shows what it showed before this save. Your changes are saved. Once the template is fixed, the page is rendered again."
+msgstr "En blokkmal feilet, så den publiserte siden viser fortsatt det den viste før denne lagringen. Endringene dine er lagret. Når malen er rettet, blir siden gjengitt på nytt."
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
@@ -15219,6 +15254,16 @@ msgstr "Lagrede visninger: %{name}, endret"
 #, elixir-autogen, elixir-format
 msgid "Saved with the page"
 msgstr "Lagres med siden"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved, but the page was not updated"
+msgstr "Lagret, men siden ble ikke oppdatert"
+
+#: lib/brando_admin/live/frontend_edit/editor_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saved, but the page was not updated: a block template failed, so visitors see the page as it was."
+msgstr "Lagret, men siden ble ikke oppdatert: en blokkmal feilet, så besøkende ser siden slik den var."
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format

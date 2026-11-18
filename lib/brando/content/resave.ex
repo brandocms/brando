@@ -27,6 +27,10 @@ defmodule Brando.Content.Resave do
   goes. Without tenancy it re-saves the entries in the application's own
   tables.
 
+  An entry in which a block template fails to render keeps the HTML it had:
+  the report names the blocks and errors under the entry, and the entries
+  again at the end (`Brando.Content.Blocks.render_entry/2`).
+
   Fragments whose module code embeds another fragment with `{% fragment … %}`
   or `<.fragment …>` are re-saved again after the others, until none of them
   changes (at most five rounds; the report names any that still did).
@@ -47,6 +51,9 @@ defmodule Brando.Content.Resave do
   # How many times the fragments that embed a fragment by tag are re-saved
   # at most
   @settle_rounds 5
+
+  # The entries whose render failed in a block template, for the report's end
+  @render_failed {__MODULE__, :render_failed}
 
   @typedoc """
   Options for `run/1`:
@@ -385,14 +392,34 @@ defmodule Brando.Content.Resave do
     # The hosts the entries' URLs start with
     if environments != [nil], do: Brando.Cache.refresh_render_inputs(registry: true)
 
+    Process.put(@render_failed, [])
+
     count =
-      environments
-      |> Enum.map(fn target -> in_environment(target, info, fn -> resave_here(blueprints, info) end) end)
-      |> Enum.sum()
+      try do
+        environments
+        |> Enum.map(fn target -> in_environment(target, info, fn -> resave_here(blueprints, info) end) end)
+        |> Enum.sum()
+      after
+        report_render_failed(Process.delete(@render_failed), info)
+      end
 
     info.("\nResaved #{count} #{if count == 1, do: "entry", else: "entries"}#{where(environments)}.")
     info.([:green, "\n==> Done.\n"])
     count
+  end
+
+  # The entries a block template failed in, named again at the end
+  defp report_render_failed([], _info), do: :ok
+
+  defp report_render_failed(failed, info) do
+    count = length(failed)
+
+    info.([
+      :red,
+      "\n==> #{count} #{if count == 1, do: "entry keeps", else: "entries keep"} the HTML #{if count == 1, do: "it", else: "they"} had: a block template failed\n"
+    ])
+
+    for line <- Enum.reverse(failed), do: info.("    * " <> line)
   end
 
   # Reloaded on the node it runs on, which is the server's over `rpc`. Each
@@ -506,6 +533,16 @@ defmodule Brando.Content.Resave do
         if blueprint == @embedded, do: Brando.Cache.Query.evict({:ok, stored})
         write.([:green, "done!\n"])
         true
+
+      {:error, {:render_failed, failures}} ->
+        write.([:red, "failed!\n"])
+
+        for failure <- failures,
+            do: write.(["    ", :red, Brando.Villain.RenderFailure.describe(failure), :reset, "\n"])
+
+        name = "#{singular}:#{entry.id} (#{title})"
+        Process.put(@render_failed, [name | Process.get(@render_failed, [])])
+        false
 
       {:error, _} ->
         write.([:red, "failed!\n"])

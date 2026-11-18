@@ -202,7 +202,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.compact([1, 2, 3], %{})
       [1,2,3]
   """
-  @spec compact([any], map()) :: [any]
+  @spec compact([any] | nil, map()) :: [any]
+  def compact(nil, _), do: []
   def compact(value, _) when is_list(value), do: Enum.reject(value, &is_nil/1)
 
   @doc """
@@ -213,6 +214,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.concat([1,2], [3,4], %{})
       [1,2,3,4]
   """
+  def concat(nil, other, context), do: concat([], other, context)
+  def concat(value, nil, context), do: concat(value, [], context)
   def concat(value, other, _) when is_list(value) and is_list(other), do: value ++ other
 
   @doc """
@@ -311,6 +314,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.first([], %{})
       nil
   """
+  def first(nil, _), do: nil
   def first([], _), do: nil
   def first([f | _], _), do: f
 
@@ -336,6 +340,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.join(~w(John Paul George Ringo), " and ", %{})
       "John and Paul and George and Ringo"
   """
+  def join(nil, _joiner, _), do: ""
   def join(values, joiner, _), do: Enum.join(values, joiner)
 
   @doc """
@@ -349,7 +354,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.first([], %{})
       nil
   """
-  @spec last(list, Liquex.Context.t()) :: any
+  @spec last(list | nil, Liquex.Context.t()) :: any
+  def last(nil, _), do: nil
   def last(arr, context), do: arr |> Enum.reverse() |> first(context)
 
   @doc """
@@ -372,7 +378,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.map([%{"a" => 1}, %{"a" => 2, "b" => 1}], "a", %{})
       [1, 2]
   """
-  @spec map([any], term, Context.t()) :: [any]
+  @spec map([any] | nil, term, Context.t()) :: [any]
+  def map(nil, _key, _), do: []
   def map(arr, key, _), do: Enum.map(arr, &Liquex.Indifferent.get(&1, key, nil))
 
   @doc """
@@ -426,6 +433,8 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.partition(["a", "b", "c", "d", "e"], 3, %{})
       [["a", "b", "c"], ["d", "e"]]
   """
+  def partition(nil, _size, _ctx), do: []
+
   def partition(arr, size, _ctx) when is_list(arr) do
     Enum.chunk_every(arr, size)
   end
@@ -517,6 +526,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.reverse(~w(apples oranges peaches plums), %{})
       ["plums", "peaches", "oranges", "apples"]
   """
+  def reverse(nil, _), do: []
   def reverse(arr, _) when is_list(arr), do: Enum.reverse(arr)
 
   @doc """
@@ -599,8 +609,17 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.sort(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
       ["Sally Snake", "giraffe", "octopus", "zebra"]
+
+  A list that is nil sorts as an empty list, as in Liquid: a ref or field with
+  nothing in it is content, not a broken template.
+
+      iex> Brando.Villain.Filters.sort(nil, %{})
+      []
   """
+  def sort(nil, _), do: []
   def sort(list, _), do: Liquex.Collection.sort(list)
+
+  def sort(nil, _field_name, _), do: []
   def sort(list, field_name, _), do: Liquex.Collection.sort(list, field_name)
 
   @doc """
@@ -626,9 +645,13 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.sort_natural(["zebra", "octopus", "giraffe", "Sally Snake"], %{})
       ["giraffe", "octopus", "Sally Snake", "zebra"]
+
+  A list that is nil sorts as an empty list, as in Liquid.
   """
+  def sort_natural(nil, _), do: []
   def sort_natural(list, _), do: Liquex.Collection.sort_case_insensitive(list)
 
+  def sort_natural(nil, _field_name, _), do: []
   def sort_natural(list, field_name, _), do: Liquex.Collection.sort_case_insensitive(list, field_name)
 
   @doc """
@@ -820,6 +843,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.uniq(~w(ants bugs bees bugs ants), %{})
       ["ants", "bugs", "bees"]
   """
+  def uniq(nil, _), do: []
   def uniq(list, _), do: Enum.uniq(list)
 
   @doc """
@@ -882,7 +906,13 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.where([%{"b" => 2}, %{"b" => 1}], "b", 1, %{})
       [%{"b" => 1}]
+
+  A list that is nil gives an empty list, as in Liquid.
+
+      iex> Brando.Villain.Filters.where(nil, "b", 1, %{})
+      []
   """
+  def where(nil, _key, _value, _), do: []
   def where(list, key, value, _), do: Liquex.Collection.where(list, key, value)
 
   @doc """
@@ -893,6 +923,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.where([%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}, %{"b" => false, "value" => 3}], "b", %{})
       [%{"b" => true, "value" => 1}, %{"b" => 1, "value" => 2}]
   """
+  def where(nil, _key, _), do: []
   def where(list, key, _), do: Liquex.Collection.where(list, key)
 
   def zero_pad(number, length \\ 3, _) do

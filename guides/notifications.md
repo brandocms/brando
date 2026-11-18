@@ -92,7 +92,9 @@ discarded (it used every attempt, or returned `{:discard, reason}`), the
 failed-job routes of the job's environment get its worker, queue, attempts and
 the first line of its error, at most once per worker every ten minutes
 (`failed_job_interval`, counted from the delivery log). A job
-the worker cancelled is not a failure. Without tenancy every job counts; with
+the worker cancelled is not a failure, except an entry render whose block
+template failed: it cancels itself, since rendering again fails the same way,
+and is notified. Without tenancy every job counts; with
 it, only jobs that belong to a site environment. Notification deliveries are
 never notified themselves.
 

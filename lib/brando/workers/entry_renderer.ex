@@ -3,6 +3,12 @@ defmodule Brando.Worker.EntryRenderer do
   # Renders of an entry queued within 5 seconds and not started coalesce
   # (`Brando.Content.RenderQueue.enqueue/2`). One running, or waiting to
   # retry, gets another after it: it may have read the entry before the write.
+  #
+  # A render whose block template fails stores nothing
+  # (`Brando.Content.Blocks.render_entry/2` logs which blocks) and cancels the
+  # job with the failures as its error, for `await_refresh/2`: rendering the
+  # same template again fails the same way. The failed-job routes are told,
+  # as of a job Oban gave up.
   use Oban.Worker,
     queue: :default,
     max_attempts: 5,
@@ -14,6 +20,7 @@ defmodule Brando.Worker.EntryRenderer do
 
   alias Brando.Content.RenderRun
   alias Brando.Tenant.Job, as: TenantJob
+  alias Brando.Villain.RenderFailure
 
   @timeout :timer.seconds(30)
 
@@ -28,7 +35,11 @@ defmodule Brando.Worker.EntryRenderer do
         Brando.Cache.ensure_fresh(args)
         schema = Module.concat([schema])
         Logger.info("==> [CRON] Rendering entry #{entry_id} for schema #{schema}")
-        Brando.Content.Blocks.render_entry(schema, entry_id)
+
+        case Brando.Content.Blocks.render_entry(schema, entry_id) do
+          {:error, {:render_failed, failures}} -> cancel(job, failures)
+          result -> result
+        end
 
       earlier ->
         # This one stores last: with what the other one's queuing nodes had
@@ -98,6 +109,12 @@ defmodule Brando.Worker.EntryRenderer do
       {1, [started]} -> started
       {0, _} -> nil
     end
+  end
+
+  defp cancel(job, failures) do
+    reason = "block templates failed: " <> RenderFailure.describe_all(failures)
+    Brando.Notifications.JobFailures.notify(job, reason)
+    {:cancel, reason}
   end
 
   defp take_tokens(%Oban.Job{id: id, args: args}, earlier) do

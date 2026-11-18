@@ -146,6 +146,10 @@ and the site's SSG build/deploy operations. Configure the site's deployment
 strategy, persistent artifact storage, and SSG workers through
 `Brando.SSG.Builds` and `Brando.SSG.Deploy`. Staging imports never automatically deploy. Source updates rerender
 Follow consumers, including fragment dependencies, before requesting a build.
+A consumer in which a block template fails keeps the HTML it had
+([Villain parser](villain_parser.md#when-a-block-template-fails)): the import
+still completes for the others, but the build is refused until that template
+is fixed, so the site is not published with the entry showing the old version.
 Saving an accepted Review/Pinned version also requests publication when enabled.
 
 Import failures preserve the previous local version. Build or deploy failures

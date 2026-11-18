@@ -191,7 +191,7 @@ defmodule Brando.Villain.GetEntryStatusTest do
   defp save_from_form_opened_as(entry, params, user) do
     entry
     |> Page.changeset(params, user)
-    |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+    |> rendered_for_save([{:blocks, Page.Blocks, nil, []}])
     |> Pages.update_page(user)
   end
 
@@ -358,7 +358,7 @@ defmodule Brando.Villain.GetEntryStatusTest do
       # Rendered while the date is ahead, saved once it has passed
       entry
       |> Page.changeset(%{status: :published, publish_at: at(3600)}, c.user)
-      |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+      |> rendered_for_save([{:blocks, Page.Blocks, nil, []}])
       |> Ecto.Changeset.put_change(:publish_at, at(-1))
       |> Pages.update_page(c.user)
 
@@ -374,7 +374,7 @@ defmodule Brando.Villain.GetEntryStatusTest do
       # Rendered as pending while the date is ahead, saved published once it has passed
       entry
       |> Page.changeset(%{publish_at: at(3600)}, c.user)
-      |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+      |> rendered_for_save([{:blocks, Page.Blocks, nil, []}])
       |> Ecto.Changeset.put_change(:publish_at, at(-1))
       |> Pages.update_page(c.user)
 
@@ -492,7 +492,7 @@ defmodule Brando.Villain.GetEntryStatusTest do
         entry
         |> Page.changeset(%{}, c.user)
         |> Ecto.Changeset.put_assoc(:meta_image, nil)
-        |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+        |> rendered_for_save([{:blocks, Page.Blocks, nil, []}])
         |> Pages.update_page(c.user)
 
       assert Brando.Repo.get(Page, target.id).meta_image_id == nil
@@ -645,5 +645,11 @@ defmodule Brando.Villain.GetEntryStatusTest do
       assert Brando.Villain.render_block(block, entry, annotate_blocks: true) =~ ~s(data-status="draft")
       assert Brando.Villain.render_block(block, entry) =~ ~s(class="no-card")
     end
+  end
+
+  # The form's inline render, as a save renders it: no block template fails here
+  defp rendered_for_save(changeset, block_map) do
+    {changeset, []} = BrandoAdmin.Components.Form.render_blocks_for_save(block_map, changeset)
+    changeset
   end
 end

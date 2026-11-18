@@ -735,7 +735,9 @@ Rendered 12 entries
 
 A render that fails an attempt counts as failed at once: the command names the
 entry and its error and exits non-zero, and Oban retries the render later on a
-node that runs its queue. When the timeout passes, the command names the
+node that runs its queue. A render whose block template fails is not retried:
+its job is cancelled with the failing blocks and their errors as its error, and
+the entry keeps the HTML it had ([Villain parser](villain_parser.md#when-a-block-template-fails)). When the timeout passes, the command names the
 entries still waiting and exits non-zero; their renders stay queued. Either
 way, it stops the application before it returns, so a render its own queue
 has started finishes.
@@ -816,7 +818,8 @@ returns its result with a run id that names the render and cascade jobs it
 queued. `await_refresh/2` follows those jobs on whichever node runs them, by
 polling the jobs table, until each entry has rendered or failed or the timeout
 passes. `failed` and `pending` hold the schema, entry ID, tenant prefix, job
-state and last error of each. `refresh_status/1` returns the same without
+state and last error of each; a render whose block template failed is
+`"cancelled"`, its error naming each block, its module and the template's error. `refresh_status/1` returns the same without
 waiting. Call them right after the apply: they know the jobs by their rows,
 which Oban's Pruner deletes a few minutes after they finish. The node that calls them needs no Oban queues of its own, but some
 node must run the `default` queue for the renders to finish.

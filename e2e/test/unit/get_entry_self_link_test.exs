@@ -85,7 +85,7 @@ defmodule E2eProject.GetEntrySelfLinkTest do
       {:ok, _} =
         entry
         |> Project.changeset(%{status: :published}, user)
-        |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Project.Blocks, nil, []}], &1))
+        |> rendered_for_save([{:blocks, Project.Blocks, nil, []}])
         |> Projects.update_project(user)
 
       for worker <- [Brando.Worker.EntryCascade, Brando.Worker.EntryRenderer],
@@ -94,5 +94,11 @@ defmodule E2eProject.GetEntrySelfLinkTest do
     end)
 
     assert Repo.get!(Project, project.id).rendered_introduction_notes =~ ~s(<div class="card">Launch</div>)
+  end
+
+  # The form's inline render, as a save renders it: no block template fails here
+  defp rendered_for_save(changeset, block_map) do
+    {changeset, []} = BrandoAdmin.Components.Form.render_blocks_for_save(block_map, changeset)
+    changeset
   end
 end
