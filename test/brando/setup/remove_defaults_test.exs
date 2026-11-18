@@ -376,6 +376,18 @@ defmodule Brando.Setup.RemoveDefaultsTest do
       assert length(in_prefix("tenant_beta_production", &live_modules/0)) == 7
     end
 
+    test "printed by the release function, a failure says what was changed before it" do
+      Repo.repo().query!(
+        ~s|ALTER TABLE "tenant_beta_production".pages_fragments ADD CONSTRAINT refuse_trash CHECK (deleted_at IS NULL)|
+      )
+
+      output = capture_io(fn -> assert {:error, _message} = Seeds.remove_defaults(yes: true) end)
+
+      refute output =~ "Nothing was done"
+      assert output =~ "nothing was removed in Beta (beta) → Production (production)"
+      assert output =~ "Already moved to the trash"
+    end
+
     test "names a site or environment that does not exist" do
       assert {{:error, message}, _} = remove(site: "nope")
       assert message =~ ~s(no site has the key "nope")

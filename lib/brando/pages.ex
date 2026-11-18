@@ -258,12 +258,20 @@ defmodule Brando.Pages do
     end
   end
 
-  defp lock_page_tree do
+  @doc """
+  Takes the current environment's page tree lock for the rest of the
+  transaction, as a page's delete and a parent change take it before any
+  row. A caller that locks pages itself and then deletes one takes it first.
+  """
+  @spec lock_page_tree() :: :ok
+  def lock_page_tree do
     prefix = Brando.Tenant.current_prefix() || "public"
 
     Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
       "brando-page-tree:" <> prefix
     ])
+
+    :ok
   end
 
   defp live_page(id) do

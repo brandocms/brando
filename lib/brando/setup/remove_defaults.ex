@@ -30,14 +30,17 @@ defmodule Brando.Setup.RemoveDefaults do
   word in a ref, the title, a block hidden, taken out, added or moved, the
   status. A homepage with another fragment or a page under it is kept too:
   move those first. So is a homepage or footer with a revision that waits to
-  be published (stored for later, or scheduled). Content the seeds of another Brando version wrote
-  differently counts as changed, and is kept.
+  be published (stored for later, or scheduled). Content the seeds of another
+  Brando version wrote differently counts as changed, and is kept.
 
   With `yes: true` each environment is planned again inside the transaction
-  that removes, once the homepages, footers and modules are locked, so an
-  edit or a new use committed after a dry run is seen. An environment that
-  fails is rolled back; the error names it, and the environments changed
-  before it.
+  that removes, after it has locked the page tree, the homepages and footers
+  with their blocks, refs and variables, and the seed's modules. An edit or
+  a new use committed before then is seen, and the plan changes with it; one
+  that starts after waits for the removal to commit, and then saves to an
+  entry or module in the trash, which can be restored from there. An
+  environment that fails is rolled back; the error names it, and the
+  environments changed before it.
 
   An entry in the trash counts as using its modules, so restoring it finds
   them, except the seeded homepage and footer as they were. Blocks no entry
@@ -133,20 +136,24 @@ defmodule Brando.Setup.RemoveDefaults do
   def run(opts \\ []) do
     info = printer(caller_info(opts) || (&IO.puts(ANSI.format(&1))))
 
-    result =
-      with :ok <- check_options(opts),
-           :ok <- started(),
-           {:ok, targets} <- Brando.Content.Resave.environments(opts) do
-        remove(targets, opts[:yes] == true, info)
-      end
-
-    case result do
-      {:error, message} -> unless caller_info(opts), do: info.([:red, "Nothing was done: " <> message])
-      _ok -> :ok
+    case prepare(opts) do
+      # A failure says itself what was changed before it
+      {:ok, targets} -> targets |> remove(opts[:yes] == true, info) |> print_error(opts, info, "")
+      error -> print_error(error, opts, info, "Nothing was done: ")
     end
-
-    result
   end
+
+  defp prepare(opts) do
+    with :ok <- check_options(opts), :ok <- started(), do: Brando.Content.Resave.environments(opts)
+  end
+
+  # Printed here unless the caller prints it (the Mix task raises with it)
+  defp print_error({:error, message} = error, opts, info, prefix) do
+    unless caller_info(opts), do: info.([:red, prefix <> message])
+    error
+  end
+
+  defp print_error(result, _opts, _info, _prefix), do: result
 
   defp caller_info(opts), do: if(Keyword.keyword?(opts) and is_function(opts[:info], 1), do: opts[:info])
 
@@ -497,9 +504,10 @@ defmodule Brando.Setup.RemoveDefaults do
   # ── Removing ──────────────────────────────────────────────────────────────
 
   # Planned in the transaction that removes, once the rows it decides on are
-  # locked, so an edit or a new use committed meanwhile is seen. A block
-  # written with one of the modules (its foreign key check takes a share of
-  # the module's row) waits for the removal to commit, or is seen by it.
+  # locked: an edit or a new use committed before the locks is in the plan.
+  # One after them waits for the removal to commit: a block written with one
+  # of the modules, whose foreign key check takes a share of the module's
+  # row, or an edit of a homepage's or footer's rows.
   defp remove_planned do
     result =
       Repo.transaction(fn ->
@@ -522,21 +530,53 @@ defmodule Brando.Setup.RemoveDefaults do
     exception -> {:error, Exception.message(exception)}
   end
 
-  # In the order an editor's save takes them: the entry's row, then (for a
-  # block written with a module) a share of the module's
+  # The page tree first, as a page's delete or parent change takes it, then
+  # in the order an editor's save takes rows: the entry's, its blocks', then
+  # (for a block written with a module) a share of the module's
   defp lock_candidates do
-    Repo.all(from(p in Pages.Page, where: p.uri == "index" and is_nil(p.deleted_at), select: p.id, lock: "FOR UPDATE"))
+    Pages.lock_page_tree()
 
-    Repo.all(
-      from(f in Pages.Fragment,
-        where: f.parent_key == "partials" and f.key == "footer" and is_nil(f.deleted_at),
-        select: f.id,
-        lock: "FOR UPDATE"
+    page_ids =
+      Repo.all(from(p in Pages.Page, where: p.uri == "index" and is_nil(p.deleted_at), select: p.id, lock: "FOR UPDATE"))
+
+    fragment_ids =
+      Repo.all(
+        from(f in Pages.Fragment,
+          where: f.parent_key == "partials" and f.key == "footer" and is_nil(f.deleted_at),
+          select: f.id,
+          lock: "FOR UPDATE"
+        )
       )
-    )
+
+    lock_blocks(Pages.Page.Blocks, page_ids)
+    lock_blocks(Pages.Fragment.Blocks, fragment_ids)
 
     module_ids = Enum.map(Map.values(Seeds.seeded_modules()), & &1.id)
     Repo.all(from(m in Content.Module, where: m.id in ^module_ids, select: m.id, lock: "FOR UPDATE"))
+  end
+
+  # The rows the fingerprint reads under each entry: an edit that updates a
+  # block, ref or variable in place touches neither the entry's row nor a
+  # module's, so those locks alone would not wait for it. A row added under
+  # them takes a share of the row it belongs to, which these locks hold.
+  defp lock_blocks(_join, []), do: :ok
+
+  defp lock_blocks(join, entry_ids) do
+    root_ids =
+      Repo.all(from(j in join, where: j.entry_id in ^entry_ids, select: j.block_id, lock: "FOR UPDATE"))
+
+    block_ids = lock_tree(root_ids, [])
+    Repo.all(from(r in Content.Ref, where: r.block_id in ^block_ids, select: r.id, lock: "FOR UPDATE"))
+    Repo.all(from(v in Content.Var, where: v.block_id in ^block_ids, select: v.id, lock: "FOR UPDATE"))
+    :ok
+  end
+
+  defp lock_tree([], locked), do: locked
+
+  defp lock_tree(ids, locked) do
+    Repo.all(from(b in Content.Block, where: b.id in ^ids, select: b.id, lock: "FOR UPDATE"))
+    children = Repo.all(from(b in Content.Block, where: b.parent_id in ^ids, select: b.id))
+    lock_tree(children -- locked, ids ++ locked)
   end
 
   # Fragments before pages: a page's delete moves the fragments still on it
