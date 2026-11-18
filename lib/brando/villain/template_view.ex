@@ -92,6 +92,19 @@ defmodule Brando.Villain.TemplateView do
   def wrap(value, mode) when is_map(value), do: %__MODULE__{value: value, mode: mode}
   def wrap(value, _mode), do: value
 
+  @doc """
+  An atom as its text, and each atom in a list, as a template reads a field.
+  Liquid has no atoms and Liquex compares none equal to text, so an entry's
+  `status` or an `Ecto.Enum` field read as text makes
+  `{% if e.status == "draft" %}` hold, and prints as the atom did. `nil`,
+  `true` and `false` stay as they are.
+  """
+  @spec atom_text(term()) :: term()
+  def atom_text(value) when is_boolean(value) or is_nil(value), do: value
+  def atom_text(value) when is_atom(value), do: Atom.to_string(value)
+  def atom_text(value) when is_list(value), do: Enum.map(value, &atom_text/1)
+  def atom_text(value), do: value
+
   @doc "`value` as `wrap/2` gives it for a template rendering in `context`."
   @spec wrap_for(term(), Context.t()) :: term()
   def wrap_for(value, %Context{} = context), do: wrap(value, read_mode(:escape, context))
@@ -118,7 +131,7 @@ defmodule Brando.Villain.TemplateView do
   def fetch(%__MODULE__{value: value, mode: mode}, key, %Context{} = context) do
     with false <- hidden?(value, key, mode),
          {:ok, field} <- Liquex.Indifferent.fetch(value, key) do
-      {:ok, read(value, key, field, read_mode(mode, context))}
+      {:ok, value |> read(key, field, read_mode(mode, context)) |> atoms_as_text(context)}
     else
       _ -> :error
     end
@@ -189,8 +202,11 @@ defmodule Brando.Villain.TemplateView do
       else: text |> InertLiquid.encode_all() |> InertLiquid.close_delimiter()
   end
 
-  def filter_result(result, _filter, nil, context), do: result |> wrap_records(context) |> inert(context)
-  def filter_result(result, _filter, mode, context), do: result |> wrap(read_mode(mode, context)) |> inert(context)
+  def filter_result(result, _filter, nil, context),
+    do: result |> atom_text() |> wrap_records(context) |> inert(context)
+
+  def filter_result(result, _filter, mode, context),
+    do: result |> atom_text() |> wrap(read_mode(mode, context)) |> inert(context)
 
   defp wrap_records(value, context) when is_map(value), do: wrap_for(value, context)
   defp wrap_records(value, context) when is_list(value), do: Enum.map(value, &wrap_records(&1, context))
@@ -236,7 +252,7 @@ defmodule Brando.Villain.TemplateView do
       end
 
     for {key, field} <- value, not hidden?(value, key, mode) do
-      [wrap(key, key_mode), wrap(field, field_mode)]
+      [wrap(key, key_mode), field |> atom_text() |> wrap(field_mode)]
     end
   end
 
@@ -261,6 +277,10 @@ defmodule Brando.Villain.TemplateView do
   end
 
   defp read_mode(mode, _context), do: mode
+
+  # A tag gets the atom itself
+  defp atoms_as_text(field, %Context{private: %{@raw_flag => true}}), do: field
+  defp atoms_as_text(field, _context), do: atom_text(field)
 
   defp read(value, key, field, :escape) when is_binary(field), do: read_text(value, key, field)
   defp read(_value, _key, field, mode), do: wrap(field, mode)

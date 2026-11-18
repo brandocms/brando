@@ -492,7 +492,9 @@ entry (`{% assign e = card.identifier | get_entry %}`) gets it on the site only
 while it is published, and in live preview whatever its status; publishing,
 unpublishing or deleting the entry renders the pages that link to it again,
 its own included
-([Liquid tags and context](block_editor.md#liquid-tags-and-context)).
+([Liquid tags and context](block_editor.md#liquid-tags-and-context)). Its
+status reads as text, so `{% if e.status == "draft" %}` marks one in live
+preview that is not out yet.
 
 <!-- usage-rules:end -->
 
