@@ -1,4 +1,4 @@
-defmodule Brando.Migrations.Brando232AddContentDefinitionBatchesTest do
+defmodule Brando.Migrations.Brando233AddContentDefinitionBatchesTest do
   # Runs the upgrade template inside the sandbox transaction, with the table
   # dropped first; Postgres DDL is transactional, so everything is undone.
   use ExUnit.Case
@@ -6,7 +6,7 @@ defmodule Brando.Migrations.Brando232AddContentDefinitionBatchesTest do
 
   import Brando.MigrationTemplates
 
-  @template "brando_232_add_content_definition_batches.exs"
+  @template "brando_233_add_content_definition_batches.exs"
   @tenant "tenant_acme_staging"
   @table "content_definition_batches"
 

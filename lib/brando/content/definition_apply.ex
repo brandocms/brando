@@ -16,7 +16,7 @@ defmodule Brando.Content.DefinitionApply do
     * `previous_digest`, `previous` - the definition the apply replaced, in
       the same canonical form, or nil for a create or an adoption
     * `definition` - the definition as the apply wrote it, its tokens written
-      as the records they name, or nil for rows from before brando_232
+      as the records they name, or nil for rows from before brando_233
     * `action` - `:created`, `:updated`, `:replaced` (applied over a database
       copy that was never applied from files, or edited here since the last
       apply, because the operator chose the files' version), `:adopted` (the

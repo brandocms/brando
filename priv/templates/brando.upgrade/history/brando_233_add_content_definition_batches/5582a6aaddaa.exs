@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.Brando232AddContentDefinitionBatches do
+defmodule Brando.Repo.Migrations.Brando233AddContentDefinitionBatches do
   use Ecto.Migration
 
   @moduledoc """

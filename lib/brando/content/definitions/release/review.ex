@@ -144,7 +144,7 @@ defmodule Brando.Content.Definitions.Release.Review do
   end
 
   # The definition as last applied here (or found equal to the files),
-  # whose `definition` the row holds from brando_232 on
+  # whose `definition` the row holds from brando_233 on
   defp applied(uid) do
     Repo.one(
       from(a in DefinitionApply,

@@ -18,12 +18,18 @@ defmodule Brando.Content.Definitions.Release.Verify do
   definition after all of them adds to the results. `blocks/3` renders one
   entry's blocks both ways for a per-block diff.
 
+  Each block is rendered as a stored render is (`Brando.Villain.parse_checked/3`),
+  with the release's modules in place of the stored ones
+  (`Brando.Villain.with_modules/2`): a template that fails to parse or raises
+  fails its block, as it would keep the entry's stored HTML.
+
   The runs are kept on the node that ran them, until the next one.
   """
 
   alias Brando.Content.Definitions.Release.{Entries, Proposed}
   alias Brando.Tenant
   alias Brando.Villain
+  alias Brando.Villain.RenderFailure
 
   @table __MODULE__
   @supervisor Brando.Content.Definitions.Release.TaskSupervisor
@@ -250,25 +256,38 @@ defmodule Brando.Content.Definitions.Release.Verify do
 
   defp compare(base, {:error, _}, {:ok, html}), do: Map.put(%{base | before: "", after: html}, :state, :changed)
 
-  defp compare(base, before, {:error, message}),
-    do: Map.put(%{base | before: elem_ok(before), message: message}, :state, :failed)
+  defp compare(base, before, {:error, failure}) do
+    base = %{base | before: elem_ok(before), message: failure_message(failure)}
+    base = if failure && failure.module_name, do: %{base | module: module_label(failure, base.module)}, else: base
+    Map.put(base, :state, :failed)
+  end
+
+  defp failure_message(%RenderFailure{} = failure), do: RenderFailure.describe(failure)
+  defp failure_message(_), do: "the block failed to render"
+
+  # The failing block may be a child of the root: name its module then
+  defp module_label(%RenderFailure{module_name: name}, root) when is_binary(name), do: root || name
+  defp module_label(_failure, root), do: root
 
   defp elem_ok({:ok, html}), do: html
   defp elem_ok(_), do: nil
 
-  defp render_stored(block, entry) do
-    {:ok, Villain.render_block(block, entry)}
-  rescue
-    error -> {:error, Exception.message(error)}
-  end
+  # Rendered as a stored render is (`Brando.Villain.parse_checked/3`): a
+  # template that fails to parse or raises is a failure of its block, named
+  # by the innermost block that failed, never output with an error in it
+  defp render_stored(block, entry), do: checked(block, entry)
 
-  # The one place a block's failure is caught: it is the block's verdict,
-  # not the run's
   defp render_proposed(block, entry, proposed) do
     synced = Proposed.sync_block(block, proposed)
-    {:ok, Villain.with_modules(proposed.modules, fn -> Villain.render_block(synced, entry) end)}
-  rescue
-    error -> {:error, error |> Exception.message() |> String.slice(0, 2000)}
+    Villain.with_modules(proposed.modules, fn -> checked(synced, entry) end)
+  end
+
+  defp checked(block, entry) do
+    case Villain.parse_checked([%{block: block}], entry) do
+      {:ok, html} -> {:ok, html}
+      {:error, [failure | _]} -> {:error, failure}
+      {:error, []} -> {:error, nil}
+    end
   end
 
   defp uses?(%{module_id: id} = block, changed) when not is_nil(id) do
