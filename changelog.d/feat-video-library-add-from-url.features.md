@@ -1,0 +1,1 @@
+- The Videos library's header has "Add from URL" and an "Add from …" button for each connected provider library, next to Upload: the video goes into the folder in view, and the buttons show only when the default video config takes external videos and the editor may add videos.

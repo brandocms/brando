@@ -239,6 +239,7 @@ defmodule Brando.Videos.Uploaders.Vimeo do
              remote_id: video_id,
              source_url: payload["link"],
              config_target: Keyword.get(opts, :config_target),
+             folder_id: Keyword.get(opts, :folder_id),
              meta: %{"provider" => "vimeo", "imported" => true, "vimeo" => %{"video_id" => video_id}},
              creator_id: user.id
            }),

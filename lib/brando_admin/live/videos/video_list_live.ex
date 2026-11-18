@@ -11,8 +11,10 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   alias Brando.Worker.VideoMetadataSweep
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Assets.ProviderLibraryPanel
   alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Assets.SortByUse
+  alias BrandoAdmin.Components.Assets.VideoFromURL
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.VideoPlayer
   alias BrandoAdmin.Components.Work, as: WorkComponent
@@ -38,6 +40,17 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       |> assign(:deliver_topic, deliver_topic)
       |> assign(:upload_strategy, upload_cfg.upload_strategy)
       |> assign(:video_upload_available?, Brando.Uploads.video_upload_available?(upload_cfg))
+      # "Add from URL" and "Add from <provider>" link an external video, so
+      # they follow the default config's `allow_external_urls`, as a field's
+      # picker follows its field's.
+      |> assign(:allow_external_urls?, upload_cfg.allow_external_urls)
+      |> assign(
+        :library_providers,
+        ProviderLibraryPanel.providers(socket.assigns.current_user, upload_cfg.allow_external_urls)
+      )
+      |> assign(:url_add?, false)
+      |> assign(:library, nil)
+      |> VideoFromURL.assign_defaults()
       |> assign(:current_folder_id, nil)
       |> assign(:recent_folders, [])
       |> assign(:custom_folders, [])
@@ -213,7 +226,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   # folder the file was picked in, which the hook sends as `opening` (the
   # element's `data-ref` when the file was queued).
   def handle_event("get_video_upload_url", params, socket) do
-    folder_id = provider_folder_id(params["opening"], socket.assigns.upload_root)
+    folder_id = library_folder_id(params["opening"], socket.assigns.upload_root)
 
     {:noreply, ProviderVideoUpload.initiate(socket, socket.assigns.current_user, "default", params, folder_id: folder_id)}
   end
@@ -237,6 +250,56 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_event("video_upload_progress", _params, socket), do: {:noreply, socket}
   def handle_event("upload_error", _params, socket), do: {:noreply, socket}
+
+  # "Add from URL": the address is read in the browser, its title looked up
+  # at the provider (`VideoFromURL`), and the video goes into the folder in
+  # view when the paste was made, as an upload does.
+  def handle_event("open_url_add", _, %{assigns: %{allow_external_urls?: true}} = socket) do
+    {:noreply, socket |> assign(:library, nil) |> assign(:url_add?, true)}
+  end
+
+  def handle_event("open_url_add", _, socket), do: {:noreply, socket}
+
+  # Closing drops a lookup still running: the editor changed their mind.
+  def handle_event("close_url_add", _, socket) do
+    {:noreply, socket |> assign(:url_add?, false) |> VideoFromURL.cancel()}
+  end
+
+  def handle_event("url", params, %{assigns: %{url_add?: true}} = socket) do
+    {:noreply, VideoFromURL.start(socket, params, %{config_target: "default", folder_id: add_folder_id(socket)})}
+  end
+
+  def handle_event("url", _params, socket), do: {:noreply, socket}
+
+  # "Add from <provider>": the provider's own library, whose videos go into
+  # the folder in view. One Brando holds already stays where it is.
+  def handle_event("open_library", %{"strategy" => strategy}, socket) do
+    case ProviderLibraryPanel.open(socket, strategy) do
+      {:ok, socket} -> {:noreply, socket |> assign(:url_add?, false) |> VideoFromURL.cancel()}
+      :error -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
+
+  def handle_event("search_library", %{"query" => query}, socket) do
+    {:noreply, ProviderLibraryPanel.search(socket, query)}
+  end
+
+  def handle_event("more_library", _, socket), do: {:noreply, ProviderLibraryPanel.more(socket)}
+
+  def handle_event("add_from_library", %{"remote-id" => remote_id}, socket) do
+    opts = [config_target: "default", folder_id: add_folder_id(socket)]
+
+    case ProviderLibraryPanel.add(socket, remote_id, socket.assigns.current_user, opts) do
+      {:ok, _video, socket} ->
+        AssetListHelpers.update_list_entries(socket.assigns.schema)
+        {:noreply, refresh(socket)}
+
+      {:error, socket} ->
+        {:noreply, socket}
+    end
+  end
 
   # With the "Not in use" filter on: delete every unused video in view, this
   # folder's or, at the root, the whole library's, as the listing's Delete does.
@@ -314,8 +377,12 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(title), do: title
 
+  # Where a video added from a URL or a provider library goes: the folder in
+  # view, the root's own at the root.
+  defp add_folder_id(socket), do: library_folder_id(socket.assigns.current_folder_id, socket.assigns.upload_root)
+
   # A folder of this library, or none: the browser names it.
-  defp provider_folder_id(folder_id, upload_root) do
+  defp library_folder_id(folder_id, upload_root) do
     with {id, ""} <- Integer.parse(to_string(folder_id || "")),
          %Folder{library: true, scope: scope, path: path} <- Brando.Repo.get(Folder, id),
          true <- AssetListHelpers.folder_under_root?(FolderBrowser.absolute_folder(path, scope), upload_root) do
@@ -341,6 +408,27 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     {:noreply,
      socket
      |> refresh()}
+  end
+
+  def handle_async(:library_page, result, socket), do: {:noreply, ProviderLibraryPanel.page_loaded(socket, result)}
+
+  def handle_async(:url_video, result, socket) do
+    case VideoFromURL.finish(socket, result, socket.assigns.current_user) do
+      {:ok, video, socket} ->
+        send(self(), {:toast, gettext("Added %{title}", title: Videos.display_title(video) || gettext("Untitled"))})
+        AssetListHelpers.update_list_entries(socket.assigns.schema)
+        {:noreply, socket |> assign(:url_add?, false) |> refresh()}
+
+      {:error, :forbidden, socket} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        {:noreply, socket}
+
+      {:error, _reason, socket} ->
+        {:noreply, socket}
+
+      {:ignore, socket} ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -374,6 +462,42 @@ defmodule BrandoAdmin.Videos.VideoListLive do
         close={JS.push("close_video")}
       >
         <VideoPlayer.player video={@playing} />
+      </Content.modal>
+
+      <%!-- Outside the folder browser, a component: the URL hook pushes to
+            its own element, which then reaches this LiveView. --%>
+      <Content.modal
+        :if={@url_add?}
+        id="video-add-url"
+        title={gettext("Add from URL")}
+        subtitle={add_destination(@current_folder)}
+        icon="link"
+        show
+        close={JS.push("close_url_add")}
+      >
+        <div class="video-library-add">
+          <p class="video-library-add-lede">
+            {gettext(
+              "A YouTube or Vimeo address, or the address of a video file or stream. The title, thumbnail and duration are looked up at the source."
+            )}
+          </p>
+          <VideoFromURL.input id="video-library" creating={@creating_video} />
+        </div>
+      </Content.modal>
+
+      <Content.modal
+        :if={@library}
+        id="video-add-library"
+        title={gettext("Add from %{provider}", provider: @library.label)}
+        subtitle={add_destination(@current_folder)}
+        icon="cloud-download"
+        show
+        wide
+        close={JS.push("close_library")}
+      >
+        <div class="video-library-add">
+          <ProviderLibraryPanel.panel id="video-library" library={@library} heading={false} select_existing={false} />
+        </div>
       </Content.modal>
 
       <.live_component
@@ -456,6 +580,25 @@ defmodule BrandoAdmin.Videos.VideoListLive do
                 ><.icon name="upload" />{gettext("Upload")}</button>
                 <input type="file" class="file-input" accept="video/*" multiple aria-label={gettext("Upload videos")} />
               </div>
+              <button
+                :if={@allow_external_urls? and BrandoAdmin.Authorization.allowed?(:create, @schema)}
+                type="button"
+                class="folder-action"
+                aria-haspopup="dialog"
+                phx-click="open_url_add"
+              >
+                <.icon name="link" />{gettext("Add from URL")}
+              </button>
+              <button
+                :for={provider <- @library_providers}
+                type="button"
+                class="folder-action"
+                aria-haspopup="dialog"
+                phx-click="open_library"
+                phx-value-strategy={provider.strategy}
+              >
+                <.icon name="cloud-download" />{gettext("Add from %{provider}", provider: provider.label)}
+              </button>
               <SortByUse.sort_button
                 :if={
                   @visible_video_count > 0 and !@all_folders? and !AssetListHelpers.unused_filter?(@params) and
@@ -601,6 +744,9 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       )
     )
   end
+
+  defp add_destination(""), do: gettext("Goes into %{folder}", folder: gettext("Library root"))
+  defp add_destination(folder), do: gettext("Goes into %{folder}", folder: String.replace(folder, "/", " › "))
 
   defp folder_label_for_display(folder, upload_root) do
     case FolderBrowser.relative_folder(folder, upload_root) do

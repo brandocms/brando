@@ -566,6 +566,7 @@ defmodule Brando.Videos.Uploaders.Mux do
              status: :processing,
              title: asset_title(asset),
              config_target: Keyword.get(opts, :config_target),
+             folder_id: Keyword.get(opts, :folder_id),
              meta: %{"provider" => "mux", "imported" => true, "mux" => %{"asset_id" => asset_id}},
              creator_id: user.id
            }) do

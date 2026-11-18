@@ -865,12 +865,12 @@ msgstr "%{property}: anbefalt av Google"
 msgid "%{property}: required by Google"
 msgstr "%{property}: kreves av Google"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} library"
 msgstr "%{provider}-bibliotek"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} no longer has this video."
 msgstr "%{provider} har ikke lenger denne videoen."
@@ -1129,6 +1129,11 @@ msgstr "En innkommende webhook-URL fra Slack, som begynner med https://hooks.sla
 #, elixir-autogen, elixir-format
 msgid "A URL or content link"
 msgstr "En URL eller lenke til innhold"
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "A YouTube or Vimeo address, or the address of a video file or stream. The title, thumbnail and duration are looked up at the source."
+msgstr "En YouTube- eller Vimeo-adresse, eller adressen til en videofil eller -strøm. Tittel, miniatyrbilde og varighet hentes fra kilden."
 
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
@@ -1692,8 +1697,8 @@ msgid "Activity views"
 msgstr "Aktivitetsvisninger"
 
 #: lib/brando_admin/components/assets/media_field.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/form/input/render_var.ex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
@@ -1811,6 +1816,7 @@ msgid "Add fragment"
 msgstr "Legg til fragment"
 
 #: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add from %{provider}"
 msgstr "Legg til fra %{provider}"
@@ -1818,6 +1824,7 @@ msgstr "Legg til fra %{provider}"
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add from URL"
 msgstr "Legg til fra URL"
@@ -1942,6 +1949,11 @@ msgstr "Lagt til"
 msgid "Added %{date}"
 msgstr "Lagt til %{date}"
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{title}"
+msgstr "La til %{title}"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Added a note"
@@ -1962,7 +1974,7 @@ msgstr "Lagt til for dette feltet"
 msgid "Added the Figma access token"
 msgstr "La til Figma-tilgangstokenet"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Adding…"
@@ -2380,7 +2392,7 @@ msgstr "Et ordnet sett med moduler for fotnoter. Plasser en tekstmodul først fo
 msgid "An update is available for review. Preview a commit and use the displayed version to accept it."
 msgstr "En oppdatering venter på gjennomgang. Forhåndsvis en commit og bruk den viste versjonen for å godta den."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Analyzing video..."
 msgstr "Analyserer video..."
@@ -4024,6 +4036,7 @@ msgstr "Klikkrate"
 msgid "Clicks"
 msgstr "Klikk"
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/children_button.ex
 #: lib/brando_admin/components/content.ex
 #: lib/brando_admin/components/content/list.ex
@@ -4034,7 +4047,6 @@ msgstr "Klikk"
 #: lib/brando_admin/components/form/tab_notice.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/shortcut_sheet.ex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/forms/submissions_live.ex
@@ -4777,7 +4789,7 @@ msgstr "Kunne ikke endre miljøets frontend-ressurser"
 msgid "Could not check whether the recipient may read the entry"
 msgstr "Kunne ikke sjekke om mottakeren kan lese oppføringen"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Could not check which sites use these videos. Try again in a moment."
 msgstr "Kunne ikke sjekke hvilke nettsteder som bruker disse videoene. Prøv igjen om litt."
@@ -4834,7 +4846,7 @@ msgstr "Klarte ikke legge publiseringshandlingen i kø."
 msgid "Could not queue the static build."
 msgstr "Klarte ikke legge det statiske bygget i kø."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Could not reach %{provider}. Try again in a moment."
 msgstr "Fikk ikke kontakt med %{provider}. Prøv igjen om litt."
@@ -5147,7 +5159,7 @@ msgstr "Opprett oversettelse"
 msgid "Create user"
 msgstr "Opprett bruker"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #: lib/brando_admin/live/videos/video_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create video"
@@ -5223,7 +5235,7 @@ msgstr "Oppretter på %{language}"
 msgid "Creating redirect..."
 msgstr "Oppretter omdirigering..."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "Oppretter..."
@@ -7476,8 +7488,8 @@ msgstr "Eksterne video-URL-er er deaktivert for dette feltet"
 msgid "Facebook, LinkedIn"
 msgstr "Facebook, LinkedIn"
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/layouts/root.html.heex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
@@ -8162,6 +8174,11 @@ msgstr "Gå til Brukere"
 msgid "Go to the dashboard"
 msgstr "Gå til dashbordet"
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Goes into %{folder}"
+msgstr "Legges i %{folder}"
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Google has not shown this page for any search in the period."
@@ -8792,7 +8809,7 @@ msgstr "I Figma: Settings → Security → Personal access tokens, med lesetilga
 msgid "In a recovery copy"
 msgstr "I en gjenopprettingskopi"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "In library"
 msgstr "I biblioteket"
@@ -9711,7 +9728,7 @@ msgstr "Hent inn i redigeringen"
 msgid "Load latest version"
 msgstr "Last inn siste versjon"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Load more"
 msgstr "Last inn flere"
@@ -9773,7 +9790,7 @@ msgstr "Henter søk …"
 msgid "Loading video..."
 msgstr "Laster video..."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Loading videos…"
 msgstr "Laster inn videoer…"
@@ -11534,7 +11551,7 @@ msgstr "Ingen video valgt"
 msgid "No videos are missing details"
 msgstr "Ingen videoer mangler detaljer"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "No videos in this %{provider} account."
 msgstr "Ingen videoer i denne %{provider}-kontoen."
@@ -11549,6 +11566,7 @@ msgstr "Ingen videoer i denne mappen"
 msgid "No videos in this view"
 msgstr "Ingen videoer i denne visningen"
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No videos match “%{query}”."
@@ -12828,7 +12846,7 @@ msgstr "Passord satt av en administrator"
 msgid "Paste"
 msgstr "Lim inn"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Paste YouTube, Vimeo or direct video URL"
 msgstr "Lim inn YouTube, Vimeo eller direkte video-URL"
@@ -13296,7 +13314,7 @@ msgid "Price range"
 msgstr "Prisklasse"
 
 #: lib/brando/images/image.ex
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-format, elixir-autogen
 msgid "Processing"
 msgstr "Behandler"
@@ -15535,7 +15553,7 @@ msgstr "Poengsum"
 msgid "Score %{score} of 100"
 msgstr "Poengsum %{score} av 100"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -15543,12 +15561,12 @@ msgstr "Poengsum %{score} av 100"
 msgid "Search"
 msgstr "Søk"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Search %{provider}"
 msgstr "Søk i %{provider}"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Search %{provider} by title"
 msgstr "Søk i %{provider} etter tittel"
@@ -15765,12 +15783,12 @@ msgstr "Oppretter startinnhold på %{language} i %{environment} nå…"
 msgid "Seeding queued."
 msgstr "Oppretting av startinnhold er satt i kø."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/input/select.ex
 #: lib/brando_admin/components/form/module_props.ex
-#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Select"
 msgstr "Velg"
@@ -16547,7 +16565,7 @@ msgstr "Innloggingsregler"
 msgid "Sign-in policy changed"
 msgstr "Innloggingsreglene endret"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Signed playback"
 msgstr "Signert avspilling"
@@ -18617,7 +18635,7 @@ msgstr "Dette MCP-endepunktet finnes ikke eller er slått av."
 msgid "This SVG declares entities, which are not allowed."
 msgstr "Denne SVG-filen deklarerer entiteter, og det er ikke tillatt."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "This address can't be used for a video."
 msgstr "Denne adressen kan ikke brukes til en video."
@@ -19110,12 +19128,12 @@ msgstr "Denne brukeren har ikke noe innhold å overføre."
 msgid "This video cannot be played here."
 msgstr "Denne videoen kan ikke spilles av her."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "This video is being added or deleted elsewhere. Try again in a moment."
 msgstr "Denne videoen blir lagt til eller slettet et annet sted. Prøv igjen om litt."
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "This video needs signed playback, which Brando does not support."
 msgstr "Denne videoen krever signert avspilling, som Brando ikke støtter."
@@ -19804,10 +19822,10 @@ msgid "Untitled section"
 msgstr "Seksjon uten tittel"
 
 #: lib/brando_admin/components/assets/media_field.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/form/input/gallery/video_config.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/video_drawer.ex
-#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled video"
 msgstr "Video uten tittel"
@@ -20346,7 +20364,7 @@ msgstr "CSS-klasser for video"
 msgid "Video Preview"
 msgstr "Videoforhåndsvisning"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/video_from_url.ex
 #, elixir-autogen, elixir-format
 msgid "Video URL"
 msgstr "Video-URL"
@@ -20436,7 +20454,7 @@ msgstr "Videoopplasting er ikke satt opp. Bruk %{action} for å velge en video f
 msgid "Videos"
 msgstr "Videoer"
 
-#: lib/brando_admin/components/video_picker.ex
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Videos already in your %{provider} account. Deleting one here later leaves it in %{provider}."
 msgstr "Videoer som allerede ligger i %{provider}-kontoen din. Sletter du en her senere, blir den liggende i %{provider}."

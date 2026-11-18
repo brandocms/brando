@@ -166,6 +166,8 @@ defmodule Brando.Videos.ProviderLibrary do
   ## Options
 
     * `:config_target` — stored on a new record, as an upload would
+    * `:folder_id` — the library folder a new record goes into. A record
+      that already holds the video stays where it is.
   """
   @spec import(atom(), String.t(), Brando.Users.User.t(), keyword()) :: {:ok, Video.t()} | {:error, term()}
   def import(strategy, remote_id, user, opts \\ []) when is_binary(remote_id) do

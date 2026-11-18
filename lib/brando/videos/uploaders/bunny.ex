@@ -455,6 +455,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
              status: :processing,
              title: bunny_video["title"],
              config_target: Keyword.get(opts, :config_target),
+             folder_id: Keyword.get(opts, :folder_id),
              meta: %{
                "provider" => "bunny",
                "imported" => true,

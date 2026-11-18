@@ -349,8 +349,9 @@
 .image-focal-field .image-focal-edit { margin-top: 12px; }
 
 /* "Add from <provider>": browse the provider's own library inside the video
-   picker. Same panel treatment as the URL input above it. */
-.drawer.admin-workspace.media-workspace-drawer {
+   picker, and in the Videos library's dialog (`.video-library-add`). Same
+   panel treatment as the URL input above it. */
+.drawer.admin-workspace.media-workspace-drawer, .video-library-add {
   .video-picker-library { margin: 0 0 24px; padding: 20px; border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface-shaded); }
   .video-picker-library-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .video-picker-library-header h4 { margin: 0; color: var(--brando-ink); font: 500 var(--brando-text-lg)/20px var(--brando-font-sans); text-transform: none; letter-spacing: 0; }
@@ -377,7 +378,26 @@
 }
 @media (max-width: 700px) {
   .drawer.admin-workspace.media-workspace-drawer .video-picker-library { padding: 16px; }
-  .drawer.admin-workspace.media-workspace-drawer .video-picker-library-item { grid-template-columns: 52px minmax(0,1fr); }
-  .drawer.admin-workspace.media-workspace-drawer .video-picker-library-thumb { width: 52px; height: 30px; }
-  .drawer.admin-workspace.media-workspace-drawer .video-picker-library-action { grid-column: 2; }
+  :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-item { grid-template-columns: 52px minmax(0,1fr); }
+  :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-thumb { width: 52px; height: 30px; }
+  :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-action { grid-column: 2; }
+}
+
+/* The Videos library's "Add from URL" and "Add from <provider>" dialogs: the
+   picker's URL input and provider panel. The dialog frames them, so the
+   panel drops its own. */
+.video-library-add {
+  display: grid;
+  gap: 16px;
+  .video-library-add-lede, .video-picker-library-lede { margin: 0; color: var(--brando-muted); font: var(--brando-text-md)/20px var(--brando-font-sans); }
+  .video-picker-url-field { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 12px; }
+  .video-picker-url-field label { grid-column: 1 / -1; color: var(--brando-ink); font: var(--brando-text-md)/20px var(--brando-font-sans); text-transform: none; letter-spacing: 0; }
+  .video-picker-url-field input.text { min-width: 0; height: 40px; border-color: var(--brando-line); border-radius: 5px; font: var(--brando-text-lg)/20px var(--brando-font-sans); color: var(--brando-ink); padding: 8px 10px; }
+  .video-picker-url-field > .btn { align-self: stretch; height: auto; margin: 0; }
+  .video-picker-analyzing { grid-column: 1 / -1; }
+}
+#video-add-library .video-picker-library { margin: 0; padding: 0; border: 0; background: none; }
+@media (max-width: 700px) {
+  .video-library-add .video-picker-url-field { grid-template-columns: minmax(0,1fr); }
+  .video-library-add .video-picker-url-field > .btn { justify-self: start; }
 }
