@@ -133,7 +133,7 @@ defmodule Brando.Pages do
 
     with :ok <- valid_fragments_choice(choice),
          {:ok, {page, trashed}} <- delete_page_with_fragments(id, user, choice) do
-      fragments_changed(trashed)
+      render_after_commit(trashed)
       {:ok, page}
     end
   end
@@ -387,7 +387,9 @@ defmodule Brando.Pages do
   page's `deleted_at` (a fragment trashed on its own in that second was set
   a second earlier). `page` is the page as it was in the trash.
   `Brando.Authorization.Boundary.restore/2` calls this in the page's
-  restore. Each fragment takes the right to restore it.
+  restore, in its transaction. Each fragment takes the right to restore it.
+  Entries embedding them are queued for rendering once the transaction
+  around the call commits.
   """
   def restore_fragments(%Page{id: id, deleted_at: %{} = deleted_at}, user) do
     fragments =
@@ -409,12 +411,23 @@ defmodule Brando.Pages do
 
     with {:ok, restored} <- result do
       if restored != [], do: Brando.Cache.Query.evict_all(Fragment)
-      fragments_changed(restored)
+      render_after_commit(restored)
       {:ok, restored}
     end
   end
 
   def restore_fragments(%Page{}, _user), do: {:ok, []}
+
+  # A page's delete or restore, or a transaction around it, may still roll
+  # back: its renders wait for the commit, in its site and environment, after
+  # the caches it evicts. Keyed per call: a page id repeats across sites, and
+  # in a second restore of the page in the transaction.
+  defp render_after_commit([]), do: :ok
+
+  defp render_after_commit(fragments) do
+    render = Brando.Tenant.capture_context(fn -> fragments_changed(fragments) end)
+    Brando.Repo.after_commit({__MODULE__, :fragments_restored, make_ref()}, render, late: true)
+  end
 
   @doc """
   The fragments not in the trash that no page in the admin lists: their page

@@ -314,8 +314,10 @@ Brando.Pages.delete_page(page.id, user, fragments: :delete)
 The fragments change in the page delete's transaction, and a refused fragment
 leaves the page where it was: moving takes the right to update each fragment,
 and deleting the right to delete it (and to publish it, when it is published).
-A fragment already in the trash stays there. Entries embedding a fragment that
-is deleted, or restored with its page, are queued for rendering.
+A fragment already in the trash stays there. Restoring the page brings back the
+fragments deleted with it in one transaction too, which takes the right to
+restore each of them. Entries embedding a fragment that is deleted, or restored
+with its page, are queued for rendering once the change commits.
 
 The pages listing shows the fragments no page holds, in its content language,
 under **Fragments without a page**: their page is in the trash or gone, or they
