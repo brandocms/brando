@@ -387,7 +387,9 @@ defmodule Brando.Pages do
   page's `deleted_at` (a fragment trashed on its own in that second was set
   a second earlier). `page` is the page as it was in the trash.
   `Brando.Authorization.Boundary.restore/2` calls this in the page's
-  restore. Each fragment takes the right to restore it.
+  restore, in its transaction. Each fragment takes the right to restore it.
+  Entries embedding them are queued for rendering once the transaction
+  around the call commits.
   """
   def restore_fragments(%Page{id: id, deleted_at: %{} = deleted_at}, user) do
     fragments =
@@ -408,13 +410,23 @@ defmodule Brando.Pages do
       end)
 
     with {:ok, restored} <- result do
-      if restored != [], do: Brando.Cache.Query.evict_all(Fragment)
-      fragments_changed(restored)
+      if restored != [] do
+        Brando.Cache.Query.evict_all(Fragment)
+        render_after_commit(id, restored)
+      end
+
       {:ok, restored}
     end
   end
 
   def restore_fragments(%Page{}, _user), do: {:ok, []}
+
+  # The restore's transaction may still roll back: its renders wait for the
+  # commit, in its site and environment, after the caches it evicts
+  defp render_after_commit(page_id, fragments) do
+    render = Brando.Tenant.capture_context(fn -> fragments_changed(fragments) end)
+    Brando.Repo.after_commit({__MODULE__, :fragments_restored, page_id}, render, late: true)
+  end
 
   @doc """
   The fragments not in the trash that no page in the admin lists: their page

@@ -1,0 +1,1 @@
+- Restoring a page with the fragments deleted with it is one transaction without group permissions too: a fragment that can't be restored leaves the page in the trash, rather than restoring the page without it.

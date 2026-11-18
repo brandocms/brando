@@ -222,7 +222,22 @@ defmodule Brando.Authorization.Boundary do
          do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
   end
 
-  def restore(actor, %{__struct__: schema} = entry) do
+  # A page brings back the fragments trashed with it (`after_restore/3`), in
+  # one transaction: `run/4` gives it one only with group authorization, so
+  # in legacy mode and for `:system` this does, as `Brando.Pages.delete_page/3`
+  # does for the delete. Matched by name, as `after_restore/3` is.
+  def restore(actor, %{__struct__: Brando.Pages.Page} = page) do
+    Repo.transaction(fn ->
+      case restore_with_run(actor, page) do
+        {:ok, restored} -> restored
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  def restore(actor, entry), do: restore_with_run(actor, entry)
+
+  defp restore_with_run(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
       with :ok <- authorize(user, :restore, entry), do: restore_entry(user, entry)
     end)
