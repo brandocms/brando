@@ -631,6 +631,11 @@ sender first, before the first compile.
   `mix brando.migrate --tenants`. Code that reads a var's `instructions`
   gets a map: read it with `Brando.Type.I18nString.localized/1`. See
   [Vars: values, controls and layout](module_definitions.md#vars-values-controls-and-layout).
+- **An index for translation history.** `brando_235` indexes
+  `translation_pending_versions` by translation in every environment, so
+  saving a source whose translations still have text to translate reads only
+  their own history. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`.
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
