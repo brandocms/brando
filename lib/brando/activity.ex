@@ -13,7 +13,7 @@ defmodule Brando.Activity do
 
   Notes on an entry record `:note_added`, `:note_resolved` and
   `:note_reopened` (`Brando.Notes`), with the note's opening words.
-  Clearing the content caches from Utilities records `:caches_cleared`
+  Clearing the caches from Utilities records `:caches_cleared`
   (`caches_cleared/2`), which names no entry.
 
   The person is the user the change was made as. `source` says how it was
