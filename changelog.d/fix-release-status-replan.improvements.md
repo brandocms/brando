@@ -1,0 +1,1 @@
+- A module save plans the release's changes again only in its own environment, once per burst of saves, and on the node that saved it; the other nodes receive the result instead of planning.

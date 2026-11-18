@@ -1,0 +1,1 @@
+- The release's module changes shown on the dashboard and in Block modules are planned again after an environment is copied over, restored from an archive or created, and after a JSON module import.

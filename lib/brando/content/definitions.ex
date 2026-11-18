@@ -126,15 +126,23 @@ defmodule Brando.Content.Definitions do
 
   @doc """
   The PubSub topic that hears `{:definitions_applied, prefix}` after each
-  apply, and `{:definitions_changed, prefix}` after a module is deleted or a
-  table template saved or deleted (module saves are on `"brando:modules"`).
+  apply, and `{:definitions_changed, prefix}` after a module is saved or
+  deleted, a table template saved or deleted, or the environment `prefix`
+  copied over, restored from an archive or created.
   """
   def topic, do: "brando:definitions"
 
-  @doc "Announces, once the current transaction commits, that definitions changed in the current environment."
-  def changed do
-    prefix = Brando.Tenant.current_prefix()
-    Brando.Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:definitions_changed, prefix}) end)
+  @doc """
+  Announces, once the current transaction commits, that definitions changed
+  in the environment `prefix` (the current one by default), once however many
+  times a transaction calls it, and has the release status planned again
+  there (`Brando.Content.Definitions.ReleaseStatus.changed/1`).
+  """
+  def changed(prefix \\ Brando.Tenant.current_prefix()) do
+    Brando.Repo.after_commit({__MODULE__, :changed, prefix}, fn ->
+      Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:definitions_changed, prefix})
+      Brando.Content.Definitions.ReleaseStatus.changed(prefix)
+    end)
   end
 
   @doc "Writes the baseline returned by a successful apply, leaving authored DSL and templates intact."

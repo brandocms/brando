@@ -27,7 +27,9 @@ defmodule Brando.CacheSync do
   `refresh_node_cache/1`, which refreshes this node's copy for a refresh
   another node broadcast: `Brando.Tenant.Cache`, `Brando.Assets.SiteAssets`,
   the shared-library allowlists of `Brando.Content.SharedLibrary`, the site
-  caches through `Brando.Cache` and `Brando.Cache.Query`.
+  caches through `Brando.Cache` and `Brando.Cache.Query`, and the release
+  status of `Brando.Content.Definitions.ReleaseStatus`, which sends the
+  result it planned rather than asking each node to plan.
 
   A node cut off from the others when a write is broadcast does not hear it,
   and keeps its copy until the next write or a restart.
@@ -42,7 +44,8 @@ defmodule Brando.CacheSync do
     Brando.Assets.SiteAssets,
     Brando.Content.SharedLibrary.Cache,
     Brando.Cache,
-    Brando.Cache.Query
+    Brando.Cache.Query,
+    Brando.Content.Definitions.ReleaseStatus
   ]
   @origin_key {__MODULE__, :origin}
   @debounce 100
