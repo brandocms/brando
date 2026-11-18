@@ -58,14 +58,30 @@ defmodule Brando.Setup.RemoveDefaults do
   alias Brando.Content
   alias Brando.Content.BlockReferences
   alias Brando.Pages
+  alias Brando.Repo
   alias Brando.Setup.Seeds
   alias IO.ANSI
 
-  @options ~w(yes site environment info)a
+  # Each option, what it must be, and how to say so. `nil` is the default,
+  # as the Mix task passes it.
+  @options [
+    yes: {:boolean, "true or false"},
+    site: {:string, "a key, as a string"},
+    environment: {:string, "a key, as a string"},
+    info: {:function, "a function of one argument"}
+  ]
 
   # What a save sets by itself, never part of the content compared
   @ignored ~w(id uid inserted_at updated_at deleted_at creator_id updated_by_id)a
-  @owner_keys ~w(block_id parent_id table_row_id page_id module_id global_set_id entry_id)a
+  # What ties a row to what holds it, never what it refers to: a block's
+  # module is content, a ref's or variable's module is its owner (a module's
+  # own defaults)
+  @owner_keys %{
+    Content.Block => ~w(parent_id)a,
+    Content.Ref => ~w(block_id module_id)a,
+    Content.Var => ~w(block_id module_id page_id table_row_id table_template_id global_set_id menu_item_id)a,
+    Content.TableRow => ~w(block_id)a
+  }
   @entry_ignored %{
     Pages.Page => ~w(sequence breadcrumbs)a,
     Pages.Fragment => ~w(sequence page_id)a
@@ -128,32 +144,37 @@ defmodule Brando.Setup.RemoveDefaults do
   defp caller_info(opts), do: if(Keyword.keyword?(opts) and is_function(opts[:info], 1), do: opts[:info])
 
   defp check_options(opts) do
-    cond do
-      not Keyword.keyword?(opts) ->
-        {:error, "the options must be a keyword list, got: #{inspect(opts)}"}
-
-      (unknown = Keyword.keys(opts) -- @options) != [] ->
-        {:error,
-         "unknown option #{Enum.map_join(Enum.uniq(unknown), ", ", &"#{&1}:")}. " <>
-           "It takes: #{Enum.map_join(@options, ", ", &"#{&1}:")}"}
-
-      invalid = Enum.find(opts, fn {key, value} -> not valid_option?(key, value) end) ->
-        {key, value} = invalid
-        {:error, "#{key}: must be #{option_type(key)}, got: #{inspect(value)}"}
-
-      true ->
-        :ok
+    with :ok <- keyword_list(opts), :ok <- known_options(opts) do
+      Enum.find_value(opts, :ok, &invalid_option/1)
     end
   end
 
-  defp valid_option?(_key, nil), do: true
-  defp valid_option?(:yes, value), do: is_boolean(value)
-  defp valid_option?(key, value) when key in [:site, :environment], do: is_binary(value)
-  defp valid_option?(:info, value), do: is_function(value, 1)
+  defp keyword_list(opts) do
+    if Keyword.keyword?(opts), do: :ok, else: {:error, "the options must be a keyword list, got: #{inspect(opts)}"}
+  end
 
-  defp option_type(:yes), do: "true or false"
-  defp option_type(key) when key in [:site, :environment], do: "a key, as a string"
-  defp option_type(:info), do: "a function of one argument"
+  defp known_options(opts) do
+    case opts |> Keyword.keys() |> Enum.uniq() |> Enum.reject(&Keyword.has_key?(@options, &1)) do
+      [] ->
+        :ok
+
+      unknown ->
+        {:error,
+         "unknown option #{Enum.map_join(unknown, ", ", &"#{&1}:")}. " <>
+           "It takes: #{Enum.map_join(Keyword.keys(@options), ", ", &"#{&1}:")}"}
+    end
+  end
+
+  defp invalid_option({_key, nil}), do: nil
+
+  defp invalid_option({key, value}) do
+    {type, description} = Keyword.fetch!(@options, key)
+    unless of_type?(type, value), do: {:error, "#{key}: must be #{description}, got: #{inspect(value)}"}
+  end
+
+  defp of_type?(:boolean, value), do: is_boolean(value)
+  defp of_type?(:string, value), do: is_binary(value)
+  defp of_type?(:function, value), do: is_function(value, 1)
 
   defp started do
     if List.keymember?(Application.started_applications(), :brando, 0),
@@ -174,21 +195,17 @@ defmodule Brando.Setup.RemoveDefaults do
   end
 
   defp remove(targets, yes?, info) do
-    targets
-    |> Enum.reduce_while({:ok, []}, fn target, {:ok, reports} ->
-      case in_environment(target, info, fn -> remove_here(yes?, info) end) do
-        {:ok, report} -> {:cont, {:ok, [Map.merge(report, keys(target)) | reports]}}
-        {:error, _message} = error -> {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, reports} ->
-        reports = Enum.reverse(reports)
-        finish(reports, yes?, info)
-        {:ok, reports}
+    with {:ok, reports} <- Enum.reduce_while(targets, {:ok, []}, &remove_in(&1, &2, yes?, info)) do
+      reports = Enum.reverse(reports)
+      finish(reports, yes?, info)
+      {:ok, reports}
+    end
+  end
 
-      error ->
-        error
+  defp remove_in(target, {:ok, reports}, yes?, info) do
+    case in_environment(target, info, fn -> remove_here(yes?, info) end) do
+      {:ok, report} -> {:cont, {:ok, [Map.merge(report, keys(target)) | reports]}}
+      {:error, _message} = error -> {:halt, error}
     end
   end
 
@@ -208,13 +225,13 @@ defmodule Brando.Setup.RemoveDefaults do
   # ── One environment ───────────────────────────────────────────────────────
 
   defp remove_here(yes?, info) do
-    plan = plan()
-
-    if plan.modules == [] and plan.entries == [] do
-      info.("\nNo modules from the seeds (brando-default-*) here: nothing to remove.")
-      {:ok, plan}
-    else
-      if yes?, do: apply_plan(plan, info), else: {:ok, show(plan, info)}
+    with {:ok, plan} <- if(yes?, do: remove_planned(), else: {:ok, plan()}) do
+      if plan.modules == [] and plan.entries == [] do
+        info.("\nNo modules from the seeds (brando-default-*) here: nothing to remove.")
+        {:ok, plan}
+      else
+        {:ok, show(plan, info)}
+      end
     end
   end
 
@@ -266,7 +283,7 @@ defmodule Brando.Setup.RemoveDefaults do
 
   defp uses(module_ids) do
     blocks =
-      Brando.Repo.all(from(b in Content.Block, where: b.module_id in ^module_ids, select: {b.id, b.module_id}))
+      Repo.all(from(b in Content.Block, where: b.module_id in ^module_ids, select: {b.id, b.module_id}))
 
     owners = BlockReferences.list_entries_for_block_ids(Enum.map(blocks, &elem(&1, 0)), include_deleted: true)
 
@@ -286,7 +303,7 @@ defmodule Brando.Setup.RemoveDefaults do
         fields = Enum.filter([:id, :language, :deleted_at], &(&1 in schema.__schema__(:fields)))
 
         from(e in schema, where: e.id in ^ids, select: map(e, ^fields))
-        |> Brando.Repo.all()
+        |> Repo.all()
         |> Enum.map(&{{schema, &1.id}, &1})
       end)
       |> Map.new()
@@ -339,7 +356,7 @@ defmodule Brando.Setup.RemoveDefaults do
 
       ids ->
         preloads = Content.BlockPreloads.for_schema(schema) ++ if(schema == Pages.Page, do: [:vars], else: [])
-        Brando.Repo.all(from(e in schema, where: e.id in ^ids, preload: ^preloads))
+        Repo.all(from(e in schema, where: e.id in ^ids, preload: ^preloads))
     end
   end
 
@@ -361,11 +378,11 @@ defmodule Brando.Setup.RemoveDefaults do
   # What keeps a homepage as seeded: pages under it, or fragments on it
   # other than a footer as seeded, which goes first
   defp held_by(page, footer_results) do
-    children = Brando.Repo.all(from(p in Pages.Page, where: p.parent_id == ^page.id and is_nil(p.deleted_at)))
+    children = Repo.all(from(p in Pages.Page, where: p.parent_id == ^page.id and is_nil(p.deleted_at)))
 
     fragments =
       from(f in Pages.Fragment, where: f.page_id == ^page.id and is_nil(f.deleted_at))
-      |> Brando.Repo.all()
+      |> Repo.all()
       |> Enum.reject(&match?(%{unchanged?: true}, Map.get(footer_results, {Pages.Fragment, &1.id})))
 
     cond do
@@ -405,7 +422,7 @@ defmodule Brando.Setup.RemoveDefaults do
   # A row's own fields, without what a save sets by itself or ties it to
   # what holds it. Its embeds are compared as plain maps.
   defp record(%schema{} = row, ignored \\ []) do
-    (schema.__schema__(:fields) -- (@ignored ++ @owner_keys ++ ignored))
+    (schema.__schema__(:fields) -- (@ignored ++ Map.get(@owner_keys, schema, []) ++ ignored))
     |> Enum.reject(&rendered_field?/1)
     |> Map.new(&{&1, plain(Map.get(row, &1))})
   end
@@ -434,9 +451,15 @@ defmodule Brando.Setup.RemoveDefaults do
 
   # ── Removing ──────────────────────────────────────────────────────────────
 
-  defp apply_plan(plan, info) do
+  # Planned in the transaction that removes, once the rows it decides on are
+  # locked, so an edit or a new use committed meanwhile is seen. A block
+  # written with one of the modules (its foreign key check takes a share of
+  # the module's row) waits for the removal to commit, or is seen by it.
+  defp remove_planned do
     result =
-      Brando.Repo.transaction(fn ->
+      Repo.transaction(fn ->
+        lock_candidates()
+        plan = plan()
         entries = Enum.map(plan.entries, &remove_entry/1)
         modules = Enum.map(plan.modules, &remove_module/1)
         %{plan | entries: entries, modules: modules}
@@ -445,11 +468,26 @@ defmodule Brando.Setup.RemoveDefaults do
     case result do
       {:ok, plan} ->
         evict()
-        {:ok, show(plan, info)}
+        {:ok, plan}
 
       {:error, reason} ->
         {:error, "nothing was removed here: #{inspect(reason)}"}
     end
+  end
+
+  defp lock_candidates do
+    module_ids = Enum.map(Map.values(Seeds.seeded_modules()), & &1.id)
+    Repo.all(from(m in Content.Module, where: m.id in ^module_ids, select: m.id, lock: "FOR UPDATE"))
+
+    Repo.all(
+      from(f in Pages.Fragment,
+        where: f.parent_key == "partials" and f.key == "footer" and is_nil(f.deleted_at),
+        select: f.id,
+        lock: "FOR UPDATE"
+      )
+    )
+
+    Repo.all(from(p in Pages.Page, where: p.uri == "index" and is_nil(p.deleted_at), select: p.id, lock: "FOR UPDATE"))
   end
 
   # Fragments before pages: a page's delete moves the fragments still on it
@@ -467,7 +505,7 @@ defmodule Brando.Setup.RemoveDefaults do
   defp remove_module(entry), do: entry
 
   defp removed(entry, {:ok, _deleted}), do: %{entry | status: :removed}
-  defp removed(_entry, {:error, reason}), do: Brando.Repo.rollback(reason)
+  defp removed(_entry, {:error, reason}), do: Repo.rollback(reason)
 
   # The contexts' deletes evict what they remove; the lists that hold them
   # are emptied here too, as the admin's Empty all caches would
@@ -551,23 +589,7 @@ defmodule Brando.Setup.RemoveDefaults do
         :ok
 
       yes? ->
-        removed =
-          [
-            count(Enum.filter(modules, &(&1.status == :removed)), "module", "modules"),
-            count(Enum.filter(entries, &(&1.status == :removed and &1.type == "page")), "page", "pages"),
-            count(Enum.filter(entries, &(&1.status == :removed and &1.type == "fragment")), "fragment", "fragments")
-          ]
-          |> Enum.reject(&is_nil/1)
-
-        kept = Enum.count(modules, &(&1.status == :in_use)) + Enum.count(entries, &(&1.status == :kept))
-
-        summary =
-          case removed do
-            [] -> "\n==> Nothing was moved to the trash."
-            removed -> "\n==> Moved #{join(removed)} to the trash, where they can be restored from."
-          end
-
-        info.([:green, summary <> if(kept > 0, do: " #{kept} kept: see above.", else: "")])
+        info.([:green, summary(modules, entries)])
 
       true ->
         info.([
@@ -578,10 +600,31 @@ defmodule Brando.Setup.RemoveDefaults do
     end
   end
 
+  defp summary(modules, entries) do
+    removed =
+      [
+        count(Enum.filter(modules, &(&1.status == :removed)), "module", "modules"),
+        count(Enum.filter(entries, &(&1.status == :removed and &1.type == "page")), "page", "pages"),
+        count(Enum.filter(entries, &(&1.status == :removed and &1.type == "fragment")), "fragment", "fragments")
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    kept = Enum.count(modules, &(&1.status == :in_use)) + Enum.count(entries, &(&1.status == :kept))
+
+    moved =
+      case removed do
+        [] -> "\n==> Nothing was moved to the trash."
+        removed -> "\n==> Moved #{join(removed)} to the trash, where they can be restored from."
+      end
+
+    moved <> if(kept > 0, do: " #{kept} kept: see above.", else: "")
+  end
+
   defp count([], _one, _many), do: nil
   defp count([_], one, _many), do: "1 #{one}"
   defp count(list, _one, many), do: "#{length(list)} #{many}"
 
   defp join([one]), do: one
-  defp join(list), do: Enum.join(Enum.drop(list, -1), ", ") <> " and " <> List.last(list)
+  defp join([one, two]), do: "#{one} and #{two}"
+  defp join([one | rest]), do: "#{one}, " <> join(rest)
 end

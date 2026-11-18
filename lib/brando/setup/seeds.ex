@@ -297,8 +297,7 @@ defmodule Brando.Setup.Seeds do
   # Without the demo: a homepage and a footer with no blocks
   defp no_modules, do: Map.new(@module_uids, fn {key, _uid} -> {key, nil} end)
 
-  @doc false
-  # The seed's modules in the current environment, trashed ones included, by uid
+  @doc "The seed's modules in the current environment, trashed ones included, by uid."
   @spec seeded_modules() :: %{optional(String.t()) => Content.Module.t()}
   def seeded_modules do
     uids = Keyword.values(@module_uids)
@@ -308,17 +307,12 @@ defmodule Brando.Setup.Seeds do
     |> Map.new(&{&1.uid, &1})
   end
 
-  @doc false
-  # The same, keyed as `index_page_entry/2` and `footer_entry/2` take them
+  @doc "`seeded_modules/0` keyed as `index_page_entry/2` and `footer_entry/2` take them, nil for one missing."
   @spec seeded_modules_by_key() :: %{optional(atom()) => Content.Module.t() | nil}
   def seeded_modules_by_key do
     seeded = seeded_modules()
     Map.new(@module_uids, fn {key, uid} -> {key, Map.get(seeded, uid)} end)
   end
-
-  @doc false
-  @spec module_uids() :: [String.t()]
-  def module_uids, do: Keyword.values(@module_uids)
 
   # Modules carry no creator, so the seeding account is only needed for the
   # content that references them. A module in the trash stays there, and
@@ -837,9 +831,10 @@ defmodule Brando.Setup.Seeds do
     end
   end
 
-  @doc false
-  # The homepage the seeds create in `language` from `modules`, unsaved: what
-  # `remove_defaults/1` compares a homepage with
+  @doc """
+  The homepage the seeds create in `language` from `modules`, unsaved and
+  without a creator: what `remove_defaults/1` compares a homepage with.
+  """
   @spec index_page_entry(atom(), map()) :: Pages.Page.t()
   def index_page_entry(language, modules) do
     blocks =
@@ -872,10 +867,7 @@ defmodule Brando.Setup.Seeds do
 
   # A trashed page's uri carries a suffix (`Brando.SoftDelete.Repo.randomize_field/1`)
   defp homepage_exists?(language, _added),
-    do:
-      exists?(
-        from(p in Pages.Page, where: (p.uri == "index" or like(p.uri, "index$$$%")) and p.language == ^language)
-      )
+    do: exists?(from(p in Pages.Page, where: (p.uri == "index" or like(p.uri, "index$$$%")) and p.language == ^language))
 
   # Trashed rows count: the repo's reads do not leave them out
   defp exists?(query), do: Brando.Repo.one(from(q in query, limit: 1, select: true)) == true
@@ -1065,9 +1057,11 @@ defmodule Brando.Setup.Seeds do
     end
   end
 
-  @doc false
-  # The footer fragment the seeds create in `language` from `modules`,
-  # unsaved and on no page: what `remove_defaults/1` compares a footer with
+  @doc """
+  The footer fragment the seeds create in `language` from `modules`, unsaved,
+  without a creator and on no page: what `remove_defaults/1` compares a
+  footer with.
+  """
   @spec footer_entry(atom(), map()) :: Pages.Fragment.t()
   def footer_entry(language, modules) do
     %Pages.Fragment{

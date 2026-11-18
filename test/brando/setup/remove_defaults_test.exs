@@ -163,7 +163,9 @@ defmodule Brando.Setup.RemoveDefaultsTest do
       {"the page's title", :title},
       {"a block taken out", :block_removed},
       {"the page unpublished", :unpublished},
-      {"a block hidden", :block_hidden}
+      {"a block hidden", :block_hidden},
+      {"a block on a copy of its module", :other_module},
+      {"the page moved under another", :parent}
     ]
 
     for {label, edit} <- edits do
@@ -377,9 +379,10 @@ defmodule Brando.Setup.RemoveDefaultsTest do
       )
 
   defp snapshot do
-    Enum.map([Content.Module, Pages.Page, Pages.Fragment, Content.Block, Navigation.Menu], fn schema ->
-      Repo.all(from(e in schema, select: {e.id, field(e, ^deleted_or_updated(schema))}, order_by: e.id))
-    end)
+    for schema <- [Content.Module, Pages.Page, Pages.Fragment, Content.Block, Navigation.Menu] do
+      from(e in schema, select: {e.id, field(e, ^deleted_or_updated(schema))}, order_by: e.id)
+    end
+    |> Enum.map(&Repo.all/1)
   end
 
   defp deleted_or_updated(schema), do: if(:deleted_at in schema.__schema__(:fields), do: :deleted_at, else: :updated_at)
@@ -442,13 +445,26 @@ defmodule Brando.Setup.RemoveDefaultsTest do
   defp edit!(:unpublished, page), do: page |> Ecto.Changeset.change(status: :draft) |> Repo.update!()
 
   defp edit!(:block_removed, page) do
-    last = List.last(block_ids(page))
+    [last | _] = page |> block_ids() |> Enum.reverse()
     Repo.delete_all(from(j in Pages.Page.Blocks, where: j.entry_id == ^page.id and j.block_id == ^last))
   end
 
   defp edit!(:block_hidden, page) do
     [first | _] = block_ids(page)
     Repo.update_all(from(b in Content.Block, where: b.id == ^first), set: [active: false])
+  end
+
+  # The block keeps its refs and version, on a module of the editor's
+  defp edit!(:other_module, page) do
+    [first | _] = block_ids(page)
+    hero = Repo.get_by!(Content.Module, uid: "brando-default-hero")
+    copy = Repo.insert!(%{hero | id: nil, uid: "our-hero", refs: [], vars: [], children: []})
+    Repo.update_all(from(b in Content.Block, where: b.id == ^first), set: [module_id: copy.id])
+  end
+
+  defp edit!(:parent, page) do
+    parent = Factory.insert(:page, uri: "home", language: :en)
+    page |> Ecto.Changeset.change(parent_id: parent.id) |> Repo.update!()
   end
 
   defp block_ids(page) do

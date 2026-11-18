@@ -292,10 +292,13 @@ defmodule Brando.Content.Resave do
     Logger.configure(level: :error)
   end
 
-  @doc false
-  # `[nil]` without tenancy: the application's own tables. With tenancy, every
-  # `{site, environment}`, narrowed by `:site` and `:environment`. Also
-  # `Brando.Setup.RemoveDefaults`'s.
+  @doc """
+  The environments a run covers: `[nil]` without tenancy, the application's
+  own tables. With tenancy, every `{site, environment}`, narrowed by the
+  keys in `:site` and `:environment`. `{:error, message}` for a site or
+  environment that does not exist, or either option without tenancy.
+  `Brando.Setup.RemoveDefaults` covers the same ones.
+  """
   @spec environments(keyword()) :: {:ok, [nil | {Brando.Sites.Site.t(), term()}]} | {:error, String.t()}
   def environments(opts) do
     case Brando.Tenant.mode() do
