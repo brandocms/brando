@@ -77,10 +77,14 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   Opens `folder` (relative to the upload root, "" for the root) by its stored
   id (`folder_id_to_open/2`). A folder not stored, known only by its assets'
   paths, is opened by its path, so a user who may not store it still can.
+  The root opens as `root`, which lists its loose assets too: its folder
+  record's id would list only that record's.
   """
+  def open_folder(socket, folder) when folder in [nil, ""], do: patch_folder_filter(socket, nil)
+
   def open_folder(socket, folder) do
     case folder_id_to_open(socket, folder) do
-      nil when folder not in [nil, ""] ->
+      nil ->
         patch_filter(socket, "filter:path", FolderBrowser.absolute_folder(folder, socket.assigns.upload_root))
 
       folder_id ->
