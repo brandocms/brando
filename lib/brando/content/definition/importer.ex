@@ -51,15 +51,17 @@ defmodule Brando.Content.Definition.Importer do
 
     uids = Enum.map(bundle["modules"] ++ bundle["table_templates"], & &1["uid"])
     replace = Keyword.get(opts, :replace, [])
-    Enum.each(replace, &(&1 in uids || Error.raise!(&1, "is not among the definitions")))
+    discard = Keyword.get(opts, :discard, [])
+    Enum.each(replace ++ discard, &(&1 in uids || Error.raise!(&1, "is not among the definitions")))
+    if discard != [] and mode != :database, do: Error.raise!("discard", "needs the database's baseline")
 
     selection =
       case Keyword.get(opts, :select) do
         nil -> nil
-        selected -> select_trees!(bundle, Enum.uniq(selected ++ replace))
+        selected -> select_trees!(bundle, Enum.uniq(selected ++ replace ++ discard))
       end
 
-    %{mode: mode, replace: MapSet.new(replace), selection: selection}
+    %{mode: mode, replace: MapSet.new(replace), discard: MapSet.new(discard), selection: selection}
   end
 
   # A selected module brings its whole tree (root, siblings and descendants)
@@ -109,7 +111,7 @@ defmodule Brando.Content.Definition.Importer do
     if plan.scope != References.scope(), do: Error.raise!("scope", "plan belongs to another installation or environment")
     unless Plan.applicable?(plan), do: Error.raise!("plan", "resolve conflicts and migrations before applying")
     creator = creator!(actor, creator: plan.creator_id)
-    settings = %{mode: plan.mode, replace: plan.replace, selection: plan.selection}
+    settings = %{mode: plan.mode, replace: plan.replace, discard: plan.discard, selection: plan.selection}
     opts = Keyword.put_new_lazy(opts, :batch_id, &Ecto.UUID.generate/0)
 
     result =
@@ -123,6 +125,8 @@ defmodule Brando.Content.Definition.Importer do
 
         changes = Brando.Activity.with_batch(opts[:batch_id], fn -> persist!(current, records, actor, creator) end)
         Baselines.record!(current, changes, records.snapshots, actor, opts)
+        # The caller's own records of the apply, in its transaction
+        if in_transaction = opts[:in_transaction], do: in_transaction.(current, changes)
         changes
       end)
 
@@ -168,6 +172,7 @@ defmodule Brando.Content.Definition.Importer do
       records: records,
       mode: settings.mode,
       replace: settings.replace,
+      discard: settings.discard,
       latest: latest,
       snapshot_references: snapshot["references"],
       parents: parents(bundle["modules"]),
@@ -195,6 +200,7 @@ defmodule Brando.Content.Definition.Importer do
        fingerprint: fingerprint,
        mode: settings.mode,
        replace: settings.replace,
+       discard: settings.discard,
        selection: settings.selection,
        # How the target's records were written as tokens, generated ones too
        snapshot_bindings: snapshot["references"]
@@ -424,6 +430,9 @@ defmodule Brando.Content.Definition.Importer do
       replace?(ctx, definition, old, row) ->
         {old && elem(resolved, 0).(old), :replaced, resolved}
 
+      discard?(ctx, definition, old, row) ->
+        {elem(resolved, 0).(old), :discarded, resolved}
+
       ctx.mode == :database and row ->
         {row.digest, :applied, resolved}
 
@@ -441,6 +450,12 @@ defmodule Brando.Content.Definition.Importer do
   # conflict on a definition applied here stays one
   defp replace?(ctx, definition, old, row),
     do: MapSet.member?(ctx.replace, definition["uid"]) and (is_nil(old) or is_nil(row))
+
+  # Named in `discard:`, applied here and edited here since: the files'
+  # version replaces the edit (the apply row keeps it in `previous`). Only
+  # against the database's baseline, and only for a definition still here.
+  defp discard?(ctx, definition, old, row),
+    do: ctx.mode == :database and MapSet.member?(ctx.discard, definition["uid"]) and not is_nil(old) and not is_nil(row)
 
   # Without a record here, the lockfile's baseline counts only when the
   # target equals it

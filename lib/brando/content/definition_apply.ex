@@ -16,14 +16,20 @@ defmodule Brando.Content.DefinitionApply do
     * `previous_digest`, `previous` - the definition the apply replaced, in
       the same canonical form, or nil for a create or an adoption
     * `action` - `:created`, `:updated`, `:replaced` (applied over a database
-      copy that was never applied from files, because the operator named it)
-      or `:adopted` (the database already equalled the files)
-    * `source` - `:release` (the release's own definitions) or `:import` (the
-      CLI, the admin's ZIP import or the dev watcher)
+      copy that was never applied from files, or edited here since the last
+      apply, because the operator chose the files' version), `:adopted` (the
+      database already equalled the files), `:kept` (a superuser chose to keep
+      the version edited here over the release's: the release's file is
+      recorded as applied, so it waits no longer, and the admin's edit stays)
+      or `:reverted` (an apply was reverted: `digest` is the definition it
+      restored)
+    * `source` - `:release` (the release's own definitions), `:import` (the
+      CLI, the admin's ZIP import or the dev watcher) or `:revert`
     * `release` - the release version, for `:release`
     * `references` - the media and content tokens the definition uses, bound
       to this environment's records, so the next release reuses them
-    * `batch_id` - shared by the rows of one apply
+    * `batch_id` - shared by the rows of one apply (`Brando.Content.DefinitionBatch`
+      for a release apply or a revert)
     * `applied_by` - the account, or nil for the system
 
   See the [module definitions guide](module_definitions.md).
@@ -32,8 +38,8 @@ defmodule Brando.Content.DefinitionApply do
 
   @type t :: %__MODULE__{}
 
-  @actions [:created, :updated, :replaced, :adopted]
-  @sources [:release, :import]
+  @actions [:created, :updated, :replaced, :adopted, :kept, :reverted]
+  @sources [:release, :import, :revert]
 
   schema "content_definition_applies" do
     field :kind, :string

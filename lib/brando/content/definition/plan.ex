@@ -6,12 +6,14 @@ defmodule Brando.Content.Definition.Plan do
   from the database it was last imported into) or `:database` (the
   definitions last applied here, `Brando.Content.DefinitionApply`).
   `selection` is nil for every definition, or the UIDs an apply writes (whole
-  module trees); `replace` the never-applied definitions it may replace.
+  module trees); `replace` the never-applied definitions it may replace;
+  `discard` the definitions edited here since they were applied, whose edit
+  it may replace with the files' version.
 
   Each item has the definition's `action`, `reason`, `state` (`:new`,
   `:in_sync`, `:changed_in_release`, `:changed_in_admin`, `:changed_in_both`,
   `:never_applied` or `:deleted`), the `baseline` it was compared with
-  (`:applied`, `:lockfile`, `:replaced` or nil), its `ModuleDiff` `class`,
+  (`:applied`, `:lockfile`, `:replaced`, `:discarded` or nil), its `ModuleDiff` `class`,
   the last apply (`applied`) and admin edit (`edited`) when known, changed
   `fields` and their `diff`, and the affected `block_count` and `entry_count`.
   """
@@ -23,6 +25,7 @@ defmodule Brando.Content.Definition.Plan do
     mode: :lockfile,
     selection: nil,
     replace: MapSet.new(),
+    discard: MapSet.new(),
     snapshot_bindings: %{},
     items: [],
     references: %{}
