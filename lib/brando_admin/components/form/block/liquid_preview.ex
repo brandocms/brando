@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
   @end_tags Map.new(@regions, &{"end" <> &1, &1})
   @tag_name ~r/\A{%-?\s*(\w+|#)/
   @end_raw ~r/{%-?\s*endraw\s*-?%}/
+  @liquid_open ~r/{(?=[{%])/
 
   # The tags `Block.liquid_splits/3` turns into a part of the preview: ref slots
   # and pictures, and the datasource region it removes. Every other tag would
@@ -110,13 +111,15 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
     end
   end
 
-  # A raw body prints as written, so its Liquid delimiters are escaped: the
-  # preview's splits would otherwise turn `{{ x }}` or `{% ref … %}` in it into
-  # a variable or a ref slot. `&#123;` reads back as `{` in text and attributes.
+  # A raw body prints as written, so the brace opening each Liquid delimiter in
+  # it is escaped: the preview's splits would otherwise turn `{{ x }}` or
+  # `{% ref … %}` into a variable or a ref slot. `&#123;` reads back as `{` in
+  # text and attributes. Other braces stay, as `<style>` and `<script>` bodies
+  # do not decode character references.
   defp scan_token("raw", token, rest, stack, acc) do
     with {:ok, offset, length} <- end_raw(rest) do
       {body, remaining} = :erlang.split_binary(rest, offset + length)
-      text = rest |> binary_part(0, offset) |> String.replace("{", "&#123;")
+      text = Regex.replace(@liquid_open, binary_part(rest, 0, offset), "&#123;")
       scan(remaining, stack, keep({text, [token, body]}, stack, acc))
     end
   end

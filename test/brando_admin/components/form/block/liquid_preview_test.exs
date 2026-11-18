@@ -146,10 +146,17 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
     code = ~S(<p>{%- raw -%}<b>{{ title }}</b> {% ref refs.x %} {% if a %}{%- endraw -%}</p>)
 
     assert LiquidPreview.strip_logic(code) ==
-             {:ok, "<p><b>&#123;&#123; title }}</b> &#123;% ref refs.x %} &#123;% if a %}</p>"}
+             {:ok, "<p><b>&#123;{ title }}</b> &#123;% ref refs.x %} &#123;% if a %}</p>"}
 
     # No ref slot, variable or picture: the body is text the site prints.
     assert code |> Block.liquid_splits([], nil) |> Enum.all?(&is_binary/1)
+  end
+
+  test "raw leaves braces that open no Liquid alone, as style and script bodies need them" do
+    code = ~S|{% raw %}<style>.a { color: red }</style><script>if (a) { b({ c: 1 }) }</script>{% endraw %}|
+
+    assert LiquidPreview.strip_logic(code) ==
+             {:ok, ~S|<style>.a { color: red }</style><script>if (a) { b({ c: 1 }) }</script>|}
   end
 
   test "nested comments and raw regions cannot expose comment contents to the region stack" do
