@@ -1,0 +1,1 @@
+- Figma: images imported from a frame go into a folder named after the frame as a slug (`figma/2-prosjekt-sprekenhus`), instead of the frame name as written (`Figma/2. Prosjekt > Sprekenhus`).

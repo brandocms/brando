@@ -3,7 +3,7 @@ defmodule Brando.Figma.Import do
   Imports the image fills of a Figma frame into the media library, as the
   person whose tool asked, for a proposal to use.
 
-  The images go into the library folder `Figma/<frame name>` under the
+  The images go into the library folder `figma/<frame name as a slug>` under the
   default image config's upload path, as an editor's upload there would.
   They are the originals placed in Figma, not renders. Each is stored the
   way an editor's upload is (`Brando.Uploads.store_upload/4`: the name,
@@ -131,17 +131,13 @@ defmodule Brando.Figma.Import do
 
   defp selected(_images, _node_ids), do: {:error, "node_ids is a list of layer ids."}
 
-  # One folder per frame, named after it: "/" would nest folders
+  # One folder per frame, named after it as a slug: the name is part of
+  # every image's address, and a frame name may hold "/", ">" or spaces.
   defp folder_path(name) do
-    name =
-      (name || "")
-      |> String.replace(~r{[/\\\x00-\x1F]}, " ")
-      |> String.replace(~r/\s+/, " ")
-      |> String.trim()
-      |> String.trim(".")
-      |> String.slice(0, 100)
+    # `slugify/1` gives nil for a name with nothing a slug keeps ("→", "🎉")
+    slug = ((name && Brando.Utils.slugify(name)) || "") |> String.slice(0, 100) |> String.trim("-")
 
-    "Figma/" <> if(name == "", do: "Untitled", else: name)
+    "figma/" <> if(slug == "", do: "untitled", else: slug)
   end
 
   # The first layer showing an asset names its file and gives its crop: one

@@ -224,7 +224,7 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
         "tool" => "brando_figma_import_images",
         "ok" => true,
         "output" => %{"frame" => "Case – Tipping", "images" => 2},
-        "folder" => "Figma/Case – Tipping",
+        "folder" => "figma/case-tipping",
         "images" => [%{"id" => first.id, "reused" => false}, %{"id" => second.id, "reused" => true}],
         "failed" => 1
       }
@@ -233,7 +233,7 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
 
       row = "#mcp-call-import"
       assert has_element?(view, row, "Imported 2 images from “Case – Tipping”")
-      assert has_element?(view, row <> " .mcp-watch-folder", "Figma/Case – Tipping")
+      assert has_element?(view, row <> " .mcp-watch-folder", "figma/case-tipping")
       assert has_element?(view, row <> " [data-image-id='#{first.id}'][data-reused=false]", "New")
       assert has_element?(view, row <> " [data-image-id='#{second.id}'][data-reused=true]", "Reused")
       assert has_element?(view, row <> " [data-image-id='#{first.id}'] img")
@@ -350,7 +350,7 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       finish.("import", %{
         "tool" => "brando_figma_import_images",
         "output" => %{"frame" => "Secret frame", "images" => 1},
-        "folder" => "Figma/Secret folder",
+        "folder" => "figma/secret-folder",
         "images" => [%{"id" => image.id, "reused" => false}]
       })
 
