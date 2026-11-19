@@ -174,7 +174,8 @@ defmodule Brando.FigmaTest do
     end
 
     test "three opaque fills: the top one shows, cropped fills cover too" do
-      node = fills_node([fill("a"), fill("b", %{"scaleMode" => "FIT"}), fill("c", %{"scaleMode" => "STRETCH"})])
+      crop = fill("c", %{"scaleMode" => "STRETCH", "imageTransform" => [[0.5, 0, 0.25], [0, 0.5, 0]]})
+      node = fills_node([fill("a"), fill("b", %{"scaleMode" => "FIT"}), crop])
 
       assert [%{images: [%{scale_mode: "crop", hidden_fills: [%{image_ref: "a"}, %{image_ref: "b"}]}]}] = sections(node)
       assert [%{image_ref: "c"}] = Frame.images(node)
@@ -192,7 +193,8 @@ defmodule Brando.FigmaTest do
 
       assert [%{images: images, note: note}] = sections(node)
       assert Enum.map(images, & &1.scale_mode) == ["fill", "tile", "fill", "fill"]
-      refute Enum.any?(images, &Map.has_key?(&1, :hidden_fills))
+      assert [%{hidden_fills: [%{image_ref: "under"}]} | above] = images
+      refute Enum.any?(above, &Map.has_key?(&1, :hidden_fills))
       assert note =~ ~s[Layer "Photo" (2:1) shows 4 images]
 
       assert ["base", "tiled", "soft", "mixed"] = Enum.map(Frame.images(node), & &1.image_ref)
@@ -203,6 +205,50 @@ defmodule Brando.FigmaTest do
 
       assert [%{images: [%{hidden_fills: [%{image_ref: "a"}]}]}] = sections(node)
       assert [%{image_ref: "b", section: 0}] = Frame.images(node)
+    end
+
+    test "a crop covers only when the image reaches every corner of the layer" do
+      # Moved to the right half of the layer: its left half shows the photo under it
+      moved = fill("b", %{"scaleMode" => "STRETCH", "imageTransform" => [[2, 0, -1], [0, 1, 0]]})
+      node = fills_node([fill("a"), moved])
+
+      assert [%{images: images, note: note}] = sections(node)
+      assert Enum.map(images, & &1.scale_mode) == ["fill", "crop"]
+      assert note =~ "shows 2 images"
+      assert ["a", "b"] = Enum.map(Frame.images(node), & &1.image_ref)
+
+      # Shrunk inside the layer
+      shrunk = fill("b", %{"scaleMode" => "STRETCH", "imageTransform" => [[1.25, 0, -0.1], [0, 1.25, -0.1]]})
+      assert ["a", "b"] = [fill("a"), shrunk] |> fills_node() |> Frame.images() |> Enum.map(& &1.image_ref)
+
+      # A crop without a usable transform does not cover
+      bare = fill("b", %{"scaleMode" => "STRETCH"})
+      assert ["a", "b"] = [fill("a"), bare] |> fills_node() |> Frame.images() |> Enum.map(& &1.image_ref)
+
+      # Figma's own rounding at the edges still covers
+      edge = fill("b", %{"scaleMode" => "STRETCH", "imageTransform" => [[1, 0, -4.05e-5], [0, 0.5, 0.50001]]})
+      assert [%{image_ref: "b", hidden_fills: [%{image_ref: "a"}]}] = [fill("a"), edge] |> fills_node() |> Frame.images()
+    end
+
+    test "an image fill at no opacity shows nothing: the one under it shows, and it is hidden" do
+      node = fills_node([fill("a"), fill("ghost", %{"opacity" => 0})])
+
+      assert [%{image_ref: "a", hidden_fills: [%{image_ref: "ghost"}]}] = Frame.images(node)
+      assert [%{images: [image]} = section] = sections(node)
+      refute Map.has_key?(section, :note)
+      refute Map.has_key?(image, :crop)
+
+      # Alone, the layer shows no image
+      assert [] = [fill("ghost", %{"opacity" => 0.0})] |> fills_node() |> Frame.images()
+    end
+
+    test "several images showing over a covering one: the fills under it are still listed" do
+      node = fills_node([fill("a"), fill("b"), fill("c", %{"opacity" => 0.5})])
+
+      assert [%{images: [bottom, top]}] = sections(node)
+      assert bottom.hidden_fills == [%{image_ref: "a"}]
+      refute Map.has_key?(top, :hidden_fills)
+      assert [%{image_ref: "b", hidden_fills: [_]}, %{image_ref: "c"}] = Frame.images(node)
     end
 
     test "solid fills do not count: an image under a solid still shows" do
@@ -260,17 +306,34 @@ defmodule Brando.FigmaTest do
       assert %{rotation: 270} = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[0, -1, 1], [1, 0, 0]]})
     end
 
-    test "FILL, FIT and TILE turn by the paint's rotation, counter-clockwise as Figma's layers do" do
-      assert %{rotation: 270} = image(%{"rotation" => 90})
+    test "FILL, FIT and TILE turn by the paint's rotation, clockwise as Figma's Rotate 90° button turns" do
+      assert %{rotation: 90} = image(%{"rotation" => 90})
       assert %{rotation: 180} = image(%{"rotation" => 180})
-      assert %{rotation: 90} = image(%{"rotation" => -90})
-      assert %{rotation: 90, scale_mode: "fit"} = image(%{"rotation" => 270, "scaleMode" => "FIT"})
+      assert %{rotation: 270} = image(%{"rotation" => -90})
+      assert %{rotation: 270, scale_mode: "fit"} = image(%{"rotation" => 270, "scaleMode" => "FIT"})
+      # Each click of the button adds 90: Figma files hold 1170
+      assert %{rotation: 90} = image(%{"rotation" => 1170})
       refute Map.has_key?(image(%{"rotation" => 360}), :rotation)
       refute Map.has_key?(image(%{"rotation" => 0}), :rotation)
     end
 
     test "another angle is reported as it is" do
-      assert %{rotation: 12.5} = image(%{"rotation" => -12.5})
+      assert %{rotation: 12.5} = image(%{"rotation" => 12.5})
+    end
+
+    test "a mirrored crop is not read as a turn: it says it is mirrored" do
+      # Flipped left to right: the layer's left edge shows the image's right
+      image = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[-1, 0, 1], [0, 1, 0]]})
+
+      assert image.mirrored == true
+      refute Map.has_key?(image, :rotation)
+      refute Map.has_key?(image, :crop)
+
+      # Mirrored and turned: still no rotation
+      image = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[0, 0.5, 0], [1, 0, 0]]})
+      assert image.mirrored == true
+      refute Map.has_key?(image, :rotation)
+      assert image.crop == %{x: 0.0, y: 0.0, width: 0.5, height: 1.0}
     end
   end
 

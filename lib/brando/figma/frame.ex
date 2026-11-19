@@ -9,12 +9,15 @@ defmodule Brando.Figma.Frame do
   out.
 
   A layer with several image fills is one image when its top fill covers it
-  (opaque, unblended, filled or cropped): the image fills under it are
-  listed under `hidden_fills`. One whose top fill is translucent, blended,
-  fit or tiled lists every image that shows, in fill order, and its section
-  says so under `note`. Each image has its `scale_mode` (`fill`, `fit`,
-  `crop`, `tile`), its `crop` as fractions of the image when cropped, and
-  its `rotation`, clockwise in degrees, when turned.
+  (opaque, unblended, and filled, or cropped so the image reaches every
+  corner of the layer). One whose top fill is translucent, blended, fit,
+  tiled or cropped short of an edge lists every image that shows, in fill
+  order, and its section says so under `note`. The image fills that do not
+  show (under one that covers, or at no opacity) are listed under the
+  bottom image's `hidden_fills`. Each image has its `scale_mode` (`fill`,
+  `fit`, `crop`, `tile`), its `crop` as fractions of the image when
+  cropped, its `rotation`, clockwise in degrees, when turned, and
+  `mirrored` when a crop flips it (it then has no `rotation`).
 
   Reading order: the children of an auto-layout frame in Figma's order (as
   laid out), others top to bottom, then left to right, by their position on
@@ -55,6 +58,7 @@ defmodule Brando.Figma.Frame do
           required(:scale_mode) => String.t(),
           optional(:crop) => %{x: float(), y: float(), width: float(), height: float()},
           optional(:rotation) => number(),
+          optional(:mirrored) => true,
           optional(:hidden_fills) => [%{image_ref: String.t()}],
           optional(:x) => integer(),
           optional(:y) => integer(),
@@ -80,9 +84,10 @@ defmodule Brando.Figma.Frame do
   @doc """
   The frame's images that show, in reading order, each with the index of its
   section, its image ref, scale mode, and crop and rotation when it has
-  them. A layer whose top image fill covers it is one entry (the fills under
-  it, under `hidden_fills`, are not listed); one that shows several images
-  has one entry per image, in fill order.
+  them. A layer whose top image fill covers it is one entry; one that shows
+  several images has one entry per image, in fill order. The image fills
+  that do not show are not entries: they are under the bottom entry's
+  `hidden_fills`.
   """
   @spec images(map()) :: [image()]
   def images(node) do
@@ -135,44 +140,83 @@ defmodule Brando.Figma.Frame do
 
     case images do
       [] -> videos
-      images -> [{:image, stack(images)} | videos]
+      images -> stack(images, videos)
     end
   end
 
   # Figma paints a layer's fills in list order, the last on top. From the
   # top down, every image fill shows until one covers the layer; the ones
-  # under it are hidden. Solid and gradient fills are not counted.
-  defp stack(images) do
-    {showing, hidden} =
-      images
-      |> Enum.reverse()
-      |> Enum.split_while(&(not covers?(&1)))
-      |> case do
-        {above, [cover | below]} -> {above ++ [cover], below}
-        {above, []} -> {above, []}
-      end
+  # under it are hidden, and so is one at no opacity, which shows nothing.
+  # Solid and gradient fills are not counted.
+  defp stack(images, videos) do
+    indexed = Enum.with_index(images)
 
-    %{
-      showing: showing |> Enum.reverse() |> Enum.map(&fill/1),
-      hidden: hidden |> Enum.reverse() |> Enum.map(&%{image_ref: &1["imageRef"]})
-    }
+    showing =
+      indexed
+      |> Enum.reject(fn {paint, _index} -> paint["opacity"] in [0, +0.0] end)
+      |> Enum.reverse()
+      |> Enum.split_while(fn {paint, _index} -> not covers?(paint) end)
+      |> case do
+        {above, [cover | _below]} -> above ++ [cover]
+        {above, []} -> above
+      end
+      |> Enum.reverse()
+
+    shown = MapSet.new(showing, &elem(&1, 1))
+    hidden = for {paint, index} <- indexed, index not in shown, do: %{image_ref: paint["imageRef"]}
+
+    case showing do
+      [] -> videos
+      showing -> [{:image, %{showing: Enum.map(showing, &fill(elem(&1, 0))), hidden: hidden}} | videos]
+    end
   end
 
-  # An opaque, unblended fill that fills or crops to the layer leaves nothing
-  # under it to see; FIT and TILE can leave part of the layer bare
+  # An opaque, unblended fill that fills the layer, or a crop of it that
+  # reaches every corner, leaves nothing under it to see; FIT, TILE and a
+  # crop moved or shrunk inside the layer can leave part of it bare
   defp covers?(paint) do
     paint["opacity"] in [nil, 1, 1.0] and paint["blendMode"] in [nil, "NORMAL", "PASS_THROUGH"] and
-      paint["scaleMode"] in [nil, "FILL", "STRETCH"]
+      case paint["scaleMode"] do
+        mode when mode in [nil, "FILL"] -> true
+        "STRETCH" -> crop_covers?(matrix(paint["imageTransform"]))
+        _mode -> false
+      end
   end
+
+  # Figma's transforms are rounded floats: a corner this far past the
+  # image's edge is still on it
+  @corner_tolerance 0.001
+
+  defp crop_covers?(nil), do: false
+
+  defp crop_covers?(matrix) do
+    Enum.all?(corners(matrix), fn {x, y} ->
+      x >= -@corner_tolerance and x <= 1 + @corner_tolerance and y >= -@corner_tolerance and y <= 1 + @corner_tolerance
+    end)
+  end
+
+  # The points of the image the layer's four corners show
+  defp corners({a, b, tx, c, d, ty}),
+    do: for({u, v} <- [{0, 0}, {1, 0}, {0, 1}, {1, 1}], do: {a * u + b * v + tx, c * u + d * v + ty})
+
+  # A crop that flips the image (its transform's determinant is negative)
+  defp mirrored?({a, b, _tx, c, d, _ty}), do: a * d - b * c < 0
+  defp mirrored?(nil), do: false
 
   @scale_modes %{"FILL" => "fill", "FIT" => "fit", "TILE" => "tile", "STRETCH" => "crop"}
 
   defp fill(paint) do
     scale_mode = Map.get(@scale_modes, paint["scaleMode"], "fill")
     matrix = if scale_mode == "crop", do: matrix(paint["imageTransform"])
-    rotation = rotation(scale_mode, paint, matrix)
+    mirrored? = mirrored?(matrix)
+    rotation = if mirrored?, do: 0, else: rotation(scale_mode, paint, matrix)
 
-    %{image_ref: paint["imageRef"], scale_mode: scale_mode, rotation: if(rotation != 0, do: rotation)}
+    %{
+      image_ref: paint["imageRef"],
+      scale_mode: scale_mode,
+      rotation: if(rotation != 0, do: rotation),
+      mirrored: if(mirrored?, do: true)
+    }
     |> Map.put(:crop, matrix && crop(matrix, rotation))
     |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end
@@ -180,17 +224,25 @@ defmodule Brando.Figma.Frame do
   # How far the image is turned clockwise as Figma shows it, in degrees from
   # 0 up to 360, to a tenth.
   #
-  # FILL, FIT and TILE: the paint's `rotation`, in degrees, in quarter turns.
-  # Figma's REST and plugin docs give no direction for a paint's rotation;
-  # this takes Figma's convention for a layer's `rotation`, where a positive
-  # angle turns counter-clockwise, so 90 shows the image turned a quarter to
-  # the left (270 clockwise).
+  # FILL, FIT and TILE: the paint's `rotation`, in degrees, in quarter turns,
+  # taken as clockwise: 90 shows the image turned a quarter to the right.
+  # Figma's REST spec ("Image rotation, in degrees") and plugin docs ("must
+  # be in increments of +90") give no direction, and this is not checked
+  # against a render by Figma. The evidence, fairly strong but indirect:
+  # Figma's help centre says its Rotate 90° control turns an image fill
+  # clockwise, it only turns one way, and files hold growing positive
+  # values (720, 1170: one click adds 90); OpenPencil, which reads .fig
+  # files and copies that control, draws +90 clockwise (its image sampling
+  # test pins the pixels); Octopus (opendesigndev) negates the value but
+  # then inverts the matrix it builds, so it draws +90 clockwise too. If a
+  # Figma render ever shows otherwise, flip the sign in the `degrees(rotation)`
+  # clause below to `degrees(-rotation)`.
   #
   # Crop (STRETCH): the turn in `imageTransform` (below); the paint's
-  # `rotation` is ignored.
+  # `rotation` is ignored. A mirrored crop has none (see `fill/1`).
   defp rotation("crop", _paint, nil), do: 0
   defp rotation("crop", _paint, {a, _b, _tx, c, _d, _ty}), do: degrees(:math.atan2(-c, a) * 180 / :math.pi())
-  defp rotation(_mode, %{"rotation" => rotation}, _matrix) when is_number(rotation), do: degrees(-rotation)
+  defp rotation(_mode, %{"rotation" => rotation}, _matrix) when is_number(rotation), do: degrees(rotation)
   defp rotation(_mode, _paint, _matrix), do: 0
 
   defp degrees(degrees) do
@@ -217,12 +269,8 @@ defmodule Brando.Figma.Frame do
   # The part of the image the layer shows, as fractions of the image as it
   # is imported: turned by a quarter turn, otherwise as stored. Nil for the
   # whole image.
-  defp crop({a, b, tx, c, d, ty}, rotation) do
-    corners =
-      for {u, v} <- [{0, 0}, {1, 0}, {0, 1}, {1, 1}],
-          do: turn({a * u + b * v + tx, c * u + d * v + ty}, rotation)
-
-    {xs, ys} = Enum.unzip(corners)
+  defp crop(matrix, rotation) do
+    {xs, ys} = matrix |> corners() |> Enum.map(&turn(&1, rotation)) |> Enum.unzip()
     [x, y, right, bottom] = Enum.map([Enum.min(xs), Enum.min(ys), Enum.max(xs), Enum.max(ys)], &clamp/1)
     crop = %{x: fraction(x), y: fraction(y), width: fraction(right - x), height: fraction(bottom - y)}
 
@@ -314,17 +362,15 @@ defmodule Brando.Figma.Frame do
     %{section | texts: [text | section.texts]}
   end
 
-  # The images a layer shows. One that covers the layer lists the image fills
-  # under it as hidden_fills; a layer that shows more than one says so in
-  # its section's note.
+  # The images a layer shows, bottom first. The image fills that do not
+  # show (under one that covers the layer, or at no opacity) are listed as
+  # hidden_fills of the bottom one; a layer that shows more than one image
+  # says so in its section's note.
   defp add(section, {{:image, %{showing: showing, hidden: hidden}}, node, _outer}, origin) do
     layer = Map.merge(%{node_id: node["id"], name: node["name"]}, box(node, origin))
-
-    images =
-      case showing do
-        [image] when hidden != [] -> [layer |> Map.merge(image) |> Map.put(:hidden_fills, hidden)]
-        showing -> Enum.map(showing, &Map.merge(layer, &1))
-      end
+    [bottom | above] = Enum.map(showing, &Map.merge(layer, &1))
+    bottom = if hidden != [], do: Map.put(bottom, :hidden_fills, hidden), else: bottom
+    images = [bottom | above]
 
     section = %{section | images: Enum.reverse(images, section.images)}
 

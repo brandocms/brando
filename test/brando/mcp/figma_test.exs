@@ -15,6 +15,7 @@ defmodule Brando.MCP.FigmaTest do
   alias Brando.Media.Folder
   alias Brando.WebhookReceiver
   alias BrandoAdmin.Images.FolderBrowser
+  alias Elixir.Image, as: Picture
   alias Req.Test, as: ReqTest
 
   @png File.read!(Path.expand("../../fixtures/sample.png", __DIR__))
@@ -153,6 +154,14 @@ defmodule Brando.MCP.FigmaTest do
       picture = 30 |> Elixir.Image.new!(10, color: color) |> Elixir.Image.Draw.rect!(0, 0, 4, 4, color: :white)
       {200, Elixir.Image.write!(picture, :memory, suffix: ".png")}
     end)
+  end
+
+  # Two frames of 30 by 10
+  defp animated_gif do
+    frames = [Picture.new!(30, 10, color: :red), Picture.new!(30, 10, color: :blue)]
+    {:ok, joined} = Vix.Vips.Operation.arrayjoin(frames, across: 1)
+    {:ok, joined} = Vix.Vips.Image.mutate(joined, &Vix.Vips.MutableImage.set(&1, "page-height", :gint, 10))
+    Picture.write!(joined, :memory, suffix: ".gif")
   end
 
   defp import!(tenant, token, args \\ %{}) do
@@ -515,7 +524,11 @@ defmodule Brando.MCP.FigmaTest do
          %{tenant: tenant, token: token} do
       stub_layers(pictures(), [
         layer("5:1", [fill("old"), fill("new")]),
-        layer("5:2", [fill("a"), fill("b", %{"scaleMode" => "FIT"}), fill("c", %{"scaleMode" => "STRETCH"})]),
+        layer("5:2", [
+          fill("a"),
+          fill("b", %{"scaleMode" => "FIT"}),
+          fill("c", %{"scaleMode" => "STRETCH", "imageTransform" => [[1, 0, 0], [0, 1, 0]]})
+        ]),
         layer("5:3", [fill("c"), fill("gone", %{"visible" => false})])
       ])
 
@@ -570,13 +583,13 @@ defmodule Brando.MCP.FigmaTest do
 
     test "a turned image is imported as a turned copy, reused for the same turn",
          %{tenant: tenant, token: token} do
-      # Figma's -90 is a quarter turn clockwise
+      # Figma's 90 is a quarter turn clockwise
       stub_layers(pictures(), [
-        layer("7:1", [fill("p", %{"rotation" => -90})]),
+        layer("7:1", [fill("p", %{"rotation" => 90})]),
         layer("7:2", [fill("p")]),
         layer("7:3", [fill("p", %{"rotation" => 180})]),
-        layer("7:4", [fill("p", %{"rotation" => 90})]),
-        layer("7:5", [fill("p", %{"rotation" => 270})])
+        layer("7:4", [fill("p", %{"rotation" => -90})]),
+        layer("7:5", [fill("p", %{"rotation" => -270})])
       ])
 
       assert %{"distinct_images" => 4, "images" => [turned, upright, half, three]} = import!(tenant, token)
@@ -615,7 +628,7 @@ defmodule Brando.MCP.FigmaTest do
     end
 
     test "another angle is not applied, and the result says so", %{tenant: tenant, token: token} do
-      stub_layers(pictures(), [layer("8:1", [fill("p", %{"rotation" => -12.5})])])
+      stub_layers(pictures(), [layer("8:1", [fill("p", %{"rotation" => 12.5})])])
 
       assert %{
                "images" => [
@@ -674,6 +687,98 @@ defmodule Brando.MCP.FigmaTest do
                import!(tenant, token)
 
       assert %Image{width: 10, height: 30, focal: %{x: 50, y: 25}} = Brando.Repo.get!(Image, id)
+    end
+
+    test "what was not applied is said for every layer that shows the image, by name",
+         %{tenant: tenant, token: token} do
+      # Both are the picture upright, one asset: only the second is turned
+      # 12.5° and only the second is cropped
+      crop = fill("p", %{"scaleMode" => "STRETCH", "imageTransform" => [[0.5, 0, 0.25], [0, 0.5, 0.25]]})
+
+      stub_layers(pictures(), [
+        layer("11:1", [fill("p")]),
+        layer("11:2", [fill("p", %{"rotation" => 12.5})]),
+        layer("11:3", [crop])
+      ])
+
+      assert %{"images" => [entry]} = import!(tenant, token)
+      assert [%{"node_id" => "11:1"}, %{"node_id" => "11:2"}, %{"node_id" => "11:3"}] = entry["layers"]
+      assert [turn, focal] = entry["not_applied"]
+      assert turn =~ ~s["Photo 11:2" (11:2)]
+      assert turn =~ "rotation 12.5°: only quarter turns are applied"
+      assert focal =~ ~s["Photo 11:3" (11:3)]
+      assert focal =~ "focal point from the Figma crop"
+      refute Map.has_key?(entry, "applied")
+    end
+
+    test "a mirrored crop is imported as it is stored, and the result says the mirror was not applied",
+         %{tenant: tenant, token: token} do
+      mirrored = fill("p", %{"scaleMode" => "STRETCH", "imageTransform" => [[-1, 0, 1], [0, 1, 0]]})
+      stub_layers(pictures(), [layer("12:1", [mirrored])])
+
+      assert %{"structuredContent" => %{"sections" => [%{"images" => [image]}]}} =
+               call(tenant, token, "read_frame", %{"url" => @link})
+
+      assert image["mirrored"] == true
+      refute Map.has_key?(image, "rotation")
+
+      assert %{"images" => [entry]} = import!(tenant, token)
+      refute Map.has_key?(entry, "rotation")
+      assert ["mirrored in Figma: the image is imported unmirrored"] = entry["not_applied"]
+
+      # The mark stays at the top left
+      assert [%Image{width: 30, height: 10} = stored] = images()
+      root = Brando.Tenant.Storage.current_media_root()
+      assert [255, 255, 255 | _] = root |> Path.join(stored.path) |> Picture.open!() |> Picture.get_pixel!(0, 0)
+    end
+
+    test "an animated image is not turned: the original is imported and the result says why",
+         %{tenant: tenant, token: token} do
+      gif = animated_gif()
+      receiver = WebhookReceiver.start(fn _request -> {200, gif} end)
+      stub_layers(receiver, [layer("13:1", [fill("anim", %{"rotation" => 90})])])
+
+      assert %{"images" => [entry]} = import!(tenant, token)
+
+      assert %{"rotation" => 90, "not_applied" => ["rotated 90°: the image is animated, so it is imported upright"]} =
+               entry
+
+      refute Map.has_key?(entry, "applied")
+
+      assert [%Image{width: 30, height: 10} = stored] = images()
+      root = Brando.Tenant.Storage.current_media_root()
+      frames = root |> Path.join(stored.path) |> Picture.open!(pages: :all)
+      assert Picture.pages(frames) == 2
+    end
+
+    test "an animated image cropped turned: the focal point is in the image as stored, upright",
+         %{tenant: tenant, token: token} do
+      gif = animated_gif()
+      receiver = WebhookReceiver.start(fn _request -> {200, gif} end)
+      # A quarter turn right, showing the stored image's left half
+      crop = fill("anim", %{"scaleMode" => "STRETCH", "imageTransform" => [[0, 0.5, 0], [-1, 0, 1]]})
+      stub_layers(receiver, [layer("13:2", [crop])])
+
+      assert %{"images" => [%{"applied" => ["focal point from the Figma crop"], "asset" => %{"id" => id}}]} =
+               import!(tenant, token)
+
+      assert %Image{width: 30, height: 10, focal: %{x: 25, y: 50}} = Brando.Repo.get!(Image, id)
+    end
+
+    test "a turned JPEG is written at a high quality, not the encoder's default", %{tenant: tenant, token: token} do
+      {:ok, noise} = Vix.Vips.Operation.gaussnoise(300, 100, mean: 128.0, sigma: 40.0)
+      {:ok, noise} = Vix.Vips.Operation.cast(noise, :VIPS_FORMAT_UCHAR)
+      jpeg = Picture.write!(noise, :memory, suffix: ".jpg", quality: 95)
+      receiver = WebhookReceiver.start(fn _request -> {200, jpeg} end)
+      stub_layers(receiver, [layer("14:1", [fill("j", %{"rotation" => 90})])])
+
+      assert %{"images" => [%{"applied" => ["rotated 90°"]}]} = import!(tenant, token)
+      assert [%Image{width: 100, height: 300} = stored] = images()
+
+      root = Brando.Tenant.Storage.current_media_root()
+      written = File.stat!(Path.join(root, stored.path)).size
+      default = noise |> Picture.rotate!(90) |> Picture.write!(:memory, suffix: ".jpg") |> byte_size()
+      assert written > default * 1.3
     end
 
     test "a Figma refusal is told as such", %{tenant: tenant, token: token, receiver: receiver} do
