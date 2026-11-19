@@ -715,6 +715,54 @@ defmodule Brando.Sites.DeployConfigTest do
              []
   end
 
+  # Each site's own account on one host: chrooted or not, the user decides
+  # whose files a deploy may replace
+  test "one list entry's destinations that differ only by the rsync user do not overlap" do
+    put_test_env(DeployConfig, resolver: &resolve/2, rsync_targets: ["{site_key}@static.example.com:/www"])
+
+    acme = %{key: "acme", allowed_rsync_targets: [], allowed_s3_targets: []}
+    beta = %{key: "beta", allowed_rsync_targets: [], allowed_s3_targets: []}
+
+    assert DeployConfig.overlapping_destinations([acme, beta]) == []
+
+    # Another source that reaches the same place with another user still does
+    beta = %{beta | allowed_rsync_targets: ["deploy@static.example.com:/www/"]}
+
+    assert DeployConfig.overlapping_destinations([acme, beta]) == [
+             {:rsync_targets, {"acme", "{site_key}@static.example.com:/www", :config},
+              {"beta", "deploy@static.example.com:/www/", :site}}
+           ]
+  end
+
+  test "two sites' entries from different sources that differ only by the user overlap" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: %{"acme" => ["acme@static.example.com:/www"], "beta" => ["beta@static.example.com:/www"]}
+    )
+
+    assert DeployConfig.overlapping_destinations() == [
+             {:rsync_targets, {"acme", "acme@static.example.com:/www", :config},
+              {"beta", "beta@static.example.com:/www", :config}}
+           ]
+  end
+
+  test "many sites are compared by host and bucket, not in every pair" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@www.example.com:/www/{site_key}"],
+      s3_targets: ["s3://static-bucket/sites/{site_key}", "s3://{site_key}-www"]
+    )
+
+    sites = for index <- 1..400, do: %{key: "site-#{index}", allowed_rsync_targets: [], allowed_s3_targets: []}
+    sites = List.update_at(sites, 0, &%{&1 | allowed_s3_targets: ["s3://static-bucket/sites/"]})
+
+    {microseconds, overlaps} = :timer.tc(fn -> DeployConfig.overlapping_destinations(sites) end)
+
+    # The first site's parent holds each of the other 399's prefixes
+    assert length(overlaps) == 399
+    assert microseconds < 500_000
+  end
+
   test "the entries config gives a site read as they apply to it" do
     put_test_env(DeployConfig,
       resolver: &resolve/2,

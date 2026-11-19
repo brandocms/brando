@@ -46,7 +46,7 @@ defmodule Brando.Sites.DeployConfig do
         s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}
 
   A site also has its own allowed targets, which an installation superuser
-  sets under Sites (`Brando.Tenant.Registry.update_site_deploy_targets/3`)
+  sets under Sites (`Brando.Tenant.Registry.update_site_deploy_targets/4`)
   and no site administrator can change: `:allowed_rsync_targets` and
   `:allowed_s3_targets` on `Brando.Sites.Site`. Each entry is an exact
   destination or a parent ending in `/`, in the form a target takes, and
@@ -603,22 +603,86 @@ defmodule Brando.Sites.DeployConfig do
   with `{site_key}`, which gives each of `sites` its own destination, or
   `:site`, from the site's own allowed targets. A list entry without the
   placeholder is every site's (`shared_destinations/0`), and is left out.
+
+  Two sites' destinations from the same list entry that differ only in the
+  rsync user, as `{site_key}@static.example.com:/www` gives them, are one
+  account each and not reported; two such destinations set apart are.
   """
   @spec overlapping_destinations([Brando.Sites.Site.t() | map()]) ::
           [{atom(), {String.t(), String.t(), :config | :site}, {String.t(), String.t(), :config | :site}}]
   def overlapping_destinations(sites \\ []) do
-    for setting <- @settings,
-        entries = setting_entries(setting, sites),
-        {key, entry, source} = first <- entries,
-        {other_key, other_entry, other_source} = second <- entries,
-        key < other_key,
-        same_place?(setting, destination(entry, key, source), destination(other_entry, other_key, other_source)),
-        do: {setting, first, second}
+    Enum.flat_map(@settings, fn setting ->
+      candidates =
+        setting
+        |> setting_entries(sites)
+        |> Enum.with_index()
+        |> Enum.flat_map(fn {entry, index} -> place(setting, entry, index) end)
+
+      for {first, second} <- overlapping_pairs(setting, candidates), do: {setting, first.entry, second.entry}
+    end)
   end
 
-  # A site's own entries are matched as written
-  defp destination(entry, key, :config), do: for_site(entry, key)
-  defp destination(entry, _key, :site), do: entry
+  # Where an entry deploys to, keyed by its host or bucket so only entries
+  # in one are compared. A site's own entries are matched as written.
+  defp place(setting, {key, entry, source, origin}, index) do
+    destination = if source == :config, do: for_site(entry, key), else: entry
+
+    case parse_place(setting, destination) do
+      {:ok, group, user, path} ->
+        [%{entry: {key, entry, source}, key: key, origin: origin, index: index, group: group, user: user, path: path}]
+
+      :error ->
+        []
+    end
+  end
+
+  defp parse_place(:rsync_targets, destination) do
+    case Regex.named_captures(@rsync_target, destination) do
+      %{"user" => user, "host" => host, "path" => path} -> {:ok, host_key(host), user, String.trim_trailing(path, "/")}
+      nil -> :error
+    end
+  end
+
+  defp parse_place(:s3_targets, destination) do
+    case parse_s3_target(destination) do
+      {:ok, bucket, prefix} -> {:ok, bucket, nil, prefix}
+      _error -> :error
+    end
+  end
+
+  # Each candidate is looked for at its own path and at each that holds it,
+  # so the work grows with the entries and their depth, not their pairs. In
+  # the order entries are sorted (by site key), the first of each pair first.
+  defp overlapping_pairs(setting, candidates) do
+    candidates
+    |> Enum.group_by(& &1.group)
+    |> Enum.flat_map(fn {_group, members} ->
+      by_path = Enum.group_by(members, & &1.path)
+
+      for candidate <- members,
+          path <- holding_paths(setting, candidate.path),
+          other <- Map.get(by_path, path, []),
+          other.key != candidate.key,
+          {first, second} = Enum.min_max_by([candidate, other], & &1.index),
+          same_account?(first, second),
+          do: {first, second}
+    end)
+    |> Enum.uniq_by(fn {first, second} -> {first.index, second.index} end)
+    |> Enum.sort_by(fn {first, second} -> {first.index, second.index} end)
+  end
+
+  # The path itself and each that holds it: `/srv/sites/acme` is held by
+  # `/srv/sites`, `/srv` and `` (`/`). A whole bucket holds every prefix.
+  defp holding_paths(:rsync_targets, path), do: path |> String.split("/") |> prefix_paths()
+  defp holding_paths(:s3_targets, ""), do: [""]
+  defp holding_paths(:s3_targets, prefix), do: ["" | prefix |> String.split("/") |> prefix_paths()]
+
+  defp prefix_paths(parts), do: for(count <- 1..length(parts), do: parts |> Enum.take(count) |> Enum.join("/"))
+
+  # From one list entry, two sites' destinations told apart by the user are
+  # each site's own account
+  defp same_account?(%{origin: {:list, entry}, user: user}, %{origin: {:list, entry}, user: other}), do: user == other
+  defp same_account?(_first, _second), do: true
 
   @doc """
   The settings with a part no target can pass: anything but a list of
@@ -646,7 +710,8 @@ defmodule Brando.Sites.DeployConfig do
 
   defp readable_site_entries?(_other), do: false
 
-  # Each site's entries for `setting`, from the config map and its own list
+  # Each site's entries for `setting`, from the config map and its own list,
+  # each with where it comes from
   defp setting_entries(setting, sites) do
     sites = for %{key: key} = site when is_binary(key) <- sites, do: site
     targets = setting_value(setting)
@@ -662,7 +727,7 @@ defmodule Brando.Sites.DeployConfig do
       for site <- sites,
           {key, own} = grant(site),
           entry <- own_entries(own, setting),
-          do: {key, entry, :site}
+          do: {key, entry, :site, :site}
 
     (configured ++ own) |> Enum.uniq() |> Enum.sort_by(&elem(&1, 0))
   end
@@ -672,41 +737,17 @@ defmodule Brando.Sites.DeployConfig do
     for entry when is_binary(entry) <- targets,
         String.contains?(entry, "{site_key}"),
         %{key: key} <- sites,
-        do: {key, entry, :config}
+        do: {key, entry, :config, {:list, entry}}
   end
 
   defp map_entries(targets) do
     for {key, entries} when is_binary(key) and is_list(entries) <- Enum.sort(targets),
         entry when is_binary(entry) <- entries,
-        do: {key, entry, :config}
-  end
-
-  # One host's or bucket's paths where either holds the other. A whole bucket,
-  # or `s3://bucket/`, holds every prefix in it.
-  defp same_place?(:rsync_targets, entry, other) do
-    with %{"host" => host, "path" => path} <- Regex.named_captures(@rsync_target, entry),
-         %{"host" => other_host, "path" => other_path} <- Regex.named_captures(@rsync_target, other) do
-      same_host?(host, other_host) and
-        nested?(String.trim_trailing(path, "/"), String.trim_trailing(other_path, "/"))
-    else
-      _unparsed -> false
-    end
-  end
-
-  defp same_place?(:s3_targets, entry, other) do
-    case {parse_s3_target(entry), parse_s3_target(other)} do
-      {{:ok, bucket, prefix}, {:ok, bucket, other_prefix}} ->
-        prefix == "" or other_prefix == "" or nested?(prefix, other_prefix)
-
-      _other ->
-        false
-    end
+        do: {key, entry, :config, :map}
   end
 
   # ssh reaches `example.com.` and `example.com`, or an IPv6 address however
   # written, as one host
-  defp same_host?(host, other), do: host_key(host) == host_key(other)
-
   defp host_key(host) do
     host = host |> String.trim_leading("[") |> String.trim_trailing("]") |> String.trim_trailing(".") |> String.downcase()
 
@@ -715,9 +756,6 @@ defmodule Brando.Sites.DeployConfig do
       {:error, _reason} -> host
     end
   end
-
-  defp nested?(path, other),
-    do: path == other or String.starts_with?(path, other <> "/") or String.starts_with?(other, path <> "/")
 
   # Without a key an entry keeps its placeholder, which no target can match
   defp for_site(listed, site_key) when is_binary(listed) and is_binary(site_key),
