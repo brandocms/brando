@@ -1,0 +1,1 @@
+- Archiving and permanently deleting a site at `/admin/sites` ask for confirmation again; the buttons acted at once.

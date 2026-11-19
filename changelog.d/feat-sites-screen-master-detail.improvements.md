@@ -1,0 +1,2 @@
+- The superuser Sites screen lists the sites and shows one at a time, named in the URL (`/admin/sites?site=acme`, `?new` for the create form), with a site's languages as a list, its default language as a choice among them, and a section per concern.
+- A superuser can change a site's delivery, dynamic or static, on its form at `/admin/sites`, after a confirmation that says what changes for visitors; setup code calls `Brando.Tenant.Setup.update_delivery/3`.

@@ -124,6 +124,7 @@
 @import "./views/config/ReleaseChanges.css";
 @import "./views/config/Authorization.css";
 @import "./views/config/Environments.css";
+@import "./views/config/Sites.css";
 @import "./views/config/FrontendAssets.css";
 @import "./views/config/Globals.css";
 @import "./views/config/ScheduledPublishing.css";

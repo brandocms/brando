@@ -13,20 +13,25 @@ defmodule BrandoAdmin.Sites.SiteLive do
   # groups and grants; a new default language moves the site's public URLs.
   on_mount(
     {BrandoAdmin.Reauth,
-     events: ~w(create_site activate_site delete suspend archive grant revoke set_library_group save_languages)}
+     events:
+       ~w(create_site activate_site delete suspend archive grant revoke set_library_group save_languages save_delivery)}
   )
 
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Repo
+  alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
+  alias Brando.SSG.LocalDelivery
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Setup
   alias Brando.Tenant.Storage
   alias Brando.Users.User
   alias Brando.Worker.SiteLanguageSeed
-  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Workspace
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -40,13 +45,39 @@ defmodule BrandoAdmin.Sites.SiteLive do
         {:ok,
          socket
          |> assign(:socket_connected, true)
+         |> assign(:page_title, gettext("Sites"))
          |> assign(:seeder, seeder)
          |> assign(:demo_option?, Brando.Tenant.Seeder.demo_option?(seeder))
+         |> assign(:selected, nil)
+         |> assign_create_form(default_create_params(), [])
          |> refresh()}
 
       true ->
         {:ok, assign(socket, :socket_connected, false)}
     end
+  end
+
+  # The selected site is in the URL: `?site=<key>`, or `?new` for the create
+  # form. Without one, or with a key no site has, the admin's current site,
+  # else the first.
+  @impl Phoenix.LiveView
+  def handle_params(params, _uri, %{assigns: %{socket_connected: true}} = socket) do
+    {:noreply, assign(socket, :selected, selection(params, socket.assigns))}
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
+
+  defp selection(%{"new" => _}, _assigns), do: :new
+
+  defp selection(params, %{sites: sites} = assigns) do
+    current_key = assigns[:current_site] && assigns.current_site.key
+
+    site =
+      Enum.find(sites, &(&1.key == params["site"])) ||
+        Enum.find(sites, &(&1.key == current_key)) ||
+        List.first(sites)
+
+    if site, do: site.id, else: :new
   end
 
   @impl Phoenix.LiveView
@@ -56,219 +87,309 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   def render(assigns) do
+    assigns = assign(assigns, :site, Enum.find(assigns.sites, &(&1.id == assigns.selected)))
+
     ~H"""
-    <div class="environment-screen site-screen">
-      <Content.header
+    <div class="admin-workspace settings-workspace site-workspace">
+      <Workspace.header
+        eyebrow={gettext("System")}
         title={gettext("Sites")}
         subtitle={gettext("Provision isolated sites, control lifecycle, and assign users")}
       >
         <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
-      </Content.header>
+      </Workspace.header>
 
-      <div class="environment-management-live">
-        <section class="environment-panel">
-          <h2>{gettext("Create site")}</h2>
-          <p>{gettext("Creates Production and Staging schemas, seeds initial content, and grants you site admin access.")}</p>
-          <form id="create-site-form" phx-submit="create_site">
-            <div class="environment-grid">
-              <label>
-                <span>{gettext("Name")}</span>
-                <input name="site[name]" required placeholder={gettext("Acme Corporation")} />
-              </label>
-              <label>
-                <span>{gettext("Key")}</span>
-                <input name="site[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="acme" />
-              </label>
-              <label>
-                <span>{gettext("Languages")}</span>
-                <input
-                  name="site[languages]"
-                  required
-                  value={Brando.Languages.installation_default_language()}
-                  placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
-                />
-              </label>
-              <label>
-                <span>{gettext("Default language")}</span>
-                <input name="site[default_language]" required value={Brando.Languages.installation_default_language()} />
-              </label>
-              <label>
-                <span>{gettext("Delivery")}</span>
-                <select name="site[delivery_mode]">
-                  <option value="dynamic">{gettext("Dynamic")}</option>
-                  <option value="static">{gettext("Static")}</option>
-                </select>
-                <small>
-                  {gettext(
-                    "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
-                  )}
-                </small>
-              </label>
-            </div>
-            <div class="site-create-demo">
-              <input type="hidden" name="site[demo]" value="false" />
-              <label class="environment-check">
-                <input
-                  type="checkbox"
-                  id="site-create-demo"
-                  name="site[demo]"
-                  value="true"
-                  checked
-                  aria-describedby="site-create-demo-help"
-                />
-                <span>{gettext("Start with demo content")}</span>
-              </label>
-              <small :if={@demo_option? and @seeder == Brando.Tenant.Seeder} id="site-create-demo-help">
-                {gettext(
-                  "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
-                )}
-              </small>
-              <small :if={@demo_option? and @seeder != Brando.Tenant.Seeder} id="site-create-demo-help">
-                {gettext(
-                  "Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out.",
-                  seeder: inspect(@seeder)
-                )}
-              </small>
-              <small :if={!@demo_option?} id="site-create-demo-help">
-                {gettext(
-                  "This installation's seeder, %{seeder}, decides what a new site starts with, so unticking this changes nothing.",
-                  seeder: inspect(@seeder)
-                )}
-              </small>
-            </div>
-            <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Provisioning…")}>
-              {gettext("Create site")}
-            </button>
-          </form>
+      <div class="site-layout">
+        <nav class="site-list" aria-label={gettext("Choose a site")}>
+          <h2 class="site-list-heading">
+            {gettext("Sites")} <span class="badge badge--count">{length(@sites)}</span>
+          </h2>
+          <.link
+            :for={site <- @sites}
+            id={"site-list-#{site.id}"}
+            patch={"/admin/sites?site=#{site.key}"}
+            class="site-list-item"
+            aria-current={@selected == site.id && "page"}
+          >
+            <span class="site-list-name">
+              <strong>{site.name}</strong>
+              <small>{site.key}</small>
+            </span>
+            <.status_badge status={site.status} />
+          </.link>
+          <.link
+            id="site-list-new"
+            patch="/admin/sites?new"
+            class="site-list-item site-list-new"
+            aria-current={@selected == :new && "page"}
+          >
+            <.icon name="plus" />
+            <span>{gettext("New site")}</span>
+          </.link>
+        </nav>
+
+        <div class="brando-form site-detail">
+          <.create_form :if={@selected == :new} form={@create_form} demo_option?={@demo_option?} seeder={@seeder} />
+          <.site_form
+            :if={@site}
+            site={@site}
+            sites={@sites}
+            stats={@stats}
+            seeding={@seeding}
+            assignments={@assignments}
+            users={@users}
+            language_drafts={@language_drafts}
+          />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :status, :atom, required: true
+
+  defp status_badge(assigns) do
+    ~H"""
+    <span class={["badge", status_tone(@status)]}>
+      <span :if={@status == :active} class="badge-dot"></span>
+      {status_label(@status)}
+    </span>
+    """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :demo_option?, :boolean, required: true
+  attr :seeder, :atom, required: true
+
+  defp create_form(assigns) do
+    ~H"""
+    <section id="site-new" class="site-editor" aria-labelledby="site-new-title">
+      <header class="site-editor-heading">
+        <div>
+          <h2 id="site-new-title">{gettext("New site")}</h2>
+          <p>
+            {gettext("Creates Production and Staging schemas, seeds initial content, and grants you site admin access.")}
+          </p>
+        </div>
+      </header>
+
+      <form id="create-site-form" phx-change="check_create" phx-submit="create_site">
+        <section class="site-section">
+          <header class="site-section-heading">
+            <h3>{gettext("Site")}</h3>
+          </header>
+          <div class="site-fields site-fields--two">
+            <Input.text field={@form[:name]} label={gettext("Name")} placeholder={gettext("Acme Corporation")} />
+            <Input.text
+              field={@form[:key]}
+              label={gettext("Key")}
+              placeholder="acme"
+              opts={[monospace: true]}
+              instructions={
+                gettext("Lowercase letters, digits and single dashes. It names the site’s database schemas and folders.")
+              }
+            />
+          </div>
         </section>
 
-        <section :for={site <- @sites} class="environment-panel site-card" id={"site-#{site.id}"}>
-          <header class="site-card__header">
-            <div class="site-card__identity">
-              <h2>{site.name}</h2>
-              <code class="badge badge--outline">{site.key}</code>
-              <span class={["badge", status_tone(site.status)]}>
-                <span :if={site.status == :active} class="badge-dot"></span>
-                {status_label(site.status)}
-              </span>
-            </div>
-            <div class="site-card__actions">
-              <button
-                :if={site.status == :active}
-                type="button"
-                class="btn"
-                phx-click="suspend"
-                phx-value-id={site.id}
-              >
-                {gettext("Suspend")}
-              </button>
-              <button
-                :if={site.status == :suspended}
-                type="button"
-                class="btn btn--primary"
-                phx-click="activate_site"
-                phx-value-id={site.id}
-              >
-                {gettext("Activate")}
-              </button>
-              <button
-                :if={site.status != :archived}
-                type="button"
-                class="btn btn--danger"
-                phx-click="archive"
-                phx-value-id={site.id}
-                phx-confirm={gettext("Archive %{name}? Its domains will stop serving immediately.", name: site.name)}
-              >
-                {gettext("Archive")}
-              </button>
-              <button
-                :if={site.status == :archived}
-                type="button"
-                class="btn"
-                phx-click="activate_site"
-                phx-value-id={site.id}
-              >
-                {gettext("Restore")}
-              </button>
-              <button
-                :if={site.status == :archived}
-                type="button"
-                class="btn btn--danger"
-                phx-click="delete"
-                phx-value-id={site.id}
-                phx-confirm={gettext("Permanently delete %{name}, all schemas, media, and uploaded assets?", name: site.name)}
-              >
-                {gettext("Permanently delete")}
-              </button>
-            </div>
+        <.languages_fields form={@form} />
+
+        <section class="site-section">
+          <header class="site-section-heading">
+            <h3>{gettext("Delivery")}</h3>
+            <p>{gettext("How visitors get the site’s pages. It can be changed later.")}</p>
           </header>
+          <div class="site-fields site-fields--two">
+            <Primitives.field_base
+              field={@form[:delivery_mode]}
+              label={gettext("Delivery")}
+              instructions={
+                gettext("Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline.")
+              }
+            >
+              <:value>{delivery_label(@form[:delivery_mode].value)}</:value>
+              <select id={@form[:delivery_mode].id} name={@form[:delivery_mode].name} class="admin-select">
+                <option
+                  :for={mode <- Site.delivery_modes()}
+                  value={mode}
+                  selected={to_string(@form[:delivery_mode].value) == to_string(mode)}
+                >
+                  {delivery_label(mode)}
+                </option>
+              </select>
+            </Primitives.field_base>
+          </div>
+        </section>
 
-          <dl class="site-stats">
-            <div>
-              <dt>{gettext("Environments")}</dt><dd>{length(site.environments)}</dd>
-            </div>
-            <div>
-              <dt>{gettext("Pages")}</dt><dd>{stat(@stats, site.id, :page_count)}</dd>
-            </div>
-            <div>
-              <dt>{gettext("Media")}</dt><dd>{format_size(stat(@stats, site.id, :media_size))}</dd>
-            </div>
-            <div>
-              <dt>{gettext("Last page edit")}</dt><dd>{format_last_edit(stat(@stats, site.id, :last_edit))}</dd>
-            </div>
-          </dl>
+        <section class="site-section">
+          <Input.checkbox
+            field={@form[:demo]}
+            label={gettext("Starting content")}
+            opts={[text: gettext("Start with demo content"), compact: true]}
+            instructions={demo_note(@demo_option?, @seeder)}
+          />
+        </section>
 
-          <form
-            id={"languages-site-#{site.id}"}
-            class="site-languages"
-            phx-change="check_languages"
-            phx-submit="save_languages"
+        <div class="site-actions">
+          <button type="submit" class="btn btn--primary btn--lg" phx-disable-with={gettext("Provisioning…")}>
+            {gettext("Create site")}
+          </button>
+        </div>
+      </form>
+    </section>
+    """
+  end
+
+  # The languages as a list, and the default as a select of what is in it,
+  # in the create form and a site's form alike
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :site, Site, default: nil
+  attr :removed, :list, default: []
+  slot :inner_block
+
+  defp languages_fields(assigns) do
+    languages = clean_languages(assigns.form[:languages].value)
+
+    assigns =
+      assigns
+      |> assign(:languages, languages)
+      |> assign(:default, default_choice(assigns.form[:default_language].value, languages))
+
+    ~H"""
+    <section class="site-section">
+      <header class="site-section-heading">
+        <h3>{gettext("Languages")}</h3>
+        <p>
+          {gettext("The languages the site’s content is written in, in the order the admin lists them.")}
+        </p>
+      </header>
+      <div class="site-fields site-fields--two">
+        <Input.string_list
+          field={@form[:languages]}
+          label={gettext("Languages")}
+          instructions={
+            gettext(
+              "Language keys such as en or no, one per line. A language you add gets the same starting content as a new site, in each environment."
+            )
+          }
+        />
+        <Primitives.field_base
+          field={@form[:default_language]}
+          label={gettext("Default language")}
+          instructions={gettext("The language of the site’s URLs without a language prefix.")}
+        >
+          <:value>{@default}</:value>
+          <select
+            id={@form[:default_language].id}
+            name={@form[:default_language].name}
+            class="admin-select"
+            disabled={@languages == []}
           >
-            <input type="hidden" name="site[id]" value={site.id} />
-            <div class="environment-grid">
-              <label>
-                <span>{gettext("Languages")}</span>
-                <input
-                  name="site[languages]"
-                  required
-                  value={language_draft(@language_drafts, site).languages}
-                  placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
-                />
-                <small>
-                  {gettext("A language you add gets the same starting content as a new site, in each environment.")}
-                </small>
-              </label>
-              <label>
-                <span>{gettext("Default language")}</span>
-                <input
-                  name="site[default_language]"
-                  required
-                  value={language_draft(@language_drafts, site).default_language}
-                />
-              </label>
-            </div>
-            <p :if={removed_languages(@language_drafts, site) != []} class="environment-hint" role="status">
-              {gettext(
-                "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again.",
-                languages: Enum.join(removed_languages(@language_drafts, site), ", ")
-              )}
-            </p>
-            <button type="submit" class="btn">{gettext("Save languages")}</button>
-          </form>
+            <option :for={language <- @languages} value={language} selected={language == @default}>
+              {language_label(language)}
+            </option>
+          </select>
+        </Primitives.field_base>
+      </div>
+      <p :if={@removed != []} class="site-hint" role="status">
+        {gettext(
+          "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again.",
+          languages: Enum.join(@removed, ", ")
+        )}
+      </p>
+      <p
+        :if={@site && @default && @default != @site.default_language && @languages != []}
+        class="site-hint"
+        role="status"
+      >
+        {gettext("Saving makes %{language} the default language, which moves the site’s public URLs.",
+          language: @default
+        )}
+      </p>
+      {render_slot(@inner_block)}
+    </section>
+    """
+  end
 
-          <div :if={seeding(@seeding, site.id) != []} class="site-seeding">
-            <table id={"seeding-site-#{site.id}"}>
+  defp site_form(assigns) do
+    site = assigns.site
+
+    assigns =
+      assigns
+      |> assign(:languages_form, languages_form(assigns.language_drafts, site))
+      |> assign(:removed, removed_languages(assigns.language_drafts, site))
+      |> assign(:seeding_rows, seeding(assigns.seeding, site.id))
+      |> assign(:site_assignments, assignments(assigns.assignments, site.id))
+      |> assign(
+        :library_form,
+        to_form(%{"provider_library_group" => site.provider_library_group},
+          as: "site",
+          id: "library-group-site-#{site.id}"
+        )
+      )
+
+    ~H"""
+    <section id={"site-#{@site.id}"} class="site-editor" aria-labelledby={"site-#{@site.id}-title"}>
+      <header class="site-editor-heading">
+        <div>
+          <h2 id={"site-#{@site.id}-title"}>{@site.name}</h2>
+          <div class="site-editor-meta">
+            <span class="badge badge--outline workspace-mono">{@site.key}</span>
+            <.status_badge status={@site.status} />
+            <span class="badge">{delivery_label(@site.delivery_mode)}</span>
+          </div>
+        </div>
+      </header>
+
+      <dl class="site-stats">
+        <div>
+          <dt>{gettext("Environments")}</dt><dd>{length(@site.environments)}</dd>
+        </div>
+        <div>
+          <dt>{gettext("Pages")}</dt><dd>{stat(@stats, @site.id, :page_count)}</dd>
+        </div>
+        <div>
+          <dt>{gettext("Media")}</dt><dd>{format_size(stat(@stats, @site.id, :media_size))}</dd>
+        </div>
+        <div>
+          <dt>{gettext("Last page edit")}</dt><dd>{format_last_edit(stat(@stats, @site.id, :last_edit))}</dd>
+        </div>
+      </dl>
+
+      <form
+        id={"languages-site-#{@site.id}"}
+        class="site-languages"
+        phx-change="check_languages"
+        phx-submit="save_languages"
+      >
+        <input type="hidden" name="site[id]" value={@site.id} />
+        <.languages_fields form={@languages_form} site={@site} removed={@removed}>
+          <div class="site-actions">
+            <button type="submit" class="btn">{gettext("Save languages")}</button>
+          </div>
+        </.languages_fields>
+      </form>
+
+      <div :if={@seeding_rows != []} class="site-seeding">
+        <div class="workspace-panel">
+          <div class="workspace-table-scroll">
+            <table id={"seeding-site-#{@site.id}"} class="workspace-table">
               <tbody>
-                <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
-                  <td>{seeding_status(row)}</td>
+                <tr
+                  :for={row <- @seeding_rows}
+                  id={"seeding-#{@site.id}-#{row.environment.id}-#{row.language}"}
+                >
                   <td>
+                    {seeding_status(row)}
                     <small :if={row.busy}>{gettext("Waiting for the environment's copy or setup to finish.")}</small>
+                  </td>
+                  <td class="row-actions">
                     <button
                       :if={seed_again?(row)}
                       type="button"
                       class="btn btn--sm"
                       phx-click="seed_language"
-                      phx-value-site-id={site.id}
+                      phx-value-site-id={@site.id}
                       phx-value-environment-id={row.environment.id}
                       phx-value-language={row.language}
                     >
@@ -279,46 +400,77 @@ defmodule BrandoAdmin.Sites.SiteLive do
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
 
-          <form
-            id={"library-group-site-#{site.id}"}
-            class="site-library-group"
-            phx-submit="set_library_group"
-          >
-            <input type="hidden" name="site[id]" value={site.id} />
-            <label>
-              <span>{gettext("Provider library group")}</span>
-              <input
-                name="site[provider_library_group]"
-                value={site.provider_library_group}
-                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-                maxlength="40"
-                placeholder={gettext("Not shared")}
-              />
-              <small>{library_group_note(@sites, site)}</small>
-            </label>
+      <.delivery_section site={@site} />
+
+      <section class="site-section">
+        <header class="site-section-heading">
+          <h3>{gettext("Video provider libraries")}</h3>
+          <p>{gettext("Sites with the same group key share the provider videos offered under “Add from …”.")}</p>
+        </header>
+        <form id={"library-group-site-#{@site.id}"} class="site-library-group" phx-submit="set_library_group">
+          <input type="hidden" name="site[id]" value={@site.id} />
+          <div class="site-fields site-fields--two">
+            <Input.text
+              field={@library_form[:provider_library_group]}
+              label={gettext("Provider library group")}
+              placeholder={gettext("Not shared")}
+              opts={[monospace: true]}
+              instructions={library_group_note(@sites, @site)}
+            />
+          </div>
+          <div class="site-actions">
             <button type="submit" class="btn">{gettext("Save group")}</button>
-          </form>
+          </div>
+        </form>
+      </section>
 
-          <p :if={Brando.Authorization.enabled?()}>
-            <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>
+      <section class="site-section site-access">
+        <header class="site-section-heading">
+          <h3>{gettext("Access")}</h3>
+          <p :if={!Brando.Authorization.enabled?()}>
+            {gettext("Who may work on this site besides superusers, who reach every site.")}
           </p>
-          <div :if={!Brando.Authorization.enabled?()} class="environment-grid site-card__users">
-            <section>
-              <h3>{gettext("Site users")}</h3>
-              <p :if={assignments(@assignments, site.id) == []}>{gettext("No explicit user assignments.")}</p>
-              <table :if={assignments(@assignments, site.id) != []}>
+        </header>
+        <p :if={Brando.Authorization.enabled?()}>
+          <a class="btn" href={"/admin/groups?brando_site_key=#{@site.key}"}>
+            {gettext("Manage this site’s groups and members")}
+          </a>
+        </p>
+        <div :if={!Brando.Authorization.enabled?()} class="site-users">
+          <p :if={@site_assignments == []} class="site-hint">{gettext("No explicit user assignments.")}</p>
+          <div :if={@site_assignments != []} class="workspace-panel">
+            <div class="workspace-table-scroll">
+              <table class="workspace-table">
+                <thead>
+                  <tr>
+                    <th>{gettext("User")}</th>
+                    <th>{gettext("Role")}</th>
+                    <th><span class="workspace-sr-only">{gettext("Actions")}</span></th>
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr :for={assignment <- assignments(@assignments, site.id)} id={"assignment-#{assignment.id}"}>
+                  <tr :for={assignment <- @site_assignments} id={"assignment-#{assignment.id}"}>
                     <td>{assignment.user.name}<small>{assignment.user.email}</small></td>
                     <td><span class="badge">{role_label(assignment.role)}</span></td>
-                    <td>
+                    <td class="row-actions">
                       <button
                         type="button"
-                        class="btn btn--sm btn--danger"
+                        class="btn btn--sm btn--quiet btn--danger"
                         phx-click="revoke"
-                        phx-value-site-id={site.id}
+                        phx-value-site-id={@site.id}
                         phx-value-user-id={assignment.user_id}
+                        data-confirm-title={gettext("Revoke %{name}’s access?", name: assignment.user.name)}
+                        data-confirm={
+                          gettext("%{name} can no longer open %{site} in the admin.",
+                            name: assignment.user.name,
+                            site: @site.name
+                          )
+                        }
+                        data-confirm-ok={gettext("Revoke access")}
+                        data-confirm-destructive
                       >
                         {gettext("Revoke")}
                       </button>
@@ -326,48 +478,168 @@ defmodule BrandoAdmin.Sites.SiteLive do
                   </tr>
                 </tbody>
               </table>
-            </section>
-
-            <section>
-              <h3>{gettext("Grant access")}</h3>
-              <p :if={@users == []}>
-                {gettext(
-                  "Every user here is a superuser, who already has access to every site. Access is granted to users with another role."
-                )}
-              </p>
-              <form :if={@users != []} phx-submit="grant" id={"grant-site-#{site.id}"}>
-                <input type="hidden" name="assignment[site_id]" value={site.id} />
-                <label>
-                  <span>{gettext("User")}</span>
-                  <select name="assignment[user_id]" required>
-                    <option :for={user <- @users} value={user.id}>{user.name} · {user.email}</option>
-                  </select>
-                </label>
-                <label>
-                  <span>{gettext("Role")}</span>
-                  <select name="assignment[role]">
-                    <option value="editor">{gettext("Editor")}</option>
-                    <option value="admin">{gettext("Administrator")}</option>
-                  </select>
-                </label>
-                <button type="submit" class="btn btn--primary">{gettext("Grant access")}</button>
-              </form>
-            </section>
+            </div>
           </div>
-        </section>
+
+          <h4>{gettext("Grant access")}</h4>
+          <p :if={@users == []} class="site-hint">
+            {gettext(
+              "Every user here is a superuser, who already has access to every site. Access is granted to users with another role."
+            )}
+          </p>
+          <form :if={@users != []} phx-submit="grant" id={"grant-site-#{@site.id}"} class="site-grant">
+            <input type="hidden" name="assignment[site_id]" value={@site.id} />
+            <label class="site-select">
+              <span>{gettext("User")}</span>
+              <select name="assignment[user_id]" class="admin-select" required>
+                <option :for={user <- @users} value={user.id}>{user.name} · {user.email}</option>
+              </select>
+            </label>
+            <label class="site-select">
+              <span>{gettext("Role")}</span>
+              <select name="assignment[role]" class="admin-select">
+                <option value="editor">{gettext("Editor")}</option>
+                <option value="admin">{gettext("Administrator")}</option>
+              </select>
+            </label>
+            <button type="submit" class="btn btn--primary">{gettext("Grant access")}</button>
+          </form>
+        </div>
+      </section>
+
+      <.lifecycle_section site={@site} />
+    </section>
+    """
+  end
+
+  attr :site, Site, required: true
+
+  defp delivery_section(assigns) do
+    target = other_delivery(assigns.site.delivery_mode)
+    assigns = assign(assigns, target: target, effect: delivery_effect(assigns.site, target))
+
+    ~H"""
+    <section class="site-section" id={"delivery-site-#{@site.id}"}>
+      <header class="site-section-heading">
+        <h3>{gettext("Delivery")}</h3>
+        <p>{delivery_description(@site.delivery_mode)}</p>
+      </header>
+      <dl class="site-facts">
+        <div>
+          <dt>{gettext("Mode")}</dt>
+          <dd>{delivery_label(@site.delivery_mode)}</dd>
+        </div>
+        <div :if={@site.delivery_mode == :static}>
+          <dt>{gettext("Deploys to")}</dt>
+          <dd>{strategy_label(@site.deploy_config)}</dd>
+        </div>
+        <div :if={Site.local_delivery?(@site)}>
+          <dt>{gettext("Published build")}</dt>
+          <dd>{@site.published_build || gettext("None yet")}</dd>
+        </div>
+      </dl>
+      <div class="site-actions">
+        <button
+          type="button"
+          id={"delivery-switch-#{@site.id}"}
+          class="btn"
+          phx-click="save_delivery"
+          phx-value-id={@site.id}
+          phx-value-mode={@target}
+          data-confirm-title={switch_title(@site, @target)}
+          data-confirm={@effect}
+          data-confirm-ok={switch_label(@target)}
+        >
+          {switch_label(@target)}
+        </button>
       </div>
-    </div>
+    </section>
+    """
+  end
+
+  attr :site, Site, required: true
+
+  defp lifecycle_section(assigns) do
+    ~H"""
+    <section class="site-section site-lifecycle" id={"lifecycle-site-#{@site.id}"}>
+      <header class="site-section-heading">
+        <h3>{gettext("Lifecycle")}</h3>
+        <p>{lifecycle_description(@site)}</p>
+      </header>
+      <div class="site-actions">
+        <button
+          :if={@site.status == :active}
+          type="button"
+          class="btn"
+          phx-click="suspend"
+          phx-value-id={@site.id}
+          data-confirm-title={gettext("Suspend %{name}?", name: @site.name)}
+          data-confirm={gettext("Its domains stop serving until the site is activated again. Nothing is deleted.")}
+          data-confirm-ok={gettext("Suspend")}
+        >
+          {gettext("Suspend")}
+        </button>
+        <button
+          :if={@site.status == :suspended}
+          type="button"
+          class="btn btn--primary"
+          phx-click="activate_site"
+          phx-value-id={@site.id}
+        >
+          {gettext("Activate")}
+        </button>
+        <button
+          :if={@site.status != :archived}
+          type="button"
+          class="btn btn--danger"
+          phx-click="archive"
+          phx-value-id={@site.id}
+          data-confirm-title={gettext("Archive %{name}?", name: @site.name)}
+          data-confirm={gettext("Archive %{name}? Its domains will stop serving immediately.", name: @site.name)}
+          data-confirm-ok={gettext("Archive")}
+          data-confirm-destructive
+        >
+          {gettext("Archive")}
+        </button>
+        <button
+          :if={@site.status == :archived}
+          type="button"
+          class="btn"
+          phx-click="activate_site"
+          phx-value-id={@site.id}
+        >
+          {gettext("Restore")}
+        </button>
+        <button
+          :if={@site.status == :archived}
+          type="button"
+          class="btn btn--danger btn--primary"
+          phx-click="delete"
+          phx-value-id={@site.id}
+          data-confirm-title={gettext("Permanently delete %{name}?", name: @site.name)}
+          data-confirm={gettext("Permanently delete %{name}, all schemas, media, and uploaded assets?", name: @site.name)}
+          data-confirm-ok={gettext("Permanently delete")}
+          data-confirm-destructive
+        >
+          {gettext("Permanently delete")}
+        </button>
+      </div>
+    </section>
     """
   end
 
   @impl Phoenix.LiveView
   def handle_event("refresh", _params, socket), do: {:noreply, refresh(socket)}
 
+  def handle_event("check_create", %{"site" => params}, socket) do
+    {:noreply, assign_create_form(socket, params, [])}
+  end
+
   def handle_event("create_site", %{"site" => params}, socket) do
     attrs = %{
       name: params["name"],
       key: params["key"],
-      languages: parse_languages(params["languages"]),
+      languages: clean_languages(params["languages"]),
       default_language: params["default_language"],
       status: :active,
       delivery_mode: parse_delivery_mode(params["delivery_mode"])
@@ -376,15 +648,26 @@ defmodule BrandoAdmin.Sites.SiteLive do
     demo = params["demo"] != "false"
 
     case Setup.create_site(attrs, socket.assigns.current_user, demo: demo) do
-      {:ok, site} -> {:noreply, socket |> notify(created_message(site, demo, socket.assigns)) |> refresh()}
-      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+      {:ok, site} ->
+        {:noreply,
+         socket
+         |> notify(created_message(site, demo, socket.assigns))
+         |> assign_create_form(default_create_params(), [])
+         |> refresh()
+         |> push_patch(to: site_path(site))}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign_create_form(params, changeset_errors(reason))
+         |> notify_error(lifecycle_error(reason))}
     end
   end
 
   def handle_event("check_languages", %{"site" => params}, socket) do
     case site_from_socket(socket, params["id"]) do
       {:ok, site} ->
-        draft = %{languages: params["languages"] || "", default_language: params["default_language"] || ""}
+        draft = %{languages: clean_languages(params["languages"]), default_language: params["default_language"]}
         {:noreply, update(socket, :language_drafts, &Map.put(&1, site.id, draft))}
 
       {:error, _reason} ->
@@ -393,7 +676,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   def handle_event("save_languages", %{"site" => params}, socket) do
-    attrs = %{languages: parse_languages(params["languages"]), default_language: params["default_language"]}
+    attrs = %{languages: clean_languages(params["languages"]), default_language: params["default_language"]}
 
     with {:ok, site} <- site_from_socket(socket, params["id"]),
          {:ok, site} <- Setup.update_languages(site, attrs, socket.assigns.current_user) do
@@ -401,6 +684,19 @@ defmodule BrandoAdmin.Sites.SiteLive do
        socket
        |> update(:language_drafts, &Map.delete(&1, site.id))
        |> notify(gettext("Languages for %{name} saved.", name: site.name))
+       |> refresh()}
+    else
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+    end
+  end
+
+  def handle_event("save_delivery", %{"id" => id, "mode" => mode}, socket) do
+    with {:ok, site} <- site_from_socket(socket, id),
+         {:ok, mode} <- delivery_mode_param(mode),
+         {:ok, site} <- Setup.update_delivery(site, mode, socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> notify(gettext("%{name} now has %{delivery} delivery.", name: site.name, delivery: delivery_name(mode)))
        |> refresh()}
     else
       {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
@@ -470,7 +766,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
     def handle_event(unquote(event), %{"id" => id}, socket) do
       with {:ok, site} <- site_from_socket(socket, id),
            {:ok, _site} <- apply(Setup, unquote(operation), [site]) do
-        {:noreply, socket |> notify(gettext("Site lifecycle updated.")) |> refresh()}
+        {:noreply, socket |> notify(gettext("Site lifecycle updated.")) |> refresh() |> after_lifecycle(unquote(event))}
       else
         {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
       end
@@ -489,7 +785,15 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:stats, Map.new(sites, &{&1.id, site_stats(&1)}))
     |> assign(:seeding, seeding_by_site(sites))
     |> assign_new(:language_drafts, fn -> %{} end)
+    |> keep_selection()
   end
+
+  # A site removed meanwhile, here or elsewhere, gives way to the default
+  defp keep_selection(%{assigns: %{selected: id, sites: sites}} = socket) when is_integer(id) do
+    if Enum.any?(sites, &(&1.id == id)), do: socket, else: assign(socket, :selected, selection(%{}, socket.assigns))
+  end
+
+  defp keep_selection(socket), do: socket
 
   # Per site, each environment and language whose latest seeding is queued,
   # running or failed, or that has no identity in that language: a seeding
@@ -633,14 +937,185 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
-  defp parse_languages(languages) do
+  # A string list's params (`site[languages][]`, its last row empty), or a
+  # site's own list
+  defp clean_languages(languages) when is_list(languages) do
     languages
-    |> to_string()
-    |> String.split(",")
-    |> Enum.map(&String.trim/1)
+    |> Enum.map(&(&1 |> to_string() |> String.trim()))
     |> Enum.reject(&(&1 == ""))
     |> Enum.uniq()
   end
+
+  defp clean_languages(_languages), do: []
+
+  # The default language select offers the languages in the list; a default
+  # no longer in it gives way to the first that is
+  defp default_choice(default, languages) do
+    if default in languages, do: default, else: List.first(languages)
+  end
+
+  defp language_label(code) do
+    case Enum.find(Brando.Languages.installation_languages(), &(to_string(&1[:value]) == code)) do
+      %{text: text} when is_binary(text) -> "#{text} (#{code})"
+      _unknown -> code
+    end
+  end
+
+  defp default_create_params do
+    language = Brando.Languages.installation_default_language()
+
+    %{
+      "name" => "",
+      "key" => "",
+      "languages" => List.wrap(language),
+      "default_language" => language,
+      "delivery_mode" => "dynamic",
+      "demo" => "true"
+    }
+  end
+
+  defp assign_create_form(socket, params, errors),
+    do: assign(socket, :create_form, to_form(params, as: "site", id: "create-site", errors: errors))
+
+  defp changeset_errors({:site_setup_failed, reason, _compensation}), do: changeset_errors(reason)
+  defp changeset_errors(%Ecto.Changeset{errors: errors}), do: errors
+  defp changeset_errors(_reason), do: []
+
+  defp site_path(%Site{key: key}), do: "/admin/sites?site=#{key}"
+
+  defp after_lifecycle(socket, "delete"), do: push_patch(socket, to: "/admin/sites")
+  defp after_lifecycle(socket, _event), do: socket
+
+  defp demo_note(true, Brando.Tenant.Seeder),
+    do:
+      gettext(
+        "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
+      )
+
+  defp demo_note(true, seeder),
+    do:
+      gettext("Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out.", seeder: inspect(seeder))
+
+  defp demo_note(false, seeder),
+    do:
+      gettext(
+        "This installation's seeder, %{seeder}, decides what a new site starts with, so unticking this changes nothing.",
+        seeder: inspect(seeder)
+      )
+
+  defp delivery_mode_param("static"), do: {:ok, :static}
+  defp delivery_mode_param("dynamic"), do: {:ok, :dynamic}
+  defp delivery_mode_param(_mode), do: {:error, :invalid_delivery_mode}
+
+  defp other_delivery(:static), do: :dynamic
+  defp other_delivery(_dynamic), do: :static
+
+  defp delivery_label(mode) when mode in [:static, "static"], do: gettext("Static")
+  defp delivery_label(_dynamic), do: gettext("Dynamic")
+
+  # In a sentence: "Acme now has static delivery."
+  defp delivery_name(:static), do: gettext("static")
+  defp delivery_name(:dynamic), do: gettext("dynamic")
+
+  defp delivery_description(:static),
+    do:
+      gettext(
+        "Visitors get a generated build: content becomes public when a build is deployed from the site’s Publishing screen."
+      )
+
+  defp delivery_description(_dynamic),
+    do: gettext("Phoenix answers each request from the live environment, so published content is public at once.")
+
+  defp strategy_label(%DeployConfig{strategy: :local}), do: gettext("Served by this installation")
+  defp strategy_label(%DeployConfig{strategy: :rsync, target: target}), do: gettext("rsync to %{target}", target: target)
+  defp strategy_label(%DeployConfig{strategy: :s3, target: target}), do: gettext("S3, %{target}", target: target)
+
+  defp strategy_label(%DeployConfig{strategy: :cloudflare_pages, target: target}),
+    do: gettext("Cloudflare Pages, %{target}", target: target)
+
+  defp strategy_label(_none), do: gettext("Not set up")
+
+  defp switch_label(:static), do: gettext("Switch to static delivery")
+  defp switch_label(:dynamic), do: gettext("Switch to dynamic delivery")
+
+  defp switch_title(site, :static), do: gettext("Switch %{name} to static delivery?", name: site.name)
+  defp switch_title(site, :dynamic), do: gettext("Switch %{name} to dynamic delivery?", name: site.name)
+
+  # What the switch changes for visitors, for its confirmation. A static site
+  # the installation serves from a published build is the one case where they
+  # see it at once: the build is forgotten (`Brando.Sites.Site`), and Phoenix
+  # answers the live environment's domain again.
+  defp delivery_effect(site, :dynamic) do
+    domain = live_domain(site)
+
+    cond do
+      LocalDelivery.serving?(site) ->
+        gettext(
+          "Visitors to %{domain} stop getting published build %{build} and get pages Phoenix renders from the live environment, so content changed since that build becomes public at once. The build is no longer published: switching back to static serves nothing from the installation until the next deploy. Publishing leaves the site’s menu.",
+          domain: domain,
+          build: site.published_build
+        )
+
+      Site.local_delivery?(site) and is_binary(site.published_build) ->
+        gettext(
+          "Nothing changes for visitors while the site is not active. Once it is active again, Phoenix answers %{domain} instead of published build %{build}, which is no longer published. Publishing leaves the site’s menu.",
+          domain: domain,
+          build: site.published_build
+        )
+
+      Site.local_delivery?(site) ->
+        gettext(
+          "Nothing changes for visitors: no build is published, so Phoenix already answers %{domain}. Publishing leaves the site’s menu.",
+          domain: domain
+        )
+
+      true ->
+        gettext(
+          "Nothing changes for visitors at once: %{domain} keeps reaching whatever its DNS or CDN points at, a static host included, until it is pointed at this installation. Forms on pages deployed to a static host stop accepting submissions, and Publishing leaves the site’s menu.",
+          domain: domain
+        )
+    end
+  end
+
+  defp delivery_effect(site, :static) do
+    domain = live_domain(site)
+
+    if match?(%DeployConfig{strategy: :local}, site.deploy_config),
+      do:
+        gettext(
+          "Nothing changes for visitors until a build is deployed: Phoenix keeps answering %{domain}, and the installation serves the build from the first deploy. Publishing, where builds are made and deployed, appears in the site’s menu.",
+          domain: domain
+        ),
+      else:
+        gettext(
+          "Nothing changes for visitors: Phoenix keeps answering %{domain} until it is pointed at the static host a build is deployed to. Publishing, where builds are made and deployed, appears in the site’s menu.",
+          domain: domain
+        )
+  end
+
+  defp live_domain(site) do
+    case Enum.find(site.environments || [], & &1.live) do
+      %{domain: domain} when is_binary(domain) and domain != "" -> domain
+      _none -> gettext("the site’s domain")
+    end
+  end
+
+  defp lifecycle_description(%Site{status: :active}),
+    do:
+      gettext(
+        "Suspending takes the site’s domains out of public routing until it is activated again. Archiving does the same, and starts the %{days} days after which it can be permanently deleted.",
+        days: Setup.delete_retention_days()
+      )
+
+  defp lifecycle_description(%Site{status: :suspended}),
+    do: gettext("Suspended: its domains serve nothing until the site is activated again. Nothing is deleted.")
+
+  defp lifecycle_description(%Site{status: :archived}),
+    do:
+      gettext(
+        "Archived: its domains serve nothing. Restore it, or permanently delete it with all its schemas, media and uploaded assets once it has been archived for %{days} days.",
+        days: Setup.delete_retention_days()
+      )
 
   defp parse_delivery_mode("static"), do: :static
   defp parse_delivery_mode(_dynamic), do: :dynamic
@@ -668,19 +1143,25 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
-  # What the form shows: the fields as typed since the last save, else the
-  # site's own. A change event re-renders the card, and an input that is not
+  # What the form shows: the fields as changed since the last save, else the
+  # site's own. A change event re-renders the form, and an input that is not
   # focused takes the rendered value, so rendering the saved one would undo
-  # what was typed in the other field.
-  defp language_draft(drafts, site) do
-    Map.get_lazy(drafts, site.id, fn ->
-      %{languages: Enum.join(site.languages, ","), default_language: site.default_language}
-    end)
+  # what was changed in the other field.
+  defp languages_form(drafts, site) do
+    draft =
+      Map.get_lazy(drafts, site.id, fn ->
+        %{languages: site.languages, default_language: site.default_language}
+      end)
+
+    to_form(%{"languages" => draft.languages, "default_language" => draft.default_language},
+      as: "site",
+      id: "languages-site-#{site.id}"
+    )
   end
 
   defp removed_languages(drafts, site) do
     case Map.fetch(drafts, site.id) do
-      {:ok, %{languages: languages}} -> site.languages -- parse_languages(languages)
+      {:ok, %{languages: languages}} -> site.languages -- languages
       :error -> []
     end
   end

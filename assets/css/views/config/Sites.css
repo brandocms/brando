@@ -1,0 +1,288 @@
+/* Sites (`BrandoAdmin.Sites.SiteLive`): the sites in a list on the left, and
+   the chosen one's form, or the create form, on the right, as the groups
+   screen lays out its groups (Authorization.css). The screen is a settings
+   workspace (SettingsWorkspace.css), so its fields look as Identity's do. */
+.admin-workspace.site-workspace {
+  .site-layout {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+
+  .site-list {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .site-list-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 0 12px;
+    font-size: var(--brando-text-md);
+    letter-spacing: 0;
+  }
+
+  .site-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 52px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--brando-radius-md);
+    color: var(--workspace-ink);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--workspace-wash);
+    }
+
+    &[aria-current="page"] {
+      border-color: var(--brando-line-strong);
+      background: var(--brando-surface-selected);
+    }
+
+    &[aria-current="page"] strong {
+      color: var(--workspace-accent);
+    }
+
+    .badge {
+      flex-shrink: 0;
+    }
+  }
+
+  .site-list-name {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+
+    strong {
+      font-size: var(--brando-text-md);
+      font-weight: 500;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    small {
+      color: var(--workspace-muted);
+      font-family: var(--brando-font-mono);
+      font-size: var(--brando-text-xs);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* "New site" closes the list, with the plus before it */
+  .site-list-new {
+    justify-content: flex-start;
+    min-height: 40px;
+    margin-top: 8px;
+    color: var(--workspace-muted);
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+    }
+
+    &[aria-current="page"] {
+      color: var(--workspace-accent);
+    }
+  }
+
+  /* The form beside the list: one column, at a settings width */
+  .brando-form.site-detail {
+    display: block;
+    min-width: 0;
+    min-height: 480px;
+    padding-left: 32px;
+    border-left: 1px solid var(--workspace-line);
+  }
+
+  .site-editor {
+    max-width: 880px;
+  }
+
+  .site-editor-heading {
+    h2 {
+      font-size: var(--brando-text-4xl);
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      max-width: 62ch;
+      margin-top: 8px;
+      color: var(--workspace-muted);
+    }
+  }
+
+  .site-editor-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  /* The site's figures, labels above values */
+  .site-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin-top: 24px;
+    padding: 16px 20px;
+    border: 1px solid var(--workspace-line);
+    border-radius: var(--brando-radius-lg);
+    background: var(--brando-surface);
+
+    > div {
+      display: grid;
+      align-content: start;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    dt {
+      color: var(--workspace-muted);
+      font-size: var(--brando-text-sm);
+    }
+
+    dd {
+      font-size: var(--brando-text-xl);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  /* A section per concern, ruled off as a settings form's fieldsets are */
+  .site-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--workspace-line);
+  }
+
+  .site-section-heading {
+    margin-bottom: 16px;
+
+    h3 {
+      font-size: var(--brando-text-2xl);
+      line-height: 26px;
+    }
+
+    p {
+      max-width: 62ch;
+      margin-top: 4px;
+      color: var(--workspace-muted);
+    }
+  }
+
+  .site-fields {
+    display: grid;
+    gap: 16px 24px;
+    align-items: start;
+  }
+
+  .site-fields--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The paragraph reset (global.css) zeroes a last paragraph's margin, so
+     the gap above the actions is their own padding */
+  .site-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-top: 16px;
+  }
+
+  .site-hint {
+    max-width: 62ch;
+    margin-top: 12px;
+    color: var(--workspace-muted);
+    font-size: var(--brando-text-sm);
+  }
+
+  .site-seeding {
+    margin-top: 16px;
+  }
+
+  .site-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 40px;
+
+    > div {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    dt {
+      color: var(--workspace-muted);
+      font-size: var(--brando-text-sm);
+    }
+
+    dd {
+      font-size: var(--brando-text-lg);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .site-users h4 {
+    margin: 24px 0 12px;
+    font-size: var(--brando-text-lg);
+  }
+
+  .site-grant {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  .site-select {
+    display: grid;
+    flex: 1 1 240px;
+    gap: 8px;
+    min-width: 0;
+
+    > span {
+      font-size: var(--brando-text-md);
+      line-height: 20px;
+    }
+  }
+
+  .site-select + .site-select {
+    flex: 0 1 200px;
+  }
+
+  .site-grant .btn {
+    min-height: 40px;
+  }
+
+  @media (max-width: 900px) {
+    .site-layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .brando-form.site-detail {
+      min-height: 0;
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .site-fields--two {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .site-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}

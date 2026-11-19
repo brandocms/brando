@@ -165,7 +165,7 @@ defmodule BrandoAdmin.ReauthTest do
   describe "sensitive actions that ask again" do
     @guarded [
       {BrandoAdmin.Sites.SiteLive,
-       ~w(create_site activate_site delete suspend archive grant revoke set_library_group save_languages)},
+       ~w(create_site activate_site delete suspend archive grant revoke set_library_group save_languages save_delivery)},
       {BrandoAdmin.Sites.PublishingLive, ~w(save_deploy_config deploy rollback request_build schedule_build)},
       {BrandoAdmin.Sites.EnvironmentLive,
        ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)},
