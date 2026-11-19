@@ -118,9 +118,15 @@ defmodule BrandoAdmin.Sites.SiteLive do
                 />
                 <span>{gettext("Start with demo content")}</span>
               </label>
-              <small :if={@demo_option?} id="site-create-demo-help">
+              <small :if={@demo_option? and @seeder == Brando.Tenant.Seeder} id="site-create-demo-help">
                 {gettext(
                   "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
+                )}
+              </small>
+              <small :if={@demo_option? and @seeder != Brando.Tenant.Seeder} id="site-create-demo-help">
+                {gettext(
+                  "Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out.",
+                  seeder: inspect(@seeder)
                 )}
               </small>
               <small :if={!@demo_option?} id="site-create-demo-help">
@@ -751,7 +757,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   # content whatever the box says, as `mix brando.setup --no-demo` warns
   defp created_message(site, false, %{demo_option?: false, seeder: seeder}) do
     gettext(
-      "Site %{name} created, with the content %{seeder} always gives a new site: it cannot start one without the demo.",
+      "Site %{name} created. %{seeder} decides what a new site starts with, so the demo choice was not used.",
       name: site.name,
       seeder: inspect(seeder)
     )

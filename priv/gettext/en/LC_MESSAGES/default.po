@@ -17504,12 +17504,12 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Site %{name} created, with the content %{seeder} always gives a new site: it cannot start one without the demo."
+msgid "Site %{name} created."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Site %{name} created."
+msgid "Site %{name} created. %{seeder} decides what a new site starts with, so the demo choice was not used."
 msgstr ""
 
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -20819,6 +20819,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out."
 msgstr ""
 
 #: lib/brando/videos/video.ex

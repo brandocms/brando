@@ -17504,13 +17504,13 @@ msgstr "Nettsted"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Site %{name} created, with the content %{seeder} always gives a new site: it cannot start one without the demo."
-msgstr "Nettstedet %{name} ble opprettet, med innholdet %{seeder} alltid gir et nytt nettsted: den kan ikke starte et uten demoen."
+msgid "Site %{name} created."
+msgstr "Nettstedet %{name} ble opprettet."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Site %{name} created."
-msgstr "Nettstedet %{name} ble opprettet."
+msgid "Site %{name} created. %{seeder} decides what a new site starts with, so the demo choice was not used."
+msgstr "Nettstedet %{name} ble opprettet. %{seeder} bestemmer hva et nytt nettsted starter med, så demo-valget ble ikke brukt."
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
@@ -20822,6 +20822,11 @@ msgstr "Innhold som ikke støttes, ble gjort om til tekst. Fotnoter fra en annen
 #, elixir-autogen, elixir-format
 msgid "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
 msgstr "Uten avkrysning blir forsiden og bunnteksten tomme, og ingen demomoduler opprettes. Identitet, SEO og hovedmeny opprettes uansett."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out."
+msgstr "Uten avkrysning blir installasjonens seeder, %{seeder}, bedt om å utelate demoen."
 
 #: lib/brando/videos/video.ex
 #: lib/brando_admin/components/video_picker.ex
