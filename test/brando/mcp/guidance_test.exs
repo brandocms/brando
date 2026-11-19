@@ -70,7 +70,7 @@ defmodule Brando.MCP.GuidanceTest do
         |> json_response(200)
 
       assert legacy == modern
-      assert legacy == MCP.Server.instructions(tenant)
+      assert legacy == MCP.Server.instructions(tenant, Repo.one!(MCP.Grant))
       assert legacy =~ "brando_content_describe_content_type"
       assert legacy =~ "brando_figma_read_frame"
       refute legacy =~ "secret convention"

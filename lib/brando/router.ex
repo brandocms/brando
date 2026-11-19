@@ -247,6 +247,8 @@ defmodule Brando.Router do
           live "/assistant", BrandoAdmin.AI.AssistantLive
           live "/assistant/shared/:token", BrandoAdmin.AI.AssistantLive, :shared
           live "/assistant/connected", BrandoAdmin.AI.AssistantLive, :connected
+          # What a connected tool does as it happens (Brando.MCP.Watch)
+          live "/assistant/connected/live/:grant_id", BrandoAdmin.MCP.WatchLive
           live "/assistant/connected/:proposal_id", BrandoAdmin.AI.AssistantLive, :connected
           live "/assistant/:conversation_id", BrandoAdmin.AI.AssistantLive, :show
           # The sidebar of frontend edit mode, framed by the published page.
