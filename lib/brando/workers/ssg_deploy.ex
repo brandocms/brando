@@ -34,7 +34,7 @@ defmodule Brando.Worker.SSGDeploy do
   defp outcome({:error, :invalid_deploy_target}, build, _job) do
     Builds.append_log(
       build,
-      "Deployment refused: its target has the wrong form or is not one this installation allows. Check rsync_targets or s3_targets in the config."
+      "Deployment refused: its target has the wrong form or is not one this site may use. A superuser sets the site's allowed deploy targets under Sites; the config's rsync_targets or s3_targets may list them too."
     )
 
     {:cancel, :invalid_deploy_target}

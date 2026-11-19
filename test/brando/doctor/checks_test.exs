@@ -386,6 +386,38 @@ defmodule Brando.Doctor.ChecksTest do
       assert item =~ "s3_targets s3://shared-bucket/ for acme and s3://shared-bucket/beta for beta"
     end
 
+    test "with several sites, sites' own allowed targets that reach one destination are a warning" do
+      put_test_env(:tenancy_mode, :multi)
+      put_test_env(Brando.Sites.DeployConfig, s3_targets: %{"doctor-beta" => ["s3://shared-bucket/beta"]})
+
+      sites =
+        for key <- ["doctor-acme", "doctor-beta"] do
+          {:ok, site} =
+            Brando.Tenant.Registry.create_site(%{
+              name: key,
+              key: key,
+              languages: ["en"],
+              default_language: "en",
+              delivery_mode: :static
+            })
+
+          site
+        end
+
+      assert [{:ok, _item, nil}] = Checks.Configuration.deploy_targets()
+
+      {:ok, _acme} =
+        Brando.Tenant.Registry.update_site_deploy_targets(
+          hd(sites),
+          %{allowed_s3_targets: ["s3://shared-bucket/"]},
+          :system
+        )
+
+      assert [{:warning, item, "deploy targets shared between sites", fix}] = Checks.Configuration.deploy_targets()
+      assert item =~ "s3_targets s3://shared-bucket/ for doctor-acme and s3://shared-bucket/beta for doctor-beta"
+      assert fix =~ "under Sites"
+    end
+
     test "a deploy target setting no target can pass is a warning" do
       put_test_env(Brando.Sites.DeployConfig, s3_targets: %{acme: ["s3://acme-www"]})
 

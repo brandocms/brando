@@ -2308,9 +2308,14 @@ with the application's one set of ExAws credentials. Its prefix may not hold
 `.`, `..` or empty segments, or `?`, `#`, `%`, `{`, `}`, `\` or spaces, and
 its bucket no user or port; `s3://bucket` with no prefix is the whole bucket.
 
-List where each site may deploy in config, which admins cannot change. The
-placeholder `{site_key}` stands for the key of the site being saved or
-deployed, so an entry binds a destination to that site:
+Where each site may deploy is listed in one of two places no site
+administrator can change: in config, or on the site itself, where a
+superuser sets it under **Sites** (see
+[A site's allowed deploy targets](#a-site-s-allowed-deploy-targets)). A target
+passes when either allows it.
+
+In config, the placeholder `{site_key}` stands for the key of the site being
+saved or deployed, so an entry binds a destination to that site:
 
 ```elixir
 config :brando, Brando.Sites.DeployConfig,
@@ -2319,13 +2324,14 @@ config :brando, Brando.Sites.DeployConfig,
 ```
 
 A target must be an entry, or lie under one that ends in `/` (not the entry
-itself, which holds the others). A bucket with no prefix passes only an entry
+itself, which holds the others), in config or in the site's own list. A bucket with no prefix passes only an entry
 that names it exactly, such as `s3://{site_key}-static`; `s3://bucket/` allows
 every prefix in the bucket but not the bucket itself. Brando checks a target
 when the settings are saved and again each time a build deploys, since a build
 keeps the configuration it was made with. A refused deploy or rollback says so
-in the build's log. If the target is of the right form, fix the list and the
-build deploys; change a site's target and it takes a new build. An older build
+in the build's log, and a refused target on the Publishing screen says a
+superuser sets the site's allowed targets under Sites. If the target is of the
+right form, fix the list and the build deploys; change a site's target and it takes a new build. An older build
 whose target no longer fits cannot be rolled back until its target is listed
 again, and one with a target of the wrong form cannot be deployed at all.
 A build made for another delivery than the site uses now is refused too, in
@@ -2362,8 +2368,9 @@ not a list. The map is checked when the settings are saved and each time a
 build deploys, as the list is.
 
 The System check's Configuration line warns when, with `tenancy_mode: :multi`,
-a list entry has no `{site_key}` or two sites' map entries reach the same
-destination, and when a setting has an entry, key or value of a form no
+a list entry has no `{site_key}` or two sites' entries reach the same
+destination, from config's map or from the sites' own allowed targets, and
+when a setting has an entry, key or value of a form no
 target can pass (see
 [System check](doctor.md)).
 
@@ -2373,8 +2380,9 @@ target can pass (see
 one entry per site layout, or separate them with a character keys cannot hold,
 such as the `/` in `s3://b/{site_key}/www` and `s3://b/{site_key}/staging`.
 
-With `tenancy_mode: :multi` the list or map of `rsync` or `s3`, when the sites
-use it, is required: until it is set, no target of that strategy can be saved or deployed. With one
+With `tenancy_mode: :multi` a target of `rsync` or `s3` needs config's list or
+map, or the site's own allowed targets, to allow it: until one does, no target
+of that strategy can be saved or deployed. With one
 site, an unset list allows any target of the right form, including a whole
 bucket; a list set there applies the same way. Serving a build from the
 installation writes nowhere outside the site's own directory, so it needs no
@@ -2453,6 +2461,28 @@ Brando owns asset registration/activation and the versioned static artifact
 lifecycle. If the application overrides `config :brando, Oban`, re-declare a
 serial `ssg_builds` queue because an application-level Oban configuration
 replaces, rather than merges with, Brando's defaults.
+
+### A site's allowed deploy targets
+
+A superuser sets, on a site's form under **Sites**, the `rsync` and `s3`
+targets that site may use besides those config lists; with
+`tenancy_mode: :multi` and nothing in config, they are enough on their own.
+They are stored on the site, and only a superuser, or trusted code acting as
+`:system`, can change them (`Brando.Tenant.Registry.update_site_deploy_targets/3`).
+The Publishing screen, and anything else a site administrator can reach,
+cannot.
+
+Each entry is an exact destination or a parent ending in `/`, held to the
+rules a target is held to: a remote `[user@]host:/absolute/path` on another
+server for `rsync`, `s3://bucket/optional-prefix` for `s3`, with no `.` or `..`
+segment. An entry grants only its own site, so it names no `{site_key}`; one
+that does is refused when it is saved. As with config, a parent grants the
+site everything under it, other sites' directories included.
+
+A site's entries are read afresh at each save of its deploy settings, and at
+each deploy and rollback: remove an entry, and a build made for that target
+can no longer be deployed or rolled back to, as when a config entry is
+removed.
 
 ### What a build holds
 

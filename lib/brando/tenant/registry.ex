@@ -89,6 +89,7 @@ defmodule Brando.Tenant.Registry do
   """
   @spec update_site(Site.t(), map(), keyword()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def update_site(%Site{} = site, attrs, opts \\ []) do
+    site = if deploy_config_attrs?(attrs), do: with_stored_deploy_targets(site), else: site
     changeset = Site.changeset(site, attrs, lookup_host: true)
 
     case new_default_to_seed(site, changeset) do
@@ -102,6 +103,25 @@ defmodule Brando.Tenant.Registry do
         |> busy_to_error(changeset)
     end
   end
+
+  defp deploy_config_attrs?(attrs) when is_map(attrs),
+    do: Map.has_key?(attrs, :deploy_config) or Map.has_key?(attrs, "deploy_config")
+
+  defp deploy_config_attrs?(_attrs), do: false
+
+  # The site's allowed targets as stored, not as a struct read before a
+  # superuser changed them: a deploy target is checked against them, and a
+  # change to them is told from what is there
+  defp with_stored_deploy_targets(%Site{id: id} = site) when is_integer(id) do
+    query = from(s in Site, where: s.id == ^id, select: {s.allowed_rsync_targets, s.allowed_s3_targets})
+
+    case Repo.one(query, @public_opts) do
+      {rsync, s3} -> %{site | allowed_rsync_targets: rsync, allowed_s3_targets: s3}
+      nil -> site
+    end
+  end
+
+  defp with_stored_deploy_targets(site), do: site
 
   defp seed_and_write(site, changeset, language, opts) do
     with {:ok, seeded} <- seed_in_every_environment(site, changeset, language, opts[:creator]),
@@ -236,6 +256,37 @@ defmodule Brando.Tenant.Registry do
          changeset,
          :provider_library_group,
          gettext("Only a superuser can choose which sites share a provider library.")
+       )}
+    end
+  end
+
+  @doc """
+  Sets the deploy targets `site` may use besides those the installation's
+  config lists: `attrs` with `:allowed_rsync_targets` and
+  `:allowed_s3_targets`, lists of exact destinations or parents ending in `/`
+  (`Brando.Sites.Site.deploy_targets_changeset/2`). Whose directories a
+  site's deploys may replace is the installation's decision: refused unless
+  `actor` is an installation superuser, or `:system`. `update_site/3` never
+  changes them.
+
+  Returns `{:error, changeset}` with an error on the field for each entry
+  that is refused (its `:entry` option names it), or on
+  `:allowed_rsync_targets` when `actor` may not set them. A target the site
+  already saved is checked against the new lists at its next deploy or
+  rollback.
+  """
+  @spec update_site_deploy_targets(Site.t(), map(), term()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
+  def update_site_deploy_targets(%Site{} = site, attrs, actor) do
+    changeset = site |> with_stored_deploy_targets() |> Site.deploy_targets_changeset(attrs)
+
+    if not is_nil(actor) and Boundary.superuser?(actor) do
+      changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
+    else
+      {:error,
+       Ecto.Changeset.add_error(
+         changeset,
+         :allowed_rsync_targets,
+         gettext("Only a superuser can set which deploy targets a site may use.")
        )}
     end
   end

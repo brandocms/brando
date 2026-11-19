@@ -678,6 +678,11 @@ msgstr ""
 msgid "%{email} was logged out everywhere."
 msgstr ""
 
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} %{message}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{environment} has no starting content in %{language}."
@@ -13031,6 +13036,11 @@ msgstr ""
 msgid "Only a superuser can reset two-factor authentication for another user."
 msgstr ""
 
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can set which deploy targets a site may use."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only administrators and superusers can change environment lifecycle state."
@@ -23050,6 +23060,11 @@ msgstr ""
 msgid "is moved to the list's Deleted filter"
 msgstr ""
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "is not a deploy target this site may use. A superuser sets the site's allowed deploy targets under Sites; the installation's config may list them too"
+msgstr ""
+
 #: lib/brando/sites/redirect/valid_source.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid pattern"
@@ -23233,6 +23248,11 @@ msgstr ""
 msgid "must be on another server"
 msgstr ""
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "must be text"
+msgstr ""
+
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
 msgid "must contain at least one language"
@@ -23241,6 +23261,11 @@ msgstr ""
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
 msgid "must contain lowercase language keys"
+msgstr ""
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must have at most %{count} entries"
 msgstr ""
 
 #: lib/brando/sites/site.ex
@@ -23270,7 +23295,7 @@ msgstr ""
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
-msgid "needs this installation's config to list its deploy destinations"
+msgid "needs no {site_key}: the entry already belongs to this site"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex

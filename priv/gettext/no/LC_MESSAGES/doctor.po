@@ -1423,8 +1423,8 @@ msgstr "gi config :brando, Oban køene sine (se Brando.Supervisor)"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "give each site in the deploy target map destinations apart from the other sites'"
-msgstr "gi hvert nettsted i kartet over publiseringsmål mål som er adskilt fra de andre nettstedenes"
+msgid "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
+msgstr "gi hvert nettsted mål som er adskilt fra de andre nettstedenes, i kartet over publiseringsmål og i hvert nettsteds tillatte publiseringsmål under Nettsteder"
 
 #: lib/brando/doctor/checks/dependency_sources.ex
 #, elixir-autogen, elixir-format

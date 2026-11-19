@@ -642,6 +642,14 @@ sender first, before the first compile.
   stays the Assistant's. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. See
   [Guidance for building from Figma](mcp.md#guidance-for-building-from-figma).
+- **A site's own allowed deploy targets.** `brando_237` adds
+  `sites.allowed_rsync_targets` and `sites.allowed_s3_targets`, the deploy
+  targets a superuser allows a site besides those config lists. They start
+  empty, so every site keeps the targets its config allows. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`: the site
+  registry reads the columns, so a release with tenancy enabled does not
+  start until it has run. See
+  [A site's allowed deploy targets](tenancy_and_environments.md#a-site-s-allowed-deploy-targets).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

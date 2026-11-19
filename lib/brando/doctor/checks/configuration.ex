@@ -5,7 +5,7 @@ defmodule Brando.Doctor.Checks.Configuration do
   dependency when AI is configured, the Assistant's model and key when the
   Assistant is configured, and the deploy target settings: entries
   of the wrong form and, with several sites, destinations that more than one
-  site may use.
+  site may use, from config or the sites' own allowed targets.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -284,9 +284,10 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @doc """
   The operator's deploy target settings as findings (see `evaluate/1`). With
-  several sites, a list entry without `{site_key}` grants every site, and map
-  entries of two sites that reach the same destination let either replace
-  the other's files. A setting with an entry, key or value of the wrong form
+  several sites, a list entry without `{site_key}` grants every site, and
+  entries of two sites that reach the same destination, in config's per-site
+  map or in the sites' own allowed targets, let either replace the other's
+  files. A setting with an entry, key or value of the wrong form
   refuses the targets it would have allowed.
   """
   def deploy_targets do
@@ -296,7 +297,7 @@ defmodule Brando.Doctor.Checks.Configuration do
       if multi?,
         do: [
           shared_deploy_targets(DeployConfig.shared_destinations()),
-          overlapping_deploy_targets(DeployConfig.overlapping_destinations())
+          overlapping_deploy_targets(DeployConfig.overlapping_destinations(Brando.Tenant.Registry.list_sites()))
         ],
         else: []
 
@@ -339,7 +340,10 @@ defmodule Brando.Doctor.Checks.Configuration do
 
     {:warning, dgettext("doctor", "Deploy targets: %{pairs} reach the same destination", pairs: pairs),
      dgettext("doctor", "deploy targets shared between sites"),
-     dgettext("doctor", "give each site in the deploy target map destinations apart from the other sites'")}
+     dgettext(
+       "doctor",
+       "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
+     )}
   end
 
   defp unreadable_deploy_targets([]), do: nil

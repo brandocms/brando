@@ -37,6 +37,11 @@ defmodule Brando.Sites.Site do
     # The version the installation serves itself (`Brando.SSG.LocalDelivery`),
     # set by a deploy, never cast
     field :published_build, :string
+    # The deploy targets a superuser allows this site besides config's
+    # (`Brando.Sites.DeployConfig`), set by `deploy_targets_changeset/2`
+    # only, never by `changeset/3`
+    field :allowed_rsync_targets, {:array, :string}, default: []
+    field :allowed_s3_targets, {:array, :string}, default: []
 
     embeds_one :deploy_config, DeployConfig, on_replace: :update
 
@@ -88,13 +93,64 @@ defmodule Brando.Sites.Site do
     )
   end
 
+  @max_allowed_targets 50
+
+  @doc """
+  Sets the deploy targets the site may use besides those the installation's
+  config lists (`Brando.Sites.DeployConfig`): `:allowed_rsync_targets` and
+  `:allowed_s3_targets`, each a list of exact destinations or parents ending
+  in `/`, held to the rules for a config entry. Entries are trimmed, and
+  blank and repeated ones dropped. Not part of `changeset/3`, as only an
+  installation superuser sets them
+  (`Brando.Tenant.Registry.update_site_deploy_targets/3`).
+  """
+  def deploy_targets_changeset(site, attrs) do
+    site
+    |> cast(attrs, [:allowed_rsync_targets, :allowed_s3_targets])
+    |> validate_allowed_targets(:allowed_rsync_targets, :rsync_targets)
+    |> validate_allowed_targets(:allowed_s3_targets, :s3_targets)
+  end
+
+  defp validate_allowed_targets(changeset, field, setting) do
+    case fetch_change(changeset, field) do
+      {:ok, entries} ->
+        entries = (entries || []) |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == "")) |> Enum.uniq()
+        changeset = put_change(changeset, field, entries)
+
+        errors =
+          for entry <- entries, message = DeployConfig.allowed_entry_error(setting, entry), do: {entry, message}
+
+        cond do
+          length(entries) > @max_allowed_targets ->
+            add_error(changeset, field, gettext("must have at most %{count} entries", count: @max_allowed_targets))
+
+          errors != [] ->
+            Enum.reduce(errors, changeset, fn {entry, message}, changeset ->
+              add_error(changeset, field, gettext("%{entry} %{message}", entry: entry, message: message), entry: entry)
+            end)
+
+          true ->
+            changeset
+        end
+
+      :error ->
+        changeset
+    end
+  end
+
   def statuses, do: @statuses
   def delivery_modes, do: @delivery_modes
 
-  # After the key is cast: the site's destinations are bound to it
+  # After the key is cast: the site's destinations are bound to it. Its own
+  # allowed targets are never cast here, so they are the stored ones.
   defp cast_deploy_config(changeset, opts) do
-    site_key = get_field(changeset, :key)
-    cast_embed(changeset, :deploy_config, with: &DeployConfig.changeset(&1, &2, site_key, opts))
+    site = %{
+      key: get_field(changeset, :key),
+      allowed_rsync_targets: get_field(changeset, :allowed_rsync_targets),
+      allowed_s3_targets: get_field(changeset, :allowed_s3_targets)
+    }
+
+    cast_embed(changeset, :deploy_config, with: &DeployConfig.changeset(&1, &2, site, opts))
   end
 
   # A site that no longer serves its build itself forgets it: turning local
