@@ -419,14 +419,29 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
           ]
         })
 
+      # In Activity, as a call the page was told of and wrote; and one still running
+      event =
+        Repo.insert!(%Brando.Activity.Event{
+          action: :tool_called,
+          source: :mcp,
+          user_id: c.owner.id,
+          schema: to_string(Grant),
+          entry_id: c.owner_grant.id,
+          details: proposal_details(record)
+        })
+
       {:ok, view, _html} = page(conn, c.owner_grant)
-      Watch.finished(c.owner_grant.id, "proposal", proposal_details(record), {:error, :not_recorded})
-      assert has_element?(view, "#mcp-call-proposal h3", "Retitle the page")
+      Watch.started(c.owner_grant.id, "running", "brando_content_search_entries", %{"query" => "secret words"})
+      assert has_element?(view, "#mcp-call-event-#{event.id} h3", "Retitle the page")
+      assert has_element?(view, "#mcp-call-running[data-state=running]")
 
       {:ok, :ok} = Groups.remove_member(c.scope, read.id, manager.id)
 
+      # Still here, the proposal without its summary, the running call kept
       assert has_element?(view, "[data-testid=mcp-watch]")
+      assert has_element?(view, "#mcp-call-event-#{event.id} .mcp-watch-counts", "1 updated entry")
       refute render(view) =~ "Retitle the page"
+      assert has_element?(view, "#mcp-call-running[data-state=running]")
     end
 
     test "a manager who loses the permission is sent away", c do

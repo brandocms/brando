@@ -70,7 +70,8 @@ defmodule BrandoAdmin.MCP.WatchLive do
            live?: live?,
            loaded?: connected?(socket),
            empty?: calls == [],
-           history: MapSet.new(calls, & &1.event_id)
+           history: MapSet.new(calls, & &1.event_id),
+           live_calls: %{}
          )
          |> schedule_expiry()
          |> stream_configure(:calls, dom_id: &dom_id/1)
@@ -99,12 +100,24 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   defp reread(%{assigns: %{reader: nil}} = socket), do: socket
 
+  # Activity has only the calls that ended and were written: the ones this
+  # page was told of and Activity has not (running, or not written) are
+  # shown again too
   defp reread(%{assigns: %{grant: grant, tenant: tenant, current_user: user}} = socket) do
     reader = reader(grant, user, tenant)
-    calls = if connected?(socket), do: Watch.history(grant), else: []
+    history = if connected?(socket), do: Watch.history(grant), else: []
+    seen = MapSet.new(history, & &1.event_id)
+
+    calls =
+      socket.assigns.live_calls
+      |> Map.values()
+      |> Enum.reject(&(&1[:event_id] && MapSet.member?(seen, &1.event_id)))
+      |> Enum.concat(history)
+      |> Enum.sort_by(& &1.at, {:desc, DateTime})
+      |> Enum.take(@limit)
 
     socket
-    |> assign(reader: reader, empty?: calls == [], history: MapSet.new(calls, & &1.event_id))
+    |> assign(reader: reader, empty?: calls == [], history: seen)
     |> stream(:calls, rows(calls, tenant, reader), reset: true, limit: @limit)
   end
 
@@ -126,11 +139,25 @@ defmodule BrandoAdmin.MCP.WatchLive do
       {:noreply, stream_delete_by_dom_id(socket, :calls, dom_id(call))}
     else
       [row] = rows([call], socket.assigns.tenant, socket.assigns.reader)
-      {:noreply, socket |> assign(:empty?, false) |> stream_insert(:calls, row, at: 0, limit: @limit)}
+
+      {:noreply,
+       socket
+       |> assign(empty?: false, live_calls: keep_live(socket.assigns.live_calls, call))
+       |> stream_insert(:calls, row, at: 0, limit: @limit)}
     end
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # The calls this page was told of, the latest of each (an end replaces its
+  # start), as many as it shows
+  defp keep_live(live, call) do
+    live = Map.put(live, call.id, call)
+
+    if map_size(live) > @limit,
+      do: live |> Enum.sort_by(fn {_id, c} -> c.at end, {:desc, DateTime}) |> Enum.take(@limit) |> Map.new(),
+      else: live
+  end
 
   def render(%{grant: _} = assigns) do
     ~H"""
