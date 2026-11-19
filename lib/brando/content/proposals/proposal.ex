@@ -16,6 +16,8 @@ defmodule Brando.Content.Proposals.Proposal do
     * `origin`, `client` — where the stored proposal came from: `"assistant"`
       or `"mcp"`, and the connected tool's name when known
     * `supersedes_id` — the stored version this one replaced, if any
+    * `supersedes_summary` — that version's summary, set when the proposal is
+      stored
   """
   defstruct [
     :id,
@@ -27,6 +29,7 @@ defmodule Brando.Content.Proposals.Proposal do
     :origin,
     :client,
     :supersedes_id,
+    :supersedes_summary,
     :expires_at,
     version: 1,
     operations: [],

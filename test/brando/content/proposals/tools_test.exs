@@ -250,21 +250,87 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert message =~ "no longer under review"
     end
 
-    test "a created entry with the same content type and ref is the same entry", c do
-      create = fn title ->
-        [
-          %{
-            "op" => "create_entry",
-            "content_type" => "Brando.Pages.Page",
-            "ref" => "about",
-            "fields" => %{"title" => title, "uri" => "about-us", "language" => "en", "template" => "default.html"}
-          }
-        ]
-      end
+    defp create(content_type, ref, fields),
+      do: [%{"op" => "create_entry", "content_type" => content_type, "ref" => ref, "fields" => fields}]
 
-      assert {:ok, first} = prepare(mcp(c), create.("About"))
-      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), create.("About us"))
+    defp page(ref, fields),
+      do: create("Brando.Pages.Page", ref, Map.merge(%{"language" => "en", "template" => "default.html"}, fields))
+
+    defp article(ref, fields),
+      do: create("Brando.SyncTest.Article", ref, Map.merge(%{"language" => "en", "title" => "News"}, fields))
+
+    test "created entries with the same ref and different slugs are different entries", c do
+      assert {:ok, %{applicable: true, version: 1}} = prepare(mcp(c), article("new", %{"slug" => "spring"}))
+      assert {:ok, %{applicable: true, version: 1} = second} = prepare(mcp(c), article("new", %{"slug" => "autumn"}))
+      refute Map.has_key?(second, :replaced)
+      assert c |> under_review() |> length() == 2
+    end
+
+    test "a created entry with the same slug is the same entry, whatever its ref", c do
+      assert {:ok, first} = prepare(mcp(c), article("spring", %{"slug" => "spring"}))
+      assert {:ok, %{version: 2} = second} = prepare(mcp(c), article("news", %{"slug" => " Spring ", "title" => "x"}))
+      assert second.replaced == first.proposal_id
+      assert %{replaced_summary: "Lobby", replaced_version: 1} = second
+      assert [_] = under_review(c)
+    end
+
+    test "the same slug in another language is another entry", c do
+      assert {:ok, %{applicable: true}} = prepare(mcp(c), article("new", %{"slug" => "spring"}))
+      assert {:ok, second} = prepare(mcp(c), article("new", %{"slug" => "spring", "language" => "no"}))
+      assert %{version: 1} = second
+      refute Map.has_key?(second, :replaced)
+    end
+
+    test "a page is told apart by its uri", c do
+      assert {:ok, %{applicable: true} = first} = prepare(mcp(c), page("a", %{"title" => "About", "uri" => "about"}))
+      assert {:ok, %{version: 1}} = prepare(mcp(c), page("a", %{"title" => "About", "uri" => "contact"}))
+
+      assert {:ok, %{version: 2, replaced: replaced}} =
+               prepare(mcp(c), page("b", %{"title" => "About us", "uri" => "About"}))
+
       assert replaced == first.proposal_id
+    end
+
+    test "a create with neither slug nor uri is told apart by its title", c do
+      assert {:ok, %{applicable: true} = first} =
+               prepare(
+                 mcp(c),
+                 create("Brando.Pages.Fragment", "a", %{
+                   "title" => "Footer",
+                   "key" => "a",
+                   "parent_key" => "p",
+                   "language" => "en"
+                 })
+               )
+
+      assert {:ok, %{version: 1}} =
+               prepare(
+                 mcp(c),
+                 create("Brando.Pages.Fragment", "a", %{
+                   "title" => "Header",
+                   "key" => "b",
+                   "parent_key" => "p",
+                   "language" => "en"
+                 })
+               )
+
+      assert {:ok, %{version: 2, replaced: replaced}} =
+               prepare(
+                 mcp(c),
+                 create("Brando.Pages.Fragment", "b", %{
+                   "title" => "footer",
+                   "key" => "c",
+                   "parent_key" => "p",
+                   "language" => "en"
+                 })
+               )
+
+      assert replaced == first.proposal_id
+
+      # Without a title either, it is no entry another create can be.
+      untitled = create("Brando.Pages.Fragment", "c", %{"key" => "d", "parent_key" => "p", "language" => "en"})
+      assert {:ok, %{applicable: true, version: 1}} = prepare(mcp(c), untitled)
+      assert {:ok, %{version: 1}} = prepare(mcp(c), untitled)
     end
 
     test "another tool, or no tool name, is not the same tool", c do

@@ -1,0 +1,1 @@
+- A connected tool's proposal no longer replaces an earlier one only because a created entry uses the same ref. Created entries count as the same entry when they have the same content type, language and slug (uri for pages, or title when the create gives neither). The result names the replaced proposal's summary and version next to its id.
