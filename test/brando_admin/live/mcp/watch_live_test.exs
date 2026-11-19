@@ -400,6 +400,35 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       assert has_element?(view, "#mcp-call-import [data-image-id='#{image.id}'] img")
     end
 
+    test "a manager who loses a read permission stays, with the calls read again", c do
+      {:ok, manage} = Groups.create(c.scope, %{name: "Manage"}, ["brando.admin.access", "brando.mcp.manage"])
+      {manager, read, conn} = member(c, ["brando.pages.read", "brando.images.read"])
+      {:ok, :ok} = Groups.add_member(c.scope, manage.id, manager.id)
+
+      page_entry = Factory.insert(:page)
+
+      record =
+        proposal!(c.owner, %{
+          summary: "Retitle the page",
+          operations: [
+            %{
+              "op" => "set_fields",
+              "target" => %{"content_type" => "Brando.Pages.Page", "id" => page_entry.id},
+              "fields" => %{"title" => "Open"}
+            }
+          ]
+        })
+
+      {:ok, view, _html} = page(conn, c.owner_grant)
+      Watch.finished(c.owner_grant.id, "proposal", proposal_details(record), {:error, :not_recorded})
+      assert has_element?(view, "#mcp-call-proposal h3", "Retitle the page")
+
+      {:ok, :ok} = Groups.remove_member(c.scope, read.id, manager.id)
+
+      assert has_element?(view, "[data-testid=mcp-watch]")
+      refute render(view) =~ "Retitle the page"
+    end
+
     test "a manager who loses the permission is sent away", c do
       {manager, group, conn} = member(c, ["brando.admin.access", "brando.mcp.manage"])
       {:ok, view, _html} = page(conn, c.owner_grant)
@@ -450,6 +479,14 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       assert has_element?(view, "[data-testid=mcp-watch]")
 
       {:ok, _} = Access.grant(c.viewer, c.there, :editor)
+      assert_redirect(view, "/admin/access-denied")
+    end
+
+    test "a viewer in another site is sent away when the connection's site is suspended", c do
+      {:ok, view, _html} = page(c.viewer_conn, c.site_grant)
+      assert has_element?(view, "[data-testid=mcp-watch]")
+
+      {:ok, _} = Brando.Tenant.Setup.suspend_site(c.there)
       assert_redirect(view, "/admin/access-denied")
     end
 

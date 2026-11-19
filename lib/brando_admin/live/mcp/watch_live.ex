@@ -83,11 +83,12 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   @doc """
   Sends the viewer away when they may no longer see the connection
-  (`BrandoAdmin.Authorization`).
+  (`BrandoAdmin.Authorization`). Someone other than the connection's person
+  stays with the calls read again, as they may read them now.
   """
   def refresh_authorization(%{assigns: %{grant: grant, current_user: user}} = socket) do
     if allowed?(grant, user) do
-      socket
+      reread(socket)
     else
       Watch.unsubscribe(grant.id)
       redirect(socket, to: "/admin/access-denied")
@@ -95,6 +96,17 @@ defmodule BrandoAdmin.MCP.WatchLive do
   end
 
   def refresh_authorization(socket), do: socket
+
+  defp reread(%{assigns: %{reader: nil}} = socket), do: socket
+
+  defp reread(%{assigns: %{grant: grant, tenant: tenant, current_user: user}} = socket) do
+    reader = reader(grant, user, tenant)
+    calls = if connected?(socket), do: Watch.history(grant), else: []
+
+    socket
+    |> assign(reader: reader, empty?: calls == [], history: MapSet.new(calls, & &1.event_id))
+    |> stream(:calls, rows(calls, tenant, reader), reset: true, limit: @limit)
+  end
 
   def handle_info({Watch, :ended}, socket), do: {:noreply, assign(socket, :live?, false)}
 
@@ -258,8 +270,11 @@ defmodule BrandoAdmin.MCP.WatchLive do
     end
   end
 
-  # As stored now: the socket's user is the one that logged in
+  # As stored now: the socket's user is the one that logged in, and the
+  # connection's site (legacy access takes its status from the struct)
   defp allowed?(grant, user) do
+    grant = Repo.preload(grant, :site, force: true)
+
     case Repo.one(from(u in User, where: u.id == ^user.id and u.active and is_nil(u.deleted_at)), prefix: "public") do
       nil -> false
       user -> (grant.user_id == user.id and site_access?(user, grant)) or MCP.can_manage?(user, MCP.grant_tenant(grant))
@@ -335,7 +350,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
   # entry's title, the frame and the folder
   defp unnamed(details) do
     input = details["input"] || %{}
-    input = if Map.has_key?(input, "query"), do: Map.put(input, "query", :hidden), else: input
+    input = if is_binary(input["query"]) and input["query"] != "", do: Map.put(input, "query", :hidden), else: input
 
     details
     |> Map.put("input", Map.delete(input, "name"))
