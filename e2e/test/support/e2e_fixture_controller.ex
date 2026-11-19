@@ -44,6 +44,10 @@ defmodule E2EFixtureController do
         "revision-panel" ->
           create_revision_panel()
 
+        # Utilities → Loose blocks: three block trees no entry links to
+        "loose-blocks" ->
+          create_loose_blocks()
+
         "media-upload" ->
           create_media_upload_module()
 
@@ -1052,6 +1056,15 @@ defmodule E2EFixtureController do
       )
 
     {page, uids}
+  end
+
+  defp create_loose_blocks do
+    import Ecto.Query, only: [from: 2]
+
+    user = get_admin_user()
+    module = Brando.Repo.one!(from(m in Brando.Content.Module, order_by: m.id, limit: 1))
+    for sequence <- 0..2, do: team_block!(user, module, nil, sequence, [])
+    user
   end
 
   defp team_block!(user, module, parent_id, sequence, vars) do

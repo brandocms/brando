@@ -173,7 +173,7 @@
     cursor: pointer;
     transition: background-color 120ms ease;
 
-    & + & {
+    & + .tenant-switcher__option {
       border-top: 1px solid var(--brando-line-soft);
     }
 

@@ -45,7 +45,8 @@ rows a screen needs in the spec's `setup`, never in SQL:
 - `{"fixture": "<name>"}` runs a named scenario from
   `e2e/test/support/e2e_fixture_controller.ex`, such as
   `assistant-applied-copy`, `mcp-proposals`, `content-transfer`,
-  `revision-panel` or `markdown-source`. Add a scenario there when a state
+  `revision-panel`, `markdown-source` or `loose-blocks` (Utilities → Loose
+  blocks, single-site only). Add a scenario there when a state
   needs more than a few factory rows, so specs and shots share it.
 - `{"post": "/e2e/admin-workspace-fixtures"}` calls the other E2E endpoints in
   `e2e/lib/e2e_project_web/router.ex`.
