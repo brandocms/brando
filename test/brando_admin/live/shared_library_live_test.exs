@@ -61,6 +61,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLiveTest do
 
   test "superusers manage access and create entries", %{
     conn: conn,
+    current_user: current_user,
     site: site,
     shared_module: shared_module
   } do
@@ -85,6 +86,41 @@ defmodule BrandoAdmin.Content.SharedLibraryLiveTest do
 
     assert source_id == shared_module.id
     assert has_element?(view, "#shared-module-#{shared_module.id}", "Edit customization")
+
+    # Each one asks first, in the admin's dialog (assets/src/confirm.js)
+    card = "#shared-module-#{shared_module.id}"
+
+    assert has_element?(
+             view,
+             ~s(#{card} button[phx-click="delete"][phx-value-kind="module"][phx-value-id="#{shared_module.id}"]) <>
+               ~s([data-confirm-title="Delete this shared entry?"]) <>
+               ~s([data-confirm="It cannot be deleted while any site uses it."]) <>
+               ~s([data-confirm-ok="Delete"][data-confirm-destructive])
+           )
+
+    assert has_element?(
+             view,
+             ~s(#{card} button[phx-click="reset"][phx-value-id="#{shared_module.id}"]) <>
+               ~s([data-confirm="Discard this environment's customization and use shared again?"]) <>
+               ~s([data-confirm-ok="Reset to shared"][data-confirm-destructive])
+           )
+
+    assert {:ok, _} =
+             SharedLibrary.update_shared(
+               :module,
+               shared_module.id,
+               %{help_text: %{"en" => "Version two"}, version_note: "Add a field"},
+               current_user
+             )
+
+    {:ok, view, _html} = live(conn, "/admin/config/content/shared_library")
+
+    assert has_element?(
+             view,
+             ~s(#{card} button[phx-click="accept_update"][phx-value-id="#{shared_module.id}"]) <>
+               ~s([data-confirm="Replace the customized version with the current shared version?"]) <>
+               ~s([data-confirm-ok="Accept update"][data-confirm-destructive])
+           )
 
     view
     |> form("#create-shared-container",

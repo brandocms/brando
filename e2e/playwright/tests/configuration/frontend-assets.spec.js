@@ -15,8 +15,12 @@ test('activates an uploaded frontend build and returns to release assets', async
     await page.getByRole('button', { name: 'Refresh', exact: true }).click()
     const row = page.locator(`#asset-set-${builds[0].id}`)
     await expect(row).toContainText(builds[0].name)
-    page.on('dialog', dialog => dialog.accept())
+    // Each switch asks first, in the admin's dialog
     await row.getByRole('button', { name: 'Activate build', exact: true }).click()
+    await page
+      .getByRole('dialog', { name: `Activate ${builds[0].name} now?` })
+      .getByRole('button', { name: 'Activate build', exact: true })
+      .click()
     await expect(page.locator('.frontend-assets-current.uploaded')).toContainText(builds[0].name)
     await expect(row.locator('.frontend-assets-build__status')).toHaveText('Active')
     await expect(row.locator('.frontend-assets-build__actions')).toBeEmpty()
@@ -24,6 +28,10 @@ test('activates an uploaded frontend build and returns to release assets', async
     await expect(page.locator('.frontend-assets-current__meta > div').last()).toContainText('2 files · 33 B')
     await page.screenshot({ path: testInfo.outputPath('frontend-assets-desktop.png'), fullPage: true })
     await page.getByRole('button', { name: 'Use release assets', exact: true }).click()
+    await page
+      .getByRole('dialog', { name: 'Use the frontend assets included in the current release?' })
+      .getByRole('button', { name: 'Use release assets', exact: true })
+      .click()
     await expect(page.locator('.frontend-assets-current')).toContainText('Release assets')
     await expect(row).toContainText('Available')
     await page.setViewportSize({ width: 390, height: 844 })

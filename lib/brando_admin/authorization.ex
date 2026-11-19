@@ -20,8 +20,10 @@ defmodule BrandoAdmin.Authorization do
       lowered role, and they rejoin on the site the session resolves to now, or none.
       While this node's cache still holds the site enterable, they refuse the event
       instead;
-    * otherwise, nothing happens: an editor whose authority did not change is left
-      alone, and a role raised takes effect for the view's next check.
+    * otherwise, on the broadcast a view that exports `refresh_authorization/1` asks
+      again what it shows, as in group mode, and nothing else happens: an editor whose
+      authority did not change is left alone, and a role raised takes effect for the
+      view's next check.
 
   An event the check lets through then goes to `BrandoAdmin.Authorization.Events`,
   which refuses a `:user` account's writes.
@@ -161,10 +163,13 @@ defmodule BrandoAdmin.Authorization do
     end
   end
 
-  # Always halted: most views have no `handle_info` clause for it.
+  # Always halted: most views have no `handle_info` clause for it. A view
+  # that still stands checks what it shows again, as with groups.
   defp legacy_info_hook({:authorization_changed, _}, socket) do
-    {_, socket} = legacy_recheck(socket, :broadcast)
-    {:halt, socket}
+    case legacy_recheck(socket, :broadcast) do
+      {:cont, socket} -> {:halt, refresh_view(socket)}
+      {_, socket} -> {:halt, socket}
+    end
   end
 
   defp legacy_info_hook(_message, socket), do: {:cont, socket}
@@ -292,14 +297,7 @@ defmodule BrandoAdmin.Authorization do
 
     case check(socket) do
       {:cont, socket} ->
-        # A view that shows what the user may do exports `refresh_authorization/1`.
-        # Asked of the running view, not named here: naming the views makes this
-        # module depend on each of them, and through them on itself.
-        socket =
-          if function_exported?(socket.view, :refresh_authorization, 1),
-            do: socket.view.refresh_authorization(socket),
-            else: socket
-
+        socket = refresh_view(socket)
         recheck_form_reads(socket)
         {:halt, socket}
 
@@ -309,6 +307,15 @@ defmodule BrandoAdmin.Authorization do
   end
 
   defp info_hook(_, socket), do: check(socket)
+
+  # A view that shows what the user may do exports `refresh_authorization/1`.
+  # Asked of the running view, not named here: naming the views makes this
+  # module depend on each of them, and through them on itself.
+  defp refresh_view(socket) do
+    if function_exported?(socket.view, :refresh_authorization, 1),
+      do: socket.view.refresh_authorization(socket),
+      else: socket
+  end
 
   # An entry form's inputs keep what they decided may be read
   # (`Boundary.read_generation/0`) and decide again only when they update:

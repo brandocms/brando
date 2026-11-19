@@ -154,7 +154,12 @@ function openDialog({ title, message, tone, buttons, choice }) {
     }
 
     // Clicking the backdrop (the dialog element itself, outside its box) cancels.
+    // No click in the dialog reaches the page: the page's click-away handlers
+    // (LiveView's `phx-click-away`, the dropdowns) listen for it bubbling to
+    // document and window, and would close the menu the dialog was opened from,
+    // taking the focus the dialog hands back with it.
     dialog.addEventListener('click', e => {
+      e.stopPropagation()
       if (e.target === dialog) close()
     })
 

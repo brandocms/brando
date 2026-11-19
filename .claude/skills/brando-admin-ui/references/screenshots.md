@@ -45,7 +45,8 @@ rows a screen needs in the spec's `setup`, never in SQL:
 - `{"fixture": "<name>"}` runs a named scenario from
   `e2e/test/support/e2e_fixture_controller.ex`, such as
   `assistant-applied-copy`, `mcp-proposals`, `content-transfer`,
-  `revision-panel` or `markdown-source`. Add a scenario there when a state
+  `revision-panel`, `markdown-source` or `loose-blocks` (Utilities → Loose
+  blocks, single-site only). Add a scenario there when a state
   needs more than a few factory rows, so specs and shots share it.
 - `{"post": "/e2e/admin-workspace-fixtures"}` calls the other E2E endpoints in
   `e2e/lib/e2e_project_web/router.ex`.
@@ -63,7 +64,8 @@ environments screen (`/admin/config/environments`) or the sites screen
    may not change hosts; `multi-site-hosts-unwritable` adds a host the file
    cannot take, with the file's error; `multi-site-queued` leaves a
    language seeding queued and a copy scheduled, which the inline Oban of the
-   E2E server would otherwise run at once.
+   E2E server would otherwise run at once; `multi-site-many` adds eleven
+   more sites, the first with a long name, for the navigation's site switcher.
 3. Shoot as usual (`--locales en,no` works for all three). Lookups come from
    `E2E.MultiSiteHosts`, so nothing queries DNS.
 4. Stop it with `scripts/server.sh stop`, which then removes the served

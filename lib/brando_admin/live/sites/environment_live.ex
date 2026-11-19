@@ -307,9 +307,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                         phx-click="queue_set_live"
                         phx-value-id={environment.id}
-                        phx-confirm={
+                        data-confirm={
                           gettext("Archive the current live environment and promote %{name}?", name: environment.name)
                         }
+                        data-confirm-ok={gettext("Set live")}
                       >
                         {gettext("Set live")}
                       </button>
@@ -320,12 +321,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments)}
                         phx-click="delete_environment"
                         phx-value-id={environment.id}
-                        phx-confirm={
+                        data-confirm-title={gettext("Delete %{name}?", name: environment.name)}
+                        data-confirm={
                           gettext(
-                            "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone.",
-                            name: environment.name
+                            "Its complete PostgreSQL schema, form submissions and drafts are deleted with it. This cannot be undone."
                           )
                         }
+                        data-confirm-ok={gettext("Delete environment")}
+                        data-confirm-destructive
                       >
                         {gettext("Delete")}
                       </button>
@@ -467,7 +470,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                         phx-click="cancel_operation"
                         phx-value-id={job.id}
-                        phx-confirm={gettext("Cancel this pending environment operation?")}
+                        data-confirm={gettext("Cancel this pending environment operation?")}
+                        data-confirm-ok={gettext("Cancel operation")}
+                        data-confirm-cancel={gettext("Keep operation")}
+                        data-confirm-destructive
                       >
                         {gettext("Cancel")}
                       </button>
@@ -563,7 +569,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       !!@restoring
                   }
                   phx-click="rollback"
-                  phx-confirm={gettext("Restore the newest archive as a new non-live environment?")}
+                  data-confirm={gettext("Restore the newest archive as a new non-live environment?")}
+                  data-confirm-ok={gettext("Restore newest")}
                 >
                   {gettext("Restore newest")}
                 </button>
@@ -575,7 +582,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                   }
                   phx-click="prune_archives"
                   phx-value-keep="3"
-                  phx-confirm={gettext("Permanently drop all but the three newest archives?")}
+                  data-confirm={gettext("Permanently drop all but the three newest archives?")}
+                  data-confirm-ok={gettext("Prune to three")}
+                  data-confirm-destructive
                 >
                   {gettext("Prune to three")}
                 </button>
@@ -586,7 +595,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <p>{gettext("No recovery archives exist for this site.")}</p>
             </div>
             <ul :if={@archives != []} class="environment-archives">
-              <li :for={archive <- @archives}>
+              <li :for={archive <- @archives} id={"environment-archive-#{archive.schema}"}>
                 <div class="environment-archive__identity">
                   <code>{archive.schema}</code>
                   <span :if={archive.note} class="environment-archive__note">{archive.note}</span>
@@ -599,7 +608,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || !!@restoring}
                     phx-click="rollback"
                     phx-value-schema={archive.schema}
-                    phx-confirm={gettext("Restore this archive as a new, non-live environment?")}
+                    data-confirm-title={gettext("Restore %{archive}?", archive: archive.schema)}
+                    data-confirm={gettext("It is restored as a new environment that is not live.")}
+                    data-confirm-ok={gettext("Restore")}
                   >
                     {gettext("Restore")}
                   </button>

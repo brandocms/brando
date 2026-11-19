@@ -55,6 +55,7 @@ import SortableAssocsHook from './hooks/SortableAssocs'
 import SortableBlocksHook from './hooks/SortableBlocks'
 import SortableEmbedsHook from './hooks/SortableEmbeds'
 import TableRowsHook from './hooks/TableRows'
+import TenantSwitcherHook from './hooks/TenantSwitcher'
 import StringListHook from './hooks/StringList'
 import StructuredDataHook from './hooks/StructuredData'
 import SubFormSortableHook from './hooks/SubFormSortable'
@@ -136,6 +137,7 @@ export default (app) => {
     'Brando.SortableEmbeds': SortableEmbedsHook(app),
     'Brando.SubFormSortable': SubFormSortableHook(app),
     'Brando.TableRows': TableRowsHook(app),
+    'Brando.TenantSwitcher': TenantSwitcherHook(app),
     'Brando.StringList': StringListHook(app),
     'Brando.StructuredData': StructuredDataHook(app),
     'Brando.Submit': SubmitHook(app),

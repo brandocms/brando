@@ -315,7 +315,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                       }
                       phx-click="deploy"
                       phx-value-id={build.id}
-                      phx-confirm={gettext("Deploy %{version}?", version: build.version)}
+                      data-confirm={gettext("Deploy %{version}?", version: build.version)}
+                      data-confirm-ok={gettext("Deploy")}
                     >
                       {gettext("Deploy")}
                     </button>
@@ -329,7 +330,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                       }
                       phx-click="rollback"
                       phx-value-id={build.id}
-                      phx-confirm={gettext("Roll back to %{version}?", version: build.version)}
+                      data-confirm={gettext("Roll back to %{version}?", version: build.version)}
+                      data-confirm-ok={gettext("Roll back")}
                     >
                       {gettext("Roll back")}
                     </button>
