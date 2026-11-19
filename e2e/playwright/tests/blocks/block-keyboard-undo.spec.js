@@ -167,7 +167,7 @@ test.describe('Undoing block changes with the keyboard', () => {
     // A's ⌘Z does not put Gamma back by its old index among B's order: it
     // says why, and B's order stands
     await undoOutsideFields(page)
-    await expect(page.locator('.toast-stack')).toContainText('Another editor has moved blocks here since')
+    await expect(page.locator('.toast-stack')).toContainText('Another editor has changed the blocks here since')
     await expectOrder(page, ['Gamma', 'Alfa', 'Beta'])
     await expectOrder(secondUserPage, ['Gamma', 'Alfa', 'Beta'])
   })

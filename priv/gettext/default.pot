@@ -2612,12 +2612,12 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "Another editor has moved blocks here since, so the move was not redone."
+msgid "Another editor has changed the blocks here since, so the move was not redone."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "Another editor has moved blocks here since, so the move was not undone."
+msgid "Another editor has changed the blocks here since, so the move was not undone."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -2628,6 +2628,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Another editor kept their version of a new block you had changed too. Yours could not be kept."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor removed the block it was in, so the deleted block was not put back."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -18684,6 +18689,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "The definitions this apply replaced are applied again, and their entries re-render. Definitions changed here since are left as they are."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The deleted block could not be put back."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex

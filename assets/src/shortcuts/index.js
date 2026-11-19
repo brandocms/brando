@@ -136,13 +136,15 @@ function builtIn(app, id) {
   if (id.startsWith('go-')) return () => navigate(app, destination(shortcut))
   if (id === 'new-entry') return () => navigate(app, createUrl())
   if (id === 'undo' || id === 'redo') {
-    return () => {
+    return event => {
       const field = blockUndoTarget()
       if (!field || !app?.liveSocket) return false
       // With nothing to undo or redo the key is still the block editor's:
       // the browser's own would take back (or redo) typing in a field that
-      // has lost the focus, out of sight.
-      if (field.dataset[`${id}At`]) app.liveSocket.execJS(field, field.dataset[id])
+      // has lost the focus, out of sight. A held key's repeats are too, and
+      // change nothing: each would take one more change back, past the one
+      // the editor meant.
+      if (field.dataset[`${id}At`] && !event?.repeat) app.liveSocket.execJS(field, field.dataset[id])
       return true
     }
   }

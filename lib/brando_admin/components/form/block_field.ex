@@ -66,9 +66,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   `@undo_stack` lists this editor's structural changes, newest first, each
   with what undoes it: `:delete` (its snapshot is the bin's newest), a root
-  block's move (`{:move, uid, index, order}`: back to `index` while the order
-  is `order`) and a reorder of a parent's children (`{:reorder_children,
-  parent_uid, target, expected}`: to `target` while they are `expected`).
+  block's move (`{:move, uid, to, from}`: back between the blocks `to` while
+  it sits between `from`) and a reorder of a parent's children
+  (`{:reorder_children, parent_uid, target, expected}`: to `target` while
+  they are `expected`). Each is the op it sends, which the edit session
+  applies or refuses as one step.
   ⌘Z outside a text field (`shortcuts/index.js`) undoes the newest, in the
   block field the editor last worked in, if it shows; a delete goes through
   the same restore as the bin toast's Undo. A move's own notice ("Block
@@ -80,10 +82,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   Any other change to the structure by this editor (an insert, a paste, a move
   to another parent) empties both stacks, so ⌘Z never steps over a change it
   cannot undo. Another editor's change leaves them, and a move is undone or
-  redone only while the order is still the one it left: when it is not,
-  another editor has moved, added or removed blocks there since, so it is
-  refused with a notice and both stacks empty rather than move their blocks
-  by a guess. They clear with the bin.
+  redone only while the blocks it depends on are as it left them: a root
+  block and the blocks either side of where it is and where it goes back to,
+  or all of a parent's children. When they are not, another editor has
+  changed the blocks there since, so it is refused with a notice and both
+  stacks empty rather than move their blocks by a guess. They clear with the
+  bin.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
@@ -115,6 +119,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        undo_stack: [],
        redo_stack: [],
        move_notice: nil,
+       reverts: %{},
        open_slot_uid: nil,
        slot_title: nil,
        note_observers: %{},
@@ -497,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     cond do
       now == before -> {:ok, socket}
       Enum.sort(now) == Enum.sort(before) -> {:ok, push_undo(socket, {:reorder_children, parent_uid, before, now})}
-      true -> {:ok, assign(socket, :undo_stack, [])}
+      true -> {:ok, drop_history(socket)}
     end
   end
 
@@ -1065,11 +1070,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp handle_session_message(%{assigns: %{edit_session: %Replica{} = replica}} = socket, %{kind: :rejected} = message) do
     case Replica.receive_rejected(replica, message) do
       {replica, displayed, op} ->
-        socket
-        |> assign(:edit_session, replica)
-        |> show_state(displayed, :all)
-        |> drop_history()
-        |> report_rejection(op, message.reason)
+        socket = socket |> assign(:edit_session, replica) |> show_state(displayed, :all)
+
+        case Map.pop(socket.assigns.reverts, message.seq) do
+          {nil, _reverts} -> socket |> drop_history() |> report_rejection(op, message.reason)
+          {direction, reverts} -> socket |> assign(:reverts, reverts) |> refuse_revert(direction)
+        end
 
       :stale ->
         socket
@@ -1616,6 +1622,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp hint_uids({:insert_child, parent_uid, _uid, _at, _params}), do: [parent_uid]
   defp hint_uids({:reorder_children, parent_uid, _uids}), do: [parent_uid]
   defp hint_uids({:move, _uid, _at}), do: []
+  defp hint_uids({:move, _uid, _to, _from}), do: []
+  defp hint_uids({:reorder_children, parent_uid, _uids, _expected}), do: [parent_uid]
   defp hint_uids({:reorder, _uids}), do: []
   defp hint_uids(_op), do: :all
 
@@ -2491,87 +2499,101 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  # A root block moved, with where it was and the order it left, so it is
-  # only moved back while that order still stands
+  # A root block moved, recorded as the op that moves it back: between the
+  # blocks it left, while it still sits between the ones it went to
   defp recorded_root_move(socket, uid, to) do
-    case Enum.find_index(socket.assigns.block_ops.order, &(&1 == uid)) do
+    case Ops.neighbours(socket.assigns.block_ops.order, uid) do
       nil ->
         apply_block_op(socket, {:move, uid, to})
 
-      index ->
+      left ->
         socket = apply_block_op(socket, {:move, uid, to}, :recorded)
-        order = socket.assigns.block_ops.order
-        if Enum.at(order, index) == uid, do: socket, else: push_undo(socket, {:move, uid, index, order})
+
+        case Ops.neighbours(socket.assigns.block_ops.order, uid) do
+          ^left -> socket
+          went -> push_undo(socket, {:move, uid, left, went})
+        end
     end
   end
 
-  # Undoes or redoes a move or reorder from the stacks, with the ops a local
-  # change would send, so it reaches the other editors. Only while the order
-  # is still the one the change left (`:conflict` otherwise: another editor
-  # has changed it since, and putting the block back by its old place would
-  # move theirs). Gives the entry that reverts it in turn. Children belong to
-  # their mounted root, which takes them in the new order through
-  # `replace_form`, as a restored child does.
-  defp revert_structure(socket, {:move, uid, index, order}) do
-    if socket.assigns.block_ops.order == order do
-      socket = apply_block_op(socket, {:move, uid, index}, :undo)
-
-      if socket.assigns.block_ops.order == order do
-        :unchanged
-      else
-        back = {:move, uid, Enum.find_index(order, &(&1 == uid)), socket.assigns.block_ops.order}
-
-        socket =
-          socket
-          |> refresh_live_preview()
-          |> maybe_rebuild_outline()
-          |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})
-
-        {:ok, socket, back}
-      end
-    else
-      :conflict
-    end
-  end
-
-  defp revert_structure(socket, {:reorder_children, parent_uid, target, expected}) do
+  # Undoes or redoes a move or reorder from the stacks: the entry is the op
+  # to send, one that holds only while the blocks it depends on stand as the
+  # change left them (`Ops.apply_op/2`). Checked here first, and again by the
+  # session, which refuses it if another editor's op reached it first
+  # (`note_revert/2`); either way it is `:conflict`, since putting the block
+  # back by a guess would move theirs. Gives the entry that reverts it in
+  # turn. Children belong to their mounted root, which takes them in the new
+  # order through `replace_form`, as a restored child does.
+  defp revert_structure(socket, op, direction) do
     ops = socket.assigns.block_ops
 
-    if Ops.known?(ops, parent_uid) and Map.get(ops.child_order, parent_uid) == expected do
-      socket = apply_block_op(socket, {:reorder_children, parent_uid, target}, :undo)
-      updated_ops = socket.assigns.block_ops
+    sent = sent_seq(socket)
 
-      if Map.get(updated_ops.child_order, parent_uid) == expected do
-        :unchanged
-      else
-        root_uid = Ops.root_of(updated_ops, parent_uid)
-        new_form = materialized_form(socket, updated_ops, root_uid)
-        send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
-
-        socket =
-          socket
-          |> refresh_live_preview()
-          |> maybe_rebuild_outline()
-          |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{parent_uid}\"]"})
-
-        {:ok, socket, {:reorder_children, parent_uid, expected, target}}
-      end
+    with {:ok, _} <- Ops.apply_op(ops, op),
+         socket = apply_block_op(socket, op, :undo),
+         false <- socket.assigns.block_ops == ops do
+      {:ok, socket |> note_revert(sent, direction) |> reverted(op), reverse(op)}
     else
-      :conflict
+      {:error, _} -> :conflict
+      true -> :unchanged
     end
   end
+
+  defp reverted(socket, {:move, uid, _to, _from}) do
+    socket
+    |> refresh_live_preview()
+    |> maybe_rebuild_outline()
+    |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})
+  end
+
+  defp reverted(socket, {:reorder_children, parent_uid, _target, _expected}) do
+    updated_ops = socket.assigns.block_ops
+    root_uid = Ops.root_of(updated_ops, parent_uid)
+    new_form = materialized_form(socket, updated_ops, root_uid)
+    send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
+
+    socket
+    |> refresh_live_preview()
+    |> maybe_rebuild_outline()
+    |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{parent_uid}\"]"})
+  end
+
+  defp reverse({:move, uid, to, from}), do: {:move, uid, from, to}
+  defp reverse({:reorder_children, parent_uid, target, expected}), do: {:reorder_children, parent_uid, expected, target}
+
+  defp sent_seq(%{assigns: %{edit_session: %Replica{seq: seq}}}), do: seq
+  defp sent_seq(_socket), do: nil
+
+  # The session refuses an undo or redo another editor's op got to first:
+  # remember which this one was, by the sequence number it went with (when
+  # it went: the last one was `before`), to say so as `refuse_revert/2`
+  # does. Only the ops still unconfirmed are kept.
+  defp note_revert(%{assigns: %{edit_session: %Replica{seq: seq, pending: pending}}} = socket, before, direction)
+       when is_integer(before) and seq > before do
+    unconfirmed = MapSet.new(pending, &elem(&1, 0))
+    reverts = socket.assigns.reverts |> Map.filter(fn {s, _} -> s in unconfirmed end) |> Map.put(seq, direction)
+    assign(socket, :reverts, reverts)
+  end
+
+  defp note_revert(socket, _before, _direction), do: socket
 
   # Neither undone nor redone: the next ⌘Z would step over this change, so
   # nothing older is undone either
   defp refuse_revert(socket, :undo) do
-    send(self(), {:toast, gettext("Another editor has moved blocks here since, so the move was not undone.")})
+    send(self(), {:toast, gettext("Another editor has changed the blocks here since, so the move was not undone.")})
     drop_history(socket)
   end
 
   defp refuse_revert(socket, :redo) do
-    send(self(), {:toast, gettext("Another editor has moved blocks here since, so the move was not redone.")})
+    send(self(), {:toast, gettext("Another editor has changed the blocks here since, so the move was not redone.")})
     drop_history(socket)
   end
+
+  # A delete ⌘Z or the bin's Undo could not put back
+  defp restore_failed({:unknown_parent, _uid}),
+    do: gettext("Another editor removed the block it was in, so the deleted block was not put back.")
+
+  defp restore_failed(_reason), do: gettext("The deleted block could not be put back.")
 
   defp undo_at([{_entry, at} | _]), do: at
   defp undo_at([]), do: nil
@@ -2735,21 +2757,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
       [snapshot | rest] ->
         # Redo does not delete it again, and would step over the restore
-        socket =
+        restoring =
           socket
           |> assign(block_bin: rest, redo_stack: [])
           |> update(:undo_stack, &drop_newest_delete/1)
 
-        case restore_from_snapshot(socket, snapshot) do
+        case restore_from_snapshot(restoring, snapshot) do
           {:ok, socket} ->
             uid = hd(snapshot.uids)
             {:noreply, push_event(socket, "b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})}
 
+          # Nothing changed: the snapshot stays in the bin, and its ⌘Z entry
           {:error, reason} ->
             Logger.warning(
               "BlockField (#{socket.assigns.block_field}) could not restore deleted block: #{inspect(reason)}"
             )
 
+            send(self(), {:toast, restore_failed(reason)})
             {:noreply, socket}
         end
     end
@@ -2764,6 +2788,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # ⌘Z outside a text field, or a move notice's Undo: the newest structural
   # change in this field
+  # The notice names its move (`at`): a second click, sent before the first
+  # one's change reached the page, finds a newer entry and does nothing.
+  def handle_event("undo_structure", %{"at" => at}, socket) do
+    if at == to_string(undo_at(socket.assigns.undo_stack)),
+      do: handle_event("undo_structure", %{}, socket),
+      else: {:noreply, socket}
+  end
+
   def handle_event("undo_structure", _, socket) do
     case socket.assigns.undo_stack do
       [] ->
@@ -2773,7 +2805,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         handle_event("restore_block", %{}, socket)
 
       [{entry, _at} | rest] ->
-        case revert_structure(assign(socket, undo_stack: rest, move_notice: nil), entry) do
+        case revert_structure(assign(socket, undo_stack: rest, move_notice: nil), entry, :undo) do
           {:ok, socket, back} -> {:noreply, stack_redo(socket, back)}
           :conflict -> {:noreply, refuse_revert(socket, :undo)}
           :unchanged -> {:noreply, socket}
@@ -2788,7 +2820,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         {:noreply, socket}
 
       [{entry, _at} | rest] ->
-        case revert_structure(assign(socket, :redo_stack, rest), entry) do
+        case revert_structure(assign(socket, :redo_stack, rest), entry, :redo) do
           {:ok, socket, back} -> {:noreply, stack_undo(socket, back)}
           :conflict -> {:noreply, refuse_revert(socket, :redo)}
           :unchanged -> {:noreply, socket}
@@ -3260,6 +3292,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           block_field={@block_field}
           block_bin={@block_bin}
           move_notice?={move_notice?(@move_notice, @undo_stack)}
+          move_at={@move_notice}
           myself={@myself}
         />
       </div>
@@ -3611,6 +3644,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           block_field={@block_field}
           block_bin={@block_bin}
           move_notice?={move_notice?(@move_notice, @undo_stack)}
+          move_at={@move_notice}
           myself={@myself}
         />
       </div>
@@ -3629,13 +3663,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   attr :block_field, :any, required: true
   attr :block_bin, :list, required: true
   attr :move_notice?, :boolean, required: true
+  attr :move_at, :integer, default: nil
   attr :myself, :any, required: true
 
   defp undo_notice(%{move_notice?: true} = assigns) do
     ~H"""
     <div id={"block-field-#{@block_field}-moved"} class="block-bin-toast" data-testid="block-moved" role="status">
       <span class="block-bin-message">{gettext("Block moved")}</span>
-      <button type="button" class="block-bin-undo" phx-click="undo_structure" phx-target={@myself}>
+      <button
+        type="button"
+        class="block-bin-undo"
+        phx-click="undo_structure"
+        phx-value-at={@move_at}
+        phx-target={@myself}
+      >
         {gettext("Undo")}
       </button>
       <button

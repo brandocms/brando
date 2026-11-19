@@ -151,4 +151,22 @@ test.describe('Undoing and redoing block moves', () => {
     await outsideFields(page, 'ControlOrMeta+z')
     await expectOrder(page, ['Alfa', 'Beta'])
   })
+
+  test('a held ⌘Z undoes one move, not every move in turn', async ({ page }) => {
+    await createPage(page, 'Angre holdt tast', 'angre-holdt-tast')
+    for (const text of ['Alfa', 'Beta', 'Gamma']) await addStyledHeader(page, text)
+
+    await choose(page, 0, 'Flytt ned')
+    await choose(page, 1, 'Flytt ned')
+    await expectOrder(page, ['Beta', 'Gamma', 'Alfa'])
+
+    // The key's own repeats, while it is held, undo nothing more
+    await page.evaluate(() => document.activeElement?.blur())
+    await page.keyboard.down('ControlOrMeta')
+    for (let i = 0; i < 3; i++) await page.keyboard.down('z')
+    await page.keyboard.up('z')
+    await page.keyboard.up('ControlOrMeta')
+    await syncLV(page)
+    await expectOrder(page, ['Beta', 'Alfa', 'Gamma'])
+  })
 })
