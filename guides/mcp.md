@@ -331,8 +331,8 @@ proposal with the modules that match.
   frame twice adds nothing. An image shown turned 90, 180 or 270° is
   imported as a turned copy; other angles, a mirrored crop and the turn of
   an animated GIF or WebP (which would keep one frame) are not applied. A
-  cropped image keeps its whole file, and a new one gets its focal point at
-  the centre of the crop; one the library already has keeps its own focal
+  cropped image keeps its whole file, and a new one gets its focal point set
+  so the site shows the crop Figma shows; one the library already has keeps its own focal
   point, and when several layers show one image, the first layer's crop
   sets it. Each answer says what was applied and what was not, naming the
   layer when only one of several missed it. It imports at most eight images per call; the

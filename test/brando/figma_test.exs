@@ -3,6 +3,7 @@ defmodule Brando.FigmaTest do
 
   alias Brando.Figma
   alias Brando.Figma.Frame
+  alias Brando.Figma.Import
 
   describe "parse_url/1" do
     test "takes the file and node of a design link, with the node id as the API writes it" do
@@ -334,6 +335,43 @@ defmodule Brando.FigmaTest do
       assert image.mirrored == true
       refute Map.has_key?(image, :rotation)
       assert image.crop == %{x: 0.0, y: 0.0, width: 0.5, height: 1.0}
+    end
+  end
+
+  describe "Import.focal/1: the object-position that shows the crop" do
+    test "the issue's photo: a 1344×741 layer showing 25.27%–98.78% of a 2500×1875 photo's height" do
+      # y: 0.2527 / (1 - 0.7351) = 0.954 → 95; the full width → 50
+      assert Import.focal(%{x: 0, y: 0.2527, width: 1, height: 0.7351}) == %{x: 50, y: 95}
+    end
+
+    test "a centred crop" do
+      # 0.25 / (1 - 0.5) = 0.5
+      assert Import.focal(%{x: 0.25, y: 0.25, width: 0.5, height: 0.5}) == %{x: 50, y: 50}
+    end
+
+    test "a crop of the whole image, or within rounding of it" do
+      assert Import.focal(%{x: 0.0, y: 0.0, width: 1.0, height: 1.0}) == %{x: 50, y: 50}
+      assert Import.focal(%{x: 0.0, y: 0.0001, width: 1.0, height: 0.9999}) == %{x: 50, y: 50}
+    end
+
+    test "a crop flush with the top or the left, and with the bottom or the right" do
+      assert Import.focal(%{x: 0.0, y: 0.0, width: 0.4, height: 0.6}) == %{x: 0, y: 0}
+      # 0.6 / (1 - 0.4) = 1; 0.4 / (1 - 0.6) = 1
+      assert Import.focal(%{x: 0.6, y: 0.4, width: 0.4, height: 0.6}) == %{x: 100, y: 100}
+    end
+
+    test "a crop reaching past an edge is clamped" do
+      # -0.1 / 0.5 = -0.2 → 0; 0.5 / (1 - 0.6) = 1.25 → 100
+      assert Import.focal(%{x: -0.1, y: 0.5, width: 0.5, height: 0.6}) == %{x: 0, y: 100}
+    end
+
+    test "a turned image: the crop Frame gives is in the turned image" do
+      # A quarter turn right showing the stored image's left half: the
+      # turned image's top half, so the top: 0 / (1 - 0.5) = 0
+      assert %{rotation: 90, crop: crop} =
+               image(%{"scaleMode" => "STRETCH", "imageTransform" => [[0, 0.5, 0], [-1, 0, 1]]})
+
+      assert Import.focal(crop) == %{x: 50, y: 0}
     end
   end
 
