@@ -1,4 +1,4 @@
 - The superuser Sites screen lists the sites and shows one at a time, named in the URL (`/admin/sites?site=acme`, `?new` for the create form), with a site's languages as a list, its default language as a choice among them, and a section per concern.
-- A superuser can change a site's delivery, dynamic or static, on its form at `/admin/sites`, after a confirmation that says what changes for visitors and is refused when the delivery changed meanwhile; setup code calls `Brando.Tenant.Setup.update_delivery/4`.
+- A superuser can change a site's delivery, dynamic or static, on its form at `/admin/sites`, after a confirmation that says what changes for visitors and is refused when the delivery changed meanwhile or a deploy of the site is running; setup code calls `Brando.Tenant.Setup.update_delivery/4`.
 - A superuser can rename a site on its form at `/admin/sites` (`Brando.Tenant.Setup.update_name/3`); its key stays as it is.
 - Activating a suspended site and restoring an archived one at `/admin/sites` ask for confirmation, and say what visitors get again.

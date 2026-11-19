@@ -82,6 +82,10 @@ defmodule Brando.Tenant.Setup do
   A language added is seeded in each of the site's environments after the
   save, with `actor` as the creator of its content
   (`Brando.Tenant.Registry.update_site/3`); one removed keeps its content.
+
+  Refused with `{:error, :site_busy}` when another lifecycle operation
+  (provisioning, archiving, another settings change) still holds the site
+  after five seconds.
   """
   @spec update_languages(Site.t(), map(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
   def update_languages(%Site{} = site, attrs, actor) do
@@ -89,18 +93,19 @@ defmodule Brando.Tenant.Setup do
     creator = if match?(%User{}, actor), do: [creator: actor], else: []
 
     with :ok <- authorize_settings(actor) do
-      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, attrs, creator) end)
+      settings_locked(site, fn -> update_current(site, attrs, creator) end)
     end
   end
 
   @doc """
   Sets `site`'s name, as `actor` (`authorize_settings/1`). Its key, which
-  names its schemas and folders, never changes.
+  names its schemas and folders, never changes. Refused with
+  `{:error, :site_busy}` as `update_languages/3` is.
   """
   @spec update_name(Site.t(), String.t(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
   def update_name(%Site{} = site, name, actor) do
     with :ok <- authorize_settings(actor) do
-      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, %{name: name}, []) end)
+      settings_locked(site, fn -> update_current(site, %{name: name}, []) end)
     end
   end
 
@@ -110,10 +115,12 @@ defmodule Brando.Tenant.Setup do
   itself forgets its published build when it becomes dynamic
   (`Brando.Sites.Site`), so its host answers from Phoenix again.
 
-  The change holds the site's lifecycle lock and, inside it, the lock its
-  static deploys hold (`Brando.SSG.Deploy`): a deploy running meanwhile
-  finishes first, and one that starts after it finds the site dynamic and
-  publishes nothing.
+  The change holds the site's lifecycle lock, refused as `update_languages/3`
+  is, and, inside it, the lock its static deploys hold (`Brando.SSG.Deploy`).
+  While a deploy, rollback or prune holds that one, which a copy to the host
+  can do for many minutes, the change is refused with
+  `{:error, :deploy_running}`; a deploy that starts after it finds the site
+  dynamic and publishes nothing.
 
   With `expected: delivery_state(site)`, taken when the consequences were
   shown to someone, the change is refused with `{:error, :delivery_changed}`
@@ -123,14 +130,18 @@ defmodule Brando.Tenant.Setup do
           {:ok, Site.t()} | {:error, term()}
   def update_delivery(%Site{} = site, mode, actor, opts \\ []) when mode in [:dynamic, :static] do
     with :ok <- authorize_settings(actor) do
-      Lock.with(lifecycle_lock_key(site.key), fn -> update_delivery_deploy_locked(site, mode, opts[:expected]) end)
+      settings_locked(site, fn -> update_delivery_deploy_locked(site, mode, opts[:expected]) end)
     end
   end
 
   # The lifecycle lock is held: the deploy lock is taken inside it, never the
   # other way round
-  defp update_delivery_deploy_locked(site, mode, expected),
-    do: Lock.with(Lock.deploy_key(site.id), fn -> update_delivery_locked(site, mode, expected) end)
+  defp update_delivery_deploy_locked(site, mode, expected) do
+    case Lock.try_with(Lock.deploy_key(site.id), fn -> update_delivery_locked(site, mode, expected) end) do
+      :busy -> {:error, :deploy_running}
+      result -> result
+    end
+  end
 
   defp update_delivery_locked(site, mode, expected) do
     case Registry.get_site(site.id) do
@@ -184,6 +195,19 @@ defmodule Brando.Tenant.Setup do
 
       true ->
         {:error, :forbidden}
+    end
+  end
+
+  # A settings change is quick, so it waits only briefly for another one; a
+  # site being provisioned, archived or deleted holds the lock for longer,
+  # and the caller (an admin event handler) is told rather than kept waiting.
+  # Brando's own tests wait less (`:site_settings_lock_wait_ms`).
+  defp settings_locked(site, fun) do
+    wait = Application.get_env(:brando, :site_settings_lock_wait_ms, 5_000)
+
+    case Lock.with_timeout(lifecycle_lock_key(site.key), wait, fun) do
+      :busy -> {:error, :site_busy}
+      result -> result
     end
   end
 

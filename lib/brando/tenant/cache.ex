@@ -29,8 +29,8 @@ defmodule Brando.Tenant.Cache do
   def warm do
     # One at a time on this node, read and publication together: a warm that
     # read the registry before another must not publish after it
-    :global.trans({{__MODULE__, :warm}, self()}, &do_warm/0, [node()], :infinity)
-    tell_subscribers()
+    changed? = :global.trans({{__MODULE__, :warm}, self()}, &do_warm/0, [node()], :infinity)
+    if changed?, do: tell_subscribers()
     # Every warm, on every node, is a registry refresh the served hosts file follows
     Brando.Tenant.ServedHosts.registry_changed()
   end
@@ -39,7 +39,8 @@ defmodule Brando.Tenant.Cache do
   Subscribes the caller to this node's warms: it gets
   `:tenant_registry_changed` once the cache holds a registry write (a site
   renamed, its delivery or languages changed), as the admin's navigation
-  does to show the current site as it is now.
+  does to show the current site as it is now. A warm that finds the
+  registry as the cache already held it sends nothing.
   """
   @spec subscribe() :: :ok | {:error, term()}
   def subscribe, do: Phoenix.PubSub.subscribe(Brando.pubsub(), @topic)
@@ -52,21 +53,26 @@ defmodule Brando.Tenant.Cache do
     ArgumentError -> :ok
   end
 
+  # Whether the registry differs from what the cache held
   defp do_warm do
+    previous = :persistent_term.get({:brando, :sites}, nil)
+
     if Tenant.enabled?() do
       # In the order they were created, as `Brando.Tenant.Registry.list_sites/0` lists them
-      from(site in Site, order_by: [asc: site.id])
-      |> Brando.Repo.all(@public_opts)
-      |> Brando.Repo.preload(
-        [environments: from(environment in Environment, order_by: [asc: environment.id])],
-        @public_opts
-      )
-      |> cache_sites()
+      sites =
+        from(site in Site, order_by: [asc: site.id])
+        |> Brando.Repo.all(@public_opts)
+        |> Brando.Repo.preload(
+          [environments: from(environment in Environment, order_by: [asc: environment.id])],
+          @public_opts
+        )
+
+      cache_sites(sites)
+      sites != previous
     else
       clear()
+      previous != nil
     end
-
-    :ok
   end
 
   @doc """

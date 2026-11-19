@@ -754,6 +754,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :hidden_input, :boolean, default: true
+  attr :sync_insert, :boolean, default: false, doc: "`:string_list` only: send an inserted row at once"
 
   def input(%{type: :checkbox} = assigns) do
     assigns =
@@ -817,6 +818,12 @@ defmodule BrandoAdmin.Components.Form.Input do
   # ghost × on hover and an insert button on the line above each row. The
   # `Brando.StringList` hook inserts and removes rows in the DOM, so the next
   # change sends the list in its new order.
+  #
+  # `sync_insert: true` makes an inserted row send the form's change at once.
+  # Only for a form whose view keeps the blank row in its params and renders
+  # it back: a form rebuilt from its data (a transformer entry, an
+  # `inputs_for` row) has no blank row to render, so the inputs below the
+  # insert would take the values above them.
   def input(%{type: :string_list} = assigns) do
     values = string_list_rows(assigns.field)
 
@@ -830,7 +837,13 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_a11y()
 
     ~H"""
-    <div class="string-list" id={@id} phx-hook="Brando.StringList" aria-describedby={@aria_describedby}>
+    <div
+      class="string-list"
+      id={@id}
+      phx-hook="Brando.StringList"
+      data-sync-insert={@sync_insert}
+      aria-describedby={@aria_describedby}
+    >
       <div
         :for={{value, index} <- Enum.with_index(@values)}
         class={["string-list-row", index == @last && "string-list-add"]}
@@ -1200,6 +1213,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :class, :string
   attr :compact, :boolean
   attr :opts, :list
+  attr :sync_insert, :boolean, default: false
 
   @doc """
   A repeatable list of short strings, as a blueprint form input.
@@ -1222,7 +1236,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       locked={@locked}
     >
       <:value>{@field.value |> Brando.Type.StringList.cast() |> elem(1) |> value_text()}</:value>
-      <.input type={:string_list} field={@field} />
+      <.input type={:string_list} field={@field} sync_insert={@sync_insert} />
     </Primitives.field_base>
     """
   end

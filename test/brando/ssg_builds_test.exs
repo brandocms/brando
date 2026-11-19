@@ -926,24 +926,55 @@ defmodule Brando.SSGBuildsTest do
       refute_received {:ran, _command}
     end
 
+    test "a queued deploy or rollback of a build made before the switch is cancelled, and says why", context do
+      for action <- ["deploy", "rollback"] do
+        site = Registry.get_site(context.site.id)
+        {:ok, site} = Registry.update_site(site, %{delivery_mode: :static})
+        build = ready_build(site, context.environment)
+        {:ok, _site} = Registry.update_site(site, %{delivery_mode: :dynamic})
+
+        assert {:cancel, :site_not_static} =
+                 perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => action})
+
+        assert Builds.get_build(build.id).build_log =~
+                 "Deployment refused: the site's delivery is no longer static, so nothing was copied or published."
+      end
+    end
+
     # A deploy reads the site's delivery under the deploy lock and publishes
-    # later: the switch waits for it, so it cannot commit in between
-    test "waits for a deploy running meanwhile", context do
+    # later, and a copy to the host can hold it for many minutes: the switch
+    # is refused meanwhile rather than waiting, and goes through once it ends
+    test "is refused while a deploy holds the deploy lock, and goes through after", context do
       superuser = Brando.Factory.insert(:random_user, role: :superuser)
-
-      {:ok, lock_conn} =
-        Postgrex.start_link(Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
-
+      lock_conn = start_supervised!({Postgrex, lock_conn_opts()})
       key = Brando.Tenant.Lock.deploy_key(context.site.id)
       Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
 
-      switch = Task.async(fn -> Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser) end)
-      assert Task.yield(switch, 300) == nil
+      assert {:error, :deploy_running} = Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser)
+      assert Registry.get_site(context.site.id).delivery_mode == :static
 
       Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
-      assert {:ok, %{delivery_mode: :dynamic}} = Task.await(switch)
+      assert {:ok, %{delivery_mode: :dynamic}} = Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser)
+    end
+
+    # Provisioning, archiving or deleting the site holds its lifecycle lock
+    # for longer than a settings change waits (`:site_settings_lock_wait_ms`)
+    test "is refused while the site's lifecycle lock stays held", context do
+      superuser = Brando.Factory.insert(:random_user, role: :superuser)
+      lock_conn = start_supervised!({Postgrex, lock_conn_opts()})
+      key = Brando.Tenant.Lock.lifecycle_key(context.site.key)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      assert {:error, :site_busy} = Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser)
+      assert {:error, :site_busy} = Brando.Tenant.Setup.update_name(context.site, "Renamed", superuser)
+      assert Registry.get_site(context.site.id).delivery_mode == :static
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      assert {:ok, %{name: "Renamed"}} = Brando.Tenant.Setup.update_name(context.site, "Renamed", superuser)
     end
   end
+
+  defp lock_conn_opts, do: Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])
 
   defmodule NeverBuilder do
     def build(_site, _environment, _opts), do: raise("a build for a dynamic site ran")

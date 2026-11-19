@@ -112,10 +112,15 @@ Publishing, say), the switch is refused and the form shows the site as it is
 now. Setup code calls `Brando.Tenant.Setup.update_delivery/4`, which takes a
 superuser or `:system` (with groups, the right to update sites, `:update` on
 `:sites`), and refuses with `{:error, :delivery_changed}` when the site no
-longer matches `expected: Brando.Tenant.Setup.delivery_state(site)`. A deploy
-running meanwhile finishes first; one that starts after a switch to dynamic
-deploys nothing. The change activates no asset set, and what it does to
-traffic depends on where the site's host points:
+longer matches `expected: Brando.Tenant.Setup.delivery_state(site)`. While a
+deploy, rollback or prune of the site runs, the switch is refused with
+`{:error, :deploy_running}` (on the form, "A deploy of this site is running"):
+try again when it has finished. A deploy that starts after a switch to dynamic
+deploys nothing, and a queued one is cancelled with the reason in its build's
+log. While the site is being set up, archived or deleted, a change of its
+delivery, name or languages is refused with `{:error, :site_busy}`. The change
+activates no asset set, and what it does to traffic depends on where the
+site's host points:
 
 - **Dynamic to static.** Nothing changes for visitors. Phoenix keeps
   answering the live environment's domain until a build is deployed: with

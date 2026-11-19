@@ -26,6 +26,34 @@ defmodule Brando.Tenant.Lock do
     end)
   end
 
+  @doc """
+  Runs `fun` holding the session advisory lock `key`, waiting up to
+  `timeout` milliseconds for it, and returns `:busy` without running it when
+  it is still held then.
+  """
+  @spec with_timeout(String.t(), non_neg_integer(), (-> result)) :: result | :busy when result: var
+  def with_timeout(key, timeout, fun) when is_binary(key) and is_integer(timeout) and is_function(fun, 0) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    try_until(key, deadline, fun)
+  end
+
+  @retry_interval 50
+
+  defp try_until(key, deadline, fun) do
+    case try_with(key, fun) do
+      :busy ->
+        if System.monotonic_time(:millisecond) + @retry_interval <= deadline do
+          Process.sleep(@retry_interval)
+          try_until(key, deadline, fun)
+        else
+          :busy
+        end
+
+      result ->
+        result
+    end
+  end
+
   @doc "Whether another session holds the advisory lock `key` now."
   @spec held?(String.t()) :: boolean()
   def held?(key) when is_binary(key), do: try_with(key, fn -> :free end) == :busy

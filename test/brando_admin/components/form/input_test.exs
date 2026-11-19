@@ -155,6 +155,21 @@ defmodule BrandoAdmin.Components.Form.InputTest do
       assert length(Regex.scan(~r/<input/, html)) == 2
     end
 
+    # Only a form that renders its blank rows back may send an insert at once
+    test "sends an inserted row at once only when asked" do
+      form = markets_form(%{"area_served" => ["Norway"]})
+
+      refute render_component(&Input.input/1, type: :string_list, field: form[:area_served]) =~ "data-sync-insert"
+
+      assert render_component(&Input.input/1, type: :string_list, field: form[:area_served], sync_insert: true) =~
+               "data-sync-insert"
+
+      refute render_component(&Input.string_list/1, field: form[:area_served], label: "Area") =~ "data-sync-insert"
+
+      assert render_component(&Input.string_list/1, field: form[:area_served], label: "Area", sync_insert: true) =~
+               "data-sync-insert"
+    end
+
     test "an empty list renders only the empty row" do
       form = markets_form(%{})
       html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])

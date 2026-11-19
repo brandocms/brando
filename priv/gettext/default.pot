@@ -1384,6 +1384,11 @@ msgstr ""
 msgid "A definition in this apply was applied again since. Review the revert again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy of this site is running. Try again when it has finished."
+msgstr ""
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
@@ -20408,6 +20413,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site is being set up, archived or changed elsewhere. Try again in a moment."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex

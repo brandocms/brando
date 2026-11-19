@@ -1386,6 +1386,11 @@ msgstr "En dato, valgt fra en kalender"
 msgid "A definition in this apply was applied again since. Review the revert again."
 msgstr "En definisjon i endringene er tatt i bruk på nytt siden. Se gjennom tilbakestillingen igjen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy of this site is running. Try again when it has finished."
+msgstr "En publisering av dette nettstedet pågår. Prøv igjen når den er ferdig."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
@@ -20413,6 +20418,11 @@ msgstr "Nettstedet kan ikke sende e-post nå. Be en administrator om å tilbakes
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
 msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble sendt."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site is being set up, archived or changed elsewhere. Try again in a moment."
+msgstr "Dette nettstedet settes opp, arkiveres eller endres et annet sted. Prøv igjen om et øyeblikk."
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex

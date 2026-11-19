@@ -817,10 +817,28 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       refute has_element?(nav, publishing)
 
       view |> element("#delivery-switch-#{site.id}") |> render_click()
-      assert has_element?(nav, publishing)
+      assert_nav(fn -> has_element?(nav, publishing) end)
 
       view |> element("#delivery-switch-#{site.id}") |> render_click()
-      refute has_element?(nav, publishing)
+      assert_nav(fn -> not has_element?(nav, publishing) end)
+    end
+
+    test "is refused while a deploy of the site runs, and says so", %{conn: conn, site: site, current_user: user} do
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+      lock_conn = start_supervised!({Postgrex, lock_conn_opts()})
+      key = Brando.Tenant.Lock.deploy_key(site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      view |> element("#delivery-switch-#{site.id}") |> render_click()
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      assert message == "A deploy of this site is running. Try again when it has finished."
+      assert Registry.get_site(site.id).delivery_mode == :dynamic
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      view |> element("#delivery-switch-#{site.id}") |> render_click()
+      assert Registry.get_site(site.id).delivery_mode == :static
     end
 
     test "in legacy authorization, only a superuser or the system changes a site's settings",
@@ -992,7 +1010,7 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       assert Registry.get_site(site.id).key == site.key
       assert has_element?(view, "#site-list-#{site.id}", "Acme Group")
       assert has_element?(view, "#site-#{site.id}-title", "Acme Group")
-      assert has_element?(nav, ".tenant-switcher__current", "Acme Group")
+      assert_nav(fn -> has_element?(nav, ".tenant-switcher__current", "Acme Group") end)
     end
 
     test "is refused empty, and the old one kept", %{conn: conn, site: site} do
@@ -1026,6 +1044,32 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       assert has_element?(view, ~s(#create-site-form input[name="site[name]"][value="Fjord"]))
     end
   end
+
+  describe "the navigation" do
+    test "shows a burst of registry warms in one refresh", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}&brando_site_key=#{site.key}")
+      nav = find_live_child(view, "brando-nav")
+      :erlang.trace(nav.pid, true, [:receive])
+
+      {:ok, _site} = Registry.update_site(Registry.get_site(site.id), %{name: "Acme Group"})
+      for _warm <- 1..5, do: send(nav.pid, :tenant_registry_changed)
+
+      assert_receive {:trace, _pid, :receive, :refresh_tenant_registry}, 1_000
+      refute_receive {:trace, _pid, :receive, :refresh_tenant_registry}, 400
+      assert has_element?(nav, ".tenant-switcher__current", "Acme Group")
+    end
+  end
+
+  # The navigation shows registry warms a moment later, in one refresh
+  defp assert_nav(fun, tries \\ 40) do
+    cond do
+      fun.() -> true
+      tries == 0 -> flunk("the navigation did not change")
+      true -> Process.sleep(25) && assert_nav(fun, tries - 1)
+    end
+  end
+
+  defp lock_conn_opts, do: Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])
 
   defp create_site(view, key, extra) do
     prefixes = Enum.map(~w(production staging), &"tenant_#{key}_#{&1}")

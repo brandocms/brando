@@ -267,6 +267,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
         <Input.string_list
           field={@form[:languages]}
           label={gettext("Languages")}
+          sync_insert
           instructions={
             gettext(
               "Language keys such as en or no, one per line. A language you add gets the same starting content as a new site, in each environment."
@@ -1421,6 +1422,12 @@ defmodule BrandoAdmin.Sites.SiteLive do
       )
 
   defp lifecycle_error(:forbidden), do: gettext("You do not have permission for this action.")
+
+  defp lifecycle_error(:deploy_running),
+    do: gettext("A deploy of this site is running. Try again when it has finished.")
+
+  defp lifecycle_error(:site_busy),
+    do: gettext("This site is being set up, archived or changed elsewhere. Try again in a moment.")
 
   defp lifecycle_error(reason) when is_atom(reason), do: reason |> Atom.to_string() |> String.replace("_", " ")
   defp lifecycle_error(reason), do: inspect(reason)
