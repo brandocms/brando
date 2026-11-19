@@ -180,6 +180,142 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert message =~ "image9"
   end
 
+  describe "a connected tool's later proposal" do
+    # What BrandoMCP builds for a call: the actor, no conversation.
+    defp mcp(c, fields \\ []), do: struct(%Context{actor: c.user, origin: :mcp, client: "Claude Code"}, fields)
+
+    defp heading_op(c, page, heading) do
+      %{
+        "op" => "insert_block",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => page.id},
+        "module" => "local:#{c.case_module.id}",
+        "values" => %{"heading" => heading}
+      }
+    end
+
+    defp prepare(context, ops, extra \\ %{}),
+      do: Tools.call("prepare_proposal", Map.merge(%{"summary" => "Lobby", "operations" => ops}, extra), context)
+
+    defp under_review(c),
+      do: c.user |> Proposals.list_external() |> Enum.filter(&(&1.status in ~w(pending approved)))
+
+    test "after a failed attempt is version 2 of it, and one proposal waits", c do
+      broken = put_in(heading_op(c, c.identity, "Lobby"), ["values", "no_such_field"], "x")
+      assert {:ok, %{applicable: false, version: 1} = first} = prepare(mcp(c), [broken])
+      refute Map.has_key?(first, :replaced)
+
+      # About another page: the failed one is still replaced.
+      assert {:ok, second} = prepare(mcp(c), [heading_op(c, c.naming, "Lobby")])
+      assert %{applicable: true, version: 2, replaced: replaced} = second
+      assert replaced == first.proposal_id
+      assert [%{id: id, version: 2}] = under_review(c)
+      assert id == second.proposal_id
+      assert {:ok, %{status: "superseded"}} = Proposals.get(first.proposal_id, c.user)
+    end
+
+    test "touching the same entry replaces the earlier one; other entries leave it alone", c do
+      assert {:ok, %{version: 1} = first} = prepare(mcp(c), [heading_op(c, c.identity, "One")])
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), [heading_op(c, c.identity, "Two")])
+      assert replaced == first.proposal_id
+
+      assert {:ok, %{version: 1} = other} = prepare(mcp(c), [heading_op(c, c.naming, "Three")])
+      refute Map.has_key?(other, :replaced)
+      assert c |> under_review() |> Enum.map(& &1.version) |> Enum.sort() == [1, 2]
+    end
+
+    test "a created entry with the same content type and ref is the same entry", c do
+      create = fn title ->
+        [
+          %{
+            "op" => "create_entry",
+            "content_type" => "Brando.Pages.Page",
+            "ref" => "about",
+            "fields" => %{"title" => title, "uri" => "about-us", "language" => "en", "template" => "default.html"}
+          }
+        ]
+      end
+
+      assert {:ok, first} = prepare(mcp(c), create.("About"))
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), create.("About us"))
+      assert replaced == first.proposal_id
+    end
+
+    test "another tool, or no tool name, is not the same tool", c do
+      assert {:ok, first} = prepare(mcp(c), [heading_op(c, c.identity, "One")])
+      assert {:ok, %{version: 1}} = prepare(mcp(c, client: "Cursor"), [heading_op(c, c.identity, "Two")])
+      assert {:ok, %{version: 1}} = prepare(mcp(c, client: nil), [heading_op(c, c.identity, "Three")])
+      assert {:ok, %{version: 2}} = prepare(mcp(c, client: nil), [heading_op(c, c.identity, "Four")])
+      assert {:ok, %{status: "pending"}} = Proposals.get(first.proposal_id, c.user)
+    end
+
+    test "replaces names the one to replace, from the same actor and tool, still under review", c do
+      assert {:ok, first} = prepare(mcp(c), [heading_op(c, c.identity, "One")])
+      assert {:ok, other} = prepare(mcp(c), [heading_op(c, c.naming, "Two")])
+      assert other.version == 1
+
+      # It replaces the one named, though it is not the latest and shares no entry.
+      assert {:ok, %{version: 2, replaced: replaced} = second} =
+               prepare(mcp(c), [heading_op(c, c.naming, "Three")], %{"replaces" => first.proposal_id})
+
+      assert replaced == first.proposal_id
+      assert {:ok, %{status: "pending"}} = Proposals.get(other.proposal_id, c.user)
+
+      # Superseded, unknown, another tool's, applied, another actor's.
+      assert {:error, message} = prepare(mcp(c), [heading_op(c, c.identity, "x")], %{"replaces" => first.proposal_id})
+      assert message =~ "no longer under review"
+
+      for id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        assert {:error, message} = prepare(mcp(c), [heading_op(c, c.identity, "x")], %{"replaces" => id})
+        assert message =~ "no proposal"
+      end
+
+      assert {:error, message} =
+               prepare(mcp(c, client: "Cursor"), [heading_op(c, c.identity, "x")], %{"replaces" => second.proposal_id})
+
+      assert message =~ "no proposal"
+
+      apply!(%{id: other.proposal_id, version: 1}, c)
+      assert {:error, message} = prepare(mcp(c), [heading_op(c, c.identity, "x")], %{"replaces" => other.proposal_id})
+      assert message =~ "no longer under review"
+
+      someone = Brando.Factory.insert(:random_user)
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(r in Proposals.Record, where: r.id == ^second.proposal_id),
+        set: [actor_id: someone.id]
+      )
+
+      assert {:error, message} = prepare(mcp(c), [heading_op(c, c.identity, "x")], %{"replaces" => second.proposal_id})
+      assert message =~ "no proposal"
+
+      assert {:error, message} = prepare(mcp(c), [heading_op(c, c.identity, "x")], %{"replaces" => 5})
+      assert message =~ "proposal_id"
+    end
+
+    test "concurrent calls from one tool leave one proposal under review", c do
+      results =
+        1..4
+        |> Enum.map(fn n -> Task.async(fn -> prepare(mcp(c), [heading_op(c, c.identity, "Lobby #{n}")]) end) end)
+        |> Enum.map(&Task.await(&1, 30_000))
+
+      assert Enum.all?(results, &match?({:ok, _}, &1))
+      assert results |> Enum.map(fn {:ok, r} -> r.version end) |> Enum.sort() == [1, 2, 3, 4]
+      assert [%{version: 4}] = under_review(c)
+    end
+
+    test "in an Assistant conversation, only the conversation's proposal is refined", c do
+      assert {:ok, first} = prepare(c.context, [heading_op(c, c.identity, "One")])
+      # A new conversation proposal with the same entry, and replaces ignored.
+      assert {:ok, second} = prepare(c.context, [heading_op(c, c.identity, "Two")], %{"replaces" => first.proposal_id})
+      assert %{version: 1} = second
+      refute Map.has_key?(second, :replaced)
+      assert {:ok, %{status: "pending"}} = Proposals.get(first.proposal_id, c.user)
+
+      assert {:ok, %{version: 2}} =
+               prepare(%{c.context | proposal_id: second.proposal_id}, [heading_op(c, c.identity, "Three")])
+    end
+  end
+
   describe "changing a block's module" do
     defp text_block!(c, text, sequence) do
       block =

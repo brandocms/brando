@@ -627,6 +627,16 @@ msgstr "ren tekst"
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "replaces: proposal %{id} is no longer under review. Leave out replaces to store a new proposal."
+msgstr "replaces: forslag %{id} er ikke lenger til gjennomgang. Utelat replaces for å lagre et nytt forslag."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "replaces: there is no proposal %{id} from this tool. Leave out replaces to store a new proposal."
+msgstr "replaces: det finnes ikke noe forslag %{id} fra dette verktøyet. Utelat replaces for å lagre et nytt forslag."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "rich text"
 msgstr "rik tekst"
 

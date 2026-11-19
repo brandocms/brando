@@ -243,7 +243,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "prepare_proposal",
       description: """
-      Validate a complete set of changes and store it for the user to review. Nothing is saved until the user approves it in the admin. Calling this again replaces the proposal under review with a new version. Operations:
+      Validate a complete set of changes and store it for the user to review. Nothing is saved until the user approves it in the admin. In an Assistant conversation, calling this again replaces the proposal under review with a new version. A connected tool's call replaces its latest proposal under review when that one has problems or touches the same entries, and otherwise stores a separate proposal; pass "replaces" with an earlier result's proposal_id to choose the one to replace. The result's "replaced" names the proposal it replaced. Operations:
       {"op":"create_entry","content_type":T,"ref":R,"fields":{}}
       {"op":"set_fields","target":{"content_type":T,"id":N},"fields":{}}
       {"op":"insert_block","target":{"content_type":T,"id":N}|{"new":R},"field":"blocks","module":"local:N","parent":UID?,"placement":"append"|{"before":UID}|{"after":UID},"values":{},"texts":{},"media":{"slot":"image1"},"uid":UID?}
@@ -265,7 +265,12 @@ defmodule Brando.Content.Proposals.Tools do
         type: "object",
         properties: %{
           summary: %{type: "string", description: "One sentence describing the change for the reviewer."},
-          operations: %{type: "array", items: %{type: "object"}}
+          operations: %{type: "array", items: %{type: "object"}},
+          replaces: %{
+            type: "string",
+            description:
+              "Outside an Assistant conversation: the proposal_id of your earlier proposal, still under review, that this one replaces."
+          }
         },
         required: ["summary", "operations"]
       }
@@ -647,6 +652,7 @@ defmodule Brando.Content.Proposals.Tools do
            Proposals.propose(operations, context.actor,
              conversation_id: context.conversation_id,
              supersedes: refinable(context),
+             replaces: replaces(context, args),
              summary: args["summary"],
              origin: origin(context),
              client: context.client
@@ -671,6 +677,20 @@ defmodule Brando.Content.Proposals.Tools do
       _ -> nil
     end
   end
+
+  # A connected tool, outside a conversation, names the proposal it refines
+  # with `replaces`; without it, its latest proposal is refined when it has
+  # problems or touches the same entries (`Proposals.propose/3`).
+  defp replaces(%{conversation_id: nil, proposal_id: nil}, args) do
+    case args["replaces"] do
+      id when is_binary(id) and id != "" -> id
+      nil -> :latest
+      "" -> :latest
+      other -> Error.fail!("replaces is a proposal_id from an earlier prepare_proposal result, not #{inspect(other)}.")
+    end
+  end
+
+  defp replaces(_context, _args), do: nil
 
   @doc "A compact review of a stored proposal, as `prepare_proposal` returns it."
   @spec review(Proposals.Proposal.t()) :: map()
@@ -714,6 +734,8 @@ defmodule Brando.Content.Proposals.Tools do
         "The user reviews and approves this in the Brando admin, under Assistant → From connected tools. Nothing is saved yet.",
       review_url: review_url(path)
     }
+
+    place = if proposal.supersedes_id, do: Map.put(place, :replaced, proposal.supersedes_id), else: place
 
     case proposal.problems in [nil, []] && Review.preview_key(proposal) do
       key when is_binary(key) -> Map.put(place, :preview_url, review_url(Review.preview_path(path, key)))
