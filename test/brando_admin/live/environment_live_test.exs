@@ -1037,9 +1037,37 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     assert has_element?(
              view,
              ~s(.environment-archive__meta button[phx-click="rollback"][phx-value-schema]) <>
-               ~s([data-confirm="Restore this archive as a new, non-live environment?"]) <>
+               ~s([data-confirm="It is restored as a new environment that is not live."]) <>
                ~s|[data-confirm-ok="Restore"]:not([data-confirm-destructive])|
            )
+  end
+
+  # The list is re-read when another admin copies or sets live, which adds an
+  # archive and prunes. A row keyed by its schema keeps its element when it
+  # moves, so a restore held by the confirm dialog restores the archive clicked.
+  test "each archive row is keyed by its schema and names it in the dialog",
+       %{conn: conn, site: site, production: production} do
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview-archives"})
+    assert {:ok, %{archive_schema: first}} = Environments.copy_environment(production, preview)
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+    row = "#environment-archive-#{first}"
+
+    assert has_element?(
+             view,
+             ~s(#{row} button[phx-click="rollback"][phx-value-schema="#{first}"]) <>
+               ~s([data-confirm-title="Restore #{first}?"]) <>
+               ~s([data-confirm="It is restored as a new environment that is not live."]) <>
+               ~s|[data-confirm-ok="Restore"]:not([data-confirm-destructive])|
+           )
+
+    assert {:ok, %{archive_schema: second}} = Environments.copy_environment(production, preview)
+    refute second == first
+    send(view.pid, {:environments_updated, site.id})
+
+    assert has_element?(view, ~s(#{row} button[phx-value-schema="#{first}"]))
+    assert has_element?(view, ~s(#environment-archive-#{second} button[phx-value-schema="#{second}"]))
   end
 
   test "editors cannot invoke environment lifecycle events", %{site: site} do

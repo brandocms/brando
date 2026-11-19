@@ -595,7 +595,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <p>{gettext("No recovery archives exist for this site.")}</p>
             </div>
             <ul :if={@archives != []} class="environment-archives">
-              <li :for={archive <- @archives}>
+              <li :for={archive <- @archives} id={"environment-archive-#{archive.schema}"}>
                 <div class="environment-archive__identity">
                   <code>{archive.schema}</code>
                   <span :if={archive.note} class="environment-archive__note">{archive.note}</span>
@@ -608,7 +608,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || !!@restoring}
                     phx-click="rollback"
                     phx-value-schema={archive.schema}
-                    data-confirm={gettext("Restore this archive as a new, non-live environment?")}
+                    data-confirm-title={gettext("Restore %{archive}?", archive: archive.schema)}
+                    data-confirm={gettext("It is restored as a new environment that is not live.")}
                     data-confirm-ok={gettext("Restore")}
                   >
                     {gettext("Restore")}
