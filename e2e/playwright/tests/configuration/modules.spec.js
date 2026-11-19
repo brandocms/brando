@@ -178,16 +178,21 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await expect(page.getByRole('button', { name: 'Edit reference intro_text', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit reference intro_text_copy', exact: true })).toBeVisible()
 
+  // Each delete asks first, in the admin's dialog
   await openModuleTab(page, 'Variables')
-  page.on('dialog', (dialog) => dialog.accept())
+  const deleteVar = page.getByRole('dialog', { name: 'Delete variable theme_copy?' })
   await clickVarChipAction(page, 'Delete variable theme_copy', async () => {
-    await expect(
-      page.getByRole('button', { name: 'Edit variable theme_copy', exact: true })
-    ).toHaveCount(0, { timeout: 2000 })
+    await expect(deleteVar).toBeVisible({ timeout: 2000 })
   })
-  // The `page.on` handler above stays registered and covers this confirm too.
+  await deleteVar.getByRole('button', { name: 'Delete variable', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Edit variable theme_copy', exact: true })).toHaveCount(0)
   await openModuleTab(page, 'References')
   await page.getByRole('button', { name: 'Delete reference intro_text_copy', exact: true }).click()
+  await page
+    .getByRole('dialog', { name: 'Delete reference intro_text_copy?' })
+    .getByRole('button', { name: 'Delete reference', exact: true })
+    .click()
+  await expect(page.getByRole('button', { name: 'Edit reference intro_text_copy', exact: true })).toHaveCount(0)
 
   // Removing a reference or a variable migrates every block using this module,
   // so the save is held until it is confirmed — and the dialog names exactly
