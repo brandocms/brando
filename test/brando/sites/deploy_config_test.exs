@@ -715,8 +715,7 @@ defmodule Brando.Sites.DeployConfigTest do
              []
   end
 
-  # Each site's own account on one host: chrooted or not, the user decides
-  # whose files a deploy may replace
+  # Not a pair for each two sites: `account_bound_destinations/0` names the entry
   test "one list entry's destinations that differ only by the rsync user do not overlap" do
     put_test_env(DeployConfig, resolver: &resolve/2, rsync_targets: ["{site_key}@static.example.com:/www"])
 
@@ -732,6 +731,26 @@ defmodule Brando.Sites.DeployConfigTest do
              {:rsync_targets, {"acme", "{site_key}@static.example.com:/www", :config},
               {"beta", "deploy@static.example.com:/www/", :site}}
            ]
+  end
+
+  # Unless each account is confined to its own directory, every site deploys
+  # into the same one: the entry is named once, however many sites there are
+  test "list entries that tell sites apart only by the rsync user are named once each" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: [
+        "{site_key}@static.example.com:/www",
+        "deploy@static.example.com:/srv/{site_key}",
+        "{site_key}@www.example.com:/srv/{site_key}",
+        "deploy@shared.example.com:/srv/"
+      ],
+      s3_targets: ["s3://{site_key}-www"]
+    )
+
+    assert DeployConfig.account_bound_destinations() == [{:rsync_targets, "{site_key}@static.example.com:/www"}]
+
+    put_test_env(DeployConfig, rsync_targets: %{"acme" => ["{site_key}@static.example.com:/www"]})
+    assert DeployConfig.account_bound_destinations() == []
   end
 
   test "two sites' entries from different sources that differ only by the user overlap" do

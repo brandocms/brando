@@ -685,6 +685,20 @@ msgstr "Verter for utrulling"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} entry every site may use; a superuser can see which"
+msgid_plural "Deploy targets: %{count} entries every site may use; a superuser can see which"
+msgstr[0] "Publiseringsmål: %{count} oppføring alle nettsteder kan bruke; en superbruker kan se hvilken"
+msgstr[1] "Publiseringsmål: %{count} oppføringer alle nettsteder kan bruke; en superbruker kan se hvilke"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} entry gives every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+msgid_plural "Deploy targets: %{count} entries give every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+msgstr[0] "Publiseringsmål: %{count} oppføring gir alle nettsteder samme sti under hver sin konto; en superbruker kan se hvilken. Det er trygt bare hvis hver konto er stengt inne i sin egen mappe (chroot)."
+msgstr[1] "Publiseringsmål: %{count} oppføringer gir alle nettsteder samme sti under hver sin konto; en superbruker kan se hvilke. Det er trygt bare hvis hver konto er stengt inne i sin egen mappe (chroot)."
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Deploy targets: %{count} pair of sites' entries reaches the same destination; a superuser can see which"
 msgid_plural "Deploy targets: %{count} pairs of sites' entries reach the same destination; a superuser can see which"
 msgstr[0] "Publiseringsmål: %{count} par av nettstedenes oppføringer når samme mål; en superbruker kan se hvilke"
@@ -699,6 +713,11 @@ msgstr "Publiseringsmål: %{pairs} når samme mål"
 #, elixir-autogen, elixir-format
 msgid "Deploy targets: %{settings} have entries no target can pass"
 msgstr "Publiseringsmål: %{settings} har oppføringer som ingen mål passer"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{setting} %{entry} gives every site the same path under its own account. That is safe only if each account is confined to its own directory (chroot)."
+msgstr "Publiseringsmål: %{setting} %{entry} gir alle nettsteder samme sti under hver sin konto. Det er trygt bare hvis hver konto er stengt inne i sin egen mappe (chroot)."
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -804,6 +823,16 @@ msgstr "Liquid i redaktørtekst"
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer} does not exist"
 msgstr "E-post: %{mailer} finnes ikke"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, a site has no sender; a superuser can see which"
+msgstr "E-post: %{mailer}, et nettsted har ingen avsender; en superbruker kan se hvilket"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, a site's sender is a placeholder; a superuser can see which"
+msgstr "E-post: %{mailer}, et nettsteds avsender er en plassholder; en superbruker kan se hvilket"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -1241,6 +1270,11 @@ msgstr "commit %{commit} fra %{url}"
 msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
 msgstr "sett opp e-postmodulens produksjonsadapter og tilgangsnøkler i config/runtime.exs"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "confine each site's rsync account to its own directory (chroot), or put `{site_key}` in the path as well: %{example}"
+msgstr "steng hvert nettsteds rsync-konto inne i sin egen mappe (chroot), eller sett `{site_key}` i stien også: %{example}"
+
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
 msgid "container %{name}"
@@ -1290,6 +1324,11 @@ msgstr "publiseringsmål som deles mellom nettsteder"
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
 msgstr "publiseringsmål som deles av alle nettsteder"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets told apart only by account"
+msgstr "publiseringsmål som bare skilles av kontoen"
 
 #: lib/brando/doctor/checks/translation_galleries.ex
 #, elixir-autogen, elixir-format

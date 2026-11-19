@@ -605,8 +605,9 @@ defmodule Brando.Sites.DeployConfig do
   placeholder is every site's (`shared_destinations/0`), and is left out.
 
   Two sites' destinations from the same list entry that differ only in the
-  rsync user, as `{site_key}@static.example.com:/www` gives them, are one
-  account each and not reported; two such destinations set apart are.
+  rsync user, as `{site_key}@static.example.com:/www` gives them, are not
+  reported as pairs: `account_bound_destinations/0` names such an entry once.
+  The same place reached from two different entries is, whatever the users.
   """
   @spec overlapping_destinations([Brando.Sites.Site.t() | map()]) ::
           [{atom(), {String.t(), String.t(), :config | :site}, {String.t(), String.t(), :config | :site}}]
@@ -680,9 +681,28 @@ defmodule Brando.Sites.DeployConfig do
   defp prefix_paths(parts), do: for(count <- 1..length(parts), do: parts |> Enum.take(count) |> Enum.join("/"))
 
   # From one list entry, two sites' destinations told apart by the user are
-  # each site's own account
+  # named once as the entry (`account_bound_destinations/0`)
   defp same_account?(%{origin: {:list, entry}, user: user}, %{origin: {:list, entry}, user: other}), do: user == other
   defp same_account?(_first, _second), do: true
+
+  @doc """
+  The entries of the operator's `rsync_targets` list that put `{site_key}` in
+  the rsync user alone, as `{:rsync_targets, entry}`:
+  `{site_key}@static.example.com:/www` gives every site the same host and
+  path, each under its own account. Each site's deploy replaces the others'
+  files there unless each account is confined to its own directory (chroot).
+  """
+  @spec account_bound_destinations() :: [{:rsync_targets, String.t()}]
+  def account_bound_destinations do
+    targets = setting_value(:rsync_targets)
+
+    for entry when is_binary(entry) <- if(is_list(targets), do: targets, else: []),
+        String.contains?(entry, "{site_key}"),
+        {:ok, group, user, path} <- [parse_place(:rsync_targets, for_site(entry, "a"))],
+        {:ok, ^group, other, ^path} <- [parse_place(:rsync_targets, for_site(entry, "b"))],
+        user != other,
+        do: {:rsync_targets, entry}
+  end
 
   @doc """
   The settings with a part no target can pass: anything but a list of

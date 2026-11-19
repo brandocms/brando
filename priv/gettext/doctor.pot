@@ -684,6 +684,20 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} entry every site may use; a superuser can see which"
+msgid_plural "Deploy targets: %{count} entries every site may use; a superuser can see which"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} entry gives every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+msgid_plural "Deploy targets: %{count} entries give every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Deploy targets: %{count} pair of sites' entries reaches the same destination; a superuser can see which"
 msgid_plural "Deploy targets: %{count} pairs of sites' entries reach the same destination; a superuser can see which"
 msgstr[0] ""
@@ -697,6 +711,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy targets: %{settings} have entries no target can pass"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{setting} %{entry} gives every site the same path under its own account. That is safe only if each account is confined to its own directory (chroot)."
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -802,6 +821,16 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer} does not exist"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, a site has no sender; a superuser can see which"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, a site's sender is a placeholder; a superuser can see which"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -1240,6 +1269,11 @@ msgstr ""
 msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "confine each site's rsync account to its own directory (chroot), or put `{site_key}` in the path as well: %{example}"
+msgstr ""
+
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
 msgid "container %{name}"
@@ -1288,6 +1322,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets told apart only by account"
 msgstr ""
 
 #: lib/brando/doctor/checks/translation_galleries.ex

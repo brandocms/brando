@@ -164,6 +164,41 @@ defmodule BrandoAdmin.UtilsSystemCheckLiveTest do
       assert has_element?(view, "li[data-check=configuration] details li", "a superuser can see which")
       refute render(view) =~ "shared-bucket"
     end
+
+    test "a superuser who loses the superuser group stops seeing which, groups mode", %{acme: acme, current_user: owner} do
+      alias Brando.Authorization.{Groups, Migration, Scope}
+
+      put_test_env(:authorization_mode, :groups)
+      held = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {:ok, _} = Migration.run()
+
+      site_scope = Scope.site(owner, acme)
+      {:ok, utilities} = Groups.create(site_scope, %{name: "Utilities"}, ~w(brando.admin.access brando.utilities.read))
+      {:ok, :ok} = Groups.add_member(site_scope, utilities.id, held.id)
+
+      conn =
+        Brando.Test.Support.admin_conn()
+        |> Brando.Test.log_in_user(held)
+        |> Plug.Conn.put_session("brando_site_key", "acme")
+
+      {:ok, view, _html} = live(conn, "/admin/config/utils")
+      render_async(view)
+      assert has_element?(view, "li[data-check=configuration] details li", "s3://shared-bucket/beta for beta")
+
+      installation = Scope.installation(owner)
+      {:ok, groups} = Groups.list(installation)
+      for group <- groups, do: Groups.remove_member(installation, group.id, held.id)
+      refute Brando.Authorization.Boundary.superuser?(held)
+
+      render_async(view)
+      refute render(view) =~ "shared-bucket"
+      assert has_element?(view, "li[data-check=configuration] details li", "a superuser can see which")
+
+      view |> element("#system-check button", "Run again") |> render_click()
+      render_async(view)
+      refute render(view) =~ "shared-bucket"
+      assert has_element?(view, "li[data-check=configuration] details li", "a superuser can see which")
+    end
   end
 
   test "Brando's own checks render", %{conn: conn} do

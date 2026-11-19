@@ -2416,11 +2416,16 @@ reads for each site, and the sites' own allowed targets, such as one site's
 own `deploy@static.example.com:/srv/sites/` holding the directory
 `deploy@static.example.com:/srv/sites/{site_key}` gives another. Two sites'
 destinations from one list entry that differ only in the `rsync` user, as
-`{site_key}@static.example.com:/www` gives each site its own account, are not
-reported; the same place reached from two different entries is, whatever the
-users. The warning says where each entry is set, from the terminal and to a
-superuser; on Utilities, anyone else sees how many pairs overlap, not which,
-as the entries are other sites' destinations. It also warns
+`{site_key}@static.example.com:/www` gives them, are not reported as pairs:
+the line names the entry once, saying it gives every site the same path under
+its own account. Each site deploys with `--delete` into that one directory,
+so the entry is safe only when each account is confined to its own directory
+(a chroot); otherwise put `{site_key}` in the path as well. The same place
+reached from two different entries warns as an overlap, whatever the users.
+The warning says where each entry is set, from the terminal and to a
+superuser; on Utilities, anyone else sees how many entries every site may
+use, how many are told apart only by account and how many pairs overlap, not
+which, as the entries are other sites' destinations too. It also warns
 when a setting has an entry, key or value of a form no
 target can pass (see
 [System check](doctor.md)).

@@ -375,6 +375,72 @@ defmodule Brando.Doctor.ChecksTest do
       assert [{:ok, _item, nil}] = Checks.Configuration.deploy_targets()
     end
 
+    test "a site administrator sees that some deploy targets are every site's, not which" do
+      put_test_env(:tenancy_mode, :multi)
+      put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["deploy@static.example.com:/srv/sites/"])
+
+      assert [{:warning, item, "deploy targets shared by every site", _fix}] = Checks.Configuration.deploy_targets()
+      assert item == "Deploy targets: every site may use rsync_targets deploy@static.example.com:/srv/sites/"
+
+      assert [{:warning, item, "deploy targets shared by every site", _fix}] =
+               Checks.Configuration.deploy_targets(false)
+
+      assert item == "Deploy targets: 1 entry every site may use; a superuser can see which"
+      refute item =~ "static.example.com"
+    end
+
+    test "with several sites, a list entry that tells sites apart only by the rsync user is named once" do
+      put_test_env(:tenancy_mode, :multi)
+      put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["{site_key}@static.example.com:/www"])
+
+      for key <- ~w(doctor-acme doctor-beta doctor-gamma doctor-delta) do
+        {:ok, _site} =
+          Brando.Tenant.Registry.create_site(%{
+            name: key,
+            key: key,
+            languages: ["en"],
+            default_language: "en",
+            delivery_mode: :static
+          })
+      end
+
+      assert [{:warning, item, "deploy targets told apart only by account", fix}] =
+               Checks.Configuration.deploy_targets()
+
+      assert item ==
+               "Deploy targets: rsync_targets {site_key}@static.example.com:/www gives every site the same path under its own account. That is safe only if each account is confined to its own directory (chroot)."
+
+      assert fix =~ "chroot"
+
+      assert [{:warning, item, "deploy targets told apart only by account", _fix}] =
+               Checks.Configuration.deploy_targets(false)
+
+      assert item ==
+               "Deploy targets: 1 entry gives every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+    end
+
+    test "a site administrator sees that another site's sender has a problem, not which site" do
+      put_test_env(:tenancy_mode, :multi)
+
+      put_test_env(Brando.Mailer,
+        from: {"Brando", "noreply@brandocms.com"},
+        sites: %{"beta" => [from: {"Beta", "noreply@example.com"}]}
+      )
+
+      assert {:error, item, "placeholder sender address", _fix} = Checks.Configuration.mailer()
+      assert item =~ "for site beta"
+
+      assert {:error, item, "placeholder sender address", _fix} = Checks.Configuration.mailer(false)
+      assert item =~ "a site's sender is a placeholder; a superuser can see which"
+      refute item =~ "beta"
+      refute item =~ "example.com"
+
+      put_test_env(Brando.Mailer, from: nil, sites: %{"beta" => []})
+      assert {:warning, item, "no sender address", _fix} = Checks.Configuration.mailer(false)
+      # The general sender is no site's
+      refute item =~ "superuser"
+    end
+
     test "with several sites, map entries of two sites that reach one destination are a warning" do
       put_test_env(:tenancy_mode, :multi)
 
