@@ -1842,10 +1842,14 @@ defmodule Brando.Content.Proposals do
   def entry_languages(schema) do
     values = language_values(schema)
 
-    for language <- Brando.Languages.languages(),
-        code = to_string(language[:value]),
-        code in values,
-        do: %{code: code, name: language[:text]}
+    listed =
+      for language <- Brando.Languages.languages(),
+          code = to_string(language[:value]),
+          code in values,
+          do: %{code: code, name: language[:text]}
+
+    # A field whose own languages are none of the site's still takes them.
+    if listed == [], do: Enum.map(values, &%{code: &1, name: &1}), else: listed
   end
 
   # A `language` field of another kind (plain text, say) is not ours to fill.

@@ -134,6 +134,11 @@ defmodule Brando.Content.Proposals.ToolsTest do
 
     # A language field with a narrower set of its own lists that set.
     assert %{languages: [%{code: "en", name: "English"}]} = language.("Brando.LanguageProposalTest.English")
+
+    # A field whose own languages are none of the site's still lists them.
+    Brando.Test.Support.put_test_env(:languages, [[value: "no", text: "Norsk"]])
+    assert [%{code: "no"}] = Proposals.entry_languages(Page)
+    assert [%{code: "en", name: "en"}] = Proposals.entry_languages(Brando.LanguageProposalTest.English)
   end
 
   test "entry_outline lists an entry's language versions and whether they follow it", c do
