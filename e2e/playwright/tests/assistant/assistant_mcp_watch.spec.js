@@ -89,7 +89,7 @@ test('follows a connected tool’s calls as they happen', async ({ page, sandbox
     await expect(imported.locator('li[data-reused="true"]')).toHaveCount(1)
     await expect(imported.locator('li[data-reused="false"]').first()).toBeVisible()
 
-    // A proposal, with its link to the review, also in the result
+    // A proposal, with the page's link in its result
     const proposal = await tool(api, resource, token, 5, 'brando_content_prepare_proposal', {
       summary: 'Retitle from the live page spec',
       operations: [
@@ -103,7 +103,9 @@ test('follows a connected tool’s calls as they happen', async ({ page, sandbox
     expect(proposal.structuredContent.watch_url).toContain(watchPath)
     const card = watch.locator(`[data-proposal-id="${proposal.structuredContent.proposal_id}"]`)
     await expect(card.locator('h3')).toHaveText('Retitle from the live page spec')
-    await expect(card.locator(`a[href="/admin/assistant/connected/${proposal.structuredContent.proposal_id}"]`)).toBeVisible()
+    await expect(card.locator('.mcp-watch-counts')).toContainText('1 updated entry')
+    // The admin watches someone else's connection: only that person reviews it
+    await expect(card.locator('a')).toHaveCount(0)
 
     await expect(calls).toHaveCount(5)
     await expect(calls.first()).toHaveAttribute('data-tool', 'prepare_proposal')
