@@ -34,7 +34,7 @@ defmodule Brando.MCP.FigmaTest do
     receiver = WebhookReceiver.start(fn %{path: path} -> if path == "/missing", do: {404, ""}, else: {200, @png} end)
 
     root = Brando.Tenant.Storage.current_media_root()
-    on_exit(fn -> File.rm_rf(Path.join(root, FolderBrowser.absolute_folder("Figma", FolderBrowser.upload_root(nil)))) end)
+    on_exit(fn -> File.rm_rf(Path.join(root, FolderBrowser.absolute_folder("figma", FolderBrowser.upload_root(nil)))) end)
 
     %{tenant: tenant, token: tokens["access_token"], user: user, receiver: receiver}
   end
@@ -120,7 +120,7 @@ defmodule Brando.MCP.FigmaTest do
 
   # A frame of these layers, with a download for each ref from `receiver`
   # (at /img/<ref>)
-  defp stub_layers(receiver, layers) do
+  defp stub_layers(receiver, layers, frame_name \\ "Fills") do
     refs = for %{"fills" => fills} <- layers, %{"imageRef" => ref} <- fills, do: ref
     downloads = Map.new(refs, &{&1, WebhookReceiver.url(receiver, "/img/" <> &1)})
 
@@ -131,7 +131,7 @@ defmodule Brando.MCP.FigmaTest do
             "name" => "Shared",
             "nodes" => %{
               "2950:4703" => %{
-                "document" => %{"id" => "2950:4703", "name" => "Fills", "type" => "FRAME", "children" => layers}
+                "document" => %{"id" => "2950:4703", "name" => frame_name, "type" => "FRAME", "children" => layers}
               }
             }
           })
@@ -730,6 +730,14 @@ defmodule Brando.MCP.FigmaTest do
       assert [%Image{width: 30, height: 10} = stored] = images()
       root = Brando.Tenant.Storage.current_media_root()
       assert [255, 255, 255 | _] = root |> Path.join(stored.path) |> Picture.open!() |> Picture.get_pixel!(0, 0)
+    end
+
+    test "the folder is the frame's name as a slug, or untitled when no slug is left", %{tenant: tenant, token: token} do
+      stub_layers(pictures(), [layer("20:1", [fill("a")])], "2. Prosjekt > Sprekenhus")
+      assert %{"folder" => "figma/2-prosjekt-sprekenhus"} = import!(tenant, token)
+
+      stub_layers(pictures(), [layer("20:1", [fill("a")])], "→ / 🎉")
+      assert %{"folder" => "figma/untitled"} = import!(tenant, token)
     end
 
     test "an animated image is not turned: the original is imported and the result says why",

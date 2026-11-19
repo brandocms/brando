@@ -871,7 +871,7 @@ defmodule E2EFixtureController do
       summary: %{
         "input" => %{},
         "output" => %{"frame" => "Case – Tipping", "images" => 4},
-        "folder" => "Figma/Case – Tipping",
+        "folder" => "figma/case-tipping",
         "images" => images |> Enum.with_index() |> Enum.map(fn {id, i} -> %{"id" => id, "reused" => i == 3} end)
       }
     )
@@ -1888,7 +1888,7 @@ defmodule E2EFixtureController do
       "ok" => true,
       "duration_ms" => 2_400,
       "output" => %{"frame" => "Case – Tipping", "images" => length(images)},
-      "folder" => "Figma/Case – Tipping",
+      "folder" => "figma/case-tipping",
       "images" => images |> Enum.with_index() |> Enum.map(fn {id, i} -> %{"id" => id, "reused" => i == 0} end)
     }
 

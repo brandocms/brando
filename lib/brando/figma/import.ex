@@ -134,7 +134,8 @@ defmodule Brando.Figma.Import do
   # One folder per frame, named after it as a slug: the name is part of
   # every image's address, and a frame name may hold "/", ">" or spaces.
   defp folder_path(name) do
-    slug = (name || "") |> Brando.Utils.slugify() |> String.slice(0, 100) |> String.trim("-")
+    # `slugify/1` gives nil for a name with nothing a slug keeps ("→", "🎉")
+    slug = ((name && Brando.Utils.slugify(name)) || "") |> String.slice(0, 100) |> String.trim("-")
 
     "figma/" <> if(slug == "", do: "untitled", else: slug)
   end
