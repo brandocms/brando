@@ -12,33 +12,37 @@ defmodule Brando.Figma.Frame do
   laid out), others top to bottom, then left to right, by their position on
   the canvas.
 
-  Each section, text, image and video has its box in the frame (`x`, `y`,
-  `width`, `height`, rounded, from the frame's top left), and the frame its
-  visible layout grids. A section that looks like page chrome (a header,
-  footer or menu, repeated on every frame) says why under `chrome`: its
-  name or component, or that it sits flush at the frame's top or bottom
-  edge. It is a hint: such sections are still listed.
+  Each section, text, image and video has its layer box in the frame (`x`,
+  `y`, `width`, `height`, rounded, from the frame's top left), before
+  clipping and masks, and the frame its visible layout grids. A section
+  named like a page header, footer or menu says why under `chrome`: its
+  layer name or its component's. It is a hint: such sections are still
+  listed.
   """
 
   @text_limit 4_000
 
-  # Words in a layer or component name that suggest page chrome. The
-  # unambiguous ones match anywhere in the name ("Toppmeny", "PageHeader");
-  # the short ones start a word ("Navbar", "Bunntekst", not "Canvas"), and
-  # "topp" is a word of its own ("Topp", not "Toppbilde").
-  @chrome_anywhere ~r/header|footer|menu|meny/i
-  @chrome_word_starts ["nav", "bunn", "topptekst"]
-  @chrome_words ["topp", "toppen"]
+  # Page chrome by name: a part of a layer or component name ("Site/Header",
+  # "Main navigation") that is one of these words, or a run of them
+  # ("NavBar"), with at most the qualifiers below around it. "Menu" and
+  # "meny" also name content (a restaurant's menu), so they count only on a
+  # short, wide bar at the frame's top or bottom edge.
+  @chrome_words ~w(header footer nav navbar navigation navigasjon topp topptekst bunn bunntekst)
+  @menu_words ~w(menu meny)
+  @chrome_qualifiers ~w(site page main global primary top bottom sticky mobile desktop tablet hoved)
+
+  # Edges within this many pixels count as flush
+  @edge_tolerance 1
 
   @type image :: %{
-          node_id: String.t(),
-          name: String.t(),
-          image_ref: String.t(),
-          x: integer(),
-          y: integer(),
-          width: integer(),
-          height: integer(),
-          section: non_neg_integer()
+          required(:node_id) => String.t(),
+          required(:name) => String.t(),
+          required(:image_ref) => String.t(),
+          optional(:x) => integer(),
+          optional(:y) => integer(),
+          optional(:width) => integer(),
+          optional(:height) => integer(),
+          required(:section) => non_neg_integer()
         }
 
   @doc """
@@ -67,15 +71,18 @@ defmodule Brando.Figma.Frame do
   end
 
   defp sections(%{document: document} = node, opts \\ []) do
-    frame = %{origin: origin(document), box: box(document, origin(document))}
+    frame = %{id: document["id"], origin: origin(document), box: box(document, origin(document))}
 
     names = %{components: node.components, component_sets: node.component_sets}
 
-    document
-    |> events(nil, [])
-    |> Enum.reverse()
-    |> group(names, frame)
-    |> Enum.map(&finish(&1, frame.box, Keyword.get(opts, :keep_refs, false)))
+    sections =
+      document
+      |> events(nil, [])
+      |> Enum.reverse()
+      |> group(names, frame)
+
+    only? = match?([_], sections)
+    Enum.map(sections, &finish(&1, frame, only?, Keyword.get(opts, :keep_refs, false)))
   end
 
   # What the walk finds, as a reversed list: an outermost instance starts a
@@ -149,6 +156,7 @@ defmodule Brando.Figma.Frame do
     %{
       kind: "component",
       node_id: node["id"],
+      node_type: node["type"],
       name: node["name"],
       component: (set && set["name"]) || component["name"],
       variant: set && component["name"],
@@ -162,7 +170,15 @@ defmodule Brando.Figma.Frame do
   defp loose_section({kind, node, nil}, origin) do
     kind = if is_tuple(kind), do: elem(kind, 0), else: kind
 
-    %{kind: to_string(kind), node_id: node["id"], name: node["name"], texts: [], images: [], videos: []}
+    %{
+      kind: to_string(kind),
+      node_id: node["id"],
+      node_type: node["type"],
+      name: node["name"],
+      texts: [],
+      images: [],
+      videos: []
+    }
     |> Map.merge(box(node, origin))
   end
 
@@ -182,33 +198,48 @@ defmodule Brando.Figma.Frame do
     %{section | videos: [video | section.videos]}
   end
 
-  defp finish(section, frame_box, keep_refs?) do
+  defp finish(section, frame, only?, keep_refs?) do
     images = Enum.reverse(section.images)
     images = if keep_refs?, do: images, else: Enum.map(images, &Map.delete(&1, :image_ref))
 
     section
     |> Map.merge(%{texts: Enum.reverse(section.texts), images: images, videos: Enum.reverse(section.videos)})
-    |> Map.put(:chrome, chrome(section, frame_box))
+    |> Map.put(:chrome, if(not only? and section.node_id != frame.id, do: chrome(section, frame.box)))
+    |> Map.delete(:node_type)
     |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end
 
-  # Why a section looks like page chrome, or nil
+  # Why a section looks like page chrome, or nil. Only an instance, component
+  # or frame is named by its designer (Figma names a text layer after its
+  # text), and a section of images with no texts is never flagged: a tool
+  # leaving it out would have nothing to check first.
   defp chrome(section, frame_box) do
+    menu_bar? = menu_bar?(section, frame_box)
+
     cond do
-      chrome_name?(section.name) -> "name"
-      chrome_name?(section[:component]) or chrome_name?(section[:variant]) -> "component"
-      match?(%{y: y} when y <= 0, section) -> "top edge"
-      bottom_edge?(section, frame_box) -> "bottom edge"
+      section.node_type not in ["INSTANCE", "COMPONENT", "FRAME"] -> nil
+      section.texts == [] and (section.images != [] or section.videos != []) -> nil
+      chrome_name?(section.name, menu_bar?) -> "name"
+      chrome_name?(section[:component], menu_bar?) -> "component"
       true -> nil
     end
   end
 
-  defp chrome_name?(name) when is_binary(name) do
-    Regex.match?(@chrome_anywhere, name) or
-      Enum.any?(words(name), &(&1 in @chrome_words or String.starts_with?(&1, @chrome_word_starts)))
+  defp chrome_name?(name, menu_bar?) when is_binary(name) do
+    name
+    |> String.split("/")
+    |> Enum.any?(fn part ->
+      words = Enum.reject(words(part), &(&1 in @chrome_qualifiers))
+      words != [] and chrome_words?(words, menu_bar?)
+    end)
   end
 
-  defp chrome_name?(_name), do: false
+  defp chrome_name?(_name, _menu_bar?), do: false
+
+  defp chrome_words?(words, menu_bar?) do
+    terms = if menu_bar?, do: @chrome_words ++ @menu_words, else: @chrome_words
+    Enum.join(words) in terms or Enum.all?(words, &(&1 in terms))
+  end
 
   # "Site/NavBar 2" → ["site", "nav", "bar"]
   defp words(name) do
@@ -217,8 +248,14 @@ defmodule Brando.Figma.Frame do
     |> Enum.map(&String.downcase(hd(&1)))
   end
 
-  defp bottom_edge?(%{y: y, height: height}, %{height: frame_height}), do: y + height >= frame_height
-  defp bottom_edge?(_section, _frame_box), do: false
+  # Short (a bar, not a hero), across most of the frame and flush with its
+  # top or bottom edge, not past it
+  defp menu_bar?(%{y: y, width: width, height: height}, %{width: frame_width, height: frame_height}) do
+    height * 4 <= min(frame_width, frame_height) and width * 4 >= frame_width * 3 and
+      (abs(y) <= @edge_tolerance or abs(frame_height - (y + height)) <= @edge_tolerance)
+  end
+
+  defp menu_bar?(_section, _frame_box), do: false
 
   # The frame's visible layout grids, as Figma gives them; nil without any
   defp layout_grids(grids) when is_list(grids) do
@@ -234,7 +271,8 @@ defmodule Brando.Figma.Frame do
 
   defp layout_grids(_grids), do: nil
 
-  defp layout_grid(%{"pattern" => "GRID"} = grid), do: %{pattern: "grid", size: number(grid["sectionSize"])}
+  defp layout_grid(%{"pattern" => "GRID"} = grid),
+    do: Map.reject(%{pattern: "grid", size: number(grid["sectionSize"])}, fn {_key, value} -> is_nil(value) end)
 
   defp layout_grid(grid) do
     alignment = grid["alignment"]

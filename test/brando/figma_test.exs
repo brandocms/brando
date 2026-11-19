@@ -122,6 +122,22 @@ defmodule Brando.FigmaTest do
   defp box_node(node, {x, y, width, height}),
     do: Map.put(node, "absoluteBoundingBox", %{"x" => x, "y" => y, "width" => width, "height" => height})
 
+  # An instance with a text, at x 0
+  defp chrome_section(id, name, {y, width, height}, opts \\ []) do
+    box_node(
+      %{
+        "id" => id,
+        "name" => name,
+        "type" => "INSTANCE",
+        "componentId" => opts[:component],
+        "children" => [%{"id" => id <> "t", "name" => "T", "type" => "TEXT", "characters" => name}]
+      },
+      {0, y, width, height}
+    )
+  end
+
+  defp chrome(node), do: node |> Frame.outline() |> Map.fetch!(:sections) |> Enum.map(&{&1.name, &1[:chrome]})
+
   describe "Frame.outline/1" do
     test "sections in reading order, with their components, texts, images and videos" do
       outline = Frame.outline(frame_node())
@@ -143,7 +159,6 @@ defmodule Brando.FigmaTest do
                y: 0,
                width: 1440,
                height: 900,
-               chrome: "top edge",
                texts: [%{node_id: "1:12", name: "Caption", text: "Second in the layout", x: 0, y: 0}],
                images: [%{node_id: "1:11", name: "Photo", x: 0, y: 500, width: 1440, height: 810}],
                videos: [%{node_id: "1:13", name: "Film"}]
@@ -221,6 +236,7 @@ defmodule Brando.FigmaTest do
           "sectionSize" => 64
         },
         %{"pattern" => "GRID", "sectionSize" => 8},
+        %{"pattern" => "GRID"},
         hidden
       ]
 
@@ -230,61 +246,143 @@ defmodule Brando.FigmaTest do
                %{pattern: "columns", alignment: "stretch", count: 12, gutter: 20, margin: 40},
                %{pattern: "columns", alignment: "center", count: 4, gutter: 10, size: 200},
                %{pattern: "rows", alignment: "min", gutter: 8, margin: 0, size: 64},
-               %{pattern: "grid", size: 8}
+               %{pattern: "grid", size: 8},
+               %{pattern: "grid"}
              ]
 
       hidden_only = put_in(node.document["layoutGrids"], [hidden])
       assert Frame.outline(hidden_only).frame.layout_grids == nil
     end
 
-    test "flags sections that look like page chrome, with the reason, and keeps them" do
-      names = %{"h" => %{"name" => "Site/Header"}, "f" => %{"name" => "Footer", "componentSetId" => "fs"}}
-
-      section = fn id, name, component, y, height ->
-        box_node(
-          %{
-            "id" => id,
-            "name" => name,
-            "type" => "INSTANCE",
-            "componentId" => component,
-            "children" => [%{"id" => id <> "t", "name" => "T", "type" => "TEXT", "characters" => name}]
-          },
-          {0, y, 1440, height}
-        )
-      end
+    test "flags sections named like page chrome, with the reason, and keeps them" do
+      names = %{
+        "h" => %{"name" => "Site/Header"},
+        "f" => %{"name" => "Theme=Dark", "componentSetId" => "fs"}
+      }
 
       node =
         %{
           frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 5000}, [
-            section.("1", "Top", "h", 0, 100),
-            section.("2", "Hovedmeny", nil, 100, 50),
-            section.("3", "NavBar", nil, 150, 50),
-            section.("4", "Toppbilde", nil, 200, 600),
-            section.("5", "Case/Section header", nil, 800, 200),
-            section.("6", "Toppen", nil, 1000, 100),
-            section.("7", "Image row", nil, 1100, 600),
-            section.("8", "Unavailable canvas", nil, 1700, 600),
-            section.("9", "Links", "f", 2300, 300),
-            section.("10", "Bunntekst", nil, 2600, 200),
-            section.("11", "Credits", nil, 4800, 200)
+            chrome_section("1", "Top", {200, 1440, 100}, component: "h"),
+            chrome_section("2", "Main navigation", {300, 1440, 50}),
+            chrome_section("3", "NavBar", {350, 1440, 50}),
+            chrome_section("4", "Navigasjon", {400, 1440, 50}),
+            chrome_section("5", "Topp", {450, 1440, 50}),
+            chrome_section("6", "Links", {2300, 1440, 300}, component: "f"),
+            chrome_section("7", "Bunntekst", {2600, 1440, 200}),
+            chrome_section("8", "Footer 2", {2800, 1440, 400}),
+            # A menu or meny is chrome only as a short, wide bar at an edge
+            chrome_section("9", "Meny", {4950, 1440, 50})
           ])
           | components: names,
-            component_sets: %{"fs" => %{"name" => "Site/Bottom"}}
+            component_sets: %{"fs" => %{"name" => "Footer"}}
         }
 
-      assert node |> Frame.outline() |> Map.fetch!(:sections) |> Enum.map(&{&1.name, &1[:chrome]}) == [
+      assert chrome(node) == [
                {"Top", "component"},
-               {"Hovedmeny", "name"},
+               {"Main navigation", "name"},
                {"NavBar", "name"},
-               {"Toppbilde", nil},
-               {"Case/Section header", "name"},
-               {"Toppen", "name"},
-               {"Image row", nil},
-               {"Unavailable canvas", nil},
+               {"Navigasjon", "name"},
+               {"Topp", "name"},
                {"Links", "component"},
                {"Bunntekst", "name"},
-               {"Credits", "bottom edge"}
+               {"Footer 2", "name"},
+               {"Meny", "name"}
              ]
+    end
+
+    test "does not flag content by its name" do
+      node =
+        %{
+          frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 5000}, [
+            chrome_section("1", "Navn", {100, 1440, 100}),
+            chrome_section("2", "Case/Section header", {200, 1440, 200}),
+            chrome_section("3", "Button", {400, 1440, 100}, component: "navy"),
+            # A restaurant's menu: tall, and not at an edge
+            chrome_section("4", "Meny", {500, 1440, 1200}),
+            chrome_section("5", "Meny", {1700, 1440, 100}),
+            chrome_section("6", "Toppbilde", {1800, 1440, 600}),
+            chrome_section("7", "Lunsjmeny", {2400, 1440, 600}),
+            chrome_section("8", "Subheader", {3000, 1440, 100}),
+            # Figma names a text layer after its text
+            box_node(
+              %{"id" => "9", "name" => "Se hele menyen", "type" => "TEXT", "characters" => "Se hele menyen"},
+              {0, 3200, 400, 40}
+            ),
+            box_node(%{"id" => "10", "name" => "Header", "type" => "TEXT", "characters" => "Header"}, {0, 3300, 400, 40}),
+            # An image-only section has no texts to check before leaving it out
+            box_node(
+              %{
+                "id" => "11",
+                "name" => "Header",
+                "type" => "INSTANCE",
+                "children" => [%{"id" => "11i", "name" => "Photo", "fills" => [%{"type" => "IMAGE", "imageRef" => "r"}]}]
+              },
+              {0, 3400, 1440, 600}
+            )
+          ])
+          | components: %{"navy" => %{"name" => "Color=Navy", "componentSetId" => "b"}},
+            component_sets: %{"b" => %{"name" => "Case/Button"}}
+        }
+
+      assert Enum.all?(chrome(node), &match?({_name, nil}, &1)), inspect(chrome(node))
+    end
+
+    test "does not flag a section for sitting at the frame's edge" do
+      hero = chrome_section("1", "Case/Image", {0, 1440, 800})
+      quote = chrome_section("2", "Case/Quote", {800, 1440, 200})
+
+      # The first and last child of a vertical auto layout without padding
+      auto =
+        frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 1000}, [hero, quote])
+        |> put_in([:document, "layoutMode"], "VERTICAL")
+
+      assert chrome(auto) == [{"Case/Image", nil}, {"Case/Quote", nil}]
+
+      # Loose layers in the top row
+      loose =
+        frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 1000}, [
+          box_node(%{"id" => "1", "name" => "Topp", "type" => "TEXT", "characters" => "Topp"}, {0, 0, 1440, 40}),
+          box_node(
+            %{"id" => "2", "name" => "Header", "fills" => [%{"type" => "IMAGE", "imageRef" => "r"}]},
+            {0, 0, 1440, 90}
+          ),
+          quote
+        ])
+
+      assert Enum.all?(chrome(loose), &match?({_name, nil}, &1))
+
+      # Sections past the frame's edges, named like a menu bar
+      overflow =
+        frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 1000}, [
+          chrome_section("1", "Meny", {-200, 1440, 100}),
+          chrome_section("2", "Case/Text", {300, 1440, 200}),
+          chrome_section("3", "Meny", {950, 1440, 100})
+        ])
+
+      assert Enum.all?(chrome(overflow), &match?({_name, nil}, &1))
+    end
+
+    test "does not flag the frame itself" do
+      # An image fill on the frame
+      filled =
+        frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 1000}, [
+          chrome_section("1", "Case/Quote", {200, 1440, 200})
+        ])
+        |> put_in([:document, "name"], "Header")
+        |> put_in([:document, "fills"], [%{"type" => "IMAGE", "imageRef" => "bg"}])
+
+      assert chrome(filled) == [{"Header", nil}, {"Case/Quote", nil}]
+
+      # A selected node that is an instance
+      instance =
+        frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 100}, [
+          %{"id" => "t", "name" => "Link", "type" => "TEXT", "characters" => "Om oss"}
+        ])
+        |> put_in([:document, "type"], "INSTANCE")
+        |> put_in([:document, "name"], "Site header")
+
+      assert chrome(instance) == [{"Site header", nil}]
     end
 
     test "images/1 lists each visible image fill with its ref and section" do
