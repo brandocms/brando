@@ -8,7 +8,7 @@ defmodule Brando.Figma.Tools do
   and run as the connection's person, in its site environment and
   authorization scope. `import_images` is the one tool over MCP that adds
   something before a person applies a proposal: images in the library
-  folder `Figma/<frame name>`, which a person needs the right to upload
+  folder `figma/<frame name as a slug>`, which a person needs the right to upload
   images for (`Brando.Figma.Import`).
   """
 
@@ -57,7 +57,7 @@ defmodule Brando.Figma.Tools do
     %{
       name: "import_images",
       description:
-        ~s[Import the images of a Figma frame into this site's media library, in the folder Figma/<frame name>, and get their assets for brando_content_prepare_proposal ({"kind":"image","id":N}). ] <>
+        ~s[Import the images of a Figma frame into this site's media library, in the folder figma/<frame name as a slug>, and get their assets for brando_content_prepare_proposal ({"kind":"image","id":N}). ] <>
           "The originals placed in Figma are imported, not screenshots: one entry per image, with its asset (or why it failed) and the layers that show it (node_id, name, section as brando_figma_read_frame numbers them, from 0). " <>
           "Without node_ids, every image of the frame; at most #{Import.max_per_call()} distinct images per call: call again with next_offset until it is null. " <>
           "Only the images read_frame lists are imported, not hidden_fills. " <>

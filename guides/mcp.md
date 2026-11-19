@@ -324,7 +324,7 @@ proposal with the modules that match.
   out of the entry.
 - `brando_figma_import_images` imports the frame's image fills, the originals
   placed in Figma rather than renders, into the library folder
-  `Figma/<frame name>` under the default image config's upload path, and
+  `figma/<frame name as a slug>` under the default image config's upload path, and
   answers with each image's asset for the proposal and the layers that show
   it. An image the library
   already has (the same file, for the same config) is reused, so importing a

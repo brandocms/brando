@@ -171,7 +171,7 @@ defmodule Brando.MCP.FigmaTest do
 
   # The images imported here, not the users' avatars
   defp images,
-    do: Brando.Repo.all(from(i in Image, where: is_nil(i.deleted_at) and like(i.path, "%Figma/%"), order_by: :id))
+    do: Brando.Repo.all(from(i in Image, where: is_nil(i.deleted_at) and like(i.path, "%figma/%"), order_by: :id))
 
   test "both tools are offered, and say that they reach Figma", %{tenant: tenant, token: token} do
     %{"result" => %{"tools" => tools}} = rpc(tenant, token, "tools/list") |> json_response(200)
@@ -233,7 +233,7 @@ defmodule Brando.MCP.FigmaTest do
 
       assert %{"structuredContent" => result} = call(tenant, token, "import_images", %{"url" => @link})
 
-      assert %{"folder" => "Figma/Case – Tipping", "distinct_images" => 2, "next_offset" => nil} = result
+      assert %{"folder" => "figma/case-tipping", "distinct_images" => 2, "next_offset" => nil} = result
 
       # One entry per picture, with the layers that show it
       assert [
@@ -246,8 +246,8 @@ defmodule Brando.MCP.FigmaTest do
              ] = result["images"]
 
       assert [%Image{id: ^id, folder_id: folder_id, path: path}] = images()
-      assert %Folder{name: "Case – Tipping"} = Brando.Repo.get!(Folder, folder_id)
-      assert path =~ "/Figma/Case – Tipping/"
+      assert %Folder{name: "case-tipping"} = Brando.Repo.get!(Folder, folder_id)
+      assert path =~ "/figma/case-tipping/"
 
       # Again: nothing new
       assert %{"structuredContent" => %{"images" => [%{"asset" => %{"id" => ^id}, "reused" => true} | _]}} =
@@ -273,7 +273,7 @@ defmodule Brando.MCP.FigmaTest do
       [%Image{id: id}] = images()
 
       assert %{
-               "folder" => "Figma/Case – Tipping",
+               "folder" => "figma/case-tipping",
                "images" => [%{"id" => ^id, "reused" => false}],
                "failed" => 1,
                "output" => %{"frame" => "Case – Tipping", "images" => 1}
