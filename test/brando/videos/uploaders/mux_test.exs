@@ -42,7 +42,8 @@ defmodule Brando.Videos.Uploaders.MuxTest do
 
     assert {:ok, settings} = Mux.build_asset_settings(config: config)
     assert settings["playback_policies"] == ["public"]
-    assert settings["static_renditions"] == [%{"resolution" => "highest"}]
+    # The configured resolutions: Brando plays no `highest`
+    assert settings["static_renditions"] == [%{"resolution" => "720p"}, %{"resolution" => "1080p"}]
     refute Map.has_key?(settings, "playback_policy")
     refute Map.has_key?(settings, "mp4_support")
   end

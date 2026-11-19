@@ -40,7 +40,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   the asset and from the `video.asset.static_rendition.*` webhooks, and
   `Brando.Videos.Playback` offers the ready ones as MP4 qualities. Assets made
   before get the configured renditions from `add_static_renditions/1`
-  (`mix brando.videos.mux_renditions`).
+  (`mix brando.videos.mux_renditions`), if they would play one.
 
   ## Mux Documentation
   - Direct Uploads: https://www.mux.com/docs/guides/upload-files-directly
@@ -52,6 +52,7 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Repo
   alias Brando.Videos
   alias Brando.Videos.Playback
   alias Brando.Videos.Uploaders.ProviderUpdate
@@ -90,7 +91,7 @@ defmodule Brando.Videos.Uploaders.Mux do
               "max_resolution_tier" => "1080p",
               "video_quality" => "basic",
               "playback_policies" => ["public"],
-              "static_renditions" => [%{"resolution" => "highest"}]
+              "static_renditions" => [%{"resolution" => "720p"}]
             }
           }
         }
@@ -130,55 +131,53 @@ defmodule Brando.Videos.Uploaders.Mux do
     {:error, :missing_asset_id}
   end
 
+  # A webhook names an upload or an asset, not where Brando holds it: each
+  # environment of each active site holding it is updated, as the backfill
+  # does (`Brando.Tenant.Job.each_active_environment/2`).
   @impl true
   def handle_webhook(%{"type" => "video.upload.asset_created", "data" => data})
       when is_map(data) do
     with upload_id when is_binary(upload_id) <- data["id"],
-         asset_id when is_binary(asset_id) <- data["asset_id"],
-         {:ok, video} <- find_video_by_upload_id(upload_id) do
-      complete_upload(video, %{"asset_id" => asset_id})
+         asset_id when is_binary(asset_id) <- data["asset_id"] do
+      in_each_holder("mux.upload_id", upload_id, &complete_upload(&1, %{"asset_id" => asset_id}))
     else
       nil ->
         Logger.warning("Missing required fields in video.upload.asset_created webhook")
         {:error, :invalid_webhook_data}
-
-      {:error, _} = error ->
-        Logger.warning("Could not find video for upload_id in webhook")
-        error
     end
   end
 
   def handle_webhook(%{"type" => "video.asset.ready", "data" => data}) when is_map(data) do
-    with asset_id when is_binary(asset_id) <- data["id"],
-         {:ok, video} <- find_video_by_asset_id(asset_id) do
+    case data["id"] do
       # Update video with complete asset data from the webhook
-      update_video_with_asset(video, data)
-    else
+      asset_id when is_binary(asset_id) ->
+        in_each_holder("mux.asset_id", asset_id, &update_video_with_asset(&1, data))
+
       nil ->
         Logger.warning("Missing asset_id in video.asset.ready webhook")
         {:error, :invalid_webhook_data}
-
-      {:error, _} = error ->
-        Logger.warning("Could not find video for asset_id in webhook")
-        error
     end
   end
 
   # A rendition's event carries the rendition, not the asset, so the asset is
   # read again: it is what Mux has now, whatever order the events arrive in.
+  # An asset Brando doesn't hold, or Mux no longer has, is ignored, so Mux
+  # doesn't retry the event.
   def handle_webhook(%{"type" => "video.asset.static_rendition." <> event} = payload)
       when event in ["ready", "skipped", "errored", "deleted"] do
     with asset_id when is_binary(asset_id) <- rendition_asset_id(payload),
-         {:ok, video} <- find_video_by_asset_id(asset_id),
+         [_ | _] = holders <- holders("mux.asset_id", asset_id),
          {:ok, asset} <- get_asset(asset_id) do
-      update_video_with_asset(video, asset)
+      in_each(holders, &store_static_renditions(&1, asset))
     else
       nil ->
         Logger.warning("Missing asset id in video.asset.static_rendition.#{event} webhook")
         {:error, :invalid_webhook_data}
 
-      # An asset Brando doesn't hold, in this environment or at all
-      {:error, :not_found} ->
+      [] ->
+        :ignore
+
+      {:error, %{"error" => %{"type" => "not_found"}}} ->
         :ignore
 
       {:error, _} = error ->
@@ -187,47 +186,25 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   def handle_webhook(%{"type" => "video.asset.errored", "data" => data}) when is_map(data) do
-    with asset_id when is_binary(asset_id) <- data["id"],
-         {:ok, video} <- find_video_by_asset_id(asset_id) do
-      update_video_status(video, :errored)
-    else
+    case data["id"] do
+      asset_id when is_binary(asset_id) ->
+        in_each_holder("mux.asset_id", asset_id, &update_video_status(&1, :errored))
+
       nil ->
         Logger.warning("Missing asset_id in video.asset.errored webhook")
         {:error, :invalid_webhook_data}
-
-      {:error, _} = error ->
-        Logger.warning("Could not find video for asset_id in webhook")
-        error
     end
   end
 
-  def handle_webhook(%{"type" => "video.upload.cancelled", "data" => data}) when is_map(data) do
-    with upload_id when is_binary(upload_id) <- data["id"],
-         {:ok, video} <- find_video_by_upload_id(upload_id) do
-      update_video_status(video, :errored)
-    else
+  def handle_webhook(%{"type" => type, "data" => data})
+      when type in ["video.upload.cancelled", "video.upload.errored"] and is_map(data) do
+    case data["id"] do
+      upload_id when is_binary(upload_id) ->
+        in_each_holder("mux.upload_id", upload_id, &update_video_status(&1, :errored))
+
       nil ->
-        Logger.warning("Missing upload_id in video.upload.cancelled webhook")
+        Logger.warning("Missing upload_id in #{type} webhook")
         {:error, :invalid_webhook_data}
-
-      {:error, _} = error ->
-        Logger.warning("Could not find video for upload_id in webhook")
-        error
-    end
-  end
-
-  def handle_webhook(%{"type" => "video.upload.errored", "data" => data}) when is_map(data) do
-    with upload_id when is_binary(upload_id) <- data["id"],
-         {:ok, video} <- find_video_by_upload_id(upload_id) do
-      update_video_status(video, :errored)
-    else
-      nil ->
-        Logger.warning("Missing upload_id in video.upload.errored webhook")
-        {:error, :invalid_webhook_data}
-
-      {:error, _} = error ->
-        Logger.warning("Could not find video for upload_id in webhook")
-        error
     end
   end
 
@@ -458,8 +435,9 @@ defmodule Brando.Videos.Uploaders.Mux do
 
     settings =
       case {Map.get(settings, "mp4_support"), Map.has_key?(settings, "static_renditions")} do
+        # The configured resolutions: Brando plays no `highest`
         {"standard", false} ->
-          Map.put(settings, "static_renditions", [%{"resolution" => "highest"}])
+          maybe_put(settings, "static_renditions", default_static_renditions())
 
         _ ->
           settings
@@ -526,6 +504,50 @@ defmodule Brando.Videos.Uploaders.Mux do
       |> put_duration(asset["duration"])
 
     ProviderUpdate.update_video(video, params)
+  end
+
+  # Stores what Mux has of the asset's static renditions, and nothing else:
+  # the size, shape and duration are the editor's once the video is ready.
+  # The row is read again under a lock, so a rendition another event stored
+  # ready while the asset was read stays ready. Nothing changed writes
+  # nothing, and only a change to what the video can play renders the
+  # entries showing it again.
+  defp store_static_renditions(video, asset) do
+    fn -> store_locked(video.id, asset) end
+    |> Repo.transaction()
+    |> case do
+      {:ok, {true, updated}} ->
+        Brando.Content.Blocks.render_entries_with_video_id(updated.id)
+        ProviderUpdate.broadcast(updated)
+        {:ok, updated}
+
+      {:ok, {_playable_changed?, video}} ->
+        {:ok, video}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  # {whether what the video can play changed, the video}
+  defp store_locked(video_id, asset) do
+    fresh = Repo.one!(from(v in Videos.Video, where: v.id == ^video_id, lock: "FOR UPDATE"))
+    stored = get_in(fresh.meta, ["mux", "static_renditions"])
+
+    case static_renditions(asset, stored) do
+      renditions when renditions in [nil, stored] -> {false, fresh}
+      renditions -> put_static_renditions(fresh, renditions)
+    end
+  end
+
+  defp put_static_renditions(video, renditions) do
+    meta =
+      Map.update(video.meta, "mux", %{"static_renditions" => renditions}, &Map.put(&1, "static_renditions", renditions))
+
+    case video |> Ecto.Changeset.change(meta: meta) |> Brando.Query.update() do
+      {:ok, updated} -> {Playback.mp4_resolutions(updated) != Playback.mp4_resolutions(video), updated}
+      {:error, reason} -> Repo.rollback(reason)
+    end
   end
 
   defp playback_info(%{"playback_ids" => playback_ids}) when is_list(playback_ids) do
@@ -614,19 +636,43 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   defp update_video_status(video, status), do: ProviderUpdate.update_video(video, %{status: status})
 
-  defp find_video_by_upload_id(upload_id) do
-    case Videos.get_video_by_meta("mux.upload_id", upload_id) do
-      nil -> {:error, :not_found}
-      video -> {:ok, video}
+  # `{prefix, video}` for each environment holding a video with `value` at
+  # `meta_path`; the prefix is nil without tenancy
+  defp holders(meta_path, value) do
+    :all
+    |> Brando.Tenant.Job.each_active_environment(fn ->
+      case Videos.get_video_by_meta(meta_path, value) do
+        nil -> []
+        video -> [{Brando.Tenant.current_prefix(), video}]
+      end
+    end)
+    |> List.flatten()
+  end
+
+  defp in_each_holder(meta_path, value, fun) do
+    case holders(meta_path, value) do
+      [] ->
+        Logger.warning("Could not find video for #{meta_path} in webhook")
+        {:error, :not_found}
+
+      holders ->
+        in_each(holders, fun)
     end
   end
 
-  defp find_video_by_asset_id(asset_id) do
-    case Videos.get_video_by_meta("mux.asset_id", asset_id) do
-      nil -> {:error, :not_found}
-      video -> {:ok, video}
-    end
+  # Runs `fun` on each video in its environment: the last one updated, or
+  # the first error
+  defp in_each(holders, fun) do
+    holders
+    |> Enum.map(fn {prefix, video} -> in_environment(prefix, fn -> fun.(video) end) end)
+    |> Enum.reduce(fn
+      _result, {:error, _} = error -> error
+      result, _previous -> result
+    end)
   end
+
+  defp in_environment(nil, fun), do: fun.()
+  defp in_environment(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
 
   defp parse_timeout(timeout) when is_integer(timeout) do
     DateTime.utc_now()
@@ -684,34 +730,52 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   @doc """
   Asks Mux for the configured static renditions
-  (`static_rendition_resolutions/0`) on each ready Mux video that lacks them,
-  in every environment of every active site, and stores what each asset has in
-  `meta.mux.static_renditions`. Mux makes a rendition in the background and
-  reports it ready through the `video.asset.static_rendition.ready` webhook,
-  which stores it; until then the video streams. Running this again stores
-  what is ready by then, which a site without the webhook needs, and asks for
-  nothing twice: a rendition Mux skipped because the source is smaller counts
-  as there.
+  (`static_rendition_resolutions/0`) on each ready Mux video that would play
+  one and lacks them, in every environment of every active site, and stores
+  what each asset has in `meta.mux.static_renditions`. Mux makes a rendition
+  in the background and reports it ready through the
+  `video.asset.static_rendition.ready` webhook, which stores it; until then
+  the video streams. Running this again stores what is ready by then, which a
+  site without the webhook needs, asks for nothing twice (a rendition Mux
+  skipped because the source is smaller counts as there), and picks up videos
+  that became loops since.
 
-  Returns a result per video, with its `:environment` (the tenant prefix, or
-  `"public"`) and:
+  A video would play an MP4 when it is shown somewhere as an autoplaying loop
+  without controls or a play button under Automatic quality, or has a fixed
+  MP4 quality on the video or a placement (`Brando.Videos.Mp4Use`). Videos
+  that only stream are skipped, to save Mux storage.
 
+  Mux won't make a resolution beside the `highest` rendition, nor any static
+  rendition while an asset's legacy `mp4_support` is on. So before asking, it
+  deletes `highest` (Brando never plays it) or turns `mp4_support` off. If
+  that fails it asks for nothing on that asset; if a request fails after it,
+  the asset has none of its MP4s until this runs again, which the result
+  shows (`:clear` and `:failed`).
+
+  Returns a result per video, and logs it, with its `:environment` (the tenant
+  prefix, or `"public"`) and:
+
+    * `:skipped` - `:streams` for a video that only streams, else nil
     * `:present` - the resolutions the asset has, ready, preparing or skipped
-    * `:requested` - the ones asked for now, or that would be with `dry_run`
+    * `:clear` - what had to go first, `:highest` or `:mp4_support`: removed,
+      or that would be with `dry_run`
+    * `:requested` - the resolutions asked for now, or that would be with `dry_run`
     * `:failed` - `{resolution, reason}` for each request Mux refused
-    * `:error` - why the asset couldn't be read, else nil
+    * `:error` - why the asset couldn't be read, or `{:clear, step, reason}`
+      when Mux refused to remove what had to go, else nil
 
   ## Options
 
-    * `:dry_run` - read the assets and report, but ask Mux for nothing and
+    * `:dry_run` - read the assets and report, but change nothing on Mux and
       store nothing
-    * `:interval` - milliseconds between two rendition requests, 1000 by
-      default: Mux takes about one POST a second
+    * `:interval` - milliseconds between two changes on Mux, 1000 by
+      default: Mux takes about one a second
 
   `mix brando.videos.mux_renditions` runs it and prints the results. From a
-  release, on the running node:
+  release, on the running node, see what it would do first:
 
-      bin/my_app rpc 'Brando.Videos.Uploaders.Mux.add_static_renditions()'
+      bin/my_app rpc 'Brando.Videos.Uploaders.Mux.add_static_renditions(dry_run: true) |> IO.inspect()'
+      bin/my_app rpc 'Brando.Videos.Uploaders.Mux.add_static_renditions() |> IO.inspect()'
   """
   @spec add_static_renditions(keyword()) :: [map()]
   def add_static_renditions(opts \\ []) do
@@ -723,40 +787,56 @@ defmodule Brando.Videos.Uploaders.Mux do
     |> Brando.Tenant.Job.each_active_environment(fn ->
       environment = Brando.Tenant.current_prefix() || "public"
 
-      Enum.map(environment_renditions(resolutions, dry_run?, interval), &Map.put(&1, :environment, environment))
+      resolutions
+      |> environment_renditions(dry_run?, interval)
+      |> Enum.map(&(&1 |> Map.put(:environment, environment) |> log_result(not dry_run?)))
     end)
     |> List.flatten()
   end
 
   defp environment_renditions(resolutions, dry_run?, interval) do
-    from(v in Videos.Video,
-      where: v.type == :mux and v.status == :ready and is_nil(v.deleted_at),
-      order_by: v.id
-    )
-    |> Brando.Repo.all()
-    |> Enum.filter(&(valid_mux_id?(get_in(&1.meta, ["mux", "asset_id"])) and not signed?(&1)))
-    |> Enum.map(&add_missing_renditions(&1, resolutions, dry_run?, interval))
+    videos =
+      from(v in Videos.Video,
+        where: v.type == :mux and v.status == :ready and is_nil(v.deleted_at),
+        order_by: v.id
+      )
+      |> Repo.all()
+      |> Enum.filter(&(valid_mux_id?(get_in(&1.meta, ["mux", "asset_id"])) and not signed?(&1)))
+
+    plays_mp4 = Brando.Videos.Mp4Use.video_ids(videos)
+
+    Enum.map(videos, fn video ->
+      if MapSet.member?(plays_mp4, video.id),
+        do: add_missing_renditions(video, resolutions, dry_run?, interval),
+        else: %{result(video) | skipped: :streams}
+    end)
   end
 
   defp signed?(video), do: get_in(video.meta, ["mux", "playback_policy"]) == "signed"
 
-  defp add_missing_renditions(video, resolutions, dry_run?, interval) do
-    asset_id = get_in(video.meta, ["mux", "asset_id"])
-
-    result = %{
+  defp result(video) do
+    %{
       video_id: video.id,
       title: video.title,
-      asset_id: asset_id,
+      asset_id: get_in(video.meta, ["mux", "asset_id"]),
+      skipped: nil,
       present: [],
+      clear: [],
       requested: [],
       failed: [],
       error: nil
     }
+  end
 
-    case get_asset(asset_id) do
+  defp add_missing_renditions(video, resolutions, dry_run?, interval) do
+    result = result(video)
+
+    case get_asset(result.asset_id) do
       {:ok, asset} ->
         present = present_resolutions(asset)
-        result = %{result | present: present, requested: resolutions -- present}
+        missing = resolutions -- present
+        clear = if missing == [], do: [], else: in_the_way(asset)
+        result = %{result | present: present, clear: clear, requested: missing}
         if dry_run?, do: result, else: request_and_store(video, asset, result, interval)
 
       {:error, reason} ->
@@ -764,18 +844,72 @@ defmodule Brando.Videos.Uploaders.Mux do
     end
   end
 
-  # Asks for the missing renditions, then stores what the asset has: read
-  # again when a request went through, so the new ones are stored preparing
-  defp request_and_store(video, asset, %{asset_id: asset_id, requested: missing} = result, interval) do
-    failed = request_renditions(asset_id, missing, interval)
-    requested = missing -- Enum.map(failed, &elem(&1, 0))
-    result = %{result | requested: requested, failed: failed}
-    asset = if requested == [], do: {:ok, asset}, else: get_asset(asset_id)
+  # What Mux won't make a resolution beside: legacy `mp4_support`, or the
+  # `highest` rendition
+  defp in_the_way(asset) do
+    cond do
+      asset["mp4_support"] not in [nil, "none"] -> [:mp4_support]
+      highest_ids(asset) != [] -> [:highest]
+      true -> []
+    end
+  end
 
-    case with({:ok, asset} <- asset, do: update_video_with_asset(video, asset)) do
+  defp highest_ids(asset) do
+    for %{"resolution" => "highest", "id" => id} <- List.wrap(get_in(asset, ["static_renditions", "files"])),
+        valid_mux_id?(id),
+        do: id
+  end
+
+  # Removes what is in the way, asks for the missing renditions, then stores
+  # what the asset has: read again when Mux changed it, so the new ones are
+  # stored preparing
+  defp request_and_store(video, asset, %{asset_id: asset_id, clear: clear, requested: missing} = result, interval) do
+    case clear_the_way(asset, clear, interval) do
+      :ok ->
+        failed = request_renditions(asset_id, missing, interval)
+        requested = missing -- Enum.map(failed, &elem(&1, 0))
+        asset = if clear == [] and requested == [], do: {:ok, asset}, else: get_asset(asset_id)
+        store_result(video, asset, %{result | requested: requested, failed: failed})
+
+      {:error, step, reason} ->
+        %{result | clear: [], requested: [], error: {:clear, step, reason}}
+    end
+  end
+
+  defp store_result(video, asset, result) do
+    case with({:ok, asset} <- asset, do: store_static_renditions(video, asset)) do
       {:ok, _video} -> result
       {:error, reason} -> %{result | error: reason}
     end
+  end
+
+  defp clear_the_way(_asset, [], _interval), do: :ok
+
+  defp clear_the_way(asset, [:mp4_support], interval) do
+    asset["id"]
+    |> then(&api_request(:put, "/assets/#{&1}/mp4-support", %{"mp4_support" => "none"}))
+    |> paced(interval)
+    |> case do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, :mp4_support, reason}
+    end
+  end
+
+  defp clear_the_way(asset, [:highest], interval) do
+    asset
+    |> highest_ids()
+    |> Enum.reduce_while(:ok, fn id, :ok ->
+      case paced(request(:delete, "/assets/#{asset["id"]}/static-renditions/#{id}", nil), interval) do
+        {:ok, _} -> {:cont, :ok}
+        {:error, {:http_error, _status, body}} -> {:halt, {:error, :highest, body}}
+        {:error, reason} -> {:halt, {:error, :highest, reason}}
+      end
+    end)
+  end
+
+  defp paced(result, interval) do
+    if interval > 0, do: Process.sleep(interval)
+    result
   end
 
   # A rendition that errored is asked for again
@@ -796,15 +930,63 @@ defmodule Brando.Videos.Uploaders.Mux do
   # rate.
   defp request_renditions(asset_id, resolutions, interval) do
     Enum.flat_map(resolutions, fn resolution ->
-      result = api_request(:post, "/assets/#{asset_id}/static-renditions", %{"resolution" => "#{resolution}p"})
-      if interval > 0, do: Process.sleep(interval)
-
-      case result do
+      case paced(
+             api_request(:post, "/assets/#{asset_id}/static-renditions", %{"resolution" => "#{resolution}p"}),
+             interval
+           ) do
         {:ok, _rendition} -> []
         {:error, reason} -> [{resolution, reason}]
       end
     end)
   end
+
+  defp log_result(result, applied?) do
+    Logger.info(
+      "Mux static renditions, #{result.environment} video ##{result.video_id} (asset #{result.asset_id}): " <>
+        describe_result(result, applied?)
+    )
+
+    result
+  end
+
+  @doc """
+  What `add_static_renditions/1` did, or would do unless `applied?`, for one
+  video, as a line of text.
+  """
+  @spec describe_result(map(), boolean()) :: String.t()
+  def describe_result(%{skipped: :streams}, _applied?), do: "skipped: only streams"
+
+  def describe_result(%{error: {:clear, step, reason}}, _applied?),
+    do: "FAILED to remove #{clear_name(step)}, asked for nothing: #{inspect(reason)}"
+
+  def describe_result(%{error: error}, _applied?) when not is_nil(error),
+    do: "FAILED to read the asset: #{inspect(error)}"
+
+  def describe_result(%{clear: [], requested: [], failed: []}, _applied?), do: "has every rendition"
+
+  def describe_result(result, applied?) do
+    cleared =
+      Enum.map(result.clear, &if(applied?, do: "removed #{clear_name(&1)}", else: "would remove #{clear_name(&1)}"))
+
+    asked =
+      if result.requested == [],
+        do: [],
+        else: [if(applied?, do: "asked for ", else: "would ask for ") <> format_resolutions(result.requested)]
+
+    failed = Enum.map(result.failed, fn {resolution, reason} -> "FAILED #{resolution}p: #{inspect(reason)}" end)
+
+    half_done =
+      if result.clear != [] and result.failed != [],
+        do: ["the asset lacks those MP4s until this runs again"],
+        else: []
+
+    Enum.join(cleared ++ asked ++ failed ++ half_done, "  ")
+  end
+
+  defp clear_name(:highest), do: "the highest rendition"
+  defp clear_name(:mp4_support), do: "legacy mp4_support"
+
+  defp format_resolutions(resolutions), do: Enum.map_join(resolutions, ", ", &"#{&1}p")
 
   # An upload's row has only its upload id until Mux reports the asset.
   @impl true
@@ -931,6 +1113,9 @@ defmodule Brando.Videos.Uploaders.Mux do
 
         :post ->
           [method: :post, url: url, headers: headers, json: body]
+
+        :put ->
+          [method: :put, url: url, headers: headers, json: body]
 
         :delete ->
           [method: :delete, url: url, headers: headers]

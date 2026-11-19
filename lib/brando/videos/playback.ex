@@ -51,7 +51,8 @@ defmodule Brando.Videos.Playback do
   (the default) when it creates an asset, and keeps what Mux reports of them in
   `meta.mux.static_renditions`. Only renditions Mux reports as `ready` are
   offered, and the `highest` rendition older uploads asked for is not used.
-  Older assets stream until `Brando.Videos.Uploaders.Mux.add_static_renditions/1`
+  An older asset that would play an MP4 streams until
+  `Brando.Videos.Uploaders.Mux.add_static_renditions/1`
   (`mix brando.videos.mux_renditions`) has asked Mux for the configured ones.
   """
 

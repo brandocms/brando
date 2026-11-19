@@ -143,6 +143,52 @@ defmodule Brando.Content.Usage do
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
+  @doc """
+  Where an entry shows each of `ids`, with what the place keeps of its own:
+
+    * `{id, {:ref, data}}` - a block's ref, with its block data as stored
+    * `{id, {:gallery, gallery_id}}` - a gallery holding it (images and
+      videos), whether or not an entry shows the gallery
+    * `{id, :direct}` - a variable or an asset field, which shows the asset
+      as it is
+
+  Only blocks, variables and fields of entries out of the trash count, as in
+  `list/2`, but for every entry, as `owners/2` does.
+  """
+  @spec placements(:image | :video | :gallery, [integer()]) :: [
+          {integer(), :direct | {:ref, map()} | {:gallery, integer()}}
+        ]
+  def placements(_kind, []), do: []
+
+  def placements(kind, ids) when kind in [:image, :video, :gallery] do
+    refs =
+      from(r in "content_refs", where: not is_nil(r.block_id), select: {field(r, ^fk(kind)), r.block_id, r.data})
+      |> where_ids(fk(kind), ids)
+      |> Brando.Repo.all()
+
+    shown_blocks =
+      refs
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.uniq()
+      |> BlockReferences.list_entries_for_block_ids()
+      |> Enum.flat_map(fn {block_id, entries} -> if entries == [], do: [], else: [block_id] end)
+      |> MapSet.new()
+
+    in_refs = for {id, block_id, data} <- refs, MapSet.member?(shown_blocks, block_id), do: {id, {:ref, data || %{}}}
+
+    direct =
+      kind
+      |> in_block_vars(ids)
+      |> credit_blocks([])
+      |> Kernel.++(in_vars(kind, ids))
+      |> Kernel.++(in_fields(kind, ids, []))
+      |> Enum.map(&{elem(&1, 0), :direct})
+
+    galleries = for {id, {@gallery, gallery_id}} <- in_galleries(kind, ids), do: {id, {:gallery, gallery_id}}
+
+    Enum.uniq(in_refs ++ direct ++ galleries)
+  end
+
   @doc "What to call each `{schema, entry_id}`: its title, admin URL, type, cover and status."
   @spec labels([{module(), integer()}]) :: %{optional({module(), integer()}) => usage()}
   def labels(entries) do
