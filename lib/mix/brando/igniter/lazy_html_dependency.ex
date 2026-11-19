@@ -30,7 +30,14 @@ if Code.ensure_loaded?(Igniter) do
           Dependencies.add_new(igniter, Brando.HTML.Tree.dependency())
 
         {:ok, declared} ->
-          if Regex.match?(@only, declared), do: drop_only(igniter, declared), else: igniter
+          cond do
+            Regex.match?(@only, declared) -> drop_only(igniter, declared)
+            declared =~ ~r/\bonly:/ -> Igniter.add_notice(igniter, options_message(declared))
+            true -> igniter
+          end
+          |> then(
+            &if(declared =~ ~r/\bruntime:\s*false/, do: Igniter.add_notice(&1, options_message(declared)), else: &1)
+          )
 
         _unreadable ->
           by_hand(igniter)
@@ -69,6 +76,16 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp by_hand(igniter), do: Igniter.add_notice(igniter, by_hand_message())
+
+    # An `only:` the installer cannot read as a literal, or `runtime: false`,
+    # would keep lazy_html out of a release, where the boot check stops it.
+    defp options_message(declared) do
+      """
+      Brando parses HTML with lazy_html, which the application lists for every
+      environment, without `only:` and without `runtime: false`. The installer
+      left this line in mix.exs as it is: #{declared}
+      """
+    end
 
     defp by_hand_message do
       """

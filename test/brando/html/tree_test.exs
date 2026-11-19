@@ -127,6 +127,23 @@ defmodule Brando.HTML.TreeTest do
                [{"script", [], ["<!--<script></script><noscript>a</noscript>-->"]}, {"p", [], ["c"]}]
     end
 
+    test "a marker that would land in text is given up, and the input parsed as lexbor reads it" do
+      for html <- [
+            ~s(<svg><foreignObject><script>"</svg><noscript>x</noscript>"</script></foreignObject></svg>),
+            ~s(<svg><foreignObject><textarea></svg><noscript>x</noscript></textarea></foreignObject></svg>)
+          ] do
+        nodes = Tree.parse_fragment(html)
+        refute Tree.to_html(nodes) =~ "data-brando-noscript"
+
+        assert nodes ==
+                 html
+                 |> then(&("<template>" <> &1))
+                 |> LazyHTML.from_fragment()
+                 |> LazyHTML.to_tree()
+                 |> then(fn [{"template", [], c} | rest] -> c ++ rest end)
+      end
+    end
+
     test "a title in svg is not a text element" do
       assert Tree.parse_fragment(~s(<svg><title><noscript>a</noscript></title></svg><p>b</p><noscript><p>c</noscript>)) ==
                [

@@ -58,6 +58,19 @@ defmodule Mix.Brando.Igniter.LazyHTMLDependencyTest do
     end
   end
 
+  test "an only: it cannot read, or runtime: false, gets a notice" do
+    for dep <- [
+          ~s|{:lazy_html, ">= 0.1.0", only: ~w(test)a}|,
+          ~s|{:lazy_html, ">= 0.1.0", only: test_envs()}|,
+          ~s({:lazy_html, ">= 0.1.0", runtime: false})
+        ] do
+      result = [dep] |> project() |> LazyHTMLDependency.plan()
+
+      Igniter.Test.assert_unchanged(result, "mix.exs")
+      assert Enum.any?(result.notices, &(&1 =~ "left this line in mix.exs as it is")), dep
+    end
+  end
+
   test "a deps/0 Igniter cannot read gets a notice naming the line" do
     result =
       IgniterCase.phoenix_project(

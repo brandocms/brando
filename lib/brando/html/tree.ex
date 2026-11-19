@@ -37,8 +37,16 @@ defmodule Brando.HTML.Tree do
   """
   @spec parse_fragment(iodata()) :: t()
   def parse_fragment(html) do
-    {html, noscripts} = html |> IO.iodata_to_binary() |> mask_noscripts()
+    html = IO.iodata_to_binary(html)
+    {masked, noscripts} = mask_noscripts(html)
 
+    case masked |> fragment_nodes() |> restore_noscripts(noscripts) do
+      {:ok, nodes} -> nodes
+      :unrestored -> fragment_nodes(html)
+    end
+  end
+
+  defp fragment_nodes(html) do
     ("<template>" <> html)
     |> LazyHTML.from_fragment()
     |> LazyHTML.to_tree()
@@ -46,15 +54,20 @@ defmodule Brando.HTML.Tree do
       [{"template", [], children} | rest] -> children ++ rest
       nodes -> nodes
     end
-    |> restore_noscripts(noscripts)
   end
 
   @doc "The nodes of a whole document, with the `html`, `head` and `body` a browser adds when missing."
   @spec parse_document(String.t()) :: t()
   def parse_document(html) do
-    {html, noscripts} = mask_noscripts(html)
-    html |> LazyHTML.from_document() |> LazyHTML.to_tree() |> restore_noscripts(noscripts)
+    {masked, noscripts} = mask_noscripts(html)
+
+    case masked |> document_nodes() |> restore_noscripts(noscripts) do
+      {:ok, nodes} -> nodes
+      :unrestored -> document_nodes(html)
+    end
   end
+
+  defp document_nodes(html), do: html |> LazyHTML.from_document() |> LazyHTML.to_tree()
 
   # lexbor parses with scripting off, where a `<noscript>`'s content is
   # markup: an element left open inside it takes in the rest of the input,
@@ -74,6 +87,12 @@ defmodule Brando.HTML.Tree do
   # an element like any other, nothing is masked. Each step moves forward,
   # so the scan is linear. The marker carries a random value made for the
   # call, so a template already in the input is never taken for one.
+  #
+  # The scan does not follow foreign content's HTML integration points
+  # (`foreignObject`, `desc`, MathML text elements) or its breakouts. Where
+  # that, or anything else, puts a marker where the parser reads text, the
+  # marker cannot be turned back: then the input is parsed unmasked, as
+  # lexbor reads it, rather than show the marker or lose the content.
   @noscript_attr "data-brando-noscript"
   @space [?\t, ?\n, ?\f, ?\r, ?\s]
   @text_elements ~w(style textarea title xmp iframe noembed noframes)
@@ -369,21 +388,25 @@ defmodule Brando.HTML.Tree do
   defp byte(s, at) when at < byte_size(s), do: :binary.at(s, at)
   defp byte(_s, _at), do: nil
 
-  defp restore_noscripts(nodes, noscripts) when noscripts == %{}, do: nodes
+  defp restore_noscripts(nodes, noscripts) when noscripts == %{}, do: {:ok, nodes}
 
   # Only an empty template whose marker comes first and carries this call's
-  # value is a noscript; any other template is left as it is.
+  # value is a noscript; any other template is left as it is. Each marker
+  # must come back as an element, or the masking is given up.
   defp restore_noscripts(nodes, noscripts) do
-    map(nodes, fn
-      {"template", [{@noscript_attr, id} | attrs], []} = node ->
-        case Map.fetch(noscripts, id) do
-          {:ok, content} -> {"noscript", attrs, parse_fragment(content)}
-          :error -> node
-        end
+    {nodes, restored} =
+      LazyHTML.Tree.postwalk(nodes, 0, fn
+        {"template", [{@noscript_attr, id} | attrs], []} = node, restored ->
+          case Map.fetch(noscripts, id) do
+            {:ok, content} -> {{"noscript", attrs, parse_fragment(content)}, restored + 1}
+            :error -> {node, restored}
+          end
 
-      node ->
-        node
-    end)
+        node, restored ->
+          {node, restored}
+      end)
+
+    if restored == map_size(noscripts), do: {:ok, nodes}, else: :unrestored
   end
 
   @doc """
