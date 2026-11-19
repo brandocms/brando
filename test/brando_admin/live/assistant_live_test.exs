@@ -1090,6 +1090,53 @@ defmodule BrandoAdmin.AssistantLiveTest do
       open_blocks_preview(view, c)
       refute has_element?(view, "#assistant-page-link")
     end
+
+    @tag :capture_log
+    test "a review link opens on an entry's page preview with ?preview", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      view |> element("button", "Share for review") |> render_click()
+      identity = "Brando.Pages.Page:#{c.identity.id}"
+      view |> form(".assistant-share-choice", %{"keys" => ["new:example_hotel", identity]}) |> render_submit()
+      [link] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#assistant-review-link", "value")
+      path = URI.parse(link).path
+
+      colleague = Brando.Factory.insert(:random_user, config: %Brando.Users.UserConfig{})
+      colleague_conn = log_in_user(build_conn(), colleague)
+
+      # A bare `?preview` opens the first entry with a page preview.
+      {:ok, shared, _} = live(colleague_conn, path <> "?preview")
+
+      assert has_element?(
+               shared,
+               ~s(.assistant-preview-tabs button[aria-current="true"][phx-value-key="new:example_hotel"])
+             )
+
+      {:ok, shared, _} = live(colleague_conn, path <> "?preview=#{identity}")
+      assert has_element?(shared, ~s(.assistant-preview-tabs button[aria-current="true"][phx-value-key="#{identity}"]))
+
+      # Another entry's tab replaces the address; closing takes the entry away.
+      shared |> element(~s(.assistant-preview-tabs button[phx-value-key="new:example_hotel"])) |> render_click()
+      assert_patch(shared, path <> "?preview=new:example_hotel")
+      shared |> element("button", "All changes") |> render_click()
+      assert_patch(shared, path)
+      assert has_element?(shared, ".assistant-cards")
+      refute has_element?(shared, "button.assistant-apply")
+    end
+
+    # A conversation's preview has no address of its own.
+    @tag :capture_log
+    test "a conversation's preview opens and closes in place", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      assert has_element?(view, ".assistant-preview")
+      view |> element("button", "All changes") |> render_click()
+      refute has_element?(view, ".assistant-preview")
+      refute_patched(view)
+    end
   end
 
   describe "child block changes" do
@@ -1380,6 +1427,62 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
       [event] = Brando.Repo.all(from(e in Brando.Activity.Event, where: e.schema == "Elixir.Brando.Pages.Page"))
       assert {event.source, event.details["client"]} == {:mcp, "Claude Code"}
+    end
+
+    # A tool links straight to the page it changed: `prepare_proposal`'s
+    # `preview_url`. The preview opens on the default view, which fails here.
+    @tag :capture_log
+    test "?preview opens the first entry's page preview, and closing it patches the address", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+      key = "Brando.Pages.Page:#{c.identity.id}"
+      path = "/admin/assistant/connected/#{id}"
+
+      # The first render shows the preview without rendering the page; the
+      # connected one renders it once.
+      {:ok, view, html} = live(conn, path <> "?preview")
+      assert html =~ "assistant-preview-title"
+      refute html =~ "assistant-preview-frame-"
+      assert has_element?(view, ".assistant-preview")
+      refute has_element?(view, ".assistant-cards")
+      assert has_element?(view, ~s(.assistant-preview-tabs button[aria-current="true"][phx-value-key="#{key}"]))
+      # The defaults the card's Preview button opens with.
+      assert has_element?(view, ~s(button[phx-value-version="proposed"][aria-pressed="true"]))
+      assert has_element?(view, ~s(button[phx-value-viewport="desktop"][aria-pressed="true"]))
+      assert render(view) =~ "The page could not be rendered"
+
+      view |> element("button", "All changes") |> render_click()
+      assert_patch(view, path)
+      assert has_element?(view, ".assistant-cards")
+      refute has_element?(view, ".assistant-preview")
+
+      # The card's Preview puts the entry in the address, so back closes it.
+      view |> element(~s(button.assistant-card-preview[phx-value-key="#{key}"])) |> render_click()
+      assert_patch(view, path <> "?preview=#{key}")
+      assert has_element?(view, ~s(.assistant-preview-tabs button[aria-current="true"][phx-value-key="#{key}"]))
+
+      # Back: the address without the entry shows the review again.
+      assert render_patch(view, path) =~ "assistant-cards"
+      refute has_element?(view, ".assistant-preview")
+    end
+
+    test "?preview naming an entry the proposal does not have shows the review", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}?preview=Brando.Pages.Page:0")
+      assert has_element?(view, ".assistant-cards")
+      refute has_element?(view, ".assistant-preview")
+    end
+
+    @tag :capture_log
+    test "?preview does not open the preview of an applied proposal", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+      {:ok, proposal} = Brando.Content.Proposals.get(id, c.current_user)
+      {:ok, _} = Brando.Content.Proposals.approve(id, proposal.version, c.current_user)
+      {:ok, _} = Brando.Content.Proposals.apply(id, proposal.version, c.current_user)
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}?preview")
+      assert has_element?(view, "h2", "Applied")
+      refute has_element?(view, ".assistant-preview")
     end
 
     test "one is rejected, and a change can be left out of another", %{conn: conn} = c do

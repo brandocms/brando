@@ -172,7 +172,11 @@ an error. Results are bounded as in the Assistant: 20 results, 160-character
 excerpts (a text is whole when `entry_outline` reads one block), 24 KB per
 result. Proposals
 are marked with the tool's name, "From Claude via MCP", and wait under
-**Assistant → From connected tools**.
+**Assistant → From connected tools**. `prepare_proposal` answers with
+`review_url`, the proposal's review there, and, when an entry the proposal
+creates or changes has a page preview, `preview_url`: the review opened on
+the first such entry's page (`?preview=<entry key>`), which is the link to
+give the person.
 
 With a Figma token (below), two more: `brando_figma_read_frame` and
 `brando_figma_import_images`.

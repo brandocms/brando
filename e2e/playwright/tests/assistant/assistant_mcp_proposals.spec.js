@@ -39,9 +39,29 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
   await expect(review.locator('.assistant-card ins')).toContainText('MCP review, from Claude Code')
   await page.screenshot({ path: testInfo.outputPath('assistant-mcp-review.png'), fullPage: true })
 
+  // The preview has an address: the card's Preview adds the entry to it, and
+  // back and forward close and open the preview again.
+  const reviewUrl = page.url()
   await review.locator('.assistant-card-preview').click()
+  await expect(page).toHaveURL(/\?preview=Brando\.Pages\.Page:\d+$/)
+  await expect(page.locator('.assistant-preview')).toBeVisible()
+  await page.goBack()
+  await expect(page).toHaveURL(reviewUrl)
+  await expect(review.locator('.assistant-cards')).toBeVisible()
+  await expect(page.locator('.assistant-preview')).toHaveCount(0)
+  await page.goForward()
   await expect(page.locator('.assistant-preview')).toBeVisible()
   await page.locator('.assistant-back').click()
+  await expect(page).toHaveURL(reviewUrl)
+  await expect(review.locator('.assistant-cards')).toBeVisible()
+
+  // A tool's `preview_url`: a bare `?preview` opens on the first entry's page.
+  await page.goto(`${reviewUrl}?preview`)
+  await syncLV(page)
+  await expect(page.locator('.assistant-preview-tabs button[aria-current="true"] strong')).toHaveText('MCP review')
+  await expect(page.locator('.assistant-frame-viewport iframe, .assistant-frame-state')).toBeVisible()
+  await page.locator('.assistant-back').click()
+  await expect(page).toHaveURL(reviewUrl)
   await expect(review.locator('.assistant-cards')).toBeVisible()
 
   await review.locator('button.assistant-apply').click()
@@ -102,5 +122,32 @@ test('discards a proposal from a connected tool that can no longer be applied', 
   await unloadable.locator('button[phx-click="cancel_proposal"]').click()
   await expect(unloadable).toHaveCount(0)
   await expect(page.locator('.assistant-connected-empty')).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+// The card's cover is shown about 700px wide: it takes the image's sizes,
+// not the 400px square thumb, cropped to the card around its focal point.
+test("a card's cover is sharp at the card's width", async ({ page }) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+
+  const response = await page.request.post('/e2e/setup_fixtures/assistant-cover')
+  expect(response.ok()).toBe(true)
+
+  await page.goto('/admin/assistant/connected')
+  await syncLV(page)
+  await page.locator('#assistant-connected-list').getByRole('link', { name: /Add the harbour page/ }).click()
+  await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]+$/)
+  await syncLV(page)
+
+  const cover = page.locator('.assistant-card-cover img')
+  // The E2E app's images have one size above the thumb: small, 700px.
+  await expect(cover).toHaveAttribute('srcset', /\/small\/.+ 700w$/)
+  await expect(cover).toHaveAttribute('style', 'object-position: 50% 40%;')
+  await expect.poll(() => cover.evaluate(img => img.complete && img.naturalWidth)).toBeGreaterThanOrEqual(700)
+  expect(await cover.evaluate(img => img.currentSrc)).not.toContain('/thumb/')
+  // The image fills the 16:10 frame, so object-fit crops it there.
+  expect(await cover.evaluate(img => img.clientHeight === img.parentElement.clientHeight)).toBe(true)
   expect(errors).toEqual([])
 })

@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Image do
         )
       end
 
-    focal = (assigns.image && assigns.image.focal) || %{x: 50, y: 50}
+    focal = focal(assigns.image)
     orientation = Metadata.orientation(assigns.image)
 
     assigns =
@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Image do
             src={@path}
             data-focal-x={@focal.x}
             data-focal-y={@focal.y}
-            style={"object-position: #{@focal.x}% #{@focal.y}%;"}
+            style={object_position(@image)}
           />
           {render_slot(@inner_block)}
         </div>
@@ -69,4 +69,17 @@ defmodule BrandoAdmin.Components.Image do
     <% end %>
     """
   end
+
+  @doc """
+  The `style` that crops `image` around its focal point when it is shown
+  with `object-fit: cover`. The centre when it has none.
+  """
+  @spec object_position(map() | nil) :: String.t()
+  def object_position(image) do
+    %{x: x, y: y} = focal(image)
+    "object-position: #{x}% #{y}%;"
+  end
+
+  defp focal(%{focal: %{x: x, y: y} = focal}) when not is_nil(x) and not is_nil(y), do: focal
+  defp focal(_image), do: %{x: 50, y: 50}
 end

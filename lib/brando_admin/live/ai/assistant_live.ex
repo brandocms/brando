@@ -25,6 +25,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   alias Brando.Repo
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.Images.Sources
   alias Phoenix.LiveView.JS
 
   def __authorization__, do: {:use, :assistant}
@@ -77,32 +78,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   # A proposal a colleague shared for review: read-only, with page previews.
-  def handle_params(%{"token" => token}, _uri, socket) do
-    user = socket.assigns.current_user
-
-    with {:ok, {id, version, keys}} <- Proposals.verify_share_token(token),
-         {:ok, proposal} <- Proposals.get_shared(id, version, user) do
-      owner = Brando.Repo.get(Brando.Users.User, proposal.actor_id)
-
-      {:noreply,
-       socket
-       |> assign(
-         # A link made for some entries shows, and previews, only those.
-         shared: %{by: owner && owner.name, token: token, keys: keys},
-         proposal: proposal,
-         review: proposal |> Review.entries() |> Enum.filter(&(is_nil(keys) or &1.key in keys)),
-         receipt: nil,
-         error: nil,
-         preview: nil
-       )
-       |> assign_media()}
-    else
-      _ ->
-        {:noreply,
-         socket
-         |> put_toast(:error, gettext("This review link has expired or the proposal is no longer available."))
-         |> push_navigate(to: "/admin/assistant")}
-    end
+  def handle_params(%{"token" => token} = params, _uri, socket) do
+    if match?(%{token: ^token}, socket.assigns.shared) and preview_patch?(socket, params),
+      do: {:noreply, preview_param(socket, params)},
+      else: shared_review(socket, token, params)
   end
 
   def handle_params(%{"conversation_id" => id}, _uri, socket) do
@@ -139,38 +118,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # Proposals from tools connected over MCP: the list, and the one chosen.
   def handle_params(params, _uri, %{assigns: %{live_action: :connected}} = socket) do
-    if connected?(socket) && socket.assigns.conversation,
-      do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), topic(socket.assigns.conversation.id))
+    id = uuid(params["proposal_id"])
 
-    socket =
-      socket
-      |> discard_previews()
-      |> assign(
-        conversation: nil,
-        target: nil,
-        guidance: [],
-        messages: [],
-        turns: [],
-        cost: nil,
-        run: nil,
-        progress: nil,
-        receipt: nil,
-        error: nil,
-        preview: nil,
-        publish: MapSet.new(),
-        review_link: nil,
-        share_choice: nil,
-        share_url: nil,
-        proposal_id: uuid(params["proposal_id"])
-      )
-      |> assign_connected()
-      |> assign_proposal()
-
-    case socket.assigns.proposal do
-      # A conversation's proposal is reviewed in its conversation.
-      %{conversation_id: id} when is_binary(id) -> {:noreply, push_patch(socket, to: "/admin/assistant/#{id}")}
-      _ -> {:noreply, socket}
-    end
+    if match?(%{id: ^id}, socket.assigns.proposal) and preview_patch?(socket, params),
+      do: {:noreply, preview_param(socket, params)},
+      else: connected_review(socket, id, params)
   end
 
   # `?content_type=…&id=…&field=…` comes from the block editor's Build with
@@ -765,14 +717,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :kind, :any, required: true
   attr :id, :any, required: true
   attr :label, :string, default: nil
+  attr :cover, :boolean, default: false, doc: "shown as an entry card's cover, larger than a thumb"
 
   defp thumb(assigns) do
-    assigns = assign(assigns, :asset, Map.get(assigns.media, {to_kind(assigns.kind), assigns.id}))
+    asset = Map.get(assigns.media, {to_kind(assigns.kind), assigns.id})
+    assigns = assign(assigns, asset: asset, sources: assigns.cover && asset && asset[:cover])
 
     ~H"""
     <span class={["assistant-thumb", "is-#{@kind}"]}>
-      <img :if={@asset && @asset.url} src={@asset.url} alt={@label || ""} loading="lazy" />
-      <.icon :if={!(@asset && @asset.url)} name={thumb_icon(@kind)} />
+      <img
+        :if={@sources}
+        src={@sources.src}
+        srcset={@sources.srcset}
+        sizes={@sources.srcset && "(max-width: 760px) 100vw, 704px"}
+        style={@sources.style}
+        alt={@label || ""}
+        loading="lazy"
+      />
+      <img :if={!@sources && @asset && @asset.url} src={@asset.url} alt={@label || ""} loading="lazy" />
+      <.icon :if={!@sources && !(@asset && @asset.url)} name={thumb_icon(@kind)} />
       <span :if={to_string(@kind) == "video"} class="assistant-play" aria-hidden="true"><.icon name="play" /></span>
     </span>
     """
@@ -856,7 +819,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         general_problems: Enum.filter(assigns.proposal.problems, &(is_nil(&1[:operation]) and is_nil(&1[:target]))),
         entry_problems: for(entry <- assigns.review, problem <- entry.problems, do: {entry, problem}),
         can_leave_out?: can_leave_out?(assigns),
-        under_review?: is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved)
+        under_review?: under_review?(assigns)
       )
 
     ~H"""
@@ -961,7 +924,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           id={"card-#{entry.key}"}
         >
           <div :if={entry.media != [] and adds_content?(entry)} class="assistant-card-cover">
-            <.thumb media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} />
+            <.thumb media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} cover />
             <span class="assistant-cover-label">{media_label(media_map(hd(entry.media)), @aliases, @media)}</span>
           </div>
           <div class="assistant-card-body">
@@ -1320,6 +1283,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
         data-viewport={@preview.viewport}
       ></iframe>
     </div>
+    """
+  end
+
+  defp frame(%{preview: %{frame: :pending}} = assigns) do
+    ~H"""
+    <div class="assistant-frame-viewport"></div>
     """
   end
 
@@ -1854,12 +1823,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
     {:noreply, socket |> assign_proposal() |> assign_connected()}
   end
 
+  # Where the preview has an address, it opens there. From the card, the
+  # browser's back button closes it again; from one entry to another, the
+  # address is replaced.
   def handle_event("preview", %{"key" => key}, socket) do
-    preview = socket.assigns.preview || %{version: "proposed", viewport: "desktop", show: true, target: nil}
-    # A named view belongs to one content type; another entry starts on its default.
-    preview = if preview[:key] == key, do: preview, else: %{preview | target: nil}
-    socket = if socket.assigns.preview, do: socket, else: push_event(socket, "b:assistant:review_top", %{})
-    {:noreply, render_preview(socket, Map.put(preview, :key, key))}
+    if preview_param?(socket),
+      do: {:noreply, push_patch(socket, to: review_path(socket, key), replace: not is_nil(socket.assigns.preview))},
+      else: {:noreply, open_preview(socket, key)}
   end
 
   # A draft has no public page: its card opens the saved entry's preview in
@@ -1888,7 +1858,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
     do: {:noreply, update(socket, :preview, &%{&1 | viewport: viewport})}
 
   def handle_event("toggle_highlight", _, socket), do: {:noreply, update(socket, :preview, &%{&1 | show: !&1.show})}
-  def handle_event("close_preview", _, socket), do: {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
+
+  def handle_event("close_preview", _, socket) do
+    if preview_param?(socket),
+      do: {:noreply, push_patch(socket, to: review_path(socket, nil))},
+      else: {:noreply, close_preview(socket)}
+  end
 
   # The pickers browse the whole library; choosing an item attaches it, and
   # choosing it again detaches it.
@@ -2019,7 +1994,131 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp proposal_version(nil), do: nil
   defp proposal_version(proposal), do: {proposal.id, proposal.version}
 
+  defp connected_review(socket, id, params) do
+    if connected?(socket) && socket.assigns.conversation,
+      do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), topic(socket.assigns.conversation.id))
+
+    socket =
+      socket
+      |> discard_previews()
+      |> assign(
+        conversation: nil,
+        target: nil,
+        guidance: [],
+        messages: [],
+        turns: [],
+        cost: nil,
+        run: nil,
+        progress: nil,
+        receipt: nil,
+        error: nil,
+        preview: nil,
+        publish: MapSet.new(),
+        review_link: nil,
+        share_choice: nil,
+        share_url: nil,
+        proposal_id: id
+      )
+      |> assign_connected()
+      |> assign_proposal()
+
+    case socket.assigns.proposal do
+      # A conversation's proposal is reviewed in its conversation.
+      %{conversation_id: id} when is_binary(id) -> {:noreply, push_patch(socket, to: "/admin/assistant/#{id}")}
+      _ -> {:noreply, preview_param(socket, params)}
+    end
+  end
+
+  defp shared_review(socket, token, params) do
+    user = socket.assigns.current_user
+
+    with {:ok, {id, version, keys}} <- Proposals.verify_share_token(token),
+         {:ok, proposal} <- Proposals.get_shared(id, version, user) do
+      owner = Brando.Repo.get(Brando.Users.User, proposal.actor_id)
+
+      {:noreply,
+       socket
+       |> assign(
+         # A link made for some entries shows, and previews, only those.
+         shared: %{by: owner && owner.name, token: token, keys: keys},
+         proposal: proposal,
+         review: proposal |> Review.entries() |> Enum.filter(&(is_nil(keys) or &1.key in keys)),
+         receipt: nil,
+         error: nil,
+         preview: nil
+       )
+       |> assign_media()
+       |> preview_param(params)}
+    else
+      _ ->
+        {:noreply,
+         socket
+         |> put_toast(:error, gettext("This review link has expired or the proposal is no longer available."))
+         |> push_navigate(to: "/admin/assistant")}
+    end
+  end
+
   ## Page preview
+
+  # A proposal from connected tools and a shared one open on a page preview
+  # with `?preview=<entry key>`, or a bare `?preview` for the first entry with
+  # a page preview, so a link can lead straight to the page. Closing the
+  # preview patches it away, so back and forward work. A conversation's
+  # preview has no address.
+  defp preview_param?(%{assigns: %{live_action: action}}), do: action in [:connected, :shared]
+
+  # A patch of the proposal on screen that only opens, switches or closes its
+  # preview: the review stays as it is.
+  defp preview_patch?(socket, params), do: Map.has_key?(params, "preview") or not is_nil(socket.assigns.preview)
+
+  defp preview_param(socket, %{"preview" => key}) do
+    case previewable_key(socket.assigns, key) do
+      nil -> close_preview(socket)
+      key -> open_preview(socket, key)
+    end
+  end
+
+  defp preview_param(socket, _params), do: close_preview(socket)
+
+  # What the review offers to preview: under review, the first entry with a
+  # page preview from its card, and any entry the preview's tabs list.
+  defp previewable_key(%{proposal: %{}} = assigns, key) do
+    if under_review?(assigns) do
+      entries = Enum.reject(assigns.review, &(&1.action == :source))
+      entry = if key == "", do: Enum.find(entries, & &1.preview?), else: Enum.find(entries, &(&1.key == key))
+      entry && entry.key
+    end
+  end
+
+  defp previewable_key(_assigns, _key), do: nil
+
+  defp review_path(%{assigns: %{live_action: :shared, shared: %{token: token}}}, key),
+    do: with_preview("/admin/assistant/shared/#{token}", key)
+
+  defp review_path(%{assigns: %{proposal: %{id: id}}}, key), do: with_preview("/admin/assistant/connected/#{id}", key)
+  defp review_path(_socket, _key), do: "/admin/assistant/connected"
+
+  defp with_preview(path, nil), do: path
+  defp with_preview(path, key), do: Review.preview_path(path, key)
+
+  # Opens the page preview of entry `key` with the view chosen so far; the
+  # first opens the proposed version on the desktop. The first render has
+  # no frame: the connected page renders it, once.
+  defp open_preview(socket, key) do
+    preview = socket.assigns.preview || %{version: "proposed", viewport: "desktop", show: true, target: nil}
+    # A named view belongs to one content type; another entry starts on its default.
+    preview = if preview[:key] == key, do: preview, else: %{preview | target: nil}
+    socket = if socket.assigns.preview, do: socket, else: push_event(socket, "b:assistant:review_top", %{})
+    preview = Map.put(preview, :key, key)
+
+    if connected?(socket),
+      do: render_preview(socket, preview),
+      else: assign(socket, :preview, Map.put(preview, :frame, :pending))
+  end
+
+  defp close_preview(socket), do: socket |> discard_previews() |> assign(:preview, nil)
+
+  defp under_review?(assigns), do: is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved)
 
   # Renders the chosen entry of the proposal on screen through the site's own
   # preview target. Only the latest frame's cache key is kept.
@@ -2410,8 +2509,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
         else: Repo.all(from(f in Brando.Files.File, where: f.id in ^file_ids))
 
     Map.new(
-      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), label: plain(&1.title)}}) ++
-        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), label: plain(&1.title)}}) ++
+      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), cover: cover(&1), label: plain(&1.title)}}) ++
+        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), cover: cover(&1.thumbnail), label: plain(&1.title)}}) ++
         Enum.map(files, &{{:file, &1.id}, %{url: nil, label: plain(&1.title) || &1.filename}})
     )
   end
@@ -2480,6 +2579,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp video_url(%{thumbnail: %Brando.Images.Image{} = thumbnail}), do: image_url(thumbnail)
   defp video_url(_), do: nil
+
+  # A card's cover is shown about 700 CSS px wide, so the 400 px square thumb
+  # is too small and crops away the framing. It takes the sizes the image
+  # has, cropped to the card around its focal point. Without an uncropped
+  # size it falls back as the small thumbs do: the thumb, or the original
+  # while the image has no sizes yet.
+  defp cover(%Brando.Images.Image{} = image) do
+    candidates = Sources.candidates(image, uncropped: true)
+
+    %{
+      src: Sources.src(candidates, 720) || image_url(image),
+      srcset: Sources.srcset(candidates),
+      style: BrandoAdmin.Components.Image.object_position(image)
+    }
+  rescue
+    _ -> nil
+  end
+
+  defp cover(_), do: nil
 
   ## Helpers
 

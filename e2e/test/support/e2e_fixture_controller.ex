@@ -100,6 +100,12 @@ defmodule E2EFixtureController do
         "assistant-block-swap" ->
           create_block_swap_proposal()
 
+        # A proposal from a connected tool creating a page whose share
+        # image is a large portrait with its sizes on disk: its card shows
+        # the image as its cover.
+        "assistant-cover" ->
+          create_cover_proposal()
+
         "mcp-unloadable-proposal" ->
           create_unloadable_mcp_proposal()
 
@@ -794,6 +800,71 @@ defmodule E2EFixtureController do
     end
 
     user
+  end
+
+  defp create_cover_proposal do
+    alias Brando.Content.Proposals.Tools
+
+    user = get_admin_user()
+    image = create_sized_portrait()
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+    op = %{
+      "op" => "create_entry",
+      "content_type" => "Brando.Pages.Page",
+      "ref" => "harbour",
+      "fields" => %{
+        "title" => "The harbour at dusk",
+        "uri" => "harbour-at-dusk",
+        "language" => "en",
+        "template" => "default.html",
+        "meta_image_id" => %{"kind" => "image", "id" => image.id}
+      }
+    }
+
+    {:ok, %{applicable: true}} =
+      Tools.call("prepare_proposal", %{"summary" => "Add the harbour page", "operations" => [op]}, context)
+
+    user
+  end
+
+  # A 1875x2500 portrait with fine detail, saved in the E2E app's sizes as
+  # image processing would: the square thumb and small.
+  defp create_sized_portrait do
+    name = "e2e-portrait-#{System.unique_integer([:positive])}"
+    {width, height} = {1875, 2500}
+
+    stripes =
+      for i <- 0..124 do
+        {:ok, band} = Image.new(width, 20, color: if(rem(i, 2) == 0, do: [32, 64, 96], else: [224, 176, 96]))
+        band
+      end
+
+    {:ok, base} = Image.join(stripes, across: 1)
+    {:ok, label} = Image.Text.text("Harbour 1875 × 2500", font_size: 160, text_fill_color: :white)
+    {:ok, original} = Image.compose(base, label, x: :center, y: :middle)
+
+    write = fn image, folder ->
+      relative = Path.join(["images", "site", "default", folder, name <> ".jpg"])
+      path = Path.join(Brando.config(:media_path), relative)
+      File.mkdir_p!(Path.dirname(path))
+      Image.write!(image, path, quality: 82)
+      relative
+    end
+
+    {:ok, small} = Image.resize(original, 700 / width)
+    {:ok, thumb} = Image.thumbnail(original, 400, crop: :center)
+
+    Brando.Repo.insert!(%Brando.Images.Image{
+      path: write.(original, "original"),
+      status: :processed,
+      width: width,
+      height: height,
+      config_target: "default",
+      formats: [:jpg],
+      focal: %Brando.Images.Focal{x: 50, y: 40},
+      sizes: %{"small" => write.(small, "small"), "thumb" => write.(thumb, "thumb")}
+    })
   end
 
   # A proposal from a connected tool, waiting for review, that replaces the
