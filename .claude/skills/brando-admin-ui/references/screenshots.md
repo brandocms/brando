@@ -63,7 +63,8 @@ environments screen (`/admin/config/environments`) or the sites screen
    may not change hosts; `multi-site-hosts-unwritable` adds a host the file
    cannot take, with the file's error; `multi-site-queued` leaves a
    language seeding queued and a copy scheduled, which the inline Oban of the
-   E2E server would otherwise run at once.
+   E2E server would otherwise run at once; `multi-site-many` adds eleven
+   more sites, the first with a long name, for the navigation's site switcher.
 3. Shoot as usual (`--locales en,no` works for all three). Lookups come from
    `E2E.MultiSiteHosts`, so nothing queries DNS.
 4. Stop it with `scripts/server.sh stop`, which then removes the served

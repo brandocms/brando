@@ -153,7 +153,7 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {recycle(conn), redirected_to(conn)}
   end
 
-  # The closed switcher: its summary's text and the site name's title.
+  # The closed switcher: its summary's text and the titles of its truncating names.
   defp switcher_summary(html) do
     summary = html |> Floki.parse_document!() |> Floki.find("#tenant-switcher summary")
     {summary |> Floki.text(sep: " ") |> String.split() |> Enum.join(" "), Floki.attribute(summary, "[title]", "title")}
@@ -187,8 +187,8 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
 
     # Only several sites need the site named before the environment.
     case Tenant.mode() do
-      :multi -> assert switcher_summary(html) == {"Alpha Production live", ["Alpha"]}
-      :single -> assert switcher_summary(html) == {"Environment Production live", []}
+      :multi -> assert switcher_summary(html) == {"Alpha Production Live", ["Alpha", "Production"]}
+      :single -> assert switcher_summary(html) == {"Environment Production Live", ["Production"]}
     end
 
     {conn, return_to} = switch_to(conn, html, "environment_key", "staging")
@@ -216,7 +216,7 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {:ok, _view, html} = live(conn, "/admin/pages")
     {conn, _} = switch_to(conn, html, "site_key", "auth-beta")
     {:ok, view, html} = live(conn, "/admin/pages")
-    assert switcher_summary(html) == {"Beta Production live", ["Beta"]}
+    assert switcher_summary(html) == {"Beta Production Live", ["Beta", "Production"]}
     # The sheet's rows truncate, so each names its site in full
     assert html
            |> Floki.parse_document!()
