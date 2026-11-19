@@ -6,15 +6,7 @@ mix = File.read!("mix.exs")
 marker = "defp deps do\n    ["
 true = String.contains?(mix, marker)
 deps = "#{marker}\n      {:brando, path: #{inspect(framework)}},\n      {:igniter, \"~> 0.8.0\", only: [:dev, :test]},"
-
-# As the installation guide says for adding Brando by hand: Brando parses HTML
-# with lazy_html at runtime, and phx.new lists it for tests only.
-mix =
-  mix
-  |> String.replace(marker, deps, global: false)
-  |> then(&Regex.replace(~r/(\{:lazy_html, "[^"]+"), only: :test\}/, &1, "\\1}"))
-
-File.write!("mix.exs", mix)
+File.write!("mix.exs", String.replace(mix, marker, deps, global: false))
 
 # A new database name is allocated for every run. No existing application
 # configuration or database is read or reused by this consumer.

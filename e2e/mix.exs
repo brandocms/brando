@@ -70,7 +70,9 @@ defmodule E2eProject.MixProject do
 
       # live view
       {:phoenix_live_view, "1.2.13"},
-      # Phoenix.LiveViewTest parses with lazy_html, which Brando brings in
+      # Brando parses HTML with lazy_html at runtime (an optional Brando
+      # dependency), and Phoenix.LiveViewTest does in tests
+      {:lazy_html, "~> 0.1.13"},
 
       # general deps
       {:postgrex, "~> 0.15"},

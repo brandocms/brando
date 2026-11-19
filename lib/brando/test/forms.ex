@@ -16,6 +16,10 @@ defmodule Brando.Test.Forms do
 
   import ExUnit.Assertions, only: [flunk: 1]
 
+  # lazy_html is optional for Brando (see `Brando.HTML.Tree`); LiveView tests
+  # need it too.
+  @compile {:no_warn_undefined, if(Code.ensure_loaded?(LazyHTML), do: [], else: [LazyHTML])}
+
   alias Brando.Blueprint.{Assets, Attributes, Relations}
   alias Phoenix.LiveViewTest
 

@@ -52,11 +52,10 @@ config :brando, Brando.AI, client: Brando.AI.Cassette
 config :brando, Brando.AI.Cassette, dir: "test/cassettes"
 ```
 
-LiveView tests parse with `lazy_html`, which Brando brings in: Brando parses
-HTML with it at runtime too. Remove the `{:lazy_html, ">= 0.1.0", only: :test}`
-a new Phoenix app lists, or drop its `only: :test`; restricted to tests, it
-stops `mix deps.get` with "Dependencies have diverged". Brando's test helpers
-need no Floki. An application whose own tests call Floki lists it:
+LiveView tests parse with `lazy_html`, and Brando parses HTML with it at
+runtime too: `mix brando.install` lists it for every environment, dropping the
+`only: :test` a new Phoenix app writes. Brando's test helpers need no Floki. An
+application whose own tests call Floki lists it:
 
 ```elixir
 {:floki, "~> 0.38", only: :test}

@@ -364,8 +364,11 @@ defmodule Brando.Mixfile do
       {:igniter, "~> 0.8.0", optional: true, runtime: false},
 
       # Runtime HTML parsing (footnotes, Markdown export, relinking, search
-      # text) — see `Brando.HTML.Tree`. Phoenix.LiveViewTest parses with it too.
-      {:lazy_html, "~> 0.1.13"},
+      # text) — see `Brando.HTML.Tree`. Optional, as in Phoenix LiveView, so it
+      # does not diverge from the test-only line `mix phx.new` writes:
+      # `mix brando.install` makes the application's line a runtime one, and
+      # `Brando.System` stops the boot when it is missing.
+      {:lazy_html, "~> 0.1.13", optional: true},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},

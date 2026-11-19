@@ -185,8 +185,9 @@ in a clean Git tree and read `git diff`.
   prerequisite with its own rewrite tests.
   Steps every version change needs, whether or not a recipe runs, go in
   `apply_version/3` beside the recipes (`AIDependency.plan/1` adds `req_llm`
-  for an application whose config sets AI up): a `0.55.0-dev` build moving
-  to a 0.55 prerelease crosses no minor.
+  for an application whose config sets AI up; `LazyHTMLDependency.plan/1`,
+  which the installer runs too, makes `lazy_html` a runtime dependency): a
+  `0.55.0-dev` build moving to a 0.55 prerelease crosses no minor.
 
 ## Verification
 

@@ -56,7 +56,8 @@ defmodule Brando.Scripts.Prepare055DepsTest do
   """
 
   # What commit 4830f06a in Lett made of it by hand, less its floki change:
-  # Brando no longer brings Floki in, so a test-only floki is left alone.
+  # Brando no longer brings Floki in, so a test-only floki is left alone. It
+  # parses HTML with lazy_html, an optional dependency the application adds.
   @after_state """
   defmodule Lett.MixProject do
     use Mix.Project
@@ -97,6 +98,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
 
         # brando
         {:brando, path: "/src/brando"},
+        {:lazy_html, "~> 0.1.13"},
         {:igniter, "~> 0.8", only: [:dev, :test]}
         # {:brando, path: "../../brando"}
       ]
@@ -157,6 +159,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     assert File.read!(Path.join(dir, "mix.exs")) == @after_state
     refute output =~ "floki"
     assert output =~ ~s|{:timex, "~> 3.0"},  →  (removed)|
+    assert output =~ ~s|(added)  →  {:lazy_html, "~> 0.1.13"}|
     assert output =~ "mix deps.unlock --all && mix deps.get"
 
     # The lock: what the application declares, then what comes in through others
@@ -178,6 +181,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
 
     assert File.read!(Path.join(dir, "mix.exs")) =~ ~s(\n      {:lazy_html, "~> 0.1.13"},\n)
     assert output =~ ~s|{:lazy_html, ">= 0.1.0", only: :test},  →  {:lazy_html, "~> 0.1.13"},|
+    refute output =~ "(added)  →  {:lazy_html"
   end
 
   test "keeps timex while lib/ calls it, and names a declared hackney 1 package", %{tmp_dir: tmp_dir} do
@@ -239,7 +243,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     written = File.read!(Path.join(dir, "mix.exs"))
 
     assert {:ok, _} = Code.string_to_quoted(written), written
-    assert written =~ ~r/\{:brando, [^\n]*\},\s*# the CMS\n\s*\{:igniter/
+    assert written =~ ~r/\{:brando, [^\n]*\},\s*# the CMS\n\s*\{:lazy_html, "~> 0.1.13"\},\n\s*\{:igniter/
   end
 
   test "the constraints are the guide's" do

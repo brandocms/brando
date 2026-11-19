@@ -92,13 +92,13 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix deps.get > "$smoke_root/logs/deps-without-igniter.log" 2>&1
   mix compile > "$smoke_root/logs/compile-without-igniter.log" 2>&1
   mix run --no-start -e 'false = Code.ensure_loaded?(Igniter); false = Mix.Brando.Igniter.Project.__mix_recompile__?()' > "$smoke_root/logs/check-without-igniter.log" 2>&1
-  # Brando compiled there without either optional dependency, Igniter or
-  # req_llm: its part of the log (from "==> brando" to the next app) has no
-  # warning.
+  # Brando compiled there without its optional dependencies, Igniter, req_llm
+  # and lazy_html (phx.new lists it for tests only): its part of the log (from
+  # "==> brando" to the next app) has no warning.
   awk '/^==> /{brando = ($2 == "brando")} brando' "$smoke_root/logs/compile-without-igniter.log" > "$smoke_root/logs/brando-without-optional-deps.log"
   if ! grep -q 'Generated brando app' "$smoke_root/logs/brando-without-optional-deps.log" ||
     grep -q 'warning:' "$smoke_root/logs/brando-without-optional-deps.log"; then
-    echo "Brando did not compile warning-free without Igniter and req_llm; see $smoke_root/logs/brando-without-optional-deps.log" >&2
+    echo "Brando did not compile warning-free without Igniter, req_llm and lazy_html; see $smoke_root/logs/brando-without-optional-deps.log" >&2
     exit 1
   fi
   elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" add
@@ -118,6 +118,9 @@ install_options=(--yes --tenancy-mode "$smoke_mode")
 if [[ "$smoke_mode" == single ]]; then install_options+=(--site-key smoke); fi
 mix igniter.install "brando@path:$brando_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/compile.log" 2>&1
+# Brando parses HTML with the optional lazy_html: the installer drops the
+# `only: :test` of phx.new's line, so a release has it.
+if ! grep -qE '^[[:space:]]*\{:lazy_html, "[^"]+"\},?$' mix.exs; then echo "brando.install left lazy_html out of the runtime dependencies" >&2; exit 1; fi
 # AI needs the optional req_llm, which the installer adds only with --ai: the
 # consumer, its admin and its site below run with AI unavailable.
 if grep -q ':req_llm' mix.exs; then echo "brando.install added req_llm without --ai" >&2; exit 1; fi

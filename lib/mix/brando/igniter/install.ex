@@ -21,6 +21,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install.PhoenixStatic
     alias Mix.Brando.Igniter.Install.Toolchain
     alias Mix.Brando.Igniter.Install.Version
+    alias Mix.Brando.Igniter.LazyHTMLDependency
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.Release
     alias Mix.Brando.Igniter.RouteInventory
@@ -139,7 +140,10 @@ if Code.ensure_loaded?(Igniter) do
     defp dependencies(igniter, options) do
       # Preserve the user's package/git/path selection, including local Brando.
       deps = [{:gettext, "~> 1.0"}, {:jason, "~> 1.0"}] ++ if(options[:ai], do: [Brando.AI.dependency()], else: [])
-      Enum.reduce(deps, igniter, &Dependencies.add_new(&2, &1))
+
+      deps
+      |> Enum.reduce(igniter, &Dependencies.add_new(&2, &1))
+      |> LazyHTMLDependency.plan()
     end
 
     # Brando's .formatter.exs exports the Blueprint DSL's locals_without_parens.

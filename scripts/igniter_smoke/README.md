@@ -43,8 +43,10 @@ instead of the installed archive.
 
 The consumer has no `req_llm`, Brando's optional AI dependency, which the
 installer adds only with `--ai`: the script checks that AI is unavailable,
-and everything after runs that way. The precompiled case also checks that
-Brando compiles without Igniter and req_llm with no warning
+and everything after runs that way. phx.new lists lazy_html, which Brando
+parses HTML with, for tests only; the script checks that the installer makes
+it a runtime dependency. The precompiled case also checks that Brando
+compiles without Igniter, req_llm and lazy_html with no warning
 (`brando-without-optional-deps.log`).
 
 The script verifies an unattended dry run and an installation rerun against

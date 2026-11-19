@@ -4,6 +4,18 @@ defmodule Brando.HTML.Tree do
   # as the `{tag, attrs, children}` trees `LazyHTML.Tree` describes. Text
   # nodes keep the whitespace between elements, so `<b>a</b> <i>b</i>`
   # keeps its space through a rewrite.
+  #
+  # lazy_html is an optional dependency, so it does not diverge from the
+  # test-only line `mix phx.new` writes; the application lists it for every
+  # environment, and `Brando.System` stops the boot when it does not.
+
+  # Without lazy_html, Brando compiles and the boot check names the line to
+  # add, not a warning per call.
+  @compile {:no_warn_undefined, if(Code.ensure_loaded?(LazyHTML), do: [], else: [LazyHTML, LazyHTML.Tree])}
+
+  @doc false
+  # The line the application adds to its deps, as the installer writes it.
+  def dependency, do: {:lazy_html, "~> 0.1.13"}
 
   @type t :: LazyHTML.Tree.t()
   @type html_node :: LazyHTML.Tree.html_node()
