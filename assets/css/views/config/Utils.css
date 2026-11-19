@@ -217,7 +217,7 @@
 
   .block-audit-tree {
     display: grid; grid-template-columns: auto 132px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 10px 16px;
-    & + & { border-top: 1px solid var(--brando-line-soft); }
+    & + .block-audit-tree { border-top: 1px solid var(--brando-line-soft); }
     &:not(.is-removable) { background: var(--brando-surface-shaded); }
   }
   .block-audit-check { display: flex; }

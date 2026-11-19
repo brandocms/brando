@@ -25,7 +25,9 @@ defmodule Brando.Worker.SiteLanguageSeed do
   finish. The snoozes are counted per job, not per attempt, and allowed for
   an hour in all: after that, each attempt that finds the site busy fails at
   once and waits for its retry, so the job goes on checking with the gaps
-  above.
+  above. While it seeds it holds the site's lifecycle lock itself, so a
+  change of the site's name, languages or delivery made meanwhile is refused
+  after a short wait (`Brando.Tenant.Setup.update_languages/3`).
   """
 
   use Oban.Worker,
@@ -137,7 +139,8 @@ defmodule Brando.Worker.SiteLanguageSeed do
   end
 
   # Runs `fun` holding the site's lifecycle and environment-operation locks,
-  # or returns `:busy` while provisioning or a copy holds one
+  # or returns `:busy` while provisioning or a copy holds one. A settings
+  # change of the site is refused while the seed holds them.
   defp when_ready(site, fun) do
     Lock.try_with(Lock.lifecycle_key(site.key), fn ->
       Lock.try_with(Lock.environment_operation_key(site.id), fun)

@@ -117,10 +117,11 @@ deploy, rollback or prune of the site runs, the switch is refused with
 `{:error, :deploy_running}` (on the form, "A deploy of this site is running"):
 try again when it has finished. A deploy that starts after a switch to dynamic
 deploys nothing, and a queued one is cancelled with the reason in its build's
-log. While the site is being set up, archived or deleted, a change of its
-delivery, name or languages is refused with `{:error, :site_busy}`. The change
-activates no asset set, and what it does to traffic depends on where the
-site's host points:
+log. While the site is being set up, archived or deleted, or a language just
+added to it is being seeded in its environments, a change of its delivery,
+name or languages waits a few seconds and is then refused with
+`{:error, :site_busy}`. The change activates no asset set, and what it does to
+traffic depends on where the site's host points:
 
 - **Dynamic to static.** Nothing changes for visitors. Phoenix keeps
   answering the live environment's domain until a build is deployed: with

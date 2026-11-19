@@ -1223,7 +1223,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
               <button
                 type="button"
                 class="menu-item menu-item--danger"
-                phx-confirm={gettext("Delete this video?")}
+                data-confirm={gettext("Delete this video?")}
+                data-confirm-ok={gettext("Delete video")}
+                data-confirm-destructive
                 phx-click={
                   JS.push("delete_video_from_picker",
                     target: @myself,

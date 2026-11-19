@@ -271,19 +271,29 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
                 |> Enum.join(" · ")}
               </span>
             </div>
-            <button
-              type="button"
-              class="btn btn--quiet"
-              phx-click="revoke_connected_app"
-              phx-value-id={grant.id}
-              data-testid="connected-app-revoke"
-              data-confirm-title={gettext("Disconnect %{client}?", client: grant.client_name)}
-              data-confirm={gettext("It stops working at once. You can connect it again from the app.")}
-              data-confirm-ok={gettext("Disconnect")}
-              data-confirm-destructive
-            >
-              {gettext("Disconnect")}
-            </button>
+            <div class="security-item-actions">
+              <.link
+                :if={!Brando.MCP.grant_expired?(grant)}
+                navigate={Brando.MCP.Watch.path(grant)}
+                class="btn btn--quiet"
+                data-testid="connected-app-watch"
+              >
+                {gettext("Follow live")}
+              </.link>
+              <button
+                type="button"
+                class="btn btn--quiet"
+                phx-click="revoke_connected_app"
+                phx-value-id={grant.id}
+                data-testid="connected-app-revoke"
+                data-confirm-title={gettext("Disconnect %{client}?", client: grant.client_name)}
+                data-confirm={gettext("It stops working at once. You can connect it again from the app.")}
+                data-confirm-ok={gettext("Disconnect")}
+                data-confirm-destructive
+              >
+                {gettext("Disconnect")}
+              </button>
+            </div>
           </li>
         </ul>
       </section>

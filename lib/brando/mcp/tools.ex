@@ -19,6 +19,12 @@ defmodule Brando.MCP.Tools do
   and authorization scope, and is written to Activity with the user, the
   client and the token's row id. Results are bounded like the Assistant's.
 
+  The connection's live page (`Brando.MCP.Watch`) follows every call: it is
+  told as a call starts, and again where the call is written to Activity.
+  `prepare_proposal`'s result carries the page's link as `watch_url`, next to
+  `review_url`, and so does the first result after 30 minutes without calls,
+  when the link still fits within the result's limit.
+
   The site's guidance comes with the results, as the Assistant has it in its
   prompt (`Brando.AI.Agent.Guidance`): `describe_content_type` returns the
   guidance for that content type under `guidance`, and
@@ -32,6 +38,7 @@ defmodule Brando.MCP.Tools do
   alias Brando.Content.Proposals.Tools, as: Registry
   alias Brando.Figma.Tools, as: FigmaTools
   alias Brando.MCP
+  alias Brando.MCP.Watch
 
   require Logger
 
@@ -103,7 +110,7 @@ defmodule Brando.MCP.Tools do
     context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
     args = Map.delete(args, "_meta")
     call = fn -> name |> Registry.call(args, context) |> with_guidance(name) end
-    called(name, auth, tenant, fn -> run(name, context, tenant, call) end)
+    called(name, args, auth, tenant, fn -> run(name, context, tenant, call) end)
   end
 
   def call("brando_figma_" <> name = full_name, args, auth, tenant) when is_map(args) do
@@ -111,7 +118,7 @@ defmodule Brando.MCP.Tools do
       context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
       args = Map.delete(args, "_meta")
       call = fn -> FigmaTools.call(name, args, auth.user, tenant) end
-      called(full_name, auth, tenant, fn -> run(full_name, context, tenant, call) end)
+      called(full_name, args, auth, tenant, fn -> run(full_name, context, tenant, call) end)
     else
       {:error, :unknown}
     end
@@ -140,20 +147,35 @@ defmodule Brando.MCP.Tools do
 
   defp with_guidance(result, _name), do: result
 
-  # Encoded, and written to Activity with the person, client and token
-  defp called(name, auth, tenant, fun) do
+  # Told to the connection's live page as it starts; encoded, with the
+  # page's link when it is due; and written to Activity with the person,
+  # client and token, and told to the page again from there.
+  defp called(name, args, auth, tenant, fun) do
     started = System.monotonic_time(:millisecond)
     %{user: user, grant: grant} = auth
-    {ok?, payload} = encode(fun.())
+    id = Ecto.UUID.generate()
+    Watch.started(grant.id, id, name, args)
 
-    MCP.in_tenant(tenant, fn ->
-      Brando.Activity.tool_called(grant, user, name,
-        ok: ok?,
-        token_id: auth.token.id,
-        duration_ms: System.monotonic_time(:millisecond) - started
-      )
-    end)
+    due? = Watch.due?(grant.id)
+    link = if due? or name == "prepare_proposal", do: %{watch_url: Watch.url(grant)}, else: %{}
+    {ok?, payload, linked?} = encode_result(fun.(), link)
+    if linked? or not due?, do: Watch.delivered(grant.id)
 
+    duration = System.monotonic_time(:millisecond) - started
+    summary = Watch.summary(name, args, ok?, payload.structuredContent)
+
+    recorded =
+      MCP.in_tenant(tenant, fn ->
+        Brando.Activity.tool_called(grant, user, name,
+          ok: ok?,
+          token_id: auth.token.id,
+          duration_ms: duration,
+          summary: summary
+        )
+      end)
+
+    details = Map.merge(summary, %{"tool" => name, "ok" => ok?, "duration_ms" => duration})
+    Watch.finished(grant.id, id, details, recorded)
     {:ok, payload}
   end
 
@@ -171,7 +193,29 @@ defmodule Brando.MCP.Tools do
       {:error, "The tool failed. Try again, or narrow the request."}
   end
 
-  defp encode({:ok, data}) when is_map(data) do
+  @doc """
+  The MCP tool result for a tool's `{:ok, data}` or `{:error, message}`,
+  with `extra` (the live page's link) merged into the data when it still
+  fits within `result_limit/0`: `{ok?, result, whether extra went in}`.
+  """
+  @spec encode_result(term(), map()) :: {boolean(), map(), boolean()}
+  def encode_result({:ok, data}, extra) when is_map(data) do
+    with_extra = if extra == %{}, do: :error, else: encode_data(Map.merge(data, extra))
+
+    case with_extra do
+      {true, payload} ->
+        {true, payload, true}
+
+      _ ->
+        {ok?, payload} = encode_data(data)
+        {ok?, payload, false}
+    end
+  end
+
+  def encode_result({:error, message}, _extra), do: {false, error(message), false}
+  def encode_result(_other, _extra), do: {false, error("The tool gave no result."), false}
+
+  defp encode_data(data) do
     case Jason.encode(data) do
       {:ok, json} when byte_size(json) > @result_limit ->
         {false, error("The result was too large (#{byte_size(json)} bytes). Narrow the request.")}
@@ -183,9 +227,6 @@ defmodule Brando.MCP.Tools do
         {false, error("The result could not be encoded.")}
     end
   end
-
-  defp encode({:error, message}), do: {false, error(message)}
-  defp encode(_other), do: {false, error("The tool gave no result.")}
 
   defp error(message) do
     message = if is_binary(message), do: message, else: inspect(message)

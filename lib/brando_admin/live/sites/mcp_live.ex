@@ -273,6 +273,9 @@ defmodule BrandoAdmin.Sites.MCPLive do
                   {if grant.last_used_at, do: date(grant.last_used_at), else: gettext("Not used yet")}
                 </td>
                 <td class="row-actions">
+                  <.link navigate={MCP.Watch.path(grant)} class="btn btn--quiet" data-testid="mcp-grant-watch">
+                    {gettext("Follow live")}
+                  </.link>
                   <button
                     type="button"
                     class="btn btn--danger"

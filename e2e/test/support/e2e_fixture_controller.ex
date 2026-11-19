@@ -44,6 +44,10 @@ defmodule E2EFixtureController do
         "revision-panel" ->
           create_revision_panel()
 
+        # Utilities → Loose blocks: three block trees no entry links to
+        "loose-blocks" ->
+          create_loose_blocks()
+
         "media-upload" ->
           create_media_upload_module()
 
@@ -110,6 +114,17 @@ defmodule E2EFixtureController do
         # twice, so the editor and its history show
         "mcp-figma-guidance" ->
           create_figma_guidance()
+
+        # A connection of the E2E admin to Claude, and its calls, made
+        # through the endpoint's tools as a client's would be: what its live
+        # page (Security → Connected apps → Follow live) shows. Figma is out
+        # of reach, so its import is the Activity event the tool would write.
+        # "mcp-watch-empty" is the connection alone.
+        "mcp-watch" ->
+          create_mcp_watch(true)
+
+        "mcp-watch-empty" ->
+          create_mcp_watch(false)
 
         "mcp-unloadable-proposal" ->
           create_unloadable_mcp_proposal()
@@ -178,6 +193,9 @@ defmodule E2EFixtureController do
 
         "multi-site-queued" ->
           MultiSiteHosts.setup(get_admin_user(), queued: true)
+
+        "multi-site-many" ->
+          MultiSiteHosts.setup(get_admin_user(), many_sites: true)
       end
 
     # Log the user in
@@ -228,7 +246,13 @@ defmodule E2EFixtureController do
     {:ok, _} = Brando.Content.Definitions.Release.plan(version: "2026.11.16-1")
 
     example = Brando.Repo.get_by!(Brando.Content.Module, class: "example")
-    edit_release_template!(dir, example, ~s(<article b-tpl="example">), ~s(<article b-tpl="example" class="from-the-release">))
+
+    edit_release_template!(
+      dir,
+      example,
+      ~s(<article b-tpl="example">),
+      ~s(<article b-tpl="example" class="from-the-release">)
+    )
 
     [conflict, never] =
       from(m in Brando.Content.Module,
@@ -810,6 +834,60 @@ defmodule E2EFixtureController do
     user
   end
 
+  defp create_mcp_watch(calls?) do
+    user = get_admin_user()
+    tenant = Brando.MCP.tenant(nil, nil)
+    :ok = Brando.MCP.set_enabled(tenant, true, user)
+
+    grant =
+      Brando.Repo.insert!(%Brando.MCP.Grant{
+        user_id: user.id,
+        resource: Brando.MCP.resource(tenant),
+        client_id: "https://claude.ai/oauth/mcp-oauth-client-metadata",
+        client_name: "Claude",
+        redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+        scope: "content"
+      })
+
+    if calls?, do: mcp_watch_calls(grant, user, tenant)
+    user
+  end
+
+  defp mcp_watch_calls(grant, user, tenant) do
+    auth = %{grant: grant, user: user, token: %{id: nil}}
+    call = &Brando.MCP.Tools.call(&1, &2, auth, tenant)
+    page = Brando.Repo.get_by!(Brando.Pages.Page, uri: "index", language: "en")
+
+    call.("brando_content_list_content_types", %{})
+    call.("brando_content_describe_content_type", %{"content_type" => "Brando.Pages.Page"})
+    call.("brando_content_search_entries", %{"query" => "Index", "content_type" => "Brando.Pages.Page"})
+    call.("brando_content_entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => page.id})
+    call.("brando_content_describe_module", %{"module" => "local:0"})
+
+    images = for _ <- 1..4, do: create_sized_portrait().id
+
+    Brando.Activity.tool_called(grant, user, "brando_figma_import_images",
+      duration_ms: 3_120,
+      summary: %{
+        "input" => %{},
+        "output" => %{"frame" => "Case – Tipping", "images" => 4},
+        "folder" => "Figma/Case – Tipping",
+        "images" => images |> Enum.with_index() |> Enum.map(fn {id, i} -> %{"id" => id, "reused" => i == 3} end)
+      }
+    )
+
+    call.("brando_content_prepare_proposal", %{
+      "summary" => "Retitle the Index page for the spring campaign",
+      "operations" => [
+        %{
+          "op" => "set_fields",
+          "target" => %{"content_type" => "Brando.Pages.Page", "id" => page.id},
+          "fields" => %{"title" => "Spring at the studio"}
+        }
+      ]
+    })
+  end
+
   defp create_cover_proposal do
     alias Brando.Content.Proposals.Tools
 
@@ -1046,6 +1124,15 @@ defmodule E2EFixtureController do
       )
 
     {page, uids}
+  end
+
+  defp create_loose_blocks do
+    import Ecto.Query, only: [from: 2]
+
+    user = get_admin_user()
+    module = Brando.Repo.one!(from(m in Brando.Content.Module, order_by: m.id, limit: 1))
+    for sequence <- 0..2, do: team_block!(user, module, nil, sequence, [])
+    user
   end
 
   defp team_block!(user, module, parent_id, sequence, vars) do
@@ -1737,6 +1824,78 @@ defmodule E2EFixtureController do
     json(conn, %{resource: Brando.MCP.resource(tenant)})
   end
 
+  # A connection of the user `email` (from "user"), made through the consent
+  # screen's own functions, for a spec that calls tools without signing in
+  # as that user: its token, its live page, and a page for it to propose to.
+  def mcp(conn, %{"action" => "connect", "email" => email}) do
+    allow_sandbox(conn)
+    user = Brando.Users.get_user!(%{matches: %{email: email}})
+    tenant = Brando.MCP.tenant(nil, nil)
+    verifier = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+    challenge = Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false)
+    redirect_uri = "http://127.0.0.1:43123/callback"
+
+    params = %{
+      "response_type" => "code",
+      "client_id" => E2eProject.MCPClient.client_id(),
+      "redirect_uri" => redirect_uri,
+      "code_challenge" => challenge,
+      "code_challenge_method" => "S256",
+      "state" => "e2e",
+      "scope" => "content",
+      "resource" => Brando.MCP.resource(tenant)
+    }
+
+    {:ok, request} = Brando.MCP.OAuth.validate(params, user)
+    {:ok, url} = Brando.MCP.OAuth.approve(request, user)
+    %{"code" => code} = URI.decode_query(URI.parse(url).query)
+
+    {:ok, tokens} =
+      Brando.MCP.OAuth.token(
+        %{
+          "grant_type" => "authorization_code",
+          "code" => code,
+          "code_verifier" => verifier,
+          "client_id" => E2eProject.MCPClient.client_id(),
+          "redirect_uri" => redirect_uri
+        },
+        tenant
+      )
+
+    import Ecto.Query, only: [from: 2]
+    grant = Brando.Repo.one!(from(g in Brando.MCP.Grant, where: g.user_id == ^user.id, order_by: [desc: g.id], limit: 1))
+
+    {:ok, page} =
+      Brando.Pages.create_page(
+        %{title: "MCP live page", uri: "mcp-live-page", language: "en", template: "default.html", status: :draft},
+        user
+      )
+
+    json(conn, %{access_token: tokens["access_token"], watch_path: Brando.MCP.Watch.path(grant), page_id: page.id})
+  end
+
+  # Figma cannot be reached from here: the live page hears an import of
+  # four new library images, the first reused, as
+  # `brando_figma_import_images` tells it.
+  def mcp(conn, %{"action" => "watch-import", "watch_path" => path}) do
+    allow_sandbox(conn)
+    grant_id = path |> String.split("/") |> List.last() |> String.to_integer()
+
+    images = for _ <- 1..4, do: create_sized_portrait().id
+
+    details = %{
+      "tool" => "brando_figma_import_images",
+      "ok" => true,
+      "duration_ms" => 2_400,
+      "output" => %{"frame" => "Case – Tipping", "images" => length(images)},
+      "folder" => "Figma/Case – Tipping",
+      "images" => images |> Enum.with_index() |> Enum.map(fn {id, i} -> %{"id" => id, "reused" => i == 0} end)
+    }
+
+    Brando.MCP.Watch.finished(grant_id, "e2e-import", details, {:error, :fixture})
+    json(conn, %{images: images})
+  end
+
   # AI for the actions declared on fields, answered by a fake model
   # (E2eProject.FieldActionModel). Application env outlives the sandbox, so a
   # spec that turns it on turns it off again after each test.
@@ -2082,7 +2241,13 @@ defmodule E2EFixtureController do
     end
 
     var_specs = [
-      %{"type" => "string", "key" => "title", "label" => %{"en" => "Title"}, "sequence" => 0, "value" => "Harbour at dawn"},
+      %{
+        "type" => "string",
+        "key" => "title",
+        "label" => %{"en" => "Title"},
+        "sequence" => 0,
+        "value" => "Harbour at dawn"
+      },
       %{
         "type" => "text",
         "key" => "meta",
@@ -2094,7 +2259,11 @@ defmodule E2EFixtureController do
 
     media_var_specs =
       if filled? do
-        for {{type, key, label}, sequence} <- Enum.with_index([{"image", "hero", "Hero"}, {"file", "brochure", "Brochure"}, {"gallery", "album", "Album"}], 2) do
+        for {{type, key, label}, sequence} <-
+              Enum.with_index(
+                [{"image", "hero", "Hero"}, {"file", "brochure", "Brochure"}, {"gallery", "album", "Album"}],
+                2
+              ) do
           %{"type" => type, "key" => key, "label" => %{"en" => label}, "sequence" => sequence}
         end
       else
@@ -2133,7 +2302,8 @@ defmodule E2EFixtureController do
     gallery = fn ->
       Brando.Repo.insert!(%Brando.Galleries.Gallery{
         config_target: "default",
-        gallery_objects: for(sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence})
+        gallery_objects:
+          for(sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence})
       })
     end
 

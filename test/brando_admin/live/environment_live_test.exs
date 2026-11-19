@@ -883,6 +883,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     assert has_element?(view, "#environment-job-#{job.id}", "Copy Production → Spring Redesign")
     assert has_element?(view, "#environment-job-#{job.id} .badge", "Scheduled")
 
+    assert has_element?(
+             view,
+             ~s(#environment-job-#{job.id} button[phx-click="cancel_operation"][phx-value-id="#{job.id}"]) <>
+               ~s([data-confirm="Cancel this pending environment operation?"][data-confirm-ok="Cancel operation"]) <>
+               ~s([data-confirm-cancel="Keep operation"][data-confirm-destructive])
+           )
+
     view
     |> element("#environment-job-#{job.id} button", "Cancel")
     |> render_click()
@@ -986,6 +993,81 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     assert has_element?(view, ".environment-log__operation", "Copied")
     refute has_element?(view, ".environment-log__operation", ~r/^\s*(copy|create)\s*$/)
     assert has_element?(view, ".environment-archive__meta span", "Saved before a copy")
+  end
+
+  # Each one asks first, in the admin's dialog (assets/src/confirm.js); the
+  # ones that delete are marked destructive and name what they do
+  test "the lifecycle actions ask before acting", %{conn: conn, site: site, production: production} do
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview-confirm"})
+    assert {:ok, _} = Environments.copy_environment(production, preview)
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+    row = "#environment-#{preview.id}"
+
+    assert has_element?(
+             view,
+             ~s(#{row} button[phx-click="queue_set_live"][phx-value-id="#{preview.id}"]) <>
+               ~s([data-confirm="Archive the current live environment and promote Preview?"]) <>
+               ~s|[data-confirm-ok="Set live"]:not([data-confirm-destructive])|
+           )
+
+    assert has_element?(
+             view,
+             ~s(#{row} button[phx-click="delete_environment"][phx-value-id="#{preview.id}"]) <>
+               ~s([data-confirm-title="Delete Preview?"][data-confirm-ok="Delete environment"][data-confirm-destructive])
+           )
+
+    assert view |> element(~s(#{row} button[phx-click="delete_environment"])) |> render() =~
+             "Its complete PostgreSQL schema, form submissions and drafts are deleted with it. This cannot be undone."
+
+    assert has_element?(
+             view,
+             ~s|button[phx-click="rollback"]:not([phx-value-schema])| <>
+               ~s([data-confirm="Restore the newest archive as a new non-live environment?"]) <>
+               ~s|[data-confirm-ok="Restore newest"]:not([data-confirm-destructive])|
+           )
+
+    assert has_element?(
+             view,
+             ~s(button[phx-click="prune_archives"][phx-value-keep="3"]) <>
+               ~s([data-confirm="Permanently drop all but the three newest archives?"]) <>
+               ~s([data-confirm-ok="Prune to three"][data-confirm-destructive])
+           )
+
+    assert has_element?(
+             view,
+             ~s(.environment-archive__meta button[phx-click="rollback"][phx-value-schema]) <>
+               ~s([data-confirm="It is restored as a new environment that is not live."]) <>
+               ~s|[data-confirm-ok="Restore"]:not([data-confirm-destructive])|
+           )
+  end
+
+  # The list is re-read when another admin copies or sets live, which adds an
+  # archive and prunes. A row keyed by its schema keeps its element when it
+  # moves, so a restore held by the confirm dialog restores the archive clicked.
+  test "each archive row is keyed by its schema and names it in the dialog",
+       %{conn: conn, site: site, production: production} do
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview-archives"})
+    assert {:ok, %{archive_schema: first}} = Environments.copy_environment(production, preview)
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+    row = "#environment-archive-#{first}"
+
+    assert has_element?(
+             view,
+             ~s(#{row} button[phx-click="rollback"][phx-value-schema="#{first}"]) <>
+               ~s([data-confirm-title="Restore #{first}?"]) <>
+               ~s([data-confirm="It is restored as a new environment that is not live."]) <>
+               ~s|[data-confirm-ok="Restore"]:not([data-confirm-destructive])|
+           )
+
+    assert {:ok, %{archive_schema: second}} = Environments.copy_environment(production, preview)
+    refute second == first
+    send(view.pid, {:environments_updated, site.id})
+
+    assert has_element?(view, ~s(#{row} button[phx-value-schema="#{first}"]))
+    assert has_element?(view, ~s(#environment-archive-#{second} button[phx-value-schema="#{second}"]))
   end
 
   test "editors cannot invoke environment lifecycle events", %{site: site} do

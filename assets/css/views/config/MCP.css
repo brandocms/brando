@@ -114,4 +114,94 @@
 .admin-workspace.security-workspace {
   .security-empty-row { padding: 16px 20px; color: var(--brando-muted); font-size: var(--brando-text-sm); }
   .security-connected-apps .security-item:first-child { border-top: 0; }
+  .security-item-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+}
+
+/* The live page of a connection (BrandoAdmin.MCP.WatchLive): each call of
+   the tool as a row, newest first, with its images and proposal under it. */
+.admin-workspace.mcp-watch-workspace {
+  /* The tool-call line is the Assistant's (ToolSteps), in its colours */
+  --assistant-ink: var(--brando-ink);
+  --assistant-accent: var(--brando-accent);
+  --assistant-surface: var(--brando-surface-shaded);
+  max-width: 1120px;
+
+  .workspace-heading-actions .badge { align-self: center; }
+
+  .mcp-watch-ended {
+    margin-bottom: 24px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
+    background: var(--brando-surface-shaded); color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 1.5;
+  }
+
+  .mcp-watch-empty > [data-icon] { width: 28px; height: 28px; margin-bottom: 4px; color: var(--brando-faint); }
+
+  .mcp-watch-calls { margin: 0; padding: 0; list-style: none; }
+
+  .mcp-watch-call {
+    display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--brando-line-soft);
+    &:last-child { border-bottom: 0; }
+    > .badge { margin-top: 1px; }
+  }
+
+  .mcp-watch-icon {
+    display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--brando-muted);
+    [data-icon] { width: 16px; height: 16px; }
+  }
+  .mcp-watch-call[data-state="running"] .mcp-watch-icon { color: var(--brando-accent); }
+  .mcp-watch-call[data-state="running"] .mcp-watch-icon [data-icon] { animation: spin 1.2s linear infinite; }
+  .mcp-watch-call[data-state="error"] .mcp-watch-icon { color: var(--brando-error-ink); }
+
+  .mcp-watch-body { display: grid; gap: 4px; min-width: 0; }
+  .mcp-watch-label { font-size: var(--brando-text-md); line-height: 20px; overflow-wrap: anywhere; }
+  .mcp-watch-meta {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 18px;
+    code { font-family: var(--brando-font-mono); font-size: var(--brando-text-xs); }
+    time, span { font-variant-numeric: tabular-nums; }
+  }
+  .mcp-watch-error { color: var(--brando-error-ink); font-size: var(--brando-text-sm); line-height: 1.5; overflow-wrap: anywhere; }
+
+  /* Imported images: the folder, then the thumbnails, each marked new or reused */
+  .mcp-watch-images {
+    /* One shrinking column, so the thumbnails wrap instead of widening the row */
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 8px;
+    ul { display: grid; grid-template-columns: repeat(auto-fill, 112px); gap: 12px 8px; max-width: 640px; margin: 0; padding: 0; list-style: none; }
+    li { display: grid; justify-items: start; gap: 6px; }
+  }
+  .mcp-watch-folder {
+    display: flex; align-items: center; gap: 6px; color: var(--brando-muted); font-size: var(--brando-text-sm);
+    [data-icon] { width: 14px; height: 14px; }
+  }
+  .mcp-watch-thumb {
+    display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1; overflow: hidden;
+    border-radius: 6px; background: var(--brando-surface-shaded); color: var(--brando-faint);
+    img { width: 100%; height: 100%; object-fit: cover; }
+    [data-icon] { width: 20px; height: 20px; }
+  }
+
+  /* A stored proposal: what it is, its counts and problems, and the review */
+  .mcp-watch-proposal {
+    display: grid; gap: 4px; max-width: 640px; margin-top: 8px; padding: 12px 14px;
+    border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface);
+    > header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 4px 12px; }
+    h3 { font-size: var(--brando-text-md); line-height: 20px; overflow-wrap: anywhere; }
+  }
+  .mcp-watch-counts { color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 18px; }
+  .mcp-watch-problems {
+    display: grid; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--brando-text-sm); line-height: 1.5;
+    li { display: flex; align-items: baseline; gap: 6px; }
+    [data-icon] { flex: 0 0 auto; width: 13px; height: 13px; align-self: flex-start; margin-top: 3px; color: var(--brando-attention-ink); }
+  }
+  .mcp-watch-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mcp-watch-call[data-state="running"] .mcp-watch-icon [data-icon] { animation: none; }
+  }
+
+  /* On a phone the state goes under the line */
+  @media (max-width: 600px) {
+    .mcp-watch-call { grid-template-columns: 20px minmax(0, 1fr); padding: 14px 16px; }
+    .mcp-watch-call > .badge { grid-column: 2; justify-self: start; }
+    .mcp-watch-images ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
 }

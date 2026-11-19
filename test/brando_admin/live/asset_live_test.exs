@@ -32,6 +32,15 @@ defmodule BrandoAdmin.Sites.AssetLiveTest do
     assert has_element?(view, ".frontend-assets-current", "Release assets")
     assert has_element?(view, "#asset-set-#{asset_set.id} button", "Activate build")
 
+    # Each switch asks first, in the admin's dialog (assets/src/confirm.js)
+    assert has_element?(
+             view,
+             ~s(#asset-set-#{asset_set.id} button[phx-click="activate"][phx-value-id="#{asset_set.id}"]) <>
+               ~s([data-confirm-title="Activate #{asset_set.name} now?"]) <>
+               ~s([data-confirm="Frontend requests will switch immediately."][data-confirm-ok="Activate build"]) <>
+               ":not([data-confirm-destructive])"
+           )
+
     view
     |> element("#asset-set-#{asset_set.id} button", "Activate build")
     |> render_click()
@@ -39,6 +48,13 @@ defmodule BrandoAdmin.Sites.AssetLiveTest do
     assert SiteAssets.active_set().id == asset_set.id
     assert has_element?(view, "#asset-set-#{asset_set.id}", "Active")
     assert has_element?(view, ".frontend-assets-current.uploaded", asset_set.name)
+
+    assert has_element?(
+             view,
+             ~s(.frontend-assets-current button[phx-click="deactivate"]) <>
+               ~s([data-confirm="Use the frontend assets included in the current release?"]) <>
+               ~s([data-confirm-ok="Use release assets"])
+           )
 
     view
     |> element("button", "Use release assets")
@@ -102,6 +118,13 @@ defmodule BrandoAdmin.Sites.AssetLiveEnvironmentsTest do
         assert has_element?(view, "#asset-environment-#{staging.id}", one.name)
         assert has_element?(view, "#asset-environment-#{staging.id}", "Editing now")
 
+        assert has_element?(
+                 view,
+                 ~s(#asset-set-#{next.id} button[phx-click="activate_environment"][phx-value-id="#{next.id}"]) <>
+                   ~s([data-confirm-title="Activate #{next.name} for Staging now?"]) <>
+                   ~s([data-confirm="Its requests switch immediately."][data-confirm-ok="Activate for Staging"])
+               )
+
         view
         |> element("#asset-set-#{next.id} button", "Activate for Staging")
         |> render_click()
@@ -113,6 +136,13 @@ defmodule BrandoAdmin.Sites.AssetLiveEnvironmentsTest do
         refute has_element?(view, "#asset-set-#{next.id} button", "Activate for Staging")
         # The site's set is untouched
         assert SiteAssets.active_set(if(unquote(mode) == :multi, do: Registry.get_site_by_key("acme"))).id == one.id
+
+        assert has_element?(
+                 view,
+                 ~s(#asset-environment-#{staging.id} button[phx-click="clear_environment"]) <>
+                   ~s([phx-value-id="#{staging.id}"][data-confirm-title="Serve the site's build on Staging again?"]) <>
+                   ~s([data-confirm="Requests switch immediately."][data-confirm-ok="Use the site's build"])
+               )
 
         view
         |> element("#asset-environment-#{staging.id} button", "Use the site's build")
@@ -134,6 +164,14 @@ defmodule BrandoAdmin.Sites.AssetLiveEnvironmentsTest do
         refute has_element?(view, ".frontend-assets-current button", "Use release assets")
         # The site's build keeps the control in its own row
         assert has_element?(view, "#asset-set-#{one.id} button", "Use release assets")
+
+        assert has_element?(
+                 view,
+                 ~s(#asset-set-#{one.id} button[phx-click="deactivate"]) <>
+                   ~s([data-confirm-title="Stop using #{one.name} as the site's build?"]) <>
+                   ~s([data-confirm-ok="Use release assets"])
+               )
+
         refute has_element?(view, "#asset-set-#{next.id} button", "Use release assets")
 
         view

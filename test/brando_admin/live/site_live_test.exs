@@ -1013,6 +1013,25 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       assert_nav(fn -> has_element?(nav, ".tenant-switcher__current", "Acme Group") end)
     end
 
+    # A language added is seeded holding the site's lifecycle lock
+    test "is refused while the site is held elsewhere, and says seeding may hold it",
+         %{conn: conn, site: site, current_user: user} do
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+      lock_conn = start_supervised!({Postgrex, lock_conn_opts()})
+      key = Brando.Tenant.Lock.lifecycle_key(site.key)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      view |> form("#name-site-#{site.id}", site: %{name: "Acme Group"}) |> render_submit()
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+
+      assert message ==
+               "This site is being set up, archived or changed elsewhere, or its new language is being seeded. Try again in a moment."
+
+      assert Registry.get_site(site.id).name == "Existing Site"
+    end
+
     test "is refused empty, and the old one kept", %{conn: conn, site: site} do
       {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
       view |> form("#name-site-#{site.id}", site: %{name: ""}) |> render_submit()
@@ -1051,12 +1070,100 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       nav = find_live_child(view, "brando-nav")
       :erlang.trace(nav.pid, true, [:receive])
 
+      # Every warm is in the navigation's mailbox before it reads the first
+      :ok = :sys.suspend(nav.pid)
       {:ok, _site} = Registry.update_site(Registry.get_site(site.id), %{name: "Acme Group"})
       for _warm <- 1..5, do: send(nav.pid, :tenant_registry_changed)
+      :ok = :sys.resume(nav.pid)
 
       assert_receive {:trace, _pid, :receive, :refresh_tenant_registry}, 1_000
-      refute_receive {:trace, _pid, :receive, :refresh_tenant_registry}, 400
+      # A second refresh would come one refresh delay (150 ms) after the first
+      refute_receive {:trace, _pid, :receive, :refresh_tenant_registry}, 300
       assert has_element?(nav, ".tenant-switcher__current", "Acme Group")
+    end
+
+    test "lists a site again once it is activated", %{conn: conn, site: site} do
+      other = other_site("Other Site", "other-site-nav")
+      nav = nav_at(conn, site)
+      assert has_element?(nav, switcher_option(other))
+
+      refreshed(nav, fn -> {:ok, _} = Registry.update_site(other, %{status: :suspended}) end)
+      refute has_element?(nav, switcher_option(other))
+
+      refreshed(nav, fn -> {:ok, _} = Registry.update_site(Registry.get_site(other.id), %{status: :active}) end)
+      assert has_element?(nav, switcher_option(other))
+    end
+
+    test "lists a site created while it is open", %{conn: conn, site: site} do
+      nav = nav_at(conn, site)
+
+      other = refreshed(nav, fn -> other_site("Other Site", "other-site-nav") end)
+      assert has_element?(nav, switcher_option(other), "Other Site")
+    end
+
+    test "drops a site the user may no longer enter", %{site: site, editor: editor} do
+      other = other_site("Other Site", "other-site-nav")
+      {:ok, _} = Access.grant(editor, site, :editor)
+      {:ok, _} = Access.grant(editor, other, :editor)
+      editor_conn = log_in_user(Brando.Test.Support.admin_conn(), editor)
+
+      {:ok, nav, _html} =
+        live_isolated(editor_conn, BrandoAdmin.Nav,
+          session: %{
+            "user_token" => get_session(editor_conn, :user_token),
+            "brando_site_key" => site.key,
+            "brando_environment_key" => "production",
+            "current_url" => "/admin"
+          }
+        )
+
+      assert has_element?(nav, switcher_option(other))
+
+      :ok = Access.revoke(editor, other)
+      refreshed(nav, fn -> {:ok, _} = Registry.update_site(other, %{name: "Renamed Site"}) end)
+
+      refute has_element?(nav, switcher_option(other))
+      assert has_element?(nav, switcher_option(site))
+    end
+  end
+
+  defp other_site(name, key) do
+    {:ok, site} =
+      Registry.create_site(%{
+        name: name,
+        key: key,
+        languages: ["en"],
+        default_language: "en",
+        status: :active,
+        delivery_mode: :dynamic
+      })
+
+    Registry.get_site(site.id)
+  end
+
+  defp nav_at(conn, site) do
+    {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}&brando_site_key=#{site.key}")
+    find_live_child(view, "brando-nav")
+  end
+
+  defp switcher_option(site), do: ~s(#tenant-switcher-options button[name="site_key"][value="#{site.key}"])
+
+  # Runs `fun`, a registry write, and returns once the navigation has shown it
+  defp refreshed(nav, fun) do
+    :erlang.trace(nav.pid, true, [:receive])
+    result = fun.()
+    assert_receive {:trace, _pid, :receive, :refresh_tenant_registry}, 1_000
+    :erlang.trace(nav.pid, false, [:receive])
+    flush_traces()
+    _ = render(nav)
+    result
+  end
+
+  defp flush_traces do
+    receive do
+      {:trace, _pid, :receive, _message} -> flush_traces()
+    after
+      0 -> :ok
     end
   end
 

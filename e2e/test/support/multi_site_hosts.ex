@@ -26,7 +26,10 @@ defmodule E2E.MultiSiteHosts do
   its production to its staging environment for tomorrow, with Oban in
   manual mode, so the sites screen shows the seeding queued and the
   environments screen the pending copy. `:deploy_targets` makes Acme static
-  with two allowed S3 targets, for the sites screen's lists.
+  with two allowed S3 targets, for the sites screen's lists. `:many_sites` adds
+  eleven more sites with a live environment each, the first with a long name,
+  and a schema for Acme's staging environment and the long-named site, which
+  the navigation's switcher can switch to.
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -162,6 +165,8 @@ defmodule E2E.MultiSiteHosts do
 
     if opts[:queued], do: queue(acme, acme_live, acme_staging, admin)
 
+    if opts[:many_sites], do: many_sites(acme_staging, admin)
+
     if opts[:site_admin] do
       admin = admin |> Ecto.Changeset.change(role: :admin) |> Repo.update!()
       {:ok, _} = Access.grant(admin, acme, :admin)
@@ -223,6 +228,33 @@ defmodule E2E.MultiSiteHosts do
       {:ok, _job} =
         Brando.Environments.schedule_copy(live, staging, DateTime.add(DateTime.utc_now(), 1, :day), creator: admin)
     end)
+
+    Cache.warm()
+  end
+
+  defp many_sites(acme_staging, admin) do
+    # A working environment the admin can switch to
+    create_schema(acme_staging)
+
+    names = [
+      "Northern Lights Photography Festival and Archive",
+      "Cedar",
+      "Delta",
+      "Elm",
+      "Fjord",
+      "Granite",
+      "Harbour",
+      "Iris",
+      "Juniper",
+      "Kestrel",
+      "Linden"
+    ]
+
+    for {name, index} <- Enum.with_index(names) do
+      site = site(name, "site-#{index}")
+      live = environment(site, admin, "production", "Production", true, nil, [])
+      if index == 0, do: create_schema(live)
+    end
 
     Cache.warm()
   end

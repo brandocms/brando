@@ -302,7 +302,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           class="module-item-action module-danger"
                           type="button"
                           phx-click={JS.dispatch("change")}
-                          phx-confirm={gettext("Delete reference %{name}?", name: ref[:name].value)}
+                          data-confirm={gettext("Delete reference %{name}?", name: ref[:name].value)}
+                          data-confirm-ok={gettext("Delete reference")}
+                          data-confirm-destructive
                           name={"#{@form.name}[drop_ref_ids][]"}
                           value={ref.index}
                           aria-label={gettext("Delete reference %{name}", name: ref[:name].value)}

@@ -1650,7 +1650,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
     do: gettext("A deploy of this site is running. Try again when it has finished.")
 
   defp lifecycle_error(:site_busy),
-    do: gettext("This site is being set up, archived or changed elsewhere. Try again in a moment.")
+    do:
+      gettext(
+        "This site is being set up, archived or changed elsewhere, or its new language is being seeded. Try again in a moment."
+      )
 
   defp lifecycle_error(reason) when is_atom(reason), do: reason |> Atom.to_string() |> String.replace("_", " ")
   defp lifecycle_error(reason), do: inspect(reason)

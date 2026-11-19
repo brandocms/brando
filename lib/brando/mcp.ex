@@ -578,7 +578,11 @@ defmodule Brando.MCP do
     from(t in Token, where: t.grant_id == ^grant.id and is_nil(t.revoked_at))
     |> Repo.update_all(set: [revoked_at: now])
 
-    if count == 1, do: record_revoked(grant, actor, reason)
+    if count == 1 do
+      record_revoked(grant, actor, reason)
+      Brando.MCP.Watch.ended(grant.id)
+    end
+
     :ok
   end
 
