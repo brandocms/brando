@@ -137,7 +137,11 @@ defmodule Brando.Webhooks.Client do
   defp transport_opts(_target, timeout), do: [timeout: timeout]
 
   defp request(conn, target, method, headers, body, deadline, limits) do
-    headers = if body == "" and method in ["GET", "HEAD"], do: headers, else: content_length(headers, body)
+    # Mint sends `content-length: 0` for an empty binary body, and some
+    # servers (Figma's image CDN) answer 400 to a GET carrying one: an empty
+    # GET or HEAD goes as no body at all.
+    {headers, body} =
+      if body == "" and method in ["GET", "HEAD"], do: {headers, nil}, else: {content_length(headers, body), body}
 
     case HTTP.request(conn, method, target.path, headers, body) do
       {:ok, conn, ref} ->
