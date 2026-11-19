@@ -1832,6 +1832,26 @@ defmodule Brando.Content.Proposals do
     end
   end
 
+  @doc """
+  The languages a new entry of `schema` can take, as
+  `[%{code: "en", name: "English"}, …]`: the current site's languages that
+  its `language` field accepts, in the site's order. Empty when the content
+  type has no `language` field of the language kind.
+  """
+  @spec entry_languages(module()) :: [%{code: String.t(), name: String.t()}]
+  def entry_languages(schema) do
+    values = language_values(schema)
+
+    listed =
+      for language <- Brando.Languages.languages(),
+          code = to_string(language[:value]),
+          code in values,
+          do: %{code: code, name: language[:text]}
+
+    # A field whose own languages are none of the site's still takes them.
+    if listed == [], do: Enum.map(values, &%{code: &1, name: &1}), else: listed
+  end
+
   # A `language` field of another kind (plain text, say) is not ours to fill.
   defp language_values(schema) do
     case schema.__schema__(:type, :language) do

@@ -77,7 +77,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "describe_content_type",
       description:
-        "Describe a content type's editable fields (name, type, required, and a description from the admin form: the field's label as editors see it, and its instructions; `default` is what a new entry gets when create_entry leaves the field out) and block fields. " <>
+        "Describe a content type's editable fields (name, type, required, and a description from the admin form: the field's label as editors see it, and its instructions; `default` is what a new entry gets when create_entry leaves the field out; `languages` lists the languages a `language` field takes, by code and name) and block fields. " <>
           "Use the descriptions to tell where text belongs: a heading or introduction the entry has as a field goes in that field, not in a block. New entries are always created as drafts.",
       parameters: %{
         type: "object",
@@ -258,7 +258,7 @@ defmodule Brando.Content.Proposals.Tools do
       {"op":"set_ref_config","target":…,"block_uid":UID,"ref":NAME,"config":{}}
       {"op":"set_block_table","target":…,"block_uid":UID,"rows":[{KEY:VALUE}]}
       {"op":"set_block_selection","target":…,"block_uid":UID,"identifiers":[ID]}
-      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot, or {"from":{"block_uid":UID,"ref":NAME}}: that saved block's text in the same entry and field, copied whole with its markup — to change a block's module, insert_block the new one with its texts from the old block, then delete_block the old one. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings); with "to":{"content_type":T,"id":N}|{"new":R} (and "to_field") it copies a saved block to another entry or block field — to move it there, copy it and delete_block the original. set_block_table replaces a table block's rows (describe_module lists the row variables). set_block_selection sets the entries a selection datasource block shows. In any text, link to an entry with <a href="entry:CONTENT_TYPE:ID">; it becomes a link that follows the entry's address. List fields (describe_content_type: "list of …") take the whole list: ids, or entries as {"content_type":T,"id":N}. set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
+      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot, or {"from":{"block_uid":UID,"ref":NAME}}: that saved block's text in the same entry and field, copied whole with its markup — to change a block's module, insert_block the new one with its texts from the old block, then delete_block the old one. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings); with "to":{"content_type":T,"id":N}|{"new":R} (and "to_field") it copies a saved block to another entry or block field — to move it there, copy it and delete_block the original. set_block_table replaces a table block's rows (describe_module lists the row variables). set_block_selection sets the entries a selection datasource block shows. In any text, link to an entry with <a href="entry:CONTENT_TYPE:ID">; it becomes a link that follows the entry's address. List fields (describe_content_type: "list of …") take the whole list: ids, or entries as {"content_type":T,"id":N}. set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id). In create_entry, set "language" to the language the entry's content is written in, one of the languages describe_content_type lists for the field; left out, the entry gets the default language.
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Uids are unique across the site, not only in the entry: prefix yours, for example with the entry's ref or slug. Returns problems to fix; call again with the corrected operations. Outside an Assistant conversation it also returns review_url, where the user reviews the proposal, and preview_url when an entry has a page preview: the review opened on that page. Give the user preview_url when there is one.
       """,
       parameters: %{
@@ -1376,18 +1376,19 @@ defmodule Brando.Content.Proposals.Tools do
   defp inspect_type(type) when is_atom(type), do: to_string(type)
   defp inspect_type(type), do: inspect(type)
 
-  # Each field's label and instructions from the Blueprint's admin form, as
-  # editors read them: "Introduction — Used for case listings". A field the
-  # form does not show, or shows without a label, has none.
-  # A new entry left without a language gets this one (`Proposals.new_entry_fields/2`).
+  # A language field lists the languages it takes on this site. A new entry
+  # left without one gets the default (`Proposals.new_entry_fields/2`).
   defp with_default(%{name: "language"} = field, schema) do
-    case Proposals.new_entry_language(schema) do
-      nil -> field
-      language -> Map.put(field, :default, language)
-    end
+    field
+    |> put_present(:languages, Proposals.entry_languages(schema))
+    |> put_present(:default, Proposals.new_entry_language(schema))
   end
 
   defp with_default(field, _schema), do: field
+
+  # Each field's label and instructions from the Blueprint's admin form, as
+  # editors read them: "Introduction — Used for case listings". A field the
+  # form does not show, or shows without a label, has none.
 
   defp with_descriptions(fields, schema) do
     descriptions = form_descriptions(schema)
