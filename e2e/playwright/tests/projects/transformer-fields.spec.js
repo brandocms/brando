@@ -275,3 +275,29 @@ test('transformer string lists save additions, removals and clearing without cha
   await expectAliases(first, [''])
   await expectAliases(second, ['Second one', 'Second two', ''])
 })
+
+// The transformer renders its rows from the saved list, without the blank
+// one, so an insert sends nothing until something is typed in it
+test('a transformer string list row inserted above a value keeps every value through typing and saving', async ({ page }) => {
+  const url = await createClient(page)
+  const first = rows(page).nth(0)
+  const aliases = first.locator('input[name="transformer_item[aliases][]"]')
+  const aliasValues = () => aliases.evaluateAll(inputs => inputs.map(input => input.value))
+
+  await first.locator('.string-list-row').nth(1).hover()
+  await first.locator('.string-list-row').nth(1).locator('.string-list-insert').click()
+  await expect(aliases.nth(1)).toBeFocused()
+
+  // Past the inputs' debounce: nothing may render over the shifted rows
+  await page.waitForTimeout(350)
+  await syncLV(page)
+  await expect.poll(aliasValues).toEqual(['First one', '', 'First two', ''])
+
+  await page.keyboard.type('First between')
+  await page.waitForTimeout(350)
+  await syncLV(page)
+  await expect.poll(aliasValues).toEqual(['First one', 'First between', 'First two', ''])
+
+  await saveAndReload(page, url)
+  await expect.poll(aliasValues).toEqual(['First one', 'First between', 'First two', ''])
+})

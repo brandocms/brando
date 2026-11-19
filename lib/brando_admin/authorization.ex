@@ -402,7 +402,10 @@ defmodule BrandoAdmin.Authorization do
     end
   end
 
-  defp event_action(:sites, "create_site"), do: :create
+  # Filling in the create form needs what creating does; focus and blur
+  # only tell field presence, which the screen has none of
+  defp event_action(:sites, event) when event in ["create_site", "check_create"], do: :create
+  defp event_action(:sites, event) when event in ["focus", "blur"], do: nil
   defp event_action(:sites, event) when event in ["archive_site", "delete_site", "archive", "delete"], do: :delete
   defp event_action(:sites, _), do: :update
   defp event_action(subject, _) when subject in [:frontend_assets, :shared_library, :utilities], do: :update

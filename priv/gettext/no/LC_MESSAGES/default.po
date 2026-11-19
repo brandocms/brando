@@ -896,6 +896,11 @@ msgstr "%{name} lagret denne siden etter at du åpnet den. Last inn på nytt for
 msgid "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again."
 msgstr "%{name} lagret denne siden etter at du åpnet redigeringen. Last inn blokken på nytt for å få med endringene deres, og gjør dine endringer igjen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved."
+msgstr "%{name} er lagret."
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} · definition"
@@ -915,6 +920,11 @@ msgstr "%{name} · mal"
 #, elixir-autogen, elixir-format
 msgid "%{name}’s account will be deleted after the transfer."
 msgstr "Kontoen til %{name} slettes etter overføringen."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s delivery changed while the confirmation was open, so nothing was switched. Check what switching does now, and switch again."
+msgstr "Leveringen av %{name} endret seg mens bekreftelsen var åpen, så ingenting ble byttet. Se hva byttet gjør nå, og bytt på nytt."
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -1381,6 +1391,11 @@ msgstr "En dato, valgt fra en kalender"
 msgid "A definition in this apply was applied again since. Review the revert again."
 msgstr "En definisjon i endringene er tatt i bruk på nytt siden. Se gjennom tilbakestillingen igjen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy of this site is running. Try again when it has finished."
+msgstr "En publisering av dette nettstedet pågår. Prøv igjen når den er ferdig."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
@@ -1805,6 +1820,11 @@ msgstr "Aktivere %{name} for %{environment} nå? Forespørslene dit bytter med e
 #, elixir-autogen, elixir-format
 msgid "Activate %{name} now? Frontend requests will switch immediately."
 msgstr "Aktiver %{name} nå? Frontend-filene byttes umiddelbart."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Activate %{name}?"
+msgstr "Aktivere %{name}?"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -9704,6 +9724,11 @@ msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] "Brukt ett sted: %{places}."
 msgstr[1] "Brukt på %{count} steder: %{places}."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "It names the site’s database schemas and folders, so it cannot be changed."
+msgstr "Nøkkelen navngir nettstedets databaseskjemaer og mapper, så den kan ikke endres."
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "It no longer logs you in. Remove it from the device too, in its settings."
@@ -9752,6 +9777,21 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] "Også %{count} underliggende blokk fjernes."
 msgstr[1] "Også %{count} underliggende blokker fjernes."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains are back in public routing at once: Phoenix answers %{domain} again where it points at this installation."
+msgstr "Domenene rutes offentlig igjen med en gang: Phoenix svarer på %{domain} igjen der det peker til denne installasjonen."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains serve again at once: visitors to %{domain} get published build %{build}."
+msgstr "Domenene svarer igjen med en gang: besøkende på %{domain} får publisert bygg %{build}."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains serve again at once: visitors to %{domain} get the site’s pages from Phoenix."
+msgstr "Domenene svarer igjen med en gang: besøkende på %{domain} får nettstedets sider fra Phoenix."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -15735,6 +15775,11 @@ msgstr "Svar"
 msgid "Restore"
 msgstr "Gjenopprett"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restore %{name}?"
+msgstr "Gjenopprette %{name}?"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Restore compatible content"
@@ -16398,6 +16443,11 @@ msgstr "Lagre språk"
 #, elixir-autogen, elixir-format
 msgid "Save minor text corrections"
 msgstr "Lagre små tekstrettelser"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save name"
+msgstr "Lagre navn"
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/entry_skeleton.ex
@@ -19670,6 +19720,11 @@ msgstr "Innloggingsreglene krever tofaktorautentisering: legg til en annen passn
 msgid "The sign-in policy was saved."
 msgstr "Innloggingsreglene er lagret."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site"
+msgstr "Nettstedet"
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -20429,6 +20484,11 @@ msgstr "Nettstedet kan ikke sende e-post nå. Be en administrator om å tilbakes
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
 msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble sendt."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site is being set up, archived or changed elsewhere. Try again in a moment."
+msgstr "Dette nettstedet settes opp, arkiveres eller endres et annet sted. Prøv igjen om et øyeblikk."
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -22587,6 +22647,7 @@ msgstr "Du endret det også. Skjemaet viser din versjon, og når du lagrer, erst
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/content/module_list_live.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex

@@ -72,6 +72,12 @@ defmodule Brando.Worker.SSGBuild do
       %Build{site: %{status: status}} = build when status != :active ->
         cancel_unbuildable(build, :site_not_active)
 
+      # Switched to dynamic since it was queued or scheduled: nothing to build
+      # for, and an automatic deploy would still copy to the static host
+      %Build{site: %{delivery_mode: mode}, status: status} = build
+      when mode != :static and status in [:queued, :building] ->
+        cancel_unbuildable(build, :site_not_static)
+
       %Build{environment: nil} = build ->
         cancel_unbuildable(build, :environment_not_found)
 
@@ -285,7 +291,7 @@ defmodule Brando.Worker.SSGBuild do
     Builds.update(build, %{
       status: :failed,
       built_at: DateTime.utc_now(),
-      build_log: build.build_log <> log_line("Build cancelled: #{inspect(reason)}")
+      build_log: build.build_log <> log_line("Build cancelled: #{cancel_message(reason)}")
     })
 
     report(build, fn user, key ->
@@ -294,6 +300,11 @@ defmodule Brando.Worker.SSGBuild do
 
     {:cancel, reason}
   end
+
+  defp cancel_message(:site_not_static),
+    do: "the site's delivery is no longer static, so nothing was built or deployed"
+
+  defp cancel_message(reason), do: inspect(reason)
 
   # What the build skipped without failing (`Brando.SSG.build/3`'s `:notes`)
   defp notes_log(result), do: result |> Map.get(:notes, []) |> Enum.map_join(&log_line/1)

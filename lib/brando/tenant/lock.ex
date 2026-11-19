@@ -26,6 +26,34 @@ defmodule Brando.Tenant.Lock do
     end)
   end
 
+  @doc """
+  Runs `fun` holding the session advisory lock `key`, waiting up to
+  `timeout` milliseconds for it, and returns `:busy` without running it when
+  it is still held then.
+  """
+  @spec with_timeout(String.t(), non_neg_integer(), (-> result)) :: result | :busy when result: var
+  def with_timeout(key, timeout, fun) when is_binary(key) and is_integer(timeout) and is_function(fun, 0) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    try_until(key, deadline, fun)
+  end
+
+  @retry_interval 50
+
+  defp try_until(key, deadline, fun) do
+    case try_with(key, fun) do
+      :busy ->
+        if System.monotonic_time(:millisecond) + @retry_interval <= deadline do
+          Process.sleep(@retry_interval)
+          try_until(key, deadline, fun)
+        else
+          :busy
+        end
+
+      result ->
+        result
+    end
+  end
+
   @doc "Whether another session holds the advisory lock `key` now."
   @spec held?(String.t()) :: boolean()
   def held?(key) when is_binary(key), do: try_with(key, fn -> :free end) == :busy
@@ -33,6 +61,15 @@ defmodule Brando.Tenant.Lock do
   @doc "The lock an environment operation (copy, live switch, deletion) of a site holds."
   @spec environment_operation_key(pos_integer()) :: String.t()
   def environment_operation_key(site_id), do: "brando:environment-operation:#{site_id}"
+
+  @doc """
+  The lock a site's static deploys, rollbacks and prunes hold
+  (`Brando.SSG.Deploy`), and a change of its delivery
+  (`Brando.Tenant.Setup.update_delivery/4`) inside the lifecycle lock. Nothing
+  takes the lifecycle lock while holding this one.
+  """
+  @spec deploy_key(pos_integer()) :: String.t()
+  def deploy_key(site_id), do: "ssg-deploy:#{site_id}"
 
   @doc "The lock a site's lifecycle operation (provisioning, archiving, deletion) holds."
   @spec lifecycle_key(String.t()) :: String.t()

@@ -33,6 +33,20 @@ defmodule Brando.TenantCacheTest do
              Cache.get_env_by_domain("www.acme.test")
   end
 
+  test "tells subscribers of a warm that changed the registry, and of no other" do
+    site = insert_site!("acme")
+    insert_environment!(site, "production", true, "www.acme.test")
+    Cache.warm()
+    :ok = Cache.subscribe()
+
+    Cache.warm()
+    refute_received :tenant_registry_changed
+
+    site |> Ecto.Changeset.change(name: "Acme Group") |> Repo.update!(prefix: "public")
+    Cache.warm()
+    assert_received :tenant_registry_changed
+  end
+
   test "rewarming removes stale lookup keys" do
     site = insert_site!("acme")
     environment = insert_environment!(site, "production", true, "old.acme.test")

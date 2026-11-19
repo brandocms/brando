@@ -1004,6 +1004,96 @@ defmodule Brando.SSGBuildsTest do
              Builds.request_build(dynamic_site, context.environment)
   end
 
+  describe "a site switched to dynamic" do
+    test "ends its queued or scheduled builds without building or deploying, and says why", context do
+      scheduled_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+      queued = request_build(context.site, context.environment, auto_deploy: true)
+      scheduled = request_build(context.site, context.environment, scheduled_at: scheduled_at, auto_deploy: true)
+      test_pid = self()
+
+      put_test_env(:ssg_builder, __MODULE__.NeverBuilder)
+      put_test_env(:ssg_deploy_runner, fn command, _args, _opts -> send(test_pid, {:ran, command}) end)
+
+      {:ok, _site} = Registry.update_site(context.site, %{delivery_mode: :dynamic})
+
+      for build <- [queued, scheduled] do
+        assert {:cancel, :site_not_static} = perform_job(SSGBuild, %{"build_id" => build.id})
+
+        cancelled = Builds.get_build(build.id)
+        assert cancelled.status == :failed
+        assert cancelled.build_log =~ "the site's delivery is no longer static, so nothing was built or deployed"
+        refute File.exists?(cancelled.build_path)
+      end
+
+      refute_received {:ran, _command}
+    end
+
+    test "gets no deploy of a build made before the switch", context do
+      build = ready_build(context.site, context.environment)
+      test_pid = self()
+      {:ok, _site} = Registry.update_site(context.site, %{delivery_mode: :dynamic})
+
+      assert {:error, :site_not_static} =
+               Deploy.deploy(build, runner: fn command, _args, _opts -> send(test_pid, {:ran, command}) end)
+
+      assert Builds.get_build(build.id).status == :ready
+      refute_received {:ran, _command}
+    end
+
+    test "a queued deploy or rollback of a build made before the switch is cancelled, and says why", context do
+      for action <- ["deploy", "rollback"] do
+        site = Registry.get_site(context.site.id)
+        {:ok, site} = Registry.update_site(site, %{delivery_mode: :static})
+        build = ready_build(site, context.environment)
+        {:ok, _site} = Registry.update_site(site, %{delivery_mode: :dynamic})
+
+        assert {:cancel, :site_not_static} =
+                 perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => action})
+
+        assert Builds.get_build(build.id).build_log =~
+                 "Deployment refused: the site's delivery is no longer static, so nothing was copied or published."
+      end
+    end
+
+    # A deploy reads the site's delivery under the deploy lock and publishes
+    # later, and a copy to the host can hold it for many minutes: the switch
+    # is refused meanwhile rather than waiting, and goes through once it ends
+    test "is refused while a deploy holds the deploy lock, and goes through after", context do
+      superuser = Brando.Factory.insert(:random_user, role: :superuser)
+      lock_conn = start_supervised!({Postgrex, lock_conn_opts()})
+      key = Brando.Tenant.Lock.deploy_key(context.site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      assert {:error, :deploy_running} = Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser)
+      assert Registry.get_site(context.site.id).delivery_mode == :static
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      assert {:ok, %{delivery_mode: :dynamic}} = Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser)
+    end
+
+    # Provisioning, archiving or deleting the site holds its lifecycle lock
+    # for longer than a settings change waits (`:site_settings_lock_wait_ms`)
+    test "is refused while the site's lifecycle lock stays held", context do
+      superuser = Brando.Factory.insert(:random_user, role: :superuser)
+      lock_conn = start_supervised!({Postgrex, lock_conn_opts()})
+      key = Brando.Tenant.Lock.lifecycle_key(context.site.key)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      assert {:error, :site_busy} = Brando.Tenant.Setup.update_delivery(context.site, :dynamic, superuser)
+      assert {:error, :site_busy} = Brando.Tenant.Setup.update_name(context.site, "Renamed", superuser)
+      assert Registry.get_site(context.site.id).delivery_mode == :static
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      assert {:ok, %{name: "Renamed"}} = Brando.Tenant.Setup.update_name(context.site, "Renamed", superuser)
+    end
+  end
+
+  defp lock_conn_opts, do: Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])
+
+  defmodule NeverBuilder do
+    def build(_site, _environment, _opts), do: raise("a build for a dynamic site ran")
+  end
+
   test "rejects lifecycle requests for inactive sites", context do
     {:ok, suspended_site} = Registry.update_site(context.site, %{status: :suspended})
 

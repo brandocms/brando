@@ -894,6 +894,11 @@ msgstr ""
 msgid "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved."
+msgstr ""
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} · definition"
@@ -912,6 +917,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}’s account will be deleted after the transfer."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s delivery changed while the confirmation was open, so nothing was switched. Check what switching does now, and switch again."
 msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
@@ -1379,6 +1389,11 @@ msgstr ""
 msgid "A definition in this apply was applied again since. Review the revert again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy of this site is running. Try again when it has finished."
+msgstr ""
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
@@ -1802,6 +1817,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Activate %{name} now? Frontend requests will switch immediately."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Activate %{name}?"
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
@@ -9702,6 +9722,11 @@ msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "It names the site’s database schemas and folders, so it cannot be changed."
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "It no longer logs you in. Remove it from the device too, in its settings."
@@ -9750,6 +9775,21 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains are back in public routing at once: Phoenix answers %{domain} again where it points at this installation."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains serve again at once: visitors to %{domain} get published build %{build}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains serve again at once: visitors to %{domain} get the site’s pages from Phoenix."
+msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -15733,6 +15773,11 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restore %{name}?"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Restore compatible content"
@@ -16395,6 +16440,11 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Save minor text corrections"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save name"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -19666,6 +19716,11 @@ msgstr ""
 msgid "The sign-in policy was saved."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -20424,6 +20479,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site is being set up, archived or changed elsewhere. Try again in a moment."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -22583,6 +22643,7 @@ msgstr ""
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/content/module_list_live.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
