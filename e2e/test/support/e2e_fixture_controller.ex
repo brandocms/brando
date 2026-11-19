@@ -185,6 +185,9 @@ defmodule E2EFixtureController do
         "multi-site-static" ->
           MultiSiteHosts.setup(get_admin_user(), static: true)
 
+        "multi-site-deploy-targets" ->
+          MultiSiteHosts.setup(get_admin_user(), deploy_targets: true)
+
         "multi-site-static-published" ->
           MultiSiteHosts.setup(get_admin_user(), published: true)
 

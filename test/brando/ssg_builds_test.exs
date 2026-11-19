@@ -515,6 +515,22 @@ defmodule Brando.SSGBuildsTest do
       {"", 0}
     end
 
+    defp flush_commands do
+      receive do
+        {:command, _command, _args} -> flush_commands()
+      after
+        0 -> :ok
+      end
+    end
+
+    defp flush_s3 do
+      receive do
+        {:s3, _operation} -> flush_s3()
+      after
+        0 -> :ok
+      end
+    end
+
     defp recording_s3(operation) do
       send(self(), {:s3, operation})
       {:ok, %{body: %{contents: [], is_truncated: "false"}}}
@@ -648,6 +664,104 @@ defmodule Brando.SSGBuildsTest do
 
         assert Builds.get_build(build.id).build_log =~ "refused"
       end
+    end
+
+    # A superuser's entries on the site, read afresh at each deploy and
+    # rollback: the build keeps only the target it was made with
+    defp allow_own_targets(context) do
+      put_test_env(DeployConfig, [])
+
+      {:ok, _site} =
+        Registry.update_site_deploy_targets(
+          context.site,
+          %{allowed_rsync_targets: ["deploy@own.example.test:/srv/acme"], allowed_s3_targets: ["s3://own-bucket/"]},
+          :system
+        )
+
+      {:ok, _other} =
+        Registry.update_site_deploy_targets(
+          Registry.get_site_by_key(context.other_key),
+          %{allowed_rsync_targets: ["deploy@own.example.test:/srv/beta"], allowed_s3_targets: ["s3://beta-bucket"]},
+          :system
+        )
+    end
+
+    test "a site's own allowed targets allow its deploys with no config", context do
+      allow_own_targets(context)
+
+      build = with_target(context.build, "rsync", "deploy@own.example.test:/srv/acme")
+      assert {:ok, deployed} = Deploy.deploy(build, runner: &recording_runner/3)
+      assert_received {:command, "rsync", _args}
+
+      build = with_target(deployed, "s3", "s3://own-bucket/acme")
+      assert {:ok, %{status: :deployed}} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      assert_received {:s3, %ExAws.Operation.S3{http_method: :get}}
+
+      # Not the parent itself
+      flush_s3()
+      build = with_target(build, "s3", "s3://own-bucket")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      refute_received {:s3, _}
+    end
+
+    test "a site's own allowed targets count beside config's", context do
+      allow_own_targets(context)
+      put_test_env(DeployConfig, s3_targets: ["s3://static-bucket/sites/{site_key}"])
+
+      build = with_target(context.build, "s3", "s3://own-bucket/acme")
+      assert {:ok, deployed} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      build = with_target(deployed, "s3", "s3://static-bucket/sites/#{context.site.key}")
+      assert {:ok, _deployed} = Deploy.deploy(build, s3_request: &recording_s3/1)
+    end
+
+    test "another site's own allowed targets do not allow this site's deploys", context do
+      allow_own_targets(context)
+
+      build = with_target(context.build, "rsync", "deploy@own.example.test:/srv/beta")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: &recording_runner/3)
+      refute_received {:command, _, _}
+
+      build = with_target(context.build, "s3", "s3://beta-bucket")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      refute_received {:s3, _}
+    end
+
+    test "an allowed target removed stops a deploy and a rollback to it", context do
+      allow_own_targets(context)
+      target = "deploy@own.example.test:/srv/acme"
+      first = with_target(context.build, "rsync", target)
+      second = context.site |> ready_build(context.environment) |> with_target("rsync", target)
+
+      assert {:ok, _deployed} = Deploy.deploy(first, runner: &recording_runner/3)
+      assert {:ok, _deployed} = Deploy.deploy(second, runner: &recording_runner/3)
+      assert Builds.get_build(first.id).status == :archived
+
+      {:ok, site} = Registry.update_site_deploy_targets(context.site, %{allowed_rsync_targets: []}, :system)
+      flush_commands()
+
+      assert {:error, :invalid_deploy_target} =
+               Deploy.rollback(site, Builds.get_build(first.id), runner: &recording_runner/3)
+
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(Builds.get_build(second.id), runner: &recording_runner/3)
+      refute_received {:command, _, _}
+
+      assert {:cancel, :invalid_deploy_target} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => first.id, "action" => "rollback"})
+
+      assert Builds.get_build(first.id).build_log =~ "A superuser sets the site's allowed deploy targets under Sites"
+    end
+
+    # One site has no Sites screen to send the operator to
+    test "with one site, a refused deploy's log points at config", context do
+      put_test_env(:tenancy_mode, :single)
+      build = with_target(context.build, "s3", "s3://static-bucket/sites/#{context.other_key}")
+
+      assert {:cancel, :invalid_deploy_target} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+
+      log = Builds.get_build(build.id).build_log
+      assert log =~ "Check rsync_targets or s3_targets in the config"
+      refute log =~ "Sites"
     end
 
     test "with several sites and no list, nothing deploys", context do

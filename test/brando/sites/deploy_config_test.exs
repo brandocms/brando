@@ -418,11 +418,12 @@ defmodule Brando.Sites.DeployConfigTest do
     )
 
     assert DeployConfig.overlapping_destinations() == [
-             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/"},
-              {"beta", "deploy@Static.example.com.:/srv/sites/beta"}},
-             {:rsync_targets, {"delta", "deploy@[2001:db8:0::1]:/srv/www/"}, {"gamma", "deploy@[2001:db8::1]:/srv/www"}},
-             {:s3_targets, {"alpha", "s3://bucket"}, {"beta", "s3://bucket/beta"}},
-             {:s3_targets, {"alpha", "s3://other/{site_key}-x"}, {"beta", "s3://other/alpha-x/y"}}
+             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/", :config},
+              {"beta", "deploy@Static.example.com.:/srv/sites/beta", :config}},
+             {:rsync_targets, {"delta", "deploy@[2001:db8:0::1]:/srv/www/", :config},
+              {"gamma", "deploy@[2001:db8::1]:/srv/www", :config}},
+             {:s3_targets, {"alpha", "s3://bucket", :config}, {"beta", "s3://bucket/beta", :config}},
+             {:s3_targets, {"alpha", "s3://other/{site_key}-x", :config}, {"beta", "s3://other/alpha-x/y", :config}}
            ]
   end
 
@@ -480,6 +481,343 @@ defmodule Brando.Sites.DeployConfigTest do
       refute s3(target).valid?, target
       assert :error = DeployConfig.s3_destination(target, @site_key)
     end
+  end
+
+  # A superuser's entries on the site itself: they grant that site only,
+  # beside config's, and are matched as written
+  describe "a site's own allowed targets" do
+    @alpha %{
+      key: "alpha",
+      allowed_rsync_targets: ["deploy@own.example.com:/srv/alpha", "deploy@tree.example.com:/srv/sites/"],
+      allowed_s3_targets: ["s3://alpha-own", "s3://shared-own/sites/alpha", "s3://tree-own/"]
+    }
+    @beta %{key: "beta", allowed_rsync_targets: [], allowed_s3_targets: []}
+
+    defp rsync_for(site, target),
+      do: DeployConfig.changeset(%DeployConfig{}, %{strategy: :rsync, target: target}, site, lookup_host: true)
+
+    defp s3_for(site, target), do: DeployConfig.changeset(%DeployConfig{}, %{strategy: :s3, target: target}, site)
+
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      put_test_env(DeployConfig, resolver: &resolve/2)
+    end
+
+    test "with several sites and no config, are enough on their own" do
+      assert rsync_for(@alpha, "deploy@own.example.com:/srv/alpha").valid?
+      assert rsync_for(@alpha, "deploy@own.example.com:/srv/alpha/").valid?
+      assert DeployConfig.valid_rsync_target?("deploy@own.example.com:/srv/alpha", @alpha)
+      assert s3_for(@alpha, "s3://alpha-own").valid?
+      assert {:ok, "shared-own", "sites/alpha"} = DeployConfig.s3_destination("s3://shared-own/sites/alpha", @alpha)
+
+      refute rsync_for(@alpha, "deploy@own.example.com:/srv/alpha/sub").valid?
+      refute rsync_for(@alpha, "other@own.example.com:/srv/alpha").valid?
+      refute s3_for(@alpha, "s3://alpha-own/sub").valid?
+    end
+
+    test "do not allow another site" do
+      refute rsync_for(@beta, "deploy@own.example.com:/srv/alpha").valid?
+      refute DeployConfig.valid_rsync_target?("deploy@own.example.com:/srv/alpha", @beta)
+      refute s3_for(@beta, "s3://alpha-own").valid?
+      assert :error = DeployConfig.s3_destination("s3://alpha-own", @beta)
+
+      # Nor the site's key alone, as config's checks are made
+      refute DeployConfig.valid_rsync_target?("deploy@own.example.com:/srv/alpha", "alpha")
+      assert :error = DeployConfig.s3_destination("s3://alpha-own", "alpha")
+    end
+
+    test "a parent ending in / allows what is under it, not the parent itself" do
+      assert rsync_for(@alpha, "deploy@tree.example.com:/srv/sites/alpha").valid?
+      assert s3_for(@alpha, "s3://tree-own/alpha").valid?
+
+      refute rsync_for(@alpha, "deploy@tree.example.com:/srv/sites").valid?
+      refute rsync_for(@alpha, "deploy@tree.example.com:/srv/sites/").valid?
+      refute s3_for(@alpha, "s3://tree-own").valid?
+      refute s3_for(@alpha, "s3://tree-own/").valid?
+    end
+
+    test "a target is still held to its form, and to another server" do
+      site = %{@alpha | allowed_rsync_targets: ["deploy@loop.example.com:/srv/www", "deploy@own.example.com:/srv/"]}
+
+      refute rsync_for(site, "deploy@loop.example.com:/srv/www").valid?
+      refute rsync_for(site, "deploy@own.example.com:/srv/a/../b").valid?
+      refute s3_for(site, "s3://tree-own/a/../b").valid?
+    end
+
+    test "an entry naming {site_key} is matched as written, and allows nothing" do
+      site = %{@alpha | allowed_s3_targets: ["s3://static-bucket/sites/{site_key}"]}
+      refute s3_for(site, "s3://static-bucket/sites/alpha").valid?
+    end
+
+    test "count beside a config list, a per-site map or an unreadable setting" do
+      for config <- [
+            [rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"], s3_targets: ["s3://static/{site_key}"]],
+            [
+              rsync_targets: %{"alpha" => ["deploy@static.example.com:/srv/sites/alpha"]},
+              s3_targets: %{"alpha" => ["s3://static/alpha"]}
+            ],
+            [rsync_targets: "deploy@static.example.com:/srv/sites/", s3_targets: %{alpha: ["s3://static/alpha"]}]
+          ] do
+        put_test_env(DeployConfig, [resolver: &resolve/2] ++ config)
+
+        assert rsync_for(@alpha, "deploy@own.example.com:/srv/alpha").valid?, inspect(config)
+        assert s3_for(@alpha, "s3://alpha-own").valid?, inspect(config)
+        refute rsync_for(@beta, "deploy@own.example.com:/srv/alpha").valid?, inspect(config)
+        refute s3_for(@beta, "s3://alpha-own").valid?, inspect(config)
+        refute rsync_for(@alpha, "deploy@static.example.com:/srv/sites/beta").valid?, inspect(config)
+      end
+
+      # What config allows still passes
+      put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: ["s3://static/{site_key}"])
+      assert s3_for(@alpha, "s3://static/alpha").valid?
+      assert s3_for(@beta, "s3://static/beta").valid?
+    end
+
+    test "a refused target says a superuser sets the allowed targets under Sites" do
+      assert {message, _opts} = s3_for(@beta, "s3://alpha-own").errors[:target]
+      assert message =~ "under Sites"
+
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: ["s3://static/{site_key}"])
+      assert {"must be a destination this installation deploys to", _opts} = s3_for(@beta, "s3://other").errors[:target]
+    end
+
+    test "leave one site as it was: an unset config list allows any target of the right form" do
+      for mode <- [:none, :single] do
+        put_test_env(:tenancy_mode, mode)
+
+        assert rsync_for(@beta, "deploy@static.example.com:/srv/www").valid?
+        assert s3_for(@beta, "s3://any-bucket").valid?
+        refute rsync_for(@beta, "deploy@localhost:/srv/www").valid?
+      end
+    end
+  end
+
+  describe "an entry of a site's own allowed targets" do
+    test "is a remote destination, or a parent ending in /" do
+      for entry <- [
+            "deploy@static.example.com:/srv/www",
+            "deploy@static.example.com:/srv/sites/",
+            "static.example.com:/srv/www",
+            "deploy@[2001:db8::1]:/srv/www"
+          ] do
+        assert DeployConfig.allowed_entry_error(:rsync_targets, entry) == nil, entry
+      end
+
+      for entry <- ["s3://bucket", "s3://bucket/", "s3://bucket/sites/acme", "s3://bucket/sites/"] do
+        assert DeployConfig.allowed_entry_error(:s3_targets, entry) == nil, entry
+      end
+    end
+
+    test "is held to a target's form" do
+      for entry <- [
+            "/srv/www",
+            "deploy@localhost:/srv/www",
+            "deploy@127.0.0.1:/srv/www",
+            "deploy@[::1]:/srv/www",
+            "static.example.com::module",
+            "rsync://static.example.com/srv",
+            "deploy@static.example.com:/srv/../etc",
+            "deploy@static.example.com:/srv/./www",
+            "deploy@static.example.com:/",
+            "-oProxyCommand=x@static.example.com:/srv",
+            "deploy@static.example.com:relative",
+            "s3://bucket/a"
+          ] do
+        assert is_binary(DeployConfig.allowed_entry_error(:rsync_targets, entry)), entry
+      end
+
+      for entry <- [
+            "s3://",
+            "s3://bucket/a/../b",
+            "s3://bucket//b",
+            "s3://bucket/a?b",
+            "s3://bucket/a%2Fb",
+            "s3://bucket/a b",
+            "https://bucket/a",
+            "deploy@static.example.com:/srv"
+          ] do
+        assert is_binary(DeployConfig.allowed_entry_error(:s3_targets, entry)), entry
+      end
+
+      assert DeployConfig.allowed_entry_error(:s3_targets, 1) == "must be text"
+    end
+
+    test "names no {site_key}: it already belongs to the site" do
+      for {setting, entry} <- [
+            rsync_targets: "deploy@static.example.com:/srv/sites/{site_key}",
+            s3_targets: "s3://bucket/sites/{site_key}"
+          ] do
+        assert DeployConfig.allowed_entry_error(setting, entry) =~ "already belongs to this site"
+      end
+    end
+  end
+
+  test "two sites' own entries, or one beside another's map entry, overlap" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      s3_targets: %{"alpha" => ["s3://alpha-www"], "gamma" => ["s3://shared/gamma"]}
+    )
+
+    sites = [
+      %{key: "alpha", allowed_rsync_targets: ["deploy@static.example.com:/srv/sites/"], allowed_s3_targets: []},
+      %{
+        key: "beta",
+        allowed_rsync_targets: ["deploy@static.example.com:/srv/sites/beta"],
+        allowed_s3_targets: ["s3://shared/"]
+      },
+      %{
+        key: "gamma",
+        allowed_rsync_targets: ["deploy@other.example.com:/srv/www"],
+        allowed_s3_targets: ["s3://shared/gamma"]
+      },
+      %{key: nil, allowed_rsync_targets: ["deploy@static.example.com:/srv/sites/"]}
+    ]
+
+    # Each entry says where it is set: config, or the site's own list
+    assert DeployConfig.overlapping_destinations(sites) == [
+             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/", :site},
+              {"beta", "deploy@static.example.com:/srv/sites/beta", :site}},
+             {:s3_targets, {"beta", "s3://shared/", :site}, {"gamma", "s3://shared/gamma", :config}},
+             {:s3_targets, {"beta", "s3://shared/", :site}, {"gamma", "s3://shared/gamma", :site}}
+           ]
+
+    # One site's own entry beside its own map entry is no overlap
+    assert DeployConfig.overlapping_destinations([Enum.at(sites, 2)]) == []
+  end
+
+  # A list entry with {site_key} gives each registered site its own
+  # destination: another site's own entry may reach it
+  test "a site's own entry that reaches what a config list gives another site overlaps" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@shared.example.com:/srv/all/"],
+      s3_targets: ["s3://static-bucket/sites/{site_key}"]
+    )
+
+    acme = %{key: "acme", allowed_rsync_targets: [], allowed_s3_targets: []}
+
+    beta = %{
+      key: "beta",
+      allowed_rsync_targets: ["deploy@static.example.com:/srv/sites/"],
+      allowed_s3_targets: ["s3://static-bucket/sites/acme"]
+    }
+
+    assert DeployConfig.overlapping_destinations([acme, beta]) == [
+             {:rsync_targets, {"acme", "deploy@static.example.com:/srv/sites/{site_key}", :config},
+              {"beta", "deploy@static.example.com:/srv/sites/", :site}},
+             {:s3_targets, {"acme", "s3://static-bucket/sites/{site_key}", :config},
+              {"beta", "s3://static-bucket/sites/acme", :site}}
+           ]
+
+    # The list's own entries, one per site, stay apart
+    assert DeployConfig.overlapping_destinations([acme, %{beta | allowed_rsync_targets: [], allowed_s3_targets: []}]) ==
+             []
+  end
+
+  # Not a pair for each two sites: `account_bound_destinations/0` names the entry
+  test "one list entry's destinations that differ only by the rsync user do not overlap" do
+    put_test_env(DeployConfig, resolver: &resolve/2, rsync_targets: ["{site_key}@static.example.com:/www"])
+
+    acme = %{key: "acme", allowed_rsync_targets: [], allowed_s3_targets: []}
+    beta = %{key: "beta", allowed_rsync_targets: [], allowed_s3_targets: []}
+
+    assert DeployConfig.overlapping_destinations([acme, beta]) == []
+
+    # Another source that reaches the same place with another user still does
+    beta = %{beta | allowed_rsync_targets: ["deploy@static.example.com:/www/"]}
+
+    assert DeployConfig.overlapping_destinations([acme, beta]) == [
+             {:rsync_targets, {"acme", "{site_key}@static.example.com:/www", :config},
+              {"beta", "deploy@static.example.com:/www/", :site}}
+           ]
+  end
+
+  # Unless each account is confined to its own directory, every site deploys
+  # into the same one: the entry is named once, however many sites there are
+  test "list entries that tell sites apart only by the rsync user are named once each" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: [
+        "{site_key}@static.example.com:/www",
+        "deploy@static.example.com:/srv/{site_key}",
+        "{site_key}@www.example.com:/srv/{site_key}",
+        "deploy@shared.example.com:/srv/"
+      ],
+      s3_targets: ["s3://{site_key}-www"]
+    )
+
+    assert DeployConfig.account_bound_destinations() == [{:rsync_targets, "{site_key}@static.example.com:/www"}]
+
+    put_test_env(DeployConfig, rsync_targets: %{"acme" => ["{site_key}@static.example.com:/www"]})
+    assert DeployConfig.account_bound_destinations() == []
+  end
+
+  test "two sites' entries from different sources that differ only by the user overlap" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: %{"acme" => ["acme@static.example.com:/www"], "beta" => ["beta@static.example.com:/www"]}
+    )
+
+    assert DeployConfig.overlapping_destinations() == [
+             {:rsync_targets, {"acme", "acme@static.example.com:/www", :config},
+              {"beta", "beta@static.example.com:/www", :config}}
+           ]
+  end
+
+  test "many sites are compared by host and bucket, not in every pair" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@www.example.com:/www/{site_key}"],
+      s3_targets: ["s3://static-bucket/sites/{site_key}", "s3://{site_key}-www"]
+    )
+
+    sites = for index <- 1..400, do: %{key: "site-#{index}", allowed_rsync_targets: [], allowed_s3_targets: []}
+    sites = List.update_at(sites, 0, &%{&1 | allowed_s3_targets: ["s3://static-bucket/sites/"]})
+
+    {microseconds, overlaps} = :timer.tc(fn -> DeployConfig.overlapping_destinations(sites) end)
+
+    # The first site's parent holds each of the other 399's prefixes
+    assert length(overlaps) == 399
+    assert microseconds < 500_000
+  end
+
+  test "the entries config gives a site read as they apply to it" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@all.example.com:/srv/"],
+      s3_targets: %{"alpha" => ["s3://alpha-www", "s3://shared/{site_key}"], "beta" => ["s3://beta-www"]}
+    )
+
+    assert DeployConfig.configured_entries(:rsync_targets, "alpha") == [
+             "deploy@static.example.com:/srv/sites/alpha",
+             "deploy@all.example.com:/srv/"
+           ]
+
+    assert DeployConfig.configured_entries(:s3_targets, "alpha") == ["s3://alpha-www", "s3://shared/alpha"]
+    assert DeployConfig.configured_entries(:s3_targets, "gamma") == []
+
+    put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: "s3://alpha-www")
+    assert DeployConfig.configured_entries(:s3_targets, "alpha") == []
+    assert DeployConfig.configured_entries(:rsync_targets, "alpha") == []
+  end
+
+  test "a target is checked as a save checks it, without a lookup" do
+    put_test_env(:tenancy_mode, :multi)
+
+    put_test_env(DeployConfig,
+      resolver: fn _host, _family -> flunk("looked up") end,
+      s3_targets: ["s3://static/{site_key}"]
+    )
+
+    site = %{key: "alpha", allowed_rsync_targets: ["deploy@own.example.com:/srv/alpha"], allowed_s3_targets: []}
+
+    assert DeployConfig.allowed_target?(:rsync, "deploy@own.example.com:/srv/alpha", site)
+    assert DeployConfig.allowed_target?(:s3, "s3://static/alpha", site)
+    refute DeployConfig.allowed_target?(:s3, "s3://static/beta", site)
+    refute DeployConfig.allowed_target?(:rsync, "deploy@own.example.com:/srv/beta", site)
+    refute DeployConfig.allowed_target?(:rsync, nil, site)
+    refute DeployConfig.allowed_target?(:local, "x", site)
   end
 
   describe "with no list" do

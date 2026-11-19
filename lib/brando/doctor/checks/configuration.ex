@@ -5,7 +5,7 @@ defmodule Brando.Doctor.Checks.Configuration do
   dependency when AI is configured, the Assistant's model and key when the
   Assistant is configured, and the deploy target settings: entries
   of the wrong form and, with several sites, destinations that more than one
-  site may use.
+  site may use, from config or the sites' own allowed targets.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -23,9 +23,10 @@ defmodule Brando.Doctor.Checks.Configuration do
   def label, do: dgettext("doctor", "Configuration")
 
   @impl true
-  def run(_context) do
+  def run(context) do
     evaluate(
-      [endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [ai_dependency(), assistant()] ++ deploy_targets()
+      [endpoint_url(), mailer(context.superuser?)] ++
+        Enum.map(@cdn_contexts, &cdn/1) ++ [ai_dependency(), assistant()] ++ deploy_targets(context.superuser?)
     )
   end
 
@@ -88,8 +89,11 @@ defmodule Brando.Doctor.Checks.Configuration do
   a placeholder sender on an `example.com` domain is an error, since Brando
   sends nothing from it outside development, and a development adapter (or
   none) in production is a warning.
+
+  With several sites and `superuser?` false, a site's sender with a problem
+  is not named, nor its site: it may be another site's.
   """
-  def mailer do
+  def mailer(superuser? \\ true) do
     mailer = Mailer.mailer()
 
     cond do
@@ -105,12 +109,12 @@ defmodule Brando.Doctor.Checks.Configuration do
          dgettext("doctor", "mailer module missing")}
 
       true ->
-        sender_finding(mailer)
+        sender_finding(mailer, superuser? or Brando.Tenant.mode() != :multi)
     end
   end
 
   # The first sender with a problem, else the first, and the adapter.
-  defp sender_finding(mailer) do
+  defp sender_finding(mailer, named?) do
     senders = senders()
 
     # The worst first: a placeholder is an error, a missing sender a warning.
@@ -119,11 +123,11 @@ defmodule Brando.Doctor.Checks.Configuration do
 
     cond do
       is_nil(from) ->
-        {:warning, no_sender_item(mailer, site), dgettext("doctor", "no sender address"),
+        {:warning, no_sender_item(mailer, site, named?), dgettext("doctor", "no sender address"),
          dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
       Mailer.placeholder?(from) ->
-        {:error, placeholder_item(mailer, from, site), dgettext("doctor", "placeholder sender address"),
+        {:error, placeholder_item(mailer, from, site, named?), dgettext("doctor", "placeholder sender address"),
          dgettext(
            "doctor",
            "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
@@ -165,19 +169,29 @@ defmodule Brando.Doctor.Checks.Configuration do
     _error -> []
   end
 
-  defp no_sender_item(mailer, nil), do: dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer))
+  defp no_sender_item(mailer, nil, _named?),
+    do: dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer))
 
-  defp no_sender_item(mailer, site),
+  defp no_sender_item(mailer, site, true),
     do: dgettext("doctor", "Mailer: %{mailer}, no sender for site %{site}", mailer: inspect(mailer), site: site)
 
-  defp placeholder_item(mailer, from, nil),
+  defp no_sender_item(mailer, _site, false),
+    do: dgettext("doctor", "Mailer: %{mailer}, a site has no sender; a superuser can see which", mailer: inspect(mailer))
+
+  defp placeholder_item(mailer, from, nil, _named?),
     do:
       dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
         mailer: inspect(mailer),
         from: format_from(from)
       )
 
-  defp placeholder_item(mailer, from, site),
+  defp placeholder_item(mailer, _from, _site, false),
+    do:
+      dgettext("doctor", "Mailer: %{mailer}, a site's sender is a placeholder; a superuser can see which",
+        mailer: inspect(mailer)
+      )
+
+  defp placeholder_item(mailer, from, site, true),
     do:
       dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from} for site %{site}",
         mailer: inspect(mailer),
@@ -284,21 +298,27 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @doc """
   The operator's deploy target settings as findings (see `evaluate/1`). With
-  several sites, a list entry without `{site_key}` grants every site, and map
-  entries of two sites that reach the same destination let either replace
-  the other's files. A setting with an entry, key or value of the wrong form
+  several sites, a list entry without `{site_key}` grants every site, and
+  entries of two sites that reach the same destination, in config's per-site
+  map, in a list entry with `{site_key}` as it reads for each site, or in the
+  sites' own allowed targets, let either replace the other's files; each
+  entry says where it is set. A setting with an entry, key or value of the wrong form
   refuses the targets it would have allowed.
+
+  A list entry that puts `{site_key}` in the rsync user alone gives every
+  site the same path under its own account (`DeployConfig.account_bound_destinations/0`),
+  safe only when each account is confined to its own directory: it is named
+  once, however many sites there are.
+
+  With `superuser?` false, entries every site may use, those told apart only
+  by account and overlapping ones are counted, not named: they are other
+  sites' destinations too, which a site's administrator could choose on
+  Publishing.
   """
-  def deploy_targets do
+  def deploy_targets(superuser? \\ true) do
     multi? = Brando.Tenant.mode() == :multi
 
-    shared =
-      if multi?,
-        do: [
-          shared_deploy_targets(DeployConfig.shared_destinations()),
-          overlapping_deploy_targets(DeployConfig.overlapping_destinations())
-        ],
-        else: []
+    shared = if multi?, do: shared_deploy_findings(superuser?), else: []
 
     findings = Enum.reject(shared ++ [unreadable_deploy_targets(DeployConfig.unreadable_settings())], &is_nil/1)
 
@@ -309,13 +329,18 @@ defmodule Brando.Doctor.Checks.Configuration do
     end
   end
 
-  defp shared_deploy_targets([]), do: nil
+  defp shared_deploy_findings(superuser?) do
+    overlapping = DeployConfig.overlapping_destinations(Brando.Tenant.Registry.list_sites())
 
-  defp shared_deploy_targets(shared) do
-    entries = Enum.map_join(shared, ", ", fn {setting, entry} -> "#{setting} #{entry}" end)
+    [shared_deploy_targets(DeployConfig.shared_destinations(), superuser?)] ++
+      account_bound_deploy_targets(DeployConfig.account_bound_destinations(), superuser?) ++
+      [overlapping_deploy_targets(overlapping, superuser?)]
+  end
 
-    {:warning, dgettext("doctor", "Deploy targets: every site may use %{entries}", entries: entries),
-     dgettext("doctor", "deploy targets shared by every site"),
+  defp shared_deploy_targets([], _superuser?), do: nil
+
+  defp shared_deploy_targets(shared, superuser?) do
+    {:warning, shared_item(shared, superuser?), dgettext("doctor", "deploy targets shared by every site"),
      dgettext(
        "doctor",
        "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}",
@@ -323,24 +348,95 @@ defmodule Brando.Doctor.Checks.Configuration do
      )}
   end
 
-  defp overlapping_deploy_targets([]), do: nil
+  defp shared_item(shared, true) do
+    entries = Enum.map_join(shared, ", ", fn {setting, entry} -> "#{setting} #{entry}" end)
+    dgettext("doctor", "Deploy targets: every site may use %{entries}", entries: entries)
+  end
 
-  defp overlapping_deploy_targets(pairs) do
-    pairs =
-      Enum.map_join(pairs, ", ", fn {setting, {key, entry}, {other_key, other_entry}} ->
-        dgettext("doctor", "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}",
+  defp shared_item(shared, false) do
+    dngettext(
+      "doctor",
+      "Deploy targets: %{count} entry every site may use; a superuser can see which",
+      "Deploy targets: %{count} entries every site may use; a superuser can see which",
+      length(shared)
+    )
+  end
+
+  # One finding for each entry, or one counting them without superuser
+  defp account_bound_deploy_targets([], _superuser?), do: []
+
+  defp account_bound_deploy_targets(entries, true) do
+    for {setting, entry} <- entries do
+      account_bound_finding(
+        dgettext(
+          "doctor",
+          "Deploy targets: %{setting} %{entry} gives every site the same path under its own account. That is safe only if each account is confined to its own directory (chroot).",
           setting: setting,
-          entry: entry,
-          site: key,
-          other_entry: other_entry,
-          other_site: other_key
+          entry: entry
+        )
+      )
+    end
+  end
+
+  defp account_bound_deploy_targets(entries, false) do
+    [
+      account_bound_finding(
+        dngettext(
+          "doctor",
+          "Deploy targets: %{count} entry gives every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot).",
+          "Deploy targets: %{count} entries give every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot).",
+          length(entries)
+        )
+      )
+    ]
+  end
+
+  defp account_bound_finding(item) do
+    {:warning, item, dgettext("doctor", "deploy targets told apart only by account"),
+     dgettext(
+       "doctor",
+       "confine each site's rsync account to its own directory (chroot), or put `{site_key}` in the path as well: %{example}",
+       example: "`{site_key}@static.example.com:/www/{site_key}`"
+     )}
+  end
+
+  defp overlapping_deploy_targets([], _superuser?), do: nil
+
+  defp overlapping_deploy_targets(pairs, superuser?) do
+    {:warning, overlap_item(pairs, superuser?), dgettext("doctor", "deploy targets shared between sites"),
+     dgettext(
+       "doctor",
+       "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
+     )}
+  end
+
+  defp overlap_item(pairs, true) do
+    pairs =
+      Enum.map_join(pairs, ", ", fn {setting, first, second} ->
+        dgettext("doctor", "%{entry} and %{other_entry}",
+          entry: deploy_entry(setting, first),
+          other_entry: deploy_entry(setting, second)
         )
       end)
 
-    {:warning, dgettext("doctor", "Deploy targets: %{pairs} reach the same destination", pairs: pairs),
-     dgettext("doctor", "deploy targets shared between sites"),
-     dgettext("doctor", "give each site in the deploy target map destinations apart from the other sites'")}
+    dgettext("doctor", "Deploy targets: %{pairs} reach the same destination", pairs: pairs)
   end
+
+  defp overlap_item(pairs, false) do
+    dngettext(
+      "doctor",
+      "Deploy targets: %{count} pair of sites' entries reaches the same destination; a superuser can see which",
+      "Deploy targets: %{count} pairs of sites' entries reach the same destination; a superuser can see which",
+      length(pairs)
+    )
+  end
+
+  # Where the entry is set, so the fix is made there
+  defp deploy_entry(setting, {key, entry, :config}),
+    do: dgettext("doctor", "%{setting} %{entry} for %{site}", setting: setting, entry: entry, site: key)
+
+  defp deploy_entry(_setting, {key, entry, :site}),
+    do: dgettext("doctor", "%{entry} in %{site}'s allowed deploy targets under Sites", entry: entry, site: key)
 
   defp unreadable_deploy_targets([]), do: nil
 

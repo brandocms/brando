@@ -170,8 +170,8 @@ defmodule Brando.SSG.Deploy do
     args = ["-az", "--delete", "--", String.trim_trailing(build.build_path, "/") <> "/", target]
 
     # The build carries the config it was made with, which may predate the
-    # check on save
-    case DeployConfig.check_rsync_target(target, build.site.key) do
+    # check on save; the site's allowed targets are read afresh with the build
+    case DeployConfig.check_rsync_target(target, build.site) do
       :ok ->
         case runner.("rsync", args, stderr_to_stdout: true) do
           {_output, 0} -> :ok
@@ -193,8 +193,8 @@ defmodule Brando.SSG.Deploy do
 
   defp deploy_s3(build, target, opts) do
     # The build carries the config it was made with, which may predate the
-    # check on save
-    with {:ok, bucket, prefix} <- DeployConfig.s3_destination(target, build.site.key),
+    # check on save; the site's allowed targets are read afresh with the build
+    with {:ok, bucket, prefix} <- DeployConfig.s3_destination(target, build.site),
          request = Keyword.get(opts, :s3_request, &ExAws.request/1),
          {:ok, existing_keys} <- list_s3_keys(bucket, prefix, request),
          :ok <- delete_s3_keys(bucket, existing_keys, request) do

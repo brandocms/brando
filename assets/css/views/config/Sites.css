@@ -211,6 +211,87 @@
     margin-top: 16px;
   }
 
+  /* Allowed deploy targets, under the delivery facts and switch */
+  .site-deploy-targets {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--workspace-line);
+  }
+
+  .site-subsection-heading {
+    margin-bottom: 16px;
+
+    h4 {
+      font-size: var(--brando-text-lg);
+      line-height: 22px;
+    }
+
+    p {
+      max-width: 62ch;
+      margin-top: 4px;
+      color: var(--workspace-muted);
+    }
+  }
+
+  .site-hint--warning {
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    border: 1px solid var(--brando-attention-line);
+    border-radius: var(--brando-radius-md);
+    background: var(--brando-attention);
+    color: var(--brando-attention-ink);
+    overflow-wrap: anywhere;
+  }
+
+  .site-target-list {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+
+    /* An entry's error names the entry, too long for the label row's
+       corner: it takes a line of its own under the label */
+    .label-wrapper {
+      flex-wrap: wrap;
+      row-gap: 4px;
+
+      > .field-errors {
+        position: static;
+        flex-basis: 100%;
+        align-items: flex-start;
+        overflow-wrap: anywhere;
+      }
+    }
+  }
+
+  /* What config grants the site, read-only, below each list */
+  .site-configured-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: var(--brando-text-sm);
+
+    .site-hint {
+      margin: 0;
+    }
+
+    ul {
+      display: grid;
+      flex-basis: 100%;
+      gap: 2px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .site-configured-label {
+    color: var(--workspace-muted);
+  }
+
   .site-facts {
     display: flex;
     flex-wrap: wrap;

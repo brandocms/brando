@@ -389,6 +389,49 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     end
   end
 
+  describe "a site's own allowed deploy targets" do
+    setup context do
+      Brando.endpoint().subscribe("user:#{context.current_user.id}")
+      put_test_env(Brando.Sites.DeployConfig, [])
+      :ok
+    end
+
+    test "allow a target here, and a refused one says a superuser sets them under Sites", context do
+      {:ok, _site} =
+        Registry.update_site_deploy_targets(context.site, %{allowed_s3_targets: ["s3://acme-own"]}, :system)
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      render_submit(form(view, "#static-deploy-config"), %{"deploy" => %{"strategy" => "s3", "target" => "s3://other"}})
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message}}
+      assert message =~ "A superuser sets the site's allowed deploy targets under Sites"
+      assert Registry.get_site(context.site.id).deploy_config.strategy == :rsync
+
+      render_submit(form(view, "#static-deploy-config"), %{"deploy" => %{"strategy" => "s3", "target" => "s3://acme-own"}})
+
+      assert Registry.get_site(context.site.id).deploy_config.target == "s3://acme-own"
+    end
+
+    test "cannot be changed from here", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{
+          "strategy" => "s3",
+          "target" => "s3://attacker",
+          "allowed_s3_targets" => ["s3://attacker"],
+          "allowed_rsync_targets" => ["deploy@static.example.test:/srv/"]
+        },
+        "allowed_s3_targets" => ["s3://attacker"]
+      })
+
+      site = Registry.get_site(context.site.id)
+      assert site.allowed_s3_targets == []
+      assert site.allowed_rsync_targets == []
+      assert site.deploy_config.target == "deploy@example.test:/srv/www"
+    end
+  end
+
   test "renders nested deployment validation errors without crashing", context do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 

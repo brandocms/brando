@@ -392,6 +392,16 @@ msgstr[1] ""
 msgid "%{database}, not the development database"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} and %{other_entry}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} in %{site}'s allowed deploy targets under Sites"
+msgstr ""
+
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "%{entry}: in static_paths/0 but not in the endpoint's only:"
@@ -522,7 +532,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}"
+msgid "%{setting} %{entry} for %{site}"
 msgstr ""
 
 #: lib/brando/doctor/checks/site_frontends.ex
@@ -675,12 +685,38 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} entry every site may use; a superuser can see which"
+msgid_plural "Deploy targets: %{count} entries every site may use; a superuser can see which"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} entry gives every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+msgid_plural "Deploy targets: %{count} entries give every site the same path under its own account; a superuser can see which. That is safe only if each account is confined to its own directory (chroot)."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} pair of sites' entries reaches the same destination; a superuser can see which"
+msgid_plural "Deploy targets: %{count} pairs of sites' entries reach the same destination; a superuser can see which"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Deploy targets: %{pairs} reach the same destination"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy targets: %{settings} have entries no target can pass"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{setting} %{entry} gives every site the same path under its own account. That is safe only if each account is confined to its own directory (chroot)."
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -786,6 +822,16 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer} does not exist"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, a site has no sender; a superuser can see which"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, a site's sender is a placeholder; a superuser can see which"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -1224,6 +1270,11 @@ msgstr ""
 msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "confine each site's rsync account to its own directory (chroot), or put `{site_key}` in the path as well: %{example}"
+msgstr ""
+
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
 msgid "container %{name}"
@@ -1272,6 +1323,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets told apart only by account"
 msgstr ""
 
 #: lib/brando/doctor/checks/translation_galleries.ex
@@ -1423,7 +1479,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "give each site in the deploy target map destinations apart from the other sites'"
+msgid "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
 msgstr ""
 
 #: lib/brando/doctor/checks/dependency_sources.ex

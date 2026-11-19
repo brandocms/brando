@@ -29,7 +29,6 @@ defmodule BrandoAdmin.Sites.UtilsLive do
        |> set_admin_locale()
        |> assign_info()
        |> assign(:loose_blocks, Brando.Content.BlockAudit.count_loose())
-       |> assign(:superuser?, Boundary.superuser?(socket.assigns[:current_user]))
        |> assign(:caches_cleared, nil)
        |> assign_search_index()
        |> subscribe_image_tasks()
@@ -512,16 +511,20 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   # The checks query and read files, so they run beside the page rather than
-  # holding up its first render
+  # holding up its first render. What a run shows depends on whether the viewer
+  # is a superuser, read again for each run; `system_check_superuser?` keeps
+  # what the running or shown results were made for.
   defp start_system_check(socket) do
     prefix = Brando.Tenant.current_prefix()
     locale = Gettext.get_locale(Brando.Gettext)
     sandbox = socket.assigns.doctor_sandbox
+    superuser? = Boundary.superuser?(socket.assigns.current_user)
 
     socket
+    |> assign(superuser?: superuser?, system_check_superuser?: superuser?)
     |> assign(system_check: nil, system_check_failed: false)
     |> start_async(:system_check, fn ->
-      Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale, sandbox: sandbox)
+      Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale, sandbox: sandbox, superuser?: superuser?)
     end)
   end
 
@@ -656,6 +659,19 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   defp queued(%{state: state} = index) when state in [:idle, :done, :failed], do: %{index | state: :queued}
   defp queued(index), do: index
 
+  # On an authorization change (`BrandoAdmin.Authorization`): what only a
+  # superuser sees goes, and a run made for one is made again
+  def refresh_authorization(%{assigns: %{system_check_superuser?: true}} = socket) do
+    if Boundary.superuser?(socket.assigns.current_user),
+      do: socket,
+      else: start_system_check(socket)
+  end
+
+  def refresh_authorization(%{assigns: %{socket_connected: true}} = socket),
+    do: assign(socket, :superuser?, Boundary.superuser?(socket.assigns.current_user))
+
+  def refresh_authorization(socket), do: socket
+
   def handle_info({:search_index, %{state: :done, done: count}}, socket) do
     send(
       self(),
@@ -681,8 +697,11 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, if(state == :done, do: assign_image_tasks(socket), else: socket)}
   end
 
+  # Results made for a superuser are shown only while the viewer still is one
   def handle_async(:system_check, {:ok, results}, socket) do
-    {:noreply, assign(socket, system_check: results, system_check_failed: false)}
+    if socket.assigns.system_check_superuser? and not Boundary.superuser?(socket.assigns.current_user),
+      do: {:noreply, start_system_check(socket)},
+      else: {:noreply, assign(socket, system_check: results, system_check_failed: false)}
   end
 
   def handle_async(:system_check, {:exit, _reason}, socket) do
