@@ -164,6 +164,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} changed block"
 msgid_plural "%{count} changed blocks"
@@ -193,6 +194,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} deletion"
 msgid_plural "%{count} deletions"
@@ -319,6 +321,13 @@ msgid_plural "%{count} images already matched their settings"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image could not be imported."
+msgid_plural "%{count} images could not be imported."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} image in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes."
@@ -421,6 +430,7 @@ msgid "%{count} more"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} moved block"
 msgid_plural "%{count} moved blocks"
@@ -428,6 +438,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} new block"
 msgid_plural "%{count} new blocks"
@@ -435,6 +446,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} new entry"
 msgid_plural "%{count} new entries"
@@ -588,6 +600,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} updated entry"
 msgid_plural "%{count} updated entries"
@@ -800,6 +813,11 @@ msgstr ""
 msgid "%{module} block"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{ms} ms"
+msgstr ""
+
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
 msgid "%{names} was mentioned in a note on %{title}"
@@ -936,6 +954,11 @@ msgstr ""
 msgid "%{scope} · saved %{time}"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{seconds} s"
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{section} permissions"
@@ -956,7 +979,7 @@ msgstr ""
 msgid "%{source} could not be read: %{error}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "%{step} (did not work)"
 msgstr ""
@@ -1476,6 +1499,11 @@ msgstr ""
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -2711,6 +2739,7 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Applied"
 msgstr ""
@@ -2833,6 +2862,11 @@ msgstr ""
 msgid "Apply…"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Approved"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Approved by %{name}"
@@ -2940,6 +2974,11 @@ msgstr ""
 msgid "As wide as its content"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ask %{client} to start. Each call it makes on the site appears here as it happens."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Ask for an adjustment…"
@@ -3000,14 +3039,14 @@ msgstr ""
 msgid "Attach videos from the media library"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Attached %{count} item from %{folder}"
 msgid_plural "Attached %{count} items from %{folder}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Attached the folder's media"
 msgstr ""
@@ -4010,7 +4049,7 @@ msgctxt "checkbox state"
 msgid "Checked"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Checked a module's slots"
 msgstr ""
@@ -4030,12 +4069,12 @@ msgstr ""
 msgid "Checked per content type"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Checked the fields of %{type}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Checked the module “%{module}”"
 msgstr ""
@@ -4801,6 +4840,7 @@ msgstr ""
 msgid "Connect repository documents to entry blocks."
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -4813,6 +4853,7 @@ msgid "Connected %{client}"
 msgstr ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -6479,6 +6520,7 @@ msgid "Discard your unsaved group changes?"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Discarded"
 msgstr ""
@@ -6494,6 +6536,7 @@ msgid "Disconnect %{client}?"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnected"
 msgstr ""
@@ -6612,6 +6655,7 @@ msgstr ""
 #: lib/brando_admin/components/form/subform.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/work.ex
 #, elixir-autogen, elixir-format
@@ -7874,6 +7918,7 @@ msgid "Expanded editing"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Expired"
@@ -7970,6 +8015,7 @@ msgstr ""
 #: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
@@ -8270,6 +8316,12 @@ msgstr ""
 msgid "Follow %{name}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Follow live"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
 #, elixir-autogen, elixir-format
 msgid "Follow updates automatically"
@@ -8430,6 +8482,7 @@ msgid "From a tool via MCP"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "From connected tools"
 msgstr ""
@@ -9309,6 +9362,18 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Imported"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Imported %{count} image from “%{frame}”"
+msgid_plural "Imported %{count} images from “%{frame}”"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Imported images from a Figma frame"
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
@@ -10267,12 +10332,12 @@ msgstr ""
 msgid "List types"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Listed %{type}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Listed entries"
 msgstr ""
@@ -10283,6 +10348,7 @@ msgid "Listing"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -10555,49 +10621,49 @@ msgstr ""
 msgid "Look up thumbnails, titles and durations at each video's source"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at %{count} picture"
 msgid_plural "Looked at %{count} pictures"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at an entry's media"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at pictures"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at the content types"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at the entries a block can show"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at the modules for %{type}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked at the site's content"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked for the folder"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Looked for the folder “%{name}”"
 msgstr ""
@@ -10801,7 +10867,7 @@ msgstr ""
 msgid "Markdown version"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Matched the attached media"
 msgstr ""
@@ -11450,6 +11516,7 @@ msgid "Needs at least %{count} impressions on Google's first page."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Needs changes"
 msgstr ""
@@ -11496,6 +11563,7 @@ msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "New"
 msgstr ""
@@ -11606,6 +11674,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "New webhook"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Newest first, from the last hour. Each call appears as it starts."
 msgstr ""
 
 #: lib/brando_admin/live/forms/submissions_live.ex
@@ -11725,6 +11798,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field/outline.ex
 #, elixir-autogen, elixir-format
 msgid "No blocks yet"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "No calls in the last hour"
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
@@ -13246,6 +13324,11 @@ msgstr ""
 msgid "Open module"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open on the page"
+msgstr ""
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Open or close the live preview"
@@ -13301,6 +13384,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Open the public page"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open the review"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -14006,17 +14094,17 @@ msgstr ""
 msgid "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Prepared the proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Prepared version %{version} of the proposal"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Prepared version %{version}, with problems to fix"
 msgstr ""
@@ -14139,6 +14227,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Price range"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Problems to fix"
 msgstr ""
 
 #: lib/brando/images/image.ex
@@ -14480,7 +14573,12 @@ msgstr[1] ""
 msgid "Reach other sites or environments"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Read a Figma frame"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Read an entry"
 msgstr ""
@@ -14488,6 +14586,16 @@ msgstr ""
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
 msgid "Read it in the admin"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Read more of the Figma frame “%{frame}”"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Read the Figma frame “%{frame}”"
 msgstr ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -14505,7 +14613,7 @@ msgstr ""
 msgid "Read the dominant color of every image again?"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Read “%{title}”"
 msgstr ""
@@ -15365,6 +15473,7 @@ msgid "Replaced %{fields}"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replaced by a newer version"
 msgstr ""
@@ -15785,6 +15894,11 @@ msgstr ""
 msgid "Returns to"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reused"
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Revert"
@@ -16136,6 +16250,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgctxt "environment job"
+msgid "Running"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
 msgid "Running"
 msgstr ""
 
@@ -16727,22 +16846,32 @@ msgstr ""
 msgid "Search: %{query}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Searched %{type}"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}”"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}” in %{type}"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Searched the entries"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Searched the media library"
 msgstr ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Searched the media library for “%{query}”"
 msgstr ""
@@ -19891,6 +20020,11 @@ msgstr[1] ""
 msgid "This collection is no longer in %{provider}. Choose another one."
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "This connection has ended, so nothing new will appear. To follow the tool again, connect it again and use the link it gives."
+msgstr ""
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "This content is kept here, but no longer has a region or a reference in the text."
@@ -20461,6 +20595,11 @@ msgstr ""
 msgid "Too many submissions. Wait a few minutes and try again."
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tool calls"
+msgstr ""
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Tools people have connected to this site. Revoking one stops it at once."
@@ -20852,6 +20991,7 @@ msgid "Undo typing, or else the last block moved or deleted"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Undone"
 msgstr ""
@@ -21010,6 +21150,7 @@ msgid "Untitled entry"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled proposal"
 msgstr ""
@@ -21589,6 +21730,11 @@ msgstr ""
 msgid "Version %{from} → %{to}"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Version %{version}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Versions"
@@ -21848,6 +21994,7 @@ msgid "Waiting for a linked translation"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for review"
 msgstr ""
@@ -21860,6 +22007,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for the next email"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the tool…"
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -21914,6 +22066,11 @@ msgstr ""
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Week"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "What %{client} does in %{site} as %{person}, while it works. It saves nothing: you review what it proposes."
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -22103,6 +22260,7 @@ msgstr ""
 msgid "With warnings only"
 msgstr ""
 
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Working"
@@ -23176,11 +23334,6 @@ msgstr ""
 msgid "last used %{date}"
 msgstr ""
 
-#: lib/brando_admin/live/nav.ex
-#, elixir-autogen, elixir-format
-msgid "live"
-msgstr ""
-
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "logged in %{date}"
@@ -23782,9 +23935,9 @@ msgstr[1] ""
 msgid "with its %{children}"
 msgstr ""
 
-#: lib/brando_admin/live/nav.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
-msgid "working"
+msgid "you"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex

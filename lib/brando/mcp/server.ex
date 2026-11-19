@@ -23,6 +23,7 @@ defmodule Brando.MCP.Server do
   """
 
   alias Brando.MCP.Tools
+  alias Brando.MCP.Watch
 
   @modern ["2026-07-28"]
   @legacy ["2025-11-25", "2025-06-18", "2025-03-26"]
@@ -155,7 +156,7 @@ defmodule Brando.MCP.Server do
 
   ## Legacy requests
 
-  defp legacy(id, "initialize", params, _headers, _auth, tenant) do
+  defp legacy(id, "initialize", params, _headers, auth, tenant) do
     requested = params["protocolVersion"]
     version = if requested in @legacy, do: requested, else: hd(@legacy)
 
@@ -164,7 +165,7 @@ defmodule Brando.MCP.Server do
        protocolVersion: version,
        capabilities: %{tools: %{listChanged: false}},
        serverInfo: server_info(),
-       instructions: instructions(tenant)
+       instructions: instructions(tenant, auth.grant)
      })}
   end
 
@@ -191,12 +192,12 @@ defmodule Brando.MCP.Server do
 
   defp dispatch("ping", _params, _auth, _tenant, _version), do: {:ok, %{}}
 
-  defp dispatch("server/discover", _params, _auth, tenant, _version) do
+  defp dispatch("server/discover", _params, auth, tenant, _version) do
     {:ok,
      %{
        supportedVersions: versions(),
        capabilities: %{tools: %{listChanged: false}},
-       instructions: instructions(tenant)
+       instructions: instructions(tenant, auth.grant)
      }}
   end
 
@@ -218,9 +219,16 @@ defmodule Brando.MCP.Server do
   defp dispatch("tools/call", _params, _auth, _tenant, _version), do: {:error, -32_602, "name is required."}
   defp dispatch(_method, _params, _auth, _tenant, _version), do: {:error, :not_found}
 
-  @doc "The instructions `initialize` and `server/discover` give for `tenant`."
-  @spec instructions(map()) :: String.t()
-  def instructions(_tenant), do: Enum.join(@instructions, " ")
+  @doc """
+  The instructions `initialize` and `server/discover` give for `tenant`, to
+  the connection `grant`: last, the link to its live page
+  (`Brando.MCP.Watch`), for the person to follow the tool's work.
+  """
+  @spec instructions(map(), Brando.MCP.Grant.t()) :: String.t()
+  def instructions(_tenant, grant) do
+    watch = "Give the person this link before you start, to follow your work in the Brando admin: #{Watch.url(grant)}"
+    Enum.join(@instructions ++ [watch], " ")
+  end
 
   defp server_info, do: %{name: "brando", title: "Brando", version: to_string(Brando.version())}
 

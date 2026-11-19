@@ -378,9 +378,12 @@ defmodule Brando.Activity do
   @doc """
   Record that the client of the MCP connection `grant` called tool `name`
   as `user` (`Brando.MCP.Tools`). Options: `:ok` (whether it succeeded),
-  `:token_id` (the access token's row id, never the token) and
-  `:duration_ms`. The arguments are not kept; a proposal the call prepared
-  is in the Assistant. Sends no content event.
+  `:token_id` (the access token's row id, never the token),
+  `:duration_ms`, and `:summary`, what the connection's live page shows of
+  the call (`Brando.MCP.Watch.summary/4`): a few of its arguments cut
+  short, its error, the images it imported and the proposal it stored. The
+  whole arguments and result are not kept; a proposal the call prepared is
+  in the Assistant. Sends no content event. Returns the insert's result.
   """
   def tool_called(%{__struct__: schema, id: id, client_name: client}, user, name, opts \\ []) do
     insert(%{
@@ -390,13 +393,14 @@ defmodule Brando.Activity do
       schema: to_string(schema),
       entry_id: id,
       title: client,
-      details: %{
-        "client" => client,
-        "tool" => name,
-        "ok" => Keyword.get(opts, :ok, true),
-        "token" => Keyword.get(opts, :token_id),
-        "duration_ms" => Keyword.get(opts, :duration_ms)
-      }
+      details:
+        Map.merge(Keyword.get(opts, :summary, %{}), %{
+          "client" => client,
+          "tool" => name,
+          "ok" => Keyword.get(opts, :ok, true),
+          "token" => Keyword.get(opts, :token_id),
+          "duration_ms" => Keyword.get(opts, :duration_ms)
+        })
     })
   end
 
