@@ -64,6 +64,34 @@
     }
     small { flex: 1 1 100%; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 1.5; }
   }
+  /* The guidance for building from Figma: the editor, then the developers'
+     text and the history, folded */
+  /* One shrinking column, so a long history excerpt ellipsizes instead of
+     widening the row */
+  .mcp-figma-guidance .integrations-text { grid-template-columns: minmax(0, 1fr); }
+  .mcp-figma-guidance-form {
+    display: grid; gap: 12px; margin-top: 12px;
+    textarea {
+      width: 100%; min-height: 180px; padding: 12px 14px;
+      border: 1px solid var(--brando-input-border, var(--brando-line)); border-radius: var(--brando-input-radius, 5px);
+      background: var(--brando-surface); color: var(--brando-ink);
+      font-family: var(--brando-font-mono); font-size: var(--brando-text-sm); line-height: 1.7; resize: vertical;
+      &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
+    }
+  }
+  .mcp-figma-guidance-readonly { display: grid; gap: 8px; margin-top: 12px; }
+  .mcp-figma-guidance pre {
+    margin: 0; padding: 12px 14px; border-radius: 6px; background: var(--brando-surface-shaded);
+    font-family: var(--brando-font-mono); font-size: var(--brando-text-sm); line-height: 1.7;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .mcp-figma-guidance-more {
+    min-width: 0; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--brando-line);
+    > summary { cursor: pointer; font-size: var(--brando-text-md); font-weight: 500; }
+    > p { margin-top: 8px; }
+    > pre, > .guidance-history { margin-top: 12px; }
+    .guidance-history { padding: 0; }
+  }
   .mcp-grants { margin-top: 24px; }
 
   /* On a phone each connection is a block: who and when, then Revoke */

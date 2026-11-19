@@ -14,10 +14,14 @@ defmodule Brando.Figma do
 
       config :brando, Brando.Figma,
         api_url: "https://api.figma.com",
-        req_options: []
+        req_options: [],
+        guidance: MyApp.FigmaGuidance
 
   `req_options` are merged into every API request (tests pass
-  `plug: {Req.Test, Brando.Figma}`).
+  `plug: {Req.Test, Brando.Figma}`). `guidance` is the developers' baseline
+  of the guidance for building from Figma that `brando_figma_read_frame`
+  returns, beside the administrators' (`Brando.AI.Agent.Guidance`): a string,
+  or a module implementing `Brando.AI.Agent.Guidance`.
   """
 
   alias Brando.MCP

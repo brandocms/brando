@@ -100,6 +100,104 @@ defmodule Brando.AI.Agent.GuidanceTest do
     assert [%{source: :code}] = Guidance.for_conversation(conversation)
   end
 
+  describe "the guidance for building from Figma" do
+    test "is versioned apart from the assistant's, and never reaches the assistant's prompt", c do
+      put_test_env(Brando.Figma, guidance: "Developers: header and footer are page chrome.")
+      {:ok, assistant} = Guidance.save("Use the lede.", c.superuser)
+      {:ok, figma} = Guidance.save("The top text is heading and intro.", c.superuser, kind: :figma)
+      {:ok, _} = Guidance.save("The top text is the heading and intro fields.", c.superuser, kind: :figma)
+
+      assert Guidance.current().id == assistant.id
+      assert Guidance.current(:figma).text == "The top text is the heading and intro fields."
+      assert {:ok, [_newest, %{id: oldest}]} = Guidance.history(c.superuser, kind: :figma)
+      assert oldest == figma.id
+      assert {:ok, [%{id: only}]} = Guidance.history(c.superuser)
+      assert only == assistant.id
+
+      # Not offered to copy as the assistant's guidance elsewhere
+      assert Guidance.sources(c.superuser) == []
+
+      conversation = %Conversation{language: "en", scope: Transfer.scope()}
+      assert [%{source: :admin, text: "Use the lede."}] = Guidance.for_conversation(conversation)
+      prompt = Prompt.system(conversation)
+      refute prompt =~ "heading and intro"
+      refute prompt =~ "page chrome"
+
+      assert [
+               %{source: :code, text: "Developers: header and footer are page chrome."},
+               %{source: :admin, text: "The top text is the heading and intro fields."}
+             ] = Guidance.for_tool(:figma)
+
+      assert Guidance.code_figma_guidance() == "Developers: header and footer are page chrome."
+    end
+
+    test "takes the same right as the assistant's", c do
+      assert {:error, message} = Guidance.save("Skip the footer.", c.admin, kind: :figma)
+      assert message =~ "permission"
+      assert {:error, _} = Guidance.history(c.admin, kind: :figma)
+      assert Guidance.current(:figma) == nil
+    end
+  end
+
+  test "fit cuts the developers' part first, by characters or encoded bytes" do
+    parts = [%{source: :code, text: "dddd"}, %{source: :admin, text: "aaaa"}]
+    assert [%{source: :code, text: "dd"}, %{source: :admin, text: "aaaa"}] = Guidance.fit(parts, 6, :characters)
+    assert [%{source: :admin, text: "aa"}] = Guidance.fit(parts, 2, :characters)
+    assert [%{source: :admin, text: "øø"}] = Guidance.fit([%{source: :admin, text: "øøø"}], 5, :json)
+    # A quote is two bytes in JSON, a control character six
+    assert [%{source: :admin, text: ~s("")}] = Guidance.fit([%{source: :admin, text: ~s("""")}], 5, :json)
+    assert [%{source: :admin, text: <<1>>}] = Guidance.fit([%{source: :admin, text: <<1, 1>>}], 11, :json)
+  end
+
+  describe "put_tool_result/4" do
+    @about "What this guidance is."
+    # A result of about 11 KB, as a content type with many fields gives
+    @result %{fields: for(i <- 1..100, do: %{name: "field_#{i}", type: "string", description: String.duplicate("x", 60)})}
+
+    for {name, text} <- [
+          bullets: String.duplicate("- Use the Lede module first.\n", 400) |> String.slice(0, 12_000),
+          quotes: String.duplicate(~s("), 12_000),
+          backslashes: String.duplicate("\\", 12_000),
+          newlines_and_tabs: String.duplicate("a\n\t", 4_000),
+          multibyte: String.duplicate("見出し「」", 2_400)
+        ] do
+      test "cuts guidance to what fits once encoded (#{name})" do
+        text = unquote(text)
+        assert byte_size(Jason.encode!(@result)) in 10_000..12_000
+
+        result = Guidance.put_tool_result(@result, [%{source: :admin, text: text}], @about, 24_000)
+
+        assert byte_size(Jason.encode!(result)) <= 24_000
+        assert %{guidance: %{about: @about, administrators: administrators}} = result
+        assert String.starts_with?(text, administrators)
+        # All of it, or as much as fits: one more character would not
+        assert administrators == text or byte_size(Jason.encode!(result)) > 24_000 - 8
+      end
+    end
+
+    test "cuts the developers' part first" do
+      parts = [
+        %{source: :code, text: String.duplicate("d\n", 2_000)},
+        %{source: :admin, text: String.duplicate(~s("), 5_000)}
+      ]
+
+      result = Guidance.put_tool_result(@result, parts, @about, 24_000)
+
+      assert byte_size(Jason.encode!(result)) <= 24_000
+      assert result.guidance.administrators == String.duplicate(~s("), 5_000)
+      assert String.length(result.guidance.developers) < 4_000
+    end
+
+    test "leaves the guidance out when none fits, and adds nothing for none" do
+      parts = [%{source: :admin, text: "Use the Lede module."}]
+      assert Guidance.put_tool_result(@result, parts, @about, byte_size(Jason.encode!(@result)) + 10) == @result
+      assert Guidance.put_tool_result(@result, [], @about, 24_000) == @result
+
+      assert %{guidance: %{administrators: "Use the Lede module."}} =
+               Guidance.put_tool_result(@result, parts, @about, 24_000)
+    end
+  end
+
   test "guidance from other sites and environments can be copied", c do
     {:ok, _} = Guidance.save("Here", c.superuser)
 

@@ -181,6 +181,32 @@ give the person.
 With a Figma token (below), two more: `brando_figma_read_frame` and
 `brando_figma_import_images`.
 
+### The site's guidance
+
+A connected tool gets the same site guidance as the Assistant, through the
+tools' results rather than the server's instructions, which some clients
+ignore. The instructions `initialize` and `server/discover` give only say
+where it is.
+
+- `brando_content_describe_content_type` returns the guidance for that
+  content type under `guidance`: the administrators' (**Configuration →
+  Assistant guidance**) and the developers' baseline for the content type
+  (`config :brando, Brando.AI.Agent, guidance:`), with a line on how to use
+  them. Both together are limited to 12,000 characters, and cut further when
+  the result would go over 24 KB; either way the developers' part is cut
+  first, since the administrators' applies where they conflict. A content
+  type the person may not read is refused as before, guidance and all.
+- It also describes each field with its label and instructions from the
+  content type's admin form ("Introduction — Used for case listings"), so a
+  tool can tell that a heading or an introduction belongs in the entry's own
+  field rather than in a text block. The Assistant reads the same
+  descriptions. Write instructions that say where a field shows.
+- `brando_figma_read_frame` returns the guidance for building from Figma
+  (below).
+
+Guidance informs the tool and nothing more: every call is still authorized
+as the person, and every proposal checked and reviewed in the admin.
+
 Every call is written to Activity: the person, the tool's name, the tool it
 called, whether it worked and the id of the token's database row (never the
 token). People who manage connected tools see these under **Configuration →
@@ -242,6 +268,42 @@ proposal with the modules that match.
   yourself, named so the tool can tell where each goes (after the Figma
   layer, for instance), and tell the tool the folder: it finds them with
   `brando_content_find_media_folders`.
+
+### Guidance for building from Figma
+
+Rebuilding a design takes conventions of its own, which the Assistant does
+not need: how the design's frames and components map to the site's modules
+when they are not named after them, which texts are the entry's own fields,
+and what to leave out. For example:
+
+- "The frame's top text is `heading` and `intro`; the mono credits at the
+  bottom are `credits`."
+- "The listing image (`cover_id`) is not in the project frame; it is on the
+  projects overview frame."
+- "Header and footer are page chrome: leave them out."
+- "Videos uploaded by hand are in the folder Projects/Videos."
+
+Write it under **Configuration → Integrations → Connected AI tools →
+Figma**, below the token. Every save is a version, as with the Assistant's
+guidance, and an earlier one can be loaded into the editor. Editing it takes
+the same right as the Assistant's guidance (**Content assistant →
+configure**, superusers by default); others who manage connected tools see
+it read-only. Developers can ship a baseline:
+
+```elixir
+config :brando, Brando.Figma,
+  guidance: MyApp.FigmaGuidance
+```
+
+A string, or a module implementing `Brando.AI.Agent.Guidance`, called with
+the site and environment keys and `content_type: nil`. The screen shows it
+read-only, and where the two conflict, the administrators' applies.
+
+`brando_figma_read_frame` returns both under `guidance` on the frame's first
+page (`offset` 0), within 12,000 characters. To make room, that page leaves
+its last sections to the next one; guidance never shortens a section. When
+the first section alone leaves too little room, the guidance is cut, the
+developers' part first. The Assistant's prompt never includes it.
 
 ### Add the token
 

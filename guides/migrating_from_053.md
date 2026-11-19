@@ -636,6 +636,12 @@ sender first, before the first compile.
   saving a source whose translations still have text to translate reads only
   their own history. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`.
+- **Guidance for building from Figma.** `brando_236` adds `kind` to
+  `ai_guidance_versions`, so the guidance connected AI tools get for
+  building from Figma is versioned beside the Assistant's. Existing guidance
+  stays the Assistant's. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`. See
+  [Guidance for building from Figma](mcp.md#guidance-for-building-from-figma).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

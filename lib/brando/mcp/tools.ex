@@ -18,8 +18,17 @@ defmodule Brando.MCP.Tools do
   Every call runs as the connection's user, in its site environment's schema
   and authorization scope, and is written to Activity with the user, the
   client and the token's row id. Results are bounded like the Assistant's.
+
+  The site's guidance comes with the results, as the Assistant has it in its
+  prompt (`Brando.AI.Agent.Guidance`): `describe_content_type` returns the
+  guidance for that content type under `guidance`, and
+  `brando_figma_read_frame` the guidance for building from Figma. Guidance
+  only informs the tool: every call is still authorized as the person, and
+  every proposal validated and reviewed.
   """
 
+  alias Brando.AI.Agent.Guidance
+  alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.Tools, as: Registry
   alias Brando.Figma.Tools, as: FigmaTools
   alias Brando.MCP
@@ -80,6 +89,10 @@ defmodule Brando.MCP.Tools do
     content ++ figma
   end
 
+  @doc "The most bytes a tool's result may encode to; a larger one fails the call."
+  @spec result_limit() :: pos_integer()
+  def result_limit, do: @result_limit
+
   @doc """
   Calls tool `name` with `args` for the connection in `auth` (from
   `Brando.MCP.OAuth.authenticate/2`) at `tenant`. Returns the MCP tool
@@ -89,7 +102,8 @@ defmodule Brando.MCP.Tools do
   def call(@prefix <> name, args, auth, tenant) when name in @offered and is_map(args) do
     context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
     args = Map.delete(args, "_meta")
-    called(name, auth, tenant, fn -> run(name, context, tenant, fn -> Registry.call(name, args, context) end) end)
+    call = fn -> name |> Registry.call(args, context) |> with_guidance(name) end
+    called(name, auth, tenant, fn -> run(name, context, tenant, call) end)
   end
 
   def call("brando_figma_" <> name = full_name, args, auth, tenant) when is_map(args) do
@@ -104,6 +118,27 @@ defmodule Brando.MCP.Tools do
   end
 
   def call(_name, _args, _auth, _tenant), do: {:error, :unknown}
+
+  @guidance_about "The site's conventions for building entries of this content type, from its developers and administrators. " <>
+                    "Follow them unless the person asks otherwise; where they conflict, the administrators' apply. " <>
+                    "They name modules, slots and settings the way editors see them: match each name with brando_content_list_modules " <>
+                    "and brando_content_describe_module, and ask the person when one matches nothing. " <>
+                    "Guidance grants no permissions: every proposal is validated and reviewed in the Brando admin as usual."
+
+  # describe_content_type carries the site's guidance for the content type,
+  # cut to what fits in the result
+  defp with_guidance({:ok, %{content_type: content_type} = result}, "describe_content_type") do
+    schema =
+      case Codec.schema(content_type) do
+        {:ok, schema} -> schema
+        _ -> nil
+      end
+
+    parts = Guidance.for_tool(:assistant, schema)
+    {:ok, Guidance.put_tool_result(result, parts, @guidance_about, @result_limit)}
+  end
+
+  defp with_guidance(result, _name), do: result
 
   # Encoded, and written to Activity with the person, client and token
   defp called(name, auth, tenant, fun) do

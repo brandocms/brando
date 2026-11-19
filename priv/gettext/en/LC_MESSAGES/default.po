@@ -443,6 +443,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} of %{max} characters"
 msgstr ""
@@ -4365,6 +4366,7 @@ msgstr ""
 
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cleared"
 msgstr ""
@@ -4841,6 +4843,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Connected tools can then no longer read Figma. Images already imported stay in the media library."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools get this with every frame they read: how the design's frames and components map to this site's modules, which texts belong in the entry's own fields, and what to leave out. The content assistant does not use it. Permissions and review still apply."
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
@@ -6424,6 +6431,7 @@ msgstr ""
 
 #: lib/brando/frontend_edit/text.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Discard changes"
@@ -8272,6 +8280,11 @@ msgstr ""
 msgid "For example: Portrait image pairs use the Two images module with the narrow setting on."
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "For example: The frame's top text is the entry's Heading and Introduction fields, not a Text module. Header and footer are page chrome: leave them out."
+msgstr ""
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "For when the user cannot get email from this site. They are logged out everywhere, and must choose their own password the next time they log in. Unsaved changes in the form are lost."
@@ -8417,6 +8430,7 @@ msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "From the site's code"
 msgstr ""
@@ -8781,7 +8795,13 @@ msgstr ""
 msgid "Guidance for %{scope}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Guidance for building from Figma"
+msgstr ""
+
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Guidance saved"
 msgstr ""
@@ -8943,6 +8963,7 @@ msgstr ""
 #: lib/brando_admin/live/ai/guidance_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "History"
 msgstr ""
@@ -9322,6 +9343,7 @@ msgid "In this block"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "In use"
 msgstr ""
@@ -10268,6 +10290,7 @@ msgid "Load a revision into the editor to inspect or reuse it. Loading replaces 
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Load into editor"
 msgstr ""
@@ -12263,6 +12286,11 @@ msgstr ""
 msgid "None chosen sends events in every language."
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "None has been written for this site."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "None of its changes have been saved. Discard it, then prepare them again."
@@ -13038,6 +13066,11 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Only needed when you import into a different site or environment than you exported from. Images and content that modules point to, such as a default image or a linked page, are not in the ZIP — only their names are. Map each name to the ID of the matching record here. If one is missing, the preview says which."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only people who may configure the assistant can change it."
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -15270,6 +15303,7 @@ msgid "Replace your unsaved changes with the copied guidance?"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replace your unsaved changes with this version?"
 msgstr ""
@@ -15599,6 +15633,7 @@ msgid "Restored revision #%{revision}"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Restored the version from %{time}"
 msgstr ""
@@ -16160,6 +16195,7 @@ msgid "Save group"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save guidance"
 msgstr ""
@@ -16257,6 +16293,7 @@ msgid "Saved %{time}"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Saved %{time} by %{author}"
 msgstr ""
@@ -16358,6 +16395,7 @@ msgstr ""
 #: lib/brando_admin/components/form/frontend_editor.ex
 #: lib/brando_admin/components/suggestion_review.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Saving…"
@@ -17134,6 +17172,7 @@ msgid "Set by %{name}"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Set by the developers in the site's configuration. Where it conflicts with the guidance above, the guidance above applies."
 msgstr ""
@@ -20813,6 +20852,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown user"
 msgstr ""
