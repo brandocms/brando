@@ -702,8 +702,9 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   # A proposal from outside the admin is reviewed under "From connected tools".
-  # With an entry whose page can be previewed, `preview_url` opens the review
-  # on that page.
+  # With an entry whose page can be previewed, and no problems (the preview
+  # waits for them, and hides the cards listing them), `preview_url` opens
+  # the review on that page.
   defp review_place(%{conversation_id: nil, id: id} = proposal) when is_binary(id) do
     path = "/admin/assistant/connected/#{id}"
 
@@ -713,9 +714,9 @@ defmodule Brando.Content.Proposals.Tools do
       review_url: review_url(path)
     }
 
-    case Review.preview_key(proposal) do
-      nil -> place
-      key -> Map.put(place, :preview_url, review_url(Review.preview_path(path, key)))
+    case proposal.problems in [nil, []] && Review.preview_key(proposal) do
+      key when is_binary(key) -> Map.put(place, :preview_url, review_url(Review.preview_path(path, key)))
+      _ -> place
     end
   end
 

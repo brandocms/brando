@@ -2582,13 +2582,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # A card's cover is shown about 700 CSS px wide, so the 400 px square thumb
   # is too small and crops away the framing. It takes the sizes the image
-  # has, cropped to the card around its focal point; the original stands in
-  # while it has none.
+  # has, cropped to the card around its focal point. Without an uncropped
+  # size it falls back as the small thumbs do: the thumb, or the original
+  # while the image has no sizes yet.
   defp cover(%Brando.Images.Image{} = image) do
     candidates = Sources.candidates(image, uncropped: true)
 
     %{
-      src: Sources.src(candidates, 720) || Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+      src: Sources.src(candidates, 720) || image_url(image),
       srcset: Sources.srcset(candidates),
       style: BrandoAdmin.Components.Image.object_position(image)
     }

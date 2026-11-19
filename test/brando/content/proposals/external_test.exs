@@ -128,6 +128,14 @@ defmodule Brando.Content.Proposals.ExternalTest do
     assert %{origin: "mcp", client: "Claude Code", conversation_id: nil, version: 2} = narrowed
   end
 
+  test "a proposal with problems has no preview_url: its preview waits for them, and hides the cards listing them", c do
+    op = put_in(insert_op(c, "Lobby"), ["values", "no_such_field"], "x")
+    assert {:ok, result} = Tools.call("prepare_proposal", %{"summary" => "Lobby", "operations" => [op]}, mcp(c))
+
+    assert %{applicable: false, review_url: _} = result
+    refute Map.has_key?(result, :preview_url)
+  end
+
   test "without a named origin, a call outside a conversation is MCP, and the agent's is the Assistant's", c do
     %{proposal_id: id} = prepare!(c, %Context{actor: c.user})
     assert {:ok, %{origin: "mcp", client: nil}} = Proposals.get(id, c.user)
