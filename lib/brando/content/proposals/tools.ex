@@ -341,7 +341,8 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: fields |> Enum.reject(&(&1.name in locked)) |> with_descriptions(schema) |> Enum.map(&with_default/1),
+      fields:
+        fields |> Enum.reject(&(&1.name in locked)) |> with_descriptions(schema) |> Enum.map(&with_default(&1, schema)),
       block_fields: block_fields(schema),
       publication: publication("status" in locked)
     }
@@ -1371,10 +1372,14 @@ defmodule Brando.Content.Proposals.Tools do
   # editors read them: "Introduction — Used for case listings". A field the
   # form does not show, or shows without a label, has none.
   # A new entry left without a language gets this one (`Proposals.new_entry_fields/2`).
-  defp with_default(%{name: "language"} = field),
-    do: Map.put(field, :default, to_string(Brando.Languages.default_language()))
+  defp with_default(%{name: "language"} = field, schema) do
+    case Proposals.new_entry_language(schema) do
+      nil -> field
+      language -> Map.put(field, :default, language)
+    end
+  end
 
-  defp with_default(field), do: field
+  defp with_default(field, _schema), do: field
 
   defp with_descriptions(fields, schema) do
     descriptions = form_descriptions(schema)

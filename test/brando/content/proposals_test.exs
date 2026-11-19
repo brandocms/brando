@@ -604,6 +604,18 @@ defmodule Brando.Content.ProposalsTest do
       assert is_binary(message)
     end
 
+    test "only a language field that takes the site's default gets it" do
+      article = Brando.MetaDrawerTest.ActionsArticle
+      default = to_string(Brando.Languages.default_language())
+
+      assert Proposals.new_entry_language(Page) == default
+      assert Proposals.new_entry_fields(Page, %{"title" => "x", "language" => ""})["language"] == default
+
+      # A text field that happens to be called language
+      assert Proposals.new_entry_language(article) == nil
+      assert Proposals.new_entry_fields(article, %{"title" => "x"}) == %{"title" => "x"}
+    end
+
     test "a new entry left without a language gets the site's default, in preview, review and apply", c do
       ops = [%CreateEntry{schema: Page, ref: "x", fields: %{title: "X", uri: "x", template: "default.html"}}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user)

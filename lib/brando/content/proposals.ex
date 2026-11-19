@@ -1807,9 +1807,51 @@ defmodule Brando.Content.Proposals do
   """
   @spec new_entry_fields(module(), map()) :: map()
   def new_entry_fields(schema, fields) do
-    if :language in schema.__schema__(:fields) and fields["language"] in [nil, ""],
-      do: Map.put(fields, "language", to_string(Brando.Languages.default_language())),
+    language = new_entry_language(schema)
+
+    if language && fields["language"] in [nil, ""],
+      do: Map.put(fields, "language", language),
       else: fields
+  end
+
+  @doc """
+  The language a new entry of `schema` gets when its fields leave it out:
+  the site's default, when the content type's `language` is a language
+  field that takes it and has no default of its own. Otherwise `nil`.
+  """
+  @spec new_entry_language(module()) :: String.t() | nil
+  def new_entry_language(schema) do
+    with true <- :language in schema.__schema__(:fields),
+         nil <- Map.get(struct(schema), :language),
+         default when not is_nil(default) <- Brando.Languages.default_language(),
+         default = to_string(default),
+         true <- default in language_values(schema) do
+      default
+    else
+      _ -> nil
+    end
+  end
+
+  # A `language` field of another kind (plain text, say) is not ours to fill.
+  defp language_values(schema) do
+    case schema.__schema__(:type, :language) do
+      {:parameterized, {Ecto.Enum, _}} -> schema |> Ecto.Enum.values(:language) |> Enum.map(&to_string/1)
+      _ -> []
+    end
+  end
+
+  # A locked `language` is dropped from a non-superuser's params; without a
+  # default from the form it would be saved empty.
+  defp put_new_entry_language(changeset, schema) do
+    case new_entry_language(schema) do
+      language when is_binary(language) ->
+        if Changeset.get_field(changeset, :language) == nil,
+          do: Changeset.cast(changeset, %{"language" => language}, [:language]),
+          else: changeset
+
+      nil ->
+        changeset
+    end
   end
 
   defp base_changeset({:new, ref} = target, proposal, _entries, user) do
@@ -1822,9 +1864,12 @@ defmodule Brando.Content.Proposals do
     # What a non-superuser can't name (`locked_fields/3`) it has as a form's new
     # entry has it. The role is the author's here too: a colleague may be
     # reading the review.
-    if Boundary.superuser?(%Brando.Users.User{id: proposal.actor_id}),
-      do: cast.(params),
-      else: LockedFields.cast_held(params, schema, entry, cast)
+    changeset =
+      if Boundary.superuser?(%Brando.Users.User{id: proposal.actor_id}),
+        do: cast.(params),
+        else: LockedFields.cast_held(params, schema, entry, cast)
+
+    put_new_entry_language(changeset, schema)
   end
 
   defp base_changeset({schema, _} = target, proposal, entries, user) do
