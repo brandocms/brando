@@ -12,6 +12,15 @@ defmodule Brando.Figma.Import do
   file, by content hash, for the same config, that the person may read) is
   reused, not stored again, so importing a frame twice adds nothing.
 
+  Only the images that show are imported (`Brando.Figma.Frame.images/1`):
+  image fills hidden under a layer's top fill are not. An image Figma shows
+  turned a quarter, half or three quarters is stored as a turned copy, a
+  file of its own; other angles, a crop's mirroring and the turn of an
+  animated GIF or WebP (which would keep one frame) are not applied, and
+  the result says so for each layer it concerns. A cropped image is not cut:
+  its focal point is set to the centre of the crop, when the image is new to
+  the library. One the library already has keeps its focal point.
+
   Figma's download URLs are fetched through `Brando.Webhooks.URLGuard`
   (public `https` addresses only, no redirects) and written to a temporary
   file, at most the config's size limit. A few download at once; they are
@@ -34,6 +43,7 @@ defmodule Brando.Figma.Import do
   alias Brando.Webhooks.Client
   alias Brando.Webhooks.URLGuard
   alias BrandoAdmin.Images.FolderBrowser
+  alias Elixir.Image, as: Vimage
 
   require Logger
 
@@ -59,7 +69,7 @@ defmodule Brando.Figma.Import do
     with :ok <- Brando.Authorization.Media.authorize(actor, :image),
          {:ok, node} <- Figma.node(token, link),
          {:ok, images} <- selected(Frame.images(node), opts[:node_ids]) do
-      refs = images |> Enum.map(& &1.image_ref) |> Enum.uniq()
+      refs = images |> Enum.map(&key/1) |> Enum.uniq()
       offset = max(opts[:offset] || 0, 0)
       page = Enum.slice(refs, offset, @max_per_call)
 
@@ -81,6 +91,13 @@ defmodule Brando.Figma.Import do
       end
     end
   end
+
+  # One asset per image and quarter turn: a picture shown turned is a copy of
+  # its own, turned as Figma shows it. Other angles are not applied.
+  defp key(image), do: {image.image_ref, quarter(image[:rotation])}
+
+  defp quarter(rotation) when rotation in [90, 180, 270], do: rotation
+  defp quarter(_rotation), do: 0
 
   # Nothing is fetched when the page is empty (an offset past the end)
   defp import_page([], _images, _link, _token, _ctx), do: %{}
@@ -127,27 +144,29 @@ defmodule Brando.Figma.Import do
     "Figma/" <> if(name == "", do: "Untitled", else: name)
   end
 
-  defp import_all(refs, urls, images, ctx) do
+  # The first layer showing an asset names its file and gives its crop: one
+  # image shown with two crops keeps the first (the result says so)
+  defp import_all(keys, urls, images, ctx) do
     dir = Path.join(System.tmp_dir!(), "brando-figma-" <> Base.url_encode64(:crypto.strong_rand_bytes(9)))
     File.mkdir_p!(dir)
-    names = Map.new(Enum.reverse(images), &{&1.image_ref, &1.name})
+    firsts = Map.new(Enum.reverse(images), &{key(&1), &1})
     limit = size_limit(ctx.cfg)
 
     try do
-      refs
+      keys
       |> Enum.with_index()
       |> Task.async_stream(
-        fn {ref, index} -> {ref, download(urls[ref], Path.join(dir, "#{index}"), limit)} end,
+        fn {{ref, _turn} = key, index} -> {key, download(urls[ref], Path.join(dir, "#{index}"), limit)} end,
         max_concurrency: @concurrency,
         timeout: @download_timeout + 5_000,
         on_timeout: :kill_task,
         ordered: true
       )
-      |> Enum.zip(refs)
+      |> Enum.zip(keys)
       |> Map.new(fn
-        {{:ok, {ref, {:ok, path}}}, ref} -> {ref, store(path, names[ref], ctx)}
-        {{:ok, {ref, {:error, message}}}, ref} -> {ref, {:error, message}}
-        {{:exit, _reason}, ref} -> {ref, {:error, "The download took too long."}}
+        {{:ok, {key, {:ok, path}}}, key} -> {key, store(path, key, firsts[key], ctx)}
+        {{:ok, {key, {:error, message}}}, key} -> {key, {:error, message}}
+        {{:exit, _reason}, key} -> {key, {:error, "The download took too long."}}
       end)
     after
       File.rm_rf(dir)
@@ -191,29 +210,100 @@ defmodule Brando.Figma.Import do
 
   # One store of a file for the config at a time (`Images.with_file_lock/3`):
   # two imports of the same picture at once find each other's image. Its
-  # sizes are queued once the row is committed.
-  defp store(path, name, ctx) do
+  # sizes are queued once the row is committed. A turned copy is a file of
+  # its own, so it is reused only for the same picture turned the same way.
+  # An animated image is stored as it is, upright: turning it would keep
+  # only its first frame.
+  defp store(path, {_ref, turn}, first, ctx) do
     with {:ok, head} <- ContentType.head(path),
-         {:ok, type, ext} <- image_type(head) do
+         {:ok, type, ext} <- image_type(head),
+         {:ok, path, turned} <- turn(path, turn, ext) do
       hash = hash(path)
+      name = if turned == 0, do: first.name, else: "#{first.name} #{turned}"
+      crop = if turned == turn, do: first[:crop], else: unturn(first[:crop], turn)
+      store = fn -> reuse_or_store(hash, path, filename(name, ext), type, crop, ctx) end
 
       hash
-      |> Images.with_file_lock(ctx.config_target, fn -> reuse_or_store(hash, path, filename(name, ext), type, ctx) end)
+      |> Images.with_file_lock(ctx.config_target, store)
       |> queue_sizes(ctx.actor)
+      |> upright(turned == turn)
     else
+      {:error, message} when is_binary(message) -> {:error, message}
       _ -> {:error, "Not a JPEG, PNG, GIF or WebP image."}
     end
   end
 
-  defp reuse_or_store(hash, path, filename, type, ctx) do
-    case existing(hash, ctx) do
-      %Image{} = image -> {:reused, image}
-      nil -> store_new(path, filename, type, ctx)
+  # The file to store and the turn it has: 0 for an animated image (a GIF or
+  # WebP of more than one frame), which is not turned
+  defp turn(path, 0, _ext), do: {:ok, path, 0}
+
+  # Upright by its EXIF orientation first, as Figma and browsers show it. A
+  # lossy format is written near its original quality, not the encoder's
+  # default (75).
+  defp turn(path, degrees, ext) do
+    turned = "#{path}-turned.#{ext}"
+
+    with {:ok, img} <- Vimage.open(path),
+         :ok <- Images.PixelLimit.check(img),
+         false <- Vimage.pages(img) > 1,
+         {:ok, {img, _flags}} <- Vimage.autorotate(img),
+         {:ok, img} <- Vimage.rotate(img, degrees),
+         {:ok, _img} <- Vimage.write(img, turned, write_options(ext)) do
+      {:ok, turned, degrees}
+    else
+      true -> {:ok, path, 0}
+      {:error, :too_many_pixels} -> {:error, Images.PixelLimit.error_message()}
+      _ -> {:error, "The image could not be turned #{degrees}°."}
     end
   end
 
+  # A crop given in the image as Figma turns it, in the image as stored
+  defp unturn(%{x: x, y: y, width: width, height: height}, 90),
+    do: %{x: y, y: 1 - x - width, width: height, height: width}
+
+  defp unturn(%{x: x, y: y, width: width, height: height}, 180),
+    do: %{x: 1 - x - width, y: 1 - y - height, width: width, height: height}
+
+  defp unturn(%{x: x, y: y, width: width, height: height}, 270),
+    do: %{x: 1 - y - height, y: x, width: height, height: width}
+
+  defp unturn(crop, _turn), do: crop
+
+  defp write_options(ext) when ext in ["jpg", "webp"], do: [quality: 95]
+  defp write_options(_ext), do: []
+
+  # An image the library has keeps its focal point: an editor may have set it
+  defp reuse_or_store(hash, path, filename, type, crop, ctx) do
+    case existing(hash, ctx) do
+      %Image{} = image -> {:reused, image}
+      nil -> path |> store_new(filename, type, ctx) |> put_focal(crop, ctx.actor)
+    end
+  end
+
+  defp put_focal({:stored, image}, crop, actor) when is_map(crop) do
+    focal = %{x: percent(crop.x + crop.width / 2), y: percent(crop.y + crop.height / 2)}
+
+    case Images.update_image(image, %{focal: focal}, actor) do
+      {:ok, image} ->
+        {:stored, image, :focal}
+
+      error ->
+        Logger.warning("[Brando.Figma] Could not set the focal point of image #{image.id}: #{inspect(error)}")
+        {:stored, image, :focal_failed}
+    end
+  end
+
+  defp put_focal(result, _crop, _actor), do: result
+
+  defp percent(fraction), do: fraction |> Kernel.*(100) |> round() |> max(0) |> min(100)
+
   # A queueing that fails leaves the image unprocessed; importing it again
   # finds it and queues it then
+  defp queue_sizes({:stored, image, _focal} = result, actor) do
+    queue_sizes({:stored, image}, actor)
+    result
+  end
+
   defp queue_sizes({:stored, image} = result, actor) do
     case Images.Processing.queue_processing(image, actor, [], silent: true) do
       {:ok, _job} -> :ok
@@ -280,23 +370,111 @@ defmodule Brando.Figma.Import do
     if(base == "", do: "figma", else: base) <> "." <> ext
   end
 
-  # One entry per image of the page, in the frame's order, with the layers
-  # that show it
+  # One entry per asset of the page, in the frame's order, with the layers
+  # that show it (each once) and what of Figma's crop, rotation and mirroring
+  # was applied, for every layer that shows it
   defp describe(page, images, results) do
-    layers = Enum.group_by(images, & &1.image_ref, &Map.take(&1, [:node_id, :name, :section]))
+    shown_by = Enum.group_by(images, &key/1)
 
-    Enum.map(page, fn ref ->
-      shown = Map.get(layers, ref, [])
-      entry = %{layers: Enum.take(shown, @max_layers)}
+    Enum.map(page, fn key ->
+      shown = Map.get(shown_by, key, [])
+      layers = shown |> Enum.uniq_by(& &1.node_id) |> Enum.map(&Map.take(&1, [:node_id, :name, :section]))
+      entry = %{layers: Enum.take(layers, @max_layers)}
 
       entry =
-        if length(shown) > @max_layers, do: Map.put(entry, :layers_left_out, length(shown) - @max_layers), else: entry
+        if length(layers) > @max_layers, do: Map.put(entry, :layers_left_out, length(layers) - @max_layers), else: entry
 
-      case results[ref] do
-        {:stored, asset} -> Map.merge(entry, %{asset: %{kind: "image", id: asset.id}, reused: false})
-        {:reused, asset} -> Map.merge(entry, %{asset: %{kind: "image", id: asset.id}, reused: true})
+      case results[key] do
         {:error, message} -> Map.put(entry, :error, message)
+        result -> Map.merge(entry, asset(result, shown, length(layers) > 1))
       end
     end)
   end
+
+  defp asset(result, [first | _] = shown, several?) do
+    {result, upright?} =
+      case result do
+        {:upright, result} -> {result, true}
+        result -> {result, false}
+      end
+
+    {asset, reused, focal} =
+      case result do
+        {:stored, asset, focal} -> {asset, false, focal}
+        {:stored, asset} -> {asset, false, nil}
+        {:reused, asset} -> {asset, true, :reused}
+      end
+
+    {applied, not_applied} =
+      shown
+      |> Enum.flat_map(&applied(&1, first, %{focal: focal, upright?: upright?, several?: several?}))
+      |> Enum.uniq()
+      |> Enum.split_with(&(elem(&1, 0) == :applied))
+
+    %{asset: %{kind: "image", id: asset.id}, reused: reused, rotation: first[:rotation]}
+    |> Map.merge(%{
+      applied: Enum.map(applied, &elem(&1, 1)),
+      not_applied: not_applied |> Enum.map(&elem(&1, 1)) |> capped()
+    })
+    |> Map.reject(fn {_key, value} -> value in [nil, []] end)
+  end
+
+  # Marks an image stored without the turn its layer shows.
+  defp upright({:error, _message} = error, _turned?), do: error
+  defp upright(result, true), do: result
+  defp upright(result, false), do: {:upright, result}
+
+  # One line per layer adds up when a cropped image repeats down a page.
+  defp capped(lines) do
+    case Enum.split(lines, @max_layers) do
+      {lines, []} -> lines
+      {lines, rest} -> lines ++ ["and #{length(rest)} more of the same kind on other layers"]
+    end
+  end
+
+  # What of one layer's image was applied. The asset is the first layer's
+  # file: its turn and its crop's focal point; another layer's crop sets
+  # nothing. When several layers show the asset, what one of them alone
+  # missed names it.
+  defp applied(image, first, ctx) do
+    rotation = image[:rotation]
+    layer = if ctx.several?, do: ~s[layer "#{image.name}" (#{image.node_id}): ], else: ""
+
+    turn =
+      cond do
+        image[:mirrored] -> [{:not_applied, layer <> "mirrored in Figma: the image is imported unmirrored"}]
+        is_nil(rotation) -> []
+        quarter(rotation) == 0 -> [{:not_applied, layer <> "rotation #{rotation}°: only quarter turns are applied"}]
+        ctx.upright? -> [{:not_applied, "rotated #{rotation}°: the image is animated, so it is imported upright"}]
+        true -> [{:applied, "rotated #{rotation}°"}]
+      end
+
+    turn ++ crop_applied(image, first, layer, ctx.focal)
+  end
+
+  defp crop_applied(%{crop: _crop} = image, first, _layer, focal) when image == first do
+    case focal do
+      :focal ->
+        [{:applied, "focal point from the Figma crop"}]
+
+      :reused ->
+        [
+          {:not_applied,
+           "focal point from the Figma crop: the library already had this image, so it keeps its own focal point"}
+        ]
+
+      _failed ->
+        [{:not_applied, "focal point from the Figma crop: it could not be saved"}]
+    end
+  end
+
+  defp crop_applied(%{crop: _crop}, first, layer, _focal) do
+    [
+      {:not_applied,
+       layer <>
+         ~s[focal point from the Figma crop: this crop is not used; only the first place the image shows, "#{first.name}" (#{first.node_id}), can set it]}
+    ]
+  end
+
+  defp crop_applied(_image, _first, _layer, _focal), do: []
 end

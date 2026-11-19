@@ -286,6 +286,24 @@ proposal with the modules that match.
   clipping and masks: an image cropped by its frame or a mask can reach
   past the cell it shows in.
 
+  Each image has its `scale_mode` (`fill`, `fit`, `crop` or `tile`), its
+  `crop` when cropped (`x`, `y`, `width`, `height` as fractions of the
+  image), its `rotation` when turned (clockwise, in degrees) and
+  `mirrored` when a crop flips it (it then has no `rotation`). A layer
+  with several image fills, as when a designer swaps a photo by adding one
+  on top, is one image when its top fill covers it: opaque, unblended, and
+  filled, or cropped so the image reaches every corner of the layer. A
+  layer whose top fill is translucent, blended, fit, tiled or cropped short
+  of an edge lists every image that shows, and its section says so in
+  `note`. The image fills that do not show, under one that covers or at no
+  opacity, are listed as the bottom image's `hidden_fills` and are not
+  imported.
+
+  Figma's API documents no direction for the `rotation` of a filled, fit
+  or tiled image. It is read as clockwise, as Figma's Rotate 90° control
+  turns, and as OpenPencil and Octopus draw it; no render by Figma has
+  confirmed it.
+
   A section named like the page's header, footer or menu is marked
   `chrome`, with the reason: `"name"` (its layer name) or `"component"`
   (its component's name). The last part of the name, after any slashes,
@@ -310,7 +328,14 @@ proposal with the modules that match.
   answers with each image's asset for the proposal and the layers that show
   it. An image the library
   already has (the same file, for the same config) is reused, so importing a
-  frame twice adds nothing. It imports at most eight images per call; the
+  frame twice adds nothing. An image shown turned 90, 180 or 270° is
+  imported as a turned copy; other angles, a mirrored crop and the turn of
+  an animated GIF or WebP (which would keep one frame) are not applied. A
+  cropped image keeps its whole file, and a new one gets its focal point at
+  the centre of the crop; one the library already has keeps its own focal
+  point, and when several layers show one image, the first layer's crop
+  sets it. Each answer says what was applied and what was not, naming the
+  layer when only one of several missed it. It imports at most eight images per call; the
   tool calls again for the rest. The images are added when the tool imports
   them, before anyone applies the proposal, and stay in the library if the
   proposal is discarded. Importing needs permission to upload images.
