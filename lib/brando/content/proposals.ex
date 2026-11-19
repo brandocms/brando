@@ -2224,6 +2224,15 @@ defmodule Brando.Content.Proposals do
       with a conversation) or `:mcp`, a tool connected over MCP
     * `:client` — the connected tool's name, such as "Claude Code", when it
       is known
+    * `:replaces` — for a proposal without a conversation, from a connected
+      tool: the id of the actor's proposal from the same client that this one
+      refines, or `:latest`. With `:latest`, the most recent proposal from the
+      same actor and client still under review is superseded when it has
+      problems or touches an entry this one touches (the same target, or a
+      created entry with the same content type and ref); otherwise it is left
+      alone and this one starts at version 1. Calls for one actor and client
+      are serialized while the earlier proposal is found and superseded, so
+      concurrent calls never leave two versions under review.
 
   A refinement keeps the origin and client of the version it supersedes.
   Proposals without a conversation are listed for review by
@@ -2241,11 +2250,107 @@ defmodule Brando.Content.Proposals do
   defp store!(proposal, actor, opts) do
     {:ok, record} =
       Repo.transaction(fn ->
-        previous = supersede!(opts[:supersedes], actor)
+        previous =
+          case opts[:replaces] do
+            nil -> supersede!(opts[:supersedes], actor)
+            replaces -> replace!(replaces, proposal, actor, opts)
+          end
+
         Repo.insert!(new_record(proposal, previous, opts))
       end)
 
     with_record(proposal, record)
+  end
+
+  # A connected tool's proposals: the earlier one is found and superseded
+  # under a lock for the actor and client, so a second call that arrives
+  # while the first is stored waits for it and then refines it.
+  defp replace!(replaces, proposal, actor, opts) do
+    client = client(opts[:client])
+
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-content-proposal-client:#{Transfer.scope()}:#{user!(actor).id}:#{client}"
+    ])
+
+    previous =
+      case replaces do
+        :latest -> actor |> under_review_from_client(client) |> Enum.find(&replaced_by?(&1, proposal))
+        id -> replaceable!(id, actor, client)
+      end
+
+    previous && previous |> Changeset.change(status: "superseded") |> Repo.update!()
+  end
+
+  # The newest proposal that has problems or shares an entry is replaced. An
+  # older one about the same entry counts too, when a proposal about another
+  # entry came in between.
+  defp replaced_by?(previous, proposal), do: previous.problems != [] or overlaps?(previous, proposal)
+
+  # Newest first. An expired proposal can no longer be approved, so it is not
+  # under review.
+  defp under_review_from_client(actor, client) do
+    Repo.all(
+      from(r in external(actor),
+        where: r.status in ~w(pending approved) and r.expires_at > ^DateTime.utc_now(),
+        order_by: [desc: r.inserted_at, desc: r.version],
+        lock: "FOR UPDATE"
+      )
+      |> where_client(client)
+    )
+  end
+
+  defp where_client(query, nil), do: from(r in query, where: is_nil(r.client))
+  defp where_client(query, client), do: from(r in query, where: r.client == ^client)
+
+  defp replaceable!(id, actor, client) do
+    record =
+      case Ecto.UUID.cast(id) do
+        {:ok, id} -> Repo.one(from(r in external(actor), where: r.id == ^id, lock: "FOR UPDATE"))
+        :error -> nil
+      end
+
+    cond do
+      is_nil(record) or record.client != client ->
+        Error.fail!(
+          dgettext(
+            "content_proposals",
+            "replaces: there is no proposal %{id} from this tool. Leave out replaces to store a new proposal.",
+            id: inspect(id)
+          )
+        )
+
+      record.status not in ~w(pending approved) or DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt ->
+        Error.fail!(
+          dgettext(
+            "content_proposals",
+            "replaces: proposal %{id} is no longer under review. Leave out replaces to store a new proposal.",
+            id: inspect(id)
+          )
+        )
+
+      true ->
+        record
+    end
+  end
+
+  # Whether a stored proposal touches an entry `proposal` touches.
+  defp overlaps?(record, proposal) do
+    case Codec.decode_all(record.operations) do
+      {:ok, operations} -> not MapSet.disjoint?(touched(operations), touched(proposal.operations))
+      {:error, _} -> false
+    end
+  end
+
+  # A created entry is told apart by its content type and ref.
+  defp touched(operations) do
+    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {op.ref, op.schema}
+
+    for op <- operations, target <- changed_targets(op), not is_nil(target), into: MapSet.new() do
+      case target do
+        {:new, ref} -> {:new, creates[ref], ref}
+        target -> target
+      end
+    end
   end
 
   defp supersede!(nil, _actor), do: nil
@@ -2818,6 +2923,7 @@ defmodule Brando.Content.Proposals do
         summary: record.summary,
         origin: record.origin,
         client: record.client,
+        supersedes_id: record.supersedes_id,
         expires_at: record.expires_at
     }
   end

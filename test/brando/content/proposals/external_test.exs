@@ -123,9 +123,11 @@ defmodule Brando.Content.Proposals.ExternalTest do
     assert [%Record{version: 2, origin: "mcp", client: "Claude Code"}] = Proposals.list_external(c.user)
 
     two = [insert_op(c, "One"), insert_op(c, "Two")]
+    # The same page: this call is version 3.
     {:ok, result} = Tools.call("prepare_proposal", %{"summary" => "Two", "operations" => two}, mcp(c))
-    assert {:ok, narrowed} = Proposals.leave_out(result.proposal_id, 1, [0], c.user)
-    assert %{origin: "mcp", client: "Claude Code", conversation_id: nil, version: 2} = narrowed
+    assert result.version == 3
+    assert {:ok, narrowed} = Proposals.leave_out(result.proposal_id, 3, [0], c.user)
+    assert %{origin: "mcp", client: "Claude Code", conversation_id: nil, version: 4} = narrowed
   end
 
   test "a proposal with problems has no preview_url: its preview waits for them, and hides the cards listing them", c do
