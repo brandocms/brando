@@ -1,7 +1,7 @@
 defmodule Brando.Videos.Playback do
   @moduledoc """
   Which source a video plays from: streamed over HLS, or a progressive MP4 at
-  one resolution. `Brando.HTML.video/1` asks this for every Bunny video, and
+  one resolution. `Brando.HTML.video/1` asks this for every Bunny and Mux video, and
   `Brando.Villain.Parser` renders provider videos through `Brando.HTML.video/1`,
   so a template and a block can't pick different files for the same inputs.
 
@@ -13,9 +13,10 @@ defmodule Brando.Videos.Playback do
       may watch it through; otherwise the MP4 at the site's default resolution,
       which reaches its first frame sooner for an autoplaying loop.
     * `:hls`: always the stream.
-    * `:mp4_360`, `:mp4_480`, `:mp4_720`, `:mp4_1080`: that MP4. A resolution
-      the video lacks falls back to the next one down, and to the stream when
-      the video has no MP4s.
+    * `:mp4_270` to `:mp4_2160`: that MP4. A resolution the video lacks falls
+      back to the next one down, and to the stream when the video has no MP4s.
+      Which resolutions there can be depends on the provider: Bunny makes 360p
+      to 1080p (`bunny_resolutions/0`), Mux 270p to 2160p (`mux_resolutions/0`).
 
   ## Precedence
 
@@ -39,23 +40,48 @@ defmodule Brando.Videos.Playback do
   uploaded. Its API reports that as `hasMP4Fallback`, stored in
   `meta.bunny.has_mp4_fallback`. Only `true` offers MP4s: a video stored before
   Brando kept the flag streams until it is refreshed (`Brando.Videos.fetch_metadata/2`).
+
+  ## Mux
+
+  Mux serves a static rendition at `https://stream.mux.com/{playback_id}/{resolution}p.mp4`
+  once it is ready. Brando asks for the ones in
+
+      config :brando, Brando.Videos, mux_static_renditions: [720, 1080]
+
+  (the default) when it creates an asset, and keeps what Mux reports of them in
+  `meta.mux.static_renditions`. Only renditions Mux reports as `ready` are
+  offered, and the `highest` rendition older uploads asked for is not used.
+  An older asset that would play an MP4 streams until
+  `Brando.Videos.Uploaders.Mux.add_static_renditions/1`
+  (`mix brando.videos.mux_renditions`) has asked Mux for the configured ones.
   """
 
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Videos.Video
 
-  @mp4_resolutions [360, 480, 720, 1080]
+  @bunny_resolutions [360, 480, 720, 1080]
+  @mux_resolutions [270, 360, 480, 540, 720, 1080, 1440, 2160]
+  @mp4_resolutions Enum.sort(Enum.uniq(@bunny_resolutions ++ @mux_resolutions))
   @mp4_qualities Map.new(@mp4_resolutions, &{&1, :"mp4_#{&1}"})
   @qualities [:auto, :hls | Enum.map(@mp4_resolutions, &@mp4_qualities[&1])]
   @default_mp4_resolution 720
 
-  @type quality :: :auto | :hls | :mp4_360 | :mp4_480 | :mp4_720 | :mp4_1080
+  @type quality ::
+          :auto | :hls | :mp4_270 | :mp4_360 | :mp4_480 | :mp4_540 | :mp4_720 | :mp4_1080 | :mp4_1440 | :mp4_2160
   @type format :: :hls | :mp4
 
   @doc "Every quality, in the order an editor chooses from."
   @spec qualities() :: [quality()]
   def qualities, do: @qualities
+
+  @doc "The MP4 resolutions Bunny's MP4 Fallback can make, lowest first."
+  @spec bunny_resolutions() :: [pos_integer()]
+  def bunny_resolutions, do: @bunny_resolutions
+
+  @doc "The static rendition resolutions Mux can make, lowest first."
+  @spec mux_resolutions() :: [pos_integer()]
+  def mux_resolutions, do: @mux_resolutions
 
   @doc """
   A quality from a stored or passed value: an atom, its string as a form or a
@@ -70,11 +96,12 @@ defmodule Brando.Videos.Playback do
   @doc """
   The qualities an editor can choose from for `video`, empty for a video
   without renditions to choose from (an upload, a linked file, YouTube). The
-  MP4s are the ones the video has, so a Bunny video without MP4 Fallback has
-  Automatic and Streaming only.
+  MP4s are the ones the video has, so a Bunny video without MP4 Fallback, or
+  a Mux video without ready static renditions, has Automatic and Streaming
+  only.
   """
   @spec choices(Video.t() | nil) :: [quality()]
-  def choices(%Video{type: :bunny} = video),
+  def choices(%Video{type: type} = video) when type in [:bunny, :mux],
     do: [:auto, :hls | Enum.map(mp4_resolutions(video), &@mp4_qualities[&1])]
 
   def choices(_video), do: []
@@ -90,16 +117,29 @@ defmodule Brando.Videos.Playback do
   """
   @spec mp4_resolutions(Video.t() | nil) :: [pos_integer()]
   def mp4_resolutions(%Video{type: :bunny, meta: %{"bunny" => %{"has_mp4_fallback" => true} = bunny}}) do
-    bunny |> Map.get("available_resolutions") |> parse_resolutions()
+    bunny |> Map.get("available_resolutions") |> parse_resolutions(@bunny_resolutions)
+  end
+
+  # Signed playback renders nothing, so it has no MP4s to offer either
+  def mp4_resolutions(%Video{type: :mux, meta: %{"mux" => %{"playback_policy" => "signed"}}}), do: []
+
+  def mp4_resolutions(%Video{type: :mux, meta: %{"mux" => %{"static_renditions" => renditions}}})
+      when is_list(renditions) do
+    renditions
+    |> Enum.flat_map(fn
+      %{"status" => "ready", "resolution" => resolution} -> [resolution]
+      _ -> []
+    end)
+    |> parse_resolutions(@mux_resolutions)
   end
 
   def mp4_resolutions(_video), do: []
 
   # Bunny lists them as "240p,360p,720p"
-  defp parse_resolutions(resolutions) when is_binary(resolutions),
-    do: resolutions |> String.split(",") |> parse_resolutions()
+  defp parse_resolutions(resolutions, known) when is_binary(resolutions),
+    do: resolutions |> String.split(",") |> parse_resolutions(known)
 
-  defp parse_resolutions(resolutions) when is_list(resolutions) do
+  defp parse_resolutions(resolutions, known) when is_list(resolutions) do
     resolutions
     |> Enum.flat_map(fn resolution ->
       case Integer.parse(String.trim(to_string(resolution))) do
@@ -107,12 +147,12 @@ defmodule Brando.Videos.Playback do
         _ -> []
       end
     end)
-    |> Enum.filter(&(&1 in @mp4_resolutions))
+    |> Enum.filter(&(&1 in known))
     |> Enum.uniq()
     |> Enum.sort()
   end
 
-  defp parse_resolutions(_resolutions), do: []
+  defp parse_resolutions(_resolutions, _known), do: []
 
   @doc """
   The quality `video` plays at: its own, then the template's, then `:auto`.
@@ -136,6 +176,15 @@ defmodule Brando.Videos.Playback do
     case mp4_resolution(video, opts) do
       nil -> {:hls, bunny_url(video, "playlist.m3u8")}
       resolution -> {:mp4, bunny_url(video, "play_#{resolution}p.mp4")}
+    end
+  end
+
+  def source(%Video{type: :mux} = video, opts) do
+    playback_id = get_in(video.meta, ["mux", "playback_id"])
+
+    case mp4_resolution(video, opts) do
+      nil -> {:hls, "https://stream.mux.com/#{playback_id}.m3u8"}
+      resolution -> {:mp4, "https://stream.mux.com/#{playback_id}/#{resolution}p.mp4"}
     end
   end
 

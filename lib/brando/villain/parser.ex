@@ -1000,7 +1000,16 @@ defmodule Brando.Villain.Parser do
     do: merge_overrides(image, object_config(object), @image_overrides)
 
   defp apply_object_config(%Brando.Videos.Video{} = video, object),
-    do: merge_overrides(video, object_config(object), @video_overrides)
+    do: apply_video_config(video, object_config(object))
+
+  @doc """
+  A gallery object's `config` over `video`, as a gallery renders it: each
+  of the video overrides the config has, unless nil or empty. `video` may be
+  a map of its settings with the same keys, as `Brando.Videos.Mp4Use` reads
+  a gallery.
+  """
+  @spec apply_video_config(map(), map()) :: map()
+  def apply_video_config(video, config), do: merge_overrides(video, config, @video_overrides)
 
   defp object_config(%{config: config}) when is_map(config), do: config
   defp object_config(_object), do: %{}

@@ -1,7 +1,8 @@
 defmodule BrandoAdmin.VideoQualityTest do
   @moduledoc """
   A video ref's settings offer the video's qualities under Playback: Automatic,
-  Streaming and the MP4s the video has, below the video's own setting. A video
+  Streaming and the MP4s the video has (Bunny's, or Mux's ready static
+  renditions), below the video's own setting. A video
   without renditions to choose from has no select, and keeps the ref's value
   in a hidden input.
   """
@@ -64,6 +65,31 @@ defmodule BrandoAdmin.VideoQualityTest do
            ]
 
     assert has_element?(view, ~s(select[name$="[refs][0][data][data][quality]"] option[value="hls"][selected]))
+  end
+
+  test "a Mux video's ref offers the static renditions Mux has ready", %{current_user: user} = ctx do
+    renditions =
+      for {resolution, status} <- [{"highest", "ready"}, {"720p", "ready"}, {"1080p", "preparing"}, {"2160p", "ready"}],
+          do: %{"id" => "r-#{resolution}", "resolution" => resolution, "status" => status, "name" => "#{resolution}.mp4"}
+
+    video =
+      Factory.insert(:video,
+        creator: user,
+        type: :mux,
+        status: :ready,
+        meta: %{"mux" => %{"asset_id" => "a-1", "playback_id" => "pb-1", "static_renditions" => renditions}}
+      )
+
+    {page, ref_uid} = page_with_video_ref(user, video, %{})
+    view = open_ref_config(ctx, page, ref_uid)
+
+    assert options(view) == [
+             {"", "Video’s setting"},
+             {"auto", "Automatic"},
+             {"hls", "Streaming (HLS)"},
+             {"mp4_720", "MP4, 720p"},
+             {"mp4_2160", "MP4, 2160p"}
+           ]
   end
 
   test "a video without renditions keeps the ref's quality in a hidden input", %{current_user: user} = ctx do

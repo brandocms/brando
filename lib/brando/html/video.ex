@@ -31,9 +31,8 @@ defmodule Brando.HTML.Video do
     - `opacity` -> background opacity of the `:svg` cover
     - `width`
     - `height`
-    - `quality` -> `:auto`, `:hls`, `:mp4_360`, `:mp4_480`, `:mp4_720` or
-      `:mp4_1080`: whether a Bunny video streams or plays an MP4, see
-      `Brando.Videos.Playback`
+    - `quality` -> `:auto`, `:hls` or `:mp4_270` to `:mp4_2160`: whether a
+      Bunny or Mux video streams or plays an MP4, see `Brando.Videos.Playback`
 
   ### Precedence
 
@@ -143,9 +142,16 @@ defmodule Brando.HTML.Video do
   def video(%{video: %Video{type: :mux, meta: meta, status: :ready} = video, opts: opts} = assigns) do
     playback_id = get_in(meta, ["mux", "playback_id"])
 
+    {_format, src} =
+      Brando.Videos.Playback.source(video,
+        quality: Keyword.get(opts, :quality),
+        controls: setting(opts, video, :controls, false),
+        play_button: setting(opts, video, :play_button, false)
+      )
+
     render_video(assigns, video, opts,
       class: "video-mux",
-      src: "https://stream.mux.com/#{playback_id}.m3u8",
+      src: src,
       poster: "https://image.mux.com/#{playback_id}/thumbnail.jpg",
       aspect_ratio: mux_meta_aspect_ratio(meta)
     )

@@ -113,4 +113,61 @@ defmodule Brando.Videos.PlaybackTest do
     assert Playback.source(video, quality: :mp4_360) == {:mp4, url("play_360p.mp4")}
     assert Playback.source(video, quality: "hls") == {:hls, url("playlist.m3u8")}
   end
+
+  describe "Mux" do
+    defp mux(renditions, attrs \\ %{}) do
+      struct(
+        %Video{
+          type: :mux,
+          status: :ready,
+          meta: %{"mux" => %{"playback_id" => "pb-1", "playback_policy" => "public", "static_renditions" => renditions}}
+        },
+        attrs
+      )
+    end
+
+    defp rendition(resolution, status \\ "ready"),
+      do: %{"id" => "r-#{resolution}", "resolution" => resolution, "status" => status, "name" => "#{resolution}.mp4"}
+
+    test "offers the static renditions Mux has ready, up to 2160p, and not `highest`" do
+      video =
+        mux([
+          rendition("highest"),
+          rendition("720p"),
+          rendition("1080p", "preparing"),
+          rendition("2160p"),
+          rendition("1440p", "skipped"),
+          rendition("270p", "errored")
+        ])
+
+      assert Playback.mp4_resolutions(video) == [720, 2160]
+      assert Playback.choices(video) == [:auto, :hls, :mp4_720, :mp4_2160]
+    end
+
+    test "an asset without ready renditions, or with signed playback, offers the stream only" do
+      assert Playback.choices(mux([rendition("highest"), rendition("720p", "preparing")])) == [:auto, :hls]
+      assert Playback.choices(%Video{type: :mux, meta: %{"mux" => %{"playback_id" => "pb-1"}}}) == [:auto, :hls]
+
+      signed = mux([rendition("720p")])
+      signed = put_in(signed.meta["mux"]["playback_policy"], "signed")
+      assert Playback.mp4_resolutions(signed) == []
+    end
+
+    test "plays the rendition's MP4 from stream.mux.com, and the stream otherwise" do
+      video = mux([rendition("720p"), rendition("1080p")])
+
+      assert Playback.source(video, []) == {:mp4, "https://stream.mux.com/pb-1/720p.mp4"}
+      assert Playback.source(video, controls: true) == {:hls, "https://stream.mux.com/pb-1.m3u8"}
+      assert Playback.source(%{video | quality: :mp4_2160}, []) == {:mp4, "https://stream.mux.com/pb-1/1080p.mp4"}
+      assert Playback.source(%{video | quality: :mp4_540}, []) == {:mp4, "https://stream.mux.com/pb-1/720p.mp4"}
+      assert Playback.source(%{video | quality: :hls}, []) == {:hls, "https://stream.mux.com/pb-1.m3u8"}
+      assert Playback.source(mux([rendition("highest")]), []) == {:hls, "https://stream.mux.com/pb-1.m3u8"}
+    end
+
+    test "each provider's resolutions are qualities" do
+      for resolution <- Playback.bunny_resolutions() ++ Playback.mux_resolutions() do
+        assert Playback.normalize("mp4_#{resolution}") == :"mp4_#{resolution}"
+      end
+    end
+  end
 end
