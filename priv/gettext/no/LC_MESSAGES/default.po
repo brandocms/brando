@@ -20421,8 +20421,8 @@ msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble s
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "This site is being set up, archived or changed elsewhere. Try again in a moment."
-msgstr "Dette nettstedet settes opp, arkiveres eller endres et annet sted. Prøv igjen om et øyeblikk."
+msgid "This site is being set up, archived or changed elsewhere, or its new language is being seeded. Try again in a moment."
+msgstr "Dette nettstedet settes opp, arkiveres eller endres et annet sted, eller startinnhold opprettes for det nye språket. Prøv igjen om et øyeblikk."
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex

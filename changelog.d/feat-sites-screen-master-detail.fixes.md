@@ -1,5 +1,5 @@
 - Archiving and permanently deleting a site at `/admin/sites` ask for confirmation again; the buttons acted at once.
 - A static build queued or scheduled before its site was switched to dynamic ends without building or deploying, and says why in its log; a deploy or rollback of such a site's build is refused, and a queued one is cancelled with the reason in the build's log.
-- The admin's navigation follows a change to its current site (name, delivery, so Publishing in the menu) without a reload.
+- The admin's navigation follows a change to its current site (name, delivery, so Publishing in the menu) and to its site switcher's list (a site created, suspended, activated or no longer open to the user) without a reload.
 - A string list field (an identity's alternate names, say) keeps every value when one of its rows is cleared while the form re-renders; a row below it could be emptied.
 - `Brando.Tenant.Setup.update_languages/3` refuses a user who is not a superuser in legacy authorization, as the Sites screen does.

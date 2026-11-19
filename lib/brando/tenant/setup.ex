@@ -84,7 +84,8 @@ defmodule Brando.Tenant.Setup do
   (`Brando.Tenant.Registry.update_site/3`); one removed keeps its content.
 
   Refused with `{:error, :site_busy}` when another lifecycle operation
-  (provisioning, archiving, another settings change) still holds the site
+  (provisioning, archiving, another settings change, or a language added
+  earlier being seeded in one of its environments) still holds the site
   after five seconds.
   """
   @spec update_languages(Site.t(), map(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
@@ -199,15 +200,17 @@ defmodule Brando.Tenant.Setup do
   end
 
   # A settings change is quick, so it waits only briefly for another one; a
-  # site being provisioned, archived or deleted holds the lock for longer,
-  # and the caller (an admin event handler) is told rather than kept waiting.
+  # site being provisioned, archived or deleted, or a language added to it
+  # being seeded (`Brando.Worker.SiteLanguageSeed`), holds the lock for
+  # longer, and the caller (an admin event handler) is told rather than kept
+  # waiting.
   # Brando's own tests wait less (`:site_settings_lock_wait_ms`).
   defp settings_locked(site, fun) do
     wait = Application.get_env(:brando, :site_settings_lock_wait_ms, 5_000)
 
     case Lock.with_timeout(lifecycle_lock_key(site.key), wait, fun) do
+      {:ok, result} -> result
       :busy -> {:error, :site_busy}
-      result -> result
     end
   end
 

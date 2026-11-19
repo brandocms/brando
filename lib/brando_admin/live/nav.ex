@@ -114,39 +114,35 @@ defmodule BrandoAdmin.Nav do
     |> assign(:tenant_mode, Tenant.mode())
   end
 
-  # From the warmed cache, without asking the database: the current site,
-  # and the switcher's sites as they are now, in their order, without those
-  # no longer active.
-  # A site that has left the cache stays as it was: access to it is checked
-  # on its own. The menu is built again only when the current site changed.
+  # The current site from the warmed cache, and the switcher's sites read
+  # again, as mount reads them: a site activated, created or no longer open
+  # to this user shows as it is now. The menu is built again only when the
+  # current site changed. In groups mode an access change of a site sends an
+  # authorization broadcast as well, and both read the list: one read more
+  # per open navigation for a rare write.
   defp refresh_from_registry(%{assigns: %{current_site: %{key: key} = current}} = socket) do
-    socket = assign(socket, :tenant_sites, cached_sites(socket.assigns[:tenant_sites] || []))
+    socket =
+      case Tenant.Cache.get_site(key) do
+        nil ->
+          socket
 
-    case Tenant.Cache.get_site(key) do
-      nil ->
-        socket
+        ^current ->
+          socket
 
-      ^current ->
-        socket
+        site ->
+          environment = socket.assigns.current_environment
+          environment = environment && Enum.find(site.environments, environment, &(&1.id == environment.id))
 
-      site ->
-        environment = socket.assigns.current_environment
-        environment = environment && Enum.find(site.environments, environment, &(&1.id == environment.id))
+          socket
+          |> assign(current_site: site, current_environment: environment)
+          |> assign(:tenant_environments, site.environments)
+          |> assign_menu_sections()
+      end
 
-        socket
-        |> assign(current_site: site, current_environment: environment)
-        |> assign(:tenant_environments, site.environments)
-        |> assign_menu_sections()
-    end
+    assign(socket, :tenant_sites, tenant_sites(socket.assigns[:current_user], socket.assigns.current_site))
   end
 
   defp refresh_from_registry(socket), do: socket
-
-  defp cached_sites(sites) do
-    sites
-    |> Enum.map(&(Tenant.Cache.get_site(&1.key) || &1))
-    |> Enum.filter(&(&1.status == :active))
-  end
 
   defp tenant_sites(current_user, current_site) do
     case Tenant.mode() do

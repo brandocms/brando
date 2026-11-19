@@ -20419,7 +20419,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "This site is being set up, archived or changed elsewhere. Try again in a moment."
+msgid "This site is being set up, archived or changed elsewhere, or its new language is being seeded. Try again in a moment."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
