@@ -58,7 +58,7 @@ defmodule Brando.Villain.Markdown.HTML do
   def render(nodes) when is_list(nodes), do: render(%MDEx.Document{nodes: nodes})
 
   @doc "The MDEx document for parsed HTML nodes."
-  @spec document(Tree.t()) :: MDEx.Document.t()
+  @spec document(LazyHTML.Tree.t()) :: MDEx.Document.t()
   def document(tree), do: %MDEx.Document{nodes: blocks(tree)}
 
   # -- Blocks ------------------------------------------------------------------
