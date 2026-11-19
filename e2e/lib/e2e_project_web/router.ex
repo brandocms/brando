@@ -89,6 +89,7 @@ defmodule E2eProjectWeb.Router do
   admin_routes do
     if @sql_sandbox do
       live "/__change_tracking", E2eProjectAdmin.ChangeTrackingLive
+      live "/__string_list", E2eProjectAdmin.StringListLive
     end
 
     live "/", E2eProjectAdmin.DashboardLive

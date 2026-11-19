@@ -104,9 +104,45 @@ Choose `:dynamic` when editors should publish directly through Phoenix. Choose
 `:static` when publication should create a reviewable, immutable artifact,
 served by the installation itself or by rsync- or S3-backed static
 infrastructure.
-Changing the field later does not move traffic or activate an asset set; treat
-that change and the corresponding infrastructure cutover as separate
-operations.
+
+A superuser changes a site's delivery later on its form at `/admin/sites`,
+which asks for confirmation and says what the change does for visitors. When
+the delivery changes while the confirmation is open (a build deployed from
+Publishing, say), the switch is refused and the form shows the site as it is
+now. Setup code calls `Brando.Tenant.Setup.update_delivery/4`, which takes a
+superuser or `:system` (with groups, the right to update sites, `:update` on
+`:sites`), and refuses with `{:error, :delivery_changed}` when the site no
+longer matches `expected: Brando.Tenant.Setup.delivery_state(site)`. While a
+deploy, rollback or prune of the site runs, the switch is refused with
+`{:error, :deploy_running}` (on the form, "A deploy of this site is running"):
+try again when it has finished. A deploy that starts after a switch to dynamic
+deploys nothing, and a queued one is cancelled with the reason in its build's
+log. While the site is being set up, archived or deleted, or a language just
+added to it is being seeded in its environments, a change of its delivery,
+name or languages waits a few seconds and is then refused with
+`{:error, :site_busy}`. The change activates no asset set, and what it does to
+traffic depends on where the site's host points:
+
+- **Dynamic to static.** Nothing changes for visitors. Phoenix keeps
+  answering the live environment's domain until a build is deployed: with
+  **Served by this installation**, the installation serves the build from the
+  first deploy; with `rsync` or `s3`, visitors get a build once the domain
+  points at the static host. Publishing appears in the site's menu.
+- **Static to dynamic, served by this installation with a published build.**
+  Visitors stop getting the build at once: the site's domain answers from
+  Phoenix, which renders the live environment, so content changed since that
+  build becomes public. The site forgets its published build, so switching
+  back to static serves nothing from the installation until the next deploy.
+- **Static to dynamic otherwise.** Nothing changes for visitors at once: with
+  no published build Phoenix already answers, and a domain pointed at a static
+  host keeps reaching it until it is pointed at the installation. Forms on
+  pages deployed to a static host stop accepting submissions, since the
+  backend takes static submissions only for a static site
+  (`Brando.Forms.SubmissionController`).
+
+Either way from static, Publishing leaves the site's menu, and a build can no
+longer be requested. A build queued or scheduled before the switch ends
+without building or deploying when its job runs, and its log says why.
 
 ## New installations
 
@@ -521,10 +557,12 @@ Two lists of content languages have different jobs:
   row, are what that site uses: a subset of the installation's, in the site's
   own order.
 
-A superuser changes a site's languages and default language on its card at
-`/admin/sites`, which calls `Brando.Tenant.Setup.update_languages/3` and asks
-for the right to update sites (`:update` on `:sites`), and for the password
-again when the session has not confirmed lately; setup code can call
+A superuser changes a site's languages and default language on its form at
+`/admin/sites`, where the languages are a list and the default a choice among
+them, which calls `Brando.Tenant.Setup.update_languages/3`. That takes a
+superuser or `:system` (with groups, the right to update sites, `:update` on
+`:sites`), and the screen asks for the password again when the session has
+not confirmed lately; setup code can call
 `Brando.Tenant.Registry.update_site/3`. Both refuse a language the
 installation does not configure, and name it. `default_language` must be one
 of the site's languages, so removing the default takes a new default in the
@@ -1449,9 +1487,13 @@ admin      per-site role; content plus site/environment lifecycle management
 editor     per-site role; content editing without lifecycle mutation
 ```
 
-The superuser Sites screen at `/admin/sites` provisions sites, shows
-environment/page/media/last-edit summaries, changes lifecycle state, grants
-or revokes roles, and sets each site's provider library group (see
+The superuser Sites screen at `/admin/sites` lists the sites and shows one
+at a time, named in the URL (`?site=acme`, or `?new` for the create form;
+without one, the admin's current site). It provisions sites, shows
+environment/page/media/last-edit summaries, renames a site (its key, which
+names its schemas and folders, stays), changes lifecycle state and
+delivery ([Choose a delivery mode](#choose-a-delivery-mode)), grants or
+revokes roles, and sets each site's provider library group (see
 [Video provider libraries](#video-provider-libraries)). The underlying API is also available to application tooling:
 
 ```elixir

@@ -88,6 +88,7 @@ defmodule BrandoAdmin.Nav do
 
   def subscribe(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "user:#{user.id}")
+    Tenant.Cache.subscribe()
     socket
   end
 
@@ -125,6 +126,36 @@ defmodule BrandoAdmin.Nav do
     |> assign(:tenant_environments, environments)
     |> assign(:tenant_mode, Tenant.mode())
   end
+
+  # The current site from the warmed cache, and the switcher's sites read
+  # again, as mount reads them: a site activated, created or no longer open
+  # to this user shows as it is now. The menu is built again only when the
+  # current site changed. In groups mode an access change of a site sends an
+  # authorization broadcast as well, and both read the list: one read more
+  # per open navigation for a rare write.
+  defp refresh_from_registry(%{assigns: %{current_site: %{key: key} = current}} = socket) do
+    socket =
+      case Tenant.Cache.get_site(key) do
+        nil ->
+          socket
+
+        ^current ->
+          socket
+
+        site ->
+          environment = socket.assigns.current_environment
+          environment = environment && Enum.find(site.environments, environment, &(&1.id == environment.id))
+
+          socket
+          |> assign(current_site: site, current_environment: environment)
+          |> assign(:tenant_environments, site.environments)
+          |> assign_menu_sections()
+      end
+
+    assign(socket, :tenant_sites, tenant_sites(socket.assigns[:current_user], socket.assigns.current_site))
+  end
+
+  defp refresh_from_registry(socket), do: socket
 
   defp tenant_sites(current_user, current_site) do
     case Tenant.mode() do
@@ -453,6 +484,25 @@ defmodule BrandoAdmin.Nav do
 
   def handle_info({:user_update, user}, socket) do
     {:noreply, assign(socket, :current_user, user)}
+  end
+
+  # A registry write: the current site's name, delivery (Publishing in the
+  # menu) and the switcher's sites as they are now. Warms come in bursts
+  # (a language seeded in each environment), so the ones within
+  # `@registry_refresh_ms` are shown in one refresh.
+  @registry_refresh_ms 150
+
+  def handle_info(:tenant_registry_changed, socket) do
+    if socket.assigns[:registry_refresh_pending] do
+      {:noreply, socket}
+    else
+      Process.send_after(self(), :refresh_tenant_registry, @registry_refresh_ms)
+      {:noreply, assign(socket, :registry_refresh_pending, true)}
+    end
+  end
+
+  def handle_info(:refresh_tenant_registry, socket) do
+    {:noreply, socket |> assign(:registry_refresh_pending, false) |> refresh_from_registry()}
   end
 
   def handle_info(_, socket) do

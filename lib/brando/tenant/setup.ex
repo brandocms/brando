@@ -78,19 +78,144 @@ defmodule Brando.Tenant.Setup do
 
   @doc """
   Sets `site`'s languages and default language, from `attrs` with
-  `:languages` and `:default_language`, as `user`, who must be allowed to
-  update sites. A language added is seeded in each of the site's
-  environments after the save, with `user` as the creator of its content
+  `:languages` and `:default_language`, as `actor` (`authorize_settings/1`).
+  A language added is seeded in each of the site's environments after the
+  save, with `actor` as the creator of its content
   (`Brando.Tenant.Registry.update_site/3`); one removed keeps its content.
-  """
-  @spec update_languages(Site.t(), map(), User.t()) :: {:ok, Site.t()} | {:error, term()}
-  def update_languages(%Site{} = site, attrs, %User{} = user) do
-    attrs = Map.take(attrs, [:languages, :default_language])
 
-    lifecycle(:update, [actor: Brando.Authorization.Scope.installation(user)], fn ->
-      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, attrs, creator: user) end)
-    end)
+  Refused with `{:error, :site_busy}` when another lifecycle operation
+  (provisioning, archiving, another settings change, or a language added
+  earlier being seeded in one of its environments) still holds the site
+  after five seconds.
+  """
+  @spec update_languages(Site.t(), map(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
+  def update_languages(%Site{} = site, attrs, actor) do
+    attrs = Map.take(attrs, [:languages, :default_language])
+    creator = if match?(%User{}, actor), do: [creator: actor], else: []
+
+    with :ok <- authorize_settings(actor) do
+      settings_locked(site, fn -> update_current(site, attrs, creator) end)
+    end
   end
+
+  @doc """
+  Sets `site`'s name, as `actor` (`authorize_settings/1`). Its key, which
+  names its schemas and folders, never changes. Refused with
+  `{:error, :site_busy}` as `update_languages/3` is.
+  """
+  @spec update_name(Site.t(), String.t(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
+  def update_name(%Site{} = site, name, actor) do
+    with :ok <- authorize_settings(actor) do
+      settings_locked(site, fn -> update_current(site, %{name: name}, []) end)
+    end
+  end
+
+  @doc """
+  Sets how `site`'s public frontend is delivered, `:dynamic` or `:static`, as
+  `actor` (`authorize_settings/1`). A static site the installation serves
+  itself forgets its published build when it becomes dynamic
+  (`Brando.Sites.Site`), so its host answers from Phoenix again.
+
+  The change holds the site's lifecycle lock, refused as `update_languages/3`
+  is, and, inside it, the lock its static deploys hold (`Brando.SSG.Deploy`).
+  While a deploy, rollback or prune holds that one, which a copy to the host
+  can do for many minutes, the change is refused with
+  `{:error, :deploy_running}`; a deploy that starts after it finds the site
+  dynamic and publishes nothing.
+
+  With `expected: delivery_state(site)`, taken when the consequences were
+  shown to someone, the change is refused with `{:error, :delivery_changed}`
+  when the site's delivery is no longer that (a build deployed since, say).
+  """
+  @spec update_delivery(Site.t(), :dynamic | :static, User.t() | :system, keyword()) ::
+          {:ok, Site.t()} | {:error, term()}
+  def update_delivery(%Site{} = site, mode, actor, opts \\ []) when mode in [:dynamic, :static] do
+    with :ok <- authorize_settings(actor) do
+      settings_locked(site, fn -> update_delivery_deploy_locked(site, mode, opts[:expected]) end)
+    end
+  end
+
+  # The lifecycle lock is held: the deploy lock is taken inside it, never the
+  # other way round
+  defp update_delivery_deploy_locked(site, mode, expected) do
+    case Lock.try_with(Lock.deploy_key(site.id), fn -> update_delivery_locked(site, mode, expected) end) do
+      :busy -> {:error, :deploy_running}
+      result -> result
+    end
+  end
+
+  defp update_delivery_locked(site, mode, expected) do
+    case Registry.get_site(site.id) do
+      nil ->
+        {:error, :site_not_found}
+
+      %Site{} = current_site ->
+        if is_nil(expected) or delivery_state(current_site) == expected,
+          do: Registry.update_site(current_site, %{delivery_mode: mode}),
+          else: {:error, :delivery_changed}
+    end
+  end
+
+  @doc """
+  What decides what a change of `site`'s delivery does for visitors, as
+  strings (`""` for none), for `update_delivery/4`'s `:expected`:
+  `"delivery"` (its mode), `"strategy"` (its deploy strategy), `"build"` (its
+  published build) and `"status"`.
+  """
+  @spec delivery_state(Site.t()) :: %{String.t() => String.t()}
+  def delivery_state(%Site{} = site) do
+    strategy =
+      case site.deploy_config do
+        %{strategy: strategy} when not is_nil(strategy) -> to_string(strategy)
+        _none -> ""
+      end
+
+    %{
+      "delivery" => to_string(site.delivery_mode),
+      "strategy" => strategy,
+      "build" => site.published_build || "",
+      "status" => to_string(site.status)
+    }
+  end
+
+  @doc """
+  Whether `actor` may change a site's settings (name, languages, delivery):
+  `:system`, a superuser in legacy authorization, and with groups whoever
+  may update sites (`:update` on `:sites`).
+  """
+  @spec authorize_settings(User.t() | Brando.Authorization.Scope.t() | :system) :: :ok | {:error, :forbidden}
+  def authorize_settings(:system), do: :ok
+
+  def authorize_settings(actor) do
+    cond do
+      Brando.Authorization.enabled?() ->
+        actor |> installation_scope() |> Brando.Authorization.Boundary.authorize(:update, :sites)
+
+      Brando.Authorization.Boundary.superuser?(actor) ->
+        :ok
+
+      true ->
+        {:error, :forbidden}
+    end
+  end
+
+  # A settings change is quick, so it waits only briefly for another one; a
+  # site being provisioned, archived or deleted, or a language added to it
+  # being seeded (`Brando.Worker.SiteLanguageSeed`), holds the lock for
+  # longer, and the caller (an admin event handler) is told rather than kept
+  # waiting.
+  # Brando's own tests wait less (`:site_settings_lock_wait_ms`).
+  defp settings_locked(site, fun) do
+    wait = Application.get_env(:brando, :site_settings_lock_wait_ms, 5_000)
+
+    case Lock.with_timeout(lifecycle_lock_key(site.key), wait, fun) do
+      {:ok, result} -> result
+      :busy -> {:error, :site_busy}
+    end
+  end
+
+  defp installation_scope(%User{} = user), do: Brando.Authorization.Scope.installation(user)
+  defp installation_scope(scope), do: scope
 
   defp update_current(site, attrs, opts) do
     case Registry.get_site(site.id) do
@@ -98,6 +223,13 @@ defmodule Brando.Tenant.Setup do
       %Site{} = current_site -> Registry.update_site(current_site, attrs, opts)
     end
   end
+
+  @doc """
+  How many days a site stays archived before `delete_site/2` removes it:
+  `config :brando, site_delete_retention_days:`, 30 by default.
+  """
+  @spec delete_retention_days() :: non_neg_integer()
+  def delete_retention_days, do: Brando.config(:site_delete_retention_days) || @default_retention_days
 
   @spec archive_site(Site.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def archive_site(%Site{} = site, opts \\ []) do
@@ -389,8 +521,7 @@ defmodule Brando.Tenant.Setup do
   defp deletable?(%Site{status: :archived, archived_at: %DateTime{} = archived_at}, opts) do
     now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
 
-    retention_days =
-      Keyword.get(opts, :retention_days, Brando.config(:site_delete_retention_days) || @default_retention_days)
+    retention_days = Keyword.get_lazy(opts, :retention_days, &delete_retention_days/0)
 
     if Keyword.get(opts, :force, false) or DateTime.diff(now, archived_at, :day) >= retention_days,
       do: :ok,

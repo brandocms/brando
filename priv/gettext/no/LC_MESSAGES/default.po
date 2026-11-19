@@ -833,6 +833,11 @@ msgstr "Fant ikke %{name} #%{id}. Den kan ha blitt slettet."
 msgid "%{name} blueprint"
 msgstr "%{name}-blueprint"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} can no longer open %{site} in the admin."
+msgstr "%{name} kan ikke lenger åpne %{site} i admin."
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} can’t be reverted without a migration"
@@ -889,6 +894,11 @@ msgstr "%{name} nevnte deg i %{place}"
 msgid "%{name} mentioned you in a note on %{title}"
 msgstr "%{name} nevnte deg i et notat på %{title}"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} now has %{delivery} delivery."
+msgstr "%{name} har nå %{delivery} levering."
+
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} saved this page after you opened it. Reload to get their changes before you save."
@@ -898,6 +908,11 @@ msgstr "%{name} lagret denne siden etter at du åpnet den. Last inn på nytt for
 #, elixir-autogen, elixir-format
 msgid "%{name} saved this page after you opened the editor. Reload the block to get their changes, then make yours again."
 msgstr "%{name} lagret denne siden etter at du åpnet redigeringen. Last inn blokken på nytt for å få med endringene deres, og gjør dine endringer igjen."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} saved."
+msgstr "%{name} er lagret."
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -918,6 +933,11 @@ msgstr "%{name} · mal"
 #, elixir-autogen, elixir-format
 msgid "%{name}’s account will be deleted after the transfer."
 msgstr "Kontoen til %{name} slettes etter overføringen."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s delivery changed while the confirmation was open, so nothing was switched. Check what switching does now, and switch again."
+msgstr "Leveringen av %{name} endret seg mens bekreftelsen var åpen, så ingenting ble byttet. Se hva byttet gjør nå, og bytt på nytt."
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -1389,6 +1409,11 @@ msgstr "En dato, valgt fra en kalender"
 msgid "A definition in this apply was applied again since. Review the revert again."
 msgstr "En definisjon i endringene er tatt i bruk på nytt siden. Se gjennom tilbakestillingen igjen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy of this site is running. Try again when it has finished."
+msgstr "En publisering av dette nettstedet pågår. Prøv igjen når den er ferdig."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "A developer adds mcp_routes() to the application's router first. See the MCP guide."
@@ -1428,11 +1453,6 @@ msgstr "Et fragment er delt innhold: det redigeres ett sted og vises likt overal
 #, elixir-autogen, elixir-format
 msgid "A heading that starts a new group of fields"
 msgstr "En overskrift som starter en ny gruppe felter"
-
-#: lib/brando_admin/live/sites/site_live.ex
-#, elixir-autogen, elixir-format
-msgid "A language you add gets the same starting content as a new site, in each environment."
-msgstr "Et språk du legger til får det samme startinnholdet som et nytt nettsted, i hvert miljø."
 
 #: lib/brando_admin/components/form/alternates_drawer.ex
 #, elixir-autogen, elixir-format
@@ -1737,6 +1757,7 @@ msgid "Accepting replaces the field's text, with its formatting, links and footn
 msgstr "Godtar du, erstattes teksten i feltet, med formatering, lenker og fotnoter."
 
 #: lib/brando_admin/components/crawler_policy.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Access"
@@ -1802,6 +1823,7 @@ msgstr "Handling"
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -1821,6 +1843,11 @@ msgstr "Aktivere %{name} for %{environment} nå?"
 #, elixir-autogen, elixir-format
 msgid "Activate %{name} now?"
 msgstr "Aktivere %{name} nå?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Activate %{name}?"
+msgstr "Aktivere %{name}?"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -2880,6 +2907,11 @@ msgstr "Arkivér"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
+msgid "Archive %{name}?"
+msgstr "Arkivere %{name}?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
 msgid "Archive %{name}? Its domains will stop serving immediately."
 msgstr "Arkivere %{name}? Domenene slutter å levere innhold umiddelbart."
 
@@ -2903,6 +2935,11 @@ msgstr "Arkivert"
 msgctxt "site status"
 msgid "Archived"
 msgstr "Arkivert"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Archived: its domains serve nothing. Restore it, or permanently delete it with all its schemas, media and uploaded assets once it has been archived for %{days} days."
+msgstr "Arkivert: domenene viser ingenting. Gjenopprett nettstedet, eller slett det permanent med alle skjemaer, medier og opplastede ressurser når det har vært arkivert i %{days} dager."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -4209,6 +4246,11 @@ msgstr "Velg en publiseringsdato i en oppføring for å legge den til i køen."
 msgid "Choose a recovery copy"
 msgstr "Velg en gjenopprettingskopi"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a site"
+msgstr "Velg et nettsted"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -4540,6 +4582,11 @@ msgstr "Lukk denne listen og åpne «Velg innlegg» igjen for å velge for denne
 #, elixir-autogen, elixir-format
 msgid "Closed"
 msgstr "Stengt"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Cloudflare Pages, %{target}"
+msgstr "Cloudflare Pages, %{target}"
 
 #: lib/brando_admin/components/form/input/blocks/svg_block.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -6357,6 +6404,11 @@ msgstr "Publiserer %{version}"
 #, elixir-autogen, elixir-format
 msgid "Deployment target"
 msgstr "Publiseringsmål"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploys to"
+msgstr "Publiseres til"
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
@@ -9099,6 +9151,11 @@ msgstr "Slik ser siden til denne oppføringen ut når den blir funnet i søk, de
 msgid "How this module appears to editors"
 msgstr "Hvordan denne modulen fremstår for redaktører"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "How visitors get the site’s pages. It can be changed later."
+msgstr "Hvordan besøkende får nettstedets sider. Dette kan endres senere."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "I have attached the media. Use it."
@@ -9723,6 +9780,11 @@ msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] "Brukt ett sted: %{places}."
 msgstr[1] "Brukt på %{count} steder: %{places}."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "It names the site’s database schemas and folders, so it cannot be changed."
+msgstr "Nøkkelen navngir nettstedets databaseskjemaer og mapper, så den kan ikke endres."
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "It no longer logs you in. Remove it from the device too, in its settings."
@@ -9776,6 +9838,26 @@ msgstr[1] "Også %{count} underliggende blokker fjernes."
 #, elixir-autogen, elixir-format
 msgid "Its complete PostgreSQL schema, form submissions and drafts are deleted with it. This cannot be undone."
 msgstr "Hele PostgreSQL-skjemaet, skjemainnsendinger og utkast slettes sammen med det. Dette kan ikke angres."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains are back in public routing at once: Phoenix answers %{domain} again where it points at this installation."
+msgstr "Domenene rutes offentlig igjen med en gang: Phoenix svarer på %{domain} igjen der det peker til denne installasjonen."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains serve again at once: visitors to %{domain} get published build %{build}."
+msgstr "Domenene svarer igjen med en gang: besøkende på %{domain} får publisert bygg %{build}."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains serve again at once: visitors to %{domain} get the site’s pages from Phoenix."
+msgstr "Domenene svarer igjen med en gang: besøkende på %{domain} får nettstedets sider fra Phoenix."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its domains stop serving until the site is activated again. Nothing is deleted."
+msgstr "Domenene slutter å svare til nettstedet aktiveres igjen. Ingenting slettes."
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -9961,6 +10043,11 @@ msgstr "Merkelapp"
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Language keys such as en or no, one per line. A language you add gets the same starting content as a new site, in each environment."
+msgstr "Språkkoder som en eller no, én per linje. Et språk du legger til får samme startinnhold som et nytt nettsted, i hvert miljø."
 
 #: lib/brando/seo/checks.ex
 #: lib/brando_admin/components/content/list/row.ex
@@ -10200,6 +10287,11 @@ msgstr "Bibliotekoverstyringen ble oppdatert."
 #, elixir-autogen, elixir-format
 msgid "Library root"
 msgstr "Rotmappe"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lifecycle"
+msgstr "Livssyklus"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -10712,6 +10804,11 @@ msgstr "Lav"
 msgid "Low click-through"
 msgstr "Lav klikkrate"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lowercase letters, digits and single dashes. It names the site’s database schemas and folders."
+msgstr "Små bokstaver, sifre og enkle bindestreker. Nøkkelen navngir nettstedets databaseskjemaer og mapper."
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Lowest score"
@@ -10791,8 +10888,8 @@ msgstr "Administrer frontend-bygget som leveres av Phoenix"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Manage this site’s groups and members →"
-msgstr "Administrer nettstedets grupper og medlemmer →"
+msgid "Manage this site’s groups and members"
+msgstr "Administrer nettstedets grupper og medlemmer"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -11095,6 +11192,11 @@ msgstr "Manglende omdirigeringer"
 #, elixir-autogen, elixir-format
 msgid "Mobile"
 msgstr "Mobil"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Mode"
+msgstr "Modus"
 
 #: lib/brando/seo/crawlers.ex
 #, elixir-autogen, elixir-format
@@ -11660,6 +11762,11 @@ msgstr "Nye gjenopprettingskoder laget"
 #, elixir-autogen, elixir-format
 msgid "New service"
 msgstr "Ny tjeneste"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "New site"
+msgstr "Nytt nettsted"
 
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
@@ -12450,6 +12557,11 @@ msgstr "Ingen valgt"
 msgid "None to show right now."
 msgstr "Ingen å vise akkurat nå."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "None yet"
+msgstr "Ingen ennå"
+
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
@@ -12641,6 +12753,7 @@ msgid "Not set"
 msgstr "Ikke angitt"
 
 #: lib/brando_admin/live/sites/integrations_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not set up"
 msgstr "Ikke satt opp"
@@ -12726,6 +12839,31 @@ msgid "Notes, %{count} open"
 msgid_plural "Notes, %{count} open"
 msgstr[0] "Notater, %{count} åpent"
 msgstr[1] "Notater, %{count} åpne"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing changes for visitors at once: %{domain} keeps reaching whatever its DNS or CDN points at, a static host included, until it is pointed at this installation. Forms on pages deployed to a static host stop accepting submissions, and Publishing leaves the site’s menu."
+msgstr "Ingenting endres for besøkende med en gang: %{domain} når fortsatt det DNS eller CDN peker på, også en statisk vert, til domenet pekes mot denne installasjonen. Skjemaer på sider publisert til en statisk vert slutter å ta imot innsendinger, og Publisering forsvinner fra nettstedets meny."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing changes for visitors until a build is deployed: Phoenix keeps answering %{domain}, and the installation serves the build from the first deploy. Publishing, where builds are made and deployed, appears in the site’s menu."
+msgstr "Ingenting endres for besøkende før et bygg publiseres: Phoenix svarer fortsatt på %{domain}, og installasjonen leverer bygget fra første publisering. Publisering, der bygg lages og publiseres, kommer til i nettstedets meny."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing changes for visitors while the site is not active. Once it is active again, Phoenix answers %{domain} instead of published build %{build}, which is no longer published. Publishing leaves the site’s menu."
+msgstr "Ingenting endres for besøkende mens nettstedet ikke er aktivt. Når det er aktivt igjen, svarer Phoenix på %{domain} i stedet for publisert bygg %{build}, som ikke lenger er publisert. Publisering forsvinner fra nettstedets meny."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing changes for visitors: Phoenix keeps answering %{domain} until it is pointed at the static host a build is deployed to. Publishing, where builds are made and deployed, appears in the site’s menu."
+msgstr "Ingenting endres for besøkende: Phoenix svarer fortsatt på %{domain} til domenet pekes mot den statiske verten et bygg publiseres til. Publisering, der bygg lages og publiseres, kommer til i nettstedets meny."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing changes for visitors: no build is published, so Phoenix already answers %{domain}. Publishing leaves the site’s menu."
+msgstr "Ingenting endres for besøkende: ingen bygg er publisert, så Phoenix svarer allerede på %{domain}. Publisering forsvinner fra nettstedets meny."
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
@@ -13904,6 +14042,11 @@ msgstr "Slett permanent"
 msgid "Permanently delete %{name}, all schemas, media, and uploaded assets?"
 msgstr "Slette %{name}, alle skjemaer, medier og opplastede ressurser permanent?"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Permanently delete %{name}?"
+msgstr "Slette %{name} permanent?"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Permanently drop all but the three newest archives?"
@@ -13946,6 +14089,11 @@ msgstr "Søkeresultater i Perplexity"
 #, elixir-autogen, elixir-format
 msgid "Person"
 msgstr "Person"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Phoenix answers each request from the live environment, so published content is public at once."
+msgstr "Phoenix svarer på hver forespørsel fra livemiljøet, så publisert innhold er offentlig med en gang."
 
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
@@ -14418,6 +14566,11 @@ msgstr "Publisert"
 #, elixir-autogen, elixir-format
 msgid "Published as scheduled: %{title}"
 msgstr "Publisert som planlagt: %{title}"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published build"
+msgstr "Publisert bygg"
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -15741,6 +15894,11 @@ msgstr "Gjenopprett"
 msgid "Restore %{archive}?"
 msgstr "Gjenopprette %{archive}?"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restore %{name}?"
+msgstr "Gjenopprette %{name}?"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Restore compatible content"
@@ -16118,6 +16276,16 @@ msgstr "Trekk tilbake"
 msgid "Revoke %{client}?"
 msgstr "Trekke tilbake %{client}?"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke %{name}’s access?"
+msgstr "Fjerne tilgangen til %{name}?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke access"
+msgstr "Fjern tilgang"
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Rewrite"
@@ -16263,6 +16431,11 @@ msgstr "Kjører"
 msgid "Running in the background"
 msgstr "Kjører i bakgrunnen"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "S3, %{target}"
+msgstr "S3, %{target}"
+
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/menu.ex
@@ -16389,6 +16562,11 @@ msgstr "Lagre språk"
 #, elixir-autogen, elixir-format
 msgid "Save minor text corrections"
 msgstr "Lagre små tekstrettelser"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save name"
+msgstr "Lagre navn"
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/entry_skeleton.ex
@@ -16549,6 +16727,11 @@ msgstr "Lagret, men siden ble ikke oppdatert: en blokkmal feilet, så besøkende
 #, elixir-autogen, elixir-format
 msgid "Saving a revision..."
 msgstr "Lagrer en versjon …"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saving makes %{language} the default language, which moves the site’s public URLs."
+msgstr "Lagring gjør %{language} til standardspråk, noe som flytter nettstedets offentlige URL-er."
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
@@ -17262,6 +17445,7 @@ msgid "Served"
 msgstr "Betjenes"
 
 #: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Served by this installation"
 msgstr "Levert av denne installasjonen"
@@ -17777,6 +17961,7 @@ msgstr "Hurtigtaster med én tast"
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/nav.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Site"
@@ -17832,11 +18017,6 @@ msgstr "Nettstedsbibliotek"
 msgid "Site lifecycle updated."
 msgstr "Nettstedets livssyklus ble oppdatert."
 
-#: lib/brando_admin/live/sites/site_live.ex
-#, elixir-autogen, elixir-format
-msgid "Site users"
-msgstr "Nettstedsbrukere"
-
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -17849,6 +18029,11 @@ msgstr "Nettstedskart"
 #, elixir-autogen, elixir-format
 msgid "Sites"
 msgstr "Nettsteder"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sites with the same group key share the provider videos offered under “Add from …”."
+msgstr "Nettsteder med samme gruppenøkkel deler leverandørvideoene som tilbys under «Legg til fra …»."
 
 #: lib/brando_admin/live/content/module_list_live.ex
 #, elixir-autogen, elixir-format
@@ -18055,6 +18240,11 @@ msgstr "Starter Live Preview — henter data…"
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview..."
 msgstr "Starter Live Preview..."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Starting content"
+msgstr "Startinnhold"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -18336,14 +18526,49 @@ msgstr "Suspender"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
+msgid "Suspend %{name}?"
+msgstr "Suspendere %{name}?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
 msgctxt "site status"
 msgid "Suspended"
 msgstr "Suspendert"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Suspended: its domains serve nothing until the site is activated again. Nothing is deleted."
+msgstr "Suspendert: domenene viser ingenting til nettstedet aktiveres igjen. Ingenting er slettet."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Suspending takes the site’s domains out of public routing until it is activated again. Archiving does the same, and starts the %{days} days after which it can be permanently deleted."
+msgstr "Suspendering tar nettstedets domener ut av offentlig ruting til det aktiveres igjen. Arkivering gjør det samme, og starter de %{days} dagene før det kan slettes permanent."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Switch %{name} to dynamic delivery?"
+msgstr "Bytte %{name} til dynamisk levering?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Switch %{name} to static delivery?"
+msgstr "Bytte %{name} til statisk levering?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Switch to dynamic delivery"
+msgstr "Bytt til dynamisk levering"
 
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Switch to installation"
 msgstr "Bytt til installasjonen"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Switch to static delivery"
+msgstr "Bytt til statisk levering"
 
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
@@ -18368,6 +18593,7 @@ msgstr "Synkroniserer…"
 
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "System"
@@ -19184,6 +19410,16 @@ msgstr "Installasjonen bruker selv denne verten, til admin, media eller CDN."
 msgid "The job could not be deleted. Refresh the list and try again."
 msgstr "Jobben kunne ikke slettes. Oppdater listen og prøv igjen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The language of the site’s URLs without a language prefix."
+msgstr "Språket til nettstedets URL-er uten språkprefiks."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The languages the site’s content is written in, in the order the admin lists them."
+msgstr "Språkene nettstedets innhold skrives på, i den rekkefølgen admin viser dem."
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "The latest 20 changes to this group."
@@ -19607,6 +19843,11 @@ msgstr "Innloggingsreglene krever tofaktorautentisering: legg til en annen passn
 #, elixir-autogen, elixir-format
 msgid "The sign-in policy was saved."
 msgstr "Innloggingsreglene er lagret."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site"
+msgstr "Nettstedet"
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -20367,6 +20608,11 @@ msgstr "Nettstedet kan ikke sende e-post nå. Be en administrator om å tilbakes
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
 msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble sendt."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site is being set up, archived or changed elsewhere, or its new language is being seeded. Try again in a moment."
+msgstr "Dette nettstedet settes opp, arkiveres eller endres et annet sted, eller startinnhold opprettes for det nye språket. Prøv igjen om et øyeblikk."
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -21835,6 +22081,11 @@ msgstr "Behandlingen av videoen feilet"
 msgid "Video provider is not configured. Check server configuration."
 msgstr "Videoleverandøren er ikke konfigurert. Sjekk serverkonfigurasjonen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Video provider libraries"
+msgstr "Videobiblioteker fra leverandører"
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Video type not supported for preview"
@@ -21963,6 +22214,11 @@ msgstr "Vimeo"
 msgid "Visitors"
 msgstr "Besøkende"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors get a generated build: content becomes public when a build is deployed from the site’s Publishing screen."
+msgstr "Besøkende får et generert bygg: innhold blir offentlig når et bygg publiseres fra nettstedets Publisering-side."
+
 #: lib/brando_admin/live/sites/integrations_live.ex
 #, elixir-autogen, elixir-format
 msgid "Visitors per entry, in Content SEO."
@@ -21972,6 +22228,11 @@ msgstr "Besøkende per oppføring, i innholds-SEO."
 #, elixir-autogen, elixir-format
 msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
 msgstr "Besøkende per oppføring, i innholds-SEO. En utvikler setter det opp i nettstedets konfigurasjon."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Visitors to %{domain} stop getting published build %{build} and get pages Phoenix renders from the live environment, so content changed since that build becomes public at once. The build is no longer published: switching back to static serves nothing from the installation until the next deploy. Publishing leaves the site’s menu."
+msgstr "Besøkende på %{domain} får ikke lenger publisert bygg %{build}, men sider Phoenix lager fra livemiljøet, så innhold endret siden det bygget blir offentlig med en gang. Bygget er ikke lenger publisert: bytter du tilbake til statisk, leverer installasjonen ingenting før neste publisering. Publisering forsvinner fra nettstedets meny."
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
@@ -22214,6 +22475,11 @@ msgstr "Hvilken versjon skal nettstedet bruke?"
 #, elixir-autogen, elixir-format
 msgid "Who created, changed, published and deleted content, and when. Changes that saved a revision can be compared with the one before."
 msgstr "Hvem som opprettet, endret, publiserte og slettet innhold, og når. Endringer som lagret en versjon kan sammenlignes med den forrige."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Who may work on this site besides superusers, who reach every site."
+msgstr "Hvem som kan jobbe med dette nettstedet i tillegg til superbrukere, som når alle nettsteder."
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -22524,6 +22790,7 @@ msgstr "Du endret det også. Skjemaet viser din versjon, og når du lagrer, erst
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/content/module_list_live.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
@@ -23106,6 +23373,11 @@ msgstr "utkast"
 #, elixir-autogen, elixir-format
 msgid "drop"
 msgstr "forkast"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "dynamic"
+msgstr "dynamisk"
 
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
@@ -23740,6 +24012,11 @@ msgstr "påkr."
 msgid "retrying"
 msgstr "prøver igjen"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "rsync to %{target}"
+msgstr "rsync til %{target}"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "served by this installation"
@@ -23757,6 +24034,11 @@ msgstr "tilgangen til det delte biblioteket"
 
 msgid "should be at most %{count} character(s)"
 msgstr "kan ha høyst %{count} tegn"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "static"
+msgstr "statisk"
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -23782,6 +24064,11 @@ msgstr "modulen har ingen %{kind} %{key}"
 #, elixir-autogen, elixir-format
 msgid "the site list"
 msgstr "nettstedslisten"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "the site’s domain"
+msgstr "nettstedets domene"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format

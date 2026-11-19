@@ -5,6 +5,12 @@ import { prefersReducedMotion } from '../../motion'
 // remove change the rows here; the form's next change then carries the list in
 // its new order, and the server renders the same rows back.
 //
+// With `data-sync-insert` (a form whose view keeps blank rows and renders them
+// back), an inserted row sends the form's change at once, past the input's
+// debounce: the form is locked until the reply, so a render already on its way
+// cannot land on the shifted rows. Elsewhere the blank row is not rendered
+// back, so an insert sends nothing until something is typed in it.
+//
 // Ids are renumbered after each change so they stay positional: when the
 // server's render arrives, every row is patched in place and the focused one
 // keeps its focus.
@@ -37,6 +43,7 @@ export default () => ({
     input.removeAttribute('value')
     row.before(added)
     this.renumber()
+    if (this.el.hasAttribute('data-sync-insert')) this.sendNow(input)
     input.focus()
 
     if (!prefersReducedMotion()) {
@@ -64,6 +71,15 @@ export default () => ({
     // removed members while a text debounce is still waiting to send them.
     input.dispatchEvent(new Event('change', { bubbles: true }))
     input.focus()
+  },
+
+  // LiveView reads `phx-debounce` while the event is dispatched, so this
+  // change goes undebounced and typing in the row is debounced as before.
+  sendNow(input) {
+    const debounce = input.getAttribute('phx-debounce')
+    input.removeAttribute('phx-debounce')
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    if (debounce !== null) input.setAttribute('phx-debounce', debounce)
   },
 
   renumber() {

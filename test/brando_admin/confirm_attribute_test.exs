@@ -5,9 +5,6 @@ defmodule BrandoAdmin.ConfirmAttributeTest do
   # confirmations reference.
   use ExUnit.Case, async: true
 
-  # Rewritten with a working confirmation in #3708; drop it once that is merged.
-  @pending ["lib/brando_admin/live/sites/site_live.ex"]
-
   # Brando's own templates, the generators' templates that end up in apps, and
   # the E2E app's.
   @globs ["lib/**/*.{ex,heex}", "priv/templates/**/*.{ex,exs,heex,eex}", "e2e/lib/**/*.{ex,heex}"]
@@ -44,7 +41,6 @@ defmodule BrandoAdmin.ConfirmAttributeTest do
   test "no template uses the dead phx-confirm attribute" do
     offenders =
       for file <- Enum.flat_map(@globs, &Path.wildcard/1),
-          file not in @pending,
           source = File.read!(file),
           [{offset, _length}] <- Regex.scan(@dead, source, return: :index),
           do: "#{file}:#{line_number(source, offset)}"
