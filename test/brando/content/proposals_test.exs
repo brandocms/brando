@@ -855,6 +855,57 @@ defmodule Brando.Content.ProposalsTest do
       assert readable_problem.message =~ "already used by a block in Page ##{c.identity.id}."
     end
 
+    test "an operation on a failed insert's uid in a field the entry lacks reports the field", c do
+      target = {Page, c.work.id}
+
+      ops = [
+        %InsertBlock{target: target, module: c.text_module.id, field: "body", uid: "row1"},
+        %InsertBlock{target: target, module: c.text_module.id, field: "typo", parent: "row1"},
+        %SetBlockValues{target: target, field: "body", block_uid: "row1", values: %{}},
+        %MoveBlock{target: target, field: "typo", block_uid: c.intro_uid, placement: {:after, "row1"}},
+        %InsertBlock{target: target, module: c.text_module.id, parent: "nope", uid: "row2"},
+        %SetBlockValues{target: target, field: "body", block_uid: "row2", values: %{}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      assert [
+               {0, :unknown_field},
+               {1, :unknown_field},
+               {2, :unknown_field},
+               {3, :unknown_field},
+               {4, _},
+               {5, :unknown_field}
+             ] =
+               Enum.map(proposal.problems, &{&1.operation, &1.code})
+
+      # The recheck on approval reads the same operations.
+      assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    end
+
+    test "a copy to another entry from a field the source lacks reports the field", c do
+      ops = [
+        %CopyBlock{target: {Page, c.work.id}, field: "typo", block_uid: c.intro_uid, to_target: {Page, c.identity.id}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert [:unknown_field | _] = Enum.map(proposal.problems, & &1.code)
+    end
+
+    test "a uid inserted after an earlier insert of it failed is no longer blamed on that insert", c do
+      target = {Page, c.work.id}
+
+      ops = [
+        %InsertBlock{target: target, module: c.text_module.id, parent: "nope", uid: "x"},
+        %InsertBlock{target: target, module: c.text_module.id, uid: "x"},
+        %DeleteBlock{target: target, block_uid: "x"},
+        %SetBlockValues{target: target, block_uid: "x", values: %{}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert [{0, :unknown_block}, {3, :unknown_block}] = Enum.map(proposal.problems, &{&1.operation, &1.code})
+    end
+
     test "new child operations survive storage", c do
       [alpha, beta, _] = c.child_uids
       target = {Page, c.work.id}

@@ -320,9 +320,15 @@ defmodule Brando.Content.Proposals do
     {problems ++ copy_problems ++ link_problems(op), trees}
   end
 
-  defp record_failure(%op_type{uid: uid} = op, index, [_ | _], trees, failed) when op_type in [InsertBlock, CopyBlock] do
+  # An insert or copy that adds its uid clears an earlier failure of it.
+  defp record_failure(%op_type{uid: uid} = op, index, problems, trees, failed) when op_type in [InsertBlock, CopyBlock] do
     tree = Map.get(trees, new_block_key(op), %BlockTree{})
-    if BlockTree.fetch(tree, uid) == nil, do: Map.put(failed, uid, index), else: failed
+
+    cond do
+      BlockTree.fetch(tree, uid) != nil -> Map.delete(failed, uid)
+      problems != [] -> Map.put(failed, uid, index)
+      true -> failed
+    end
   end
 
   defp record_failure(_op, _index, _problems, _trees, failed), do: failed
@@ -337,9 +343,12 @@ defmodule Brando.Content.Proposals do
   end
 
   # A block an earlier operation failed to add, unless the field has a
-  # block with that uid after all.
+  # block with that uid after all. A missing target or field is left to
+  # the operation's own check.
   defp failed_block({role, uid, {target, field} = key}, proposal, trees, failed) do
     with index when is_integer(index) <- Map.get(failed, uid),
+         {:ok, schema} <- target_schema(target, proposal),
+         :ok <- block_field(schema, field),
          tree = Map.get_lazy(trees, key, fn -> saved_tree(target, field, proposal) end),
          nil <- BlockTree.fetch(tree, uid) do
       failed_problem(role, uid, index)
@@ -603,7 +612,8 @@ defmodule Brando.Content.Proposals do
 
   defp saved_tree(target, field, proposal) do
     case Map.get(proposal.targets, target) do
-      %{} = entry -> entry |> Map.fetch!(:"entry_#{field}") |> BlockTree.from_saved()
+      # A field the entry lacks is reported by the operation's own check.
+      %{} = entry -> entry |> Map.get(:"entry_#{field}", []) |> BlockTree.from_saved()
       _ -> %BlockTree{}
     end
   end
@@ -631,7 +641,8 @@ defmodule Brando.Content.Proposals do
 
       {problems, BlockTree.put(tree, node, op.parent, op.placement)}
     else
-      # Text is checked whatever else is wrong: a preview builds the block anyway.
+      # Text is checked whatever else is wrong, so it is reported in the same
+      # round. An insert that stops at `parent_failed` is not checked at all.
       {:error, problem} -> {[problem | inserted_unsafe_text(op, actor)], tree}
     end
   end
