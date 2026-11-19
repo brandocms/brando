@@ -316,7 +316,15 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
       await(fn -> roots(a, c) == [x, z, y] end)
 
       undo(a)
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor removed" <> _}}, 2_000
+
+      assert_receive %Phoenix.Socket.Broadcast{
+                       event: "toast",
+                       payload: %{
+                         payload: "Another editor removed the block it was in, so the deleted block was not put back."
+                       }
+                     },
+                     2_000
+
       assert has_element?(a, "[data-testid=block-bin]")
 
       # The root deleted before it comes back, then the move before that is undone
@@ -328,7 +336,15 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
 
       # It is still in the bin, and its Undo says again why it does not come back
       a |> element("[data-testid=block-bin] .block-bin-undo") |> render_click()
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor removed" <> _}}, 2_000
+
+      assert_receive %Phoenix.Socket.Broadcast{
+                       event: "toast",
+                       payload: %{
+                         payload: "Another editor removed the block it was in, so the deleted block was not put back."
+                       }
+                     },
+                     2_000
+
       assert has_element?(a, "[data-testid=block-bin]")
     end
 
@@ -348,7 +364,14 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
       assert children(a, c) == [alpha, beta, gamma]
       :sys.resume(session)
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor removed" <> _}}, 2_000
+      assert_receive %Phoenix.Socket.Broadcast{
+                       event: "toast",
+                       payload: %{
+                         payload: "Another editor removed the block it was in, so the deleted block was not put back."
+                       }
+                     },
+                     2_000
+
       await(fn -> roots(a, c) == [c.intro_uid] end)
       assert has_element?(a, "[data-testid=block-bin]")
     end
@@ -374,6 +397,31 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
       await(fn -> children(a, c) == [gamma, alpha, beta] end)
       assert roots(a, c) == [c.multi_uid, c.intro_uid]
       assert roots(b, c) == [c.multi_uid, c.intro_uid]
+    end
+
+    # The bin's Undo is held back the same way: were the undo refused, the
+    # restore would bring back an older delete behind it
+    test "the bin's Undo waits too while the session has an undo", %{a: a, b: b} = c do
+      [alpha, beta, gamma] = c.child_uids
+
+      delete_block(a, gamma)
+      await(fn -> children(b, c) == [alpha, beta] end)
+      move(a, beta, "up")
+      await(fn -> children(b, c) == [beta, alpha] end)
+
+      session = session(c)
+      :sys.suspend(session)
+      move(b, alpha, "up")
+      undo(a)
+      a |> element("[data-testid=block-bin] .block-bin-undo") |> render_click()
+      :sys.resume(session)
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor has changed" <> _}},
+                     2_000
+
+      await(fn -> children(a, c) == [alpha, beta] end)
+      assert has_element?(a, "[data-testid=block-bin]")
+      refute has_element?(a, "#child-#{gamma}")
     end
 
     # The undo the session refused is told of as a conflict only when it is

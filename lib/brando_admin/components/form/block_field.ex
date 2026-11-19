@@ -90,7 +90,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   or all of a parent's children. When they are not, another editor has
   changed the blocks there since, so it is refused with a notice and both
   stacks empty rather than move their blocks by a guess. Until the session
-  has confirmed an undo or redo, the next waits: were the first refused
+  has confirmed an undo or redo, another ⌘Z, ⌘⇧Z or Undo (the notice's or
+  the bin's) is ignored, and is pressed again: were the first refused
   there, the next would undo an older change behind it. They clear with the
   bin.
   """
@@ -2815,7 +2816,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # Undo the most recent delete (LIFO — a parent deleted after its child
   # restores first, so the child's snapshot finds its parent again).
   def handle_event("restore_block", _, socket) do
-    case socket.assigns.block_bin do
+    case revert_pending?(socket) || socket.assigns.block_bin do
+      # An undo or redo still waits for the session, and this restore would
+      # get ahead of it, were it refused
+      true ->
+        {:noreply, socket}
+
       [] ->
         {:noreply, socket}
 
