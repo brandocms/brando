@@ -57,4 +57,24 @@ defmodule Brando.Webhooks.ClientTest do
     # A webhook's answer is what arrived
     assert %{status: 200, error: nil} = Client.post(target, [], "")
   end
+
+  test "an empty GET or HEAD sends no content-length; other methods send their body's length" do
+    receiver = WebhookReceiver.start(fn _request -> {200, "ok"} end)
+    {:ok, target} = URLGuard.resolve("http://pinned.test:#{receiver.port}/")
+
+    for method <- ["GET", "HEAD"] do
+      Client.request(target, method, [], "", [])
+      assert_receive {:webhook_request, %{method: ^method, headers: headers}}
+      refute Map.has_key?(headers, "content-length")
+    end
+
+    Client.request(target, "POST", [], "", [])
+    assert_receive {:webhook_request, %{method: "POST", headers: %{"content-length" => "0"}}}
+
+    Client.request(target, "POST", [], "hello", [])
+    assert_receive {:webhook_request, %{method: "POST", headers: %{"content-length" => "5"}, body: "hello"}}
+
+    Client.request(target, "GET", [], "hello", [])
+    assert_receive {:webhook_request, %{method: "GET", headers: %{"content-length" => "5"}, body: "hello"}}
+  end
 end

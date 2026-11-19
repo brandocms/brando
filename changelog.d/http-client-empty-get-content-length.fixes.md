@@ -1,0 +1,1 @@
+- Figma image imports no longer fail with "Figma's download answered 400." on images Figma's CDN has not cached. The guarded HTTP client sent `content-length: 0` on GET requests, which Figma's origin refuses; an empty GET or HEAD now goes without one.
