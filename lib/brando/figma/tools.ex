@@ -16,14 +16,12 @@ defmodule Brando.Figma.Tools do
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Figma.Import
+  alias Brando.MCP.Tools, as: MCPTools
 
   @prefix "brando_figma_"
   # Below `Brando.MCP.Tools`' result limit, with room for the envelope
   @page_bytes 18_000
   @short_text 500
-  # The first page carries the guidance for building from Figma, and as
-  # many sections as fit beside it; at least this many bytes of them
-  @min_page_bytes 4_000
 
   @guidance_about "The site's conventions for building content from Figma, from its developers and administrators: " <>
                     "how the design's frames and components map to the site's modules and fields. " <>
@@ -111,20 +109,18 @@ defmodule Brando.Figma.Tools do
   defp run("read_frame", link, token, %{"offset" => offset}, _actor) do
     with {:ok, node} <- Figma.node(token, link) do
       outline = Frame.outline(node)
-      guidance = guidance(offset)
-      budget = max(@page_bytes - byte_size(Jason.encode!(guidance)), @min_page_bytes)
-      {page, next} = page(outline.sections, offset, budget)
+      {page, next} = page(outline.sections, offset, @page_bytes)
 
-      {:ok,
-       %{
-         file_name: outline.file_name,
-         frame: outline.frame,
-         sections_total: length(outline.sections),
-         offset: offset,
-         sections: page,
-         next_offset: next
-       }
-       |> then(&if(guidance, do: Map.put(&1, :guidance, guidance), else: &1))}
+      result = %{
+        file_name: outline.file_name,
+        frame: outline.frame,
+        sections_total: length(outline.sections),
+        offset: offset,
+        sections: page,
+        next_offset: next
+      }
+
+      {:ok, if(offset == 0, do: with_guidance(result), else: result)}
     end
   end
 
@@ -132,14 +128,33 @@ defmodule Brando.Figma.Tools do
     Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"])
   end
 
-  # The guidance for building from Figma, with the first page only, cut to
-  # leave room for that page's sections
-  defp guidance(0) do
-    parts = :figma |> Guidance.for_tool() |> Guidance.fit(@page_bytes - @min_page_bytes, :bytes)
-    Guidance.tool_result(parts, @guidance_about)
+  # The first page carries the guidance for building from Figma. Its
+  # sections are the ones a page without guidance would have, so guidance
+  # never shortens one: the last ones move to the next page to make room,
+  # and what still does not fit beside the first section is cut from the
+  # guidance. (A page with no sections would have to point back at itself.)
+  defp with_guidance(result) do
+    case Guidance.for_tool(:figma) do
+      [] ->
+        result
+
+      parts ->
+        # What the whole guidance adds to a result, with the comma before it
+        added = byte_size(Jason.encode!(Guidance.put_tool_result(%{}, parts, @guidance_about, :infinity))) - 1
+        result |> make_room(added) |> Guidance.put_tool_result(parts, @guidance_about, MCPTools.result_limit())
+    end
   end
 
-  defp guidance(_offset), do: nil
+  defp make_room(%{sections: [_, _ | _] = sections} = result, added) do
+    if byte_size(Jason.encode!(result)) + added <= MCPTools.result_limit() do
+      result
+    else
+      {kept, [moved]} = Enum.split(sections, -1)
+      make_room(%{result | sections: kept, next_offset: moved.index}, added)
+    end
+  end
+
+  defp make_room(result, _added), do: result
 
   # Sections from `offset` while they fit in `budget` bytes, numbered as in
   # the frame; at least one, its texts shortened if it alone does not fit.

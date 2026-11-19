@@ -89,6 +89,10 @@ defmodule Brando.MCP.Tools do
     content ++ figma
   end
 
+  @doc "The most bytes a tool's result may encode to; a larger one fails the call."
+  @spec result_limit() :: pos_integer()
+  def result_limit, do: @result_limit
+
   @doc """
   Calls tool `name` with `args` for the connection in `auth` (from
   `Brando.MCP.OAuth.authenticate/2`) at `tenant`. Returns the MCP tool
@@ -130,13 +134,8 @@ defmodule Brando.MCP.Tools do
         _ -> nil
       end
 
-    room = @result_limit - byte_size(Jason.encode!(result)) - byte_size(@guidance_about) - 200
-    parts = :assistant |> Guidance.for_tool(schema) |> Guidance.fit(max(room, 0), :bytes)
-
-    case Guidance.tool_result(parts, @guidance_about) do
-      nil -> {:ok, result}
-      guidance -> {:ok, Map.put(result, :guidance, guidance)}
-    end
+    parts = Guidance.for_tool(:assistant, schema)
+    {:ok, Guidance.put_tool_result(result, parts, @guidance_about, @result_limit)}
   end
 
   defp with_guidance(result, _name), do: result

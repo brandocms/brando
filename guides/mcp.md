@@ -192,10 +192,10 @@ where it is.
   content type under `guidance`: the administrators' (**Configuration →
   Assistant guidance**) and the developers' baseline for the content type
   (`config :brando, Brando.AI.Agent, guidance:`), with a line on how to use
-  them. Both together are limited to 12,000 characters; where they go over,
-  the developers' part is cut first, since the administrators' applies where
-  they conflict. A content type the person may not read is refused as before,
-  guidance and all.
+  them. Both together are limited to 12,000 characters, and cut further when
+  the result would go over 24 KB; either way the developers' part is cut
+  first, since the administrators' applies where they conflict. A content
+  type the person may not read is refused as before, guidance and all.
 - It also describes each field with its label and instructions from the
   content type's admin form ("Introduction — Used for case listings"), so a
   tool can tell that a heading or an introduction belongs in the entry's own
@@ -300,8 +300,10 @@ the site and environment keys and `content_type: nil`. The screen shows it
 read-only, and where the two conflict, the administrators' applies.
 
 `brando_figma_read_frame` returns both under `guidance` on the frame's first
-page (`offset` 0), within 12,000 characters; that page holds fewer sections
-to leave room for it. The Assistant's prompt never includes it.
+page (`offset` 0), within 12,000 characters. To make room, that page leaves
+its last sections to the next one; guidance never shortens a section. When
+the first section alone leaves too little room, the guidance is cut, the
+developers' part first. The Assistant's prompt never includes it.
 
 ### Add the token
 

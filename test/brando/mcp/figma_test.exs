@@ -299,10 +299,87 @@ defmodule Brando.MCP.FigmaTest do
       assert String.length(first["guidance"]["administrators"]) == 12_000
       assert byte_size(Jason.encode!(first)) <= 24_000
 
+      # Without guidance, one page holds all 40
+      assert length(first["sections"]) < 40
+
       assert %{"structuredContent" => second} =
                call(tenant, token, "read_frame", %{"url" => @link, "offset" => first["next_offset"]})
 
-      assert length(first["sections"]) < length(second["sections"])
+      assert Enum.map(first["sections"] ++ second["sections"], & &1["index"]) == Enum.to_list(0..39)
+      assert second["next_offset"] == nil
+    end
+
+    # Guidance never shortens a section: a large first section keeps all its
+    # images beside long guidance, whatever its characters encode to
+    for {name, guidance} <- [
+          multibyte: String.duplicate("見出し", 4_000),
+          quotes: String.duplicate(~s("), 12_000),
+          latin: String.duplicate("g", 12_000)
+        ] do
+      test "a large first section keeps all its images beside long guidance (#{name})",
+           %{tenant: tenant, token: token, user: user} do
+        MCP.in_tenant(tenant, fn ->
+          {:ok, _} = Guidance.save(unquote(guidance), user, kind: :figma)
+        end)
+
+        gallery =
+          for i <- 1..40 do
+            %{
+              "id" => "4:#{i}",
+              "name" => "Gallery image #{i} – detail of the façade, seen from the street",
+              "type" => "RECTANGLE",
+              "fills" => [image("ref-#{i}")],
+              "absoluteBoundingBox" => %{"x" => 0, "y" => i * 600, "width" => 800, "height" => 600}
+            }
+          end
+
+        texts =
+          for i <- 1..20,
+              do: %{"id" => "2:#{i}", "name" => "T#{i}", "type" => "TEXT", "characters" => String.duplicate("x", 400)}
+
+        children = [%{"id" => "4:0", "name" => "Gallery", "type" => "INSTANCE", "children" => gallery} | texts]
+
+        ReqTest.stub(Brando.Figma, fn conn ->
+          ReqTest.json(conn, %{
+            "name" => "Shared",
+            "nodes" => %{
+              "2950:4703" => %{
+                "document" => %{"id" => "2950:4703", "name" => "Long", "type" => "FRAME", "children" => children}
+              }
+            }
+          })
+        end)
+
+        pages =
+          Stream.unfold(0, fn
+            nil ->
+              nil
+
+            offset ->
+              result = call(tenant, token, "read_frame", %{"url" => @link, "offset" => offset})
+              refute result["isError"], inspect(result["content"])
+              page = result["structuredContent"]
+              assert byte_size(Jason.encode!(page)) <= 24_000
+              # Every page moves on
+              assert page["next_offset"] == nil or page["next_offset"] > offset
+              {page, page["next_offset"]}
+          end)
+          |> Enum.to_list()
+
+        [first | later] = pages
+        assert %{"administrators" => administrators} = first["guidance"]
+        assert administrators != ""
+        assert String.starts_with?(unquote(guidance), administrators)
+        refute Enum.any?(later, &Map.has_key?(&1, "guidance"))
+
+        sections = Enum.flat_map(pages, & &1["sections"])
+        assert Enum.map(sections, & &1["index"]) == Enum.to_list(0..20)
+        refute Enum.any?(sections, &Map.has_key?(&1, "images_left_out"))
+        refute Enum.any?(sections, &Map.has_key?(&1, "texts_left_out"))
+
+        node_ids = for section <- sections, image <- section["images"], do: image["node_id"]
+        assert node_ids == for(i <- 1..40, do: "4:#{i}")
+      end
     end
 
     test "a section too large for a page keeps what fits and says how much it left out",

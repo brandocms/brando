@@ -121,11 +121,12 @@ defmodule Brando.AI.Agent.Guidance do
   end
 
   @doc """
-  Cuts `parts` to at most `max` characters or bytes together: the
-  developers' part first, then the administrators'. A part cut to nothing is
-  left out; a cut is logged.
+  Cuts `parts` to at most `max` characters, or bytes as JSON string
+  contents (`:json`: a quote, backslash or newline takes two, a control
+  character six), together: the developers' part first, then the
+  administrators'. A part cut to nothing is left out; a cut is logged.
   """
-  @spec fit([part()], non_neg_integer(), :characters | :bytes) :: [part()]
+  @spec fit([part()], integer(), :characters | :json) :: [part()]
   def fit(parts, max, unit) do
     admin = Enum.find(parts, &(&1.source == :admin))
     code = Enum.find(parts, &(&1.source == :code))
@@ -138,7 +139,7 @@ defmodule Brando.AI.Agent.Guidance do
   end
 
   defp size(text, :characters), do: String.length(text)
-  defp size(text, :bytes), do: byte_size(text)
+  defp size(text, :json), do: byte_size(Jason.encode!(text)) - 2
 
   defp cut(text, max, unit) do
     cond do
@@ -157,11 +158,13 @@ defmodule Brando.AI.Agent.Guidance do
 
   defp take(text, max, :characters), do: String.slice(text, 0, max)
 
-  defp take(text, max, :bytes) do
+  # JSON escapes each code point on its own, so the graphemes' encoded
+  # sizes add up to the text's
+  defp take(text, max, :json) do
     text
     |> String.graphemes()
     |> Enum.reduce_while({[], 0}, fn grapheme, {taken, bytes} ->
-      bytes = bytes + byte_size(grapheme)
+      bytes = bytes + size(grapheme, :json)
       if bytes > max, do: {:halt, {taken, bytes}}, else: {:cont, {[grapheme | taken], bytes}}
     end)
     |> elem(0)
@@ -170,13 +173,32 @@ defmodule Brando.AI.Agent.Guidance do
   end
 
   @doc """
-  `parts` as a tool result gives them: what they are and how to use them,
-  then the developers' and the administrators' text. `nil` for no parts.
+  `result` with `parts` under `:guidance`, as a tool result gives them:
+  what they are and how to use them (`about`), then the developers' and the
+  administrators' text. The guidance is cut, the developers' part first, so
+  that `result` encodes to at most `limit` bytes of JSON (`:infinity` for
+  no cut), and left out when none fits or there is none: a tool never fails
+  for its guidance.
   """
-  @spec tool_result([part()], String.t()) :: map() | nil
-  def tool_result([], _about), do: nil
+  @spec put_tool_result(map(), [part()], String.t(), pos_integer() | :infinity) :: map()
+  def put_tool_result(result, [], _about, _limit), do: result
 
-  def tool_result(parts, about) do
+  def put_tool_result(result, parts, about, :infinity), do: Map.put(result, :guidance, tool_result(parts, about))
+
+  def put_tool_result(result, parts, about, limit) do
+    guided = Map.put(result, :guidance, tool_result(parts, about))
+    over = byte_size(Jason.encode!(guided)) - limit
+
+    if over <= 0 do
+      guided
+    else
+      # Each pass cuts at least `over` bytes, so it ends with a fit or no parts
+      text = parts |> Enum.map(&size(&1.text, :json)) |> Enum.sum()
+      put_tool_result(result, fit(parts, text - over, :json), about, limit)
+    end
+  end
+
+  defp tool_result(parts, about) do
     Enum.reduce(parts, %{about: about}, fn
       %{source: :code, text: text}, result -> Map.put(result, :developers, text)
       %{source: :admin, text: text}, result -> Map.put(result, :administrators, text)

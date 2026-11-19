@@ -141,6 +141,42 @@ defmodule Brando.MCP.GuidanceTest do
       assert String.starts_with?(String.duplicate("ø", 12_000), administrators)
       assert byte_size(Jason.encode!(result["structuredContent"])) <= 24_000
     end
+
+    # The result limit counts the encoded JSON, where a quote, backslash,
+    # newline or tab takes two bytes and a control character six
+    for {name, text} <- [
+          quotes: String.duplicate(~s("), 12_000),
+          backslashes: String.duplicate("\\", 12_000),
+          tabs: String.duplicate("a\t", 6_000),
+          control: String.duplicate(<<1>>, 12_000),
+          bullets: String.duplicate("- Use the Lede module first.\n", 400) |> String.slice(0, 12_000),
+          multibyte: String.duplicate("見出し「」", 2_400)
+        ] do
+      test "cuts guidance to its encoded size, rather than failing (#{name})", %{tenant: tenant, token: token} = c do
+        text = unquote(text)
+        save!(text, c.user)
+
+        result = describe_type(tenant, token)
+        refute result["isError"], inspect(result["content"])
+        assert %{"structuredContent" => %{"guidance" => %{"administrators" => administrators}} = content} = result
+        assert administrators != ""
+        assert String.starts_with?(text, administrators)
+        assert byte_size(Jason.encode!(content)) <= 24_000
+      end
+    end
+
+    test "cuts the developers' part first when the encoded guidance does not fit", %{tenant: tenant, token: token} = c do
+      Application.put_env(:brando, Agent, guidance: String.duplicate("d\n", 2_000))
+      save!(String.duplicate(~s("), 8_000), c.user)
+
+      result = describe_type(tenant, token)
+      refute result["isError"], inspect(result["content"])
+      %{"structuredContent" => %{"guidance" => guidance} = content} = result
+      assert guidance["administrators"] == String.duplicate(~s("), 8_000)
+      assert String.starts_with?(String.duplicate("d\n", 2_000), guidance["developers"])
+      assert String.length(guidance["developers"]) < 4_000
+      assert byte_size(Jason.encode!(content)) <= 24_000
+    end
   end
 
   describe "guidance changes no permission" do
