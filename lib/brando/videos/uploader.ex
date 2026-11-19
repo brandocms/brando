@@ -130,8 +130,10 @@ defmodule Brando.Videos.Uploader do
 
   Optional; implemented by providers that `Brando.Videos.ProviderLibrary` can
   browse. Options are `:cursor` (the previous page's `next`), `:query`,
-  `:per_page` and, for a provider implementing `list_collections/1`,
-  `:collection`, the id of the collection to list. Items are
+  `:per_page`, `:search_pages` (the most provider pages one call may read,
+  for a provider that reads on past pages with nothing to show) and, for a
+  provider implementing `list_collections/1`, `:collection`, the id of the
+  collection to list. Items are
   `t:Brando.Videos.ProviderLibrary.item/0` without `:video_id`, and carry the
   `:collection_id` of the collection each video is in, if any. An item may
   also carry its collection's `:collection_name`, which the admin shows for a
@@ -148,7 +150,8 @@ defmodule Brando.Videos.Uploader do
 
   Optional; a provider implementing it takes `:collection` in
   `list_remote/1`, and returns `{:error, :collection_not_found}` from it for
-  a collection it no longer has. A provider reading them a page at a time
+  a collection it can tell it no longer has (Vimeo can; Bunny Stream's API
+  is not known to say). A provider reading them a page at a time
   reads a bounded number, and returns `{:ok, collections, :truncated}` when
   there are more. `opts` is empty today.
   """

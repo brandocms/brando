@@ -198,7 +198,8 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   def library_searchable?, do: true
 
   # The account's search, read 100 at a time, may have none of the folder's
-  # videos on a page: up to this many pages are read for each call.
+  # videos on a page: up to this many pages are read for each call, or
+  # `:search_pages` when the caller bounds its own reads.
   @max_folder_search_pages 3
 
   # A folder (the API's project) the library lists from: `:collection` is
@@ -211,9 +212,26 @@ defmodule Brando.Videos.Uploaders.Vimeo do
     folder_id = Keyword.get(opts, :collection)
     query = Keyword.get(opts, :query)
 
-    if folder_id not in [nil, ""] and is_binary(query) and query != "",
-      do: search_folder(folder_id, query, Keyword.get(opts, :cursor) || 1, @max_folder_search_pages),
-      else: list_page(folder_id, query, Keyword.get(opts, :cursor) || 1, Keyword.get(opts, :per_page, 24))
+    if folder_id not in [nil, ""] and is_binary(query) and query != "" do
+      pages = Keyword.get(opts, :search_pages, @max_folder_search_pages)
+      page = Keyword.get(opts, :cursor) || 1
+
+      with {:ok, %{items: []}} = result when page == 1 <- search_folder(folder_id, query, page, pages),
+           :ok <- folder_exists(folder_id),
+           do: result
+    else
+      list_page(folder_id, query, Keyword.get(opts, :cursor) || 1, Keyword.get(opts, :per_page, 24))
+    end
+  end
+
+  # The account's search answers for any folder id, so a search whose first
+  # page finds nothing asks whether the folder is still there.
+  defp folder_exists(folder_id) do
+    case api_request(:get, "/me/projects/#{folder_id}", params: [fields: "uri"]) do
+      {:ok, %Req.Response{}} -> :ok
+      {:error, {:http_error, 404, _body}} -> {:error, :collection_not_found}
+      error -> error
+    end
   end
 
   @library_fields @video_fields <> ",created_time,parent_folder.uri,parent_folder.name"

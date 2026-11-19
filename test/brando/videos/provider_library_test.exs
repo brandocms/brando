@@ -305,6 +305,22 @@ defmodule Brando.Videos.ProviderLibraryTest do
       assert {:ok, %{items: [], next: 6}} = ProviderLibrary.list(:vimeo, query: "harbour", collection: "11", cursor: 3)
     end
 
+    test "Vimeo says a folder deleted since it was listed is gone, when searching it" do
+      elsewhere = Map.put(vimeo_video("9", "available"), "parent_folder", vimeo_folder("12", "Client B", 1))
+
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/me/videos"
+        Req.Test.json(conn, %{"paging" => %{"next" => nil}, "data" => [elsewhere]})
+      end)
+
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/me/projects/11"
+        send_resp(conn, 404, ~s({"error": "The requested folder could not be found"}))
+      end)
+
+      assert {:error, :collection_not_found} = ProviderLibrary.list(:vimeo, query: "harbour", collection: "11")
+    end
+
     test "Vimeo says a folder deleted since it was listed is gone" do
       Req.Test.expect(Vimeo, &send_resp(&1, 404, ~s({"error": "The requested folder could not be found"})))
       assert {:error, :collection_not_found} = ProviderLibrary.list(:vimeo, collection: "11")

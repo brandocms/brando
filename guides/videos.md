@@ -536,7 +536,7 @@ implements `list_collections/1`, takes `:collection` in `list_remote/1`, and
 gives each item its `:collection_id`. `list_collections/1` returns
 `{:ok, collections, :truncated}` when it stops reading before the end, and
 `list_remote/1` returns `{:error, :collection_not_found}` for a collection the
-provider no longer has.
+provider can tell it no longer has.
 
 ### Remote Video Deletion
 

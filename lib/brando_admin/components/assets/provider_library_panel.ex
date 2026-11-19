@@ -422,6 +422,10 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
         class="video-picker-library-note"
       >
         <%= cond do %>
+          <% @library.query != "" && @library.next -> %>
+            {gettext("No matches for “%{query}” in the videos read so far. Load more to search further.",
+              query: @library.query
+            )}
           <% @library.query != "" -> %>
             {gettext("No videos match “%{query}”.", query: @library.query)}
           <% @library.collection != "" -> %>

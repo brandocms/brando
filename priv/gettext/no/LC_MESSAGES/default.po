@@ -11800,6 +11800,11 @@ msgstr "Ingen løse blokker."
 msgid "No mailer is configured, so the site cannot send email."
 msgstr "Ingen e-posttjeneste er satt opp, så nettstedet kan ikke sende e-post."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No matches for “%{query}” in the videos read so far. Load more to search further."
+msgstr "Ingen treff på «%{query}» i videoene som er lest så langt. Last flere for å søke videre."
+
 #: lib/brando_admin/components/form/input/entries.ex
 #, elixir-autogen
 msgid "No matching entries"

@@ -213,7 +213,11 @@ defmodule Brando.Videos.ProviderLibrary do
 
   defp list_page(module, :account, opts, _pages_left), do: guarded(fn -> module.list_remote(opts) end)
 
+  # This loop bounds the reads itself: a provider that reads several pages
+  # for one call (a Vimeo search within a folder) reads one per call here.
   defp list_page(module, {:group, _site_ids, sites} = scope, opts, pages_left) do
+    opts = Keyword.put(opts, :search_pages, 1)
+
     with {:ok, %{items: items, next: next}} <- guarded(fn -> module.list_remote(opts) end),
          {:ok, holders} <-
            ProviderHoldings.sites_holding(module.library_meta_path(), Enum.map(items, &holding/1), sites) do
