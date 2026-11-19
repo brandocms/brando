@@ -6,3 +6,5 @@
 - An inline SVG's `viewBox` keeps its case in a field rendered with footnotes.
 
 - Markdown export keeps the indentation of a code block that opens the document.
+
+- Markdown export writes an `<hr>` as a thematic break, and no longer fails on a `<header>`.

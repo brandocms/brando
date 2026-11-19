@@ -90,7 +90,7 @@ defmodule Brando.Villain.Markdown.HTML do
 
   defp block({"p", _, children}), do: paragraph(children)
 
-  defp block({"h" <> level, _, children}) do
+  defp block({"h" <> level = tag, _, children}) when tag in ~w(h1 h2 h3 h4 h5 h6) do
     case trim_inline(Enum.flat_map(children, &inline/1)) do
       [] -> []
       nodes -> [%MDEx.Heading{level: String.to_integer(level), nodes: nodes}]

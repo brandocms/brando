@@ -284,6 +284,11 @@ defmodule Brando.Villain.MarkdownTest do
                "# Welcome!\n\nNot an image: !\\[x\\](y)"
     end
 
+    test "a rule is a thematic break and a header is read through" do
+      assert HTML.to_markdown("<p>a</p><hr><p>b</p>") == "a\n\n-----\n\nb"
+      assert HTML.to_markdown("<header><h2>Hi</h2><p>There</p></header>") == "## Hi\n\nThere"
+    end
+
     test "already written Markdown passes through" do
       assert HTML.to_markdown("<div><p>Intro</p><brando-markdown>## Kept\n\n- *as is*</brando-markdown></div>") ==
                "Intro\n\n## Kept\n\n- *as is*"
