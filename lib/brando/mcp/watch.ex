@@ -62,6 +62,10 @@ defmodule Brando.MCP.Watch do
   @spec subscribe(integer()) :: :ok | {:error, term()}
   def subscribe(grant_id), do: Phoenix.PubSub.subscribe(Brando.pubsub(), topic(grant_id))
 
+  @doc "Stops the caller's `subscribe/1` to the connection `grant_id`."
+  @spec unsubscribe(integer()) :: :ok
+  def unsubscribe(grant_id), do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), topic(grant_id))
+
   @doc """
   Tells the connection `grant_id`'s page that call `id` of `tool` started,
   with `args` (`Brando.MCP.Tools`).

@@ -225,12 +225,24 @@ summary, counts, problems and links to its review and page preview. It opens
 on the connection's calls of the last hour (at most 50) from Activity, then
 follows the new ones; it changes nothing, and cannot steer the tool.
 
-The connection's person and those who manage connected tools in its site
-environment can open it, behind the admin sign-in; anyone else gets the
-access-denied page, whatever the link. **Follow live** opens it from
+The connection's person, while their account is active and may enter its
+site, and those who manage connected tools in its site environment can open
+it, behind the admin sign-in; anyone else gets the access-denied page,
+whatever the link. A page already open is checked again whenever
+permissions change, and one that may no longer be seen leaves for the
+access-denied page. **Follow live** opens it from
 **Security → Connected apps** and from the connections under
 **Configuration → Integrations → Connected AI tools**. A revoked or expired
-connection's page says it has ended and shows what it did.
+connection's page says it has ended and shows what it did, and an open page
+says so the moment it expires.
+
+The person sees everything on it. Someone who manages connected tools sees
+another person's calls as Activity shows them: each call's line without
+what it named (an entry's title, the words searched for, the Figma frame
+and the library folder), only the images they may read, and a proposal's
+summary and problems only when they may read every entry it changes;
+otherwise just its version, state and counts, without the review links,
+which only the person opens.
 
 The link lasts as long as the connection, and the tool gets it right away:
 

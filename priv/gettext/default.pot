@@ -1499,6 +1499,11 @@ msgstr ""
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
 msgstr ""
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "A proposal with problems cannot be shared. Leave out the changes with problems first."
@@ -2853,6 +2858,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Apply…"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Approved"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -16779,12 +16789,22 @@ msgstr ""
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
+msgid "Searched %{type}"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
 msgid "Searched for “%{query}”"
 msgstr ""
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}” in %{type}"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Searched the entries"
 msgstr ""
 
 #: lib/brando_admin/components/tool_steps.ex

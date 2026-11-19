@@ -114,6 +114,15 @@ defmodule BrandoAdmin.Components.ToolSteps do
     if first in marks, do: {first, String.slice(text, 1..-1//1)}, else: {"", text}
   end
 
+  # The words left out (`BrandoAdmin.MCP.WatchLive`, for someone who may not
+  # read what they found)
+  defp step_text("search_entries", %{"query" => :hidden} = args, _) do
+    case args["content_type"] && content_type_plural(args["content_type"]) do
+      nil -> gettext("Searched the entries")
+      type -> gettext("Searched %{type}", type: type(type))
+    end
+  end
+
   defp step_text("search_entries", args, _) do
     query = if is_binary(args["query"]), do: String.trim(args["query"]), else: ""
     type = args["content_type"] && content_type_plural(args["content_type"])
@@ -154,7 +163,7 @@ defmodule BrandoAdmin.Components.ToolSteps do
 
   defp step_text("look_at_media", _, _), do: gettext("Looked at pictures")
 
-  defp step_text("search_assets", %{"query" => query}, _) when query not in [nil, ""],
+  defp step_text("search_assets", %{"query" => query}, _) when is_binary(query) and query != "",
     do: gettext("Searched the media library for “%{query}”", query: term(query))
 
   defp step_text("search_assets", _, _), do: gettext("Searched the media library")

@@ -8,28 +8,42 @@ defmodule BrandoAdmin.MCP.WatchLive do
   its summary, counts, problems and review link.
 
   It opens on the connection's calls from Activity of the last hour, then
-  follows the new ones. Only the connection's person and those who may
-  manage connections to its site environment (`Brando.MCP.can_manage?/2`)
-  see it; anyone else, and a connection that does not exist, get the
-  access-denied page. Once the connection is revoked or expires, the page
-  says so and shows what it did.
+  follows the new ones. Only the connection's person, while active with
+  access to its site, and those who may manage connections to its site
+  environment (`Brando.MCP.can_manage?/2`) see it, checked again on each
+  authorization change; anyone else, and a connection that does not exist,
+  get the access-denied page. Once the connection is revoked or expires, the
+  page says so and shows what it did.
+
+  The person sees all of it. A manager sees each call's step without what
+  it named (the entry's title, the words searched for, the frame and the
+  folder), only the images they may read, and a proposal's summary and
+  problems only when they may read what it changes, as Activity shows them.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
+  alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.Record
+  alias Brando.Content.Transfer.Catalog
+  alias Brando.Images.Image
   alias Brando.MCP
   alias Brando.MCP.Grant
   alias Brando.MCP.Watch
   alias Brando.Repo
+  alias Brando.Users.User
   alias BrandoAdmin.Components.ToolSteps
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Dates
 
   # Calls kept on the page; older ones leave it
   @limit 100
+
+  # A timer holds 49 days at most: the expiry is looked at again each day
+  @expiry_check :timer.hours(24)
 
   def __authorization__, do: {:access, :backend}
 
@@ -42,6 +56,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
       {:ok, grant} ->
         tenant = MCP.grant_tenant(grant)
         live? = live?(grant)
+        reader = reader(grant, user, tenant)
         if connected?(socket) and live?, do: Watch.subscribe(grant.id)
         calls = if connected?(socket), do: Watch.history(grant), else: []
 
@@ -51,13 +66,15 @@ defmodule BrandoAdmin.MCP.WatchLive do
            page_title: grant.client_name,
            grant: grant,
            tenant: tenant,
+           reader: reader,
            live?: live?,
            loaded?: connected?(socket),
            empty?: calls == [],
            history: MapSet.new(calls, & &1.event_id)
          )
-         |> stream_configure(:calls, dom_id: &"mcp-call-#{&1.id}")
-         |> stream(:calls, rows(calls, tenant), limit: @limit)}
+         |> schedule_expiry()
+         |> stream_configure(:calls, dom_id: &dom_id/1)
+         |> stream(:calls, rows(calls, tenant, reader), limit: @limit)}
 
       :error ->
         {:ok, redirect(socket, to: "/admin/access-denied")}
@@ -69,20 +86,34 @@ defmodule BrandoAdmin.MCP.WatchLive do
   (`BrandoAdmin.Authorization`).
   """
   def refresh_authorization(%{assigns: %{grant: grant, current_user: user}} = socket) do
-    if allowed?(grant, user), do: socket, else: redirect(socket, to: "/admin/access-denied")
+    if allowed?(grant, user) do
+      socket
+    else
+      Watch.unsubscribe(grant.id)
+      redirect(socket, to: "/admin/access-denied")
+    end
   end
 
   def refresh_authorization(socket), do: socket
 
   def handle_info({Watch, :ended}, socket), do: {:noreply, assign(socket, :live?, false)}
 
+  def handle_info({__MODULE__, :expiry}, %{assigns: %{grant: grant}} = socket) do
+    if MCP.grant_expired?(grant) do
+      Watch.unsubscribe(grant.id)
+      {:noreply, assign(socket, :live?, false)}
+    else
+      {:noreply, schedule_expiry(socket)}
+    end
+  end
+
   def handle_info({Watch, %{} = call}, socket) do
     # Already shown from Activity, when it ended between the subscription
-    # and the history's read
+    # and the history's read: its start, if that came after, goes
     if call[:event_id] && MapSet.member?(socket.assigns.history, call.event_id) do
-      {:noreply, socket}
+      {:noreply, stream_delete_by_dom_id(socket, :calls, dom_id(call))}
     else
-      [row] = rows([call], socket.assigns.tenant)
+      [row] = rows([call], socket.assigns.tenant, socket.assigns.reader)
       {:noreply, socket |> assign(:empty?, false) |> stream_insert(:calls, row, at: 0, limit: @limit)}
     end
   end
@@ -195,7 +226,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
     ~H"""
     <article class="mcp-watch-proposal" data-proposal-id={@proposal.id}>
       <header>
-        <h3>{@proposal.summary || gettext("Untitled proposal")}</h3>
+        <h3>{@proposal.title}</h3>
         <span class={["badge", @proposal.tone]}>{@proposal.state}</span>
       </header>
       <p class="mcp-watch-counts">
@@ -227,9 +258,39 @@ defmodule BrandoAdmin.MCP.WatchLive do
     end
   end
 
-  defp allowed?(grant, user), do: grant.user_id == user.id or MCP.can_manage?(user, MCP.grant_tenant(grant))
+  # As stored now: the socket's user is the one that logged in
+  defp allowed?(grant, user) do
+    case Repo.one(from(u in User, where: u.id == ^user.id and u.active and is_nil(u.deleted_at)), prefix: "public") do
+      nil -> false
+      user -> (grant.user_id == user.id and site_access?(user, grant)) or MCP.can_manage?(user, MCP.grant_tenant(grant))
+    end
+  end
+
+  defp site_access?(_user, %Grant{site: nil}), do: true
+  defp site_access?(user, %Grant{site: site}), do: Brando.Tenant.Access.can_access?(user, site)
+
+  # Who reads what the calls named: nil for the connection's person, who sees
+  # it all; for anyone else, whom to ask what they may read, in the
+  # connection's site environment
+  defp reader(%Grant{user_id: id}, %User{id: id}, _tenant), do: nil
+
+  defp reader(_grant, user, tenant),
+    do: if(Brando.Authorization.Engine.enabled?(), do: MCP.authorization_scope(user, tenant), else: user)
 
   defp live?(grant), do: is_nil(grant.revoked_at) and not MCP.grant_expired?(grant)
+
+  defp schedule_expiry(%{assigns: %{live?: true, grant: grant}} = socket) do
+    if connected?(socket) do
+      left = DateTime.diff(MCP.grant_expires_at(grant), DateTime.utc_now(), :millisecond) + 1
+      Process.send_after(self(), {__MODULE__, :expiry}, left |> max(0) |> min(@expiry_check))
+    end
+
+    socket
+  end
+
+  defp schedule_expiry(socket), do: socket
+
+  defp dom_id(call), do: "mcp-call-#{call.id}"
 
   defp person(%{user_id: id}, %{id: id}), do: gettext("you")
   defp person(%{user: %{name: name}}, _viewer), do: name
@@ -239,16 +300,16 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   # Each call as a row: its line, error, images and proposal. What they name
   # is read in the connection's site environment.
-  defp rows(calls, tenant) do
+  defp rows(calls, tenant, reader) do
     MCP.in_tenant(tenant, fn ->
-      images = load_images(Enum.flat_map(calls, &image_ids/1))
+      images = load_images(Enum.flat_map(calls, &image_ids/1), reader)
       proposals = load_proposals(Enum.flat_map(calls, &List.wrap(&1.details["proposal"])))
-      Enum.map(calls, &row(&1, images, proposals))
+      Enum.map(calls, &row(&1, images, proposals, reader))
     end)
   end
 
-  defp row(call, images, proposals) do
-    details = call.details
+  defp row(call, images, proposals, reader) do
+    details = if reader, do: unnamed(call.details), else: call.details
     output = details["output"] || %{}
 
     %{
@@ -266,16 +327,30 @@ defmodule BrandoAdmin.MCP.WatchLive do
           %{"id" => id} = image <- List.wrap(details["images"]),
           do: Map.merge(Map.get(images, id, %{url: nil, title: nil}), %{id: id, reused: image["reused"] == true})
         ),
-      proposal: proposal_card(Map.get(proposals, details["proposal"]), details)
+      proposal: proposal_card(Map.get(proposals, details["proposal"]), details, reader)
     }
+  end
+
+  # A call's details without what it named: the words searched for, the
+  # entry's title, the frame and the folder
+  defp unnamed(details) do
+    input = details["input"] || %{}
+    input = if Map.has_key?(input, "query"), do: Map.put(input, "query", :hidden), else: input
+
+    details
+    |> Map.put("input", Map.delete(input, "name"))
+    |> Map.put("output", Map.drop(details["output"] || %{}, ["title", "frame"]))
+    |> Map.delete("folder")
   end
 
   defp image_ids(call), do: for(%{"id" => id} when is_integer(id) <- List.wrap(call.details["images"]), do: id)
 
-  defp load_images([]), do: %{}
+  defp load_images([], _reader), do: %{}
 
-  defp load_images(ids) do
-    from(i in Brando.Images.Image, where: i.id in ^Enum.uniq(ids))
+  defp load_images(ids, reader) do
+    query = from(i in Image, where: i.id in ^Enum.uniq(ids) and is_nil(i.deleted_at))
+
+    if(reader, do: Catalog.scoped_query(query, Image, reader, :read), else: query)
     |> Repo.all()
     |> Map.new(&{&1.id, %{url: image_url(&1), title: plain(&1.title)}})
   end
@@ -290,25 +365,57 @@ defmodule BrandoAdmin.MCP.WatchLive do
     |> Map.new(&{&1.id, &1})
   end
 
-  defp proposal_card(nil, _details), do: nil
+  defp proposal_card(nil, _details, _reader), do: nil
 
-  defp proposal_card(%Record{} = record, details) do
+  defp proposal_card(%Record{} = record, details, reader) do
     {state, tone} = proposal_state(record)
+    readable? = is_nil(reader) or readable?(record, reader)
 
     %{
       id: record.id,
-      summary: record.summary,
+      title: if(readable?, do: record.summary || gettext("Untitled proposal"), else: gettext("A proposal")),
       version: record.version,
       state: state,
       tone: tone,
       counts: counts(record.effects || %{}),
-      problems: record.problems |> List.wrap() |> Enum.map(& &1["message"]) |> Enum.filter(&is_binary/1),
+      problems:
+        if(readable?,
+          do: record.problems |> List.wrap() |> Enum.map(& &1["message"]) |> Enum.filter(&is_binary/1),
+          else: []
+        ),
       review: "/admin/assistant/connected/#{record.id}",
       preview: details["preview"]
     }
   end
 
+  # Whether `reader` may read each entry the proposal changes, and the
+  # content types it creates entries of
+  defp readable?(%Record{operations: operations}, reader) do
+    operations
+    |> List.wrap()
+    |> Enum.flat_map(&subjects/1)
+    |> Enum.uniq()
+    |> Enum.all?(&readable_subject?(&1, reader))
+  end
+
+  defp subjects(%{"op" => "create_entry", "content_type" => type}), do: [{type, nil}]
+
+  defp subjects(%{} = op) do
+    for %{"content_type" => type, "id" => id} <- [op["target"], op["to"]], do: {type, id}
+  end
+
+  defp subjects(_op), do: []
+
+  defp readable_subject?({type, id}, reader) do
+    case Codec.schema(type) do
+      {:ok, schema} when is_integer(id) -> Boundary.authorize_record(reader, :read, schema, id) == :ok
+      {:ok, schema} -> Boundary.authorize(reader, :read, schema) == :ok
+      :error -> false
+    end
+  end
+
   defp proposal_state(%{status: "applied"}), do: {gettext("Applied"), "badge--success"}
+  defp proposal_state(%{status: "approved"}), do: {gettext("Approved"), "badge--success"}
   defp proposal_state(%{status: "undone"}), do: {gettext("Undone"), nil}
   defp proposal_state(%{status: "cancelled"}), do: {gettext("Discarded"), nil}
   defp proposal_state(%{status: "superseded"}), do: {gettext("Replaced by a newer version"), nil}

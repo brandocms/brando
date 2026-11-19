@@ -6,7 +6,8 @@ import { syncLV } from '../../utils'
 // The live page of a connected tool (Brando.MCP.Watch): a person's
 // connection (made by the fixture through the consent screen's functions)
 // calls tools over the endpoint, and the admin, who manages connected
-// tools, follows each call on the page as it happens.
+// tools, follows each call on the page as it happens, without what the
+// calls named.
 
 const fixture = async (userAgent, action, body = {}) => {
   const response = await fetch(e2eUrl(`/e2e/mcp/${action}`), {
@@ -74,7 +75,10 @@ test('follows a connected tool’s calls as they happen', async ({ page, sandbox
       content_type: 'Brando.Pages.Page',
       query: 'MCP live',
     })
-    await expect(watch.locator('.mcp-watch-call[data-tool="search_entries"] .assistant-step-term')).toHaveText('“MCP live”')
+    // Another person's search: the step, not the words
+    const search = watch.locator('.mcp-watch-call[data-tool="search_entries"]')
+    await expect(search).toHaveAttribute('data-state', 'ok')
+    await expect(search.locator('.assistant-step-term')).toHaveCount(0)
 
     // A failed call: its error is under it
     await tool(api, resource, token, 4, 'brando_content_describe_module', { module: 'local:0' })
@@ -82,11 +86,13 @@ test('follows a connected tool’s calls as they happen', async ({ page, sandbox
     await expect(failed).toHaveAttribute('data-state', 'error')
     await expect(failed.locator('.mcp-watch-error')).toBeVisible()
 
-    // An import, as the Figma tool tells it: the thumbnails, new and reused
+    // An import, as the Figma tool tells it: the thumbnails, new and reused,
+    // without the folder's name
     await fixture(sandboxUserAgent, 'watch-import', { watch_path: watchPath })
     const imported = watch.locator('#mcp-call-e2e-import')
-    await expect(imported.locator('.mcp-watch-folder')).toContainText('Figma/Case – Tipping')
     await expect(imported.locator('li[data-reused="true"]')).toHaveCount(1)
+    await expect(imported.locator('li img').first()).toBeVisible()
+    await expect(imported.locator('.mcp-watch-folder')).toHaveCount(0)
     await expect(imported.locator('li[data-reused="false"]').first()).toBeVisible()
 
     // A proposal, with the page's link in its result

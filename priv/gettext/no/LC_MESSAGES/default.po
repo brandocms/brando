@@ -1501,6 +1501,11 @@ msgstr "Et telefonnummer"
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
 msgstr "Et program på denne datamaskinen. Ethvert program her kan gi seg ut for å være hva som helst: tillat det bare hvis du startet det selv."
 
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal"
+msgstr "Et forslag"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "A proposal with problems cannot be shared. Leave out the changes with problems first."
@@ -2856,6 +2861,11 @@ msgstr "Legger til…"
 #, elixir-autogen, elixir-format
 msgid "Apply…"
 msgstr "Ta i bruk …"
+
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Approved"
+msgstr "Godkjent"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -16781,6 +16791,11 @@ msgstr "Søk: %{query}"
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
+msgid "Searched %{type}"
+msgstr "Søkte i %{type}"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
 msgid "Searched for “%{query}”"
 msgstr "Søkte etter «%{query}»"
 
@@ -16788,6 +16803,11 @@ msgstr "Søkte etter «%{query}»"
 #, elixir-autogen, elixir-format
 msgid "Searched for “%{query}” in %{type}"
 msgstr "Søkte etter «%{query}» i %{type}"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Searched the entries"
+msgstr "Søkte i oppføringene"
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
