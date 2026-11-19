@@ -785,7 +785,15 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:stats, Map.new(sites, &{&1.id, site_stats(&1)}))
     |> assign(:seeding, seeding_by_site(sites))
     |> assign_new(:language_drafts, fn -> %{} end)
+    |> keep_selection()
   end
+
+  # A site removed meanwhile, here or elsewhere, gives way to the default
+  defp keep_selection(%{assigns: %{selected: id, sites: sites}} = socket) when is_integer(id) do
+    if Enum.any?(sites, &(&1.id == id)), do: socket, else: assign(socket, :selected, selection(%{}, socket.assigns))
+  end
+
+  defp keep_selection(socket), do: socket
 
   # Per site, each environment and language whose latest seeding is queued,
   # running or failed, or that has no identity in that language: a seeding
