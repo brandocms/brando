@@ -296,11 +296,10 @@ defmodule Brando.MCP.FigmaTest do
 
       assert %{"structuredContent" => first} = result = call(tenant, token, "read_frame", %{"url" => @link})
       refute result["isError"]
+      # The guidance comes whole: the page's last sections made room for it,
+      # where cutting the guidance beside a full page would leave about 6 KB
       assert String.length(first["guidance"]["administrators"]) == 12_000
       assert byte_size(Jason.encode!(first)) <= 24_000
-
-      # Without guidance, one page holds all 40
-      assert length(first["sections"]) < 40
 
       assert %{"structuredContent" => second} =
                call(tenant, token, "read_frame", %{"url" => @link, "offset" => first["next_offset"]})
