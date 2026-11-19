@@ -43,7 +43,9 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
     attribute :controls, :boolean
     attribute :preload, :boolean
     # `Brando.Videos.Playback.qualities/0`; nil = use the video's
-    attribute :quality, :enum, values: [:auto, :hls, :mp4_360, :mp4_480, :mp4_720, :mp4_1080]
+    attribute :quality, :enum,
+      values: [:auto, :hls, :mp4_270, :mp4_360, :mp4_480, :mp4_540, :mp4_720, :mp4_1080, :mp4_1440, :mp4_2160]
+
     attribute :use_default_autoplay, :boolean, default: true
     attribute :use_default_loop, :boolean, default: true
     attribute :use_default_muted, :boolean, default: true

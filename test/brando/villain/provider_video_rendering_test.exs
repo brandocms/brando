@@ -355,6 +355,16 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
       assert html_video(overridden, []) =~ "/playlist.m3u8"
     end
 
+    test "a Mux video plays its ready static rendition as an MP4, from a template and from a block" do
+      renditions = [%{"id" => "r-1", "resolution" => "720p", "status" => "ready", "name" => "720p.mp4"}]
+      video = mux(%{autoplay: true, meta: %{"mux" => %{"playback_id" => "abc123", "static_renditions" => renditions}}})
+
+      assert html_video(video, []) =~ ~s(data-src="https://stream.mux.com/abc123/720p.mp4")
+      assert Parser.video(video, []) =~ ~s(data-src="https://stream.mux.com/abc123/720p.mp4")
+      assert html_video(%{video | controls: true}, []) =~ "https://stream.mux.com/abc123.m3u8"
+      assert html_video(mux(%{autoplay: true}), []) =~ "https://stream.mux.com/abc123.m3u8"
+    end
+
     test "the Liquid tag takes the template's quality" do
       context = Liquex.Context.new(%{"video" => with_mp4s(bunny())})
       html = Brando.Villain.parse_and_render(~s({% video video { quality: "mp4_360" } %}), context)

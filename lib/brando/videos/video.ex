@@ -70,7 +70,9 @@ defmodule Brando.Videos.Video do
     attribute :muted, :boolean
     # HLS or an MP4 at a resolution; nil inherits. `Brando.Videos.Playback.qualities/0`,
     # written out: that module matches on this struct.
-    attribute :quality, :enum, values: [:auto, :hls, :mp4_360, :mp4_480, :mp4_720, :mp4_1080]
+    attribute :quality, :enum,
+      values: [:auto, :hls, :mp4_270, :mp4_360, :mp4_480, :mp4_540, :mp4_720, :mp4_1080, :mp4_1440, :mp4_2160]
+
     attribute :source_url, :text
     attribute :remote_id, :text
     attribute :config_target, :text
@@ -157,7 +159,7 @@ defmodule Brando.Videos.Video do
             label: t("Quality"),
             options: &__MODULE__.quality_options/2,
             resetable: true,
-            show_if: {:type, :bunny}
+            show_if: {:type, [:bunny, :mux]}
 
           input :file, :file, label: t("Video file")
           input :thumbnail, :image, label: t("Thumbnail")

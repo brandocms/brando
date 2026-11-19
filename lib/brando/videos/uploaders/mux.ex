@@ -24,20 +24,43 @@ defmodule Brando.Videos.Uploaders.Mux do
   - `:on_purge` - Delete from Mux when soft-delete expires after 30 days (default)
   - `false` - Never delete from Mux
 
+  ## Static renditions
+
+  New assets ask Mux for MP4 static renditions at the resolutions in
+
+      config :brando, Brando.Videos, mux_static_renditions: [720, 1080]
+
+  which is the default. Mux makes 270, 360, 480, 540, 720, 1080, 1440 and
+  2160, never above the source, and skips the ones that would need upscaling.
+  `[]` asks for none, and a video config's `meta.mux["static_renditions"]`
+  replaces the list for its uploads. Each rendition costs storage and delivery
+  on Mux.
+
+  Brando keeps what Mux reports of them in `meta.mux.static_renditions`, from
+  the asset and from the `video.asset.static_rendition.*` webhooks, and
+  `Brando.Videos.Playback` offers the ready ones as MP4 qualities. Assets made
+  before get the configured renditions from `add_static_renditions/1`
+  (`mix brando.videos.mux_renditions`).
+
   ## Mux Documentation
   - Direct Uploads: https://www.mux.com/docs/guides/upload-files-directly
   - Webhooks: https://www.mux.com/docs/core/listen-for-webhooks
+  - Static renditions: https://www.mux.com/docs/guides/enable-static-mp4-renditions
   """
 
   @behaviour Brando.Videos.Uploader
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Videos
+  alias Brando.Videos.Playback
   alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
 
   require Logger
 
   @base_url "https://api.mux.com/video/v1"
+  @default_static_renditions [720, 1080]
 
   @impl true
   @doc """
@@ -49,7 +72,8 @@ defmodule Brando.Videos.Uploaders.Mux do
   - `:cors_origin` - CORS origin for upload (default: "*")
   - `:playback_policies` - Override config default. Only `["public"]` is
     supported until Brando has a token-signing boundary.
-  - `:static_renditions` - Optional current Mux static rendition settings
+  - `:static_renditions` - Mux static rendition settings, replacing the
+    configured `mux_static_renditions` (see the moduledoc)
   - `:max_resolution_tier` - Override config default. Mux accepts `"1080p"`,
     `"1440p"` or `"2160p"` only
   - `:video_quality` - `"basic"`, `"plus"` or `"premium"`. No Brando default;
@@ -140,6 +164,28 @@ defmodule Brando.Videos.Uploaders.Mux do
     end
   end
 
+  # A rendition's event carries the rendition, not the asset, so the asset is
+  # read again: it is what Mux has now, whatever order the events arrive in.
+  def handle_webhook(%{"type" => "video.asset.static_rendition." <> event} = payload)
+      when event in ["ready", "skipped", "errored", "deleted"] do
+    with asset_id when is_binary(asset_id) <- rendition_asset_id(payload),
+         {:ok, video} <- find_video_by_asset_id(asset_id),
+         {:ok, asset} <- get_asset(asset_id) do
+      update_video_with_asset(video, asset)
+    else
+      nil ->
+        Logger.warning("Missing asset id in video.asset.static_rendition.#{event} webhook")
+        {:error, :invalid_webhook_data}
+
+      # An asset Brando doesn't hold, in this environment or at all
+      {:error, :not_found} ->
+        :ignore
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
   def handle_webhook(%{"type" => "video.asset.errored", "data" => data}) when is_map(data) do
     with asset_id when is_binary(asset_id) <- data["id"],
          {:ok, video} <- find_video_by_asset_id(asset_id) do
@@ -191,6 +237,12 @@ defmodule Brando.Videos.Uploaders.Mux do
     Logger.debug("Full payload: #{inspect(payload, pretty: true)}")
     :ignore
   end
+
+  defp rendition_asset_id(%{"object" => %{"type" => "asset", "id" => asset_id}}) when is_binary(asset_id),
+    do: asset_id
+
+  defp rendition_asset_id(%{"data" => %{"asset_id" => asset_id}}) when is_binary(asset_id), do: asset_id
+  defp rendition_asset_id(_payload), do: nil
 
   @impl true
   def delete_remote(%Videos.Video{meta: %{"mux" => %{"asset_id" => asset_id}}})
@@ -312,10 +364,12 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   @doc false
   def build_asset_settings(opts) do
-    defaults = %{
-      "playback_policies" => ["public"],
-      "max_resolution_tier" => "1080p"
-    }
+    defaults =
+      %{
+        "playback_policies" => ["public"],
+        "max_resolution_tier" => "1080p"
+      }
+      |> maybe_put("static_renditions", default_static_renditions())
 
     config_meta =
       case Keyword.get(opts, :config) do
@@ -348,6 +402,42 @@ defmodule Brando.Videos.Uploaders.Mux do
       policies -> {:error, {:invalid_playback_policies, policies}}
     end
   end
+
+  defp default_static_renditions do
+    case static_rendition_resolutions() do
+      [] -> nil
+      resolutions -> Enum.map(resolutions, &%{"resolution" => "#{&1}p"})
+    end
+  end
+
+  @doc """
+  The static rendition resolutions new assets ask for, and
+  `add_static_renditions/1` adds: `config :brando, Brando.Videos,
+  mux_static_renditions: [720, 1080]`, the default. Values Mux doesn't make
+  are left out.
+  """
+  @spec static_rendition_resolutions() :: [pos_integer()]
+  def static_rendition_resolutions do
+    :brando
+    |> Application.get_env(Brando.Videos, [])
+    |> Keyword.get(:mux_static_renditions, @default_static_renditions)
+    |> List.wrap()
+    |> Enum.flat_map(&parse_resolution/1)
+    |> Enum.filter(&(&1 in Playback.mux_resolutions()))
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  defp parse_resolution(resolution) when is_integer(resolution), do: [resolution]
+
+  defp parse_resolution(resolution) when is_binary(resolution) do
+    case Integer.parse(resolution) do
+      {height, rest} when rest in ["", "p"] -> [height]
+      _ -> []
+    end
+  end
+
+  defp parse_resolution(_resolution), do: []
 
   defp stringify_keys(settings) do
     Map.new(settings, fn
@@ -466,11 +556,29 @@ defmodule Brando.Videos.Uploaders.Mux do
       |> maybe_put("max_resolution", asset["max_resolution_tier"])
       |> maybe_put("aspect_ratio", asset["aspect_ratio"])
       |> maybe_put("status", asset["status"])
+      |> maybe_put("static_renditions", static_renditions(asset, get_in(video.meta, ["mux", "static_renditions"])))
 
     video.meta
     |> Map.put("provider", "mux")
     |> Map.put("mux", mux_meta)
   end
+
+  # What Mux has of the asset's static renditions. An asset without any has no
+  # `static_renditions`. A rendition stored as ready stays ready when an older
+  # report still has it preparing: Mux's events don't arrive in order, and a
+  # ready rendition never prepares again.
+  defp static_renditions(%{"static_renditions" => %{"files" => files}}, stored) when is_list(files) do
+    ready_ids =
+      for %{"id" => id, "status" => "ready"} <- List.wrap(stored), into: MapSet.new(), do: id
+
+    for %{"resolution" => resolution} = file <- files, is_binary(resolution) do
+      status = if file["status"] == "preparing" and file["id"] in ready_ids, do: "ready", else: file["status"]
+
+      %{"id" => file["id"], "resolution" => resolution, "status" => status, "name" => file["name"]}
+    end
+  end
+
+  defp static_renditions(_asset, _stored), do: nil
 
   defp video_status("ready"), do: :ready
   defp video_status("errored"), do: :errored
@@ -572,6 +680,130 @@ defmodule Brando.Videos.Uploaders.Mux do
            }) do
       update_video_with_asset(video, asset)
     end
+  end
+
+  @doc """
+  Asks Mux for the configured static renditions
+  (`static_rendition_resolutions/0`) on each ready Mux video that lacks them,
+  in every environment of every active site, and stores what each asset has in
+  `meta.mux.static_renditions`. Mux makes a rendition in the background and
+  reports it ready through the `video.asset.static_rendition.ready` webhook,
+  which stores it; until then the video streams. Running this again stores
+  what is ready by then, which a site without the webhook needs, and asks for
+  nothing twice: a rendition Mux skipped because the source is smaller counts
+  as there.
+
+  Returns a result per video, with its `:environment` (the tenant prefix, or
+  `"public"`) and:
+
+    * `:present` - the resolutions the asset has, ready, preparing or skipped
+    * `:requested` - the ones asked for now, or that would be with `dry_run`
+    * `:failed` - `{resolution, reason}` for each request Mux refused
+    * `:error` - why the asset couldn't be read, else nil
+
+  ## Options
+
+    * `:dry_run` - read the assets and report, but ask Mux for nothing and
+      store nothing
+    * `:interval` - milliseconds between two rendition requests, 1000 by
+      default: Mux takes about one POST a second
+
+  `mix brando.videos.mux_renditions` runs it and prints the results. From a
+  release, on the running node:
+
+      bin/my_app rpc 'Brando.Videos.Uploaders.Mux.add_static_renditions()'
+  """
+  @spec add_static_renditions(keyword()) :: [map()]
+  def add_static_renditions(opts \\ []) do
+    dry_run? = Keyword.get(opts, :dry_run, false)
+    interval = Keyword.get(opts, :interval, 1_000)
+    resolutions = static_rendition_resolutions()
+
+    :all
+    |> Brando.Tenant.Job.each_active_environment(fn ->
+      environment = Brando.Tenant.current_prefix() || "public"
+
+      Enum.map(environment_renditions(resolutions, dry_run?, interval), &Map.put(&1, :environment, environment))
+    end)
+    |> List.flatten()
+  end
+
+  defp environment_renditions(resolutions, dry_run?, interval) do
+    from(v in Videos.Video,
+      where: v.type == :mux and v.status == :ready and is_nil(v.deleted_at),
+      order_by: v.id
+    )
+    |> Brando.Repo.all()
+    |> Enum.filter(&(valid_mux_id?(get_in(&1.meta, ["mux", "asset_id"])) and not signed?(&1)))
+    |> Enum.map(&add_missing_renditions(&1, resolutions, dry_run?, interval))
+  end
+
+  defp signed?(video), do: get_in(video.meta, ["mux", "playback_policy"]) == "signed"
+
+  defp add_missing_renditions(video, resolutions, dry_run?, interval) do
+    asset_id = get_in(video.meta, ["mux", "asset_id"])
+
+    result = %{
+      video_id: video.id,
+      title: video.title,
+      asset_id: asset_id,
+      present: [],
+      requested: [],
+      failed: [],
+      error: nil
+    }
+
+    case get_asset(asset_id) do
+      {:ok, asset} ->
+        present = present_resolutions(asset)
+        result = %{result | present: present, requested: resolutions -- present}
+        if dry_run?, do: result, else: request_and_store(video, asset, result, interval)
+
+      {:error, reason} ->
+        %{result | error: reason}
+    end
+  end
+
+  # Asks for the missing renditions, then stores what the asset has: read
+  # again when a request went through, so the new ones are stored preparing
+  defp request_and_store(video, asset, %{asset_id: asset_id, requested: missing} = result, interval) do
+    failed = request_renditions(asset_id, missing, interval)
+    requested = missing -- Enum.map(failed, &elem(&1, 0))
+    result = %{result | requested: requested, failed: failed}
+    asset = if requested == [], do: {:ok, asset}, else: get_asset(asset_id)
+
+    case with({:ok, asset} <- asset, do: update_video_with_asset(video, asset)) do
+      {:ok, _video} -> result
+      {:error, reason} -> %{result | error: reason}
+    end
+  end
+
+  # A rendition that errored is asked for again
+  defp present_resolutions(asset) do
+    asset
+    |> get_in(["static_renditions", "files"])
+    |> List.wrap()
+    |> Enum.flat_map(fn
+      %{"status" => status, "resolution" => resolution} when status != "errored" -> parse_resolution(resolution)
+      _ -> []
+    end)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  # The resolutions Mux refused, with why. Each request waits `interval`
+  # after it, so the next one, for this asset or the next, keeps to Mux's
+  # rate.
+  defp request_renditions(asset_id, resolutions, interval) do
+    Enum.flat_map(resolutions, fn resolution ->
+      result = api_request(:post, "/assets/#{asset_id}/static-renditions", %{"resolution" => "#{resolution}p"})
+      if interval > 0, do: Process.sleep(interval)
+
+      case result do
+        {:ok, _rendition} -> []
+        {:error, reason} -> [{resolution, reason}]
+      end
+    end)
   end
 
   # An upload's row has only its upload id until Mux reports the asset.

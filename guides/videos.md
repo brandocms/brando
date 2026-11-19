@@ -204,7 +204,7 @@ Available settings via `meta.mux`:
 | `max_resolution_tier` | Maximum transcoding resolution | `"1080p"` (Brando default), `"1440p"`, `"2160p"` |
 | `video_quality` | Encoding quality level | `"basic"`, `"plus"`, `"premium"` |
 | `playback_policies` | Who can view the video | `["public"]` |
-| `static_renditions` | Generate downloadable renditions | `[%{"resolution" => "highest"}]` |
+| `static_renditions` | MP4 renditions, replacing `mux_static_renditions` below | `[%{"resolution" => "720p"}]` |
 
 `max_resolution_tier` accepts only the three values above — Mux rejects anything
 else (`"720p"`, `"480p"`) with `Invalid max resolution tier value`. Set it to
@@ -224,6 +224,47 @@ API error when the upload is initiated, not at compile time.
 Signed Mux playback is rejected until the application provides a token-signing
 boundary. Legacy `playback_policy` and `mp4_support` settings are translated to
 the current Mux request fields, but new configuration should use the fields above.
+
+#### Mux static renditions
+
+New Mux assets ask for MP4 static renditions at 720p and 1080p, which a video
+can play instead of the stream (see [Playback quality](#playback-quality)).
+The list is set in config:
+
+```elixir
+# config/config.exs
+config :brando, Brando.Videos, mux_static_renditions: [720, 1080]
+```
+
+Mux makes 270, 360, 480, 540, 720, 1080, 1440 and 2160, and skips any that
+would need upscaling, so a 2160 rendition also needs a source and a
+`max_resolution_tier` that high. `[]` asks for none. Each rendition has its
+own storage and delivery cost on Mux.
+
+Mux makes a rendition after the asset is ready, and reports it through the
+`video.asset.static_rendition.*` webhooks, which `BrandoWeb.Plugs.MuxWebhook`
+records in `meta.mux.static_renditions`. A video offers only the renditions
+Mux reports ready, and streams until then. The `highest` rendition older
+uploads asked for is not used.
+
+Assets made before keep streaming until they have renditions. This lists the
+ones that lack the configured renditions, and with `--apply` asks Mux for
+them:
+
+```bash
+mix brando.videos.mux_renditions
+mix brando.videos.mux_renditions --apply
+```
+
+From a release, `Brando.Videos.Uploaders.Mux.add_static_renditions/1` does the
+same (`dry_run: true` only reports):
+
+```bash
+bin/my_app rpc "Brando.Videos.Uploaders.Mux.add_static_renditions()"
+```
+
+Running it again stores what Mux has made by then, which a site without the
+webhook needs, and asks for nothing twice.
 
 ### Bunny Stream Configuration
 
@@ -306,12 +347,14 @@ end
 
 #### Playback quality
 
-A Bunny video plays streamed over HLS, or as a progressive MP4 at one
+A Bunny or Mux video plays streamed over HLS, or as a progressive MP4 at one
 resolution. An MP4 reaches its first frame sooner, which suits a short
 autoplaying loop; the stream adapts to the viewer's connection, which suits a
 video someone watches through. Bunny makes the MP4s (`play_360p.mp4` up to
 `play_1080p.mp4`, never above the source) when the library's **MP4 Fallback**
-encoding setting is on, for uploads made after it was turned on.
+encoding setting is on, for uploads made after it was turned on. Mux makes the
+static renditions Brando asks for, from 270p up to 2160p (see
+[Mux static renditions](#mux-static-renditions)).
 
 The choice is a video's **Quality**:
 
@@ -319,7 +362,7 @@ The choice is a video's **Quality**:
 |---------|-------|
 | `:auto` (Automatic) | The stream when the video shows controls or a play button, otherwise the MP4 at the site default |
 | `:hls` (Streaming) | The stream |
-| `:mp4_360`, `:mp4_480`, `:mp4_720`, `:mp4_1080` | That MP4, else the next resolution down, else the lowest |
+| `:mp4_270` to `:mp4_2160` | That MP4, else the next resolution down, else the lowest |
 
 A video without MP4s plays the stream whatever its quality. The editor offers
 the qualities the video has.
@@ -345,7 +388,8 @@ config :brando, Brando.Videos, default_mp4_resolution: 720
 ```
 
 Brando learns whether a video has MP4s from Bunny when it finishes encoding
-or is added from the Bunny library, and keeps it in `meta.bunny`. A video
+or is added from the Bunny library, and keeps it in `meta.bunny`; a Mux
+video's renditions are in `meta.mux`. A video
 stored before Brando kept it streams until **Fetch details** in the video
 library looks it up. `Brando.Videos.Playback` resolves the source for both
 templates and blocks. Saving a video, or looking it up, renders the entries
