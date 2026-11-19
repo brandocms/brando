@@ -293,4 +293,61 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
     assert before == "R<D og utvikling"
     assert proposed == "Pris på utvikling"
   end
+
+  # The card shows its cover about 700 px wide: the 400 px square thumb is
+  # blurry there and crops away the framing.
+  describe "an entry card's cover" do
+    defp cover_proposal(conn, user, c, image) do
+      ops = [
+        %Brando.Content.Proposals.InsertBlock{
+          target: {Page, c.identity.id},
+          module: c.case_module.id,
+          media: %{cover: {:image, image.id}}
+        }
+      ]
+
+      {:ok, conversation} = Agent.start_conversation(user)
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, user, conversation_id: conversation.id)
+      conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+      {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      view
+    end
+
+    test "takes the image's larger sizes, cropped around its focal point", %{conn: conn, current_user: user} = c do
+      image =
+        Brando.Factory.insert(:image,
+          creator_id: user.id,
+          width: 2000,
+          height: 1500,
+          focal: %Brando.Images.Focal{x: 30, y: 70}
+        )
+
+      html = conn |> cover_proposal(user, c, image) |> render() |> Floki.parse_document!()
+      [cover] = Floki.find(html, ".assistant-card-cover img")
+      [src] = Floki.attribute(cover, "src")
+      [srcset] = Floki.attribute(cover, "srcset")
+
+      refute src =~ "/thumb/"
+      assert src =~ "/medium/"
+      assert srcset =~ ~r{/medium/1\.jpg \d+w}
+      assert srcset =~ ~r{/xlarge/1\.jpg \d+w}
+      refute srcset =~ "/thumb/"
+      assert Floki.attribute(cover, "sizes") != []
+      assert Floki.attribute(cover, "style") == ["object-position: 30% 70%;"]
+
+      # The change list's inline thumbs stay small.
+      assert html |> Floki.find(".assistant-inline-media img") |> Floki.attribute("src") |> Enum.all?(&(&1 =~ "/thumb/"))
+    end
+
+    test "is the original while the image has no sizes", %{conn: conn, current_user: user} = c do
+      image = Brando.Factory.insert(:image, creator_id: user.id, sizes: %{})
+
+      html = conn |> cover_proposal(user, c, image) |> render() |> Floki.parse_document!()
+      [cover] = Floki.find(html, ".assistant-card-cover img")
+
+      assert Floki.attribute(cover, "src") == ["/media/image/1.jpg"]
+      assert Floki.attribute(cover, "srcset") == []
+      assert Floki.attribute(cover, "style") == ["object-position: 50% 50%;"]
+    end
+  end
 end

@@ -554,6 +554,10 @@
   margin: 8px 8px 0;
 
   .assistant-thumb { aspect-ratio: 16 / 10; border-radius: 6px; }
+  /* Out of the grid's flow, the image takes the frame's height, so
+     object-fit crops it around its focal point instead of the frame
+     cutting off its foot. */
+  .assistant-thumb img { position: absolute; inset: 0; }
   .assistant-thumb [data-icon] { width: 28px; height: 28px; }
 }
 

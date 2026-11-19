@@ -1,0 +1,1 @@
+- A proposal review's entry card shows its cover image sharp, in the sizes the image has and cropped around its focal point, instead of the blurry 400×400 thumb.

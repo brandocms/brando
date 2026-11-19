@@ -6,10 +6,10 @@ defmodule BrandoAdmin.Dashboard do
   alias Brando.Blueprint
   alias Brando.Blueprint.Identifier.Generator
   alias Brando.Content.Identifier
-  alias Brando.Images.{ConfigResolver, Image, Size}
-  alias Brando.Images.Operations.Sizing
+  alias Brando.Images.Image
   alias Brando.Repo
   alias Brando.Utils
+  alias BrandoAdmin.Images.Sources
 
   def load(user) do
     scope = Boundary.actor_scope(user)
@@ -85,37 +85,11 @@ defmodule BrandoAdmin.Dashboard do
   defp thumb_cover(%{cover: url}), do: %{src: url, srcset: nil}
 
   defp sized_cover(image) do
-    {:ok, config} = ConfigResolver.get(image)
-
-    # Low-quality sizes are blur placeholders, not candidates
-    candidates =
-      for {key, %{"size" => geometry} = size_config} <- config.sizes,
-          Map.has_key?(image.sizes, key),
-          Map.get(size_config, "quality", 100) >= 30,
-          {:ok, dimensions} <- [Size.dimensions(geometry)],
-          width = rendered_width(image, dimensions, size_config) do
-        {width, Utils.img_url(image, key, prefix: Utils.media_url())}
-      end
-      |> Enum.sort()
-      |> Enum.uniq_by(&elem(&1, 0))
-
-    case candidates do
-      [] ->
-        %{src: Utils.img_url(image, :thumb, prefix: Utils.media_url()), srcset: nil}
-
-      _ ->
-        {_width, src} = Enum.find(candidates, &(elem(&1, 0) >= 600)) || Enum.max(candidates)
-        %{src: src, srcset: Enum.map_join(candidates, ", ", fn {width, url} -> "#{url} #{width}w" end)}
+    case Sources.candidates(image) do
+      [] -> %{src: Utils.img_url(image, :thumb, prefix: Utils.media_url()), srcset: nil}
+      candidates -> %{src: Sources.src(candidates, 600), srcset: Sources.srcset(candidates)}
     end
   end
-
-  # The width a size is actually saved at, which `srcset` needs.
-  defp rendered_width(%{width: width, height: height}, _box, size_config)
-       when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
-    size_config |> Sizing.processed_dimensions({width, height}) |> elem(0)
-  end
-
-  defp rendered_width(_image, {box_width, _box_height}, _size_config), do: box_width
 
   # Who last edited each entry (its creator until someone edits it), loaded
   # in one query for the whole list.

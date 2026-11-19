@@ -25,6 +25,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   alias Brando.Repo
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.Images.Sources
   alias Phoenix.LiveView.JS
 
   def __authorization__, do: {:use, :assistant}
@@ -765,14 +766,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :kind, :any, required: true
   attr :id, :any, required: true
   attr :label, :string, default: nil
+  attr :cover, :boolean, default: false, doc: "shown as an entry card's cover, larger than a thumb"
 
   defp thumb(assigns) do
-    assigns = assign(assigns, :asset, Map.get(assigns.media, {to_kind(assigns.kind), assigns.id}))
+    asset = Map.get(assigns.media, {to_kind(assigns.kind), assigns.id})
+    assigns = assign(assigns, asset: asset, sources: assigns.cover && asset && asset[:cover])
 
     ~H"""
     <span class={["assistant-thumb", "is-#{@kind}"]}>
-      <img :if={@asset && @asset.url} src={@asset.url} alt={@label || ""} loading="lazy" />
-      <.icon :if={!(@asset && @asset.url)} name={thumb_icon(@kind)} />
+      <img
+        :if={@sources}
+        src={@sources.src}
+        srcset={@sources.srcset}
+        sizes={@sources.srcset && "(max-width: 760px) 100vw, 704px"}
+        style={@sources.style}
+        alt={@label || ""}
+        loading="lazy"
+      />
+      <img :if={!@sources && @asset && @asset.url} src={@asset.url} alt={@label || ""} loading="lazy" />
+      <.icon :if={!@sources && !(@asset && @asset.url)} name={thumb_icon(@kind)} />
       <span :if={to_string(@kind) == "video"} class="assistant-play" aria-hidden="true"><.icon name="play" /></span>
     </span>
     """
@@ -961,7 +973,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           id={"card-#{entry.key}"}
         >
           <div :if={entry.media != [] and adds_content?(entry)} class="assistant-card-cover">
-            <.thumb media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} />
+            <.thumb media={@media} kind={elem(hd(entry.media), 0)} id={elem(hd(entry.media), 1)} cover />
             <span class="assistant-cover-label">{media_label(media_map(hd(entry.media)), @aliases, @media)}</span>
           </div>
           <div class="assistant-card-body">
@@ -2410,8 +2422,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
         else: Repo.all(from(f in Brando.Files.File, where: f.id in ^file_ids))
 
     Map.new(
-      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), label: plain(&1.title)}}) ++
-        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), label: plain(&1.title)}}) ++
+      Enum.map(images, &{{:image, &1.id}, %{url: image_url(&1), cover: cover(&1), label: plain(&1.title)}}) ++
+        Enum.map(videos, &{{:video, &1.id}, %{url: video_url(&1), cover: cover(&1.thumbnail), label: plain(&1.title)}}) ++
         Enum.map(files, &{{:file, &1.id}, %{url: nil, label: plain(&1.title) || &1.filename}})
     )
   end
@@ -2480,6 +2492,24 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp video_url(%{thumbnail: %Brando.Images.Image{} = thumbnail}), do: image_url(thumbnail)
   defp video_url(_), do: nil
+
+  # A card's cover is shown about 700 CSS px wide, so the 400 px square thumb
+  # is too small and crops away the framing. It takes the sizes the image
+  # has, cropped to the card around its focal point; the original stands in
+  # while it has none.
+  defp cover(%Brando.Images.Image{} = image) do
+    candidates = Sources.candidates(image, uncropped: true)
+
+    %{
+      src: Sources.src(candidates, 720) || Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+      srcset: Sources.srcset(candidates),
+      style: BrandoAdmin.Components.Image.object_position(image)
+    }
+  rescue
+    _ -> nil
+  end
+
+  defp cover(_), do: nil
 
   ## Helpers
 

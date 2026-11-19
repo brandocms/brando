@@ -104,3 +104,30 @@ test('discards a proposal from a connected tool that can no longer be applied', 
   await expect(page.locator('.assistant-connected-empty')).toBeVisible()
   expect(errors).toEqual([])
 })
+
+// The card's cover is shown about 700px wide: it takes the image's sizes,
+// not the 400px square thumb, cropped to the card around its focal point.
+test("a card's cover is sharp at the card's width", async ({ page }) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+
+  const response = await page.request.post('/e2e/setup_fixtures/assistant-cover')
+  expect(response.ok()).toBe(true)
+
+  await page.goto('/admin/assistant/connected')
+  await syncLV(page)
+  await page.locator('#assistant-connected-list').getByRole('link', { name: /Add the harbour page/ }).click()
+  await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]+$/)
+  await syncLV(page)
+
+  const cover = page.locator('.assistant-card-cover img')
+  // The E2E app's images have one size above the thumb: small, 700px.
+  await expect(cover).toHaveAttribute('srcset', /\/small\/.+ 700w$/)
+  await expect(cover).toHaveAttribute('style', 'object-position: 50% 40%;')
+  await expect.poll(() => cover.evaluate(img => img.complete && img.naturalWidth)).toBeGreaterThanOrEqual(700)
+  expect(await cover.evaluate(img => img.currentSrc)).not.toContain('/thumb/')
+  // The image fills the 16:10 frame, so object-fit crops it there.
+  expect(await cover.evaluate(img => img.clientHeight === img.parentElement.clientHeight)).toBe(true)
+  expect(errors).toEqual([])
+})
