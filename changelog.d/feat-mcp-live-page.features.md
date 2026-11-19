@@ -1,0 +1,1 @@
+- A connected AI tool's work can be followed live in the admin: each connection has a page showing every tool call as it starts and ends, the images it imports and the proposals it prepares, and the tool gets its link in the server's instructions, as `watch_url` in `prepare_proposal`'s result, and in its first result after a quiet half hour.

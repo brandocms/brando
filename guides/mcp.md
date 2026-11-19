@@ -209,8 +209,46 @@ as the person, and every proposal checked and reviewed in the admin.
 
 Every call is written to Activity: the person, the tool's name, the tool it
 called, whether it worked and the id of the token's database row (never the
-token). People who manage connected tools see these under **Configuration →
-Activity**.
+token), with what the live page shows of it (below). People who manage
+connected tools see these under **Configuration → Activity**.
+
+### Follow a tool as it works
+
+Each connection has a live page in the admin,
+`/admin/assistant/connected/live/<connection>`, that shows what the tool does
+on the site while it works: each call as it starts and as it ends, with what
+it was about ("Searched for “harbour” in Pages", "Read the Figma frame
+“Home”"), whether it worked and the error if not; the images
+`brando_figma_import_images` adds or reuses, with their thumbnails and
+library folder; and each proposal `prepare_proposal` stores, with its
+summary, counts, problems and links to its review and page preview. It opens
+on the connection's calls of the last hour (at most 50) from Activity, then
+follows the new ones; it changes nothing, and cannot steer the tool.
+
+The connection's person and those who manage connected tools in its site
+environment can open it, behind the admin sign-in; anyone else gets the
+access-denied page, whatever the link. **Follow live** opens it from
+**Security → Connected apps** and from the connections under
+**Configuration → Integrations → Connected AI tools**. A revoked or expired
+connection's page says it has ended and shows what it did.
+
+The link lasts as long as the connection, and the tool gets it right away:
+
+- the instructions `initialize` and `server/discover` give end with it, for
+  the tool to give the person before it starts;
+- `prepare_proposal` returns it as `watch_url`, next to `review_url`;
+- the first result after 30 minutes without calls returns it as
+  `watch_url` too, for clients that do not show the server's instructions.
+  Each server node remembers the connection's last call in memory, so
+  another node may give the link once more, and a result at the 24 KB limit
+  goes without it.
+
+To keep the page useful, Activity keeps a short summary of each call beside
+it: the few arguments its line names (a search's words, a content type, a
+module), cut to 120 characters, the part of the result that names its
+subject (an entry's title, a frame's name, a proposal's version), the error
+cut to 300 characters, the ids of the images an import added or reused and
+their folder, and the proposal's id. Never a whole argument or result.
 
 ## Build from Figma
 
@@ -476,7 +514,8 @@ What the endpoint does about each requirement in
    at another whatever ids are guessed. Tools run in its schema prefix and
    authorization scope. The consent screen names the site environment.
 6. **Everything is logged.** Activity records every tool call (person, tool,
-   result, token row id), connections, revocations and the switch; the
+   result, token row id, the short summary its live page shows), connections,
+   revocations and the switch; the
    person's security log records connecting and disconnecting. Proposals are
    marked with the tool's name.
 7. **Rate limits.** Per connection and per person on the endpoint, per
