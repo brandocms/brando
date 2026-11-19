@@ -1,0 +1,1 @@
+- The block rows on Utilities → Loose blocks have hairline dividers between them.

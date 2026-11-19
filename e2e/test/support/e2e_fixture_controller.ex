@@ -44,6 +44,10 @@ defmodule E2EFixtureController do
         "revision-panel" ->
           create_revision_panel()
 
+        # Utilities → Loose blocks: three block trees no entry links to
+        "loose-blocks" ->
+          create_loose_blocks()
+
         "media-upload" ->
           create_media_upload_module()
 
@@ -186,6 +190,9 @@ defmodule E2EFixtureController do
 
         "multi-site-queued" ->
           MultiSiteHosts.setup(get_admin_user(), queued: true)
+
+        "multi-site-many" ->
+          MultiSiteHosts.setup(get_admin_user(), many_sites: true)
       end
 
     # Log the user in
@@ -236,7 +243,13 @@ defmodule E2EFixtureController do
     {:ok, _} = Brando.Content.Definitions.Release.plan(version: "2026.11.16-1")
 
     example = Brando.Repo.get_by!(Brando.Content.Module, class: "example")
-    edit_release_template!(dir, example, ~s(<article b-tpl="example">), ~s(<article b-tpl="example" class="from-the-release">))
+
+    edit_release_template!(
+      dir,
+      example,
+      ~s(<article b-tpl="example">),
+      ~s(<article b-tpl="example" class="from-the-release">)
+    )
 
     [conflict, never] =
       from(m in Brando.Content.Module,
@@ -1108,6 +1121,15 @@ defmodule E2EFixtureController do
       )
 
     {page, uids}
+  end
+
+  defp create_loose_blocks do
+    import Ecto.Query, only: [from: 2]
+
+    user = get_admin_user()
+    module = Brando.Repo.one!(from(m in Brando.Content.Module, order_by: m.id, limit: 1))
+    for sequence <- 0..2, do: team_block!(user, module, nil, sequence, [])
+    user
   end
 
   defp team_block!(user, module, parent_id, sequence, vars) do
@@ -2216,7 +2238,13 @@ defmodule E2EFixtureController do
     end
 
     var_specs = [
-      %{"type" => "string", "key" => "title", "label" => %{"en" => "Title"}, "sequence" => 0, "value" => "Harbour at dawn"},
+      %{
+        "type" => "string",
+        "key" => "title",
+        "label" => %{"en" => "Title"},
+        "sequence" => 0,
+        "value" => "Harbour at dawn"
+      },
       %{
         "type" => "text",
         "key" => "meta",
@@ -2228,7 +2256,11 @@ defmodule E2EFixtureController do
 
     media_var_specs =
       if filled? do
-        for {{type, key, label}, sequence} <- Enum.with_index([{"image", "hero", "Hero"}, {"file", "brochure", "Brochure"}, {"gallery", "album", "Album"}], 2) do
+        for {{type, key, label}, sequence} <-
+              Enum.with_index(
+                [{"image", "hero", "Hero"}, {"file", "brochure", "Brochure"}, {"gallery", "album", "Album"}],
+                2
+              ) do
           %{"type" => type, "key" => key, "label" => %{"en" => label}, "sequence" => sequence}
         end
       else
@@ -2267,7 +2299,8 @@ defmodule E2EFixtureController do
     gallery = fn ->
       Brando.Repo.insert!(%Brando.Galleries.Gallery{
         config_target: "default",
-        gallery_objects: for(sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence})
+        gallery_objects:
+          for(sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence})
       })
     end
 

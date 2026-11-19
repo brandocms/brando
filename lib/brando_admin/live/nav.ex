@@ -95,8 +95,21 @@ defmodule BrandoAdmin.Nav do
     socket
   end
 
-  defp environment_state(%{live: true}), do: gettext("live")
-  defp environment_state(_environment), do: gettext("working")
+  attr :environment, :map, required: true
+
+  # Live in the success tone, a working environment in the attention tone, so
+  # the two never read alike in the closed control or the sheet.
+  defp environment_badge(%{environment: %{live: true}} = assigns) do
+    ~H"""
+    <span class="badge badge--success tenant-switcher__state">{gettext("Live")}</span>
+    """
+  end
+
+  defp environment_badge(assigns) do
+    ~H"""
+    <span class="badge badge--attention tenant-switcher__state">{gettext("Working")}</span>
+    """
+  end
 
   defp assign_tenant_options(socket) do
     sites = tenant_sites(socket.assigns[:current_user], socket.assigns[:current_site])
@@ -221,20 +234,24 @@ defmodule BrandoAdmin.Nav do
             <details
               :if={@current_site && @current_environment}
               id="tenant-switcher"
+              phx-hook="Brando.TenantSwitcher"
               phx-mounted={JS.ignore_attributes(["open"])}
               class={["tenant-switcher", !@current_environment.live && "working"]}
             >
               <summary>
-                <%!-- With several sites, the site being edited is the main line and its environment sits under it. --%>
-                <span :if={@tenant_mode == :multi} class="tenant-switcher__site">
-                  <span class="tenant-switcher__current" title={@current_site.name}>{@current_site.name}</span>
-                  <span class="tenant-switcher__environment">
-                    {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
+                <%!-- With several sites, the site being edited is the main line and its
+                      environment sits under it; with one, the environment is the main line. --%>
+                <span class="tenant-switcher__copy">
+                  <span :if={@tenant_mode != :multi} class="tenant-switcher__label">{gettext("Environment")}</span>
+                  <span :if={@tenant_mode == :multi} class="tenant-switcher__current" title={@current_site.name}>
+                    {@current_site.name}
                   </span>
-                </span>
-                <span :if={@tenant_mode != :multi} class="tenant-switcher__label">{gettext("Environment")}</span>
-                <span :if={@tenant_mode != :multi} class="tenant-switcher__current">
-                  {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
+                  <span class={["tenant-switcher__environment", @tenant_mode != :multi && "tenant-switcher__current"]}>
+                    <span class="tenant-switcher__name" title={@current_environment.name}>
+                      {@current_environment.name}
+                    </span>
+                    <.environment_badge environment={@current_environment} />
+                  </span>
                 </span>
                 <.icon name="chevron-down" />
               </summary>
@@ -246,16 +263,20 @@ defmodule BrandoAdmin.Nav do
                   <input type="hidden" name="site_key" value={@current_site.key} />
 
                   <span class="tenant-switcher__heading">{gettext("Environment")}</span>
-                  <button
-                    :for={environment <- @tenant_environments}
-                    type="submit"
-                    name="environment_key"
-                    value={environment.key}
-                    class={["tenant-switcher__option", environment.id == @current_environment.id && "current"]}
-                  >
-                    <span class="tenant-switcher__option-name" title={environment.name}>{environment.name}</span>
-                    <span class="tenant-switcher__state">{environment_state(environment)}</span>
-                  </button>
+                  <div class="tenant-switcher__rows">
+                    <button
+                      :for={environment <- @tenant_environments}
+                      type="submit"
+                      name="environment_key"
+                      value={environment.key}
+                      aria-current={environment.id == @current_environment.id && "true"}
+                      class="tenant-switcher__option"
+                    >
+                      <span class="tenant-switcher__name" title={environment.name}>{environment.name}</span>
+                      <.environment_badge environment={environment} />
+                      <.icon :if={environment.id == @current_environment.id} name="check" />
+                    </button>
+                  </div>
                 </form>
 
                 <form :if={@tenant_mode == :multi} action="/admin/environment" method="post">
@@ -263,16 +284,21 @@ defmodule BrandoAdmin.Nav do
                   <input type="hidden" name="return_to" value={@current_url || "/admin"} />
 
                   <span class="tenant-switcher__heading">{gettext("Site")}</span>
-                  <%!-- No environment_key: the controller falls back to the site's live environment. --%>
-                  <button
-                    :for={site <- @tenant_sites}
-                    type="submit"
-                    name="site_key"
-                    value={site.key}
-                    class={["tenant-switcher__option", site.id == @current_site.id && "current"]}
-                  >
-                    <span class="tenant-switcher__option-name" title={site.name}>{site.name}</span>
-                  </button>
+                  <%!-- No environment_key: the controller falls back to the site's live environment.
+                        Many sites scroll inside this list rather than pushing the navigation down. --%>
+                  <div class="tenant-switcher__rows tenant-switcher__rows--sites">
+                    <button
+                      :for={site <- @tenant_sites}
+                      type="submit"
+                      name="site_key"
+                      value={site.key}
+                      aria-current={site.id == @current_site.id && "true"}
+                      class="tenant-switcher__option"
+                    >
+                      <span class="tenant-switcher__name" title={site.name}>{site.name}</span>
+                      <.icon :if={site.id == @current_site.id} name="check" />
+                    </button>
+                  </div>
                 </form>
               </div>
             </details>

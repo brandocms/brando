@@ -10295,6 +10295,7 @@ msgid "Listing"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -22201,6 +22202,7 @@ msgstr ""
 msgid "With warnings only"
 msgstr ""
 
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Working"
@@ -23274,11 +23276,6 @@ msgstr ""
 msgid "last used %{date}"
 msgstr ""
 
-#: lib/brando_admin/live/nav.ex
-#, elixir-autogen, elixir-format
-msgid "live"
-msgstr ""
-
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "logged in %{date}"
@@ -23878,11 +23875,6 @@ msgstr[1] ""
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
 msgid "with its %{children}"
-msgstr ""
-
-#: lib/brando_admin/live/nav.ex
-#, elixir-autogen, elixir-format
-msgid "working"
 msgstr ""
 
 #: lib/brando_admin/live/mcp/watch_live.ex
