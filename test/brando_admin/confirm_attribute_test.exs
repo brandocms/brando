@@ -8,13 +8,46 @@ defmodule BrandoAdmin.ConfirmAttributeTest do
   # Rewritten with a working confirmation in #3708; drop it once that is merged.
   @pending ["lib/brando_admin/live/sites/site_live.ex"]
 
+  # Brando's own templates, the generators' templates that end up in apps, and
+  # the E2E app's.
+  @globs ["lib/**/*.{ex,heex}", "priv/templates/**/*.{ex,exs,heex,eex}", "e2e/lib/**/*.{ex,heex}"]
+
+  # As a HEEx attribute (`=` may sit on the next line), a map key or a keyword.
+  # `phx-confirm-click` and attributes that only end in `phx-confirm` pass.
+  @dead ~r/(?<![\w-])(?:phx-confirm\s*=|"phx-confirm"\s*(?:=>|:)|phx_confirm\s*:)/
+
+  test "the pattern finds every spelling of the attribute" do
+    for spelling <- [
+          ~s|phx-confirm="Sure?"|,
+          ~s|phx-confirm={gettext("Sure?")}|,
+          ~s|phx-confirm = {gettext("Sure?")}|,
+          ~s|phx-confirm\n  ={gettext("Sure?")}|,
+          ~s|%{"phx-confirm" => "Sure?"}|,
+          ~s|["phx-confirm": "Sure?"]|,
+          ~s|[phx_confirm: "Sure?"]|,
+          ~s|rest={[phx_confirm: "Sure?"]}|
+        ] do
+      assert spelling =~ @dead, "missed: #{spelling}"
+    end
+
+    for spelling <- [
+          ~s|phx-confirm-click="delete"|,
+          ~s|data-confirm="Sure?"|,
+          ~s|data-phx-confirm="Sure?"|,
+          ~s|%{"phx-confirm-click" => "delete"}|,
+          ~s|[phx_confirm_click: "delete"]|
+        ] do
+      refute spelling =~ @dead, "flagged: #{spelling}"
+    end
+  end
+
   test "no template uses the dead phx-confirm attribute" do
     offenders =
-      for file <- Path.wildcard("lib/**/*.{ex,heex}"),
+      for file <- Enum.flat_map(@globs, &Path.wildcard/1),
           file not in @pending,
-          {line, number} <- file |> File.read!() |> String.split("\n") |> Enum.with_index(1),
-          line =~ ~r/\bphx-confirm=/,
-          do: "#{file}:#{number}: #{String.trim(line)}"
+          source = File.read!(file),
+          [{offset, _length}] <- Regex.scan(@dead, source, return: :index),
+          do: "#{file}:#{line_number(source, offset)}"
 
     assert offenders == [], """
     `phx-confirm` does nothing in the admin. Use `data-confirm` (with
@@ -23,5 +56,9 @@ defmodule BrandoAdmin.ConfirmAttributeTest do
 
     #{Enum.join(offenders, "\n")}
     """
+  end
+
+  defp line_number(source, offset) do
+    source |> binary_part(0, offset) |> String.split("\n") |> length()
   end
 end
