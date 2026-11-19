@@ -879,7 +879,8 @@ defmodule Brando.Content.ProposalsTest do
              ] =
                Enum.map(proposal.problems, &{&1.operation, &1.code})
 
-      # The recheck on approval reads the same operations.
+      # No field name a tool makes up becomes an atom.
+      assert_raise ArgumentError, fn -> String.to_existing_atom("entry_typo") end
       assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
     end
 

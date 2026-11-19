@@ -203,7 +203,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_entry_block(entries, target, field, uid) do
     with %{} = entry <- Map.get(entries, target),
-         {block, _parent, _index} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+         {block, _parent, _index} <- BlockTree.find_saved(entry_blocks(entry, field), uid) do
       block
     else
       _ -> nil
@@ -322,11 +322,12 @@ defmodule Brando.Content.Proposals do
 
   # An insert or copy that adds its uid clears an earlier failure of it.
   defp record_failure(%op_type{uid: uid} = op, index, problems, trees, failed) when op_type in [InsertBlock, CopyBlock] do
-    tree = Map.get(trees, new_block_key(op), %BlockTree{})
+    key = new_block_key(op)
+    tree = Map.get(trees, key, %BlockTree{})
 
     cond do
-      BlockTree.fetch(tree, uid) != nil -> Map.delete(failed, uid)
-      problems != [] -> Map.put(failed, uid, index)
+      BlockTree.fetch(tree, uid) != nil -> Map.delete(failed, {key, uid})
+      problems != [] -> Map.put(failed, {key, uid}, index)
       true -> failed
     end
   end
@@ -346,7 +347,7 @@ defmodule Brando.Content.Proposals do
   # block with that uid after all. A missing target or field is left to
   # the operation's own check.
   defp failed_block({role, uid, {target, field} = key}, proposal, trees, failed) do
-    with index when is_integer(index) <- Map.get(failed, uid),
+    with index when is_integer(index) <- Map.get(failed, {key, uid}),
          {:ok, schema} <- target_schema(target, proposal),
          :ok <- block_field(schema, field),
          tree = Map.get_lazy(trees, key, fn -> saved_tree(target, field, proposal) end),
@@ -565,7 +566,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_block_of(proposal, target, field, uid) do
     with %{} = entry <- Map.get(proposal.targets, target),
-         {block, _, _} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+         {block, _, _} <- BlockTree.find_saved(entry_blocks(entry, field), uid) do
       block
     else
       _ -> nil
@@ -613,9 +614,16 @@ defmodule Brando.Content.Proposals do
   defp saved_tree(target, field, proposal) do
     case Map.get(proposal.targets, target) do
       # A field the entry lacks is reported by the operation's own check.
-      %{} = entry -> entry |> Map.get(:"entry_#{field}", []) |> BlockTree.from_saved()
+      %{} = entry -> entry |> entry_blocks(field) |> BlockTree.from_saved()
       _ -> %BlockTree{}
     end
+  end
+
+  # The field name comes from the tool unchecked, so it is compared as a
+  # string: an unknown one must not become an atom.
+  defp entry_blocks(entry, field) do
+    name = "entry_#{field}"
+    entry |> Map.to_list() |> Enum.find_value([], fn {key, blocks} -> Atom.to_string(key) == name && blocks end)
   end
 
   defp check_block(%InsertBlock{} = op, schema, tree, actor, proposal) do
@@ -1705,7 +1713,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_block(proposal, %{target: target, field: field, block_uid: uid}) do
     with %{} = entry <- Map.get(proposal.targets, target),
-         {block, _parent, _index} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+         {block, _parent, _index} <- BlockTree.find_saved(entry_blocks(entry, field), uid) do
       block
     else
       _ -> nil
