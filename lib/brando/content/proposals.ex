@@ -2515,15 +2515,30 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # The slug, or the uri (pages), or else the title, as the create gives it:
-  # trimmed and case-insensitive, without slug generation.
+  # The slug, or the uri (pages), or the key under its parent key
+  # (fragments), or else the title, as the create gives it: trimmed and
+  # case-insensitive, without slug generation. A blank value is no address.
   defp created(%CreateEntry{schema: schema, fields: fields}) do
     fields = Map.new(fields, fn {key, value} -> {to_string(key), value} end)
+    address = Enum.find_value(~w(slug uri key title), &address(&1, fields))
 
-    Enum.find_value(~w(slug uri title), fn key ->
-      with address when address not in [nil, ""] <- normalized(fields[key]),
-           do: {:new, schema, normalized(fields["language"]), key, address}
-    end)
+    address && {:new, schema, normalized(fields["language"]), address}
+  end
+
+  defp address("key", fields) do
+    case present(fields["key"]) do
+      nil -> nil
+      key -> {:key, present(fields["parent_key"]), key}
+    end
+  end
+
+  defp address(field, fields), do: present(fields[field])
+
+  defp present(value) do
+    case normalized(value) do
+      "" -> nil
+      value -> value
+    end
   end
 
   defp normalized(value) when is_binary(value), do: value |> String.trim() |> String.downcase()

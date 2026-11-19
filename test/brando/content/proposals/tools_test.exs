@@ -291,46 +291,43 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert replaced == first.proposal_id
     end
 
-    test "a create with neither slug nor uri is told apart by its title", c do
-      assert {:ok, %{applicable: true} = first} =
-               prepare(
-                 mcp(c),
-                 create("Brando.Pages.Fragment", "a", %{
-                   "title" => "Footer",
-                   "key" => "a",
-                   "parent_key" => "p",
-                   "language" => "en"
-                 })
-               )
+    test "fragments are told apart by key and parent key, not by title", c do
+      fragment = fn ref, parent_key, key ->
+        create("Brando.Pages.Fragment", ref, %{
+          "title" => "Text",
+          "key" => key,
+          "parent_key" => parent_key,
+          "language" => "en"
+        })
+      end
 
-      assert {:ok, %{version: 1}} =
-               prepare(
-                 mcp(c),
-                 create("Brando.Pages.Fragment", "a", %{
-                   "title" => "Header",
-                   "key" => "b",
-                   "parent_key" => "p",
-                   "language" => "en"
-                 })
-               )
+      assert {:ok, %{applicable: true, version: 1} = first} = prepare(mcp(c), fragment.("a", "footer", "text"))
+      assert {:ok, %{version: 1} = second} = prepare(mcp(c), fragment.("a", "header", "text"))
+      refute Map.has_key?(second, :replaced)
 
-      assert {:ok, %{version: 2, replaced: replaced}} =
-               prepare(
-                 mcp(c),
-                 create("Brando.Pages.Fragment", "b", %{
-                   "title" => "footer",
-                   "key" => "c",
-                   "parent_key" => "p",
-                   "language" => "en"
-                 })
-               )
-
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), fragment.("b", "Footer", " text "))
       assert replaced == first.proposal_id
+    end
 
-      # Without a title either, it is no entry another create can be.
-      untitled = create("Brando.Pages.Fragment", "c", %{"key" => "d", "parent_key" => "p", "language" => "en"})
-      assert {:ok, %{applicable: true, version: 1}} = prepare(mcp(c), untitled)
-      assert {:ok, %{version: 1}} = prepare(mcp(c), untitled)
+    test "a blank address is no address", c do
+      assert {:ok, %{applicable: true, version: 1} = first} =
+               prepare(mcp(c), article("a", %{"slug" => " ", "title" => "One"}))
+
+      assert {:ok, %{applicable: true, version: 1} = other} =
+               prepare(mcp(c), article("a", %{"slug" => "", "title" => "Two"}))
+
+      refute Map.has_key?(other, :replaced)
+
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), article("b", %{"slug" => " ", "title" => "one"}))
+      assert replaced == first.proposal_id
+    end
+
+    test "a create with no slug, uri or key is told apart by its title", c do
+      assert {:ok, %{applicable: true, version: 1} = first} = prepare(mcp(c), article("a", %{"title" => "Spring"}))
+      assert {:ok, %{applicable: true, version: 1}} = prepare(mcp(c), article("a", %{"title" => "Autumn"}))
+
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), article("b", %{"title" => " spring"}))
+      assert replaced == first.proposal_id
     end
 
     test "another tool, or no tool name, is not the same tool", c do
