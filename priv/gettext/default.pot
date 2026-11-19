@@ -2525,6 +2525,11 @@ msgstr ""
 msgid "An embedded map"
 msgstr ""
 
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "An entry %{message}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "An entry is published at its scheduled time."

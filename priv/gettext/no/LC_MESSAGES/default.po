@@ -2527,6 +2527,11 @@ msgstr "En merknad som bare vises i redigeringsvinduet"
 msgid "An embedded map"
 msgstr "Et innebygd kart"
 
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "An entry %{message}"
+msgstr "En oppføring %{message}"
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "An entry is published at its scheduled time."

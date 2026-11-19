@@ -98,6 +98,16 @@ defmodule Brando.Tenant.SiteDeployTargetsTest do
       assert targets(site) == {[], []}
     end
 
+    test "an entry that is not text is refused, not raised on", %{site: site} do
+      assert {:error, changeset} =
+               Registry.update_site_deploy_targets(site, %{allowed_s3_targets: [nil, @s3]}, :system)
+
+      assert [allowed_s3_targets: {message, opts}] = changeset.errors
+      assert message =~ "must be text"
+      assert opts[:entry] == nil
+      assert targets(site) == {[], []}
+    end
+
     test "a list is kept to 50 entries", %{site: site} do
       entries = for n <- 1..51, do: "s3://acme-#{n}"
       assert {:error, changeset} = Registry.update_site_deploy_targets(site, %{allowed_s3_targets: entries}, :system)

@@ -383,7 +383,7 @@ defmodule Brando.Doctor.ChecksTest do
       )
 
       assert [{:warning, item, "deploy targets shared between sites", _fix}] = Checks.Configuration.deploy_targets()
-      assert item =~ "s3_targets s3://shared-bucket/ for acme and s3://shared-bucket/beta for beta"
+      assert item =~ "s3_targets s3://shared-bucket/ for acme and s3_targets s3://shared-bucket/beta for beta"
     end
 
     test "with several sites, sites' own allowed targets that reach one destination are a warning" do
@@ -414,7 +414,10 @@ defmodule Brando.Doctor.ChecksTest do
         )
 
       assert [{:warning, item, "deploy targets shared between sites", fix}] = Checks.Configuration.deploy_targets()
-      assert item =~ "s3_targets s3://shared-bucket/ for doctor-acme and s3://shared-bucket/beta for doctor-beta"
+      # Each entry says where it is set, so the fix is made in the right place
+      assert item =~
+               "s3://shared-bucket/ in doctor-acme's allowed deploy targets under Sites and s3_targets s3://shared-bucket/beta for doctor-beta"
+
       assert fix =~ "under Sites"
     end
 

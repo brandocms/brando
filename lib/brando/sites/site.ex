@@ -114,7 +114,7 @@ defmodule Brando.Sites.Site do
   defp validate_allowed_targets(changeset, field, setting) do
     case fetch_change(changeset, field) do
       {:ok, entries} ->
-        entries = (entries || []) |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == "")) |> Enum.uniq()
+        entries = (entries || []) |> Enum.map(&trim_entry/1) |> Enum.reject(&(&1 == "")) |> Enum.uniq()
         changeset = put_change(changeset, field, entries)
 
         if Enum.count(entries) > @max_allowed_targets,
@@ -126,12 +126,20 @@ defmodule Brando.Sites.Site do
     end
   end
 
+  # Ecto keeps `nil` in a list of strings: refused below, as "must be text"
+  defp trim_entry(entry) when is_binary(entry), do: String.trim(entry)
+  defp trim_entry(entry), do: entry
+
   defp allowed_targets_errors(changeset, field, setting, entries) do
     for entry <- entries, message = DeployConfig.allowed_entry_error(setting, entry), reduce: changeset do
-      changeset ->
-        add_error(changeset, field, gettext("%{entry} %{message}", entry: entry, message: message), entry: entry)
+      changeset -> add_error(changeset, field, entry_error(entry, message), entry: entry)
     end
   end
+
+  defp entry_error(entry, message) when is_binary(entry),
+    do: gettext("%{entry} %{message}", entry: entry, message: message)
+
+  defp entry_error(_entry, message), do: gettext("An entry %{message}", message: message)
 
   def statuses, do: @statuses
   def delivery_modes, do: @delivery_modes

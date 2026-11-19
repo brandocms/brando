@@ -391,6 +391,16 @@ msgstr[1] ""
 msgid "%{database}, not the development database"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} and %{other_entry}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} in %{site}'s allowed deploy targets under Sites"
+msgstr ""
+
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "%{entry}: in static_paths/0 but not in the endpoint's only:"
@@ -521,7 +531,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}"
+msgid "%{setting} %{entry} for %{site}"
 msgstr ""
 
 #: lib/brando/doctor/checks/site_frontends.ex

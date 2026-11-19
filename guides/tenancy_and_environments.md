@@ -2368,8 +2368,12 @@ not a list. The map is checked when the settings are saved and each time a
 build deploys, as the list is.
 
 The System check's Configuration line warns when, with `tenancy_mode: :multi`,
-a list entry has no `{site_key}` or two sites' entries reach the same
-destination, from config's map or from the sites' own allowed targets, and
+a list entry has no `{site_key}`, or two sites' entries reach the same
+destination: entries of config's map, a list entry with `{site_key}` as it
+reads for each site, and the sites' own allowed targets, such as one site's
+own `deploy@static.example.com:/srv/sites/` holding the directory
+`deploy@static.example.com:/srv/sites/{site_key}` gives another. The warning
+says where each entry is set. It also warns
 when a setting has an entry, key or value of a form no
 target can pass (see
 [System check](doctor.md)).

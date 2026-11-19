@@ -418,11 +418,12 @@ defmodule Brando.Sites.DeployConfigTest do
     )
 
     assert DeployConfig.overlapping_destinations() == [
-             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/"},
-              {"beta", "deploy@Static.example.com.:/srv/sites/beta"}},
-             {:rsync_targets, {"delta", "deploy@[2001:db8:0::1]:/srv/www/"}, {"gamma", "deploy@[2001:db8::1]:/srv/www"}},
-             {:s3_targets, {"alpha", "s3://bucket"}, {"beta", "s3://bucket/beta"}},
-             {:s3_targets, {"alpha", "s3://other/{site_key}-x"}, {"beta", "s3://other/alpha-x/y"}}
+             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/", :config},
+              {"beta", "deploy@Static.example.com.:/srv/sites/beta", :config}},
+             {:rsync_targets, {"delta", "deploy@[2001:db8:0::1]:/srv/www/", :config},
+              {"gamma", "deploy@[2001:db8::1]:/srv/www", :config}},
+             {:s3_targets, {"alpha", "s3://bucket", :config}, {"beta", "s3://bucket/beta", :config}},
+             {:s3_targets, {"alpha", "s3://other/{site_key}-x", :config}, {"beta", "s3://other/alpha-x/y", :config}}
            ]
   end
 
@@ -673,14 +674,45 @@ defmodule Brando.Sites.DeployConfigTest do
       %{key: nil, allowed_rsync_targets: ["deploy@static.example.com:/srv/sites/"]}
     ]
 
+    # Each entry says where it is set: config, or the site's own list
     assert DeployConfig.overlapping_destinations(sites) == [
-             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/"},
-              {"beta", "deploy@static.example.com:/srv/sites/beta"}},
-             {:s3_targets, {"beta", "s3://shared/"}, {"gamma", "s3://shared/gamma"}}
+             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/", :site},
+              {"beta", "deploy@static.example.com:/srv/sites/beta", :site}},
+             {:s3_targets, {"beta", "s3://shared/", :site}, {"gamma", "s3://shared/gamma", :config}},
+             {:s3_targets, {"beta", "s3://shared/", :site}, {"gamma", "s3://shared/gamma", :site}}
            ]
 
     # One site's own entry beside its own map entry is no overlap
     assert DeployConfig.overlapping_destinations([Enum.at(sites, 2)]) == []
+  end
+
+  # A list entry with {site_key} gives each registered site its own
+  # destination: another site's own entry may reach it
+  test "a site's own entry that reaches what a config list gives another site overlaps" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@shared.example.com:/srv/all/"],
+      s3_targets: ["s3://static-bucket/sites/{site_key}"]
+    )
+
+    acme = %{key: "acme", allowed_rsync_targets: [], allowed_s3_targets: []}
+
+    beta = %{
+      key: "beta",
+      allowed_rsync_targets: ["deploy@static.example.com:/srv/sites/"],
+      allowed_s3_targets: ["s3://static-bucket/sites/acme"]
+    }
+
+    assert DeployConfig.overlapping_destinations([acme, beta]) == [
+             {:rsync_targets, {"acme", "deploy@static.example.com:/srv/sites/{site_key}", :config},
+              {"beta", "deploy@static.example.com:/srv/sites/", :site}},
+             {:s3_targets, {"acme", "s3://static-bucket/sites/{site_key}", :config},
+              {"beta", "s3://static-bucket/sites/acme", :site}}
+           ]
+
+    # The list's own entries, one per site, stay apart
+    assert DeployConfig.overlapping_destinations([acme, %{beta | allowed_rsync_targets: [], allowed_s3_targets: []}]) ==
+             []
   end
 
   describe "with no list" do

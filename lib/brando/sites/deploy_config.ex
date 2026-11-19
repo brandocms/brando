@@ -565,24 +565,32 @@ defmodule Brando.Sites.DeployConfig do
   end
 
   @doc """
-  Pairs of entries of two sites that reach the same destination, from a
-  per-site map in config or from `sites`' own allowed targets, as
-  `{setting, {site_key, entry}, {other_site_key, other_entry}}`: the same
-  directory or prefix, or one inside the other, such as a parent of one site
-  holding another site's directory. Either site's deploy replaces what the
-  other's put there.
+  Pairs of entries of two sites that reach the same destination, as
+  `{setting, {site_key, entry, source}, {other_site_key, other_entry,
+  other_source}}`: the same directory or prefix, or one inside the other,
+  such as a parent of one site holding another site's directory. Either
+  site's deploy replaces what the other's put there.
+
+  An entry's `source` is `:config`, from a per-site map or from a list entry
+  with `{site_key}`, which gives each of `sites` its own destination, or
+  `:site`, from the site's own allowed targets. A list entry without the
+  placeholder is every site's (`shared_destinations/0`), and is left out.
   """
   @spec overlapping_destinations([Brando.Sites.Site.t() | map()]) ::
-          [{atom(), {String.t(), String.t()}, {String.t(), String.t()}}]
+          [{atom(), {String.t(), String.t(), :config | :site}, {String.t(), String.t(), :config | :site}}]
   def overlapping_destinations(sites \\ []) do
     for setting <- @settings,
         entries = setting_entries(setting, sites),
-        {key, entry} <- entries,
-        {other_key, other_entry} <- entries,
+        {key, entry, source} = first <- entries,
+        {other_key, other_entry, other_source} = second <- entries,
         key < other_key,
-        same_place?(setting, for_site(entry, key), for_site(other_entry, other_key)),
-        do: {setting, {key, entry}, {other_key, other_entry}}
+        same_place?(setting, destination(entry, key, source), destination(other_entry, other_key, other_source)),
+        do: {setting, first, second}
   end
+
+  # A site's own entries are matched as written
+  defp destination(entry, key, :config), do: for_site(entry, key)
+  defp destination(entry, _key, :site), do: entry
 
   @doc """
   The settings with a part no target can pass: anything but a list of
@@ -612,22 +620,37 @@ defmodule Brando.Sites.DeployConfig do
 
   # Each site's entries for `setting`, from the config map and its own list
   defp setting_entries(setting, sites) do
+    sites = for %{key: key} = site when is_binary(key) <- sites, do: site
     targets = setting_value(setting)
-    configured = if is_map(targets) and not is_struct(targets), do: map_entries(targets), else: []
+
+    configured =
+      cond do
+        is_list(targets) -> bound_entries(targets, sites)
+        is_map(targets) and not is_struct(targets) -> map_entries(targets)
+        true -> []
+      end
 
     own =
-      for %{key: key} = site when is_binary(key) <- sites,
-          {_key, own} = grant(site),
+      for site <- sites,
+          {key, own} = grant(site),
           entry <- own_entries(own, setting),
-          do: {key, entry}
+          do: {key, entry, :site}
 
     (configured ++ own) |> Enum.uniq() |> Enum.sort_by(&elem(&1, 0))
+  end
+
+  # A list entry with the placeholder, once for each site it names
+  defp bound_entries(targets, sites) do
+    for entry when is_binary(entry) <- targets,
+        String.contains?(entry, "{site_key}"),
+        %{key: key} <- sites,
+        do: {key, entry, :config}
   end
 
   defp map_entries(targets) do
     for {key, entries} when is_binary(key) and is_list(entries) <- Enum.sort(targets),
         entry when is_binary(entry) <- entries,
-        do: {key, entry}
+        do: {key, entry, :config}
   end
 
   # One host's or bucket's paths where either holds the other. A whole bucket,

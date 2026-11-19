@@ -751,6 +751,19 @@ defmodule Brando.SSGBuildsTest do
       assert Builds.get_build(first.id).build_log =~ "A superuser sets the site's allowed deploy targets under Sites"
     end
 
+    # One site has no Sites screen to send the operator to
+    test "with one site, a refused deploy's log points at config", context do
+      put_test_env(:tenancy_mode, :single)
+      build = with_target(context.build, "s3", "s3://static-bucket/sites/#{context.other_key}")
+
+      assert {:cancel, :invalid_deploy_target} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+
+      log = Builds.get_build(build.id).build_log
+      assert log =~ "Check rsync_targets or s3_targets in the config"
+      refute log =~ "Sites"
+    end
+
     test "with several sites and no list, nothing deploys", context do
       put_test_env(DeployConfig, [])
 

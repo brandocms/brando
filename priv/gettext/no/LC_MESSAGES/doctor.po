@@ -392,6 +392,16 @@ msgstr[1] "%{count} med manglende filer"
 msgid "%{database}, not the development database"
 msgstr "%{database}, ikke utviklingsdatabasen"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} and %{other_entry}"
+msgstr "%{entry} og %{other_entry}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} in %{site}'s allowed deploy targets under Sites"
+msgstr "%{entry} i de tillatte publiseringsmålene til %{site} under Nettsteder"
+
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "%{entry}: in static_paths/0 but not in the endpoint's only:"
@@ -522,8 +532,8 @@ msgstr "%{schema}: %{helpers}"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}"
-msgstr "%{setting} %{entry} for %{site} og %{other_entry} for %{other_site}"
+msgid "%{setting} %{entry} for %{site}"
+msgstr "%{setting} %{entry} for %{site}"
 
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format

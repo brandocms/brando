@@ -286,8 +286,9 @@ defmodule Brando.Doctor.Checks.Configuration do
   The operator's deploy target settings as findings (see `evaluate/1`). With
   several sites, a list entry without `{site_key}` grants every site, and
   entries of two sites that reach the same destination, in config's per-site
-  map or in the sites' own allowed targets, let either replace the other's
-  files. A setting with an entry, key or value of the wrong form
+  map, in a list entry with `{site_key}` as it reads for each site, or in the
+  sites' own allowed targets, let either replace the other's files; each
+  entry says where it is set. A setting with an entry, key or value of the wrong form
   refuses the targets it would have allowed.
   """
   def deploy_targets do
@@ -328,13 +329,10 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   defp overlapping_deploy_targets(pairs) do
     pairs =
-      Enum.map_join(pairs, ", ", fn {setting, {key, entry}, {other_key, other_entry}} ->
-        dgettext("doctor", "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}",
-          setting: setting,
-          entry: entry,
-          site: key,
-          other_entry: other_entry,
-          other_site: other_key
+      Enum.map_join(pairs, ", ", fn {setting, first, second} ->
+        dgettext("doctor", "%{entry} and %{other_entry}",
+          entry: deploy_entry(setting, first),
+          other_entry: deploy_entry(setting, second)
         )
       end)
 
@@ -345,6 +343,13 @@ defmodule Brando.Doctor.Checks.Configuration do
        "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
      )}
   end
+
+  # Where the entry is set, so the fix is made there
+  defp deploy_entry(setting, {key, entry, :config}),
+    do: dgettext("doctor", "%{setting} %{entry} for %{site}", setting: setting, entry: entry, site: key)
+
+  defp deploy_entry(_setting, {key, entry, :site}),
+    do: dgettext("doctor", "%{entry} in %{site}'s allowed deploy targets under Sites", entry: entry, site: key)
 
   defp unreadable_deploy_targets([]), do: nil
 
