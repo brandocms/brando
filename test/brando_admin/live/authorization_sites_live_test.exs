@@ -159,6 +159,17 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {summary |> Floki.text(sep: " ") |> String.split() |> Enum.join(" "), Floki.attribute(summary, "[title]", "title")}
   end
 
+  # The switcher's rows marked current, as {field, value}.
+  defp current_rows(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#tenant-switcher-options button[aria-current]")
+    |> Enum.map(fn button ->
+      assert Floki.attribute(button, "aria-current") == ["true"]
+      {hd(Floki.attribute(button, "name")), hd(Floki.attribute(button, "value"))}
+    end)
+  end
+
   defp title_value(view) do
     view |> render() |> Floki.parse_document!() |> Floki.find("input[name='page[title]']") |> Floki.attribute("value")
   end
@@ -196,6 +207,21 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {view, _html} = live_form(conn, path)
     assert title_value(view) == ["Alpha staging page"]
 
+    # Staging is a working environment: the summary says so, and the sheet
+    # marks staging, and in multi-site mode Alpha, as the current rows.
+    html = render(view)
+    assert has_element?(view, "#tenant-switcher summary .badge--attention", "Working")
+
+    case Tenant.mode() do
+      :multi ->
+        assert switcher_summary(html) == {"Alpha Staging Working", ["Alpha", "Staging"]}
+        assert current_rows(html) == [{"environment_key", "staging"}, {"site_key", "auth-alpha"}]
+
+      :single ->
+        assert switcher_summary(html) == {"Environment Staging Working", ["Staging"]}
+        assert current_rows(html) == [{"environment_key", "staging"}]
+    end
+
     save_title(view, "Edited only in staging")
     assert_redirect(view, 3_000)
 
@@ -217,6 +243,7 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {conn, _} = switch_to(conn, html, "site_key", "auth-beta")
     {:ok, view, html} = live(conn, "/admin/pages")
     assert switcher_summary(html) == {"Beta Production Live", ["Beta", "Production"]}
+    assert current_rows(html) == [{"environment_key", "production"}, {"site_key", "auth-beta"}]
     # The sheet's rows truncate, so each names its site in full
     assert html
            |> Floki.parse_document!()
