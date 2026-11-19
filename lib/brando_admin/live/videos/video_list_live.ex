@@ -290,8 +290,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
 
-  def handle_event("search_library", %{"query" => query}, socket) do
-    {:noreply, ProviderLibraryPanel.search(socket, query)}
+  def handle_event("search_library", params, socket) do
+    {:noreply, ProviderLibraryPanel.search(socket, params)}
   end
 
   def handle_event("more_library", _, socket), do: {:noreply, ProviderLibraryPanel.more(socket)}

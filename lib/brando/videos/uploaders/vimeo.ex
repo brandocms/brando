@@ -197,6 +197,9 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   @impl true
   def library_searchable?, do: true
 
+  # A folder (the API's project) the library lists from: `:collection` is
+  # its id, the last segment of its `uri`. Its videos are listed and searched
+  # by `GET /me/projects/{id}/videos`.
   @impl true
   def list_remote(opts) do
     page = Keyword.get(opts, :cursor) || 1
@@ -207,17 +210,62 @@ defmodule Brando.Videos.Uploaders.Vimeo do
         per_page: Keyword.get(opts, :per_page, 24),
         sort: "date",
         direction: "desc",
-        fields: @video_fields <> ",created_time"
+        fields: @video_fields <> ",created_time,parent_folder.uri,parent_folder.name"
       ]
       |> maybe_put_query(Keyword.get(opts, :query))
 
-    case api_request(:get, "/me/videos", params: params) do
+    with {:ok, path} <- library_path(Keyword.get(opts, :collection)) do
+      case api_request(:get, path, params: params) do
+        {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
+          {:ok,
+           %{
+             items: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
+             next: if(get_in(body, ["paging", "next"]), do: page + 1)
+           }}
+
+        {:ok, _response} ->
+          {:error, :invalid_response}
+
+        error ->
+          error
+      end
+    end
+  end
+
+  defp library_path(folder_id) when folder_id in [nil, ""], do: {:ok, "/me/videos"}
+
+  defp library_path(folder_id) when is_binary(folder_id) do
+    if valid_video_id?(folder_id), do: {:ok, "/me/projects/#{folder_id}/videos"}, else: {:error, :not_found}
+  end
+
+  defp library_path(_folder_id), do: {:error, :not_found}
+
+  # Read until Vimeo has no next page, up to this many pages of 100.
+  @max_folder_pages 10
+
+  @doc """
+  The account's folders (the API's projects), by name, with the number of
+  videos each holds.
+  """
+  @impl true
+  def list_collections(_opts), do: folder_pages(1, [])
+
+  defp folder_pages(page, acc) do
+    params = [
+      page: page,
+      per_page: 100,
+      sort: "name",
+      direction: "asc",
+      fields: "uri,name,metadata.connections.videos.total"
+    ]
+
+    case api_request(:get, "/me/projects", params: params) do
       {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
-        {:ok,
-         %{
-           items: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
-           next: if(get_in(body, ["paging", "next"]), do: page + 1)
-         }}
+        acc = acc ++ Enum.flat_map(data, &folder/1)
+
+        if get_in(body, ["paging", "next"]) && page < @max_folder_pages,
+          do: folder_pages(page + 1, acc),
+          else: {:ok, acc}
 
       {:ok, _response} ->
         {:error, :invalid_response}
@@ -226,6 +274,30 @@ defmodule Brando.Videos.Uploaders.Vimeo do
         error
     end
   end
+
+  defp folder(%{"uri" => uri} = folder) do
+    case folder_id_from_uri(uri) do
+      nil ->
+        []
+
+      id ->
+        count = get_in(folder, ["metadata", "connections", "videos", "total"])
+        name = folder["name"]
+        [%{id: id, name: if(is_binary(name) and name != "", do: name, else: id), count: if(is_integer(count), do: count)}]
+    end
+  end
+
+  defp folder(_folder), do: []
+
+  # "/users/1/projects/2" — or "/me/projects/2" — is folder "2".
+  defp folder_id_from_uri(uri) when is_binary(uri) do
+    case uri |> String.split("/", trim: true) |> Enum.take(-2) do
+      ["projects", id] -> if valid_video_id?(id), do: id
+      _ -> nil
+    end
+  end
+
+  defp folder_id_from_uri(_uri), do: nil
 
   @impl true
   def import_remote(video_id, user, opts) do
@@ -270,7 +342,9 @@ defmodule Brando.Videos.Uploaders.Vimeo do
           height: positive(payload["height"]),
           status: status,
           created_at: payload["created_time"],
-          playable?: status == :ready
+          playable?: status == :ready,
+          collection_id: folder_id_from_uri(get_in(payload, ["parent_folder", "uri"])),
+          collection_name: get_in(payload, ["parent_folder", "name"])
         }
     end
   end

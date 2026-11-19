@@ -361,6 +361,9 @@
   .video-picker-library-close [data-icon] { width: 16px; height: 16px; }
   .video-picker-library-search { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; margin-top: 16px; }
   .video-picker-library-search input.text { min-width: 0; height: 32px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-md)/18px var(--brando-font-sans); padding: 6px 10px; }
+  /* The collection dropdown, before the search, at the search field's height. */
+  .video-picker-library-search.has-collections { grid-template-columns: minmax(120px,200px) minmax(0,1fr) auto; }
+  .video-picker-library-search select.admin-select { height: 32px; padding-left: 10px; }
   .video-picker-library-error { margin: 12px 0 0; color: var(--brando-error-ink); font: var(--brando-text-md)/18px var(--brando-font-sans); }
   .video-picker-library-items { display: grid; margin: 16px 0 0; padding: 0; list-style: none; border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); max-height: 420px; overflow-y: auto; }
   .video-picker-library-item { display: grid; grid-template-columns: 64px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--brando-line-soft); }
@@ -381,6 +384,8 @@
   :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-item { grid-template-columns: 52px minmax(0,1fr); }
   :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-thumb { width: 52px; height: 30px; }
   :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-action { grid-column: 2; }
+  :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-search.has-collections { grid-template-columns: minmax(0,1fr) auto; }
+  :is(.drawer.admin-workspace.media-workspace-drawer, .video-library-add) .video-picker-library-search.has-collections select.admin-select { grid-column: 1 / -1; }
 }
 
 /* The Videos library's "Add from URL" and "Add from <provider>" dialogs: the

@@ -2363,6 +2363,11 @@ msgstr "Alle statuser"
 msgid "All types (%{count})"
 msgstr "Alle typer (%{count})"
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "All videos"
+msgstr "Alle videoer"
+
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -4523,6 +4528,11 @@ msgstr "Kolleger med tilgang til admin kan se gjennom det i ett døgn:"
 #, elixir-autogen, elixir-format
 msgid "Collecting content..."
 msgstr "Samler innhold..."
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Collection"
+msgstr "Samling"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -8179,6 +8189,7 @@ msgstr "Rett dem i full redigering"
 msgid "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
 msgstr "Florist registrerer hvert bygg her. Å aktivere et bygg virker umiddelbart og deployer ikke applikasjonen."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -12168,10 +12179,20 @@ msgstr "Ingen videoer mangler detaljer"
 msgid "No videos in this %{provider} account."
 msgstr "Ingen videoer i denne %{provider}-kontoen."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this collection."
+msgstr "Ingen videoer i denne samlingen."
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No videos in this folder"
 msgstr "Ingen videoer i denne mappen"
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this folder."
+msgstr "Ingen videoer i denne mappen."
 
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format

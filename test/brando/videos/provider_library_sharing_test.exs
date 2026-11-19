@@ -50,6 +50,18 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
         {"GET", "/videos/" <> id} ->
           Req.Test.json(conn, vimeo_video(id))
 
+        {"GET", "/me/projects"} ->
+          Req.Test.json(conn, %{
+            "paging" => %{"next" => nil},
+            "data" => [
+              %{
+                "uri" => "/users/1/projects/7",
+                "name" => "News",
+                "metadata" => %{"connections" => %{"videos" => %{"total" => 4}}}
+              }
+            ]
+          })
+
         {"DELETE", "/videos/" <> _id} ->
           send_resp(conn, 204, "")
       end
@@ -92,11 +104,22 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     test "outside any site, nothing is offered", %{user: user} do
       assert Tenant.current_prefix() == nil
       assert ProviderLibrary.providers() == []
+      assert {:error, {:unknown_strategy, :vimeo}} = ProviderLibrary.collections(:vimeo)
       assert {:error, {:unknown_strategy, :vimeo}} = ProviderLibrary.import(:vimeo, "4", user)
     end
   end
 
   describe "a site in a group" do
+    test "gets the collections' names, without counts that take in other sites' videos", %{sites: sites} do
+      as_site(sites.beta, fn ->
+        assert ProviderLibrary.collections(:vimeo) == {:ok, [%{id: "7", name: "News", count: nil}]}
+      end)
+
+      as_site(sites.alpha, fn ->
+        assert {:error, {:unknown_strategy, :vimeo}} = ProviderLibrary.collections(:vimeo)
+      end)
+    end
+
     test "lists what its group holds and what no site holds", %{sites: sites} do
       as_site(sites.beta, fn ->
         assert [%{strategy: :vimeo}] = ProviderLibrary.providers()

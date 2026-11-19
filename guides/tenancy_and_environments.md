@@ -1579,7 +1579,9 @@ superuser sets for each site on the Sites screen:
 - **A site in a group** lists, and may add, the videos held by the sites with
   the same key, and the videos no site holds, such as those uploaded in the
   provider's own dashboard. A video only sites outside the group hold is not
-  listed, and adding it by its id is refused.
+  listed, and adding it by its id is refused. Its collection dropdown names
+  every Bunny collection or Vimeo folder of the account, without the number
+  of videos in each, which would count the videos it may not see.
 
 A site holds a video while any of its current environments has a record of
 it, deleted or not. A Mux upload holds its video from the start, before Mux

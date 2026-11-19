@@ -422,7 +422,13 @@ defmodule Brando.Videos.Uploaders.Bunny do
     page = Keyword.get(opts, :cursor) || 1
 
     query =
-      [page: page, itemsPerPage: Keyword.get(opts, :per_page, 24), orderBy: "date", search: Keyword.get(opts, :query)]
+      [
+        page: page,
+        itemsPerPage: Keyword.get(opts, :per_page, 24),
+        orderBy: "date",
+        search: Keyword.get(opts, :query),
+        collection: Keyword.get(opts, :collection)
+      ]
       |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
       |> URI.encode_query()
 
@@ -441,6 +447,45 @@ defmodule Brando.Videos.Uploaders.Bunny do
         error
     end
   end
+
+  # Read until Bunny says there are no more, up to this many pages of 100.
+  @max_collection_pages 10
+
+  @doc """
+  The library's collections, by name. Bunny's `search` and `collection`
+  combine, so a search runs within the collection listed.
+  """
+  @impl true
+  def list_collections(_opts) do
+    library_id = get_config(:library_id)
+    collection_pages(library_id, 1, [])
+  end
+
+  defp collection_pages(library_id, page, acc) do
+    query = URI.encode_query(page: page, itemsPerPage: 100, orderBy: "date", includeThumbnails: false)
+
+    case api_request(:get, "/library/#{library_id}/collections?" <> query) do
+      {:ok, %{"items" => items} = body} when is_list(items) ->
+        acc = acc ++ Enum.flat_map(items, &collection/1)
+
+        if more_pages?(body) and page < @max_collection_pages,
+          do: collection_pages(library_id, page + 1, acc),
+          else: {:ok, Enum.sort_by(acc, &String.downcase(&1.name))}
+
+      {:ok, _body} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  defp collection(%{"guid" => guid, "name" => name} = collection) when is_binary(guid) and guid != "" do
+    count = collection["videoCount"]
+    [%{id: guid, name: if(is_binary(name) and name != "", do: name, else: guid), count: if(is_integer(count), do: count)}]
+  end
+
+  defp collection(_collection), do: []
 
   @impl true
   def import_remote(video_guid, user, opts) do
@@ -505,7 +550,8 @@ defmodule Brando.Videos.Uploaders.Bunny do
       height: bunny_video["height"],
       status: status,
       created_at: bunny_video["dateUploaded"],
-      playable?: status == :ready
+      playable?: status == :ready,
+      collection_id: if(bunny_video["collectionId"] not in [nil, ""], do: bunny_video["collectionId"])
     }
   end
 

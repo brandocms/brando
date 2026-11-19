@@ -479,10 +479,17 @@ configured provider gets an "Add from …" button next to "Add from URL"; it
 lists the account's videos newest first, with search where the provider's API
 has it (Bunny, Cloudflare and Vimeo; Mux has none).
 
+Bunny Stream's collections and Vimeo's folders can be browsed one at a time:
+a dropdown next to the search, on "All videos" to start with, lists them with
+the number of videos each holds. The search runs within the one chosen. Listing
+them all, each video shows the name of the collection or folder it is in. Mux
+and Cloudflare Stream have no such grouping, so their library is one list.
+
 With several sites (`tenancy_mode: :multi`), a site shows the button only when
 an installation superuser has put it in a provider library group, and then
 lists the videos the sites of its group hold and those no site holds. Videos
-other sites upload are not listed otherwise. See
+other sites upload are not listed otherwise. The collection dropdown leaves out
+the counts there, as they take in every site's videos. See
 [Video provider libraries](tenancy_and_environments.md#video-provider-libraries).
 
 - A video that is still processing or has failed is listed but cannot be added.
@@ -510,15 +517,20 @@ The same operations are available in code through
 
 ```elixir
 Brando.Videos.ProviderLibrary.providers()
-# => [%{strategy: :vimeo, label: "Vimeo", search?: true}]
+# => [%{strategy: :vimeo, label: "Vimeo", search?: true, collections?: true}]
 
 {:ok, %{items: items, next: cursor}} = Brando.Videos.ProviderLibrary.list(:vimeo, query: "harbour")
+
+{:ok, [%{id: "12345", name: "Client A", count: 6}]} = Brando.Videos.ProviderLibrary.collections(:vimeo)
+{:ok, %{items: items, next: cursor}} = Brando.Videos.ProviderLibrary.list(:vimeo, collection: "12345")
 {:ok, video} = Brando.Videos.ProviderLibrary.import(:vimeo, "76979871", user, config_target: "default")
 ```
 
 A provider joins by implementing the optional `list_remote/1`,
 `import_remote/3`, `library_meta_path/0` and `library_searchable?/0`
-callbacks of `Brando.Videos.Uploader`.
+callbacks of `Brando.Videos.Uploader`. One that groups its videos also
+implements `list_collections/1`, takes `:collection` in `list_remote/1`, and
+gives each item its `:collection_id`.
 
 ### Remote Video Deletion
 

@@ -2361,6 +2361,11 @@ msgstr ""
 msgid "All types (%{count})"
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "All videos"
+msgstr ""
+
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -4520,6 +4525,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Collecting content..."
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Collection"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -8177,6 +8187,7 @@ msgstr ""
 msgid "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -12166,9 +12177,19 @@ msgstr ""
 msgid "No videos in this %{provider} account."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this collection."
+msgstr ""
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No videos in this folder"
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this folder."
 msgstr ""
 
 #: lib/brando_admin/live/videos/video_list_live.ex
