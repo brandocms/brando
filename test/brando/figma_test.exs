@@ -140,6 +140,140 @@ defmodule Brando.FigmaTest do
 
   defp chrome(node), do: node |> Frame.outline() |> Map.fetch!(:sections) |> Enum.map(&{&1.name, &1[:chrome]})
 
+  # A loose rectangle with these fills, as the frame's only layer
+  defp fills_node(fills) do
+    frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 900}, [
+      box_node(%{"id" => "2:1", "name" => "Photo", "type" => "RECTANGLE", "fills" => fills}, {0, 0, 1344, 741})
+    ])
+  end
+
+  defp fill(ref, attrs \\ %{}), do: Map.merge(%{"type" => "IMAGE", "imageRef" => ref, "scaleMode" => "FILL"}, attrs)
+
+  defp sections(node), do: Frame.outline(node).sections
+
+  describe "stacked image fills" do
+    test "an opaque top fill over one image is one section, with the fill under it hidden" do
+      node = fills_node([fill("old"), fill("new", %{"blendMode" => "NORMAL", "opacity" => 1})])
+
+      assert [%{kind: "image", node_id: "2:1", images: [image]} = section] = sections(node)
+
+      assert image == %{
+               node_id: "2:1",
+               name: "Photo",
+               scale_mode: "fill",
+               x: 0,
+               y: 0,
+               width: 1344,
+               height: 741,
+               hidden_fills: [%{image_ref: "old"}]
+             }
+
+      refute Map.has_key?(section, :note)
+
+      assert [%{node_id: "2:1", image_ref: "new", section: 0, hidden_fills: [%{image_ref: "old"}]}] = Frame.images(node)
+    end
+
+    test "three opaque fills: the top one shows, cropped fills cover too" do
+      node = fills_node([fill("a"), fill("b", %{"scaleMode" => "FIT"}), fill("c", %{"scaleMode" => "STRETCH"})])
+
+      assert [%{images: [%{scale_mode: "crop", hidden_fills: [%{image_ref: "a"}, %{image_ref: "b"}]}]}] = sections(node)
+      assert [%{image_ref: "c"}] = Frame.images(node)
+    end
+
+    test "a translucent, blended or fitted top fill shows the images under it, down to one that covers, with a note" do
+      node =
+        fills_node([
+          fill("under"),
+          fill("base"),
+          fill("tiled", %{"scaleMode" => "TILE"}),
+          fill("soft", %{"opacity" => 0.5}),
+          fill("mixed", %{"blendMode" => "MULTIPLY"})
+        ])
+
+      assert [%{images: images, note: note}] = sections(node)
+      assert Enum.map(images, & &1.scale_mode) == ["fill", "tile", "fill", "fill"]
+      refute Enum.any?(images, &Map.has_key?(&1, :hidden_fills))
+      assert note =~ ~s[Layer "Photo" (2:1) shows 4 images]
+
+      assert ["base", "tiled", "soft", "mixed"] = Enum.map(Frame.images(node), & &1.image_ref)
+    end
+
+    test "a top fill that is not visible is left out: the one under it shows" do
+      node = fills_node([fill("a"), fill("b"), fill("c", %{"visible" => false})])
+
+      assert [%{images: [%{hidden_fills: [%{image_ref: "a"}]}]}] = sections(node)
+      assert [%{image_ref: "b", section: 0}] = Frame.images(node)
+    end
+
+    test "solid fills do not count: an image under a solid still shows" do
+      node = fills_node([fill("a"), %{"type" => "SOLID"}])
+      assert [%{image_ref: "a"}] = Frame.images(node)
+    end
+
+    test "inside an instance, a stacked layer is one image of its section" do
+      node =
+        frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 900}, [
+          %{
+            "id" => "3:1",
+            "name" => "Card",
+            "type" => "INSTANCE",
+            "children" => [
+              %{"id" => "3:2", "name" => "One", "type" => "RECTANGLE", "fills" => [fill("a"), fill("b")]},
+              %{"id" => "3:3", "name" => "Two", "type" => "RECTANGLE", "fills" => [fill("c")]}
+            ]
+          }
+        ])
+
+      assert [%{images: [%{node_id: "3:2"}, %{node_id: "3:3"}]}] = sections(node)
+    end
+  end
+
+  describe "an image's crop and rotation" do
+    defp image(attrs), do: [fill("r", attrs)] |> fills_node() |> Frame.images() |> hd()
+
+    test "a crop's imageTransform gives the part of the image shown, as fractions" do
+      # The issue's example: full width, the band from 34.5% to 71% of a
+      # portrait photo's height
+      image = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[1, 0, 0], [0, 0.3635, 0.3453]]})
+
+      assert image.scale_mode == "crop"
+      assert image.crop == %{x: 0.0, y: 0.3453, width: 1.0, height: 0.3635}
+      refute Map.has_key?(image, :rotation)
+    end
+
+    test "a crop of the whole image has none" do
+      image = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[1, 0, 0], [0, 1, 0]]})
+      assert image.scale_mode == "crop"
+      refute Map.has_key?(image, :crop)
+    end
+
+    test "a rotated crop: its turn from the transform, the crop in the image as turned" do
+      # A quarter turn right: the layer's top left shows the stored image's
+      # bottom left. The layer shows the stored image's left half.
+      image = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[0, 0.5, 0], [-1, 0, 1]]})
+
+      assert image.rotation == 90
+      # The stored image's left half is the turned image's top half
+      assert image.crop == %{x: 0.0, y: 0.0, width: 1.0, height: 0.5}
+
+      assert %{rotation: 180} = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[-1, 0, 1], [0, -1, 1]]})
+      assert %{rotation: 270} = image(%{"scaleMode" => "STRETCH", "imageTransform" => [[0, -1, 1], [1, 0, 0]]})
+    end
+
+    test "FILL, FIT and TILE turn by the paint's rotation, counter-clockwise as Figma's layers do" do
+      assert %{rotation: 270} = image(%{"rotation" => 90})
+      assert %{rotation: 180} = image(%{"rotation" => 180})
+      assert %{rotation: 90} = image(%{"rotation" => -90})
+      assert %{rotation: 90, scale_mode: "fit"} = image(%{"rotation" => 270, "scaleMode" => "FIT"})
+      refute Map.has_key?(image(%{"rotation" => 360}), :rotation)
+      refute Map.has_key?(image(%{"rotation" => 0}), :rotation)
+    end
+
+    test "another angle is reported as it is" do
+      assert %{rotation: 12.5} = image(%{"rotation" => -12.5})
+    end
+  end
+
   describe "Frame.outline/1" do
     test "sections in reading order, with their components, texts, images and videos" do
       outline = Frame.outline(frame_node())
@@ -162,7 +296,7 @@ defmodule Brando.FigmaTest do
                width: 1440,
                height: 900,
                texts: [%{node_id: "1:12", name: "Caption", text: "Second in the layout", x: 0, y: 0}],
-               images: [%{node_id: "1:11", name: "Photo", x: 0, y: 500, width: 1440, height: 810}],
+               images: [%{node_id: "1:11", name: "Photo", scale_mode: "fill", x: 0, y: 500, width: 1440, height: 810}],
                videos: [%{node_id: "1:13", name: "Film"}]
              }
 
