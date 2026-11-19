@@ -1,0 +1,1 @@
+- A proposed new entry left without a `language` now gets the site's default language in its preview, its review and when applied, so its page preview no longer fails on assigns that filter by language. `describe_content_type` gives the default, and `Brando.LivePreview` passes the default language to assign functions when an entry has none.

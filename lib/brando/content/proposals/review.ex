@@ -111,6 +111,7 @@ defmodule Brando.Content.Proposals.Review do
 
   defp entry({:new, ref} = target, schema, proposal) do
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
+    fields = Brando.Content.Proposals.new_entry_fields(schema, fields)
 
     changes = [%{type: :create, fields: fields |> order_fields() |> Enum.map(fn {k, v} -> field_view(schema, k, v) end)}]
     changes = changes ++ block_changes(target, nil, proposal)

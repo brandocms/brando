@@ -52,6 +52,8 @@ defmodule Brando.Content.Proposals.ToolsTest do
     names = Enum.map(fields, & &1.name)
     assert "title" in names and "uri" in names
     assert %{type: "one of published, draft, disabled, pending"} = Enum.find(fields, &(&1.name == "status"))
+    # A new entry left without a language gets the site's default.
+    assert %{default: "en"} = Enum.find(fields, &(&1.name == "language"))
 
     # Entries without block fields are listed too, but not palettes, which a
     # proposal may pick and not change.

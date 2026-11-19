@@ -271,6 +271,20 @@ defmodule BrandoIntegrationWeb.LivePreview do
     site_assigns(true)
   end
 
+  # Fragments of the page's language, as the target `mix brando.install`
+  # writes: `Brando.Pages.get_fragments/1` raises for a `nil` language
+  preview_target Brando.Pages.Page do
+    name :partials
+    label "Partials"
+    template {BrandoIntegrationWeb.PageHTML, "blocks"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+
+    assign :partials, fn _entry, language ->
+      {:ok, partials} = Brando.Pages.get_fragments(%{filter: %{parent_key: "partials", language: language}})
+      partials
+    end
+  end
+
   # A schema without block fields, whose layout reads the title
   preview_target Brando.MetaDrawerTest.ActionsArticle do
     template {BrandoIntegrationWeb.ArticleHTML, "titled"}
