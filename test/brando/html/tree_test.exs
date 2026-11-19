@@ -50,6 +50,111 @@ defmodule Brando.HTML.TreeTest do
              ]
     end
 
+    test "a noscript in an attribute value is the value's text" do
+      for html <- [
+            ~s(<p data-tip="Wrap fallbacks in <noscript> tags">Tip</p><h2>Keep</h2><noscript><img src=p></noscript><p>after</p>),
+            ~s(<img alt="<noscript>x</noscript>"><p>a</p>),
+            ~s(<p title='<noscript>'>a</p><noscript>b</noscript>)
+          ] do
+        assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
+      end
+
+      assert [{"p", _, ["Tip"]}, {"h2", [], ["Keep"]}, {"noscript", [], [{"img", _, []}]}, {"p", [], ["after"]}] =
+               Tree.parse_fragment(
+                 ~s(<p data-tip="Wrap fallbacks in <noscript> tags">Tip</p><h2>Keep</h2><noscript><img src=p></noscript><p>after</p>)
+               )
+    end
+
+    test "a quote opens an attribute value only after `=`" do
+      html = ~s(<noscript title=it's><p>x</noscript><p>Don't stop</p><noscript>y</noscript>)
+
+      assert Tree.parse_fragment(html) == [
+               {"noscript", [{"title", "it's"}], [{"p", [], ["x"]}]},
+               {"p", [], ["Don't stop"]},
+               {"noscript", [], ["y"]}
+             ]
+
+      assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
+    end
+
+    test "noscript tags in any case, with junk in the end tag" do
+      for html <- [~s(<NOSCRIPT CLASS=x><p>a</NoScript ><p>b</p>), ~s(<noscript>a</noscript foo><p>b</p>)] do
+        assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
+      end
+
+      assert Tree.parse_fragment(~s(<NOSCRIPT CLASS=x><p>a</NoScript ><p>b</p>)) ==
+               [{"noscript", [{"class", "x"}], [{"p", [], ["a"]}]}, {"p", [], ["b"]}]
+    end
+
+    test "an unclosed noscript runs to the end" do
+      html = ~s(<noscript>open<p>x)
+      assert Tree.parse_fragment(html) == [{"noscript", [], ["open", {"p", [], ["x"]}]}]
+      assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
+    end
+
+    # Floki ends the outer noscript at the second end tag; a browser ends
+    # it at the first, and the rest is text after it.
+    test "a nested noscript ends the outer one at its end tag" do
+      assert Tree.parse_fragment(~s(<noscript><noscript>a</noscript>b</noscript><p>c</p>)) ==
+               [{"noscript", [], [{"noscript", [], ["a"]}]}, "b", {"p", [], ["c"]}]
+    end
+
+    # An unclosed textarea, comment or script, and plaintext, run to the end
+    # of the input; Floki ends them with a `</floki>` of its own.
+    test "unclosed text elements and comments keep a noscript in them as text" do
+      assert Tree.parse_fragment(~s(<textarea><noscript>x</noscript>)) ==
+               [{"textarea", [], ["<noscript>x</noscript>"]}]
+
+      assert Tree.parse_fragment(~s(<!-- <noscript>x</noscript>)) == [comment: " <noscript>x</noscript>"]
+      assert Tree.parse_fragment(~s(<script><noscript>x</noscript>)) == [{"script", [], ["<noscript>x</noscript>"]}]
+
+      assert Tree.parse_fragment(~s(<plaintext><noscript>x</noscript>)) ==
+               [{"plaintext", [], ["<noscript>x</noscript>"]}]
+    end
+
+    test "a bogus or abrupt comment ends at its own end" do
+      assert Tree.parse_fragment(~s(<!x<noscript>y</noscript>z)) == [{:comment, "x<noscript"}, "yz"]
+      assert Tree.parse_fragment(~s(<?pi <noscript>?>a)) == [{:comment, "?pi <noscript"}, "?>a"]
+
+      for html <- [~s(<!--><noscript>a</noscript>), ~s(<!---><noscript>a</noscript>)] do
+        assert Tree.parse_fragment(html) == [{:comment, ""}, {"noscript", [], ["a"]}]
+      end
+    end
+
+    # A script in its escaped state (`<!--<script>`) is not ended by `</script>`.
+    test "a double escaped script keeps a noscript in it as text" do
+      assert Tree.parse_fragment(~s(<script><!--<script></script><noscript>a</noscript>--></script><p>c</p>)) ==
+               [{"script", [], ["<!--<script></script><noscript>a</noscript>-->"]}, {"p", [], ["c"]}]
+    end
+
+    test "a title in svg is not a text element" do
+      assert Tree.parse_fragment(~s(<svg><title><noscript>a</noscript></title></svg><p>b</p><noscript><p>c</noscript>)) ==
+               [
+                 {"svg", [], [{"title", [], [{"noscript", [], ["a"]}]}]},
+                 {"p", [], ["b"]},
+                 {"noscript", [], [{"p", [], ["c"]}]}
+               ]
+    end
+
+    test "a template in the input is never taken for a noscript" do
+      html =
+        ~s(<template data-brando-noscript="0"><p>mine</p></template><template data-brando-noscript="0"></template><noscript>n</noscript>)
+
+      assert Tree.parse_fragment(html) == [
+               {"template", [{"data-brando-noscript", "0"}], [{"p", [], ["mine"]}]},
+               {"template", [{"data-brando-noscript", "0"}], []},
+               {"noscript", [], ["n"]}
+             ]
+
+      assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
+    end
+
+    test "finding noscripts is linear in the input" do
+      html = "<noscript>a</noscript>" <> String.duplicate("<title>a ", 8000)
+      {microseconds, [{"noscript", [], ["a"]}, {"title", [], [_]}]} = :timer.tc(Tree, :parse_fragment, [html])
+      assert microseconds < 100_000
+    end
+
     test "takes iodata" do
       assert Tree.parse_fragment(["<p>", "a", "</p>"]) == [{"p", [], ["a"]}]
     end
