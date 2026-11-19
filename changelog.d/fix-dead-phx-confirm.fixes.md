@@ -1,0 +1,2 @@
+- Deleting, pruning, restoring, deploying, rolling back and switching in the environment, frontend asset, publishing and shared library screens, and deleting an image, a video, a module reference or a variable, ask for confirmation again; the buttons acted on the first click.
+- Cancelling a confirmation asked from a menu, such as Delete in an image or video picker row, leaves the menu open with focus on the item; the click closed the menu and dropped keyboard focus to the page behind the picker.

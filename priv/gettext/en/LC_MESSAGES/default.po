@@ -1814,12 +1814,12 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Activate %{name} for %{environment} now? Its requests switch immediately."
+msgid "Activate %{name} for %{environment} now?"
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Activate %{name} now? Frontend requests will switch immediately."
+msgid "Activate %{name} now?"
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
@@ -3702,6 +3702,11 @@ msgstr ""
 #: lib/brando_admin/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel operation"
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
@@ -6029,7 +6034,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone."
+msgid "Delete %{name}?"
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -6043,6 +6048,11 @@ msgstr[1] ""
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
 msgid "Delete %{singular}?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete environment"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/form_fields.ex
@@ -6068,6 +6078,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Delete option"
+msgstr ""
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Delete reference"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
@@ -6122,7 +6137,7 @@ msgstr ""
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete this shared entry? This is blocked while any site uses it."
+msgid "Delete this shared entry?"
 msgstr ""
 
 #: lib/brando_admin/live/forms/submissions_live.ex
@@ -6141,6 +6156,7 @@ msgid "Delete this webhook?"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/vars.ex
+#: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Delete variable"
 msgstr ""
@@ -7675,6 +7691,11 @@ msgstr ""
 msgid "Environments"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Environments without a build of their own switch to the release's assets immediately."
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/structured_data.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -8498,6 +8519,11 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Frontend editing is switched off for this site."
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Frontend requests will switch immediately."
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -9627,6 +9653,11 @@ msgstr ""
 msgid "It cannot"
 msgstr ""
 
+#: lib/brando_admin/live/content/shared_library_live.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot be deleted while any site uses it."
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "It cannot be saved as it is: %{errors}"
@@ -9661,6 +9692,11 @@ msgstr[1] ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "It is kept, but not shown on the page."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "It is restored as a new environment that is not live."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -9736,6 +9772,11 @@ msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its complete PostgreSQL schema, form submissions and drafts are deleted with it. This cannot be undone."
+msgstr ""
+
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "Its fragments"
@@ -9744,6 +9785,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Its own"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its requests switch immediately."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -9826,6 +9872,11 @@ msgstr ""
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Keep my version"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep operation"
 msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
@@ -15502,6 +15553,11 @@ msgstr ""
 msgid "Requests for URLs that do not exist, over the last %{days} days. Add a redirect above when a page has moved."
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requests switch immediately."
+msgstr ""
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Require two-factor authentication"
@@ -15680,6 +15736,11 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restore %{archive}?"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Restore compatible content"
@@ -15708,11 +15769,6 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Restore the newest archive as a new non-live environment?"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Restore this archive as a new, non-live environment?"
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -17197,7 +17253,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Serve the site's build on %{environment} again? Requests switch immediately."
+msgid "Serve the site's build on %{environment} again?"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -18098,7 +18154,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately."
+msgid "Stop using %{name} as the site's build?"
 msgstr ""
 
 #: lib/brando_admin/components/layouts/root.html.heex
