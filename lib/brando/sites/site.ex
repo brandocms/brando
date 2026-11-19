@@ -117,24 +117,19 @@ defmodule Brando.Sites.Site do
         entries = (entries || []) |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == "")) |> Enum.uniq()
         changeset = put_change(changeset, field, entries)
 
-        errors =
-          for entry <- entries, message = DeployConfig.allowed_entry_error(setting, entry), do: {entry, message}
-
-        cond do
-          length(entries) > @max_allowed_targets ->
-            add_error(changeset, field, gettext("must have at most %{count} entries", count: @max_allowed_targets))
-
-          errors != [] ->
-            Enum.reduce(errors, changeset, fn {entry, message}, changeset ->
-              add_error(changeset, field, gettext("%{entry} %{message}", entry: entry, message: message), entry: entry)
-            end)
-
-          true ->
-            changeset
-        end
+        if Enum.count(entries) > @max_allowed_targets,
+          do: add_error(changeset, field, gettext("must have at most %{count} entries", count: @max_allowed_targets)),
+          else: allowed_targets_errors(changeset, field, setting, entries)
 
       :error ->
         changeset
+    end
+  end
+
+  defp allowed_targets_errors(changeset, field, setting, entries) do
+    for entry <- entries, message = DeployConfig.allowed_entry_error(setting, entry), reduce: changeset do
+      changeset ->
+        add_error(changeset, field, gettext("%{entry} %{message}", entry: entry, message: message), entry: entry)
     end
   end
 
