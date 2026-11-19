@@ -223,6 +223,33 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert c |> under_review() |> Enum.map(& &1.version) |> Enum.sort() == [1, 2]
     end
 
+    test "an older proposal about the same entry is replaced past a newer one about another", c do
+      assert {:ok, %{version: 1} = first} = prepare(mcp(c), [heading_op(c, c.identity, "One")])
+      assert {:ok, %{version: 1} = other} = prepare(mcp(c), [heading_op(c, c.naming, "Two")])
+
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), [heading_op(c, c.identity, "Three")])
+      assert replaced == first.proposal_id
+      assert {:ok, %{status: "pending"}} = Proposals.get(other.proposal_id, c.user)
+    end
+
+    test "an expired proposal is not replaced", c do
+      broken = put_in(heading_op(c, c.identity, "Lobby"), ["values", "no_such_field"], "x")
+      assert {:ok, %{version: 1} = first} = prepare(mcp(c), [broken])
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(r in Proposals.Record, where: r.id == ^first.proposal_id),
+        set: [expires_at: DateTime.add(DateTime.utc_now(), -60, :second)]
+      )
+
+      assert {:ok, %{version: 1} = second} = prepare(mcp(c), [heading_op(c, c.identity, "Lobby")])
+      refute Map.has_key?(second, :replaced)
+
+      assert {:error, message} =
+               prepare(mcp(c), [heading_op(c, c.identity, "x")], %{"replaces" => first.proposal_id})
+
+      assert message =~ "no longer under review"
+    end
+
     test "a created entry with the same content type and ref is the same entry", c do
       create = fn title ->
         [
@@ -292,6 +319,8 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert message =~ "proposal_id"
     end
 
+    # The sandbox shares one connection, so the calls run one after another
+    # here: this checks the outcome, not the advisory lock in `replace!`.
     test "concurrent calls from one tool leave one proposal under review", c do
       results =
         1..4

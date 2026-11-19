@@ -2274,26 +2274,25 @@ defmodule Brando.Content.Proposals do
 
     previous =
       case replaces do
-        :latest -> actor |> latest_from_client(client) |> replaced_by(proposal)
+        :latest -> actor |> under_review_from_client(client) |> Enum.find(&replaced_by?(&1, proposal))
         id -> replaceable!(id, actor, client)
       end
 
     previous && previous |> Changeset.change(status: "superseded") |> Repo.update!()
   end
 
-  # The latest proposal is replaced when it has problems or shares an entry.
-  defp replaced_by(nil, _proposal), do: nil
+  # The newest proposal that has problems or shares an entry is replaced. An
+  # older one about the same entry counts too, when a proposal about another
+  # entry came in between.
+  defp replaced_by?(previous, proposal), do: previous.problems != [] or overlaps?(previous, proposal)
 
-  defp replaced_by(previous, proposal) do
-    if previous.problems != [] or overlaps?(previous, proposal), do: previous
-  end
-
-  defp latest_from_client(actor, client) do
-    Repo.one(
+  # Newest first. An expired proposal can no longer be approved, so it is not
+  # under review.
+  defp under_review_from_client(actor, client) do
+    Repo.all(
       from(r in external(actor),
-        where: r.status in ~w(pending approved),
+        where: r.status in ~w(pending approved) and r.expires_at > ^DateTime.utc_now(),
         order_by: [desc: r.inserted_at, desc: r.version],
-        limit: 1,
         lock: "FOR UPDATE"
       )
       |> where_client(client)
@@ -2320,7 +2319,7 @@ defmodule Brando.Content.Proposals do
           )
         )
 
-      record.status not in ~w(pending approved) ->
+      record.status not in ~w(pending approved) or DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt ->
         Error.fail!(
           dgettext(
             "content_proposals",
