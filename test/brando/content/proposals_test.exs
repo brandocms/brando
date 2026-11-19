@@ -759,6 +759,154 @@ defmodule Brando.Content.ProposalsTest do
              ]
     end
 
+    test "a taken uid says where it is taken, and what depends on the insert says so", c do
+      [taken | _] = uids(c.identity, c.user)
+      target = {Page, c.work.id}
+
+      ops = [
+        # Taken in another entry: the whole branch below it fails with it.
+        %InsertBlock{target: target, module: c.projects_module.id, uid: taken},
+        %InsertBlock{target: target, module: c.project_module.id, parent: taken, uid: "work-child"},
+        %InsertBlock{target: target, module: c.project_module.id, parent: "work-child", uid: "work-grandchild"},
+        %SetBlockValues{target: target, block_uid: "work-child", values: %{size: "50"}},
+        %InsertBlock{target: target, module: c.project_module.id, parent: c.multi_uid, placement: {:after, "work-child"}},
+        # A parent no operation inserts is unknown.
+        %InsertBlock{target: target, module: c.project_module.id, parent: "nope"},
+        # Taken in this field, and earlier in this proposal.
+        %InsertBlock{target: target, module: c.text_module.id, uid: c.intro_uid},
+        %InsertBlock{target: target, module: c.text_module.id, uid: "work-text"},
+        %InsertBlock{target: target, module: c.text_module.id, uid: "work-text"}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      assert [entry, child, grandchild, values, anchor, unknown, field, proposed] =
+               Enum.map(proposal.problems, &{&1.operation, &1.code, &1.message})
+
+      advice = "Uids are unique across the site; prefix yours, for example with the entry's ref or slug."
+
+      assert entry ==
+               {0, :duplicate_uid, "The uid `#{taken}` is already used by a block in Page ##{c.identity.id}. " <> advice}
+
+      assert child == {1, :parent_failed, "Not inserted: its parent `#{taken}` failed (operation 0)."}
+      assert grandchild == {2, :parent_failed, "Not inserted: its parent `work-child` failed (operation 1)."}
+      assert values == {3, :parent_failed, "Not applied: the block `work-child` failed (operation 1)."}
+
+      assert anchor ==
+               {4, :parent_failed, "Not applied: the block to place it next to, `work-child`, failed (operation 1)."}
+
+      assert {5, :unknown_block, _} = unknown
+
+      assert field ==
+               {6, :duplicate_uid, "The uid `#{c.intro_uid}` is already used by another block in this field. " <> advice}
+
+      assert proposed ==
+               {8, :duplicate_uid, "The uid `work-text` is already used by another block in this proposal. " <> advice}
+    end
+
+    test "a uid taken in an entry the actor cannot read does not name it", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Factory.insert(:random_user, role: :user)
+
+      grants = [
+        Catalog.get(:read, Page).key,
+        Catalog.get(:update, Page).key,
+        Catalog.get(:read, Brando.Content.Module).key,
+        "brando.admin.access"
+      ]
+
+      {:ok, group} = Groups.create(Scope.standalone(c.user), %{name: "Page editors"}, grants)
+      {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, editor.id)
+      Repo.get!(Page, c.work.id) |> Changeset.change(status: :draft) |> Repo.update!()
+
+      fragment = Factory.insert(:fragment, creator: c.user)
+
+      hidden =
+        %Block{}
+        |> Block.recursive_block_changeset(
+          %{
+            "uid" => "fragment-block",
+            "type" => "module",
+            "module_id" => c.text_module.id,
+            "creator_id" => c.user.id,
+            "source" => to_string(Brando.Pages.Fragment.Blocks)
+          },
+          c.user
+        )
+        |> Repo.insert!()
+
+      struct(Brando.Pages.Fragment.Blocks, %{entry_id: fragment.id, block_id: hidden.id, sequence: 0})
+      |> Repo.insert!()
+
+      [readable | _] = uids(c.identity, c.user)
+      target = {Page, c.work.id}
+
+      ops = [
+        %InsertBlock{target: target, module: c.text_module.id, uid: hidden.uid},
+        %InsertBlock{target: target, module: c.text_module.id, uid: readable}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, editor)
+      assert [hidden_problem, readable_problem] = proposal.problems
+      assert hidden_problem.message =~ "The uid `fragment-block` is already used by a block in another entry."
+      refute hidden_problem.message =~ "Fragment"
+      assert readable_problem.message =~ "already used by a block in Page ##{c.identity.id}."
+    end
+
+    test "an operation on a failed insert's uid in a field the entry lacks reports the field", c do
+      target = {Page, c.work.id}
+
+      ops = [
+        %InsertBlock{target: target, module: c.text_module.id, field: "body", uid: "row1"},
+        %InsertBlock{target: target, module: c.text_module.id, field: "typo", parent: "row1"},
+        %SetBlockValues{target: target, field: "body", block_uid: "row1", values: %{}},
+        %MoveBlock{target: target, field: "typo", block_uid: c.intro_uid, placement: {:after, "row1"}},
+        %InsertBlock{target: target, module: c.text_module.id, parent: "nope", uid: "row2"},
+        %SetBlockValues{target: target, field: "body", block_uid: "row2", values: %{}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      assert [
+               {0, :unknown_field},
+               {1, :unknown_field},
+               {2, :unknown_field},
+               {3, :unknown_field},
+               {4, _},
+               {5, :unknown_field}
+             ] =
+               Enum.map(proposal.problems, &{&1.operation, &1.code})
+
+      # No field name a tool makes up becomes an atom.
+      assert_raise ArgumentError, fn -> String.to_existing_atom("entry_typo") end
+      assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    end
+
+    test "a copy to another entry from a field the source lacks reports the field", c do
+      ops = [
+        %CopyBlock{target: {Page, c.work.id}, field: "typo", block_uid: c.intro_uid, to_target: {Page, c.identity.id}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert [:unknown_field | _] = Enum.map(proposal.problems, & &1.code)
+    end
+
+    test "a uid inserted after an earlier insert of it failed is no longer blamed on that insert", c do
+      target = {Page, c.work.id}
+
+      ops = [
+        %InsertBlock{target: target, module: c.text_module.id, parent: "nope", uid: "x"},
+        %InsertBlock{target: target, module: c.text_module.id, uid: "x"},
+        %DeleteBlock{target: target, block_uid: "x"},
+        %SetBlockValues{target: target, block_uid: "x", values: %{}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert [{0, :unknown_block}, {3, :unknown_block}] = Enum.map(proposal.problems, &{&1.operation, &1.code})
+    end
+
     test "new child operations survive storage", c do
       [alpha, beta, _] = c.child_uids
       target = {Page, c.work.id}
