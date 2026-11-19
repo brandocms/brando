@@ -165,6 +165,37 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
   end
 
+  # Undo and redo: a move that holds only while the blocks around it stand
+  describe "move between neighbours" do
+    test "goes between `to` while it sits between `from`" do
+      state = apply!(Ops.new(["b", "a", "c"]), {:move, "a", {nil, "b"}, {"b", "c"}})
+      assert state.order == ["a", "b", "c"]
+
+      state = apply!(Ops.new(["a", "b"]), {:move, "a", {"b", nil}, {nil, "b"}})
+      assert state.order == ["b", "a"]
+    end
+
+    test "blocks added, removed or moved elsewhere do not matter" do
+      state = apply!(Ops.new(["x", "b", "a", "c", "y"]), {:move, "a", {"x", "b"}, {"b", "c"}})
+      assert state.order == ["x", "a", "b", "c", "y"]
+    end
+
+    test "is refused when it no longer sits between `from`" do
+      assert {:error, :conflict} = Ops.apply_op(Ops.new(["a", "b", "c"]), {:move, "a", {"b", "c"}, {"b", "c"}})
+    end
+
+    test "is refused when the blocks of `to` are no longer side by side" do
+      # another block went in between, or one of them is gone
+      assert {:error, :conflict} = Ops.apply_op(Ops.new(["b", "a", "x", "c"]), {:move, "a", {"b", "c"}, {"b", "x"}})
+      assert {:error, :conflict} = Ops.apply_op(Ops.new(["b", "a"]), {:move, "a", {"b", "c"}, {"b", nil}})
+      assert {:error, :conflict} = Ops.apply_op(Ops.new(["x", "b", "a"]), {:move, "a", {nil, "b"}, {"b", nil}})
+    end
+
+    test "is refused for a block not in the root order" do
+      assert {:error, :conflict} = Ops.apply_op(Ops.new(["b"]), {:move, "a", {nil, "b"}, {"b", nil}})
+    end
+  end
+
   describe "reorder" do
     test "applies a full new order" do
       state = apply!(Ops.new(["a", "b", "c"]), {:reorder, ["c", "a", "b"]})
@@ -265,6 +296,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
 
     test "insert_child under unknown parent is rejected" do
       assert {:error, {:unknown_uid, "ghost"}} = Ops.apply_op(tree_state(), {:insert_child, "ghost", "x", 0, %{}})
+    end
+
+    test "reorder_children with the children it expects holds only while they are that" do
+      state = apply!(tree_state(), {:reorder_children, "a", ["a2", "a1"], ["a1", "a2"]})
+      assert state.child_order["a"] == ["a2", "a1"]
+
+      assert {:error, :conflict} = Ops.apply_op(state, {:reorder_children, "a", ["a2", "a1"], ["a1", "a2"]})
+
+      assert {:error, {:unknown_uid, "ghost"}} =
+               Ops.apply_op(tree_state(), {:reorder_children, "ghost", [], []})
     end
 
     test "reorder_children sanitizes against the parent's children" do

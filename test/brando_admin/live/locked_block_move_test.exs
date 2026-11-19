@@ -112,4 +112,24 @@ defmodule BrandoAdmin.LockedBlockMoveTest do
     assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
     assert shown(view, uids) == [first, second]
   end
+
+  test "a refused move shows no move notice, and undo and redo are refused",
+       %{conn: conn, current_user: user, target: target} do
+    {_container, [first, second] = uids} = children(target.id)
+    view = open(conn, target.id)
+    Brando.endpoint().subscribe("user:#{user.id}")
+
+    view |> element("#block-#{second}-dropdown [data-block-move=up]") |> render_click()
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+    refute has_element?(view, "[data-testid=block-moved]")
+
+    for event <- ~w(undo_structure redo_structure) do
+      view |> with_target(cid_of(view, "[data-undo]")) |> render_hook(event, %{})
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Blocks in this translation" <> _}},
+                     2_000
+    end
+
+    assert shown(view, uids) == [first, second]
+  end
 end

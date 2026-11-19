@@ -1,0 +1,1 @@
+- A deleted block that cannot be put back, because another editor removed the block it was in, no longer goes missing when its Undo reaches the edit session after their change: it stays in the bin with a notice, and Undo and ⌘Z go on to the blocks and changes before it.

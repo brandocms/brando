@@ -7,7 +7,7 @@
  *
  * - `dispatch: true`: `shortcuts/index.js` listens for it, on one capturing
  *   `keydown` on the window, and runs its handler: a built-in one (the sheet,
- *   "go to", new entry, preview, block undo) or one a hook binds while it is mounted
+ *   "go to", new entry, preview, block undo and redo) or one a hook binds while it is mounted
  *   (`bindShortcut`: the command palette, the listing's filter).
  * - The rest belong to the widget that has the keys: the entry form's save
  *   (`hooks/Form`, which matches with `matches()` from here), the rich text
@@ -55,11 +55,12 @@ export const SHORTCUTS = [
   { id: 'save', group: 'entry', keys: ['Mod+S'] },
   { id: 'save-close', group: 'entry', keys: ['Mod+Shift+S'] },
   { id: 'preview', group: 'entry', sequence: ['g', 'p'], dispatch: true },
-  // In a text field, the browser's and the rich text editor's own undo, for
-  // typing. Anywhere else in an entry it undoes the last block moved or
-  // deleted (`builtIn` in ./index.js), as the deleted block notice's Undo does.
+  // In a text field, the browser's and the rich text editor's own undo and
+  // redo, for typing. Anywhere else in an entry undo takes back the last block
+  // moved or deleted (`builtIn` in ./index.js), as the block notices' Undo
+  // does, and redo makes the last block move undone again.
   { id: 'undo', group: 'entry', keys: ['Mod+Z'], dispatch: true },
-  { id: 'redo', group: 'entry', keys: ['Mod+Shift+Z'] },
+  { id: 'redo', group: 'entry', keys: ['Mod+Shift+Z'], dispatch: true },
   { id: 'bold', group: 'entry', keys: ['Mod+B'] },
   { id: 'italic', group: 'entry', keys: ['Mod+I'] },
   { id: 'rich-text-toolbar', group: 'entry', keys: ['Alt+F10'] },

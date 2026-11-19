@@ -116,7 +116,7 @@ test.describe('Undoing block changes with the keyboard', () => {
     await expect(page.getByTestId('block-bin')).toBeVisible()
   })
 
-  test("another editor's move ends what ⌘Z undoes", async ({ page, secondUserPage }) => {
+  test("another editor's move among the blocks refuses the undo, with a notice", async ({ page, secondUserPage }) => {
     await page.setViewportSize({ width: 1440, height: 2600 })
     await page.goto('/admin/pages/create')
     await syncLV(page)
@@ -164,9 +164,12 @@ test.describe('Undoing block changes with the keyboard', () => {
     await moveAs(secondUserPage, 0, 'Move down')
     await expectOrder(page, ['Gamma', 'Alfa', 'Beta'])
 
-    // A's ⌘Z does not put Gamma back by its old index among B's order
+    // A's ⌘Z does not put Gamma back by its old index among B's order: it
+    // says why, and B's order stands
     await undoOutsideFields(page)
+    await expect(page.locator('.toast-stack')).toContainText('Another editor has changed the blocks here since')
     await expectOrder(page, ['Gamma', 'Alfa', 'Beta'])
+    await expectOrder(secondUserPage, ['Gamma', 'Alfa', 'Beta'])
   })
 
   test('undoes a reorder of a block’s children', async ({ page }) => {

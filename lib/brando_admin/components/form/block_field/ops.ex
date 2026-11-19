@@ -107,6 +107,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @type field_path :: [String.t() | {:at, String.t(), term(), [map()]} | {:map, String.t(), map()}]
 
+  @typedoc "The blocks before and after a place in the root order, `nil` at either end."
+  @type neighbours :: {uid() | nil, uid() | nil}
+
   @type op ::
           {:insert, uid(), position(), params()}
           | {:insert_child, parent :: uid(), uid(), position(), params()}
@@ -114,8 +117,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           | {:set_field, uid(), field_path(), term(), rev :: non_neg_integer() | nil}
           | {:set_fields, uid(), [{field_path(), term()}], rev :: non_neg_integer() | nil}
           | {:move, uid(), position()}
+          | {:move, uid(), to :: neighbours(), from :: neighbours()}
           | {:reorder, [uid()]}
           | {:reorder_children, parent :: uid(), [uid()]}
+          | {:reorder_children, parent :: uid(), [uid()], expected :: [uid()]}
           | {:move_to_parent, uid(), new_parent :: uid(), position()}
           | {:remap_slot, uid(), uid() | nil, params()}
           | {:delete, uid()}
@@ -377,6 +382,23 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
+  # A root move that holds only while the blocks it depends on stand as it
+  # left them: `uid` still between `from`, and the blocks of `to` side by side
+  # without it, so it goes between them. Undo and redo send it, and the
+  # session applies or refuses it in one step (`:conflict`), whatever reached
+  # it first. Other blocks added, removed or moved elsewhere do not matter.
+  def apply_op(%__MODULE__{} = state, {:move, uid, {_, _} = to, {_, _} = from}) do
+    rest = List.delete(state.order, uid)
+
+    with true <- uid in state.order and neighbours(state.order, uid) == from,
+         index when is_integer(index) <- gap_index(rest, to) do
+      {order, keys} = place(rest, state.keys, uid, index)
+      {:ok, %{state | order: order, keys: keys}}
+    else
+      _ -> {:error, :conflict}
+    end
+  end
+
   def apply_op(%__MODULE__{} = state, {:reorder, uids}) when is_list(uids) do
     order = sanitize_order(uids, state.order)
     {:ok, %{state | order: order, keys: FractionalKey.rekey(order, state.keys)}}
@@ -394,6 +416,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
        }}
     else
       {:error, {:unknown_uid, parent_uid}}
+    end
+  end
+
+  # A reorder that holds only while the children are still `expected`, in
+  # one step in the session as the root move above.
+  def apply_op(%__MODULE__{} = state, {:reorder_children, parent_uid, uids, expected}) when is_list(uids) do
+    cond do
+      not known?(state, parent_uid) -> {:error, {:unknown_uid, parent_uid}}
+      Map.get(state.child_order, parent_uid, []) != expected -> {:error, :conflict}
+      true -> apply_op(state, {:reorder_children, parent_uid, uids})
     end
   end
 
@@ -484,6 +516,38 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   def apply_op(%__MODULE__{}, op), do: {:error, {:unknown_op, op}}
 
   @doc """
+  The blocks either side of `uid` in `list`, `nil` at an end, or `nil` when
+  `uid` is not in it.
+
+  ## Examples
+
+      iex> alias BrandoAdmin.Components.Form.BlockField.Ops
+      iex> Ops.neighbours(["a", "b", "c"], "a")
+      {nil, "b"}
+      iex> Ops.neighbours(["a", "b", "c"], "b")
+      {"a", "c"}
+
+  """
+  @spec neighbours([uid()], uid()) :: neighbours() | nil
+  def neighbours(list, uid) do
+    case Enum.find_index(list, &(&1 == uid)) do
+      nil -> nil
+      0 -> {nil, Enum.at(list, 1)}
+      index -> {Enum.at(list, index - 1), Enum.at(list, index + 1)}
+    end
+  end
+
+  # Where a block goes between `prev` and `next`, while they are side by side
+  defp gap_index(list, {nil, next}), do: if(List.first(list) == next, do: 0)
+
+  defp gap_index(list, {prev, next}) do
+    case Enum.find_index(list, &(&1 == prev)) do
+      nil -> nil
+      index -> if Enum.at(list, index + 1) == next, do: index + 1
+    end
+  end
+
+  @doc """
   All known uids under `uid`, depth first.
   """
   @spec descendants(t(), uid()) :: [uid()]
@@ -505,6 +569,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   def op_uids({:move_to_parent, uid, parent, _at}), do: [uid, parent]
   def op_uids({:remap_slot, uid, _destination, _params}), do: [uid]
   def op_uids({:reorder_children, parent, _uids}), do: [parent]
+  def op_uids({:move, uid, _to, _from}), do: [uid]
+  def op_uids({:reorder_children, parent, _uids, _expected}), do: [parent]
   def op_uids(_op), do: []
 
   @doc """
