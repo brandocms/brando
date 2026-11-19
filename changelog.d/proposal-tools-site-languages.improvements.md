@@ -1,0 +1,1 @@
+- Proposal tools: `describe_content_type` lists the languages a `language` field takes on the site, by code and name, and `prepare_proposal` asks a connected tool to set a new entry's language to the one its content is written in.

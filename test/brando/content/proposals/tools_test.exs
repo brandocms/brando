@@ -115,6 +115,27 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert {:error, _} = Tools.call("search_assets", %{"kind" => "gallery"}, c.context)
   end
 
+  test "describe_content_type lists the languages a language field takes", c do
+    language = fn content_type ->
+      %{fields: fields} = call!("describe_content_type", %{"content_type" => content_type}, c.context)
+      Enum.find(fields, &(&1.name == "language"))
+    end
+
+    # A translatable type takes the site's languages, and gets its default.
+    assert %{
+             languages: [%{code: "no", name: "Norsk"}, %{code: "en", name: "English"}],
+             default: "en"
+           } = language.("Brando.Pages.Page")
+
+    # A text field called language is not one.
+    plain = language.("Brando.LanguageProposalTest.Plain")
+    refute Map.has_key?(plain, :languages)
+    refute Map.has_key?(plain, :default)
+
+    # A language field with a narrower set of its own lists that set.
+    assert %{languages: [%{code: "en", name: "English"}]} = language.("Brando.LanguageProposalTest.English")
+  end
+
   test "entry_outline lists an entry's language versions and whether they follow it", c do
     {:ok, source} =
       Brando.SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "published"}, c.user)
