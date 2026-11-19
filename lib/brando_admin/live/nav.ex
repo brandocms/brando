@@ -88,6 +88,7 @@ defmodule BrandoAdmin.Nav do
 
   def subscribe(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "user:#{user.id}")
+    Tenant.Cache.subscribe()
     socket
   end
 
@@ -427,6 +428,26 @@ defmodule BrandoAdmin.Nav do
 
   def handle_info({:user_update, user}, socket) do
     {:noreply, assign(socket, :current_user, user)}
+  end
+
+  # A registry write: the current site's name, delivery (Publishing in the
+  # menu) and the switcher's sites as they are now. A site that has left
+  # the cache stays as it was: access to it is checked on its own.
+  def handle_info(:tenant_registry_changed, %{assigns: %{current_site: %{key: key}}} = socket) do
+    case Tenant.Cache.get_site(key) do
+      nil ->
+        {:noreply, socket}
+
+      site ->
+        environment = socket.assigns.current_environment
+        environment = environment && Enum.find(site.environments, environment, &(&1.id == environment.id))
+
+        {:noreply,
+         socket
+         |> assign(current_site: site, current_environment: environment)
+         |> assign_tenant_options()
+         |> assign_menu_sections()}
+    end
   end
 
   def handle_info(_, socket) do

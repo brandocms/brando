@@ -34,6 +34,15 @@ defmodule Brando.Tenant.Lock do
   @spec environment_operation_key(pos_integer()) :: String.t()
   def environment_operation_key(site_id), do: "brando:environment-operation:#{site_id}"
 
+  @doc """
+  The lock a site's static deploys, rollbacks and prunes hold
+  (`Brando.SSG.Deploy`), and a change of its delivery
+  (`Brando.Tenant.Setup.update_delivery/4`) inside the lifecycle lock. Nothing
+  takes the lifecycle lock while holding this one.
+  """
+  @spec deploy_key(pos_integer()) :: String.t()
+  def deploy_key(site_id), do: "ssg-deploy:#{site_id}"
+
   @doc "The lock a site's lifecycle operation (provisioning, archiving, deletion) holds."
   @spec lifecycle_key(String.t()) :: String.t()
   def lifecycle_key(site_key), do: "brando:site-lifecycle:#{site_key}"

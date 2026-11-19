@@ -78,32 +78,117 @@ defmodule Brando.Tenant.Setup do
 
   @doc """
   Sets `site`'s languages and default language, from `attrs` with
-  `:languages` and `:default_language`, as `user`, who must be allowed to
-  update sites. A language added is seeded in each of the site's
-  environments after the save, with `user` as the creator of its content
+  `:languages` and `:default_language`, as `actor` (`authorize_settings/1`).
+  A language added is seeded in each of the site's environments after the
+  save, with `actor` as the creator of its content
   (`Brando.Tenant.Registry.update_site/3`); one removed keeps its content.
   """
-  @spec update_languages(Site.t(), map(), User.t()) :: {:ok, Site.t()} | {:error, term()}
-  def update_languages(%Site{} = site, attrs, %User{} = user) do
+  @spec update_languages(Site.t(), map(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
+  def update_languages(%Site{} = site, attrs, actor) do
     attrs = Map.take(attrs, [:languages, :default_language])
+    creator = if match?(%User{}, actor), do: [creator: actor], else: []
 
-    lifecycle(:update, [actor: Brando.Authorization.Scope.installation(user)], fn ->
-      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, attrs, creator: user) end)
-    end)
+    with :ok <- authorize_settings(actor) do
+      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, attrs, creator) end)
+    end
   end
 
   @doc """
-  Sets how `site`'s public frontend is delivered, `:dynamic` or `:static`,
-  as `user`, who must be allowed to update sites. A static site the
-  installation serves itself forgets its published build when it becomes
-  dynamic (`Brando.Sites.Site`), so its host answers from Phoenix again.
+  Sets `site`'s name, as `actor` (`authorize_settings/1`). Its key, which
+  names its schemas and folders, never changes.
   """
-  @spec update_delivery(Site.t(), :dynamic | :static, User.t()) :: {:ok, Site.t()} | {:error, term()}
-  def update_delivery(%Site{} = site, mode, %User{} = user) when mode in [:dynamic, :static] do
-    lifecycle(:update, [actor: Brando.Authorization.Scope.installation(user)], fn ->
-      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, %{delivery_mode: mode}, []) end)
-    end)
+  @spec update_name(Site.t(), String.t(), User.t() | :system) :: {:ok, Site.t()} | {:error, term()}
+  def update_name(%Site{} = site, name, actor) do
+    with :ok <- authorize_settings(actor) do
+      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, %{name: name}, []) end)
+    end
   end
+
+  @doc """
+  Sets how `site`'s public frontend is delivered, `:dynamic` or `:static`, as
+  `actor` (`authorize_settings/1`). A static site the installation serves
+  itself forgets its published build when it becomes dynamic
+  (`Brando.Sites.Site`), so its host answers from Phoenix again.
+
+  The change holds the site's lifecycle lock and, inside it, the lock its
+  static deploys hold (`Brando.SSG.Deploy`): a deploy running meanwhile
+  finishes first, and one that starts after it finds the site dynamic and
+  publishes nothing.
+
+  With `expected: delivery_state(site)`, taken when the consequences were
+  shown to someone, the change is refused with `{:error, :delivery_changed}`
+  when the site's delivery is no longer that (a build deployed since, say).
+  """
+  @spec update_delivery(Site.t(), :dynamic | :static, User.t() | :system, keyword()) ::
+          {:ok, Site.t()} | {:error, term()}
+  def update_delivery(%Site{} = site, mode, actor, opts \\ []) when mode in [:dynamic, :static] do
+    with :ok <- authorize_settings(actor) do
+      Lock.with(lifecycle_lock_key(site.key), fn -> update_delivery_deploy_locked(site, mode, opts[:expected]) end)
+    end
+  end
+
+  # The lifecycle lock is held: the deploy lock is taken inside it, never the
+  # other way round
+  defp update_delivery_deploy_locked(site, mode, expected),
+    do: Lock.with(Lock.deploy_key(site.id), fn -> update_delivery_locked(site, mode, expected) end)
+
+  defp update_delivery_locked(site, mode, expected) do
+    case Registry.get_site(site.id) do
+      nil ->
+        {:error, :site_not_found}
+
+      %Site{} = current_site ->
+        if is_nil(expected) or delivery_state(current_site) == expected,
+          do: Registry.update_site(current_site, %{delivery_mode: mode}),
+          else: {:error, :delivery_changed}
+    end
+  end
+
+  @doc """
+  What decides what a change of `site`'s delivery does for visitors, as
+  strings (`""` for none), for `update_delivery/4`'s `:expected`:
+  `"delivery"` (its mode), `"strategy"` (its deploy strategy), `"build"` (its
+  published build) and `"status"`.
+  """
+  @spec delivery_state(Site.t()) :: %{String.t() => String.t()}
+  def delivery_state(%Site{} = site) do
+    strategy =
+      case site.deploy_config do
+        %{strategy: strategy} when not is_nil(strategy) -> to_string(strategy)
+        _none -> ""
+      end
+
+    %{
+      "delivery" => to_string(site.delivery_mode),
+      "strategy" => strategy,
+      "build" => site.published_build || "",
+      "status" => to_string(site.status)
+    }
+  end
+
+  @doc """
+  Whether `actor` may change a site's settings (name, languages, delivery):
+  `:system`, a superuser in legacy authorization, and with groups whoever
+  may update sites (`:update` on `:sites`).
+  """
+  @spec authorize_settings(User.t() | Brando.Authorization.Scope.t() | :system) :: :ok | {:error, :forbidden}
+  def authorize_settings(:system), do: :ok
+
+  def authorize_settings(actor) do
+    cond do
+      Brando.Authorization.enabled?() ->
+        actor |> installation_scope() |> Brando.Authorization.Boundary.authorize(:update, :sites)
+
+      Brando.Authorization.Boundary.superuser?(actor) ->
+        :ok
+
+      true ->
+        {:error, :forbidden}
+    end
+  end
+
+  defp installation_scope(%User{} = user), do: Brando.Authorization.Scope.installation(user)
+  defp installation_scope(scope), do: scope
 
   defp update_current(site, attrs, opts) do
     case Registry.get_site(site.id) do

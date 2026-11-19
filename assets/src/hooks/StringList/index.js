@@ -1,9 +1,12 @@
 import { prefersReducedMotion } from '../../motion'
 
 // A `:string_list` input (Input.input/1). The server renders one text input
-// per value plus an empty one, named `field[]` with positional ids. Insert and
-// remove change the rows here; the form's next change then carries the list in
-// its new order, and the server renders the same rows back.
+// per row plus an empty one, named `field[]` with positional ids, blank rows
+// included while the form holds them. Insert and remove change the rows here
+// and send the form's change at once, so the server renders the same rows
+// back: a render of the list it had before would be patched over the moved
+// rows by id, and LiveView keeps the focused input's own value, so a value
+// below would be cleared.
 //
 // Ids are renumbered after each change so they stay positional: when the
 // server's render arrives, every row is patched in place and the focused one
@@ -37,6 +40,9 @@ export default () => ({
     input.removeAttribute('value')
     row.before(added)
     this.renumber()
+    // Sent before anything is typed: the form is locked until the reply, so
+    // a render already on its way cannot land on the shifted rows
+    input.dispatchEvent(new Event('change', { bubbles: true }))
     input.focus()
 
     if (!prefersReducedMotion()) {

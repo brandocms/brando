@@ -23,13 +23,33 @@ defmodule Brando.Tenant.Cache do
   @cache_keys_key {:brando, :tenant_cache_keys}
   @public_opts [prefix: "public"]
 
+  @topic "brando:tenant_registry"
+
   @spec warm() :: :ok
   def warm do
     # One at a time on this node, read and publication together: a warm that
     # read the registry before another must not publish after it
     :global.trans({{__MODULE__, :warm}, self()}, &do_warm/0, [node()], :infinity)
+    tell_subscribers()
     # Every warm, on every node, is a registry refresh the served hosts file follows
     Brando.Tenant.ServedHosts.registry_changed()
+  end
+
+  @doc """
+  Subscribes the caller to this node's warms: it gets
+  `:tenant_registry_changed` once the cache holds a registry write (a site
+  renamed, its delivery or languages changed), as the admin's navigation
+  does to show the current site as it is now.
+  """
+  @spec subscribe() :: :ok | {:error, term()}
+  def subscribe, do: Phoenix.PubSub.subscribe(Brando.pubsub(), @topic)
+
+  # Before the application's PubSub has started (a warm at boot) there is no
+  # one to tell
+  defp tell_subscribers do
+    Phoenix.PubSub.local_broadcast(Brando.pubsub(), @topic, :tenant_registry_changed)
+  rescue
+    ArgumentError -> :ok
   end
 
   defp do_warm do

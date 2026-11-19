@@ -106,10 +106,16 @@ served by the installation itself or by rsync- or S3-backed static
 infrastructure.
 
 A superuser changes a site's delivery later on its form at `/admin/sites`,
-which asks for confirmation and says what the change does for visitors;
-setup code calls `Brando.Tenant.Setup.update_delivery/3`, which asks for the
-right to update sites (`:update` on `:sites`). The change activates no asset
-set, and what it does to traffic depends on where the site's host points:
+which asks for confirmation and says what the change does for visitors. When
+the delivery changes while the confirmation is open (a build deployed from
+Publishing, say), the switch is refused and the form shows the site as it is
+now. Setup code calls `Brando.Tenant.Setup.update_delivery/4`, which takes a
+superuser or `:system` (with groups, the right to update sites, `:update` on
+`:sites`), and refuses with `{:error, :delivery_changed}` when the site no
+longer matches `expected: Brando.Tenant.Setup.delivery_state(site)`. A deploy
+running meanwhile finishes first; one that starts after a switch to dynamic
+deploys nothing. The change activates no asset set, and what it does to
+traffic depends on where the site's host points:
 
 - **Dynamic to static.** Nothing changes for visitors. Phoenix keeps
   answering the live environment's domain until a build is deployed: with
@@ -129,7 +135,8 @@ set, and what it does to traffic depends on where the site's host points:
   (`Brando.Forms.SubmissionController`).
 
 Either way from static, Publishing leaves the site's menu, and a build can no
-longer be requested.
+longer be requested. A build queued or scheduled before the switch ends
+without building or deploying when its job runs, and its log says why.
 
 ## New installations
 
@@ -546,9 +553,10 @@ Two lists of content languages have different jobs:
 
 A superuser changes a site's languages and default language on its form at
 `/admin/sites`, where the languages are a list and the default a choice among
-them, which calls `Brando.Tenant.Setup.update_languages/3` and asks
-for the right to update sites (`:update` on `:sites`), and for the password
-again when the session has not confirmed lately; setup code can call
+them, which calls `Brando.Tenant.Setup.update_languages/3`. That takes a
+superuser or `:system` (with groups, the right to update sites, `:update` on
+`:sites`), and the screen asks for the password again when the session has
+not confirmed lately; setup code can call
 `Brando.Tenant.Registry.update_site/3`. Both refuse a language the
 installation does not configure, and name it. `default_language` must be one
 of the site's languages, so removing the default takes a new default in the
@@ -1476,7 +1484,8 @@ editor     per-site role; content editing without lifecycle mutation
 The superuser Sites screen at `/admin/sites` lists the sites and shows one
 at a time, named in the URL (`?site=acme`, or `?new` for the create form;
 without one, the admin's current site). It provisions sites, shows
-environment/page/media/last-edit summaries, changes lifecycle state and
+environment/page/media/last-edit summaries, renames a site (its key, which
+names its schemas and folders, stays), changes lifecycle state and
 delivery ([Choose a delivery mode](#choose-a-delivery-mode)), grants or
 revokes roles, and sets each site's provider library group (see
 [Video provider libraries](#video-provider-libraries)). The underlying API is also available to application tooling:

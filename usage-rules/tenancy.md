@@ -91,9 +91,10 @@ Two lists of content languages have different jobs:
 
 A superuser changes a site's languages and default language on its form at
 `/admin/sites`, where the languages are a list and the default a choice among
-them, which calls `Brando.Tenant.Setup.update_languages/3` and asks
-for the right to update sites (`:update` on `:sites`), and for the password
-again when the session has not confirmed lately; setup code can call
+them, which calls `Brando.Tenant.Setup.update_languages/3`. That takes a
+superuser or `:system` (with groups, the right to update sites, `:update` on
+`:sites`), and the screen asks for the password again when the session has
+not confirmed lately; setup code can call
 `Brando.Tenant.Registry.update_site/3`. Both refuse a language the
 installation does not configure, and name it. `default_language` must be one
 of the site's languages, so removing the default takes a new default in the

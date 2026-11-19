@@ -779,6 +779,68 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
                "Nothing changes for visitors: no build is published, so Phoenix already answers existing.dashboard.test"
     end
 
+    test "a switch confirmed for a delivery that changed meanwhile is refused, and the form shows it as it is", %{
+      conn: conn,
+      site: site,
+      current_user: user
+    } do
+      {:ok, _site} = Registry.update_site(site, %{delivery_mode: :static, deploy_config: %{strategy: :local}})
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+      button = "#delivery-switch-#{site.id}"
+
+      assert view |> element(button) |> render() =~ "no build is published"
+
+      # Deployed from Publishing while the confirmation is open
+      Brando.Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^site.id), [set: [published_build: "v1"]],
+        prefix: "public"
+      )
+
+      view |> element(button) |> render_click()
+
+      site = Registry.get_site(site.id)
+      assert site.delivery_mode == :static
+      assert site.published_build == "v1"
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      assert message =~ "Existing Site’s delivery changed while the confirmation was open, so nothing was switched."
+
+      assert has_element?(view, "#delivery-site-#{site.id} dd", "v1")
+      assert view |> element(button) |> render() =~ "stop getting published build v1"
+    end
+
+    test "is shown in the navigation's menu as it changes", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}&brando_site_key=#{site.key}")
+      nav = find_live_child(view, "brando-nav")
+      publishing = ~s(a[href="/admin/config/publishing"])
+
+      refute has_element?(nav, publishing)
+
+      view |> element("#delivery-switch-#{site.id}") |> render_click()
+      assert has_element?(nav, publishing)
+
+      view |> element("#delivery-switch-#{site.id}") |> render_click()
+      refute has_element?(nav, publishing)
+    end
+
+    test "in legacy authorization, only a superuser or the system changes a site's settings",
+         %{editor: editor, site: site} do
+      admin = Brando.Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
+      {:ok, _assignment} = Access.grant(admin, site, :admin)
+      {:ok, _assignment} = Access.grant(editor, site, :editor)
+
+      for user <- [editor, admin] do
+        assert {:error, :forbidden} = Brando.Tenant.Setup.update_delivery(site, :static, user)
+        assert {:error, :forbidden} = Brando.Tenant.Setup.update_languages(site, %{languages: ["en", "no"]}, user)
+        assert {:error, :forbidden} = Brando.Tenant.Setup.update_name(site, "Renamed", user)
+      end
+
+      unchanged = Registry.get_site(site.id)
+      assert {unchanged.delivery_mode, unchanged.languages, unchanged.name} == {:dynamic, ["en"], "Existing Site"}
+
+      assert {:ok, %{delivery_mode: :static}} = Brando.Tenant.Setup.update_delivery(site, :static, :system)
+    end
+
     test "a mode that is neither is refused", %{conn: conn, site: site} do
       {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
       render_click(view, "save_delivery", %{"id" => to_string(site.id), "mode" => "cdn"})
@@ -799,6 +861,170 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
 
     assert has_element?(view, ~s(#site-#{site.id} button[phx-click=archive][data-confirm][data-confirm-destructive]))
     assert has_element?(view, ~s(#site-#{site.id} button[phx-click=suspend][data-confirm]))
+  end
+
+  describe "activating or restoring a site" do
+    test "asks first, and says its domains serve again", %{conn: conn, site: site} do
+      for {status, title} <- [{:suspended, "Activate Existing Site?"}, {:archived, "Restore Existing Site?"}] do
+        Brando.Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^site.id), [set: [status: status]],
+          prefix: "public"
+        )
+
+        {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+        button = ~s(#lifecycle-site-#{site.id} button[phx-click=activate_site][data-confirm-title="#{title}"])
+
+        assert has_element?(view, button)
+
+        assert view |> element(button) |> render() =~
+                 "Its domains serve again at once: visitors to existing.dashboard.test get the site’s pages from Phoenix."
+      end
+    end
+
+    test "says a build the installation kept is served again", %{conn: conn, site: site} do
+      {:ok, _site} = Registry.update_site(site, %{delivery_mode: :static, deploy_config: %{strategy: :local}})
+
+      Brando.Repo.update_all(
+        from(s in Brando.Sites.Site, where: s.id == ^site.id),
+        [set: [published_build: "v3", status: :archived]],
+        prefix: "public"
+      )
+
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+
+      assert view |> element("#lifecycle-site-#{site.id} button[phx-click=activate_site]") |> render() =~
+               "visitors to existing.dashboard.test get published build v3"
+    end
+  end
+
+  describe "the text fields" do
+    # Their hook reports focus and blur to the nearest `.brando-form`, the
+    # screen's own LiveView
+    test "can be focused and left, and keep what was typed", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+
+      view
+      |> form("#library-group-site-#{site.id}", site: %{provider_library_group: "agency"})
+      |> render_change()
+
+      for event <- ["focus", "blur"],
+          do: render_hook(view, event, %{"field" => "site[provider_library_group]"})
+
+      assert has_element?(
+               view,
+               ~s(#library-group-site-#{site.id} input[name="site[provider_library_group]"][value="agency"])
+             )
+
+      {:ok, view, _html} = live(conn, "/admin/sites?new")
+      for event <- ["focus", "blur"], do: render_hook(view, event, %{"field" => "site[name]"})
+      assert has_element?(view, "#create-site-form")
+    end
+  end
+
+  describe "what is typed into one form" do
+    setup %{site: site} do
+      {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      %{site: site}
+    end
+
+    test "stays while another form on the site is changed", %{conn: conn, site: site, editor: editor} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+
+      view |> form("#name-site-#{site.id}", site: %{name: "Renamed"}) |> render_change()
+
+      view
+      |> form("#library-group-site-#{site.id}", site: %{provider_library_group: "agency"})
+      |> render_change()
+
+      view
+      |> form("#grant-site-#{site.id}", assignment: %{user_id: editor.id, role: "admin"})
+      |> render_change()
+
+      # The default language select re-renders the site's form
+      view |> form("#languages-site-#{site.id}", site: %{default_language: "no"}) |> render_change()
+
+      assert has_element?(view, ~s(#name-site-#{site.id} input[name="site[name]"][value="Renamed"]))
+
+      assert has_element?(
+               view,
+               ~s(#library-group-site-#{site.id} input[name="site[provider_library_group]"][value="agency"])
+             )
+
+      assert has_element?(view, ~s(#grant-site-#{site.id} option[value="#{editor.id}"][selected]))
+      assert has_element?(view, ~s(#grant-site-#{site.id} option[value="admin"][selected]))
+    end
+
+    # LiveView keeps the focused input's own value and patches the others by
+    # id: rendered without the row being cleared, the list would shift the
+    # language below it into that input, and clear its own
+    test "keeps a language list's blank rows until it is saved", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+      form_id = "#languages-site-#{site.id}"
+      row = &"input#languages-site-#{site.id}_languages_#{&1}"
+
+      view |> form(form_id, site: %{languages: ["en", "", "no", ""]}) |> render_change()
+
+      assert has_element?(view, ~s(#{form_id} #{row.(0)}[value="en"]))
+      assert has_element?(view, ~s(#{form_id} #{row.(1)}[value=""]))
+      assert has_element?(view, ~s(#{form_id} #{row.(2)}[value="no"]))
+      assert has_element?(view, "#{form_id} .string-list-add #{row.(3)}")
+      # Nothing is removed by the blank row
+      refute has_element?(view, "#{form_id} [role=status]", "Removing")
+
+      view |> form(form_id) |> render_submit()
+
+      assert Registry.get_site(site.id).languages == ["en", "no"]
+      assert has_element?(view, ~s(#{form_id} #{row.(1)}[value="no"]))
+      assert has_element?(view, "#{form_id} .string-list-add #{row.(2)}")
+    end
+  end
+
+  describe "a site's name" do
+    test "is changed here, and the list and the navigation show the new one", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}&brando_site_key=#{site.key}")
+      nav = find_live_child(view, "brando-nav")
+
+      assert has_element?(view, ~s(#name-site-#{site.id} input[name="site[key]"][value="#{site.key}"][readonly]))
+      assert has_element?(view, "#name-site-#{site.id}", "cannot be changed")
+
+      view |> form("#name-site-#{site.id}", site: %{name: "Acme Group"}) |> render_submit()
+
+      assert Registry.get_site(site.id).name == "Acme Group"
+      assert Registry.get_site(site.id).key == site.key
+      assert has_element?(view, "#site-list-#{site.id}", "Acme Group")
+      assert has_element?(view, "#site-#{site.id}-title", "Acme Group")
+      assert has_element?(nav, ".tenant-switcher__current", "Acme Group")
+    end
+
+    test "is refused empty, and the old one kept", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites?site=#{site.key}")
+      view |> form("#name-site-#{site.id}", site: %{name: ""}) |> render_submit()
+      assert Registry.get_site(site.id).name == "Existing Site"
+    end
+  end
+
+  describe "in groups mode, the create form" do
+    test "is filled in by a user who may create sites but not update them", %{editor: editor} do
+      put_test_env(:authorization_mode, :groups)
+      owner = Brando.Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      scope = Brando.Authorization.Scope.installation(owner)
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(scope, %{name: "Site provisioners"}, [
+          "brando.admin.access",
+          "brando.sites.read",
+          "brando.sites.create"
+        ])
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, editor.id)
+      conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)
+
+      {:ok, view, _html} = live(conn, "/admin/sites?new")
+      html = view |> form("#create-site-form", site: %{name: "Fjord"}) |> render_change()
+
+      refute html =~ "You do not have permission for this action."
+      assert has_element?(view, ~s(#create-site-form input[name="site[name]"][value="Fjord"]))
+    end
   end
 
   defp create_site(view, key, extra) do

@@ -129,6 +129,32 @@ defmodule BrandoAdmin.Components.Form.InputTest do
       assert html =~ ~s(value="Europe")
     end
 
+    # A cleared row stays a row while the form sends it, so the rows below it
+    # keep their ids: the browser keeps the focused input's own value and
+    # takes the others by id
+    test "a row cleared in the form stays, blank, in its place" do
+      form = markets_form(%{"area_served" => ["Norway", "", "Europe", ""]})
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+
+      assert html =~ ~s(id="config_area_served_1" value="")
+      assert html =~ ~r/id="config_area_served_2" value="Europe"/
+      assert length(Regex.scan(~r/<input/, html)) == 4
+    end
+
+    test "the field's own value wins over sent rows that are another list" do
+      form =
+        %TestMarkets{}
+        |> cast(%{"area_served" => ["Norway", ""]}, [:area_served])
+        |> Ecto.Changeset.put_change(:area_served, ["Europe"])
+        |> to_form(as: :config)
+
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+
+      assert html =~ ~s(value="Europe")
+      refute html =~ ~s(value="Norway")
+      assert length(Regex.scan(~r/<input/, html)) == 2
+    end
+
     test "an empty list renders only the empty row" do
       form = markets_form(%{})
       html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])

@@ -66,7 +66,7 @@ defmodule Brando.SSG.Deploy do
 
   def prune(%Site{}, keep), do: {:error, {:invalid_retention_count, keep}}
 
-  defp deploy_lock(site_id), do: "ssg-deploy:#{site_id}"
+  defp deploy_lock(site_id), do: Lock.deploy_key(site_id)
 
   # The published version is read under the lock, in the query that chooses
   defp prune_locked(site, keep) do
@@ -104,6 +104,7 @@ defmodule Brando.SSG.Deploy do
 
     with %Build{} <- build,
          true <- build.site.status == :active,
+         :ok <- still_static(build.site),
          true <- build.status in [:ready, :deployed, :archived],
          true <- managed_build_path?(build),
          true <- is_nil(build.pruned_at) and File.dir?(build.build_path),
@@ -116,6 +117,12 @@ defmodule Brando.SSG.Deploy do
       {:error, _reason} = error -> error
     end
   end
+
+  # Read under the deploy lock, which a change of delivery takes too
+  # (`Brando.Tenant.Setup.update_delivery/4`): a site switched to dynamic
+  # while this build waited gets nothing copied or published
+  defp still_static(%Site{delivery_mode: :static}), do: :ok
+  defp still_static(%Site{}), do: {:error, :site_not_static}
 
   defp deploy_and_mark(build, opts) do
     with :ok <- made_for_current_delivery(build),

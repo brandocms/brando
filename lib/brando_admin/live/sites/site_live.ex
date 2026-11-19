@@ -138,7 +138,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
             seeding={@seeding}
             assignments={@assignments}
             users={@users}
-            language_drafts={@language_drafts}
+            drafts={@drafts}
           />
         </div>
       </div>
@@ -202,7 +202,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <div class="site-fields site-fields--two">
             <Primitives.field_base
               field={@form[:delivery_mode]}
-              label={gettext("Delivery")}
+              label={gettext("Mode")}
               instructions={
                 gettext("Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline.")
               }
@@ -314,19 +314,17 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp site_form(assigns) do
     site = assigns.site
 
+    drafts = assigns.drafts
+
     assigns =
       assigns
-      |> assign(:languages_form, languages_form(assigns.language_drafts, site))
-      |> assign(:removed, removed_languages(assigns.language_drafts, site))
+      |> assign(:name_form, name_form(drafts, site))
+      |> assign(:languages_form, languages_form(drafts, site))
+      |> assign(:removed, removed_languages(drafts, site))
       |> assign(:seeding_rows, seeding(assigns.seeding, site.id))
       |> assign(:site_assignments, assignments(assigns.assignments, site.id))
-      |> assign(
-        :library_form,
-        to_form(%{"provider_library_group" => site.provider_library_group},
-          as: "site",
-          id: "library-group-site-#{site.id}"
-        )
-      )
+      |> assign(:library_form, library_form(drafts, site))
+      |> assign(:grant, Map.get(drafts, {:grant, site.id}, %{}))
 
     ~H"""
     <section id={"site-#{@site.id}"} class="site-editor" aria-labelledby={"site-#{@site.id}-title"}>
@@ -355,6 +353,27 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <dt>{gettext("Last page edit")}</dt><dd>{format_last_edit(stat(@stats, @site.id, :last_edit))}</dd>
         </div>
       </dl>
+
+      <form id={"name-site-#{@site.id}"} phx-change="check_name" phx-submit="save_name">
+        <input type="hidden" name="site[id]" value={@site.id} />
+        <section class="site-section">
+          <header class="site-section-heading">
+            <h3>{gettext("Site")}</h3>
+          </header>
+          <div class="site-fields site-fields--two">
+            <Input.text field={@name_form[:name]} label={gettext("Name")} />
+            <Input.text
+              field={@name_form[:key]}
+              label={gettext("Key")}
+              opts={[monospace: true, locked: true]}
+              instructions={gettext("It names the site’s database schemas and folders, so it cannot be changed.")}
+            />
+          </div>
+          <div class="site-actions">
+            <button type="submit" class="btn">{gettext("Save name")}</button>
+          </div>
+        </section>
+      </form>
 
       <form
         id={"languages-site-#{@site.id}"}
@@ -410,7 +429,12 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <h3>{gettext("Video provider libraries")}</h3>
           <p>{gettext("Sites with the same group key share the provider videos offered under “Add from …”.")}</p>
         </header>
-        <form id={"library-group-site-#{@site.id}"} class="site-library-group" phx-submit="set_library_group">
+        <form
+          id={"library-group-site-#{@site.id}"}
+          class="site-library-group"
+          phx-change="check_library_group"
+          phx-submit="set_library_group"
+        >
           <input type="hidden" name="site[id]" value={@site.id} />
           <div class="site-fields site-fields--two">
             <Input.text
@@ -487,19 +511,27 @@ defmodule BrandoAdmin.Sites.SiteLive do
               "Every user here is a superuser, who already has access to every site. Access is granted to users with another role."
             )}
           </p>
-          <form :if={@users != []} phx-submit="grant" id={"grant-site-#{@site.id}"} class="site-grant">
+          <form
+            :if={@users != []}
+            phx-change="check_grant"
+            phx-submit="grant"
+            id={"grant-site-#{@site.id}"}
+            class="site-grant"
+          >
             <input type="hidden" name="assignment[site_id]" value={@site.id} />
             <label class="site-select">
               <span>{gettext("User")}</span>
               <select name="assignment[user_id]" class="admin-select" required>
-                <option :for={user <- @users} value={user.id}>{user.name} · {user.email}</option>
+                <option :for={user <- @users} value={user.id} selected={@grant["user_id"] == to_string(user.id)}>
+                  {user.name} · {user.email}
+                </option>
               </select>
             </label>
             <label class="site-select">
               <span>{gettext("Role")}</span>
               <select name="assignment[role]" class="admin-select">
-                <option value="editor">{gettext("Editor")}</option>
-                <option value="admin">{gettext("Administrator")}</option>
+                <option value="editor" selected={@grant["role"] == "editor"}>{gettext("Editor")}</option>
+                <option value="admin" selected={@grant["role"] == "admin"}>{gettext("Administrator")}</option>
               </select>
             </label>
             <button type="submit" class="btn btn--primary">{gettext("Grant access")}</button>
@@ -516,7 +548,13 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   defp delivery_section(assigns) do
     target = other_delivery(assigns.site.delivery_mode)
-    assigns = assign(assigns, target: target, effect: delivery_effect(assigns.site, target))
+
+    assigns =
+      assign(assigns,
+        target: target,
+        effect: delivery_effect(assigns.site, target),
+        state: Setup.delivery_state(assigns.site)
+      )
 
     ~H"""
     <section class="site-section" id={"delivery-site-#{@site.id}"}>
@@ -546,6 +584,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
           phx-click="save_delivery"
           phx-value-id={@site.id}
           phx-value-mode={@target}
+          phx-value-delivery={@state["delivery"]}
+          phx-value-strategy={@state["strategy"]}
+          phx-value-build={@state["build"]}
+          phx-value-status={@state["status"]}
           data-confirm-title={switch_title(@site, @target)}
           data-confirm={@effect}
           data-confirm-ok={switch_label(@target)}
@@ -585,6 +627,9 @@ defmodule BrandoAdmin.Sites.SiteLive do
           class="btn btn--primary"
           phx-click="activate_site"
           phx-value-id={@site.id}
+          data-confirm-title={gettext("Activate %{name}?", name: @site.name)}
+          data-confirm={activation_effect(@site)}
+          data-confirm-ok={gettext("Activate")}
         >
           {gettext("Activate")}
         </button>
@@ -607,6 +652,9 @@ defmodule BrandoAdmin.Sites.SiteLive do
           class="btn"
           phx-click="activate_site"
           phx-value-id={@site.id}
+          data-confirm-title={gettext("Restore %{name}?", name: @site.name)}
+          data-confirm={activation_effect(@site)}
+          data-confirm-ok={gettext("Restore")}
         >
           {gettext("Restore")}
         </button>
@@ -630,6 +678,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   @impl Phoenix.LiveView
   def handle_event("refresh", _params, socket), do: {:noreply, refresh(socket)}
+
+  # The text fields' `Brando.FieldBase` hook reports focus and blur to the
+  # nearest `.brando-form`, for field presence, which this screen has none of
+  def handle_event(event, _params, socket) when event in ["focus", "blur"], do: {:noreply, socket}
 
   def handle_event("check_create", %{"site" => params}, socket) do
     {:noreply, assign_create_form(socket, params, [])}
@@ -664,14 +716,36 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  # Each form's draft: what it shows until saved, as a change re-renders the
+  # site's form, and a field that is not focused takes the rendered value.
+  # The languages keep their blank rows, which the list's rows are matched
+  # by, until they are saved.
   def handle_event("check_languages", %{"site" => params}, socket) do
-    case site_from_socket(socket, params["id"]) do
-      {:ok, site} ->
-        draft = %{languages: clean_languages(params["languages"]), default_language: params["default_language"]}
-        {:noreply, update(socket, :language_drafts, &Map.put(&1, site.id, draft))}
+    put_draft(socket, :languages, params["id"], %{
+      languages: List.wrap(params["languages"]),
+      default_language: params["default_language"]
+    })
+  end
 
-      {:error, _reason} ->
-        {:noreply, socket}
+  def handle_event("check_name", %{"site" => params}, socket),
+    do: put_draft(socket, :name, params["id"], params["name"])
+
+  def handle_event("check_library_group", %{"site" => params}, socket),
+    do: put_draft(socket, :library, params["id"], params["provider_library_group"])
+
+  def handle_event("check_grant", %{"assignment" => params}, socket),
+    do: put_draft(socket, :grant, params["site_id"], Map.take(params, ["user_id", "role"]))
+
+  def handle_event("save_name", %{"site" => params}, socket) do
+    with {:ok, site} <- site_from_socket(socket, params["id"]),
+         {:ok, site} <- Setup.update_name(site, params["name"], socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> drop_draft(:name, site.id)
+       |> notify(gettext("%{name} saved.", name: site.name))
+       |> refresh()}
+    else
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
   end
 
@@ -682,7 +756,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
          {:ok, site} <- Setup.update_languages(site, attrs, socket.assigns.current_user) do
       {:noreply,
        socket
-       |> update(:language_drafts, &Map.delete(&1, site.id))
+       |> drop_draft(:languages, site.id)
        |> notify(gettext("Languages for %{name} saved.", name: site.name))
        |> refresh()}
     else
@@ -690,16 +764,26 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
-  def handle_event("save_delivery", %{"id" => id, "mode" => mode}, socket) do
+  # The confirmation was written for the delivery the button carries: a
+  # deploy or another switch since then is refused, and the form shows the
+  # site as it is now
+  def handle_event("save_delivery", %{"id" => id, "mode" => mode} = params, socket) do
+    # An empty value may arrive as no value at all
+    expected = Map.new(~w(delivery strategy build status), &{&1, params[&1] || ""})
+
     with {:ok, site} <- site_from_socket(socket, id),
          {:ok, mode} <- delivery_mode_param(mode),
-         {:ok, site} <- Setup.update_delivery(site, mode, socket.assigns.current_user) do
+         {:ok, site} <- Setup.update_delivery(site, mode, socket.assigns.current_user, expected: expected) do
       {:noreply,
        socket
        |> notify(gettext("%{name} now has %{delivery} delivery.", name: site.name, delivery: delivery_name(mode)))
        |> refresh()}
     else
-      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+      {:error, :delivery_changed} ->
+        {:noreply, socket |> refresh() |> notify_error(delivery_changed_message(socket, id))}
+
+      {:error, reason} ->
+        {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
   end
 
@@ -724,6 +808,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
            Registry.put_provider_library_group(site, params["provider_library_group"], socket.assigns.current_user) do
       {:noreply,
        socket
+       |> drop_draft(:library, site.id)
        |> notify(gettext("Provider library group for %{name} saved.", name: site.name))
        |> refresh()}
     else
@@ -741,7 +826,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
          {:ok, user} <- user_from_socket(socket, params["user_id"]),
          {:ok, role} <- parse_role(params["role"]),
          {:ok, _assignment} <- Access.grant(user, site, role) do
-      {:noreply, socket |> notify(gettext("Site access updated.")) |> refresh()}
+      {:noreply, socket |> drop_draft(:grant, site.id) |> notify(gettext("Site access updated.")) |> refresh()}
     else
       {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
@@ -784,7 +869,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:assignments, Map.new(sites, &{&1.id, Access.list_assignments(&1)}))
     |> assign(:stats, Map.new(sites, &{&1.id, site_stats(&1)}))
     |> assign(:seeding, seeding_by_site(sites))
-    |> assign_new(:language_drafts, fn -> %{} end)
+    |> assign_new(:drafts, fn -> %{} end)
     |> keep_selection()
   end
 
@@ -865,10 +950,28 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   # What saving a site's languages asks of the user (`Setup.update_languages/3`)
-  defp authorize_site_update(socket) do
-    socket.assigns.current_user
-    |> Brando.Authorization.Scope.installation()
-    |> Brando.Authorization.Boundary.authorize(:update, :sites)
+  defp authorize_site_update(socket), do: Setup.authorize_settings(socket.assigns.current_user)
+
+  defp put_draft(socket, form, id, draft) do
+    case site_from_socket(socket, id) do
+      {:ok, site} -> {:noreply, update(socket, :drafts, &Map.put(&1, {form, site.id}, draft))}
+      {:error, _reason} -> {:noreply, socket}
+    end
+  end
+
+  defp drop_draft(socket, form, site_id), do: update(socket, :drafts, &Map.delete(&1, {form, site_id}))
+
+  defp delivery_changed_message(socket, id) do
+    name =
+      case site_from_socket(socket, id) do
+        {:ok, site} -> site.name
+        {:error, _reason} -> gettext("The site")
+      end
+
+    gettext(
+      "%{name}’s delivery changed while the confirmation was open, so nothing was switched. Check what switching does now, and switch again.",
+      name: name
+    )
   end
 
   defp site_stats(site) do
@@ -1100,6 +1203,32 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  # What activating or restoring the site does for visitors, for its
+  # confirmation: its hosts are back in public routing, and a build the
+  # installation kept is served again (`Brando.SSG.LocalDelivery`)
+  defp activation_effect(site) do
+    domain = live_domain(site)
+
+    cond do
+      Site.local_delivery?(site) and is_binary(site.published_build) ->
+        gettext("Its domains serve again at once: visitors to %{domain} get published build %{build}.",
+          domain: domain,
+          build: site.published_build
+        )
+
+      site.delivery_mode == :static and not Site.local_delivery?(site) ->
+        gettext(
+          "Its domains are back in public routing at once: Phoenix answers %{domain} again where it points at this installation.",
+          domain: domain
+        )
+
+      true ->
+        gettext("Its domains serve again at once: visitors to %{domain} get the site’s pages from Phoenix.",
+          domain: domain
+        )
+    end
+  end
+
   defp lifecycle_description(%Site{status: :active}),
     do:
       gettext(
@@ -1149,7 +1278,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   # what was changed in the other field.
   defp languages_form(drafts, site) do
     draft =
-      Map.get_lazy(drafts, site.id, fn ->
+      Map.get_lazy(drafts, {:languages, site.id}, fn ->
         %{languages: site.languages, default_language: site.default_language}
       end)
 
@@ -1160,10 +1289,24 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   defp removed_languages(drafts, site) do
-    case Map.fetch(drafts, site.id) do
-      {:ok, %{languages: languages}} -> site.languages -- languages
+    case Map.fetch(drafts, {:languages, site.id}) do
+      {:ok, %{languages: languages}} -> site.languages -- clean_languages(languages)
       :error -> []
     end
+  end
+
+  defp name_form(drafts, site) do
+    to_form(%{"name" => Map.get(drafts, {:name, site.id}, site.name), "key" => site.key},
+      as: "site",
+      id: "name-site-#{site.id}"
+    )
+  end
+
+  defp library_form(drafts, site) do
+    to_form(%{"provider_library_group" => Map.get(drafts, {:library, site.id}, site.provider_library_group)},
+      as: "site",
+      id: "library-group-site-#{site.id}"
+    )
   end
 
   defp seeding(seeding, site_id), do: Map.get(seeding, site_id, [])
@@ -1276,6 +1419,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
       gettext("%{name} is being set up, or one of its environments copied. Seed it again when that has finished.",
         name: site.name
       )
+
+  defp lifecycle_error(:forbidden), do: gettext("You do not have permission for this action.")
 
   defp lifecycle_error(reason) when is_atom(reason), do: reason |> Atom.to_string() |> String.replace("_", " ")
   defp lifecycle_error(reason), do: inspect(reason)
