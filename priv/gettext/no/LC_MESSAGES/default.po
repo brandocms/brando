@@ -2614,6 +2614,16 @@ msgstr "Og %{count} til"
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
+msgid "Another editor has moved blocks here since, so the move was not redone."
+msgstr "En annen redaktør har flyttet blokker her siden, så flyttingen ble ikke gjort om."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor has moved blocks here since, so the move was not undone."
+msgstr "En annen redaktør har flyttet blokker her siden, så flyttingen ble ikke angret."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
 msgid "Another editor kept their version of a new block you had changed too. Your version is kept as a copy next to it."
 msgstr "En annen redaktør beholdt sin versjon av en ny blokk du også hadde endret. Din versjon er tatt vare på som en kopi ved siden av."
 
@@ -3244,6 +3254,11 @@ msgstr "Blokkmodulsett"
 #, elixir-autogen, elixir-format
 msgid "Block modules"
 msgstr "Blokkmoduler"
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Block moved"
+msgstr "Blokk flyttet"
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
@@ -14632,8 +14647,8 @@ msgstr "Gjør om"
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
-msgid "Redo typing"
-msgstr "Gjør om skriving"
+msgid "Redo typing, or else the last block move undone"
+msgstr "Gjør om skriving, ellers siste angrede blokkflytting"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

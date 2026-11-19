@@ -114,8 +114,9 @@ export function available(shortcut) {
 }
 
 // The block field the editor last worked in (a click, a key or the focus in
-// it), which undoes its own last block moved or deleted. Only while it shows:
-// ⌘Z never changes a block field in a hidden tab.
+// it), which undoes its own last block moved or deleted, and redoes its own
+// last move undone. Only while it shows: ⌘Z and ⌘⇧Z never change a block
+// field in a hidden tab.
 let lastBlockField = null
 
 function noteBlockField(event) {
@@ -134,14 +135,14 @@ function builtIn(app, id) {
   const shortcut = SHORTCUTS.find(s => s.id === id)
   if (id.startsWith('go-')) return () => navigate(app, destination(shortcut))
   if (id === 'new-entry') return () => navigate(app, createUrl())
-  if (id === 'undo') {
+  if (id === 'undo' || id === 'redo') {
     return () => {
       const field = blockUndoTarget()
       if (!field || !app?.liveSocket) return false
-      // With nothing to undo the key is still the block editor's: the
-      // browser's own undo would take back typing in a field that has lost
-      // the focus, out of sight.
-      if (field.dataset.undoAt) app.liveSocket.execJS(field, field.dataset.undo)
+      // With nothing to undo or redo the key is still the block editor's:
+      // the browser's own would take back (or redo) typing in a field that
+      // has lost the focus, out of sight.
+      if (field.dataset[`${id}At`]) app.liveSocket.execJS(field, field.dataset[id])
       return true
     }
   }

@@ -62,18 +62,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   The bin clears on save — the save deletes the underlying rows, so stashed
   db ids go stale.
 
-  ## Undoing structure with ⌘Z
+  ## Undoing structure with ⌘Z, redoing it with ⌘⇧Z
 
   `@undo_stack` lists this editor's structural changes, newest first, each
   with what undoes it: `:delete` (its snapshot is the bin's newest), a root
-  block's move (`{:move, uid, index, order}`) and a reorder of a parent's
-  children (`{:reorder_children, parent_uid, before, after}`). ⌘Z outside a
-  text field (`shortcuts/index.js`) undoes the newest, in the block field the
-  editor last worked in, if it shows; a delete goes through the same restore
-  as the bin toast's Undo. Any other change to the structure, this editor's
-  (an insert, a paste, a move to another parent) or another editor's, empties
-  it, so ⌘Z never steps over a change it cannot undo; and a move is only
-  undone while the order is still the one it left. It clears with the bin.
+  block's move (`{:move, uid, index, order}`: back to `index` while the order
+  is `order`) and a reorder of a parent's children (`{:reorder_children,
+  parent_uid, target, expected}`: to `target` while they are `expected`).
+  ⌘Z outside a text field (`shortcuts/index.js`) undoes the newest, in the
+  block field the editor last worked in, if it shows; a delete goes through
+  the same restore as the bin toast's Undo. A move's own notice ("Block
+  moved", `@move_notice`) offers the same undo while that move is the newest
+  change. An undone move goes on `@redo_stack` as the change that puts it
+  back, for ⌘⇧Z; a new change of this editor's empties it, and so does
+  restoring a deleted block, which redo does not delete again.
+
+  Any other change to the structure by this editor (an insert, a paste, a move
+  to another parent) empties both stacks, so ⌘Z never steps over a change it
+  cannot undo. Another editor's change leaves them, and a move is undone or
+  redone only while the order is still the one it left: when it is not,
+  another editor has moved, added or removed blocks there since, so it is
+  refused with a notice and both stacks empty rather than move their blocks
+  by a guess. They clear with the bin.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
@@ -103,6 +113,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      assign(socket,
        outline_items: [],
        undo_stack: [],
+       redo_stack: [],
+       move_notice: nil,
        open_slot_uid: nil,
        slot_title: nil,
        note_observers: %{},
@@ -1056,7 +1068,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> assign(:edit_session, replica)
         |> show_state(displayed, :all)
-        |> assign(:undo_stack, [])
+        |> drop_history()
         |> report_rejection(op, message.reason)
 
       :stale ->
@@ -2437,24 +2449,40 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     if stashed?, do: push_undo(socket, :delete), else: socket
   end
 
-  # Structural changes the stack does not record empty it: ⌘Z must not step
-  # over them to an older change. `:recorded` ops are the ones it records,
-  # `:undo` the ones it undoes with.
+  # Structural changes of this editor's the stacks do not record empty them:
+  # ⌘Z must not step over them to an older change. `:recorded` ops are the
+  # ones the undo stack records, `:undo` the ones undo and redo apply.
   @unrecorded_structure @structural_ops ++ [:restore, :carry, :replace_state]
 
   defp forget_undo(socket, _op, mode) when mode in [:recorded, :undo], do: socket
   # This editor's own restore of a delete (the toast's Undo, or ⌘Z)
   defp forget_undo(socket, {:restore, _}, mode) when mode != :remote, do: socket
-  defp forget_undo(socket, op, _mode) when elem(op, 0) in @unrecorded_structure, do: assign(socket, :undo_stack, [])
+  # Another editor's change: each entry checks, when it is undone or redone,
+  # that what it would put back is still as it left it (`revert_structure/2`)
+  defp forget_undo(socket, _op, :remote), do: socket
+  defp forget_undo(socket, op, _mode) when elem(op, 0) in @unrecorded_structure, do: drop_history(socket)
   defp forget_undo(socket, _op, _mode), do: socket
 
-  defp clear_undo(socket), do: assign(socket, block_bin: [], undo_stack: [])
+  defp clear_undo(socket), do: socket |> assign(:block_bin, []) |> drop_history()
 
-  # `at` orders the changes of every block field in the form, for ⌘Z
+  defp drop_history(socket), do: assign(socket, undo_stack: [], redo_stack: [], move_notice: nil)
+
+  # A new change of this editor's: what was undone before it cannot be redone
   defp push_undo(%{assigns: %{source_locked: true}} = socket, _entry), do: socket
+  defp push_undo(socket, entry), do: socket |> assign(:redo_stack, []) |> stack_undo(entry)
 
-  defp push_undo(socket, entry),
-    do: update(socket, :undo_stack, &[{entry, System.unique_integer([:positive, :monotonic])} | &1])
+  # `at` orders the changes of every block field in the form, for ⌘Z. A move
+  # shows its notice while it is the newest change.
+  defp stack_undo(socket, entry) do
+    at = System.unique_integer([:positive, :monotonic])
+
+    socket
+    |> update(:undo_stack, &[{entry, at} | &1])
+    |> assign(:move_notice, if(entry == :delete, do: nil, else: at))
+  end
+
+  defp stack_redo(socket, entry),
+    do: update(socket, :redo_stack, &[{entry, System.unique_integer([:positive, :monotonic])} | &1])
 
   defp drop_newest_delete(stack) do
     case Enum.find_index(stack, &match?({:delete, _at}, &1)) do
@@ -2477,43 +2505,79 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  # Undoes a move or reorder from `@undo_stack`, with the ops a local change
-  # would send, so it reaches the other editors. Children belong to their
-  # mounted root, which takes them in the new order through `replace_form`,
-  # as a restored child does.
-  defp undo_structure(socket, {:move, uid, index, order}) do
+  # Undoes or redoes a move or reorder from the stacks, with the ops a local
+  # change would send, so it reaches the other editors. Only while the order
+  # is still the one the change left (`:conflict` otherwise: another editor
+  # has changed it since, and putting the block back by its old place would
+  # move theirs). Gives the entry that reverts it in turn. Children belong to
+  # their mounted root, which takes them in the new order through
+  # `replace_form`, as a restored child does.
+  defp revert_structure(socket, {:move, uid, index, order}) do
     if socket.assigns.block_ops.order == order do
-      socket
-      |> apply_block_op({:move, uid, index}, :undo)
-      |> refresh_live_preview()
-      |> maybe_rebuild_outline()
-      |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})
+      socket = apply_block_op(socket, {:move, uid, index}, :undo)
+
+      if socket.assigns.block_ops.order == order do
+        :unchanged
+      else
+        back = {:move, uid, Enum.find_index(order, &(&1 == uid)), socket.assigns.block_ops.order}
+
+        socket =
+          socket
+          |> refresh_live_preview()
+          |> maybe_rebuild_outline()
+          |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})
+
+        {:ok, socket, back}
+      end
     else
-      socket
+      :conflict
     end
   end
 
-  defp undo_structure(socket, {:reorder_children, parent_uid, before, after_reorder}) do
+  defp revert_structure(socket, {:reorder_children, parent_uid, target, expected}) do
     ops = socket.assigns.block_ops
 
-    if Ops.known?(ops, parent_uid) and Map.get(ops.child_order, parent_uid) == after_reorder do
-      socket = apply_block_op(socket, {:reorder_children, parent_uid, before}, :undo)
+    if Ops.known?(ops, parent_uid) and Map.get(ops.child_order, parent_uid) == expected do
+      socket = apply_block_op(socket, {:reorder_children, parent_uid, target}, :undo)
       updated_ops = socket.assigns.block_ops
-      root_uid = Ops.root_of(updated_ops, parent_uid)
-      new_form = materialized_form(socket, updated_ops, root_uid)
-      send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
 
-      socket
-      |> refresh_live_preview()
-      |> maybe_rebuild_outline()
-      |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{parent_uid}\"]"})
+      if Map.get(updated_ops.child_order, parent_uid) == expected do
+        :unchanged
+      else
+        root_uid = Ops.root_of(updated_ops, parent_uid)
+        new_form = materialized_form(socket, updated_ops, root_uid)
+        send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
+
+        socket =
+          socket
+          |> refresh_live_preview()
+          |> maybe_rebuild_outline()
+          |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{parent_uid}\"]"})
+
+        {:ok, socket, {:reorder_children, parent_uid, expected, target}}
+      end
     else
-      socket
+      :conflict
     end
+  end
+
+  # Neither undone nor redone: the next ⌘Z would step over this change, so
+  # nothing older is undone either
+  defp refuse_revert(socket, :undo) do
+    send(self(), {:toast, gettext("Another editor has moved blocks here since, so the move was not undone.")})
+    drop_history(socket)
+  end
+
+  defp refuse_revert(socket, :redo) do
+    send(self(), {:toast, gettext("Another editor has moved blocks here since, so the move was not redone.")})
+    drop_history(socket)
   end
 
   defp undo_at([{_entry, at} | _]), do: at
   defp undo_at([]), do: nil
+
+  # The newest change, when it is a move with its notice still up
+  defp move_notice?(move_notice, undo_stack), do: move_notice != nil and move_notice == undo_at(undo_stack)
 
   defp maybe_rebuild_outline(%{assigns: %{outline_items: []}} = socket), do: socket
   defp maybe_rebuild_outline(socket), do: rebuild_outline_items(socket)
@@ -2589,7 +2653,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # reposition a main block
   @locked_client_events ~w(reposition paste_block_at_end restore_block outline_root_reposition outline_reposition start_from_template
-                           insert_starting_module)
+                           insert_starting_module undo_structure redo_structure)
 
   def handle_event(event, _params, %{assigns: %{source_locked: true}} = socket) when event in @locked_client_events,
     do: {:noreply, refuse_structure(socket, event)}
@@ -2670,9 +2734,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         {:noreply, socket}
 
       [snapshot | rest] ->
+        # Redo does not delete it again, and would step over the restore
         socket =
           socket
-          |> assign(:block_bin, rest)
+          |> assign(block_bin: rest, redo_stack: [])
           |> update(:undo_stack, &drop_newest_delete/1)
 
         case restore_from_snapshot(socket, snapshot) do
@@ -2697,7 +2762,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      |> update(:undo_stack, fn stack -> Enum.reject(stack, &match?({:delete, _at}, &1)) end)}
   end
 
-  # ⌘Z outside a text field: the newest structural change in this field
+  # ⌘Z outside a text field, or a move notice's Undo: the newest structural
+  # change in this field
   def handle_event("undo_structure", _, socket) do
     case socket.assigns.undo_stack do
       [] ->
@@ -2707,8 +2773,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         handle_event("restore_block", %{}, socket)
 
       [{entry, _at} | rest] ->
-        {:noreply, socket |> assign(:undo_stack, rest) |> undo_structure(entry)}
+        case revert_structure(assign(socket, undo_stack: rest, move_notice: nil), entry) do
+          {:ok, socket, back} -> {:noreply, stack_redo(socket, back)}
+          :conflict -> {:noreply, refuse_revert(socket, :undo)}
+          :unchanged -> {:noreply, socket}
+        end
     end
+  end
+
+  # ⌘⇧Z outside a text field: the move undone last, made again
+  def handle_event("redo_structure", _, socket) do
+    case socket.assigns.redo_stack do
+      [] ->
+        {:noreply, socket}
+
+      [{entry, _at} | rest] ->
+        case revert_structure(assign(socket, :redo_stack, rest), entry) do
+          {:ok, socket, back} -> {:noreply, stack_undo(socket, back)}
+          :conflict -> {:noreply, refuse_revert(socket, :redo)}
+          :unchanged -> {:noreply, socket}
+        end
+    end
+  end
+
+  def handle_event("dismiss_move_notice", _, socket) do
+    {:noreply, assign(socket, :move_notice, nil)}
   end
 
   # Outline: rebuild items when drawer opens
@@ -3109,6 +3198,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
       data-undo-at={undo_at(@undo_stack)}
       data-undo={JS.push("undo_structure", target: @myself)}
+      data-redo-at={undo_at(@redo_stack)}
+      data-redo={JS.push("redo_structure", target: @myself)}
     >
       <p :if={@source_locked && @focus.root} class="blocks-source-note">
         {gettext("Blocks, their order and media follow the source. Edit the text here.")}
@@ -3165,23 +3256,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             </div>
           </.inputs_for>
         </div>
-        <div :if={@block_bin != []} id={"block-field-#{@block_field}-bin"} class="block-bin-toast" data-testid="block-bin">
-          <span class="block-bin-message">
-            {ngettext("Block deleted", "%{count} blocks deleted", length(@block_bin))}
-          </span>
-          <button type="button" class="block-bin-undo" phx-click="restore_block" phx-target={@myself}>
-            {gettext("Undo")}
-          </button>
-          <button
-            type="button"
-            class="block-bin-dismiss"
-            phx-click="clear_block_bin"
-            phx-target={@myself}
-            aria-label={gettext("Dismiss")}
-          >
-            <.icon name="x" />
-          </button>
-        </div>
+        <.undo_notice
+          block_field={@block_field}
+          block_bin={@block_bin}
+          move_notice?={move_notice?(@move_notice, @undo_stack)}
+          myself={@myself}
+        />
       </div>
     </div>
     """
@@ -3201,6 +3281,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
       data-undo-at={undo_at(@undo_stack)}
       data-undo={JS.push("undo_structure", target: @myself)}
+      data-redo-at={undo_at(@redo_stack)}
+      data-redo={JS.push("redo_structure", target: @myself)}
     >
       <div :if={!@note_collection?} class="label-wrapper">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
@@ -3525,23 +3607,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           paste_event="paste_block_at_end"
           paste_target={@myself}
         />
-        <div :if={@block_bin != []} id={"block-field-#{@block_field}-bin"} class="block-bin-toast" data-testid="block-bin">
-          <span class="block-bin-message">
-            {ngettext("Block deleted", "%{count} blocks deleted", length(@block_bin))}
-          </span>
-          <button type="button" class="block-bin-undo" phx-click="restore_block" phx-target={@myself}>
-            {gettext("Undo")}
-          </button>
-          <button
-            type="button"
-            class="block-bin-dismiss"
-            phx-click="clear_block_bin"
-            phx-target={@myself}
-            aria-label={gettext("Dismiss")}
-          >
-            <.icon name="x" />
-          </button>
-        </div>
+        <.undo_notice
+          block_field={@block_field}
+          block_bin={@block_bin}
+          move_notice?={move_notice?(@move_notice, @undo_stack)}
+          myself={@myself}
+        />
       </div>
       <Outline.outline_drawer
         id={"block-field-#{@block_field}-outline"}
@@ -3549,6 +3620,55 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         block_field={@block_field}
         target={@myself}
       />
+    </div>
+    """
+  end
+
+  # One notice at a time, the newest change's: a move's while it is the
+  # newest, else the deleted blocks'. Both sit where the field ends.
+  attr :block_field, :any, required: true
+  attr :block_bin, :list, required: true
+  attr :move_notice?, :boolean, required: true
+  attr :myself, :any, required: true
+
+  defp undo_notice(%{move_notice?: true} = assigns) do
+    ~H"""
+    <div id={"block-field-#{@block_field}-moved"} class="block-bin-toast" data-testid="block-moved" role="status">
+      <span class="block-bin-message">{gettext("Block moved")}</span>
+      <button type="button" class="block-bin-undo" phx-click="undo_structure" phx-target={@myself}>
+        {gettext("Undo")}
+      </button>
+      <button
+        type="button"
+        class="block-bin-dismiss"
+        phx-click="dismiss_move_notice"
+        phx-target={@myself}
+        aria-label={gettext("Dismiss")}
+      >
+        <.icon name="x" />
+      </button>
+    </div>
+    """
+  end
+
+  defp undo_notice(assigns) do
+    ~H"""
+    <div :if={@block_bin != []} id={"block-field-#{@block_field}-bin"} class="block-bin-toast" data-testid="block-bin">
+      <span class="block-bin-message">
+        {ngettext("Block deleted", "%{count} blocks deleted", length(@block_bin))}
+      </span>
+      <button type="button" class="block-bin-undo" phx-click="restore_block" phx-target={@myself}>
+        {gettext("Undo")}
+      </button>
+      <button
+        type="button"
+        class="block-bin-dismiss"
+        phx-click="clear_block_bin"
+        phx-target={@myself}
+        aria-label={gettext("Dismiss")}
+      >
+        <.icon name="x" />
+      </button>
     </div>
     """
   end

@@ -1,0 +1,1 @@
+- Moving a block, by dragging it or with Move up or Move down, shows a "Block moved" notice whose Undo puts it back, and ⌘⇧Z (Ctrl+Shift+Z) outside a text field moves it again; an undo or redo is refused with a notice when another editor has moved blocks there since.

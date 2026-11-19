@@ -52,6 +52,16 @@ test('⌘Z is dispatched for the block undo, never in a text field or a dialog',
   assert.ok(!matches('undo', key('Z', { metaKey: true, shiftKey: true })))
 })
 
+test('⌘⇧Z is dispatched for the block redo, never in a text field or a dialog', () => {
+  const redo = find('redo')
+  assert.ok(redo.dispatch)
+  assert.ok(!redo.inText)
+  assert.ok(!redo.inModal)
+  assert.ok(matches('redo', key('Z', { metaKey: true, shiftKey: true })))
+  assert.ok(matches('redo', key('z', { ctrlKey: true, shiftKey: true })))
+  assert.ok(!matches('redo', key('z', { metaKey: true })))
+})
+
 test('Mod is ⌘ or Ctrl, and Shift must match', () => {
   assert.ok(matches('save', key('s', { metaKey: true })))
   assert.ok(matches('save', key('s', { ctrlKey: true })))

@@ -2614,6 +2614,16 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
+msgid "Another editor has moved blocks here since, so the move was not redone."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor has moved blocks here since, so the move was not undone."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
 msgid "Another editor kept their version of a new block you had changed too. Your version is kept as a copy next to it."
 msgstr ""
 
@@ -3243,6 +3253,11 @@ msgstr ""
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Block modules"
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Block moved"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -14632,7 +14647,7 @@ msgstr ""
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
-msgid "Redo typing"
+msgid "Redo typing, or else the last block move undone"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex
