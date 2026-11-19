@@ -181,6 +181,11 @@ msgstr ""
 msgid "You do not have permission to change the assistant's guidance."
 msgstr ""
 
+#: lib/brando/ai/agent/guidance.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change the guidance for Figma."
+msgstr ""
+
 #: lib/brando/ai/agent.ex
 #: lib/brando/ai/agent/loop.ex
 #, elixir-autogen, elixir-format

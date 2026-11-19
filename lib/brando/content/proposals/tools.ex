@@ -77,7 +77,8 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "describe_content_type",
       description:
-        "Describe a content type's editable fields (name, type, required) and block fields. New entries are always created as drafts.",
+        "Describe a content type's editable fields (name, type, required, and a description from the admin form: the field's label as editors see it, and its instructions) and block fields. " <>
+          "Use the descriptions to tell where text belongs: a heading or introduction the entry has as a field goes in that field, not in a block. New entries are always created as drafts.",
       parameters: %{
         type: "object",
         properties: %{content_type: %{type: "string"}},
@@ -335,7 +336,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: Enum.reject(fields, &(&1.name in locked)),
+      fields: fields |> Enum.reject(&(&1.name in locked)) |> with_descriptions(schema),
       block_fields: block_fields(schema),
       publication: publication("status" in locked)
     }
@@ -1343,4 +1344,64 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp inspect_type(type) when is_atom(type), do: to_string(type)
   defp inspect_type(type), do: inspect(type)
+
+  # Each field's label and instructions from the Blueprint's admin form, as
+  # editors read them: "Introduction — Used for case listings". A field the
+  # form does not show, or shows without a label, has none.
+  defp with_descriptions(fields, schema) do
+    descriptions = form_descriptions(schema)
+
+    Enum.map(fields, fn %{name: name} = field ->
+      case Map.get(descriptions, name) || Map.get(descriptions, String.replace_suffix(name, "_id", "")) do
+        nil -> field
+        description -> Map.put(field, :description, description)
+      end
+    end)
+  end
+
+  @description_limit 300
+
+  defp form_descriptions(schema) do
+    case function_exported?(schema, :__form__, 0) && schema.__form__() do
+      %Brando.Blueprint.Forms.Form{tabs: tabs} ->
+        for %{fields: fieldsets} <- tabs,
+            %Brando.Blueprint.Forms.Fieldset{fields: inputs} <- fieldsets,
+            {name, label, instructions} <- Enum.map(inputs, &form_text/1),
+            description = description(schema, label, instructions),
+            description,
+            into: %{},
+            do: {to_string(name), description}
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp form_text(%Brando.Blueprint.Forms.Input{name: name, opts: opts}),
+    do: {name, opts[:label], opts[:instructions]}
+
+  defp form_text(%Brando.Blueprint.Forms.Subform{name: name, label: label, instructions: instructions}),
+    do: {name, label, instructions}
+
+  defp form_text(_element), do: {nil, nil, nil}
+
+  defp description(schema, label, instructions) do
+    [label, instructions]
+    |> Enum.map(&form_string(schema, &1))
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.uniq()
+    |> case do
+      [] -> nil
+      texts -> texts |> Enum.join(" — ") |> String.slice(0, @description_limit)
+    end
+  end
+
+  # Labels and instructions are msgids in the Blueprint's Gettext domain
+  defp form_string(schema, text) when is_binary(text) do
+    %{domain: domain, schema: name} = schema.__naming__()
+    translated = Gettext.dgettext(schema.__modules__(:gettext), String.downcase("#{domain}_#{name}"), text)
+    translated |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+  end
+
+  defp form_string(_schema, _text), do: nil
 end

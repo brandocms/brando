@@ -5,8 +5,10 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
   use Brando.LiveCase
 
   import Brando.MCPHelpers
+  import Brando.Test.Support, only: [put_test_env: 2]
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.AI.Agent.Guidance
   alias Brando.MCP
   alias Brando.MCP.Grant
   alias Brando.MCP.Setting
@@ -108,6 +110,52 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       {:ok, _view, html} = live(conn, "/admin/config/activity")
       assert html =~ "Added the Figma access token"
       assert html =~ "Removed the Figma access token"
+    end
+
+    test "edits the guidance for building from Figma, as versions apart from the assistant's",
+         %{conn: conn, current_user: user} do
+      put_test_env(Brando.Figma, guidance: "Developers: header and footer are page chrome.")
+      {:ok, _} = Guidance.save("The assistant's own guidance.", user)
+
+      {:ok, view, html} = live(conn, "/admin/config/mcp")
+      assert html =~ ~s(data-testid="mcp-figma-guidance-form")
+      assert has_element?(view, "[data-testid=mcp-figma-guidance-code] pre", "page chrome")
+      refute html =~ "The assistant&#39;s own guidance."
+      refute has_element?(view, "[data-testid=mcp-figma-guidance-history]")
+
+      form = "[data-testid=mcp-figma-guidance-form]"
+      view |> form(form, %{text: "The top text is heading and intro."}) |> render_change()
+      view |> form(form, %{text: "The top text is heading and intro."}) |> render_submit()
+      assert Guidance.current(:figma).text == "The top text is heading and intro."
+      assert Guidance.current().text == "The assistant's own guidance."
+      assert has_element?(view, "[data-testid=mcp-figma-guidance-saved]")
+
+      view |> form(form, %{text: "Credits go last."}) |> render_submit()
+      assert {:ok, [%{text: "Credits go last."}, first]} = Guidance.history(user, kind: :figma)
+
+      # An earlier version loads into the editor, unsaved until saved
+      view |> element("[data-testid=mcp-figma-guidance-history] button[phx-value-id='#{first.id}']") |> render_click()
+      assert has_element?(view, "#mcp-figma-guidance-text", "The top text is heading and intro.")
+      assert Guidance.current(:figma).text == "Credits go last."
+
+      view |> form(form, %{text: "The top text is heading and intro."}) |> render_submit()
+      assert Guidance.current(:figma).text == "The top text is heading and intro."
+      assert Guidance.current(:figma).note =~ "Restored"
+    end
+
+    test "shows the guidance for building from Figma read-only to a manager who may not configure the assistant",
+         %{current_user: superuser} do
+      {:ok, _} = Guidance.save("Credits go last.", superuser, kind: :figma)
+      admin = Brando.Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
+      conn = log_in_user(build_conn(), admin)
+
+      {:ok, view, html} = live(conn, "/admin/config/mcp")
+      refute html =~ ~s(data-testid="mcp-figma-guidance-form")
+      assert has_element?(view, "[data-testid=mcp-figma-guidance-readonly] pre", "Credits go last.")
+
+      # The event alone changes nothing
+      render_hook(view, "save_figma_guidance", %{"text" => "Changed"})
+      assert Guidance.current(:figma).text == "Credits go last."
     end
 
     test "is for those who may manage connections", %{tenant: tenant} do

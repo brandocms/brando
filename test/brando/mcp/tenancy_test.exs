@@ -33,29 +33,6 @@ defmodule Brando.MCP.TenancyTest do
     |> Repo.insert!()
   end
 
-  # A connection made through the consent screen's own functions
-  defp connect_directly(user, tenant) do
-    {verifier, challenge} = pkce()
-    params = authorize_params(tenant, challenge)
-    {:ok, request} = OAuth.validate(params, user)
-    {:ok, url} = OAuth.approve(request, user)
-    %{"code" => code} = URI.decode_query(URI.parse(url).query)
-
-    {:ok, tokens} =
-      OAuth.token(
-        %{
-          "grant_type" => "authorization_code",
-          "code" => code,
-          "code_verifier" => verifier,
-          "client_id" => client_id(),
-          "redirect_uri" => redirect_uri()
-        },
-        tenant
-      )
-
-    tokens
-  end
-
   describe "with sites" do
     setup do
       put_test_env(:tenancy_mode, :multi)

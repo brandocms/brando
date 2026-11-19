@@ -10,6 +10,7 @@ defmodule Brando.MCPHelpers do
   import Plug.Conn
 
   alias Brando.MCP
+  alias Brando.MCP.OAuth
   alias Brando.MCP.Setting
   alias Brando.Repo
 
@@ -183,5 +184,28 @@ defmodule Brando.MCPHelpers do
     tenant
     |> rpc(token, "tools/call", %{"name" => "brando_content_" <> name, "arguments" => arguments})
     |> json_response(200)
+  end
+
+  @doc "Connects `user` to `tenant` through the consent screen's own functions, and returns the tokens."
+  def connect_directly(user, tenant) do
+    {verifier, challenge} = pkce()
+    params = authorize_params(tenant, challenge)
+    {:ok, request} = OAuth.validate(params, user)
+    {:ok, url} = OAuth.approve(request, user)
+    %{"code" => code} = URI.decode_query(URI.parse(url).query)
+
+    {:ok, tokens} =
+      OAuth.token(
+        %{
+          "grant_type" => "authorization_code",
+          "code" => code,
+          "code_verifier" => verifier,
+          "client_id" => client_id(),
+          "redirect_uri" => redirect_uri()
+        },
+        tenant
+      )
+
+    tokens
   end
 end

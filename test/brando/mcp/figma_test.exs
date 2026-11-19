@@ -9,6 +9,7 @@ defmodule Brando.MCP.FigmaTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Activity.Event
+  alias Brando.AI.Agent.Guidance
   alias Brando.Images.Image
   alias Brando.MCP
   alias Brando.Media.Folder
@@ -240,6 +241,68 @@ defmodule Brando.MCP.FigmaTest do
       assert one.path != two.path
       root = Brando.Tenant.Storage.current_media_root()
       assert File.read!(Path.join(root, one.path)) == @png
+    end
+
+    test "read_frame's first page carries the guidance for building from Figma",
+         %{tenant: tenant, token: token, user: user, receiver: receiver} do
+      put_test_env(Brando.Figma,
+        req_options: [plug: {Req.Test, Brando.Figma}],
+        guidance: "Developers: header and footer are page chrome."
+      )
+
+      MCP.in_tenant(tenant, fn ->
+        {:ok, _} = Guidance.save("The frame's top text is heading and intro.", user, kind: :figma)
+        {:ok, _} = Guidance.save("Not for Figma.", user)
+      end)
+
+      stub_figma(receiver)
+
+      assert %{"structuredContent" => %{"guidance" => guidance, "sections" => [_ | _]}} =
+               call(tenant, token, "read_frame", %{"url" => @link})
+
+      assert %{
+               "developers" => "Developers: header and footer are page chrome.",
+               "administrators" => "The frame's top text is heading and intro.",
+               "about" => about
+             } = guidance
+
+      assert about =~ "grants no permissions"
+
+      # Later pages carry none
+      assert %{"structuredContent" => later} = call(tenant, token, "read_frame", %{"url" => @link, "offset" => 1})
+      refute Map.has_key?(later, "guidance")
+    end
+
+    test "long guidance leaves the first page fewer sections, within the result limit",
+         %{tenant: tenant, token: token, user: user} do
+      MCP.in_tenant(tenant, fn ->
+        {:ok, _} = Guidance.save(String.duplicate("g", 12_000), user, kind: :figma)
+      end)
+
+      texts =
+        for i <- 1..40,
+            do: %{"id" => "2:#{i}", "name" => "T#{i}", "type" => "TEXT", "characters" => String.duplicate("x", 400)}
+
+      ReqTest.stub(Brando.Figma, fn conn ->
+        ReqTest.json(conn, %{
+          "name" => "Shared",
+          "nodes" => %{
+            "2950:4703" => %{
+              "document" => %{"id" => "2950:4703", "name" => "Long", "type" => "FRAME", "children" => texts}
+            }
+          }
+        })
+      end)
+
+      assert %{"structuredContent" => first} = result = call(tenant, token, "read_frame", %{"url" => @link})
+      refute result["isError"]
+      assert String.length(first["guidance"]["administrators"]) == 12_000
+      assert byte_size(Jason.encode!(first)) <= 24_000
+
+      assert %{"structuredContent" => second} =
+               call(tenant, token, "read_frame", %{"url" => @link, "offset" => first["next_offset"]})
+
+      assert length(first["sections"]) < length(second["sections"])
     end
 
     test "a section too large for a page keeps what fits and says how much it left out",

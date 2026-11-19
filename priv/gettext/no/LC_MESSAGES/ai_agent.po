@@ -182,6 +182,11 @@ msgstr "Skriv en melding først."
 msgid "You do not have permission to change the assistant's guidance."
 msgstr "Du har ikke tilgang til å endre assistentens veiledning."
 
+#: lib/brando/ai/agent/guidance.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have permission to change the guidance for Figma."
+msgstr "Du har ikke tilgang til å endre veiledningen for Figma."
+
 #: lib/brando/ai/agent.ex
 #: lib/brando/ai/agent/loop.ex
 #, elixir-autogen, elixir-format

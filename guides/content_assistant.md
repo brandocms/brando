@@ -268,6 +268,14 @@ matches nothing, matches several modules, or needs a setting the module does
 not have, the assistant says so and asks. It does not invent module ids, and
 every proposal is checked and reviewed.
 
+Tools connected over MCP get the same guidance with the content type they
+describe (see [The site's guidance](mcp.md#the-site-s-guidance)).
+
+The assistant also reads each field's label and instructions from the
+content type's admin form, through `describe_content_type`. Instructions that
+say where a field shows ("Shown above the case's blocks") help it put text in
+the entry's own fields rather than in blocks.
+
 **Instructions for one entry or request** are written in the conversation:
 "Put image3 and image4 after the lede", "Use the quote module for the last
 paragraph". Open the conversation from the entry's block editor so the

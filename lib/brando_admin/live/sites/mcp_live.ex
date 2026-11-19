@@ -2,8 +2,14 @@ defmodule BrandoAdmin.Sites.MCPLive do
   @moduledoc """
   Configuration → Integrations → Connected AI tools: the switch for the
   remote MCP endpoint of the current site environment, its URL, the Figma
-  token its tools read Figma with (`Brando.Figma`), and every connection
-  people have made to it, with a revoke button for each.
+  token its tools read Figma with (`Brando.Figma`), the guidance for
+  building from Figma that `brando_figma_read_frame` returns
+  (`Brando.AI.Agent.Guidance`, kind `:figma`), and every connection people
+  have made to it, with a revoke button for each.
+
+  The guidance is edited by those who may configure the assistant
+  (`Brando.AI.Agent.Guidance.configurable?/1`), as the assistant's guidance
+  is; others see it read-only. Every save is a version.
 
   For people who may manage connections (`Brando.MCP.can_manage?/2`).
   Turning the endpoint on or off, adding or removing the Figma token and
@@ -14,6 +20,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.AI.Agent.Guidance
   alias Brando.MCP
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Toast
@@ -218,6 +225,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               </button>
             </div>
           </article>
+          <.figma_guidance guidance={@figma_guidance} />
         </section>
       </div>
 
@@ -290,6 +298,127 @@ defmodule BrandoAdmin.Sites.MCPLive do
     """
   end
 
+  @guidance_max 12_000
+
+  attr :guidance, :map, required: true
+
+  defp figma_guidance(assigns) do
+    guidance = assigns.guidance
+    saved = (guidance.current && guidance.current.text) || ""
+    assigns = assign(assigns, dirty?: guidance.draft != saved, saved: saved, length: String.length(guidance.draft))
+
+    ~H"""
+    <article class="integrations-row plain mcp-figma-guidance" id="mcp-figma-guidance" data-testid="mcp-figma-guidance">
+      <div class="integrations-text">
+        <h3>{gettext("Guidance for building from Figma")}</h3>
+        <p>
+          {gettext(
+            "Connected tools get this with every frame they read: how the design's frames and components map to this site's modules, which texts belong in the entry's own fields, and what to leave out. The content assistant does not use it. Permissions and review still apply."
+          )}
+        </p>
+
+        <form
+          :if={@guidance.editable?}
+          id="mcp-figma-guidance-form"
+          class="mcp-figma-guidance-form"
+          phx-change="figma_guidance_draft"
+          phx-submit="save_figma_guidance"
+          data-testid="mcp-figma-guidance-form"
+        >
+          <textarea
+            id="mcp-figma-guidance-text"
+            name="text"
+            rows="8"
+            maxlength={@guidance.max}
+            phx-debounce="300"
+            aria-label={gettext("Guidance for building from Figma")}
+            placeholder={
+              gettext(
+                "For example: The frame's top text is the entry's Heading and Introduction fields, not a Text module. Header and footer are page chrome: leave them out."
+              )
+            }
+          >{@guidance.draft}</textarea>
+          <div class="guidance-form-footer">
+            <div class="guidance-form-status">
+              <span class={["guidance-count", @length > @guidance.max && "is-over"]}>
+                {gettext("%{count} of %{max} characters", count: @length, max: @guidance.max)}
+              </span>
+              <span :if={@guidance.note && @dirty?} class="guidance-note">{@guidance.note}</span>
+              <span :if={!@dirty? && @guidance.current} class="guidance-saved" data-testid="mcp-figma-guidance-saved">
+                {gettext("Saved %{time} by %{author}",
+                  time: timestamp(@guidance.current.inserted_at),
+                  author: author(@guidance.current)
+                )}
+              </span>
+            </div>
+            <div class="guidance-actions">
+              <button :if={@dirty?} type="button" class="btn btn--quiet" phx-click="discard_figma_guidance">
+                {gettext("Discard changes")}
+              </button>
+              <button
+                type="submit"
+                class="btn btn--primary"
+                disabled={!@dirty?}
+                phx-disable-with={gettext("Saving…")}
+                data-testid="mcp-figma-guidance-save"
+              >
+                {gettext("Save guidance")}
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div :if={!@guidance.editable?} class="mcp-figma-guidance-readonly" data-testid="mcp-figma-guidance-readonly">
+          <pre :if={@saved != ""}>{@saved}</pre>
+          <p :if={@saved == ""}>{gettext("None has been written for this site.")}</p>
+          <p>{gettext("Only people who may configure the assistant can change it.")}</p>
+        </div>
+
+        <details :if={@guidance.code} class="mcp-figma-guidance-more" data-testid="mcp-figma-guidance-code">
+          <summary>{gettext("From the site's code")}</summary>
+          <p>
+            {gettext(
+              "Set by the developers in the site's configuration. Where it conflicts with the guidance above, the guidance above applies."
+            )}
+          </p>
+          <pre>{@guidance.code}</pre>
+        </details>
+
+        <details
+          :if={@guidance.editable? && @guidance.history != []}
+          class="mcp-figma-guidance-more"
+          data-testid="mcp-figma-guidance-history"
+        >
+          <summary>{gettext("History")}</summary>
+          <ol class="guidance-history">
+            <li :for={version <- @guidance.history}>
+              <div>
+                <strong>{timestamp(version.inserted_at)}</strong>
+                <span>{author(version)}</span>
+                <span :if={version.note} class="guidance-note">{version.note}</span>
+                <p class="guidance-excerpt">{excerpt(version.text)}</p>
+              </div>
+              <span :if={@guidance.current && version.id == @guidance.current.id} class="badge badge--success">
+                {gettext("In use")}
+              </span>
+              <button
+                :if={!(@guidance.current && version.id == @guidance.current.id)}
+                type="button"
+                class="btn btn--sm"
+                phx-click="restore_figma_guidance"
+                phx-value-id={version.id}
+                data-confirm={@dirty? && gettext("Replace your unsaved changes with this version?")}
+              >
+                {gettext("Load into editor")}
+              </button>
+            </li>
+          </ol>
+        </details>
+      </div>
+    </article>
+    """
+  end
+
   def mount(_params, _session, socket) do
     tenant = MCP.tenant(socket.assigns[:current_site], socket.assigns[:current_environment])
 
@@ -304,7 +433,8 @@ defmodule BrandoAdmin.Sites.MCPLive do
          secure?: MCP.secure_base?(),
          figma_form?: false
        )
-       |> load()}
+       |> load()
+       |> load_figma_guidance()}
     else
       {:ok, redirect(socket, to: "/admin/access-denied")}
     end
@@ -318,6 +448,62 @@ defmodule BrandoAdmin.Sites.MCPLive do
       grants: MCP.list_grants(tenant),
       figma: MCP.figma_token_status(tenant)
     )
+  end
+
+  defp load_figma_guidance(socket) do
+    user = socket.assigns.current_user
+    editable? = Guidance.configurable?(user)
+    current = Guidance.current(:figma)
+
+    history =
+      case editable? && Guidance.history(user, kind: :figma, limit: 10) do
+        {:ok, history} -> history
+        _ -> []
+      end
+
+    assign(socket, :figma_guidance, %{
+      editable?: editable?,
+      current: current,
+      draft: (current && current.text) || "",
+      note: nil,
+      history: history,
+      code: Guidance.code_figma_guidance(),
+      max: @guidance_max
+    })
+  end
+
+  defp update_figma_guidance(socket, changes),
+    do: assign(socket, :figma_guidance, Map.merge(socket.assigns.figma_guidance, changes))
+
+  def handle_event("figma_guidance_draft", %{"text" => text}, socket),
+    do: {:noreply, update_figma_guidance(socket, %{draft: text})}
+
+  def handle_event("discard_figma_guidance", _params, socket),
+    do: {:noreply, load_figma_guidance(socket)}
+
+  def handle_event("save_figma_guidance", %{"text" => text}, socket) do
+    user = socket.assigns.current_user
+
+    case Guidance.save(text, user, kind: :figma, note: socket.assigns.figma_guidance.note) do
+      {:ok, _current} ->
+        Toast.send_to(user, gettext("Guidance saved"))
+        {:noreply, load_figma_guidance(socket)}
+
+      {:error, message} ->
+        Toast.send_to(user, message, %{level: :error})
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("restore_figma_guidance", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.figma_guidance.history, &(&1.id == id)) do
+      nil ->
+        {:noreply, socket}
+
+      version ->
+        note = gettext("Restored the version from %{time}", time: timestamp(version.inserted_at))
+        {:noreply, update_figma_guidance(socket, %{draft: version.text, note: note})}
+    end
   end
 
   def handle_event("enable", _params, socket), do: {:noreply, toggle(socket, true)}
@@ -397,6 +583,18 @@ defmodule BrandoAdmin.Sites.MCPLive do
       true ->
         gettext("Ends in %{hint}.", hint: hint)
     end
+  end
+
+  defp timestamp(datetime), do: BrandoAdmin.Dates.long(datetime)
+
+  defp author(%{author: %{name: name}}) when is_binary(name), do: name
+  defp author(_version), do: gettext("Unknown user")
+
+  defp excerpt(""), do: gettext("Cleared")
+
+  defp excerpt(text) do
+    line = text |> String.split("\n", trim: true) |> Enum.join(" · ")
+    if String.length(line) > 160, do: String.slice(line, 0, 160) <> "…", else: line
   end
 
   defp date(datetime), do: Brando.Utils.Datetime.format_datetime(datetime, "%-d %B %Y, %H:%M")

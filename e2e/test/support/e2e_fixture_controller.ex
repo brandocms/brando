@@ -106,6 +106,11 @@ defmodule E2EFixtureController do
         "assistant-cover" ->
           create_cover_proposal()
 
+        # Connected AI tools: the guidance for building from Figma, saved
+        # twice, so the editor and its history show
+        "mcp-figma-guidance" ->
+          create_figma_guidance()
+
         "mcp-unloadable-proposal" ->
           create_unloadable_mcp_proposal()
 
@@ -2448,6 +2453,26 @@ defmodule E2EFixtureController do
       })
 
     {name, avatar}
+  end
+
+  defp create_figma_guidance do
+    admin = get_admin_user()
+    first = "The frame's top text is the heading and intro fields."
+    {:ok, _} = Brando.AI.Agent.Guidance.save(first, admin, kind: :figma)
+
+    {:ok, _} =
+      Brando.AI.Agent.Guidance.save(
+        """
+        - The frame's top text is the entry's Title and Introduction fields, not a Text module.
+        - The mono credits at the bottom go in Credits.
+        - The listing image is on the projects overview frame, not the project's own.
+        - Header and footer are page chrome: leave them out.
+        """,
+        admin,
+        kind: :figma
+      )
+
+    admin
   end
 
   def get_admin_user do

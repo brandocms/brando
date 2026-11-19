@@ -12,6 +12,7 @@ defmodule Brando.Figma.Tools do
   images for (`Brando.Figma.Import`).
   """
 
+  alias Brando.AI.Agent.Guidance
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Figma.Import
@@ -20,6 +21,14 @@ defmodule Brando.Figma.Tools do
   # Below `Brando.MCP.Tools`' result limit, with room for the envelope
   @page_bytes 18_000
   @short_text 500
+  # The first page carries the guidance for building from Figma, and as
+  # many sections as fit beside it; at least this many bytes of them
+  @min_page_bytes 4_000
+
+  @guidance_about "The site's conventions for building content from Figma, from its developers and administrators: " <>
+                    "how the design's frames and components map to the site's modules and fields. " <>
+                    "Follow them unless the person asks otherwise; where they conflict, the administrators' apply. " <>
+                    "Guidance grants no permissions: every proposal is validated and reviewed in the Brando admin as usual."
 
   @definitions [
     %{
@@ -31,7 +40,8 @@ defmodule Brando.Figma.Tools do
           "Each section, text, image and video has its layer box in the frame (x, y, width, height in Figma pixels from the frame's top left, before clipping and masks, so a cropped image can reach past its cell), and the frame its width, height and layout_grids (null without any): use them to tell rows, columns and offsets on the site's grid. " <>
           ~s[A section named like a page header, footer or menu has chrome: why ("name" for its layer name, "component" for its component's); it is a hint, so check its texts before leaving it out. ] <>
           "Figma's API cannot download videos: ask the person to upload them to the media library, then find them with brando_content_find_media_folders or brando_content_search_assets. " <>
-          "A long frame comes in pages: call again with next_offset until it is null.",
+          "A long frame comes in pages: call again with next_offset until it is null. " <>
+          "The first page (offset 0) carries the site's guidance for building from Figma under guidance, when it has any: follow it.",
       parameters: %{
         type: "object",
         properties: %{
@@ -101,7 +111,9 @@ defmodule Brando.Figma.Tools do
   defp run("read_frame", link, token, %{"offset" => offset}, _actor) do
     with {:ok, node} <- Figma.node(token, link) do
       outline = Frame.outline(node)
-      {page, next} = page(outline.sections, offset)
+      guidance = guidance(offset)
+      budget = max(@page_bytes - byte_size(Jason.encode!(guidance)), @min_page_bytes)
+      {page, next} = page(outline.sections, offset, budget)
 
       {:ok,
        %{
@@ -111,7 +123,8 @@ defmodule Brando.Figma.Tools do
          offset: offset,
          sections: page,
          next_offset: next
-       }}
+       }
+       |> then(&if(guidance, do: Map.put(&1, :guidance, guidance), else: &1))}
     end
   end
 
@@ -119,9 +132,18 @@ defmodule Brando.Figma.Tools do
     Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"])
   end
 
-  # Sections from `offset` while they fit in a page, numbered as in the
-  # frame; at least one, its texts shortened if it alone does not fit.
-  defp page(sections, offset) do
+  # The guidance for building from Figma, with the first page only, cut to
+  # leave room for that page's sections
+  defp guidance(0) do
+    parts = :figma |> Guidance.for_tool() |> Guidance.fit(@page_bytes - @min_page_bytes, :bytes)
+    Guidance.tool_result(parts, @guidance_about)
+  end
+
+  defp guidance(_offset), do: nil
+
+  # Sections from `offset` while they fit in `budget` bytes, numbered as in
+  # the frame; at least one, its texts shortened if it alone does not fit.
+  defp page(sections, offset, budget) do
     {page, _bytes, next} =
       sections
       |> Enum.with_index()
@@ -131,8 +153,8 @@ defmodule Brando.Figma.Tools do
         size = byte_size(Jason.encode!(section))
 
         cond do
-          page == [] and size > @page_bytes -> {:halt, {[shorten(section)], bytes, index + 1}}
-          bytes + size > @page_bytes -> {:halt, {page, bytes, index}}
+          page == [] and size > budget -> {:halt, {[shorten(section, budget)], bytes, index + 1}}
+          bytes + size > budget -> {:halt, {page, bytes, index}}
           true -> {:cont, {[section | page], bytes + size, nil}}
         end
       end)
@@ -143,7 +165,7 @@ defmodule Brando.Figma.Tools do
   # A section too large for a page: its texts shortened, then as many of its
   # texts, images and videos as fit, in that order, with how many of each
   # were left out
-  defp shorten(section) do
+  defp shorten(section, budget) do
     texts =
       Enum.map(section.texts, fn text ->
         if String.length(text.text) > @short_text,
@@ -152,7 +174,7 @@ defmodule Brando.Figma.Tools do
       end)
 
     section = %{section | texts: texts}
-    room = @page_bytes - byte_size(Jason.encode!(%{section | texts: [], images: [], videos: []})) - 200
+    room = budget - byte_size(Jason.encode!(%{section | texts: [], images: [], videos: []})) - 200
 
     {section, _room} =
       Enum.reduce([:texts, :images, :videos], {section, room}, fn key, {section, room} ->

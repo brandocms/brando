@@ -38,6 +38,25 @@ defmodule Brando.AI.Agent.Guidance do
   permissions or skip the review.
 
   Guidance is limited to 12,000 characters; longer text is cut and logged.
+
+  ## Connected AI tools
+
+  Tools connected over MCP (`Brando.MCP`) get the same guidance through the
+  tools' results, since some clients ignore a server's instructions:
+  `brando_content_describe_content_type` returns the guidance for that
+  content type (`for_tool/2`), both parts together within the same 12,000
+  characters.
+
+  The guidance for building from Figma is a second kind, edited next to the
+  Figma token under Configuration → Integrations → Connected AI tools and
+  versioned the same way, with its own baseline in the configuration:
+
+      config :brando, Brando.Figma,
+        guidance: MyApp.FigmaGuidance
+
+  A string, or a module implementing this behaviour, called with
+  `content_type: nil`. `brando_figma_read_frame` returns it with a frame. The
+  content assistant's prompt never includes it.
   """
   use Gettext, backend: Brando.Gettext
   import Ecto.Query, only: [from: 2]
@@ -57,6 +76,11 @@ defmodule Brando.AI.Agent.Guidance do
   """
   @type scope :: %{site: String.t() | nil, environment: String.t() | nil, content_type: module() | nil}
 
+  @typedoc "Which guidance: the content assistant's, or the one for building from Figma."
+  @type kind :: :assistant | :figma
+
+  @type part :: %{source: :code | :admin, text: String.t()}
+
   @doc "The guidance for `scope`, or `nil` for none."
   @callback guidance(scope()) :: String.t() | nil
 
@@ -68,14 +92,99 @@ defmodule Brando.AI.Agent.Guidance do
   A failing guidance module is logged and ignored, so the assistant keeps
   working without it.
   """
-  @spec for_conversation(Brando.AI.Agent.Conversation.t()) :: [%{source: :code | :admin, text: String.t()}]
+  @spec for_conversation(Brando.AI.Agent.Conversation.t()) :: [part()]
   def for_conversation(conversation) do
     code = Brando.AI.Agent.config()[:guidance] |> resolve(scope(conversation)) |> limit()
-    admin = conversation.scope |> latest() |> then(&(&1 && limit(&1.text)))
+    admin = conversation.scope |> latest(:assistant) |> then(&(&1 && limit(&1.text)))
 
     [%{source: :code, text: code}, %{source: :admin, text: admin}]
     |> Enum.reject(&is_nil(&1.text))
   end
+
+  @doc """
+  The guidance a connected AI tool gets in the current site/environment, in
+  the same order and shape as `for_conversation/1`: the `:assistant` kind
+  for `content_type`, or the `:figma` kind. Both parts together are at most
+  12,000 characters; the developers' part is cut first, since the
+  administrators' applies where they conflict.
+  """
+  @spec for_tool(kind(), module() | nil) :: [part()]
+  def for_tool(kind, content_type \\ nil) do
+    {site, environment} = tenant_keys()
+    scope = %{site: site, environment: environment, content_type: if(kind == :assistant, do: content_type)}
+    code = kind |> code_config() |> resolve(scope) |> limit()
+    admin = Transfer.scope() |> latest(kind) |> then(&(&1 && limit(&1.text)))
+
+    [%{source: :code, text: code}, %{source: :admin, text: admin}]
+    |> Enum.reject(&is_nil(&1.text))
+    |> fit(@max_length, :characters)
+  end
+
+  @doc """
+  Cuts `parts` to at most `max` characters or bytes together: the
+  developers' part first, then the administrators'. A part cut to nothing is
+  left out; a cut is logged.
+  """
+  @spec fit([part()], non_neg_integer(), :characters | :bytes) :: [part()]
+  def fit(parts, max, unit) do
+    admin = Enum.find(parts, &(&1.source == :admin))
+    code = Enum.find(parts, &(&1.source == :code))
+    admin_text = admin && cut(admin.text, max, unit)
+    room = max - size(admin_text || "", unit)
+    code_text = code && cut(code.text, room, unit)
+
+    [%{source: :code, text: code_text}, %{source: :admin, text: admin_text}]
+    |> Enum.reject(&(&1.text in [nil, ""]))
+  end
+
+  defp size(text, :characters), do: String.length(text)
+  defp size(text, :bytes), do: byte_size(text)
+
+  defp cut(text, max, unit) do
+    cond do
+      size(text, unit) <= max ->
+        text
+
+      max <= 0 ->
+        Logger.warning("Guidance for connected tools is over its limit; a part was left out.")
+        nil
+
+      true ->
+        Logger.warning("Guidance for connected tools is over its limit and was cut.")
+        take(text, max, unit)
+    end
+  end
+
+  defp take(text, max, :characters), do: String.slice(text, 0, max)
+
+  defp take(text, max, :bytes) do
+    text
+    |> String.graphemes()
+    |> Enum.reduce_while({[], 0}, fn grapheme, {taken, bytes} ->
+      bytes = bytes + byte_size(grapheme)
+      if bytes > max, do: {:halt, {taken, bytes}}, else: {:cont, {[grapheme | taken], bytes}}
+    end)
+    |> elem(0)
+    |> Enum.reverse()
+    |> Enum.join()
+  end
+
+  @doc """
+  `parts` as a tool result gives them: what they are and how to use them,
+  then the developers' and the administrators' text. `nil` for no parts.
+  """
+  @spec tool_result([part()], String.t()) :: map() | nil
+  def tool_result([], _about), do: nil
+
+  def tool_result(parts, about) do
+    Enum.reduce(parts, %{about: about}, fn
+      %{source: :code, text: text}, result -> Map.put(result, :developers, text)
+      %{source: :admin, text: text}, result -> Map.put(result, :administrators, text)
+    end)
+  end
+
+  defp code_config(:assistant), do: Brando.AI.Agent.config()[:guidance]
+  defp code_config(:figma), do: (Brando.config(Brando.Figma) || [])[:guidance]
 
   @doc """
   The developers' guidance for the current site and environment: the
@@ -84,7 +193,7 @@ defmodule Brando.AI.Agent.Guidance do
   """
   @spec code_guidance() :: [{module() | nil, String.t()}]
   def code_guidance do
-    config = Brando.AI.Agent.config()[:guidance]
+    config = code_config(:assistant)
     {site, environment} = tenant_keys()
 
     at = fn content_type ->
@@ -102,9 +211,20 @@ defmodule Brando.AI.Agent.Guidance do
     if(general, do: [{nil, general}], else: []) ++ specific
   end
 
+  @doc "The developers' guidance for building from Figma in the current site and environment, or `nil`."
+  @spec code_figma_guidance() :: String.t() | nil
+  def code_figma_guidance do
+    {site, environment} = tenant_keys()
+    :figma |> code_config() |> resolve(%{site: site, environment: environment, content_type: nil}) |> limit()
+  end
+
   ## Admin guidance
 
-  @doc "Whether `actor` may edit the guidance of the current site/environment."
+  @doc """
+  Whether `actor` may edit the guidance of the current site/environment, of
+  either kind. The Figma guidance shapes what connected tools propose as
+  much as the assistant's shapes the assistant, so it takes the same right.
+  """
   @spec configurable?(term()) :: boolean()
   def configurable?(actor) do
     if Brando.Authorization.Engine.enabled?(),
@@ -112,19 +232,24 @@ defmodule Brando.AI.Agent.Guidance do
       else: match?(%{role: :superuser}, Brando.Authorization.Boundary.fresh_role(actor))
   end
 
-  @doc "The admin guidance in use in the current site/environment, or `nil`."
-  @spec current() :: Version.t() | nil
-  def current, do: latest(Transfer.scope())
+  @doc "The admin guidance of `kind` in use in the current site/environment, or `nil`."
+  @spec current(kind()) :: Version.t() | nil
+  def current(kind \\ :assistant), do: latest(Transfer.scope(), kind)
 
-  @doc "The latest versions of the current site/environment's admin guidance, newest first."
+  @doc """
+  The latest versions of the current site/environment's admin guidance,
+  newest first. `kind:` (`:assistant` by default) and `limit:` (20).
+  """
   @spec history(term(), keyword()) :: {:ok, [Version.t()]} | {:error, String.t()}
   def history(actor, opts \\ []) do
+    kind = Keyword.get(opts, :kind, :assistant)
+
     Error.protect(fn ->
-      authorize!(actor)
+      authorize!(actor, kind)
 
       Repo.all(
         from(v in Version,
-          where: v.scope == ^Transfer.scope(),
+          where: v.scope == ^Transfer.scope() and v.kind == ^kind,
           order_by: [desc: v.inserted_at, desc: v.id],
           limit: ^Keyword.get(opts, :limit, 20),
           preload: [:author]
@@ -136,18 +261,21 @@ defmodule Brando.AI.Agent.Guidance do
   @doc """
   Save `text` as the admin guidance of the current site/environment. An
   empty text clears it. Saving the text already in use adds no version.
-  `note:` describes where the text came from, such as a copy.
+  `note:` describes where the text came from, such as a copy; `kind:` which
+  guidance it is (`:assistant` by default).
   """
   @spec save(String.t(), term(), keyword()) :: {:ok, Version.t() | nil} | {:error, String.t()}
   def save(text, actor, opts \\ []) do
+    kind = Keyword.get(opts, :kind, :assistant)
+
     Error.protect(fn ->
-      authorize!(actor)
+      authorize!(actor, kind)
       text = text |> to_string() |> String.replace("\r\n", "\n") |> String.trim()
 
       if String.length(text) > @max_length,
         do: Error.fail!(dgettext("ai_agent", "Guidance can be at most %{count} characters.", count: @max_length))
 
-      current = current()
+      current = current(kind)
 
       if (current && current.text) == text or (is_nil(current) and text == "") do
         current
@@ -156,6 +284,7 @@ defmodule Brando.AI.Agent.Guidance do
 
         %Version{
           scope: Transfer.scope(),
+          kind: kind,
           prefix: Brando.Tenant.current_prefix(),
           site_key: site,
           environment_key: environment,
@@ -170,8 +299,8 @@ defmodule Brando.AI.Agent.Guidance do
   end
 
   @doc """
-  Guidance from other sites and environments that `actor` may also
-  configure, to copy from: `%{id, label, text, inserted_at}`, one per
+  Assistant guidance from other sites and environments that `actor` may
+  also configure, to copy from: `%{id, label, text, inserted_at}`, one per
   site/environment, newest first.
   """
   @spec sources(term()) :: [map()]
@@ -180,7 +309,7 @@ defmodule Brando.AI.Agent.Guidance do
       scope = Transfer.scope()
 
       from(v in Version,
-        where: v.scope != ^scope,
+        where: v.scope != ^scope and v.kind == :assistant,
         distinct: v.scope,
         order_by: [asc: v.scope, desc: v.inserted_at, desc: v.id]
       )
@@ -223,12 +352,12 @@ defmodule Brando.AI.Agent.Guidance do
     Enum.join([(site && site.name) || site_key, environment], " / ")
   end
 
-  defp latest(nil), do: nil
+  defp latest(nil, _kind), do: nil
 
-  defp latest(scope) do
+  defp latest(scope, kind) do
     Repo.one(
       from(v in Version,
-        where: v.scope == ^scope,
+        where: v.scope == ^scope and v.kind == ^kind,
         order_by: [desc: v.inserted_at, desc: v.id],
         limit: 1,
         preload: [:author]
@@ -247,9 +376,13 @@ defmodule Brando.AI.Agent.Guidance do
     ArgumentError -> false
   end
 
-  defp authorize!(actor) do
-    unless configurable?(actor),
-      do: Error.fail!(dgettext("ai_agent", "You do not have permission to change the assistant's guidance."))
+  defp authorize!(actor, kind) do
+    unless configurable?(actor) do
+      case kind do
+        :assistant -> Error.fail!(dgettext("ai_agent", "You do not have permission to change the assistant's guidance."))
+        :figma -> Error.fail!(dgettext("ai_agent", "You do not have permission to change the guidance for Figma."))
+      end
+    end
   end
 
   @doc "The scope the guidance module receives for `conversation`."

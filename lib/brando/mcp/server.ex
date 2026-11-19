@@ -29,8 +29,15 @@ defmodule Brando.MCP.Server do
   @meta_version "io.modelcontextprotocol/protocolVersion"
   @meta_capabilities "io.modelcontextprotocol/clientCapabilities"
 
-  @instructions "Brando's content tools for one site environment: read content types, entries, modules and media, " <>
-                  "and prepare proposals. A proposal changes nothing until the person approves it in the Brando admin."
+  # One sentence each: what the server is, then where its guidance is. The
+  # guidance itself comes with the tools' results, which every client passes
+  # on; some ignore these instructions.
+  @instructions [
+    "Brando's content tools for one site environment: read content types, entries, modules and media, and prepare proposals.",
+    "A proposal changes nothing until the person approves it in the Brando admin.",
+    "The site's conventions come with the tools' results: read brando_content_describe_content_type before you build an entry, " <>
+      "for its fields' descriptions and the site's guidance, and follow the guidance brando_figma_read_frame returns when you build from Figma."
+  ]
 
   @doc "The protocol versions served, newest first."
   @spec versions() :: [String.t()]
@@ -148,7 +155,7 @@ defmodule Brando.MCP.Server do
 
   ## Legacy requests
 
-  defp legacy(id, "initialize", params, _headers, _auth, _tenant) do
+  defp legacy(id, "initialize", params, _headers, _auth, tenant) do
     requested = params["protocolVersion"]
     version = if requested in @legacy, do: requested, else: hd(@legacy)
 
@@ -157,7 +164,7 @@ defmodule Brando.MCP.Server do
        protocolVersion: version,
        capabilities: %{tools: %{listChanged: false}},
        serverInfo: server_info(),
-       instructions: @instructions
+       instructions: instructions(tenant)
      })}
   end
 
@@ -184,12 +191,12 @@ defmodule Brando.MCP.Server do
 
   defp dispatch("ping", _params, _auth, _tenant, _version), do: {:ok, %{}}
 
-  defp dispatch("server/discover", _params, _auth, _tenant, _version) do
+  defp dispatch("server/discover", _params, _auth, tenant, _version) do
     {:ok,
      %{
        supportedVersions: versions(),
        capabilities: %{tools: %{listChanged: false}},
-       instructions: @instructions
+       instructions: instructions(tenant)
      }}
   end
 
@@ -210,6 +217,10 @@ defmodule Brando.MCP.Server do
 
   defp dispatch("tools/call", _params, _auth, _tenant, _version), do: {:error, -32_602, "name is required."}
   defp dispatch(_method, _params, _auth, _tenant, _version), do: {:error, :not_found}
+
+  @doc "The instructions `initialize` and `server/discover` give for `tenant`."
+  @spec instructions(map()) :: String.t()
+  def instructions(_tenant), do: Enum.join(@instructions, " ")
 
   defp server_info, do: %{name: "brando", title: "Brando", version: to_string(Brando.version())}
 
