@@ -247,12 +247,27 @@
     display: grid;
     gap: 12px;
     min-width: 0;
+
+    /* An entry's error names the entry, too long for the label row's
+       corner: it takes a line of its own under the label */
+    .label-wrapper {
+      flex-wrap: wrap;
+      row-gap: 4px;
+
+      > .field-errors {
+        position: static;
+        flex-basis: 100%;
+        align-items: flex-start;
+        overflow-wrap: anywhere;
+      }
+    }
   }
 
   /* What config grants the site, read-only, below each list */
   .site-configured-targets {
-    display: grid;
-    gap: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
     font-size: var(--brando-text-sm);
 
     .site-hint {
@@ -261,6 +276,7 @@
 
     ul {
       display: grid;
+      flex-basis: 100%;
       gap: 2px;
       margin: 0;
       padding: 0;
