@@ -516,7 +516,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   def apply_op(%__MODULE__{}, op), do: {:error, {:unknown_op, op}}
 
   @doc """
-  The blocks either side of `uid` in `list`, `nil` at an end.
+  The blocks either side of `uid` in `list`, `nil` at an end, or `nil` when
+  `uid` is not in it.
 
   ## Examples
 
@@ -527,7 +528,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       {"a", "c"}
 
   """
-  @spec neighbours([uid()], uid()) :: neighbours()
+  @spec neighbours([uid()], uid()) :: neighbours() | nil
   def neighbours(list, uid) do
     case Enum.find_index(list, &(&1 == uid)) do
       nil -> nil

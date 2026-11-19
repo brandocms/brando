@@ -59,6 +59,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   the snapshot into the store (a `{:restore, snapshot}` op), then re-mounts a
   root from its re-materialized seed form or hands a child's root the
   `replace_form` cascade. The op reaches the other editors like any other.
+  A block that cannot go back, because another editor removed the block it
+  was in, here or in the session first, stays in the bin below the others,
+  with a toast, so it does not stand in the way of older changes.
   The bin clears on save — the save deletes the underlying rows, so stashed
   db ids go stale.
 
@@ -86,7 +89,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   block and the blocks either side of where it is and where it goes back to,
   or all of a parent's children. When they are not, another editor has
   changed the blocks there since, so it is refused with a notice and both
-  stacks empty rather than move their blocks by a guess. They clear with the
+  stacks empty rather than move their blocks by a guess. Until the session
+  has confirmed an undo or redo, the next waits: were the first refused
+  there, the next would undo an older change behind it. They clear with the
   bin.
   """
   use BrandoAdmin, :live_component
@@ -974,8 +979,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # session with the join: nothing is cast again.
     replica = %{Replica.new(ref, info, monitor) | read_only: read_only?(socket)}
 
+    # Sequence numbers start again in a new session: an undo or redo sent to
+    # the old one names none of its ops
     socket
-    |> assign(:edit_session, replica)
+    |> assign(edit_session: replica, reverts: %{})
     |> show_state(Replica.displayed(replica), :all,
       mounted?: Keyword.get(opts, :mounted?, true),
       also: Keyword.get(opts, :also, [])
@@ -1070,12 +1077,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp handle_session_message(%{assigns: %{edit_session: %Replica{} = replica}} = socket, %{kind: :rejected} = message) do
     case Replica.receive_rejected(replica, message) do
       {replica, displayed, op} ->
-        socket = socket |> assign(:edit_session, replica) |> show_state(displayed, :all)
+        {direction, reverts} = Map.pop(socket.assigns.reverts, message.seq)
 
-        case Map.pop(socket.assigns.reverts, message.seq) do
-          {nil, _reverts} -> socket |> drop_history() |> report_rejection(op, message.reason)
-          {direction, reverts} -> socket |> assign(:reverts, reverts) |> refuse_revert(direction)
-        end
+        socket
+        |> assign(edit_session: replica, reverts: reverts)
+        |> show_state(displayed, :all)
+        |> rejected(direction, op, message.reason)
 
       :stale ->
         socket
@@ -1476,6 +1483,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp position(_socket, _parent, at), do: at
+
+  # An undo or redo (`direction`) another editor's op got to first
+  defp rejected(socket, direction, _op, :conflict) when direction != nil, do: refuse_revert(socket, direction)
+  defp rejected(socket, direction, _op, {:unknown_uid, _}) when direction != nil, do: refuse_revert(socket, direction)
+
+  # This editor's restore of a deleted block, which went back on screen at
+  # once: it goes back in the bin, as when it fails here (`keep_in_bin/3`).
+  # Nothing older depended on it, so the history stays.
+  defp rejected(socket, _direction, {:restore, snapshot}, reason), do: keep_in_bin(socket, snapshot, reason)
+  defp rejected(socket, _direction, op, reason), do: socket |> drop_history() |> report_rejection(op, reason)
 
   # An op turned away because another editor removed its block.
   defp report_rejection(socket, op, {:unknown_uid, _uid})
@@ -2539,6 +2556,44 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # The newest change in this field undone, or the move undone last made again
+  defp undo_newest(socket) do
+    case socket.assigns.undo_stack do
+      [] ->
+        {:noreply, socket}
+
+      [{:delete, _at} | _] ->
+        handle_event("restore_block", %{}, socket)
+
+      [{entry, _at} | rest] ->
+        case revert_structure(assign(socket, undo_stack: rest, move_notice: nil), entry, :undo) do
+          {:ok, socket, back} -> {:noreply, stack_redo(socket, back)}
+          :conflict -> {:noreply, refuse_revert(socket, :undo)}
+          :unchanged -> {:noreply, socket}
+        end
+    end
+  end
+
+  defp redo_newest(socket) do
+    case socket.assigns.redo_stack do
+      [] ->
+        {:noreply, socket}
+
+      [{entry, _at} | rest] ->
+        case revert_structure(assign(socket, :redo_stack, rest), entry, :redo) do
+          {:ok, socket, back} -> {:noreply, stack_undo(socket, back)}
+          :conflict -> {:noreply, refuse_revert(socket, :redo)}
+          :unchanged -> {:noreply, socket}
+        end
+    end
+  end
+
+  # An undo or redo sent to the session and not yet confirmed
+  defp revert_pending?(%{assigns: %{edit_session: %Replica{pending: pending}, reverts: reverts}}),
+    do: Enum.any?(pending, fn {seq, _op} -> Map.has_key?(reverts, seq) end)
+
+  defp revert_pending?(_socket), do: false
+
   defp reverted(socket, {:move, uid, _to, _from}) do
     socket
     |> refresh_live_preview()
@@ -2589,7 +2644,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     drop_history(socket)
   end
 
-  # A delete ⌘Z or the bin's Undo could not put back
+  # A deleted block ⌘Z or the bin's Undo could not put back, here or in the
+  # session: it stays in the bin, below the others, so the next Undo or ⌘Z
+  # goes on to them and to older changes. Its ⌘Z entry is gone; the bin's
+  # Undo tries it again once it is the last.
+  defp keep_in_bin(socket, snapshot, reason) do
+    Logger.warning("BlockField (#{socket.assigns.block_field}) could not restore deleted block: #{inspect(reason)}")
+    send(self(), {:toast, restore_failed(reason)})
+    update(socket, :block_bin, &(&1 ++ [snapshot]))
+  end
+
   defp restore_failed({:unknown_parent, _uid}),
     do: gettext("Another editor removed the block it was in, so the deleted block was not put back.")
 
@@ -2756,25 +2820,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         {:noreply, socket}
 
       [snapshot | rest] ->
-        # Redo does not delete it again, and would step over the restore
-        restoring =
-          socket
-          |> assign(block_bin: rest, redo_stack: [])
-          |> update(:undo_stack, &drop_newest_delete/1)
+        taken = socket |> assign(:block_bin, rest) |> update(:undo_stack, &drop_newest_delete/1)
 
-        case restore_from_snapshot(restoring, snapshot) do
+        # Redo does not delete it again, and would step over the restore
+        case restore_from_snapshot(assign(taken, :redo_stack, []), snapshot) do
           {:ok, socket} ->
             uid = hd(snapshot.uids)
             {:noreply, push_event(socket, "b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})}
 
-          # Nothing changed: the snapshot stays in the bin, and its ⌘Z entry
           {:error, reason} ->
-            Logger.warning(
-              "BlockField (#{socket.assigns.block_field}) could not restore deleted block: #{inspect(reason)}"
-            )
-
-            send(self(), {:toast, restore_failed(reason)})
-            {:noreply, socket}
+            {:noreply, keep_in_bin(taken, snapshot, reason)}
         end
     end
   end
@@ -2796,36 +2851,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       else: {:noreply, socket}
   end
 
+  # An undo or redo the session has not confirmed yet holds the next back:
+  # were it refused, the next would undo an older change behind it.
   def handle_event("undo_structure", _, socket) do
-    case socket.assigns.undo_stack do
-      [] ->
-        {:noreply, socket}
-
-      [{:delete, _at} | _] ->
-        handle_event("restore_block", %{}, socket)
-
-      [{entry, _at} | rest] ->
-        case revert_structure(assign(socket, undo_stack: rest, move_notice: nil), entry, :undo) do
-          {:ok, socket, back} -> {:noreply, stack_redo(socket, back)}
-          :conflict -> {:noreply, refuse_revert(socket, :undo)}
-          :unchanged -> {:noreply, socket}
-        end
-    end
+    if revert_pending?(socket), do: {:noreply, socket}, else: undo_newest(socket)
   end
 
   # ⌘⇧Z outside a text field: the move undone last, made again
   def handle_event("redo_structure", _, socket) do
-    case socket.assigns.redo_stack do
-      [] ->
-        {:noreply, socket}
-
-      [{entry, _at} | rest] ->
-        case revert_structure(assign(socket, :redo_stack, rest), entry, :redo) do
-          {:ok, socket, back} -> {:noreply, stack_undo(socket, back)}
-          :conflict -> {:noreply, refuse_revert(socket, :redo)}
-          :unchanged -> {:noreply, socket}
-        end
-    end
+    if revert_pending?(socket), do: {:noreply, socket}, else: redo_newest(socket)
   end
 
   def handle_event("dismiss_move_notice", _, socket) do

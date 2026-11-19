@@ -19,6 +19,8 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
       for n <- 1..Map.get(tags, :extra_roots, 0)//1,
           do: Brando.ProposalFixtures.root_block!(c, :module, c.projects_module, n + 1).uid
 
+    # ⌘Z and ⌘⇧Z wait for the session to confirm each change (`undo/1`)
+    Process.put(:undo_test_entry, c.work)
     c |> Map.put(:extra_uids, extra) |> Map.put(:a, open(conn, c.work))
   end
 
@@ -33,9 +35,26 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
     render(view)
   end
 
-  # ⌘Z and ⌘⇧Z outside a text field run the wrapper's `data-undo` / `data-redo`
-  defp undo(view), do: view |> with_target(cid_of(view, "[data-undo]")) |> render_hook("undo_structure", %{})
-  defp redo(view), do: view |> with_target(cid_of(view, "[data-redo]")) |> render_hook("redo_structure", %{})
+  # ⌘Z and ⌘⇧Z outside a text field run the wrapper's `data-undo` / `data-redo`.
+  # A person presses the next one after the session has confirmed this one
+  # (an undo or redo it has not confirmed holds the next back), so they wait
+  # for it, as `settle/1` does.
+  defp undo(view),
+    do: view |> with_target(cid_of(view, "[data-undo]")) |> render_hook("undo_structure", %{}) |> settle(view)
+
+  defp redo(view),
+    do: view |> with_target(cid_of(view, "[data-redo]")) |> render_hook("redo_structure", %{}) |> settle(view)
+
+  defp click_undo(view),
+    do: view |> element("[data-testid=block-moved] .block-bin-undo") |> render_click() |> settle(view)
+
+  # The session has handled what the editor sent, and the editor what the
+  # session sent back. A suspended session still answers `:sys` calls.
+  defp settle(result, view) do
+    if pid = EditSession.whereis(EditSession.ref_for(Process.get(:undo_test_entry))), do: :sys.get_state(pid)
+    render(view)
+    result
+  end
 
   defp order(html, prefix, uids) do
     ~r/id="#{prefix}-([^"]+)"/
@@ -61,7 +80,7 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
     assert roots(a, c) == [c.multi_uid, c.intro_uid]
     assert notice?(a)
 
-    a |> element("[data-testid=block-moved] .block-bin-undo") |> render_click()
+    click_undo(a)
     assert roots(a, c) == [c.intro_uid, c.multi_uid]
     refute notice?(a)
 
@@ -128,7 +147,7 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
     assert children(a, c) == [gamma, beta]
 
     [_, at] = Regex.run(~r/data-testid="block-moved".*?phx-value-at="(\d+)"/s, render(a))
-    a |> element("[data-testid=block-moved] .block-bin-undo") |> render_click()
+    click_undo(a)
     assert children(a, c) == [beta, gamma]
 
     # The click sent again before the page took the first one in: the move
@@ -280,18 +299,125 @@ defmodule BrandoAdmin.BlockMoveUndoTest do
       assert roots(a, c) == [x, c.multi_uid, c.intro_uid]
     end
 
-    test "⌘Z keeps a deleted block in the bin when it cannot go back", %{a: a, b: b} = c do
+    # A deleted block another editor took the parent of cannot come back: it
+    # stays in the bin, with a notice, but no longer stands in the way of the
+    # changes before it
+    @tag extra_roots: 3
+    test "a deleted block that cannot go back does not hold back older changes", %{a: a, b: b} = c do
       [_alpha, _beta, gamma] = c.child_uids
+      [x, y, z] = c.extra_uids
 
+      move(a, z, "up")
+      delete_block(a, c.intro_uid)
       delete_block(a, gamma)
-      await(fn -> not has_element?(b, "#child-#{gamma}") end)
+      await(fn -> roots(b, c) == [c.multi_uid, x, z, y] and not has_element?(b, "#child-#{gamma}") end)
 
       delete_block(b, c.multi_uid)
-      await(fn -> roots(a, c) == [c.intro_uid] end)
+      await(fn -> roots(a, c) == [x, z, y] end)
 
       undo(a)
       assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor removed" <> _}}, 2_000
       assert has_element?(a, "[data-testid=block-bin]")
+
+      # The root deleted before it comes back, then the move before that is undone
+      undo(a)
+      assert roots(a, c) == [c.intro_uid, x, z, y]
+      undo(a)
+      assert roots(a, c) == [c.intro_uid, x, y, z]
+      await(fn -> roots(b, c) == [c.intro_uid, x, y, z] end)
+
+      # It is still in the bin, and its Undo says again why it does not come back
+      a |> element("[data-testid=block-bin] .block-bin-undo") |> render_click()
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor removed" <> _}}, 2_000
+      assert has_element?(a, "[data-testid=block-bin]")
+    end
+
+    # A's restore reaches the session after B's delete of the parent, which A
+    # has not seen yet: the session refuses it, and the block goes back to
+    # the bin, with a notice
+    test "a restore the session refuses keeps the block in the bin", %{a: a, b: b} = c do
+      [alpha, beta, gamma] = c.child_uids
+
+      delete_block(a, gamma)
+      await(fn -> not has_element?(b, "#child-#{gamma}") end)
+
+      session = session(c)
+      :sys.suspend(session)
+      delete_block(b, c.multi_uid)
+      a |> element("[data-testid=block-bin] .block-bin-undo") |> render_click()
+      assert children(a, c) == [alpha, beta, gamma]
+      :sys.resume(session)
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor removed" <> _}}, 2_000
+      await(fn -> roots(a, c) == [c.intro_uid] end)
+      assert has_element?(a, "[data-testid=block-bin]")
+    end
+
+    # A's first ⌘Z reaches the session after B's move among its blocks, and
+    # a second follows before the session's refusal of the first is back: the
+    # second waits, so it does not undo an older move behind the refused one
+    test "a second ⌘Z waits while the session has the first", %{a: a, b: b} = c do
+      [alpha, beta, gamma] = c.child_uids
+
+      move(a, c.multi_uid, "up")
+      move(a, gamma, "up")
+      await(fn -> roots(b, c) == [c.multi_uid, c.intro_uid] and children(b, c) == [alpha, gamma, beta] end)
+
+      session = session(c)
+      :sys.suspend(session)
+      move(b, alpha, "down")
+      undo(a)
+      undo(a)
+      :sys.resume(session)
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor" <> _}}, 2_000
+      await(fn -> children(a, c) == [gamma, alpha, beta] end)
+      assert roots(a, c) == [c.multi_uid, c.intro_uid]
+      assert roots(b, c) == [c.multi_uid, c.intro_uid]
+    end
+
+    # The undo the session refused is told of as a conflict only when it is
+    # one: not when the editor may no longer change the entry
+    test "an undo the session refuses for another reason is not called a conflict", %{a: a} = c do
+      move(a, c.multi_uid, "up")
+      GenServer.cast(session(c), {:read_only, a.pid, true})
+
+      undo(a)
+      await(fn -> roots(a, c) == [c.multi_uid, c.intro_uid] end)
+
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor has changed" <> _}},
+                     300
+    end
+
+    # Sequence numbers start again in the session joined after a crash: an
+    # undo sent to the old one does not name a change sent to the new one
+    test "an undo from before a rejoin does not name a later rejection", %{a: a, b: b} = c do
+      [alpha, beta, gamma] = c.child_uids
+
+      move(a, gamma, "up")
+      undo(a)
+      await(fn -> children(b, c) == [alpha, beta, gamma] end)
+
+      Brando.EditSessionRejoin.kill_session(c.work)
+      Brando.EditSessionRejoin.await_joined(a, c.work)
+      Brando.EditSessionRejoin.await_joined(b, c.work)
+
+      move(a, c.multi_uid, "up")
+      await(fn -> roots(b, c) == [c.multi_uid, c.intro_uid] end)
+
+      session = session(c)
+      :sys.suspend(session)
+      delete_block(b, c.multi_uid)
+      move(a, gamma, "up")
+      :sys.resume(session)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+                       event: "toast",
+                       payload: %{payload: "Another editor removed the block you were changing." <> _}
+                     },
+                     2_000
+
+      refute_received %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Another editor has changed" <> _}}
     end
   end
 end
