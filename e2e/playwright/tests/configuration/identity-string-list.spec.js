@@ -15,20 +15,39 @@ const addValue = async (list, value, count) => {
   await expect(values(list)).toHaveCount(count)
 }
 
-test("a row inserted into a service's alternate names keeps every value through typing and saving", async ({ page }) => {
+const openServices = async page => {
+  await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Services' }).click()
+}
+
+const save = async page => {
+  const saveState = page.locator('.draft-save-state').first()
+  await page.getByTestId('submit').click()
+  await expect(saveState).toHaveAttribute('data-state', 'clean', { timeout: 15000 })
+}
+
+// A saved service with nothing else changed is rendered from its data, so a
+// blank row would not come back in a render: the insert must send nothing
+test("a row inserted into a saved service's alternate names keeps every value through typing and saving", async ({ page }) => {
   await page.goto('/admin/config/identity')
   await syncLV(page)
-
-  await page.getByRole('tab', { name: 'Services' }).click()
+  await openServices(page)
   await page.getByRole('button', { name: 'Add entry', exact: true }).click()
 
-  const service = page.locator('.summary-entry').last()
-  await service.getByRole('textbox', { name: 'Name' }).fill('Consulting')
-
-  const names = service.locator('.string-list[id$="_alternate_names"]')
-  await addValue(names, 'Advice', 2)
-  await addValue(names, 'Guidance', 3)
+  const created = page.locator('.summary-entry').last()
+  await created.getByRole('textbox', { name: 'Name', exact: true }).fill('Consulting')
+  const createdNames = created.locator('.string-list[id$="_alternate_names"]')
+  await addValue(createdNames, 'Advice', 2)
+  await addValue(createdNames, 'Guidance', 3)
   await syncLV(page)
+  await save(page)
+
+  await page.reload()
+  await syncLV(page)
+  await openServices(page)
+  const service = page.locator('.summary-entry').filter({ hasText: 'Consulting' })
+  await service.getByRole('button', { name: 'Edit', exact: true }).click()
+  const names = service.locator('.string-list[id$="_alternate_names"]')
+  await expectValues(names, ['Advice', 'Guidance', ''])
 
   // Above the second value
   await names.locator('.string-list-row').nth(1).hover()
@@ -36,8 +55,8 @@ test("a row inserted into a service's alternate names keeps every value through 
   await expect(values(names)).toHaveCount(4)
   await expect(values(names).nth(1)).toBeFocused()
 
-  // An insert sends nothing here: past the debounce a render of the list
-  // without the blank row would land on the shifted rows
+  // Past the debounce: a render of the list without the blank row would
+  // land on the shifted rows
   await page.waitForTimeout(STRING_LIST_DEBOUNCE_MS + 50)
   await syncLV(page)
   await expectValues(names, ['Advice', '', 'Guidance', ''])
@@ -46,16 +65,12 @@ test("a row inserted into a service's alternate names keeps every value through 
   await page.waitForTimeout(STRING_LIST_DEBOUNCE_MS + 50)
   await syncLV(page)
   await expectValues(names, ['Advice', 'Counsel', 'Guidance', ''])
-
-  const saveState = page.locator('.draft-save-state').first()
-  await page.getByTestId('submit').click()
-  await expect(saveState).toHaveAttribute('data-state', 'clean', { timeout: 15000 })
+  await save(page)
 
   await page.reload()
   await syncLV(page)
-  await page.getByRole('tab', { name: 'Services' }).click()
+  await openServices(page)
   const saved = page.locator('.summary-entry').filter({ hasText: 'Consulting' })
   await saved.getByRole('button', { name: 'Edit', exact: true }).click()
-
   await expectValues(saved.locator('.string-list[id$="_alternate_names"]'), ['Advice', 'Counsel', 'Guidance', ''])
 })
