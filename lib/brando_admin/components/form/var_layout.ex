@@ -411,7 +411,9 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
             data-tooltip={gettext("Delete")}
             aria-label={gettext("Delete variable %{key}", key: @entry.key)}
             phx-click={JS.dispatch("change")}
-            phx-confirm={gettext("Delete variable %{key}?", key: @entry.key)}
+            data-confirm={gettext("Delete variable %{key}?", key: @entry.key)}
+            data-confirm-ok={gettext("Delete variable")}
+            data-confirm-destructive
             name={"#{@form.name}[drop_var_ids][]"}
             value={@entry.index}
           >

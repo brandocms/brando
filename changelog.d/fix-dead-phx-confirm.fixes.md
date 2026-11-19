@@ -1,0 +1,1 @@
+- Deleting, pruning, restoring, deploying, rolling back and switching in the environment, frontend asset, publishing and shared library screens, and deleting an image, a video, a module reference or a variable, ask for confirmation again; the buttons acted on the first click.

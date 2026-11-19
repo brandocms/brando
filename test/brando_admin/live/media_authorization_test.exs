@@ -101,10 +101,25 @@ defmodule BrandoAdmin.MediaAuthorizationTest do
 
       grants = ~w(brando.images.update brando.images.delete brando.videos.update brando.videos.delete)
       {conn, _user} = log_in_as(build_conn(), permissions: @page ++ ~w(brando.images.read brando.videos.read) ++ grants)
-      html = conn |> open_form(c.page) |> open_pickers()
+      view = open_form(conn, c.page)
+      html = open_pickers(view)
 
       assert html =~ "delete_image_from_picker"
       assert html =~ "delete_video_from_picker"
+
+      # Deleting asks first, in the admin's dialog (assets/src/confirm.js)
+      assert has_element?(
+               view,
+               ~s(#image-picker-image-menu-#{c.image.id} button[phx-click*="delete_image_from_picker"]) <>
+                 ~s([data-confirm="Delete this image?"][data-confirm-ok="Delete image"][data-confirm-destructive])
+             )
+
+      assert has_element?(
+               view,
+               ~s(#video-picker-menu-#{c.video.id} button[phx-click*="delete_video_from_picker"]) <>
+                 ~s([data-confirm="Delete this video?"][data-confirm-ok="Delete video"][data-confirm-destructive])
+             )
+
       assert html =~ "start_rename"
       assert html =~ "new-folder-trigger"
     end

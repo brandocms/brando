@@ -84,7 +84,8 @@ defmodule BrandoAdmin.Sites.AssetLive do
               type="button"
               class="btn"
               phx-click="deactivate"
-              phx-confirm={gettext("Use the frontend assets included in the current release?")}
+              data-confirm={gettext("Use the frontend assets included in the current release?")}
+              data-confirm-ok={gettext("Use release assets")}
             >
               {gettext("Use release assets")}
             </button>
@@ -146,11 +147,11 @@ defmodule BrandoAdmin.Sites.AssetLive do
                       class="btn"
                       phx-click="clear_environment"
                       phx-value-id={environment.id}
-                      phx-confirm={
-                        gettext("Serve the site's build on %{environment} again? Requests switch immediately.",
-                          environment: environment.name
-                        )
+                      data-confirm-title={
+                        gettext("Serve the site's build on %{environment} again?", environment: environment.name)
                       }
+                      data-confirm={gettext("Requests switch immediately.")}
+                      data-confirm-ok={gettext("Use the site's build")}
                     >
                       {gettext("Use the site's build")}
                     </button>
@@ -229,12 +230,14 @@ defmodule BrandoAdmin.Sites.AssetLive do
                       class="btn"
                       phx-click="activate_environment"
                       phx-value-id={asset_set.id}
-                      phx-confirm={
-                        gettext("Activate %{name} for %{environment} now? Its requests switch immediately.",
+                      data-confirm-title={
+                        gettext("Activate %{name} for %{environment} now?",
                           name: asset_set.name,
                           environment: @editing_environment.name
                         )
                       }
+                      data-confirm={gettext("Its requests switch immediately.")}
+                      data-confirm-ok={gettext("Activate for %{environment}", environment: @editing_environment.name)}
                     >
                       {gettext("Activate for %{environment}", environment: @editing_environment.name)}
                     </button>
@@ -244,9 +247,9 @@ defmodule BrandoAdmin.Sites.AssetLive do
                       class="btn btn--primary"
                       phx-click="activate"
                       phx-value-id={asset_set.id}
-                      phx-confirm={
-                        gettext("Activate %{name} now? Frontend requests will switch immediately.", name: asset_set.name)
-                      }
+                      data-confirm-title={gettext("Activate %{name} now?", name: asset_set.name)}
+                      data-confirm={gettext("Frontend requests will switch immediately.")}
+                      data-confirm-ok={gettext("Activate build")}
                     >
                       {gettext("Activate build")}
                     </button>
@@ -255,12 +258,11 @@ defmodule BrandoAdmin.Sites.AssetLive do
                       type="button"
                       class="btn"
                       phx-click="deactivate"
-                      phx-confirm={
-                        gettext(
-                          "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately.",
-                          name: asset_set.name
-                        )
+                      data-confirm-title={gettext("Stop using %{name} as the site's build?", name: asset_set.name)}
+                      data-confirm={
+                        gettext("Environments without a build of their own switch to the release's assets immediately.")
                       }
+                      data-confirm-ok={gettext("Use release assets")}
                     >
                       {gettext("Use release assets")}
                     </button>

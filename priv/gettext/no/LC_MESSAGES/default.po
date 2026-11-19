@@ -1786,13 +1786,13 @@ msgstr "Aktivér"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Activate %{name} for %{environment} now? Its requests switch immediately."
-msgstr "Aktivere %{name} for %{environment} nå? Forespørslene dit bytter med en gang."
+msgid "Activate %{name} for %{environment} now?"
+msgstr "Aktivere %{name} for %{environment} nå?"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Activate %{name} now? Frontend requests will switch immediately."
-msgstr "Aktiver %{name} nå? Frontend-filene byttes umiddelbart."
+msgid "Activate %{name} now?"
+msgstr "Aktivere %{name} nå?"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -3664,6 +3664,11 @@ msgstr "Kan gjenopprettes fra papirkurven til %{date}"
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Avbryt"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel operation"
+msgstr "Avbryt operasjonen"
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
@@ -5988,8 +5993,8 @@ msgstr[1] "Slette alle %{count} ubrukte videoer?"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone."
-msgstr "Slette %{name}, hele PostgreSQL-skjemaet og tilhørende skjemainnsendinger og utkast? Dette kan ikke angres."
+msgid "Delete %{name}?"
+msgstr "Slette %{name}?"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -6003,6 +6008,11 @@ msgstr[1] "Slette %{name}? %{count} medlemmer mister tillatelsene fra denne grup
 #, elixir-autogen
 msgid "Delete %{singular}?"
 msgstr "Slette %{singular}?"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete environment"
+msgstr "Slett miljø"
 
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
@@ -6028,6 +6038,11 @@ msgstr "Slett jobb"
 #, elixir-autogen, elixir-format
 msgid "Delete option"
 msgstr "Slett alternativ"
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Delete reference"
+msgstr "Slett referanse"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -6081,8 +6096,8 @@ msgstr "Slette denne versjonen permanent?"
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete this shared entry? This is blocked while any site uses it."
-msgstr "Slette denne delte oppføringen? Dette blokkeres så lenge et nettsted bruker den."
+msgid "Delete this shared entry?"
+msgstr "Slette denne delte oppføringen?"
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format
@@ -6100,6 +6115,7 @@ msgid "Delete this webhook?"
 msgstr "Slette denne webhooken?"
 
 #: lib/brando_admin/components/form/input/vars.ex
+#: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Delete variable"
 msgstr "Slett variabel"
@@ -7631,6 +7647,11 @@ msgstr "Miljøoperasjonen feilet: %{reason}"
 msgid "Environments"
 msgstr "Miljøer"
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Environments without a build of their own switch to the release's assets immediately."
+msgstr "Miljøer uten eget bygg bytter til filene fra release med en gang."
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/structured_data.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -8446,6 +8467,11 @@ msgstr "Frontend-ressurser"
 #, elixir-autogen, elixir-format
 msgid "Frontend editing is switched off for this site."
 msgstr "Redigering på nettsiden er slått av for dette nettstedet."
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Frontend requests will switch immediately."
+msgstr "Frontend-filene byttes umiddelbart."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -9562,6 +9588,11 @@ msgstr "Det kan ikke lenger dekrypteres, som etter at krypteringsnøkkelen er by
 msgid "It cannot"
 msgstr "Det kan ikke"
 
+#: lib/brando_admin/live/content/shared_library_live.ex
+#, elixir-autogen, elixir-format
+msgid "It cannot be deleted while any site uses it."
+msgstr "Den kan ikke slettes så lenge et nettsted bruker den."
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "It cannot be saved as it is: %{errors}"
@@ -9671,6 +9702,11 @@ msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] "Også %{count} underliggende blokk fjernes."
 msgstr[1] "Også %{count} underliggende blokker fjernes."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its complete PostgreSQL schema, form submissions and drafts are deleted with it. This cannot be undone."
+msgstr "Hele PostgreSQL-skjemaet, skjemainnsendinger og utkast slettes sammen med det. Dette kan ikke angres."
+
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "Its fragments"
@@ -9680,6 +9716,11 @@ msgstr "Fragmentene"
 #, elixir-autogen, elixir-format
 msgid "Its own"
 msgstr "Eget"
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its requests switch immediately."
+msgstr "Forespørslene dit bytter med en gang."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -9762,6 +9803,11 @@ msgstr "Forbli innlogget i 60 dager"
 #, elixir-autogen, elixir-format
 msgid "Keep my version"
 msgstr "Behold min versjon"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep operation"
+msgstr "Behold operasjonen"
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -15393,6 +15439,11 @@ msgstr "Etterspurte URL-er som ikke lenger finnes, men som passer med en oppfør
 msgid "Requests for URLs that do not exist, over the last %{days} days. Add a redirect above when a page has moved."
 msgstr "Forespørsler til URL-er som ikke finnes, de siste %{days} dagene. Legg til en omdirigering ovenfor når en side har flyttet."
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requests switch immediately."
+msgstr "Forespørslene bytter med en gang."
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Require two-factor authentication"
@@ -17068,8 +17119,8 @@ msgstr "Rekkefølge oppdatert"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Serve the site's build on %{environment} again? Requests switch immediately."
-msgstr "Servere nettstedets bygg på %{environment} igjen? Forespørslene bytter med en gang."
+msgid "Serve the site's build on %{environment} again?"
+msgstr "Servere nettstedets bygg på %{environment} igjen?"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -17969,8 +18020,8 @@ msgstr "Slutt å dele"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
-msgid "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately."
-msgstr "Slutte å bruke %{name} som nettstedets bygg? Miljøer uten eget bygg bytter til filene fra release med en gang."
+msgid "Stop using %{name} as the site's build?"
+msgstr "Slutte å bruke %{name} som nettstedets bygg?"
 
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/work.ex

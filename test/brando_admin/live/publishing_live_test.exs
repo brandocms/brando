@@ -127,6 +127,28 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     BrandoAdmin.Work.finish(user, Brando.Worker.SSGBuild.work_key(ready.id), nil, global: true)
   end
 
+  # Both ask first, in the admin's dialog (assets/src/confirm.js)
+  test "deploying and rolling back a build ask before acting", context do
+    {:ok, first} = Builds.request_build(context.site, context.environment, [])
+    {:ok, archived} = Builds.update(first, %{status: :archived, built_at: DateTime.utc_now()})
+    {:ok, second} = Builds.request_build(context.site, context.environment, [])
+    {:ok, ready} = Builds.update(second, %{status: :ready, built_at: DateTime.utc_now()})
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    assert has_element?(
+             view,
+             ~s(#ssg-build-#{ready.id} button[phx-click="deploy"][phx-value-id="#{ready.id}"]) <>
+               ~s|[data-confirm="Deploy #{ready.version}?"][data-confirm-ok="Deploy"]:not([data-confirm-destructive])|
+           )
+
+    assert has_element?(
+             view,
+             ~s(#ssg-build-#{archived.id} button[phx-click="rollback"][phx-value-id="#{archived.id}"]) <>
+               ~s([data-confirm="Roll back to #{archived.version}?"][data-confirm-ok="Roll back"]) <>
+               ":not([data-confirm-destructive])"
+           )
+  end
+
   test "does not link a preview on a host where it would answer 404", context do
     admin_host = URI.parse(Brando.endpoint().url()).host
 

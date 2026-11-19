@@ -183,7 +183,10 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
             phx-click="delete"
             phx-value-kind={@kind}
             phx-value-id={@entry.id}
-            phx-confirm={gettext("Delete this shared entry? This is blocked while any site uses it.")}
+            data-confirm-title={gettext("Delete this shared entry?")}
+            data-confirm={gettext("It cannot be deleted while any site uses it.")}
+            data-confirm-ok={gettext("Delete")}
+            data-confirm-destructive
           >
             {gettext("Delete")}
           </button>
@@ -243,7 +246,9 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
               phx-click="reset"
               phx-value-kind={@kind}
               phx-value-id={@entry.id}
-              phx-confirm={gettext("Discard this environment's customization and use shared again?")}
+              data-confirm={gettext("Discard this environment's customization and use shared again?")}
+              data-confirm-ok={gettext("Reset to shared")}
+              data-confirm-destructive
             >
               {gettext("Reset to shared")}
             </button>
@@ -254,7 +259,9 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
               phx-click="accept_update"
               phx-value-kind={@kind}
               phx-value-id={@entry.id}
-              phx-confirm={gettext("Replace the customized version with the current shared version?")}
+              data-confirm={gettext("Replace the customized version with the current shared version?")}
+              data-confirm-ok={gettext("Accept update")}
+              data-confirm-destructive
             >
               {gettext("Accept update")}
             </button>
