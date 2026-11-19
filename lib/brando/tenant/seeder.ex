@@ -99,6 +99,16 @@ defmodule Brando.Tenant.Seeder do
   @spec configured() :: module()
   def configured, do: Brando.config(:tenant_seeder) || __MODULE__
 
+  @doc """
+  Whether `seeder` takes `demo: false` (`c:seed/4`). One without it seeds a
+  new site as it always does, whatever is asked.
+  """
+  @spec demo_option?(module()) :: boolean()
+  def demo_option?(seeder \\ configured()) do
+    Code.ensure_loaded(seeder)
+    function_exported?(seeder, :seed, 4)
+  end
+
   defp seed_languages(site, languages, creator, opts) do
     languages = Enum.map(languages, &String.to_existing_atom/1)
 

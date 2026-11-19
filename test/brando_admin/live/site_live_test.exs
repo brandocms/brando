@@ -176,6 +176,60 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
     end
   end
 
+  describe "the create form's \"Start with demo content\" box" do
+    setup do
+      put_test_env(:tenant_seeder, Brando.Tenant.Seeder)
+      put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+      :ok
+    end
+
+    test "is ticked by default, which gives the site the demo modules and homepage", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      assert has_element?(view, "#site-create-demo[checked]")
+
+      site = create_site(view, "demo-client", %{})
+
+      for environment <- site.environments do
+        in_site(site, environment, fn ->
+          assert seeded_module_count() > 0
+          assert homepage_blocks() != []
+        end)
+      end
+    end
+
+    test "unticked, gives the site an empty homepage and footer, and no demo modules", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      site = create_site(view, "plain-client", %{demo: "false"})
+
+      for environment <- site.environments do
+        in_site(site, environment, fn ->
+          assert seeded_module_count() == 0
+          assert homepage_blocks() == []
+
+          footer =
+            Brando.Pages.Fragment
+            |> Brando.Repo.get_by!(parent_key: "partials", key: "footer", language: :en)
+            |> Brando.Repo.preload(:entry_blocks)
+
+          assert footer.entry_blocks == []
+          assert Brando.Repo.get_by(Brando.Navigation.Menu, key: "main", language: :en)
+          assert Brando.Repo.get_by(Brando.Sites.Identity, language: :en).name == "Plain Client"
+        end)
+      end
+    end
+
+    test "says so when the application's seeder cannot leave the demo out", %{conn: conn} do
+      put_test_env(:tenant_seeder, Seeder)
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      assert has_element?(view, "#site-create-demo-help", inspect(Seeder))
+      refute has_element?(view, "#site-create-demo-help", "homepage and footer start empty")
+    end
+  end
+
   test "site lifecycle actions immediately update status", %{conn: conn, site: site} do
     {:ok, view, _html} = live(conn, "/admin/sites")
 
@@ -540,6 +594,36 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       view |> element("button", "Refresh") |> render_click()
       assert has_element?(view, "#{row} button", "Seed again")
     end
+  end
+
+  defp create_site(view, key, extra) do
+    prefixes = Enum.map(~w(production staging), &"tenant_#{key}_#{&1}")
+    on_exit(fn -> Brando.TenantCaches.clear(prefixes) end)
+
+    name = key |> String.split("-") |> Enum.map_join(" ", &String.capitalize/1)
+
+    view
+    |> form("#create-site-form",
+      site: Map.merge(%{name: name, key: key, languages: "en", default_language: "en"}, extra)
+    )
+    |> render_submit()
+
+    assert %{} = site = Registry.get_site_by_key(key)
+    assert Enum.map(site.environments, & &1.key) |> Enum.sort() == ["production", "staging"]
+    site
+  end
+
+  defp in_site(site, environment, fun), do: Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fun)
+
+  defp seeded_module_count do
+    Brando.Repo.aggregate(from(m in Brando.Content.Module, where: like(m.uid, "brando-default-%")), :count)
+  end
+
+  defp homepage_blocks do
+    Brando.Pages.Page
+    |> Brando.Repo.get_by!(uri: "index", language: :en)
+    |> Brando.Repo.preload(:entry_blocks)
+    |> Map.fetch!(:entry_blocks)
   end
 
   test "non-superusers are redirected", %{editor: editor, site: site} do

@@ -163,7 +163,8 @@ setup seeds nothing: sites are created at `/admin/sites`, and each gets that
 content then. Setup says which in its output, and that `--base-url` and
 `--description` (and, with `multi`, `--no-demo`) are unused when they are
 given; `--no-seeds` skips the site too. With `single`, `--no-demo` gives the
-site its content without the demo.
+site its content without the demo; with `multi`, untick **Start with demo
+content** when creating a site at `/admin/sites`.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
 with `Setup complete.`; [Running the steps separately](#running-the-steps-separately)
 describes each step as its own task.
@@ -659,6 +660,9 @@ the same content in each new site's Production environment, in the site's
 languages, when the site is provisioned: by `mix brando.setup` with `single`,
 at `/admin/sites` with `multi` (see
 [Sites and environments](tenancy_and_environments.md#provision-sites-and-initial-environments)).
+`mix brando.setup --no-demo` with `single`, and unticking **Start with demo
+content** in the create form at `/admin/sites` with `multi`, give the site
+this content without the demo.
 
 The seeded modules (Hero, Steps, Cards, Tips, Toolbox, Closing and Footer)
 double as worked examples of the ref conventions: mono micro-labels and links

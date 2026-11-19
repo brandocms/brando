@@ -1,0 +1,1 @@
+- The create-site form at Sites has a "Start with demo content" box, ticked by default: unticked, the site gets an empty homepage and footer and no demo modules, as `mix brando.setup --no-demo` gives a single site.

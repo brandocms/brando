@@ -1236,7 +1236,19 @@
   align-content: start;
 }
 
+/* The help line sits under the checkbox's label, in line with its text */
+.site-screen .site-create-demo {
+  display: grid;
+  gap: 4px;
+
+  > small {
+    max-width: 62ch;
+    padding-left: calc(13px + 8px);
+  }
+}
+
 .site-screen label > small,
+.site-screen .site-create-demo > small,
 .site-screen .site-card__users small {
   color: var(--brando-muted);
   font-size: var(--brando-text-sm);
