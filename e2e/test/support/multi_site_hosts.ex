@@ -25,7 +25,8 @@ defmodule E2E.MultiSiteHosts do
   URLs failed. `:queued` adds Norwegian to Acme and schedules a copy from
   its production to its staging environment for tomorrow, with Oban in
   manual mode, so the sites screen shows the seeding queued and the
-  environments screen the pending copy.
+  environments screen the pending copy. `:deploy_targets` makes Acme static
+  with two allowed S3 targets, for the sites screen's lists.
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -145,7 +146,19 @@ defmodule E2E.MultiSiteHosts do
       ServedHosts.check()
     end
 
-    if opts[:static] || opts[:published], do: serve_statically(acme, acme_live, admin, opts[:published])
+    if opts[:static] || opts[:published] || opts[:deploy_targets],
+      do: serve_statically(acme, acme_live, admin, opts[:published])
+
+    if opts[:deploy_targets] do
+      {:ok, _acme} =
+        Registry.update_site_deploy_targets(
+          Registry.get_site(acme.id),
+          %{allowed_s3_targets: ["s3://acme-first", "s3://acme-second"]},
+          :system
+        )
+
+      Cache.warm()
+    end
 
     if opts[:queued], do: queue(acme, acme_live, acme_staging, admin)
 

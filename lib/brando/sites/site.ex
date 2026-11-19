@@ -102,7 +102,7 @@ defmodule Brando.Sites.Site do
   in `/`, held to the rules for a config entry. Entries are trimmed, and
   blank and repeated ones dropped. Not part of `changeset/3`, as only an
   installation superuser sets them
-  (`Brando.Tenant.Registry.update_site_deploy_targets/3`).
+  (`Brando.Tenant.Registry.update_site_deploy_targets/4`).
   """
   def deploy_targets_changeset(site, attrs) do
     site
@@ -140,6 +140,24 @@ defmodule Brando.Sites.Site do
     do: gettext("%{entry} %{message}", entry: entry, message: message)
 
   defp entry_error(_entry, message), do: gettext("An entry %{message}", message: message)
+
+  @doc """
+  A short digest of a site's allowed deploy targets, or of the two lists as
+  string-keyed params: what a form drawn from them posts back, so a save can
+  tell that they were changed elsewhere since
+  (`Brando.Tenant.Registry.update_site_deploy_targets/4`).
+  """
+  @spec deploy_targets_digest(map()) :: String.t()
+  def deploy_targets_digest(%{allowed_rsync_targets: rsync, allowed_s3_targets: s3}), do: targets_digest(rsync, s3)
+
+  def deploy_targets_digest(%{"allowed_rsync_targets" => rsync, "allowed_s3_targets" => s3}),
+    do: targets_digest(rsync, s3)
+
+  defp targets_digest(rsync, s3) do
+    :sha256
+    |> :crypto.hash(:erlang.term_to_binary({rsync || [], s3 || []}, [:deterministic]))
+    |> Base.url_encode64(padding: false)
+  end
 
   def statuses, do: @statuses
   def delivery_modes, do: @delivery_modes

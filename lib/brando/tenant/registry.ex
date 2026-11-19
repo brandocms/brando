@@ -274,20 +274,46 @@ defmodule Brando.Tenant.Registry do
   `:allowed_rsync_targets` when `actor` may not set them. A target the site
   already saved is checked against the new lists at its next deploy or
   rollback.
-  """
-  @spec update_site_deploy_targets(Site.t(), map(), term()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
-  def update_site_deploy_targets(%Site{} = site, attrs, actor) do
-    changeset = site |> with_stored_deploy_targets() |> Site.deploy_targets_changeset(attrs)
 
+  With `expected: digest`, the digest of the lists the change was made from
+  (`Brando.Sites.Site.deploy_targets_digest/1`), lists changed since are
+  left alone: `{:error, :deploy_targets_changed}`. The row is locked from
+  that check to the write.
+  """
+  @spec update_site_deploy_targets(Site.t(), map(), term(), keyword()) ::
+          {:ok, Site.t()} | {:error, Ecto.Changeset.t() | :deploy_targets_changed}
+  def update_site_deploy_targets(%Site{} = site, attrs, actor, opts \\ []) do
     if not is_nil(actor) and Boundary.superuser?(actor) do
-      changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
+      fn -> write_deploy_targets(site, attrs, opts[:expected]) end
+      |> Repo.transaction(@public_opts)
+      |> case do
+        {:ok, site} -> refresh_cache_on_success({:ok, site})
+        {:error, _reason} = error -> error
+      end
     else
       {:error,
-       Ecto.Changeset.add_error(
-         changeset,
+       site
+       |> with_stored_deploy_targets()
+       |> Site.deploy_targets_changeset(attrs)
+       |> Ecto.Changeset.add_error(
          :allowed_rsync_targets,
          gettext("Only a superuser can set which deploy targets a site may use.")
        )}
+    end
+  end
+
+  defp write_deploy_targets(%Site{id: id} = site, attrs, expected) do
+    query =
+      from(s in Site, where: s.id == ^id, lock: "FOR UPDATE", select: {s.allowed_rsync_targets, s.allowed_s3_targets})
+
+    with {rsync, s3} <- Repo.one(query, @public_opts) || Repo.rollback(:site_not_found),
+         stored = %{site | allowed_rsync_targets: rsync, allowed_s3_targets: s3},
+         true <- is_nil(expected) or Site.deploy_targets_digest(stored) == expected,
+         {:ok, site} <- stored |> Site.deploy_targets_changeset(attrs) |> Repo.update(@public_opts) do
+      site
+    else
+      false -> Repo.rollback(:deploy_targets_changed)
+      {:error, changeset} -> Repo.rollback(changeset)
     end
   end
 

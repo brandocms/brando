@@ -924,6 +924,11 @@ msgstr ""
 msgid "%{name}’s delivery changed while the confirmation was open, so nothing was switched. Check what switching does now, and switch again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s deploy targets were changed elsewhere, so nothing was saved."
+msgstr ""
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back."
@@ -19341,6 +19346,11 @@ msgstr ""
 msgid "The list stays as it is."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The lists were changed elsewhere while you edited them, so nothing was saved, and they now show what is saved. What you had: rsync %{rsync}; S3 %{s3}."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
@@ -23674,6 +23684,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "no page of its own"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "none"
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex

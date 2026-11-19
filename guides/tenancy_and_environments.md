@@ -2413,8 +2413,13 @@ a list entry has no `{site_key}`, or two sites' entries reach the same
 destination: entries of config's map, a list entry with `{site_key}` as it
 reads for each site, and the sites' own allowed targets, such as one site's
 own `deploy@static.example.com:/srv/sites/` holding the directory
-`deploy@static.example.com:/srv/sites/{site_key}` gives another. The warning
-says where each entry is set. It also warns
+`deploy@static.example.com:/srv/sites/{site_key}` gives another. Two sites'
+destinations from one list entry that differ only in the `rsync` user, as
+`{site_key}@static.example.com:/www` gives each site its own account, are not
+reported; the same place reached from two different entries is, whatever the
+users. The warning says where each entry is set, from the terminal and to a
+superuser; on Utilities, anyone else sees how many pairs overlap, not which,
+as the entries are other sites' destinations. It also warns
 when a setting has an entry, key or value of a form no
 target can pass (see
 [System check](doctor.md)).
@@ -2513,12 +2518,19 @@ A superuser sets, under **Allowed deploy targets** in the Delivery section of
 a site's form under **Sites**, the `rsync` and `s3` targets that site may use
 besides those config lists; with `tenancy_mode: :multi` and nothing in
 config, they are enough on their own. The lists show for a static site, and
-for a dynamic one while it still has entries. Beside each list are the
+for a dynamic one while it still has entries, and only to a superuser: in
+groups mode, a user who may read Sites without being a superuser sees the
+Delivery section without them. Beside each list are the
 entries config already allows the site, as they read for it, and when the
 target the site has saved is allowed by neither, the section says its next
 deploy will be refused.
+
+The form saves both lists at once, from the lists it was drawn from: when
+they were changed elsewhere since, by another superuser or in another tab, the
+save is refused, the form shows the lists as they are saved now, and a note
+beside them repeats what was typed, to make the change again on them.
 They are stored on the site, and only a superuser, or trusted code acting as
-`:system`, can change them (`Brando.Tenant.Registry.update_site_deploy_targets/3`).
+`:system`, can change them (`Brando.Tenant.Registry.update_site_deploy_targets/4`).
 The Publishing screen, and anything else a site administrator can reach,
 cannot.
 

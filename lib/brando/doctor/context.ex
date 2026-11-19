@@ -17,6 +17,9 @@ defmodule Brando.Doctor.Context do
     * `:offline?` — whether checks must not reach the network. The Versions
       check asks a git remote for its latest commit only from the terminal,
       and not with `mix brando.doctor --offline`.
+    * `:superuser?` — whether whoever reads the results may see what only an
+      installation superuser does, such as other sites' deploy destinations.
+      `true` from the terminal; the admin passes the viewer's.
   """
 
   alias Brando.Tenant
@@ -30,7 +33,8 @@ defmodule Brando.Doctor.Context do
           locale: String.t(),
           oban: keyword(),
           now: DateTime.t(),
-          offline?: boolean()
+          offline?: boolean(),
+          superuser?: boolean()
         }
 
   defstruct mode: :mix,
@@ -41,7 +45,8 @@ defmodule Brando.Doctor.Context do
             locale: "en",
             oban: [],
             now: nil,
-            offline?: false
+            offline?: false,
+            superuser?: true
 
   @doc "Builds a context; every field can be given in `opts`."
   @spec new(keyword()) :: t()
@@ -58,7 +63,8 @@ defmodule Brando.Doctor.Context do
       locale: Keyword.get_lazy(opts, :locale, fn -> Gettext.get_locale(Brando.Gettext) end),
       oban: Keyword.get_lazy(opts, :oban, &oban_config/0),
       now: Keyword.get_lazy(opts, :now, &DateTime.utc_now/0),
-      offline?: Keyword.get(opts, :offline?, false)
+      offline?: Keyword.get(opts, :offline?, false),
+      superuser?: Keyword.get(opts, :superuser?, mode == :mix)
     }
   end
 

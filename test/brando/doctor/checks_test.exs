@@ -384,6 +384,18 @@ defmodule Brando.Doctor.ChecksTest do
 
       assert [{:warning, item, "deploy targets shared between sites", _fix}] = Checks.Configuration.deploy_targets()
       assert item =~ "s3_targets s3://shared-bucket/ for acme and s3_targets s3://shared-bucket/beta for beta"
+
+      # The admin shows a site administrator that some do, not which
+      assert [{:warning, item, "deploy targets shared between sites", _fix}] =
+               Checks.Configuration.deploy_targets(false)
+
+      assert item == "Deploy targets: 1 pair of sites' entries reaches the same destination; a superuser can see which"
+    end
+
+    test "the terminal's context shows everything, the admin's only what its viewer may see" do
+      assert Brando.Doctor.Context.new(mode: :mix).superuser?
+      refute Brando.Doctor.Context.new(mode: :admin).superuser?
+      assert Brando.Doctor.Context.new(mode: :admin, superuser?: true).superuser?
     end
 
     test "with several sites, sites' own allowed targets that reach one destination are a warning" do

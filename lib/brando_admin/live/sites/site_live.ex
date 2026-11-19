@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Repo
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
@@ -139,7 +140,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
             assignments={@assignments}
             users={@users}
             drafts={@drafts}
-            deploy_target_drafts={@deploy_target_drafts}
+            superuser?={@superuser?}
           />
         </div>
       </div>
@@ -424,7 +425,12 @@ defmodule BrandoAdmin.Sites.SiteLive do
         </div>
       </div>
 
-      <.delivery_section site={@site} draft={Map.get(@deploy_target_drafts, @site.id)} />
+      <.delivery_section
+        site={@site}
+        superuser?={@superuser?}
+        draft={Map.get(@drafts, {:deploy_targets, @site.id})}
+        typed={Map.get(@drafts, {:deploy_targets_typed, @site.id})}
+      />
 
       <section class="site-section">
         <header class="site-section-heading">
@@ -547,7 +553,9 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   attr :site, Site, required: true
+  attr :superuser?, :boolean, required: true
   attr :draft, :map, default: nil
+  attr :typed, :map, default: nil
 
   defp delivery_section(assigns) do
     target = other_delivery(assigns.site.delivery_mode)
@@ -598,7 +606,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           {switch_label(@target)}
         </button>
       </div>
-      <.deploy_targets :if={deploy_targets_shown?(@site)} site={@site} draft={@draft} />
+      <.deploy_targets :if={@superuser? and deploy_targets_shown?(@site)} site={@site} draft={@draft} typed={@typed} />
     </section>
     """
   end
@@ -610,9 +618,12 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   attr :site, Site, required: true
   attr :draft, :map, default: nil
+  attr :typed, :map, default: nil
 
   # The deploy targets a superuser allows the site besides config's
-  # (`Brando.Tenant.Registry.update_site_deploy_targets/3`)
+  # (`Brando.Tenant.Registry.update_site_deploy_targets/4`), shown only to a
+  # superuser in either authorization mode: in groups mode, reading this
+  # screen takes no more than the Sites read permission
   defp deploy_targets(assigns) do
     site = assigns.site
 
@@ -631,6 +642,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
       phx-submit="save_deploy_targets"
     >
       <input type="hidden" name="deploy_targets[id]" value={@site.id} />
+      <input type="hidden" name="deploy_targets[base]" value={@form[:base].value} />
       <header class="site-subsection-heading">
         <h4>{gettext("Allowed deploy targets")}</h4>
         <p>
@@ -639,6 +651,13 @@ defmodule BrandoAdmin.Sites.SiteLive do
           )}
         </p>
       </header>
+      <p :if={@typed} class="site-hint site-hint--warning" role="status">
+        {gettext(
+          "The lists were changed elsewhere while you edited them, so nothing was saved, and they now show what is saved. What you had: rsync %{rsync}; S3 %{s3}.",
+          rsync: typed_entries(@typed["allowed_rsync_targets"]),
+          s3: typed_entries(@typed["allowed_s3_targets"])
+        )}
+      </p>
       <p :if={@refused_target} class="site-hint site-hint--warning" role="status">
         {gettext(
           "The site’s saved target, %{target}, is not allowed here or in config: its next deploy will be refused.",
@@ -650,6 +669,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <Input.string_list
             field={@form[:allowed_rsync_targets]}
             label={gettext("Allowed rsync targets")}
+            sync_insert
             instructions={
               gettext(
                 "For example deploy@static.example.com:/srv/sites/acme, or deploy@static.example.com:/srv/sites/ for every directory under it."
@@ -662,6 +682,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <Input.string_list
             field={@form[:allowed_s3_targets]}
             label={gettext("Allowed S3 targets")}
+            sync_insert
             instructions={gettext("For example s3://acme-www, or s3://static-bucket/sites/ for every prefix under it.")}
           />
           <.configured_targets entries={@configured_s3} />
@@ -688,17 +709,30 @@ defmodule BrandoAdmin.Sites.SiteLive do
     """
   end
 
-  # The draft keeps what was typed, and a refused save's errors
+  # The draft keeps the rows as typed, blank ones included, a refused save's
+  # errors, and the digest of the stored lists it was started from, which
+  # the save posts back (`Brando.Sites.Site.deploy_targets_digest/1`)
   defp deploy_targets_form(nil, site) do
     to_form(
-      %{"allowed_rsync_targets" => site.allowed_rsync_targets, "allowed_s3_targets" => site.allowed_s3_targets},
+      %{
+        "allowed_rsync_targets" => site.allowed_rsync_targets,
+        "allowed_s3_targets" => site.allowed_s3_targets,
+        "base" => Site.deploy_targets_digest(site)
+      },
       as: "deploy_targets",
       id: "deploy-targets-site-#{site.id}"
     )
   end
 
-  defp deploy_targets_form(%{params: params, errors: errors}, site),
-    do: to_form(params, as: "deploy_targets", id: "deploy-targets-site-#{site.id}", errors: errors)
+  defp deploy_targets_form(%{rows: rows, base: base, errors: errors}, site),
+    do: to_form(Map.put(rows, "base", base), as: "deploy_targets", id: "deploy-targets-site-#{site.id}", errors: errors)
+
+  defp typed_entries(entries) do
+    case Brando.Type.StringList.normalize(entries || []) do
+      [] -> gettext("none")
+      entries -> Enum.join(entries, ", ")
+    end
+  end
 
   # A target the site saved that neither its list nor config allows now
   defp refused_target(
@@ -898,34 +932,57 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  # Like the languages, the lists keep their blank rows until saved. A draft
+  # that is the lists it was started from is dropped, so the form shows the
+  # stored lists again, as they are now.
   def handle_event("check_deploy_targets", %{"deploy_targets" => params}, socket) do
-    case site_from_socket(socket, params["id"]) do
-      {:ok, site} ->
-        draft = %{params: deploy_target_params(params), errors: []}
-        {:noreply, update(socket, :deploy_target_drafts, &Map.put(&1, site.id, draft))}
+    with :ok <- deploy_targets_access(socket),
+         {:ok, site} <- site_from_socket(socket, params["id"]) do
+      rows = deploy_target_rows(params)
 
-      {:error, _reason} ->
-        {:noreply, socket}
+      if Site.deploy_targets_digest(trailing_trimmed(rows)) == params["base"],
+        do: {:noreply, drop_draft(socket, :deploy_targets, site.id)},
+        else: put_draft(socket, :deploy_targets, site.id, %{rows: rows, base: params["base"], errors: []})
+    else
+      {:error, :site_not_found} -> {:noreply, socket}
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
   end
 
+  # The form posts both lists whole, and the digest of the stored lists it
+  # was drawn from: lists changed elsewhere since are not overwritten
   def handle_event("save_deploy_targets", %{"deploy_targets" => params}, socket) do
-    attrs = deploy_target_params(params)
+    rows = deploy_target_rows(params)
+    user = socket.assigns.current_user
 
-    with {:ok, site} <- site_from_socket(socket, params["id"]),
-         {:ok, site} <- Registry.update_site_deploy_targets(site, attrs, socket.assigns.current_user) do
+    with :ok <- deploy_targets_access(socket),
+         {:ok, site} <- site_from_socket(socket, params["id"]),
+         {:ok, site} <- Registry.update_site_deploy_targets(site, rows, user, expected: params["base"] || "") do
       {:noreply,
        socket
-       |> update(:deploy_target_drafts, &Map.delete(&1, site.id))
+       |> drop_draft(:deploy_targets, site.id)
+       |> drop_draft(:deploy_targets_typed, site.id)
        |> notify(gettext("Deploy targets for %{name} saved.", name: site.name))
        |> refresh()}
     else
-      {:error, %Ecto.Changeset{data: site, errors: errors}} ->
-        draft = %{params: attrs, errors: errors}
+      {:error, :deploy_targets_changed} ->
+        {:ok, site} = site_from_socket(socket, params["id"])
 
         {:noreply,
          socket
-         |> update(:deploy_target_drafts, &Map.put(&1, site.id, draft))
+         |> drop_draft(:deploy_targets, site.id)
+         |> update(:drafts, &Map.put(&1, {:deploy_targets_typed, site.id}, rows))
+         |> refresh()
+         |> notify_error(
+           gettext("%{name}’s deploy targets were changed elsewhere, so nothing was saved.", name: site.name)
+         )}
+
+      {:error, %Ecto.Changeset{data: site, errors: errors}} ->
+        draft = %{rows: rows, base: params["base"], errors: errors}
+
+        {:noreply,
+         socket
+         |> update(:drafts, &Map.put(&1, {:deploy_targets, site.id}, draft))
          |> notify_error(gettext("Some deploy targets were refused. Nothing was saved."))}
 
       {:error, reason} ->
@@ -1015,8 +1072,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:assignments, Map.new(sites, &{&1.id, Access.list_assignments(&1)}))
     |> assign(:stats, Map.new(sites, &{&1.id, site_stats(&1)}))
     |> assign(:seeding, seeding_by_site(sites))
+    |> assign(:superuser?, Boundary.superuser?(socket.assigns.current_user))
     |> assign_new(:drafts, fn -> %{} end)
-    |> assign_new(:deploy_target_drafts, fn -> %{} end)
     |> keep_selection()
   end
 
@@ -1458,12 +1515,25 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   defp seeding(seeding, site_id), do: Map.get(seeding, site_id, [])
 
-  # As the string list posts them; blanks are dropped when saved
-  defp deploy_target_params(params) do
+  # As the string list posts them, blank rows included; the save drops them
+  defp deploy_target_rows(params) do
     for field <- ["allowed_rsync_targets", "allowed_s3_targets"], into: %{} do
-      {field, params |> Map.get(field) |> Brando.Type.StringList.cast() |> elem(1)}
+      {field, params |> Map.get(field) |> List.wrap() |> Enum.map(&to_string/1)}
     end
   end
+
+  # The lists as the form drew them: a blank row after the last entry is the
+  # list's add row, one between entries is a row being edited
+  defp trailing_trimmed(rows) do
+    Map.new(rows, fn {field, entries} ->
+      {field, entries |> Enum.reverse() |> Enum.drop_while(&(String.trim(&1) == "")) |> Enum.reverse()}
+    end)
+  end
+
+  # Only a superuser sees or sets a site's deploy targets: in groups mode,
+  # reading this screen takes only the Sites read permission
+  defp deploy_targets_access(%{assigns: %{superuser?: true}}), do: :ok
+  defp deploy_targets_access(_socket), do: {:error, :forbidden}
 
   defp seed_again?(%{busy: true}), do: false
   defp seed_again?(%{job: nil}), do: true

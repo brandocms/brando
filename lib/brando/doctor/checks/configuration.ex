@@ -23,9 +23,10 @@ defmodule Brando.Doctor.Checks.Configuration do
   def label, do: dgettext("doctor", "Configuration")
 
   @impl true
-  def run(_context) do
+  def run(context) do
     evaluate(
-      [endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [ai_dependency(), assistant()] ++ deploy_targets()
+      [endpoint_url(), mailer()] ++
+        Enum.map(@cdn_contexts, &cdn/1) ++ [ai_dependency(), assistant()] ++ deploy_targets(context.superuser?)
     )
   end
 
@@ -290,15 +291,22 @@ defmodule Brando.Doctor.Checks.Configuration do
   sites' own allowed targets, let either replace the other's files; each
   entry says where it is set. A setting with an entry, key or value of the wrong form
   refuses the targets it would have allowed.
+
+  With `superuser?` false, the overlapping entries are counted, not named:
+  they are other sites' destinations, which a site's administrator could
+  choose on Publishing if their own site's list allowed them.
   """
-  def deploy_targets do
+  def deploy_targets(superuser? \\ true) do
     multi? = Brando.Tenant.mode() == :multi
 
     shared =
       if multi?,
         do: [
           shared_deploy_targets(DeployConfig.shared_destinations()),
-          overlapping_deploy_targets(DeployConfig.overlapping_destinations(Brando.Tenant.Registry.list_sites()))
+          overlapping_deploy_targets(
+            DeployConfig.overlapping_destinations(Brando.Tenant.Registry.list_sites()),
+            superuser?
+          )
         ],
         else: []
 
@@ -325,9 +333,17 @@ defmodule Brando.Doctor.Checks.Configuration do
      )}
   end
 
-  defp overlapping_deploy_targets([]), do: nil
+  defp overlapping_deploy_targets([], _superuser?), do: nil
 
-  defp overlapping_deploy_targets(pairs) do
+  defp overlapping_deploy_targets(pairs, superuser?) do
+    {:warning, overlap_item(pairs, superuser?), dgettext("doctor", "deploy targets shared between sites"),
+     dgettext(
+       "doctor",
+       "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
+     )}
+  end
+
+  defp overlap_item(pairs, true) do
     pairs =
       Enum.map_join(pairs, ", ", fn {setting, first, second} ->
         dgettext("doctor", "%{entry} and %{other_entry}",
@@ -336,12 +352,16 @@ defmodule Brando.Doctor.Checks.Configuration do
         )
       end)
 
-    {:warning, dgettext("doctor", "Deploy targets: %{pairs} reach the same destination", pairs: pairs),
-     dgettext("doctor", "deploy targets shared between sites"),
-     dgettext(
-       "doctor",
-       "give each site destinations apart from the other sites', in the deploy target map and in each site's allowed deploy targets under Sites"
-     )}
+    dgettext("doctor", "Deploy targets: %{pairs} reach the same destination", pairs: pairs)
+  end
+
+  defp overlap_item(pairs, false) do
+    dngettext(
+      "doctor",
+      "Deploy targets: %{count} pair of sites' entries reaches the same destination; a superuser can see which",
+      "Deploy targets: %{count} pairs of sites' entries reach the same destination; a superuser can see which",
+      length(pairs)
+    )
   end
 
   # Where the entry is set, so the fix is made there

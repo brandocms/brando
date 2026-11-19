@@ -685,6 +685,13 @@ msgstr "Verter for utrulling"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Deploy targets: %{count} pair of sites' entries reaches the same destination; a superuser can see which"
+msgid_plural "Deploy targets: %{count} pairs of sites' entries reach the same destination; a superuser can see which"
+msgstr[0] "Publiseringsmål: %{count} par av nettstedenes oppføringer når samme mål; en superbruker kan se hvilke"
+msgstr[1] "Publiseringsmål: %{count} par av nettstedenes oppføringer når samme mål; en superbruker kan se hvilke"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Deploy targets: %{pairs} reach the same destination"
 msgstr "Publiseringsmål: %{pairs} når samme mål"
 

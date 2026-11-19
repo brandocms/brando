@@ -3,6 +3,13 @@ defmodule BrandoAdmin.UtilsSystemCheckLiveTest do
 
   alias Brando.DoctorFixtures.{Healthy, Warns}
 
+  defmodule Migrator do
+    @behaviour Brando.Environments.Migrator
+
+    @impl true
+    def migrate(_site, _environment), do: {:ok, []}
+  end
+
   setup do
     put_test_env(:authorization_mode, :legacy)
     put_test_env(:tenancy_mode, :none)
@@ -84,6 +91,78 @@ defmodule BrandoAdmin.UtilsSystemCheckLiveTest do
 
       assert has_element?(view, "li[data-check=video_providers][data-status=ok]")
       refute has_element?(view, "li[data-check=video_providers] details")
+    end
+  end
+
+  # Other sites' deploy destinations are what a site administrator could pick
+  # on Publishing, so they see that some overlap, not which
+  describe "overlapping deploy targets" do
+    setup %{current_user: superuser} do
+      root = Path.join(System.tmp_dir!(), "brando-system-check-#{System.unique_integer([:positive])}")
+      put_test_env(:media_path, Path.join(root, "media"))
+      put_test_env(:sites_path, Path.join(root, "sites"))
+      put_test_env(:tenant_migrator, Migrator)
+      put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+      put_test_env(:tenancy_mode, :multi)
+      put_test_env(Brando.Doctor, skip: Brando.Doctor.default_checks() -- [Brando.Doctor.Checks.Configuration])
+
+      put_test_env(Brando.Sites.DeployConfig,
+        s3_targets: %{"acme" => ["s3://shared-bucket/"], "beta" => ["s3://shared-bucket/beta"]}
+      )
+
+      Brando.Tenant.put_prefix(nil)
+      Brando.Tenant.Cache.clear()
+
+      on_exit(fn ->
+        File.rm_rf(root)
+        Brando.Tenant.put_prefix(nil)
+        Brando.Tenant.Cache.clear()
+        Brando.TenantCaches.clear(~w(tenant_acme_production))
+      end)
+
+      {:ok, acme} =
+        Brando.Tenant.Setup.create_site(
+          %{name: "Acme", key: "acme", languages: ["en"], default_language: "en", status: :active},
+          superuser,
+          environments: [%{name: "Production", key: "production", live: true, domain: "acme.test"}]
+        )
+
+      {:ok, _beta} =
+        Brando.Tenant.Registry.create_site(%{
+          name: "Beta",
+          key: "beta",
+          languages: ["en"],
+          default_language: "en",
+          status: :active
+        })
+
+      %{acme: acme}
+    end
+
+    test "a superuser sees which entries reach the same destination", %{conn: conn} do
+      {:ok, view, _html} = live(Plug.Conn.put_session(conn, "brando_site_key", "acme"), "/admin/config/utils")
+      render_async(view)
+
+      assert has_element?(view, "li[data-check=configuration] details li", "s3://shared-bucket/beta for beta")
+    end
+
+    test "a site administrator sees that some do, and not which", %{acme: acme} do
+      admin = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _grant} = Brando.Tenant.Access.grant(admin, acme, :admin)
+
+      conn =
+        Brando.Test.Support.admin_conn()
+        |> Brando.Test.log_in_user(admin)
+        |> Plug.Conn.put_session("brando_site_key", "acme")
+
+      {:ok, view, _html} = live(conn, "/admin/config/utils")
+      render_async(view)
+
+      assert has_element?(view, "li[data-check=configuration] p", "deploy targets shared between sites")
+      assert has_element?(view, "li[data-check=configuration] details li", "1 pair of sites' entries")
+      assert has_element?(view, "li[data-check=configuration] details li", "a superuser can see which")
+      refute render(view) =~ "shared-bucket"
     end
   end
 

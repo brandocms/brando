@@ -517,11 +517,12 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     prefix = Brando.Tenant.current_prefix()
     locale = Gettext.get_locale(Brando.Gettext)
     sandbox = socket.assigns.doctor_sandbox
+    superuser? = socket.assigns.superuser?
 
     socket
     |> assign(system_check: nil, system_check_failed: false)
     |> start_async(:system_check, fn ->
-      Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale, sandbox: sandbox)
+      Brando.Doctor.run(mode: :admin, prefix: prefix, locale: locale, sandbox: sandbox, superuser?: superuser?)
     end)
   end
 

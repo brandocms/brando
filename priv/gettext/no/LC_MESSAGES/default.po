@@ -926,6 +926,11 @@ msgstr "Kontoen til %{name} slettes etter overføringen."
 msgid "%{name}’s delivery changed while the confirmation was open, so nothing was switched. Check what switching does now, and switch again."
 msgstr "Leveringen av %{name} endret seg mens bekreftelsen var åpen, så ingenting ble byttet. Se hva byttet gjør nå, og bytt på nytt."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}’s deploy targets were changed elsewhere, so nothing was saved."
+msgstr "Publiseringsmålene for %{name} ble endret et annet sted, så ingenting ble lagret."
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back."
@@ -19345,6 +19350,11 @@ msgstr "Listen åpnes nå uten visning"
 msgid "The list stays as it is."
 msgstr "Listen blir som den er."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The lists were changed elsewhere while you edited them, so nothing was saved, and they now show what is saved. What you had: rsync %{rsync}; S3 %{s3}."
+msgstr "Listene ble endret et annet sted mens du redigerte dem, så ingenting ble lagret, og de viser nå det som er lagret. Det du hadde: rsync %{rsync}; S3 %{s3}."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
@@ -23679,6 +23689,11 @@ msgstr "ingen slettinger"
 #, elixir-autogen, elixir-format
 msgid "no page of its own"
 msgstr "ingen egen side"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "none"
+msgstr "ingen"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
