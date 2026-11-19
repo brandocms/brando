@@ -250,20 +250,83 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert message =~ "no longer under review"
     end
 
-    test "a created entry with the same content type and ref is the same entry", c do
-      create = fn title ->
-        [
-          %{
-            "op" => "create_entry",
-            "content_type" => "Brando.Pages.Page",
-            "ref" => "about",
-            "fields" => %{"title" => title, "uri" => "about-us", "language" => "en", "template" => "default.html"}
-          }
-        ]
+    defp create(content_type, ref, fields),
+      do: [%{"op" => "create_entry", "content_type" => content_type, "ref" => ref, "fields" => fields}]
+
+    defp page(ref, fields),
+      do: create("Brando.Pages.Page", ref, Map.merge(%{"language" => "en", "template" => "default.html"}, fields))
+
+    defp article(ref, fields),
+      do: create("Brando.SyncTest.Article", ref, Map.merge(%{"language" => "en", "title" => "News"}, fields))
+
+    test "created entries with the same ref and different slugs are different entries", c do
+      assert {:ok, %{applicable: true, version: 1}} = prepare(mcp(c), article("new", %{"slug" => "spring"}))
+      assert {:ok, %{applicable: true, version: 1} = second} = prepare(mcp(c), article("new", %{"slug" => "autumn"}))
+      refute Map.has_key?(second, :replaced)
+      assert c |> under_review() |> length() == 2
+    end
+
+    test "a created entry with the same slug is the same entry, whatever its ref", c do
+      assert {:ok, first} = prepare(mcp(c), article("spring", %{"slug" => "spring"}))
+      assert {:ok, %{version: 2} = second} = prepare(mcp(c), article("news", %{"slug" => " Spring ", "title" => "x"}))
+      assert second.replaced == first.proposal_id
+      assert %{replaced_summary: "Lobby", replaced_version: 1} = second
+      assert [_] = under_review(c)
+    end
+
+    test "the same slug in another language is another entry", c do
+      assert {:ok, %{applicable: true}} = prepare(mcp(c), article("new", %{"slug" => "spring"}))
+      assert {:ok, second} = prepare(mcp(c), article("new", %{"slug" => "spring", "language" => "no"}))
+      assert %{version: 1} = second
+      refute Map.has_key?(second, :replaced)
+    end
+
+    test "a page is told apart by its uri", c do
+      assert {:ok, %{applicable: true} = first} = prepare(mcp(c), page("a", %{"title" => "About", "uri" => "about"}))
+      assert {:ok, %{version: 1}} = prepare(mcp(c), page("a", %{"title" => "About", "uri" => "contact"}))
+
+      assert {:ok, %{version: 2, replaced: replaced}} =
+               prepare(mcp(c), page("b", %{"title" => "About us", "uri" => "About"}))
+
+      assert replaced == first.proposal_id
+    end
+
+    test "fragments are told apart by key and parent key, not by title", c do
+      fragment = fn ref, parent_key, key ->
+        create("Brando.Pages.Fragment", ref, %{
+          "title" => "Text",
+          "key" => key,
+          "parent_key" => parent_key,
+          "language" => "en"
+        })
       end
 
-      assert {:ok, first} = prepare(mcp(c), create.("About"))
-      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), create.("About us"))
+      assert {:ok, %{applicable: true, version: 1} = first} = prepare(mcp(c), fragment.("a", "footer", "text"))
+      assert {:ok, %{version: 1} = second} = prepare(mcp(c), fragment.("a", "header", "text"))
+      refute Map.has_key?(second, :replaced)
+
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), fragment.("b", "Footer", " text "))
+      assert replaced == first.proposal_id
+    end
+
+    test "a blank address is no address", c do
+      assert {:ok, %{applicable: true, version: 1} = first} =
+               prepare(mcp(c), article("a", %{"slug" => " ", "title" => "One"}))
+
+      assert {:ok, %{applicable: true, version: 1} = other} =
+               prepare(mcp(c), article("a", %{"slug" => "", "title" => "Two"}))
+
+      refute Map.has_key?(other, :replaced)
+
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), article("b", %{"slug" => " ", "title" => "one"}))
+      assert replaced == first.proposal_id
+    end
+
+    test "a create with no slug, uri or key is told apart by its title", c do
+      assert {:ok, %{applicable: true, version: 1} = first} = prepare(mcp(c), article("a", %{"title" => "Spring"}))
+      assert {:ok, %{applicable: true, version: 1}} = prepare(mcp(c), article("a", %{"title" => "Autumn"}))
+
+      assert {:ok, %{version: 2, replaced: replaced}} = prepare(mcp(c), article("b", %{"title" => " spring"}))
       assert replaced == first.proposal_id
     end
 

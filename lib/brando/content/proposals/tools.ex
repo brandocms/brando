@@ -243,7 +243,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "prepare_proposal",
       description: """
-      Validate a complete set of changes and store it for the user to review. Nothing is saved until the user approves it in the admin. In an Assistant conversation, calling this again replaces the proposal under review with a new version. A connected tool's call replaces its latest proposal under review when that one has problems or touches the same entries, and otherwise stores a separate proposal; pass "replaces" with an earlier result's proposal_id to choose the one to replace. The result's "replaced" names the proposal it replaced. Operations:
+      Validate a complete set of changes and store it for the user to review. Nothing is saved until the user approves it in the admin. In an Assistant conversation, calling this again replaces the proposal under review with a new version. A connected tool's call replaces its latest proposal under review when that one has problems or touches the same entries, and otherwise stores a separate proposal; pass "replaces" with an earlier result's proposal_id to choose the one to replace. The result's "replaced" is the id of the proposal it replaced, with "replaced_summary" and "replaced_version": check them, and if it replaced the wrong one, prepare that proposal again; nothing else undoes it. A created entry counts as the same entry when it has the same content type, language and slug (or uri for pages, key and parent_key for fragments, or else title); its ref does not count. Operations:
       {"op":"create_entry","content_type":T,"ref":R,"fields":{}}
       {"op":"set_fields","target":{"content_type":T,"id":N},"fields":{}}
       {"op":"insert_block","target":{"content_type":T,"id":N}|{"new":R},"field":"blocks","module":"local:N","parent":UID?,"placement":"append"|{"before":UID}|{"after":UID},"values":{},"texts":{},"media":{"slot":"image1"},"uid":UID?}
@@ -735,7 +735,15 @@ defmodule Brando.Content.Proposals.Tools do
       review_url: review_url(path)
     }
 
-    place = if proposal.supersedes_id, do: Map.put(place, :replaced, proposal.supersedes_id), else: place
+    place =
+      if proposal.supersedes_id,
+        do:
+          Map.merge(place, %{
+            replaced: proposal.supersedes_id,
+            replaced_summary: proposal.supersedes_summary,
+            replaced_version: proposal.version - 1
+          }),
+        else: place
 
     case proposal.problems in [nil, []] && Review.preview_key(proposal) do
       key when is_binary(key) -> Map.put(place, :preview_url, review_url(Review.preview_path(path, key)))

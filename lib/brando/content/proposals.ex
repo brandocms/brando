@@ -2388,7 +2388,8 @@ defmodule Brando.Content.Proposals do
       refines, or `:latest`. With `:latest`, the most recent proposal from the
       same actor and client still under review is superseded when it has
       problems or touches an entry this one touches (the same target, or a
-      created entry with the same content type and ref); otherwise it is left
+      created entry with the same content type, language and slug — or uri
+      for pages, or title when it gives neither); otherwise it is left
       alone and this one starts at version 1. Calls for one actor and client
       are serialized while the earlier proposal is found and superseded, so
       concurrent calls never leave two versions under review.
@@ -2407,7 +2408,7 @@ defmodule Brando.Content.Proposals do
   end
 
   defp store!(proposal, actor, opts) do
-    {:ok, record} =
+    {:ok, {record, previous}} =
       Repo.transaction(fn ->
         previous =
           case opts[:replaces] do
@@ -2415,10 +2416,10 @@ defmodule Brando.Content.Proposals do
             replaces -> replace!(replaces, proposal, actor, opts)
           end
 
-        Repo.insert!(new_record(proposal, previous, opts))
+        {Repo.insert!(new_record(proposal, previous, opts)), previous}
       end)
 
-    with_record(proposal, record)
+    %{with_record(proposal, record) | supersedes_summary: previous && previous.summary}
   end
 
   # A connected tool's proposals: the earlier one is found and superseded
@@ -2500,17 +2501,49 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # A created entry is told apart by its content type and ref.
+  # A ref is a name inside one proposal, so a created entry is told apart by
+  # its content type, language and address (`created/1`). One without an
+  # address overlaps with nothing.
   defp touched(operations) do
-    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {op.ref, op.schema}
+    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {op.ref, created(op)}
 
     for op <- operations, target <- changed_targets(op), not is_nil(target), into: MapSet.new() do
       case target do
-        {:new, ref} -> {:new, creates[ref], ref}
+        {:new, ref} -> creates[ref] || {:new, make_ref()}
         target -> target
       end
     end
   end
+
+  # The slug, or the uri (pages), or the key under its parent key
+  # (fragments), or else the title, as the create gives it: trimmed and
+  # case-insensitive, without slug generation. A blank value is no address.
+  defp created(%CreateEntry{schema: schema, fields: fields}) do
+    fields = Map.new(fields, fn {key, value} -> {to_string(key), value} end)
+    address = Enum.find_value(~w(slug uri key title), &address(&1, fields))
+
+    address && {:new, schema, normalized(fields["language"]), address}
+  end
+
+  defp address("key", fields) do
+    case present(fields["key"]) do
+      nil -> nil
+      key -> {:key, present(fields["parent_key"]), key}
+    end
+  end
+
+  defp address(field, fields), do: present(fields[field])
+
+  defp present(value) do
+    case normalized(value) do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  defp normalized(value) when is_binary(value), do: value |> String.trim() |> String.downcase()
+  defp normalized(value) when is_atom(value) and not is_nil(value), do: normalized(to_string(value))
+  defp normalized(_value), do: nil
 
   defp supersede!(nil, _actor), do: nil
 
