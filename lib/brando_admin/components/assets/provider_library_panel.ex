@@ -17,6 +17,8 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
     * `add_from_library`: `add/4`, which creates the record, or returns the
       one that already holds the video
     * `handle_async(:library_page, result, socket)`: `page_loaded/2`
+    * `handle_async(:library_collections, result, socket)`:
+      `collections_loaded/2`
 
   A page is listed off the LiveView process; adding is synchronous, as it
   creates a record under the editor's authorization and tenant context,
@@ -24,8 +26,10 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
 
   A provider that groups its videos (`Brando.Videos.ProviderLibrary`'s
   "Collections") gets a collection dropdown next to the search, on "All
-  videos" to start with. The collections are read with the first page, and
-  each video listed from all of them shows the name of the one it is in.
+  videos" to start with. The collections are read in a task of their own,
+  so a slow or failing read neither holds up nor hides the videos; a failed
+  read is tried again on the next search. Each video listed from all of
+  them shows the name of the one it is in.
   """
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
@@ -60,8 +64,10 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
           label: provider.label,
           search?: provider.search?,
           collections?: Map.get(provider, :collections?, false),
-          # nil until read with the first page; [] for a provider without any
+          # nil until read; [] for a provider without any
           collections: nil,
+          collections_ref: nil,
+          collections_truncated?: false,
           collection: "",
           query: "",
           items: [],
@@ -71,7 +77,7 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
           ref: nil
         }
 
-        {:ok, socket |> assign(:library, library) |> load_page(nil)}
+        {:ok, socket |> assign(:library, library) |> load_collections() |> load_page(nil)}
     end
   end
 
@@ -85,6 +91,7 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
 
     socket
     |> assign(:library, %{library | query: query, collection: collection, items: [], next: nil})
+    |> load_collections()
     |> load_page(nil)
   end
 
@@ -102,23 +109,37 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
   def more(socket), do: socket
 
   @doc "A page listed, from the owner's `handle_async(:library_page, result, socket)`."
-  def page_loaded(socket, {:ok, {ref, cursor, result, collections}}) do
+  def page_loaded(socket, {:ok, {ref, cursor, result}}) do
     case socket.assigns.library do
-      %{ref: ^ref} = library ->
-        assign(socket, :library, library |> apply_collections(collections) |> apply_page(cursor, result))
-
+      %{ref: ^ref} = library -> assign(socket, :library, apply_page(library, cursor, result))
       # Closed, or superseded by a newer search.
-      _ ->
-        socket
+      _ -> socket
     end
   end
 
-  def page_loaded(%{assigns: %{library: %{} = library}} = socket, {:exit, _reason}) do
-    library = if library.collections == nil, do: %{library | collections: []}, else: library
-    assign(socket, :library, %{library | loading?: false, error: error_message(:provider_error, library.label)})
-  end
+  def page_loaded(%{assigns: %{library: %{} = library}} = socket, {:exit, _reason}),
+    do: assign(socket, :library, %{library | loading?: false, error: error_message(:provider_error, library.label)})
 
   def page_loaded(socket, _result), do: socket
+
+  @doc """
+  The collections read, from the owner's
+  `handle_async(:library_collections, result, socket)`. A failed read
+  leaves the library one list, until the next search reads them again.
+  """
+  def collections_loaded(socket, {:ok, {ref, result}}) do
+    case socket.assigns.library do
+      %{collections_ref: ^ref} = library -> assign(socket, :library, apply_collections(library, result))
+      # Closed, or opened again since.
+      _ -> socket
+    end
+  end
+
+  def collections_loaded(%{assigns: %{library: %{collections_ref: ref} = library}} = socket, {:exit, _reason})
+      when is_reference(ref),
+      do: assign(socket, :library, %{library | collections_ref: nil})
+
+  def collections_loaded(socket, _result), do: socket
 
   @doc """
   Adds the open library's video `remote_id` to Brando's library as `user`,
@@ -145,35 +166,56 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
 
   def add(socket, _remote_id, _user, _opts), do: {:error, socket}
 
-  # Read with this page, or not asked for. Without them, the library is
-  # browsed as one list.
-  defp apply_collections(library, nil), do: library
-  defp apply_collections(library, {:ok, collections}) when is_list(collections), do: %{library | collections: collections}
-  defp apply_collections(library, _error), do: %{library | collections: []}
+  # Without them, the library is browsed as one list.
+  defp apply_collections(library, {:ok, collections}) when is_list(collections),
+    do: %{library | collections: collections, collections_ref: nil, collections_truncated?: false}
+
+  defp apply_collections(library, {:ok, collections, :truncated}) when is_list(collections),
+    do: %{library | collections: collections, collections_ref: nil, collections_truncated?: true}
+
+  defp apply_collections(library, _error), do: %{library | collections_ref: nil}
 
   defp apply_page(library, cursor, {:ok, %{items: items, next: next}}) do
     items = if cursor, do: library.items ++ items, else: items
     %{library | items: items, next: next, loading?: false}
   end
 
+  defp apply_page(library, _cursor, {:error, :collection_not_found}),
+    do: %{library | loading?: false, error: collection_gone(library.strategy, library.label)}
+
   defp apply_page(library, _cursor, {:error, reason}),
     do: %{library | loading?: false, error: error_message(reason, library.label)}
+
+  # Read once per open, and again after a failed read; not while one runs.
+  defp load_collections(%{assigns: %{library: %{collections?: true, collections: nil, collections_ref: nil}}} = socket) do
+    library = socket.assigns.library
+    ref = make_ref()
+    strategy = library.strategy
+
+    socket
+    |> assign(:library, %{library | collections_ref: ref})
+    |> start_async(
+      :library_collections,
+      Brando.Tenant.capture_context(fn -> {ref, ProviderLibrary.collections(strategy)} end)
+    )
+  end
+
+  defp load_collections(%{assigns: %{library: %{collections?: false} = library}} = socket),
+    do: assign(socket, :library, %{library | collections: []})
+
+  defp load_collections(socket), do: socket
 
   defp load_page(socket, cursor) do
     library = socket.assigns.library
     ref = make_ref()
     strategy = library.strategy
     opts = [cursor: cursor, query: library.query, collection: library.collection]
-    collections? = library.collections? and library.collections == nil
 
     socket
     |> assign(:library, %{library | loading?: true, error: nil, ref: ref})
     |> start_async(
       :library_page,
-      Brando.Tenant.capture_context(fn ->
-        collections = if collections?, do: ProviderLibrary.collections(strategy)
-        {ref, cursor, ProviderLibrary.list(strategy, opts), collections}
-      end)
+      Brando.Tenant.capture_context(fn -> {ref, cursor, ProviderLibrary.list(strategy, opts)} end)
     )
   end
 
@@ -235,6 +277,15 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
   # What the provider calls its groups of videos.
   defp collection_noun(:vimeo), do: gettext("Folder")
   defp collection_noun(_strategy), do: gettext("Collection")
+
+  defp collection_gone(:vimeo, provider),
+    do: gettext("This folder is no longer in %{provider}. Choose another one.", provider: provider)
+
+  defp collection_gone(_strategy, provider),
+    do: gettext("This collection is no longer in %{provider}. Choose another one.", provider: provider)
+
+  defp truncated_note(:vimeo, count), do: gettext("Only the first %{count} folders are listed", count: count)
+  defp truncated_note(_strategy, count), do: gettext("Only the first %{count} collections are listed", count: count)
 
   defp empty_collection(:vimeo), do: gettext("No videos in this folder.")
   defp empty_collection(_strategy), do: gettext("No videos in this collection.")
@@ -301,6 +352,9 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanel do
           <option value="" selected={@library.collection == ""}>{gettext("All videos")}</option>
           <option :for={c <- @library.collections} value={c.id} selected={@library.collection == c.id}>
             {collection_option(c)}
+          </option>
+          <option :if={@library.collections_truncated?} disabled>
+            {truncated_note(@library.strategy, length(@library.collections))}
           </option>
         </select>
         <input

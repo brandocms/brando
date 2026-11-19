@@ -420,6 +420,9 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_async(:library_page, result, socket), do: {:noreply, ProviderLibraryPanel.page_loaded(socket, result)}
 
+  def handle_async(:library_collections, result, socket),
+    do: {:noreply, ProviderLibraryPanel.collections_loaded(socket, result)}
+
   def handle_async(:url_video, result, socket) do
     case VideoFromURL.finish(socket, result, socket.assigns.current_user) do
       {:ok, video, socket} ->

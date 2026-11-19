@@ -735,6 +735,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   def handle_async(:library_page, result, socket), do: {:noreply, ProviderLibraryPanel.page_loaded(socket, result)}
 
+  def handle_async(:library_collections, result, socket),
+    do: {:noreply, ProviderLibraryPanel.collections_loaded(socket, result)}
+
   # The picker opened for another field since the paste (`update/2` clears
   # the ref): the answer is dropped.
   def handle_async(:url_video, result, socket) do

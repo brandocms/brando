@@ -17,6 +17,8 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
     search?: true,
     collections?: true,
     collections: [],
+    collections_ref: nil,
+    collections_truncated?: false,
     collection: "",
     query: "",
     items: [],
@@ -61,20 +63,20 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
       socket = socket(%{library: %{@library | ref: ref}})
 
       socket =
-        ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, {:ok, %{items: [item("1")], next: "c2"}}, nil}})
+        ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, {:ok, %{items: [item("1")], next: "c2"}}}})
 
       assert %{items: [%{remote_id: "1"}], next: "c2", loading?: false} = socket.assigns.library
 
       # A further page adds to it
       socket =
-        ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, "c2", {:ok, %{items: [item("2")], next: nil}}, nil}})
+        ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, "c2", {:ok, %{items: [item("2")], next: nil}}}})
 
       assert Enum.map(socket.assigns.library.items, & &1.remote_id) == ["1", "2"]
     end
 
     test "drops a page for a request superseded since, or a library closed" do
       socket = socket(%{library: %{@library | ref: make_ref()}})
-      page = {:ok, {make_ref(), nil, {:ok, %{items: [item("1")], next: nil}}, nil}}
+      page = {:ok, {make_ref(), nil, {:ok, %{items: [item("1")], next: nil}}}}
 
       assert ProviderLibraryPanel.page_loaded(socket, page).assigns.library.items == []
       assert ProviderLibraryPanel.page_loaded(socket(%{library: nil}), page).assigns.library == nil
@@ -84,26 +86,91 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
       ref = make_ref()
       socket = socket(%{library: %{@library | ref: ref}})
 
-      failed = ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, {:error, :not_found}, nil}})
+      failed = ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, {:error, :not_found}}})
       assert %{loading?: false, error: "Vimeo no longer has this video."} = failed.assigns.library
 
       crashed = ProviderLibraryPanel.page_loaded(socket, {:exit, :boom})
       assert crashed.assigns.library.error == "Could not reach Vimeo. Try again in a moment."
     end
 
-    test "takes the collections read with the first page; without them, the library is one list" do
+    test "says a folder or collection is gone, by the provider's word for it" do
       ref = make_ref()
-      socket = socket(%{library: %{@library | ref: ref, collections: nil}})
-      page = {:ok, %{items: [item("1")], next: nil}}
+      gone = {:ok, {ref, nil, {:error, :collection_not_found}}}
+
+      vimeo = ProviderLibraryPanel.page_loaded(socket(%{library: %{@library | ref: ref, collection: "11"}}), gone)
+      assert vimeo.assigns.library.error == "This folder is no longer in Vimeo. Choose another one."
+
+      bunny = %{@library | ref: ref, collection: "c-1", strategy: :bunny, label: "Bunny Stream"}
+      bunny = ProviderLibraryPanel.page_loaded(socket(%{library: bunny}), gone)
+      assert bunny.assigns.library.error == "This collection is no longer in Bunny Stream. Choose another one."
+    end
+
+    test "leaves the collections alone when the page crashes" do
+      ref = make_ref()
       collections = [%{id: "11", name: "Client A", count: 6}]
+      socket = socket(%{library: %{@library | ref: ref, collections: collections}})
 
-      read = ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, page, {:ok, collections}}})
-      assert read.assigns.library.collections == collections
+      assert ProviderLibraryPanel.page_loaded(socket, {:exit, :boom}).assigns.library.collections == collections
+    end
+  end
 
-      failed = ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, page, {:error, :timeout}}})
-      assert %{collections: [], items: [_], error: nil} = failed.assigns.library
+  describe "open/2" do
+    test "reads the collections apart from the first page, for a provider that has them" do
+      providers = [%{strategy: :vimeo, label: "Vimeo", search?: true, collections?: true}]
+      {:ok, socket} = ProviderLibraryPanel.open(socket(%{library_providers: providers, library: nil}), "vimeo")
 
-      assert ProviderLibraryPanel.page_loaded(socket, {:exit, :boom}).assigns.library.collections == []
+      assert %{collections: nil, collections_ref: collections_ref, ref: page_ref, loading?: true} =
+               socket.assigns.library
+
+      assert is_reference(collections_ref) and is_reference(page_ref) and collections_ref != page_ref
+
+      flat = [%{strategy: :mux, label: "Mux", search?: false, collections?: false}]
+      {:ok, socket} = ProviderLibraryPanel.open(socket(%{library_providers: flat, library: nil}), "mux")
+      assert %{collections: [], collections_ref: nil} = socket.assigns.library
+    end
+  end
+
+  describe "collections_loaded/2" do
+    setup do
+      ref = make_ref()
+      %{ref: ref, socket: socket(%{library: %{@library | collections: nil, collections_ref: ref, items: [item("1")]}})}
+    end
+
+    test "fills the dropdown from the read its open asked for", %{ref: ref, socket: socket} do
+      collections = [%{id: "11", name: "Client A", count: 6}]
+      read = ProviderLibraryPanel.collections_loaded(socket, {:ok, {ref, {:ok, collections}}})
+
+      assert %{collections: ^collections, collections_ref: nil, collections_truncated?: false, items: [_]} =
+               read.assigns.library
+    end
+
+    test "drops a read for a library closed, or opened again since", %{socket: socket} do
+      stale = {:ok, {make_ref(), {:ok, [%{id: "11", name: "Client A", count: 6}]}}}
+
+      assert ProviderLibraryPanel.collections_loaded(socket, stale).assigns.library.collections == nil
+      assert ProviderLibraryPanel.collections_loaded(socket(%{library: nil}), stale).assigns.library == nil
+    end
+
+    test "a failed read leaves the list as it is, and the next search reads them again", %{ref: ref, socket: socket} do
+      put_test_env(Vimeo, access_token: "vimeo-token")
+
+      for result <- [{:ok, {ref, {:error, :timeout}}}, {:exit, :boom}] do
+        failed = ProviderLibraryPanel.collections_loaded(socket, result)
+        assert %{collections: nil, collections_ref: nil, items: [_], error: nil} = failed.assigns.library
+
+        searched = ProviderLibraryPanel.search(failed, %{"query" => "dawn"})
+        assert is_reference(searched.assigns.library.collections_ref)
+      end
+    end
+
+    test "says when the provider has more than it lists", %{ref: ref, socket: socket} do
+      collections = [%{id: "11", name: "Client A", count: 6}]
+      read = ProviderLibraryPanel.collections_loaded(socket, {:ok, {ref, {:ok, collections, :truncated}}})
+      assert %{collections: ^collections, collections_truncated?: true} = read.assigns.library
+
+      doc = %{read.assigns.library | loading?: false} |> render_library() |> Floki.parse_fragment!()
+      assert [note] = Floki.find(doc, "select option[disabled]")
+      assert Floki.text(note) =~ "Only the first 1 folders are listed"
     end
   end
 

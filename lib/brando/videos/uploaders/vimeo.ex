@@ -197,40 +197,70 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   @impl true
   def library_searchable?, do: true
 
+  # The account's search, read 100 at a time, may have none of the folder's
+  # videos on a page: up to this many pages are read for each call.
+  @max_folder_search_pages 3
+
   # A folder (the API's project) the library lists from: `:collection` is
-  # its id, the last segment of its `uri`. Its videos are listed and searched
-  # by `GET /me/projects/{id}/videos`.
+  # its id, the last segment of its `uri`. Its videos are listed by
+  # `GET /me/projects/{id}/videos`, which takes no `query`. A search within
+  # a folder goes through the account's search, `GET /me/videos`, and keeps
+  # the videos whose `parent_folder` is that folder.
   @impl true
   def list_remote(opts) do
-    page = Keyword.get(opts, :cursor) || 1
+    folder_id = Keyword.get(opts, :collection)
+    query = Keyword.get(opts, :query)
 
+    if folder_id not in [nil, ""] and is_binary(query) and query != "",
+      do: search_folder(folder_id, query, Keyword.get(opts, :cursor) || 1, @max_folder_search_pages),
+      else: list_page(folder_id, query, Keyword.get(opts, :cursor) || 1, Keyword.get(opts, :per_page, 24))
+  end
+
+  @library_fields @video_fields <> ",created_time,parent_folder.uri,parent_folder.name"
+
+  defp list_page(folder_id, query, page, per_page) do
     params =
-      [
-        page: page,
-        per_page: Keyword.get(opts, :per_page, 24),
-        sort: "date",
-        direction: "desc",
-        fields: @video_fields <> ",created_time,parent_folder.uri,parent_folder.name"
-      ]
-      |> maybe_put_query(Keyword.get(opts, :query))
+      maybe_put_query(
+        [page: page, per_page: per_page, sort: "date", direction: "desc", fields: @library_fields],
+        query
+      )
 
-    with {:ok, path} <- library_path(Keyword.get(opts, :collection)) do
-      case api_request(:get, path, params: params) do
-        {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
-          {:ok,
-           %{
-             items: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
-             next: if(get_in(body, ["paging", "next"]), do: page + 1)
-           }}
-
-        {:ok, _response} ->
-          {:error, :invalid_response}
-
-        error ->
-          error
-      end
+    with {:ok, path} <- library_path(folder_id),
+         {:ok, data, next?} <- library_request(path, params) do
+      {:ok, %{items: library_items(data), next: if(next?, do: page + 1)}}
+    else
+      {:error, {:http_error, 404, _body}} when folder_id not in [nil, ""] -> {:error, :collection_not_found}
+      error -> error
     end
   end
+
+  defp search_folder(folder_id, query, page, pages_left) do
+    params = [page: page, per_page: 100, sort: "date", direction: "desc", fields: @library_fields, query: query]
+
+    with {:ok, _path} <- library_path(folder_id),
+         {:ok, data, next?} <- library_request("/me/videos", params) do
+      items = data |> library_items() |> Enum.filter(&(&1.collection_id == folder_id))
+
+      if items == [] and next? and pages_left > 1,
+        do: search_folder(folder_id, query, page + 1, pages_left - 1),
+        else: {:ok, %{items: items, next: if(next?, do: page + 1)}}
+    end
+  end
+
+  defp library_request(path, params) do
+    case api_request(:get, path, params: params) do
+      {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
+        {:ok, data, get_in(body, ["paging", "next"]) != nil}
+
+      {:ok, _response} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  defp library_items(data), do: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1)
 
   defp library_path(folder_id) when folder_id in [nil, ""], do: {:ok, "/me/videos"}
 
@@ -245,7 +275,7 @@ defmodule Brando.Videos.Uploaders.Vimeo do
 
   @doc """
   The account's folders (the API's projects), by name, with the number of
-  videos each holds.
+  videos each holds: the first 1,000, `:truncated` when there are more.
   """
   @impl true
   def list_collections(_opts), do: folder_pages(1, [])
@@ -263,9 +293,20 @@ defmodule Brando.Videos.Uploaders.Vimeo do
       {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
         acc = acc ++ Enum.flat_map(data, &folder/1)
 
-        if get_in(body, ["paging", "next"]) && page < @max_folder_pages,
-          do: folder_pages(page + 1, acc),
-          else: {:ok, acc}
+        cond do
+          !get_in(body, ["paging", "next"]) ->
+            {:ok, acc}
+
+          page < @max_folder_pages ->
+            folder_pages(page + 1, acc)
+
+          true ->
+            Logger.warning(
+              "Vimeo has more than #{@max_folder_pages * 100} folders; only the first #{@max_folder_pages * 100} are listed"
+            )
+
+            {:ok, acc, :truncated}
+        end
 
       {:ok, _response} ->
         {:error, :invalid_response}

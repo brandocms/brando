@@ -177,9 +177,11 @@ defmodule Brando.Videos.ProviderLibrary do
 
   @doc """
   The collections `strategy`'s library groups its videos in, by name; see
-  "Collections". `{:ok, []}` for a provider with none.
+  "Collections". `{:ok, []}` for a provider with none. A provider reads a
+  bounded number of them, and says `{:ok, collections, :truncated}` when it
+  has more.
   """
-  @spec collections(atom()) :: {:ok, [collection()]} | {:error, term()}
+  @spec collections(atom()) :: {:ok, [collection()]} | {:ok, [collection()], :truncated} | {:error, term()}
   def collections(strategy) do
     scope = scope()
 
@@ -193,7 +195,10 @@ defmodule Brando.Videos.ProviderLibrary do
   defp list_collections(module, scope) do
     case guarded(fn -> module.list_collections([]) end) do
       {:ok, collections} when is_list(collections) ->
-        {:ok, if(match?({:group, _, _}, scope), do: Enum.map(collections, &%{&1 | count: nil}), else: collections)}
+        {:ok, scoped_collections(collections, scope)}
+
+      {:ok, collections, :truncated} when is_list(collections) ->
+        {:ok, scoped_collections(collections, scope), :truncated}
 
       {:ok, _other} ->
         {:error, :invalid_response}
@@ -202,6 +207,9 @@ defmodule Brando.Videos.ProviderLibrary do
         error
     end
   end
+
+  defp scoped_collections(collections, {:group, _site_ids, _sites}), do: Enum.map(collections, &%{&1 | count: nil})
+  defp scoped_collections(collections, _scope), do: collections
 
   defp list_page(module, :account, opts, _pages_left), do: guarded(fn -> module.list_remote(opts) end)
 

@@ -13035,6 +13035,16 @@ msgstr ""
 msgid "Only superusers see and change the HTML and its parameters."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Only the first %{count} collections are listed"
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Only the first %{count} folders are listed"
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only these"
@@ -19741,6 +19751,11 @@ msgid_plural "This changes %{count} entries. A revision of each is stored first,
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "This collection is no longer in %{provider}. Choose another one."
+msgstr ""
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "This content is kept here, but no longer has a region or a reference in the text."
@@ -19851,6 +19866,11 @@ msgstr ""
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "This file contains no groups to import."
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "This folder is no longer in %{provider}. Choose another one."
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex

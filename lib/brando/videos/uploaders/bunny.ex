@@ -452,8 +452,9 @@ defmodule Brando.Videos.Uploaders.Bunny do
   @max_collection_pages 10
 
   @doc """
-  The library's collections, by name. Bunny's `search` and `collection`
-  combine, so a search runs within the collection listed.
+  The library's collections, by name: the first 1,000, `:truncated` when
+  there are more. Bunny's `search` and `collection` combine, so a search
+  runs within the collection listed.
   """
   @impl true
   def list_collections(_opts) do
@@ -468,9 +469,21 @@ defmodule Brando.Videos.Uploaders.Bunny do
       {:ok, %{"items" => items} = body} when is_list(items) ->
         acc = acc ++ Enum.flat_map(items, &collection/1)
 
-        if more_pages?(body) and page < @max_collection_pages,
-          do: collection_pages(library_id, page + 1, acc),
-          else: {:ok, Enum.sort_by(acc, &String.downcase(&1.name))}
+        cond do
+          not more_pages?(body) ->
+            {:ok, Enum.sort_by(acc, &String.downcase(&1.name))}
+
+          page < @max_collection_pages ->
+            collection_pages(library_id, page + 1, acc)
+
+          true ->
+            Logger.warning(
+              "Bunny Stream has more than #{@max_collection_pages * 100} collections; " <>
+                "only the first #{@max_collection_pages * 100} are listed"
+            )
+
+            {:ok, Enum.sort_by(acc, &String.downcase(&1.name)), :truncated}
+        end
 
       {:ok, _body} ->
         {:error, :invalid_response}

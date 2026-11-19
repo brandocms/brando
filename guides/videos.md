@@ -481,9 +481,12 @@ has it (Bunny, Cloudflare and Vimeo; Mux has none).
 
 Bunny Stream's collections and Vimeo's folders can be browsed one at a time:
 a dropdown next to the search, on "All videos" to start with, lists them with
-the number of videos each holds. The search runs within the one chosen. Listing
-them all, each video shows the name of the collection or folder it is in. Mux
-and Cloudflare Stream have no such grouping, so their library is one list.
+the number of videos each holds, up to the first 1,000 (the dropdown says when
+there are more). The search runs within the one chosen. Vimeo cannot search
+inside a folder, so a search there goes through the account's search and keeps
+the folder's own videos, not those of its subfolders. Listing them all, each
+video shows the name of the collection or folder it is in. Mux and Cloudflare
+Stream have no such grouping, so their library is one list.
 
 With several sites (`tenancy_mode: :multi`), a site shows the button only when
 an installation superuser has put it in a provider library group, and then
@@ -530,7 +533,10 @@ A provider joins by implementing the optional `list_remote/1`,
 `import_remote/3`, `library_meta_path/0` and `library_searchable?/0`
 callbacks of `Brando.Videos.Uploader`. One that groups its videos also
 implements `list_collections/1`, takes `:collection` in `list_remote/1`, and
-gives each item its `:collection_id`.
+gives each item its `:collection_id`. `list_collections/1` returns
+`{:ok, collections, :truncated}` when it stops reading before the end, and
+`list_remote/1` returns `{:error, :collection_not_found}` for a collection the
+provider no longer has.
 
 ### Remote Video Deletion
 

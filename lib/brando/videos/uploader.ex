@@ -147,10 +147,15 @@ defmodule Brando.Videos.Uploader do
   provider does not say.
 
   Optional; a provider implementing it takes `:collection` in
-  `list_remote/1`. `opts` is empty today.
+  `list_remote/1`, and returns `{:error, :collection_not_found}` from it for
+  a collection it no longer has. A provider reading them a page at a time
+  reads a bounded number, and returns `{:ok, collections, :truncated}` when
+  there are more. `opts` is empty today.
   """
   @callback list_collections(opts :: keyword()) ::
-              {:ok, [%{id: String.t(), name: String.t(), count: non_neg_integer() | nil}]} | {:error, any()}
+              {:ok, [%{id: String.t(), name: String.t(), count: non_neg_integer() | nil}]}
+              | {:ok, [%{id: String.t(), name: String.t(), count: non_neg_integer() | nil}], :truncated}
+              | {:error, any()}
 
   @doc """
   Creates a Video record for a video already in the provider's library.
