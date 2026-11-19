@@ -35,8 +35,9 @@ defmodule Mix.Tasks.Brando.Setup do
        The modules and the page's blocks are a demo: with `--no-demo` the
        `index` page and the footer fragment are created empty, and no
        modules are, in every configured language (or the site's). `--no-demo`
-       is unused with `:multi`. `mix brando.seeds.remove_defaults` takes the
-       demo away later
+       is unused with `:multi`: untick "Start with demo content" when creating
+       a site at `/admin/sites` instead. `mix brando.seeds.remove_defaults`
+       takes the demo away later
 
   Each step is skipped when its result already exists, so rerunning after a
   failure resumes rather than duplicates. Nothing is removed or rewritten.
@@ -199,9 +200,7 @@ defmodule Mix.Tasks.Brando.Setup do
   # An application's seeder decides its content: `--no-demo` reaches only one
   # with `seed/4`
   defp custom_seeder_notice(seeder) do
-    Code.ensure_loaded(seeder)
-
-    unless function_exported?(seeder, :seed, 4) do
+    unless Brando.Tenant.Seeder.demo_option?(seeder) do
       Mix.shell().info([
         :yellow,
         "--no-demo does not reach #{inspect(seeder)}, which has no seed/4: it seeds the site as it does without it."

@@ -17507,6 +17507,11 @@ msgstr ""
 msgid "Site %{name} created."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Site %{name} created. %{seeder} decides what a new site starts with, so the demo choice was not used."
+msgstr ""
+
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
 msgid "Site access and overrides"
@@ -17754,6 +17759,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Start with %{module}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Start with demo content"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -19868,6 +19878,11 @@ msgstr "This imports independent module copies with new identities. Use Content 
 msgid "This installation"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "This installation's seeder, %{seeder}, decides what a new site starts with, so unticking this changes nothing."
+msgstr ""
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "This is already running."
@@ -20799,6 +20814,16 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Unsupported content was converted to text. Footnotes from another entry need to be added here."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out."
 msgstr ""
 
 #: lib/brando/videos/video.ex

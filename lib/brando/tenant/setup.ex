@@ -333,9 +333,7 @@ defmodule Brando.Tenant.Setup do
   defp run_seeder(seeder, site, environment, creator, true), do: seeder.seed(site, environment, creator)
 
   defp run_seeder(seeder, site, environment, creator, demo) do
-    Code.ensure_loaded(seeder)
-
-    if function_exported?(seeder, :seed, 4),
+    if Brando.Tenant.Seeder.demo_option?(seeder),
       do: seeder.seed(site, environment, creator, demo: demo),
       else: seeder.seed(site, environment, creator)
   end

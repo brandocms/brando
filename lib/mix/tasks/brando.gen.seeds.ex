@@ -24,7 +24,8 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
   With `tenancy_mode: :single` or `:multi` it seeds nothing: this content
   belongs to a site's environment, and each site gets it when it is
   provisioned (`Brando.Tenant.Seeder`). In `:single`, `mix brando.setup`
-  provisions the site; in `:multi`, sites are created at `/admin/sites`.
+  provisions the site; in `:multi`, sites are created at `/admin/sites`,
+  where unticking "Start with demo content" leaves the demo out.
   `--base-url`, `--description` and `--no-demo` are unused then, and it says so.
 
   The seeded content is a starting point for editing in the admin, not a
@@ -83,8 +84,8 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     do: "--no-demo is unused here: mix brando.setup --no-demo creates the site without the demo."
 
   defp no_demo_notice(:multi) do
-    "--no-demo is unused here: a site created at /admin/sites gets the demo. " <>
-      "Remove it with mix brando.seeds.remove_defaults --site KEY --yes."
+    "--no-demo is unused here: untick \"Start with demo content\" when you create a site at /admin/sites. " <>
+      "Remove the demo from an existing site with mix brando.seeds.remove_defaults --site KEY --yes."
   end
 
   defp seed(opts) do

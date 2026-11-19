@@ -209,6 +209,16 @@ defmodule Brando.Setup.SiteTest do
     assert shell_output() =~ "/admin/sites"
   end
 
+  test "with tenancy_mode :multi, brando.gen.seeds --no-demo points to the create form's box" do
+    put_test_env(:tenancy_mode, :multi)
+
+    Mix.Task.reenable("brando.gen.seeds")
+    Mix.Task.run("brando.gen.seeds", ["--no-demo"])
+
+    assert shell_output() =~ ~s(untick "Start with demo content")
+    assert Registry.list_sites() == []
+  end
+
   test "outside :single, provisioning does nothing", %{creator: creator} do
     for mode <- [:none, :multi] do
       put_test_env(:tenancy_mode, mode)

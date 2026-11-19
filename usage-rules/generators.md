@@ -47,7 +47,8 @@ setup seeds nothing: sites are created at `/admin/sites`, and each gets that
 content then. Setup says which in its output, and that `--base-url` and
 `--description` (and, with `multi`, `--no-demo`) are unused when they are
 given; `--no-seeds` skips the site too. With `single`, `--no-demo` gives the
-site its content without the demo.
+site its content without the demo; with `multi`, untick **Start with demo
+content** when creating a site at `/admin/sites`.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
 with `Setup complete.`; [Running the steps separately](../guides/installation.md#running-the-steps-separately)
 describes each step as its own task.

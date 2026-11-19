@@ -35,7 +35,14 @@ defmodule BrandoAdmin.Sites.SiteLive do
         {:ok, redirect(socket, to: "/admin")}
 
       connected?(socket) ->
-        {:ok, socket |> assign(:socket_connected, true) |> refresh()}
+        seeder = Brando.Tenant.Seeder.configured()
+
+        {:ok,
+         socket
+         |> assign(:socket_connected, true)
+         |> assign(:seeder, seeder)
+         |> assign(:demo_option?, Brando.Tenant.Seeder.demo_option?(seeder))
+         |> refresh()}
 
       true ->
         {:ok, assign(socket, :socket_connected, false)}
@@ -97,6 +104,37 @@ defmodule BrandoAdmin.Sites.SiteLive do
                   )}
                 </small>
               </label>
+            </div>
+            <div class="site-create-demo">
+              <input type="hidden" name="site[demo]" value="false" />
+              <label class="environment-check">
+                <input
+                  type="checkbox"
+                  id="site-create-demo"
+                  name="site[demo]"
+                  value="true"
+                  checked
+                  aria-describedby="site-create-demo-help"
+                />
+                <span>{gettext("Start with demo content")}</span>
+              </label>
+              <small :if={@demo_option? and @seeder == Brando.Tenant.Seeder} id="site-create-demo-help">
+                {gettext(
+                  "Unticked, the homepage and footer start empty and no demo modules are created. The identity, SEO and main menu are created either way."
+                )}
+              </small>
+              <small :if={@demo_option? and @seeder != Brando.Tenant.Seeder} id="site-create-demo-help">
+                {gettext(
+                  "Unticked, this installation's seeder, %{seeder}, is asked to leave the demo out.",
+                  seeder: inspect(@seeder)
+                )}
+              </small>
+              <small :if={!@demo_option?} id="site-create-demo-help">
+                {gettext(
+                  "This installation's seeder, %{seeder}, decides what a new site starts with, so unticking this changes nothing.",
+                  seeder: inspect(@seeder)
+                )}
+              </small>
             </div>
             <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Provisioning…")}>
               {gettext("Create site")}
@@ -335,8 +373,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
       delivery_mode: parse_delivery_mode(params["delivery_mode"])
     }
 
-    case Setup.create_site(attrs, socket.assigns.current_user) do
-      {:ok, site} -> {:noreply, socket |> notify(gettext("Site %{name} created.", name: site.name)) |> refresh()}
+    demo = params["demo"] != "false"
+
+    case Setup.create_site(attrs, socket.assigns.current_user, demo: demo) do
+      {:ok, site} -> {:noreply, socket |> notify(created_message(site, demo, socket.assigns)) |> refresh()}
       {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
   end
@@ -712,6 +752,18 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp format_last_edit(%NaiveDateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)
   defp format_last_edit(%DateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)
   defp format_last_edit(value), do: value
+
+  # An application's seeder without `seed/4` gives the site its usual
+  # content whatever the box says, as `mix brando.setup --no-demo` warns
+  defp created_message(site, false, %{demo_option?: false, seeder: seeder}) do
+    gettext(
+      "Site %{name} created. %{seeder} decides what a new site starts with, so the demo choice was not used.",
+      name: site.name,
+      seeder: inspect(seeder)
+    )
+  end
+
+  defp created_message(site, _demo, _assigns), do: gettext("Site %{name} created.", name: site.name)
 
   defp notify(socket, message) do
     send(self(), {:toast, message})
