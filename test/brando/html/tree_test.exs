@@ -21,8 +21,52 @@ defmodule Brando.HTML.TreeTest do
                [{"template", [{"data-x", "1"}], [{"p", [], ["a"]}]}]
     end
 
+    # Browsers read a noscript's content as text, ending at the first
+    # `</noscript>`. lexbor parses with scripting off, where it is markup
+    # and an unclosed element inside swallowed the rest of the field.
+    test "a noscript ends at its end tag, its content parsed on its own" do
+      html = ~s(<noscript class="n"><p>Enable JavaScript</noscript><h2>Title</h2><p>Body</p>)
+
+      assert Tree.parse_fragment(html) == [
+               {"noscript", [{"class", "n"}], [{"p", [], ["Enable JavaScript"]}]},
+               {"h2", [], ["Title"]},
+               {"p", [], ["Body"]}
+             ]
+
+      assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
+
+      assert html |> Tree.parse_fragment() |> Tree.to_html() ==
+               ~s(<noscript class="n"><p>Enable JavaScript</p></noscript><h2>Title</h2><p>Body</p>)
+    end
+
+    test "noscript in a script, textarea or comment is left to them" do
+      html = ~s(<script>"<noscript><p>"</script><textarea><noscript>a</noscript></textarea><!-- <noscript> --><p>a</p>)
+
+      assert Tree.parse_fragment(html) == [
+               {"script", [], [~s("<noscript><p>")]},
+               {"textarea", [], ["<noscript>a</noscript>"]},
+               {:comment, " <noscript> "},
+               {"p", [], ["a"]}
+             ]
+    end
+
     test "takes iodata" do
       assert Tree.parse_fragment(["<p>", "a", "</p>"]) == [{"p", [], ["a"]}]
+    end
+  end
+
+  describe "parse_document/1" do
+    test "a noscript in head keeps the head tags after it in head" do
+      html =
+        ~s(<html><head><noscript><img src="px"></noscript><title>T</title><link rel="canonical" href="/c"></head><body>b</body></html>)
+
+      assert [{"html", [], [{"head", [], head}, {"body", [], ["b"]}]}] = Tree.parse_document(html)
+
+      assert head == [
+               {"noscript", [], [{"img", [{"src", "px"}], []}]},
+               {"title", [], ["T"]},
+               {"link", [{"rel", "canonical"}, {"href", "/c"}], []}
+             ]
     end
   end
 

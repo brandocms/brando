@@ -57,6 +57,14 @@ defmodule Brando.Villain.FootnotesTest do
     assert result.html =~ "const note"
   end
 
+  test "a noscript's unclosed markup does not swallow the field after it" do
+    html = "<noscript><p>Enable JavaScript</noscript><h2>Title</h2><p>Body#{marker("a")}</p>" <> definition("a", "A")
+    result = Footnotes.render(html)
+
+    assert result.html =~ ~r{^<noscript><p>Enable JavaScript</p></noscript><h2>Title</h2><p>Body<sup}
+    assert [%{uid: "a"}] = result.notes
+  end
+
   test "ordinary HTML is returned byte-for-byte without parsing" do
     html = "<div data-x='y'>Existing &amp; unchanged</div>"
     assert Footnotes.render(html) == %{html: html, notes: []}

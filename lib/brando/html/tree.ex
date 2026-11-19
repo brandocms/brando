@@ -15,22 +15,92 @@ defmodule Brando.HTML.Tree do
   element at its top level: table rows and cells without their table, as a
   row module renders them, stay rows and cells. A stray `</template>` ends
   that context, and what follows it is parsed as body content.
+
+  The first element sets how the rest is read, as in a browser's
+  `<template>`, so table parts mixed with other content lose some markup:
+  after a `<col>` other elements are dropped (`<col><p>a</p>` gives the
+  `col` alone), and after other content a row's `tr`, `td` and `th` tags are
+  dropped and their text kept (`<p>x</p><tr><td>y</td></tr>` gives the `p`
+  and `"y"`). Floki kept both.
   """
   @spec parse_fragment(iodata()) :: t()
   def parse_fragment(html) do
-    ["<template>", html]
-    |> IO.iodata_to_binary()
+    {html, noscripts} = html |> IO.iodata_to_binary() |> mask_noscripts()
+
+    ("<template>" <> html)
     |> LazyHTML.from_fragment()
     |> LazyHTML.to_tree()
     |> case do
       [{"template", [], children} | rest] -> children ++ rest
       nodes -> nodes
     end
+    |> restore_noscripts(noscripts)
   end
 
   @doc "The nodes of a whole document, with the `html`, `head` and `body` a browser adds when missing."
   @spec parse_document(String.t()) :: t()
-  def parse_document(html), do: html |> LazyHTML.from_document() |> LazyHTML.to_tree()
+  def parse_document(html) do
+    {html, noscripts} = mask_noscripts(html)
+    html |> LazyHTML.from_document() |> LazyHTML.to_tree() |> restore_noscripts(noscripts)
+  end
+
+  # lexbor parses with scripting off, where a `<noscript>`'s content is
+  # markup: an element left open inside it takes in the rest of the input,
+  # and in `<head>` an `<img>` inside it ends the head. Browsers, with
+  # scripting on, read the content as text up to the first `</noscript>`.
+  # So each noscript is parsed as an empty `<template>`, marked with an
+  # attribute, and turned back into the noscript with its content parsed on
+  # its own. A template, as an empty noscript does not, stays where it is
+  # in a head, body or table: lexbor puts a `<link>` after an empty
+  # `<noscript></noscript>` in head inside it. Comments and the other
+  # elements whose content is text are matched too, so a `<noscript>` in
+  # their text stays text.
+  @noscript_attr "data-brando-noscript"
+  @raw_text ~r/<!--.*?-->|<(script|style|textarea|title|xmp|iframe|noembed|noframes|noscript)(?=[\s\/>])(?:"[^"]*"|'[^']*'|[^'">])*>.*?<\/\1\s*>/is
+  @noscript ~r/\A<noscript((?:"[^"]*"|'[^']*'|[^'">])*)>(.*)<\/noscript\s*>\z/is
+
+  defp mask_noscripts(html) do
+    if html =~ ~r/<noscript/i do
+      @raw_text
+      |> Regex.split(html, include_captures: true)
+      |> Enum.with_index()
+      |> Enum.map_reduce(%{}, &mask_noscript/2)
+      |> then(fn {parts, noscripts} -> {IO.iodata_to_binary(parts), noscripts} end)
+    else
+      {html, %{}}
+    end
+  end
+
+  # Odd parts are the raw text elements and comments the split matched.
+  defp mask_noscript({raw_text, index}, noscripts) when rem(index, 2) == 1 do
+    case Regex.run(@noscript, raw_text) do
+      [_, attrs, content] ->
+        id = Integer.to_string(map_size(noscripts))
+        {~s(<template #{@noscript_attr}="#{id}"#{attrs}></template>), Map.put(noscripts, id, content)}
+
+      nil ->
+        {raw_text, noscripts}
+    end
+  end
+
+  defp mask_noscript({markup, _index}, noscripts), do: {markup, noscripts}
+
+  defp restore_noscripts(nodes, noscripts) when noscripts == %{}, do: nodes
+
+  defp restore_noscripts(nodes, noscripts) do
+    map(nodes, fn
+      {"template", attrs, _children} = node ->
+        with {{_, id}, attrs} <- List.keytake(attrs, @noscript_attr, 0),
+             {:ok, content} <- Map.fetch(noscripts, id) do
+          {"noscript", attrs, parse_fragment(content)}
+        else
+          _ -> node
+        end
+
+      node ->
+        node
+    end)
+  end
 
   @doc """
   HTML for `nodes`.
