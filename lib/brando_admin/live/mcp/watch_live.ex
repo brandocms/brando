@@ -103,6 +103,8 @@ defmodule BrandoAdmin.MCP.WatchLive do
   # Activity has only the calls that ended and were written: the ones this
   # page was told of and Activity has not (running, or not written) are
   # shown again too
+  # Every time: a scope is asked what it may read when it is used, so one
+  # equal to the last says nothing about what changed
   defp reread(%{assigns: %{grant: grant, tenant: tenant, current_user: user}} = socket) do
     reader = reader(grant, user, tenant)
     history = if connected?(socket), do: Watch.history(grant), else: []
@@ -377,7 +379,11 @@ defmodule BrandoAdmin.MCP.WatchLive do
   # entry's title, the frame and the folder
   defp unnamed(details) do
     input = details["input"] || %{}
-    input = if is_binary(input["query"]) and input["query"] != "", do: Map.put(input, "query", :hidden), else: input
+
+    input =
+      if is_binary(input["query"]) and String.trim(input["query"]) != "",
+        do: Map.put(input, "query", :hidden),
+        else: input
 
     details
     |> Map.put("input", Map.delete(input, "name"))
