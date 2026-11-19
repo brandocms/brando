@@ -124,6 +124,8 @@ defmodule Brando.FigmaTest do
 
   # An instance with a text, at x 0
   defp chrome_section(id, name, {y, width, height}, opts \\ []) do
+    x = Keyword.get(opts, :x, 0)
+
     box_node(
       %{
         "id" => id,
@@ -132,7 +134,7 @@ defmodule Brando.FigmaTest do
         "componentId" => opts[:component],
         "children" => [%{"id" => id <> "t", "name" => "T", "type" => "TEXT", "characters" => name}]
       },
-      {0, y, width, height}
+      {x, y, width, height}
     )
   end
 
@@ -263,27 +265,33 @@ defmodule Brando.FigmaTest do
       node =
         %{
           frame(%{"x" => 0, "y" => 0, "width" => 1440, "height" => 5000}, [
+            chrome_section("14", "Hovedmeny", {0, 1440, 50}),
             chrome_section("1", "Top", {200, 1440, 100}, component: "h"),
             chrome_section("2", "Main navigation", {300, 1440, 50}),
             chrome_section("3", "NavBar", {350, 1440, 50}),
             chrome_section("4", "Navigasjon", {400, 1440, 50}),
-            chrome_section("5", "Topp", {450, 1440, 50}),
+            chrome_section("5", "Global/Footer", {450, 1440, 50}),
             chrome_section("6", "Links", {2300, 1440, 300}, component: "f"),
             chrome_section("7", "Bunntekst", {2600, 1440, 200}),
             chrome_section("8", "Footer 2", {2800, 1440, 400}),
             # A menu or meny is chrome only as a short, wide bar at an edge
-            chrome_section("9", "Meny", {4950, 1440, 50})
+            chrome_section("9", "Meny", {4950, 1440, 50}),
+            chrome_section("10", "Header v2", {500, 1440, 50}),
+            chrome_section("11", "Hovednavigasjon", {600, 1440, 50})
           ])
           | components: names,
             component_sets: %{"fs" => %{"name" => "Footer"}}
         }
 
       assert chrome(node) == [
+               {"Hovedmeny", "name"},
                {"Top", "component"},
                {"Main navigation", "name"},
                {"NavBar", "name"},
                {"Navigasjon", "name"},
-               {"Topp", "name"},
+               {"Global/Footer", "name"},
+               {"Header v2", "name"},
+               {"Hovednavigasjon", "name"},
                {"Links", "component"},
                {"Bunntekst", "name"},
                {"Footer 2", "name"},
@@ -304,6 +312,11 @@ defmodule Brando.FigmaTest do
             chrome_section("6", "Toppbilde", {1800, 1440, 600}),
             chrome_section("7", "Lunsjmeny", {2400, 1440, 600}),
             chrome_section("8", "Subheader", {3000, 1440, 100}),
+            # Under a module's name, and a page's opening section in Norwegian
+            chrome_section("12", "Case/Header", {3100, 1440, 300}),
+            chrome_section("13", "Topp", {3500, 1440, 50}),
+            # Flush with the bottom edge, but mostly outside the frame
+            chrome_section("15", "Meny", {4950, 1440, 50}, x: 1000),
             # Figma names a text layer after its text
             box_node(
               %{"id" => "9", "name" => "Se hele menyen", "type" => "TEXT", "characters" => "Se hele menyen"},

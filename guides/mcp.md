@@ -208,13 +208,17 @@ proposal with the modules that match.
 
   A section named like the page's header, footer or menu is marked
   `chrome`, with the reason: `"name"` (its layer name) or `"component"`
-  (its component's name). A part of the name, between slashes, has to be
-  one of header, footer, nav, navbar, navigation, navigasjon, topp,
-  topptekst, bunn or bunntekst, as a whole word ("Site/Header", "Main
-  navigation", "NavBar"; not "Section header", "Subheader" or "Navn").
-  Menu and meny count only on a short bar across most of the frame, flush
-  with its top or bottom edge, since a module can be a restaurant's menu.
-  Only instances, components and frames are matched, not text layers,
+  (its component's name). The last part of the name, after any slashes,
+  has to be header, footer, nav, navbar, navigation, navigasjon, topptekst
+  or bunntekst as a whole word, or joined to "hoved" and the like ("Site
+  header", "Main navigation", "NavBar", "Header v2", "Hovednavigasjon"; not
+  "Section header", "Subheader" or "Navn"). The parts before it must be a
+  library's grouping such as Site, Global, Layout or Components
+  ("Global/Footer"); under a module's name ("Case/Header") it is content.
+  Menu, meny, topp and bunn ("Hovedmeny") count only on a short bar across
+  most of the frame, flush with its top or bottom edge, since a module can
+  be a restaurant's menu or a page's opening section. Only component
+  instances are matched, not text layers,
   which Figma names after their text, and not variant values such as
   `Color=Navy`. A section with images but no texts is never marked, nor is
   the frame itself or a frame's only section. The mark is a hint: the

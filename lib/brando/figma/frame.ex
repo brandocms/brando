@@ -22,14 +22,20 @@ defmodule Brando.Figma.Frame do
 
   @text_limit 4_000
 
-  # Page chrome by name: a part of a layer or component name ("Site/Header",
-  # "Main navigation") that is one of these words, or a run of them
-  # ("NavBar"), with at most the qualifiers below around it. "Menu" and
-  # "meny" also name content (a restaurant's menu), so they count only on a
-  # short, wide bar at the frame's top or bottom edge.
-  @chrome_words ~w(header footer nav navbar navigation navigasjon topp topptekst bunn bunntekst)
-  @menu_words ~w(menu meny)
-  @chrome_qualifiers ~w(site page main global primary top bottom sticky mobile desktop tablet hoved)
+  # Page chrome by name: the last part of a layer or component name, after
+  # any slashes, that is one of these words, or a run of them ("NavBar"),
+  # with at most the qualifiers below around it ("Main navigation", "Header
+  # v2"), or one of them joined to a qualifier ("Hovedmeny"). The parts
+  # before it must be a library's own grouping ("Site/Header",
+  # "Global/Footer"): under a module's name ("Case/Header") it is content.
+  # "Menu", "meny", "topp" and "bunn" also name content (a restaurant's
+  # menu, a page's opening section), so they count only on a short bar
+  # across most of the frame at its top or bottom edge.
+  @chrome_words ~w(header footer nav navbar navigation navigasjon topptekst bunntekst)
+  @menu_words ~w(menu meny topp bunn)
+  @chrome_qualifiers ~w(site page main global primary top bottom sticky mobile desktop tablet hoved bar)
+  @compound_prefixes ~w(hoved topp bunn top main)
+  @library_prefixes ~w(site global layout layouts shared common chrome components component ui felles nettsted)
 
   # Edges within this many pixels count as flush
   @edge_tolerance 1
@@ -226,32 +232,43 @@ defmodule Brando.Figma.Frame do
   end
 
   defp chrome_name?(name, menu_bar?) when is_binary(name) do
-    name
-    |> String.split("/")
-    |> Enum.any?(fn part ->
-      words = Enum.reject(words(part), &(&1 in @chrome_qualifiers))
-      words != [] and chrome_words?(words, menu_bar?)
-    end)
+    {groups, [last]} = name |> String.split("/") |> Enum.split(-1)
+    words = Enum.reject(words(last), &(&1 in @chrome_qualifiers))
+
+    Enum.all?(groups, &library_group?/1) and words != [] and chrome_words?(words, menu_bar?)
   end
 
   defp chrome_name?(_name, _menu_bar?), do: false
 
   defp chrome_words?(words, menu_bar?) do
     terms = if menu_bar?, do: @chrome_words ++ @menu_words, else: @chrome_words
-    Enum.join(words) in terms or Enum.all?(words, &(&1 in terms))
+    Enum.join(words) in terms or Enum.all?(words, &term?(&1, terms))
   end
 
-  # "Site/NavBar 2" → ["site", "nav", "bar"]
+  defp term?(word, terms) do
+    word in terms or
+      Enum.any?(@compound_prefixes, fn prefix ->
+        String.starts_with?(word, prefix) and String.replace_prefix(word, prefix, "") in terms
+      end)
+  end
+
+  defp library_group?(group), do: Enum.all?(words(group), &(&1 in @library_prefixes or &1 in @chrome_qualifiers))
+
+  # "Site/NavBar v2" → ["site", "nav", "bar"]: a single letter (a version's
+  # "v") is not a word
   defp words(name) do
     ~r/\p{Lu}?\p{Ll}+|\p{Lu}+(?!\p{Ll})/u
     |> Regex.scan(name)
     |> Enum.map(&String.downcase(hd(&1)))
+    |> Enum.reject(&(String.length(&1) < 2))
   end
 
-  # Short (a bar, not a hero), across most of the frame and flush with its
-  # top or bottom edge, not past it
-  defp menu_bar?(%{y: y, width: width, height: height}, %{width: frame_width, height: frame_height}) do
-    height * 4 <= min(frame_width, frame_height) and width * 4 >= frame_width * 3 and
+  # Short (a bar, not a hero), across most of the frame (the part of it
+  # inside the frame) and flush with its top or bottom edge, not past it
+  defp menu_bar?(%{x: x, y: y, width: width, height: height}, %{width: frame_width, height: frame_height}) do
+    across = min(x + width, frame_width) - max(x, 0)
+
+    height * 4 <= min(frame_width, frame_height) and across * 4 >= frame_width * 3 and
       (abs(y) <= @edge_tolerance or abs(frame_height - (y + height)) <= @edge_tolerance)
   end
 
