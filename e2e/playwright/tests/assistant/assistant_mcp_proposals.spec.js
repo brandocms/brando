@@ -39,9 +39,29 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
   await expect(review.locator('.assistant-card ins')).toContainText('MCP review, from Claude Code')
   await page.screenshot({ path: testInfo.outputPath('assistant-mcp-review.png'), fullPage: true })
 
+  // The preview has an address: the card's Preview adds the entry to it, and
+  // back and forward close and open the preview again.
+  const reviewUrl = page.url()
   await review.locator('.assistant-card-preview').click()
+  await expect(page).toHaveURL(/\?preview=Brando\.Pages\.Page:\d+$/)
+  await expect(page.locator('.assistant-preview')).toBeVisible()
+  await page.goBack()
+  await expect(page).toHaveURL(reviewUrl)
+  await expect(review.locator('.assistant-cards')).toBeVisible()
+  await expect(page.locator('.assistant-preview')).toHaveCount(0)
+  await page.goForward()
   await expect(page.locator('.assistant-preview')).toBeVisible()
   await page.locator('.assistant-back').click()
+  await expect(page).toHaveURL(reviewUrl)
+  await expect(review.locator('.assistant-cards')).toBeVisible()
+
+  // A tool's `preview_url`: a bare `?preview` opens on the first entry's page.
+  await page.goto(`${reviewUrl}?preview`)
+  await syncLV(page)
+  await expect(page.locator('.assistant-preview-tabs button[aria-current="true"] strong')).toHaveText('MCP review')
+  await expect(page.locator('.assistant-frame-viewport iframe, .assistant-frame-state')).toBeVisible()
+  await page.locator('.assistant-back').click()
+  await expect(page).toHaveURL(reviewUrl)
   await expect(review.locator('.assistant-cards')).toBeVisible()
 
   await review.locator('button.assistant-apply').click()

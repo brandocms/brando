@@ -50,8 +50,10 @@ defmodule Brando.Content.Proposals.ExternalTest do
 
   test "a proposal from MCP records its origin and is listed for review, previewed and applied", c do
     result = prepare!(c, mcp(c))
-    assert %{applicable: true, version: 1, review_url: url} = result
+    assert %{applicable: true, version: 1, review_url: url, preview_url: preview_url} = result
     assert url =~ "/admin/assistant/connected/#{result.proposal_id}"
+    # The page it changes can be previewed: this link opens the review on it.
+    assert preview_url == url <> "?preview=Brando.Pages.Page:#{c.identity.id}"
     assert result.note =~ "From connected tools"
 
     assert {:ok, proposal} = Proposals.get(result.proposal_id, c.user)
@@ -133,6 +135,7 @@ defmodule Brando.Content.Proposals.ExternalTest do
     conversation = %Context{actor: c.user, conversation_id: Ecto.UUID.generate()}
     result = prepare!(c, conversation)
     refute Map.has_key?(result, :review_url)
+    refute Map.has_key?(result, :preview_url)
     assert {:ok, %{origin: "assistant"}} = Proposals.get(result.proposal_id, c.user)
     # A conversation's proposals are not listed with the connected tools'.
     assert [%Record{id: ^id}] = Proposals.list_external(c.user)
@@ -176,5 +179,28 @@ defmodule Brando.Content.Proposals.ExternalTest do
     assert Proposals.count_external(c.user) == 0
     assert {:error, _} = Proposals.get(id, c.user)
     assert {:error, _} = Proposals.approve(id, 1, c.user)
+  end
+
+  # What a bare `?preview` opens, and so what `preview_url` names: the first
+  # entry, in the review's order, whose content type has a page preview.
+  test "the entry to preview is the first with a page preview that the proposal changes" do
+    alias Brando.Content.Proposals.{CopyBlock, CreateEntry, Proposal, Review, SetFields}
+
+    article = {Brando.SyncTest.Article, 1}
+
+    assert Review.preview_key(%Proposal{
+             operations: [%SetFields{target: article, fields: %{}}],
+             targets: %{article => %{}}
+           }) == nil
+
+    operations = [
+      %SetFields{target: article, fields: %{}},
+      %CopyBlock{target: {Page, 1}, block_uid: "a", to_target: {:new, "lobby"}},
+      %CreateEntry{schema: Page, ref: "lobby", fields: %{}}
+    ]
+
+    targets = %{article => %{}, {Page, 1} => %{}, {:new, "lobby"} => Page}
+    # The page blocks are only copied from is read, not changed.
+    assert Review.preview_key(%Proposal{operations: operations, targets: targets}) == "new:lobby"
   end
 end

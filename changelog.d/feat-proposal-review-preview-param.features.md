@@ -1,0 +1,1 @@
+- A proposal review opens on an entry's page preview with `?preview=<entry key>` (or a bare `?preview` for the first entry with one), on proposals from connected tools and shared review links, and `brando_content_prepare_proposal` returns that link as `preview_url`.

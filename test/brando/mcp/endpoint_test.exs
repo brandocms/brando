@@ -306,6 +306,7 @@ defmodule Brando.MCP.EndpointTest do
         call_tool(tenant, token, "prepare_proposal", %{"summary" => "Add a case", "operations" => [op]})
 
       assert review["review_url"] =~ "/admin/assistant/connected/"
+      assert review["preview_url"] == review["review_url"] <> "?preview=Brando.Pages.Page:#{c.identity.id}"
       assert {:ok, proposal} = Proposals.get(review["proposal_id"], c.current_user)
       assert %{origin: "mcp", client: "Test Client", status: "pending"} = proposal
     end

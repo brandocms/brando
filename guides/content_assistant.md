@@ -143,7 +143,8 @@ lists them apart:
   origin in the AI suggestion look. There is no Adjust: to change it, ask the
   tool again, and its next proposal replaces this one as a new version.
 - **The tool is told where to look.** `prepare_proposal`'s result gives the
-  address of the proposal under "From connected tools".
+  address of the proposal under "From connected tools", and, when an entry
+  in it has a page preview, the address that opens the review on that page.
 - **Who sees them.** Only the user the tool ran as, in the site and
   environment it was prepared in, and only with **Content assistant → use**,
   like the Assistant itself. Without a configured model the Assistant has no
@@ -324,6 +325,12 @@ new tab.
 - **Desktop / Mobile** set the frame width. **Show changes** outlines the
   inserted and changed blocks. The outline is drawn over the page, not into
   it, so it does not change the layout.
+
+A proposal from connected tools and a review link open on a page preview
+with `?preview=<entry key>` in their address (`?preview=new:lobby`,
+`?preview=MyApp.Projects.Project:12`), or a bare `?preview` for the first
+entry with a page preview. Opening and closing the preview changes the
+address, so the browser's back button closes it.
 
 Content types without a preview target show their changes in the card only.
 A template that fails to render shows the error and a retry. Previews are private to the editor who prepared the

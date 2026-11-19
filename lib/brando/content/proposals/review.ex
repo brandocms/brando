@@ -62,6 +62,30 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   @doc """
+  The key of the first entry, in the review's order, whose page can be
+  previewed: what the review page's bare `?preview` opens. `nil` for none.
+  """
+  @spec preview_key(Proposal.t()) :: String.t() | nil
+  def preview_key(%Proposal{} = proposal) do
+    sources = Brando.Content.Proposals.sources(proposal.operations)
+
+    proposal.targets
+    |> Enum.sort_by(fn {target, _} -> first_mention(proposal, target) end)
+    |> Enum.find_value(fn {target, value} ->
+      schema = if match?({:new, _}, target), do: value, else: elem(target, 0)
+
+      if target not in sources and Brando.LivePreview.has_live_preview_target(schema),
+        do: Proposal.key(target)
+    end)
+  end
+
+  @doc """
+  The review page at `path` opened on the page preview of entry `key`.
+  """
+  @spec preview_path(String.t(), String.t()) :: String.t()
+  def preview_path(path, key), do: path <> "?preview=" <> URI.encode(key, &(URI.char_unreserved?(&1) or &1 == ?:))
+
+  @doc """
   Every `{kind, id}` media reference in the review cards, for batch loading:
   the media a proposal places, and the `context` media that identify the
   blocks it changes, moves or removes.
