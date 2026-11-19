@@ -11,30 +11,48 @@ defmodule Brando.Figma.Frame do
   Reading order: the children of an auto-layout frame in Figma's order (as
   laid out), others top to bottom, then left to right, by their position on
   the canvas.
+
+  Each section, text, image and video has its box in the frame (`x`, `y`,
+  `width`, `height`, rounded, from the frame's top left), and the frame its
+  visible layout grids. A section that looks like page chrome (a header,
+  footer or menu, repeated on every frame) says why under `chrome`: its
+  name or component, or that it sits flush at the frame's top or bottom
+  edge. It is a hint: such sections are still listed.
   """
 
   @text_limit 4_000
+
+  # Words in a layer or component name that suggest page chrome. The
+  # unambiguous ones match anywhere in the name ("Toppmeny", "PageHeader");
+  # the short ones start a word ("Navbar", "Bunntekst", not "Canvas"), and
+  # "topp" is a word of its own ("Topp", not "Toppbilde").
+  @chrome_anywhere ~r/header|footer|menu|meny/i
+  @chrome_word_starts ["nav", "bunn", "topptekst"]
+  @chrome_words ["topp", "toppen"]
 
   @type image :: %{
           node_id: String.t(),
           name: String.t(),
           image_ref: String.t(),
-          width: integer() | nil,
-          height: integer() | nil,
+          x: integer(),
+          y: integer(),
+          width: integer(),
+          height: integer(),
           section: non_neg_integer()
         }
 
   @doc """
   The sections of the frame in `node` (from `Brando.Figma.node/2`), with its
-  name, size and file name.
+  name, size, layout grids (nil without any) and file name.
   """
   @spec outline(map()) :: map()
   def outline(%{document: document} = node) do
-    %{
-      file_name: node.file_name,
-      frame: %{node_id: document["id"], name: document["name"]} |> Map.merge(size(document)),
-      sections: sections(node)
-    }
+    frame =
+      %{node_id: document["id"], name: document["name"]}
+      |> Map.merge(Map.take(box(document, origin(document)), [:width, :height]))
+      |> Map.put(:layout_grids, layout_grids(document["layoutGrids"]))
+
+    %{file_name: node.file_name, frame: frame, sections: sections(node)}
   end
 
   @doc """
@@ -49,13 +67,15 @@ defmodule Brando.Figma.Frame do
   end
 
   defp sections(%{document: document} = node, opts \\ []) do
+    frame = %{origin: origin(document), box: box(document, origin(document))}
+
     names = %{components: node.components, component_sets: node.component_sets}
 
     document
     |> events(nil, [])
     |> Enum.reverse()
-    |> group(names)
-    |> Enum.map(&finish(&1, Keyword.get(opts, :keep_refs, false)))
+    |> group(names, frame)
+    |> Enum.map(&finish(&1, frame.box, Keyword.get(opts, :keep_refs, false)))
   end
 
   # What the walk finds, as a reversed list: an outermost instance starts a
@@ -106,23 +126,23 @@ defmodule Brando.Figma.Frame do
     end
   end
 
-  defp group(events, names) do
+  defp group(events, names, frame) do
     {sections, _open} =
       Enum.reduce(events, {[], nil}, fn
         {:instance, node}, {sections, _open} ->
-          {[instance_section(node, names) | sections], node["id"]}
+          {[instance_section(node, names, frame.origin) | sections], node["id"]}
 
         {_kind, _node, nil} = event, {sections, _open} ->
-          {[add(loose_section(event), event) | sections], nil}
+          {[add(loose_section(event, frame.origin), event, frame.origin) | sections], nil}
 
         {_kind, _node, outer} = event, {[%{node_id: outer} = section | rest], open} ->
-          {[add(section, event) | rest], open}
+          {[add(section, event, frame.origin) | rest], open}
       end)
 
     Enum.reverse(sections)
   end
 
-  defp instance_section(node, names) do
+  defp instance_section(node, names, origin) do
     component = names.components[node["componentId"]] || %{}
     set = names.component_sets[component["componentSetId"]]
 
@@ -136,39 +156,118 @@ defmodule Brando.Figma.Frame do
       images: [],
       videos: []
     }
+    |> Map.merge(box(node, origin))
   end
 
-  defp loose_section({kind, node, nil}) do
+  defp loose_section({kind, node, nil}, origin) do
     kind = if is_tuple(kind), do: elem(kind, 0), else: kind
+
     %{kind: to_string(kind), node_id: node["id"], name: node["name"], texts: [], images: [], videos: []}
+    |> Map.merge(box(node, origin))
   end
 
-  defp add(section, {:text, node, _outer}) do
+  defp add(section, {:text, node, _outer}, origin) do
     text = String.slice(node["characters"] || "", 0, @text_limit)
-    %{section | texts: [%{node_id: node["id"], name: node["name"], text: text} | section.texts]}
+    text = Map.merge(%{node_id: node["id"], name: node["name"], text: text}, box(node, origin))
+    %{section | texts: [text | section.texts]}
   end
 
-  defp add(section, {{:image, ref}, node, _outer}) do
-    image = Map.merge(%{node_id: node["id"], name: node["name"], image_ref: ref}, size(node))
+  defp add(section, {{:image, ref}, node, _outer}, origin) do
+    image = Map.merge(%{node_id: node["id"], name: node["name"], image_ref: ref}, box(node, origin))
     %{section | images: [image | section.images]}
   end
 
-  defp add(section, {:video, node, _outer}) do
-    %{section | videos: [%{node_id: node["id"], name: node["name"]} | section.videos]}
+  defp add(section, {:video, node, _outer}, origin) do
+    video = Map.merge(%{node_id: node["id"], name: node["name"]}, box(node, origin))
+    %{section | videos: [video | section.videos]}
   end
 
-  defp finish(section, keep_refs?) do
+  defp finish(section, frame_box, keep_refs?) do
     images = Enum.reverse(section.images)
     images = if keep_refs?, do: images, else: Enum.map(images, &Map.delete(&1, :image_ref))
 
     section
     |> Map.merge(%{texts: Enum.reverse(section.texts), images: images, videos: Enum.reverse(section.videos)})
+    |> Map.put(:chrome, chrome(section, frame_box))
     |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end
 
-  defp size(%{"absoluteBoundingBox" => %{"width" => width, "height" => height}})
-       when is_number(width) and is_number(height),
-       do: %{width: round(width), height: round(height)}
+  # Why a section looks like page chrome, or nil
+  defp chrome(section, frame_box) do
+    cond do
+      chrome_name?(section.name) -> "name"
+      chrome_name?(section[:component]) or chrome_name?(section[:variant]) -> "component"
+      match?(%{y: y} when y <= 0, section) -> "top edge"
+      bottom_edge?(section, frame_box) -> "bottom edge"
+      true -> nil
+    end
+  end
 
-  defp size(_node), do: %{}
+  defp chrome_name?(name) when is_binary(name) do
+    Regex.match?(@chrome_anywhere, name) or
+      Enum.any?(words(name), &(&1 in @chrome_words or String.starts_with?(&1, @chrome_word_starts)))
+  end
+
+  defp chrome_name?(_name), do: false
+
+  # "Site/NavBar 2" → ["site", "nav", "bar"]
+  defp words(name) do
+    ~r/\p{Lu}?\p{Ll}+|\p{Lu}+(?!\p{Ll})/u
+    |> Regex.scan(name)
+    |> Enum.map(&String.downcase(hd(&1)))
+  end
+
+  defp bottom_edge?(%{y: y, height: height}, %{height: frame_height}), do: y + height >= frame_height
+  defp bottom_edge?(_section, _frame_box), do: false
+
+  # The frame's visible layout grids, as Figma gives them; nil without any
+  defp layout_grids(grids) when is_list(grids) do
+    case for(
+           %{"pattern" => pattern} = grid when is_binary(pattern) <- grids,
+           grid["visible"] != false,
+           do: layout_grid(grid)
+         ) do
+      [] -> nil
+      grids -> grids
+    end
+  end
+
+  defp layout_grids(_grids), do: nil
+
+  defp layout_grid(%{"pattern" => "GRID"} = grid), do: %{pattern: "grid", size: number(grid["sectionSize"])}
+
+  defp layout_grid(grid) do
+    alignment = grid["alignment"]
+
+    %{
+      pattern: String.downcase(grid["pattern"]),
+      count: if(is_integer(grid["count"]) and grid["count"] > 0, do: grid["count"]),
+      gutter: number(grid["gutterSize"]),
+      margin: if(alignment != "CENTER", do: number(grid["offset"])),
+      alignment: if(is_binary(alignment), do: String.downcase(alignment)),
+      # Columns stretched to fill the frame have no fixed size
+      size: if(alignment != "STRETCH", do: number(grid["sectionSize"]))
+    }
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
+  end
+
+  defp number(value) when is_number(value), do: round(value)
+  defp number(_value), do: nil
+
+  defp origin(%{"absoluteBoundingBox" => %{"x" => x, "y" => y}}) when is_number(x) and is_number(y), do: {x, y}
+  defp origin(_node), do: {0, 0}
+
+  # The node's box from the frame's top left, with what Figma gives of it
+  defp box(%{"absoluteBoundingBox" => %{} = box}, {origin_x, origin_y}) do
+    [x: {"x", origin_x}, y: {"y", origin_y}, width: {"width", 0}, height: {"height", 0}]
+    |> Enum.flat_map(fn {key, {field, from}} ->
+      case box[field] do
+        value when is_number(value) -> [{key, round(value - from)}]
+        _ -> []
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp box(_node, _origin), do: %{}
 end

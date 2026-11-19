@@ -50,6 +50,10 @@ defmodule Brando.MCP.FigmaTest do
       "name" => "Case – Tipping",
       "type" => "FRAME",
       "layoutMode" => "VERTICAL",
+      "absoluteBoundingBox" => %{"x" => 100, "y" => 100, "width" => 1440, "height" => 2000},
+      "layoutGrids" => [
+        %{"pattern" => "COLUMNS", "alignment" => "STRETCH", "count" => 12, "gutterSize" => 20, "offset" => 40}
+      ],
       "children" => [
         %{
           "id" => "1:10",
@@ -57,7 +61,13 @@ defmodule Brando.MCP.FigmaTest do
           "type" => "INSTANCE",
           "componentId" => "c1",
           "children" => [
-            %{"id" => "1:11", "name" => "Hero photo", "type" => "RECTANGLE", "fills" => [image("ref-a")]},
+            %{
+              "id" => "1:11",
+              "name" => "Hero photo",
+              "type" => "RECTANGLE",
+              "fills" => [image("ref-a")],
+              "absoluteBoundingBox" => %{"x" => 340, "y" => 260, "width" => 480, "height" => 640}
+            },
             %{"id" => "1:12", "name" => "Title", "type" => "TEXT", "characters" => "Tipping"}
           ]
         },
@@ -139,11 +149,23 @@ defmodule Brando.MCP.FigmaTest do
 
       assert %{
                "file_name" => "Shared",
-               "frame" => %{"name" => "Case – Tipping"},
+               "frame" => %{
+                 "name" => "Case – Tipping",
+                 "width" => 1440,
+                 "height" => 2000,
+                 "layout_grids" => [
+                   %{"pattern" => "columns", "alignment" => "stretch", "count" => 12, "gutter" => 20, "margin" => 40}
+                 ]
+               },
                "sections_total" => 3,
                "next_offset" => nil,
                "sections" => [
-                 %{"index" => 0, "component" => "Case/Hero", "texts" => [%{"text" => "Tipping"}]},
+                 %{
+                   "index" => 0,
+                   "component" => "Case/Hero",
+                   "texts" => [%{"text" => "Tipping"}],
+                   "images" => [%{"node_id" => "1:11", "x" => 240, "y" => 160, "width" => 480, "height" => 640}]
+                 },
                  %{"index" => 1, "kind" => "image", "images" => [%{"node_id" => "1:20"}]},
                  %{"index" => 2, "kind" => "image"}
                ]

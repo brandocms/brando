@@ -196,6 +196,18 @@ proposal with the modules that match.
   left out. The component names are what the tool matches to modules, so
   frames built from components named like the site's modules ("Case/Image
   full" for a module named "Case image full") rebuild most faithfully.
+
+  Each section, text, image and video has its box in the frame (`x`, `y`,
+  `width` and `height`, in Figma pixels from the frame's top left), and the
+  frame has its size and its visible layout grids (`layout_grids`: pattern,
+  count, gutter, margin, alignment and column size), so the tool can tell
+  which images share a row, how many columns come before one and how far
+  it drops below its neighbour. A section that looks like page chrome is
+  marked `chrome`, with the reason: its name, or its component's, has
+  header, footer, nav, menu, meny, bunn or topp in it, or it sits flush at
+  the frame's top or bottom edge. The mark is a hint: the section is still
+  listed, and the tool checks its texts before leaving it out of the
+  entry.
 - `brando_figma_import_images` imports the frame's image fills, the originals
   placed in Figma rather than renders, into the library folder
   `Figma/<frame name>` under the default image config's upload path, and

@@ -1,0 +1,1 @@
+- `brando_figma_read_frame` gives each section's, text's, image's and video's box in the frame, the frame's layout grids, and marks sections that look like a page header, footer or menu, so a tool rebuilding the frame can place modules on the site's grid and skip the page chrome.
