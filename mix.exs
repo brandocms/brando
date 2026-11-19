@@ -363,13 +363,17 @@ defmodule Brando.Mixfile do
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:igniter, "~> 0.8.0", optional: true, runtime: false},
 
-      # HTML-aware footnote resolution after Villain composes the render scope.
-      {:floki, "~> 0.32"},
+      # Runtime HTML parsing (footnotes, Markdown export, relinking, search
+      # text) — see `Brando.HTML.Tree`. Optional, as in Phoenix LiveView, so it
+      # does not diverge from the test-only line `mix phx.new` writes:
+      # `mix brando.install` makes the application's line a runtime one, and
+      # `Brando.System` stops the boot when it is missing.
+      {:lazy_html, "~> 0.1.13", optional: true},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
-      # Required by Phoenix.LiveViewTest — see `Brando.LiveCase`
-      {:lazy_html, ">= 0.1.0", only: :test},
+      # Brando's own tests parse rendered HTML with it
+      {:floki, "~> 0.32", only: :test},
       # Mocks the S3 seam — see `Brando.CDN.Client`
       {:mox, "~> 1.2", only: :test},
 

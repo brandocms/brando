@@ -7,6 +7,7 @@ defmodule Brando.Villain.Footnotes do
   Numbers belong to a render scope, never to persisted Tiptap content.
   """
   alias Brando.Content.BlockSlots
+  alias Brando.HTML.Tree
   alias Brando.Villain.Parser
 
   @marker "data-footnote-uid"
@@ -88,13 +89,13 @@ defmodule Brando.Villain.Footnotes do
     html = IO.iodata_to_binary(html || "")
 
     if String.contains?(html, @marker) || String.contains?(html, @definition) do
-      tree = Floki.parse_fragment!(html)
+      tree = Tree.parse_fragment(html)
       {tree, definitions} = extract(tree, %{})
       scope = opts |> Keyword.get(:scope, "article") |> to_string() |> safe_id()
       state = %{definitions: definitions, order: [], notes: %{}, scope: scope, occurrence: 0}
       {tree, state} = walk(tree, state)
       notes = Enum.map(state.order, &Map.fetch!(state.notes, &1))
-      %{html: Floki.raw_html(tree), notes: notes}
+      %{html: Tree.to_html(tree), notes: notes}
     else
       %{html: html, notes: []}
     end
@@ -158,7 +159,7 @@ defmodule Brando.Villain.Footnotes do
     Enum.reduce(nodes, {[], definitions}, fn
       {"template", attrs, children} = node, {acc, defs} ->
         if uid = attr(attrs, @definition) do
-          {acc, Map.put_new(defs, uid, Floki.raw_html(children))}
+          {acc, Map.put_new(defs, uid, Tree.to_html(children))}
         else
           {[node | acc], defs}
         end
@@ -178,9 +179,11 @@ defmodule Brando.Villain.Footnotes do
   end
 
   defp outlet_definitions(children, defs) do
-    Enum.reduce(Floki.find(children, "[data-brando-note]"), defs, fn {_, note_attrs, body}, defs ->
-      content = Floki.find(body, "[data-footnote-body]") |> Enum.flat_map(fn {_, _, content} -> content end)
-      Map.put_new(defs, attr(note_attrs, "data-brando-note"), Floki.raw_html(content))
+    children
+    |> Tree.find(&Tree.attr(&1, "data-brando-note"))
+    |> Enum.reduce(defs, fn {_, note_attrs, body}, defs ->
+      content = body |> Tree.find(&Tree.attr(&1, "data-footnote-body")) |> Enum.flat_map(&elem(&1, 2))
+      Map.put_new(defs, attr(note_attrs, "data-brando-note"), Tree.to_html(content))
     end)
   end
 

@@ -177,8 +177,9 @@ reference are not rendered. A reference whose note is missing renders as
 `span.footnote-unresolved`. The site's CSS styles all of this; Brando ships no
 footnote styles for the site.
 
-Footnote rendering parses HTML with Floki at runtime, so the application must
-not restrict Floki to `only: :test`.
+Footnote rendering parses HTML with `lazy_html` at runtime. The application
+lists it for every environment, as `mix brando.install` writes it: see
+[Installing into an existing application](installation.md#installing-into-an-existing-application).
 
 ## Unused content
 

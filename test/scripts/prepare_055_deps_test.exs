@@ -55,7 +55,9 @@ defmodule Brando.Scripts.Prepare055DepsTest do
   end
   """
 
-  # What commit 4830f06a in Lett made of it by hand.
+  # What commit 4830f06a in Lett made of it by hand, less its floki change:
+  # Brando no longer brings Floki in, so a test-only floki is left alone. It
+  # parses HTML with lazy_html, an optional dependency the application adds.
   @after_state """
   defmodule Lett.MixProject do
     use Mix.Project
@@ -83,7 +85,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
 
         # live view
         {:phoenix_live_view, "~> 1.2.0"},
-        {:floki, "~> 0.32"},
+        {:floki, ">= 0.27.0", only: :test},
 
         # general deps
         {:postgrex, "~> 0.20"},
@@ -96,6 +98,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
 
         # brando
         {:brando, path: "/src/brando"},
+        {:lazy_html, "~> 0.1.13"},
         {:igniter, "~> 0.8", only: [:dev, :test]}
         # {:brando, path: "../../brando"}
       ]
@@ -154,8 +157,9 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     output = run_script(["--brando-path", "/src/brando", dir])
 
     assert File.read!(Path.join(dir, "mix.exs")) == @after_state
-    assert output =~ ~s|{:floki, ">= 0.27.0", only: :test},  →  {:floki, "~> 0.32"},|
+    refute output =~ "floki"
     assert output =~ ~s|{:timex, "~> 3.0"},  →  (removed)|
+    assert output =~ ~s|(added)  →  {:lazy_html, "~> 0.1.13"}|
     assert output =~ "mix deps.unlock --all && mix deps.get"
 
     # The lock: what the application declares, then what comes in through others
@@ -166,6 +170,18 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     # A second run changes nothing
     assert run_script(["--brando-path", "/src/brando", dir]) =~ "nothing to change"
     assert File.read!(Path.join(dir, "mix.exs")) == @after_state
+  end
+
+  test "drops only: :test from lazy_html, as phx.new writes it", %{tmp_dir: tmp_dir} do
+    mix_exs =
+      String.replace(@before_state, ~s({:floki, ">= 0.27.0", only: :test},), ~s({:lazy_html, ">= 0.1.0", only: :test},))
+
+    dir = app(tmp_dir, mix_exs)
+    output = run_script([dir])
+
+    assert File.read!(Path.join(dir, "mix.exs")) =~ ~s(\n      {:lazy_html, "~> 0.1.13"},\n)
+    assert output =~ ~s|{:lazy_html, ">= 0.1.0", only: :test},  →  {:lazy_html, "~> 0.1.13"},|
+    refute output =~ "(added)  →  {:lazy_html"
   end
 
   test "keeps timex while lib/ calls it, and names a declared hackney 1 package", %{tmp_dir: tmp_dir} do
@@ -227,7 +243,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     written = File.read!(Path.join(dir, "mix.exs"))
 
     assert {:ok, _} = Code.string_to_quoted(written), written
-    assert written =~ ~r/\{:brando, [^\n]*\},\s*# the CMS\n\s*\{:igniter/
+    assert written =~ ~r/\{:brando, [^\n]*\},\s*# the CMS\n\s*\{:lazy_html, "~> 0.1.13"\},\n\s*\{:igniter/
   end
 
   test "the constraints are the guide's" do

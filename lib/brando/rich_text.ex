@@ -9,6 +9,7 @@ defmodule Brando.RichText do
   event handlers, LiveView bindings, embedded documents, script addresses) is
   refused rather than stripped. Unrelated raw HTML fields are not rewritten.
   """
+  alias Brando.HTML.Tree
   alias Ecto.Changeset
 
   @protocols ~w(http https ftp ftps mailto tel callto sms cid xmpp)
@@ -331,21 +332,19 @@ defmodule Brando.RichText do
   end
 
   def update_identifier_url(html, identifier_id, url) when is_binary(html) and is_integer(identifier_id) do
-    with true <- allowed_uri?(url), {:ok, nodes} <- Floki.parse_fragment(html) do
-      relink_identifier(nodes, to_string(identifier_id), url)
-    else
-      _ -> :unchanged
-    end
+    if allowed_uri?(url),
+      do: html |> Tree.parse_fragment() |> relink_identifier(to_string(identifier_id), url),
+      else: :unchanged
   end
 
   def update_identifier_url(_, _, _), do: :unchanged
 
   defp relink_identifier(nodes, id, url) do
-    matching = Floki.find(nodes, "a[data-identifier-id=\"#{id}\"]")
+    matching = identifier_anchors(nodes, id)
 
     if Enum.any?(matching, fn {_, attrs, _} -> List.keyfind(attrs, "href", 0) != {"href", url} end) do
-      updated = Floki.traverse_and_update(nodes, &relink_anchor(&1, id, url))
-      {:updated, Floki.raw_html(updated)}
+      updated = Tree.map(nodes, &relink_anchor(&1, id, url))
+      {:updated, Tree.to_html(updated)}
     else
       :unchanged
     end
@@ -361,12 +360,11 @@ defmodule Brando.RichText do
 
   defp relink_anchor(node, _id, _url), do: node
 
-  def contains_identifier?(html, identifier_id) when is_binary(html) and is_integer(identifier_id) do
-    case Floki.parse_fragment(html) do
-      {:ok, nodes} -> Floki.find(nodes, "a[data-identifier-id=\"#{identifier_id}\"]") != []
-      _ -> false
-    end
-  end
+  def contains_identifier?(html, identifier_id) when is_binary(html) and is_integer(identifier_id),
+    do: html |> Tree.parse_fragment() |> identifier_anchors(to_string(identifier_id)) != []
 
   def contains_identifier?(_, _), do: false
+
+  defp identifier_anchors(nodes, id),
+    do: Tree.find(nodes, &(match?({"a", _, _}, &1) and Tree.attr(&1, "data-identifier-id") == id))
 end

@@ -275,6 +275,11 @@ defmodule BrandoAdmin.ContentPreviewTest do
              ContentPreview.lines([block("Hero", [picture(media)])])
   end
 
+  test "rich text keeps the line breaks inside a pre" do
+    ref = %{"data" => %{"data" => %{"text" => "<pre><span>a</span>\n<span>b</span></pre>\n<p>c</p>"}}}
+    assert ContentPreview.lines([block("Code", [ref])]) |> text() == ["Code", "a", "b", "c"]
+  end
+
   test "media labels and metadata are translated to Norwegian" do
     Gettext.with_locale(Brando.Gettext, "no", fn ->
       lines = ContentPreview.lines([block("Forside", [picture(image(1, "hus.jpg", %{"alt" => "Hage"}))])])

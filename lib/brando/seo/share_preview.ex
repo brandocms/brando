@@ -68,7 +68,7 @@ defmodule Brando.SEO.SharePreview do
   end
 
   defp present(value) when is_binary(value) do
-    value = value |> Floki.parse_fragment!() |> Floki.text() |> String.trim()
+    value = value |> Brando.HTML.Tree.parse_fragment() |> Brando.HTML.Tree.text() |> String.trim()
     if value == "", do: nil, else: value
   end
 

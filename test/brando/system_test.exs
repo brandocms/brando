@@ -11,6 +11,14 @@ defmodule Brando.SystemTest do
     assert Brando.System.initialize() == :ok
   end
 
+  test "check_lazy_html/1 names the line to add when lazy_html is missing" do
+    assert Brando.System.check_lazy_html(true) == :ok
+
+    error = assert_raise Brando.Exception.ConfigError, fn -> Brando.System.check_lazy_html(false) end
+    assert error.message =~ ~s(\n    {:lazy_html, "~> 0.1.13"}\n)
+    assert error.message =~ "drop `only: :test`"
+  end
+
   describe "run_checks/0 with languages changed after compilation" do
     setup do
       languages = Application.fetch_env!(:brando, :languages)

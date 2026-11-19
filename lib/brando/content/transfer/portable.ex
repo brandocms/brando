@@ -4,6 +4,7 @@ defmodule Brando.Content.Transfer.Portable do
   alias Brando.Content.Definition.Value
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Drafts.Params
+  alias Brando.HTML.Tree
   alias Brando.Villain.Blocks.GalleryObjectOverride
 
   @block ~w(uid type active collapsed anchor description multi datasource sequence slot_name slot_kind slot_module_set module_id container_id palette_id fragment_id identifier_metas)
@@ -445,11 +446,10 @@ defmodule Brando.Content.Transfer.Portable do
     value = Regex.replace(@footnote_attribute, value, &fresh_footnote(&1, &2, &3, &4, uids))
 
     if Regex.match?(@identifier_attribute, value) do
-      {:ok, nodes} = Floki.parse_fragment(value)
-
-      nodes
-      |> Floki.traverse_and_update(&decode_identifier_node(&1, bindings))
-      |> Floki.raw_html()
+      value
+      |> Tree.parse_fragment()
+      |> Tree.map(&decode_identifier_node(&1, bindings))
+      |> Tree.to_html()
     else
       value
     end

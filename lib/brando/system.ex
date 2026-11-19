@@ -29,6 +29,7 @@ defmodule Brando.System do
   def run_checks do
     Logger.info("==> Brando >> Running system checks...")
     Brando.Cache.put(:warnings, [], :infinite)
+    :ok = check_lazy_html(Code.ensure_loaded?(LazyHTML))
     {:ok, {:module_config, :exists}} = check_module_config_exists()
     {:ok, {:soft_delete_repo, :exists}} = check_soft_delete_repo()
     :ok = Brando.Blueprint.CompileConfig.check!()
@@ -50,6 +51,29 @@ defmodule Brando.System do
   # and AI settings without the optional dependency they need.
   defp warn_deprecated_config do
     Enum.each(Brando.AI.deprecations() ++ Brando.AI.dependency_warnings(), &Brando.System.Log.warn/1)
+  end
+
+  @doc false
+  # Brando parses HTML with lazy_html, an optional dependency (see
+  # `Brando.HTML.Tree`). Checked at boot, not at compile time: Mix does not
+  # recompile a Hex dependency when an optional one leaves the application's
+  # deps, so a compile-time check passes for a build that no longer has it.
+  def check_lazy_html(true), do: :ok
+
+  def check_lazy_html(false) do
+    raise ConfigError,
+      message: """
+      The lazy_html dependency is missing.
+
+      Brando parses HTML with it (footnotes, Markdown export, search text). It
+      is optional for Brando, and the application lists it for every
+      environment. In mix.exs, add to deps
+
+          #{inspect(Brando.HTML.Tree.dependency())}
+
+      or drop `only: :test` from the lazy_html line `mix phx.new` writes, then
+      run mix deps.get.
+      """
   end
 
   # Every delete and restore calls them: a site without them is broken

@@ -1,15 +1,16 @@
 defmodule Brando.Content.BlockSlots.Lifecycle do
   @moduledoc "Inspection and explicit recovery of collections whose insertion point is gone."
   alias Brando.Content.BlockSlots
+  alias Brando.HTML.Tree
   alias Ecto.Changeset
 
   @salt "brando-region-remap"
 
   def marker_uids(html) when is_binary(html) do
     html
-    |> Floki.parse_fragment!()
-    |> Floki.find("sup[data-footnote-uid], span[data-footnote-uid]")
-    |> Floki.attribute("data-footnote-uid")
+    |> Tree.parse_fragment()
+    |> Tree.find(&match?({tag, _, _} when tag in ["sup", "span"], &1))
+    |> Enum.flat_map(&List.wrap(Tree.attr(&1, "data-footnote-uid")))
     |> MapSet.new()
   end
 
@@ -65,7 +66,7 @@ defmodule Brando.Content.BlockSlots.Lifecycle do
       |> Enum.flat_map(fn child -> List.wrap(child.refs) end)
       |> Enum.find_value(fn
         %{data: %{type: "text", data: %{text: html}}} when is_binary(html) ->
-          text = html |> Floki.parse_fragment!() |> Floki.text() |> String.trim()
+          text = html |> Tree.parse_fragment() |> Tree.text() |> String.trim()
           if text != "", do: text
 
         _ ->

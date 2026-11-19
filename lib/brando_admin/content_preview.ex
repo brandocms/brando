@@ -9,6 +9,7 @@ defmodule BrandoAdmin.ContentPreview do
   use Gettext, backend: Brando.Gettext
   alias Brando.Content.Transfer.Labels
   alias Brando.Drafts.Params
+  alias Brando.HTML.Tree
   alias Brando.Villain.Blocks.GalleryObjectOverride
 
   @media ~w(image file video gallery)
@@ -232,19 +233,30 @@ defmodule BrandoAdmin.ContentPreview do
   defp plain_lines(text, code? \\ false),
     do: if(code?, do: text, else: plain(text)) |> String.split(~r/\r\n|\n|\r/) |> Enum.map(&line/1)
 
+  # Whitespace that only breaks lines between tags is the markup's layout:
+  # the blocks already end their lines. Inside a `pre` or `textarea` it is
+  # content.
   defp plain(text) do
     text
-    |> Floki.parse_fragment!()
-    |> Floki.traverse_and_update(fn
-      {tag, attrs, children} when tag in ~w(p div li h1 h2 h3 h4 h5 h6 blockquote pre) ->
-        {tag, attrs, children ++ ["\n"]}
-
-      node ->
-        node
-    end)
-    |> Floki.text(style: false)
+    |> Tree.parse_fragment()
+    |> plain_nodes(false)
+    |> Tree.text(style: false)
     |> String.trim_trailing("\n")
   end
+
+  defp plain_nodes(nodes, preformatted?), do: Enum.flat_map(nodes, &plain_node(&1, preformatted?))
+
+  defp plain_node({tag, attrs, children}, preformatted?) when is_binary(tag) do
+    children = plain_nodes(children, preformatted? or tag in ~w(pre textarea))
+    children = if tag in ~w(p div li h1 h2 h3 h4 h5 h6 blockquote pre), do: children ++ ["\n"], else: children
+    [{tag, attrs, children}]
+  end
+
+  defp plain_node(text, false) when is_binary(text) do
+    if String.trim(text) == "" and String.contains?(text, "\n"), do: [], else: [text]
+  end
+
+  defp plain_node(node, _preformatted?), do: [node]
 
   defp line(text, key \\ nil, type \\ nil), do: %{text: text, key: key, type: type}
 

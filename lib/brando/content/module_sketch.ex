@@ -18,7 +18,7 @@ defmodule Brando.Content.ModuleSketch do
 
   @elements ~w(svg g rect circle ellipse line polyline polygon path)
 
-  # Lowercase, as the HTML parser gives them, to the name SVG needs.
+  # Lowercase, as the model may write them, to the name SVG needs.
   @attributes %{
     "viewbox" => "viewBox",
     "x" => "x",
@@ -155,7 +155,7 @@ defmodule Brando.Content.ModuleSketch do
   @spec sanitize(String.t()) :: {:ok, String.t()} | {:error, :invalid_response}
   def sanitize(text) when is_binary(text) do
     with [markup] <- Regex.run(~r/<svg\b.*?<\/svg>/si, text),
-         {:ok, tree} <- Floki.parse_fragment(markup),
+         tree = Brando.HTML.Tree.parse_fragment(markup),
          {"svg", _attrs, children} <- Enum.find(tree, &match?({"svg", _, _}, &1)),
          [_ | _] = shapes <- Enum.flat_map(children, &clean/1) do
       {:ok, ~s(<svg xmlns="http://www.w3.org/2000/svg" viewBox="#{@view_box}">#{Enum.join(shapes)}</svg>)}
@@ -167,7 +167,7 @@ defmodule Brando.Content.ModuleSketch do
   defp clean({tag, attrs, children}) when tag in @elements and tag != "svg" do
     attributes =
       for {name, value} <- attrs,
-          canonical = @attributes[name],
+          canonical = @attributes[String.downcase(name)],
           canonical != nil,
           safe_value?(value),
           do: ~s( #{canonical}="#{value}")

@@ -22,6 +22,8 @@ defmodule Brando.Upgrade.Snapshot.Diff do
   `+ `, in document order); the head as a set.
   """
 
+  alias Brando.HTML.Tree
+
   @layers [:status, :text, :head, :structure]
   @skipped_text ~w(head script style noscript template svg)
   @opaque_elements ~w(script style template svg)
@@ -82,12 +84,7 @@ defmodule Brando.Upgrade.Snapshot.Diff do
 
   # The parsed document, or nil for a body that is not HTML.
   defp parse(%{body: body} = page) do
-    if html?(page) do
-      case Floki.parse_document(body) do
-        {:ok, document} -> document
-        {:error, _} -> nil
-      end
-    end
+    if html?(page), do: Tree.parse_document(body)
   end
 
   defp html?(%{content_type: content_type}) when is_binary(content_type), do: content_type =~ "html"
@@ -103,7 +100,7 @@ defmodule Brando.Upgrade.Snapshot.Diff do
   end
 
   @doc "The visible text of a parsed document, one entry per text node or image."
-  @spec text(Floki.html_tree()) :: [String.t()]
+  @spec text(LazyHTML.Tree.t()) :: [String.t()]
   def text(document) do
     document |> text_nodes([]) |> Enum.reverse()
   end
@@ -131,24 +128,24 @@ defmodule Brando.Upgrade.Snapshot.Diff do
   the attributes sorted; a `title` is followed by its text and JSON-LD by its
   content.
   """
-  @spec head(Floki.html_tree()) :: [String.t()]
+  @spec head(LazyHTML.Tree.t()) :: [String.t()]
   def head(nil), do: []
 
   def head(document) do
     document
-    |> Floki.find("head")
+    |> Tree.find(&match?({"head", _, _}, &1))
     |> Enum.flat_map(&head_tags(&1, []))
     |> Enum.reverse()
   end
 
   defp head_tags({"script", attrs, children} = node, acc) do
     if List.keyfind(attrs, "type", 0) == {"type", "application/ld+json"},
-      do: [head_tag(node) <> " " <> json_ld_text(Floki.text(children, js: true)) | acc],
+      do: [head_tag(node) <> " " <> json_ld_text(Tree.text(children, js: true)) | acc],
       else: acc
   end
 
   defp head_tags({"title", _attrs, children} = node, acc),
-    do: [head_tag(node) <> " " <> collapse(Floki.text(children)) | acc]
+    do: [head_tag(node) <> " " <> collapse(Tree.text(children)) | acc]
 
   defp head_tags({tag, _attrs, _children} = node, acc) when tag in @head_tags, do: [head_tag(node) | acc]
   defp head_tags({_tag, _attrs, children}, acc), do: Enum.reduce(children, acc, &head_tags/2)
@@ -177,12 +174,12 @@ defmodule Brando.Upgrade.Snapshot.Diff do
   The elements of a parsed document's body in order, each as its tag, sorted
   classes and sorted `data-*` attribute names: `video.hero[data-src data-video]`.
   """
-  @spec structure(Floki.html_tree()) :: [String.t()]
+  @spec structure(LazyHTML.Tree.t()) :: [String.t()]
   def structure(nil), do: []
 
   def structure(document) do
     root =
-      case Floki.find(document, "body") do
+      case Tree.find(document, &match?({"body", _, _}, &1)) do
         [] -> document
         body -> body
       end

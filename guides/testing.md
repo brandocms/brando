@@ -52,10 +52,13 @@ config :brando, Brando.AI, client: Brando.AI.Cassette
 config :brando, Brando.AI.Cassette, dir: "test/cassettes"
 ```
 
-LiveView tests need `lazy_html` (a new Phoenix app has it):
+LiveView tests parse with `lazy_html`, and Brando parses HTML with it at
+runtime too: `mix brando.install` lists it for every environment, dropping the
+`only: :test` a new Phoenix app writes. Brando's test helpers need no Floki. An
+application whose own tests call Floki lists it:
 
 ```elixir
-{:lazy_html, ">= 0.1.0", only: :test}
+{:floki, "~> 0.38", only: :test}
 ```
 
 The test database needs Brando's migrations, as in development. Pages that

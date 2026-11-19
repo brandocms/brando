@@ -112,6 +112,17 @@ defmodule Mix.Tasks.Brando.Upgrade.SnapshotTest do
              ]
     end
 
+    # A tracking pixel's noscript img in head (Meta Pixel) must not end the
+    # head: a browser reads its content as text
+    test "head tags after a noscript in head stay in the head layer" do
+      pixel = ~s(<noscript><img height="1" src="https://www.facebook.com/tr?id=1"></noscript>)
+      before_page = page(html(pixel <> ~s(<link rel="canonical" href="/no/meny">), "<p>Meny</p>"))
+      after_page = page(html(pixel <> ~s(<link rel="canonical" href="/no/meny-2">), "<p>Meny</p>"))
+
+      assert [%{layer: :head, lines: lines}] = Diff.compare(before_page, after_page)
+      assert ~s(+ link rel="canonical" href="/no/meny-2") in lines
+    end
+
     # JSON-LD is now encoded HTML-safe (`https:\/\/`): a snapshot from before
     # holds the same data
     test "JSON-LD compares by its data, not how it is escaped" do

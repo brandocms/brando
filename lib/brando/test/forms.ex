@@ -16,6 +16,10 @@ defmodule Brando.Test.Forms do
 
   import ExUnit.Assertions, only: [flunk: 1]
 
+  # lazy_html is optional for Brando (see `Brando.HTML.Tree`); LiveView tests
+  # need it too.
+  @compile {:no_warn_undefined, if(Code.ensure_loaded?(LazyHTML), do: [], else: [LazyHTML])}
+
   alias Brando.Blueprint.{Assets, Attributes, Relations}
   alias Phoenix.LiveViewTest
 
@@ -54,7 +58,7 @@ defmodule Brando.Test.Forms do
     html = LiveViewTest.render(view)
 
     cond do
-      html |> Floki.parse_document!() |> Floki.find(selector) |> Enum.any?() ->
+      html |> LazyHTML.from_document() |> LazyHTML.query(selector) |> Enum.any?() ->
         html
 
       System.monotonic_time(:millisecond) >= deadline ->
@@ -153,9 +157,9 @@ defmodule Brando.Test.Forms do
   defp block_uids(view, field_id) do
     view
     |> LiveViewTest.render()
-    |> Floki.parse_document!()
-    |> Floki.find("##{field_id}-wrapper [data-block-uid]")
-    |> Enum.flat_map(&Floki.attribute(&1, "data-block-uid"))
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("##{field_id}-wrapper [data-block-uid]")
+    |> LazyHTML.attribute("data-block-uid")
     |> Enum.uniq()
   end
 
@@ -213,12 +217,12 @@ defmodule Brando.Test.Forms do
     prefix = form_name(schema) <> "_"
 
     html
-    |> Floki.parse_document!()
-    |> Floki.find(".field-errors[id$='-error']")
+    |> LazyHTML.from_document()
+    |> LazyHTML.query(".field-errors[id$='-error']")
     |> Enum.reduce(%{}, fn element, errors ->
-      [id] = Floki.attribute(element, "id")
+      [id] = LazyHTML.attribute(element, "id")
       field = id |> String.trim_trailing("-error") |> String.replace_prefix(prefix, "")
-      messages = element |> Floki.find(".field-error") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+      messages = element |> LazyHTML.query(".field-error") |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
       if messages == [],
         do: errors,

@@ -8,9 +8,10 @@
 # It needs no resolved dependencies: it rewrites mix.exs as text and prints
 # each change. From "Dependencies by hand" in
 # guides/migrating_from_053.md: the constraints below for the packages the
-# application declares, floki without `only: :test`, timex removed once lib/
-# has no Timex. calls (listed otherwise), igniter for dev and test, the
-# Brando dependency pointed at --brando-path or --brando-ref; and Elixir
+# application declares, lazy_html for every environment (`only: :test`
+# dropped, or the line added), timex removed once lib/ has no Timex. calls
+# (listed otherwise), igniter for dev and test, the Brando dependency pointed
+# at --brando-path or --brando-ref; and Elixir
 # "~> 1.18" with `listeners: [Phoenix.CodeReloader]` in project/0. Running it
 # again changes nothing. Then it lists what mix.lock still has on HTTPoison
 # or hackney 1, which Brando's ex_aws 2.7 (hackney 4) cannot resolve beside.
@@ -32,12 +33,13 @@ defmodule Brando.Prepare055Deps do
     ecto_sql: "~> 3.14",
     postgrex: "~> 0.20",
     gettext: "~> 1.0",
-    floki: "~> 0.32",
+    lazy_html: "~> 0.1.13",
     swoosh: "~> 1.17",
     ex_chimp: "~> 0.2.0"
   ]
 
   @igniter ~s({:igniter, "~> 0.8", only: [:dev, :test]})
+  @lazy_html ~s({:lazy_html, "~> 0.1.13"})
   @elixir "~> 1.18"
 
   def main(argv) do
@@ -110,7 +112,8 @@ defmodule Brando.Prepare055Deps do
     |> apply_constraints()
     |> remove_timex(dir)
     |> point_brando(opts)
-    |> add_igniter()
+    |> add_after_brando(:igniter, @igniter)
+    |> add_after_brando(:lazy_html, @lazy_html)
     |> project_settings()
     |> then(&{&1.lines, Enum.reverse(&1.changes), Enum.reverse(&1.notes)})
   end
@@ -155,8 +158,9 @@ defmodule Brando.Prepare055Deps do
       else: line
   end
 
-  # Brando uses Floki at runtime; `only: :test` makes the dependencies diverge.
-  defp runtime_dep(line, :floki), do: Regex.replace(~r/,\s*only:\s*(:\w+|\[[^\]]*\])/, line, "", global: false)
+  # Brando parses HTML with lazy_html at runtime and lists it as optional, so
+  # the application's own line must cover every environment.
+  defp runtime_dep(line, :lazy_html), do: Regex.replace(~r/,\s*only:\s*(:\w+|\[[^\]]*\])/, line, "", global: false)
   defp runtime_dep(line, _name), do: line
 
   # "~> 0.18" is lower than "~> 1.2.0"; ">= 0.27.0" lower than "~> 0.32".
@@ -293,11 +297,12 @@ defmodule Brando.Prepare055Deps do
     end
   end
 
-  # Igniter is the optional Brando dependency the source tasks run on; added
-  # after Brando when the application does not declare it.
-  defp add_igniter(state) do
+  # Optional Brando dependencies the application declares itself, added after
+  # Brando when it does not: Igniter, which the source tasks run on, and
+  # lazy_html, which Brando parses HTML with at runtime.
+  defp add_after_brando(state, name, dep) do
     cond do
-      Enum.any?(state.lines, &(not comment?(&1) and String.contains?(&1, "{:igniter"))) ->
+      Enum.any?(state.lines, &(not comment?(&1) and String.contains?(&1, "{:#{name}"))) ->
         state
 
       index = brando_index(state.lines) ->
@@ -305,16 +310,16 @@ defmodule Brando.Prepare055Deps do
         indent = line |> String.replace(~r/\S.*$/, "")
         last? = not trailing_comma?(line)
 
-        {brando_line, igniter_line} =
+        {brando_line, dep_line} =
           if last?,
-            do: {update_code(line, &(&1 <> ",")), indent <> @igniter},
-            else: {line, indent <> @igniter <> ","}
+            do: {update_code(line, &(&1 <> ",")), indent <> dep},
+            else: {line, indent <> dep <> ","}
 
-        lines = state.lines |> List.replace_at(index, brando_line) |> List.insert_at(index + 1, igniter_line)
-        %{state | lines: lines, changes: ["(added)  →  #{@igniter}" | state.changes]}
+        lines = state.lines |> List.replace_at(index, brando_line) |> List.insert_at(index + 1, dep_line)
+        %{state | lines: lines, changes: ["(added)  →  #{dep}" | state.changes]}
 
       true ->
-        note(state, "Add #{@igniter} to deps by hand.")
+        note(state, "Add #{dep} to deps by hand.")
     end
   end
 
