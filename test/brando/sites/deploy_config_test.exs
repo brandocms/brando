@@ -715,6 +715,44 @@ defmodule Brando.Sites.DeployConfigTest do
              []
   end
 
+  test "the entries config gives a site read as they apply to it" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@all.example.com:/srv/"],
+      s3_targets: %{"alpha" => ["s3://alpha-www", "s3://shared/{site_key}"], "beta" => ["s3://beta-www"]}
+    )
+
+    assert DeployConfig.configured_entries(:rsync_targets, "alpha") == [
+             "deploy@static.example.com:/srv/sites/alpha",
+             "deploy@all.example.com:/srv/"
+           ]
+
+    assert DeployConfig.configured_entries(:s3_targets, "alpha") == ["s3://alpha-www", "s3://shared/alpha"]
+    assert DeployConfig.configured_entries(:s3_targets, "gamma") == []
+
+    put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: "s3://alpha-www")
+    assert DeployConfig.configured_entries(:s3_targets, "alpha") == []
+    assert DeployConfig.configured_entries(:rsync_targets, "alpha") == []
+  end
+
+  test "a target is checked as a save checks it, without a lookup" do
+    put_test_env(:tenancy_mode, :multi)
+
+    put_test_env(DeployConfig,
+      resolver: fn _host, _family -> flunk("looked up") end,
+      s3_targets: ["s3://static/{site_key}"]
+    )
+
+    site = %{key: "alpha", allowed_rsync_targets: ["deploy@own.example.com:/srv/alpha"], allowed_s3_targets: []}
+
+    assert DeployConfig.allowed_target?(:rsync, "deploy@own.example.com:/srv/alpha", site)
+    assert DeployConfig.allowed_target?(:s3, "s3://static/alpha", site)
+    refute DeployConfig.allowed_target?(:s3, "s3://static/beta", site)
+    refute DeployConfig.allowed_target?(:rsync, "deploy@own.example.com:/srv/beta", site)
+    refute DeployConfig.allowed_target?(:rsync, nil, site)
+    refute DeployConfig.allowed_target?(:local, "x", site)
+  end
+
   describe "with no list" do
     setup do
       put_test_env(DeployConfig, resolver: &resolve/2)

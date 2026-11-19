@@ -2413,6 +2413,21 @@ msgstr "Tillat egen lenketekst"
 msgid "Allow setting opacity"
 msgstr "Tillat å sette gjennomsiktighet"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed S3 targets"
+msgstr "Tillatte S3-mål"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed by config"
+msgstr "Tillatt av konfigurasjonen"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed deploy targets"
+msgstr "Tillatte publiseringsmål"
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Allowed identifier schemas"
@@ -2423,6 +2438,11 @@ msgstr "Tillatte skjema"
 #, elixir-autogen, elixir-format
 msgid "Allowed media"
 msgstr "Tillatte medier"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed rsync targets"
+msgstr "Tillatte rsync-mål"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -6312,6 +6332,11 @@ msgstr "Publiser automatisk etter et vellykket bygg"
 msgid "Deploy of %{version} is queued"
 msgstr "Publisering av %{version} står i kø"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets for %{name} saved."
+msgstr "Publiseringsmålene for %{name} er lagret."
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy this configuration only after reviewing groups, mapping application policies, and testing representative accounts."
@@ -8316,6 +8341,16 @@ msgstr "Modulsett for fotnoter"
 #, elixir-autogen, elixir-format
 msgid "Footnotes"
 msgstr "Fotnoter"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "For example deploy@static.example.com:/srv/sites/acme, or deploy@static.example.com:/srv/sites/ for every directory under it."
+msgstr "For eksempel deploy@static.example.com:/srv/sites/acme, eller deploy@static.example.com:/srv/sites/ for alle mapper under den."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "For example s3://acme-www, or s3://static-bucket/sites/ for every prefix under it."
+msgstr "For eksempel s3://acme-www, eller s3://static-bucket/sites/ for alle prefikser under den."
 
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
@@ -12344,6 +12379,7 @@ msgstr "Ingen må bruke tofaktorautentisering."
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/seo_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Ingen"
@@ -16327,6 +16363,11 @@ msgstr "Lagre endringer"
 msgid "Save current view…"
 msgstr "Lagre gjeldende visning …"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save deploy targets"
+msgstr "Lagre publiseringsmål"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save deployment settings"
@@ -17851,6 +17892,11 @@ msgstr "Smart tekst"
 #, elixir-autogen, elixir-format
 msgid "Snippet length"
 msgstr "Lengde på tekstutdrag"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some deploy targets were refused. Nothing was saved."
+msgstr "Noen publiseringsmål ble avvist. Ingenting ble lagret."
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
@@ -19644,6 +19690,11 @@ msgstr "Nettstedets"
 #, elixir-autogen, elixir-format
 msgid "The site's address must use https before the endpoint can be turned on."
 msgstr "Nettstedets adresse må bruke https før endepunktet kan slås på."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site’s saved target, %{target}, is not allowed here or in config: its next deploy will be refused."
+msgstr "Nettstedets lagrede mål, %{target}, er ikke tillatt her eller i konfigurasjonen: neste publisering blir avvist."
 
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
@@ -22182,6 +22233,11 @@ msgstr "Når du har valgt mer enn 1 kobling så kan klikke knappen under for å 
 #, elixir-autogen, elixir-format
 msgid "Where the link dialog opens while no link is set. Editors can still switch."
 msgstr "Hvor lenkevinduet åpner når ingen lenke er satt. Redaktører kan fortsatt bytte."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where the site’s deploys may go, besides what this installation’s config allows. Its administrators choose a target on the Publishing screen, but cannot change this list. Each entry is an exact destination, or a parent ending in / that allows everything under it, not the parent itself."
+msgstr "Hvor nettstedet kan publiseres, i tillegg til det konfigurasjonen til denne installasjonen tillater. Administratorene velger et mål på Publisering-siden, men kan ikke endre denne listen. Hver oppføring er et eksakt mål, eller en overordnet mappe som slutter på / og tillater alt under seg, men ikke seg selv."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format

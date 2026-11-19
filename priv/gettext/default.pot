@@ -2411,6 +2411,21 @@ msgstr ""
 msgid "Allow setting opacity"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed S3 targets"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed by config"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed deploy targets"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Allowed identifier schemas"
@@ -2420,6 +2435,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Allowed media"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allowed rsync targets"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -6310,6 +6330,11 @@ msgstr ""
 msgid "Deploy of %{version} is queued"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets for %{name} saved."
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy this configuration only after reviewing groups, mapping application policies, and testing representative accounts."
@@ -8313,6 +8338,16 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Footnotes"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "For example deploy@static.example.com:/srv/sites/acme, or deploy@static.example.com:/srv/sites/ for every directory under it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "For example s3://acme-www, or s3://static-bucket/sites/ for every prefix under it."
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
@@ -12342,6 +12377,7 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/sites/seo_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr ""
@@ -16325,6 +16361,11 @@ msgstr ""
 msgid "Save current view…"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save deploy targets"
+msgstr ""
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save deployment settings"
@@ -17848,6 +17889,11 @@ msgstr ""
 #: lib/brando_admin/components/form/meta_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Snippet length"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some deploy targets were refused. Nothing was saved."
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -19639,6 +19685,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "The site's address must use https before the endpoint can be turned on."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site’s saved target, %{target}, is not allowed here or in config: its next deploy will be refused."
 msgstr ""
 
 #: lib/brando_admin/components/form/translation.ex
@@ -22177,6 +22228,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Where the link dialog opens while no link is set. Editors can still switch."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where the site’s deploys may go, besides what this installation’s config allows. Its administrators choose a target on the Publishing screen, but cannot change this list. Each entry is an exact destination, or a parent ending in / that allows everything under it, not the parent itself."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex

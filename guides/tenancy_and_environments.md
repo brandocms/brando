@@ -2495,9 +2495,14 @@ replaces, rather than merges with, Brando's defaults.
 
 ### A site's allowed deploy targets
 
-A superuser sets, on a site's form under **Sites**, the `rsync` and `s3`
-targets that site may use besides those config lists; with
-`tenancy_mode: :multi` and nothing in config, they are enough on their own.
+A superuser sets, under **Allowed deploy targets** in the Delivery section of
+a site's form under **Sites**, the `rsync` and `s3` targets that site may use
+besides those config lists; with `tenancy_mode: :multi` and nothing in
+config, they are enough on their own. The lists show for a static site, and
+for a dynamic one while it still has entries. Beside each list are the
+entries config already allows the site, as they read for it, and when the
+target the site has saved is allowed by neither, the section says its next
+deploy will be refused.
 They are stored on the site, and only a superuser, or trusted code acting as
 `:system`, can change them (`Brando.Tenant.Registry.update_site_deploy_targets/3`).
 The Publishing screen, and anything else a site administrator can reach,

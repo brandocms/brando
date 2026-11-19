@@ -211,6 +211,71 @@
     margin-top: 16px;
   }
 
+  /* Allowed deploy targets, under the delivery facts and switch */
+  .site-deploy-targets {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--workspace-line);
+  }
+
+  .site-subsection-heading {
+    margin-bottom: 16px;
+
+    h4 {
+      font-size: var(--brando-text-lg);
+      line-height: 22px;
+    }
+
+    p {
+      max-width: 62ch;
+      margin-top: 4px;
+      color: var(--workspace-muted);
+    }
+  }
+
+  .site-hint--warning {
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    border: 1px solid var(--brando-attention-line);
+    border-radius: var(--brando-radius-md);
+    background: var(--brando-attention);
+    color: var(--brando-attention-ink);
+    overflow-wrap: anywhere;
+  }
+
+  .site-target-list {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* What config grants the site, read-only, below each list */
+  .site-configured-targets {
+    display: grid;
+    gap: 4px;
+    font-size: var(--brando-text-sm);
+
+    .site-hint {
+      margin: 0;
+    }
+
+    ul {
+      display: grid;
+      gap: 2px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .site-configured-label {
+    color: var(--workspace-muted);
+  }
+
   .site-facts {
     display: flex;
     flex-wrap: wrap;

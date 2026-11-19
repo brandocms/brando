@@ -549,6 +549,34 @@ defmodule Brando.Sites.DeployConfig do
   @settings [:rsync_targets, :s3_targets]
 
   @doc """
+  The entries of the operator's `setting` (`:rsync_targets` or
+  `:s3_targets`) that apply to the site with key `site_key`, as they read for
+  it: a list's entries with `{site_key}` filled in, those without it
+  included, or the site's entries in a per-site map. A setting no target can
+  pass gives none. For showing what config grants; a target is checked with
+  `valid_rsync_target?/2` and `s3_destination/2`.
+  """
+  @spec configured_entries(:rsync_targets | :s3_targets, String.t()) :: [String.t()]
+  def configured_entries(setting, site_key) when setting in @settings and is_binary(site_key) do
+    case setting_value(setting) do
+      targets when is_list(targets) or (is_map(targets) and not is_struct(targets)) ->
+        for entry when is_binary(entry) <- site_entries(targets, site_key), do: for_site(entry, site_key)
+
+      _unset_or_unreadable ->
+        []
+    end
+  end
+
+  @doc """
+  Whether `target` passes for `site` as a save checks it, without looking
+  its host up: for `:rsync` or `:s3`. A deploy also looks an rsync host up.
+  """
+  @spec allowed_target?(:rsync | :s3, term(), site()) :: boolean()
+  def allowed_target?(:rsync, target, site) when is_binary(target), do: rsync_target_error(target, site, :none) == nil
+  def allowed_target?(:s3, target, site) when is_binary(target), do: s3_target_error(target, site) == nil
+  def allowed_target?(_strategy, _target, _site), do: false
+
+  @doc """
   The entries of the operator's `rsync_targets` and `s3_targets` lists that
   grant every site, as `{setting, entry}`: those without `{site_key}`. Entries
   of a per-site map belong to their site, but see `overlapping_destinations/0`.

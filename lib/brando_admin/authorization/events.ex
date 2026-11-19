@@ -414,9 +414,9 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(delete_job)
     ],
     "BrandoAdmin.Sites.SiteLive" => [
-      read: ~w(check_create check_languages refresh),
+      read: ~w(check_create check_deploy_targets check_languages refresh),
       write:
-        ~w(activate_site archive create_site delete grant revoke save_delivery save_languages seed_language set_library_group suspend)
+        ~w(activate_site archive create_site delete grant revoke save_delivery save_deploy_targets save_languages seed_language set_library_group suspend)
     ],
     "BrandoAdmin.Sites.UtilsLive" => [
       read:
