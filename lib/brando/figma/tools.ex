@@ -35,6 +35,10 @@ defmodule Brando.Figma.Tools do
         "Read a Figma frame from its link (copied from a selected frame, with ?node-id=…): the file and frame names, then its sections in reading order. " <>
           "A section is a component instance — its component and variant name, to match with a module (brando_content_list_modules, brando_content_describe_module) — with its texts, images and videos in reading order; " <>
           "or a text, image or video outside any instance. Images are listed by layer (node_id, name): import them with brando_figma_import_images to use them in a proposal. " <>
+          "Each image has its scale_mode (fill, fit, crop or tile), its crop when cropped ({x, y, width, height} as fractions of the image, from its top left) its rotation when turned (clockwise, in degrees), and mirrored: true when a crop flips it (it then has no rotation). " <>
+          "A layer whose top image fill covers it (opaque, unblended, and filled, or cropped to reach every corner of the layer) is one image. " <>
+          "A layer whose top fill is translucent, blended, fit, tiled or cropped short of an edge lists every image that shows, in fill order, and its section says so under note. " <>
+          "The image fills that do not show (under one that covers, or at no opacity) are listed under the bottom image's hidden_fills (their image_ref); they are not imported, so mention them only if the person asks about a layer's other pictures. " <>
           "Each section, text, image and video has its layer box in the frame (x, y, width, height in Figma pixels from the frame's top left, before clipping and masks, so a cropped image can reach past its cell), and the frame its width, height and layout_grids (null without any): use them to tell rows, columns and offsets on the site's grid. " <>
           ~s[A section named like a page header, footer or menu has chrome: why ("name" for its layer name, "component" for its component's); it is a hint, so check its texts before leaving it out. ] <>
           "Figma's API cannot download videos: ask the person to upload them to the media library, then find them with brando_content_find_media_folders or brando_content_search_assets. " <>
@@ -56,7 +60,10 @@ defmodule Brando.Figma.Tools do
         ~s[Import the images of a Figma frame into this site's media library, in the folder Figma/<frame name>, and get their assets for brando_content_prepare_proposal ({"kind":"image","id":N}). ] <>
           "The originals placed in Figma are imported, not screenshots: one entry per image, with its asset (or why it failed) and the layers that show it (node_id, name, section as brando_figma_read_frame numbers them, from 0). " <>
           "Without node_ids, every image of the frame; at most #{Import.max_per_call()} distinct images per call: call again with next_offset until it is null. " <>
-          "An image the library already has is reused, so a second import adds nothing. " <>
+          "Only the images read_frame lists are imported, not hidden_fills. " <>
+          "An image shown turned 90, 180 or 270° is imported as a turned copy; another angle, a mirrored crop and the turn of an animated GIF or WebP are not applied. A cropped image keeps its whole file, with its focal point at the centre of the crop. " <>
+          "Each entry says what was applied and what was not (applied, not_applied), in words to pass on to the person; when several layers show the image, what one of them missed names that layer. " <>
+          "An image the library already has is reused, so a second import adds nothing; a reused image keeps its own focal point. " <>
           "The images are added to the library at once, before any proposal is applied; their sizes are made in the background.",
       parameters: %{
         type: "object",

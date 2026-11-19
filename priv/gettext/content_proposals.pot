@@ -11,6 +11,11 @@
 msgid ""
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{content_type} #%{id}"
+msgstr ""
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
@@ -200,11 +205,6 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "Another block already uses this uid."
-msgstr ""
-
-#: lib/brando/content/proposals.ex
-#, elixir-autogen, elixir-format
 msgid "Approve this version of the proposal before applying it."
 msgstr ""
 
@@ -291,6 +291,21 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "No entry is created with this reference."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Not applied: the block `%{uid}` failed (operation %{operation})."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Not applied: the block to place it next to, `%{uid}`, failed (operation %{operation})."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Not inserted: its parent `%{uid}` failed (operation %{operation})."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -425,6 +440,26 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by a block in %{entry}."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by a block in another entry."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by another block in this field."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by another block in this proposal."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "There is no saved text %{ref} in block %{uid} of this entry and field to copy."
 msgstr ""
 
@@ -541,6 +576,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Uids are unique across the site; prefix yours, for example with the entry's ref or slug."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Undo failed: %{reason}"
 msgstr ""
 
@@ -622,6 +662,16 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "plain text"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "replaces: proposal %{id} is no longer under review. Leave out replaces to store a new proposal."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "replaces: there is no proposal %{id} from this tool. Leave out replaces to store a new proposal."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

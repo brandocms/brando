@@ -3,7 +3,8 @@ import { syncLV } from '../../utils'
 
 // Proposals from a tool connected over MCP have no conversation. The fixture
 // prepares two the way BrandoMCP does (`Proposals.Tools`, as the admin, from
-// "Claude Code"); the Assistant lists them under "From connected tools",
+// "Claude Code"), about different pages, so the second does not replace the
+// first; the Assistant lists them under "From connected tools",
 // where one is reviewed, previewed and applied, and the other rejected.
 
 test('reviews, applies and rejects proposals from a connected tool', async ({ page }, testInfo) => {

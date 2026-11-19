@@ -203,7 +203,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_entry_block(entries, target, field, uid) do
     with %{} = entry <- Map.get(entries, target),
-         {block, _parent, _index} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+         {block, _parent, _index} <- BlockTree.find_saved(entry_blocks(entry, field), uid) do
       block
     else
       _ -> nil
@@ -293,19 +293,119 @@ defmodule Brando.Content.Proposals do
 
   defp recheck(proposal, actor), do: Error.protect(fn -> operation_problems(proposal, actor) end)
 
+  # `failed` holds the uids of blocks an earlier insert or copy could not
+  # add, with that operation's index: an operation on one of them is told
+  # so, not that the block is unknown.
   defp operation_problems(proposal, actor) do
-    {problems, _trees} =
+    {problems, _acc} =
       proposal.operations
       |> Enum.with_index()
-      |> Enum.flat_map_reduce(%{}, fn {op, index}, trees ->
-        {problems, trees} = check(op, proposal, actor, trees)
-        {copy_problems, trees} = check_copy_destination(op, proposal, trees)
-        problems = problems ++ copy_problems ++ link_problems(op)
-        {Enum.map(problems, &Map.put(&1, :operation, index)), trees}
+      |> Enum.flat_map_reduce({%{}, %{}}, fn {op, index}, {trees, failed} ->
+        {problems, trees} =
+          case failed_reference(op, proposal, trees, failed) do
+            nil -> check_operation(op, proposal, actor, trees)
+            problem -> {[problem], trees}
+          end
+
+        failed = record_failure(op, index, problems, trees, failed)
+        {Enum.map(problems, &Map.put(&1, :operation, index)), {trees, failed}}
       end)
 
     problems
   end
+
+  defp check_operation(op, proposal, actor, trees) do
+    {problems, trees} = check(op, proposal, actor, trees)
+    {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
+    {problems ++ copy_problems ++ link_problems(op), trees}
+  end
+
+  # An insert or copy that adds its uid clears an earlier failure of it.
+  defp record_failure(%op_type{uid: uid} = op, index, problems, trees, failed) when op_type in [InsertBlock, CopyBlock] do
+    key = new_block_key(op)
+    tree = Map.get(trees, key, %BlockTree{})
+
+    cond do
+      BlockTree.fetch(tree, uid) != nil -> Map.delete(failed, {key, uid})
+      problems != [] -> Map.put(failed, {key, uid}, index)
+      true -> failed
+    end
+  end
+
+  defp record_failure(_op, _index, _problems, _trees, failed), do: failed
+
+  defp new_block_key(%CopyBlock{to_target: to} = op) when not is_nil(to), do: {to, op.to_field}
+  defp new_block_key(op), do: {op.target, op.field}
+
+  defp failed_reference(_op, _proposal, _trees, failed) when map_size(failed) == 0, do: nil
+
+  defp failed_reference(op, proposal, trees, failed) do
+    Enum.find_value(block_references(op), &failed_block(&1, proposal, trees, failed))
+  end
+
+  # A block an earlier operation failed to add, unless the field has a
+  # block with that uid after all. A missing target or field is left to
+  # the operation's own check.
+  defp failed_block({role, uid, {target, field} = key}, proposal, trees, failed) do
+    with index when is_integer(index) <- Map.get(failed, {key, uid}),
+         {:ok, schema} <- target_schema(target, proposal),
+         :ok <- block_field(schema, field),
+         tree = Map.get_lazy(trees, key, fn -> saved_tree(target, field, proposal) end),
+         nil <- BlockTree.fetch(tree, uid) do
+      failed_problem(role, uid, index)
+    else
+      _ -> nil
+    end
+  end
+
+  # The blocks an operation names, with the field each is looked up in.
+  defp block_references(%InsertBlock{field: field} = op) when is_binary(field) do
+    key = {op.target, field}
+    if(op.parent, do: [{:parent, op.parent, key}], else: []) ++ anchor_reference(op.placement, key)
+  end
+
+  defp block_references(%{block_uid: uid, field: field} = op) when is_binary(uid) and is_binary(field) do
+    [{:block, uid, {op.target, field}} | anchor_reference(Map.get(op, :placement), new_block_key(op))]
+  end
+
+  defp block_references(_op), do: []
+
+  defp anchor_reference({side, anchor}, key) when side in [:before, :after, :into] and is_binary(anchor),
+    do: [{:anchor, anchor, key}]
+
+  defp anchor_reference(_placement, _key), do: []
+
+  defp failed_problem(:parent, uid, index),
+    do:
+      problem(
+        :parent_failed,
+        dgettext("content_proposals", "Not inserted: its parent `%{uid}` failed (operation %{operation}).",
+          uid: uid,
+          operation: index
+        )
+      )
+
+  defp failed_problem(:anchor, uid, index),
+    do:
+      problem(
+        :parent_failed,
+        dgettext(
+          "content_proposals",
+          "Not applied: the block to place it next to, `%{uid}`, failed (operation %{operation}).",
+          uid: uid,
+          operation: index
+        )
+      )
+
+  defp failed_problem(:block, uid, index),
+    do:
+      problem(
+        :parent_failed,
+        dgettext("content_proposals", "Not applied: the block `%{uid}` failed (operation %{operation}).",
+          uid: uid,
+          operation: index
+        )
+      )
 
   # The entries an operation touches: its target, and a copy's destination.
   defp op_targets(%CopyBlock{target: target, to_target: to}) when not is_nil(to), do: [target, to]
@@ -435,7 +535,7 @@ defmodule Brando.Content.Proposals do
   defp check(op, proposal, actor, trees), do: {check(op, proposal, actor), trees}
 
   # The destination half of a copy to another entry or field.
-  defp check_copy_destination(%CopyBlock{to_target: to} = op, proposal, trees) when not is_nil(to) do
+  defp check_copy_destination(%CopyBlock{to_target: to} = op, proposal, actor, trees) when not is_nil(to) do
     source = {op.target, op.field}
     source_tree = Map.get_lazy(trees, source, fn -> saved_tree(op.target, op.field, proposal) end)
     saved? = saved_block_of(proposal, op.target, op.field, op.block_uid) != nil
@@ -446,7 +546,7 @@ defmodule Brando.Content.Proposals do
          true <- saved? || {:error, copy_unsaved()},
          key = {to, op.to_field},
          tree = Map.get_lazy(trees, key, fn -> saved_tree(to, op.to_field, proposal) end),
-         :ok <- new_uid(op.uid, tree),
+         :ok <- new_uid(op.uid, tree, actor),
          {:ok, parent} <- destination(op.placement, %{node | uid: op.uid, parent: nil}, tree, :copy),
          :ok <- movable(%{node | parent: :elsewhere}, parent, schema, op.to_field, tree) do
       {[], Map.put(trees, key, BlockTree.copy_from(source_tree, tree, node.uid, op.uid, parent, op.placement))}
@@ -455,7 +555,7 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  defp check_copy_destination(_op, _proposal, trees), do: {[], trees}
+  defp check_copy_destination(_op, _proposal, _actor, trees), do: {[], trees}
 
   defp copy_unsaved,
     do:
@@ -466,7 +566,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_block_of(proposal, target, field, uid) do
     with %{} = entry <- Map.get(proposal.targets, target),
-         {block, _, _} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+         {block, _, _} <- BlockTree.find_saved(entry_blocks(entry, field), uid) do
       block
     else
       _ -> nil
@@ -513,13 +613,21 @@ defmodule Brando.Content.Proposals do
 
   defp saved_tree(target, field, proposal) do
     case Map.get(proposal.targets, target) do
-      %{} = entry -> entry |> Map.fetch!(:"entry_#{field}") |> BlockTree.from_saved()
+      # A field the entry lacks is reported by the operation's own check.
+      %{} = entry -> entry |> entry_blocks(field) |> BlockTree.from_saved()
       _ -> %BlockTree{}
     end
   end
 
+  # The field name comes from the tool unchecked, so it is compared as a
+  # string: an unknown one must not become an atom.
+  defp entry_blocks(entry, field) do
+    name = "entry_#{field}"
+    entry |> Map.to_list() |> Enum.find_value([], fn {key, blocks} -> Atom.to_string(key) == name && blocks end)
+  end
+
   defp check_block(%InsertBlock{} = op, schema, tree, actor, proposal) do
-    with :ok <- new_uid(op.uid, tree),
+    with :ok <- new_uid(op.uid, tree, actor),
          :ok <- new_ref_uids(op.ref_uids),
          {:ok, module, type} <- insertable(op, schema, tree),
          :ok <- sibling_placement(op.placement, op.parent, op.uid, tree) do
@@ -541,7 +649,8 @@ defmodule Brando.Content.Proposals do
 
       {problems, BlockTree.put(tree, node, op.parent, op.placement)}
     else
-      # Text is checked whatever else is wrong: a preview builds the block anyway.
+      # Text is checked whatever else is wrong, so it is reported in the same
+      # round. An insert that stops at `parent_failed` is not checked at all.
       {:error, problem} -> {[problem | inserted_unsafe_text(op, actor)], tree}
     end
   end
@@ -562,9 +671,9 @@ defmodule Brando.Content.Proposals do
     do: {[], tree}
 
   # A copy may sit next to its original, but not inside it.
-  defp check_block(%CopyBlock{} = op, schema, tree, _actor, _proposal) do
+  defp check_block(%CopyBlock{} = op, schema, tree, actor, _proposal) do
     with {:ok, node} <- structural_block(tree, op.block_uid),
-         :ok <- new_uid(op.uid, tree),
+         :ok <- new_uid(op.uid, tree, actor),
          {:ok, parent} <- destination(op.placement, node, tree, :copy),
          :ok <- movable(node, parent, schema, op.field, tree) do
       {[], BlockTree.copy(tree, op.block_uid, op.uid, parent, op.placement)}
@@ -906,7 +1015,7 @@ defmodule Brando.Content.Proposals do
          dgettext("content_proposals", "Only blocks built from a module can move to another parent.")
        )}
 
-  defp new_uid(uid, tree) do
+  defp new_uid(uid, tree, actor) do
     cond do
       is_binary(uid) and byte_size(uid) > @new_uid_bytes ->
         {:error,
@@ -918,12 +1027,62 @@ defmodule Brando.Content.Proposals do
       not Content.Block.valid_uid?(uid) ->
         {:error, invalid_uid()}
 
-      BlockTree.fetch(tree, uid) != nil or
-          Repo.one(from(b in Content.Block, where: b.uid == ^uid, select: true, limit: 1)) == true ->
-        {:error, problem(:duplicate_uid, dgettext("content_proposals", "Another block already uses this uid."))}
-
       true ->
-        :ok
+        saved = Repo.one(from(b in Content.Block, where: b.uid == ^uid, select: b.id, limit: 1))
+
+        cond do
+          BlockTree.fetch(tree, uid) != nil -> {:error, duplicate_uid(uid, if(saved, do: :field, else: :proposal))}
+          saved -> {:error, duplicate_uid(uid, {:entry, entry_label(saved, actor)})}
+          true -> :ok
+        end
+    end
+  end
+
+  # Where the uid is taken, so it can be changed: in this proposal or field,
+  # or in another entry, named only when the actor may read it.
+  defp duplicate_uid(uid, where) do
+    taken =
+      case where do
+        :proposal ->
+          dgettext("content_proposals", "The uid `%{uid}` is already used by another block in this proposal.", uid: uid)
+
+        :field ->
+          dgettext("content_proposals", "The uid `%{uid}` is already used by another block in this field.", uid: uid)
+
+        {:entry, nil} ->
+          dgettext("content_proposals", "The uid `%{uid}` is already used by a block in another entry.", uid: uid)
+
+        {:entry, entry} ->
+          dgettext("content_proposals", "The uid `%{uid}` is already used by a block in %{entry}.",
+            uid: uid,
+            entry: entry
+          )
+      end
+
+    advice =
+      dgettext(
+        "content_proposals",
+        "Uids are unique across the site; prefix yours, for example with the entry's ref or slug."
+      )
+
+    problem(:duplicate_uid, taken <> " " <> advice)
+  end
+
+  defp entry_label(block_id, actor) do
+    with %{^block_id => [{schema, id} | _]} <- Content.BlockReferences.list_entries_for_block_ids([block_id]),
+         true <- readable?(schema, id, actor) do
+      dgettext("content_proposals", "%{content_type} #%{id}", content_type: Brando.Blueprint.get_singular(schema), id: id)
+    else
+      _ -> nil
+    end
+  end
+
+  defp readable?(schema, id, actor) do
+    query = Catalog.scoped_query(from(e in schema, where: e.id == ^id), schema, actor, :read)
+
+    case Repo.one(query) do
+      nil -> false
+      entry -> Boundary.authorize(actor, :read, entry) == :ok
     end
   end
 
@@ -1554,7 +1713,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_block(proposal, %{target: target, field: field, block_uid: uid}) do
     with %{} = entry <- Map.get(proposal.targets, target),
-         {block, _parent, _index} <- BlockTree.find_saved(Map.get(entry, :"entry_#{field}", []), uid) do
+         {block, _parent, _index} <- BlockTree.find_saved(entry_blocks(entry, field), uid) do
       block
     else
       _ -> nil
@@ -2224,6 +2383,15 @@ defmodule Brando.Content.Proposals do
       with a conversation) or `:mcp`, a tool connected over MCP
     * `:client` — the connected tool's name, such as "Claude Code", when it
       is known
+    * `:replaces` — for a proposal without a conversation, from a connected
+      tool: the id of the actor's proposal from the same client that this one
+      refines, or `:latest`. With `:latest`, the most recent proposal from the
+      same actor and client still under review is superseded when it has
+      problems or touches an entry this one touches (the same target, or a
+      created entry with the same content type and ref); otherwise it is left
+      alone and this one starts at version 1. Calls for one actor and client
+      are serialized while the earlier proposal is found and superseded, so
+      concurrent calls never leave two versions under review.
 
   A refinement keeps the origin and client of the version it supersedes.
   Proposals without a conversation are listed for review by
@@ -2241,11 +2409,107 @@ defmodule Brando.Content.Proposals do
   defp store!(proposal, actor, opts) do
     {:ok, record} =
       Repo.transaction(fn ->
-        previous = supersede!(opts[:supersedes], actor)
+        previous =
+          case opts[:replaces] do
+            nil -> supersede!(opts[:supersedes], actor)
+            replaces -> replace!(replaces, proposal, actor, opts)
+          end
+
         Repo.insert!(new_record(proposal, previous, opts))
       end)
 
     with_record(proposal, record)
+  end
+
+  # A connected tool's proposals: the earlier one is found and superseded
+  # under a lock for the actor and client, so a second call that arrives
+  # while the first is stored waits for it and then refines it.
+  defp replace!(replaces, proposal, actor, opts) do
+    client = client(opts[:client])
+
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-content-proposal-client:#{Transfer.scope()}:#{user!(actor).id}:#{client}"
+    ])
+
+    previous =
+      case replaces do
+        :latest -> actor |> under_review_from_client(client) |> Enum.find(&replaced_by?(&1, proposal))
+        id -> replaceable!(id, actor, client)
+      end
+
+    previous && previous |> Changeset.change(status: "superseded") |> Repo.update!()
+  end
+
+  # The newest proposal that has problems or shares an entry is replaced. An
+  # older one about the same entry counts too, when a proposal about another
+  # entry came in between.
+  defp replaced_by?(previous, proposal), do: previous.problems != [] or overlaps?(previous, proposal)
+
+  # Newest first. An expired proposal can no longer be approved, so it is not
+  # under review.
+  defp under_review_from_client(actor, client) do
+    Repo.all(
+      from(r in external(actor),
+        where: r.status in ~w(pending approved) and r.expires_at > ^DateTime.utc_now(),
+        order_by: [desc: r.inserted_at, desc: r.version],
+        lock: "FOR UPDATE"
+      )
+      |> where_client(client)
+    )
+  end
+
+  defp where_client(query, nil), do: from(r in query, where: is_nil(r.client))
+  defp where_client(query, client), do: from(r in query, where: r.client == ^client)
+
+  defp replaceable!(id, actor, client) do
+    record =
+      case Ecto.UUID.cast(id) do
+        {:ok, id} -> Repo.one(from(r in external(actor), where: r.id == ^id, lock: "FOR UPDATE"))
+        :error -> nil
+      end
+
+    cond do
+      is_nil(record) or record.client != client ->
+        Error.fail!(
+          dgettext(
+            "content_proposals",
+            "replaces: there is no proposal %{id} from this tool. Leave out replaces to store a new proposal.",
+            id: inspect(id)
+          )
+        )
+
+      record.status not in ~w(pending approved) or DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt ->
+        Error.fail!(
+          dgettext(
+            "content_proposals",
+            "replaces: proposal %{id} is no longer under review. Leave out replaces to store a new proposal.",
+            id: inspect(id)
+          )
+        )
+
+      true ->
+        record
+    end
+  end
+
+  # Whether a stored proposal touches an entry `proposal` touches.
+  defp overlaps?(record, proposal) do
+    case Codec.decode_all(record.operations) do
+      {:ok, operations} -> not MapSet.disjoint?(touched(operations), touched(proposal.operations))
+      {:error, _} -> false
+    end
+  end
+
+  # A created entry is told apart by its content type and ref.
+  defp touched(operations) do
+    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {op.ref, op.schema}
+
+    for op <- operations, target <- changed_targets(op), not is_nil(target), into: MapSet.new() do
+      case target do
+        {:new, ref} -> {:new, creates[ref], ref}
+        target -> target
+      end
+    end
   end
 
   defp supersede!(nil, _actor), do: nil
@@ -2818,6 +3082,7 @@ defmodule Brando.Content.Proposals do
         summary: record.summary,
         origin: record.origin,
         client: record.client,
+        supersedes_id: record.supersedes_id,
         expires_at: record.expires_at
     }
   end

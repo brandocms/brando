@@ -12,6 +12,11 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{content_type} #%{id}"
+msgstr "%{content_type} #%{id}"
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
@@ -201,11 +206,6 @@ msgstr "En oppføring har ingen tidligere revisjon å gå tilbake til."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "Another block already uses this uid."
-msgstr "En annen blokk bruker allerede denne uid-en."
-
-#: lib/brando/content/proposals.ex
-#, elixir-autogen, elixir-format
 msgid "Approve this version of the proposal before applying it."
 msgstr "Godkjenn denne versjonen av forslaget før du utfører det."
 
@@ -293,6 +293,21 @@ msgstr "Ingen vedlegg heter %{alias}."
 #, elixir-autogen, elixir-format
 msgid "No entry is created with this reference."
 msgstr "Ingen oppføring opprettes med denne referansen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Not applied: the block `%{uid}` failed (operation %{operation})."
+msgstr "Ikke utført: blokken `%{uid}` feilet (operasjon %{operation})."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Not applied: the block to place it next to, `%{uid}`, failed (operation %{operation})."
+msgstr "Ikke utført: blokken den skal plasseres ved, `%{uid}`, feilet (operasjon %{operation})."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Not inserted: its parent `%{uid}` failed (operation %{operation})."
+msgstr "Ikke satt inn: forelderen `%{uid}` feilet (operasjon %{operation})."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -426,6 +441,26 @@ msgstr "Statusen er publisert, utkast, deaktivert eller venter."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by a block in %{entry}."
+msgstr "Uid-en `%{uid}` brukes allerede av en blokk i %{entry}."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by a block in another entry."
+msgstr "Uid-en `%{uid}` brukes allerede av en blokk i en annen oppføring."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by another block in this field."
+msgstr "Uid-en `%{uid}` brukes allerede av en annen blokk i dette feltet."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The uid `%{uid}` is already used by another block in this proposal."
+msgstr "Uid-en `%{uid}` brukes allerede av en annen blokk i dette forslaget."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "There is no saved text %{ref} in block %{uid} of this entry and field to copy."
 msgstr "Det finnes ingen lagret tekst %{ref} i blokk %{uid} i denne oppføringen og dette feltet å kopiere."
 
@@ -542,6 +577,11 @@ msgstr "To nye oppføringer bruker samme referanse."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Uids are unique across the site; prefix yours, for example with the entry's ref or slug."
+msgstr "Uid-er er unike på hele nettstedet; gi dine et prefiks, for eksempel oppføringens referanse eller slug."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Undo failed: %{reason}"
 msgstr "Angring mislyktes: %{reason}"
 
@@ -624,6 +664,16 @@ msgstr "åpnes i samme fane"
 #, elixir-autogen, elixir-format
 msgid "plain text"
 msgstr "ren tekst"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "replaces: proposal %{id} is no longer under review. Leave out replaces to store a new proposal."
+msgstr "replaces: forslag %{id} er ikke lenger til gjennomgang. Utelat replaces for å lagre et nytt forslag."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "replaces: there is no proposal %{id} from this tool. Leave out replaces to store a new proposal."
+msgstr "replaces: det finnes ikke noe forslag %{id} fra dette verktøyet. Utelat replaces for å lagre et nytt forslag."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
