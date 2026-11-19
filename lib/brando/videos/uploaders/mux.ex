@@ -151,7 +151,7 @@ defmodule Brando.Videos.Uploaders.Mux do
     case data["id"] do
       # Update video with complete asset data from the webhook
       asset_id when is_binary(asset_id) ->
-        in_each_holder("mux.asset_id", asset_id, &update_video_with_asset(&1, data))
+        in_each_holder("mux.asset_id", asset_id, &update_video_with_asset(&1, data, payload?: true))
 
       nil ->
         Logger.warning("Missing asset_id in video.asset.ready webhook")
@@ -494,9 +494,14 @@ defmodule Brando.Videos.Uploaders.Mux do
   # The row is read again under a lock, as `store_static_renditions/2` does,
   # so a rendition another event stored ready while the asset was read stays
   # ready. A video deleted since is ignored.
-  defp update_video_with_asset(video, asset) do
+  #
+  # With `payload?: true` the asset is the event's payload, as it was when Mux
+  # sent it, not as it is now: a late or retried `video.asset.ready` must not
+  # drop renditions stored since, so it sets them only when none are stored.
+  # The rendition events read the asset again, and keep them current.
+  defp update_video_with_asset(video, asset, opts \\ []) do
     fn ->
-      with %Videos.Video{} = fresh <- lock_video(video.id), do: write_asset(fresh, asset)
+      with %Videos.Video{} = fresh <- lock_video(video.id), do: write_asset(fresh, asset, opts)
     end
     |> Repo.transaction()
     |> case do
@@ -507,12 +512,12 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   # {the video as it was, the video}
-  defp write_asset(video, asset) do
+  defp write_asset(video, asset, opts) do
     {playback_id, playback_policy} = playback_info(asset)
 
     params =
       %{
-        meta: mux_meta(video, asset, playback_id, playback_policy),
+        meta: mux_meta(video, asset, playback_id, playback_policy, opts),
         status: video_status(asset["status"])
       }
       |> put_video_dimensions(asset["tracks"])
@@ -591,7 +596,14 @@ defmodule Brando.Videos.Uploaders.Mux do
     {nil, nil}
   end
 
-  defp mux_meta(video, asset, playback_id, playback_policy) do
+  defp mux_meta(video, asset, playback_id, playback_policy, opts) do
+    stored = get_in(video.meta, ["mux", "static_renditions"])
+
+    renditions =
+      if Keyword.get(opts, :payload?, false) and not is_nil(stored),
+        do: stored,
+        else: static_renditions(asset, stored)
+
     mux_meta =
       %{
         "upload_id" => get_in(video.meta, ["mux", "upload_id"]),
@@ -603,7 +615,7 @@ defmodule Brando.Videos.Uploaders.Mux do
       |> maybe_put("max_resolution", asset["max_resolution_tier"])
       |> maybe_put("aspect_ratio", asset["aspect_ratio"])
       |> maybe_put("status", asset["status"])
-      |> maybe_put("static_renditions", static_renditions(asset, get_in(video.meta, ["mux", "static_renditions"])))
+      |> maybe_put("static_renditions", renditions)
 
     video.meta
     |> Map.put("provider", "mux")
@@ -751,7 +763,8 @@ defmodule Brando.Videos.Uploaders.Mux do
              meta: %{"provider" => "mux", "imported" => true, "mux" => %{"asset_id" => asset_id}},
              creator_id: user.id
            }) do
-      update_video_with_asset(video, asset)
+      # Deleted the moment it was made: the callback answers ok or error
+      with :ignore <- update_video_with_asset(video, asset), do: {:error, :not_found}
     end
   end
 
@@ -908,9 +921,13 @@ defmodule Brando.Videos.Uploaders.Mux do
     case with({:ok, asset} <- asset, do: store_static_renditions(video, asset)) do
       {:ok, _video} -> result
       :ignore -> result
-      {:error, reason} -> %{result | error: reason}
+      {:error, reason} -> %{result | error: store_error(asset, reason)}
     end
   end
+
+  # A failed read of the asset, or a failed save of what it has
+  defp store_error({:ok, _asset}, reason), do: {:store, reason}
+  defp store_error(_asset, reason), do: reason
 
   defp clear_the_way(_asset, [], _interval), do: :ok
 
@@ -988,12 +1005,16 @@ defmodule Brando.Videos.Uploaders.Mux do
   def describe_result(%{error: {:clear, step, reason}}, _applied?),
     do: "FAILED to remove #{clear_name(step)}, asked for nothing: #{inspect(reason)}"
 
+  def describe_result(%{error: {:store, reason}, clear: [], requested: [], failed: []}, _applied?),
+    do: "FAILED to store what the asset has: #{inspect(reason)}"
+
   def describe_result(%{error: error, clear: [], requested: [], failed: []}, _applied?) when not is_nil(error),
     do: "FAILED to read the asset: #{inspect(error)}"
 
   def describe_result(%{error: error} = result, applied?) when not is_nil(error),
     do:
-      describe_result(%{result | error: nil}, applied?) <> "  then FAILED to store what the asset has: #{inspect(error)}"
+      describe_result(%{result | error: nil}, applied?) <>
+        "  then FAILED to store what the asset has: #{inspect(with {:store, reason} <- error, do: reason)}"
 
   def describe_result(%{clear: [], requested: [], failed: []}, _applied?), do: "has every rendition"
 

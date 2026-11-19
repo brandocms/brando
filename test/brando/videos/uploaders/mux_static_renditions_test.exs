@@ -442,12 +442,23 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
       end
     end
 
-    test "an asset's ready report without renditions stores none" do
-      _video = insert_mux("asset-ready-none", %{"static_renditions" => stored([file("720p", "ready")])})
-      payload = %{"type" => "video.asset.ready", "data" => Map.delete(asset("asset-ready-none", []), "static_renditions")}
+    test "a late or retried ready report, as Mux sent it, keeps the renditions stored since" do
+      # Renditions added after the asset was ready (the backfill), and stored
+      # by their own events; the asset's original ready report then comes again
+      _video = insert_mux("asset-ready-late", %{"static_renditions" => stored([file("720p", "ready")])})
+
+      for data <- [Map.delete(asset("asset-ready-late", []), "static_renditions"), asset("asset-ready-late", [])] do
+        assert {:ok, video} = Mux.handle_webhook(%{"type" => "video.asset.ready", "data" => data})
+        assert Playback.mp4_resolutions(video) == [720]
+      end
+    end
+
+    test "a ready report for a video with no renditions stored takes the report's" do
+      _video = insert_mux("asset-ready-first", %{})
+      payload = %{"type" => "video.asset.ready", "data" => asset("asset-ready-first", [file("720p", "preparing")])}
 
       assert {:ok, video} = Mux.handle_webhook(payload)
-      assert video.meta["mux"]["static_renditions"] == []
+      assert [%{"resolution" => "720p", "status" => "preparing"}] = video.meta["mux"]["static_renditions"]
     end
 
     test "a webhook for a video deleted from the database meanwhile is ignored" do
@@ -680,6 +691,15 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
       assert description =~ "removed the highest rendition"
       assert description =~ "asked for 720p, 1080p"
       assert description =~ "FAILED"
+    end
+
+    test "a failed save of what a read asset has is reported as that, not as a failed read" do
+      result = %{clear: [], requested: [], failed: [], error: {:store, :changeset}}
+      assert Mux.describe_result(result, true) == "FAILED to store what the asset has: :changeset"
+
+      description = Mux.describe_result(%{result | clear: [:highest]}, true)
+      assert description =~ "removed the highest rendition"
+      assert description =~ "then FAILED to store what the asset has: :changeset"
     end
 
     test "a removal followed by a refused request is reported as half done" do
