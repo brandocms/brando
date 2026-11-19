@@ -65,8 +65,10 @@ defmodule Brando.Type.VideoConfig do
     - `["public"]` - Anyone with the URL. Signed playback is rejected until
       Brando has a configured token-signing boundary.
 
-  - `"static_renditions"` - Optional downloadable MP4/M4A renditions using
-    Mux's current static rendition API.
+  - `"static_renditions"` - The MP4 static renditions this config's uploads
+    ask for, replacing `config :brando, Brando.Videos, mux_static_renditions:`
+    (720p and 1080p by default). Brando plays the fixed resolutions, never
+    `"highest"` (see `Brando.Videos.Uploaders.Mux`).
 
   Apart from `"playback_policies"`, Brando does not validate these values - the
   `meta.mux` map is merged into Mux's `new_asset_settings` as-is, so any other
@@ -85,7 +87,7 @@ defmodule Brando.Type.VideoConfig do
             mux: %{
               "max_resolution_tier" => "1080p",
               "playback_policies" => ["public"],
-              "static_renditions" => [%{"resolution" => "highest"}]
+              "static_renditions" => [%{"resolution" => "720p"}, %{"resolution" => "1080p"}]
             }
           }
         }

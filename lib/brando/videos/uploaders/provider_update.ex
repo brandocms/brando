@@ -18,13 +18,21 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
   (`Brando.Assets.ProcessingStatus`). Returns `{:ok, video}` or the error from the update.
   """
   def update_video(video, params) do
-    creator = creator(video)
-
     with {:ok, updated_video} <- Videos.update_video(video, params, :system) do
-      Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast(updated_video)
-      {:ok, updated_video}
+      {:ok, updated(video, updated_video)}
     end
+  end
+
+  @doc """
+  What `update_video/2` does after the write, for a provider that wrote
+  `updated_video` over `video` itself (under a lock): runs the creator's
+  completed callback when it has just become ready, and broadcasts it.
+  Returns `updated_video`.
+  """
+  def updated(video, updated_video) do
+    Videos.run_completed_callback_on_ready(video, updated_video, creator(video))
+    broadcast(updated_video)
+    updated_video
   end
 
   # A creator deleted since gets the callback as the system

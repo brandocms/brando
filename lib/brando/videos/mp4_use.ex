@@ -21,6 +21,7 @@ defmodule Brando.Videos.Mp4Use do
   alias Brando.Galleries.GalleryObject
   alias Brando.Videos.Playback
   alias Brando.Videos.Video
+  alias Brando.Villain.Parser
 
   @doc "The ids of `videos` that would play an MP4 somewhere."
   @spec video_ids([Video.t()]) :: MapSet.t(integer())
@@ -71,9 +72,12 @@ defmodule Brando.Videos.Mp4Use do
     %{places: places, objects: objects} = Map.fetch!(galleries, gallery_id)
     configs = Map.get(objects, {gallery_id, video.id}, [])
 
+    # As the renderer does: a gallery block's override first, then the
+    # object's config on top of it (`Brando.Villain.Parser`)
     Enum.flat_map(configs, fn config ->
-      base = object_settings(settings(video), config)
-      Enum.flat_map(places, &gallery_place_settings(base, &1, video.id, length(configs)))
+      places
+      |> Enum.flat_map(&gallery_place_settings(settings(video), &1, video.id, length(configs)))
+      |> Enum.map(&Parser.apply_video_config(&1, config))
     end)
   end
 
@@ -97,27 +101,9 @@ defmodule Brando.Videos.Mp4Use do
   defp inherit(nil, base), do: base
   defp inherit(value, _base), do: value
 
-  # A gallery object's config overrides the video for every place showing
-  # the gallery; an empty value inherits
-  defp object_settings(base, config) do
-    %{
-      base
-      | quality: Playback.normalize(config["quality"]) || base.quality,
-        autoplay: config_value(config, "autoplay", base.autoplay),
-        controls: config_value(config, "controls", base.controls)
-    }
-  end
-
-  defp config_value(config, key, base) do
-    case Map.get(config, key) do
-      value when value in [nil, ""] -> base
-      value -> value
-    end
-  end
-
   # A gallery shown as it is, or through a gallery block's ref, whose
-  # overrides for the video apply on top. A placement without one plays the
-  # gallery's own, unless one override covers each placement.
+  # overrides for the video apply to it. A placement without one plays the
+  # video's own, unless one override covers each placement.
   defp gallery_place_settings(base, :direct, _video_id, _count), do: [base]
 
   defp gallery_place_settings(base, {:ref, data}, video_id, count) do
@@ -142,7 +128,7 @@ defmodule Brando.Videos.Mp4Use do
   defp video_override?(_override, _video_id), do: false
 
   # `Brando.Villain.Parser`'s gallery overrides: a `use_default_*` flag keeps
-  # the gallery's, as does no flag and no value
+  # the video's, as does no flag and no value
   defp override_settings(base, override) do
     %{
       base

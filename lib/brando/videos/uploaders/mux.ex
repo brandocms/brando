@@ -491,7 +491,23 @@ defmodule Brando.Videos.Uploaders.Mux do
     Videos.create_video(params)
   end
 
+  # The row is read again under a lock, as `store_static_renditions/2` does,
+  # so a rendition another event stored ready while the asset was read stays
+  # ready. A video deleted since is ignored.
   defp update_video_with_asset(video, asset) do
+    fn ->
+      with %Videos.Video{} = fresh <- lock_video(video.id), do: write_asset(fresh, asset)
+    end
+    |> Repo.transaction()
+    |> case do
+      {:ok, nil} -> :ignore
+      {:ok, {fresh, updated}} -> {:ok, ProviderUpdate.updated(fresh, updated)}
+      {:error, _} = error -> error
+    end
+  end
+
+  # {the video as it was, the video}
+  defp write_asset(video, asset) do
     {playback_id, playback_policy} = playback_info(asset)
 
     params =
@@ -503,19 +519,27 @@ defmodule Brando.Videos.Uploaders.Mux do
       |> put_aspect_ratio(asset["aspect_ratio"])
       |> put_duration(asset["duration"])
 
-    ProviderUpdate.update_video(video, params)
+    case Videos.update_video(video, params, :system) do
+      {:ok, updated} -> {video, updated}
+      {:error, reason} -> Repo.rollback(reason)
+    end
   end
+
+  defp lock_video(video_id), do: Repo.one(from(v in Videos.Video, where: v.id == ^video_id, lock: "FOR UPDATE"))
 
   # Stores what Mux has of the asset's static renditions, and nothing else:
   # the size, shape and duration are the editor's once the video is ready.
   # The row is read again under a lock, so a rendition another event stored
   # ready while the asset was read stays ready. Nothing changed writes
   # nothing, and only a change to what the video can play renders the
-  # entries showing it again.
+  # entries showing it again. A video deleted since is ignored.
   defp store_static_renditions(video, asset) do
     fn -> store_locked(video.id, asset) end
     |> Repo.transaction()
     |> case do
+      {:ok, nil} ->
+        :ignore
+
       {:ok, {true, updated}} ->
         Brando.Content.Blocks.render_entries_with_video_id(updated.id)
         ProviderUpdate.broadcast(updated)
@@ -529,14 +553,15 @@ defmodule Brando.Videos.Uploaders.Mux do
     end
   end
 
-  # {whether what the video can play changed, the video}
+  # {whether what the video can play changed, the video}, or nil without the row
   defp store_locked(video_id, asset) do
-    fresh = Repo.one!(from(v in Videos.Video, where: v.id == ^video_id, lock: "FOR UPDATE"))
-    stored = get_in(fresh.meta, ["mux", "static_renditions"])
+    with %Videos.Video{} = fresh <- lock_video(video_id) do
+      stored = get_in(fresh.meta, ["mux", "static_renditions"])
 
-    case static_renditions(asset, stored) do
-      renditions when renditions in [nil, stored] -> {false, fresh}
-      renditions -> put_static_renditions(fresh, renditions)
+      case static_renditions(asset, stored) do
+        renditions when renditions in [nil, stored] -> {false, fresh}
+        renditions -> put_static_renditions(fresh, renditions)
+      end
     end
   end
 
@@ -586,7 +611,8 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   # What Mux has of the asset's static renditions. An asset without any has no
-  # `static_renditions`. A rendition stored as ready stays ready when an older
+  # `static_renditions`, or no files in it: a ready one has none (its last was
+  # deleted), else it is unknown yet. A rendition stored as ready stays ready when an older
   # report still has it preparing: Mux's events don't arrive in order, and a
   # ready rendition never prepares again.
   defp static_renditions(%{"static_renditions" => %{"files" => files}}, stored) when is_list(files) do
@@ -600,6 +626,7 @@ defmodule Brando.Videos.Uploaders.Mux do
     end
   end
 
+  defp static_renditions(%{"status" => "ready"}, _stored), do: []
   defp static_renditions(_asset, _stored), do: nil
 
   defp video_status("ready"), do: :ready
@@ -761,8 +788,9 @@ defmodule Brando.Videos.Uploaders.Mux do
       or that would be with `dry_run`
     * `:requested` - the resolutions asked for now, or that would be with `dry_run`
     * `:failed` - `{resolution, reason}` for each request Mux refused
-    * `:error` - why the asset couldn't be read, or `{:clear, step, reason}`
-      when Mux refused to remove what had to go, else nil
+    * `:error` - why the asset couldn't be read (or read again and stored
+      after the changes above), or `{:clear, step, reason}` when Mux refused
+      to remove what had to go, else nil
 
   ## Options
 
@@ -879,6 +907,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   defp store_result(video, asset, result) do
     case with({:ok, asset} <- asset, do: store_static_renditions(video, asset)) do
       {:ok, _video} -> result
+      :ignore -> result
       {:error, reason} -> %{result | error: reason}
     end
   end
@@ -959,8 +988,12 @@ defmodule Brando.Videos.Uploaders.Mux do
   def describe_result(%{error: {:clear, step, reason}}, _applied?),
     do: "FAILED to remove #{clear_name(step)}, asked for nothing: #{inspect(reason)}"
 
-  def describe_result(%{error: error}, _applied?) when not is_nil(error),
+  def describe_result(%{error: error, clear: [], requested: [], failed: []}, _applied?) when not is_nil(error),
     do: "FAILED to read the asset: #{inspect(error)}"
+
+  def describe_result(%{error: error} = result, applied?) when not is_nil(error),
+    do:
+      describe_result(%{result | error: nil}, applied?) <> "  then FAILED to store what the asset has: #{inspect(error)}"
 
   def describe_result(%{clear: [], requested: [], failed: []}, _applied?), do: "has every rendition"
 

@@ -20,6 +20,7 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
   alias Brando.Villain.Blocks.GalleryBlock
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias Brando.Villain.Blocks.VideoBlock
+  alias Ecto.Adapters.SQL.Sandbox
   alias Plug.Conn
 
   @renderer Brando.Worker.EntryRenderer
@@ -170,6 +171,13 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
 
   defp reload(video), do: Brando.Repo.get!(Brando.Videos.Video, video.id)
 
+  # What another event stores: these resolutions ready
+  defp store_ready(video, resolutions) do
+    renditions = stored(Enum.map(resolutions, &file(&1, "ready")))
+    meta = put_in(video.meta, ["mux", "static_renditions"], renditions)
+    video |> Ecto.Changeset.change(meta: meta) |> Brando.Repo.update!()
+  end
+
   defp rendition_event(asset_id, event \\ "ready") do
     %{
       "type" => "video.asset.static_rendition.#{event}",
@@ -305,13 +313,163 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
 
       # The asset report is old, and while it is read another event stores 1080p ready
       fake_mux(%{}, fn "GET", "/video/v1/assets/asset-race", nil ->
-        meta = put_in(video.meta, ["mux", "static_renditions"], stored([file("720p", "ready"), file("1080p", "ready")]))
-        video |> Ecto.Changeset.change(meta: meta) |> Brando.Repo.update!()
+        store_ready(video, ["720p", "1080p"])
         {200, %{"data" => asset("asset-race", [file("720p", "ready"), file("1080p", "preparing")])}}
       end)
 
       assert {:ok, _} = Mux.handle_webhook(rendition_event("asset-race"))
       assert Playback.mp4_resolutions(reload(video)) == [720, 1080]
+    end
+
+    # A row lock needs two connections, so this runs outside the sandbox
+    test "a rendition's webhook waits for another event holding the row, and keeps what it stored" do
+      preparing = stored([file("720p", "ready"), file("1080p", "preparing")])
+
+      video =
+        Sandbox.unboxed_run(Brando.Repo.repo(), fn ->
+          Factory.insert(:video,
+            type: :mux,
+            status: :ready,
+            meta: %{"provider" => "mux", "mux" => %{"asset_id" => "asset-lock", "static_renditions" => preparing}}
+          )
+        end)
+
+      on_exit(fn -> Sandbox.unboxed_run(Brando.Repo.repo(), fn -> Brando.Repo.repo().delete!(video) end) end)
+
+      # Mux's report is older than the other event: 1080p still preparing, and 480p asked for since
+      fake_mux(%{
+        "asset-lock" =>
+          asset("asset-lock", [file("720p", "ready"), file("1080p", "preparing"), file("480p", "preparing")])
+      })
+
+      test = self()
+
+      holder =
+        Task.async(fn ->
+          Sandbox.unboxed_run(Brando.Repo.repo(), fn ->
+            Brando.Repo.transaction(fn ->
+              from(v in Brando.Videos.Video, where: v.id == ^video.id, lock: "FOR UPDATE") |> Brando.Repo.one!()
+              store_ready(video, ["720p", "1080p"])
+              send(test, :holding)
+              receive do: (:commit -> :ok), after: (5_000 -> raise "never told to commit")
+            end)
+          end)
+        end)
+
+      assert_receive :holding, 5_000
+
+      webhook =
+        Task.async(fn ->
+          Sandbox.unboxed_run(Brando.Repo.repo(), fn -> Mux.handle_webhook(rendition_event("asset-lock")) end)
+        end)
+
+      refute Task.yield(webhook, 300)
+      send(holder.pid, :commit)
+      Task.await(holder)
+      assert {:ok, _} = Task.await(webhook)
+
+      renditions =
+        Sandbox.unboxed_run(Brando.Repo.repo(), fn -> reload(video).meta["mux"]["static_renditions"] end)
+
+      assert Map.new(renditions, &{&1["resolution"], &1["status"]}) ==
+               %{"720p" => "ready", "1080p" => "ready", "480p" => "preparing"}
+    end
+
+    test "an asset's ready report keeps a rendition another event stored ready while it was read" do
+      video =
+        insert_mux("asset-ready-race", %{"static_renditions" => stored([file("720p", "preparing")])})
+
+      payload = %{"type" => "video.asset.ready", "data" => asset("asset-ready-race", [file("720p", "preparing")])}
+
+      # The report's holders are read, then a rendition's event stores 720p ready
+      handler = "mux-ready-race-#{System.unique_integer()}"
+
+      :telemetry.attach(
+        handler,
+        [:brando_integration, :repo, :query],
+        fn _event, _measurements, %{source: source}, _ ->
+          if source == "videos" do
+            :telemetry.detach(handler)
+            store_ready(video, ["720p"])
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      assert {:ok, _} = Mux.handle_webhook(payload)
+      assert Playback.mp4_resolutions(reload(video)) == [720]
+    end
+
+    test "an upload's asset report keeps a rendition another event stored ready while the asset was read" do
+      video =
+        insert_mux("asset-upload-race", %{
+          "upload_id" => "upload-race",
+          "static_renditions" => stored([file("720p", "preparing")])
+        })
+
+      fake_mux(%{}, fn "GET", "/video/v1/assets/asset-upload-race", nil ->
+        store_ready(video, ["720p"])
+        {200, %{"data" => asset("asset-upload-race", [file("720p", "preparing")])}}
+      end)
+
+      event = %{
+        "type" => "video.upload.asset_created",
+        "data" => %{"id" => "upload-race", "asset_id" => "asset-upload-race"}
+      }
+
+      assert {:ok, _} = Mux.handle_webhook(event)
+      assert Playback.mp4_resolutions(reload(video)) == [720]
+    end
+
+    for {shape, report} <- [
+          {"no static_renditions", quote(do: Map.delete(asset("asset-del", []), "static_renditions"))},
+          {"no files", quote(do: Map.put(asset("asset-del", []), "static_renditions", %{"status" => "disabled"}))},
+          {"files: []", quote(do: asset("asset-del", []))}
+        ] do
+      test "a deleted last rendition (#{shape}) stores none, and the entries showing the video stream again" do
+        video = insert_mux("asset-del", %{"static_renditions" => stored([file("720p", "ready")])})
+        video_ref(video, autoplay: true)
+        fake_mux(%{"asset-del" => unquote(report)})
+
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          assert {:ok, _} = Mux.handle_webhook(rendition_event("asset-del", "deleted"))
+          assert reload(video).meta["mux"]["static_renditions"] == []
+          assert Playback.mp4_resolutions(reload(video)) == []
+          assert_enqueued(worker: @renderer)
+        end)
+      end
+    end
+
+    test "an asset's ready report without renditions stores none" do
+      _video = insert_mux("asset-ready-none", %{"static_renditions" => stored([file("720p", "ready")])})
+      payload = %{"type" => "video.asset.ready", "data" => Map.delete(asset("asset-ready-none", []), "static_renditions")}
+
+      assert {:ok, video} = Mux.handle_webhook(payload)
+      assert video.meta["mux"]["static_renditions"] == []
+    end
+
+    test "a webhook for a video deleted from the database meanwhile is ignored" do
+      video =
+        insert_mux("asset-hard", %{"upload_id" => "upload-hard", "static_renditions" => stored([file("720p", "ready")])})
+
+      fake_mux(%{}, fn "GET", "/video/v1/assets/asset-hard", nil ->
+        Brando.Repo.delete!(video)
+        {200, %{"data" => asset("asset-hard", [file("720p", "ready"), file("1080p", "ready")])}}
+      end)
+
+      assert Mux.handle_webhook(rendition_event("asset-hard")) == :ignore
+
+      video = insert_mux("asset-hard", %{"upload_id" => "upload-hard"})
+
+      fake_mux(%{}, fn "GET", "/video/v1/assets/asset-hard", nil ->
+        Brando.Repo.delete!(video)
+        {200, %{"data" => asset("asset-hard", [])}}
+      end)
+
+      event = %{"type" => "video.upload.asset_created", "data" => %{"id" => "upload-hard", "asset_id" => "asset-hard"}}
+      assert Mux.handle_webhook(event) == :ignore
     end
 
     test "a late report of a rendition preparing doesn't undo it being ready" do
@@ -501,6 +659,29 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
       refute_received {:mux, "POST", "/video/v1/assets/asset-h3/static-renditions", _}
     end
 
+    test "a failed read after the changes still reports what was changed" do
+      insert_loop("asset-h6")
+      reads = :counters.new(1, [])
+
+      fake_mux(%{"asset-h6" => asset("asset-h6", [file("highest", "ready")])}, fn
+        "GET", "/video/v1/assets/asset-h6", _ ->
+          :counters.add(reads, 1, 1)
+          if :counters.get(reads, 1) > 1, do: {500, %{"error" => %{"type" => "server"}}}
+
+        _method, _path, _body ->
+          nil
+      end)
+
+      capture_log(fn -> send(self(), {:results, Mux.add_static_renditions(interval: 0)}) end)
+      assert_received {:results, [result]}
+      assert %{clear: [:highest], requested: [720, 1080], error: %{"error" => %{"type" => "server"}}} = result
+
+      description = Mux.describe_result(result, true)
+      assert description =~ "removed the highest rendition"
+      assert description =~ "asked for 720p, 1080p"
+      assert description =~ "FAILED"
+    end
+
     test "a removal followed by a refused request is reported as half done" do
       insert_loop("asset-h5")
 
@@ -581,6 +762,45 @@ defmodule Brando.Videos.Uploaders.MuxStaticRenditionsTest do
           do: assert(%{skipped: :streams, requested: []} = results[id], id)
 
       refute_received {:mux, "GET", "/video/v1/assets/q-unused-loop", _}
+    end
+  end
+
+  describe "add_static_renditions/1 reads a gallery's settings as the renderer does" do
+    # The gallery block's override applies first, then the gallery object's
+    # config on top (`Brando.Villain.Parser`)
+    defp in_gallery(asset_id, config, override) do
+      video = insert_mux(asset_id)
+      gallery = Factory.insert(:gallery)
+      Factory.insert(:gallery_object, gallery_id: gallery.id, video_id: video.id, config: config)
+      {_page, block} = page_block("Gallery #{asset_id}")
+
+      Factory.insert(:ref,
+        block_id: block.id,
+        gallery_id: gallery.id,
+        data: %GalleryBlock{
+          type: "gallery",
+          data: %GalleryBlock.Data{
+            gallery_object_overrides: [
+              struct(GalleryObjectOverride, Map.merge(%{object_id: "#{video.id}", object_type: :video}, override))
+            ]
+          }
+        }
+      )
+
+      video
+    end
+
+    test "the object's config wins over the gallery block's override, either way" do
+      in_gallery("g-config-off", %{"autoplay" => false}, %{autoplay: true, use_default_autoplay: false})
+      in_gallery("g-config-on", %{"autoplay" => true}, %{autoplay: false, use_default_autoplay: false})
+      in_gallery("g-config-hls", %{"quality" => "hls"}, %{quality: :mp4_720, autoplay: true, use_default_autoplay: false})
+
+      fake_mux(Map.new(~w(g-config-off g-config-on g-config-hls), &{&1, asset(&1, [])}))
+      results = Map.new(Mux.add_static_renditions(dry_run: true), &{&1.asset_id, &1})
+
+      assert %{skipped: :streams} = results["g-config-off"]
+      assert %{skipped: nil, requested: [720, 1080]} = results["g-config-on"]
+      assert %{skipped: :streams} = results["g-config-hls"]
     end
   end
 
