@@ -62,26 +62,37 @@ inside one, `mix igniter.new` fails on Elixir 1.20.4):
 
 ```sh
 mix igniter.new my_app --with phx.new \
-  --with-args="--no-install --no-assets --no-dashboard --no-mailer" \
-  --install brando
+  --with-args="--no-install --no-assets --no-dashboard --no-mailer"
 cd my_app
 ```
 
-`mix igniter.new` creates the application with `mix phx.new`, adds Igniter,
-and runs Brando's installer with the options it does not use itself.
-`--with-args` goes to `mix phx.new`, not to Brando. `--no-install` leaves
-fetching dependencies to Igniter, which fetches them once Brando is added.
+`mix igniter.new` creates the application with `mix phx.new` and adds
+Igniter. `--with-args` goes to `mix phx.new`. `--no-install` leaves fetching
+dependencies to Igniter, which fetches them once Brando is added.
 `--no-assets` leaves out esbuild and Tailwind, since Brando installs its own
 Vite builds. `--no-dashboard` leaves out Phoenix LiveDashboard, which Brando
 does not use. `--no-mailer` leaves out phx.new's Swoosh mailer, because
 `mix brando.gen.mail` creates one in [Run setup](#run-setup).
 
 For an existing application, commit it first, so `git diff` shows the install
-afterwards. Then, from its root:
+afterwards.
+
+Brando parses HTML with `lazy_html` at runtime, and `mix phx.new` lists it for
+tests only. In `mix.exs`, drop its `only: :test`:
+
+```elixir
+{:lazy_html, ">= 0.1.0"},
+```
+
+Otherwise fetching Brando stops with "Dependencies have diverged", before
+the installer can run. Then, from the application's root:
 
 ```sh
 mix igniter.install brando
 ```
+
+Igniter adds Brando and runs its installer with the options it does not use
+itself.
 
 Once Brando is a dependency, `mix brando.install` runs the same installer with
 the same options. [Installing into an existing application](#installing-into-an-existing-application)
@@ -449,14 +460,7 @@ source as in [Where Brando comes from](#where-brando-comes-from):
 {:igniter, "~> 0.8.0", only: [:dev, :test]}
 ```
 
-Brando parses HTML with `lazy_html` at runtime. If `mix.exs` lists it for
-tests only, as `mix phx.new` writes it, drop the `only: :test`
-(`mix igniter.install` does this itself):
-
-```elixir
-{:lazy_html, ">= 0.1.0"}
-```
-
+and drop `only: :test` from `lazy_html`, as in [Install Brando](#install-brando).
 Then run:
 
 ```sh
