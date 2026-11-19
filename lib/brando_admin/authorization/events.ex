@@ -117,7 +117,7 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Components.Form.BlockField" => [
       read:
-        ~w(clear_block_bin collapse_multi_children collapse_root_blocks expand_multi_children expand_root_blocks insert_starting_module outline_reposition outline_root_reposition outline_scroll_to paste_block_at_end rebuild_outline recover_blocks reposition restore_block show_block_picker start_from_template undo_structure),
+        ~w(clear_block_bin collapse_multi_children collapse_root_blocks dismiss_move_notice expand_multi_children expand_root_blocks insert_starting_module outline_reposition outline_root_reposition outline_scroll_to paste_block_at_end rebuild_outline recover_blocks redo_structure reposition restore_block show_block_picker start_from_template undo_structure),
       own: ~w(clear_clipboard)
     ],
     "BrandoAdmin.Components.Form.BlockField.ModulePicker" => [
