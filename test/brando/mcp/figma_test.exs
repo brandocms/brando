@@ -751,6 +751,20 @@ defmodule Brando.MCP.FigmaTest do
       assert Picture.pages(frames) == 2
     end
 
+    test "a turned animated image the library refuses is an error on its entry, not a failed call",
+         %{tenant: tenant, token: token} do
+      gif = animated_gif()
+      receiver = WebhookReceiver.start(fn _request -> {200, gif} end)
+      stub_layers(receiver, [layer("13:3", [fill("anim", %{"rotation" => 90})])])
+
+      # One frame is within the limit, both together are not.
+      original = Application.get_env(:brando, Brando.Images, [])
+      put_test_env(Brando.Images, Keyword.put(original, :max_pixels, 400))
+
+      assert %{"images" => [%{"error" => _} = entry]} = import!(tenant, token)
+      refute Map.has_key?(entry, "asset")
+    end
+
     test "an animated image cropped turned: the focal point is in the image as stored, upright",
          %{tenant: tenant, token: token} do
       gif = animated_gif()

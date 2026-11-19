@@ -226,7 +226,7 @@ defmodule Brando.Figma.Import do
       hash
       |> Images.with_file_lock(ctx.config_target, store)
       |> queue_sizes(ctx.actor)
-      |> then(&if(turned == turn, do: &1, else: {:upright, &1}))
+      |> upright(turned == turn)
     else
       {:error, message} when is_binary(message) -> {:error, message}
       _ -> {:error, "Not a JPEG, PNG, GIF or WebP image."}
@@ -412,8 +412,24 @@ defmodule Brando.Figma.Import do
       |> Enum.split_with(&(elem(&1, 0) == :applied))
 
     %{asset: %{kind: "image", id: asset.id}, reused: reused, rotation: first[:rotation]}
-    |> Map.merge(%{applied: Enum.map(applied, &elem(&1, 1)), not_applied: Enum.map(not_applied, &elem(&1, 1))})
+    |> Map.merge(%{
+      applied: Enum.map(applied, &elem(&1, 1)),
+      not_applied: not_applied |> Enum.map(&elem(&1, 1)) |> capped()
+    })
     |> Map.reject(fn {_key, value} -> value in [nil, []] end)
+  end
+
+  # Marks an image stored without the turn its layer shows.
+  defp upright({:error, _message} = error, _turned?), do: error
+  defp upright(result, true), do: result
+  defp upright(result, false), do: {:upright, result}
+
+  # One line per layer adds up when a cropped image repeats down a page.
+  defp capped(lines) do
+    case Enum.split(lines, @max_layers) do
+      {lines, []} -> lines
+      {lines, rest} -> lines ++ ["and #{length(rest)} more of the same kind on other layers"]
+    end
   end
 
   # What of one layer's image was applied. The asset is the first layer's
@@ -456,7 +472,7 @@ defmodule Brando.Figma.Import do
     [
       {:not_applied,
        layer <>
-         ~s[focal point from the Figma crop: only the first layer that shows this image, "#{first.name}" (#{first.node_id}), sets it]}
+         ~s[focal point from the Figma crop: this crop is not used; only the first place the image shows, "#{first.name}" (#{first.node_id}), can set it]}
     ]
   end
 

@@ -389,7 +389,7 @@ defmodule Brando.Figma.Frame do
   end
 
   defp stacked_note(node, count) do
-    ~s[Layer "#{node["name"]}" (#{node["id"]}) shows #{count} images stacked: the ones above are translucent, blended, fit or tiled, so the ones under them show too.]
+    ~s[Layer "#{node["name"]}" (#{node["id"]}) shows #{count} images stacked: the ones above are translucent, blended, fit, tiled or cropped short of an edge, so the ones under them show too.]
   end
 
   defp finish(section, frame, only?, keep_refs?) do
