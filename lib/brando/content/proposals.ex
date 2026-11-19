@@ -940,7 +940,7 @@ defmodule Brando.Content.Proposals do
 
   defp language({:new, ref}, proposal) do
     case Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1)) do
-      %{fields: fields} -> fields["language"]
+      %{schema: schema, fields: fields} -> new_entry_fields(schema, fields)["language"]
       nil -> nil
     end
   end
@@ -1800,11 +1800,23 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
+  @doc """
+  A `create_entry`'s fields as the new entry gets them. A content type with
+  a `language` field gets the site's default language when the fields leave
+  it out. Preview, review and apply all build the entry from these.
+  """
+  @spec new_entry_fields(module(), map()) :: map()
+  def new_entry_fields(schema, fields) do
+    if :language in schema.__schema__(:fields) and fields["language"] in [nil, ""],
+      do: Map.put(fields, "language", to_string(Brando.Languages.default_language())),
+      else: fields
+  end
+
   defp base_changeset({:new, ref} = target, proposal, _entries, user) do
     schema = Map.fetch!(proposal.targets, target)
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
     entry = struct(schema)
-    params = EntryFields.params(schema, fields)
+    params = EntryFields.params(schema, new_entry_fields(schema, fields))
     cast = &schema.changeset(entry, Map.put(&1, "status", "draft"), user, nil, [])
 
     # What a non-superuser can't name (`locked_fields/3`) it has as a form's new

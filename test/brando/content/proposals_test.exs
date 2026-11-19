@@ -604,6 +604,26 @@ defmodule Brando.Content.ProposalsTest do
       assert is_binary(message)
     end
 
+    test "a new entry left without a language gets the site's default, in preview, review and apply", c do
+      ops = [%CreateEntry{schema: Page, ref: "x", fields: %{title: "X", uri: "x", template: "default.html"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      default = Brando.Languages.default_language()
+
+      assert {:ok, %{{:new, "x"} => changeset}} = Proposals.materialize(proposal, c.user)
+      assert to_string(Changeset.get_field(changeset, :language)) == default
+
+      # The target's assign filters fragments by the language, which raises for `nil`.
+      assert {:ok, %{key: key}} = Preview.render(proposal, {:new, "x"}, c.user, preview_target: :partials)
+      Preview.discard([key])
+
+      [%{changes: [%{type: :create, fields: fields}]}] = Review.entries(proposal)
+      assert Enum.any?(fields, &(&1.name == "Language"))
+
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert to_string(Repo.get_by!(Page, uri: "x").language) == default
+    end
+
     test "a content type without a preview target says so", c do
       ops = [%CreateEntry{schema: Brando.Pages.Fragment, ref: "f", fields: %{key: "f", parent_key: "p", language: "en"}}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user)

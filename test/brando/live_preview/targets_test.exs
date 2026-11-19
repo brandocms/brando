@@ -14,7 +14,16 @@ defmodule Brando.LivePreview.TargetsTest do
   test "legacy targets remain the default and named targets resolve without browser atom conversion" do
     assert LivePreview.get_target_config(Page).name == :default
     assert LivePreview.get_target_config(Page, "listing").label == "Listing"
-    assert Enum.map(LivePreview.get_targets(Page), & &1.name) == [:default, :listing, :blocks, :broken, :localized, :site]
+
+    assert Enum.map(LivePreview.get_targets(Page), & &1.name) == [
+             :default,
+             :listing,
+             :blocks,
+             :broken,
+             :localized,
+             :site,
+             :partials
+           ]
 
     assert_raise Brando.Exception.LivePreviewError, fn ->
       LivePreview.get_target_config(Page, "not-a-declared-target")
@@ -183,6 +192,18 @@ defmodule Brando.LivePreview.TargetsTest do
 
   # The message goes to an admin's alert; an exception's text can carry
   # entry content another editor wrote (audit F17).
+  test "an entry without a language gets the site's default in its assigns" do
+    changeset = Ecto.Changeset.change(%Page{title: "No language", language: nil, entry_blocks: [], vars: []})
+
+    # Fragments filtered by a `nil` language would raise.
+    assert {:ok, partials} = LivePreview.initialize(Page, changeset, %{}, :partials)
+    on_exit(fn -> LivePreview.cleanup_cache(partials) end)
+
+    assert {:ok, key} = LivePreview.initialize(Page, changeset, %{}, :localized)
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    assert LivePreview.get_var(key, :greeting) == "greeting:#{Brando.Languages.default_language()}"
+  end
+
   test "a failing render returns a fixed message and logs the exception", %{changeset: changeset} do
     log =
       capture_log(fn ->

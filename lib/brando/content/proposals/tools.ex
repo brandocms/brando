@@ -77,7 +77,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "describe_content_type",
       description:
-        "Describe a content type's editable fields (name, type, required, and a description from the admin form: the field's label as editors see it, and its instructions) and block fields. " <>
+        "Describe a content type's editable fields (name, type, required, and a description from the admin form: the field's label as editors see it, and its instructions; `default` is what a new entry gets when create_entry leaves the field out) and block fields. " <>
           "Use the descriptions to tell where text belongs: a heading or introduction the entry has as a field goes in that field, not in a block. New entries are always created as drafts.",
       parameters: %{
         type: "object",
@@ -341,7 +341,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: fields |> Enum.reject(&(&1.name in locked)) |> with_descriptions(schema),
+      fields: fields |> Enum.reject(&(&1.name in locked)) |> with_descriptions(schema) |> Enum.map(&with_default/1),
       block_fields: block_fields(schema),
       publication: publication("status" in locked)
     }
@@ -1370,6 +1370,12 @@ defmodule Brando.Content.Proposals.Tools do
   # Each field's label and instructions from the Blueprint's admin form, as
   # editors read them: "Introduction — Used for case listings". A field the
   # form does not show, or shows without a label, has none.
+  # A new entry left without a language gets this one (`Proposals.new_entry_fields/2`).
+  defp with_default(%{name: "language"} = field),
+    do: Map.put(field, :default, to_string(Brando.Languages.default_language()))
+
+  defp with_default(field), do: field
+
   defp with_descriptions(fields, schema) do
     descriptions = form_descriptions(schema)
 
