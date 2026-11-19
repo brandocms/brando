@@ -50,6 +50,18 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
         {"GET", "/videos/" <> id} ->
           Req.Test.json(conn, vimeo_video(id))
 
+        {"GET", "/me/projects"} ->
+          Req.Test.json(conn, %{
+            "paging" => %{"next" => nil},
+            "data" => [
+              %{
+                "uri" => "/users/1/projects/7",
+                "name" => "News",
+                "metadata" => %{"connections" => %{"videos" => %{"total" => 4}}}
+              }
+            ]
+          })
+
         {"DELETE", "/videos/" <> _id} ->
           send_resp(conn, 204, "")
       end
@@ -92,11 +104,49 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     test "outside any site, nothing is offered", %{user: user} do
       assert Tenant.current_prefix() == nil
       assert ProviderLibrary.providers() == []
+      assert {:error, {:unknown_strategy, :vimeo}} = ProviderLibrary.collections(:vimeo)
       assert {:error, {:unknown_strategy, :vimeo}} = ProviderLibrary.import(:vimeo, "4", user)
     end
   end
 
   describe "a site in a group" do
+    test "gets the collections' names, without counts that take in other sites' videos", %{sites: sites} do
+      as_site(sites.beta, fn ->
+        assert ProviderLibrary.collections(:vimeo) == {:ok, [%{id: "7", name: "News", count: nil}]}
+      end)
+
+      as_site(sites.alpha, fn ->
+        assert {:error, {:unknown_strategy, :vimeo}} = ProviderLibrary.collections(:vimeo)
+      end)
+    end
+
+    test "a search within a folder reads a bounded number of pages", %{sites: sites} do
+      me = self()
+
+      # Each page of the account's search has more, and none of folder 7's
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:vimeo, conn.method, conn.request_path})
+
+        case conn.request_path do
+          "/me/videos" ->
+            page = String.to_integer(conn.query_params["page"])
+            Req.Test.json(conn, %{"paging" => %{"next" => "/me/videos?page=#{page + 1}"}, "data" => [vimeo_video("4")]})
+
+          "/me/projects/7" ->
+            Req.Test.json(conn, %{"uri" => "/users/1/projects/7"})
+        end
+      end)
+
+      as_site(sites.beta, fn ->
+        assert {:ok, %{items: [], next: next}} = ProviderLibrary.list(:vimeo, query: "harbour", collection: "7")
+        assert next
+      end)
+
+      searches = Stream.repeatedly(fn -> receive do: ({:vimeo, "GET", "/me/videos"} -> 1), after: (0 -> nil) end)
+      assert searches |> Enum.take_while(& &1) |> length() == 5
+      assert_received {:vimeo, "GET", "/me/projects/7"}
+    end
+
     test "lists what its group holds and what no site holds", %{sites: sites} do
       as_site(sites.beta, fn ->
         assert [%{strategy: :vimeo}] = ProviderLibrary.providers()

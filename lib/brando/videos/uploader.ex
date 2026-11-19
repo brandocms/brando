@@ -129,12 +129,36 @@ defmodule Brando.Videos.Uploader do
   Lists one page of the provider's own library, newest first.
 
   Optional; implemented by providers that `Brando.Videos.ProviderLibrary` can
-  browse. Options are `:cursor` (the previous page's `next`), `:query` and
-  `:per_page`. Items are `t:Brando.Videos.ProviderLibrary.item/0` without
-  `:video_id`.
+  browse. Options are `:cursor` (the previous page's `next`), `:query`,
+  `:per_page`, `:search_pages` (the most provider pages one call may read,
+  for a provider that reads on past pages with nothing to show) and, for a
+  provider implementing `list_collections/1`, `:collection`, the id of the
+  collection to list. Items are
+  `t:Brando.Videos.ProviderLibrary.item/0` without `:video_id`, and carry the
+  `:collection_id` of the collection each video is in, if any. An item may
+  also carry its collection's `:collection_name`, which the admin shows for a
+  collection `list_collections/1` does not list, such as a Vimeo subfolder.
   """
   @callback list_remote(opts :: keyword()) ::
               {:ok, %{items: [map()], next: term() | nil}} | {:error, any()}
+
+  @doc """
+  The collections the provider groups its library's videos in — Bunny
+  Stream's collections, Vimeo's folders — by name. Each is `%{id:, name:,
+  count:}`, `count` the number of videos it holds, or `nil` where the
+  provider does not say.
+
+  Optional; a provider implementing it takes `:collection` in
+  `list_remote/1`, and returns `{:error, :collection_not_found}` from it for
+  a collection it can tell it no longer has (Vimeo can; Bunny Stream's API
+  is not known to say). A provider reading them a page at a time
+  reads a bounded number, and returns `{:ok, collections, :truncated}` when
+  there are more. `opts` is empty today.
+  """
+  @callback list_collections(opts :: keyword()) ::
+              {:ok, [%{id: String.t(), name: String.t(), count: non_neg_integer() | nil}]}
+              | {:ok, [%{id: String.t(), name: String.t(), count: non_neg_integer() | nil}], :truncated}
+              | {:error, any()}
 
   @doc """
   Creates a Video record for a video already in the provider's library.
@@ -169,6 +193,7 @@ defmodule Brando.Videos.Uploader do
               {:ok, [{String.t(), String.t()}]} | {:error, any()}
 
   @optional_callbacks list_remote: 1,
+                      list_collections: 1,
                       import_remote: 3,
                       library_meta_path: 0,
                       library_searchable?: 0,

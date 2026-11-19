@@ -197,27 +197,78 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   @impl true
   def library_searchable?, do: true
 
+  # The account's search, read 100 at a time, may have none of the folder's
+  # videos on a page: up to this many pages are read for each call, or
+  # `:search_pages` when the caller bounds its own reads.
+  @max_folder_search_pages 3
+
+  # A folder (the API's project) the library lists from: `:collection` is
+  # its id, the last segment of its `uri`. Its videos are listed by
+  # `GET /me/projects/{id}/videos`, which takes no `query`. A search within
+  # a folder goes through the account's search, `GET /me/videos`, and keeps
+  # the videos whose `parent_folder` is that folder.
   @impl true
   def list_remote(opts) do
-    page = Keyword.get(opts, :cursor) || 1
+    folder_id = Keyword.get(opts, :collection)
+    query = Keyword.get(opts, :query)
 
+    if folder_id not in [nil, ""] and is_binary(query) and query != "" do
+      pages = Keyword.get(opts, :search_pages, @max_folder_search_pages)
+      page = Keyword.get(opts, :cursor) || 1
+
+      with {:ok, %{items: []}} = result when page == 1 <- search_folder(folder_id, query, page, pages),
+           :ok <- folder_exists(folder_id),
+           do: result
+    else
+      list_page(folder_id, query, Keyword.get(opts, :cursor) || 1, Keyword.get(opts, :per_page, 24))
+    end
+  end
+
+  # The account's search answers for any folder id, so a search whose first
+  # page finds nothing asks whether the folder is still there.
+  defp folder_exists(folder_id) do
+    case api_request(:get, "/me/projects/#{folder_id}", params: [fields: "uri"]) do
+      {:ok, %Req.Response{}} -> :ok
+      {:error, {:http_error, 404, _body}} -> {:error, :collection_not_found}
+      error -> error
+    end
+  end
+
+  @library_fields @video_fields <> ",created_time,parent_folder.uri,parent_folder.name"
+
+  defp list_page(folder_id, query, page, per_page) do
     params =
-      [
-        page: page,
-        per_page: Keyword.get(opts, :per_page, 24),
-        sort: "date",
-        direction: "desc",
-        fields: @video_fields <> ",created_time"
-      ]
-      |> maybe_put_query(Keyword.get(opts, :query))
+      maybe_put_query(
+        [page: page, per_page: per_page, sort: "date", direction: "desc", fields: @library_fields],
+        query
+      )
 
-    case api_request(:get, "/me/videos", params: params) do
+    with {:ok, path} <- library_path(folder_id),
+         {:ok, data, next?} <- library_request(path, params) do
+      {:ok, %{items: library_items(data), next: if(next?, do: page + 1)}}
+    else
+      {:error, {:http_error, 404, _body}} when folder_id not in [nil, ""] -> {:error, :collection_not_found}
+      error -> error
+    end
+  end
+
+  defp search_folder(folder_id, query, page, pages_left) do
+    params = [page: page, per_page: 100, sort: "date", direction: "desc", fields: @library_fields, query: query]
+
+    with {:ok, _path} <- library_path(folder_id),
+         {:ok, data, next?} <- library_request("/me/videos", params) do
+      items = data |> library_items() |> Enum.filter(&(&1.collection_id == folder_id))
+
+      if items == [] and next? and pages_left > 1,
+        do: search_folder(folder_id, query, page + 1, pages_left - 1),
+        else: {:ok, %{items: items, next: if(next?, do: page + 1)}}
+    end
+  end
+
+  defp library_request(path, params) do
+    case api_request(:get, path, params: params) do
       {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
-        {:ok,
-         %{
-           items: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1),
-           next: if(get_in(body, ["paging", "next"]), do: page + 1)
-         }}
+        {:ok, data, get_in(body, ["paging", "next"]) != nil}
 
       {:ok, _response} ->
         {:error, :invalid_response}
@@ -226,6 +277,86 @@ defmodule Brando.Videos.Uploaders.Vimeo do
         error
     end
   end
+
+  defp library_items(data), do: data |> Enum.map(&library_item/1) |> Enum.reject(&is_nil/1)
+
+  defp library_path(folder_id) when folder_id in [nil, ""], do: {:ok, "/me/videos"}
+
+  defp library_path(folder_id) when is_binary(folder_id) do
+    if valid_video_id?(folder_id), do: {:ok, "/me/projects/#{folder_id}/videos"}, else: {:error, :not_found}
+  end
+
+  defp library_path(_folder_id), do: {:error, :not_found}
+
+  # Read until Vimeo has no next page, up to this many pages of 100.
+  @max_folder_pages 10
+
+  @doc """
+  The account's folders (the API's projects), by name, with the number of
+  videos each holds: the first 1,000, `:truncated` when there are more.
+  """
+  @impl true
+  def list_collections(_opts), do: folder_pages(1, [])
+
+  defp folder_pages(page, acc) do
+    params = [
+      page: page,
+      per_page: 100,
+      sort: "name",
+      direction: "asc",
+      fields: "uri,name,metadata.connections.videos.total"
+    ]
+
+    case api_request(:get, "/me/projects", params: params) do
+      {:ok, %Req.Response{body: %{"data" => data} = body}} when is_list(data) ->
+        acc = acc ++ Enum.flat_map(data, &folder/1)
+
+        cond do
+          !get_in(body, ["paging", "next"]) ->
+            {:ok, acc}
+
+          page < @max_folder_pages ->
+            folder_pages(page + 1, acc)
+
+          true ->
+            Logger.warning(
+              "Vimeo has more than #{@max_folder_pages * 100} folders; only the first #{@max_folder_pages * 100} are listed"
+            )
+
+            {:ok, acc, :truncated}
+        end
+
+      {:ok, _response} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  defp folder(%{"uri" => uri} = folder) do
+    case folder_id_from_uri(uri) do
+      nil ->
+        []
+
+      id ->
+        count = get_in(folder, ["metadata", "connections", "videos", "total"])
+        name = folder["name"]
+        [%{id: id, name: if(is_binary(name) and name != "", do: name, else: id), count: if(is_integer(count), do: count)}]
+    end
+  end
+
+  defp folder(_folder), do: []
+
+  # "/users/1/projects/2" — or "/me/projects/2" — is folder "2".
+  defp folder_id_from_uri(uri) when is_binary(uri) do
+    case uri |> String.split("/", trim: true) |> Enum.take(-2) do
+      ["projects", id] -> if valid_video_id?(id), do: id
+      _ -> nil
+    end
+  end
+
+  defp folder_id_from_uri(_uri), do: nil
 
   @impl true
   def import_remote(video_id, user, opts) do
@@ -270,7 +401,9 @@ defmodule Brando.Videos.Uploaders.Vimeo do
           height: positive(payload["height"]),
           status: status,
           created_at: payload["created_time"],
-          playable?: status == :ready
+          playable?: status == :ready,
+          collection_id: folder_id_from_uri(get_in(payload, ["parent_folder", "uri"])),
+          collection_name: get_in(payload, ["parent_folder", "name"])
         }
     end
   end

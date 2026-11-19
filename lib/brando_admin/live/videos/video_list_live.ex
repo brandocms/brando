@@ -290,8 +290,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
 
-  def handle_event("search_library", %{"query" => query}, socket) do
-    {:noreply, ProviderLibraryPanel.search(socket, query)}
+  def handle_event("search_library", params, socket) do
+    {:noreply, ProviderLibraryPanel.search(socket, params)}
   end
 
   def handle_event("more_library", _, socket), do: {:noreply, ProviderLibraryPanel.more(socket)}
@@ -419,6 +419,9 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   end
 
   def handle_async(:library_page, result, socket), do: {:noreply, ProviderLibraryPanel.page_loaded(socket, result)}
+
+  def handle_async(:library_collections, result, socket),
+    do: {:noreply, ProviderLibraryPanel.collections_loaded(socket, result)}
 
   def handle_async(:url_video, result, socket) do
     case VideoFromURL.finish(socket, result, socket.assigns.current_user) do

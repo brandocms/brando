@@ -18,6 +18,18 @@ defmodule E2EFakeBunny do
 
   @store __MODULE__.Store
 
+  @coastline "c011ec71-0000-4000-8000-000000000001"
+  @interviews "c011ec71-0000-4000-8000-000000000002"
+
+  @library_collections [{@coastline, "Coastline"}, {@interviews, "Interviews"}]
+
+  # {guid, title, length, uploaded, collection}
+  @library_videos [
+    {"5d6c1b0e-0000-4000-8000-000000000001", "Harbour at dawn", 94, "2026-10-02T08:15:00Z", @coastline},
+    {"5d6c1b0e-0000-4000-8000-000000000003", "Studio interview", 340, "2026-09-25T13:05:00Z", @interviews},
+    {"5d6c1b0e-0000-4000-8000-000000000002", "Night ferry", 212, "2026-09-18T19:40:00Z", @coastline}
+  ]
+
   @impl true
   def init(opts), do: opts
 
@@ -51,16 +63,38 @@ defmodule E2EFakeBunny do
     })
   end
 
-  # The account's own library, for "Add from Bunny Stream": two finished
-  # videos, as if uploaded in Bunny's dashboard. Fetching either answers a
-  # finished encode (above).
+  # The account's own library, for "Add from Bunny Stream": three finished
+  # videos, as if uploaded in Bunny's dashboard, two in the collection
+  # "Coastline" and one in "Interviews". A listing takes Bunny's `collection`
+  # and `search` (the title, ignoring case), which combine. Fetching any of
+  # them answers a finished encode (above).
   def call(%Plug.Conn{method: "GET", path_info: ["library", library_id, "videos"]} = conn, _opts) do
-    items = [
-      library_video(library_id, "5d6c1b0e-0000-4000-8000-000000000001", "Harbour at dawn", 94, "2026-10-02T08:15:00Z"),
-      library_video(library_id, "5d6c1b0e-0000-4000-8000-000000000002", "Night ferry", 212, "2026-09-18T19:40:00Z")
-    ]
+    %{query_params: params} = conn = fetch_query_params(conn)
+    collection = params["collection"]
+    search = params["search"] && String.downcase(params["search"])
+
+    items =
+      for {guid, title, length, uploaded, collection_id} <- @library_videos,
+          collection in [nil, ""] or collection == collection_id,
+          search in [nil, ""] or String.contains?(String.downcase(title), search) do
+        library_video(library_id, guid, title, length, uploaded, collection_id)
+      end
 
     json(conn, %{"items" => items, "currentPage" => 1, "itemsPerPage" => 24, "totalItems" => length(items)})
+  end
+
+  def call(%Plug.Conn{method: "GET", path_info: ["library", library_id, "collections"]} = conn, _opts) do
+    items =
+      for {guid, name} <- @library_collections do
+        %{
+          "videoLibraryId" => String.to_integer(library_id),
+          "guid" => guid,
+          "name" => name,
+          "videoCount" => Enum.count(@library_videos, &(elem(&1, 4) == guid))
+        }
+      end
+
+    json(conn, %{"items" => items, "currentPage" => 1, "itemsPerPage" => 100, "totalItems" => length(items)})
   end
 
   def call(
@@ -72,9 +106,10 @@ defmodule E2EFakeBunny do
 
   def call(conn, _opts), do: json(conn, 404, %{"Message" => "Not Found"})
 
-  defp library_video(library_id, guid, title, length, uploaded) do
+  defp library_video(library_id, guid, title, length, uploaded, collection_id) do
     %{
       "guid" => guid,
+      "collectionId" => collection_id,
       "videoLibraryId" => String.to_integer(library_id),
       "title" => title,
       # Finished

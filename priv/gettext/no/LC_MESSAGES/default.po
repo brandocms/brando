@@ -2363,6 +2363,11 @@ msgstr "Alle statuser"
 msgid "All types (%{count})"
 msgstr "Alle typer (%{count})"
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "All videos"
+msgstr "Alle videoer"
+
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -4523,6 +4528,11 @@ msgstr "Kolleger med tilgang til admin kan se gjennom det i ett døgn:"
 #, elixir-autogen, elixir-format
 msgid "Collecting content..."
 msgstr "Samler innhold..."
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Collection"
+msgstr "Samling"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -8179,6 +8189,7 @@ msgstr "Rett dem i full redigering"
 msgid "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
 msgstr "Florist registrerer hvert bygg her. Å aktivere et bygg virker umiddelbart og deployer ikke applikasjonen."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -11789,6 +11800,11 @@ msgstr "Ingen løse blokker."
 msgid "No mailer is configured, so the site cannot send email."
 msgstr "Ingen e-posttjeneste er satt opp, så nettstedet kan ikke sende e-post."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No matches for “%{query}” in the videos read so far. Load more to search further."
+msgstr "Ingen treff på «%{query}» i videoene som er lest så langt. Last flere for å søke videre."
+
 #: lib/brando_admin/components/form/input/entries.ex
 #, elixir-autogen
 msgid "No matching entries"
@@ -12168,10 +12184,20 @@ msgstr "Ingen videoer mangler detaljer"
 msgid "No videos in this %{provider} account."
 msgstr "Ingen videoer i denne %{provider}-kontoen."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this collection."
+msgstr "Ingen videoer i denne samlingen."
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No videos in this folder"
 msgstr "Ingen videoer i denne mappen"
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this folder."
+msgstr "Ingen videoer i denne mappen."
 
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
@@ -13013,6 +13039,16 @@ msgstr "Kun superbrukere kan endre passord for andre brukere."
 #, elixir-autogen, elixir-format
 msgid "Only superusers see and change the HTML and its parameters."
 msgstr "Bare superbrukere ser og endrer HTML-en og parameterne."
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Only the first %{count} collections are listed"
+msgstr "Bare de første %{count} samlingene vises"
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Only the first %{count} folders are listed"
+msgstr "Bare de første %{count} mappene vises"
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -19732,6 +19768,11 @@ msgid_plural "This changes %{count} entries. A revision of each is stored first,
 msgstr[0] "Dette endrer %{count} oppføring. En revisjon av den lagres først, så Historikk kan gjenopprette den."
 msgstr[1] "Dette endrer %{count} oppføringer. En revisjon av hver lagres først, så Historikk kan gjenopprette dem."
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "This collection is no longer in %{provider}. Choose another one."
+msgstr "Denne samlingen finnes ikke lenger i %{provider}. Velg en annen."
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "This content is kept here, but no longer has a region or a reference in the text."
@@ -19843,6 +19884,11 @@ msgstr "Modulsettet for fotnoter i dette feltet har ingen egnede moduler. Legg t
 #, elixir-autogen, elixir-format
 msgid "This file contains no groups to import."
 msgstr "Denne filen inneholder ingen grupper som kan importeres."
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "This folder is no longer in %{provider}. Choose another one."
+msgstr "Denne mappen finnes ikke lenger i %{provider}. Velg en annen."
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format

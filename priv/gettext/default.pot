@@ -2361,6 +2361,11 @@ msgstr ""
 msgid "All types (%{count})"
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "All videos"
+msgstr ""
+
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -4520,6 +4525,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Collecting content..."
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Collection"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -8177,6 +8187,7 @@ msgstr ""
 msgid "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -11787,6 +11798,11 @@ msgstr ""
 msgid "No mailer is configured, so the site cannot send email."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No matches for “%{query}” in the videos read so far. Load more to search further."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/entries.ex
 #, elixir-autogen
 msgid "No matching entries"
@@ -12166,9 +12182,19 @@ msgstr ""
 msgid "No videos in this %{provider} account."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this collection."
+msgstr ""
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No videos in this folder"
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No videos in this folder."
 msgstr ""
 
 #: lib/brando_admin/live/videos/video_list_live.ex
@@ -13010,6 +13036,16 @@ msgstr ""
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Only superusers see and change the HTML and its parameters."
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Only the first %{count} collections are listed"
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Only the first %{count} folders are listed"
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -19728,6 +19764,11 @@ msgid_plural "This changes %{count} entries. A revision of each is stored first,
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "This collection is no longer in %{provider}. Choose another one."
+msgstr ""
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "This content is kept here, but no longer has a region or a reference in the text."
@@ -19838,6 +19879,11 @@ msgstr ""
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "This file contains no groups to import."
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_library_panel.ex
+#, elixir-autogen, elixir-format
+msgid "This folder is no longer in %{provider}. Choose another one."
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex

@@ -22,11 +22,11 @@ defmodule Brando.Videos.ProviderLibraryTest do
   end
 
   test "offers only configured providers" do
-    assert ProviderLibrary.providers() == [%{strategy: :vimeo, label: "Vimeo", search?: true}]
+    assert ProviderLibrary.providers() == [%{strategy: :vimeo, label: "Vimeo", search?: true, collections?: true}]
 
     put_test_env(Mux, access_token_id: "id", access_token_secret: "secret")
 
-    assert [%{strategy: :mux, search?: false}, %{strategy: :vimeo}] = ProviderLibrary.providers()
+    assert [%{strategy: :mux, search?: false, collections?: false}, %{strategy: :vimeo}] = ProviderLibrary.providers()
     assert {:error, {:unknown_strategy, :bunny}} = ProviderLibrary.list(:bunny)
   end
 
@@ -224,6 +224,225 @@ defmodule Brando.Videos.ProviderLibraryTest do
       assert Brando.Videos.Playback.choices(video) == [:auto, :hls, :mp4_360, :mp4_720]
     end
   end
+
+  describe "collections" do
+    test "Vimeo lists its folders, and a folder's videos, searched within it" do
+      Req.Test.expect(Vimeo, 2, fn conn ->
+        assert conn.request_path == "/me/projects"
+        assert %{"per_page" => "100", "sort" => "name", "direction" => "asc"} = conn.query_params
+        assert conn.query_params["fields"] =~ "metadata.connections.videos.total"
+
+        case conn.query_params["page"] do
+          "1" ->
+            Req.Test.json(conn, %{
+              "paging" => %{"next" => "/me/projects?page=2"},
+              "data" => [vimeo_folder("11", "Client A", 6), %{"uri" => "/users/1/albums/9", "name" => "Not a folder"}]
+            })
+
+          "2" ->
+            Req.Test.json(conn, %{"paging" => %{"next" => nil}, "data" => [vimeo_folder("12", "", nil)]})
+        end
+      end)
+
+      assert {:ok, [%{id: "11", name: "Client A", count: 6}, %{id: "12", name: "12", count: nil}]} =
+               ProviderLibrary.collections(:vimeo)
+
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/me/projects/11/videos"
+        assert %{"page" => "1", "sort" => "date"} = conn.query_params
+        refute Map.has_key?(conn.query_params, "query")
+
+        video = Map.put(vimeo_video("1", "available"), "parent_folder", vimeo_folder("11", "Client A", 6))
+        Req.Test.json(conn, %{"paging" => %{"next" => nil}, "data" => [video]})
+      end)
+
+      assert {:ok, %{items: [item], next: nil}} = ProviderLibrary.list(:vimeo, collection: "11")
+      assert {item.collection_id, item.collection_name} == {"11", "Client A"}
+
+      # The whole library: each video names its folder, or none
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/me/videos"
+        assert conn.query_params["fields"] =~ "parent_folder.uri,parent_folder.name"
+        Req.Test.json(conn, %{"paging" => %{"next" => nil}, "data" => [vimeo_video("2", "available")]})
+      end)
+
+      assert {:ok, %{items: [%{collection_id: nil}]}} = ProviderLibrary.list(:vimeo, collection: "")
+    end
+
+    test "Vimeo searches a folder through the account's search, keeping the folder's videos" do
+      in_folder = fn id -> Map.put(vimeo_video(id, "available"), "parent_folder", vimeo_folder("11", "Client A", 6)) end
+      elsewhere = Map.put(vimeo_video("9", "available"), "parent_folder", vimeo_folder("12", "Client B", 1))
+
+      # The folder's own listing takes no `query`: the account's search does,
+      # and each video names its folder. A page with none of the folder's
+      # reads the next, up to a bound.
+      Req.Test.expect(Vimeo, 2, fn conn ->
+        assert conn.request_path == "/me/videos"
+        assert %{"query" => "harbour", "per_page" => "100"} = conn.query_params
+        assert conn.query_params["fields"] =~ "parent_folder.uri"
+
+        case conn.query_params["page"] do
+          "1" ->
+            Req.Test.json(conn, %{"paging" => %{"next" => "/me/videos?page=2"}, "data" => [elsewhere]})
+
+          "2" ->
+            Req.Test.json(conn, %{
+              "paging" => %{"next" => "/me/videos?page=3"},
+              "data" => [in_folder.("1"), vimeo_video("8", "available"), in_folder.("2")]
+            })
+        end
+      end)
+
+      assert {:ok, %{items: items, next: 3}} = ProviderLibrary.list(:vimeo, query: "harbour", collection: "11")
+      assert Enum.map(items, &{&1.remote_id, &1.collection_id}) == [{"1", "11"}, {"2", "11"}]
+
+      # Nothing in the folder within the bound: an empty page, and more to read
+      Req.Test.expect(Vimeo, 3, fn conn ->
+        page = String.to_integer(conn.query_params["page"])
+        Req.Test.json(conn, %{"paging" => %{"next" => "/me/videos?page=#{page + 1}"}, "data" => [elsewhere]})
+      end)
+
+      assert {:ok, %{items: [], next: 6}} = ProviderLibrary.list(:vimeo, query: "harbour", collection: "11", cursor: 3)
+    end
+
+    test "Vimeo says a folder deleted since it was listed is gone, when searching it" do
+      elsewhere = Map.put(vimeo_video("9", "available"), "parent_folder", vimeo_folder("12", "Client B", 1))
+
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/me/videos"
+        Req.Test.json(conn, %{"paging" => %{"next" => nil}, "data" => [elsewhere]})
+      end)
+
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/me/projects/11"
+        send_resp(conn, 404, ~s({"error": "The requested folder could not be found"}))
+      end)
+
+      assert {:error, :collection_not_found} = ProviderLibrary.list(:vimeo, query: "harbour", collection: "11")
+    end
+
+    test "Vimeo says a folder deleted since it was listed is gone" do
+      Req.Test.expect(Vimeo, &send_resp(&1, 404, ~s({"error": "The requested folder could not be found"})))
+      assert {:error, :collection_not_found} = ProviderLibrary.list(:vimeo, collection: "11")
+    end
+
+    test "Vimeo lists at most 1,000 folders, and says when there are more" do
+      Req.Test.expect(Vimeo, 10, fn conn ->
+        page = conn.query_params["page"]
+
+        Req.Test.json(conn, %{
+          "paging" => %{"next" => "/me/projects?page=x"},
+          "data" => [vimeo_folder(page, "F#{page}", 1)]
+        })
+      end)
+
+      assert {:ok, folders, :truncated} = ProviderLibrary.collections(:vimeo)
+      assert length(folders) == 10
+    end
+
+    test "Bunny lists at most 1,000 collections, and says when there are more" do
+      put_test_env(Bunny, api_key: "key", library_id: "77", req_options: [plug: {Req.Test, Bunny}])
+
+      Req.Test.expect(Bunny, 10, fn conn ->
+        page = String.to_integer(conn.query_params["page"])
+
+        Req.Test.json(conn, %{
+          "items" => [bunny_collection("c-#{page}", "C#{page}", 1)],
+          "currentPage" => page,
+          "itemsPerPage" => 100,
+          "totalItems" => 1_500
+        })
+      end)
+
+      assert {:ok, collections, :truncated} = ProviderLibrary.collections(:bunny)
+      assert length(collections) == 10
+    end
+
+    test "Vimeo refuses a folder id that is not one, without asking" do
+      assert {:error, :not_found} = ProviderLibrary.list(:vimeo, collection: "../videos/1")
+    end
+
+    test "Bunny lists its collections, and a collection's videos, searched within it" do
+      put_test_env(Bunny, api_key: "key", library_id: "77", req_options: [plug: {Req.Test, Bunny}])
+
+      Req.Test.expect(Bunny, 2, fn conn ->
+        assert conn.request_path == "/library/77/collections"
+        assert %{"itemsPerPage" => "100"} = conn.query_params
+
+        {items, page} =
+          case conn.query_params["page"] do
+            "1" -> {[bunny_collection("c-2", "studio", 4), bunny_collection("c-1", "Harbour", 6)], 1}
+            "2" -> {[bunny_collection("c-3", "Archive", 0)], 2}
+          end
+
+        Req.Test.json(conn, %{"items" => items, "currentPage" => page, "itemsPerPage" => 100, "totalItems" => 101})
+      end)
+
+      assert {:ok, collections} = ProviderLibrary.collections(:bunny)
+
+      assert Enum.map(collections, &{&1.id, &1.name, &1.count}) == [
+               {"c-3", "Archive", 0},
+               {"c-1", "Harbour", 6},
+               {"c-2", "studio", 4}
+             ]
+
+      Req.Test.expect(Bunny, fn conn ->
+        assert conn.request_path == "/library/77/videos"
+        assert %{"collection" => "c-1", "search" => "dawn", "page" => "1"} = conn.query_params
+
+        Req.Test.json(conn, %{
+          "items" => [
+            %{"guid" => "v-1", "title" => "Dawn", "status" => 4, "collectionId" => "c-1"},
+            %{"guid" => "v-2", "title" => "Dusk", "status" => 4, "collectionId" => ""}
+          ],
+          "currentPage" => 1,
+          "itemsPerPage" => 24,
+          "totalItems" => 2
+        })
+      end)
+
+      assert {:ok, %{items: [one, two]}} = ProviderLibrary.list(:bunny, query: "dawn", collection: "c-1")
+      assert {one.collection_id, two.collection_id} == {"c-1", nil}
+    end
+
+    test "a provider without them has none, and its items no collection" do
+      put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", req_options: [plug: {Req.Test, Mux}])
+
+      assert ProviderLibrary.collections(:mux) == {:ok, []}
+      assert {:error, {:unknown_strategy, :bunny}} = ProviderLibrary.collections(:bunny)
+
+      Req.Test.expect(Mux, fn conn ->
+        Req.Test.json(conn, %{
+          "data" => [
+            %{
+              "id" => "ASSET-1",
+              "status" => "ready",
+              "playback_ids" => [%{"id" => "p", "policy" => "public"}],
+              "created_at" => "1700000000"
+            }
+          ]
+        })
+      end)
+
+      assert {:ok, %{items: [%{collection_id: nil}]}} = ProviderLibrary.list(:mux, collection: "c-1")
+    end
+
+    test "a provider error comes back as an error tuple" do
+      Req.Test.expect(Vimeo, &send_resp(&1, 403, "forbidden"))
+      assert {:error, {:http_error, 403, _body}} = ProviderLibrary.collections(:vimeo)
+    end
+  end
+
+  defp vimeo_folder(id, name, count) do
+    %{
+      "uri" => "/users/1/projects/#{id}",
+      "name" => name,
+      "metadata" => %{"connections" => %{"videos" => %{"total" => count}}}
+    }
+  end
+
+  defp bunny_collection(guid, name, count),
+    do: %{"guid" => guid, "name" => name, "videoCount" => count, "videoLibraryId" => 77}
 
   defp vimeo_video(id, status) do
     %{

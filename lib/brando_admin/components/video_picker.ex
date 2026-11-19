@@ -498,8 +498,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   def handle_event("close_library", _, socket), do: {:noreply, assign(socket, :library, nil)}
 
-  def handle_event("search_library", %{"query" => query}, socket) do
-    {:noreply, ProviderLibraryPanel.search(socket, query)}
+  def handle_event("search_library", params, socket) do
+    {:noreply, ProviderLibraryPanel.search(socket, params)}
   end
 
   def handle_event("more_library", _, socket), do: {:noreply, ProviderLibraryPanel.more(socket)}
@@ -530,9 +530,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
-  def handle_event(event, _params, socket)
-      when event in ["search_library", "add_from_library"],
-      do: {:noreply, socket}
+  def handle_event("add_from_library", _params, socket), do: {:noreply, socket}
 
   # From the video drawer, which opens this picker already configured for its
   # field: "Add from URL" shows the URL input, "Select video" hides it.
@@ -736,6 +734,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
   # -- Render --
 
   def handle_async(:library_page, result, socket), do: {:noreply, ProviderLibraryPanel.page_loaded(socket, result)}
+
+  def handle_async(:library_collections, result, socket),
+    do: {:noreply, ProviderLibraryPanel.collections_loaded(socket, result)}
 
   # The picker opened for another field since the paste (`update/2` clears
   # the ref): the answer is dropped.

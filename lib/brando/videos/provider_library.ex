@@ -31,6 +31,17 @@ defmodule Brando.Videos.ProviderLibrary do
 
   With `:single` or `:none` tenancy, the whole account is listed.
 
+  ## Collections
+
+  A provider that groups its videos — Bunny Stream's collections, Vimeo's
+  folders — implements `list_collections/1` of `Brando.Videos.Uploader`, and
+  its library can be listed one collection at a time (`collections/1`, and
+  `list/2`'s `:collection`). Each item carries its `:collection_id`. Mux and
+  Cloudflare Stream have no such grouping, so their library is one list.
+
+  A site in a provider library group gets the collections' names without
+  their counts, which take in videos the group may not see.
+
   ## One record per remote video
 
   Adding a video that already has a record — uploaded through Brando, or added
@@ -76,8 +87,12 @@ defmodule Brando.Videos.ProviderLibrary do
           status: :ready | :processing | :errored,
           created_at: String.t() | nil,
           playable?: boolean(),
+          collection_id: String.t() | nil,
           video_id: pos_integer() | nil
         }
+
+  @typedoc "A group of the provider's videos: Bunny Stream's collection, Vimeo's folder."
+  @type collection :: %{id: String.t(), name: String.t(), count: non_neg_integer() | nil}
 
   @type page :: %{items: [item()], next: term() | nil}
 
@@ -95,10 +110,11 @@ defmodule Brando.Videos.ProviderLibrary do
   @doc """
   The providers that can be browsed right now, from the current site:
   configured, and implementing the library callbacks. Each is
-  `%{strategy:, label:, search?:}`. Empty for a site in no provider library
-  group of a multi-site installation.
+  `%{strategy:, label:, search?:, collections?:}`, `collections?` when the
+  library can be listed by collection (`collections/1`). Empty for a site in
+  no provider library group of a multi-site installation.
   """
-  @spec providers() :: [%{strategy: atom(), label: String.t(), search?: boolean()}]
+  @spec providers() :: [%{strategy: atom(), label: String.t(), search?: boolean(), collections?: boolean()}]
   def providers do
     providers(scope())
   end
@@ -111,7 +127,12 @@ defmodule Brando.Videos.ProviderLibrary do
         Code.ensure_loaded?(module),
         function_exported?(module, :list_remote, 1),
         module.configured?() do
-      %{strategy: strategy, label: label, search?: searchable?(module)}
+      %{
+        strategy: strategy,
+        label: label,
+        search?: searchable?(module),
+        collections?: function_exported?(module, :list_collections, 1)
+      }
     end
   end
 
@@ -122,6 +143,8 @@ defmodule Brando.Videos.ProviderLibrary do
 
     * `:cursor` — the `next` value of the previous page
     * `:query` — a search string, for providers whose API searches
+    * `:collection` — the id of one of `collections/1`, to list only its
+      videos; searched within, where the provider's API allows
     * `:per_page` — defaults to 24
 
   Each item's `:video_id` is the id of the Brando record that already holds it,
@@ -140,14 +163,61 @@ defmodule Brando.Videos.ProviderLibrary do
       {:ok,
        %{
          page
-         | items: Enum.map(items, &(&1 |> Map.delete(:holding_keys) |> Map.put(:video_id, existing[&1.remote_id])))
+         | items:
+             Enum.map(
+               items,
+               &(&1
+                 |> Map.delete(:holding_keys)
+                 |> Map.put_new(:collection_id, nil)
+                 |> Map.put(:video_id, existing[&1.remote_id]))
+             )
        }}
     end
   end
 
+  @doc """
+  The collections `strategy`'s library groups its videos in, by name; see
+  "Collections". `{:ok, []}` for a provider with none. A provider reads a
+  bounded number of them, and says `{:ok, collections, :truncated}` when it
+  has more.
+  """
+  @spec collections(atom()) :: {:ok, [collection()]} | {:ok, [collection()], :truncated} | {:error, term()}
+  def collections(strategy) do
+    scope = scope()
+
+    with {:ok, module} <- provider(strategy, scope) do
+      if function_exported?(module, :list_collections, 1),
+        do: list_collections(module, scope),
+        else: {:ok, []}
+    end
+  end
+
+  defp list_collections(module, scope) do
+    case guarded(fn -> module.list_collections([]) end) do
+      {:ok, collections} when is_list(collections) ->
+        {:ok, scoped_collections(collections, scope)}
+
+      {:ok, collections, :truncated} when is_list(collections) ->
+        {:ok, scoped_collections(collections, scope), :truncated}
+
+      {:ok, _other} ->
+        {:error, :invalid_response}
+
+      error ->
+        error
+    end
+  end
+
+  defp scoped_collections(collections, {:group, _site_ids, _sites}), do: Enum.map(collections, &%{&1 | count: nil})
+  defp scoped_collections(collections, _scope), do: collections
+
   defp list_page(module, :account, opts, _pages_left), do: guarded(fn -> module.list_remote(opts) end)
 
+  # This loop bounds the reads itself: a provider that reads several pages
+  # for one call (a Vimeo search within a folder) reads one per call here.
   defp list_page(module, {:group, _site_ids, sites} = scope, opts, pages_left) do
+    opts = Keyword.put(opts, :search_pages, 1)
+
     with {:ok, %{items: items, next: next}} <- guarded(fn -> module.list_remote(opts) end),
          {:ok, holders} <-
            ProviderHoldings.sites_holding(module.library_meta_path(), Enum.map(items, &holding/1), sites) do

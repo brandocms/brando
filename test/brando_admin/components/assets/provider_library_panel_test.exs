@@ -15,6 +15,11 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
     strategy: :vimeo,
     label: "Vimeo",
     search?: true,
+    collections?: true,
+    collections: [],
+    collections_ref: nil,
+    collections_truncated?: false,
+    collection: "",
     query: "",
     items: [],
     next: nil,
@@ -35,6 +40,7 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
         status: :ready,
         created_at: "2026-09-01T10:00:00Z",
         playable?: true,
+        collection_id: nil,
         video_id: nil
       },
       extra
@@ -56,7 +62,9 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
       ref = make_ref()
       socket = socket(%{library: %{@library | ref: ref}})
 
-      socket = ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, {:ok, %{items: [item("1")], next: "c2"}}}})
+      socket =
+        ProviderLibraryPanel.page_loaded(socket, {:ok, {ref, nil, {:ok, %{items: [item("1")], next: "c2"}}}})
+
       assert %{items: [%{remote_id: "1"}], next: "c2", loading?: false} = socket.assigns.library
 
       # A further page adds to it
@@ -84,11 +92,112 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
       crashed = ProviderLibraryPanel.page_loaded(socket, {:exit, :boom})
       assert crashed.assigns.library.error == "Could not reach Vimeo. Try again in a moment."
     end
+
+    test "says a folder or collection is gone, by the provider's word for it" do
+      ref = make_ref()
+      gone = {:ok, {ref, nil, {:error, :collection_not_found}}}
+
+      vimeo = ProviderLibraryPanel.page_loaded(socket(%{library: %{@library | ref: ref, collection: "11"}}), gone)
+      assert vimeo.assigns.library.error == "This folder is no longer in Vimeo. Choose another one."
+
+      bunny = %{@library | ref: ref, collection: "c-1", strategy: :bunny, label: "Bunny Stream"}
+      bunny = ProviderLibraryPanel.page_loaded(socket(%{library: bunny}), gone)
+      assert bunny.assigns.library.error == "This collection is no longer in Bunny Stream. Choose another one."
+    end
+
+    test "leaves the collections alone when the page crashes" do
+      ref = make_ref()
+      collections = [%{id: "11", name: "Client A", count: 6}]
+      socket = socket(%{library: %{@library | ref: ref, collections: collections}})
+
+      assert ProviderLibraryPanel.page_loaded(socket, {:exit, :boom}).assigns.library.collections == collections
+    end
+  end
+
+  describe "open/2" do
+    test "reads the collections apart from the first page, for a provider that has them" do
+      providers = [%{strategy: :vimeo, label: "Vimeo", search?: true, collections?: true}]
+      {:ok, socket} = ProviderLibraryPanel.open(socket(%{library_providers: providers, library: nil}), "vimeo")
+
+      assert %{collections: nil, collections_ref: collections_ref, ref: page_ref, loading?: true} =
+               socket.assigns.library
+
+      assert is_reference(collections_ref) and is_reference(page_ref) and collections_ref != page_ref
+
+      flat = [%{strategy: :mux, label: "Mux", search?: false, collections?: false}]
+      {:ok, socket} = ProviderLibraryPanel.open(socket(%{library_providers: flat, library: nil}), "mux")
+      assert %{collections: [], collections_ref: nil} = socket.assigns.library
+    end
+  end
+
+  describe "collections_loaded/2" do
+    setup do
+      ref = make_ref()
+      %{ref: ref, socket: socket(%{library: %{@library | collections: nil, collections_ref: ref, items: [item("1")]}})}
+    end
+
+    test "fills the dropdown from the read its open asked for", %{ref: ref, socket: socket} do
+      collections = [%{id: "11", name: "Client A", count: 6}]
+      read = ProviderLibraryPanel.collections_loaded(socket, {:ok, {ref, {:ok, collections}}})
+
+      assert %{collections: ^collections, collections_ref: nil, collections_truncated?: false, items: [_]} =
+               read.assigns.library
+    end
+
+    test "drops a read for a library closed, or opened again since", %{socket: socket} do
+      stale = {:ok, {make_ref(), {:ok, [%{id: "11", name: "Client A", count: 6}]}}}
+
+      assert ProviderLibraryPanel.collections_loaded(socket, stale).assigns.library.collections == nil
+      assert ProviderLibraryPanel.collections_loaded(socket(%{library: nil}), stale).assigns.library == nil
+    end
+
+    test "a failed read leaves the list as it is, and the next search reads them again", %{ref: ref, socket: socket} do
+      put_test_env(Vimeo, access_token: "vimeo-token")
+
+      for result <- [{:ok, {ref, {:error, :timeout}}}, {:exit, :boom}] do
+        failed = ProviderLibraryPanel.collections_loaded(socket, result)
+        assert %{collections: nil, collections_ref: nil, items: [_], error: nil} = failed.assigns.library
+
+        searched = ProviderLibraryPanel.search(failed, %{"query" => "dawn"})
+        assert is_reference(searched.assigns.library.collections_ref)
+      end
+    end
+
+    test "says when the provider has more than it lists", %{ref: ref, socket: socket} do
+      collections = [%{id: "11", name: "Client A", count: 6}]
+      read = ProviderLibraryPanel.collections_loaded(socket, {:ok, {ref, {:ok, collections, :truncated}}})
+      assert %{collections: ^collections, collections_truncated?: true} = read.assigns.library
+
+      doc = %{read.assigns.library | loading?: false} |> render_library() |> Floki.parse_fragment!()
+      assert [note] = Floki.find(doc, "select option[disabled]")
+      assert Floki.text(note) =~ "Only the first 1 folders are listed"
+    end
+  end
+
+  describe "search/2" do
+    setup do
+      put_test_env(Vimeo, access_token: "vimeo-token")
+      collections = [%{id: "11", name: "Client A", count: 6}]
+      %{socket: socket(%{library: %{@library | query: "dawn", collections: collections, items: [item("1")]}})}
+    end
+
+    test "lists the collection chosen, keeping the search", %{socket: socket} do
+      socket = ProviderLibraryPanel.search(socket, %{"collection" => "11"})
+      assert %{collection: "11", query: "dawn", items: [], loading?: true} = socket.assigns.library
+    end
+
+    test "searches the collection the form names, or all of them for one not listed", %{socket: socket} do
+      socket = ProviderLibraryPanel.search(socket, %{"query" => " harbour ", "collection" => "11"})
+      assert %{collection: "11", query: "harbour"} = socket.assigns.library
+
+      socket = ProviderLibraryPanel.search(socket, %{"collection" => "../99"})
+      assert %{collection: "", query: "harbour"} = socket.assigns.library
+    end
   end
 
   test "search/2 and more/1 leave a closed library alone" do
     socket = socket(%{library: nil})
-    assert ProviderLibraryPanel.search(socket, "harbour") == socket
+    assert ProviderLibraryPanel.search(socket, %{"query" => "harbour"}) == socket
     assert ProviderLibraryPanel.more(socket) == socket
     # Nothing further to list
     open = socket(%{library: %{@library | next: nil}})
@@ -109,6 +218,7 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
   test "item_meta/1 gives the duration, size and day added" do
     assert ProviderLibraryPanel.item_meta(item("1")) == "1:15 · 1920 × 1080 · 2026-09-01"
     assert ProviderLibraryPanel.item_meta(item("1", %{duration: nil, width: nil, created_at: nil})) == ""
+    assert ProviderLibraryPanel.item_meta(item("1"), "Client A") == "Client A · 1:15 · 1920 × 1080 · 2026-09-01"
   end
 
   describe "panel/1" do
@@ -155,5 +265,84 @@ defmodule BrandoAdmin.Components.Assets.ProviderLibraryPanelTest do
       assert Floki.text(Floki.find(doc, ~s([data-remote-id="held"]))) =~ "In library"
       assert Floki.find(doc, ~s([data-remote-id="held"] button)) == []
     end
+
+    test "no collection dropdown for a provider without collections", %{items: items} do
+      html =
+        render_component(&ProviderLibraryPanel.panel/1, id: "p", library: %{@library | items: items, loading?: false})
+
+      doc = Floki.parse_fragment!(html)
+
+      assert Floki.find(doc, "select") == []
+      assert [_] = Floki.find(doc, "input#p-library-query")
+    end
+  end
+
+  describe "panel/1 with collections" do
+    setup do
+      library = %{
+        @library
+        | strategy: :bunny,
+          label: "Bunny Stream",
+          loading?: false,
+          collections: [%{id: "c-1", name: "Client A", count: 6}, %{id: "c-2", name: "Client B", count: nil}],
+          items: [item("in-a", %{collection_id: "c-1"}), item("loose"), item("elsewhere", %{collection_id: "c-9"})]
+      }
+
+      %{library: library}
+    end
+
+    test "a dropdown on All videos, and each video names its collection", %{library: library} do
+      doc = library |> render_library() |> Floki.parse_fragment!()
+
+      assert [select] = Floki.find(doc, ~s(form select#p-library-collection[name="collection"]))
+      assert Floki.attribute(select, "phx-change") == ["search_library"]
+      assert Floki.attribute(select, "aria-label") == ["Collection"]
+
+      assert select |> Floki.find("option") |> Enum.map(&String.trim(Floki.text(&1))) == [
+               "All videos",
+               "Client A · 6",
+               "Client B"
+             ]
+
+      assert select |> Floki.find("option[selected]") |> Floki.attribute("value") == [""]
+
+      assert meta(doc, "in-a") == "Client A · 1:15 · 1920 × 1080 · 2026-09-01"
+      assert meta(doc, "loose") == "1:15 · 1920 × 1080 · 2026-09-01"
+      assert meta(doc, "elsewhere") == "1:15 · 1920 × 1080 · 2026-09-01"
+    end
+
+    test "a collection chosen: selected, its videos not named, and an empty one said so", %{library: library} do
+      doc = %{library | collection: "c-1"} |> render_library() |> Floki.parse_fragment!()
+
+      assert doc |> Floki.find("option[selected]") |> Floki.attribute("value") == ["c-1"]
+      assert meta(doc, "in-a") == "1:15 · 1920 × 1080 · 2026-09-01"
+
+      empty = %{library | collection: "c-1", items: []} |> render_library() |> Floki.parse_fragment!()
+      assert Floki.text(Floki.find(empty, ".video-picker-library-note")) =~ "No videos in this collection."
+
+      folder = %{library | strategy: :vimeo, collection: "c-1", items: []} |> render_library() |> Floki.parse_fragment!()
+      assert Floki.text(Floki.find(folder, ".video-picker-library-note")) =~ "No videos in this folder."
+      assert Floki.attribute(Floki.find(folder, "select"), "aria-label") == ["Folder"]
+    end
+
+    test "a video in a folder not listed is named by its own", %{library: library} do
+      items = [item("sub", %{collection_id: "c-9", collection_name: "Subfolder"})]
+      doc = %{library | items: items} |> render_library() |> Floki.parse_fragment!()
+      assert meta(doc, "sub") =~ "Subfolder · "
+    end
+
+    test "the dropdown alone, for a provider that does not search", %{library: library} do
+      doc = %{library | search?: false} |> render_library() |> Floki.parse_fragment!()
+
+      assert [_] = Floki.find(doc, "select")
+      assert Floki.find(doc, "input[type=search]") == []
+      assert Floki.find(doc, "button[type=submit]") == []
+    end
+  end
+
+  defp render_library(library), do: render_component(&ProviderLibraryPanel.panel/1, id: "p", library: library)
+
+  defp meta(doc, remote_id) do
+    doc |> Floki.find(~s([data-remote-id="#{remote_id}"] .video-picker-library-meta)) |> Floki.text() |> String.trim()
   end
 end
