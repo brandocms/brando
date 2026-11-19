@@ -210,6 +210,28 @@ defmodule Brando.MCP.FigmaTest do
              )
     end
 
+    test "the connection's live page hears each import: its images, new or reused, and their folder",
+         %{tenant: tenant, token: token, receiver: receiver} do
+      stub_figma(receiver)
+      grant = Brando.Repo.one!(Brando.MCP.Grant)
+      Brando.MCP.Watch.subscribe(grant.id)
+
+      call(tenant, token, "import_images", %{"url" => @link})
+      assert_receive {Brando.MCP.Watch, %{state: :ok, tool: "brando_figma_import_images", details: first}}
+      [%Image{id: id}] = images()
+
+      assert %{
+               "folder" => "Figma/Case – Tipping",
+               "images" => [%{"id" => ^id, "reused" => false}],
+               "failed" => 1,
+               "output" => %{"frame" => "Case – Tipping", "images" => 1}
+             } = first
+
+      call(tenant, token, "import_images", %{"url" => @link, "node_ids" => ["1:11"]})
+      assert_receive {Brando.MCP.Watch, %{state: :ok, details: %{"images" => [%{"id" => ^id, "reused" => true}]} = again}}
+      refute Map.has_key?(again, "failed")
+    end
+
     test "a changed image is stored next to the first, even when the config overwrites",
          %{tenant: tenant, token: token, receiver: receiver} do
       config = Application.get_env(:brando, Brando.Images)
