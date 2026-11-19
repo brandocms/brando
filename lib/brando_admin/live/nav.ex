@@ -234,6 +234,7 @@ defmodule BrandoAdmin.Nav do
             <details
               :if={@current_site && @current_environment}
               id="tenant-switcher"
+              phx-hook="Brando.TenantSwitcher"
               phx-mounted={JS.ignore_attributes(["open"])}
               class={["tenant-switcher", !@current_environment.live && "working"]}
             >

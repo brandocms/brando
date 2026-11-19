@@ -1,1 +1,1 @@
-- The site and environment switcher at the top of the navigation uses the admin's joined list rows, with Live and Working badges, the current site and environment marked, and a long list of sites that scrolls.
+- The site and environment switcher at the top of the navigation uses the admin's joined list rows, with Live and Working badges, the current site and environment marked, and a long list of sites that scrolls and opens at the current site.
