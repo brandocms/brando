@@ -92,12 +92,32 @@ defmodule Brando.Tenant.Setup do
     end)
   end
 
+  @doc """
+  Sets how `site`'s public frontend is delivered, `:dynamic` or `:static`,
+  as `user`, who must be allowed to update sites. A static site the
+  installation serves itself forgets its published build when it becomes
+  dynamic (`Brando.Sites.Site`), so its host answers from Phoenix again.
+  """
+  @spec update_delivery(Site.t(), :dynamic | :static, User.t()) :: {:ok, Site.t()} | {:error, term()}
+  def update_delivery(%Site{} = site, mode, %User{} = user) when mode in [:dynamic, :static] do
+    lifecycle(:update, [actor: Brando.Authorization.Scope.installation(user)], fn ->
+      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, %{delivery_mode: mode}, []) end)
+    end)
+  end
+
   defp update_current(site, attrs, opts) do
     case Registry.get_site(site.id) do
       nil -> {:error, :site_not_found}
       %Site{} = current_site -> Registry.update_site(current_site, attrs, opts)
     end
   end
+
+  @doc """
+  How many days a site stays archived before `delete_site/2` removes it:
+  `config :brando, site_delete_retention_days:`, 30 by default.
+  """
+  @spec delete_retention_days() :: non_neg_integer()
+  def delete_retention_days, do: Brando.config(:site_delete_retention_days) || @default_retention_days
 
   @spec archive_site(Site.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def archive_site(%Site{} = site, opts \\ []) do
@@ -389,8 +409,7 @@ defmodule Brando.Tenant.Setup do
   defp deletable?(%Site{status: :archived, archived_at: %DateTime{} = archived_at}, opts) do
     now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
 
-    retention_days =
-      Keyword.get(opts, :retention_days, Brando.config(:site_delete_retention_days) || @default_retention_days)
+    retention_days = Keyword.get_lazy(opts, :retention_days, &delete_retention_days/0)
 
     if Keyword.get(opts, :force, false) or DateTime.diff(now, archived_at, :day) >= retention_days,
       do: :ok,
