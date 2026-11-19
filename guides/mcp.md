@@ -200,6 +200,34 @@ proposal with the modules that match.
   left out. The component names are what the tool matches to modules, so
   frames built from components named like the site's modules ("Case/Image
   full" for a module named "Case image full") rebuild most faithfully.
+
+  Each section, text, image and video has its layer box in the frame (`x`,
+  `y`, `width` and `height`, in Figma pixels from the frame's top left), and
+  the frame has its size and its visible layout grids (`layout_grids`:
+  pattern, count, gutter, margin, alignment and column size), so the tool
+  can tell which images share a row, how many columns come before one and
+  how far it drops below its neighbour. The box is the layer's own, before
+  clipping and masks: an image cropped by its frame or a mask can reach
+  past the cell it shows in.
+
+  A section named like the page's header, footer or menu is marked
+  `chrome`, with the reason: `"name"` (its layer name) or `"component"`
+  (its component's name). The last part of the name, after any slashes,
+  has to be header, footer, nav, navbar, navigation, navigasjon, topptekst
+  or bunntekst as a whole word, or joined to "hoved" and the like ("Site
+  header", "Main navigation", "NavBar", "Header v2", "Hovednavigasjon"; not
+  "Section header", "Subheader" or "Navn"). The parts before it must be a
+  library's grouping such as Site, Global, Layout or Components
+  ("Global/Footer"); under a module's name ("Case/Header") it is content.
+  Menu, meny, topp and bunn ("Hovedmeny") count only on a short bar across
+  most of the frame, flush with its top or bottom edge, since a module can
+  be a restaurant's menu or a page's opening section. Only component
+  instances are matched, not text layers,
+  which Figma names after their text, and not variant values such as
+  `Color=Navy`. A section with images but no texts is never marked, nor is
+  the frame itself or a frame's only section. The mark is a hint: the
+  section is still listed, and the tool checks its texts before leaving it
+  out of the entry.
 - `brando_figma_import_images` imports the frame's image fills, the originals
   placed in Figma rather than renders, into the library folder
   `Figma/<frame name>` under the default image config's upload path, and
