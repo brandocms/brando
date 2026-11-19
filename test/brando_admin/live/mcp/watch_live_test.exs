@@ -46,6 +46,20 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
 
       call_tool(tenant, tokens["access_token"], "list_content_types")
       assert has_element?(view, "[data-tool=list_content_types][data-state=ok]")
+
+      # The person's proposal shows, without the review only they can open
+      c = Brando.ProposalFixtures.context()
+      Brando.Content.create_identifier(Page, c.identity)
+
+      op = %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "fields" => %{"title" => "Theirs"}
+      }
+
+      call_tool(tenant, tokens["access_token"], "prepare_proposal", %{"summary" => "Theirs", "operations" => [op]})
+      assert has_element?(view, ".mcp-watch-proposal h3", "Theirs")
+      refute has_element?(view, ".mcp-watch-proposal a")
     end
 
     test "is linked from Connected apps and from the connections under Configuration",

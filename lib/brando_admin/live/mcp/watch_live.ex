@@ -153,7 +153,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
               </p>
               <p :if={call.error} class="mcp-watch-error">{call.error}</p>
               <.images :if={call.folder || call.images != [] || call.failed} call={call} />
-              <.proposal :if={call.proposal} proposal={call.proposal} />
+              <.proposal :if={call.proposal} proposal={call.proposal} owner?={@grant.user_id == @current_user.id} />
             </div>
             <span class={["badge", state_tone(call.state)]} data-testid="mcp-watch-state">{state_label(call.state)}</span>
           </li>
@@ -189,6 +189,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
   end
 
   attr :proposal, :map, required: true
+  attr :owner?, :boolean, required: true, doc: "only the person reviews their proposals"
 
   defp proposal(assigns) do
     ~H"""
@@ -203,7 +204,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
       <ul :if={@proposal.problems != []} class="mcp-watch-problems" aria-label={gettext("Problems to fix")}>
         <li :for={problem <- @proposal.problems}><.icon name="triangle-alert" />{problem}</li>
       </ul>
-      <div class="mcp-watch-actions">
+      <div :if={@owner?} class="mcp-watch-actions">
         <.link navigate={@proposal.review} class="btn btn--sm">{gettext("Open the review")}</.link>
         <.link :if={@proposal.preview} navigate={@proposal.preview} class="btn btn--sm btn--quiet">
           <.icon name="eye" />{gettext("Open on the page")}
