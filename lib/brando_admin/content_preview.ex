@@ -9,6 +9,7 @@ defmodule BrandoAdmin.ContentPreview do
   use Gettext, backend: Brando.Gettext
   alias Brando.Content.Transfer.Labels
   alias Brando.Drafts.Params
+  alias Brando.HTML.Tree
   alias Brando.Villain.Blocks.GalleryObjectOverride
 
   @media ~w(image file video gallery)
@@ -232,17 +233,22 @@ defmodule BrandoAdmin.ContentPreview do
   defp plain_lines(text, code? \\ false),
     do: if(code?, do: text, else: plain(text)) |> String.split(~r/\r\n|\n|\r/) |> Enum.map(&line/1)
 
+  # Whitespace that only breaks lines between tags is the markup's layout:
+  # the blocks already end their lines.
   defp plain(text) do
     text
-    |> Floki.parse_fragment!()
-    |> Floki.traverse_and_update(fn
+    |> Tree.parse_fragment()
+    |> Tree.map(fn
       {tag, attrs, children} when tag in ~w(p div li h1 h2 h3 h4 h5 h6 blockquote pre) ->
         {tag, attrs, children ++ ["\n"]}
+
+      text when is_binary(text) ->
+        if String.trim(text) == "" and String.contains?(text, "\n"), do: [], else: text
 
       node ->
         node
     end)
-    |> Floki.text(style: false)
+    |> Tree.text(style: false)
     |> String.trim_trailing("\n")
   end
 

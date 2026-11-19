@@ -60,8 +60,8 @@ defmodule Brando.SSG.PreviewRewrite do
   # The value a browser reads from the attribute, its character references
   # decoded (`&#32;` is a space that separates candidates)
   defp decode_attribute(value) do
-    case Floki.parse_fragment(~s(<img a=") <> value <> ~s(">)) do
-      {:ok, [{"img", [{"a", decoded}], []}]} -> decoded
+    case Brando.HTML.Tree.parse_fragment(~s(<img a=") <> value <> ~s(">)) do
+      [{"img", [{"a", decoded}], []}] -> decoded
       _other -> value
     end
   end

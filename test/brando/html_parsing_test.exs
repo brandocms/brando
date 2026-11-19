@@ -3,6 +3,9 @@ defmodule Brando.HTMLParsingTest do
   What each runtime HTML rewrite and text extraction gives for markup that
   parsers disagree on: whitespace between inline elements, entities, void and
   boolean attributes, SVG attribute case, misnested and unclosed tags.
+
+  These were written against Floki's parser. Where lexbor (`LazyHTML`) gives
+  something else, a comment says what Floki gave.
   """
   use Brando.ConnCase, async: true
 
@@ -30,21 +33,26 @@ defmodule Brando.HTMLParsingTest do
 
       result = Footnotes.render(html)
 
+      # Floki dropped whitespace-only text: `<strong>Bold</strong><em>`, `</p><p>`,
+      # `<em>one</em><em>two</em>`; and wrote `disabled="disabled"`.
       assert result.html ==
-               ~s(<p><strong>Bold</strong><em>it&#39;s</em> &amp; &quot;q&quot;#{noteref(@article)}<br/>next</p>) <>
-                 ~s(<p><img src="/a.jpg" alt="A &quot;B&quot;"/><input disabled="disabled"/></p>)
+               ~s(<p><strong>Bold</strong> <em>it&#39;s</em> &amp; &quot;q&quot;#{noteref(@article)}<br/>next</p>\n) <>
+                 ~s(<p><img src="/a.jpg" alt="A &quot;B&quot;"/><input disabled=""/></p>)
 
-      assert hd(result.notes).html == ~s(<p>Source &amp; <a href="/x?a=1&amp;b=2">link</a><em>one</em><em>two</em></p>)
+      assert hd(result.notes).html ==
+               ~s(<p>Source &amp; <a href="/x?a=1&amp;b=2">link</a> <em>one</em> <em>two</em></p>)
     end
 
     test "SVG beside a reference" do
       result = Footnotes.render(~s(<svg viewBox="0 0 10 10"><path d="M0"/></svg>#{marker("a")}) <> definition("a", "x"))
-      assert result.html == ~s(<svg viewbox="0 0 10 10"><path d="M0"></path></svg>#{noteref(@article)})
+      # Floki lowercased it to `viewbox`, which SVG ignores.
+      assert result.html == ~s(<svg viewBox="0 0 10 10"><path d="M0"></path></svg>#{noteref(@article)})
     end
 
     test "a block element inside a paragraph" do
       result = Footnotes.render(~s(<p>A#{marker("a")}<div>block</div></p>) <> definition("a", "x"))
-      assert result.html == ~s(<p>A#{noteref(@article)}<div>block</div></p>)
+      # As a browser reads it. Floki kept the div inside the paragraph.
+      assert result.html == ~s(<p>A#{noteref(@article)}</p><div>block</div><p></p>)
     end
 
     test "a rendered result renumbers with its note body intact" do
@@ -55,7 +63,7 @@ defmodule Brando.HTMLParsingTest do
                noteref("Yw") <>
                  ~s(<section class="footnotes" role="doc-endnotes" data-brando-footnotes><h2>Notes &amp; sources</h2>) <>
                  ~s(<ol><li id="fn-Yw-YQ" data-brando-note="a" value="1"><div data-footnote-body>) <>
-                 ~s(<p>Note <b>x</b><i>y</i></p></div><nav aria-label="Back to text">) <>
+                 ~s(<p>Note <b>x</b> <i>y</i></p></div><nav aria-label="Back to text">) <>
                  ~s(<a class="footnote-backlink" role="doc-backlink" href="#fnref-Yw-1" aria-label="Return to reference 1">↩</a>) <>
                  ~s(</nav></li></ol></section>)
     end
@@ -63,7 +71,8 @@ defmodule Brando.HTMLParsingTest do
 
   describe "HTML to Markdown" do
     test "inline elements separated by a space" do
-      assert MarkdownHTML.to_markdown("<p><strong>Bold</strong> <em>text</em></p>") == "**Bold***text*"
+      # Floki: "**Bold***text*"
+      assert MarkdownHTML.to_markdown("<p><strong>Bold</strong> <em>text</em></p>") == "**Bold** *text*"
     end
 
     test "a table with head and body" do
@@ -86,15 +95,19 @@ defmodule Brando.HTMLParsingTest do
     end
 
     test "a pre that starts with a line break" do
-      assert MarkdownHTML.to_markdown("<pre>\nline1\n  line2\n</pre>") == "```\n\nline1\n  line2\n```"
+      # The parser drops the line break, as browsers do. Floki kept it, which
+      # gave a fenced block with an empty first line: "```\n\nline1\n  line2\n```"
+      assert MarkdownHTML.to_markdown("<pre>\nline1\n  line2\n</pre>") == "    line1\n      line2"
     end
 
     test "a block element inside a paragraph" do
-      assert MarkdownHTML.to_markdown("<p>Intro<div>Block</div>tail</p>") == "IntroBlocktail"
+      # Floki: "IntroBlocktail"
+      assert MarkdownHTML.to_markdown("<p>Intro<div>Block</div>tail</p>") == "Intro\n\nBlock\n\ntail"
     end
 
     test "unclosed paragraphs and formatting" do
-      assert MarkdownHTML.to_markdown("<p>One<p>Two <b>bold") == "OneTwo **bold**"
+      # Floki nested the second paragraph in the first: "OneTwo **bold**"
+      assert MarkdownHTML.to_markdown("<p>One<p>Two <b>bold") == "One\n\nTwo **bold**"
     end
 
     test "indented list items and paragraphs" do
@@ -111,10 +124,11 @@ defmodule Brando.HTMLParsingTest do
   describe "rewriting identifier links" do
     @html ~s(<p><strong>Hi</strong> <a data-identifier-id="7" href="/old">it's</a> &amp; "q"<br>x</p>\n<p>y</p>)
 
+    # Floki dropped whitespace-only text: `<strong>Hi</strong><a`, `</p><p>`.
+    @relinked ~s(<p><strong>Hi</strong> <a data-identifier-id="7" href="/new?a=1&amp;b=2">it&#39;s</a> &amp; &quot;q&quot;<br/>x</p>\n<p>y</p>)
+
     test "rich text relinks the anchor and keeps the rest" do
-      assert Brando.RichText.update_identifier_url(@html, 7, "/new?a=1&b=2") ==
-               {:updated,
-                ~s(<p><strong>Hi</strong><a data-identifier-id="7" href="/new?a=1&amp;b=2">it&#39;s</a> &amp; &quot;q&quot;<br/>x</p><p>y</p>)}
+      assert Brando.RichText.update_identifier_url(@html, 7, "/new?a=1&b=2") == {:updated, @relinked}
 
       assert Brando.RichText.contains_identifier?(@html, 7)
       refute Brando.RichText.contains_identifier?(@html, 8)
@@ -124,8 +138,7 @@ defmodule Brando.HTMLParsingTest do
       html = String.replace(@html, ~s("7"), ~s("tok1"))
       bindings = %{"tok1" => %{id: 7, url: "/new?a=1&b=2", external_url: nil}}
 
-      assert Portable.decode_values(html, bindings) ==
-               ~s(<p><strong>Hi</strong><a data-identifier-id="7" href="/new?a=1&amp;b=2">it&#39;s</a> &amp; &quot;q&quot;<br/>x</p><p>y</p>)
+      assert Portable.decode_values(html, bindings) == @relinked
     end
   end
 
@@ -133,8 +146,9 @@ defmodule Brando.HTMLParsingTest do
     test "remapping a marker keeps the rest" do
       html = ~s(<p><strong>A</strong> <em>b</em><sup data-footnote-uid="old">•</sup> it's &amp;</p>\n<p>c</p>)
 
+      # Floki: `<strong>A</strong><em>b</em>` and `</p><p>`
       assert BlockSlots.remap_markers(html, %{"old" => "new"}) ==
-               ~s(<p><strong>A</strong><em>b</em><sup data-footnote-uid="new">•</sup> it&#39;s &amp;</p><p>c</p>)
+               ~s(<p><strong>A</strong> <em>b</em><sup data-footnote-uid="new">•</sup> it&#39;s &amp;</p>\n<p>c</p>)
     end
 
     test "marker uids come from sup and span markers only" do
@@ -149,11 +163,13 @@ defmodule Brando.HTMLParsingTest do
         ~s(<p><strong>Bold</strong> <em>text</em></p>\n<p>Two<br>lines &amp; more</p>) <>
           ~s(<style>.x{}</style><script>go</script><ul><li>a</li><li>b</li></ul>)
 
-      assert Brando.Search.Text.plain(html) == "Boldtext Two lines & more a b"
+      # Floki: "Boldtext Two lines & more a b"
+      assert Brando.Search.Text.plain(html) == "Bold text Two lines & more a b"
     end
 
     test "caption text" do
-      assert Brando.Captions.text(~s(<p><strong>Bold</strong> <em>text</em></p><p>x&nbsp;y</p>)) == "Boldtext x y"
+      # Floki: "Boldtext x y"
+      assert Brando.Captions.text(~s(<p><strong>Bold</strong> <em>text</em></p><p>x&nbsp;y</p>)) == "Bold text x y"
       refute Brando.Captions.present?("<p><br></p>")
       assert Brando.Captions.present?("<untitled>")
     end
@@ -165,7 +181,8 @@ defmodule Brando.HTMLParsingTest do
       }
 
       lines = BrandoAdmin.ContentPreview.lines([%{"description" => "Text", "refs" => [ref]}])
-      assert Enum.map(lines, & &1.text) == ["Text", "Ab", "Two", "lines"]
+      # Floki: "Ab"
+      assert Enum.map(lines, & &1.text) == ["Text", "A b", "Two", "lines"]
     end
 
     test "an entry's Markdown title" do
@@ -196,11 +213,12 @@ defmodule Brando.HTMLParsingTest do
         commit: "abc"
       }
 
+      # MDEx's line breaks between tags stay; Floki dropped them.
       assert Brando.MarkdownSources.Renderer.render(document) ==
                {:ok,
-                ~s(<h1 id="hello-world">Hello <em>world</em></h1>) <>
-                  ~s(<p>Text with <strong>bold</strong> and <a href="https://github.com/o/r/blob/abc/docs/a.md">link</a> and <code>code</code>.</p>) <>
-                  ~s(<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>) <>
+                ~s(<h1 id="hello-world">Hello <em>world</em></h1>\n) <>
+                  ~s(<p>Text with <strong>bold</strong> and <a href="https://github.com/o/r/blob/abc/docs/a.md">link</a> and <code>code</code>.</p>\n) <>
+                  ~s(<table>\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>2</td>\n</tr>\n</tbody>\n</table>\n) <>
                   ~s(<pre><code class="language-elixir">IO.puts\(1\)\n</code></pre>)}
     end
 

@@ -8,6 +8,7 @@ defmodule Brando.Captions do
   before it goes into markup — except rows written when the library title was
   itself rich text, which already hold markup and are sanitized instead.
   """
+  alias Brando.HTML.Tree
 
   @doc """
   Whether `text` holds any text. An emptied rich-text document is markup
@@ -29,12 +30,7 @@ defmodule Brando.Captions do
   are a space apart, inline formatting joins what it splits. `nil` when
   there is no text.
   """
-  def text(text) when is_binary(text) do
-    case Floki.parse_fragment(text) do
-      {:ok, nodes} -> nodes |> nodes_text() |> one_line()
-      _ -> one_line(text)
-    end
-  end
+  def text(text) when is_binary(text), do: text |> Tree.parse_fragment() |> nodes_text() |> one_line()
 
   def text(_text), do: nil
 
@@ -131,10 +127,6 @@ defmodule Brando.Captions do
   # title would have held too. Anything else that looks like a tag is text.
   @markup_tags ~w(p br em strong b i u a span sub sup h1 h2 h3 h4 h5 h6 ul ol li blockquote)
 
-  defp markup?(text) do
-    case Floki.parse_fragment(text) do
-      {:ok, nodes} -> nodes |> Floki.find(Enum.join(@markup_tags, ",")) |> Enum.any?()
-      _ -> false
-    end
-  end
+  defp markup?(text),
+    do: text |> Tree.parse_fragment() |> Tree.find(&match?({tag, _, _} when tag in @markup_tags, &1)) != []
 end

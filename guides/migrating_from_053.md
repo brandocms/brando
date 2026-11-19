@@ -1227,7 +1227,7 @@ by-hand alternatives to the tasks, and what the tasks write.
 
 `scripts/prepare_055_deps.exs` applies the constraints below to the packages
 the application declares, bumps `ex_chimp` to 0.2, drops `only: :test` from
-`floki`, removes `timex` once `lib/` no longer calls it, adds Igniter, sets
+`lazy_html`, removes `timex` once `lib/` no longer calls it, adds Igniter, sets
 `elixir: "~> 1.18"` and `listeners: [Phoenix.CodeReloader]` in `project/0`,
 and points the Brando dependency at the checkout or commit:
 
@@ -1250,7 +1250,7 @@ By hand, change every one of these the application declares before fetching
 {:ecto_sql, "~> 3.14"},
 {:postgrex, "~> 0.20"},
 {:gettext, "~> 1.0"},
-{:floki, "~> 0.32"},
+{:lazy_html, "~> 0.1.13"},
 {:swoosh, "~> 1.17"},
 {:igniter, "~> 0.8", only: [:dev, :test]},
 ```
@@ -1265,9 +1265,12 @@ Brando's `mix.exs` as well. In particular:
   `~> 0.26`), and Brando's installer added it to sites until 2021. Replace its
   calls with `Date`, `DateTime` and `Calendar`; Brando makes the `tz`
   package Elixir's time zone database at boot.
-- Drop `only: :test` from `floki` (the Phoenix generator default). Brando uses
-  Floki at runtime, and `mix deps.get` stops with "Dependencies have diverged"
-  while the application restricts it to tests.
+- Drop `only: :test` from `lazy_html` (the Phoenix generator default). Brando
+  parses HTML with it at runtime, and `mix deps.get` stops with "Dependencies
+  have diverged" while the application restricts it to tests.
+- Brando no longer brings in Floki. An application that calls Floki itself
+  (in `lib/`, or in its tests) declares it: `{:floki, "~> 0.38"}`, with
+  `only: :test` when only its tests use it.
 - Igniter is an optional Brando dependency the source tasks are built on.
 - AI (AI actions on fields, alt text and meta description drafts, the
   content assistant) is new in 0.55 and needs the optional

@@ -132,7 +132,7 @@ defmodule Brando.SEO.Markdown do
   def title(%{__struct__: schema} = entry) do
     [Map.get(entry, :title), meta_title(schema, entry), Map.get(entry, :meta_title)]
     |> Enum.find(&(is_binary(&1) and String.trim(&1) != ""))
-    |> then(&(&1 && &1 |> Floki.parse_fragment!() |> Floki.text() |> String.trim()))
+    |> then(&(&1 && &1 |> Brando.HTML.Tree.parse_fragment() |> Brando.HTML.Tree.text() |> String.trim()))
   end
 
   defp meta_title(schema, entry) do

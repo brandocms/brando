@@ -14,6 +14,7 @@ defmodule Brando.Search.Text do
   boundary.
   """
 
+  alias Brando.HTML.Tree
   alias Brando.Type.I18nString
   alias Brando.Villain.Blocks
   alias Brando.Villain.Blocks.GalleryObjectOverride
@@ -275,15 +276,15 @@ defmodule Brando.Search.Text do
   defp strip_tags(text) do
     if String.contains?(text, ["<", "&"]) do
       text
-      |> Floki.parse_fragment!()
-      |> Floki.traverse_and_update(fn
+      |> Tree.parse_fragment()
+      |> Tree.map(fn
         {tag, attrs, children} when tag in ~w(p div li h1 h2 h3 h4 h5 h6 blockquote pre tr br td th) ->
           {tag, attrs, children ++ ["\n"]}
 
         node ->
           node
       end)
-      |> Floki.text(style: false)
+      |> Tree.text(style: false)
     else
       text
     end

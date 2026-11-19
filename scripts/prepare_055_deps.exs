@@ -8,7 +8,7 @@
 # It needs no resolved dependencies: it rewrites mix.exs as text and prints
 # each change. From "Dependencies by hand" in
 # guides/migrating_from_053.md: the constraints below for the packages the
-# application declares, floki without `only: :test`, timex removed once lib/
+# application declares, lazy_html without `only: :test`, timex removed once lib/
 # has no Timex. calls (listed otherwise), igniter for dev and test, the
 # Brando dependency pointed at --brando-path or --brando-ref; and Elixir
 # "~> 1.18" with `listeners: [Phoenix.CodeReloader]` in project/0. Running it
@@ -32,7 +32,7 @@ defmodule Brando.Prepare055Deps do
     ecto_sql: "~> 3.14",
     postgrex: "~> 0.20",
     gettext: "~> 1.0",
-    floki: "~> 0.32",
+    lazy_html: "~> 0.1.13",
     swoosh: "~> 1.17",
     ex_chimp: "~> 0.2.0"
   ]
@@ -155,8 +155,9 @@ defmodule Brando.Prepare055Deps do
       else: line
   end
 
-  # Brando uses Floki at runtime; `only: :test` makes the dependencies diverge.
-  defp runtime_dep(line, :floki), do: Regex.replace(~r/,\s*only:\s*(:\w+|\[[^\]]*\])/, line, "", global: false)
+  # Brando parses HTML with lazy_html at runtime; `only: :test` makes the
+  # dependencies diverge.
+  defp runtime_dep(line, :lazy_html), do: Regex.replace(~r/,\s*only:\s*(:\w+|\[[^\]]*\])/, line, "", global: false)
   defp runtime_dep(line, _name), do: line
 
   # "~> 0.18" is lower than "~> 1.2.0"; ">= 0.27.0" lower than "~> 0.32".

@@ -7,6 +7,7 @@ defmodule Brando.Content.BlockSlots do
   """
   alias Brando.Content.Block
   alias Brando.Content.BlockSlots.Lifecycle
+  alias Brando.HTML.Tree
   alias Ecto.Changeset
 
   def children(%{children: children}) when is_list(children), do: children
@@ -230,12 +231,12 @@ defmodule Brando.Content.BlockSlots do
   def remap_markers(html, mapping) when is_binary(html) do
     if String.contains?(html, "data-footnote-uid") do
       html
-      |> Floki.parse_fragment!()
-      |> Floki.traverse_and_update(fn
+      |> Tree.parse_fragment()
+      |> Tree.map(fn
         {tag, attrs, children} -> {tag, Enum.map(attrs, &remap_marker_attr(&1, mapping)), children}
         node -> node
       end)
-      |> Floki.raw_html()
+      |> Tree.to_html()
     else
       html
     end

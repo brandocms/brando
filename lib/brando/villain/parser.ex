@@ -893,8 +893,8 @@ defmodule Brando.Villain.Parser do
 
   defp get_alt_text(_alt, caption) do
     caption
-    |> Floki.parse_fragment!()
-    |> Floki.text(sep: " ")
+    |> Brando.HTML.Tree.parse_fragment()
+    |> Brando.HTML.Tree.text(sep: " ")
     |> String.split()
     |> Enum.join(" ")
   end

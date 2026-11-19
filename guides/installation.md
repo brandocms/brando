@@ -449,6 +449,14 @@ source as in [Where Brando comes from](#where-brando-comes-from):
 {:igniter, "~> 0.8.0", only: [:dev, :test]}
 ```
 
+Brando parses HTML with `lazy_html` at runtime. If `mix.exs` lists it for
+tests only, as `mix phx.new` writes it, drop the `only: :test`
+(`mix igniter.install` does this itself):
+
+```elixir
+{:lazy_html, ">= 0.1.0"}
+```
+
 Then run:
 
 ```sh

@@ -17,6 +17,8 @@ defmodule Brando.Villain.Markdown.HTML do
   like Markdown syntax is escaped rather than reinterpreted.
   """
 
+  alias Brando.HTML.Tree
+
   @skip ~w(script style noscript template svg math head meta link title button form input select textarea option
            label nav canvas object embed map area dialog)
   @blocks ~w(p h1 h2 h3 h4 h5 h6 ul ol blockquote pre hr table figure figcaption div section article main header
@@ -34,7 +36,7 @@ defmodule Brando.Villain.Markdown.HTML do
       ""
     else
       html
-      |> Floki.parse_fragment!()
+      |> Tree.parse_fragment()
       |> document()
       |> render()
     end
@@ -47,7 +49,8 @@ defmodule Brando.Villain.Markdown.HTML do
   def render(%MDEx.Document{} = document) do
     document
     |> MDEx.to_markdown!(@render_options)
-    |> String.trim()
+    # Line breaks only: an indented code block may open the Markdown.
+    |> String.trim("\n")
     # The writer escapes every `!`; only one before `[` starts an image.
     |> String.replace(~r/\\!(?!\[)/, "!")
   end
@@ -55,7 +58,7 @@ defmodule Brando.Villain.Markdown.HTML do
   def render(nodes) when is_list(nodes), do: render(%MDEx.Document{nodes: nodes})
 
   @doc "The MDEx document for parsed HTML nodes."
-  @spec document(Floki.html_tree()) :: MDEx.Document.t()
+  @spec document(Tree.t()) :: MDEx.Document.t()
   def document(tree), do: %MDEx.Document{nodes: blocks(tree)}
 
   # -- Blocks ------------------------------------------------------------------
@@ -117,7 +120,7 @@ defmodule Brando.Villain.Markdown.HTML do
   end
 
   defp block({"pre", _, children}) do
-    case Floki.text(children) do
+    case Tree.text(children) do
       "" ->
         []
 
@@ -129,7 +132,7 @@ defmodule Brando.Villain.Markdown.HTML do
   defp block({"hr", _, _}), do: [%MDEx.ThematicBreak{}]
   defp block({"table", _, _} = table), do: table(table)
   defp block({"figcaption", _, children}), do: caption(children)
-  defp block({"brando-markdown", _, children}), do: children |> Floki.text() |> markdown_nodes()
+  defp block({"brando-markdown", _, children}), do: children |> Tree.text() |> markdown_nodes()
   defp block({"tr", _, _} = row), do: table({"table", [], [row]})
   defp block({_wrapper, _, children}), do: blocks(children)
 
@@ -162,7 +165,7 @@ defmodule Brando.Villain.Markdown.HTML do
   defp table(table) do
     rows =
       table
-      |> Floki.find("tr")
+      |> Tree.find(&match?({"tr", _, _}, &1))
       |> Enum.map(fn {"tr", _, cells} ->
         cells
         |> Enum.filter(&match?({tag, _, _} when tag in ["th", "td"], &1))
@@ -208,7 +211,7 @@ defmodule Brando.Villain.Markdown.HTML do
   defp inline({"br", _, _}), do: [%MDEx.LineBreak{}]
 
   defp inline({"code", _, children}) do
-    case Floki.text(children) do
+    case Tree.text(children) do
       "" -> []
       text -> [%MDEx.Code{literal: text, num_backticks: 1}]
     end
@@ -225,7 +228,9 @@ defmodule Brando.Villain.Markdown.HTML do
   end
 
   defp inline({"img", attrs, _}), do: image(attrs)
-  defp inline({"picture", _, _} = picture), do: picture |> Floki.find("img") |> Enum.take(1) |> Enum.flat_map(&inline/1)
+
+  defp inline({"picture", _, _} = picture),
+    do: picture |> Tree.find(&match?({"img", _, _}, &1)) |> Enum.take(1) |> Enum.flat_map(&inline/1)
 
   defp inline({tag, attrs, children}) when tag in ["video", "audio", "iframe"] do
     source = attr(attrs, "src") || attr(attrs, "data-src") || source_src(children)
@@ -262,8 +267,8 @@ defmodule Brando.Villain.Markdown.HTML do
 
   defp source_src(children) do
     children
-    |> Floki.find("source")
-    |> Enum.find_value(&(&1 |> Floki.attribute("src") |> List.first()))
+    |> Tree.find(&match?({"source", _, _}, &1))
+    |> Enum.find_value(&Tree.attr(&1, "src"))
   end
 
   @doc false

@@ -1,15 +1,17 @@
 defmodule Brando.MarkdownSources.Renderer do
   @moduledoc "Safe external Markdown; intentionally independent of trusted CMS Markdown options."
+  alias Brando.HTML.Tree
+
   @tags ~w(p br hr em strong del pre code blockquote ul ol li h1 h2 h3 h4 h5 h6 table thead tbody tr th td a img)
 
   def render(%{markdown: markdown} = document) do
-    with {:ok, html} <-
-           MDEx.to_html(markdown, extension: [autolink: true, strikethrough: true, table: true], render: [unsafe: false]),
-         {:ok, tree} <- Floki.parse_fragment(html) do
-      {safe, _} = sanitize(tree, document, %{})
-      {:ok, Floki.raw_html(safe)}
-    else
-      _ -> {:error, :invalid_markdown}
+    case MDEx.to_html(markdown, extension: [autolink: true, strikethrough: true, table: true], render: [unsafe: false]) do
+      {:ok, html} ->
+        {safe, _} = html |> Tree.parse_fragment() |> sanitize(document, %{})
+        {:ok, Tree.to_html(safe)}
+
+      _ ->
+        {:error, :invalid_markdown}
     end
   end
 
@@ -83,7 +85,7 @@ defmodule Brando.MarkdownSources.Renderer do
   end
 
   defp heading(tag, attrs, children, counts) when tag in ~w(h1 h2 h3 h4 h5 h6) do
-    slug = children |> Floki.text() |> Slug.slugify() |> then(&if(&1 == "", do: "section", else: &1))
+    slug = children |> Tree.text() |> Slug.slugify() |> then(&if(&1 == "", do: "section", else: &1))
     number = Map.get(counts, slug, 0)
     {id, number} = unique_heading_id(slug, number, counts)
     {[{"id", id} | attrs], counts |> Map.put(slug, number + 1) |> Map.put({:used, id}, true)}
