@@ -330,6 +330,23 @@ use of that asset. A failed replacement retains the original.
 If a stable URL is cached outside Brando, refresh the CDN/browser cache after a
 replacement; Brando cannot invalidate an arbitrary proxy automatically.
 
+The file browser writes the new bytes over the old ones, at the same path, so
+the old bytes are gone once it succeeds. **An image's file** is replaced by a
+reviewed proposal from a connected tool (`replace_image_file`, see
+[Connected AI tools](mcp.md)), with another library image's file. The image
+keeps its record, focal point, texts, folder, config and references; its path,
+dimensions, type and `content_hash` become the new file's, so its URLs change,
+and its sizes are made again in the background. The image the file came from
+is removed. Nothing is written over: the new file stays where it was uploaded
+and the image points at it, and a failed approval leaves the image on its
+previous file. That previous original and its sizes stay on disk, no longer
+referenced (another environment of the site may still show them), until
+`Brando.Media.OrphanCleanup` removes them, and for at least 24 hours from the
+replacement: the replacement marks them changed, since the entries that show
+the image link them until they are rendered again, and a visitor's cached page
+longer. The cleanup only removes files from the media folder; what was
+delivered to a CDN stays there. A replaced image file cannot be undone.
+
 Removing an optional field association is not permanent deletion of the shared
 asset. A `required: true` asset must remain present for a valid publishable entry.
 A rejected MIME type or size should leave the previous selection in place; test

@@ -438,21 +438,35 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   # Whether `reader` may read each entry the proposal changes, and the
   # content types it creates entries of
-  defp readable?(%Record{operations: operations}, reader) do
+  defp readable?(%Record{operations: operations, status: status}, reader) do
     operations
     |> List.wrap()
-    |> Enum.flat_map(&subjects/1)
+    |> Enum.flat_map(&(&1 |> as_applied(status) |> subjects()))
     |> Enum.uniq()
     |> Enum.all?(&readable_subject?(&1, reader))
   end
 
+  # Once applied, the image whose file replaced another's has no record
+  defp as_applied(%{"op" => "replace_image_file"} = op, "applied"), do: Map.delete(op, "with")
+  defp as_applied(op, _status), do: op
+
   defp subjects(%{"op" => "create_entry", "content_type" => type}), do: [{type, nil}]
+
+  defp subjects(%{"op" => "create_translation", "source" => %{"content_type" => type, "id" => id}}),
+    do: [{type, nil}, {type, id}]
+
+  defp subjects(%{"op" => "replace_image_file"} = op) do
+    for %{"kind" => "image", "id" => id} <- [op["asset"], op["with"]], do: {:image, id}
+  end
 
   defp subjects(%{} = op) do
     for %{"content_type" => type, "id" => id} <- [op["target"], op["to"]], do: {type, id}
   end
 
   defp subjects(_op), do: []
+
+  defp readable_subject?({:image, id}, reader),
+    do: is_integer(id) and Boundary.authorize_record(reader, :read, Image, id) == :ok
 
   defp readable_subject?({type, id}, reader) do
     case Codec.schema(type) do
@@ -482,7 +496,8 @@ defmodule BrandoAdmin.MCP.WatchLive do
       {effects["inserted_blocks"], &ngettext("%{count} new block", "%{count} new blocks", &1)},
       {effects["updated_blocks"], &ngettext("%{count} changed block", "%{count} changed blocks", &1)},
       {effects["moved_blocks"], &ngettext("%{count} moved block", "%{count} moved blocks", &1)},
-      {effects["deletions"], &ngettext("%{count} deletion", "%{count} deletions", &1)}
+      {effects["deletions"], &ngettext("%{count} deletion", "%{count} deletions", &1)},
+      {effects["replaced_images"], &ngettext("%{count} image file replaced", "%{count} image files replaced", &1)}
     ]
     |> Enum.filter(fn {count, _label} -> is_integer(count) and count > 0 end)
     |> Enum.map(fn {count, label} -> label.(count) end)

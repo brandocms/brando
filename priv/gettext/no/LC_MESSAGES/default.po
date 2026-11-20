@@ -239,6 +239,13 @@ msgid_plural "%{count} entries you cannot open"
 msgstr[0] "%{count} oppføring du ikke kan åpne"
 msgstr[1] "%{count} oppføringer du ikke kan åpne"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry you cannot see"
+msgid_plural "%{count} entries you cannot see"
+msgstr[0] "%{count} oppføring du ikke kan se"
+msgstr[1] "%{count} oppføringer du ikke kan se"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} environment"
@@ -334,6 +341,14 @@ msgid "%{count} image could not be recreated:"
 msgid_plural "%{count} images could not be recreated:"
 msgstr[0] "%{count} bilde kunne ikke lages på nytt:"
 msgstr[1] "%{count} bilder kunne ikke lages på nytt:"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image file replaced"
+msgid_plural "%{count} image files replaced"
+msgstr[0] "%{count} bildefil erstattet"
+msgstr[1] "%{count} bildefiler erstattet"
 
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
@@ -1437,6 +1452,11 @@ msgstr "Et konfigurert responsivt bilde"
 msgid "A connected tool"
 msgstr "Et tilkoblet verktøy"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A copy of the source in its translation group, not published. Its texts are marked to translate, and its structure follows the source."
+msgstr "En kopi av kilden i oversettelsesgruppen, ikke publisert. Tekstene er merket for oversettelse, og strukturen følger kilden."
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A date and time value"
@@ -1579,6 +1599,11 @@ msgstr "Et forslag med problemer kan ikke deles. Utelat endringene med problemer
 #, elixir-autogen, elixir-format
 msgid "A quarter — 3 of 12 units"
 msgstr "En fjerdedel – 3 av 12 enheter"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A replaced image file cannot be undone, so this proposal has no undo."
+msgstr "En erstattet bildefil kan ikke angres, så dette forslaget kan ikke angres."
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -2316,6 +2341,11 @@ msgstr "Administrator"
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "Avansert"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "After"
+msgstr "Etter"
 
 #: lib/brando/users/user_notifier.ex
 #, elixir-autogen, elixir-format
@@ -4036,6 +4066,13 @@ msgstr "Endringer"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
+msgid "Changes %{count} entry that shows it"
+msgid_plural "Changes %{count} entries that show it"
+msgstr[0] "Endrer %{count} oppføring som viser det"
+msgstr[1] "Endrer %{count} oppføringer som viser det"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
 msgid "Changes applied"
 msgstr "Endringene er utført"
 
@@ -5712,6 +5749,16 @@ msgstr "Opprett nettsted"
 #, elixir-autogen, elixir-format
 msgid "Create template"
 msgstr "Opprett mal"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create the %{language} version of %{title}"
+msgstr "Opprett versjonen på %{language} av %{title}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create the %{language} version of its source"
+msgstr "Opprett versjonen på %{language} av kilden"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -8279,6 +8326,7 @@ msgstr "Filen er for stor"
 msgid "File not imported"
 msgstr "Filen er ikke importert"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "File replaced"
@@ -9328,10 +9376,12 @@ msgstr "Må du logge inn før det, kan du spørre en administrator."
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/transformer.ex
+#: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr "Bilde"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Image #%{id}"
@@ -9397,6 +9447,11 @@ msgstr "Bildedetaljer"
 #, elixir-autogen, elixir-format
 msgid "Image duplicated"
 msgstr "Bilde duplisert"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Image files"
+msgstr "Bildefiler"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -9966,6 +10021,11 @@ msgstr "Domenene svarer igjen med en gang: besøkende på %{domain} får nettste
 #, elixir-autogen, elixir-format
 msgid "Its domains stop serving until the site is activated again. Nothing is deleted."
 msgstr "Domenene slutter å svare til nettstedet aktiveres igjen. Ingenting slettes."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Its file replaced; it had %{file}"
+msgstr "Filen erstattet; den var %{file}"
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -12081,6 +12141,11 @@ msgstr "Ingen gjeldende tillatelser i dette området. Kontroller at kontoen er a
 #, elixir-autogen, elixir-format
 msgid "No entries match."
 msgstr "Ingen oppføringer passer."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "No entry shows it"
+msgstr "Ingen oppføring viser det"
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -14383,6 +14448,13 @@ msgstr "Gjorde klar versjon %{version} av forslaget"
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
+msgid "Prepared version %{version} of the proposal, replacing the file of %{count} image"
+msgid_plural "Prepared version %{version} of the proposal, replacing the files of %{count} images"
+msgstr[0] "Laget versjon %{version} av forslaget, som erstatter filen til %{count} bilde"
+msgstr[1] "Laget versjon %{version} av forslaget, som erstatter filene til %{count} bilder"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
 msgid "Prepared version %{version}, with problems to fix"
 msgstr "Gjorde klar versjon %{version}, med problemer som må rettes"
 
@@ -15685,6 +15757,13 @@ msgstr "Endret rekkefølge"
 msgid "Replace"
 msgstr "Erstatt"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace %{count} image file"
+msgid_plural "Replace %{count} image files"
+msgstr[0] "Erstatt %{count} bildefil"
+msgstr[1] "Erstatt %{count} bildefiler"
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -15696,6 +15775,7 @@ msgstr "Bytt URL"
 msgid "Replace content"
 msgstr "Erstatt innhold"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replace file"
@@ -19537,6 +19617,11 @@ msgstr "Bildet er i et format KI-modellen ikke kan lese"
 msgid "The image is larger than %{megapixels} megapixels."
 msgstr "Bildet er større enn %{megapixels} megapiksler."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The image keeps its id, title, alt text, credits, focal point and folder. Its sizes are made again from the new file."
+msgstr "Bildet beholder id, tittel, alt-tekst, kreditering, fokuspunkt og mappe. Størrelsene lages på nytt fra den nye filen."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "The image this content type shares, as it is shared."
@@ -19825,6 +19910,11 @@ msgstr "Forhåndsvisningen manglet noen endringer, så den ble oppdatert."
 #, elixir-autogen, elixir-format
 msgid "The previous preview is still open. Check the target configuration and your access, then try again."
 msgstr "Den forrige forhåndsvisningen er fortsatt åpen. Kontroller målkonfigurasjonen og tilgangen din, og prøv igjen."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The proportions differ. The focal point and every crop carry over unchanged, so check how the image is framed where it is used."
+msgstr "Proporsjonene er forskjellige. Fokuspunktet og alle utsnitt følger med uendret, så sjekk hvordan bildet er beskåret der det brukes."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -24203,10 +24293,29 @@ msgstr "gjengivelse"
 msgid "render with changes"
 msgstr "gjengis med endringer"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "replace %{count} image file"
+msgid_plural "replace %{count} image files"
+msgstr[0] "erstatt %{count} bildefil"
+msgstr[1] "erstatt %{count} bildefiler"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "replaced image file"
+msgid_plural "replaced image files"
+msgstr[0] "erstattet bildefil"
+msgstr[1] "erstattede bildefiler"
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "replaced in %{target}: %{value}"
 msgstr "erstattes i %{target}: %{value}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "replacing the file of image %{id}"
+msgstr "å erstatte filen til bilde %{id}"
 
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format

@@ -160,6 +160,40 @@ defmodule Brando.MCP.TenancyTest do
       assert {:ok, %{path: _}} = MCP.Uploads.take(id, grant.id, acme)
     end
 
+    test "a replacement cannot name another environment's images", %{user: user, tenants: [acme, staging, _other]} do
+      # Both environments with their own tables, empty
+      for %{prefix: prefix} <- [acme, staging] do
+        :ok = Brando.Environments.Schema.create(prefix)
+        :ok = Brando.TenantCloners.clone_structure("public", prefix)
+      end
+
+      [old, new] =
+        MCP.in_tenant(staging, fn ->
+          for path <- ["images/staging/a.jpg", "images/staging/b.jpg"],
+              do: Repo.insert!(Factory.build(:image, path: path, content_hash: path))
+        end)
+
+      token = connect_directly(user, acme)["access_token"]
+
+      op = %{
+        "op" => "replace_image_file",
+        "asset" => %{"kind" => "image", "id" => old.id},
+        "with" => %{"kind" => "image", "id" => new.id}
+      }
+
+      %{"result" => %{"structuredContent" => review}} =
+        call_tool(acme, token, "prepare_proposal", %{"summary" => "Swap", "operations" => [op]})
+
+      refute review["applicable"]
+      assert [%{"code" => "missing_asset"}] = review["problems"]
+
+      # Staging's images are as they were
+      MCP.in_tenant(staging, fn ->
+        assert Repo.get!(Brando.Images.Image, old.id).path == "images/staging/a.jpg"
+        assert Repo.get!(Brando.Images.Image, new.id)
+      end)
+    end
+
     test "resources are matched exactly", %{tenants: [acme | _]} do
       base = MCP.base_url()
       assert {:ok, ^acme} = MCP.tenant_for_resource(base <> "/mcp/acme/production")

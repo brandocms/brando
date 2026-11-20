@@ -13,6 +13,7 @@ defmodule Brando.Content.Proposals.Codec do
   name any in the catalogue.
 
       %{"op" => "create_entry", "content_type" => "…", "ref" => "case", "fields" => %{}}
+      %{"op" => "create_translation", "source" => %{"content_type" => "…", "id" => 12}, "language" => "en", "ref" => "en"}
       %{"op" => "set_fields", "target" => target, "fields" => %{}}
       %{"op" => "insert_block", "target" => target, "field" => "blocks", "module" => "local:12",
         "parent" => uid | nil, "placement" => "append" | %{"before" => uid} | %{"after" => uid},
@@ -28,6 +29,7 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "set_ref_config", "target" => target, "block_uid" => uid, "ref" => name, "config" => %{}}
       %{"op" => "set_block_table", "target" => target, "block_uid" => uid, "rows" => [%{}]}
       %{"op" => "set_block_selection", "target" => target, "block_uid" => uid, "identifiers" => [id]}
+      %{"op" => "replace_image_file", "asset" => %{"kind" => "image", "id" => old}, "with" => %{"kind" => "image", "id" => new}}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video" | "file", "id" => 3}`, the alias
@@ -44,9 +46,11 @@ defmodule Brando.Content.Proposals.Codec do
   alias Brando.Content.Proposals.{
     CopyBlock,
     CreateEntry,
+    CreateTranslation,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
+    ReplaceImageFile,
     SetBlockActive,
     SetBlockDetails,
     SetBlockMedia,
@@ -92,6 +96,13 @@ defmodule Brando.Content.Proposals.Codec do
       schema: writable!(map["content_type"]),
       ref: string!(map["ref"], "ref"),
       fields: values(map!(map["fields"]), attachments)
+    }
+
+  defp decode!("create_translation", map, _),
+    do: %CreateTranslation{
+      source: source!(map["source"]),
+      language: string!(map["language"], "language"),
+      ref: string!(map["ref"], "ref")
     }
 
   defp decode!("set_fields", map, attachments),
@@ -231,6 +242,18 @@ defmodule Brando.Content.Proposals.Codec do
     }
   end
 
+  # What the two files were is frozen when the proposal is prepared
+  # (`Brando.Content.Proposals.prepare/2` puts it in), and kept in the stored
+  # operation; one a tool sends is replaced.
+  defp decode!("replace_image_file", map, attachments) do
+    %ReplaceImageFile{
+      asset: image!(map["asset"], attachments, "asset"),
+      with: image!(map["with"], attachments, "with"),
+      old: snapshot(map["old"]),
+      new: snapshot(map["new"])
+    }
+  end
+
   defp decode!(op, _, _), do: invalid!(dgettext("content_proposals", "Unknown operation %{op}.", op: inspect(op)))
 
   @doc "Encode one operation to its JSON form."
@@ -242,6 +265,9 @@ defmodule Brando.Content.Proposals.Codec do
       "ref" => op.ref,
       "fields" => Map.new(op.fields, fn {key, value} -> {key, value(value)} end)
     }
+
+  def encode(%CreateTranslation{} = op),
+    do: %{"op" => "create_translation", "source" => target(op.source), "language" => op.language, "ref" => op.ref}
 
   def encode(%SetFields{} = op),
     do: %{
@@ -365,6 +391,15 @@ defmodule Brando.Content.Proposals.Codec do
       "description" => op.description
     }
 
+  def encode(%ReplaceImageFile{} = op),
+    do: %{
+      "op" => "replace_image_file",
+      "asset" => asset(op.asset),
+      "with" => asset(op.with),
+      "old" => op.old,
+      "new" => op.new
+    }
+
   def encode(%DeleteBlock{} = op),
     do: %{"op" => "delete_block", "target" => target(op.target), "field" => op.field, "block_uid" => op.block_uid}
 
@@ -447,6 +482,12 @@ defmodule Brando.Content.Proposals.Codec do
   defp target!(_),
     do: invalid!(dgettext("content_proposals", "A target is {content_type, id} or {new: ref}."))
 
+  # A translation is made of a saved entry.
+  defp source!(%{"content_type" => _, "id" => _} = source) when not is_map_key(source, "new"), do: target!(source)
+
+  defp source!(_),
+    do: invalid!(dgettext("content_proposals", "source is a saved entry: {content_type, id}."))
+
   defp schema!(name) do
     case schema(name) do
       {:ok, schema} -> schema
@@ -517,6 +558,28 @@ defmodule Brando.Content.Proposals.Codec do
       invalid!(
         dgettext("content_proposals", "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}.")
       )
+
+  # Only an image's file can be replaced so far.
+  defp image!(nil, _attachments, key), do: invalid!(dgettext("content_proposals", "%{key} is required.", key: key))
+
+  defp image!(value, attachments, key) do
+    case asset!(value, attachments) do
+      {:image, id} ->
+        {:image, id}
+
+      _ ->
+        invalid!(
+          dgettext(
+            "content_proposals",
+            "%{key} is an image ({kind: image, id}): only an image's file can be replaced so far.",
+            key: key
+          )
+        )
+    end
+  end
+
+  defp snapshot(%{} = snapshot), do: snapshot
+  defp snapshot(_), do: nil
 
   # A block variable's value. A link may come with its text or new-tab
   # setting; without "link" (or "url"), it keeps where it points.

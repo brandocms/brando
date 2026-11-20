@@ -79,6 +79,8 @@ defmodule Brando.Content.Proposals.Preview do
 
     cond do
       !schema -> {:error, dgettext("content_proposals", "This entry is not part of the proposal.")}
+      # A translation is copied from its source as the proposal is applied.
+      Proposals.translation(proposal.operations, target) -> {:error, :no_preview_target}
       version == :before and match?({:new, _}, target) -> {:error, :not_created}
       !LivePreview.has_live_preview_target(schema) -> {:error, :no_preview_target}
       version == :proposed and not Proposals.previewable?(proposal) -> {:error, :problems}

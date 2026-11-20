@@ -12,6 +12,23 @@ defmodule Brando.Worker.ImageProcessorTest do
 
   @sample Path.expand("../../fixtures/sample.jpg", __DIR__)
 
+  # Gives the image it sizes another file halfway, as an approved
+  # `replace_image_file` does while the image's job is running on another node
+  defmodule ReplacingProcessor do
+    @moduledoc false
+    import Ecto.Query, only: [from: 2]
+
+    def process_image(%{image_id: id} = params) do
+      Brando.Repo.update_all(from(i in Image, where: i.id == ^id and i.path != "images/replaced/new.jpg"),
+        set: [path: "images/replaced/new.jpg", sizes: %{"small" => "images/replaced/small/new.jpg"}]
+      )
+
+      Brando.Images.Processor.Dummy.process_image(params)
+    end
+
+    defdelegate get_dominant_color(path), to: Brando.Images.Processor.Dummy
+  end
+
   setup do
     dir = Path.join(Storage.current_media_root(), "images/no-type")
     File.mkdir_p!(Path.join(dir, "small"))
@@ -61,6 +78,36 @@ defmodule Brando.Worker.ImageProcessorTest do
     end)
 
     assert_receive {%Image{id: id}, [:image, :error], ^path} when id == image.id
+  end
+
+  test "a run that started on the image's previous file writes nothing over the file it has now" do
+    images_config = Application.get_env(:brando, Brando.Images, [])
+    put_test_env(Brando.Images, Keyword.put(images_config, :processor_module, ReplacingProcessor))
+
+    path = "images/replaced/old-#{System.unique_integer([:positive])}.jpg"
+    file = Path.join(Storage.current_media_root(), path)
+    File.mkdir_p!(Path.dirname(file))
+    File.cp!(@sample, file)
+
+    image =
+      Brando.Factory.insert(:image, %{
+        path: path,
+        width: 800,
+        height: 600,
+        formats: [:jpg],
+        sizes: %{},
+        status: :unprocessed,
+        config_fingerprint: nil
+      })
+
+    args = %{"image_id" => image.id, "config_target" => "default", "user_id" => nil, "field_full_path" => []}
+    # Its job is done: the image's own job makes the sizes of the file it has
+    assert :ok = perform_job(Brando.Worker.ImageProcessor, args)
+
+    now = Brando.Repo.get!(Image, image.id)
+    assert now.path == "images/replaced/new.jpg"
+    assert now.sizes == %{"small" => "images/replaced/small/new.jpg"}
+    assert {now.status, now.config_fingerprint} == {:unprocessed, nil}
   end
 
   test "a bulk recreate skips it and keeps its sizes", %{image: image, size: size} do

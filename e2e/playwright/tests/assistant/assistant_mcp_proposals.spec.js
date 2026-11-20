@@ -152,3 +152,39 @@ test("a card's cover is sharp at the card's width", async ({ page }) => {
   expect(await cover.evaluate(img => img.clientHeight === img.parentElement.clientHeight)).toBe(true)
   expect(errors).toEqual([])
 })
+
+// A connected tool proposes the English version of a Norwegian synchronized
+// article. Its card says what it creates and offers no publishing; applied,
+// the translation opens as a draft in the source's group.
+test('applies a proposal from a connected tool that creates a translation', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+
+  const response = await page.request.post('/e2e/setup_fixtures/mcp-create-translation')
+  expect(response.ok()).toBe(true)
+
+  await page.goto('/admin/assistant/connected')
+  await syncLV(page)
+  const list = page.locator('#assistant-connected-list')
+  await expect(list.locator('li')).toHaveCount(1)
+  await list.locator('a[data-proposal-id]').click()
+  await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]+$/)
+  await syncLV(page)
+
+  const review = page.locator('.assistant-proposal')
+  const card = review.locator('.assistant-card')
+  await expect(card).toHaveCount(1)
+  await expect(card.getByTestId('assistant-action-create')).toBeVisible()
+  await expect(card.getByTestId('assistant-create-translation')).toContainText('Fjordhuset')
+  await expect(card.locator('.assistant-publish')).toHaveCount(0)
+  await expect(card.locator('.assistant-card-preview')).toHaveCount(0)
+
+  await review.locator('button.assistant-apply').click()
+  await expect(review.locator('.assistant-feedback.is-success')).toBeVisible({ timeout: 15000 })
+
+  // The receipt links to the new translation's form
+  await review.locator('.assistant-receipt a').first().click()
+  await syncLV(page)
+  await expect(page.locator('input[name$="[title]"]').first()).toHaveValue('Fjordhuset', { timeout: 15000 })
+  expect(errors).toEqual([])
+})

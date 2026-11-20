@@ -75,6 +75,29 @@ defmodule Brando.Media.OrphanCleanup do
     end
   end
 
+  @doc """
+  Restarts the grace period of `image`'s files (its original and its sizes,
+  in each of its formats), counted from now, so a run removes none of them
+  for the next 24 hours: for files no row names any more that a page rendered
+  before, or a visitor's cached copy of it, still links (an image whose file
+  was replaced: `Brando.Content.Proposals.ImageReplacement`). A file that
+  isn't in the media folder (kept only on a CDN) is left alone.
+  """
+  @spec hold_image_files(Image.t()) :: :ok
+  def hold_image_files(%Image{path: path, sizes: sizes, formats: formats}) do
+    now = System.os_time(:second)
+
+    for relative <- image_paths({path, sizes, formats}),
+        is_binary(relative),
+        {:ok, file} <- [Storage.media_file(relative)],
+        # `File.touch/2` would create one that isn't there
+        File.regular?(file) do
+      File.touch(file, now)
+    end
+
+    :ok
+  end
+
   @doc "Returns the local media root reserved for a site."
   @spec media_root(Site.t() | nil) :: String.t()
   def media_root(nil), do: Brando.config(:media_path)

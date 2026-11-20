@@ -7,6 +7,21 @@ defmodule Brando.Content.Proposals.CreateEntry do
   defstruct [:schema, :ref, fields: %{}]
 end
 
+defmodule Brando.Content.Proposals.CreateTranslation do
+  @moduledoc """
+  Create the `language` version of `source` (`{schema, id}`) in its
+  synchronized translation group, as the editor's Create translation does
+  (`Brando.Translations.create_target/5`): an unpublished copy, linked as an
+  alternate, with every text it copied marked to translate. A source not yet
+  in a group becomes its source. Other operations name the new entry as
+  `{:new, ref}`.
+  """
+  @enforce_keys [:source, :language, :ref]
+  defstruct [:source, :language, :ref]
+
+  @type t :: %__MODULE__{source: {module(), integer()}, language: String.t(), ref: String.t()}
+end
+
 defmodule Brando.Content.Proposals.SetFields do
   @moduledoc """
   Change attributes of an existing entry. `target` is `{schema, id}`.
@@ -179,4 +194,24 @@ defmodule Brando.Content.Proposals.SetBlockSelection do
   """
   @enforce_keys [:target, :block_uid, :identifiers]
   defstruct [:target, :block_uid, :identifiers, field: "blocks"]
+end
+
+defmodule Brando.Content.Proposals.ReplaceImageFile do
+  @moduledoc """
+  Give library image `asset` (`{:image, id}`, OLD) the file of library image
+  `with` (`{:image, id}`, NEW), keeping OLD's id, focal point, texts, folder
+  and every place it is used. NEW's record goes, since its file is now OLD's
+  and nothing used it. See `Brando.Content.Proposals.ImageReplacement`.
+
+  `old` and `new` are what the two files were when the proposal was
+  prepared, frozen with it (string keys: `"path"`, `"width"`, `"height"`,
+  `"content_hash"`, `"type"`, `"bytes"`, `"sizes"`, `"formats"`, `"cdn"`,
+  `"focal"`): the review shows them, and the proposal is refused when
+  either file changed since. `Brando.Content.Proposals.prepare/2` always
+  takes them from the library, never from the operation it is given.
+  """
+  @enforce_keys [:asset, :with]
+  defstruct [:asset, :with, :old, :new]
+
+  @type t :: %__MODULE__{}
 end

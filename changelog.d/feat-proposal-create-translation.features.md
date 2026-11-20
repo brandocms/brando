@@ -1,0 +1,1 @@
+- A proposal from the Assistant or an MCP client can create a synchronized entry's translation into another language (`create_translation`), as the admin's **Create translation** does, reviewed on its own card and undone with the proposal.

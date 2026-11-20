@@ -17,6 +17,13 @@ msgstr ""
 msgid "%{content_type} #%{id}"
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry you cannot see"
+msgid_plural "%{count} entries you cannot see"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
@@ -24,9 +31,21 @@ msgid_plural "%{count} items"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "%{entries} and %{count} entry you cannot see"
+msgid_plural "%{entries} and %{count} entries you cannot see"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "%{entries} changed after the proposal was applied. Undo would overwrite that."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} became its translation group's source after the proposal was applied. Undo would leave the group without a source: make another version the source first."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -51,6 +70,11 @@ msgstr ""
 
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
+msgid "%{key} is an image ({kind: image, id}): only an image's file can be replaced so far."
+msgstr ""
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
 msgid "%{key} is required."
 msgstr ""
 
@@ -71,6 +95,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{language} is not one of the site's languages for %{name} entries."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} cannot hold a {, which the page could read as Liquid."
 msgstr ""
 
@@ -82,6 +111,16 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} does not accept this media type."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} entries are not synchronized translations. Create the version in another language with create_entry instead."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} entries cannot be copied, so they cannot be translated."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -194,6 +233,16 @@ msgstr ""
 msgid "After %{block}"
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "An SVG can only be replaced with an SVG."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "An SVG can only replace an SVG."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "An anchor starts with a letter and holds letters, digits, - and _."
@@ -201,7 +250,17 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "An earlier operation in this proposal already creates this version."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "An entry has no earlier revision to go back to."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "An image cannot be replaced with itself."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -239,6 +298,16 @@ msgstr ""
 msgid "Content changed after this proposal was prepared. Review it again."
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Could not queue the image's sizes: %{error}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Creating a translation takes permission to edit %{name} entries as well, which you do not have."
+msgstr ""
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Deactivated"
@@ -272,6 +341,46 @@ msgstr ""
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "File #%{id}"
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} has another file than when this proposal was prepared. Prepare it again."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is already used, and its record goes when its file replaces another image's. Swap the references to it instead (set_block_media, set_fields), or upload the file again as a new image."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is in the trash."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is replaced in another operation of this proposal too."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is used in another replacement of this proposal too."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{new} is the same file as image %{old}."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{new}'s file is delivered through another CDN than image %{old}'s field uses, so image %{old} would not find it. Upload the file again to image %{old}'s field."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{old}'s field takes %{types}; the file of image %{new} is %{type}."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -364,6 +473,11 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Replacing the file of image %{id} changes every entry that shows it, and you may not change %{entries}."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve every blocking problem before applying."
@@ -414,6 +528,16 @@ msgstr ""
 msgid "The entry to link to was not found."
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The file of image %{id} could not be read."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The file of image %{new} is larger than image %{old}'s field takes (%{limit})."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The module has no media slot %{name}."
@@ -434,9 +558,29 @@ msgstr ""
 msgid "The module has no variable %{key}."
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The sizes of image %{id} are still being made. Approve the proposal again in a moment."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source already has a version in this language. Change that version instead."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source is already in this language."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation could not be created: %{reason}"
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -457,6 +601,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The uid `%{uid}` is already used by another block in this proposal."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "There is no image %{id} you may read in the media library."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -504,9 +653,24 @@ msgstr ""
 msgid "This content type is not registered on this site."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a translation. Create translations from its group's source, %{source}."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a translation. Create translations from its group's source."
+msgstr ""
+
 #: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This entry is not part of the proposal."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is the translation an earlier operation creates. Its blocks and fields are copied from its source when the proposal is applied, and its structure follows the source: write its text with a translate operation instead."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -544,6 +708,11 @@ msgstr ""
 msgid "This module is not available in this slot."
 msgstr ""
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal also places image %{id}, whose record goes when its file replaces image %{old}. Place image %{old} instead, or swap the references instead of replacing the file."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal belongs to another user, site or environment."
@@ -568,6 +737,11 @@ msgstr ""
 #: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal is no longer under review."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal replaced an image's file, and a replaced file cannot be undone."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -617,6 +791,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "You do not have permission to create a translation of this entry."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "You do not have permission to create this entry."
 msgstr ""
 
@@ -628,6 +807,18 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to save this entry."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "You may not change image %{ids}."
+msgid_plural "You may not change images %{ids}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "You may not see the images this proposal replaces."
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex
@@ -648,6 +839,11 @@ msgstr ""
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "identifiers is a list of identifier ids."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "no images"
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex
@@ -683,6 +879,11 @@ msgstr ""
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "rows is a list of objects."
+msgstr ""
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "source is a saved entry: {content_type, id}."
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex
