@@ -760,7 +760,8 @@ defmodule Brando.MCP.MediaTest do
       assert images() == []
     end
 
-    test "a refused import makes no folder", %{tenant: tenant, token: token} do
+    test "an import refused before the store makes no folder; one the store refuses leaves it",
+         %{tenant: tenant, token: token} do
       html = WebhookReceiver.start(fn _request -> {200, "<html></html>"} end)
 
       for url <- ["https://169.254.169.254/a.png", WebhookReceiver.url(html, "/a.png")] do
@@ -768,6 +769,17 @@ defmodule Brando.MCP.MediaTest do
       end
 
       refute Brando.Repo.repo().exists?(from(f in Folder, where: f.name == "refused"))
+
+      # The folder is made before the store, which refuses an image over the
+      # pixel limit only once it has the file
+      put_test_env(Brando.Images, Keyword.put(Application.get_env(:brando, Brando.Images, []), :max_pixels, 10))
+      png = WebhookReceiver.start(fn _request -> {200, @png} end)
+
+      assert %{"isError" => true} =
+               call(tenant, token, "import_url", %{"url" => WebhookReceiver.url(png, "/a.png"), "folder" => "too-large"})
+
+      refute Brando.Repo.repo().exists?(from(i in Image, where: like(i.path, "%/too-large/%")))
+      assert Brando.Repo.repo().exists?(from(f in Folder, where: f.name == "too-large"))
     end
 
     test "does not follow a redirect", %{tenant: tenant, token: token} do

@@ -10,7 +10,9 @@ defmodule Brando.Images.Intake do
   for the same config, that the person may read) is reused rather than
   stored again. One store of a file for the config runs at a time
   (`Brando.Images.with_file_lock/3`), so two imports of the same picture at
-  once find each other's image. Sizes are made in the background.
+  once find each other's image; the folder is made before that lock's
+  transaction, so two stores into a new folder at once both use it. Sizes
+  are made in the background.
 
   A download from a URL goes through `Brando.Webhooks.URLGuard`: public
   `https` addresses only, no redirects, at most the config's size limit.
@@ -50,8 +52,10 @@ defmodule Brando.Images.Intake do
   @doc """
   Where `actor`'s files go: the default image config, with `folder` (a path
   below its upload path, or one that starts with it) as the upload path and
-  overwriting off. The library folder is created when an image is stored in
-  it, if `actor` may add one.
+  overwriting off. The library folder is created, if `actor` may add one,
+  when `store/6` is about to store a new image in it: not for a file the
+  library already has. A file the store then refuses (over the pixel limit,
+  an SVG it does not take) leaves the folder.
   """
   @spec context(term(), String.t() | nil) :: context()
   def context(actor, folder) do
@@ -162,14 +166,28 @@ defmodule Brando.Images.Intake do
   def store(path, filename, type, ctx, on_new \\ &{:stored, &1}, attrs \\ %{}) do
     hash = hash(path)
 
-    hash
-    |> Images.with_file_lock(ctx.config_target, fn -> reuse_or_store(hash, path, filename, type, ctx, on_new, attrs) end)
-    |> queue_sizes(ctx.actor)
+    case existing(hash, ctx) do
+      %Image{} = image ->
+        queue_sizes({:reused, image}, ctx.actor)
+
+      nil ->
+        # The folder is made before the store's transaction, and committed:
+        # two stores into a new folder at once both insert it, and the one
+        # that loses, inside a transaction, could no longer read the other's
+        folder_id = FolderBrowser.folder_id_for(ctx.absolute_folder, ctx.upload_root, ctx.actor, Image)
+
+        hash
+        |> Images.with_file_lock(ctx.config_target, fn ->
+          reuse_or_store(hash, path, filename, type, ctx, folder_id, on_new, attrs)
+        end)
+        |> queue_sizes(ctx.actor)
+    end
   end
 
-  defp reuse_or_store(hash, path, filename, type, ctx, on_new, attrs) do
+  # Looked for again under the lock: the same file stored meanwhile is reused
+  defp reuse_or_store(hash, path, filename, type, ctx, folder_id, on_new, attrs) do
     with nil <- existing(hash, ctx),
-         {:stored, image} <- store_new(path, filename, type, ctx, attrs) do
+         {:stored, image} <- store_new(path, filename, type, ctx, folder_id, attrs) do
       on_new.(image)
     else
       %Image{} = image -> {:reused, image}
@@ -177,8 +195,7 @@ defmodule Brando.Images.Intake do
     end
   end
 
-  defp store_new(path, filename, type, ctx, attrs) do
-    folder_id = FolderBrowser.folder_id_for(ctx.absolute_folder, ctx.upload_root, ctx.actor, Image)
+  defp store_new(path, filename, type, ctx, folder_id, attrs) do
     meta = %{path: path, config_target: ctx.config_target, folder_id: folder_id, image_attrs: attrs}
     entry = %{client_name: filename, client_type: type, client_size: File.stat!(path).size}
 

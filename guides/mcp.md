@@ -301,7 +301,11 @@ the person hands it, or one on another website.
 Both store an image the library already has, the same bytes for the same
 config, only once: the answer says `"reused": true` and gives the image the
 library has. The type comes from the file's bytes, not from its name or the
-request's `Content-Type`, and names the stored file's extension.
+request's `Content-Type`, and names the stored file's extension. A new
+`folder` is made when a new image is about to be stored in it: not for an
+address or download that is refused, nor for an image the library already
+has. An image the store itself refuses (over the pixel limit, an SVG it
+does not take) can leave the folder, empty.
 
 `brando_media_finish_upload` and `brando_media_import_url` also take:
 
