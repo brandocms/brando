@@ -1,0 +1,1 @@
+- Changing an entry's URL no longer fails for a project with a rich-text input in a subform, where it looked for links in the subform's rich-text input as if it were a column of the schema.

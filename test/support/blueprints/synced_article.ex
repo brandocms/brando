@@ -65,6 +65,9 @@ defmodule Brando.SyncTest.Article do
       preload_order: [asc: :sequence],
       cast: true
 
+    # An embeds_many subform with a text (TranslationAIFillTest)
+    relation :quotes, :embeds_many, module: Brando.SyncTest.ArticleQuote, on_replace: :delete
+
     # A one-to-one subform with an image field (SubformRelationTest)
     relation :author, :has_one,
       module: Brando.SyncTest.ArticleAuthor,
@@ -158,6 +161,14 @@ defmodule Brando.SyncTest.Article do
             input :link, :text
             input :cover, :image
             input :clip, :video
+          end
+
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :text
           end
         end
       end
@@ -474,6 +485,73 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # A translatable subform only superusers may change (TranslationAIFillTest)
+    form :superuser_items do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+        end
+
+        fieldset do
+          superuser true
+
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+          end
+        end
+      end
+    end
+
+    # A rich text in a subform's rows (TranslationAIFillTest), which
+    # Translate with AI leaves to the editor
+    form :rich_quotes do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+        end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+          end
+        end
+      end
+    end
+
+    # No input for some translatable texts (TranslationAIFillTest): the
+    # subtitle shows only for a featured article, and the items' rows have
+    # no label
+    form :partial do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :featured, :toggle
+          input :subtitle, :text, show_if: {:featured, true}
+        end
+
+        fieldset do
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :link, :text
+          end
+        end
+      end
+    end
+
     # A one-to-one subform with an image field (SubformRelationTest), on the
     # form's automatic preloads.
     form :author do
@@ -576,6 +654,29 @@ defmodule Brando.SyncTest.ArticleItem do
 
     # Entries input in a row (form `:item_entries`, EntriesInputMaskingTest)
     relation :related_entries, :entries
+  end
+end
+
+defmodule Brando.SyncTest.ArticleQuote do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "SyncTest",
+    schema: "ArticleQuote",
+    singular: "article_quote",
+    plural: "article_quotes",
+    gettext_module: Brando.Gettext
+
+  data_layer :embedded
+
+  trait :ensure_uid
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :uid, :string
+    attribute :text, :string
   end
 end
 

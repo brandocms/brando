@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Authorization.Events do
         ~w(draft_capture draft_clean draft_discard draft_dismiss draft_restore draft_restore_compatible open_live_preview open_live_preview_standalone recover_live_preview_state refresh_live_preview select_preview_target),
       checked: ~w(save save_form),
       write:
-        ~w(create_footnote create_permalink_redirect create_translation duplicate_image image_editor_save make_translation_independent make_translation_source reset_video_thumbnail run_field_action save_file save_image save_video save_video_authorized select_image share_link store_revision suggest_alt_text suggest_entry_alt_text tiptap_ai_generate)
+        ~w(create_footnote create_permalink_redirect create_translation duplicate_image image_editor_save make_translation_independent make_translation_source reset_video_thumbnail run_field_action save_file save_image save_video save_video_authorized select_image share_link store_revision suggest_alt_text suggest_entry_alt_text tiptap_ai_generate translate_with_ai)
     ],
     "BrandoAdmin.Components.Form.AltTextSuggestion" => [
       read: ~w(accept discard edit)
@@ -344,7 +344,7 @@ defmodule BrandoAdmin.Authorization.Events do
     "BrandoAdmin.LiveView.Listing.Hooks" => [
       read: ~w(describe_delete edit_entry),
       write:
-        ~w(create_entry_translation delete_entry delete_selected duplicate_entry duplicate_entry_to_language duplicate_selected_to_language rerender_entry set_status translate_entry_to_language undelete_entry)
+        ~w(create_entry_translation create_entry_translation_with_ai delete_entry delete_selected duplicate_entry duplicate_entry_to_language duplicate_selected_to_language rerender_entry set_status translate_entry_to_language undelete_entry)
     ],
     "BrandoAdmin.MCP.ConsentLive" => [
       read: ~w(deny return),

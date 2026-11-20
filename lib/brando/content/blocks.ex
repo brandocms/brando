@@ -770,11 +770,23 @@ defmodule Brando.Content.Blocks do
     end
   end
 
-  defp rich_text_fields_for(module) do
-    if function_exported?(module, :__rich_text_fields__, 0) do
-      module.__rich_text_fields__()
+  @doc """
+  The rich-text columns of a blueprint `module` that a moved identifier's
+  URL is rewritten in: the `:rich_text` inputs at the top of its default
+  form. `__rich_text_fields__/0` also names its subforms' rich-text inputs,
+  which are no columns of the module, and one named like a column of another
+  kind (a map, an embed) would reach `ilike`, which cannot read it.
+  """
+  def rich_text_fields_for(module) do
+    with true <- Brando.Blueprint.blueprint?(module),
+         %{tabs: tabs} <- module.__form__() do
+      for %{fields: fieldsets} <- tabs,
+          %{fields: inputs} <- fieldsets,
+          %Brando.Blueprint.Forms.Input{type: :rich_text, name: name} <- inputs,
+          name in module.__schema__(:fields),
+          do: name
     else
-      []
+      _ -> []
     end
   end
 
