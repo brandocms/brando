@@ -389,6 +389,45 @@ defmodule Brando.MCP.MediaTest do
       assert Map.values(image.alt) == ["Boats in a harbour"]
     end
 
+    # The default image config takes SVGs; the test config does not
+    test "an SVG, uploaded or imported, gets the focal point, title and alt text given",
+         %{tenant: tenant, token: token} do
+      images_env = Application.get_env(:brando, Brando.Images, [])
+
+      put_test_env(
+        Brando.Images,
+        Keyword.update!(
+          images_env,
+          :default_config,
+          &Map.update!(&1, :allowed_mimetypes, fn types -> types ++ ["image/svg+xml"] end)
+        )
+      )
+
+      attrs = %{"focal" => %{"x" => 20, "y" => 75, "mode" => "position"}, "title" => "Logo", "alt" => "The logo"}
+
+      svg = fn color ->
+        ~s(<svg xmlns="http://www.w3.org/2000/svg" width="10" height="20"><rect width="10" height="20" fill="#{color}"/></svg>)
+      end
+
+      assert %{"structuredContent" => %{"applied" => ["alt", "focal", "title"]}} =
+               upload!(tenant, token, svg.("red"), attrs)
+
+      receiver = WebhookReceiver.start(fn _request -> {200, svg.("blue")} end)
+      args = Map.put(attrs, "url", WebhookReceiver.url(receiver, "/logo.svg"))
+
+      assert %{"structuredContent" => %{"applied" => ["alt", "focal", "title"], "reused" => false}} =
+               call(tenant, token, "import_url", args)
+
+      assert [_uploaded, _imported] = images = images()
+
+      for image <- images do
+        assert image.path =~ ~r/\.svg$/
+        assert %{x: 20, y: 75, mode: :position} = image.focal
+        assert Map.values(image.title) == ["Logo"]
+        assert Map.values(image.alt) == ["The logo"]
+      end
+    end
+
     test "copies the focal point of the image it replaces", %{tenant: tenant, token: token} do
       %{"structuredContent" => %{"asset" => %{"id" => old}}} =
         upload!(tenant, token, @png, %{"focal" => %{"x" => 10, "y" => 90, "mode" => "position"}})
