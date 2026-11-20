@@ -48,7 +48,10 @@ defmodule Brando.Content.Proposals.TranslationWork do
                  "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
                  "the source, markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly " <>
                  "as they are. source_digest is the batch's token, which an answer to the batch is checked against. " <>
-                 "When next_after is set, read the next batch with after: next_after."
+                 "Answer the batch with one translate operation in prepare_proposal, with this source_digest: each " <>
+                 "unit's translation in texts by its key, or its key in reviewed when its text is right as it is. " <>
+                 "When next_after is set, read the next batch with after: next_after, and answer it with another " <>
+                 "translate operation in the same proposal."
 
   @doc "Runs the tool for `args` as `actor`."
   def run(args, actor) do
@@ -230,7 +233,8 @@ defmodule Brando.Content.Proposals.TranslationWork do
       total: length(all),
       note:
         "The units a new #{language} translation of this entry gets, before it exists, keyed as its work " <>
-          "items will be. " <> @answer_note
+          "items will be. One proposal creates and fills in the translation: create_translation with a ref R, " <>
+          "then translate on {\"new\": R}. " <> @answer_note
     })
     |> put_batch(all, positions, after_key, %{type: to_string(schema), id: {:new, entry.id}, language: language})
   end

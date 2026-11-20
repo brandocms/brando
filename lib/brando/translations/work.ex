@@ -203,6 +203,40 @@ defmodule Brando.Translations.Work do
     end
   end
 
+  @doc """
+  Where each of `keys` is and what its source holds, for a review of an
+  answer: `[%{key, label, format, source}]` in the order of `entry`, the
+  translation, or the source itself for one not created yet. A key the
+  entry does not have comes last, labelled by its path.
+  """
+  @spec describe(module(), struct(), struct(), [String.t()]) :: [map()]
+  def describe(schema, source, entry, keys) do
+    uids = Translations.module_uids([source, entry], schema)
+    source_texts = for {path, :text, value} <- Sync.flatten_entry(source, schema, nil, uids), into: %{}, do: {path, value}
+    order = entry |> Sync.flatten_entry(schema, nil, uids) |> positions()
+    ctx = context(schema, entry)
+
+    keys
+    |> Enum.uniq()
+    |> Enum.sort_by(&place(order, &1))
+    |> Enum.map(fn key ->
+      target = Labels.target(key, ctx.blocks)
+
+      %{
+        key: key,
+        label: Labels.label(target, ctx.labels),
+        format: described_format(key, target, ctx),
+        source: Map.get(source_texts, key)
+      }
+    end)
+  end
+
+  defp described_format(key, target, ctx) do
+    format(key, target, ctx)
+  rescue
+    _ -> "plain"
+  end
+
   defp context(schema, entry) do
     %{
       entry: entry,

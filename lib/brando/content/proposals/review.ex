@@ -31,7 +31,8 @@ defmodule Brando.Content.Proposals.Review do
     SetBlockText,
     SetBlockValues,
     SetFields,
-    SetRefConfig
+    SetRefConfig,
+    Translate
   }
 
   alias Brando.Content.Proposals.EntryFields
@@ -119,7 +120,10 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp entry({schema, id} = target, entry, proposal) do
-    changes = field_changes(target, entry, proposal) ++ block_changes(target, entry, proposal)
+    changes =
+      field_changes(target, entry, proposal) ++
+        block_changes(target, entry, proposal) ++ translate_changes(target, proposal)
+
     described = Catalog.describe(entry)
 
     %{
@@ -161,6 +165,8 @@ defmodule Brando.Content.Proposals.Review do
       operations: [Enum.find_index(proposal.operations, &(&1 == op))]
     }
 
+    changes = [change | translate_changes(target, proposal)]
+
     %{
       key: Proposal.key(target),
       target: target,
@@ -173,7 +179,7 @@ defmodule Brando.Content.Proposals.Review do
       admin_url: nil,
       status: "draft",
       live?: false,
-      changes: [change],
+      changes: changes,
       media: [],
       highlight: [],
       preview?: false,
@@ -181,6 +187,89 @@ defmodule Brando.Content.Proposals.Review do
       placeholders: [],
       problems: problems(proposal, target)
     }
+  end
+
+  # Each batch a translate operation answers, unit by unit: where the text
+  # is, the source's text and its translation, so the reviewer can check one
+  # against the other. A unit kept as it is shows the source's text only.
+  # The source is read as the reviewer may read it.
+  defp translate_changes(target, proposal) do
+    ops = for {%Translate{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
+
+    case ops != [] && translate_context(target, proposal) do
+      {schema, source, entry, language, source_language} ->
+        keys = Enum.flat_map(ops, fn {op, _} -> Map.keys(texts_of(op)) ++ reviewed_of(op) end)
+        # Without read on the source, its text is not shown
+        described = Brando.Translations.Work.describe(schema, source || entry, entry, keys)
+
+        for {op, index} <- ops do
+          texts = texts_of(op)
+          reviewed = reviewed_of(op)
+
+          units =
+            for %{key: key} = unit <- described, Map.has_key?(texts, key) or key in reviewed do
+              %{
+                key: key,
+                label: unit.label,
+                source: readable(source && unit.source),
+                text: if(Map.has_key?(texts, key), do: readable(texts[key])),
+                reviewed?: not Map.has_key?(texts, key)
+              }
+            end
+
+          %{
+            type: :translate,
+            language: language,
+            source_language: source_language,
+            units: units,
+            operations: [index]
+          }
+        end
+
+      _ ->
+        []
+    end
+  end
+
+  defp texts_of(%Translate{texts: texts}) when is_map(texts),
+    do: for({key, text} <- texts, is_binary(key) and is_binary(text), into: %{}, do: {key, text})
+
+  defp texts_of(_op), do: %{}
+
+  defp reviewed_of(%Translate{reviewed: reviewed}) when is_list(reviewed), do: Enum.filter(reviewed, &is_binary/1)
+  defp reviewed_of(_op), do: []
+
+  # The translation the proposal creates is its source's copy: its units are
+  # the source's, labelled from it.
+  defp translate_context({:new, _} = target, proposal) do
+    case Brando.Content.Proposals.translation(proposal.operations, target) do
+      %CreateTranslation{source: {schema, source_id}, language: language} ->
+        source = readable_source(schema, source_id)
+        source && {schema, source, source, language, to_string(source.language)}
+
+      nil ->
+        nil
+    end
+  end
+
+  defp translate_context({schema, id}, _proposal) do
+    with %{group_id: group_id, language: language} <- Brando.Translations.get_member(schema, id),
+         %{entry_id: source_id} <- Enum.find(Brando.Translations.list_members(group_id), &(&1.role == :source)),
+         {:ok, entry} <- Brando.Translations.load_entry(schema, id, with_deleted: true) do
+      source = readable_source(schema, source_id)
+      {schema, source, entry, language, source && to_string(source.language)}
+    else
+      _ -> nil
+    end
+  end
+
+  defp readable_source(schema, id) do
+    with true <- Boundary.readable_entry?(schema, id),
+         {:ok, source} <- Brando.Translations.load_entry(schema, id) do
+      source
+    else
+      _ -> nil
+    end
   end
 
   defp new_entry({:new, ref} = target, schema, proposal) do

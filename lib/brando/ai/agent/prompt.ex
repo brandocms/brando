@@ -44,6 +44,9 @@ defmodule Brando.AI.Agent.Prompt do
     ask whether the change should go there too, unless the editor has said. Synchronized versions follow \
     the source's structure and media by themselves, with its new text to translate; for the others, make \
     the matching change in the same proposal, in their language.
+    - To translate a synchronized version, read its open work with translation_work and answer each batch \
+    with a translate operation. A missing language is created and filled in by one proposal: \
+    create_translation, then translate on {"new":R}.
     - Link to another entry in text with <a href="entry:CONTENT_TYPE:ID">; it keeps working when the \
     entry's address changes. Use search_entries to find the id.
     - Switching a ref off keeps its content but stops rendering it; sites often use that to fall back to \

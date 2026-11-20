@@ -1551,6 +1551,33 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  # Each unit's source text above its translation, so one can be checked
+  # against the other; a unit kept as it is says so.
+  defp change(%{change: %{type: :translate}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title" data-testid="assistant-translate">
+      {ngettext(
+        "Translate %{count} text into %{language}",
+        "Translate %{count} texts into %{language}",
+        length(@change.units),
+        language: language_label(@change.language)
+      )}
+    </span>
+    <dl class="assistant-fields assistant-translation">
+      <div :for={unit <- @change.units} data-key={unit.key} data-reviewed={to_string(unit.reviewed?)}>
+        <dt>{unit.label}</dt>
+        <dd>
+          <span :if={unit.source not in [nil, ""]} class="assistant-translation-source" lang={@change.source_language}>
+            {unit.source}
+          </span>
+          <ins :if={!unit.reviewed?} lang={@change.language}>{unit.text}</ins>
+          <span :if={unit.reviewed?} class="assistant-translation-kept">{gettext("Kept as it is")}</span>
+        </dd>
+      </div>
+    </dl>
+    """
+  end
+
   defp change(%{change: %{type: :fields}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Change fields")}</span>
