@@ -99,7 +99,10 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
 
     # The state the admin's Create translation leaves
     {:ok, other} =
-      SyncTest.create_article(%{title: "Tittel", slug: "annen-#{c.source.id}", language: "no", status: "published"}, c.user)
+      SyncTest.create_article(
+        %{title: "Tittel", slug: "annen-#{c.source.id}", language: "no", status: "published"},
+        c.user
+      )
 
     other_block = TranslationFixtures.add_block(other, c.module, c.user, "<p>Første avsnitt</p>", 0)
     {:ok, admin} = Translations.create_target(Article, other.id, :en, c.user)
@@ -128,8 +131,12 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     {:ok, _} = Translations.create_target(Article, c.source.id, :en, c.user)
     assert codes([op(c)], c.user) == [{0, :language_exists}]
 
-    {:ok, lone} = SyncTest.create_article(%{title: "Alone", slug: "alone-#{c.source.id}", language: "no", status: "draft"}, c.user)
-    {:ok, english} = SyncTest.create_article(%{title: "Alone", slug: "alone-en-#{c.source.id}", language: "en", status: "draft"}, c.user)
+    {:ok, lone} =
+      SyncTest.create_article(%{title: "Alone", slug: "alone-#{c.source.id}", language: "no", status: "draft"}, c.user)
+
+    {:ok, english} =
+      SyncTest.create_article(%{title: "Alone", slug: "alone-en-#{c.source.id}", language: "en", status: "draft"}, c.user)
+
     :ok = Article.Alternate.add(lone.id, english.id)
     assert codes([op(c, source: {Article, lone.id})], c.user) == [{0, :language_exists}]
     # The refusal enrolled nothing
@@ -162,7 +169,13 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     ]
 
     {:ok, proposal} = Proposals.prepare(ops, c.user)
-    assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [{1, :use_translate}, {2, :use_translate}, {3, :use_translate}]
+
+    assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [
+             {1, :use_translate},
+             {2, :use_translate},
+             {3, :use_translate}
+           ]
+
     assert Enum.all?(proposal.problems, &(&1.message =~ "translate"))
   end
 
@@ -178,7 +191,12 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
   end
 
   test "a later failure rolls the translation back with the rest of the apply", c do
-    create = %CreateEntry{schema: Page, ref: "page", fields: %{title: "Page", uri: "taken-later", language: "en", template: "default.html"}}
+    create = %CreateEntry{
+      schema: Page,
+      ref: "page",
+      fields: %{title: "Page", uri: "taken-later", language: "en", template: "default.html"}
+    }
+
     {:ok, proposal} = Proposals.propose([op(c), create], c.user)
     assert proposal.problems == []
     {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)

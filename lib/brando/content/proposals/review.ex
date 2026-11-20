@@ -77,7 +77,7 @@ defmodule Brando.Content.Proposals.Review do
 
       if target not in sources and is_nil(Brando.Content.Proposals.translation(proposal.operations, target)) and
            Brando.LivePreview.has_live_preview_target(schema),
-        do: Proposal.key(target)
+         do: Proposal.key(target)
     end)
   end
 

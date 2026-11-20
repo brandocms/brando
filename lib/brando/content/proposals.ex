@@ -676,10 +676,7 @@ defmodule Brando.Content.Proposals do
         ]
 
       true ->
-        case Error.protect(fn -> load!({schema, id}, actor, action: :read) end) do
-          {:ok, source} -> translation_problems(op, source, proposal, actor)
-          {:error, message} -> [problem(:unknown_target, message)]
-        end
+        source_problems(op, {schema, id}, proposal, actor)
     end
   end
 
@@ -695,6 +692,14 @@ defmodule Brando.Content.Proposals do
       status_problems(status, schema, proposal.targets[op.target], actor) ++
       asset_fields(op.fields, schema, actor) ++
       list_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
+  end
+
+  # The source is read as the actor may read it.
+  defp source_problems(op, source, proposal, actor) do
+    case Error.protect(fn -> load!(source, actor, action: :read) end) do
+      {:ok, source} -> translation_problems(op, source, proposal, actor)
+      {:error, message} -> [problem(:unknown_target, message)]
+    end
   end
 
   defp duplicate_ref?(op, proposal) do
@@ -795,7 +800,8 @@ defmodule Brando.Content.Proposals do
 
     schema == op_schema and language == op.language and
       (id == op_id or
-         (member != nil and match?(%{group_id: group_id} when group_id == member.group_id, Translations.get_member(schema, id))))
+         (member != nil and
+            match?(%{group_id: group_id} when group_id == member.group_id, Translations.get_member(schema, id))))
   end
 
   defp same_translation?(_earlier, _op, _member), do: false

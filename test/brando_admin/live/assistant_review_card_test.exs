@@ -70,7 +70,10 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
     # publishing, since its texts are still to translate.
     test "has its own card, in English and Norwegian", %{conn: conn, current_user: user} do
       {:ok, source} =
-        Brando.SyncTest.create_article(%{title: "Fjordhuset", slug: "fjordhuset-card", language: "no", status: "published"}, user)
+        Brando.SyncTest.create_article(
+          %{title: "Fjordhuset", slug: "fjordhuset-card", language: "no", status: "published"},
+          user
+        )
 
       op = %{
         "op" => "create_translation",
