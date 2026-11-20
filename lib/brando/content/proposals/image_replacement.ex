@@ -34,7 +34,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   every reference. NEW's record is deleted, with its jobs that have not
   started, and OLD's sizes are queued to be made again, as for an upload. A
   run of Image sizes that was waiting to recreate NEW counts OLD's job in
-  its place (`Brando.Images.SizeRun.carry_over/2`).
+  its place.
   Only rows change: no file is moved or written, so an approval that fails
   anywhere rolls back to OLD as it was, with its files.
 
