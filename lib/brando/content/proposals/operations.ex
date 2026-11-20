@@ -22,6 +22,32 @@ defmodule Brando.Content.Proposals.CreateTranslation do
   @type t :: %__MODULE__{source: {module(), integer()}, language: String.t(), ref: String.t()}
 end
 
+defmodule Brando.Content.Proposals.Translate do
+  @moduledoc """
+  Answer one batch of a synchronized translation's work, as
+  `translation_work` read it (`Brando.Translations.Work`).
+
+    * `target` — the translation, `{schema, id}`, or `{:new, ref}` for the
+      one a `CreateTranslation` in the same proposal creates
+    * `source_digest` — the batch's token
+    * `texts` — the translated text by unit key
+    * `reviewed` — the keys of units that are right as they are
+
+  Applied, the translation is saved as its form saves it
+  (`Brando.Translations.save_work/5`): its pending version with the texts
+  written in, and every answered work item resolved.
+  """
+  @enforce_keys [:target, :source_digest]
+  defstruct [:target, :source_digest, texts: %{}, reviewed: []]
+
+  @type t :: %__MODULE__{
+          target: {module(), integer()} | {:new, String.t()},
+          source_digest: String.t(),
+          texts: map(),
+          reviewed: [String.t()]
+        }
+end
+
 defmodule Brando.Content.Proposals.SetFields do
   @moduledoc """
   Change attributes of an existing entry. `target` is `{schema, id}`.

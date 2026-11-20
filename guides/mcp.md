@@ -184,7 +184,10 @@ creates or changes has a page preview, `preview_url`: the review opened on
 the first such entry's page (`?preview=<entry key>`), which is the link to
 give the person. A proposal can create a synchronized entry's version in
 another language with `create_translation`, as the admin's **Create
-translation** does ([Language versions](content_assistant.md#language-versions)).
+translation** does ([Language versions](content_assistant.md#language-versions)),
+and translate a synchronized version with `translate`, answering each batch
+`translation_work` read; both in one proposal create the version and fill it in
+([Translating with a proposal](content_assistant.md#translating-with-a-proposal)).
 
 With them, three tools that add images to the media library (below):
 `brando_media_prepare_upload`, `brando_media_finish_upload` and

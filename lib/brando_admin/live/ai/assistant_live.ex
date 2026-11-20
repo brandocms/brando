@@ -1551,6 +1551,38 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  # Each unit's source text above its translation, so one can be checked
+  # against the other; a unit kept as it is shows the text it keeps, and
+  # says so.
+  defp change(%{change: %{type: :translate}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title" data-testid="assistant-translate">
+      {ngettext(
+        "Translate %{count} text into %{language}",
+        "Translate %{count} texts into %{language}",
+        length(@change.units),
+        language: language_label(@change.language)
+      )}
+    </span>
+    <dl class="assistant-fields assistant-translation">
+      <div :for={unit <- @change.units} data-key={unit.key} data-reviewed={to_string(unit.reviewed?)}>
+        <dt>{unit.label}</dt>
+        <dd>
+          <span :if={unit.source not in [nil, ""]} class="assistant-translation-source" lang={@change.source_language}>
+            {unit.source}
+          </span>
+          <ins :if={!unit.reviewed?} lang={@change.language}>{unit.text}</ins>
+          <span :if={unit.reviewed? and unit.text not in [nil, ""]} lang={@change.language}>{unit.text}</span>
+          <span :if={unit.reviewed?} class="assistant-translation-kept">{gettext("Kept as it is")}</span>
+        </dd>
+      </div>
+    </dl>
+    <p :if={pending_note(@change[:pending])} class="assistant-placement" data-testid="assistant-translate-pending">
+      {pending_note(@change[:pending])}
+    </p>
+    """
+  end
+
   defp change(%{change: %{type: :fields}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Change fields")}</span>
@@ -1804,6 +1836,35 @@ defmodule BrandoAdmin.AI.AssistantLive do
     </dl>
     """
   end
+
+  # Applying a translate operation saves the translation's whole pending
+  # version, as its form's save does: what its source changed comes along,
+  # and the texts this proposal does not answer stay to translate.
+  defp pending_note(%{open: open, structure?: structure?, live?: live?}) when open > 0 or structure? do
+    structure =
+      cond do
+        structure? and live? ->
+          gettext(
+            "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated, and they go to the live page."
+          )
+
+        structure? ->
+          gettext(
+            "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated."
+          )
+
+        true ->
+          nil
+      end
+
+    texts =
+      if open > 0,
+        do: ngettext("%{count} other text is left to translate.", "%{count} other texts are left to translate.", open)
+
+    Enum.join(Enum.reject([structure, texts], &is_nil/1), " ")
+  end
+
+  defp pending_note(_pending), do: nil
 
   ## Events
 

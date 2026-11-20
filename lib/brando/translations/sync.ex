@@ -572,6 +572,15 @@ defmodule Brando.Translations.Sync do
     if texts == %{}, do: payload, else: put_texts(payload, spec, texts)
   end
 
+  @doc """
+  Writes `texts` (`%{path => text}`, paths as `flatten_entry/4` gives them)
+  into `entry`, at the paths `flatten_entry/4` reads. A path the entry lacks,
+  or a source-controlled variable's, is left alone.
+  """
+  def put_entry_texts(entry, schema, texts, module_uids \\ %{}) do
+    put_texts(entry, spec(schema, schema.__translatable_config__(), module_uids), texts)
+  end
+
   defp put_texts(entry, spec, texts) do
     entry =
       Enum.reduce(spec.fields, entry, fn
