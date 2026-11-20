@@ -286,7 +286,8 @@ the person hands it, or one on another website.
 - The tool sends the file's bytes to the URL with a PUT:
   `curl -T photo.jpg '<upload_url>'`. The URL is the only credential that
   needs, and it works once: a second PUT, even after a failed one, is
-  refused, and the tool prepares a new upload.
+  refused, and the tool prepares a new upload. `Brando.Plug.RequestLog`
+  logs it with the secret filtered out.
 - `brando_media_finish_upload` takes the `upload_id` and stores the image
   as an editor's upload is stored (`Brando.Uploads.store_upload/4`), under
   the default image config: its types, size limit and pixel limit, its sizes

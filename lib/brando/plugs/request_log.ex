@@ -3,7 +3,8 @@ defmodule Brando.Plug.RequestLog do
   Keeps the secret tokens some of Brando's paths carry out of the request
   log: a shared preview's key (`/__p__/…`), a static site preview's token
   (`/__ssg_preview__/…`), a password reset link, a content transfer
-  download and a shared assistant conversation. Anyone who reads the log
+  download, a shared assistant conversation and an MCP upload URL
+  (`/mcp/…/uploads/<id>/<secret>`). Anyone who reads the log
   could otherwise open them.
 
   Phoenix logs each request's method and path when the endpoint's
@@ -23,8 +24,14 @@ defmodule Brando.Plug.RequestLog do
   @filtered "[FILTERED]"
 
   # A path whose segments start with (or, below the admin's path, contain)
-  # one of these has a secret token in the segment after it.
-  @at_root [["__p__"], ["__ssg_preview__"]]
+  # one of these has a secret token in the segment after it. `:any` is any
+  # one segment: an MCP upload URL's id, or its site and environment.
+  @at_root [
+    ["__p__"],
+    ["__ssg_preview__"],
+    ["mcp", "uploads", :any],
+    ["mcp", :any, :any, "uploads", :any]
+  ]
   @anywhere [["reset-password"], ["content-transfer", "download"], ["assistant", "shared"]]
 
   @doc """
@@ -77,6 +84,7 @@ defmodule Brando.Plug.RequestLog do
   end
 
   defp after_marker([segment | rest], [segment | marker], index), do: after_marker(rest, marker, index + 1)
+  defp after_marker([_segment | rest], [:any | marker], index), do: after_marker(rest, marker, index + 1)
   defp after_marker([_token | _rest], [], index), do: index
   defp after_marker(_decoded, _marker, _index), do: nil
 end

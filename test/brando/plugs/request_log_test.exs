@@ -23,6 +23,25 @@ defmodule Brando.Plug.RequestLogTest do
     end
   end
 
+  # An MCP upload URL takes the bytes with no other credential
+  test "an MCP upload URL is logged with its secret filtered out, at a site environment's path too" do
+    id = "AbCdEfGhIjKlMnOpQrStUv"
+
+    for {path, logged} <- [
+          {"/mcp/uploads/#{id}/s3cr3t", "PUT /mcp/uploads/#{id}/[FILTERED]"},
+          {"/mcp/site/prod/uploads/#{id}/s3cr3t", "PUT /mcp/site/prod/uploads/#{id}/[FILTERED]"},
+          {"/mcp/%75ploads/#{id}/s3cr3t", "PUT /mcp/%75ploads/#{id}/[FILTERED]"}
+        ] do
+      log = OwnLog.capture(fn -> assert RequestLog.level(Plug.Test.conn(:put, path), :error) == false end)
+      assert log =~ logged
+      refute log =~ "s3cr3t"
+    end
+
+    # A media file's path is not an upload URL
+    assert RequestLog.filter(["media", "images", "uploads", "a", "b.jpg"]) == nil
+    assert RequestLog.filter(["mcp"]) == nil
+  end
+
   # The router decodes segments before it matches them, so these open the
   # same pages (found by the Codex audit)
   test "a percent-encoded path is filtered as the router reads it" do
