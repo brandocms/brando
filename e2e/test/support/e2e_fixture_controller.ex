@@ -142,6 +142,12 @@ defmodule E2EFixtureController do
         "mcp-create-translation" ->
           create_mcp_translation_proposal()
 
+        # A proposal from a connected tool translating the English version of
+        # a Norwegian synchronized article: the title translated, the subtitle
+        # kept as it is, read and answered with the tools as a client would
+        "mcp-translate" ->
+          create_mcp_translate_proposal()
+
         "assistant-block-swap" ->
           create_block_swap_proposal()
 
@@ -906,6 +912,43 @@ defmodule E2EFixtureController do
 
     {:ok, %{applicable: true}} =
       Tools.call("prepare_proposal", %{"summary" => "Create the English version", "operations" => [op]}, context)
+
+    user
+  end
+
+  defp create_mcp_translate_proposal do
+    user = get_admin_user()
+    alias Brando.Content.Proposals.Tools
+
+    {:ok, source} =
+      E2eProject.SyncTest.create_article(
+        %{
+          title: "Fjordhuset",
+          subtitle: "Arkitektkontor",
+          slug: "fjordhuset-oversatt",
+          language: "no",
+          status: "published",
+          year: 2020
+        },
+        user
+      )
+
+    {:ok, target} = Brando.Translations.create_target(E2eProject.SyncTest.Article, source.id, :en, user)
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+    {:ok, work} =
+      Tools.call("translation_work", %{"content_type" => "E2eProject.SyncTest.Article", "id" => target.id}, context)
+
+    op = %{
+      "op" => "translate",
+      "target" => %{"content_type" => "E2eProject.SyncTest.Article", "id" => target.id},
+      "source_digest" => work.source_digest,
+      "texts" => %{"title" => "The Fjord House"},
+      "reviewed" => ["subtitle"]
+    }
+
+    {:ok, %{applicable: true}} =
+      Tools.call("prepare_proposal", %{"summary" => "Translate into English", "operations" => [op]}, context)
 
     user
   end

@@ -188,3 +188,49 @@ test('applies a proposal from a connected tool that creates a translation', asyn
   await expect(page.locator('input[name$="[title]"]').first()).toHaveValue('Fjordhuset', { timeout: 15000 })
   expect(errors).toEqual([])
 })
+
+// A connected tool translates the English version of a Norwegian
+// synchronized article: its card shows each text's source above its
+// translation, and the subtitle kept as it is. Applied, the translation's
+// form holds the translated title.
+test('reviews and applies a translation from a connected tool', async ({ page }, testInfo) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+
+  const response = await page.request.post('/e2e/setup_fixtures/mcp-translate')
+  expect(response.ok()).toBe(true)
+
+  await page.goto('/admin/assistant/connected')
+  await syncLV(page)
+  const list = page.locator('#assistant-connected-list')
+  await expect(list.locator('li')).toHaveCount(1)
+  await list.locator('a[data-proposal-id]').click()
+  await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]+$/)
+  await syncLV(page)
+
+  const review = page.locator('.assistant-proposal')
+  const card = review.locator('.assistant-card')
+  await expect(card).toHaveCount(1)
+  await expect(card.getByTestId('assistant-translate')).toBeVisible()
+
+  const units = card.locator('.assistant-translation')
+  const title = units.locator('[data-key="title"]')
+  await expect(title.locator('.assistant-translation-source')).toHaveText('Fjordhuset')
+  await expect(title.locator('ins')).toHaveText('The Fjord House')
+  const subtitle = units.locator('[data-key="subtitle"]')
+  await expect(subtitle).toHaveAttribute('data-reviewed', 'true')
+  await expect(subtitle.locator('.assistant-translation-source')).toHaveText('Arkitektkontor')
+  await expect(subtitle.locator('ins')).toHaveCount(0)
+  // A translation is saved as its form saves it: it is not published here
+  await expect(card.locator('.assistant-publish')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('assistant-mcp-translate.png'), fullPage: true })
+
+  await review.locator('button.assistant-apply').click()
+  await expect(review.locator('.assistant-feedback.is-success')).toBeVisible({ timeout: 15000 })
+
+  await review.locator('.assistant-receipt a').first().click()
+  await syncLV(page)
+  await expect(page.locator('input[name$="[title]"]').first()).toHaveValue('The Fjord House', { timeout: 15000 })
+  expect(errors).toEqual([])
+})

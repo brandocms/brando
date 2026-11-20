@@ -131,6 +131,9 @@ defmodule Brando.Content.Proposals.Review do
       target: target,
       # An entry blocks are only copied from is read, not changed.
       action: if(target in Brando.Content.Proposals.sources(proposal.operations), do: :source, else: :update),
+      # A translation a translate operation fills in is saved as its form
+      # saves it, and is not published by the apply
+      translation?: Brando.Content.Proposals.translated?(proposal.operations, target),
       content_type: Brando.Blueprint.get_singular(schema),
       title: described.title,
       url: blank(described.url),
