@@ -1536,12 +1536,26 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     rich_fields = for {key, {:field, field}, _text} <- writes, key in written, do: field
+    previous = socket.assigns.form.source
 
     socket
     |> ship_all_field_changes()
     |> put_written_form(to_form(changeset, []))
+    |> replace_written_values(previous, changeset)
     |> force_svelte_remounts(rich_fields)
     |> TranslationFill.fields_written(written, failed)
+  end
+
+  # The browser shows the fields' old values until the written ones reach
+  # it: a `validate` sent meanwhile carries them, and the written values are
+  # kept over them (`drop_echoes/4`), as for another editor's change.
+  defp replace_written_values(socket, previous, changeset) do
+    replaced =
+      socket
+      |> changed_fields(previous, changeset)
+      |> Enum.reduce(replaced_values(socket), &replace_value(&2, previous, changeset, &1))
+
+    assign(socket, :replaced_values, replaced)
   end
 
   # Opening an existing entry. The entry is read before the form's first

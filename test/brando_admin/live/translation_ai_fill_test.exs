@@ -278,6 +278,29 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert has_element?(view, "#{item("title")}[data-ai='kept']")
     end
 
+    test "a keystroke sent before the filled texts reached the browser does not take them back",
+         %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+
+      translate_one(view, "title")
+      assert_receive {:ai_waiting, model}, 2_000
+
+      # The browser's form as it is before the fill, with a keystroke in
+      # another field: it reaches the server after the fill.
+      before = view |> render() |> form_params("#article_form_form")
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> title(view) == "EN Tittel" end)
+
+      params = before |> put_in(["article", "subtitle"], "Typed") |> Map.put("_target", ["article", "subtitle"])
+      view |> element("#article_form_form") |> render_change(params)
+
+      assert title(view) == "EN Tittel"
+      assert has_element?(view, "#{item("title")}[data-ai='filled']")
+    end
+
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
       source = source(c, "Gammel", "Gammel tekst")
       {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)
