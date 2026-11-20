@@ -347,7 +347,7 @@ defmodule Brando.Translations.Work do
         }
   def batch(units, positions, after_key, bytes, opts \\ []) do
     max_units = Keyword.get(opts, :max_units, 60)
-    known? = after_key != nil and (Map.has_key?(positions, after_key) or Enum.any?(units, &(&1.key == after_key)))
+    known? = follows?(units, positions, after_key)
 
     rest =
       if known?,
@@ -367,6 +367,14 @@ defmodule Brando.Translations.Work do
 
     %{units: Enum.reverse(batch), more: length(batch) < length(rest), restarted: after_key != nil and not known?}
   end
+
+  @doc """
+  Whether `batch/5` continues after `after_key`: false for nil, or a key
+  neither in the entry nor among the `units`, from which it starts over.
+  """
+  @spec follows?([unit()], map(), String.t() | nil) :: boolean()
+  def follows?(_units, _positions, nil), do: false
+  def follows?(units, positions, key), do: Map.has_key?(positions, key) or Enum.any?(units, &(&1.key == key))
 
   @doc """
   At most the bytes an answerable unit adds to its batch's token: its key and

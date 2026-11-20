@@ -110,6 +110,46 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
       assert Enum.uniq(Enum.map([first | rest], & &1.source_digest)) |> length() == length([first | rest])
     end
 
+    # The token, the other items and the head share the result with the units
+    test "a first batch with many links waiting for their targets stays within a result", c do
+      {:ok, source} =
+        SyncTest.create_article(%{title: "Mange", slug: "mange", language: "no", status: "published"}, c.user)
+
+      blocks =
+        for n <- 1..59, do: TranslationFixtures.add_block(source, c.module, c.user, "<p>Avsnitt nummer #{n}</p>", n)
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+      version = Translations.get_pending_version(Article, target.id)
+      now = NaiveDateTime.utc_now(:second)
+
+      Brando.Repo.insert_all(
+        Brando.Translations.WorkItem,
+        for {block, n} <- blocks |> Enum.take(40) |> Enum.with_index() do
+          %{
+            pending_version_id: version.id,
+            path: "entry_blocks/#{block.uid}/vars/link_to_the_related_entry_shown_in_the_sidebar_beside_the_article_body_#{n}/identifier/#{100_000 + n}",
+            kind: :awaiting_translation,
+            inserted_at: now,
+            updated_at: now
+          }
+        end
+      )
+
+      first = call!(args(target.id), c.context)
+      assert first.total == 60 and first.other_total == 40
+      assert byte_size(Jason.encode!(first)) <= Brando.MCP.Tools.result_limit()
+
+      # The rest follows, and every unit is read once
+      rest =
+        Stream.unfold(first.next_after, fn
+          nil -> nil
+          key -> (batch = call!(args(target.id, %{"after" => key}), c.context)) && {batch, batch.next_after}
+        end)
+        |> Enum.to_list()
+
+      assert [first | rest] |> Enum.flat_map(& &1.units) |> length() == 60
+    end
+
     # Applying a batch resolves its units, so the open ones shrink: the next
     # batch follows a key's place in the entry, not a count
     test "the next batch starts after the last key read, though the batch read was applied", c do

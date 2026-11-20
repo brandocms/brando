@@ -28,11 +28,15 @@ defmodule Brando.Content.Proposals.TranslationWork do
   alias Brando.Translations
   alias Brando.Translations.Work
 
-  # Units per result: under the MCP endpoint's 24 KB with the token, the
-  # other items and the head
-  @batch_bytes 14_000
+  # A result is sized whole, under the 24 KB the MCP endpoint and the
+  # Assistant take (`Brando.MCP.Tools.result_limit/0`): the head, the other
+  # items (at most @other_bytes) and the token first, the units in the rest.
+  # The margin covers what is added after (`next_after`, `restarted`) and the
+  # endpoint's link to its live page.
+  @result_bytes 22_000
   @batch_units 60
   @other_limit 40
+  @other_bytes 4_000
 
   @answer_note "Translate each unit's source into the translation's language, unit by unit by its key; a review " <>
                  "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
@@ -65,7 +69,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
     case Work.translation_units(schema, entry.id) do
       {:ok, work} ->
         {answerable, other} = Enum.split_with(work.units, & &1.answerable)
-        batch = Work.batch(answerable, work.positions, after_key, @batch_bytes, max_units: @batch_units)
+        first? = not Work.follows?(answerable, work.positions, after_key)
 
         schema
         |> head(entry)
@@ -73,13 +77,14 @@ defmodule Brando.Content.Proposals.TranslationWork do
           role: "translation",
           source: %{content_type: Codec.content_type(schema), id: work.source_id, language: work.source_language},
           total: length(answerable),
-          next_after: next_after(batch),
-          units: batch.units,
-          source_digest: Work.token(%{type: to_string(schema), id: entry.id, language: work.language}, batch.units),
           note: @answer_note
         })
-        |> put_restarted(batch)
-        |> put_other(other, after_key == nil or batch.restarted)
+        |> put_other(other, first?)
+        |> put_batch(answerable, work.positions, after_key, %{
+          type: to_string(schema),
+          id: entry.id,
+          language: work.language
+        })
 
       {:error, _} ->
         Error.fail!(dgettext_unavailable())
@@ -91,16 +96,46 @@ defmodule Brando.Content.Proposals.TranslationWork do
   defp put_other(result, [], _first?), do: result
 
   defp put_other(result, other, true) do
+    listed =
+      other
+      |> Enum.take(@other_limit)
+      |> Enum.reduce_while({[], 0}, fn item, {acc, size} ->
+        size = size + byte_size(Jason.encode!(item)) + 1
+        if size > @other_bytes, do: {:halt, {acc, size}}, else: {:cont, {[item | acc], size}}
+      end)
+      |> elem(0)
+      |> Enum.reverse()
+
     Map.merge(result, %{
-      other: Enum.take(other, @other_limit),
+      other: listed,
       other_total: length(other),
       other_note:
         "Not answerable with text: a link waiting for its target's translation, or a value updated from the " <>
-          "source. They are listed as the editor sees them; they resolve in the admin."
+          "source. They are listed as the editor sees them, the first of other_total; they resolve in the admin."
     })
   end
 
   defp put_other(result, _other, false), do: result
+
+  # The units take what the rest of the result leaves. Should the estimate
+  # be short, units are left to the next batch until the result fits.
+  defp put_batch(result, units, positions, after_key, scope) do
+    skeleton = Map.merge(result, %{units: [], next_after: nil, source_digest: Work.token(scope, [])})
+    budget = max(@result_bytes - byte_size(Jason.encode!(skeleton)), 0)
+    batch = Work.batch(units, positions, after_key, budget, max_units: @batch_units)
+    fit(result, batch, scope)
+  end
+
+  defp fit(result, batch, scope) do
+    full =
+      result
+      |> Map.merge(%{next_after: next_after(batch), units: batch.units, source_digest: Work.token(scope, batch.units)})
+      |> put_restarted(batch)
+
+    if length(batch.units) > 1 and byte_size(Jason.encode!(full)) > Brando.MCP.Tools.result_limit(),
+      do: fit(result, %{batch | units: Enum.drop(batch.units, -1), more: true}, scope),
+      else: full
+  end
 
   defp next_after(%{more: true, units: units}), do: List.last(units).key
   defp next_after(_batch), do: nil
@@ -168,20 +203,16 @@ defmodule Brando.Content.Proposals.TranslationWork do
 
   defp new_translation(schema, entry, head, language, after_key) do
     {:ok, %{units: all, positions: positions}} = Work.new_translation_units(schema, entry.id)
-    batch = Work.batch(all, positions, after_key, @batch_bytes, max_units: @batch_units)
 
     head
     |> Map.merge(%{
       new_translation: language,
       total: length(all),
-      next_after: next_after(batch),
-      units: batch.units,
-      source_digest: Work.token(%{type: to_string(schema), id: {:new, entry.id}, language: language}, batch.units),
       note:
         "The units a new #{language} translation of this entry gets, before it exists, keyed as its work " <>
           "items will be. " <> @answer_note
     })
-    |> put_restarted(batch)
+    |> put_batch(all, positions, after_key, %{type: to_string(schema), id: {:new, entry.id}, language: language})
   end
 
   defp trashed_ids(schema, ids) do

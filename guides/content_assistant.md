@@ -198,8 +198,8 @@ its source.
   source's current text (`source`) and the translation's (`current`); its
   `format`, `plain`, `html` or `markdown`; and in a block, the translation's
   own `block_uid`. Links waiting for a translation and values updated from
-  the source are listed under `other`, as the form lists them; they are not
-  answered with text.
+  the source are listed under `other` with the first batch, as many as fit,
+  with their count in `other_total`; they are not answered with text.
 - **On a source**, its language versions with their open work, and the
   languages without one. A version in the trash is marked `in_trash`, without
   its work; its language is still taken. With `language` naming one of those, the units a new
