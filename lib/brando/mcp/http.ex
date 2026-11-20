@@ -4,6 +4,7 @@ defmodule Brando.MCP.HTTP do
   `Brando.Router.mcp_routes/0`:
 
       POST /mcp[/<site>/<environment>]                    the MCP endpoint
+      PUT  /mcp[/<site>/<environment>]/uploads/<id>/<secret>  an upload's bytes (`Brando.MCP.Uploads`)
       GET  /mcp[/<site>/<environment>]/oauth/authorize    to the consent screen
       POST /mcp[/<site>/<environment>]/oauth/token        code and refresh grants
       POST /mcp[/<site>/<environment>]/oauth/revoke       RFC 7009
@@ -85,6 +86,7 @@ defmodule Brando.MCP.HTTP do
   defp action(["oauth", "authorize"]), do: {:ok, :authorize}
   defp action(["oauth", "token"]), do: {:ok, :token}
   defp action(["oauth", "revoke"]), do: {:ok, :revoke}
+  defp action(["uploads", id, secret]), do: {:ok, {:upload, id, secret}}
   defp action(_rest), do: :error
 
   # As if the route did not exist: the application's own 404.
@@ -137,6 +139,14 @@ defmodule Brando.MCP.HTTP do
 
       {:error, {:rate_limited, retry_after}} ->
         rate_limited(conn, retry_after, Server.error(nil, -32_000, "Too many requests."))
+    end
+  end
+
+  # The URL is the credential: no bearer token, so `curl -T` can send it
+  defp run(conn, {:upload, id, secret}, tenant) do
+    case origin(conn) do
+      :ok -> Brando.MCP.Uploads.accept(conn, id, secret, tenant)
+      {:error, :origin} -> json(conn, 403, %{error: "Origin not allowed."})
     end
   end
 

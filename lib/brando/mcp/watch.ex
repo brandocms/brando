@@ -32,7 +32,7 @@ defmodule Brando.MCP.Watch do
   @error_limit 300
 
   # The arguments a call's line names (`BrandoAdmin.Components.ToolSteps`)
-  @inputs ~w(query content_type module name kind offset)
+  @inputs ~w(query content_type module name kind offset filename)
 
   @doc "The path of `grant`'s live page in the admin."
   @spec path(Grant.t() | integer()) :: String.t()
@@ -176,8 +176,8 @@ defmodule Brando.MCP.Watch do
   What the live page shows of a call of tool `name` (the full MCP name) with
   `args`, which ended with `ok?` and the tool's structured result `data`
   (string keys): the arguments and the part of the result its line names
-  (`"input"`, `"output"`), the error, the images an import added or reused
-  and their folder, and the proposal it stored. Strings are cut short; no
+  (`"input"`, `"output"`), the error, the images an import or upload added
+  or reused and their folder, and the proposal it stored. Strings are cut short; no
   whole argument or result is kept. Written to the Activity event's details.
   """
   @spec summary(String.t(), map(), boolean(), map()) :: map()
@@ -189,10 +189,11 @@ defmodule Brando.MCP.Watch do
     |> Map.reject(fn {_key, value} -> value in [nil, %{}] end)
   end
 
-  @doc "A tool's name without `brando_content_` or `brando_figma_`."
+  @doc "A tool's name without `brando_content_`, `brando_figma_` or `brando_media_`."
   @spec short_name(String.t() | nil) :: String.t()
   def short_name("brando_content_" <> name), do: name
   def short_name("brando_figma_" <> name), do: name
+  def short_name("brando_media_" <> name), do: name
   def short_name(name) when is_binary(name), do: name
   def short_name(_name), do: ""
 
@@ -214,6 +215,10 @@ defmodule Brando.MCP.Watch do
   defp output("import_images", data),
     do: %{"frame" => frame_name(data), "images" => Enum.count(images(data), &Map.has_key?(&1, "id"))}
 
+  # The host of an imported address, not the address: its query may hold a key
+  defp output(name, data) when name in ["finish_upload", "import_url"],
+    do: %{"images" => length(media_images(data)), "reused" => data["reused"] == true}
+
   defp output(_name, _data), do: %{}
 
   defp extras("prepare_proposal", data) do
@@ -231,7 +236,15 @@ defmodule Brando.MCP.Watch do
     }
   end
 
+  defp extras(name, data) when name in ["finish_upload", "import_url"],
+    do: %{"folder" => cut(data["folder"], @text_limit), "images" => media_images(data)}
+
   defp extras(_name, _data), do: %{}
+
+  defp media_images(%{"asset" => %{"id" => id}} = data) when is_integer(id),
+    do: [%{"id" => id, "reused" => data["reused"] == true}]
+
+  defp media_images(_data), do: []
 
   defp images(%{"images" => images}) when is_list(images) do
     Enum.map(images, fn

@@ -9478,6 +9478,16 @@ msgstr[1] ""
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
+msgid "Imported an image from an address"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Imported an image the media library already had"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
 msgid "Imported images from a Figma frame"
 msgstr ""
 
@@ -14291,6 +14301,11 @@ msgstr ""
 msgid "Prepare groups, review permissions, and transfer configuration between environments."
 msgstr ""
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Prepared an upload"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
@@ -14299,6 +14314,11 @@ msgstr ""
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "Prepared the proposal"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Prepared to upload “%{filename}”"
 msgstr ""
 
 #: lib/brando_admin/components/tool_steps.ex
@@ -21701,6 +21721,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Uploaded"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Uploaded an image the media library already had"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Uploaded an image to the media library"
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex

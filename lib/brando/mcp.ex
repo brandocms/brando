@@ -422,11 +422,13 @@ defmodule Brando.MCP do
   @doc """
   Removes what no request can use any more: the tokens of revoked or
   expired connections and expired tokens, authorization codes past their
-  minute. Run nightly by `Brando.Worker.ActivityPurger`.
-  Returns how many rows went.
+  minute, and uploads not finished in time (`Brando.MCP.Uploads.sweep/0`).
+  Run nightly by `Brando.Worker.ActivityPurger`. Returns how many rows went.
   """
   @spec prune() :: non_neg_integer()
   def prune do
+    Brando.MCP.Uploads.sweep()
+
     if installed?() do
       now = DateTime.utc_now()
       made_after = DateTime.add(now, -grant_days() * 86_400, :second)

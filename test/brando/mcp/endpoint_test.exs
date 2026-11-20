@@ -248,14 +248,15 @@ defmodule Brando.MCP.EndpointTest do
       c
     end
 
-    test "are the content tools that read and propose, the Figma tools, and nothing that applies",
+    test "are the content tools that read and propose, the Figma and media tools, and nothing that applies",
          %{tenant: tenant, token: token} do
       %{"result" => %{"tools" => tools}} = rpc(tenant, token, "tools/list") |> json_response(200)
       names = Enum.map(tools, & &1["name"])
 
       assert names ==
                Enum.map(MCP.Tools.offered(), &("brando_content_" <> &1)) ++
-                 Enum.map(Brando.Figma.Tools.names(), &("brando_figma_" <> &1))
+                 Enum.map(Brando.Figma.Tools.names(), &("brando_figma_" <> &1)) ++
+                 Enum.map(Brando.MCP.Media.names(), &("brando_media_" <> &1))
 
       refute Enum.any?(names, &(&1 =~ ~r/apply|approve|delete|attach_folder/))
 
