@@ -1478,6 +1478,114 @@ defmodule Brando.EditSessionTest do
     end
   end
 
+  # The pending version of a synchronized translation the session's unsaved
+  # state is built on (#3760): one value for every form in the entry, so
+  # entry fields and block fields load the same one.
+  describe "the pending version" do
+    defp version_ref do
+      ref = new_ref()
+      {_a, _info} = editor(ref)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      ref
+    end
+
+    test "with none set, the first form loads the version it wants" do
+      ref = version_ref()
+      assert EditSession.take_version(ref, 7) == {:load, 7}
+      assert_receive {:edit_session_version, %{version: 7, origin: origin}}
+      assert origin == self()
+    end
+
+    test "a form that wants the session's version keeps it" do
+      ref = version_ref()
+      {:load, 7} = EditSession.take_version(ref, 7)
+      assert EditSession.take_version(ref, 7) == {:keep, 7}
+    end
+
+    test "a form that wants another version keeps the session's" do
+      ref = version_ref()
+      {:load, 7} = EditSession.take_version(ref, 7)
+      assert EditSession.take_version(ref, 9) == {:keep, 7}
+      assert EditSession.take_version(ref, nil) == {:keep, 7}
+    end
+
+    test "no version is a version: a session built on none keeps none" do
+      ref = version_ref()
+      assert EditSession.take_version(ref, nil) == {:load, nil}
+      assert EditSession.take_version(ref, 9) == {:keep, nil}
+    end
+
+    test "a form's own save sets the version it loads next" do
+      ref = version_ref()
+      {:load, 7} = EditSession.take_version(ref, 7)
+      assert_receive {:edit_session_version, %{version: 7}}
+
+      assert EditSession.take_version(ref, 9, saved: true) == {:load, 9}
+      assert_receive {:edit_session_version, %{version: 9}}
+      assert EditSession.take_version(ref, 11) == {:keep, 9}
+    end
+
+    test "a load that failed releases the version it took, and only that one" do
+      ref = version_ref()
+      {:load, 7} = EditSession.take_version(ref, 7)
+      assert EditSession.release_version(ref, 9) == :ok
+      assert EditSession.take_version(ref, 9) == {:keep, 7}
+
+      assert EditSession.release_version(ref, 7) == :ok
+      assert EditSession.take_version(ref, 9) == {:load, 9}
+    end
+
+    @tag :capture_log
+    test "a save that closes the form unsets it" do
+      ref = new_ref()
+      {_a, _info} = editor(ref)
+      {_prefix, schema, id, _language} = ref.key
+      {:load, 7} = EditSession.take_version(ref, 7)
+
+      # the rows are read again from the database, which this test has not:
+      # the version is unset all the same
+      EditSession.saved(struct(schema, id: id))
+
+      assert EditSession.take_version(ref, 9) == {:load, 9}
+    end
+
+    test "a form that rejoins a replaced session puts back the version it holds" do
+      ref = new_ref()
+      {_a, _info} = editor(ref)
+      {:load, 7} = EditSession.take_version(ref, 7)
+
+      session = EditSession.whereis(ref)
+      Process.exit(session, :kill)
+      wait_until(fn -> EditSession.whereis(ref) != session end)
+      {_b, _info} = editor(ref)
+
+      assert EditSession.take_version(ref, 7, adopt: true) == {:keep, 7}
+      assert EditSession.take_version(ref, 9) == {:keep, 7}
+      # a second rejoiner on another version keeps the one put back first
+      assert EditSession.take_version(ref, 9, adopt: true) == {:keep, 7}
+    end
+
+    test "without a session the form decides alone" do
+      assert EditSession.take_version(new_ref(), 7) == {:error, :no_session}
+    end
+
+    test "the rules, as pure functions" do
+      data = Data.new(1)
+      assert Data.version(data) == :unset
+
+      assert {{:load, 7}, data} = Data.take_version(data, 7, [])
+      assert {{:keep, 7}, ^data} = Data.take_version(data, 9, [])
+      assert {{:keep, 7}, ^data} = Data.take_version(data, 9, adopt: true)
+      assert {{:load, 9}, data} = Data.take_version(data, 9, saved: true)
+      assert Data.version(data) == 9
+      assert data |> Data.release_version(7) |> Data.version() == 9
+      assert data |> Data.release_version(9) |> Data.version() == :unset
+      assert data |> Data.reset_version() |> Data.version() == :unset
+      assert {{:keep, 3}, data} = Data.take_version(Data.new(2), 3, adopt: true)
+      assert Data.version(data) == 3
+    end
+  end
+
   describe "tenancy" do
     setup do
       put_test_env(:tenancy_mode, :multi)
