@@ -75,7 +75,17 @@ defmodule Brando.Images.SizeRun do
   an image it queued waiting or being processed?
   """
   @spec running?() :: boolean()
-  def running?, do: walking?() or remaining() > 0
+  def running?, do: status().running?
+
+  @doc """
+  Whether a run is going on (`running?/0`) and how many images it has left
+  (`remaining/0`), read once.
+  """
+  @spec status() :: %{running?: boolean(), remaining: non_neg_integer()}
+  def status do
+    remaining = remaining()
+    %{running?: remaining > 0 or walking?(), remaining: remaining}
+  end
 
   @doc """
   How many images the runs in the current site (or the run `run`) have

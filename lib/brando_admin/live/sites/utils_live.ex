@@ -96,19 +96,22 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp assign_image_tasks(socket) do
-    # Either recreate run blocks both buttons, until its last image is
-    # processed: they queue the same jobs.
-    recreating? = SizeRun.running?()
-
     socket
     |> assign(:image_tasks, %{
-      "recreate_sizes" => recreating?,
       "dominant_colors" => Images.Processing.image_maintenance_running?("dominant_colors")
     })
-    |> assign(:image_sizes_remaining, if(recreating?, do: SizeRun.remaining(), else: 0))
+    |> assign_size_run(SizeRun.status())
     |> assign(:changed_images, Images.Processing.count_changed_images())
     |> assign_unsynced_media()
     |> poll_image_tasks()
+  end
+
+  # Either recreate run blocks both buttons, until its last image is
+  # processed: they queue the same jobs. While one goes on, only it is read.
+  defp assign_size_run(socket, %{running?: running?, remaining: remaining}) do
+    socket
+    |> update(:image_tasks, &Map.put(&1, "recreate_sizes", running?))
+    |> assign(:image_sizes_remaining, remaining)
   end
 
   defp poll_image_tasks(%{assigns: %{image_tasks: %{"recreate_sizes" => true}, image_tasks_poll: false}} = socket) do
@@ -791,8 +794,15 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, if(state == :done, do: assign_image_tasks(socket), else: socket)}
   end
 
+  # While a run goes on, a check reads only the run; the rest is read again
+  # when it ends
   def handle_info(:check_image_tasks, socket) do
-    {:noreply, socket |> assign(:image_tasks_poll, false) |> assign_image_tasks()}
+    socket = assign(socket, :image_tasks_poll, false)
+
+    case SizeRun.status() do
+      %{running?: true} = status -> {:noreply, socket |> assign_size_run(status) |> poll_image_tasks()}
+      _ended -> {:noreply, assign_image_tasks(socket)}
+    end
   end
 
   # Results made for a superuser are shown only while the viewer still is one

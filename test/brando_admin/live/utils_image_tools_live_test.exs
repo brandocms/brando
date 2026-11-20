@@ -253,5 +253,48 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
       send(view.pid, {:work, SizeRun.work_key(), :running, %{work | done: 250, failed: 250}})
       assert has_element?(view, "#utils-image-failures[data-count=\"250\"]")
     end
+
+    test "a check while a run goes on reads only the run", %{conn: conn, current_user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.Processing.recreate_sizes_for_images(user)
+        {:ok, view, _} = live(conn, "/admin/config/utils")
+
+        test = self()
+        pid = view.pid
+        handler = "utils-image-check-#{inspect(pid)}"
+
+        :telemetry.attach(
+          handler,
+          [:brando_integration, :repo, :query],
+          fn _event, _measurements, meta, _config ->
+            if self() == pid, do: send(test, {:query, meta.source, meta.query})
+          end,
+          nil
+        )
+
+        try do
+          send(pid, :check_image_tasks)
+          render(view)
+        after
+          :telemetry.detach(handler)
+        end
+
+        queries = collect_queries([])
+        refute Enum.any?(queries, fn {source, _query} -> source == "images" end)
+        # How many images are left, and whether the walk is: once each
+        assert Enum.count(queries, fn {source, _query} -> source == "oban_jobs" end) == 2
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+      end)
+    end
+  end
+
+  defp collect_queries(acc) do
+    receive do
+      {:query, source, query} -> collect_queries([{source, query} | acc])
+    after
+      0 -> acc
+    end
   end
 end
