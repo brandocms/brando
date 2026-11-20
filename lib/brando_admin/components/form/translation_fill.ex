@@ -639,24 +639,6 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   def put_field(_changeset, _target, _text), do: :error
 
-  @doc """
-  The input a subform row's field has in `form`, as the subform's
-  `inputs_for` draws it, nil for none.
-  """
-  def row_input(%Phoenix.HTML.Form{source: %Changeset{} = changeset} = form, {:row, subform, key, field}) do
-    with {:ok, _relation, _rows} <- rows(changeset, subform),
-         {:ok, name} <- existing_atom(subform),
-         row_forms = Phoenix.HTML.FormData.to_form(changeset, form, name, []),
-         {index, row} <- find_row(Enum.map(row_forms, & &1.source), key),
-         {:ok, field} <- field_name(row, field) do
-      Enum.at(row_forms, index)[field]
-    else
-      _ -> nil
-    end
-  end
-
-  def row_input(_form, _target), do: nil
-
   defp field_name(%Changeset{data: %schema{}}, field) do
     with {:ok, name} <- existing_atom(field),
          true <- name in schema.__schema__(:fields) do

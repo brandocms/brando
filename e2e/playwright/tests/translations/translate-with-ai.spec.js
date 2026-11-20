@@ -65,10 +65,11 @@ test('create and translate from the listing fills the form, and the save empties
   expect(errors).toEqual([])
 })
 
-// A rich text in a subform's row (the source's quote): the fill reaches the
-// editor on screen, not only its hidden input, so typing there afterwards
-// keeps the translation.
-test('a rich text in a subform row shows the filled text, and typing in it keeps it', async ({ page }) => {
+// A rich text in a subform's row (the source's quote) is left to the editor
+// until the server can give a row's editor a text (#3757): it stays in the
+// work list without an AI action, and the run leaves its editor and hidden
+// input with the source's text.
+test('a rich text in a subform row is not filled and has no AI action', async ({ page }) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width: 1440, height: 1000 })
@@ -93,18 +94,17 @@ test('a rich text in a subform row shows the filled text, and typing in it keeps
   await syncLV(page)
 
   await expect(panel.locator('[data-ai-status="done"]')).toBeVisible({ timeout: 15000 })
+  await expect(page.locator('input[name="article[title]"]')).toHaveValue('Kilden (AI)')
+
+  const quote = panel.locator('[data-translation-item^="quotes/"]')
+  await expect(quote).toHaveCount(1)
+  await expect(quote).not.toHaveAttribute('data-ai', /.*/)
+  await expect(quote.getByTestId('translation-ai-item')).toHaveCount(0)
 
   const input = page.locator('input[name="article[quotes][0][text]"]')
   const editor = page.locator('[id$="_quotes_0_text-rich-text"] .ProseMirror')
-  await expect(input).toHaveValue('<p>Sitatet (AI)</p>')
-  await expect(editor).toHaveText('Sitatet (AI)')
-
-  await editor.click()
-  await page.keyboard.press('End')
-  await page.keyboard.type(' og mer')
-
-  await expect(editor).toHaveText('Sitatet (AI) og mer')
-  await expect(input).toHaveValue('<p>Sitatet (AI) og mer</p>')
+  await expect(input).toHaveValue('<p>Sitatet</p>')
+  await expect(editor).toHaveText('Sitatet')
 
   expect(errors).toEqual([])
 })
