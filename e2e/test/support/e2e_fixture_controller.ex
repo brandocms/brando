@@ -2371,7 +2371,8 @@ defmodule E2EFixtureController do
         %{
           title: "Kilden",
           slug: "kilden",
-          language: "no",
+          # An English source for a listing in the content language, English
+          language: params["source_language"] || "no",
           status: "published",
           year: 2020,
           items: [%{label: "Mer", link: "/mer"}]
