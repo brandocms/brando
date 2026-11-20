@@ -2068,6 +2068,11 @@ msgstr ""
 msgid "Add image"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add images to the media library. They are added at once, without review"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen
 msgid "Add link"
@@ -16710,7 +16715,7 @@ msgstr ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
-msgid "Save, publish or delete anything"
+msgid "Save, publish or delete entries, or delete media"
 msgstr ""
 
 #: lib/brando/frontend_edit/text.ex
