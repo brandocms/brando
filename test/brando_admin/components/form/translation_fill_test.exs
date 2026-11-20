@@ -3,21 +3,41 @@ defmodule BrandoAdmin.Components.Form.TranslationFillTest do
 
   alias Brando.Forms.Form
   alias Brando.Forms.Recipient
+  alias Brando.SyncTest.Article
+  alias Brando.SyncTest.ArticleItem
   alias BrandoAdmin.Components.Form.TranslationFill
   alias Ecto.Changeset
 
-  describe "fillable?/1" do
-    test "an address is not filled: it stays the editor's" do
-      refute TranslationFill.fillable?({:row, "vars", "link", "url"})
-      refute TranslationFill.fillable?({:block, "b1", "m1", ["vars", "link", "url"]})
-      refute TranslationFill.fillable?({:block, "b1", "m1", ["rows", "r1", "vars", "link", "url"]})
+  describe "fillable/1" do
+    setup do
+      article = %Article{items: [%ArticleItem{uid: "i1", label: "Punkt"}]}
+
+      assigns = %{
+        schema: Article,
+        form_blueprint: Article.__form__(:default),
+        current_user: %Brando.Users.User{role: :superuser},
+        form: Phoenix.Component.to_form(Changeset.change(article))
+      }
+
+      %{fillable: TranslationFill.fillable(assigns)}
     end
 
-    test "a text is filled" do
-      assert TranslationFill.fillable?({:field, "title"})
-      assert TranslationFill.fillable?({:row, "vars", "link", "link_text"})
-      assert TranslationFill.fillable?({:block, "b1", "m1", ["vars", "link", "link_text"]})
-      assert TranslationFill.fillable?({:block, "b1", "m1", ["refs", "body", "text"]})
+    test "an address is not filled: it stays the editor's", %{fillable: fillable} do
+      refute fillable.("entry_blocks/s1/vars/link/url", {:block, "b1", "m1", ["vars", "link", "url"]})
+      refute fillable.("entry_blocks/s1/rows/r1/vars/link/url", {:block, "b1", "m1", ["rows", "r1", "vars", "link", "url"]})
+    end
+
+    test "a text is filled", %{fillable: fillable} do
+      assert fillable.("title", {:field, "title"})
+      assert fillable.("items/i1/label", {:row, "items", "i1", "label"})
+      assert fillable.("entry_blocks/s1/vars/link/link_text", {:block, "b1", "m1", ["vars", "link", "link_text"]})
+      assert fillable.("entry_blocks/s1/refs/body/text", {:block, "b1", "m1", ["refs", "body", "text"]})
+    end
+
+    test "a text the form has no input or row for is not", %{fillable: fillable} do
+      refute fillable.("language", {:field, "language"})
+      refute fillable.("items/gone/label", {:row, "items", "gone", "label"})
+      refute fillable.("notes/s1/refs/body/text", {:block, "b1", "m1", ["refs", "body", "text"]})
     end
   end
 

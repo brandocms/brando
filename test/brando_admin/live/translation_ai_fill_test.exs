@@ -387,6 +387,51 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
       refute has_element?(view, "#{item("subtitle")}[data-ai]")
       refute has_element?(view, "#{item(block_key(target.id))}[data-ai]")
+
+      # Nor do their items offer the AI action
+      assert has_element?(view, "#{item("title")} [data-testid=translation-ai-item]")
+      refute has_element?(view, "#{item("subtitle")} [data-testid=translation-ai-item]")
+      refute has_element?(view, "#{item(block_key(target.id))} [data-testid=translation-ai-item]")
+    end
+
+    test "a text the form has no input for, or hides, is not sent and has no AI action",
+         %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{
+            title: "Tittel",
+            subtitle: "Undertittel",
+            slug: "tittel",
+            language: "no",
+            status: "published",
+            items: [%{label: "Første punkt"}]
+          },
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      key = "items/#{hd(load(target.id).items).uid}/label"
+      answer_and_report()
+
+      # The `:partial` form: the subtitle shows only for a featured article,
+      # and the items' rows have no label
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}/partial", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+      assert has_element?(view, item("subtitle"))
+      assert has_element?(view, item(key))
+
+      assert has_element?(view, "#{item("title")} [data-testid=translation-ai-item]")
+      refute has_element?(view, "#{item("subtitle")} [data-testid=translation-ai-item]")
+      refute has_element?(view, "#{item(key)} [data-testid=translation-ai-item]")
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Tittel"]
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
+      refute has_element?(view, "#{item("subtitle")}[data-ai]")
+      refute has_element?(view, "#{item(key)}[data-ai]")
     end
 
     test "a subform in a fieldset only superusers may change is not sent to anyone else",

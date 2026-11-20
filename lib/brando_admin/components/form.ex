@@ -5160,6 +5160,15 @@ defmodule BrandoAdmin.Components.Form do
               form_name={@form.name}
               target={@myself}
               fill={@translation_fill}
+              actionable={
+                TranslationFill.actionable(%{
+                  translation: @translation,
+                  schema: @schema,
+                  form_blueprint: @form_blueprint,
+                  current_user: @current_user,
+                  form: @form
+                })
+              }
               editing={@tab_editing?}
             />
             <div style="display:none">

@@ -45,6 +45,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.Translation
+  alias BrandoAdmin.Components.Form.Visibility
   alias Ecto.Changeset
 
   @doc "Whether the form offers Translate with AI: a synchronized translation, AI configured."
@@ -75,7 +76,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
          version_id when is_integer(version_id) <- Translation.version_id(assigns),
          {:ok, work} <- Work.translation_units(assigns.schema, assigns.entry.id),
          true <- work.version_id == version_id || {:error, :stale},
-         [_ | _] = units <- units(work.units, keys, targets(assigns.translation), writable(assigns)) do
+         [_ | _] = units <- units(work.units, keys, targets(assigns.translation), fillable(assigns)) do
       read(socket, work, units, keys)
     else
       {:error, :stale} -> toast(socket, gettext("The source changed. Save the translation, then translate with AI."))
@@ -89,46 +90,93 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   # share. A legacy `:user` account may not.
   defp may_write?(%{current_user: user, entry: entry}), do: Brando.Authorization.Boundary.may_update?(user, entry)
 
-  defp units(units, keys, targets, writable) do
+  defp units(units, keys, targets, fillable) do
     Enum.filter(units, fn unit ->
-      target = targets[unit.key]
-
-      WorkTranslation.translatable?(unit) and fillable?(target) and writable.(unit.key, target) and
+      WorkTranslation.translatable?(unit) and fillable.(unit.key, targets[unit.key]) and
         (keys == :all or unit.key in keys)
     end)
   end
 
   @doc """
-  Whether the form can fill the text an item's target points at: not a
-  gallery's per-image texts, which are translated in the block, and not an
-  address (a link's `url`), which is not sent to the model and stays the
-  editor's.
+  The paths of the open items this editor's form can fill
+  (`fillable/1`): the items with an AI action.
   """
-  def fillable?({:block, _uid, _module, ["refs", _name, "gallery" | _]}), do: false
-  def fillable?({:block, _uid, _module, path}) when is_list(path), do: not address?(path)
-  def fillable?({:row, _subform, _key, field}), do: field != "url"
-  def fillable?({:field, _}), do: true
-  def fillable?(_target), do: false
+  def actionable(%{translation: %{items: items}} = assigns) do
+    if available?(assigns) do
+      fillable = fillable(assigns)
+      for %{path: path, target: target} <- items, fillable.(path, target), into: MapSet.new(), do: path
+    else
+      MapSet.new()
+    end
+  end
+
+  def actionable(_assigns), do: MapSet.new()
+
+  @doc """
+  Whether this editor's form can fill the text an item points at, as a
+  function of the item's key and target; what a run sends and what has an
+  AI action. Not:
+
+    * a gallery's per-image texts, which are translated in the block
+    * an address (a link's `url`), which is not sent to the model and stays
+      the editor's
+    * a field or a subform's row locked for this editor (`LockedFields`:
+      read-only, or in a fieldset only superusers may change)
+    * a field or a row's field the form has no input for, or hides
+      (`hidden:`, `show_if:`): a text put there would not reach the browser
+      and would be lost at its next `validate`
+    * a block text in a block field the form has none of
+  """
+  def fillable(%{schema: schema, form_blueprint: blueprint, current_user: user, form: form}) do
+    locked = schema |> LockedFields.keys(blueprint, user) |> Enum.map(&to_string/1)
+    inputs = for input <- top_inputs(blueprint), into: %{}, do: {to_string(input.name), input}
+    block_fields = Enum.map(blueprint.blocks || [], &to_string(&1.name))
+
+    fn
+      _key, {:block, _uid, _module, ["refs", _name, "gallery" | _]} ->
+        false
+
+      key, {:block, _uid, _module, path} when is_list(path) ->
+        not address?(path) and block_field(key) in block_fields
+
+      _key, {:field, field} ->
+        field not in locked and shown?(inputs[field], form)
+
+      _key, {:row, subform, _row, field} = target ->
+        field != "url" and subform not in locked and row_shown?(inputs[subform], form.source, target)
+
+      _key, _target ->
+        false
+    end
+  end
 
   defp address?(["url"]), do: true
   defp address?([_ | rest]), do: address?(rest)
   defp address?([]), do: false
 
-  # Whether this editor's form can change a target: not a field locked for
-  # them (`LockedFields`), nor a row of a subform locked for them (in a
-  # fieldset only superusers may change), nor a block text in a block field
-  # this form has none of
-  defp writable(assigns) do
-    locked = assigns.schema |> LockedFields.keys(assigns.form_blueprint, assigns.current_user) |> Enum.map(&to_string/1)
-    block_fields = Enum.map(assigns.form_blueprint.blocks || [], &to_string(&1.name))
+  # The top-level inputs and subforms of the form's fieldsets
+  defp top_inputs(%{tabs: tabs}) when is_list(tabs) do
+    for %{fields: fieldsets} <- tabs, %{fields: fields} <- fieldsets, %{name: name} = input <- fields, name != nil,
+        do: input
+  end
 
-    fn
-      _key, {:field, field} -> field not in locked
-      _key, {:row, subform, _row, _field} -> subform not in locked
-      key, {:block, _uid, _module, _path} -> block_field(key) in block_fields
-      _key, _target -> true
+  defp top_inputs(_blueprint), do: []
+
+  defp shown?(%Brando.Blueprint.Forms.Input{opts: opts}, form), do: not Visibility.hidden?(opts, form)
+  defp shown?(_input, _form), do: false
+
+  # The row's field has an input in the subform, and the row shows it
+  defp row_shown?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, changeset, {:row, subform, key, field}) do
+    with %{opts: opts} <- Enum.find(inputs, &match?(%{name: name} when name != nil, &1) and to_string(&1.name) == field),
+         {:ok, _kind, _assoc, rows} <- rows(changeset, subform),
+         {_index, row} <- find_row(rows, key) do
+      not Visibility.hidden?(opts, Phoenix.HTML.FormData.to_form(row, []))
+    else
+      _ -> false
     end
   end
+
+  defp row_shown?(_subform, _changeset, _target), do: false
 
   # The block field a block text's key is in: `entry_<field>/…`
   defp block_field("entry_" <> rest), do: rest |> String.split("/", parts: 2) |> hd()

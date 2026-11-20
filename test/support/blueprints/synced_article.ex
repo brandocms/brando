@@ -496,6 +496,30 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # No input for some translatable texts (TranslationAIFillTest): the
+    # subtitle shows only for a featured article, and the items' rows have
+    # no label
+    form :partial do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :featured, :toggle
+          input :subtitle, :text, show_if: {:featured, true}
+        end
+
+        fieldset do
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :link, :text
+          end
+        end
+      end
+    end
+
     # A one-to-one subform with an image field (SubformRelationTest), on the
     # form's automatic preloads.
     form :author do

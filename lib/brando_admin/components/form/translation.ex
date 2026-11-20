@@ -402,6 +402,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   attr :target, :any, required: true
   attr :fill, :map, default: nil, doc: "Translate with AI's run (`Form.TranslationFill`)"
   attr :editing, :boolean, default: true, doc: "whether this tab edits the entry"
+  attr :actionable, :any, default: MapSet.new(), doc: "the items with an AI action (`TranslationFill.actionable/1`)"
 
   @doc "The translation panel at the top of the entry form."
   def panel(%{state: %{role: :source}} = assigns) do
@@ -525,6 +526,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
           state={@state}
           fill={@fill}
           ai={@ai?}
+          actionable={@actionable}
           editing={@editing}
           target={@target}
           acknowledge
@@ -536,6 +538,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
           state={@state}
           fill={@fill}
           ai={@ai?}
+          actionable={@actionable}
           editing={@editing}
           target={@target}
           acknowledge
@@ -694,6 +697,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   attr :acknowledge, :boolean, default: false
   attr :fill, :map, default: nil
   attr :ai, :boolean, default: false
+  attr :actionable, :any, default: MapSet.new()
   attr :editing, :boolean, default: true
   attr :target, :any, default: nil
 
@@ -728,7 +732,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
           <span :if={@ai or @acknowledge} class="translation-item-actions">
             <.ai_mark mark={ai_mark(@fill, item.path)} />
             <AIAction.button
-              :if={@ai and TranslationFill.fillable?(item.target)}
+              :if={@ai and item.path in @actionable}
               size={:icon}
               data-testid="translation-ai-item"
               phx-click="translate_with_ai"
