@@ -581,6 +581,45 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert label.(view) == "My point"
     end
 
+    test "a keystroke sent before a filled subform row reached the browser does not take it back",
+         %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", slug: "tittel", language: "no", status: "published", items: [%{label: "Første punkt"}]},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      key = "items/#{hd(load(target.id).items).uid}/label"
+
+      label = fn view ->
+        view |> render() |> form_params("#article_form_form") |> get_in(["article", "items", "0", "label"])
+      end
+
+      answer_when_told(&("EN " <> &1["source"]))
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      translate_one(view, key)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      # The browser's form before the fill, with a keystroke in the title:
+      # it reaches the server after the fill.
+      before = view |> render() |> form_params("#article_form_form")
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> label.(view) == "EN Første punkt" end)
+
+      params = before |> put_in(["article", "title"], "Typed") |> Map.put("_target", ["article", "title"])
+      view |> element("#article_form_form") |> render_change(params)
+
+      assert label.(view) == "EN Første punkt"
+      assert title(view) == "Typed"
+      assert has_element?(view, "#{item(key)}[data-ai='filled']")
+    end
+
     test "a second editor's change during the run is kept", %{conn: conn, target: target} do
       answer_when_told(&("EN " <> &1["source"]))
       other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})

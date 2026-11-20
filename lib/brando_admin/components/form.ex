@@ -1537,19 +1537,25 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     rich_fields = for {key, {:field, field}, _text} <- writes, key in written, do: field
+    subforms = for {key, {:row, subform, _key, _field}, _text} <- writes, key in written, uniq: true, do: subform
+    relations = Enum.filter(relation_fields(socket), &(Atom.to_string(&1) in subforms))
     previous = socket.assigns.form.source
 
     socket
     |> ship_all_field_changes()
     |> put_written_form(to_form(changeset, []))
     |> replace_written_values(previous, changeset)
+    |> redraw_relations(previous, changeset, relations)
     |> force_svelte_remounts(rich_fields)
     |> TranslationFill.fields_written(written, failed)
   end
 
   # The browser shows the fields' old values until the written ones reach
   # it: a `validate` sent meanwhile carries them, and the written values are
-  # kept over them (`drop_echoes/4`), as for another editor's change.
+  # kept over them (`drop_echoes/4`), as for another editor's change. A
+  # has_many's rows are kept the way another editor's save keeps them: the
+  # form revision moves (`redraw_relations/4`), and an event from the form
+  # before it leaves the relation as the form has it (`stale_relations/2`).
   defp replace_written_values(socket, previous, changeset) do
     replaced =
       socket
