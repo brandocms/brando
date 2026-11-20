@@ -111,6 +111,20 @@ defmodule Brando.EditSession do
   end
 
   @doc """
+  Subscribe the calling process to the session's topic, once however often
+  it is called: block fields and the form of one LiveView share it.
+  """
+  @spec subscribe(ref()) :: :ok
+  def subscribe(%{topic: topic}) do
+    unless Process.get({:brando_edit_session_topic, topic}) do
+      PubSub.subscribe(Brando.pubsub(), topic)
+      Process.put({:brando_edit_session_topic, topic}, true)
+    end
+
+    :ok
+  end
+
+  @doc """
   Join the session for `ref` as a replica of `field`, starting it if needed.
 
   `base` is the rows the caller loaded (`Ops.from_entry_blocks/1`) and

@@ -1451,13 +1451,14 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert_receive {:DOWN, ^monitor, :process, _, _}, 2_000
 
       view = open(conn, c.target.id)
-      view |> element("#article_form_form") |> render_change(main)
-      view |> element("#entry_block_form-#{uid}") |> render_change(Map.put(block, "_target", @text))
 
-      # The hook sends the roots the new render lacks (the version's new
-      # block) as it mounts, before the form loads the version again.
+      # As it mounts, the BlockField hook sends the roots the new render
+      # lacks (the version's new block), before the form loads the version
+      # again (`maybeRecoverBlocks`); LiveView replays the forms.
       current = Enum.map(load(c.target.id).entry_blocks, & &1.block.uid)
       missing = root_uids -- current
+      assert missing != []
+      refute has_element?(view, "input[name='translation_review[version_id]']")
 
       view
       |> with_target("[phx-hook='Brando.BlockField']")
@@ -1468,6 +1469,9 @@ defmodule BrandoAdmin.TranslationFormTest do
         "forms" => Map.take(forms, Enum.map(missing, &"entry_block_form-#{&1}")),
         "childOrder" => %{}
       })
+
+      view |> element("#article_form_form") |> render_change(main)
+      view |> element("#entry_block_form-#{uid}") |> render_change(Map.put(block, "_target", @text))
 
       await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
       await(fn -> Brando.EditSessionEditors.shown_text(view, uid) == "Typed paragraph" end)
@@ -1569,6 +1573,7 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert load(c.target.id).updated_at == saved_at
 
       # the reload takes the session's version, and saves
+      kill_live(other)
       other = open_version(other_conn, c.target.id, third)
       assert shown_year(other) == "2030"
       save(other)

@@ -12,13 +12,27 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   State lives in the Form's `:translation` assign, `nil` for entries outside a
   synchronized group.
+
+  ## Which pending version the form holds
+
+  The form's entry fields and its block fields load one version: the edit
+  session's (`Brando.EditSession.take_version/3`), the one the session's
+  unsaved block state is built on. The form decides once, at mount (and so
+  at a reconnect), and again after its own save (`decide/2`); a parent
+  update reads the database again only to say that a newer version waits
+  (`waiting?`). When the session moves on to a version with changes the
+  form does not hold (another editor saved), the form is `behind?` and
+  refuses to save until it is reloaded (`session_moved/2`). A form without
+  block fields has no session and decides alone, at the same moments.
   """
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Drafts.Modules
   alias Brando.Drafts.Params
+  alias Brando.EditSession
   alias Brando.Translations
+  alias Brando.Translations.PendingVersion
   alias Brando.Translations.Labels
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Drafts
@@ -32,7 +46,11 @@ defmodule BrandoAdmin.Components.Form.Translation do
         assign(socket, :translation, state)
 
       state ->
-        previous = socket.assigns[:translation]
+        previous =
+          case socket.assigns[:translation] do
+            %{entry_id: ^id} = previous -> previous
+            _ -> nil
+          end
 
         state = build(schema, socket.assigns.entry, state, previous, socket.assigns.current_user)
 
@@ -69,15 +87,25 @@ defmodule BrandoAdmin.Components.Form.Translation do
       structure_changed?: false,
       changes?: false,
       applied_version_id: nil,
+      decided?: false,
+      saved?: false,
+      waiting?: false,
+      behind?: false,
       acknowledged: [],
       stale?: false,
       ai?: false
     }
   end
 
+  # `previous`: the state of the same entry, if any. Once the form decided
+  # which version it holds, its content and work are that version's,
+  # whatever the database's current one is (`waiting?` says one is newer).
   defp build(schema, entry, state, previous, user) do
-    %{member: member, source: source, pending: pending} = state
+    %{member: member, source: source, pending: current} = state
     entry_id = entry.id
+    decided? = match?(%{decided?: true}, previous)
+    held = if decided?, do: previous.applied_version_id
+    pending = if decided?, do: held_version(current, held, member), else: current
     payload = pending && Translations.pending_content(pending, entry)
 
     %{
@@ -95,15 +123,42 @@ defmodule BrandoAdmin.Components.Form.Translation do
       items: items(schema, pending, payload, member.language),
       structure_changed?: payload != nil and structure(payload, schema) != structure(entry, schema),
       changes?: payload != nil and changes?(schema, payload, pending),
-      # The version whose changes are in the form. Kept across refreshes of
-      # the same entry, so a reconnecting form does not apply it twice.
-      applied_version_id: previous && previous.entry_id == entry_id && previous.applied_version_id,
-      acknowledged: (previous && previous.entry_id == entry_id && previous.acknowledged) || [],
+      # The version the form holds (`nil` for none), once it decided.
+      applied_version_id: held,
+      decided?: decided?,
+      # what the form decides next follows its own save (`decide/2`)
+      saved?: false,
+      waiting?: decided? and waiting?(current, pending),
+      behind?: match?(%{behind?: true}, previous),
+      acknowledged: (previous && previous.acknowledged) || [],
       stale?: false,
       # Translate with AI (`Form.TranslationFill`), where AI is configured
       ai?: ai?(member)
     }
   end
+
+  # The version the form holds: the current one, or one superseded since
+  # (they stay in the table), or none.
+  defp held_version(_current, nil, _member), do: nil
+  defp held_version(%PendingVersion{id: id} = current, id, _member), do: current
+
+  defp held_version(_current, id, member) do
+    case Brando.Repo.get(PendingVersion, id) do
+      %PendingVersion{member_id: member_id} = version when member_id == member.id ->
+        Brando.Repo.preload(version, :work_items)
+
+      _ ->
+        nil
+    end
+  end
+
+  # The source changed again since the version the form holds: its changes
+  # load after the save. A version recomputed from the same source save
+  # (another save of the translation, an applied proposal) is not newer.
+  defp waiting?(nil, _held), do: false
+  defp waiting?(_current, nil), do: true
+  defp waiting?(%{id: id}, %{id: id}), do: false
+  defp waiting?(current, held), do: current.source_generation > held.source_generation
 
   defp ai?(%{role: :target, synchronized: true}), do: Brando.AI.configured?()
   defp ai?(_member), do: false
@@ -210,21 +265,88 @@ defmodule BrandoAdmin.Components.Form.Translation do
     _ -> true
   end
 
-  @doc "Whether the form should load the pending version now."
-  def apply?(%{translation: %{pending: %{id: id}, applied_version_id: applied}}) when applied != id, do: true
+  @doc "Whether the form has yet to decide which pending version it holds (`decide/2`)."
+  def apply?(%{translation: %{role: :target, synchronized?: true, decided?: false}}), do: true
   def apply?(_assigns), do: false
 
   @doc """
+  The form decides which pending version it holds: at mount, at a
+  reconnect, and after its own save (`saved?`). With block fields it asks
+  the edit session (`session`, a `Brando.EditSession.ref/3`, or `nil`
+  without block fields). Returns `{:load, socket}` when the version is the
+  form's to load into its fields and block fields, `{:keep, socket}` when
+  the block fields hold it already and the form loads only its own fields.
+  The state is the held version's either way.
+  """
+  def decide(%{assigns: %{translation: state}} = socket, session) do
+    wanted = state.pending && state.pending.id
+    # the session tells this LiveView when another form moves it
+    if session, do: EditSession.subscribe(session)
+
+    answer =
+      case session && EditSession.take_version(session, wanted, saved: state.saved?) do
+        {how, version} when how in [:load, :keep] -> {how, version}
+        _ -> {:load, wanted}
+      end
+
+    {how, version} = answer
+    {how, hold(socket, version)}
+  end
+
+  @doc "The form loads `version`'s content from now on: the state is rebuilt on it."
+  def hold(%{assigns: %{translation: state}} = socket, version) do
+    socket
+    |> assign(:translation, %{state | decided?: true, applied_version_id: version, behind?: false})
+    |> assign_state()
+  end
+
+  @doc """
+  The form could not load the version it took: it decides again at the
+  next parent update, and the session lets go of the version.
+  """
+  def undecide(%{assigns: %{translation: state}} = socket, session) do
+    if session, do: EditSession.release_version(session, state.applied_version_id)
+    assign(socket, :translation, %{state | decided?: false, applied_version_id: nil})
+  end
+
+  @doc """
+  Another form moved the edit session onto `version` (its save, or a
+  first load). The form takes a version it holds nothing different from:
+  none, or one without changes (its work only). One with changes is in the
+  block fields now but not in the entry fields: the form is behind, and
+  refuses to save until it is reloaded.
+  """
+  def session_moved(%{assigns: %{translation: %{decided?: true, applied_version_id: held}}} = socket, version)
+      when version != :unset and version != held do
+    held_socket = hold(socket, version)
+
+    if held_socket.assigns.translation.changes? do
+      state = socket.assigns.translation
+      assign(socket, :translation, %{state | behind?: true})
+    else
+      held_socket
+    end
+  end
+
+  def session_moved(socket, _version), do: socket
+
+  @doc "Whether the form refuses to save: the edit session moved on to a version it does not hold."
+  def behind?(%{translation: %{behind?: true}}), do: true
+  def behind?(_assigns), do: false
+
+  @doc "After the form's own save: it decides again, from what the save left pending."
+  def after_save(%{assigns: %{translation: %{} = state}} = socket),
+    do: assign(socket, :translation, %{state | saved?: true})
+
+  def after_save(socket), do: socket
+
+  @doc """
   Whether the pending version changes what the form holds. One that does not
-  is only marked as applied (`mark_applied/1`), so its work is resolved on
-  save, without loading it into the form as unsaved changes.
+  is only held, so its work is resolved on save, without loading it into the
+  form as unsaved changes.
   """
   def changes?(%{translation: %{changes?: changes?}}), do: changes?
   def changes?(_assigns), do: false
-
-  @doc "Marks the pending version as the one the form holds, without loading it."
-  def mark_applied(%{assigns: %{translation: state}} = socket),
-    do: assign(socket, :translation, %{state | applied_version_id: state.pending.id})
 
   @doc """
   Builds the changeset that puts the pending version into the form, on top of
@@ -500,8 +622,18 @@ defmodule BrandoAdmin.Components.Form.Translation do
         value={@state.applied_version_id}
       />
 
+      <p :if={@state.behind?} class="translation-notice" role="alert" data-translation-behind>
+        {gettext(
+          "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+        )}
+      </p>
+
       <p :if={@state.stale?} class="translation-notice" role="status">
         {gettext("The source changed again while you were editing. Its newer changes are loaded below and are not saved yet.")}
+      </p>
+
+      <p :if={@state.waiting? and not @state.behind?} class="translation-notice" role="status" data-translation-waiting>
+        {gettext("The source changed again. Its changes are loaded when you save the translation.")}
       </p>
 
       <p :if={@state.structure_changed?} class="translation-structure">
