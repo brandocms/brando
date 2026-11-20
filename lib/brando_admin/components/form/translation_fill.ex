@@ -474,7 +474,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
     {writes, kept} =
       Enum.split_with(field_texts, fn {key, _text} ->
-        field_value(socket.assigns.form.source, targets[key]) == Map.get(fill.baseline, key) and
+        same_text?(field_value(socket.assigns.form.source, targets[key]), Map.get(fill.baseline, key)) and
           not held?(targets[key], held)
       end)
 

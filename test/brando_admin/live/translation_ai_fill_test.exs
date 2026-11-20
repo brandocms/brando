@@ -867,6 +867,39 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert sent_sources() == ["Linje en\r\nLinje to", "Tittel"]
     end
 
+    test "a text with Windows line endings the browser sent back during the run is filled", %{conn: conn} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", subtitle: "Linje en\r\nLinje to", slug: "tittel", language: "no", status: "published"},
+          c.current_user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user)
+      answer_when_told(&("EN " <> &1["source"]))
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      # The run starts before any `validate`, with the stored \r\n text
+      translate_one(view, "subtitle")
+      assert_receive {:ai_waiting, model}, 2_000
+
+      # The editor types in another field; the browser sends the textarea's
+      # text back with \n
+      change_main(view, fn params ->
+        params
+        |> put_in(["article", "subtitle"], "Linje en\nLinje to")
+        |> put_in(["article", "featured"], "true")
+        |> Map.put("_target", ["article", "featured"])
+      end)
+
+      send(model, :answer)
+      render_async(view, 5_000)
+
+      await(fn -> has_element?(view, "#{item("subtitle")}[data-ai='filled']") end)
+      refute has_element?(view, "#{item("subtitle")}[data-ai='kept']")
+    end
+
     test "a second run leaves out the texts the first filled and the editor corrected", %{conn: conn, target: target} do
       answer_and_report()
       view = open(conn, target.id)
