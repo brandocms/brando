@@ -377,10 +377,18 @@ defmodule Brando.Content.RenderQueueTest do
         max_hold = RenderQueue.max_hold()
         assert max_hold == :timer.minutes(15)
 
-        Oban.drain_queue(queue: :default, with_scheduled: DateTime.add(DateTime.utc_now(), max_hold - 60_000, :millisecond))
+        Oban.drain_queue(
+          queue: :default,
+          with_scheduled: DateTime.add(DateTime.utc_now(), max_hold - 60_000, :millisecond)
+        )
+
         assert Enum.all?(renders_by_entry(), &(&1.state == "scheduled"))
 
-        Oban.drain_queue(queue: :default, with_scheduled: DateTime.add(DateTime.utc_now(), max_hold + 1_000, :millisecond))
+        Oban.drain_queue(
+          queue: :default,
+          with_scheduled: DateTime.add(DateTime.utc_now(), max_hold + 1_000, :millisecond)
+        )
+
         assert [] = all_enqueued(worker: EntryRenderer)
       end)
     end
