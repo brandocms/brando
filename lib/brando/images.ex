@@ -305,8 +305,14 @@ defmodule Brando.Images do
     end
   end
 
-  defp effective_cdn(%{cdn: %{enabled: true} = cdn}), do: cdn
-  defp effective_cdn(_cfg), do: Brando.CDN.config(Brando.Images)
+  @doc """
+  The CDN image config `cfg` delivers through: its own when enabled,
+  otherwise the one configured for `Brando.Images`, as the uploader falls
+  back to it.
+  """
+  @spec effective_cdn(map()) :: map()
+  def effective_cdn(%{cdn: %{enabled: true} = cdn}), do: cdn
+  def effective_cdn(_cfg), do: Brando.CDN.config(Brando.Images)
 
   @doc """
   Runs `fun` in a transaction holding the lock `for_config_target/3` takes

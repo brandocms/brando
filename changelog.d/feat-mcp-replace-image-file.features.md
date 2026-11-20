@@ -1,0 +1,1 @@
+- A connected tool can propose replacing an image's file with a better copy it uploaded (`replace_image_file` in `prepare_proposal`): on approval the image keeps its id, focal point, texts, folder and every use, takes the new file, and has its sizes made again. The review shows both files side by side, the entries that show the image, and a warning when the proportions differ.

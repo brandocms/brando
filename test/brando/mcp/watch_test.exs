@@ -98,6 +98,35 @@ defmodule Brando.MCP.WatchTest do
       refute inspect(event.details) =~ "Identity, from MCP"
       refute Map.has_key?(event.details["input"] || %{}, "operations")
     end
+
+    test "a proposal replacing an image's file is told with how many it replaces",
+         %{tenant: tenant, token: token, grant: grant} do
+      old = Brando.ImageFileFixtures.file_image("old", {800, 600})
+      new = Brando.ImageFileFixtures.file_image("new", {1600, 1200})
+      Watch.subscribe(grant.id)
+
+      op = %{
+        "op" => "replace_image_file",
+        "asset" => %{"kind" => "image", "id" => old.id},
+        "with" => %{"kind" => "image", "id" => new.id}
+      }
+
+      %{"result" => %{"structuredContent" => review}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Better photo", "operations" => [op]})
+
+      assert review["applicable"]
+      assert review["effects"]["replaced_images"] == 1
+
+      assert_receive {Watch, %{state: :ok, tool: "prepare_proposal", details: details}}
+      assert details["output"] == %{"version" => 1, "applicable" => true, "replaced_images" => 1}
+
+      # The Assistant keeps the whole result, with the count in its effects
+      assert BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, review) ==
+               BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, details["output"])
+
+      refute BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, details["output"]) ==
+               BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, %{"version" => 1, "applicable" => true})
+    end
   end
 
   describe "the link" do

@@ -28,6 +28,7 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "set_ref_config", "target" => target, "block_uid" => uid, "ref" => name, "config" => %{}}
       %{"op" => "set_block_table", "target" => target, "block_uid" => uid, "rows" => [%{}]}
       %{"op" => "set_block_selection", "target" => target, "block_uid" => uid, "identifiers" => [id]}
+      %{"op" => "replace_image_file", "asset" => %{"kind" => "image", "id" => old}, "with" => %{"kind" => "image", "id" => new}}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video" | "file", "id" => 3}`, the alias
@@ -47,6 +48,7 @@ defmodule Brando.Content.Proposals.Codec do
     DeleteBlock,
     InsertBlock,
     MoveBlock,
+    ReplaceImageFile,
     SetBlockActive,
     SetBlockDetails,
     SetBlockMedia,
@@ -231,6 +233,18 @@ defmodule Brando.Content.Proposals.Codec do
     }
   end
 
+  # What the two files were is frozen when the proposal is prepared
+  # (`Brando.Content.Proposals.prepare/2` puts it in), and kept in the stored
+  # operation; one a tool sends is replaced.
+  defp decode!("replace_image_file", map, attachments) do
+    %ReplaceImageFile{
+      asset: image!(map["asset"], attachments, "asset"),
+      with: image!(map["with"], attachments, "with"),
+      old: snapshot(map["old"]),
+      new: snapshot(map["new"])
+    }
+  end
+
   defp decode!(op, _, _), do: invalid!(dgettext("content_proposals", "Unknown operation %{op}.", op: inspect(op)))
 
   @doc "Encode one operation to its JSON form."
@@ -363,6 +377,15 @@ defmodule Brando.Content.Proposals.Codec do
       "block_uid" => op.block_uid,
       "anchor" => op.anchor,
       "description" => op.description
+    }
+
+  def encode(%ReplaceImageFile{} = op),
+    do: %{
+      "op" => "replace_image_file",
+      "asset" => asset(op.asset),
+      "with" => asset(op.with),
+      "old" => op.old,
+      "new" => op.new
     }
 
   def encode(%DeleteBlock{} = op),
@@ -517,6 +540,28 @@ defmodule Brando.Content.Proposals.Codec do
       invalid!(
         dgettext("content_proposals", "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}.")
       )
+
+  # Only an image's file can be replaced so far.
+  defp image!(nil, _attachments, key), do: invalid!(dgettext("content_proposals", "%{key} is required.", key: key))
+
+  defp image!(value, attachments, key) do
+    case asset!(value, attachments) do
+      {:image, id} ->
+        {:image, id}
+
+      _ ->
+        invalid!(
+          dgettext(
+            "content_proposals",
+            "%{key} is an image ({kind: image, id}): only an image's file can be replaced so far.",
+            key: key
+          )
+        )
+    end
+  end
+
+  defp snapshot(%{} = snapshot), do: snapshot
+  defp snapshot(_), do: nil
 
   # A block variable's value. A link may come with its text or new-tab
   # setting; without "link" (or "url"), it keeps where it points.

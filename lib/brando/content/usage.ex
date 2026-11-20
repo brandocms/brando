@@ -121,18 +121,31 @@ defmodule Brando.Content.Usage do
   end
 
   @doc """
+  Whether asset `id` of `kind` is used anywhere `used_ids/1` looks: by an
+  entry, in the trash too, a gallery, a page or global set variable, a
+  recovery draft, or a module's or table template's default. For one asset,
+  without listing every used one.
+  """
+  @spec used?(kind(), integer()) :: boolean()
+  def used?(kind, id) when kind in @kinds and is_integer(id) do
+    references(kind, [id], include_deleted: true) != [] or in_defaults(kind, [id]) != [] or id in in_drafts(kind)
+  end
+
+  @doc """
   The entries each of `ids` belongs to, as `%{id => [{schema, entry_id}]}`.
   Unlike `list/2`, a gallery is not an owner: an image or video in one
   belongs to the entries that show the gallery. Ids no entry uses are left
-  out.
+  out. Entries in the trash are left out too, unless `include_deleted: true`.
   """
-  @spec owners(kind(), [integer()]) :: %{optional(integer()) => [{module(), integer()}]}
-  def owners(_kind, []), do: %{}
+  @spec owners(kind(), [integer()], keyword()) :: %{optional(integer()) => [{module(), integer()}]}
+  def owners(kind, ids, opts \\ [])
+  def owners(_kind, [], _opts), do: %{}
 
-  def owners(kind, ids) when kind in @kinds do
-    references = references(kind, ids)
+  def owners(kind, ids, opts) when kind in @kinds do
+    opts = Keyword.take(opts, [:include_deleted])
+    references = references(kind, ids, opts)
     gallery_ids = for {_id, {@gallery, gallery_id}} <- references, uniq: true, do: gallery_id
-    gallery_owners = :gallery |> references(gallery_ids) |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    gallery_owners = :gallery |> references(gallery_ids, opts) |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     references
     |> Enum.flat_map(fn
@@ -317,7 +330,7 @@ defmodule Brando.Content.Usage do
 
   # Ids of `kind` set as a default: on a module's variables or refs, or a
   # table template's variables. Not entries, so not in "Used in".
-  defp in_defaults(kind) do
+  defp in_defaults(kind, ids \\ :all) do
     vars =
       from(v in "content_vars",
         where: not is_nil(v.module_id) or not is_nil(v.table_template_id),
@@ -330,7 +343,7 @@ defmodule Brando.Content.Usage do
         else: []
 
     [vars | refs]
-    |> Enum.flat_map(&(&1 |> where_ids(fk(kind), :all) |> Brando.Repo.all()))
+    |> Enum.flat_map(&(&1 |> where_ids(fk(kind), ids) |> Brando.Repo.all()))
   end
 
   defp in_vars(kind, ids) do
