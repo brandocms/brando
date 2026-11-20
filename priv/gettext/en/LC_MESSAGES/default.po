@@ -328,6 +328,13 @@ msgid_plural "%{count} images could not be imported."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image could not be recreated:"
+msgid_plural "%{count} images could not be recreated:"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} image in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes."
@@ -335,7 +342,7 @@ msgid_plural "%{count} images in this folder are used by entries. Each moves to 
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/sites/utils_live.ex
+#: lib/brando/images/size_run.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} image recreated"
 msgid_plural "%{count} images recreated"
@@ -9294,6 +9301,11 @@ msgstr ""
 msgid "Image"
 msgstr ""
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Image #%{id}"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #, elixir-autogen, elixir-format
 msgid "Image CSS classes"
@@ -9368,6 +9380,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Image sizes"
+msgstr ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "Image sizes recreated"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -12102,6 +12119,11 @@ msgstr ""
 #: lib/brando_admin/live/images/image_list_live.ex
 #, elixir-format, elixir-autogen
 msgid "No images in this view"
+msgstr ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "No images to recreate"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -15050,15 +15072,18 @@ msgstr ""
 msgid "Recreate the sizes of every image?"
 msgstr ""
 
+#: lib/brando/images/size_run.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreating changed image sizes in the background."
+msgid "Recreating image sizes"
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreating image sizes in the background."
-msgstr ""
+msgid "Recreating image sizes: %{count} image left"
+msgid_plural "Recreating image sizes: %{count} images left"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -18151,6 +18176,11 @@ msgstr ""
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some images could not be described"
+msgstr ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "Some images could not be recreated"
 msgstr ""
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
@@ -23207,6 +23237,7 @@ msgid "and"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "and %{count} more"
 msgstr ""
