@@ -927,6 +927,56 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, texts(saved)} == {2030, ["Nytt avsnitt"]}
     end
 
+    # The source moves a container's child into another container.
+    defp move_child(c) do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn", "Andre barn"])
+          add_container(c, source, ["Tredje barn"], 2)
+        end)
+
+      [_, %{block: from}, %{block: to}] = load(c.source.id).entry_blocks
+      [moved, _] = Repo.preload(from, :children).children |> Enum.sort_by(& &1.sequence)
+      moved |> Ecto.Changeset.change(parent_id: to.id, sequence: 1) |> Repo.update!()
+      {c, source_saved(c)}
+    end
+
+    defp assert_moved(c, version) do
+      saved = assert_follows_source(c, version)
+      [_, %{block: from}, %{block: to}] = saved.entry_blocks
+      assert {length(from.children), length(to.children)} == {1, 2}
+    end
+
+    test "a child the source moved to another container", %{conn: conn} = c do
+      {c, version} = move_child(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      assert_moved(c, version)
+    end
+
+    test "a child the source moved to another container, with a second editor in the entry", %{conn: conn} = c do
+      {c, version} = move_child(c)
+
+      # the translation's copy of the moved child, still in the first container
+      [_, %{block: from}, %{block: to}] = load(c.target.id).entry_blocks
+      [moved | _] = Enum.sort_by(from.children, & &1.sequence)
+
+      first = open_version(conn, c.target.id, version)
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+      second = open_version(other_conn, c.target.id, version)
+
+      # each shows the moved child once, in the container the source has it in
+      for view <- [first, second] do
+        assert view |> element("#child-#{moved.uid}") |> render() =~ ~s(data-parent_uid="#{to.uid}")
+      end
+
+      save(second)
+
+      assert_moved(c, version)
+    end
+
     # A block on an older version of its module: it keeps a variable the
     # module no longer defines (`Brando.Content.StaleBlocks`), written past
     # the changeset as a module save leaves it. The pending version holds it;
@@ -1053,7 +1103,7 @@ defmodule BrandoAdmin.TranslationFormTest do
       %{c | source: source, target: target}
     end
 
-    defp add_container(c, source, texts) do
+    defp add_container(c, source, texts, sequence \\ 1) do
       params = %{
         "uid" => Brando.Utils.generate_uid(),
         "type" => "container",
@@ -1063,7 +1113,7 @@ defmodule BrandoAdmin.TranslationFormTest do
       }
 
       container = %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
-      struct(Article.Blocks, %{entry_id: source.id, block_id: container.id, sequence: 1}) |> Repo.insert!()
+      struct(Article.Blocks, %{entry_id: source.id, block_id: container.id, sequence: sequence}) |> Repo.insert!()
       container
     end
 
