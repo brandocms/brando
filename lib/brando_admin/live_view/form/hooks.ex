@@ -21,6 +21,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         |> assign_entry_id(entry_id)
         |> assign_title()
         |> assign(:mutation_listeners, %{})
+        |> attach_translate_with_ai()
 
       subscribe_entry_topics(socket.assigns.schema, entry_id)
 
@@ -56,6 +57,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         # sync topics) when the patched params first carry an entry_id, or
         # block sync/presence stay silently disarmed until a full reload
         |> attach_hook(:b_form_arm_entry, :handle_params, &maybe_arm_entry_scope/3)
+        |> attach_translate_with_ai()
 
       {:cont, socket}
     else
@@ -253,6 +255,32 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp maybe_arm_entry_scope(_params, _uri, socket), do: {:cont, socket}
+
+  # The listing's "Create and translate" opens the new translation with
+  # `?translate=ai`: its form starts Translate with AI once it holds the
+  # pending version (`Form.TranslationFill`). The parameter is taken off the
+  # URL, so a reload does not start another run. The form exists after the
+  # first render, which comes before this message.
+  defp attach_translate_with_ai(socket) do
+    socket
+    |> attach_hook(:b_form_translate_with_ai, :handle_params, &maybe_translate_with_ai/3)
+    |> attach_hook(:b_form_translate_with_ai, :handle_info, &handle_translate_with_ai_info/2)
+  end
+
+  defp maybe_translate_with_ai(%{"translate" => "ai"}, uri, socket) do
+    send(self(), {:brando_translate_with_ai, URI.parse(uri).path})
+    {:cont, socket}
+  end
+
+  defp maybe_translate_with_ai(_params, _uri, socket), do: {:cont, socket}
+
+  defp handle_translate_with_ai_info({:brando_translate_with_ai, path}, socket) do
+    singular = socket.assigns.schema.__naming__().singular
+    send_update(BrandoAdmin.Components.Form, id: "#{singular}_form", event: "translate_with_ai_on_open")
+    {:halt, push_patch(socket, to: path, replace: true)}
+  end
+
+  defp handle_translate_with_ai_info(_message, socket), do: {:cont, socket}
 
   defp frontend?(socket), do: match?(%{frontend: true}, socket.assigns[:presence_meta])
 

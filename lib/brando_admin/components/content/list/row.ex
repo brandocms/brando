@@ -390,6 +390,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Create translation")} [{String.upcase(lang)}]
         </.action_button>
         <.action_button
+          :for={lang <- @translation_langs}
+          :if={@ai_configured? and BrandoAdmin.Authorization.allowed?(:create, @schema)}
+          :key={"create_and_translate_#{lang}"}
+          id={"action_#{@listing.name}_create_and_translate_#{@entry.id}_lang_#{lang}"}
+          entry_id={@translation_source_id}
+          language={lang}
+          event="create_entry_translation_with_ai"
+          ai
+        >
+          {gettext("Create and translate")} [{String.upcase(lang)}]
+          <span class="menu-item-hint"><.icon name="sparkles" /></span>
+        </.action_button>
+        <.action_button
           :if={@has_blocks? && superuser?(@current_user) && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
           id={"action_#{@listing.name}_rerender_entry_#{@entry.id}"}
           entry_id={@entry.id}

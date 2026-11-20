@@ -78,6 +78,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.TabNotice
   alias BrandoAdmin.Components.Form.Translation
+  alias BrandoAdmin.Components.Form.TranslationFill
   alias BrandoAdmin.Components.Form.VideoDrawer
   alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.ImagePicker
@@ -148,6 +149,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:offline_main, nil)
      |> assign(:offline_blocks, %{})
      |> assign(:translation, nil)
+     |> assign(:translation_fill, nil)
      |> assign(:minor_save?, false)
      |> assign(:draft_save_checked?, false)
      |> assign(:editing_image?, false)
@@ -1330,6 +1332,42 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
+  # Translate with AI (`Form.TranslationFill`): a batch of the run is done.
+  def update(%{action: :translation_fill_progress, run: run, step: step}, socket),
+    do: {:ok, TranslationFill.progress(socket, run, step)}
+
+  # A BlockField's block texts as they are when a run starts, and one that
+  # did not answer with them.
+  def update(%{event: "translation_fill_read", run: run, field: field, texts: texts}, socket),
+    do: {:ok, TranslationFill.block_texts_read(socket, run, field, texts)}
+
+  def update(%{action: :translation_fill_unanswered, run: run}, socket),
+    do: {:ok, TranslationFill.unanswered(socket, run)}
+
+  # A BlockField filled the block texts of a run, or kept the editor's.
+  def update(%{event: "translation_filled", run: run, filled: filled, kept: kept}, socket),
+    do: {:ok, TranslationFill.blocks_filled(socket, run, filled, kept)}
+
+  # The listing's "Create and translate": the translation opened with
+  # `?translate=ai` (`LiveView.Form.Hooks`). The run starts once the form
+  # holds the pending version and its blocks, as a click would start it.
+  def update(%{event: "translate_with_ai_on_open"} = message, socket) do
+    tries = Map.get(message, :tries, 0)
+
+    cond do
+      tries > 100 ->
+        {:ok, socket}
+
+      socket.assigns.entry_loading? or not socket.assigns.blocks_ready? or Translation.apply?(socket.assigns) or
+          socket.assigns[:translation] == nil ->
+        send_update_after(__MODULE__, [id: socket.assigns.id, event: "translate_with_ai_on_open", tries: tries + 1], 100)
+        {:ok, socket}
+
+      true ->
+        {:ok, TranslationFill.start(socket, :all)}
+    end
+  end
+
   def update(%{action: :apply_translation}, socket) do
     cond do
       not Translation.apply?(socket.assigns) ->
@@ -1456,6 +1494,7 @@ defmodule BrandoAdmin.Components.Form do
     |> FrontendEditor.unless_frontend(&Drafts.init/1)
     |> then(&Drafts.keep_baseline(&1, &1.assigns[:opened_entry]))
     |> Translation.assign_state()
+    |> TranslationFill.refresh()
     |> FrontendEditor.unless_frontend(&schedule_translation_apply/1)
   end
 
@@ -1478,7 +1517,54 @@ defmodule BrandoAdmin.Components.Form do
       %{assigns: %{translation: %{} = state}} = socket -> assign(socket, :translation, %{state | stale?: stale?})
       socket -> socket
     end)
+    |> TranslationFill.refresh(saved: true)
     |> schedule_translation_apply()
+  end
+
+  # Field texts from Translate with AI, written as one change of the form
+  # through its local-change path (`put_written_form/2`), so they reach the
+  # other editors and the recovery copy as typed text does. A text the form
+  # cannot put where its item points is not filled.
+  defp write_translation_fill(socket, []), do: socket
+
+  defp write_translation_fill(socket, writes) do
+    {changeset, written, failed} =
+      Enum.reduce(writes, {socket.assigns.form.source, [], []}, fn {key, target, text}, {changeset, written, failed} ->
+        case TranslationFill.put_field(changeset, target, text) do
+          {:ok, changeset} -> {changeset, [key | written], failed}
+          :error -> {changeset, written, [key | failed]}
+        end
+      end)
+
+    rich_fields = for {key, {:field, field}, _text} <- writes, key in written, do: field
+    subforms = for {key, {:row, subform, _key, _field}, _text} <- writes, key in written, uniq: true, do: subform
+    relations = Enum.filter(relation_fields(socket) ++ embed_fields(socket), &(Atom.to_string(&1) in subforms))
+    previous = socket.assigns.form.source
+
+    socket
+    |> ship_all_field_changes()
+    |> put_written_form(to_form(changeset, []))
+    |> replace_written_values(previous, changeset)
+    |> redraw_relations(previous, changeset, relations)
+    |> force_svelte_remounts(rich_fields)
+    |> TranslationFill.fields_written(written, failed)
+  end
+
+  # The browser shows the fields' old values until the written ones reach
+  # it: a `validate` sent meanwhile carries them, and the written values are
+  # kept over them (`drop_echoes/4`), as for another editor's change. A
+  # has_many's or embeds_many's rows are kept the way another editor's save
+  # keeps a has_many's: the form revision moves (`redraw_relations/4`), and
+  # an event from the form before it leaves the relation as the form has it
+  # (`stale_relations/2`). `drop_echoes/4` alone would not keep an embed's: a
+  # keystroke in another of its rows names the embed as its target.
+  defp replace_written_values(socket, previous, changeset) do
+    replaced =
+      socket
+      |> changed_fields(previous, changeset)
+      |> Enum.reduce(replaced_values(socket), &replace_value(&2, previous, changeset, &1))
+
+    assign(socket, :replaced_values, replaced)
   end
 
   # Opening an existing entry. The entry is read before the form's first
@@ -1703,6 +1789,20 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready?, true)
      |> Preview.resume()
      |> announce_join()}
+  end
+
+  # Translate with AI's reply: field texts are written here, through the
+  # local-change path, as typed text is; block texts by their BlockFields.
+  def handle_async(:translation_fill, result, socket) do
+    run =
+      case result do
+        {:ok, {run, _}} -> run
+        _ -> socket.assigns[:translation_fill] && socket.assigns.translation_fill.run
+      end
+
+    reply = with {:ok, {_run, reply}} <- result, do: {:ok, reply}
+    {socket, writes} = TranslationFill.finish(socket, run, reply)
+    {:noreply, write_translation_fill(socket, writes)}
   end
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
@@ -4175,6 +4275,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # The embeds a subform's rows are in, which `relation_fields/1` leaves out
+  defp embed_fields(%{assigns: %{schema: schema}}),
+    do: Enum.filter(schema.__schema__(:embeds), &match?(%{cardinality: :many}, schema.__schema__(:embed, &1)))
+
   defp relation_keys(changeset, field),
     do: changeset |> SubformHelpers.current_entries(field) |> List.wrap() |> Enum.map(&SubformHelpers.row_key/1)
 
@@ -5056,7 +5160,23 @@ defmodule BrandoAdmin.Components.Form do
               name="_relation_bases"
               value={relation_bases(@entry, @schema, @form_blueprint, @conflict_bases)}
             />
-            <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
+            <Translation.panel
+              :if={@translation}
+              state={@translation}
+              form_name={@form.name}
+              target={@myself}
+              fill={@translation_fill}
+              actionable={
+                TranslationFill.actionable(%{
+                  translation: @translation,
+                  schema: @schema,
+                  form_blueprint: @form_blueprint,
+                  current_user: @current_user,
+                  form: @form
+                })
+              }
+              editing={@tab_editing?}
+            />
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
             </div>
@@ -6984,6 +7104,16 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:minor_save?, true)
      |> assign(:save_redirect_target, :self)
      |> push_event("b:submit", %{})}
+  end
+
+  def handle_event("translate_with_ai", params, socket) do
+    keys =
+      case params do
+        %{"key" => key} when is_binary(key) -> [key]
+        _ -> :all
+      end
+
+    {:noreply, TranslationFill.start(socket, keys)}
   end
 
   def handle_event("create_translation", %{"language" => language}, socket) do

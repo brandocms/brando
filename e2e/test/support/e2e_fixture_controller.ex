@@ -2203,7 +2203,16 @@ defmodule E2EFixtureController do
     send_resp(conn, 200, "")
   end
 
+  # The model as `on`, answering Translate with AI after a few seconds, so
+  # a screenshot can show a run in progress
+  def field_ai(conn, %{"action" => "slow"} = params) do
+    Application.put_env(:e2e_project, :field_ai_delay, 4_000)
+    field_ai(conn, %{params | "action" => "on"})
+  end
+
   def field_ai(conn, %{"action" => "off"}) do
+    Application.delete_env(:e2e_project, :field_ai_delay)
+
     case Application.get_env(:e2e_project, :field_ai_previous) do
       {nil} -> Application.delete_env(:brando, Brando.AI)
       {previous} -> Application.put_env(:brando, Brando.AI, previous)
@@ -2414,10 +2423,13 @@ defmodule E2EFixtureController do
         %{
           title: "Kilden",
           slug: "kilden",
-          language: "no",
+          # An English source for a listing in the content language, English
+          language: params["source_language"] || "no",
           status: "published",
           year: 2020,
-          items: [%{label: "Mer", link: "/mer"}]
+          items: [%{label: "Mer", link: "/mer"}],
+          # A rich text in a subform's row (translate-with-ai.spec.js)
+          quotes: if(params["rich_quote"], do: [%{text: "<p>Sitatet</p>"}], else: [])
         },
         user
       )

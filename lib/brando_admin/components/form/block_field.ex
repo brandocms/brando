@@ -113,6 +113,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.BlockField.Outline
   alias BrandoAdmin.Components.Form.BlockField.Replica
+  alias BrandoAdmin.Components.Form.BlockField.TextFill
   alias Ecto.Changeset
   alias Phoenix.PubSub
 
@@ -514,6 +515,50 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(%{event: "block_op", op: op}, socket) do
     {:ok, apply_block_op(socket, op)}
+  end
+
+  # === Translate with AI (`Form.TranslationFill`) ===
+
+  # A run starts: the block texts it would translate as they are now
+  # (`{key, uid, path}`), for the Form to choose what to send, and kept to
+  # tell when the reply comes whether one changed meanwhile, by this editor
+  # or another.
+  def update(%{event: "translation_fill_start", run: run, field: field, targets: targets}, socket) do
+    baseline = current_texts(socket, targets)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "translation_fill_read",
+      run: run,
+      field: field,
+      texts: baseline
+    )
+
+    {:ok, assign(socket, :translation_fill, %{run: run, baseline: baseline})}
+  end
+
+  # The reply: each text that is still what it was at the start is set as a
+  # field op, through the edit session like typed text, and the blocks are
+  # shown from the store again. The Form hears what was filled and what kept
+  # the editor's text.
+  def update(%{event: "translation_fill", run: run, texts: texts}, socket) do
+    baseline =
+      case socket.assigns[:translation_fill] do
+        %{run: ^run, baseline: baseline} -> baseline
+        _ -> %{}
+      end
+
+    {socket, filled, kept} = fill_texts(socket, texts, baseline)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "translation_filled",
+      run: run,
+      filled: filled,
+      kept: kept
+    )
+
+    {:ok, socket}
   end
 
   # Outline: relay extracted child to target parent.
@@ -2118,6 +2163,187 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
     |> BlockIdentity.keep_entry_block(identities, socket.assigns[:restored_blocks] || %{})
   end
+
+  # The texts `{key, uid, path}` as the store has them (`TextFill.read/2`),
+  # by key, `:error` for a block or text the store no longer has. Each root
+  # is materialized once.
+  defp current_texts(socket, targets) do
+    ops = socket.assigns.block_ops
+
+    roots =
+      for {_key, uid, _path} <- targets, Ops.known?(ops, uid), uniq: true do
+        Ops.root_of(ops, uid)
+      end
+      |> Map.new(&{&1, read_root(socket, ops, &1)})
+
+    Map.new(targets, fn {key, uid, path} ->
+      text =
+        with true <- Ops.known?(ops, uid),
+             {:ok, _materialized, root_block} <- Map.get(roots, Ops.root_of(ops, uid), :error) do
+          text_in(root_block, uid, path)
+        else
+          _ -> :error
+        end
+
+      {key, text}
+    end)
+  end
+
+  # A root's changeset materialized from the store, and its block
+  defp read_root(socket, ops, root) do
+    with %Changeset{} = materialized <- root_changeset(socket, ops, root),
+         %{block: %Brando.Content.Block{} = root_block} <- Changeset.apply_changes(materialized) do
+      {:ok, materialized, root_block}
+    else
+      _ -> :error
+    end
+  end
+
+  defp text_in(root_block, uid, path) do
+    with %Brando.Content.Block{} = block <- TextFill.find_block(root_block, uid),
+         {:ok, text} <- TextFill.read(block, path) do
+      text
+    else
+      _ -> :error
+    end
+  end
+
+  defp root_changeset(socket, ops, root) do
+    case Ops.materialize_root(ops, root) do
+      {:ok, params} ->
+        socket
+        |> materialize_base_struct(root)
+        |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+
+      _ ->
+        nil
+    end
+  end
+
+  # Sets `{key, uid, path, text}` in the blocks, each text that is still
+  # what it was when the run started (`baseline`): per root, read once, the
+  # root's full params with the texts put in are cast, and each block's
+  # change goes out as the field op an edit in it would send
+  # (`Ops.field_op/5`). Returns the socket, the keys filled and the keys
+  # that kept the editor's text or could not be filled.
+  defp fill_texts(socket, texts, baseline) do
+    ops = socket.assigns.block_ops
+    {known, lost} = Enum.split_with(texts, &Ops.known?(ops, elem(&1, 1)))
+
+    known
+    |> Enum.group_by(fn {_key, uid, _path, _text} -> Ops.root_of(ops, uid) end)
+    |> Enum.reduce({socket, [], Enum.map(lost, &elem(&1, 0))}, fn {root, texts}, {socket, filled, kept} ->
+      {socket, root_filled, root_kept} = fill_read_root(socket, ops, root, texts, baseline)
+      {socket, filled ++ root_filled, kept ++ root_kept}
+    end)
+  end
+
+  defp fill_read_root(socket, ops, root, texts, baseline) do
+    case read_root(socket, ops, root) do
+      {:ok, materialized, root_block} ->
+        {fill, changed} =
+          Enum.split_with(texts, fn {key, uid, path, _text} ->
+            current = text_in(root_block, uid, path)
+            current != :error and Map.has_key?(baseline, key) and current == baseline[key]
+          end)
+
+        changed = Enum.map(changed, &elem(&1, 0))
+
+        if fill == [] do
+          {socket, [], changed}
+        else
+          {socket, keys} = fill_root(socket, root, materialized, root_block, fill)
+          {refresh_filled_root(socket, root), keys, changed ++ (Enum.map(fill, &elem(&1, 0)) -- keys)}
+        end
+
+      :error ->
+        {socket, [], Enum.map(texts, &elem(&1, 0))}
+    end
+  end
+
+  # A filled root is shown from the store. The root the editor works in is
+  # shown as another editor's change to it is (`flush_remote_refresh/1`):
+  # the widget with the focus keeps what is being typed, and the root is
+  # shown once more when the editor leaves the field.
+  defp refresh_filled_root(%{assigns: %{local_focus: root}} = socket, root) do
+    socket
+    |> update(:deferred_roots, &MapSet.put(&1, root))
+    |> refresh_roots([root], :skip_focused)
+  end
+
+  defp refresh_filled_root(socket, root), do: refresh_roots(socket, [root], :force)
+
+  defp fill_root(socket, root, materialized, root_block, texts) do
+    %{block_module: block_module, current_user: user} = socket.assigns
+    base = materialize_base_struct(socket, root)
+    full = Ops.snapshot_params(materialized)
+
+    {params, keys} = Enum.reduce(texts, {full, []}, &put_fill_text(&1, &2, root_block))
+
+    before = block_module.changeset(base, full, user.id, true)
+    filled = block_module.changeset(base, params, user.id, true)
+    uids = texts |> Enum.filter(&(elem(&1, 0) in keys)) |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+
+    socket = Enum.reduce(uids, socket, &apply_fill_op(&2, before, filled, root, &1))
+    {socket, Enum.reverse(keys)}
+  end
+
+  defp put_fill_text({key, uid, path, text}, {params, keys}, root_block) do
+    case put_block_text(params, root_block, uid, path, text) do
+      {:ok, params} -> {params, [key | keys]}
+      :error -> {params, keys}
+    end
+  end
+
+  # The op one block's filled texts make, as an edit in it would
+  defp apply_fill_op(socket, before, filled, root, uid) do
+    with {%Changeset{} = previous, %Changeset{} = changeset} <-
+           {block_changeset(before, root, uid), block_changeset(filled, root, uid)},
+         {:ok, op} when not is_nil(op) <- Ops.field_op(previous, changeset, uid) do
+      apply_block_op(socket, op)
+    else
+      _ -> socket
+    end
+  end
+
+  defp put_block_text(params, root_block, uid, path, text) do
+    with %Brando.Content.Block{} = block <- TextFill.find_block(root_block, uid),
+         %{} = block_params <- params["block"] do
+      result = TextFill.update_block_params(block_params, uid, &put_text!(&1, block, path, text))
+      {:ok, Map.put(params, "block", result)}
+    else
+      _ -> :error
+    end
+  catch
+    :text_fill_error -> :error
+  end
+
+  defp put_text!(params, block, path, text) do
+    case TextFill.put(params, block, path, text) do
+      {:ok, params} -> params
+      :error -> throw(:text_fill_error)
+    end
+  end
+
+  # A root's changeset, or a child's below it at any depth
+  defp block_changeset(changeset, root, root), do: changeset
+
+  defp block_changeset(changeset, _root, uid) do
+    changeset |> Changeset.get_assoc(:block, :changeset) |> find_child_changeset(uid)
+  end
+
+  defp find_child_changeset(%Changeset{} = changeset, uid) do
+    if Changeset.get_field(changeset, :uid) == uid do
+      changeset
+    else
+      changeset
+      |> Changeset.get_assoc(:children, :changeset)
+      |> List.wrap()
+      |> Enum.find_value(&find_child_changeset(&1, uid))
+    end
+  end
+
+  defp find_child_changeset(_changeset, _uid), do: nil
 
   defp materialize_base_struct(socket, uid) do
     case Enum.find(socket.assigns.entry_blocks || [], &(&1.block.uid == uid)) do

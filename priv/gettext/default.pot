@@ -718,6 +718,13 @@ msgid_plural "%{count} were left: they are in use again."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} was not filled in; see why below."
+msgid_plural "%{count} were not filled in; see why below."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/sites/integrations_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} webhook"
@@ -1773,6 +1780,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "AI crawlers"
 msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "AI filled in %{count} text."
+msgid_plural "AI filled in %{count} texts."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -4027,6 +4041,11 @@ msgstr ""
 msgid "Changed %{fields}"
 msgstr ""
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Changed during the run: your text was kept"
+msgstr ""
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "Changed here and in the file"
@@ -4182,6 +4201,11 @@ msgstr ""
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Check the spelling, try fewer words, or clear the filters."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Check the texts, then save."
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -5646,6 +5670,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create and edit content across entries. Nothing changes until you apply it."
+msgstr ""
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Create and translate"
 msgstr ""
 
 #: lib/brando_admin/live/content/container_form_live.ex
@@ -8018,6 +8047,11 @@ msgstr ""
 msgid "Every module has a sketch."
 msgstr ""
 
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "Every open text has been reviewed or changed. Translate one with its own AI action."
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
@@ -8373,6 +8407,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Fill — takes what is left"
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Filled in by AI"
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -12818,6 +12857,21 @@ msgstr ""
 msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
 msgstr ""
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: AI changed the template placeholders"
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: AI lost the formatting or links"
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: AI returned no text"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"
@@ -13102,6 +13156,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has happened in this period."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing here needs translating."
 msgstr ""
 
 #: lib/brando_admin/components/form/var_layout.ex
@@ -19352,6 +19411,7 @@ msgid "The blocks changed after you reviewed them. Review them again."
 msgstr ""
 
 #: lib/brando/ai.ex
+#: lib/brando_admin/components/form/translation_fill.ex
 #, elixir-autogen, elixir-format
 msgid "The blocks could not be read. Try again."
 msgstr ""
@@ -20153,6 +20213,16 @@ msgstr ""
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "The source changed these. The new values are already in the form, so saving is all they need."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed while AI was translating, so nothing was filled in. Save, then try again."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed. Save the translation, then translate with AI."
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -21195,10 +21265,27 @@ msgid_plural "Translate %{count} texts into %{language}"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translate %{label} with AI"
+msgstr ""
+
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "Translate to"
 msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translate with AI"
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translating %{count} text with AI…"
+msgid_plural "Translating %{count} texts with AI…"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
@@ -21208,6 +21295,16 @@ msgstr ""
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Translating entry"
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translating with AI"
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translating with AI failed. Nothing was changed; try again."
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
