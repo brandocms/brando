@@ -994,6 +994,74 @@ defmodule BrandoAdmin.TranslationAIFillTest do
     end
   end
 
+  describe "a synchronized page" do
+    # Pages are made synchronized by configuration; every text unit the work
+    # gives is sent, or has a reason not to be. A change to what the form can
+    # fill that drops a kind of text fails here.
+    setup %{current_user: user} do
+      Brando.AIStub.configure()
+      put_test_env(Brando.Pages.Page, translatable: [mode: :synchronized])
+
+      page =
+        Factory.insert(:page,
+          title: "Om oss",
+          uri: "om-oss-#{System.unique_integer([:positive])}",
+          language: :no,
+          creator: user,
+          meta_title: "Om oss | Firma",
+          meta_description: "Hvem vi er",
+          vars: [
+            Factory.build(:var_text, key: "intro", label: "Intro", value: "Velkommen", creator: user),
+            %Brando.Content.Var{
+              type: :link,
+              key: "cta",
+              label: "Lenke",
+              link_type: :url,
+              value: "/no/kontakt",
+              link_text: "Kontakt oss",
+              creator: user
+            }
+          ]
+        )
+
+      {:ok, target} = Translations.create_target(Brando.Pages.Page, page.id, :en, user)
+      %{target: target}
+    end
+
+    test "sends every text unit but an address, and gives each its AI action", %{conn: conn, target: target} do
+      answer_and_report()
+      {:ok, work} = Brando.Translations.Work.translation_units(Brando.Pages.Page, target.id)
+      units = Enum.filter(work.units, &Brando.AI.WorkTranslation.translatable?/1)
+      {addresses, texts} = Enum.split_with(units, &address?/1)
+
+      # The page's own texts: the title, the meta title and description, and
+      # both variables
+      keys = Enum.map(texts, & &1.key)
+      assert Enum.all?(~w(title meta_title meta_description vars/intro/value vars/cta/link_text), &(&1 in keys))
+      assert Enum.map(addresses, & &1.key) == ["vars/cta/url"]
+
+      {view, _html} = live_form(conn, "/admin/pages/update/#{target.id}", "page_form")
+      version = Translations.get_pending_version(Brando.Pages.Page, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      for unit <- texts, do: assert(has_element?(view, "#{item(unit.key)} [data-testid=translation-ai-item]"))
+      for unit <- addresses, do: refute(has_element?(view, "#{item(unit.key)} [data-testid=translation-ai-item]"))
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == texts |> Enum.map(& &1.source) |> Enum.sort()
+      for unit <- texts, do: await(fn -> has_element?(view, "#{item(unit.key)}[data-ai='filled']") end)
+    end
+
+    defp address?(unit) do
+      BrandoAdmin.Components.Form.TranslationFill.address?(
+        Brando.Pages.Page,
+        Brando.Translations.Labels.target(unit.key, %{})
+      )
+    end
+  end
+
   describe "without AI configured" do
     test "offers no AI actions", %{conn: conn, current_user: user} = c do
       source = source(c, "Tittel", "Første avsnitt")

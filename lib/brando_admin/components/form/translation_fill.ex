@@ -125,13 +125,17 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
       read-only, or in a fieldset only superusers may change)
     * a field or a row's field the form has no input for, or hides
       (`hidden:`, `show_if:`): a text put there would not reach the browser
-      and would be lost at its next `validate`
+      and would be lost at its next `validate`. The Meta drawer's title and
+      description are inputs of a schema with the Meta trait, and a subform
+      drawn by its own component with no inputs declared (a page's
+      `component :vars`) shows its rows' fields
     * a block text in a block field the form has none of
   """
   def fillable(%{schema: schema, form_blueprint: blueprint, current_user: user, form: form}) do
     locked = schema |> LockedFields.keys(blueprint, user) |> Enum.map(&to_string/1)
     inputs = for input <- top_inputs(blueprint), into: %{}, do: {to_string(input.name), input}
     block_fields = Enum.map(blueprint.blocks || [], &to_string(&1.name))
+    meta = meta_fields(schema)
 
     fn
       _key, {:block, _uid, _module, ["refs", _name, "gallery" | _]} ->
@@ -141,7 +145,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
         not address?(schema, target) and block_field(key) in block_fields
 
       _key, {:field, field} ->
-        field not in locked and shown?(inputs[field], form)
+        field not in locked and (field in meta or shown?(inputs[field], form))
 
       _key, {:row, subform, _row, _field} = target ->
         not address?(schema, target) and subform not in locked and row_shown?(inputs[subform], form.source, target)
@@ -171,6 +175,12 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     end
   end
 
+  # The texts the Meta drawer has inputs for, which the blueprint's fieldsets
+  # need not declare
+  defp meta_fields(schema) do
+    if schema.has_trait(Brando.Trait.Meta), do: ~w(meta_title meta_description), else: []
+  end
+
   # The top-level inputs and subforms of the form's fieldsets
   defp top_inputs(%{tabs: tabs}) when is_list(tabs) do
     for %{fields: fieldsets} <- tabs,
@@ -184,6 +194,12 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   defp shown?(%Brando.Blueprint.Forms.Input{opts: opts}, form), do: not Visibility.hidden?(opts, form)
   defp shown?(_input, _form), do: false
+
+  # A subform its own component draws, with no inputs declared: the component
+  # shows its rows' fields (a page's variables)
+  defp row_shown?(%Brando.Blueprint.Forms.Subform{component: component, sub_fields: []}, changeset, target)
+       when component != nil,
+       do: field_value(changeset, target) != :error
 
   # The row's field has an input in the subform, and the row shows it
   defp row_shown?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, changeset, {:row, subform, key, field}) do
