@@ -478,11 +478,11 @@ defmodule Brando.MCP.MediaTest do
       assert put_bytes(url, @jpg).status == 403
     end
 
-    test "is not reachable at another site environment's path", %{tenant: tenant, token: token} do
+    # At another site environment's path: Brando.MCP.TenancyTest
+    test "is not reachable once the endpoint is off", %{tenant: tenant, token: token} do
       {_id, url} = prepare!(tenant, token)
-      MCP.tenant(nil, nil) |> switch!(false)
+      switch!(tenant, false)
       assert_not_found(put_bytes(url, @jpg))
-      _ = tenant
     end
 
     test "a declared length over the size limit is refused before anything is read", %{tenant: tenant, token: token} do
