@@ -20,8 +20,8 @@ defmodule Brando.Images.Rerender do
   #
   #   * the image's owners (`Brando.Content.Usage.owners/2`): entries with
   #     it in a block's ref or variable, a page's variables, a gallery they
-  #     show, or an asset field, out of the trash; only entries that have
-  #     blocks to render count, so a global set or a user is left out;
+  #     show, or an asset field; only entries that have blocks to render
+  #     count, so a global set or a user is left out, and none in the trash;
   #   * for an entry that holds it in an asset field (a project's cover), the
   #     entries that show that entry from elsewhere, as an entry's save finds
   #     them (`Brando.Worker.EntryCascade.showing_block_ids/2`): through its
@@ -117,6 +117,20 @@ defmodule Brando.Images.Rerender do
     |> Enum.uniq()
     |> Enum.filter(fn {schema, _id} -> renders?(schema) end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.map(fn {schema, ids} -> {schema, out_of_trash(schema, ids)} end)
+    |> Enum.reject(fn {_schema, ids} -> ids == [] end)
+    |> Map.new()
+  end
+
+  # `Usage` lists a page in the trash that holds the image in a page
+  # variable: its render is not served, and is not queued
+  defp out_of_trash(schema, ids) do
+    if :deleted_at in schema.__schema__(:fields) do
+      kept = MapSet.new(Brando.Repo.all(from(e in schema, where: e.id in ^ids and is_nil(e.deleted_at), select: e.id)))
+      Enum.filter(ids, &MapSet.member?(kept, &1))
+    else
+      ids
+    end
   end
 
   defp showing_block_ids([]), do: []

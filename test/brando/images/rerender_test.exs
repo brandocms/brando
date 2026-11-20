@@ -12,6 +12,7 @@ defmodule Brando.Images.RerenderTest do
   alias Brando.Content.Block
   alias Brando.Content.Blocks
   alias Brando.Content.RenderQueue
+  alias Brando.Content.Var
   alias Brando.Factory
   alias Brando.Images.Image
   alias Brando.Images.Processing
@@ -469,6 +470,15 @@ defmodule Brando.Images.RerenderTest do
       Repo.update_all(from(u in Brando.Users.User, where: u.id == ^avatar.id), set: [avatar_id: image.id])
 
       assert Rerender.entries([image.id]) == %{Page => [twice.id]}
+    end
+
+    test "leave out a page in the trash that holds the image in a page variable", %{user: user} do
+      image = image()
+      page = page!(user)
+      Repo.insert!(%Var{type: :image, key: "photo", label: "Photo", page_id: page.id, image_id: image.id})
+      Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [deleted_at: DateTime.utc_now()])
+
+      assert Rerender.entries([image.id]) == %{}
     end
 
     test "adopting an image changes nothing a render reads" do
