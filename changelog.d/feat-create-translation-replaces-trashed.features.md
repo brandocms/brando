@@ -1,0 +1,1 @@
+- Creating a synchronized translation in a language whose version is in the trash asks first, then deletes that version for good and creates the new one, from the listing's **Create translation** and **Create and translate** and the form's translation panel.

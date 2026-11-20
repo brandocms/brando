@@ -266,6 +266,73 @@ defmodule Brando.Translations do
     end
   end
 
+  @doc """
+  Creates the `language` translation of a synchronized source as
+  `create_target/5` does, after deleting for good the group's version in that
+  language if it is in the trash. Only the admin calls it, once the editor has
+  confirmed; proposals and `create_target/5` refuse a language in the trash.
+
+  In one transaction: the version in the trash is deleted the way the trash's
+  purge deletes it (`Brando.SoftDelete.Query.purge_entries/3`: its group
+  member with its pending versions and work items, its alternate link, the
+  context's `before_purge/2`), then the translation is created. If the create
+  fails, the version is still in the trash as it was.
+
+  Deleting it takes permission to delete it: `actor` without it is refused
+  with `{:error, :language_in_trash}`, as `create_target/5` refuses. A
+  language with no version is created as `create_target/5` creates it; one
+  whose version is not in the trash is refused with `{:error, :language_exists}`.
+  """
+  def replace_trashed_target(schema, source_id, language, actor, opts \\ []) do
+    language = to_string(language)
+    mark_translate? = Keyword.get(opts, :mark_translate, true)
+
+    with :ok <- ensure_duplicable(schema),
+         :ok <- ensure_language_known(schema, language),
+         :ok <- ensure_no_linked_version(schema, source_id, language) do
+      Repo.transaction(fn -> replace_target(schema, source_id, language, actor, mark_translate?) end)
+    end
+  end
+
+  defp replace_target(schema, source_id, language, actor, mark_translate?) do
+    with {:ok, source_member} <- source_member(schema, source_id, actor),
+         :ok <- purge_trashed_version(schema, source_member, language, actor),
+         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
+      target
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  defp purge_trashed_version(schema, %Member{group_id: group_id}, language, actor) do
+    case Repo.one(from m in Member, where: m.group_id == ^group_id and m.language == ^language, select: m.entry_id) do
+      nil ->
+        :ok
+
+      entry_id ->
+        # Locked, so a restore waits for the delete
+        trashed =
+          if :deleted_at in schema.__schema__(:fields),
+            do: Repo.one(from e in schema, where: e.id == ^entry_id and not is_nil(e.deleted_at), lock: "FOR UPDATE")
+
+        cond do
+          is_nil(trashed) -> {:error, :language_exists}
+          not may_delete_for_good?(actor, trashed) -> {:error, :language_in_trash}
+          true -> Brando.SoftDelete.Query.purge_entries(schema, [entry_id], actor, %{"replaced" => true})
+        end
+    end
+  end
+
+  # What deleting an entry takes: the delete permission, and for a published
+  # one the publish permission too, as trashing it does. A version trashed
+  # while published still has that status.
+  defp may_delete_for_good?(actor, entry) do
+    alias Brando.Authorization.Boundary
+
+    Boundary.authorize(actor, :delete, entry) == :ok and
+      (Map.get(entry, :status) != :published or Boundary.authorize(actor, :publish, entry) == :ok)
+  end
+
   defp enrol_target(schema, source_id, language, actor, mark_translate?) do
     with {:ok, source_member} <- source_member(schema, source_id, actor),
          :ok <- ensure_language_free(schema, source_member, language),
