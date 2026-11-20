@@ -209,3 +209,86 @@ test('a rich-text page variable shows another editor’s saved text, after the v
 
   expect(errors).toEqual([])
 })
+
+// Resolves when the form next sends a `validate` (the hidden input's
+// debounce has run out); registered before the page connects
+function watchValidates(page) {
+  let waiting = []
+  page.on('websocket', ws => ws.on('framesent', frame => {
+    if (!String(frame.payload).includes('"event":"validate"')) return
+    waiting.forEach(resolve => resolve())
+    waiting = []
+  }))
+  return () => new Promise(resolve => waiting.push(resolve))
+}
+
+// Types `words` into `editor` with a pause after each, long enough for the
+// debounce to send the text so far; the next word is typed while the
+// server's answer to it is on its way
+async function typeWithPauses(page, editor, words, nextValidate) {
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+End')
+  for (const word of words) {
+    const sent = nextValidate()
+    await page.keyboard.type(word, { delay: 15 })
+    await sent
+  }
+}
+
+const sentence = [' Det', ' var', ' en', ' gang', ' en', ' konge', ' som', ' het', ' Olav.']
+
+test('typing in a row’s rich text while the form validates keeps every keystroke where it was typed', async ({ page }) => {
+  const nextValidate = watchValidates(page)
+  const path = await openArticle(page, ['Første', 'Andre'])
+  await open(page, path, quoteRows, 2)
+
+  await typeWithPauses(page, editorOf(quoteRows(page).nth(1)), sentence, nextValidate)
+  const typed = 'Andre' + sentence.join('')
+  await expect(editorOf(quoteRows(page).nth(1))).toHaveText(typed)
+  await editorOf(quoteRows(page).nth(1)).blur()
+  await syncLV(page)
+  await expectTexts(page, quoteRows, ['Første', typed])
+  await expectInputs(page, quoteRows, ['Første', typed])
+})
+
+test('typing in an entry’s own rich text while the form validates keeps every keystroke where it was typed', async ({ page }) => {
+  const nextValidate = watchValidates(page)
+  await page.goto('/admin/projects/projects')
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Test Project Gamma' }).click()
+  await syncLV(page)
+
+  const editor = page.locator('[id$="_summary-rich-text"] .ProseMirror')
+  await expect(editor).toBeVisible()
+  const before = await editor.textContent()
+  await typeWithPauses(page, editor, sentence, nextValidate)
+  await expect(editor).toHaveText(before + sentence.join(''))
+  await editor.blur()
+  await syncLV(page)
+  await expect(editor).toHaveText(before + sentence.join(''))
+})
+
+// In turn: field sync ships a relation's rows whole, so two editors typing
+// in rows of one relation at the same moment keep only the last to leave
+// (as before #3757)
+test('two editors typing in different rows in turn keep both texts', async ({ page, secondUserPage }) => {
+  const nextA = watchValidates(page)
+  const nextB = watchValidates(secondUserPage)
+  const path = await openArticle(page, ['Første', 'Andre'])
+  await open(page, path, quoteRows, 2)
+  await open(secondUserPage, path, quoteRows, 2)
+
+  await typeWithPauses(page, editorOf(quoteRows(page).nth(0)), [' fra', ' en'], nextA)
+  await editorOf(quoteRows(page).nth(0)).blur()
+  await syncLV(page)
+  await expectTexts(secondUserPage, quoteRows, ['Første fra en', 'Andre'])
+
+  await typeWithPauses(secondUserPage, editorOf(quoteRows(secondUserPage).nth(1)), [' fra', ' to'], nextB)
+  await editorOf(quoteRows(secondUserPage).nth(1)).blur()
+  await syncLV(secondUserPage)
+
+  for (const p of [page, secondUserPage]) {
+    await expectTexts(p, quoteRows, ['Første fra en', 'Andre fra to'])
+    await expectInputs(p, quoteRows, ['Første fra en', 'Andre fra to'])
+  }
+})
