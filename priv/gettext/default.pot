@@ -6261,6 +6261,12 @@ msgstr[1] ""
 msgid "Delete %{singular}?"
 msgstr ""
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Delete and create"
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Delete environment"
@@ -15900,6 +15906,12 @@ msgstr ""
 msgid "Replace the version here with the file’s"
 msgstr ""
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the version in %{language}?"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Replace the video while keeping this reference’s settings."
@@ -20320,6 +20332,12 @@ msgstr ""
 msgid "The version here is replaced when you apply; the apply keeps it, and Revert brings it back. From then on this module follows the release’s files."
 msgstr ""
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The version in %{language} is in the trash. Creating a new one deletes it for good."
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The video is in the library. The form could not add it to the field it was uploaded for."
@@ -20800,6 +20818,7 @@ msgstr ""
 msgid "This language already has a version."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "This language's version is in the trash. Restore it from the trash instead."

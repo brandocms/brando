@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.TranslationListingTrashTest do
   # A synchronized translation in the trash, as the listing shows it: not a
-  # language version, and creating its language again is refused (#3752).
+  # language version, and creating its language again without the dialog's
+  # confirmation is refused (#3752). The confirmed replace is in
+  # `BrandoAdmin.TranslationReplaceTrashedTest` (#3762).
   # Not async: pages are made synchronized through the application env.
   use Brando.LiveCase, async: false
 
@@ -19,7 +21,7 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
     %{source: source, target: target}
   end
 
-  test "leaves a version in the trash out, and refuses to create its language again", %{conn: conn} = c do
+  test "leaves a version in the trash out, and refuses to create its language again unconfirmed", %{conn: conn} = c do
     {:ok, view, _html} = live(conn, "/admin/pages")
     await_selector(view, ".listing-translations")
 
@@ -28,7 +30,9 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
 
     log =
       capture_log(fn ->
-        view |> element("[id$='_create_translation_#{c.source.id}_lang_no']") |> render_click()
+        # The event the row's button sends for a free language, as a listing
+        # that has not caught up with the trash would send it
+        render_click(view, "create_entry_translation", %{"id" => to_string(c.source.id), "language" => "no"})
       end)
 
     # An expected refusal, told to the editor and not logged as an error

@@ -310,6 +310,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:duplicate_langs?, duplicate_langs?)
       |> assign(:translation_source_id, translation_source_id)
       |> assign(:translation_langs, translation_langs)
+      |> assign(:translations_in_trash, Map.get(assigns.entry, :translations_in_trash) || [])
       |> assign(:ai_configured?, ai_configured?)
       |> assign(:translated_singular, translated_singular)
       |> assign(
@@ -385,7 +386,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           id={"action_#{@listing.name}_create_translation_#{@entry.id}_lang_#{lang}"}
           entry_id={@translation_source_id}
           language={lang}
-          event="create_entry_translation"
+          {create_translation_opts("create_entry_translation", @translation_source_id, lang, @translations_in_trash)}
         >
           {gettext("Create translation")} [{String.upcase(lang)}]
         </.action_button>
@@ -396,8 +397,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           id={"action_#{@listing.name}_create_and_translate_#{@entry.id}_lang_#{lang}"}
           entry_id={@translation_source_id}
           language={lang}
-          event="create_entry_translation_with_ai"
           ai
+          {create_translation_opts("create_entry_translation_with_ai", @translation_source_id, lang, @translations_in_trash)}
         >
           {gettext("Create and translate")} [{String.upcase(lang)}]
           <span class="menu-item-hint"><.icon name="sparkles" /></span>
@@ -1109,6 +1110,30 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   defp render_status_label(:pending), do: gettext("Pending")
   defp render_status_label(:published), do: gettext("Published")
   defp render_status_label(:deleted), do: gettext("Deleted")
+
+  # A language whose version is in the trash: the dialog asks first, and the
+  # confirmed event carries `replace`, which deletes that version for good
+  # (`Brando.Translations.replace_trashed_target/5`). The menu row keeps its
+  # look; the dialog's confirm button is the destructive one.
+  defp create_translation_opts(event, source_id, lang, in_trash) do
+    if lang in in_trash do
+      language = BrandoAdmin.Components.Form.Translation.language_label(lang)
+
+      %{
+        event: JS.push(event, value: %{id: source_id, language: lang, replace: true}),
+        confirm_title: gettext("Replace the version in %{language}?", language: language),
+        confirm:
+          gettext("The version in %{language} is in the trash. Creating a new one deletes it for good.",
+            language: language
+          ),
+        confirm_label: gettext("Delete and create"),
+        destructive: true,
+        class: ["menu-item", event == "create_entry_translation_with_ai" && "menu-item--ai"]
+      }
+    else
+      %{event: event}
+    end
+  end
 
   # The group's source and the languages it has no version in yet. An entry
   # outside a group becomes the source of the first translation.
