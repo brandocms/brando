@@ -44,6 +44,15 @@ defmodule Brando.Content.Proposals do
   translation it translates (`:translate_only`); on `{:new, ref}` it fills
   in the translation a `CreateTranslation` creates, once it is created.
 
+  A synchronized translation follows its source, so on one every other
+  operation is refused (`:follows_source`), checked at prepare and again at
+  approve and apply: its structure, media and source-controlled fields are
+  changed in the source, its text with `Translate`. A `SetFields` may still
+  set the fields that are its language's own: those its synchronization
+  leaves to each language (`Brando.Translations.Sync`'s `:local` class) or
+  does not touch, such as its status. A `CopyBlock` into it counts as an
+  operation on it; one from it does not.
+
   `ReplaceImageFile` changes no entry: a library image takes another's file
   (`Brando.Content.Proposals.ImageReplacement`), in the same transaction as
   the entries. A proposal that replaced a file cannot be undone.

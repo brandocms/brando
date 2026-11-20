@@ -65,6 +65,16 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{field} is text of a synchronized translation, which is translation work: write it with a translate operation, which saves it as the translation form does."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{field} of a synchronized translation follows its source: change it in the source, and the translation follows."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{key} cannot be set to this value."
 msgstr ""
 
@@ -756,6 +766,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "This content type is not synchronized: it has no translation work. Change its text with set_fields and set_block_text."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a synchronized translation: its structure, media and source-controlled fields follow its source, and its text is filled in with translate. Make this change in the source, or write the text with a translate operation."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

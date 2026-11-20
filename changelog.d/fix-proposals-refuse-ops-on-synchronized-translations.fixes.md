@@ -1,0 +1,1 @@
+- Assistant and MCP proposals no longer change a synchronized translation's structure, media, text or source-controlled fields outside its translation save: every operation on one other than `translate` is refused, except `set_fields` on the fields that are its language's own, such as its status or slug.

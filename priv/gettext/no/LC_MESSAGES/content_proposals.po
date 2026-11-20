@@ -65,6 +65,16 @@ msgstr "%{field} kan ikke endres av et forslag."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{field} is text of a synchronized translation, which is translation work: write it with a translate operation, which saves it as the translation form does."
+msgstr "%{field} er tekst i en synkronisert oversettelse, og dermed oversettelsesarbeid: skriv den med en translate-operasjon, som lagrer den slik oversettelsesskjemaet gjør."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{field} of a synchronized translation follows its source: change it in the source, and the translation follows."
+msgstr "%{field} i en synkronisert oversettelse følger kilden: endre det i kilden, så følger oversettelsen etter."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{key} cannot be set to this value."
 msgstr "%{key} kan ikke settes til denne verdien."
 
@@ -757,6 +767,11 @@ msgstr "Denne innholdstypen er ikke registrert på dette nettstedet."
 #, elixir-autogen, elixir-format
 msgid "This content type is not synchronized: it has no translation work. Change its text with set_fields and set_block_text."
 msgstr "Denne innholdstypen er ikke synkronisert: den har ikke oversettelsesarbeid. Endre teksten med set_fields og set_block_text."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a synchronized translation: its structure, media and source-controlled fields follow its source, and its text is filled in with translate. Make this change in the source, or write the text with a translate operation."
+msgstr "Denne oppføringen er en synkronisert oversettelse: strukturen, mediene og de kildestyrte feltene følger kilden, og teksten fylles ut med translate. Gjør denne endringen i kilden, eller skriv teksten med en translate-operasjon."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
