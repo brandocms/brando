@@ -250,7 +250,7 @@ defmodule Brando.Translations.WorkTest do
   end
 
   test "a source's units for a missing language are those its new translation gets", c do
-    {:ok, prospective} = Work.new_translation_units(Article, c.source.id)
+    {:ok, %{units: prospective}} = Work.new_translation_units(Article, c.source.id)
     assert Enum.all?(prospective, &(&1.kind == "translate" and not Map.has_key?(&1, :block_uid)))
 
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
@@ -281,27 +281,48 @@ defmodule Brando.Translations.WorkTest do
         current: text
       }
 
-    test "splits the units by size, each batch starting where the last ended" do
-      units = Enum.map(1..30, &unit/1)
-      size = byte_size(Jason.encode!(unit(1)))
+    defp positions(units), do: units |> Enum.with_index() |> Map.new(fn {unit, index} -> {unit.key, index} end)
 
-      assert {first, 10} = Work.batch(units, 0, size * 10)
-      assert Enum.map(first, & &1.key) == Enum.map(1..10, &unit(&1).key)
-      assert {second, 20} = Work.batch(units, 10, size * 10)
-      assert hd(second).key == "k11"
-      assert {_third, nil} = Work.batch(units, 20, size * 10)
-      assert {[], nil} = Work.batch(units, 30, size * 10)
-      assert {limited, 5} = Work.batch(units, 0, size * 10, 5)
+    defp keys(%{units: units}), do: Enum.map(units, & &1.key)
+
+    test "splits the units by size, each batch following the last key read" do
+      units = Enum.map(1..30, &unit/1)
+      positions = positions(units)
+      size = byte_size(Jason.encode!(unit(1))) + 1 + Work.token_bytes(unit(1))
+
+      assert %{more: true, restarted: false} = first = Work.batch(units, positions, nil, size * 10)
+      assert keys(first) == Enum.map(1..10, &unit(&1).key)
+      assert %{more: true} = second = Work.batch(units, positions, "k10", size * 10)
+      assert hd(keys(second)) == "k11"
+      assert %{more: false} = Work.batch(units, positions, "k20", size * 10)
+      assert %{units: [], more: false} = Work.batch(units, positions, "k30", size * 10)
+      assert %{units: limited, more: true} = Work.batch(units, positions, nil, size * 10, max_units: 5)
       assert length(limited) == 5
+    end
+
+    test "follows a key that is no longer open by its place in the entry" do
+      all = Enum.map(1..30, &unit/1)
+      positions = positions(all)
+      # The first ten were answered and resolved
+      open = Enum.drop(all, 10)
+
+      assert %{restarted: false} = batch = Work.batch(open, positions, "k10", 10_000)
+      assert hd(keys(batch)) == "k11"
+    end
+
+    test "starts from the first unit after a key the entry no longer has, and says so" do
+      units = Enum.map(1..3, &unit/1)
+      assert %{restarted: true, units: [%{key: "k01"} | _]} = Work.batch(units, positions(units), "gone", 10_000)
     end
 
     test "returns a unit larger than a batch alone and whole" do
       long = String.duplicate("Lang tekst. ", 2_000)
       units = [unit(1), unit(2, long), unit(3)]
+      positions = positions(units)
 
-      assert {[%{key: "k01"}], 1} = Work.batch(units, 0, 500)
-      assert {[%{key: "k02", source: ^long}], 2} = Work.batch(units, 1, 500)
-      assert {[%{key: "k03"}], nil} = Work.batch(units, 2, 500)
+      assert %{units: [%{key: "k01"}], more: true} = Work.batch(units, positions, nil, 500)
+      assert %{units: [%{key: "k02", source: ^long}], more: true} = Work.batch(units, positions, "k01", 500)
+      assert %{units: [%{key: "k03"}], more: false} = Work.batch(units, positions, "k02", 500)
     end
   end
 

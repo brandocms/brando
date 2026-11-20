@@ -48,6 +48,18 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
     result
   end
 
+  # Thirteen texts, too long together for one result
+  defp long_translation(c) do
+    {:ok, source} =
+      SyncTest.create_article(%{title: "Lang", slug: "lang", language: "no", status: "published"}, c.user)
+
+    for n <- 1..12,
+        do: TranslationFixtures.add_block(source, c.module, c.user, String.duplicate("Tekst #{n}. ", 200), n)
+
+    {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+    target
+  end
+
   defp args(id, extra \\ %{}), do: Map.merge(%{"content_type" => @type_name, "id" => id}, extra)
 
   describe "a synchronized translation" do
@@ -61,8 +73,7 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
                language: "en",
                source: %{id: source_id, language: "no"},
                total: 2,
-               offset: 0,
-               next_offset: nil,
+               next_after: nil,
                units: [title, body_unit],
                source_digest: token
              } = result
@@ -80,29 +91,50 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
     end
 
     test "returns a long entry's work in batches, each with its own token", c do
-      {:ok, source} =
-        SyncTest.create_article(%{title: "Lang", slug: "lang", language: "no", status: "published"}, c.user)
-
-      for n <- 1..12,
-          do: TranslationFixtures.add_block(source, c.module, c.user, String.duplicate("Tekst #{n}. ", 200), n)
-
-      {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+      target = long_translation(c)
 
       first = call!(args(target.id), c.context)
       assert first.total == 13
-      assert is_integer(first.next_offset)
+      assert is_binary(first.next_after)
       assert byte_size(Jason.encode!(first)) < Brando.MCP.Tools.result_limit()
 
       rest =
-        Stream.unfold(first.next_offset, fn
+        Stream.unfold(first.next_after, fn
           nil -> nil
-          offset -> (batch = call!(args(target.id, %{"offset" => offset}), c.context)) && {batch, batch.next_offset}
+          key -> (batch = call!(args(target.id, %{"after" => key}), c.context)) && {batch, batch.next_after}
         end)
         |> Enum.to_list()
 
       keys = Enum.flat_map([first | rest], fn batch -> Enum.map(batch.units, & &1.key) end)
       assert length(keys) == 13 and keys == Enum.uniq(keys)
       assert Enum.uniq(Enum.map([first | rest], & &1.source_digest)) |> length() == length([first | rest])
+    end
+
+    # Applying a batch resolves its units, so the open ones shrink: the next
+    # batch follows a key's place in the entry, not a count
+    test "the next batch starts after the last key read, though the batch read was applied", c do
+      target = long_translation(c)
+      first = call!(args(target.id), c.context)
+      all = Enum.map(Work.translation_units(Article, target.id) |> elem(1) |> Map.get(:units), & &1.key)
+      read = Enum.map(first.units, & &1.key)
+
+      version = Translations.get_pending_version(Article, target.id)
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(w in Brando.Translations.WorkItem,
+          where: w.pending_version_id == ^version.id and w.path in ^read
+        ),
+        set: [resolved_at: DateTime.utc_now(:second)]
+      )
+
+      second = call!(args(target.id, %{"after" => first.next_after}), c.context)
+      assert hd(second.units).key == Enum.at(all, length(read))
+      refute Map.has_key?(second, :restarted)
+
+      # A key no longer in the entry starts from the beginning, and says so
+      again = call!(args(target.id, %{"after" => "entry_blocks/gone/refs/body/text"}), c.context)
+      assert %{restarted: true} = again
+      assert hd(again.units).key == Enum.at(all, length(read))
     end
 
     test "an independent translation is described, without units", c do
@@ -138,7 +170,7 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
       created = call!(args(target.id), c.context)
       assert Enum.map(units, & &1.key) == Enum.map(created.units, & &1.key)
 
-      {:ok, now} = Work.new_translation_units(Article, c.source.id)
+      {:ok, %{units: now}} = Work.new_translation_units(Article, c.source.id)
       scope = %{type: to_string(Article), id: {:new, c.source.id}, language: "en"}
       assert :ok = Work.check(token, scope, now, %{texts: %{}, reviewed: Enum.map(units, & &1.key)})
     end

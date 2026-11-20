@@ -206,8 +206,12 @@ its source.
   translation in it would have, keyed as its work items will be.
 - **On any other entry**, a message saying what it is.
 
-A long entry's work comes in batches that fit a result, read in turn with
-`offset`. Each batch carries its own `source_digest`, an opaque token the
+A long entry's work comes in batches that fit a result. The next batch is
+read with `after`, the previous result's `next_after`: the key the batch
+ended with. It follows that key's place in the entry, so applying a batch,
+which resolves its units, does not move the next one; a key the entry no
+longer has starts from the beginning, and the result says so (`restarted`).
+Each batch carries its own `source_digest`, an opaque token the
 answer to that batch is checked against (`Brando.Translations.Work.check/4`):
 an answer is refused, unit by unit and with every problem at once, when the
 source's text changed since the batch was read, when a key is missing,

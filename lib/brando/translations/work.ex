@@ -74,8 +74,10 @@ defmodule Brando.Translations.Work do
   save of the translation, as opening the form does
   (`Brando.Translations.editor_state/2`); nothing else is written.
 
-  Returns `{:ok, %{units: units, source_id: id, source_language: code,
-  language: code, version_id: id | nil}}`, or `{:error, reason}`:
+  Returns `{:ok, %{units: units, positions: positions, source_id: id,
+  source_language: code, language: code, version_id: id | nil}}`, where
+  `positions` places every path of the translation in the entry's order
+  (`batch/5`), or `{:error, reason}`:
   `:not_synchronized` for a type that is not, `:unlinked` for an entry
   outside a group, `:source` for a group's source, `:independent` for a
   translation that no longer follows it, `:source_not_found`.
@@ -109,9 +111,12 @@ defmodule Brando.Translations.Work do
       items = if pending, do: pending.work_items, else: []
       uids = Translations.module_uids([source, payload], schema)
 
+      {units, positions} = open_work(schema, payload, source, items, uids)
+
       {:ok,
        %{
-         units: units(schema, payload, source, items, module_uids: uids),
+         units: units,
+         positions: positions,
          source_id: source_id,
          source_language: source_language,
          language: member.language,
@@ -124,12 +129,15 @@ defmodule Brando.Translations.Work do
 
   @doc """
   The units a new translation of `source_id` would have
-  (`prospective_units/3`), or `{:error, :not_found}`.
+  (`prospective_units/3`) with their `positions`, as
+  `{:ok, %{units: units, positions: positions}}`, or `{:error, :not_found}`.
   """
   def new_translation_units(schema, source_id) do
     case Translations.load_entry(schema, source_id) do
       {:ok, source} ->
-        {:ok, prospective_units(schema, source, module_uids: Translations.module_uids([source], schema))}
+        uids = Translations.module_uids([source], schema)
+        positions = source |> Sync.flatten_entry(schema, nil, uids) |> positions()
+        {:ok, %{units: prospective_units(schema, source, module_uids: uids), positions: positions}}
 
       _ ->
         {:error, :not_found}
@@ -149,23 +157,34 @@ defmodule Brando.Translations.Work do
   """
   @spec units(module(), struct(), struct(), [map()], keyword()) :: [unit()]
   def units(schema, payload, source, work_items, opts \\ []) do
-    uids = Keyword.get(opts, :module_uids, %{})
+    schema |> open_work(payload, source, work_items, Keyword.get(opts, :module_uids, %{})) |> elem(0)
+  end
+
+  defp open_work(schema, payload, source, work_items, uids) do
     payload_rows = Sync.flatten_entry(payload, schema, nil, uids)
     current = for {path, :text, value} <- payload_rows, into: %{}, do: {path, value}
-    order = payload_rows |> Enum.with_index() |> Map.new(fn {{path, _, _}, index} -> {path, index} end)
+    order = positions(payload_rows)
     source_texts = for {path, :text, value} <- Sync.flatten_entry(source, schema, nil, uids), into: %{}, do: {path, value}
     ctx = context(schema, payload)
 
-    work_items
-    |> Enum.filter(&is_nil(Map.get(&1, :resolved_at)))
-    |> Enum.uniq_by(& &1.path)
-    |> Enum.sort_by(&{@kind_order[&1.kind], Map.get(order, &1.path, :infinity), &1.path})
-    |> Enum.map(fn item ->
-      if item.kind in @answerable,
-        do: text_unit(item.path, item.kind, Map.get(source_texts, item.path), Map.get(current, item.path), ctx),
-        else: other_unit(item.path, item.kind, ctx)
-    end)
+    units =
+      work_items
+      |> Enum.filter(&is_nil(Map.get(&1, :resolved_at)))
+      |> Enum.uniq_by(& &1.path)
+      |> Enum.sort_by(&{@kind_order[&1.kind], place(order, &1.path)})
+      |> Enum.map(fn item ->
+        if item.kind in @answerable,
+          do: text_unit(item.path, item.kind, Map.get(source_texts, item.path), Map.get(current, item.path), ctx),
+          else: other_unit(item.path, item.kind, ctx)
+      end)
+
+    {units, order}
   end
+
+  defp positions(rows), do: rows |> Enum.with_index() |> Map.new(fn {{path, _, _}, index} -> {path, index} end)
+
+  # Where a path is in the entry; one the entry no longer has goes last
+  defp place(positions, path), do: {Map.get(positions, path, :infinity), path}
 
   @doc """
   The units a new translation of `source` would have: every text that is not
@@ -308,18 +327,36 @@ defmodule Brando.Translations.Work do
   ## Batches
 
   @doc """
-  Splits the answerable units into batches whose JSON stays within `bytes`.
-  A unit larger than that is a batch of its own, whole: a cut text cannot be
-  translated. Returns the batch starting at `offset` and the offset of the
-  next one, or nil.
+  The batch of answerable `units` (in the order `units/5` gives them) that
+  comes after the key `after` in the entry, whose JSON stays within `bytes`
+  with each unit's share of the token (`token_bytes/1`): at most
+  `:max_units` (60). The first unit is taken whatever its size.
+
+  `after` is the last key of the previous batch, read from `positions`
+  (`translation_units/2`), so a unit resolved since that batch was read does
+  not move the next one: the key need not be open any more. nil, or a key
+  the entry no longer has, starts from the first unit; the latter is
+  `restarted`.
+
+  Returns `%{units: batch, more: boolean, restarted: boolean}`.
   """
-  @spec batch([unit()], non_neg_integer(), pos_integer(), pos_integer()) :: {[unit()], non_neg_integer() | nil}
-  def batch(units, offset, bytes, max_units \\ 60) do
-    rest = Enum.drop(units, offset)
+  @spec batch([unit()], map(), String.t() | nil, pos_integer(), keyword()) :: %{
+          units: [unit()],
+          more: boolean(),
+          restarted: boolean()
+        }
+  def batch(units, positions, after_key, bytes, opts \\ []) do
+    max_units = Keyword.get(opts, :max_units, 60)
+    known? = after_key != nil and (Map.has_key?(positions, after_key) or Enum.any?(units, &(&1.key == after_key)))
+
+    rest =
+      if known?,
+        do: Enum.filter(units, &(place(positions, &1.key) > place(positions, after_key))),
+        else: units
 
     {batch, _size} =
       Enum.reduce_while(rest, {[], 0}, fn unit, {acc, size} ->
-        unit_size = byte_size(Jason.encode!(unit))
+        unit_size = byte_size(Jason.encode!(unit)) + 1 + token_bytes(unit)
 
         cond do
           acc == [] -> {:cont, {[unit], unit_size}}
@@ -328,9 +365,16 @@ defmodule Brando.Translations.Work do
         end
       end)
 
-    next = offset + length(batch)
-    {Enum.reverse(batch), if(next < offset + length(rest), do: next)}
+    %{units: Enum.reverse(batch), more: length(batch) < length(rest), restarted: after_key != nil and not known?}
   end
+
+  @doc """
+  At most the bytes an answerable unit adds to its batch's token: its key and
+  source digest, encoded.
+  """
+  @spec token_bytes(unit()) :: non_neg_integer()
+  def token_bytes(%{answerable: true, key: key}), do: div((byte_size(key) + 24) * 4, 3) + 1
+  def token_bytes(_unit), do: 0
 
   ## Token
 

@@ -38,24 +38,24 @@ defmodule Brando.Content.Proposals.TranslationWork do
                  "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
                  "the source, markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly " <>
                  "as they are. source_digest is the batch's token, which an answer to the batch is checked against. " <>
-                 "When next_offset is set, read the next batch with it."
+                 "When next_after is set, read the next batch with after: next_after."
 
   @doc "Runs the tool for `args` as `actor`."
   def run(args, actor) do
     schema = schema!(args["content_type"])
     entry = Catalog.load!(schema, args["id"], actor, :read)
-    offset = max(integer(args["offset"]) || 0, 0)
+    after_key = if is_binary(args["after"]) and args["after"] != "", do: args["after"]
 
     case Translations.synchronized?(schema) && Translations.editor_state(schema, entry.id) do
       false -> not_synchronized(schema, entry)
-      nil -> source(schema, entry, args["language"], offset, actor)
-      %{member: %{role: :source}} -> source(schema, entry, args["language"], offset, actor)
+      nil -> source(schema, entry, args["language"], after_key, actor)
+      %{member: %{role: :source}} -> source(schema, entry, args["language"], after_key, actor)
       %{member: %{synchronized: false}} -> independent(schema, entry)
-      %{source: %{id: source_id}} -> translation(schema, entry, source_id, args["language"], offset, actor)
+      %{source: %{id: source_id}} -> translation(schema, entry, source_id, args["language"], after_key, actor)
     end
   end
 
-  defp translation(schema, entry, source_id, language, offset, actor) do
+  defp translation(schema, entry, source_id, language, after_key, actor) do
     readable_source!(schema, source_id, actor)
     own = to_string(entry.language)
 
@@ -65,7 +65,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
     case Work.translation_units(schema, entry.id) do
       {:ok, work} ->
         {answerable, other} = Enum.split_with(work.units, & &1.answerable)
-        {units, next} = Work.batch(answerable, offset, @batch_bytes, @batch_units)
+        batch = Work.batch(answerable, work.positions, after_key, @batch_bytes, max_units: @batch_units)
 
         schema
         |> head(entry)
@@ -73,13 +73,13 @@ defmodule Brando.Content.Proposals.TranslationWork do
           role: "translation",
           source: %{content_type: Codec.content_type(schema), id: work.source_id, language: work.source_language},
           total: length(answerable),
-          offset: offset,
-          next_offset: next,
-          units: units,
-          source_digest: Work.token(%{type: to_string(schema), id: entry.id, language: work.language}, units),
+          next_after: next_after(batch),
+          units: batch.units,
+          source_digest: Work.token(%{type: to_string(schema), id: entry.id, language: work.language}, batch.units),
           note: @answer_note
         })
-        |> put_other(other, offset)
+        |> put_restarted(batch)
+        |> put_other(other, after_key == nil or batch.restarted)
 
       {:error, _} ->
         Error.fail!(dgettext_unavailable())
@@ -88,9 +88,9 @@ defmodule Brando.Content.Proposals.TranslationWork do
 
   # Not answerable with text; listed with the first batch, as the form's work
   # list shows them
-  defp put_other(result, [], _offset), do: result
+  defp put_other(result, [], _first?), do: result
 
-  defp put_other(result, other, 0) do
+  defp put_other(result, other, true) do
     Map.merge(result, %{
       other: Enum.take(other, @other_limit),
       other_total: length(other),
@@ -100,9 +100,21 @@ defmodule Brando.Content.Proposals.TranslationWork do
     })
   end
 
-  defp put_other(result, _other, _offset), do: result
+  defp put_other(result, _other, false), do: result
 
-  defp source(schema, entry, language, offset, actor) do
+  defp next_after(%{more: true, units: units}), do: List.last(units).key
+  defp next_after(_batch), do: nil
+
+  defp put_restarted(result, %{restarted: true}) do
+    Map.merge(result, %{
+      restarted: true,
+      restarted_note: "after named a key this entry no longer has: this batch starts from the beginning."
+    })
+  end
+
+  defp put_restarted(result, _batch), do: result
+
+  defp source(schema, entry, language, after_key, actor) do
     missing = Translations.missing_languages(schema, entry)
 
     listed =
@@ -145,7 +157,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
         Error.fail!("There is a #{language} version already: read its work with id #{version.id}.")
 
       language in missing ->
-        new_translation(schema, entry, head, language, offset)
+        new_translation(schema, entry, head, language, after_key)
 
       true ->
         Error.fail!(
@@ -154,21 +166,22 @@ defmodule Brando.Content.Proposals.TranslationWork do
     end
   end
 
-  defp new_translation(schema, entry, head, language, offset) do
-    {:ok, all} = Work.new_translation_units(schema, entry.id)
-    {units, next} = Work.batch(all, offset, @batch_bytes, @batch_units)
+  defp new_translation(schema, entry, head, language, after_key) do
+    {:ok, %{units: all, positions: positions}} = Work.new_translation_units(schema, entry.id)
+    batch = Work.batch(all, positions, after_key, @batch_bytes, max_units: @batch_units)
 
-    Map.merge(head, %{
+    head
+    |> Map.merge(%{
       new_translation: language,
       total: length(all),
-      offset: offset,
-      next_offset: next,
-      units: units,
-      source_digest: Work.token(%{type: to_string(schema), id: {:new, entry.id}, language: language}, units),
+      next_after: next_after(batch),
+      units: batch.units,
+      source_digest: Work.token(%{type: to_string(schema), id: {:new, entry.id}, language: language}, batch.units),
       note:
         "The units a new #{language} translation of this entry gets, before it exists, keyed as its work " <>
           "items will be. " <> @answer_note
     })
+    |> put_restarted(batch)
   end
 
   defp trashed_ids(schema, ids) do
@@ -228,17 +241,6 @@ defmodule Brando.Content.Proposals.TranslationWork do
       :error -> Error.fail!("Unknown content type #{inspect(name)}. Use list_content_types.")
     end
   end
-
-  defp integer(value) when is_integer(value), do: value
-
-  defp integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {n, ""} -> n
-      _ -> nil
-    end
-  end
-
-  defp integer(_), do: nil
 
   defp to_string_or_nil(nil), do: nil
   defp to_string_or_nil(value), do: to_string(value)
