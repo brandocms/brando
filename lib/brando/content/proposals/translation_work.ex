@@ -42,6 +42,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
   @other_bytes 4_000
   # other_note and other_total, beside the items
   @other_note_bytes 400
+  @title_length 200
 
   @answer_note "Translate each unit's source into the translation's language, unit by unit by its key; a review " <>
                  "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
@@ -53,7 +54,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
   def run(args, actor) do
     schema = schema!(args["content_type"])
     entry = Catalog.load!(schema, args["id"], actor, :read)
-    after_key = if is_binary(args["after"]) and args["after"] != "", do: args["after"]
+    after_key = after_key!(args)
 
     case Translations.synchronized?(schema) && Translations.editor_state(schema, entry.id) do
       false -> not_synchronized(schema, entry)
@@ -265,11 +266,23 @@ defmodule Brando.Content.Proposals.TranslationWork do
     })
   end
 
+  # A cursor that cannot be followed would read the first batch again and
+  # again: it is refused, where an unknown key restarts and says so
+  defp after_key!(%{"offset" => _}),
+    do: Error.fail!("offset is not an argument. Read the next batch with after: next_after.")
+
+  defp after_key!(%{"after" => key}) when is_binary(key) and key != "", do: key
+  defp after_key!(%{"after" => key}) when key in [nil, ""], do: nil
+  defp after_key!(%{"after" => _}), do: Error.fail!("after takes a unit's key, as next_after gives it.")
+  defp after_key!(_args), do: nil
+
+  # The title names the entry in every batch, so a long one is cut: its whole
+  # text is a unit of its own
   defp head(schema, entry) do
     %{
       content_type: Codec.content_type(schema),
       id: entry.id,
-      title: Catalog.describe(entry).title,
+      title: entry |> Catalog.describe() |> Map.get(:title) |> to_string() |> String.slice(0, @title_length),
       language: entry |> Map.get(:language) |> to_string_or_nil()
     }
   end

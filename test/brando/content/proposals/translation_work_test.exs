@@ -233,6 +233,27 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
       assert hd(again.units).key == Enum.at(all, length(read))
     end
 
+    test "a cursor that cannot be followed is refused, not read as the first batch", c do
+      target = long_translation(c)
+
+      assert {:error, _} = Tools.call("translation_work", args(target.id, %{"offset" => 20}), c.context)
+      assert {:error, _} = Tools.call("translation_work", args(target.id, %{"after" => 12}), c.context)
+      assert %{units: [_ | _]} = call!(args(target.id, %{"after" => nil}), c.context)
+    end
+
+    test "a long title is cut where it names the entry, so every batch still fits", c do
+      title = String.duplicate("Lang tittel ", 2_500)
+
+      {:ok, source} =
+        SyncTest.create_article(%{title: title, slug: "lang-tittel", language: "no", status: "published"}, c.user)
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+
+      result = call!(args(target.id), c.context)
+      assert String.length(result.title) == 200
+      assert byte_size(Jason.encode!(result)) <= Brando.MCP.Tools.result_limit()
+    end
+
     test "an independent translation is described, without units", c do
       {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
       {:ok, _} = Translations.make_independent(Article, target.id, c.user)
