@@ -32,7 +32,9 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   is refused, to be tried again (`ready!/1`). It
   keeps its id, focal point, title, alt text, credits, folder, config and
   every reference. NEW's record is deleted, with its jobs that have not
-  started, and OLD's sizes are queued to be made again, as for an upload.
+  started, and OLD's sizes are queued to be made again, as for an upload. A
+  run of Image sizes that was waiting to recreate NEW counts OLD's job in
+  its place (`Brando.Images.SizeRun.carry_over/2`).
   Only rows change: no file is moved or written, so an approval that fails
   anywhere rolls back to OLD as it was, with its files.
 
@@ -669,14 +671,17 @@ defmodule Brando.Content.Proposals.ImageReplacement do
       )
       |> Repo.update!()
 
-    discard_jobs(new_id)
+    discarded = discard_jobs(new_id)
     Repo.delete!(new)
 
     # The entries that show OLD link its previous files until they are
     # rendered again, and a cached page longer
     Brando.Media.OrphanCleanup.hold_image_files(old)
 
-    case Images.Processing.queue_processing(replaced, user, [], silent: true) do
+    # A run of Image sizes waiting to recreate NEW counts OLD's job instead
+    prepare = &Images.SizeRun.carry_over(&1, discarded)
+
+    case Images.Processing.queue_processing(replaced, user, [], silent: true, prepare: prepare) do
       {:ok, _job} ->
         :ok
 
@@ -693,16 +698,21 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   end
 
   # NEW's jobs that have not started would find no image. One already running
-  # writes what OLD's own run writes again.
+  # writes what OLD's own run writes again. Returns the deleted jobs' state
+  # and meta, for `Brando.Images.SizeRun.carry_over/2`.
   defp discard_jobs(image_id) do
     workers = Enum.map([Brando.Worker.ImageProcessor, Brando.Worker.ImageUploader], &Oban.Worker.to_string/1)
     args = TenantJob.attach(%{image_id: image_id})
 
-    Repo.delete_all(
-      from(j in Oban.Job,
-        where: j.worker in ^workers and j.state in ^@unstarted and fragment("? @> ?", j.args, ^args)
+    {_count, deleted} =
+      Repo.delete_all(
+        from(j in Oban.Job,
+          where: j.worker in ^workers and j.state in ^@unstarted and fragment("? @> ?", j.args, ^args),
+          select: %{state: j.state, meta: j.meta}
+        )
       )
-    )
+
+    deleted
   end
 
   @doc "Once the proposal is committed: what reads the images afresh."

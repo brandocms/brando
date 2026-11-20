@@ -357,10 +357,20 @@ defmodule Brando.Images.SizeRun do
   reports none: the image is counted once, when the replaced job ends. The
   work can then end before the new job is done, and does not hear of it
   failing. The run, read from the jobs, goes on until the new job is done.
+
+  An image whose file replaced another's (`replace_image_file`) hands its
+  place to the image it replaced, whose job is then queued. A job that
+  already took over a place keeps it.
   """
   @spec carry_over(Ecto.Changeset.t(), [%{state: String.t(), meta: map()}]) :: Ecto.Changeset.t()
   def carry_over(changeset, deleted) do
+    marked? = Map.has_key?(Ecto.Changeset.get_field(changeset, :meta) || %{}, @meta_key)
+
     case Enum.find(deleted, &(&1.state in @unfinished_states and Map.has_key?(&1.meta || %{}, @meta_key))) do
+      # A job that took over one place keeps it
+      _replaced when marked? ->
+        changeset
+
       nil ->
         changeset
 
