@@ -221,7 +221,10 @@ its source.
   `plain`, `html` or `markdown`; and in a block, the translation's own
   `block_uid`. A text too long to fit a result on its own is listed with
   `too_long` and a `reason` instead of its text: it is not answerable with
-  the tool, and is translated in the entry's form. Links waiting for a translation and values updated from
+  the tool, and is translated in the entry's form. A text in a field the
+  person may not change through a proposal (one the forms lock for anyone
+  but a superuser) is listed in its place with `locked` and a `reason`: it is
+  not answerable either, and is outside the batch's token. Links waiting for a translation and values updated from
   the source are listed under `other` with the first batch, as many as fit,
   with their count in `other_total`; they are not answered with text.
 - **On a source**, its language versions with their open work, and the
@@ -269,21 +272,30 @@ unit's format: safe rich text for `html` (Markdown is checked as the HTML it
 renders), no markup in `plain` text, and entry links resolved. A proposal's
 text holds no `{` anywhere else, but a translation keeps the source's
 template placeholders, so those are allowed, and required, exactly as the
-source has them; any other `{` is refused. The editor must be able to edit
+source has them, as text inside the same tags: one put into a tag or an
+attribute the source does not have around it is refused, as is any other
+`{`. The editor must be able to edit
 the translation and read its source, and a field the forms lock is refused
-as in `set_fields`. `translate` is the only operation a proposal may have on
+as in `set_fields`. Problems are in the admin's language and name the unit
+by its label; its key is the problem's `key`. `translate` is the only operation a proposal may have on
 the translation it translates: another operation on the same entry is
 refused, while other entries in the proposal are not affected.
 
 The review shows each unit with its label, the source's text and the
-translation, so one can be checked against the other; units kept as they are
-say so. Applying saves the translation as its form saves it
-(`Brando.Translations.save_work/5`): from its pending version, with the
-texts written in, so its structure and media still follow the source, and
-every answered unit's work is resolved, a text kept the same included. The
-others stay open. A published translation is updated and stays published,
+translation, so one can be checked against the other; a unit kept as it is
+shows the text it keeps, and says so. Units are placed and labelled from the
+translation's pending version. Applying saves the translation as its form
+saves it (`Brando.Translations.save_work/5`): its whole pending version, with
+the texts written in and its blocks rendered, so its structure and media
+still follow the source, and every answered unit's work is resolved, a text
+kept the same included. The others stay open. Blocks and media the source
+added or changed since the translation's last save go in with it, their
+texts in the source's language until they are translated; the review says
+so when the pending version brings such changes, and how many texts stay to
+translate. A published translation is updated and stays published,
 an unpublished one stays unpublished, and the apply offers no publishing for
-it. Everything is checked again when the proposal is approved and applied: a
+it. Everything is checked again when the proposal is approved and applied,
+and each batch once more against its source, locked, inside the apply: a
 source changed since makes the proposal stale, and the message names the
 units. **Undo** puts the texts back and opens the work the apply resolved
 again, so the translation's work list is as it was.
