@@ -125,5 +125,16 @@ defmodule Brando.Translations.SourcePreviousTest do
 
     assert member(c.source).baseline_texts["title"] == "Tittel"
     assert member(c.target).baseline_texts == %{}
+    assert member(c.target).baseline == %{}
+  end
+
+  test "a new source that kept no texts is left with none", c do
+    from(m in Member, where: m.entry_id == ^c.target.id and m.entry_type == ^to_string(Article))
+    |> Repo.update_all(set: [baseline_texts: %{}])
+
+    {:ok, _} = Translations.transfer_source(Article, c.target.id, c.user)
+
+    assert member(c.target).baseline_texts == %{}
+    assert member(c.source).baseline_texts["title"] == "Tittel"
   end
 end

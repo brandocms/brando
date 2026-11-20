@@ -450,13 +450,17 @@ defmodule Brando.Translations do
         from(m in Member, where: m.group_id == ^new_source.group_id and m.role == :source)
         |> Repo.update_all(set: [role: :target, synchronized: true, updated_at: naive_now()])
 
-        from(m in Member, where: m.group_id == ^new_source.group_id)
+        from(m in Member, where: m.group_id == ^new_source.group_id and m.id != ^new_source.id)
         |> Repo.update_all(set: [baseline: baseline, baseline_texts: baseline_texts, updated_at: naive_now()])
 
         supersede_pending(new_source.id)
 
+        # A source keeps no baseline. The member was loaded without its texts,
+        # so they are written whatever the struct holds
         new_source
-        |> Changeset.change(role: :source, baseline: %{}, baseline_texts: %{})
+        |> Changeset.change(role: :source)
+        |> Changeset.force_change(:baseline, %{})
+        |> Changeset.force_change(:baseline_texts, %{})
         |> Repo.update!()
       end)
     else
