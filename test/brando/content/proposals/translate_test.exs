@@ -420,6 +420,74 @@ defmodule Brando.Content.Proposals.TranslateTest do
     end
   end
 
+  describe "a tag added around a placeholder" do
+    # The source's heading (plain), intro (rich text without a tag) and notes
+    # (Markdown) hold a placeholder: a translation may keep it, not put it in
+    # a tag of its own.
+    setup c do
+      [join] = load(c.source.id).entry_blocks
+      ref = Enum.find(join.block.refs, &(&1.name == "heading"))
+
+      ref
+      |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: "Om {{ entry.title }}"}})
+      |> Repo.update!()
+
+      notes = Enum.find(join.block.refs, &(&1.name == "notes"))
+
+      notes
+      |> Ecto.Changeset.change(data: %{notes.data | data: %{notes.data.data | text: "**Merk** {{ entry.title }}"}})
+      |> Repo.update!()
+
+      var = Enum.find(join.block.vars, &(&1.key == "intro"))
+      var |> Ecto.Changeset.change(value: "Innledning om {{ entry.title }}") |> Repo.update!()
+
+      %{target: create_translation(c)}
+    end
+
+    test "is refused in a plain unit, a rich text without tags and one with them, and Markdown", c do
+      heading = "#{c.prefix}/refs/heading/text"
+      intro = "#{c.prefix}/vars/intro/value"
+      body = "#{c.prefix}/refs/body/text"
+      notes = "#{c.prefix}/refs/notes/text"
+
+      kept = %{
+        heading => "About {{ entry.title }}",
+        intro => "Introduction to {{ entry.title }}",
+        notes => "**Note** {{ entry.title }}"
+      }
+
+      texts =
+        english(c)
+        |> Map.put(heading, ~s(About <a href="{{ entry.title }}">it</a>))
+        |> Map.put(intro, ~s(Introduction to <a href="{{ entry.title }}">it</a>))
+        |> Map.put(
+          body,
+          ~s(<p>First <a href="https://example.com/">paragraph</a> on <a href="{{ entry.title }}">it</a></p>)
+        )
+
+      found = problems([translate(c.target, texts)], c.user)
+      assert Enum.any?(found, &match?({0, _, ^heading}, &1))
+      assert Enum.any?(found, &match?({0, _, ^intro}, &1))
+      assert Enum.any?(found, &match?({0, _, ^body}, &1))
+
+      # In an attribute after an address, or inside a tag of its own
+      for text <- [
+            ~s(Introduction to <a href="https://example.com/{{ entry.title }}">it</a>),
+            ~s(Introduction to <strong>{{ entry.title }}</strong>),
+            ~s(Introduction to <a href="https://example.com/">{{ entry.title }}</a>)
+          ] do
+        texts = english(c) |> Map.merge(kept) |> Map.put(intro, text)
+        assert problems([translate(c.target, texts)], c.user) == [{0, :unsafe_text, intro}]
+      end
+
+      texts = english(c) |> Map.merge(kept) |> Map.put(notes, "**Note** **{{ entry.title }}**")
+      assert problems([translate(c.target, texts)], c.user) == [{0, :unsafe_text, notes}]
+
+      # Kept as text, the placeholder is right
+      assert problems([translate(c.target, Map.merge(english(c), kept))], c.user) == []
+    end
+  end
+
   describe "refused, per unit" do
     setup c, do: %{target: create_translation(c)}
 

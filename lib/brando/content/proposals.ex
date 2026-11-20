@@ -1019,6 +1019,7 @@ defmodule Brando.Content.Proposals do
     name = Map.get(unit, :label) || unit.key
 
     cond do
+      placeholders_moved?(unit, text) -> placeholder_place_problem(name)
       unit.format == "html" -> rich_text_problem(rest, name)
       unit.format == "markdown" -> rich_text_problem(checked_text("markdown", rest), name)
       String.ends_with?(unit.key, "/url") -> address_problem(rest, name)
@@ -1027,6 +1028,70 @@ defmodule Brando.Content.Proposals do
       true -> plain_text_problem(rest, name)
     end
   end
+
+  # A placeholder the source has is taken out before a text is checked, so
+  # it must stay where the source has it: inside the same tags, and never
+  # put into a tag's attributes or a tag of the translation's own, where its
+  # output would become markup or an address the check never saw.
+  @placeholder_or_tag ~r/<\/?[A-Za-z][^>]*>|\{\{.*?\}\}|\{%.*?%\}|<%.*?%>/su
+  @void_tags ~w(area base br col embed hr img input link meta param source track wbr)
+
+  # Markdown is compared as the HTML it renders
+  defp placeholders_moved?(unit, text) do
+    source = unit.source || ""
+
+    case Work.placeholders(source) do
+      [] -> false
+      _ -> Enum.sort(placeholder_places(placed(unit, source))) != Enum.sort(placeholder_places(placed(unit, text)))
+    end
+  end
+
+  defp placed(%{format: "markdown"}, text), do: checked_text("markdown", text)
+  defp placed(_unit, text), do: text
+
+  # Each placeholder with the tags open around it, or the tag it is in
+  defp placeholder_places(text) do
+    @placeholder_or_tag
+    |> Regex.scan(text)
+    |> List.flatten()
+    |> Enum.reduce({[], []}, fn token, {open, places} ->
+      cond do
+        not String.starts_with?(token, "<") or String.starts_with?(token, "<%") ->
+          {open, [{token, open} | places]}
+
+        Work.placeholders(token) != [] ->
+          {open, Enum.map(Work.placeholders(token), &{&1, {:in_tag, token, open}}) ++ places}
+
+        String.starts_with?(token, "</") ->
+          {close_tag(open, tag_name(token)), places}
+
+        String.ends_with?(token, "/>") or tag_name(token) in @void_tags ->
+          {open, places}
+
+        true ->
+          {[token | open], places}
+      end
+    end)
+    |> elem(1)
+  end
+
+  defp tag_name(tag),
+    do: ~r/^<\/?([A-Za-z][A-Za-z0-9-]*)/ |> Regex.run(tag, capture: :all_but_first) |> hd() |> String.downcase()
+
+  defp close_tag(open, name) do
+    case Enum.split_while(open, &(tag_name(&1) != name)) do
+      {_inner, [_tag | rest]} -> rest
+      {_inner, []} -> open
+    end
+  end
+
+  defp placeholder_place_problem(name),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder as text where the source has it, inside the same tags.",
+        name: name
+      )
 
   # A field's text: the field is not one a proposal may write, or one the
   # forms lock, as `set_fields` refuses them. `translation_work` leaves such

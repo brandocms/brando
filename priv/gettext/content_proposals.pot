@@ -144,6 +144,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder as text where the source has it, inside the same tags."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} takes a web, mail or phone address."
 msgstr ""
 
