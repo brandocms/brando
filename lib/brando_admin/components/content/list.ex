@@ -601,13 +601,20 @@ defmodule BrandoAdmin.Components.Content.List do
   defp entry_count(_entries), do: nil
 
   # Synchronized translations show each language version's open work, fetched
-  # for the whole page at once.
+  # for the whole page at once. A version in the trash is not one to show:
+  # creating its language again is refused, with where the version is.
   defp put_translation_status(entries, schema, user) do
     case Brando.Translations.listing_status(schema, entries, user) do
-      status when map_size(status) == 0 -> entries
-      status -> Enum.map(entries, &Map.put(&1, :translation_status, status[&1.id]))
+      status when map_size(status) == 0 ->
+        entries
+
+      status ->
+        Enum.map(entries, &Map.put(&1, :translation_status, shown_versions(status[&1.id])))
     end
   end
+
+  defp shown_versions(nil), do: nil
+  defp shown_versions(versions), do: Enum.reject(versions, & &1.in_trash)
 
   # Who moved each trashed entry there, from the activity log; the row
   # otherwise has only the last editor to go by.

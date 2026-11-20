@@ -12810,6 +12810,16 @@ msgctxt "checkbox state"
 msgid "Not checked"
 msgstr "Ikke avkrysset"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
+msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
+msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"
@@ -20723,6 +20733,11 @@ msgstr "Dette er for langt."
 #, elixir-autogen, elixir-format
 msgid "This language already has a version."
 msgstr "Dette språket har allerede en versjon."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This language's version is in the trash. Restore it from the trash instead."
+msgstr "Versjonen på dette språket ligger i papirkurven. Gjenopprett den fra papirkurven i stedet."
 
 #: lib/brando_admin/components/form/input/blocks/map_block.ex
 #, elixir-autogen, elixir-format

@@ -53,12 +53,14 @@ defmodule Brando.Translations do
 
       %{entry_id => [%{language: "en", entry_id: 7, role: :target,
                        synchronized: true, pending: true,
-                       counts: %{translate: 2, review: 1}}, ...]}
+                       counts: %{translate: 2, review: 1}, in_trash: false}, ...]}
 
   Only a member's current pending version counts; superseded ones are
   ignored, and a pending version with no open item still reads as pending
-  — a structural or shared update without text work. With an `actor`, only
-  versions the actor may read are listed.
+  — a structural or shared update without text work. A version in the trash
+  is listed with `in_trash: true`: it still holds its language, but is not a
+  version to show. With an `actor`, only versions the actor may read are
+  listed.
   """
   def listing_status(schema, entries, actor \\ nil) do
     ids = for %{id: id} <- entries, id, do: id
@@ -92,6 +94,7 @@ defmodule Brando.Translations do
         |> Map.new(fn {version_id, kinds} -> {version_id, Map.new(kinds)} end)
 
       version_by_member = Map.new(versions)
+      trashed = MapSet.new(trashed_ids(schema, Enum.map(members, & &1.entry_id)))
 
       group_status =
         members
@@ -109,7 +112,8 @@ defmodule Brando.Translations do
                role: member.role,
                synchronized: member.synchronized,
                pending: version_id != nil,
-               counts: Map.get(counts, version_id, %{})
+               counts: Map.get(counts, version_id, %{}),
+               in_trash: MapSet.member?(trashed, member.entry_id)
              }
            end)}
         end)
@@ -261,7 +265,7 @@ defmodule Brando.Translations do
 
   defp enrol_target(schema, source_id, language, actor, mark_translate?) do
     with {:ok, source_member} <- source_member(schema, source_id, actor),
-         :ok <- ensure_language_free(source_member, language),
+         :ok <- ensure_language_free(schema, source_member, language),
          {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
       target
     else
@@ -516,11 +520,14 @@ defmodule Brando.Translations do
   @doc """
   Recomputes one synchronized target's pending version against its saved
   content, at the group's current source generation. Unresolved work carries
-  over; nothing new is asked for review.
+  over; nothing new is asked for review. `{:error, :group_not_found}` when the
+  group is gone, its source deleted since.
   """
   def resync_target(group_id, member_id) do
     Repo.transaction(fn ->
-      group = Repo.one!(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE")
+      group =
+        Repo.one(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE") ||
+          Repo.rollback(:group_not_found)
 
       with %Member{role: :target, synchronized: true} = member <- Repo.get(Member, member_id),
            {:ok, source} <- load_group_source(group) do
@@ -1343,6 +1350,53 @@ defmodule Brando.Translations do
   def guard_delete(_, _), do: :ok
 
   @doc """
+  Whether a synchronized translation of the source `id` is in the trash: it
+  still counts for `guard_delete/2` until it is restored or purged, though the
+  listing does not show it.
+  """
+  def trashed_synchronized_targets?(module, id) do
+    case get_member(module, id) do
+      %Member{role: :source, group_id: group_id} ->
+        ids =
+          Repo.all(
+            from m in Member,
+              where: m.group_id == ^group_id and m.role == :target and m.synchronized == true,
+              select: m.entry_id
+          )
+
+        trashed_ids(module, ids) != []
+
+      _ ->
+        false
+    end
+  end
+
+  @doc """
+  Takes entries of `schema` deleted for good out of their groups: their
+  members go, with their pending versions and work items, and their languages
+  are free again. A source's group goes with it; `guard_delete/2` lets a source
+  go only when no synchronized translation is left, and the independent ones
+  stay as they are, outside any group. An entry in the trash keeps its member.
+
+  The trash's purge calls it in its transaction, before the rows go; a delete
+  of an entry without a trash, once the entry is gone.
+  """
+  def entries_deleted(_schema, []), do: :ok
+
+  def entries_deleted(schema, ids) do
+    if synchronized?(schema) do
+      type = entry_type(schema)
+      members = from(m in Member, where: m.entry_type == ^type and m.entry_id in ^ids)
+      groups = Repo.all(from m in members, where: m.role == :source, select: m.group_id)
+
+      Repo.delete_all(members)
+      Repo.delete_all(from g in Group, where: g.id in ^groups)
+    end
+
+    :ok
+  end
+
+  @doc """
   Maps the `{module_origin, module_id}` of every block in `entries` to its
   module's `uid`, for module-variable selectors. Empty when the schema
   controls no module variables.
@@ -1446,10 +1500,26 @@ defmodule Brando.Translations do
     end
   end
 
-  defp ensure_language_free(%Member{group_id: group_id}, language) do
-    if exists?(from m in Member, where: m.group_id == ^group_id and m.language == ^language),
-      do: {:error, :language_exists},
-      else: :ok
+  # A version in the trash still holds its language, so a restore puts it back
+  # in its group as it was; it is refused apart, so the editor is told where
+  # the version is.
+  defp ensure_language_free(schema, %Member{group_id: group_id}, language) do
+    case Repo.one(from m in Member, where: m.group_id == ^group_id and m.language == ^language, select: m.entry_id) do
+      nil ->
+        :ok
+
+      entry_id ->
+        if entry_id in trashed_ids(schema, [entry_id]), do: {:error, :language_in_trash}, else: {:error, :language_exists}
+    end
+  end
+
+  @doc "The ids of `ids` whose entries are in the trash."
+  def trashed_ids(schema, ids) do
+    if ids != [] and :deleted_at in schema.__schema__(:fields) do
+      Repo.all(from e in schema, where: e.id in ^ids and not is_nil(e.deleted_at), select: e.id)
+    else
+      []
+    end
   end
 
   # An independent alternate isn't a group member, but it holds its language:

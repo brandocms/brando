@@ -790,6 +790,8 @@ defmodule Brando.Query.Mutations do
         Revisions.delete_entry_revisions(module, entry.id)
       end
 
+      if !soft_deletable?, do: Brando.Translations.entries_deleted(module, [entry.id])
+
       Activity.deleted(entry, user, soft_deletable?)
       Brando.Notes.entry_deleted(module, entry, soft_deletable?)
 

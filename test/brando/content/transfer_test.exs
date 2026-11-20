@@ -173,6 +173,32 @@ defmodule Brando.Content.TransferTest do
     refute Repo.get!(Page, c.source.id).deleted_at
   end
 
+  test "recovery refuses to delete an imported entry that has since become a translation source", c do
+    Brando.Test.Support.put_test_env(Page, translatable: [mode: :synchronized])
+    archive = entry_archive(c)
+    [entry] = archive.bundle["entries"]
+    targets = %{entry["key"] => %{"attributes" => %{"uri" => "translated-import", "language" => "en"}}}
+    assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+    created = receipt.after[entry["key"]]["id"]
+    {:ok, target} = Brando.Translations.create_target(Page, created, :no, c.user)
+
+    assert {:error, message} = Transfer.restore(receipt.id, c.user)
+    refute message =~ "group_has_synchronized_members"
+    assert Repo.get(Page, created)
+    assert %{role: :source} = Brando.Translations.get_member(Page, created)
+    assert %{role: :target} = Brando.Translations.get_member(Page, target.id)
+
+    # Made independent, the translation lets recovery delete its source, which
+    # takes the group with it
+    %{group_id: group_id} = Brando.Translations.get_member(Page, created)
+    {:ok, _} = Brando.Translations.make_independent(Page, target.id, c.user)
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    refute Repo.get(Page, created)
+    assert Brando.Translations.get_member(Page, created) == nil
+    assert Repo.get(Brando.Translations.Group, group_id) == nil
+  end
+
   # brando_225 renamed html vars to rich_text after the import was recorded
   test "a whole entry imported before the html var rename can still be recovered", c do
     Brando.Content.Var.changeset(
