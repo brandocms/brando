@@ -877,11 +877,13 @@ defmodule Brando.Content.Proposals do
   }
 
   # A problem of `Work.check/4`, in the admin's language, naming its unit by
-  # its label; the key is the problem's `key`.
+  # its label; the key is the problem's `key`. A source changed carries the
+  # label for the message of a recheck (`recheck_failed/1`); it is not stored.
   defp work_problem(%{key: key, code: code}, units) do
     unit = Enum.find(units, &(&1.key == key))
     name = (unit && unit.label) || key
-    key_problem(Map.fetch!(@work_codes, code), key, work_message(code, name, unit))
+    problem = key_problem(Map.fetch!(@work_codes, code), key, work_message(code, name, unit))
+    if code == "source_changed", do: Map.put(problem, :label, name), else: problem
   end
 
   defp work_message("stale", _name, _unit),
@@ -3520,15 +3522,15 @@ defmodule Brando.Content.Proposals do
   # an entry that changed, the proposal is stale, and the message names the
   # units.
   defp recheck_failed(problems) do
-    case for(%{code: :source_changed, key: key} <- problems, uniq: true, do: key) do
+    case for(%{code: :source_changed} = problem <- problems, uniq: true, do: Map.get(problem, :label, problem.key)) do
       [] ->
         dgettext("content_proposals", "Resolve every blocking problem before applying.")
 
-      keys ->
+      names ->
         dgettext(
           "content_proposals",
           "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again.",
-          units: Enum.join(keys, ", ")
+          units: Enum.join(names, ", ")
         )
     end
   end
@@ -4006,6 +4008,7 @@ defmodule Brando.Content.Proposals do
 
   defp encode_problem(problem) do
     problem
+    |> Map.delete(:label)
     |> Map.update(:target, nil, &(&1 && Proposal.key(&1)))
     |> Map.new(fn {key, value} -> {to_string(key), if(key == :code, do: to_string(value), else: value)} end)
   end

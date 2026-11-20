@@ -310,7 +310,8 @@ defmodule Brando.Content.Proposals.TranslateTest do
       Translations.source_saved(load(c.source.id))
 
       assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
-      assert message =~ heading
+      assert message =~ "Text › Heading"
+      refute message =~ heading
       assert {:ok, %{status: "pending", problems: problems}} = Proposals.get(proposal.id, c.user)
       assert [%{code: :source_changed, key: ^heading}] = problems
       assert %{title: "Tittel"} = saved_texts(target.id)
@@ -414,9 +415,13 @@ defmodule Brando.Content.Proposals.TranslateTest do
       {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
       assert {:ok, :ok} = check_sources(proposal)
 
-      {1, _} = Repo.update_all(from(a in Article, where: a.id == ^c.source.id), set: [title: "I morgen"])
+      [join] = load(c.source.id).entry_blocks
+      ref = Enum.find(join.block.refs, &(&1.name == "heading"))
+      ref |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: "Ny overskrift"}}) |> Repo.update!()
 
-      assert_raise Brando.Content.Transfer.Error, ~r/title/, fn -> check_sources(proposal) end
+      error = assert_raise Brando.Content.Transfer.Error, fn -> check_sources(proposal) end
+      assert Exception.message(error) =~ "Text › Heading"
+      refute Exception.message(error) =~ "#{c.prefix}/refs/heading/text"
     end
 
     test "refuses a batch for a translation the proposal creates whose source text changed", c do
@@ -433,7 +438,7 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
       {1, _} = Repo.update_all(from(a in Article, where: a.id == ^c.source.id), set: [title: "I morgen"])
 
-      assert_raise Brando.Content.Transfer.Error, ~r/title/, fn -> check_sources(proposal) end
+      assert_raise Brando.Content.Transfer.Error, ~r/Title/, fn -> check_sources(proposal) end
     end
   end
 
