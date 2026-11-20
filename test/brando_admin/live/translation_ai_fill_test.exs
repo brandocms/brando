@@ -389,6 +389,33 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       refute has_element?(view, "#{item(block_key(target.id))}[data-ai]")
     end
 
+    test "a subform in a fieldset only superusers may change is not sent to anyone else",
+         %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", slug: "tittel", language: "no", status: "published", items: [%{label: "Første punkt"}]},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      key = "items/#{hd(load(target.id).items).uid}/label"
+      answer_and_report()
+
+      admin = Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
+      admin_conn = log_in_user(build_conn(), admin)
+      {view, _html} = live_form(admin_conn, "/admin/articles/update/#{target.id}/superuser_items", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Tittel"]
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
+      refute has_element?(view, "#{item(key)}[data-ai]")
+      _ = conn
+    end
+
     test "a run reads a block with many texts once per pass, not once per text", %{conn: conn, current_user: user} do
       names = ~w(one two three four five six)
 

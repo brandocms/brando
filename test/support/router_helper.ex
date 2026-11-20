@@ -328,7 +328,8 @@ defmodule BrandoAdmin.SavedElsewhereTest.ShelfFormLive do
   end
 end
 
-# Form `:media`, `:locked_media` or `:superuser_media` (LockedMediaDeliveriesTest)
+# Form `:media`, `:locked_media` or `:superuser_media` (LockedMediaDeliveriesTest), and
+# others by the live action
 defmodule BrandoAdmin.SyncTest.ArticleMediaFormLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
@@ -421,6 +422,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id/media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :media
     live "/articles/update/:entry_id/locked_media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :locked_media
     live "/articles/update/:entry_id/superuser_media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :superuser_media
+    live "/articles/update/:entry_id/superuser_items", BrandoAdmin.SyncTest.ArticleMediaFormLive, :superuser_items
     live "/articles/update/:entry_id/entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :entries
     live "/articles/update/:entry_id/locked_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :locked_entries
     live "/articles/update/:entry_id/policy_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :policy_entries

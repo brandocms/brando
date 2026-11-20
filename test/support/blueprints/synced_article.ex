@@ -474,6 +474,28 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # A translatable subform only superusers may change (TranslationAIFillTest)
+    form :superuser_items do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+        end
+
+        fieldset do
+          superuser true
+
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+          end
+        end
+      end
+    end
+
     # A one-to-one subform with an image field (SubformRelationTest), on the
     # form's automatic preloads.
     form :author do

@@ -115,14 +115,16 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   defp address?([]), do: false
 
   # Whether this editor's form can change a target: not a field locked for
-  # them (`LockedFields`), nor a block text in a block field this form has
-  # none of
+  # them (`LockedFields`), nor a row of a subform locked for them (in a
+  # fieldset only superusers may change), nor a block text in a block field
+  # this form has none of
   defp writable(assigns) do
     locked = assigns.schema |> LockedFields.keys(assigns.form_blueprint, assigns.current_user) |> Enum.map(&to_string/1)
     block_fields = Enum.map(assigns.form_blueprint.blocks || [], &to_string(&1.name))
 
     fn
       _key, {:field, field} -> field not in locked
+      _key, {:row, subform, _row, _field} -> subform not in locked
       key, {:block, _uid, _module, _path} -> block_field(key) in block_fields
       _key, _target -> true
     end
