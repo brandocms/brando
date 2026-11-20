@@ -21,8 +21,6 @@ defmodule Brando.Content.Proposals.TranslationWork do
   """
   use Gettext, backend: Brando.Gettext
 
-  import Ecto.Query, only: [from: 2]
-
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Transfer.{Catalog, Error}
@@ -216,13 +214,11 @@ defmodule Brando.Content.Proposals.TranslationWork do
       |> Map.get(entry.id, [])
       |> Enum.reject(&(&1.entry_id == entry.id))
 
-    trashed = trashed_ids(schema, Enum.map(listed, & &1.entry_id))
-
     # A version in the trash still holds its language; its work is read once
     # it is restored
     versions =
       Enum.map(listed, fn version ->
-        if version.entry_id in trashed,
+        if version.in_trash,
           do: %{language: version.language, id: version.entry_id, in_trash: true},
           else: %{
             language: version.language,
@@ -244,7 +240,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
         )
 
       version = Enum.find(versions, &(&1.language == language and Map.get(&1, :in_trash))) ->
-        Error.fail!("The #{version.language} version is in the trash. It is restored, or deleted for good, in the admin.")
+        Error.fail!("The #{version.language} version is in the trash. It can be restored from the trash in the admin.")
 
       version = Enum.find(versions, &(&1.language == language)) ->
         Error.fail!("There is a #{language} version already: read its work with id #{version.id}.")
@@ -273,15 +269,6 @@ defmodule Brando.Content.Proposals.TranslationWork do
           "then translate on {\"new\": R}. " <> @answer_note
     })
     |> put_batch(all, positions, after_key, %{type: to_string(schema), id: {:new, entry.id}, language: language})
-  end
-
-  defp trashed_ids(schema, ids) do
-    if ids != [] and :deleted_at in schema.__schema__(:fields) do
-      from(e in schema, where: e.id in ^ids and not is_nil(e.deleted_at), select: e.id)
-      |> Brando.Repo.all()
-    else
-      []
-    end
   end
 
   defp not_synchronized(schema, entry) do

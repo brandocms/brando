@@ -1221,6 +1221,17 @@ defmodule Brando.Content.Proposals do
       language == to_string(source.language) ->
         [problem(:same_language, dgettext("content_proposals", "The source is already in this language."))]
 
+      language in trashed_languages(schema, member) ->
+        [
+          problem(
+            :language_in_trash,
+            dgettext(
+              "content_proposals",
+              "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
+            )
+          )
+        ]
+
       language in group_languages(schema, source, member) ->
         [
           problem(
@@ -1266,6 +1277,15 @@ defmodule Brando.Content.Proposals do
         else: dgettext("content_proposals", "This entry is a translation. Create translations from its group's source.")
 
     problem(:not_source, message)
+  end
+
+  # The languages of the source's group whose versions are in the trash
+  defp trashed_languages(_schema, nil), do: []
+
+  defp trashed_languages(schema, member) do
+    members = Translations.list_members(member.group_id)
+    trashed = Translations.trashed_ids(schema, Enum.map(members, & &1.entry_id))
+    for %{entry_id: id, language: language} <- members, id in trashed, do: language
   end
 
   # The languages the source's group holds, and those of the independent
@@ -3774,7 +3794,26 @@ defmodule Brando.Content.Proposals do
 
     case Kernel.apply(context, :"delete_#{singular}", [id, user]) do
       {:ok, _} -> :ok
+      {:error, :group_has_synchronized_members} -> Error.fail!(has_synchronized_members(schema, id))
       {:error, reason} -> Error.fail!(dgettext("content_proposals", "Undo failed: %{reason}", reason: inspect(reason)))
+    end
+  end
+
+  defp has_synchronized_members(schema, id) do
+    entry = Catalog.describe(Repo.get!(schema, id)).title
+
+    if Translations.trashed_synchronized_targets?(schema, id) do
+      dgettext(
+        "content_proposals",
+        "%{entry} became the source of synchronized translations after the proposal was applied, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before undoing.",
+        entry: entry
+      )
+    else
+      dgettext(
+        "content_proposals",
+        "%{entry} became the source of synchronized translations after the proposal was applied. Make them independent, or make one of them the source, before undoing.",
+        entry: entry
+      )
     end
   end
 
@@ -4369,6 +4408,13 @@ defmodule Brando.Content.Proposals do
 
   defp translation_failed(:language_exists),
     do: dgettext("content_proposals", "The source already has a version in this language. Change that version instead.")
+
+  defp translation_failed(:language_in_trash),
+    do:
+      dgettext(
+        "content_proposals",
+        "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
+      )
 
   defp translation_failed(:not_source),
     do: dgettext("content_proposals", "This entry is a translation. Create translations from its group's source.")

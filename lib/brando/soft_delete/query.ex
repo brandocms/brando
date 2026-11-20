@@ -232,6 +232,7 @@ defmodule Brando.SoftDelete.Query do
     end
 
     Brando.Notes.entries_purged(schema, ids)
+    Brando.Translations.entries_deleted(schema, ids)
     before_purge(schema, ids)
     Repo.delete_all(from t in schema, where: t.id in ^ids)
   end

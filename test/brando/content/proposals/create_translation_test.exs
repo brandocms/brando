@@ -315,6 +315,19 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert Repo.get(Translations.Group, group_id) == nil
   end
 
+  test "undo of an entry that has since become a source says why it is refused", c do
+    create = %CreateEntry{schema: Article, ref: "new", fields: %{title: "Ny", slug: "ny", language: "no"}}
+    {:ok, proposal} = Proposals.propose([create], c.user)
+    {:ok, receipt} = approve_and_apply(proposal, c.user)
+    id = receipt.mappings["created"]["new"]
+    {:ok, _} = Translations.create_target(Article, id, :en, c.user)
+
+    assert {:error, message} = Proposals.undo(proposal.id, c.user)
+    refute message =~ "group_has_synchronized_members"
+    assert Repo.get(Article, id)
+    assert {:ok, %{status: "applied"}} = Proposals.get(proposal.id, c.user)
+  end
+
   test "undo is refused when the translation has since become its group's source", c do
     {:ok, proposal} = Proposals.propose([op(c)], c.user)
     {:ok, receipt} = approve_and_apply(proposal, c.user)

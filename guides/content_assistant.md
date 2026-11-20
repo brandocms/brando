@@ -193,7 +193,9 @@ an entry not yet in a group becomes its source. It is checked like the
 admin's: the content type must be synchronized and able to copy entries, the
 editor must be able to read the source, create and edit entries of its type
 and copy it, the language must be one of the site's and not the source's, and neither
-the group nor an earlier operation may already have that language. Named a
+the group nor an earlier operation may already have that language. A
+version of the group in the trash still holds its language, and the problem
+says it is in the trash. Named a
 translation instead of its source, the problem names the source. The checks
 run again when the proposal is applied, as the language may have been taken
 in the meantime. The new copy is made from the source as it is then, so the

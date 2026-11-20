@@ -696,4 +696,30 @@ defmodule BrandoAdmin.TranslationFormTest do
     assert has_element?(view, ".translation-members a[href='/admin/articles/update/#{c.target.id}']")
     refute has_element?(view, "input[name='translation_review[version_id]']")
   end
+
+  # The pending version drops the translation's copy of the removed block and
+  # adds the new one: the changeset the save checks carries rows marked
+  # `:replace` (`Translations.check_target_save/4`), which raised before #3750.
+  # The save is refused as a change to source-controlled content: the form
+  # still sends the translation's copy of the dropped block
+  # (`entry_blocks/<its sync_uid>`). A drop alone, or an addition alone, saves.
+  @tag skip: "#3756: the form's save sends the block the source dropped, and is refused"
+  test "a translation saves after the source dropped a block and added another", %{conn: conn} = c do
+    [join] = load(c.source.id).entry_blocks
+    Repo.delete!(join)
+    Repo.delete!(join.block)
+    TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 0)
+    {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
+    version = Translations.get_pending_version(Article, c.target.id)
+
+    view = open(conn, c.target.id)
+    await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+    save(view)
+
+    assert Repo.get!(PendingVersion, version.id).status == :applied
+    saved = load(c.target.id)
+    source_blocks = load(c.source.id).entry_blocks
+    assert Enum.map(saved.entry_blocks, & &1.block.sync_uid) == Enum.map(source_blocks, & &1.block.sync_uid)
+    assert {saved.year, texts(saved)} == {2024, ["Nytt avsnitt"]}
+  end
 end

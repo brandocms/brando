@@ -50,6 +50,16 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after the proposal was applied, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before undoing."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after the proposal was applied. Make them independent, or make one of them the source, before undoing."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{field} cannot be changed by a proposal."
 msgstr ""
 
@@ -621,6 +631,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The source text of %{name} changed since it was read, or it no longer needs translation. Read translation_work again."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

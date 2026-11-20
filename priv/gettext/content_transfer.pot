@@ -90,6 +90,16 @@ msgstr[1] ""
 
 #: lib/brando/content/transfer/entries.ex
 #, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after this import, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before recovering."
+msgstr ""
+
+#: lib/brando/content/transfer/entries.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after this import. Make them independent, or make one of them the source, before recovering."
+msgstr ""
+
+#: lib/brando/content/transfer/entries.ex
+#, elixir-autogen, elixir-format
 msgid "%{value1} is already in use. Update the matching entry or choose another value."
 msgstr ""
 

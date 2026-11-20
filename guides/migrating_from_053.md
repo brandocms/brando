@@ -650,6 +650,16 @@ sender first, before the first compile.
   registry reads the columns, so a release with tenancy enabled does not
   start until it has run. See
   [A site's allowed deploy targets](tenancy_and_environments.md#a-site-s-allowed-deploy-targets).
+- **Languages of deleted translations.** `brando_238` removes the
+  synchronized-translation memberships of entries already deleted for good,
+  with their pending work, so their languages can be translated again; a
+  group with no entry left goes too. A translation in the trash keeps its
+  membership. A group whose source was deleted but which still has
+  translations stays as it was, and the migration logs it: hand the source
+  role on to one of them, or make them independent. Run
+  `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`. See
+  [Synchronized translations](i18n.md#synchronized-translations).
 - **The source's previous text for translation reviews.** `brando_239` adds
   `translation_group_members.baseline_texts` and
   `translation_work_items.source_previous` in every environment, so a
