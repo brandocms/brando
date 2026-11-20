@@ -650,6 +650,14 @@ sender first, before the first compile.
   registry reads the columns, so a release with tenancy enabled does not
   start until it has run. See
   [A site's allowed deploy targets](tenancy_and_environments.md#a-site-s-allowed-deploy-targets).
+- **The source's previous text for translation reviews.** `brando_239` adds
+  `translation_group_members.baseline_texts` and
+  `translation_work_items.source_previous` in every environment, so a
+  synchronized translation's review item keeps the source's text from before
+  the change. Both start empty: a translation keeps the texts from its next
+  synchronization, and review items raised before that have no previous
+  text. Run `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
+  [Synchronized translations](i18n.md#synchronized-translations).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
