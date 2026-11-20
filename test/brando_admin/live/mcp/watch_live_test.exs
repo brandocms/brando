@@ -456,6 +456,31 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       assert has_element?(view, "#mcp-call-import [data-image-id='#{image.id}'] img")
     end
 
+    test "an applied image replacement is read by OLD, NEW's record being gone", c do
+      {_manager, _group, conn} = member(c, ["brando.admin.access", "brando.mcp.manage", "brando.images.read"])
+      old = Factory.insert(:image)
+      new = Factory.insert(:image)
+      Repo.delete!(new)
+
+      record =
+        proposal!(c.owner, %{
+          summary: "Swap the photo",
+          status: "applied",
+          problems: [],
+          operations: [
+            %{
+              "op" => "replace_image_file",
+              "asset" => %{"kind" => "image", "id" => old.id},
+              "with" => %{"kind" => "image", "id" => new.id}
+            }
+          ]
+        })
+
+      {:ok, view, _html} = page(conn, c.owner_grant)
+      Watch.finished(c.owner_grant.id, "proposal", proposal_details(record), {:error, :not_recorded})
+      assert has_element?(view, "#mcp-call-proposal h3", "Swap the photo")
+    end
+
     test "a manager who loses a read permission stays, with the calls read again", c do
       {:ok, manage} = Groups.create(c.scope, %{name: "Manage"}, ["brando.admin.access", "brando.mcp.manage"])
       {manager, read, conn} = member(c, ["brando.pages.read", "brando.images.read"])

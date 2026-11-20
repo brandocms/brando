@@ -438,13 +438,17 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   # Whether `reader` may read each entry the proposal changes, and the
   # content types it creates entries of
-  defp readable?(%Record{operations: operations}, reader) do
+  defp readable?(%Record{operations: operations, status: status}, reader) do
     operations
     |> List.wrap()
-    |> Enum.flat_map(&subjects/1)
+    |> Enum.flat_map(&(&1 |> as_applied(status) |> subjects()))
     |> Enum.uniq()
     |> Enum.all?(&readable_subject?(&1, reader))
   end
+
+  # Once applied, the image whose file replaced another's has no record
+  defp as_applied(%{"op" => "replace_image_file"} = op, "applied"), do: Map.delete(op, "with")
+  defp as_applied(op, _status), do: op
 
   defp subjects(%{"op" => "create_entry", "content_type" => type}), do: [{type, nil}]
 
