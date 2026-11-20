@@ -272,9 +272,11 @@ unit's format: safe rich text for `html` (Markdown is checked as the HTML it
 renders), no markup in `plain` text, and entry links resolved. A proposal's
 text holds no `{` anywhere else, but a translation keeps the source's
 template placeholders, so those are allowed, and required, exactly as the
-source has them, as text inside the same tags: one put into a tag or an
-attribute the source does not have around it is refused, as is any other
-`{`. The editor must be able to edit
+source has them and where it has them, read from the parsed markup: as text
+inside the same tags, or in the same attribute of the same tag. One put into
+a tag or an attribute the source does not have around it is refused, as is
+any other `{`; the attribute's other text, such as an image's alt text or a
+link's address, may be translated around it. The editor must be able to edit
 the translation and read its source, and a field the forms lock is refused
 as in `set_fields`. Problems are in the admin's language and name the unit
 by its label; its key is the problem's `key`. `translate` is the only operation a proposal may have on

@@ -1035,60 +1035,63 @@ defmodule Brando.Content.Proposals do
   end
 
   # A placeholder the source has is taken out before a text is checked, so
-  # it must stay where the source has it: inside the same tags, and never
-  # put into a tag's attributes or a tag of the translation's own, where its
-  # output would become markup or an address the check never saw.
-  @placeholder_or_tag ~r/<\/?[A-Za-z][^>]*>|\{\{.*?\}\}|\{%.*?%\}|<%.*?%>/su
-  @void_tags ~w(area base br col embed hr img input link meta param source track wbr)
+  # it must stay where the source has it: as text inside the same tags, or
+  # in the same attribute of the same tag, and never put into an attribute
+  # or a tag of the translation's own, where its output would become markup
+  # or an address the check never saw. Places are read from the parsed
+  # markup, as browsers read it; attribute values and other attributes do
+  # not count, so an address or an alt text may be translated around it.
+  @placeholder_pattern ~r/\{\{.*?\}\}|\{%.*?%\}|<%.*?%>/su
+  @placeholder_marker ~r/zqbrandoplaceholder(\d+)zq/
 
-  # Markdown is compared as the HTML it renders
   defp placeholders_moved?(unit, text) do
     source = unit.source || ""
 
     case Work.placeholders(source) do
-      [] -> false
-      _ -> Enum.sort(placeholder_places(placed(unit, source))) != Enum.sort(placeholder_places(placed(unit, text)))
+      [] ->
+        false
+
+      _ ->
+        placeholders = Enum.uniq(Work.placeholders(source) ++ Work.placeholders(text))
+        places(unit, source, placeholders) != places(unit, text, placeholders)
     end
   end
 
-  defp placed(%{format: "markdown"}, text), do: checked_text("markdown", text)
-  defp placed(_unit, text), do: text
+  # Each placeholder of `text` with its place, sorted: the placeholders are
+  # replaced by markers that survive parsing, and Markdown is rendered.
+  defp places(unit, text, placeholders) do
+    markers = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {p, "zqbrandoplaceholder#{i}zq"} end)
+    names = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {Integer.to_string(i), p} end)
 
-  # Each placeholder with the tags open around it, or the tag it is in
-  defp placeholder_places(text) do
-    @placeholder_or_tag
-    |> Regex.scan(text)
-    |> List.flatten()
-    |> Enum.reduce({[], []}, fn token, {open, places} ->
-      cond do
-        not String.starts_with?(token, "<") or String.starts_with?(token, "<%") ->
-          {open, [{token, open} | places]}
-
-        Work.placeholders(token) != [] ->
-          {open, Enum.map(Work.placeholders(token), &{&1, {:in_tag, token, open}}) ++ places}
-
-        String.starts_with?(token, "</") ->
-          {close_tag(open, tag_name(token)), places}
-
-        String.ends_with?(token, "/>") or tag_name(token) in @void_tags ->
-          {open, places}
-
-        true ->
-          {[token | open], places}
-      end
-    end)
-    |> elem(1)
+    @placeholder_pattern
+    |> Regex.replace(text, &Map.fetch!(markers, &1))
+    |> placed(unit)
+    |> Brando.HTML.Tree.parse_fragment()
+    |> Enum.flat_map(&node_places(&1, []))
+    |> Enum.map(fn {index, place} -> {Map.fetch!(names, index), place} end)
+    |> Enum.sort()
   end
 
-  defp tag_name(tag),
-    do: ~r/^<\/?([A-Za-z][A-Za-z0-9-]*)/ |> Regex.run(tag, capture: :all_but_first) |> hd() |> String.downcase()
+  defp placed(text, %{format: "markdown"}), do: checked_text("markdown", text)
+  defp placed(text, _unit), do: text
 
-  defp close_tag(open, name) do
-    case Enum.split_while(open, &(tag_name(&1) != name)) do
-      {_inner, [_tag | rest]} -> rest
-      {_inner, []} -> open
-    end
+  defp node_places(text, ancestors) when is_binary(text),
+    do: for(index <- marker_indexes(text), do: {index, {:text, ancestors}})
+
+  defp node_places({:comment, text}, ancestors),
+    do: for(index <- marker_indexes(text), do: {index, {:comment, ancestors}})
+
+  defp node_places({tag, attributes, children}, ancestors) do
+    in_attributes =
+      for {name, value} <- attributes, index <- marker_indexes(name <> " " <> value), do: {index, {:attribute, tag, name}}
+
+    in_attributes ++ Enum.flat_map(children, &node_places(&1, [tag | ancestors]))
   end
+
+  defp node_places(_node, _ancestors), do: []
+
+  defp marker_indexes(text),
+    do: @placeholder_marker |> Regex.scan(text, capture: :all_but_first) |> List.flatten()
 
   defp placeholder_place_problem(name),
     do:

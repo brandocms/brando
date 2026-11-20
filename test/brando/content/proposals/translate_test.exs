@@ -145,7 +145,7 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
   defp problems(ops, user) do
     {:ok, proposal} = Proposals.prepare(ops, user)
-    Enum.map(proposal.problems, &{&1.operation, &1.code, Map.get(&1, :key)})
+    Enum.map(proposal.problems, &{Map.get(&1, :operation), &1.code, Map.get(&1, :key)})
   end
 
   defp open_items(id) do
@@ -485,6 +485,79 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
       # Kept as text, the placeholder is right
       assert problems([translate(c.target, Map.merge(english(c), kept))], c.user) == []
+    end
+  end
+
+  describe "where a placeholder sits, read from the parsed markup" do
+    # Sets the source's intro (rich text) and notes (Markdown), then creates
+    # the translation
+    defp with_source(c, texts) do
+      [join] = load(c.source.id).entry_blocks
+
+      if notes = texts[:notes] do
+        ref = Enum.find(join.block.refs, &(&1.name == "notes"))
+
+        ref
+        |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: notes}})
+        |> Repo.update!()
+      end
+
+      if intro = texts[:intro] do
+        var = Enum.find(join.block.vars, &(&1.key == "intro"))
+        var |> Ecto.Changeset.change(value: intro) |> Repo.update!()
+      end
+
+      create_translation(c)
+    end
+
+    # A placeholder without spaces passes as an address, so only where it
+    # sits keeps it out of an href
+    test "a placeholder moved into an attribute behind a quoted > is refused", c do
+      target = with_source(c, %{intro: "Innledning om {{entry.title}}"})
+      intro = "#{c.prefix}/vars/intro/value"
+
+      for text <- [
+            ~s(Introduction to <a title="></a>" href="https://example.com/{{entry.title}}">it</a>),
+            ~s(Introduction to <a title="></a>" href="{{entry.title}}#">it</a>)
+          ] do
+        texts = Map.put(english(c), intro, text)
+        assert problems([translate(target, texts)], c.user) == [{0, :unsafe_text, intro}], text
+      end
+
+      texts = Map.put(english(c), intro, "Introduction to {{entry.title}}")
+      assert problems([translate(target, texts)], c.user) == []
+    end
+
+    test "Markdown keeps a placeholder in an image's alt text", c do
+      notes = "#{c.prefix}/refs/notes/text"
+
+      target = with_source(c, %{notes: "![Bilde av {{ entry.title }}](/x.jpg)"})
+      texts = Map.put(english(c), notes, "![Picture of {{ entry.title }}](/x.jpg)")
+      assert problems([translate(target, texts)], c.user) == []
+    end
+
+    test "Markdown keeps a placeholder as a link's text, with the address localised", c do
+      notes = "#{c.prefix}/refs/notes/text"
+
+      target = with_source(c, %{notes: "[{{ entry.title }}](/no/side)"})
+      texts = Map.put(english(c), notes, "[{{ entry.title }}](/en/page)")
+      assert problems([translate(target, texts)], c.user) == []
+    end
+
+    test "a placeholder the source has in an attribute or inside tags is kept there", c do
+      intro = "#{c.prefix}/vars/intro/value"
+
+      target =
+        with_source(c, %{
+          intro: ~s(<p><a href="https://example.com/{{entry.slug}}">Les <strong>{{ entry.title }}</strong></a></p>)
+        })
+
+      kept = ~s(<p><a href="https://example.com/{{entry.slug}}">Read <strong>{{ entry.title }}</strong></a></p>)
+      assert problems([translate(target, Map.put(english(c), intro, kept))], c.user) == []
+
+      # Swapped, each is somewhere the source does not have it
+      swapped = ~s(<p><a href="https://example.com/{{entry.slug}}">Read {{ entry.title }}</a></p>)
+      assert {0, :unsafe_text, intro} in problems([translate(target, Map.put(english(c), intro, swapped))], c.user)
     end
   end
 
