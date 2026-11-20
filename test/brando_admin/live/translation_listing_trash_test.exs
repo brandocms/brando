@@ -31,7 +31,8 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
         view |> element("[id$='_create_translation_#{c.source.id}_lang_no']") |> render_click()
       end)
 
-    assert log =~ ":language_in_trash"
+    # An expected refusal, told to the editor and not logged as an error
+    refute log =~ ":language_in_trash"
     # The version in the trash keeps its place, and no other was created
     %{group_id: group_id} = Translations.get_member(Page, c.source.id)
     assert [c.source.id, c.target.id] == Enum.map(Translations.list_members(group_id), & &1.entry_id)

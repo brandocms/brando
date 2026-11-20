@@ -20732,7 +20732,7 @@ msgstr ""
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
-msgid "This language's version is in the trash. Restore it, or delete it for good, first."
+msgid "This language's version is in the trash. Restore it from the trash instead."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/map_block.ex

@@ -1227,7 +1227,7 @@ defmodule Brando.Content.Proposals do
             :language_in_trash,
             dgettext(
               "content_proposals",
-              "The source's version in this language is in the trash. It is restored, or deleted for good, in the admin."
+              "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
             )
           )
         ]
@@ -4413,7 +4413,7 @@ defmodule Brando.Content.Proposals do
     do:
       dgettext(
         "content_proposals",
-        "The source's version in this language is in the trash. It is restored, or deleted for good, in the admin."
+        "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
       )
 
   defp translation_failed(:not_source),

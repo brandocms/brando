@@ -238,7 +238,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
         )
 
       version = Enum.find(versions, &(&1.language == language and Map.get(&1, :in_trash))) ->
-        Error.fail!("The #{version.language} version is in the trash. It is restored, or deleted for good, in the admin.")
+        Error.fail!("The #{version.language} version is in the trash. It can be restored from the trash in the admin.")
 
       version = Enum.find(versions, &(&1.language == language)) ->
         Error.fail!("There is a #{language} version already: read its work with id #{version.id}.")

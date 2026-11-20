@@ -635,8 +635,8 @@ msgstr "Kildeteksten til %{name} er endret siden den ble lest, eller den trenger
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "The source's version in this language is in the trash. It is restored, or deleted for good, in the admin."
-msgstr "Kildens versjon på dette språket ligger i papirkurven. Den gjenopprettes, eller slettes for godt, i admin."
+msgid "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
+msgstr "Kildens versjon på dette språket ligger i papirkurven. Gjenopprett den fra papirkurven i admin, og endre heller den versjonen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format

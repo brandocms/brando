@@ -634,7 +634,7 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "The source's version in this language is in the trash. It is restored, or deleted for good, in the admin."
+msgid "The source's version in this language is in the trash. Restore it from the trash in the admin, then change that version instead."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

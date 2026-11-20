@@ -285,6 +285,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       update_url = schema.__admin_route__(:update, [target.id])
       send(self(), {:set_content_language_and_navigate, language, update_url})
     else
+      # Refusals the editor is told about, as a delete's are
+      {:error, reason} = error when reason in [:language_in_trash, :language_exists] ->
+        send(self(), {:toast, translation_error_message(error)})
+
       error ->
         Logger.error("(!) Error creating a translation: #{inspect(error)}")
         send(self(), {:toast, translation_error_message(error)})
@@ -389,7 +393,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   end
 
   defp translation_error_message({:error, :language_in_trash}),
-    do: gettext("This language's version is in the trash. Restore it, or delete it for good, first.")
+    do: gettext("This language's version is in the trash. Restore it from the trash instead.")
 
   defp translation_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
   defp translation_error_message(_error), do: gettext("Could not create the translation")
