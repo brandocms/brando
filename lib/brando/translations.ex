@@ -160,6 +160,34 @@ defmodule Brando.Translations do
     end
   end
 
+  @doc """
+  The site's languages (`Brando.Languages`) of `schema` that `entry` has no
+  version in yet: neither a member of its group nor an alternate linked to
+  its source (an existing, independent version is not joined to a group).
+  For an entry outside a group, its own language and its alternates'.
+  """
+  def missing_languages(schema, %{id: id} = entry) do
+    taken =
+      case synchronized?(schema) && get_member(schema, id) do
+        %Member{group_id: group_id} ->
+          members = list_members(group_id)
+          source = Enum.find(members, &(&1.role == :source))
+          alternates = if source, do: alternate_languages(schema, source.entry_id), else: []
+          Enum.map(members, & &1.language) ++ alternates
+
+        _ ->
+          [to_string(entry.language) | alternate_languages(schema, id)]
+      end
+
+    site = Brando.Languages.codes()
+
+    for value <- Ecto.Enum.values(schema, :language),
+        code = to_string(value),
+        code in site,
+        code not in taken,
+        do: code
+  end
+
   @doc "Returns the group membership of an entry, or nil."
   def get_member(schema, entry_id) do
     Repo.one(from m in Member, where: m.entry_type == ^entry_type(schema) and m.entry_id == ^entry_id)
@@ -1657,7 +1685,11 @@ defmodule Brando.Translations do
     end
   end
 
-  defp load_entry(schema, id, opts \\ []) do
+  @doc """
+  Loads an entry as synchronization reads it, with every preload its
+  Blueprint declares. `with_deleted: true` finds one in the trash too.
+  """
+  def load_entry(schema, id, opts \\ []) do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
     args = %{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(schema)}
