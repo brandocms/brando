@@ -444,22 +444,21 @@ defmodule Brando.Images.SizeRun do
   # Says the work again for a node that lost it, then the pages' count,
   # when it changed since the last look
   defp report_pages(user, run, pages, settled, total) do
-    if Work.user_id(user) do
-      Work.in_locale(user, fn ->
-        message = gettext("Updating pages")
+    if Work.user_id(user), do: Work.in_locale(user, fn -> say_pages(user, run, pages, settled, total) end)
+    :ok
+  end
 
-        unless Work.running?(Work.get(user, @work_key)) do
-          failed = failures(run)
-          opts = [total: total, counted: settled, open: true, failures: length(failed), failed_items: failed]
-          Work.resume(user, @work_key, message, opts ++ work_opts())
-        end
+  defp say_pages(user, run, pages, settled, total) do
+    message = gettext("Updating pages")
 
-        if pages["reported"] != [settled, total],
-          do: Work.update(user, @work_key, message, total: total, done: settled)
-      end)
+    unless Work.running?(Work.get(user, @work_key)) do
+      failed = failures(run)
+      opts = [total: total, counted: settled, open: true, failures: length(failed), failed_items: failed]
+      Work.resume(user, @work_key, message, opts ++ work_opts())
     end
 
-    :ok
+    if pages["reported"] != [settled, total],
+      do: Work.update(user, @work_key, message, total: total, done: settled)
   end
 
   defp end_run(user, pages, total, failed) do
@@ -621,19 +620,14 @@ defmodule Brando.Images.SizeRun do
   """
   @spec close(Processing.user(), non_neg_integer(), String.t() | nil) :: :ok
   def close(user, queued, run \\ nil) do
-    if queued == 0 or is_nil(run) or tell_watcher(run, queued) == 0 do
-      Work.in_locale(user, fn ->
-        done =
-          if queued == 0,
-            do: gettext("No images to recreate"),
-            else: ngettext("%{count} image recreated", "%{count} images recreated", queued)
-
-        Work.close(user, @work_key, done: done)
-      end)
-    end
+    if queued == 0 or is_nil(run) or tell_watcher(run, queued) == 0,
+      do: Work.in_locale(user, fn -> Work.close(user, @work_key, done: closed(queued)) end)
 
     :ok
   end
+
+  defp closed(0), do: gettext("No images to recreate")
+  defp closed(queued), do: ngettext("%{count} image recreated", "%{count} images recreated", queued)
 
   # Returns how many watchers it told: none when the run has none
   defp tell_watcher(run, queued) do
