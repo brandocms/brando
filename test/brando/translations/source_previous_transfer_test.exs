@@ -76,4 +76,30 @@ defmodule Brando.Translations.SourcePreviousTransferTest do
     {:ok, _} = SyncTest.update_article(c.english.id, %{title: "Newer English title"}, c.user)
     assert %{source_previous: nil} = open_review(c.other, "title")
   end
+
+  # An undo opens again the items a proposal resolved, as its receipt holds
+  # them: under another source than they were resolved under, without the
+  # former source's text
+  test "work opened again under another source comes back without the former source's text", c do
+    %{id: norwegian} = Repo.get_by!(Member, entry_id: c.source.id, role: :source)
+    {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+    %{source_digest: digest} = open_review(c.other, "title")
+
+    item = %{
+      "path" => "title",
+      "kind" => "review",
+      "source_digest" => digest,
+      "source_previous" => "Tittel",
+      "minor" => false,
+      "source_member_id" => norwegian
+    }
+
+    # Under the source it was resolved under, it keeps its text
+    {:ok, _} = Translations.reopen_work(Article, c.other.id, [item])
+    assert %{source_previous: "Tittel"} = open_review(c.other, "title")
+
+    {:ok, _} = Translations.transfer_source(Article, c.english.id, c.user)
+    {:ok, _} = Translations.reopen_work(Article, c.other.id, [item])
+    assert %{source_previous: nil} = open_review(c.other, "title")
+  end
 end

@@ -1041,8 +1041,16 @@ defmodule Brando.Translations do
 
   # The member with the texts it keeps beside its baseline, which a member is
   # loaded without: what the sync reads, and compares its new texts with
+  #
+  # The baseline is read again with them: a member loaded before the group's
+  # lock was taken may hold the digests of the sync before the one whose
+  # texts are read here, and a review raised from that pair would take the
+  # source's current text as its previous one.
   defp with_baseline_texts(%Member{id: id} = member) do
-    %{member | baseline_texts: Repo.one(from m in Member, where: m.id == ^id, select: m.baseline_texts) || %{}}
+    case Repo.one(from m in Member, where: m.id == ^id, select: {m.baseline, m.baseline_texts}) do
+      {baseline, texts} -> %{member | baseline: baseline || %{}, baseline_texts: texts || %{}}
+      nil -> member
+    end
   end
 
   @doc """
@@ -1950,7 +1958,7 @@ defmodule Brando.Translations do
          open = open_items(version_id),
          {:ok, entry} <- apply(context, :"update_#{singular}", [changeset, user, mutation]),
          {:ok, result} <- target_saved(schema, entry_id, %{version_id: version_id, acknowledged: acknowledged}) do
-      {:ok, Map.merge(result, %{entry: entry, changeset: changeset, resolved: resolved_items(open)})}
+      {:ok, Map.merge(result, %{entry: entry, changeset: changeset, resolved: resolved_items(open, schema, entry_id)})}
     end
   end
 
@@ -1965,15 +1973,23 @@ defmodule Brando.Translations do
   defp open_items(version_id),
     do: Repo.all(from(w in WorkItem, where: w.pending_version_id == ^version_id and is_nil(w.resolved_at)))
 
-  defp resolved_items([]), do: []
+  defp resolved_items([], _schema, _entry_id), do: []
 
-  defp resolved_items(open) do
+  # Each with the member that was the source when it was resolved: its
+  # previous text is that source's, and is not opened again under another
+  defp resolved_items(open, schema, entry_id) do
     ids = Enum.map(open, & &1.id)
+    source_member_id = source_member_id(get_member(schema, entry_id))
 
     from(w in WorkItem, where: w.id in ^ids and not is_nil(w.resolved_at), order_by: w.id)
     |> Repo.all()
-    |> Enum.map(&Map.take(&1, @item_fields))
+    |> Enum.map(&(&1 |> Map.take(@item_fields) |> Map.put(:source_member_id, source_member_id)))
   end
+
+  defp source_member_id(%Member{group_id: group_id}),
+    do: Repo.one(from m in Member, where: m.group_id == ^group_id and m.role == :source, select: m.id, limit: 1)
+
+  defp source_member_id(_member), do: nil
 
   @doc """
   Opens again work `save_work/5` resolved, after the translation's text is
@@ -2000,13 +2016,25 @@ defmodule Brando.Translations do
     group = Repo.one!(from g in Group, where: g.id == ^member.group_id, lock: "FOR UPDATE")
     current = current_pending(member.id)
     open = if current, do: Enum.filter(current.work_items, &is_nil(&1.resolved_at)), else: []
-    reopened = Enum.map(items, &struct(WorkItem, Map.put(atomize_item(&1), :resolved_at, nil)))
+    reopened = Enum.map(items, &reopened_item(&1, source_member_id(member)))
     previous = %{(current || %PendingVersion{member_id: member.id}) | work_items: reopen_into(open, reopened)}
 
     with {:ok, source} <- load_group_source(group),
          do: sync_member(schema, source, member, group.source_generation, false, previous: previous, with_deleted: true)
 
     open_count(member.id)
+  end
+
+  # An item resolved under another source than the group has now is opened
+  # without its previous text, which is in that former source's language. An
+  # item that does not say (a receipt from before it was recorded) keeps it.
+  defp reopened_item(item, source_member_id) do
+    {made_under, fields} = item |> atomize_item() |> Map.pop(:source_member_id)
+
+    fields =
+      if made_under && made_under != source_member_id, do: Map.put(fields, :source_previous, nil), else: fields
+
+    struct(WorkItem, Map.put(fields, :resolved_at, nil))
   end
 
   # One open item per path: a path the source changed again since the work
@@ -2027,10 +2055,11 @@ defmodule Brando.Translations do
       kind: String.to_existing_atom(kind),
       source_digest: item["source_digest"],
       source_previous: item["source_previous"],
-      minor: item["minor"] || false
+      minor: item["minor"] || false,
+      source_member_id: item["source_member_id"]
     }
 
-  defp atomize_item(%{} = item), do: Map.take(item, @item_fields)
+  defp atomize_item(%{} = item), do: Map.take(item, [:source_member_id | @item_fields])
 
   @doc """
   Loads an entry as synchronization reads it, with every preload its
