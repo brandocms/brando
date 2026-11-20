@@ -381,6 +381,8 @@ defmodule Brando.Translations.Work do
     * `missing` — a key of the batch answered neither with a text nor as
       reviewed
     * `duplicate` — a key answered twice
+    * `malformed` (no key) — `texts` is not an object of texts by key, or
+      `reviewed` not a list of keys
     * `not_text` / `blank` — an answer that is not a string, or is empty for
       a source text that is not
     * `html_changed` / `placeholders_changed` — the text lost or changed the
@@ -390,7 +392,10 @@ defmodule Brando.Translations.Work do
   def check(token, scope, units, answer) do
     case decode(token, scope) do
       {:ok, entries} ->
-        case problems(entries, units, Map.get(answer, :texts) || %{}, Map.get(answer, :reviewed) || []) do
+        texts = Map.get(answer, :texts) || %{}
+        reviewed = Map.get(answer, :reviewed) || []
+
+        case shape_problems(texts, reviewed) ++ problems(entries, units, texts, reviewed) do
           [] -> :ok
           problems -> {:error, problems}
         end
@@ -405,6 +410,22 @@ defmodule Brando.Translations.Work do
            )
          ]}
     end
+  end
+
+  # An answer the model shaped wrongly is a problem to tell it, not a crash
+  defp shape_problems(texts, reviewed) do
+    [
+      {is_map(texts) and Enum.all?(Map.keys(texts), &is_binary/1), "texts must be an object of {key: translation}."},
+      {is_list(reviewed) and Enum.all?(reviewed, &is_binary/1), "reviewed must be a list of keys."}
+    ]
+    |> Enum.reject(&elem(&1, 0))
+    |> Enum.map(&problem(nil, "malformed", elem(&1, 1)))
+  end
+
+  defp problems(entries, units, texts, reviewed) when not (is_map(texts) and is_list(reviewed)) do
+    texts = if is_map(texts), do: texts, else: %{}
+    reviewed = if is_list(reviewed), do: reviewed, else: []
+    problems(entries, units, texts, reviewed)
   end
 
   defp problems(entries, units, texts, reviewed) do

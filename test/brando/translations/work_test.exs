@@ -337,6 +337,18 @@ defmodule Brando.Translations.WorkTest do
                ])
     end
 
+    test "refuses a wrongly shaped answer as a problem, without raising", c do
+      for answer <- [
+            %{texts: %{}, reviewed: "title"},
+            %{texts: ["title"], reviewed: []},
+            %{texts: "Title", reviewed: nil},
+            %{texts: %{}, reviewed: [12]}
+          ] do
+        assert {:error, problems} = Work.check(c.token, scope(c.target), c.units, answer)
+        assert Enum.any?(problems, &(&1.code == "malformed"))
+      end
+    end
+
     test "refuses an empty or non-text answer", c do
       texts = c.units |> all_texts() |> Map.merge(%{"title" => " "})
       [_, second | _] = Enum.map(c.units, & &1.key)
