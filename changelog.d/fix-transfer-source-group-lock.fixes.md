@@ -1,0 +1,1 @@
+- **Making a translation the source waits for a running synchronization.** `Brando.Translations.transfer_source/3` takes the translation group's lock, so a synchronization job running at the same moment can no longer write the former source's digests over the new baselines, which raised a review on every text at the new source's next save.

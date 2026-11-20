@@ -449,6 +449,17 @@ defmodule Brando.Translations do
       baseline_texts = Sync.baseline_texts_for(entry, schema, nil, uids)
 
       Repo.transaction(fn ->
+        # Under the group's lock, as a synchronization takes it: one that had
+        # listed the members before this committed would write the former
+        # source's digests over the baselines set here. The member is read
+        # again under it, as it may have been made independent meanwhile.
+        Repo.one!(from g in Group, where: g.id == ^new_source.group_id, lock: "FOR UPDATE")
+
+        case Repo.get(Member, new_source.id) do
+          %Member{role: :target, synchronized: true} -> :ok
+          _ -> Repo.rollback(:not_a_synchronized_target)
+        end
+
         from(m in Member, where: m.group_id == ^new_source.group_id and m.role == :source)
         |> Repo.update_all(set: [role: :target, synchronized: true, updated_at: naive_now()])
 
