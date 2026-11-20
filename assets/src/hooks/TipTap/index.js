@@ -201,8 +201,13 @@ export default app => ({
   // `pendingInputs` keeps the input from taking a value older than what this
   // editor typed; the server holds another editor's change to the field this
   // editor is in until it leaves it.
+  //
+  // Only an input the server hears from: one in a form with `phx-change`.
+  // A popover's input (a gallery caption, `input_form`) names no form, and an
+  // object config's form sends its values on Save: what the server renders
+  // into those is the stored text, never a change to show.
   entryRichText() {
-    return this.el.dataset.tiptapType === 'rich_text' && !this.el.closest('[data-block-uid]')
+    return this.el.dataset.tiptapType === 'rich_text' && !this.el.closest('[data-block-uid]') && !!this._input.form?.hasAttribute('phx-change')
   },
 
   followInput() {

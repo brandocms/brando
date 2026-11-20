@@ -173,25 +173,45 @@ function watchValidates(page) {
 
 // Types `words` into `editor` with a pause after each, long enough for the
 // debounce to send the text so far; the next word is typed while the
-// server's answer to it is on its way
-async function typeWithPauses(page, editor, words, nextValidate) {
+// server's answer to it is on its way. `midway` runs after the word at its
+// index, with the editor still focused.
+async function typeWithPauses(page, editor, words, nextValidate, midway = {}) {
   await editor.click()
   await page.keyboard.press('ControlOrMeta+End')
-  for (const word of words) {
+  for (const [index, word] of words.entries()) {
     const sent = nextValidate()
     await page.keyboard.type(word, { delay: 15 })
     await sent
+    if (index === midway.after) await midway.run()
   }
 }
 
+// `Presence/pendingInputs.js`: how long after a keystroke a patch leaves a
+// rich text's input alone
+const PENDING_INPUT_MS = 2000
+
 const sentence = [' Det', ' var', ' en', ' gang', ' en', ' konge', ' som', ' het', ' Olav.']
 
-test('typing in a row’s rich text while the form validates keeps every keystroke where it was typed', async ({ page }) => {
+// Halfway, the editor stops typing for longer than the pending-input
+// window, and a patch lands then (another editor's change to the title): the
+// row's text stays as typed, and typing goes on where it stopped.
+test('typing in a row’s rich text while the form validates keeps every keystroke where it was typed', async ({ page, secondUserPage }) => {
   const nextValidate = watchValidates(page)
   const path = await openArticle(page, ['Første', 'Andre'])
   await open(page, path, quoteRows, 2)
+  await open(secondUserPage, path, quoteRows, 2)
+  const title = p => p.locator('input[name$="[title]"]').first()
 
-  await typeWithPauses(page, editorOf(quoteRows(page).nth(1)), sentence, nextValidate)
+  const pauseWhileAPatchLands = async () => {
+    // Deliberate: the pause the case is about
+    await page.waitForTimeout(PENDING_INPUT_MS + 500)
+    await title(secondUserPage).fill('Ny tittel')
+    await title(secondUserPage).blur()
+    await syncLV(secondUserPage)
+    await expect(title(page)).toHaveValue('Ny tittel')
+  }
+
+  await typeWithPauses(page, editorOf(quoteRows(page).nth(1)), sentence, nextValidate, { after: 3, run: pauseWhileAPatchLands })
   const typed = 'Andre' + sentence.join('')
   await expect(editorOf(quoteRows(page).nth(1))).toHaveText(typed)
   await editorOf(quoteRows(page).nth(1)).blur()
