@@ -407,6 +407,21 @@ defmodule Brando.Content.RenderQueueTest do
       end)
     end
 
+    test "past the most parameters one statement takes, queue them all, held or not, and merge into them" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        ids = Enum.to_list(1..7_000)
+
+        assert length(RenderQueue.enqueue_many(Page, ids)) == 7_000
+        assert length(RenderQueue.enqueue_many(Fragment, ids, hold: "run-1")) == 7_000
+        # Each merges into the one waiting
+        assert length(RenderQueue.enqueue_many(Page, ids, hold: "run-1")) == 7_000
+
+        assert Repo.aggregate(from(j in Oban.Job, where: j.state == "available"), :count) == 7_000
+        assert Repo.aggregate(from(j in Oban.Job, where: j.state == "scheduled"), :count) == 7_000
+        assert RenderQueue.release("run-1") == 7_000
+      end)
+    end
+
     test "counts its renders as steps of work" do
       Oban.Testing.with_testing_mode(:manual, fn ->
         user = Factory.insert(:random_user)

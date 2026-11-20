@@ -46,6 +46,7 @@ defmodule Brando.Content.RenderQueue do
   @bulk_priority 5
   @hold "brando_hold"
   @max_hold :timer.minutes(15)
+  @insert_chunk 1_000
 
   @type entries :: %{optional(module() | String.t()) => [integer()]}
 
@@ -241,7 +242,10 @@ defmodule Brando.Content.RenderQueue do
       |> RenderRun.tag()
       |> track(work)
     end)
-    |> Oban.insert_all()
+    # `Oban.insert_all/1` is one statement, and Postgres takes at most 65,535
+    # parameters in one: about 6,000 jobs
+    |> Enum.chunk_every(@insert_chunk)
+    |> Enum.flat_map(&Oban.insert_all/1)
     |> Enum.map(&{:ok, &1})
   end
 
