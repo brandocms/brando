@@ -148,7 +148,7 @@ its new sizes: this is the run's second step, "Updating pages", with a count
 of its own. The result names both counts ("65 images recreated, 14 pages
 updated"), and a page that could not be rendered fails the run. Both buttons
 stay disabled until the last page is rendered, for every admin. When no
-page has been rendered for 30 minutes (the render queue paused or held up),
+page has been rendered for 25 minutes (the render queue held up),
 the run ends as failed and says how many pages are still waiting; their
 renders stay queued and run when the queue does. Each page
 renders once per run, however many of the run's images it shows; if the run

@@ -498,7 +498,7 @@ defmodule Brando.Images.RerenderTest do
       end)
     end
 
-    test "with pages that never render ends as failed after 30 minutes in which none did", %{user: user} do
+    test "with pages that never render ends as failed after 25 minutes in which none did", %{user: user} do
       page = page_with(user, [image()])
 
       Oban.Testing.with_testing_mode(:manual, fn ->

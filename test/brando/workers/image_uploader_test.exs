@@ -135,9 +135,9 @@ defmodule Brando.Worker.ImageUploaderTest do
     refute Map.has_key?(render.meta, "brando_hold")
   end
 
-  # Processed by a size run that is still going on: its renders are held
-  # under the run's key, and the run counts them
-  test "an image a size run processed and put on the CDN renders with the run", %{dir: dir} do
+  # Processed by a size run that is still going on: its local files go as
+  # soon as it is on the CDN, so its pages do not wait for the run's release
+  test "an image a size run processed and put on the CDN renders at once, not held with the run", %{dir: dir} do
     image = image_with_files(dir, ["thumb", "large"])
     page = Factory.insert(:page)
     Repo.insert!(%Brando.Content.Var{type: :image, key: "photo", label: "Photo", page_id: page.id, image_id: image.id})
@@ -169,8 +169,8 @@ defmodule Brando.Worker.ImageUploaderTest do
                )
              )
 
-    assert render.meta["brando_hold"] == [Brando.Images.SizeRun.hold_key(run)]
-    assert run in render.meta["brando_runs"]
+    assert render.state == "available"
+    assert render.meta["brando_hold"] in [nil, []]
   end
 
   test "an image whose files are all uploaded is on the CDN, and its local files go", %{dir: dir} do

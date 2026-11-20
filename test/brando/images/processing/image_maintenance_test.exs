@@ -553,14 +553,6 @@ defmodule Brando.Images.ImageMaintenanceTest do
       watcher
     end
 
-    defp flush_work do
-      receive do
-        {:work, _key, _status, _work} -> flush_work()
-      after
-        0 -> :ok
-      end
-    end
-
     defp set_job(job, fields), do: Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: fields)
 
     # The run goes on after its last image until its watcher has seen the
