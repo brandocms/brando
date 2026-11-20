@@ -106,3 +106,38 @@ test('a translation opens with its pending version, is reviewed and saved', asyn
 
   expect(errors).toEqual([])
 })
+
+// The source dropped its block and added another (#3756): the translation's
+// form opens with the new block in place of the old one and saves it.
+test('a translation saves after the source dropped a block and added another', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+
+  const response = await page.request.post('/e2e/synchronized-translation', { data: { replace_block: 'true' } })
+  expect(response.ok()).toBeTruthy()
+  const { target_id: targetId } = await response.json()
+
+  await page.goto(`/admin/sync_test/articles/update/${targetId}`)
+  await syncLV(page)
+
+  const panel = page.locator('#translation-panel')
+  await expect(panel.locator('input[name="translation_review[version_id]"]')).toHaveCount(1, { timeout: 10000 })
+  await expect(panel.locator('.translation-structure')).toBeVisible()
+  const blocks = page.locator('.blocks-wrapper .entry-block')
+  await expect(blocks).toHaveCount(1)
+  await expect(blocks.first()).toContainText('Nytt avsnitt')
+
+  await page.getByTestId('split-dropdown-button').click()
+  await page.getByRole('button', { name: 'Save and continue editing' }).click()
+  // Saved, the translation has the source's blocks: no structural change left.
+  await expect(panel.locator('.translation-structure')).toHaveCount(0, { timeout: 15000 })
+
+  await page.reload()
+  await syncLV(page)
+  await expect(panel).toBeVisible()
+  await expect(panel.locator('.translation-structure')).toHaveCount(0)
+  await expect(blocks).toHaveCount(1)
+  await expect(blocks.first()).toContainText('Nytt avsnitt')
+
+  expect(errors).toEqual([])
+})

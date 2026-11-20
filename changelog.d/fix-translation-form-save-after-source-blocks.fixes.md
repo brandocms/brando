@@ -1,0 +1,1 @@
+- A synchronized translation saves after its source both removed a block and added another: the form no longer keeps the removed block, which made the save fail as a change to content the source controls. A removed block, or a removed child block, now also leaves the translation when nothing was added.

@@ -2367,7 +2367,8 @@ defmodule E2EFixtureController do
   # pending version: a new block to translate and a new year.
   # The source changes again while its translation is open in the editor.
   # With `source_only`, just the source with its block, for the admin to
-  # translate.
+  # translate. With `replace_block`, the source's change drops its block and
+  # adds another instead of adding one.
   def synchronized_translation(conn, %{"source_id" => source_id, "year" => year}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
@@ -2463,10 +2464,10 @@ defmodule E2EFixtureController do
 
     if params["source_only"],
       do: json(conn, %{source_id: source.id}),
-      else: translate_synchronized(conn, source, user, add_sync_block)
+      else: translate_synchronized(conn, source, user, add_sync_block, params)
   end
 
-  defp translate_synchronized(conn, source, user, add_sync_block) do
+  defp translate_synchronized(conn, source, user, add_sync_block, params) do
     alias E2eProject.SyncTest
     alias E2eProject.SyncTest.Article
 
@@ -2495,7 +2496,17 @@ defmodule E2EFixtureController do
       SyncTest.update_article(target.id, %{title: "The source", slug: "the-source"}, user)
 
     # The source changes.
-    add_sync_block.(source, "Nytt avsnitt", 1)
+    if params["replace_block"] do
+      for join <- Brando.Repo.preload(source, :entry_blocks, force: true).entry_blocks do
+        Brando.Repo.delete!(join)
+        Brando.Repo.delete!(%Brando.Content.Block{id: join.block_id})
+      end
+
+      add_sync_block.(source, "Nytt avsnitt", 0)
+    else
+      add_sync_block.(source, "Nytt avsnitt", 1)
+    end
+
     {:ok, _} = SyncTest.update_article(source.id, %{year: 2024}, user)
 
     {:ok, source} =
