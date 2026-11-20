@@ -24,7 +24,11 @@ defmodule BrandoAdmin.Components.Form.TranslationFillTest do
 
     test "an address is not filled: it stays the editor's", %{fillable: fillable} do
       refute fillable.("entry_blocks/s1/vars/link/url", {:block, "b1", "m1", ["vars", "link", "url"]})
-      refute fillable.("entry_blocks/s1/rows/r1/vars/link/url", {:block, "b1", "m1", ["rows", "r1", "vars", "link", "url"]})
+
+      refute fillable.(
+               "entry_blocks/s1/rows/r1/vars/link/url",
+               {:block, "b1", "m1", ["rows", "r1", "vars", "link", "url"]}
+             )
     end
 
     test "a text is filled", %{fillable: fillable} do
@@ -38,6 +42,21 @@ defmodule BrandoAdmin.Components.Form.TranslationFillTest do
       refute fillable.("language", {:field, "language"})
       refute fillable.("items/gone/label", {:row, "items", "gone", "label"})
       refute fillable.("notes/s1/refs/body/text", {:block, "b1", "m1", ["refs", "body", "text"]})
+    end
+  end
+
+  describe "address?/2" do
+    test "a link variable's address is one, in a block, a block's table row or a page's variables" do
+      assert TranslationFill.address?(Article, {:block, "b1", "m1", ["vars", "link", "url"]})
+      assert TranslationFill.address?(Article, {:block, "b1", "m1", ["rows", "r1", "vars", "link", "url"]})
+      assert TranslationFill.address?(Brando.Pages.Page, {:row, "vars", "link", "url"})
+    end
+
+    test "a text named url that is not a link variable's is not" do
+      refute TranslationFill.address?(Article, {:field, "url"})
+      refute TranslationFill.address?(Article, {:row, "items", "i1", "url"})
+      refute TranslationFill.address?(Article, {:block, "b1", "m1", ["refs", "url", "text"]})
+      refute TranslationFill.address?(Brando.Pages.Page, {:row, "vars", "link", "link_text"})
     end
   end
 

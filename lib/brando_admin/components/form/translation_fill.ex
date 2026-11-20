@@ -118,8 +118,8 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   AI action. Not:
 
     * a gallery's per-image texts, which are translated in the block
-    * an address (a link's `url`), which is not sent to the model and stays
-      the editor's
+    * an address (a link's `url`, `address?/2`), which is not sent to the
+      model and stays the editor's
     * a field or a subform's row locked for this editor (`LockedFields`:
       read-only, or in a fieldset only superusers may change)
     * a field or a row's field the form has no input for, or hides
@@ -136,23 +136,39 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
       _key, {:block, _uid, _module, ["refs", _name, "gallery" | _]} ->
         false
 
-      key, {:block, _uid, _module, path} when is_list(path) ->
-        not address?(path) and block_field(key) in block_fields
+      key, {:block, _uid, _module, path} = target when is_list(path) ->
+        not address?(schema, target) and block_field(key) in block_fields
 
       _key, {:field, field} ->
         field not in locked and shown?(inputs[field], form)
 
-      _key, {:row, subform, _row, field} = target ->
-        field != "url" and subform not in locked and row_shown?(inputs[subform], form.source, target)
+      _key, {:row, subform, _row, _field} = target ->
+        not address?(schema, target) and subform not in locked and row_shown?(inputs[subform], form.source, target)
 
       _key, _target ->
         false
     end
   end
 
-  defp address?(["url"]), do: true
-  defp address?([_ | rest]), do: address?(rest)
-  defp address?([]), do: false
+  @doc """
+  Whether a target is an address: the `url` text `Brando.Translations.Sync`
+  gives a link variable (`…/vars/<key>/url` in a block or a block's table
+  row, `<subform>/<key>/url` in a subform of `Brando.Content.Var` rows,
+  such as a page's variables). A field or a row's field named `url` is the
+  schema's own text, sent like any other.
+  """
+  def address?(_schema, {:block, _uid, _module, path}) when is_list(path),
+    do: match?(["vars", _key, "url"], Enum.take(path, -3))
+
+  def address?(schema, {:row, subform, _key, "url"}), do: variables?(schema, subform)
+  def address?(_schema, _target), do: false
+
+  defp variables?(schema, subform) do
+    case existing_atom(subform) do
+      {:ok, name} -> match?(%{related: Brando.Content.Var}, schema.__schema__(:association, name))
+      :error -> false
+    end
+  end
 
   # The top-level inputs and subforms of the form's fieldsets
   defp top_inputs(%{tabs: tabs}) when is_list(tabs) do
