@@ -46,6 +46,13 @@ defmodule Brando.MCP.HTTP do
   @impl Plug
   def init(action), do: action
 
+  # An upload URL's own routes, which log no parameters: dispatched as the
+  # catch-all route's path would be
+  def call(%{path_params: params} = conn, :upload) do
+    path = Enum.reject([params["site"], params["environment"]], &is_nil/1) ++ ["uploads", params["id"], params["secret"]]
+    call(%{conn | path_params: Map.put(params, "path", path)}, :dispatch)
+  end
+
   @impl Plug
   def call(conn, :dispatch) do
     segments = conn.path_params["path"] || []

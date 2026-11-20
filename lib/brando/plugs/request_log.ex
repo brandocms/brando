@@ -17,7 +17,8 @@ defmodule Brando.Plug.RequestLog do
         log: {Brando.Plug.RequestLog, :level, []}
 
   `mix brando.install` writes this. The parameters Phoenix logs for the
-  matched route are filtered by `config :phoenix, :filter_parameters`.
+  matched route are filtered by `config :phoenix, :filter_parameters`; an
+  MCP upload URL's route logs none (`Brando.Router.mcp_routes/0`).
   """
   require Logger
 
@@ -26,11 +27,14 @@ defmodule Brando.Plug.RequestLog do
   # A path whose segments start with (or, below the admin's path, contain)
   # one of these has a secret token in the segment after it. `:any` is any
   # one segment: an MCP upload URL's id, or its site and environment.
+  # `:last` is the token as the path's last segment: an upload URL is told
+  # from one at a site environment by its length, as `Brando.MCP.HTTP` does,
+  # since a site may be keyed `uploads`.
   @at_root [
     ["__p__"],
     ["__ssg_preview__"],
-    ["mcp", "uploads", :any],
-    ["mcp", :any, :any, "uploads", :any]
+    ["mcp", "uploads", :any, :last],
+    ["mcp", :any, :any, "uploads", :any, :last]
   ]
   @anywhere [["reset-password"], ["content-transfer", "download"], ["assistant", "shared"]]
 
@@ -85,6 +89,7 @@ defmodule Brando.Plug.RequestLog do
 
   defp after_marker([segment | rest], [segment | marker], index), do: after_marker(rest, marker, index + 1)
   defp after_marker([_segment | rest], [:any | marker], index), do: after_marker(rest, marker, index + 1)
+  defp after_marker([_token], [:last], index), do: index
   defp after_marker([_token | _rest], [], index), do: index
   defp after_marker(_decoded, _marker, _index), do: nil
 end

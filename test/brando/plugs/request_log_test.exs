@@ -30,7 +30,9 @@ defmodule Brando.Plug.RequestLogTest do
     for {path, logged} <- [
           {"/mcp/uploads/#{id}/s3cr3t", "PUT /mcp/uploads/#{id}/[FILTERED]"},
           {"/mcp/site/prod/uploads/#{id}/s3cr3t", "PUT /mcp/site/prod/uploads/#{id}/[FILTERED]"},
-          {"/mcp/%75ploads/#{id}/s3cr3t", "PUT /mcp/%75ploads/#{id}/[FILTERED]"}
+          {"/mcp/%75ploads/#{id}/s3cr3t", "PUT /mcp/%75ploads/#{id}/[FILTERED]"},
+          # A site may be keyed `uploads`
+          {"/mcp/uploads/prod/uploads/#{id}/s3cr3t", "PUT /mcp/uploads/prod/uploads/#{id}/[FILTERED]"}
         ] do
       log = OwnLog.capture(fn -> assert RequestLog.level(Plug.Test.conn(:put, path), :error) == false end)
       assert log =~ logged

@@ -287,7 +287,8 @@ the person hands it, or one on another website.
   `curl -T photo.jpg '<upload_url>'`. The URL is the only credential that
   needs, and it works once: a second PUT, even after a failed one, is
   refused, and the tool prepares a new upload. `Brando.Plug.RequestLog`
-  logs it with the secret filtered out.
+  logs it with the secret filtered out, and its route logs no parameters
+  (Phoenix's debug line would show the path's segments).
 - `brando_media_finish_upload` takes the `upload_id` and stores the image
   as an editor's upload is stored (`Brando.Uploads.store_upload/4`), under
   the default image config: its types, size limit and pixel limit, its sizes
@@ -726,7 +727,9 @@ And the attacks the review asked about:
   Whoever holds it can at most put one image in place of the tool's: only
   the connection that prepared it can finish the upload, and the image is
   then in the library as any upload is, for a proposal a person reviews.
-  The URL is never shown on the live page or in Activity.
+  The URL is never shown on the live page or in Activity, and Brando's own
+  log has its secret filtered out; a proxy in front of the application logs
+  what it is set to log.
 - **Another connection.** An upload is found only for the connection that
   prepared it, at the site environment it was prepared for. Another
   connection's `brando_media_finish_upload` gets the answer for an upload

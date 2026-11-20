@@ -543,6 +543,27 @@ defmodule Brando.MCP.MediaTest do
       assert %{"error" => "This upload URL has expired" <> _} = put_bytes(url, @jpg) |> json_response(410)
     end
 
+    # Phoenix logs the route's parameters at debug, the URL's path among them
+    test "is kept out of the log, the route's parameters included", %{tenant: tenant, token: token} do
+      {_id, url} = prepare!(tenant, token)
+
+      # Above the test config's level for Phoenix's lines only, for this request
+      Logger.put_module_level(Phoenix.Logger, :debug)
+      on_exit(fn -> Logger.delete_module_level(Phoenix.Logger) end)
+
+      log =
+        Brando.Test.OwnLog.capture(fn ->
+          assert put_bytes(url, @jpg).status == 200
+          # A request to the same route without a token is logged as before
+          put_bytes(MCP.resource(tenant) <> "/oauth/token", "")
+        end)
+
+      Logger.delete_module_level(Phoenix.Logger)
+
+      assert log =~ "Processing with Brando.MCP.HTTP"
+      refute log =~ secret(url)
+    end
+
     test "only takes PUT", %{tenant: tenant, token: token} do
       {_id, url} = prepare!(tenant, token)
       conn = put_bytes(url, @jpg, [], :post)
