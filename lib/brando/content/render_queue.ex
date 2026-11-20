@@ -96,15 +96,19 @@ defmodule Brando.Content.RenderQueue do
   def enqueue_many(schema, entry_ids, opts \\ []), do: enqueue_map(%{schema => entry_ids}, opts)
 
   @doc """
-  Makes the renders held with `key` (`enqueue_map/2`) run now. Returns how
-  many it released.
+  Makes the renders held with `key` (`enqueue_map/2`) in the current site
+  run now. Returns how many it released.
   """
   @spec release(String.t()) :: non_neg_integer()
   def release(key) when is_binary(key) do
+    # The jobs of every site share one table: this site's, as they were queued
+    site = Brando.Tenant.Job.attach(%{})
+
     query =
       from(j in Oban.Job,
         where: j.worker == @worker_name and j.state == "scheduled",
-        where: fragment("? @> ?", j.meta, type(^%{@hold => [key]}, :map))
+        where: fragment("? @> ?", j.meta, type(^%{@hold => [key]}, :map)),
+        where: fragment("? @> ?", j.args, type(^site, :map))
       )
 
     {count, _} = Brando.Repo.update_all(query, set: [state: "available", scheduled_at: DateTime.utc_now()])

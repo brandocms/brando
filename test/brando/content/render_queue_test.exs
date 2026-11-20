@@ -370,6 +370,20 @@ defmodule Brando.Content.RenderQueueTest do
       end)
     end
 
+    test "held renders release in the site that holds them" do
+      put_test_env(:tenancy_mode, :multi)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for prefix <- ~w(tenant_one_live tenant_two_live) do
+          Brando.Tenant.with_prefix(prefix, fn -> RenderQueue.enqueue_map(%{Fragment => [1]}, hold: "run") end)
+        end
+
+        assert Brando.Tenant.with_prefix("tenant_one_live", fn -> RenderQueue.release("run") end) == 1
+        states = Map.new(renders_by_entry(), &{&1.args["tenant_prefix"], &1.state})
+        assert states == %{"tenant_one_live" => "available", "tenant_two_live" => "scheduled"}
+      end)
+    end
+
     @tag :capture_log
     test "held renders run by themselves after the maximum hold" do
       Oban.Testing.with_testing_mode(:manual, fn ->
