@@ -17,6 +17,7 @@ defmodule Brando.SEO.SharePreview do
   shared image puts it.
   """
   alias Brando.Images.ConfigResolver
+  alias Brando.Images.Focal
   alias Brando.Images.Operations.Sizing
 
   # Card shapes, width / height.
@@ -148,9 +149,9 @@ defmodule Brando.SEO.SharePreview do
   The part of the original image a size config keeps, as `{x, y, width,
   height}` in the original's pixels, and whether it was cropped.
 
-  A cropping size is cut around the focal point exactly as
-  `Brando.Images.Operations.Sizing` cuts it; any other size keeps the whole
-  image.
+  A cropping size is cut by the focal point exactly as
+  `Brando.Images.Operations.Sizing` cuts it, in the focal point's mode (see
+  `Brando.Images.Focal`); any other size keeps the whole image.
   """
   @spec shared_region(map(), map()) :: {{number(), number(), number(), number()}, boolean()}
   def shared_region(%{width: width, height: height} = image, size_cfg)
@@ -211,7 +212,11 @@ defmodule Brando.SEO.SharePreview do
 
   def focal_in_card(_image, _region, _ratio), do: nil
 
-  defp focal(%{focal: %{x: x, y: y}}) when is_number(x) and is_number(y), do: %{x: x, y: y}
-  defp focal(%{focal: %{"x" => x, "y" => y}}) when is_number(x) and is_number(y), do: %{x: x, y: y}
-  defp focal(_image), do: %{x: 50, y: 50}
+  defp focal(%{focal: %{x: x, y: y} = focal}) when is_number(x) and is_number(y),
+    do: %{x: x, y: y, mode: Focal.mode(focal)}
+
+  defp focal(%{focal: %{"x" => x, "y" => y} = focal}) when is_number(x) and is_number(y),
+    do: %{x: x, y: y, mode: Focal.mode(focal)}
+
+  defp focal(_image), do: %{x: 50, y: 50, mode: :center}
 end

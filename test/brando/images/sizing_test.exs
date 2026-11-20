@@ -358,4 +358,46 @@ defmodule Brando.Images.Processing.SizingTest do
     |> add_anchor()
     |> add_values()
   end
+
+  describe "calculate_anchor/1 by the focal point's mode" do
+    # The issue's photo, 2500×1875, and a cropping size of 1000×375: resized
+    # to 1000×750, the crop keeps 375 of its 750 rows.
+    defp anchor(focal) do
+      %{
+        focal_point: focal,
+        original_width: 2500,
+        original_height: 1875,
+        crop: true,
+        crop_width: 1000,
+        crop_height: 375
+      }
+      |> add_resize_dimensions()
+      |> add_anchor()
+      |> Map.fetch!(:anchor)
+    end
+
+    test ":position cuts the way object-position shows it" do
+      # Figma's crop is rows 20%–70%; its object-position is y 40:
+      # 0.4 × (750 - 375) = 150, so rows 150–525 of 750, 20%–70%
+      assert anchor(%Brando.Images.Focal{x: 50, y: 40, mode: :position}) == %{x: 0, y: 150}
+      assert anchor(%{x: 50, y: 0, mode: :position}) == %{x: 0, y: 0}
+      assert anchor(%{x: 50, y: 100, mode: "position"}) == %{x: 0, y: 375}
+    end
+
+    test ":center, and a focal point without a mode, centre the crop on the point" do
+      # y 45 is row 338 of 750: rows 151–526, the same band but for rounding
+      assert anchor(%Brando.Images.Focal{x: 50, y: 45, mode: :center}) == %{x: 0, y: 151}
+      assert anchor(%{x: 50, y: 45}) == %{x: 0, y: 151}
+      # y 40 centred is rows 113–488, 15%–65%
+      assert anchor(%{x: 50, y: 40}) == %{x: 0, y: 113}
+      assert anchor(%{x: 50, y: 40, mode: "unknown"}) == %{x: 0, y: 113}
+    end
+
+    test "both stay inside the image" do
+      assert anchor(%{x: 50, y: 0}) == %{x: 0, y: 0}
+      assert anchor(%{x: 50, y: 100}) == %{x: 0, y: 375}
+      assert anchor(%{x: -10, y: 140, mode: :position}) == %{x: 0, y: 375}
+      assert anchor(%{x: 50, y: -20, mode: :position}) == %{x: 0, y: 0}
+    end
+  end
 end

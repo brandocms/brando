@@ -21,6 +21,20 @@ defmodule Brando.SEO.SharePreviewTest do
       assert SharePreview.shared_region(image({50, 10}), @meta_size) == {{0.0, 0.0, 4000.0, 2100.0}, true}
     end
 
+    test "a focal point in :position mode cuts the band object-position shows" do
+      # Resized to 2400×1800, the crop keeps 1260 rows and leaves 540 out:
+      # y 10 puts 54 of them above it, 90 rows of the 4000×3000 original.
+      image = %Brando.Images.Image{width: 4000, height: 3000, focal: %Brando.Images.Focal{x: 50, y: 10, mode: :position}}
+      assert SharePreview.shared_region(image, @meta_size) == {{0.0, 90.0, 4000.0, 2100.0}, true}
+
+      # Read as the centre, the same point runs off the top
+      assert SharePreview.shared_region(image({50, 10}), @meta_size) == {{0.0, 0.0, 4000.0, 2100.0}, true}
+
+      # A plain map, as JSON stores it
+      plain = %{width: 4000, height: 3000, focal: %{"x" => 50, "y" => 10, "mode" => "position"}}
+      assert SharePreview.shared_region(plain, @meta_size) == {{0.0, 90.0, 4000.0, 2100.0}, true}
+    end
+
     test "a size without crop keeps the whole image" do
       assert SharePreview.shared_region(image({50, 10}), %{"size" => "2100", "quality" => 65}) ==
                {{0, 0, 4000, 3000}, false}

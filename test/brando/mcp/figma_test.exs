@@ -650,9 +650,11 @@ defmodule Brando.MCP.FigmaTest do
       assert %{"images" => [%{"applied" => ["focal point from the Figma crop"], "asset" => %{"id" => id}}]} =
                import!(tenant, token)
 
-      assert %Image{focal: %{x: 50, y: 53}} = Brando.Repo.get!(Image, id)
+      # y: 0.3453 / (1 - 0.3635) = 0.5425 → 54; the full width → 50
+      assert %Image{focal: %{x: 50, y: 54, mode: :position}} = Brando.Repo.get!(Image, id)
 
-      # An editor moves it; a later import of a crop leaves it
+      # An editor moves it, which sets it back to the centre reading; a later
+      # import of a crop leaves it
       {:ok, _image} = Brando.Images.update_image(Brando.Repo.get!(Image, id), %{focal: %{x: 10, y: 20}}, :system)
       other = fill("p", %{"scaleMode" => "STRETCH", "imageTransform" => [[0.5, 0, 0.5], [0, 0.5, 0.5]]})
       stub_layers(pictures(), [layer("9:2", [other])])
@@ -666,7 +668,7 @@ defmodule Brando.MCP.FigmaTest do
                import!(tenant, token)
 
       refute Map.has_key?(entry, "applied")
-      assert %Image{focal: %{x: 10, y: 20}} = Brando.Repo.get!(Image, id)
+      assert %Image{focal: %{x: 10, y: 20, mode: :center}} = Brando.Repo.get!(Image, id)
     end
 
     test "a rotated crop: the focal point in the turned copy", %{tenant: tenant, token: token} do
@@ -686,7 +688,8 @@ defmodule Brando.MCP.FigmaTest do
              } =
                import!(tenant, token)
 
-      assert %Image{width: 10, height: 30, focal: %{x: 50, y: 25}} = Brando.Repo.get!(Image, id)
+      # The top half of the turned image: y 0 / (1 - 0.5) = 0; the full width → 50
+      assert %Image{width: 10, height: 30, focal: %{x: 50, y: 0, mode: :position}} = Brando.Repo.get!(Image, id)
     end
 
     test "what was not applied is said for every layer that shows the image, by name",
@@ -784,7 +787,8 @@ defmodule Brando.MCP.FigmaTest do
       assert %{"images" => [%{"applied" => ["focal point from the Figma crop"], "asset" => %{"id" => id}}]} =
                import!(tenant, token)
 
-      assert %Image{width: 30, height: 10, focal: %{x: 25, y: 50}} = Brando.Repo.get!(Image, id)
+      # The left half of the stored image: x 0 / (1 - 0.5) = 0; the full height → 50
+      assert %Image{width: 30, height: 10, focal: %{x: 0, y: 50, mode: :position}} = Brando.Repo.get!(Image, id)
     end
 
     test "a turned JPEG is written at a high quality, not the encoder's default", %{tenant: tenant, token: token} do

@@ -712,7 +712,12 @@ defmodule Brando.Content.TransferTest do
   end
 
   test "media originals and gallery objects receive new ownership and override identities", c do
-    image = c.user.avatar
+    # A focal point set by the Figma import travels with its mode
+    image =
+      c.user.avatar
+      |> Changeset.change()
+      |> Changeset.put_embed(:focal, %Brando.Images.Focal{x: 20, y: 40, mode: :position})
+      |> Repo.update!()
 
     gallery =
       %Brando.Galleries.Gallery{}
@@ -789,6 +794,10 @@ defmodule Brando.Content.TransferTest do
     assert ref.gallery_id != gallery.id
     [copied_object] = ref.gallery.gallery_objects
     assert copied_object.image_id != image.id
+
+    assert %Brando.Images.Focal{x: 20, y: 40, mode: :position} =
+             Repo.get!(Brando.Images.Image, copied_object.image_id).focal
+
     assert copied_object.config["caption"] == "Gallery placement"
     [override] = ref.data.data.gallery_object_overrides
     assert override.object_id == to_string(copied_object.image_id)

@@ -18,8 +18,13 @@ defmodule Brando.Figma.Import do
   file of its own; other angles, a crop's mirroring and the turn of an
   animated GIF or WebP (which would keep one frame) are not applied, and
   the result says so for each layer it concerns. A cropped image is not cut:
-  its focal point is set to the centre of the crop, when the image is new to
-  the library. One the library already has keeps its focal point.
+  when the image is new to the library, its focal point is set so the site
+  shows the crop Figma shows, in `:position` mode (`Brando.Images.Focal`),
+  so the sizes Brando cuts and the share cards follow the crop too. A crop
+  that spans the image's whole width or height shows exactly in a box of the
+  layer's proportions; one that zooms in on both axes shows with more of the
+  image around it, as the site always shows the whole width or height of the
+  image. One the library already has keeps its focal point.
 
   Figma's download URLs are fetched through `Brando.Webhooks.URLGuard`
   (public `https` addresses only, no redirects) and written to a temporary
@@ -277,9 +282,7 @@ defmodule Brando.Figma.Import do
   end
 
   defp put_focal({:stored, image}, crop, actor) when is_map(crop) do
-    focal = %{x: percent(crop.x + crop.width / 2), y: percent(crop.y + crop.height / 2)}
-
-    case Images.update_image(image, %{focal: focal}, actor) do
+    case Images.update_image(image, %{focal: Map.put(focal(crop), :mode, :position)}, actor) do
       {:ok, image} ->
         {:stored, image, :focal}
 
@@ -290,6 +293,21 @@ defmodule Brando.Figma.Import do
   end
 
   defp put_focal(result, _crop, _actor), do: result
+
+  # The focal point is rendered as CSS `object-position: x% y%`, which lines
+  # up the point p% across the image with the point p% across the box: the
+  # hidden part of an axis is split p : (100 - p). The crop hides `offset`
+  # before it and `1 - offset - size` after it, so p = offset / (1 - size).
+  # A box that shows the whole of one axis and the crop's share of the other
+  # then shows exactly the crop; one that shows more keeps the crop in view.
+  # An axis the crop spans hides nothing: 50. The crop is in the image as
+  # stored, as is the focal point. Stored in `:position` mode, the server cuts
+  # its sizes the same way.
+  @doc false
+  def focal(%{x: x, y: y, width: width, height: height}), do: %{x: position(x, width), y: position(y, height)}
+
+  defp position(_offset, size) when size >= 1 - 1.0e-3, do: 50
+  defp position(offset, size), do: percent(offset / (1 - size))
 
   defp percent(fraction), do: fraction |> Kernel.*(100) |> round() |> max(0) |> min(100)
 

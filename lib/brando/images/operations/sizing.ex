@@ -280,7 +280,13 @@ defmodule Brando.Images.Operations.Sizing do
   def add_anchor(%{crop: false} = conversion_parameters), do: conversion_parameters
 
   @doc """
-  Calculate anchor
+  Calculate the top left corner of the crop in the resized image.
+
+  A focal point in `:center` mode (the default, and a focal point without a
+  mode) is the centre of the crop. One in `:position` mode places the crop
+  the way CSS `object-position` does: the part of the resized image the crop
+  leaves out of an axis is split `p : (100 - p)`. Either way the crop stays
+  inside the image.
   """
   def calculate_anchor(
         %{
@@ -291,10 +297,22 @@ defmodule Brando.Images.Operations.Sizing do
           crop_height: crop_height
         } = conversion_parameters
       ) do
-    anchor = %{
-      x: round(transformed_focal_point.x - crop_width / 2),
-      y: round(transformed_focal_point.y - crop_height / 2)
-    }
+    focal = Map.get(conversion_parameters, :focal_point)
+
+    anchor =
+      case Focal.mode(focal) do
+        :position ->
+          %{
+            x: round(focal.x / 100 * (resize_width - crop_width)),
+            y: round(focal.y / 100 * (resize_height - crop_height))
+          }
+
+        :center ->
+          %{
+            x: round(transformed_focal_point.x - crop_width / 2),
+            y: round(transformed_focal_point.y - crop_height / 2)
+          }
+      end
 
     anchor = %{
       x: (anchor.x + crop_width <= resize_width && anchor.x) || resize_width - crop_width,
