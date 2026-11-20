@@ -479,6 +479,14 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert {0, :unsafe_text, notes} in found
     end
 
+    test "a text for a unit that is not answered with text", c do
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+      assert {:shared_update, "year"} in open_items(c.target.id)
+
+      texts = Map.put(english(c), "year", "2001")
+      assert problems([translate(c.target, texts)], c.user) == [{0, :extra_key, "year"}]
+    end
+
     test "a token for another entry, or a changed one", c do
       assert [{0, :stale, nil}] = problems([translate(c.target, english(c), digest: "nonsense")], c.user)
 

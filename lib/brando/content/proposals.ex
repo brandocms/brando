@@ -754,7 +754,8 @@ defmodule Brando.Content.Proposals do
     case translate_work(op, proposal, actor) do
       {:ok, schema, scope, units} ->
         answer = %{texts: op.texts, reviewed: op.reviewed}
-        by_key = Map.new(units, &{&1.key, &1})
+        # Only a unit answered with text has a source and a format
+        by_key = for %{answerable: true} = unit <- units, into: %{}, do: {unit.key, unit}
 
         check =
           case Work.check(op.source_digest, scope, units, answer) do
