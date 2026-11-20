@@ -93,6 +93,21 @@ renders again from what was saved, so it never stores over an editor's newer
 blocks. A save that stores over a background render that read newer modules
 queues another render of the entry.
 
+Background renders run at a lower Oban priority than the render a save
+queues for its own entry, so in the `default` queue an editor's save, uploads
+and the other jobs there go ahead of them, however many are waiting. An entry
+has at most one render waiting: a change that reaches it before that render
+starts adds to it rather than queueing another, and saving the entry moves
+it to the front.
+
+Code of your own that re-renders entries in bulk queues them in one insert
+with `Brando.Content.RenderQueue.enqueue_map/2`. Work that reaches the same
+entries step by step, outside the `default` queue, holds their renders so
+each renders once: `enqueue_map(entries, hold: key)` at each step, then
+`Brando.Content.RenderQueue.release(key)` at the end, or after each batch of
+a long run. Held renders that are never released run 15 minutes after they
+were queued.
+
 <!-- usage-rules:start -->
 
 ## Modules, refs and vars

@@ -1,0 +1,1 @@
+- Re-renders queued in bulk (after a module, fragment, video or datasource change, a cascade and the like) wait behind an editor's save, uploads and other jobs, are inserted in one go, and add to a render of the same entry that is already waiting instead of queueing another.
