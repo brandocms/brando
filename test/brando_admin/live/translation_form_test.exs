@@ -703,7 +703,7 @@ defmodule BrandoAdmin.TranslationFormTest do
   # The save is refused as a change to source-controlled content: the form
   # still sends the translation's copy of the dropped block
   # (`entry_blocks/<its sync_uid>`). A drop alone, or an addition alone, saves.
-  @tag skip: "#3752: the form's save sends the block the source dropped, and is refused"
+  @tag skip: "#3756: the form's save sends the block the source dropped, and is refused"
   test "a translation saves after the source dropped a block and added another", %{conn: conn} = c do
     [join] = load(c.source.id).entry_blocks
     Repo.delete!(join)
