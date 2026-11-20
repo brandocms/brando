@@ -54,10 +54,7 @@ defmodule Brando.Worker.ImageMaintenance do
     batch_size = Map.get(args, "batch_size", @batch_size)
     images = next_batch(task, Map.get(args, "after_id", 0), batch_size)
 
-    counts =
-      images
-      |> only_changed(task)
-      |> run_tasks(task, user, args)
+    counts = run_tasks(images, task, user, args)
 
     args = Map.merge(args, counts, fn _key, total, count -> total + count end)
 
@@ -98,7 +95,7 @@ defmodule Brando.Worker.ImageMaintenance do
   # Filtered after the batch is read rather than in the query, since the
   # current fingerprint comes from code, not the database. Each target's is
   # resolved once per batch.
-  defp only_changed(images, "recreate_changed_sizes") do
+  defp only_changed(images) do
     current =
       images
       |> Enum.map(& &1.config_target)
@@ -108,13 +105,13 @@ defmodule Brando.Worker.ImageMaintenance do
     Enum.filter(images, &Processing.changed_config?(&1, current[&1.config_target]))
   end
 
-  defp only_changed(images, _task), do: images
-
   # Images processed before configs were recorded are kept when their files
   # already match their config; only the rest are recreated.
-  defp run_tasks(images, "recreate_changed_sizes", user, args) do
-    {adopted, rest} = Adoption.adopt(images)
-    %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user, run_opts(args))}
+  # A retried batch picks fewer: the images processed since match their
+  # config. The run counts the batch's images it queued, picked now or not.
+  defp run_tasks(batch, "recreate_changed_sizes", user, args) do
+    {adopted, rest} = batch |> only_changed() |> Adoption.adopt()
+    %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user, [batch: batch] ++ run_opts(args))}
   end
 
   # The per-image work is already a job of its own, so this only enqueues it,

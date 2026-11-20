@@ -379,9 +379,11 @@ defmodule Brando.Images.ImageMaintenanceTest do
         # Retrying or being processed still counts
         Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "retryable"])
         assert {:error, :already_running} = Processing.recreate_sizes_for_images(other)
+
         Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"),
           set: [state: "executing", attempted_at: DateTime.utc_now()]
         )
+
         assert {:error, :already_running} = Processing.recreate_sizes_for_images(other)
 
         Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "completed"])
@@ -603,6 +605,46 @@ defmodule Brando.Images.ImageMaintenanceTest do
       end)
 
       refute_received {:work, "image-sizes", _, _}
+    end
+
+    # The attempt queued its images and failed after: the images processed
+    # before the retry now match their config
+    test "a retried batch of changed images counts the images it queued before", %{user: user} do
+      images =
+        for _ <- 1..3, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg", config_fingerprint: "0123456789ab")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run = SizeRun.begin(user)
+        args = %{"task" => "recreate_changed_sizes", "user_id" => user.id, "batch_size" => 2, "run" => run}
+
+        assert :ok = perform_job(Worker.ImageMaintenance, args)
+        # Its next batch was never queued
+        Repo.delete_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageMaintenance"))
+
+        [first | later] = image_jobs()
+        for job <- later, do: set_job(job, state: "scheduled", scheduled_at: DateTime.add(DateTime.utc_now(), 3600))
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing)
+
+        refute Processing.changed_config?(
+                 Repo.get!(Image, first.args["image_id"]),
+                 Processing.current_fingerprint("default")
+               )
+
+        assert :ok = perform_job(Worker.ImageMaintenance, args)
+        assert [next] = all_enqueued(worker: Worker.ImageMaintenance)
+        assert next.args["queued"] == 2
+        assert :ok = perform_job(Worker.ImageMaintenance, next.args)
+
+        queued_ids =
+          Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor", select: j.args["image_id"]))
+
+        assert Enum.sort(queued_ids) == Enum.sort(Enum.map(images, & &1.id))
+        assert %Work{total: 3, open: false, message: "Recreating image sizes"} = work(user)
+
+        assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 3, done: 3, message: "3 images recreated"}}
     end
 
     test "an image job left executing past its timeout does not hold a run" do

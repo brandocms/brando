@@ -224,17 +224,24 @@ defmodule Brando.Images.SizeRun do
   def abort(user), do: Work.fail(user, @work_key)
 
   @doc """
-  Queues each of `images`, a batch of the run `run:`, to be recreated, and
-  counts them in the run's work. `counted:` is how many the run's earlier
-  batches counted: the run's count is set, not added to, and images the run
-  already queued are skipped, so a batch run again comes out the same.
-  Returns how many it counted.
+  Queues each of `images`, of a batch of the run `run:`, to be recreated,
+  and counts them in the run's work. `counted:` is how many the run's
+  earlier batches counted: the run's count is set, not added to, and images
+  the run already queued are skipped, so a batch run again comes out the
+  same. `batch:` is the whole batch `images` were picked from: its images
+  that an earlier attempt queued and that are no longer picked (processed
+  since, they match their config) are counted too. Returns how many it
+  counted.
   """
   @spec queue([Processing.image()], Processing.user(), keyword()) :: non_neg_integer()
   def queue(images, user, opts \\ []) do
     run = opts[:run]
-    total = (opts[:counted] || 0) + length(images)
     queued = queued(images, run)
+    # Queued by an earlier attempt, and no longer picked
+    picked = MapSet.new(images, & &1.id)
+    earlier = queued(Enum.reject(opts[:batch] || [], &(&1.id in picked)), run)
+    count = length(images) + MapSet.size(earlier)
+    total = (opts[:counted] || 0) + count
 
     for image <- images, image.id not in queued do
       prepare = fn changeset -> mark(changeset, user, image, run) end
@@ -249,7 +256,7 @@ defmodule Brando.Images.SizeRun do
     # After queueing: a batch that stops halfway has counted nothing, and
     # its retry counts the batch once
     if Work.user_id(user), do: resume(user, total, total - remaining(run), true)
-    length(images)
+    count
   end
 
   # The images the run has a job for already, in any state
