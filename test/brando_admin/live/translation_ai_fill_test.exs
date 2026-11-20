@@ -301,6 +301,25 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert has_element?(view, "#{item("title")}[data-ai='filled']")
     end
 
+    test "filling a block the editor is in keeps the widget with the focus", %{conn: conn, target: target} do
+      answer(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+
+      render_hook(view, "block_focused", %{"uid" => uid, "field" => "f", "label" => "L"})
+      translate_one(view, block_key(target.id))
+      render_async(view, 5_000)
+      await(fn -> block_text(view, uid) == "EN Første avsnitt" end)
+
+      assert_push_event(view, "b:component:remount_block", %{uid: ^uid} = filled)
+      assert filled[:skip_focused] == true
+
+      # Leaving the field shows the block once more, the field's input too
+      render_hook(view, "block_focused", %{"uid" => "elsewhere", "field" => "g", "label" => "L"})
+      assert_push_event(view, "b:component:remount_block", %{uid: ^uid} = left)
+      refute Map.has_key?(left, :skip_focused)
+    end
+
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
       source = source(c, "Gammel", "Gammel tekst")
       {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)

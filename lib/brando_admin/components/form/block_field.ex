@@ -2211,13 +2211,25 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> Enum.reduce({socket, [], []}, fn {root, texts}, {socket, filled, failed} ->
       case fill_root(socket, root, texts) do
         {:ok, socket, keys} ->
-          {refresh_roots(socket, [root], :force), filled ++ keys, failed ++ (Enum.map(texts, &elem(&1, 0)) -- keys)}
+          {refresh_filled_root(socket, root), filled ++ keys, failed ++ (Enum.map(texts, &elem(&1, 0)) -- keys)}
 
         :error ->
           {socket, filled, failed ++ Enum.map(texts, &elem(&1, 0))}
       end
     end)
   end
+
+  # A filled root is shown from the store. The root the editor works in is
+  # shown as another editor's change to it is (`flush_remote_refresh/1`):
+  # the widget with the focus keeps what is being typed, and the root is
+  # shown once more when the editor leaves the field.
+  defp refresh_filled_root(%{assigns: %{local_focus: root}} = socket, root) do
+    socket
+    |> update(:deferred_roots, &MapSet.put(&1, root))
+    |> refresh_roots([root], :skip_focused)
+  end
+
+  defp refresh_filled_root(socket, root), do: refresh_roots(socket, [root], :force)
 
   defp fill_root(socket, root, texts) do
     %{block_module: block_module, current_user: user, block_ops: ops} = socket.assigns
