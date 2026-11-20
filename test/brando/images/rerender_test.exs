@@ -498,6 +498,30 @@ defmodule Brando.Images.RerenderTest do
       end)
     end
 
+    test "with pages that never render ends as failed after 30 minutes in which none did", %{user: user} do
+      page = page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run_images(user)
+        assert :ok = look()
+        assert :ok = look()
+
+        # The queue is paused: no page has been updated for half an hour
+        [watcher] = jobs(Worker.ImageMaintenance)
+        since = DateTime.utc_now() |> DateTime.add(-31, :minute) |> DateTime.to_unix()
+        args = put_in(watcher.args, ["pages", "since"], since)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^watcher.id), set: [args: args])
+
+        look()
+        refute SizeRun.running?()
+        # The render stays queued
+        assert [%{state: "available"}] = renders_of(page)
+      end)
+
+      assert_receive {:work, "image-sizes", :failed,
+                      %Work{message: "1 image recreated, 1 page is still waiting to be updated"}}
+    end
+
     test "counts a page whose failed render was queued again and rendered as updated", %{user: user} do
       page = page_with(user, [image()])
 

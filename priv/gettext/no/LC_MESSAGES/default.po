@@ -495,6 +495,13 @@ msgstr[1] "%{count} sider kunne ikke oppdateres"
 
 #: lib/brando/images/size_run.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} page is still waiting to be updated"
+msgid_plural "%{count} pages are still waiting to be updated"
+msgstr[0] "%{count} side venter fortsatt på å bli oppdatert"
+msgstr[1] "%{count} sider venter fortsatt på å bli oppdatert"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} page updated"
 msgid_plural "%{count} pages updated"
 msgstr[0] "%{count} side oppdatert"

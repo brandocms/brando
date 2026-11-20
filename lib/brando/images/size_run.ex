@@ -74,6 +74,9 @@ defmodule Brando.Images.SizeRun do
   # what is left
   @watch_every 2
   @settle_after 1
+  # The pages step ends, as failed, after this long without a page updated
+  # (the queue paused, or held up): its renders stay queued
+  @pages_stall to_timeout(minute: 30)
 
   @doc "The `BrandoAdmin.Work` key a run reports under."
   @spec work_key() :: String.t()
@@ -351,7 +354,13 @@ defmodule Brando.Images.SizeRun do
   # that gave up, a job cancelled or discarded without running) fails the
   # run at the end.
   defp images_done(%Oban.Job{args: %{"settle" => true} = args} = job, user) do
-    pages = %{"images" => images(args, user), "images_failed" => images_failed?(args, user), "seen" => %{}}
+    pages = %{
+      "images" => images(args, user),
+      "images_failed" => images_failed?(args, user),
+      "seen" => %{},
+      "since" => System.os_time(:second)
+    }
+
     pages(%{job | args: args |> Map.delete("settle") |> Map.put("pages", pages)}, user)
   end
 
@@ -439,19 +448,37 @@ defmodule Brando.Images.SizeRun do
     seen = seen |> Map.merge(settled(states)) |> Map.drop(left)
     total = map_size(seen) + length(left)
     failed = Enum.count(seen, fn {_entry, outcome} -> outcome == "failed" end)
+    since = since(pages, seen)
     # Another run's work is under the key now: this one's watcher was left
     # behind by a node that went down, and is late
     ours? = watching(run) == [] and not walking_other?(run)
 
-    if left == [] do
-      if ours?, do: end_run(user, pages, total, failed)
-      :ok
-    else
-      if ours?, do: report_pages(user, run, pages, map_size(seen), total)
-      pages = Map.merge(pages, %{"seen" => seen, "left" => left, "reported" => [map_size(seen), total]})
-      snooze(job, Map.put(args, "pages", pages), @watch_every)
+    cond do
+      left == [] ->
+        if ours?, do: end_run(user, pages, total, failed)
+        :ok
+
+      System.os_time(:second) - since > div(@pages_stall, 1000) ->
+        if ours?, do: end_run(user, pages, map_size(seen), failed, length(left))
+        :ok
+
+      true ->
+        if ours?, do: report_pages(user, run, pages, map_size(seen), total)
+
+        pages =
+          Map.merge(pages, %{"seen" => seen, "left" => left, "since" => since, "reported" => [map_size(seen), total]})
+
+        snooze(job, Map.put(args, "pages", pages), @watch_every)
     end
   end
+
+  # When a page last finished, in Unix seconds: now, when one did since the
+  # last look, or the step began now
+  defp since(%{"since" => since, "seen" => before}, seen) when is_integer(since) do
+    if Enum.any?(seen, fn {entry, outcome} -> before[entry] != outcome end), do: System.os_time(:second), else: since
+  end
+
+  defp since(_pages, _seen), do: System.os_time(:second)
 
   # As the jobs table holds an entry: the same entry queued as a module or
   # its name is one page
@@ -515,13 +542,14 @@ defmodule Brando.Images.SizeRun do
       do: Work.update(user, @work_key, message, total: total, done: settled)
   end
 
-  defp end_run(user, pages, total, failed) do
+  # `waiting`: the pages still to render when the step gave up on them
+  defp end_run(user, pages, total, failed, waiting \\ 0) do
     images_failed? = pages["images_failed"] == true
 
     Work.in_locale(user, fn ->
-      message = result_message(pages["images"] || 0, images_failed?, total, failed)
+      message = result_message(pages["images"] || 0, images_failed?, total, failed, waiting)
 
-      if images_failed? or failed > 0,
+      if images_failed? or failed > 0 or waiting > 0,
         do: Work.fail(user, @work_key, message),
         else: Work.finish(user, @work_key, message)
     end)
@@ -530,9 +558,25 @@ defmodule Brando.Images.SizeRun do
   end
 
   @doc false
-  # "65 images recreated, 14 pages updated", in the current locale
-  @spec result_message(non_neg_integer(), boolean(), non_neg_integer(), non_neg_integer()) :: String.t()
-  def result_message(images, images_failed?, pages, failed_pages) do
+  # "65 images recreated, 14 pages updated", in the current locale, and how
+  # many pages are still waiting when the step gave up on them
+  @spec result_message(non_neg_integer(), boolean(), non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
+          String.t()
+  def result_message(images, images_failed?, pages, failed_pages, waiting \\ 0)
+
+  def result_message(images, images_failed?, pages, failed_pages, waiting) when waiting > 0 do
+    gettext("%{images}, %{pages}",
+      images: result_message(images, images_failed?, pages, failed_pages),
+      pages:
+        ngettext(
+          "%{count} page is still waiting to be updated",
+          "%{count} pages are still waiting to be updated",
+          waiting
+        )
+    )
+  end
+
+  def result_message(images, images_failed?, pages, failed_pages, _waiting) do
     images =
       cond do
         images_failed? -> gettext("Some images could not be recreated")
