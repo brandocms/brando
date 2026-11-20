@@ -278,6 +278,31 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
              ]
     end
 
+    test "the same replacement twice", c do
+      old = image!("a", {800, 600})
+      new = image!("b", {800, 600})
+
+      assert {:ok, proposal} = Proposals.propose([replace(old, new), replace(old, new)], c.user)
+      assert Enum.map(proposal.problems, & &1.code) == [:duplicate_replacement, :duplicate_replacement]
+    end
+
+    test "a NEW this proposal sets as a field's id", c do
+      old = image!("a", {800, 600})
+      new = image!("b", {800, 600})
+
+      {:ok, [set | _]} =
+        Codec.decode_all([
+          %{
+            "op" => "set_fields",
+            "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+            "fields" => %{"meta_image_id" => new.id}
+          }
+        ])
+
+      assert {:ok, proposal} = Proposals.propose([set, replace(old, new)], c.user)
+      assert {1, :asset_in_use} in Enum.map(proposal.problems, &{&1.operation, &1.code})
+    end
+
     test "NEW put to use: approval and apply are refused, and OLD stays as it was", c do
       old = image!("a", {800, 600})
       new = image!("b", {1600, 1200})

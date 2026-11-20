@@ -55,7 +55,9 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
+  alias Brando.Content.Proposals.CreateEntry
   alias Brando.Content.Proposals.ReplaceImageFile
+  alias Brando.Content.Proposals.SetFields
   alias Brando.Content.Transfer.Catalog
   alias Brando.Content.Transfer.Error
   alias Brando.Content.Usage
@@ -177,7 +179,8 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   # NEW's record goes on approval, so nothing else in the proposal may place
   # it, and an image is replaced, or replaces another, once.
   defp in_proposal(%ReplaceImageFile{asset: {:image, old_id}, with: {:image, new_id}} = op, operations) do
-    others = Enum.reject(operations, &(&1 == op))
+    # By position: the same replacement twice is a duplicate of itself
+    others = List.delete(operations, op)
     replacements = for %ReplaceImageFile{} = other <- others, do: other
 
     cond do
@@ -223,8 +226,24 @@ defmodule Brando.Content.Proposals.ImageReplacement do
     op
     |> Map.from_struct()
     |> Map.values()
-    |> mentions?(asset)
+    |> mentions?(asset) or sets_image_id?(op, asset)
   end
+
+  # An entry's image field set to the bare id, as `"cover_id": 87`
+  defp sets_image_id?(%CreateEntry{schema: schema, fields: fields}, asset), do: image_id?(schema, fields, asset)
+  defp sets_image_id?(%SetFields{target: {schema, _id}, fields: fields}, asset), do: image_id?(schema, fields, asset)
+  defp sets_image_id?(_op, _asset), do: false
+
+  defp image_id?(schema, fields, {:image, id}) when is_atom(schema) and is_map(fields) do
+    image_fields =
+      for %{name: name, type: :image} <- Brando.Blueprint.Assets.__assets__(schema), do: "#{name}_id"
+
+    Enum.any?(fields, fn {key, value} -> value == id and to_string(key) in image_fields end)
+  rescue
+    _ -> false
+  end
+
+  defp image_id?(_schema, _fields, _asset), do: false
 
   defp mentions?(asset, asset), do: true
   defp mentions?(list, asset) when is_list(list), do: Enum.any?(list, &mentions?(&1, asset))
