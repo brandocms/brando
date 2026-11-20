@@ -38,6 +38,9 @@ defmodule Brando.Translations do
   alias Brando.Utils
   alias Ecto.Changeset
 
+  # A work item as it is carried, resolved and opened again
+  @item_fields [:path, :kind, :source_digest, :source_previous, :minor]
+
   @doc "Whether `schema` declares `trait :translatable, mode: :synchronized`."
   def synchronized?(schema) when is_atom(schema) do
     Code.ensure_loaded?(schema) and function_exported?(schema, :__translatable_config__, 0) and
@@ -288,6 +291,7 @@ defmodule Brando.Translations do
          {:ok, source} <- load_entry(schema, source_id) do
       if schema.has_alternates?(), do: Module.concat(schema, Alternate).add(source_id, target.id)
       group = Repo.get!(Group, source_member.group_id)
+      uids = module_uids([source], schema)
 
       member =
         Repo.insert!(%Member{
@@ -298,7 +302,8 @@ defmodule Brando.Translations do
           role: :target,
           synchronized: true,
           last_synced_generation: group.source_generation,
-          baseline: Sync.baseline_for(source, schema, nil, module_uids([source], schema))
+          baseline: Sync.baseline_for(source, schema, nil, uids),
+          baseline_texts: Sync.baseline_texts_for(source, schema, nil, uids)
         })
 
       # The copy still links to the source language's content; its first
@@ -433,19 +438,21 @@ defmodule Brando.Translations do
   def transfer_source(schema, new_source_id, _actor) do
     with %Member{role: :target, synchronized: true} = new_source <- get_member(schema, new_source_id),
          {:ok, entry} <- load_entry(schema, new_source_id) do
-      baseline = Sync.baseline_for(entry, schema, nil, module_uids([entry], schema))
+      uids = module_uids([entry], schema)
+      baseline = Sync.baseline_for(entry, schema, nil, uids)
+      baseline_texts = Sync.baseline_texts_for(entry, schema, nil, uids)
 
       Repo.transaction(fn ->
         from(m in Member, where: m.group_id == ^new_source.group_id and m.role == :source)
         |> Repo.update_all(set: [role: :target, synchronized: true, updated_at: naive_now()])
 
         from(m in Member, where: m.group_id == ^new_source.group_id)
-        |> Repo.update_all(set: [baseline: baseline, updated_at: naive_now()])
+        |> Repo.update_all(set: [baseline: baseline, baseline_texts: baseline_texts, updated_at: naive_now()])
 
         supersede_pending(new_source.id)
 
         new_source
-        |> Changeset.change(role: :source, baseline: %{})
+        |> Changeset.change(role: :source, baseline: %{}, baseline_texts: %{})
         |> Repo.update!()
       end)
     else
@@ -982,6 +989,7 @@ defmodule Brando.Translations do
         result =
           Sync.compute_pending(source, target, member.baseline,
             schema: schema,
+            baseline_texts: member.baseline_texts,
             module_uids: uids,
             minor: minor?,
             translate_all: Keyword.get(opts, :translate_all, false),
@@ -993,7 +1001,11 @@ defmodule Brando.Translations do
         record_pending(member, result, previous, generation, schema)
 
         member
-        |> Changeset.change(baseline: result.baseline, last_synced_generation: generation)
+        |> Changeset.change(
+          baseline: result.baseline,
+          baseline_texts: result.baseline_texts,
+          last_synced_generation: generation
+        )
         |> Repo.update!()
 
         {member.id, :ok}
@@ -1195,9 +1207,13 @@ defmodule Brando.Translations do
 
   Unresolved work items of the previous version are carried over when their
   path still exists and the new computation did not raise its own item for it.
+  A `:review` item raised again for a path whose review is still open keeps
+  the open one's `source_previous`, nil included: the text the translation
+  was written from, not the source's text in between.
   Nothing is recorded when the result changes nothing and no work carries over.
   """
   def record_pending(member, result, previous, generation, schema) do
+    result = %{result | work_items: keep_previous_texts(result.work_items, previous)}
     new_paths = MapSet.new(result.work_items, & &1.path)
 
     carried =
@@ -1217,7 +1233,7 @@ defmodule Brando.Translations do
               is_nil(item.resolved_at),
               MapSet.member?(result.paths, item.path),
               not MapSet.member?(new_paths, item.path),
-              do: Map.take(item, [:path, :kind, :source_digest, :minor])
+              do: Map.take(item, @item_fields)
       end
 
     if previous, do: supersede_pending(member.id)
@@ -1245,6 +1261,17 @@ defmodule Brando.Translations do
       Repo.insert_all(WorkItem, items)
       version
     end
+  end
+
+  defp keep_previous_texts(items, nil), do: items
+
+  defp keep_previous_texts(items, %PendingVersion{work_items: open}) do
+    reviews = for %{kind: :review, resolved_at: nil} = item <- open, into: %{}, do: {item.path, item.source_previous}
+
+    Enum.map(items, fn
+      %{kind: :review, path: path} = item when is_map_key(reviews, path) -> %{item | source_previous: reviews[path]}
+      item -> item
+    end)
   end
 
   # The text paths still to translate whose text in the translation is a copy
@@ -1795,7 +1822,7 @@ defmodule Brando.Translations do
 
   Returns `{:ok, %{entry: entry, changeset: changeset, resolved: items,
   open: count, stale: boolean}}`, `resolved` being the work items the save resolved
-  (`%{path, kind, source_digest, minor}`, for `reopen_work/3`), or
+  (`%{path, kind, source_digest, source_previous, minor}`, for `reopen_work/3`), or
   `{:error, reason}`: those of `work_changeset/4`,
   `{:source_controlled, paths}`, or the update's error.
   """
@@ -1834,13 +1861,13 @@ defmodule Brando.Translations do
 
     from(w in WorkItem, where: w.id in ^ids and not is_nil(w.resolved_at), order_by: w.id)
     |> Repo.all()
-    |> Enum.map(&Map.take(&1, [:path, :kind, :source_digest, :minor]))
+    |> Enum.map(&Map.take(&1, @item_fields))
   end
 
   @doc """
   Opens again work `save_work/5` resolved, after the translation's text is
   put back (an undo): its pending version is recomputed against the saved
-  translation with `items` (`%{path, kind, source_digest, minor}`, as
+  translation with `items` (`%{path, kind, source_digest, source_previous, minor}`, as
   `save_work/5` returns them) open again beside the work still open. A text
   that is again the copy of the source's is to translate against the
   source's current text, as before. Returns `{:ok, open_count}`; nothing is
@@ -1874,10 +1901,11 @@ defmodule Brando.Translations do
       path: path,
       kind: String.to_existing_atom(kind),
       source_digest: item["source_digest"],
+      source_previous: item["source_previous"],
       minor: item["minor"] || false
     }
 
-  defp atomize_item(%{} = item), do: Map.take(item, [:path, :kind, :source_digest, :minor])
+  defp atomize_item(%{} = item), do: Map.take(item, @item_fields)
 
   @doc """
   Loads an entry as synchronization reads it, with every preload its

@@ -4,7 +4,10 @@ defmodule Brando.Translations.Member do
 
   `baseline` holds a digest per source text and shared-value path, taken from
   the source when this member was last synchronized. A source text whose digest
-  has since moved is flagged for review.
+  has since moved is flagged for review. `baseline_texts` holds the source's
+  texts of that sync by path (text paths only), so a review item can carry the
+  text the translation was written from (`WorkItem`'s `source_previous`). A
+  member last synchronized before brando_239 has none until its next sync.
   """
   use Ecto.Schema
 
@@ -21,6 +24,7 @@ defmodule Brando.Translations.Member do
     field :detached_at, :utc_datetime
     field :last_synced_generation, :integer, default: 0
     field :baseline, :map, default: %{}
+    field :baseline_texts, :map, default: %{}
     has_many :pending_versions, PendingVersion
     timestamps()
   end

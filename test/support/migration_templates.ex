@@ -259,7 +259,9 @@ defmodule Brando.MigrationTemplates do
       "sites_seos" => ~w(crawler_policy),
       "content_modules" => ~w(markdown_code write_with_ai),
       "activity_events" => ~w(proposal_id approver_id),
-      "content_identifiers" => ~w(external_url)
+      "content_identifiers" => ~w(external_url),
+      "translation_group_members" => ~w(baseline_texts),
+      "translation_work_items" => ~w(source_previous)
     }
   end
 
