@@ -1411,6 +1411,11 @@ msgstr ""
 msgid "A connected tool"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A copy of the source in its translation group, not published. Its texts are marked to translate, and its structure follows the source."
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A date and time value"
@@ -5685,6 +5690,16 @@ msgstr ""
 #: lib/brando_admin/live/content/template_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create template"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create the %{language} version of %{title}"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create the %{language} version of its source"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

@@ -1362,6 +1362,25 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  defp change(%{change: %{type: :create_translation}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title" data-testid="assistant-create-translation">
+      {if @change.source.title,
+        do:
+          gettext("Create the %{language} version of %{title}",
+            language: language_label(@change.language),
+            title: @change.source.title
+          ),
+        else: gettext("Create the %{language} version of its source", language: language_label(@change.language))}
+    </span>
+    <p class="assistant-placement">
+      {gettext(
+        "A copy of the source in its translation group, not published. Its texts are marked to translate, and its structure follows the source."
+      )}
+    </p>
+    """
+  end
+
   defp change(%{change: %{type: :fields}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Change fields")}</span>
@@ -2256,7 +2275,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp action_tone(action) when action in [:create, :update], do: "badge--ai"
   defp action_tone(_action), do: nil
 
-  # New entries and drafts can be published as the proposal is applied.
+  # New entries and drafts can be published as the proposal is applied. A new
+  # translation stays unpublished: its texts are still to translate.
+  defp publishable?(%{translation?: true}), do: false
   defp publishable?(entry), do: entry.action == :create or (entry.action == :update and entry.status == "draft")
 
   # Entries still holding placeholders stay drafts, whatever was ticked.

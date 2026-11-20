@@ -448,6 +448,9 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   defp subjects(%{"op" => "create_entry", "content_type" => type}), do: [{type, nil}]
 
+  defp subjects(%{"op" => "create_translation", "source" => %{"content_type" => type, "id" => id}}),
+    do: [{type, nil}, {type, id}]
+
   defp subjects(%{} = op) do
     for %{"content_type" => type, "id" => id} <- [op["target"], op["to"]], do: {type, id}
   end

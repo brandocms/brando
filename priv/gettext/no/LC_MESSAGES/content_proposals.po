@@ -71,6 +71,11 @@ msgstr "%{key} viser teksten modulen gir den."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{language} is not one of the site's languages for %{name} entries."
+msgstr "%{language} er ikke et av nettstedets språk for %{name}-oppføringer."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} cannot hold a {, which the page could read as Liquid."
 msgstr "%{name} kan ikke inneholde {, som siden kan lese som Liquid."
 
@@ -83,6 +88,16 @@ msgstr "%{name} inneholder utrygg rik tekst."
 #, elixir-autogen, elixir-format
 msgid "%{name} does not accept this media type."
 msgstr "%{name} godtar ikke denne medietypen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} entries are not synchronized translations. Create the version in another language with create_entry instead."
+msgstr "%{name}-oppføringer er ikke synkroniserte oversettelser. Opprett versjonen på et annet språk med create_entry i stedet."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} entries cannot be copied, so they cannot be translated."
+msgstr "%{name}-oppføringer kan ikke kopieres, så de kan ikke oversettes."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -198,6 +213,11 @@ msgstr "Etter %{block}"
 #, elixir-autogen, elixir-format
 msgid "An anchor starts with a letter and holds letters, digits, - and _."
 msgstr "Et anker starter med en bokstav og inneholder bokstaver, sifre, - og _."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "An earlier operation in this proposal already creates this version."
+msgstr "En tidligere operasjon i dette forslaget oppretter allerede denne versjonen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -436,8 +456,23 @@ msgstr "Modulen har ingen variabel som heter %{key}."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source already has a version in this language. Change that version instead."
+msgstr "Kilden har allerede en versjon på dette språket. Endre den versjonen i stedet."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source is already in this language."
+msgstr "Kilden er allerede på dette språket."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr "Statusen er publisert, utkast, deaktivert eller venter."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation could not be created: %{reason}"
+msgstr "Oversettelsen kunne ikke opprettes: %{reason}"
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -504,10 +539,25 @@ msgstr "Denne innholdstypen har ikke et slikt blokkfelt."
 msgid "This content type is not registered on this site."
 msgstr "Denne innholdstypen er ikke registrert på dette nettstedet."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a translation. Create translations from its group's source, %{source}."
+msgstr "Denne oppføringen er en oversettelse. Opprett oversettelser fra kilden i gruppen, %{source}."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a translation. Create translations from its group's source."
+msgstr "Denne oppføringen er en oversettelse. Opprett oversettelser fra kilden i gruppen."
+
 #: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This entry is not part of the proposal."
 msgstr "Denne oppføringen er ikke en del av forslaget."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is the translation an earlier operation creates. Its blocks and fields are copied from its source when the proposal is applied, and its structure follows the source: write its text with a translate operation instead."
+msgstr "Denne oppføringen er oversettelsen en tidligere operasjon oppretter. Blokkene og feltene kopieres fra kilden når forslaget tas i bruk, og strukturen følger kilden: skriv teksten med en translate-operasjon i stedet."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -617,6 +667,11 @@ msgstr "Du kan ikke publisere eller avpublisere denne innholdstypen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "You do not have permission to create a translation of this entry."
+msgstr "Du har ikke tilgang til å opprette en oversettelse av denne oppføringen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "You do not have permission to create this entry."
 msgstr "Du har ikke tilgang til å opprette denne oppføringen."
 
@@ -684,6 +739,11 @@ msgstr "rik tekst"
 #, elixir-autogen, elixir-format
 msgid "rows is a list of objects."
 msgstr "rows er en liste med objekter."
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "source is a saved entry: {content_type, id}."
+msgstr "source er en lagret oppføring: {content_type, id}."
 
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format

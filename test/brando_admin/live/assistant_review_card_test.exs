@@ -65,6 +65,43 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
      html |> Floki.find(".assistant-fields ins") |> Floki.text()}
   end
 
+  describe "a translation the proposal creates" do
+    # The card in both admin languages: its own title, a draft, and no
+    # publishing, since its texts are still to translate.
+    test "has its own card, in English and Norwegian", %{conn: conn, current_user: user} do
+      {:ok, source} =
+        Brando.SyncTest.create_article(%{title: "Fjordhuset", slug: "fjordhuset-card", language: "no", status: "published"}, user)
+
+      op = %{
+        "op" => "create_translation",
+        "source" => %{"content_type" => "Brando.SyncTest.Article", "id" => source.id},
+        "language" => "en",
+        "ref" => "english"
+      }
+
+      {view, proposal} = propose(conn, user, [op])
+      assert proposal.problems == []
+      english = card_text(view)
+      assert english =~ "Fjordhuset"
+      assert has_element?(view, ~s([data-testid="assistant-action-create"]))
+      refute has_element?(view, ".assistant-publish")
+
+      user |> Ecto.Changeset.change(language: :no) |> Repo.update!()
+      {:ok, view, _} = live(conn, "/admin/assistant/#{proposal.conversation_id}")
+      norwegian = card_text(view)
+      assert norwegian =~ "Fjordhuset"
+      refute norwegian == english
+    end
+  end
+
+  defp card_text(view) do
+    view
+    |> element(~s([data-testid="assistant-create-translation"]))
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.text()
+  end
+
   describe "the assistant's reply" do
     test "writes an image as a link, so nothing loads by itself", %{conn: conn, current_user: user} do
       {:ok, conversation} = Agent.start_conversation(user)

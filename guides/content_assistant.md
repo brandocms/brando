@@ -183,6 +183,24 @@ translations need no matching change: applying runs the same after-save work
 as an editor's save, so they get pending versions with the source's structure,
 media and new text to translate.
 
+A proposal can also create a synchronized entry's version in a language its
+group lacks, as **Create translation** does in the admin
+(`{"op": "create_translation", "source": {…}, "language": "en", "ref": R}`,
+one operation per language). Its card says which version it creates. When the
+proposal is applied, an unpublished copy of the source joins the source's
+group, linked as an alternate, with every text it copied marked to translate;
+an entry not yet in a group becomes its source. It is checked like the
+admin's: the content type must be synchronized and able to copy entries, the
+editor must be able to read the source, create entries of its type and copy
+it, the language must be one of the site's and not the source's, and neither
+the group nor an earlier operation may already have that language. Named a
+translation instead of its source, the problem names the source. The checks
+run again when the proposal is applied, as the language may have been taken
+in the meantime. The new copy is made from the source as it is then, so other
+operations in the same proposal cannot change it as `{"new": R}`. **Undo**
+deletes the translation and takes it out of the group, and removes a group
+the proposal made, so the language can be created again.
+
 ## Build with AI from the block editor
 
 A block field shows **Build with AI** next to its label when the assistant
@@ -350,6 +368,8 @@ is applied.
 - Create entries, as drafts. For anyone but a superuser, a field the forms lock
   takes its input's default or, for a slug, the value derived from its source,
   as a new entry in the form does.
+- Create a synchronized entry's translation into another language, unpublished
+  and with its texts marked to translate ([Language versions](#language-versions)).
 - Change fields of existing entries, including their status where the editor
   may set it. Publication times and block fields are not set this way, nor,
   for anyone but a superuser, is a field the forms lock (`readonly` or
