@@ -75,6 +75,10 @@
           {
             "digest": "8c7c73ffa7e5326b",
             "name": "search_entries"
+          },
+          {
+            "digest": "f8f5c9bcc3d3a375",
+            "name": "translation_work"
           }
         ]
       },
