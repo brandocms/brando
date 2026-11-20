@@ -47,6 +47,7 @@ defmodule Brando.Content.RenderQueue do
   @waiting ~w(available scheduled)
   # What identifies a render's entry, as the renderer's `unique` keys do
   @entry_keys ~w(tenant_prefix schema entry_id)
+  @entry_keys_joined ~w(schema entry_id tenant_prefix)
   @bulk_priority 5
   @hold "brando_hold"
   @max_hold :timer.minutes(15)
@@ -180,12 +181,28 @@ defmodule Brando.Content.RenderQueue do
     {Enum.map(merged, &{:ok, &1}), Enum.reject(requests, &MapSet.member?(merged_keys, entry_key(&1)))}
   end
 
-  # The first waiting render of each entry
+  # The first waiting render of each entry. A join on the key's fields as
+  # text, as `@> ANY(keys)` compares every waiting job with every key; the
+  # exact keys are compared after.
   defp waiting(keys) do
+    [schemas, entry_ids, prefixes] =
+      for field <- @entry_keys_joined do
+        Enum.map(keys, &key_text(Map.get(&1, field)))
+      end
+
     query =
       from(j in Oban.Job,
+        join:
+          k in fragment(
+            "SELECT * FROM unnest(?::text[], ?::text[], ?::text[]) AS k(schema, entry_id, tenant_prefix)",
+            ^schemas,
+            ^entry_ids,
+            ^prefixes
+          ),
+        on:
+          fragment("?->>'schema'", j.args) == k.schema and fragment("?->>'entry_id'", j.args) == k.entry_id and
+            fragment("?->>'tenant_prefix' IS NOT DISTINCT FROM ?", j.args, k.tenant_prefix),
         where: j.worker == @worker_name and j.state in @waiting,
-        where: fragment("? @> ANY(?)", j.args, type(^keys, {:array, :map})),
         order_by: j.id
       )
 
@@ -310,6 +327,11 @@ defmodule Brando.Content.RenderQueue do
     |> track({user, key, opts})
     |> Ecto.Changeset.get_field(:meta)
   end
+
+  # As `->>` reads a jsonb value
+  defp key_text(nil), do: nil
+  defp key_text(value) when is_binary(value), do: value
+  defp key_text(value), do: JSON.encode!(value)
 
   # As the jobs table holds it
   defp entry_key(args) do
