@@ -156,7 +156,9 @@ defmodule Brando.Uploads.Store do
       folder_id: upload_folder_id(upload)
     }
 
+    # What the uploader gave with the file, as for other images below
     image_params
+    |> Map.merge(upload.meta[:image_attrs] || %{})
     |> Images.create_image(user)
     |> run_completed_callback(upload.cfg, user)
   end
@@ -214,7 +216,11 @@ defmodule Brando.Uploads.Store do
         folder_id: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
       }
 
-      Images.create_image(image_params, user)
+      # What the uploader gave with the file (`Brando.Images.Intake`): its
+      # focal point and texts, set as the image is created
+      image_params
+      |> Map.merge(meta[:image_attrs] || %{})
+      |> Images.create_image(user)
     else
       # Refused before anything decodes it. Server and direct uploads are
       # checked before they are written; this is a last check.

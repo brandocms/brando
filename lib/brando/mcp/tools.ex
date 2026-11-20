@@ -12,8 +12,10 @@ defmodule Brando.MCP.Tools do
   marked as coming from the connected client.
 
   With them, the Figma tools (`Brando.Figma.Tools`, `brando_figma_…`): read
-  a Figma frame, and import its images into the media library, the one
-  thing a tool adds before a person applies a proposal.
+  a Figma frame, and import its images into the media library; and the
+  media tools (`Brando.MCP.Media`, `brando_media_…`): upload an image, or
+  import one from a URL. Adding images to the library is the one thing a
+  tool does before a person applies a proposal.
 
   Every call runs as the connection's user, in its site environment's schema
   and authorization scope, and is written to Activity with the user, the
@@ -38,6 +40,7 @@ defmodule Brando.MCP.Tools do
   alias Brando.Content.Proposals.Tools, as: Registry
   alias Brando.Figma.Tools, as: FigmaTools
   alias Brando.MCP
+  alias Brando.MCP.Media
   alias Brando.MCP.Watch
 
   require Logger
@@ -93,7 +96,22 @@ defmodule Brando.MCP.Tools do
         }
       end
 
-    content ++ figma
+    media =
+      for definition <- Media.definitions() do
+        %{
+          name: Media.prefix() <> definition.name,
+          description: definition.description,
+          inputSchema: definition.parameters,
+          annotations: %{
+            readOnlyHint: definition.read_only,
+            destructiveHint: false,
+            idempotentHint: definition.idempotent,
+            openWorldHint: definition.open_world
+          }
+        }
+      end
+
+    content ++ figma ++ media
   end
 
   @doc "The most bytes a tool's result may encode to; a larger one fails the call."
@@ -118,6 +136,17 @@ defmodule Brando.MCP.Tools do
       context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
       args = Map.delete(args, "_meta")
       call = fn -> FigmaTools.call(name, args, auth.user, tenant) end
+      called(full_name, args, auth, tenant, fn -> run(full_name, context, tenant, call) end)
+    else
+      {:error, :unknown}
+    end
+  end
+
+  def call("brando_media_" <> name = full_name, args, auth, tenant) when is_map(args) do
+    if name in Media.names() do
+      context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
+      args = Map.delete(args, "_meta")
+      call = fn -> Media.call(name, args, auth, tenant) end
       called(full_name, args, auth, tenant, fn -> run(full_name, context, tenant, call) end)
     else
       {:error, :unknown}

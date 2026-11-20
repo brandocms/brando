@@ -240,6 +240,38 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       assert has_element?(view, row <> " .mcp-watch-error", "1 image could not be imported.")
     end
 
+    test "an upload and an import from an address, with their image and folder", %{conn: conn, grant: grant} do
+      [uploaded, imported] = for _ <- 1..2, do: Factory.insert(:image)
+      {:ok, view, _html} = page(conn, grant)
+      finish = &Watch.finished(grant.id, &1, Map.put(&2, "ok", true), {:error, :not_recorded})
+
+      finish.("prepare", %{
+        "tool" => "brando_media_prepare_upload",
+        "input" => %{"kind" => "image", "filename" => "harbour.jpg"}
+      })
+
+      finish.("upload", %{
+        "tool" => "brando_media_finish_upload",
+        "output" => %{"images" => 1, "reused" => false},
+        "folder" => "uploads",
+        "images" => [%{"id" => uploaded.id, "reused" => false}]
+      })
+
+      finish.("import", %{
+        "tool" => "brando_media_import_url",
+        "output" => %{"images" => 1, "reused" => true},
+        "folder" => "uploads",
+        "images" => [%{"id" => imported.id, "reused" => true}]
+      })
+
+      assert has_element?(view, "#mcp-call-prepare", "Prepared to upload “harbour.jpg”")
+      assert has_element?(view, "#mcp-call-upload", "Uploaded an image to the media library")
+      assert has_element?(view, "#mcp-call-upload .mcp-watch-folder", "uploads")
+      assert has_element?(view, "#mcp-call-upload [data-image-id='#{uploaded.id}'][data-reused=false]")
+      assert has_element?(view, "#mcp-call-import", "Imported an image the media library already had")
+      assert has_element?(view, "#mcp-call-import [data-image-id='#{imported.id}'][data-reused=true]")
+    end
+
     test "an approved proposal says so", %{conn: conn, grant: grant, current_user: user} do
       record = proposal!(user, %{status: "approved", problems: [], approved_at: DateTime.utc_now()})
       {:ok, view, _html} = page(conn, grant)
@@ -355,7 +387,9 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       })
 
       finish.("proposal", proposal_details(record))
+      finish.("prepare", %{"tool" => "brando_media_prepare_upload", "input" => %{"filename" => "Secret file.jpg"}})
 
+      assert has_element?(view, "#mcp-call-prepare", "Prepared an upload")
       assert has_element?(view, "#mcp-call-outline", "Read an entry")
       assert has_element?(view, "#mcp-call-search", "Searched Pages")
       assert has_element?(view, "#mcp-call-import", "Imported images from a Figma frame")

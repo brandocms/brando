@@ -389,8 +389,8 @@ request logs with
 `config :phoenix, :filter_parameters, ["password", "code", "proof", "secret", "token", "key"]`.
 A reset link's token is part of its path, which Phoenix logs as is;
 `Brando.Plug.RequestLog` logs those paths with the token filtered out (and
-those of shared previews, static site previews, content transfer downloads and
-shared assistant conversations). `mix brando.install` writes both:
+those of shared previews, static site previews, content transfer downloads,
+shared assistant conversations and MCP upload URLs). `mix brando.install` writes both:
 
 ```elixir
 plug Plug.Telemetry,

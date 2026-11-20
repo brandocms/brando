@@ -36,21 +36,12 @@ defmodule Brando.Figma.Import do
   says where the next call starts.
   """
 
-  import Ecto.Query, only: [from: 2]
-
-  alias Brando.Content.Transfer.Catalog
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Images
-  alias Brando.Images.Image
-  alias Brando.Uploads
+  alias Brando.Images.Intake
   alias Brando.Uploads.ContentType
-  alias Brando.Webhooks.Client
-  alias Brando.Webhooks.URLGuard
-  alias BrandoAdmin.Images.FolderBrowser
   alias Elixir.Image, as: Vimage
-
-  require Logger
 
   @max_per_call 8
   # Layers listed per image: a placeholder used all over a frame stays one entry
@@ -107,18 +98,11 @@ defmodule Brando.Figma.Import do
   # Nothing is fetched when the page is empty (an offset past the end)
   defp import_page([], _images, _link, _token, _ctx), do: %{}
 
+  # Never over a file already stored, whatever the config says: an image
+  # changed in Figma is a new file next to the old one (`Intake.context/2`)
   defp import_page(page, images, link, token, %{actor: actor, folder: folder}) do
-    {cfg, config_target} = Uploads.resolve_image_config(nil)
-    root = FolderBrowser.upload_root(config_target)
-    absolute = FolderBrowser.absolute_folder(folder, root)
-
     with {:ok, urls} <- Figma.image_urls(token, link.file_key) do
-      folder_id = FolderBrowser.folder_id_for(absolute, root, actor, Image)
-      # Never over a file already stored, whatever the config says: an image
-      # changed in Figma is a new file next to the old one
-      cfg = cfg |> Map.put(:upload_path, absolute) |> Map.put(:overwrite, false)
-      ctx = %{cfg: cfg, config_target: config_target, folder_id: folder_id, actor: actor}
-      import_all(page, urls, images, ctx)
+      import_all(page, urls, images, Intake.context(actor, folder))
     end
   end
 
@@ -151,7 +135,7 @@ defmodule Brando.Figma.Import do
     dir = Path.join(System.tmp_dir!(), "brando-figma-" <> Base.url_encode64(:crypto.strong_rand_bytes(9)))
     File.mkdir_p!(dir)
     firsts = Map.new(Enum.reverse(images), &{key(&1), &1})
-    limit = size_limit(ctx.cfg)
+    limit = Intake.size_limit(ctx.cfg)
 
     try do
       keys
@@ -174,59 +158,32 @@ defmodule Brando.Figma.Import do
     end
   end
 
-  defp size_limit(cfg) do
-    case Map.get(cfg, :size_limit) do
-      limit when is_integer(limit) and limit > 0 -> limit
-      _ -> Uploads.max_file_size()
-    end
-  end
-
   defp download(nil, _path, _limit), do: {:error, "Figma gave no download for this image."}
 
   defp download(url, path, limit) do
     case Keyword.get(Brando.config(Figma) || [], :downloader) do
       {module, function} -> apply(module, function, [url, path, limit])
-      nil -> guarded_download(url, path, limit)
+      nil -> Intake.download(url, path, limit, timeout: @download_timeout, who: "Figma's download")
     end
   end
 
-  defp guarded_download(url, path, limit) do
-    with {:ok, target} <- URLGuard.resolve(url),
-         %{status: 200, error: nil} <-
-           Client.request(target, "GET", [{"user-agent", "Brando"}], "",
-             into: path,
-             body_limit: limit,
-             timeout: @download_timeout
-           ) do
-      {:ok, path}
-    else
-      %{error: :body_too_large} -> {:error, "The image is larger than #{div(limit, 1_000_000)} MB."}
-      %{error: :timeout} -> {:error, "The download took too long."}
-      %{error: :unwritable} -> {:error, "The download could not be written to a temporary file."}
-      %{status: 200} -> {:error, "The download was cut off. Try again."}
-      %{status: status} when is_integer(status) -> {:error, "Figma's download answered #{status}."}
-      _ -> {:error, "The image could not be downloaded."}
-    end
-  end
-
-  # One store of a file for the config at a time (`Images.with_file_lock/3`):
-  # two imports of the same picture at once find each other's image. Its
-  # sizes are queued once the row is committed. A turned copy is a file of
-  # its own, so it is reused only for the same picture turned the same way.
+  # Stored or reused by `Intake.store/5`. A turned copy is a file of its
+  # own, so it is reused only for the same picture turned the same way.
   # An animated image is stored as it is, upright: turning it would keep
   # only its first frame.
   defp store(path, {_ref, turn}, first, ctx) do
     with {:ok, head} <- ContentType.head(path),
          {:ok, type, ext} <- image_type(head),
          {:ok, path, turned} <- turn(path, turn, ext) do
-      hash = hash(path)
       name = if turned == 0, do: first.name, else: "#{first.name} #{turned}"
       crop = if turned == turn, do: first[:crop], else: unturn(first[:crop], turn)
-      store = fn -> reuse_or_store(hash, path, filename(name, ext), type, crop, ctx) end
 
-      hash
-      |> Images.with_file_lock(ctx.config_target, store)
-      |> queue_sizes(ctx.actor)
+      # A new image is created with its focal point, under the permission to
+      # create it; an image the library has keeps its own: an editor may have set it
+      {on_new, attrs} = crop_focal(crop)
+
+      path
+      |> Intake.store(Intake.filename(name, ext, "figma"), type, ctx, on_new, attrs)
       |> upright(turned == turn)
     else
       {:error, message} when is_binary(message) -> {:error, message}
@@ -273,26 +230,10 @@ defmodule Brando.Figma.Import do
   defp write_options(ext) when ext in ["jpg", "webp"], do: [quality: 95]
   defp write_options(_ext), do: []
 
-  # An image the library has keeps its focal point: an editor may have set it
-  defp reuse_or_store(hash, path, filename, type, crop, ctx) do
-    case existing(hash, ctx) do
-      %Image{} = image -> {:reused, image}
-      nil -> path |> store_new(filename, type, ctx) |> put_focal(crop, ctx.actor)
-    end
-  end
+  defp crop_focal(crop) when is_map(crop),
+    do: {&{:stored, &1, :focal}, %{focal: Map.put(focal(crop), :mode, :position)}}
 
-  defp put_focal({:stored, image}, crop, actor) when is_map(crop) do
-    case Images.update_image(image, %{focal: Map.put(focal(crop), :mode, :position)}, actor) do
-      {:ok, image} ->
-        {:stored, image, :focal}
-
-      error ->
-        Logger.warning("[Brando.Figma] Could not set the focal point of image #{image.id}: #{inspect(error)}")
-        {:stored, image, :focal_failed}
-    end
-  end
-
-  defp put_focal(result, _crop, _actor), do: result
+  defp crop_focal(_crop), do: {&{:stored, &1}, %{}}
 
   # The focal point is rendered as CSS `object-position: x% y%`, which lines
   # up the point p% across the image with the point p% across the box: the
@@ -311,29 +252,6 @@ defmodule Brando.Figma.Import do
 
   defp percent(fraction), do: fraction |> Kernel.*(100) |> round() |> max(0) |> min(100)
 
-  # A queueing that fails leaves the image unprocessed; importing it again
-  # finds it and queues it then
-  defp queue_sizes({:stored, image, _focal} = result, actor) do
-    queue_sizes({:stored, image}, actor)
-    result
-  end
-
-  defp queue_sizes({:stored, image} = result, actor) do
-    case Images.Processing.queue_processing(image, actor, [], silent: true) do
-      {:ok, _job} -> :ok
-      error -> Logger.warning("[Brando.Figma] Could not queue image #{image.id}: #{inspect(error)}")
-    end
-
-    result
-  end
-
-  defp queue_sizes({:reused, image} = result, actor) do
-    Images.ensure_processing_queued(image, actor)
-    result
-  end
-
-  defp queue_sizes(result, _actor), do: result
-
   defp image_type(head) do
     case ContentType.image(head) do
       "image/jpeg" -> {:ok, "image/jpeg", "jpg"}
@@ -342,46 +260,6 @@ defmodule Brando.Figma.Import do
       "image/webp" -> {:ok, "image/webp", "webp"}
       _ -> :error
     end
-  end
-
-  defp store_new(path, filename, type, ctx) do
-    meta = %{path: path, config_target: ctx.config_target, folder_id: ctx.folder_id}
-    entry = %{client_name: filename, client_type: type, client_size: File.stat!(path).size}
-
-    case Uploads.store_upload(meta, entry, ctx.cfg, ctx.actor) do
-      {:ok, %Image{} = image} -> {:stored, image}
-      {:error, message} -> {:error, message}
-    end
-  end
-
-  defp existing(hash, ctx) do
-    query =
-      from(i in Image,
-        where: i.content_hash == ^hash and i.config_target == ^ctx.config_target and is_nil(i.deleted_at),
-        order_by: [asc: i.id],
-        limit: 1
-      )
-
-    query |> Catalog.scoped_query(Image, ctx.actor, :read) |> Brando.Repo.one()
-  end
-
-  defp hash(path) do
-    path
-    |> File.stream!(1_048_576)
-    |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
-    |> :crypto.hash_final()
-    |> Base.encode16(case: :lower)
-  end
-
-  # Layer names such as "Rectangle 12" or "hero"; the store makes it unique
-  defp filename(name, ext) do
-    base =
-      (name || "")
-      |> Brando.Utils.slugify()
-      |> Kernel.||("")
-      |> String.slice(0, 80)
-
-    if(base == "", do: "figma", else: base) <> "." <> ext
   end
 
   # One entry per asset of the page, in the frame's order, with the layers

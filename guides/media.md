@@ -446,6 +446,21 @@ Media in a hidden folder is not listed in the image, file or video library,
 counted on the alt-text page, or offered by the image picker's browse-all.
 It is still public at its URL, like all media.
 
+## Images a connected tool adds
+
+A connected AI tool ([Connected AI tools](mcp.md#add-images)) can add images
+to the media library as its person: from a file it has, sent to a one-time
+upload URL, from a public `https` address, or from a Figma frame. Each is
+stored as an editor's upload is, under the default image config (its types,
+size limit and pixel limit, sizes made in the background), in the library
+folder the tool names (`uploads` when it names none). An image the library
+already has, the same bytes for the same config, is reused instead, and keeps
+its focal point and texts. A new one can get its focal point, title and alt
+text from the tool, the focal point copied from another image if need be.
+The person needs permission to create images. The images are in the library
+as soon as the tool adds them, whether or not a proposal using them is
+applied.
+
 ## Tidy a folder that has filled up
 
 Block media all upload to the default config's folder (`images/site/default`,

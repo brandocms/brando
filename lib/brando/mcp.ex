@@ -59,6 +59,8 @@ defmodule Brando.MCP do
   alias Brando.Tenant
   alias Brando.Users.User
 
+  require Logger
+
   @path "/mcp"
   @scope "content"
 
@@ -419,14 +421,24 @@ defmodule Brando.MCP do
     length(grants)
   end
 
+  # A sweep that fails (an unusable `upload_dir`) does not keep the tokens
+  # from being pruned
+  defp sweep_uploads do
+    Brando.MCP.Uploads.sweep()
+  rescue
+    error -> Logger.error("[Brando.MCP] Could not sweep the pending uploads: " <> Exception.message(error))
+  end
+
   @doc """
   Removes what no request can use any more: the tokens of revoked or
   expired connections and expired tokens, authorization codes past their
-  minute. Run nightly by `Brando.Worker.ActivityPurger`.
-  Returns how many rows went.
+  minute, and uploads not finished in time (`Brando.MCP.Uploads.sweep/0`).
+  Run nightly by `Brando.Worker.ActivityPurger`. Returns how many rows went.
   """
   @spec prune() :: non_neg_integer()
   def prune do
+    sweep_uploads()
+
     if installed?() do
       now = DateTime.utc_now()
       made_after = DateTime.add(now, -grant_days() * 86_400, :second)

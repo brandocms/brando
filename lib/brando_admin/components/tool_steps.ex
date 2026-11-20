@@ -206,6 +206,22 @@ defmodule BrandoAdmin.Components.ToolSteps do
          )
 
   defp step_text("import_images", _, _), do: gettext("Imported images from a Figma frame")
+
+  # The media tools of a connected tool (`Brando.MCP.Media`)
+  defp step_text("prepare_upload", %{"filename" => filename}, _) when is_binary(filename),
+    do: gettext("Prepared to upload “%{filename}”", filename: term(filename))
+
+  defp step_text("prepare_upload", _, _), do: gettext("Prepared an upload")
+
+  defp step_text("finish_upload", _, %{"reused" => true}),
+    do: gettext("Uploaded an image the media library already had")
+
+  defp step_text("finish_upload", _, _), do: gettext("Uploaded an image to the media library")
+
+  defp step_text("import_url", _, %{"reused" => true}),
+    do: gettext("Imported an image the media library already had")
+
+  defp step_text("import_url", _, _), do: gettext("Imported an image from an address")
   defp step_text(_, _, _), do: gettext("Looked at the site's content")
 
   defp content_type_plural(name) do

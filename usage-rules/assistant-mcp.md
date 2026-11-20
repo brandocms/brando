@@ -160,6 +160,11 @@ Guide: [mcp.md](../guides/mcp.md)
    Without it, the MCP endpoint applies the same limit from the same header
    itself, before it looks at the token, but after the parser has run.
 
+   The plug also refuses a PUT to an upload URL (below) sent as JSON or a
+   form (415), so the parser never reads it. An upload's bytes pass the plug
+   and the parser untouched; the upload URL itself reads them and holds them
+   to the image config's size limit.
+
 2. Make sure the endpoint's URL (`config :my_app, MyAppWeb.Endpoint, url:
    […]`) is the public `https` address. The MCP URL, the OAuth issuer and the
    token audience are all made from it, and production refuses to turn the
@@ -208,7 +213,12 @@ config :brando, Brando.MCP,
   token_requests_per_minute: 30,  # per address, at the token and revocation endpoints
   authorize_per_minute: 30,       # consent screen checks per person
   max_request_bytes: 512_000,
-  allowed_origins: []             # browser origins allowed besides the site's own
+  allowed_origins: [],            # browser origins allowed besides the site's own
+  upload_dir: nil,                # uploads wait in a directory Brando makes here; the system's temporary directory by default
+  upload_url_minutes: 10,         # an upload URL's life
+  upload_transfer_minutes: 10,    # how long one PUT may take
+  upload_keep_minutes: 60,        # an upload must be finished within this, from preparing it
+  upload_max_pending: 10          # uploads waiting per connection
 ```
 
 Rate limits count per node, like the sign-in throttle (`Brando.RateLimit`).

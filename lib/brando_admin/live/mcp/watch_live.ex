@@ -376,7 +376,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
   end
 
   # A call's details without what it named: the words searched for, the
-  # entry's title, the frame and the folder
+  # entry's title, the frame, the file name and the folder
   defp unnamed(details) do
     input = details["input"] || %{}
 
@@ -386,7 +386,7 @@ defmodule BrandoAdmin.MCP.WatchLive do
         else: input
 
     details
-    |> Map.put("input", Map.delete(input, "name"))
+    |> Map.put("input", Map.drop(input, ["name", "filename"]))
     |> Map.put("output", Map.drop(details["output"] || %{}, ["title", "frame"]))
     |> Map.delete("folder")
   end

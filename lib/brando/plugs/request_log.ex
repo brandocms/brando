@@ -3,7 +3,8 @@ defmodule Brando.Plug.RequestLog do
   Keeps the secret tokens some of Brando's paths carry out of the request
   log: a shared preview's key (`/__p__/…`), a static site preview's token
   (`/__ssg_preview__/…`), a password reset link, a content transfer
-  download and a shared assistant conversation. Anyone who reads the log
+  download, a shared assistant conversation and an MCP upload URL
+  (`/mcp/…/uploads/<id>/<secret>`). Anyone who reads the log
   could otherwise open them.
 
   Phoenix logs each request's method and path when the endpoint's
@@ -16,15 +17,25 @@ defmodule Brando.Plug.RequestLog do
         log: {Brando.Plug.RequestLog, :level, []}
 
   `mix brando.install` writes this. The parameters Phoenix logs for the
-  matched route are filtered by `config :phoenix, :filter_parameters`.
+  matched route are filtered by `config :phoenix, :filter_parameters`; an
+  MCP upload URL's route logs none (`Brando.Router.mcp_routes/0`).
   """
   require Logger
 
   @filtered "[FILTERED]"
 
   # A path whose segments start with (or, below the admin's path, contain)
-  # one of these has a secret token in the segment after it.
-  @at_root [["__p__"], ["__ssg_preview__"]]
+  # one of these has a secret token in the segment after it. `:any` is any
+  # one segment: an MCP upload URL's id, or its site and environment.
+  # The first that matches counts: an upload URL at a site environment comes
+  # before the plain one, since a site may be keyed `uploads`. Segments after
+  # the token change nothing: `curl -T photo.jpg <url>/` adds the file's name.
+  @at_root [
+    ["__p__"],
+    ["__ssg_preview__"],
+    ["mcp", :any, :any, "uploads", :any],
+    ["mcp", "uploads", :any]
+  ]
   @anywhere [["reset-password"], ["content-transfer", "download"], ["assistant", "shared"]]
 
   @doc """
@@ -77,6 +88,7 @@ defmodule Brando.Plug.RequestLog do
   end
 
   defp after_marker([segment | rest], [segment | marker], index), do: after_marker(rest, marker, index + 1)
+  defp after_marker([_segment | rest], [:any | marker], index), do: after_marker(rest, marker, index + 1)
   defp after_marker([_token | _rest], [], index), do: index
   defp after_marker(_decoded, _marker, _index), do: nil
 end

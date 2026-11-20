@@ -60,6 +60,11 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    Without it, the MCP endpoint applies the same limit from the same header
    itself, before it looks at the token, but after the parser has run.
 
+   The plug also refuses a PUT to an upload URL (below) sent as JSON or a
+   form (415), so the parser never reads it. An upload's bytes pass the plug
+   and the parser untouched; the upload URL itself reads them and holds them
+   to the image config's size limit.
+
 2. Make sure the endpoint's URL (`config :my_app, MyAppWeb.Endpoint, url:
    […]`) is the public `https` address. The MCP URL, the OAuth issuer and the
    token audience are all made from it, and production refuses to turn the
@@ -178,8 +183,10 @@ creates or changes has a page preview, `preview_url`: the review opened on
 the first such entry's page (`?preview=<entry key>`), which is the link to
 give the person.
 
-With a Figma token (below), two more: `brando_figma_read_frame` and
-`brando_figma_import_images`.
+With them, three tools that add images to the media library (below):
+`brando_media_prepare_upload`, `brando_media_finish_upload` and
+`brando_media_import_url`. With a Figma token, two more:
+`brando_figma_read_frame` and `brando_figma_import_images`.
 
 ### The site's guidance
 
@@ -219,8 +226,8 @@ Each connection has a live page in the admin,
 on the site while it works: each call as it starts and as it ends, with what
 it was about ("Searched for “harbour” in Pages", "Read the Figma frame
 “Home”"), whether it worked and the error if not; the images
-`brando_figma_import_images` adds or reuses, with their thumbnails and
-library folder; and each proposal `prepare_proposal` stores, with its
+an upload, an import from an address or `brando_figma_import_images` adds or
+reuses, with their thumbnails and library folder; and each proposal `prepare_proposal` stores, with its
 summary, counts, problems and links to its review and page preview. It opens
 on the connection's calls of the last hour (at most 50) from Activity, then
 follows the new ones; it changes nothing, and cannot steer the tool.
@@ -238,8 +245,8 @@ says so the moment it expires.
 
 The person sees everything on it. Someone who manages connected tools sees
 another person's calls as Activity shows them: each call's line without
-what it named (an entry's title, the words searched for, the Figma frame
-and the library folder), only the images they may read, and a proposal's
+what it named (an entry's title, the words searched for, the Figma frame,
+an upload's file name and the library folder), only the images they may read, and a proposal's
 summary and problems only when they may read every entry it changes;
 otherwise just its version, state and counts, without the review links,
 which only the person opens.
@@ -259,8 +266,99 @@ To keep the page useful, Activity keeps a short summary of each call beside
 it: the few arguments its line names (a search's words, a content type, a
 module), cut to 120 characters, the part of the result that names its
 subject (an entry's title, a frame's name, a proposal's version), the error
-cut to 300 characters, the ids of the images an import added or reused and
-their folder, and the proposal's id. Never a whole argument or result.
+cut to 300 characters, the ids of the images an import or upload added or
+reused and their folder, and the proposal's id. Never a whole argument or
+result: not an upload URL, and not the address an image was imported from.
+
+## Add images
+
+A tool can add an image to the media library, from a file it has or from a
+public address, and use it in a proposal: a better copy of a photo, an image
+the person hands it, or one on another website.
+
+- `brando_media_prepare_upload` takes `kind` (`"image"`; files and videos
+  are refused for now, with a message that says so), the file's `filename`
+  and optionally a library `folder` (a path such as
+  `products/2026`, as `brando_content_find_media_folders` gives it, or a new
+  one; `uploads` without it). It answers with an `upload_url`, an
+  `upload_id`, when the URL expires, the most bytes it takes and the image
+  types the site takes.
+- The tool sends the file's bytes to the URL with a PUT:
+  `curl -T photo.jpg '<upload_url>'`. The URL is the only credential that
+  needs, and it works once: a second PUT, even after a failed one, is
+  refused, and the tool prepares a new upload. `Brando.Plug.RequestLog`
+  logs it with the secret filtered out, and its route logs no parameters
+  (Phoenix's debug line would show the path's segments).
+- `brando_media_finish_upload` takes the `upload_id` and stores the image
+  as an editor's upload is stored (`Brando.Uploads.store_upload/4`), under
+  the default image config: its types, size limit and pixel limit, its sizes
+  made in the background. It answers with the image's asset,
+  `{"kind": "image", "id": N}`, for `prepare_proposal`.
+- `brando_media_import_url` takes an `https` `url`, and optionally a
+  `filename` (the last part of the address's path without it) and a
+  `folder`, downloads the image and stores it the same way, with the same
+  answer.
+
+Both store an image the library already has, the same bytes for the same
+config, only once: the answer says `"reused": true` and gives the image the
+library has. The type comes from the file's bytes, not from its name or the
+request's `Content-Type`, and names the stored file's extension. A new
+`folder` is made when a new image is about to be stored in it: not for an
+address or download that is refused, nor for an image the library already
+has. An image the store itself refuses (over the pixel limit, an SVG it
+does not take) can leave the folder, empty.
+
+`brando_media_finish_upload` and `brando_media_import_url` also take:
+
+- `focal`, the image's focal point, either as `Brando.Images.Focal` stores
+  it, `{"x": 0–100, "y": 0–100, "mode": "center" | "position"}` (percent
+  from the top left; without `mode`, `center`), or
+  `{"from": {"kind": "image", "id": N}}`, which copies image N's focal
+  point. A better copy of the same photo keeps its framing that way.
+- `title` and `alt`, the image's caption and alt text, in the site's
+  default language.
+
+They are checked before anything is stored, and set on a new image; one the
+library already had keeps its own, an editor may have set them. The answer
+lists what was `applied` and `not_applied`.
+
+The images are added when the tool adds them, before anyone applies a
+proposal, and stay in the library if the proposal is discarded. Adding them
+needs permission to create images, checked when the upload is prepared,
+again when its bytes arrive (with the connection, which must still be good),
+and again when it is finished. Every call shows on the connection's live
+page and in Activity with the image it added or reused.
+
+An upload URL is bound to the connection that prepared it and to its site
+environment: another connection, even the same person's, cannot finish the
+upload, and the URL answers only at the endpoint it was made for. It expires
+10 minutes after it is prepared; the bytes must have all arrived 10 minutes
+after the PUT starts, and the upload must be finished within the hour.
+A connection has at most 10 uploads waiting at once; one whose bytes were
+refused, whose URL expired with nothing sent, or whose PUT stopped without
+an answer and is past its 10 minutes, does not count, and finishing it says
+it failed. A request whose
+`Content-Length` is over the image config's size limit is refused before a
+byte is read, and one sent without a length is cut off the moment it passes
+the limit; one whose first bytes are not an image type the config takes is
+cut off there.
+
+Uploads wait in the application's own directory,
+`brando-mcp-uploads-<otp_app>`, which Brando makes in the system's temporary
+directory, or in `upload_dir` (below) when it is set, readable by the server
+only, until they are finished. The directory around it is left as it is, and
+a directory of that name Brando cannot make its own (a link, or another
+user's) is refused: nothing in it is listed, read, written or removed, by
+the nightly purge either, and the log says once why every upload is refused.
+One not finished in time is removed when the connection's next
+upload is prepared and by the nightly purge. With more than one server
+node, set `upload_dir` to a directory every node shares.
+
+An import from an address goes through the webhooks' address guard, as the
+Figma import does: `https` only, public addresses only (checked on every
+address the host resolves to, and connected to the address checked), no user
+name or password in the address, no redirects, at most the image config's
+size limit, within a minute.
 
 ## Build from Figma
 
@@ -446,7 +544,12 @@ config :brando, Brando.MCP,
   token_requests_per_minute: 30,  # per address, at the token and revocation endpoints
   authorize_per_minute: 30,       # consent screen checks per person
   max_request_bytes: 512_000,
-  allowed_origins: []             # browser origins allowed besides the site's own
+  allowed_origins: [],            # browser origins allowed besides the site's own
+  upload_dir: nil,                # uploads wait in a directory Brando makes here; the system's temporary directory by default
+  upload_url_minutes: 10,         # an upload URL's life
+  upload_transfer_minutes: 10,    # how long one PUT may take
+  upload_keep_minutes: 60,        # an upload must be finished within this, from preparing it
+  upload_max_pending: 10          # uploads waiting per connection
 ```
 
 Rate limits count per node, like the sign-in throttle (`Brando.RateLimit`).
@@ -540,12 +643,12 @@ What the endpoint does about each requirement in
 4. **Read and propose only.** A fixed list of the registry's tools, none of
    which approves, applies or deletes; `prepare_proposal` stores a proposal
    that only a person's click in the admin applies (the Assistant's version
-   check and transaction). The one exception is
-   `brando_figma_import_images`, which adds images to the media library
-   before a proposal is applied, as an upload by the person would: only for
-   someone who may upload images, into the frame's own folder, checked like
-   an upload (type, contents, size, pixels), at most eight a call, and never
-   replacing or deleting an image.
+   check and transaction). The exceptions are
+   `brando_figma_import_images`, `brando_media_finish_upload` and
+   `brando_media_import_url`, which add images to the media library before
+   a proposal is applied, as an upload by the person would: only for
+   someone who may create images, checked like an upload (type, contents,
+   size, pixels), and never replacing or deleting an image.
 5. **Scoped per site and environment.** The endpoint URL names the site
    environment; it is the token's audience, and every token, code and
    connection records its site and environment. A token is looked up only
@@ -567,7 +670,8 @@ What the endpoint does about each requirement in
    gets 400, one without a `Content-Length` 411, and one over 512 KB 413, read from the header before the
    token is looked at (`Brando.MCP.BodyLimit` refuses it before the
    endpoint's parser too); results are bounded as in the Assistant. Tokens are read from the
-   `Authorization` header only, never the query string.
+   `Authorization` header only, never the query string. An upload URL is
+   the one place a credential is in a URL (below).
 9. **Security review.** This section, and the tests for the flow, token
    scope, revocation and cross-tenant access in `test/brando/mcp/`.
 
@@ -615,6 +719,37 @@ And the attacks the review asked about:
   seconds while the first answer's refresh token is unused, when the same
   answer is returned (a client refreshing twice at once). A reused code
   revokes the connection it made.
+- **A leaked upload URL.** It carries a 256-bit random secret, of which
+  only the SHA-256 is kept and which is compared in constant time; a wrong
+  one answers as an unknown upload. It takes one PUT within 10 minutes, of
+  at most the image config's size limit, of an image type the config
+  takes, while its connection is good and its person may create images.
+  Whoever holds it can at most put one image in place of the tool's: only
+  the connection that prepared it can finish the upload, and the image is
+  then in the library as any upload is, for a proposal a person reviews.
+  The URL is never shown on the live page or in Activity, and Brando's own
+  log has its secret filtered out; a proxy in front of the application logs
+  what it is set to log.
+- **Another connection.** An upload is found only for the connection that
+  prepared it, at the site environment it was prepared for. Another
+  connection's `brando_media_finish_upload` gets the answer for an upload
+  that does not exist.
+- **Oversized, unsized or slow bodies.** A declared length over the limit is
+  refused before reading; the bytes are counted as they arrive and the PUT
+  is cut off past the limit, when 64 KB take longer than 15 seconds to
+  arrive, or 10 minutes after it started. JSON and form bodies are refused
+  before the endpoint's parser reads them (with `Brando.MCP.BodyLimit`).
+  What was written is removed, also when the client goes away mid-upload;
+  when the request's process dies without a word (an HTTP/2 stream the
+  peer closed, a node going down), the upload counts as failed once its
+  10 minutes are up, and its bytes go with it when it is finished or swept.
+- **Mislabelled files.** The type is read from the first bytes, whatever the
+  name or `Content-Type` say, and the store checks it again with the
+  config's types, the pixel limit and an SVG's contents.
+- **Fetching an address (SSRF).** `brando_media_import_url` fetches only
+  public `https` addresses through the webhooks' address guard, connects to
+  the address it checked, follows no redirect and reads at most the size
+  limit, so it cannot reach the server's own network or cloud metadata.
 - **Revocation latency.** None: there is no token cache. Every request reads
   the token, the connection, the person, two-factor authentication, the
   permission and the switch from the database.

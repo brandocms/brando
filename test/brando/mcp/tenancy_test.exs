@@ -118,6 +118,48 @@ defmodule Brando.MCP.TenancyTest do
       assert {:error, {:refused, :permission, _}} = OAuth.validate(authorize_params(acme, challenge), admin)
     end
 
+    # An upload URL and its upload belong to the site environment it was
+    # prepared at, though the endpoint is on at the other too
+    test "an upload is neither sent nor finished at another environment's path",
+         %{user: user, tenants: [acme, staging, _other]} do
+      dir = Path.join(System.tmp_dir!(), "brando-mcp-tenancy-#{System.unique_integer([:positive])}")
+      on_exit(fn -> File.rm_rf(dir) end)
+      put_test_env(Brando.MCP, Keyword.put(Brando.MCP.config(), :upload_dir, dir))
+
+      token = connect_directly(user, acme)["access_token"]
+      staging_token = connect_directly(user, staging)["access_token"]
+      args = %{"kind" => "image", "filename" => "a.jpg"}
+
+      %{"result" => %{"structuredContent" => %{"upload_id" => id, "upload_url" => url}}} =
+        acme
+        |> rpc(token, "tools/call", %{"name" => "brando_media_prepare_upload", "arguments" => args})
+        |> json_response(200)
+
+      "/mcp/acme/production" <> rest = URI.parse(url).path
+      jpg = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
+
+      put = fn path ->
+        conn = %{Plug.Test.conn(:put, path, jpg) | host: BrandoAdmin.AdminHost.endpoint_host()}
+        Brando.endpoint().call(conn, Brando.endpoint().init([]))
+      end
+
+      assert put.(staging.path <> rest).status == 404
+      assert put.(URI.parse(url).path).status == 200
+
+      # Not by the person's connection there, nor by this connection's grant there
+      assert %{"result" => %{"isError" => true}} =
+               staging
+               |> rpc(staging_token, "tools/call", %{
+                 "name" => "brando_media_finish_upload",
+                 "arguments" => %{"upload_id" => id}
+               })
+               |> json_response(200)
+
+      grant = Repo.get_by!(MCP.Grant, resource: MCP.resource(acme))
+      assert {:error, "There is no such upload" <> _} = MCP.Uploads.take(id, grant.id, staging)
+      assert {:ok, %{path: _}} = MCP.Uploads.take(id, grant.id, acme)
+    end
+
     test "resources are matched exactly", %{tenants: [acme | _]} do
       base = MCP.base_url()
       assert {:ok, ^acme} = MCP.tenant_for_resource(base <> "/mcp/acme/production")

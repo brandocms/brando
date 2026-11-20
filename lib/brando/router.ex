@@ -114,6 +114,10 @@ defmodule Brando.Router do
         match :*, "/.well-known/oauth-authorization-server/mcp", Brando.MCP.HTTP, :server_metadata
         match :*, "/.well-known/oauth-authorization-server/mcp/*tenant", Brando.MCP.HTTP, :server_metadata
         match :*, "/mcp", Brando.MCP.HTTP, :endpoint
+        # An upload URL's secret is a path segment, so its parameters are not
+        # logged (Phoenix filters them by name only)
+        match :*, "/mcp/uploads/:id/:secret", Brando.MCP.HTTP, :upload, log: false
+        match :*, "/mcp/:site/:environment/uploads/:id/:secret", Brando.MCP.HTTP, :upload, log: false
         match :*, "/mcp/*path", Brando.MCP.HTTP, :dispatch
       end
 
