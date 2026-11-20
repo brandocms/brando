@@ -218,6 +218,38 @@ defmodule Brando.SoftDelete.Query do
     end)
   end
 
+  @doc """
+  Deletes the entries `ids` of `schema` that are in the trash for good, now,
+  in the caller's transaction: what the scheduled purge does for an expired
+  row (revisions, notes, translation membership through
+  `Brando.Translations.entries_deleted/2`, the context's `before_purge/2`), and
+  the activity log records `actor` deleting each one. Rows not in the trash
+  are left.
+
+  Returns `:ok`, or `{:error, {:referenced, constraint}}` when something still
+  refers to one of them: the purge is rolled back to a savepoint, nothing is
+  deleted, and the transaction goes on. Run it inside `Repo.transaction/1`.
+  """
+  def purge_entries(schema, ids, actor) do
+    entries =
+      from(t in schema, where: t.id in ^ids and not is_nil(t.deleted_at), lock: "FOR UPDATE")
+      |> Repo.all()
+
+    trashed = Enum.map(entries, & &1.id)
+
+    case in_savepoint(fn -> if trashed != [], do: purge_rows(schema, trashed) end) do
+      :ok ->
+        for entry <- entries, Brando.Activity.logged?(schema) do
+          Brando.Activity.deleted(entry, actor, false, %{"purged" => true})
+        end
+
+        :ok
+
+      {:referenced, constraint} ->
+        {:error, {:referenced, constraint}}
+    end
+  end
+
   # The ids of the rows deleted
   defp purge_ids(schema, ids) do
     case in_savepoint(fn -> purge_rows(schema, ids) end) do
