@@ -335,6 +335,13 @@ msgid_plural "%{count} images could not be imported."
 msgstr[0] "%{count} bilde kunne ikke importeres."
 msgstr[1] "%{count} bilder kunne ikke importeres."
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image could not be recreated:"
+msgid_plural "%{count} images could not be recreated:"
+msgstr[0] "%{count} bilde kunne ikke lages på nytt:"
+msgstr[1] "%{count} bilder kunne ikke lages på nytt:"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
@@ -350,7 +357,7 @@ msgid_plural "%{count} images in this folder are used by entries. Each moves to 
 msgstr[0] "%{count} bilde i denne mappen brukes av en oppføring. Det flyttes til en mappe med oppføringens navn; selve filen blir liggende, så ingen adresser endres."
 msgstr[1] "%{count} bilder i denne mappen brukes av oppføringer. Hvert bilde flyttes til en mappe med oppføringens navn; selve filene blir liggende, så ingen adresser endres."
 
-#: lib/brando_admin/live/sites/utils_live.ex
+#: lib/brando/images/size_run.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} image recreated"
 msgid_plural "%{count} images recreated"
@@ -9334,6 +9341,7 @@ msgid "Image"
 msgstr "Bilde"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Image #%{id}"
 msgstr "Bilde #%{id}"
@@ -9418,6 +9426,11 @@ msgstr "Bildeprosessering feilet"
 #, elixir-autogen, elixir-format
 msgid "Image sizes"
 msgstr "Bildestørrelser"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "Image sizes recreated"
+msgstr "Bildestørrelsene er laget på nytt"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -12172,6 +12185,11 @@ msgstr "Ingen bilder i denne mappen"
 #, elixir-format, elixir-autogen
 msgid "No images in this view"
 msgstr "Ingen bilder i denne visningen"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "No images to recreate"
+msgstr "Ingen bilder å lage på nytt"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
@@ -15136,15 +15154,18 @@ msgstr "Lage størrelsene for endrede bilder på nytt?"
 msgid "Recreate the sizes of every image?"
 msgstr "Lage størrelsene for alle bilder på nytt?"
 
+#: lib/brando/images/size_run.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreating changed image sizes in the background."
-msgstr "Lager størrelser for endrede bilder på nytt i bakgrunnen."
+msgid "Recreating image sizes"
+msgstr "Lager bildestørrelser på nytt"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
-msgid "Recreating image sizes in the background."
-msgstr "Lager bildestørrelser på nytt i bakgrunnen."
+msgid "Recreating image sizes: %{count} image left"
+msgid_plural "Recreating image sizes: %{count} images left"
+msgstr[0] "Lager bildestørrelser på nytt: %{count} bilde igjen"
+msgstr[1] "Lager bildestørrelser på nytt: %{count} bilder igjen"
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -18246,6 +18267,11 @@ msgstr "Noen av oppføringene kunne ikke kopieres."
 #, elixir-autogen, elixir-format
 msgid "Some images could not be described"
 msgstr "Noen bilder kunne ikke beskrives"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "Some images could not be recreated"
+msgstr "Noen bilder kunne ikke lages på nytt"
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -23323,6 +23349,7 @@ msgid "and"
 msgstr "og"
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
+#: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "and %{count} more"
 msgstr "og %{count} til"

@@ -58,6 +58,17 @@ defmodule BrandoAdmin.Work do
   Starting a key that is still running with `total:` adds to its count, so a
   second batch joins the first.
 
+  Work that queues its steps in batches, not knowing how many there are until
+  the last batch, starts with `open: true`: it does not end when its counted
+  steps are in, which the first batch's could be before the next batch is
+  counted. Each batch joins the count with `start/4` and `total:`, and
+  `close/3` says there are no more: the work ends once its counted steps are
+  in, or at once when they already are (and when there were none).
+
+  A step can name what it was about (`item:` on `advance/3`, or on `track/4`
+  for a job): the work keeps the items of the steps that failed, in
+  `failed_items`, so the screen can name them.
+
   ## Messages
 
   Messages are shown as given, so translate them in the user's language. A
@@ -100,6 +111,8 @@ defmodule BrandoAdmin.Work do
     :started_at,
     :updated_at,
     status: :running,
+    open: false,
+    failed_items: [],
     done: 0,
     failed: 0,
     toast: :auto,
@@ -118,7 +131,9 @@ defmodule BrandoAdmin.Work do
           percent: number() | nil,
           done: non_neg_integer(),
           failed: non_neg_integer(),
-          total: pos_integer() | nil,
+          total: non_neg_integer() | nil,
+          open: boolean(),
+          failed_items: [term()],
           done_message: String.t() | nil,
           failed_message: String.t() | nil,
           toast: :auto | :always,
@@ -142,6 +157,8 @@ defmodule BrandoAdmin.Work do
     * `:percent` — how far it has come, 0–100
     * `:total` — the number of steps (see "Several jobs as one piece of work")
     * `:done`, `:failed` — the messages when the last step is in
+    * `:open` — `true` when more steps may be counted later: the work does
+      not end before `close/3` (see "Several jobs as one piece of work")
     * `:timeout` — how long without news before it is given up, in ms
     * `:toast` — `:always` to show a toast even where the page shows the
       work inline
@@ -152,12 +169,36 @@ defmodule BrandoAdmin.Work do
   def start(user, key, message, opts \\ []) do
     attrs =
       opts
-      |> Keyword.take([:percent, :total, :timeout, :toast])
+      |> Keyword.take([:percent, :total, :timeout, :toast, :open])
       |> Map.new()
       |> Map.merge(%{message: message, done_message: opts[:done], failed_message: opts[:failed]})
       |> put_scope(opts)
 
     report(user, key, :start, attrs)
+  end
+
+  @doc """
+  Says again what `start/4` started, for work that may have been lost: the
+  registry is in memory, so a node restarted halfway knows no work that
+  started before. Takes the options of `start/4`, with `:total` the count
+  so far, not added to it, `:counted`, the steps already in, and
+  `:failures` and `:failed_items`, how many of those failed and what they
+  were about.
+
+  Work that is not running starts, as given, with `:counted` steps done.
+  Running work keeps its state, its count and its steps: only a larger
+  `:total` replaces its own, so saying it again changes nothing.
+  """
+  @spec resume(user(), String.t(), String.t(), keyword()) :: :ok
+  def resume(user, key, message, opts \\ []) do
+    attrs =
+      opts
+      |> Keyword.take([:total, :timeout, :toast, :open, :failures, :failed_items])
+      |> Map.new()
+      |> Map.merge(%{message: message, done: opts[:counted], done_message: opts[:done], failed_message: opts[:failed]})
+      |> put_scope(opts)
+
+    report(user, key, :resume, attrs)
   end
 
   @doc """
@@ -180,10 +221,25 @@ defmodule BrandoAdmin.Work do
     report(user, key, :update, attrs)
   end
 
-  @doc "Counts one step of work started with `total:`, `:ok` or `:error`."
+  @doc """
+  Counts one step of work started with `total:`, `:ok` or `:error`. Takes
+  `:global`, and `:item`, what the step was about: a failed step's item is
+  kept in `failed_items`.
+  """
   @spec advance(user(), String.t(), :ok | :error, keyword()) :: :ok
   def advance(user, key, result \\ :ok, opts \\ []) when result in [:ok, :error] do
-    report(user, key, :advance, put_scope(%{result: result}, opts))
+    report(user, key, :advance, put_scope(%{result: result, item: opts[:item]}, opts))
+  end
+
+  @doc """
+  No more steps are counted for work started with `open: true`: it ends once
+  its counted steps are in, or now when they already are. `:done` and
+  `:failed` replace its messages for the end; takes `:global`.
+  """
+  @spec close(user(), String.t(), keyword()) :: :ok
+  def close(user, key, opts \\ []) do
+    attrs = put_scope(%{done_message: opts[:done], failed_message: opts[:failed]}, opts)
+    report(user, key, :close, attrs)
   end
 
   @doc "The work is done. Takes `:global`. Ends only running work."
@@ -208,6 +264,8 @@ defmodule BrandoAdmin.Work do
       Oban cancels or gives it up)
     * `:step` — `true` to count as a step of work started with `total:`
       instead (`advance/3`)
+    * `:item` — for a step, what it is about, kept when it fails (a
+      JSON value: it is stored with the job)
     * `:finish` — `false` for a job that hands its work on, or ends it
       itself: success reports nothing, and only a failure, cancellation or
       giving up ends the work
@@ -226,6 +284,7 @@ defmodule BrandoAdmin.Work do
             "key" => key,
             "prefix" => if(opts[:global], do: nil, else: Brando.Tenant.current_prefix()),
             "step" => Keyword.get(opts, :step, false),
+            "item" => opts[:item],
             "finish" => Keyword.get(opts, :finish, true),
             "queued" => opts[:queued],
             "running" => opts[:running],

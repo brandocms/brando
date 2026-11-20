@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Work.Oban do
 
   defp handle(_event, _meta, _job, _work), do: :ok
 
-  defp ended(%{"step" => true} = work, result), do: report(work, :advance, %{result: result})
+  defp ended(%{"step" => true} = work, result), do: report(work, :advance, %{result: result, item: work["item"]})
   defp ended(%{"finish" => false}, :ok), do: :ok
   defp ended(work, :ok), do: report(work, :finish, %{message: work["done"]})
   defp ended(work, :error), do: report(work, :fail, %{message: work["failed"]})

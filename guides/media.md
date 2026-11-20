@@ -139,8 +139,10 @@ config replaces `sizes` without its own `srcset`, the inherited default
 Changing size definitions does not regenerate existing images by itself. Each
 processed image records a fingerprint of the sizes and formats it was made
 with, and **Utilities → Image sizes** counts the images whose config has changed
-since; **Recreate changed images** reprocesses only those. Confirm the new size
-paths exist before rendering them. A requested size absent from `image.sizes`
+since; **Recreate changed images** reprocesses only those. The row counts the
+images as each one is recreated, names any that could not be, with a link to
+it, and keeps both buttons disabled until the last image is done, for every
+admin. Confirm the new size paths exist before rendering them. A requested size absent from `image.sizes`
 is a configuration/processing error, not a fallback image.
 
 ### Images made before fingerprints

@@ -1,0 +1,1 @@
+- Utilities → Image sizes counts a run's images as they are recreated, not when they are queued, names the images that could not be recreated, and keeps both buttons disabled until the last image is done, for every admin and after a reload.
