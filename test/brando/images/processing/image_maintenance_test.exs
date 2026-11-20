@@ -438,6 +438,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
         assert SizeRun.remaining() == 2
 
         assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        watch()
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2, failed: 0}}
@@ -474,6 +475,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
         assert %Work{total: 2} = work(user)
 
         assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        watch()
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2}}
@@ -516,11 +518,13 @@ defmodule Brando.Images.ImageMaintenanceTest do
 
         assert %{success: 1} = Oban.drain_queue(queue: :default)
 
+        # Without a watcher, the last image's report ends it
         assert %Work{status: :running, total: 3, done: 0, open: false, timeout: 1_800_000} = run = work(user)
         assert run.message
         assert run.failed_message
 
         assert %{success: 3} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        watch()
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 3, done: 3}}
@@ -538,6 +542,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
         assert %Work{status: :running, total: 2, done: 0} = work(user)
 
         assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        watch()
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2}}
@@ -558,30 +563,29 @@ defmodule Brando.Images.ImageMaintenanceTest do
 
     defp set_job(job, fields), do: Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: fields)
 
-    # The watcher's look comes up to seconds after the last image: the run
-    # is over when its walk and images are, and its watcher's late look
-    # leaves a run started since alone
-    test "a run whose images are done is over before its watcher looks", %{user: user} do
+    # The run goes on after its last image until its watcher has seen the
+    # pages that show its images rendered: no second run starts meanwhile
+    test "a run goes on until its watcher's last look, after its images", %{user: user} do
       Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
 
       Oban.Testing.with_testing_mode(:manual, fn ->
         walk_and_wait(user)
-        old_watcher = watcher()
         assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
-        assert_receive {:work, "image-sizes", :finished, %Work{}}
 
+        assert %Work{status: :running, total: 1, done: 1} = work(user)
+        assert SizeRun.running?()
+        assert {:error, :already_running} = Processing.recreate_sizes_for_images(user)
+
+        watch()
         refute SizeRun.running?()
-        assert {:ok, _} = Processing.recreate_sizes_for_images(user)
-        assert %Work{status: :running} = work(user)
-
-        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(old_watcher.args, "settle", true))
-        assert %Work{status: :running} = work(user)
       end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated"}}
     end
 
-    # The watcher reads one image left; that image's report ends the work
-    # before the watcher's resume reaches the registry
-    test "the watcher's late resume does not bring back a run that has ended", %{user: user} do
+    # The image's report after the watcher read it left: the work stays
+    # with the watcher, which ends it once
+    test "the last image's report does not end a run with a watcher", %{user: user} do
       Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
 
       Oban.Testing.with_testing_mode(:manual, fn ->
@@ -590,21 +594,19 @@ defmodule Brando.Images.ImageMaintenanceTest do
         watcher = watcher()
 
         # The watcher's read, while the job runs
-        assert SizeRun.remaining() == 1
-        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
-        assert_receive {:work, "image-sizes", :finished, %Work{}}
-
-        flush_work()
-
-        # Its resume, after the report
         set_job(job, state: "executing", attempted_at: DateTime.utc_now())
         assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher.args)
-        set_job(job, state: "completed")
-        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher.args, "settle", true))
-        BrandoAdmin.Work.Registry.sync()
+        set_job(job, state: "available")
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        assert %Work{status: :running, done: 1} = work(user)
+        refute_received {:work, "image-sizes", :finished, _}
+
+        watch()
       end)
 
-      refute_received {:work, "image-sizes", _, _}
+      assert_receive {:work, "image-sizes", :finished, %Work{}}
+      refute_received {:work, "image-sizes", :finished, _}
+      refute_received {:work, "image-sizes", :failed, _}
     end
 
     # The attempt queued its images and failed after: the images processed
@@ -642,6 +644,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
         assert %Work{total: 3, open: false, message: "Recreating image sizes"} = work(user)
 
         assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        watch()
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 3, done: 3, message: "3 images recreated"}}
@@ -664,6 +667,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
           assert %Work{status: :running, total: 2, done: 1, failed: 1, failed_items: [^failed_id]} = work(user)
 
           assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+          watch()
           failed_id
         end)
 
@@ -697,7 +701,6 @@ defmodule Brando.Images.ImageMaintenanceTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
         set_job(walk, state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600))
-        refute SizeRun.running?()
 
         assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher().args)
         assert Repo.get!(Oban.Job, walk.id).state == "available"
@@ -713,7 +716,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
         stale = DateTime.add(DateTime.utc_now(), -3600)
         set_job(walk, state: "executing", attempted_at: stale, attempt: walk.max_attempts)
 
-        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher().args, "settle", true))
+        watch()
         assert Repo.get!(Oban.Job, walk.id).state == "discarded"
         refute SizeRun.running?()
       end)

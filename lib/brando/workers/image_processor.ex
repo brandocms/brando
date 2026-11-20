@@ -72,8 +72,12 @@ defmodule Brando.Worker.ImageProcessor do
       end
 
     case result do
-      {:processed, image, config, user} ->
-        finish_processing(image, original, config, user, field_full_path)
+      {:processed, processed, config, user} ->
+        finish_processing(processed, original, config, user, field_full_path)
+        # The entries that show it render again when a render reads anything
+        # processing changed: held, within a size run, until its images are done
+        Images.Rerender.after_processing(image, processed, Images.SizeRun.render_options(job.meta))
+        broadcast_status(processed, field_full_path, :updated)
 
       {:not_updated, error} ->
         Images.discard_restored_original(image, original)
@@ -129,7 +133,6 @@ defmodule Brando.Worker.ImageProcessor do
 
     Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
     ProcessingStatus.broadcast(:image, image, :done)
-    broadcast_status(image, field_full_path, :updated)
   end
 
   # Images uploaded before Brando recorded upright dimensions have those of

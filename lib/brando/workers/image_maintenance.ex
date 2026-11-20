@@ -8,8 +8,9 @@ defmodule Brando.Worker.ImageMaintenance do
   #
   # The recreate tasks are a run of `Brando.Images.SizeRun`: each batch
   # queues its images and counts them in the run's work, and the last batch
-  # closes the run, which ends when the last image is processed. A job with
-  # "watch" in its arguments is the run's watcher (`SizeRun.watch/2`).
+  # gives the run's watcher the count. The run ends when the pages that show
+  # its images are rendered again. A job with "watch" in its arguments is the
+  # run's watcher (`SizeRun.watch/2`).
   #
   # "recreate_changed_sizes" first adopts the images processed before configs
   # were recorded whose files already match (`Brando.Images.Adoption`), and
@@ -157,7 +158,7 @@ defmodule Brando.Worker.ImageMaintenance do
   defp finish(_task, _args), do: :ok
 
   defp close_run(%{"user_id" => user_id} = args) do
-    SizeRun.close(job_user(user_id), args["queued"] || 0)
+    SizeRun.close(job_user(user_id), args["queued"] || 0, args["run"])
     :ok
   end
 
