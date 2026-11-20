@@ -17,12 +17,26 @@ msgstr ""
 msgid "%{content_type} #%{id}"
 msgstr "%{content_type} #%{id}"
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry you cannot see"
+msgid_plural "%{count} entries you cannot see"
+msgstr[0] "%{count} oppføring du ikke kan se"
+msgstr[1] "%{count} oppføringer du ikke kan se"
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
 msgstr[0] "%{count} element"
 msgstr[1] "%{count} elementer"
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "%{entries} and %{count} entry you cannot see"
+msgid_plural "%{entries} and %{count} entries you cannot see"
+msgstr[0] "%{entries} og %{count} oppføring du ikke kan se"
+msgstr[1] "%{entries} og %{count} oppføringer du ikke kan se"
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -48,6 +62,11 @@ msgstr "%{key} kan ikke lenke til denne innholdstypen."
 #, elixir-autogen, elixir-format
 msgid "%{key} has no option %{value}."
 msgstr "%{key} har ikke valget %{value}."
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "%{key} is an image ({kind: image, id}): only an image's file can be replaced so far."
+msgstr "%{key} er et bilde ({kind: image, id}): foreløpig kan bare et bildes fil erstattes."
 
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
@@ -194,6 +213,16 @@ msgstr "En uid kan bare inneholde bokstaver, sifre, - og _, og kan ikke slutte m
 msgid "After %{block}"
 msgstr "Etter %{block}"
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "An SVG can only be replaced with an SVG."
+msgstr "En SVG kan bare erstattes med en SVG."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "An SVG can only replace an SVG."
+msgstr "En SVG kan bare erstatte en SVG."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "An anchor starts with a letter and holds letters, digits, - and _."
@@ -203,6 +232,11 @@ msgstr "Et anker starter med en bokstav og inneholder bokstaver, sifre, - og _."
 #, elixir-autogen, elixir-format
 msgid "An entry has no earlier revision to go back to."
 msgstr "En oppføring har ingen tidligere revisjon å gå tilbake til."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "An image cannot be replaced with itself."
+msgstr "Et bilde kan ikke erstattes med seg selv."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -239,6 +273,11 @@ msgstr "Velg oppføringer blant blokkens valg (list_selection_options)."
 msgid "Content changed after this proposal was prepared. Review it again."
 msgstr "Innholdet er endret etter at forslaget ble laget. Se gjennom det på nytt."
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Could not queue the image's sizes: %{error}"
+msgstr "Kunne ikke sette bildets størrelser i kø: %{error}"
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Deactivated"
@@ -273,6 +312,41 @@ msgstr "Forventet et objekt."
 #, elixir-autogen, elixir-format
 msgid "File #%{id}"
 msgstr "Fil #%{id}"
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} has another file than when this proposal was prepared. Prepare it again."
+msgstr "Bilde %{id} har en annen fil enn da forslaget ble laget. Lag det på nytt."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is already used, and its record goes when its file replaces another image's. Swap the references to it instead (set_block_media, set_fields), or upload the file again as a new image."
+msgstr "Bilde %{id} er allerede i bruk, og oppføringen fjernes når filen erstatter et annet bildes fil. Bytt heller referansene til det (set_block_media, set_fields), eller last opp filen på nytt som et nytt bilde."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is in the trash."
+msgstr "Bilde %{id} ligger i papirkurven."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is replaced in another operation of this proposal too."
+msgstr "Bilde %{id} erstattes også i en annen operasjon i dette forslaget."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{id} is used in another replacement of this proposal too."
+msgstr "Bilde %{id} brukes også i en annen erstatning i dette forslaget."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{new} is the same file as image %{old}."
+msgstr "Bilde %{new} er samme fil som bilde %{old}."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Image %{old}'s field takes %{types}; the file of image %{new} is %{type}."
+msgstr "Feltet til bilde %{old} tar %{types}; filen til bilde %{new} er %{type}."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -364,6 +438,11 @@ msgstr "Plassering er \"append\", {before: uid}, {after: uid} eller {into: uid}.
 msgid "Published"
 msgstr "Publisert"
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "Replacing the file of image %{id} changes every entry that shows it, and you may not change %{entries}."
+msgstr "Å erstatte filen til bilde %{id} endrer alle oppføringer som viser det, og du har ikke lov til å endre %{entries}."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve every blocking problem before applying."
@@ -414,6 +493,16 @@ msgstr "Oppføringen det skal lenkes til, har ingen identifikator ennå."
 msgid "The entry to link to was not found."
 msgstr "Fant ikke oppføringen det skal lenkes til."
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The file of image %{id} could not be read."
+msgstr "Filen til bilde %{id} kunne ikke leses."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The file of image %{new} is larger than image %{old}'s field takes (%{limit})."
+msgstr "Filen til bilde %{new} er større enn feltet til bilde %{old} tar (%{limit})."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The module has no media slot %{name}."
@@ -458,6 +547,11 @@ msgstr "Uid-en `%{uid}` brukes allerede av en annen blokk i dette feltet."
 #, elixir-autogen, elixir-format
 msgid "The uid `%{uid}` is already used by another block in this proposal."
 msgstr "Uid-en `%{uid}` brukes allerede av en annen blokk i dette forslaget."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "There is no image %{id} you may read in the media library."
+msgstr "Det finnes ikke noe bilde %{id} du kan lese i mediebiblioteket."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -544,6 +638,11 @@ msgstr "Denne modulen er ikke tilgjengelig i dette blokkfeltet."
 msgid "This module is not available in this slot."
 msgstr "Denne modulen er ikke tilgjengelig på denne plassen."
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal also places image %{id}, whose record goes when its file replaces image %{old}. Place image %{old} instead, or swap the references instead of replacing the file."
+msgstr "Dette forslaget setter også inn bilde %{id}, som fjernes når filen erstatter bilde %{old}. Sett inn bilde %{old} i stedet, eller bytt referansene i stedet for å erstatte filen."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal belongs to another user, site or environment."
@@ -569,6 +668,11 @@ msgstr "Dette forslaget finnes ikke lenger."
 #, elixir-autogen, elixir-format
 msgid "This proposal is no longer under review."
 msgstr "Dette forslaget er ikke lenger til gjennomgang."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal replaced an image's file, and a replaced file cannot be undone."
+msgstr "Dette forslaget erstattet filen til et bilde, og en erstattet fil kan ikke angres."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -630,6 +734,13 @@ msgstr "Du har ikke tilgang til å publisere denne oppføringen."
 msgid "You do not have permission to save this entry."
 msgstr "Du har ikke tilgang til å lagre denne oppføringen."
 
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "You may not change image %{ids}."
+msgid_plural "You may not change images %{ids}."
+msgstr[0] "Du har ikke lov til å endre bilde %{ids}."
+msgstr[1] "Du har ikke lov til å endre bildene %{ids}."
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "a block"
@@ -649,6 +760,11 @@ msgstr "from tar {\"block_uid\": UID, \"ref\": NAME}."
 #, elixir-autogen, elixir-format
 msgid "identifiers is a list of identifier ids."
 msgstr "identifiers er en liste med identifikator-id-er."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "no images"
+msgstr "ingen bilder"
 
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
