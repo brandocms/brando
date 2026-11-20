@@ -1517,7 +1517,7 @@ defmodule BrandoAdmin.Components.Form do
       %{assigns: %{translation: %{} = state}} = socket -> assign(socket, :translation, %{state | stale?: stale?})
       socket -> socket
     end)
-    |> TranslationFill.refresh()
+    |> TranslationFill.refresh(saved: true)
     |> schedule_translation_apply()
   end
 

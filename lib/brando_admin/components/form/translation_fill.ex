@@ -156,7 +156,10 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   # The top-level inputs and subforms of the form's fieldsets
   defp top_inputs(%{tabs: tabs}) when is_list(tabs) do
-    for %{fields: fieldsets} <- tabs, %{fields: fields} <- fieldsets, %{name: name} = input <- fields, name != nil,
+    for %{fields: fieldsets} <- tabs,
+        %{fields: fields} <- fieldsets,
+        %{name: name} = input <- fields,
+        name != nil,
         do: input
   end
 
@@ -167,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   # The row's field has an input in the subform, and the row shows it
   defp row_shown?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, changeset, {:row, subform, key, field}) do
-    with %{opts: opts} <- Enum.find(inputs, &match?(%{name: name} when name != nil, &1) and to_string(&1.name) == field),
+    with %{opts: opts} <- Enum.find(inputs, &(match?(%{name: name} when name != nil, &1) and to_string(&1.name) == field)),
          {:ok, _kind, _assoc, rows} <- rows(changeset, subform),
          {_index, row} <- find_row(rows, key) do
       not Visibility.hidden?(opts, Phoenix.HTML.FormData.to_form(row, []))
@@ -468,14 +471,29 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   @doc """
   Clears the marks and the status line of a run for a pending version that
-  is no longer the one the form holds or the translation's pending one.
+  is no longer the one the form holds or the translation's pending one. A
+  run still going keeps its line, and so does one whose reply was dropped
+  because the source changed, until the next run or a save (`saved: true`,
+  after the form's own save).
   """
-  def refresh(socket) do
+  def refresh(socket, opts \\ []) do
+    saved? = Keyword.get(opts, :saved, false)
+
     case {socket.assigns[:translation_fill], Translation.version_id(socket.assigns), pending_id(socket.assigns)} do
-      {%{version_id: version_id}, version_id, version_id} -> socket
-      {%{status: :running} = fill, _, _} -> assign(socket, :translation_fill, %{fill | marks: %{}})
-      {nil, _, _} -> socket
-      _ -> assign(socket, :translation_fill, nil)
+      {%{status: :dropped}, _, _} when saved? ->
+        assign(socket, :translation_fill, nil)
+
+      {%{version_id: version_id}, version_id, version_id} ->
+        socket
+
+      {%{status: status} = fill, _, _} when status in [:running, :dropped] ->
+        assign(socket, :translation_fill, %{fill | marks: %{}})
+
+      {nil, _, _} ->
+        socket
+
+      _ ->
+        assign(socket, :translation_fill, nil)
     end
   end
 

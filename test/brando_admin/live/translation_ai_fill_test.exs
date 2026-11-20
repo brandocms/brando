@@ -276,6 +276,26 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert title(view) == "Tittel"
     end
 
+    test "the line saying the source changed stays when the form is drawn again", %{conn: conn} = c do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, c.target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
+      send(model, :answer)
+      render_async(view, 5_000)
+      assert has_element?(view, "#translation-panel [data-ai-status='dropped']")
+
+      # The LiveView renders the form again (another editor joins, say): it
+      # takes the translation's new pending version
+      newer = Translations.get_pending_version(Article, c.target.id).id
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{newer}']")
+
+      assert has_element?(view, "#translation-panel [data-ai-status='dropped']")
+    end
+
     test "a text the editor changed during the run keeps the editor's text", %{conn: conn, target: target} do
       answer_when_told(&("EN " <> &1["source"]))
       view = open(conn, target.id)
