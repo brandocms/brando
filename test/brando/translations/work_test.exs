@@ -180,6 +180,22 @@ defmodule Brando.Translations.WorkTest do
                by_key(units(target))[body]
     end
 
+    test "a review unit carries the source's text before the change; a translate unit has none", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      version = Translations.get_pending_version(Article, target.id)
+      body = "entry_blocks/#{c.block.uid}/refs/body/text"
+
+      refute Map.has_key?(by_key(units(target))[body], :source_previous)
+
+      set_body(target.id, "<p>First paragraph</p>")
+      {:ok, _} = Translations.target_saved(Article, target.id, %{version_id: version.id, acknowledged: []})
+      set_body(c.source.id, "<p>Første avsnitt, endret</p>")
+      Translations.source_saved(load(c.source.id))
+
+      assert %{kind: "review", source_previous: @body, source: "<p>Første avsnitt, endret</p>"} =
+               by_key(units(target))[body]
+    end
+
     test "a link waiting for its target's translation is listed, not answerable", c do
       {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
       version = Translations.get_pending_version(Article, target.id)
@@ -314,6 +330,22 @@ defmodule Brando.Translations.WorkTest do
     test "starts from the first unit after a key the entry no longer has, and says so" do
       units = Enum.map(1..3, &unit/1)
       assert %{restarted: true, units: [%{key: "k01"} | _]} = Work.batch(units, positions(units), "gone", 10_000)
+    end
+
+    test "leaves out a review unit's previous text when the unit fits only without it" do
+      long = String.duplicate("Lang tekst. ", 100)
+      review = %{unit(1, long) | kind: "review"} |> Map.put(:source_previous, long)
+      alone = byte_size(Jason.encode!(Map.delete(review, :source_previous))) + Work.token_bytes(review) + 10
+
+      assert %{units: [%{key: "k01", answerable: true} = kept]} = Work.batch([review], positions([review]), nil, 10_000)
+      assert kept.source_previous == long
+
+      assert %{units: [%{answerable: true, source: ^long} = shortened]} =
+               Work.batch([review], positions([review]), nil, 10_000, alone: alone)
+
+      refute Map.has_key?(shortened, :source_previous)
+
+      assert %{units: [%{too_long: true}]} = Work.batch([review], positions([review]), nil, 10_000, alone: 100)
     end
 
     test "returns a unit larger than a batch alone and whole" do

@@ -21,8 +21,10 @@ defmodule Brando.Translations.Work do
     * `format` — `"plain"`, `"html"` or `"markdown"`.
     * `block_uid` — for a text in a block, the translation's own block.
 
-  A *review* unit has no `source_previous` yet: Brando keeps a digest of the
-  source's earlier text, not the text.
+  A *review* unit also has `source_previous`, the source's text before the
+  change that raised it (`Brando.Translations.WorkItem`), where it is known:
+  not for a review raised before brando_239, and not in a batch whose unit
+  would be too long with it (`batch/5`).
 
   `token/2` encodes the batch a client read: the entry, the language, and
   each answerable unit's key with a digest of its source text, signed so a
@@ -54,6 +56,7 @@ defmodule Brando.Translations.Work do
           optional(:format) => String.t(),
           optional(:source) => String.t() | nil,
           optional(:current) => String.t() | nil,
+          optional(:source_previous) => String.t(),
           optional(:block_uid) => String.t()
         }
 
@@ -174,7 +177,10 @@ defmodule Brando.Translations.Work do
       |> Enum.sort_by(&{@kind_order[&1.kind], place(order, &1.path)})
       |> Enum.map(fn item ->
         if item.kind in @answerable,
-          do: text_unit(item.path, item.kind, Map.get(source_texts, item.path), Map.get(current, item.path), ctx),
+          do:
+            item.path
+            |> text_unit(item.kind, Map.get(source_texts, item.path), Map.get(current, item.path), ctx)
+            |> put_previous(item),
           else: other_unit(item.path, item.kind, ctx)
       end)
 
@@ -265,6 +271,11 @@ defmodule Brando.Translations.Work do
     |> put_current(source, current)
     |> put_block_uid(target)
   end
+
+  defp put_previous(unit, %{kind: :review, source_previous: previous}) when is_binary(previous),
+    do: Map.put(unit, :source_previous, previous)
+
+  defp put_previous(unit, _item), do: unit
 
   defp put_current(unit, same, same), do: unit
   defp put_current(unit, _source, current), do: Map.put(unit, :current, current)
@@ -376,7 +387,9 @@ defmodule Brando.Translations.Work do
 
   A unit that takes more than `:alone` bytes (no limit by default) cannot be
   sent in any batch: it is listed without its text, not answerable, with
-  `too_long: true` and a `reason`, and is left out of the batch's token.
+  `too_long: true` and a `reason`, and is left out of the batch's token. A
+  review unit that fits only without its `source_previous` is sent without
+  it.
 
   `after` is the last key of the previous batch, read from `positions`
   (`translation_units/2`), so a unit resolved since that batch was read does
@@ -418,11 +431,16 @@ defmodule Brando.Translations.Work do
   defp sized(unit, alone) do
     size = unit_bytes(unit)
 
-    if alone && size > alone do
-      unit = too_long(unit)
-      {unit, unit_bytes(unit)}
-    else
-      {unit, size}
+    cond do
+      is_nil(alone) or size <= alone ->
+        {unit, size}
+
+      Map.has_key?(unit, :source_previous) ->
+        sized(Map.delete(unit, :source_previous), alone)
+
+      true ->
+        unit = too_long(unit)
+        {unit, unit_bytes(unit)}
     end
   end
 

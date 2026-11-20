@@ -53,6 +53,38 @@ defmodule Brando.AI.WorkTranslationTest do
     assert prompt =~ "up to date"
   end
 
+  test "a review unit with the source's previous text sends it, and asks for the smallest change" do
+    test = self()
+
+    Brando.AIStub.reply(fn prompt ->
+      send(test, {:prompt, prompt})
+      ~s({"1": "The new text", "2": "Other"})
+    end)
+
+    review =
+      "title"
+      |> unit("review", "Ny tekst", current: "The old text")
+      |> Map.put(:source_previous, "Gammel tekst")
+
+    # Only a review's previous text is sent
+    translate = "subtitle" |> unit("translate", "Annen") |> Map.put(:source_previous, "Ignored")
+
+    assert {:ok, %{texts: %{"title" => "The new text"}}} = WorkTranslation.translate([review, translate], "no", "en")
+
+    assert_received {:prompt, prompt}
+
+    assert [
+             %{"source" => "Ny tekst", "previous_source" => "Gammel tekst", "translation" => "The old text"},
+             second
+           ] = items(prompt)
+
+    refute Map.has_key?(second, "previous_source")
+
+    {system_prompt, _prompt} = WorkTranslation.prompt([{review, "1"}], "no", "en")
+    assert system_prompt =~ "previous_source"
+    assert system_prompt =~ "smallest change"
+  end
+
   test "a unit whose reply lost the markup or a placeholder is not returned, with why" do
     answer(fn
       %{"source" => "<p>Hei</p>"} -> "Hello"
