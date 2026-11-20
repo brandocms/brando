@@ -2369,11 +2369,51 @@ defmodule E2EFixtureController do
   # With `source_only`, just the source with its block, for the admin to
   # translate. With `replace_block`, the source's change drops its block and
   # adds another instead of adding one.
-  def synchronized_translation(conn, %{"source_id" => source_id, "year" => year}) do
+  def synchronized_translation(conn, %{"source_id" => source_id, "year" => year} = params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     user = get_admin_user()
     alias E2eProject.SyncTest
+
+    # `add_block`: the source also gets a block with this text, at the end
+    if text = params["add_block"] do
+      {:ok, before} =
+        SyncTest.get_article(%{
+          matches: %{id: String.to_integer(source_id)},
+          preload: Brando.Blueprint.preloads_for(E2eProject.SyncTest.Article)
+        })
+
+      [%{block: %{module_id: module_id}} | _] = before.entry_blocks
+
+      block =
+        %Brando.Content.Block{}
+        |> Brando.Content.Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => module_id,
+            "creator_id" => user.id,
+            "source" => to_string(E2eProject.SyncTest.Article.Blocks),
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "body",
+                "data" => %{"type" => "text", "data" => %{"text" => "<p>#{text}</p>"}}
+              }
+            ]
+          },
+          user
+        )
+        |> Brando.Repo.insert!()
+
+      Brando.Repo.insert!(
+        struct(E2eProject.SyncTest.Article.Blocks, %{
+          entry_id: before.id,
+          block_id: block.id,
+          sequence: length(before.entry_blocks)
+        })
+      )
+    end
 
     {:ok, _} =
       SyncTest.update_article(

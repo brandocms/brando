@@ -302,6 +302,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
     socket
     |> assign(:translation, %{state | decided?: true, applied_version_id: version, behind?: false})
     |> assign_state()
+    # the notice of a save whose version the source had moved past stays
+    |> then(fn %{assigns: %{translation: held}} = socket ->
+      assign(socket, :translation, %{held | stale?: state.stale?})
+    end)
   end
 
   @doc """
