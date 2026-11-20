@@ -713,6 +713,13 @@ msgid_plural "%{count} were left: they are in use again."
 msgstr[0] "%{count} ble stående: den er i bruk igjen."
 msgstr[1] "%{count} ble stående: de er i bruk igjen."
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} was not filled in; see why below."
+msgid_plural "%{count} were not filled in; see why below."
+msgstr[0] "%{count} ble ikke fylt inn; se hvorfor nedenfor."
+msgstr[1] "%{count} ble ikke fylt inn; se hvorfor nedenfor."
+
 #: lib/brando_admin/live/sites/integrations_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} webhook"
@@ -1768,6 +1775,13 @@ msgstr "KI"
 #, elixir-autogen, elixir-format
 msgid "AI crawlers"
 msgstr "AI-roboter"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "AI filled in %{count} text."
+msgid_plural "AI filled in %{count} texts."
+msgstr[0] "KI fylte inn %{count} tekst."
+msgstr[1] "KI fylte inn %{count} tekster."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -4012,6 +4026,11 @@ msgstr "Endre opplastingsmappe"
 msgid "Changed %{fields}"
 msgstr "Endret %{fields}"
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Changed during the run: your text was kept"
+msgstr "Endret underveis: teksten din ble beholdt"
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "Changed here and in the file"
@@ -4168,6 +4187,11 @@ msgstr "Se tilgjengelige versjoner"
 #, elixir-autogen, elixir-format
 msgid "Check the spelling, try fewer words, or clear the filters."
 msgstr "Sjekk stavemåten, prøv færre ord, eller fjern filtrene."
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Check the texts, then save."
+msgstr "Les gjennom tekstene, og lagre."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -5632,6 +5656,11 @@ msgstr "Opprett en oppføring"
 #, elixir-autogen, elixir-format
 msgid "Create and edit content across entries. Nothing changes until you apply it."
 msgstr "Lag og rediger innhold på tvers av oppføringer. Ingenting endres før du utfører det."
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Create and translate"
+msgstr "Opprett og oversett"
 
 #: lib/brando_admin/live/content/container_form_live.ex
 #, elixir-autogen, elixir-format
@@ -8359,6 +8388,11 @@ msgstr "Fyll ut dette."
 #, elixir-autogen, elixir-format
 msgid "Fill — takes what is left"
 msgstr "Fyll – tar det som er igjen"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Filled in by AI"
+msgstr "Fylt inn av KI"
 
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
@@ -12788,6 +12822,21 @@ msgctxt "checkbox state"
 msgid "Not checked"
 msgstr "Ikke avkrysset"
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: AI changed the template placeholders"
+msgstr "Ikke fylt inn: KI endret malplassholderne"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: AI lost the formatting or links"
+msgstr "Ikke fylt inn: KI mistet formateringen eller lenkene"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: AI returned no text"
+msgstr "Ikke fylt inn: KI ga ingen tekst"
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"
@@ -13073,6 +13122,11 @@ msgstr "Ingenting er registrert for denne oppføringen ennå."
 #, elixir-autogen, elixir-format
 msgid "Nothing has happened in this period."
 msgstr "Ingenting har skjedd i denne perioden."
+
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing here needs translating."
+msgstr "Ingenting her trenger oversettelse."
 
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -20127,6 +20181,16 @@ msgstr "Kilden ble endret igjen mens du redigerte. De nyere endringene er lastet
 msgid "The source changed these. The new values are already in the form, so saving is all they need."
 msgstr "Kilden har endret disse. De nye verdiene ligger allerede i skjemaet, så alt som trengs er å lagre."
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed while AI was translating, so nothing was filled in. Save, then try again."
+msgstr "Kilden ble endret mens KI oversatte, så ingenting ble fylt inn. Lagre, og prøv igjen."
+
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed. Save the translation, then translate with AI."
+msgstr "Kilden er endret. Lagre oversettelsen, og oversett så med KI."
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "The source could not be saved. Check your access and reload if it changed."
@@ -21155,10 +21219,27 @@ msgstr "Overfør innhold og slett bruker"
 msgid "Transfer ownership to"
 msgstr "Overfør eierskap til"
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translate %{label} with AI"
+msgstr "Oversett %{label} med KI"
+
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "Translate to"
 msgstr "Oversett til"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translate with AI"
+msgstr "Oversett med KI"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translating %{count} text with AI…"
+msgid_plural "Translating %{count} texts with AI…"
+msgstr[0] "Oversetter %{count} tekst med KI …"
+msgstr[1] "Oversetter %{count} tekster med KI …"
 
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
@@ -21169,6 +21250,16 @@ msgstr "Oversetter innhold..."
 #, elixir-autogen, elixir-format
 msgid "Translating entry"
 msgstr "Oversetter oppføring"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translating with AI"
+msgstr "Oversetter med KI"
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Translating with AI failed. Nothing was changed; try again."
+msgstr "Oversettelsen med KI feilet. Ingenting ble endret; prøv igjen."
 
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
