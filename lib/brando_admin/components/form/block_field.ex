@@ -342,12 +342,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     translation? = Map.get(message, :source) == :translation
 
     cond do
-      # A synchronized translation's pending version, loaded by an editor who
-      # joined an edit session that already holds unsaved work: the editor
-      # who opened it first loaded the version, and the work is on top of it.
-      translation? and joined_with_work?(socket) ->
-        {:ok, socket}
-
+      # A synchronized translation's pending version. It comes here only from
+      # the form that decided to load it (`Form.Translation.decide/2`): the
+      # edit session held no version, so the version is carried onto what
+      # the field holds, typing replayed on a reconnect included. A form
+      # that joins a session holding one sends nothing.
+      #
       # The pending version is the whole field as the source has it, so its
       # blocks go where it has them and the ones it lacks go (`place?`). A
       # row it leaves out comes as a `:replace` changeset (`put_assoc/3` in
@@ -1057,12 +1057,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     do: Brando.Authorization.Boundary.may_update?(user, entry)
 
   # One subscription per LiveView process, however many block fields join.
-  defp subscribe_session(%{topic: topic}) do
-    unless Process.get({:brando_edit_session_topic, topic}) do
-      PubSub.subscribe(Brando.pubsub(), topic)
-      Process.put({:brando_edit_session_topic, topic}, true)
-    end
-  end
+  defp subscribe_session(ref), do: EditSession.subscribe(ref)
 
   # Other editors show a joiner the block they are in once its blocks are
   # there (see `BrandoAdmin.LiveView.Form.Hooks`). Blocks need no replay:
@@ -2077,11 +2072,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:blocks_changed?, true)
     |> tap(fn socket -> send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty") end)
   end
-
-  defp joined_with_work?(%{assigns: %{edit_session: %Replica{}}} = socket),
-    do: not Ops.pristine?(socket.assigns.block_ops, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
-
-  defp joined_with_work?(_socket), do: false
 
   # Build with AI opens the content assistant for this entry and field. It is
   # offered when the assistant has a model, the user may use it, and the
