@@ -556,6 +556,16 @@ defmodule Brando.Translations.Work do
     duplicate ++ extra ++ missing ++ stale ++ texts_problems
   end
 
+  @doc """
+  The problems of one translated `text` for an answerable `unit`, as
+  `check/4` finds them per unit: `not_text`, `blank`, `html_changed`,
+  `placeholders_changed`. An empty list when the text keeps what the source
+  has. For an answer that did not come with a token, such as the admin's
+  Translate with AI.
+  """
+  @spec answer_problems(unit(), term()) :: [problem()]
+  def answer_problems(unit, text), do: text_problems(unit, text)
+
   defp stale?(nil, _digest), do: true
   defp stale?(unit, digest), do: source_digest(unit.source) != digest
 
