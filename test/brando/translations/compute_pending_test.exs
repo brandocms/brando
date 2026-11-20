@@ -357,6 +357,13 @@ defmodule Brando.Translations.ComputePendingTest do
       Map.merge(Article.__translatable_config__(), overrides)
     end
 
+    # The module selector as a Blueprint declares it through the DSL:
+    # `{:module, "hero-banner", [:layout]}` in `source_controlled_fields`
+    defp module_selector_config do
+      %{source_controlled_module_vars: vars} = Brando.SyncSelectorTest.Article.__translatable_config__()
+      controlled_config(%{source_controlled_module_vars: vars})
+    end
+
     test "a controlled subform field follows the source; the row's text stays translated" do
       config = controlled_config(%{source_controlled_subform_fields: %{items: [:link]}})
       item = fn uid, label, link -> %ArticleItem{uid: uid, label: label, link: link} end
@@ -376,7 +383,7 @@ defmodule Brando.Translations.ComputePendingTest do
     end
 
     test "a controlled variable follows the source only on the named module" do
-      config = controlled_config(%{source_controlled_module_vars: %{"hero-banner" => ["layout"]}})
+      config = module_selector_config()
       var = fn key, value -> %Var{key: key, type: :string, value: value, label: key} end
 
       source =
@@ -411,7 +418,7 @@ defmodule Brando.Translations.ComputePendingTest do
     end
 
     test "repeated source saves keep controlled values in step without new work" do
-      config = controlled_config(%{source_controlled_module_vars: %{"hero-banner" => ["layout"]}})
+      config = module_selector_config()
       var = fn value -> %Var{key: "layout", type: :string, value: value, label: "Layout"} end
       source = article(:no, blocks: [block("h", module_id: 1, vars: [var.("wide")])])
       target = article(:en, id: 2, blocks: [block("h", id: 10, module_id: 1, vars: [var.("wide")])])

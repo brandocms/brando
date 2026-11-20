@@ -1,0 +1,1 @@
+- The i18n guide's `source_controlled_fields` example lists the module selector before the keyword entries, so it is valid Elixir.

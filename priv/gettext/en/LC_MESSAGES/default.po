@@ -12849,6 +12849,16 @@ msgctxt "checkbox state"
 msgid "Not checked"
 msgstr ""
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Not filled in: AI changed the template placeholders"
@@ -20790,6 +20800,11 @@ msgstr ""
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "This language already has a version."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This language's version is in the trash. Restore it from the trash instead."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/map_block.ex

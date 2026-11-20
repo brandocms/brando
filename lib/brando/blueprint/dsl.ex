@@ -501,8 +501,10 @@ defmodule Brando.Blueprint.Dsl do
           def implemented(_), do: true
         end
 
+        # Escaped: options may hold values that are not literals in quoted
+        # code, such as a module selector's 3-tuple
         def __trait__(unquote(trait)) do
-          unquote(trait_opts)
+          unquote(Macro.escape(trait_opts))
         end
       end
 

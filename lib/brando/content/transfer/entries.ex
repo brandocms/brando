@@ -880,6 +880,7 @@ defmodule Brando.Content.Transfer.Entries do
 
     created = Enum.map(receipt.mappings["created_order"] || [], &current[&1])
     ensure_unused!(created)
+    Enum.each(created, &ensure_not_translation_source!/1)
     # Undo creation in reverse dependency order. These rows were created by
     # this operation and have passed the full-entry edit check above.
     Enum.each(Enum.reverse(receipt.mappings["created_order"] || []), fn key ->
@@ -888,6 +889,7 @@ defmodule Brando.Content.Transfer.Entries do
       if Map.get(entry, :status) == :published, do: Catalog.authorize!(actor, :publish, entry)
       cancel_status_jobs(entry)
       delete_owned!(entry)
+      Brando.Translations.entries_deleted(entry.__struct__, [entry.id])
       Activity.import_undone(entry, actor, :delete)
     end)
 
@@ -939,6 +941,30 @@ defmodule Brando.Content.Transfer.Entries do
     Enum.each(before, fn {name, _, _} -> Enum.each(List.wrap(Map.get(entry, name)), &delete_owned!/1) end)
     Repo.delete!(entry)
     Enum.each(after_entry, fn {name, _, _} -> Enum.each(List.wrap(Map.get(entry, name)), &delete_owned!/1) end)
+  end
+
+  # An entry made the source of synchronized translations since the import
+  # stays: deleting it would leave them without one.
+  defp ensure_not_translation_source!(%schema{} = entry) do
+    with {:error, :group_has_synchronized_members} <- Brando.Translations.guard_delete(schema, entry) do
+      title = Catalog.describe(entry).title
+
+      Error.fail!(
+        if Brando.Translations.trashed_synchronized_targets?(schema, entry.id) do
+          dgettext(
+            "content_transfer",
+            "%{entry} became the source of synchronized translations after this import, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before recovering.",
+            entry: title
+          )
+        else
+          dgettext(
+            "content_transfer",
+            "%{entry} became the source of synchronized translations after this import. Make them independent, or make one of them the source, before recovering.",
+            entry: title
+          )
+        end
+      )
+    end
   end
 
   defp cancel_status_jobs(entry) do
