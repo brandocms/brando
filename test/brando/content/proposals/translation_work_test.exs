@@ -188,6 +188,7 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
   # with their own changes; until then the tool names none
   test "names no proposal operation that prepare_proposal does not have", c do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+
     texts = [
       Enum.find(Tools.definitions(), &(&1.name == "translation_work")).description,
       call!(args(target.id), c.context).note,
@@ -237,6 +238,47 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
 
       reader = member(c, ["brando.admin.access", "brando.assistant.use", @read_articles])
       assert {:ok, %{units: [_, _]}} = Tools.call("translation_work", args(c.target.id), %Context{actor: reader})
+    end
+
+    # The source's text is in every unit: a translation whose source the
+    # person may not read is refused as if it did not exist
+    test "someone who may read the translation and not its source gets nothing", c do
+      alias Brando.SyncPolicyTest.Article, as: PolicyArticle
+
+      reader = member(c, ["brando.admin.access", "brando.assistant.use", "authorization.policy_articles.read"])
+      policy_args = &%{"content_type" => "Brando.SyncPolicyTest.Article", "id" => &1}
+
+      translated = fn owner ->
+        {:ok, source} =
+          Brando.SyncPolicyTest.create_article(
+            %{title: "Policy #{owner.id}", slug: "policy-#{owner.id}", language: "no", status: "published"},
+            c.user
+          )
+
+        {:ok, target} = Translations.create_target(PolicyArticle, source.id, :en, c.user)
+
+        # The policy reads the creator: the reader made the translation, `owner` the source
+        Brando.Repo.update_all(
+          Ecto.Query.from(a in PolicyArticle, where: a.id == ^source.id),
+          set: [creator_id: owner.id]
+        )
+
+        Brando.Repo.update_all(
+          Ecto.Query.from(a in PolicyArticle, where: a.id == ^target.id),
+          set: [creator_id: reader.id]
+        )
+
+        target
+      end
+
+      # Both the reader's: the work is read
+      own = translated.(reader)
+      assert {:ok, %{units: [_]}} = Tools.call("translation_work", policy_args.(own.id), %Context{actor: reader})
+
+      # The source someone else's: refused, and nothing of the source shows
+      other = translated.(c.user)
+      assert {:error, message} = Tools.call("translation_work", policy_args.(other.id), %Context{actor: reader})
+      refute message =~ "Policy"
     end
 
     test "over MCP, the same", c do

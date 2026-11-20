@@ -582,6 +582,15 @@ defmodule Brando.VillainTest do
             type: :has_many
           }
         ],
+        # A synchronized type read through a record policy (TranslationWorkTest)
+        "Elixir.Brando.SyncPolicyTest.Article": [
+          %Brando.Blueprint.Relations.Relation{
+            __identifier__: :blocks,
+            name: :blocks,
+            opts: %{module: :blocks},
+            type: :has_many
+          }
+        ],
         "Elixir.Brando.SyncTest.Article": [
           %Brando.Blueprint.Relations.Relation{
             __identifier__: :blocks,
