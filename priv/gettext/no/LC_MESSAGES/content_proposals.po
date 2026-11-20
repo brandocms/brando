@@ -193,6 +193,11 @@ msgstr "En modul er endret etter at forslaget ble laget. Se gjennom det på nytt
 msgid "A newer version of this proposal exists. Review it instead."
 msgstr "Det finnes en nyere versjon av forslaget. Se gjennom den i stedet."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal cannot change this field."
+msgstr "Et forslag kan ikke endre dette feltet."
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "A proposal cannot create or change %{name} entries. It can only change the content types list_content_types lists."

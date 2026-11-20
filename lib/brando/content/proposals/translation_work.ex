@@ -23,6 +23,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Content.Proposals
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Transfer.{Catalog, Error}
   alias Brando.Translations
@@ -77,7 +78,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
 
     case Work.translation_units(schema, entry.id) do
       {:ok, work} ->
-        {answerable, other} = Enum.split_with(work.units, & &1.answerable)
+        {answerable, other} = work.units |> lock_units(schema, actor) |> Enum.split_with(&(&1.answerable or &1[:locked]))
         first? = not Work.follows?(answerable, work.positions, after_key)
 
         schema
@@ -85,7 +86,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
         |> Map.merge(%{
           role: "translation",
           source: %{content_type: Codec.content_type(schema), id: work.source_id, language: work.source_language},
-          total: length(answerable),
+          total: Enum.count(answerable, & &1.answerable),
           note: @answer_note
         })
         |> put_other(other, first?)
@@ -98,6 +99,38 @@ defmodule Brando.Content.Proposals.TranslationWork do
       {:error, _} ->
         Error.fail!(dgettext_unavailable())
     end
+  end
+
+  # A text in a field the actor may not change through a proposal is listed
+  # in its place, not answerable, and left out of the batch's token: an
+  # answer neither misses it nor may give it.
+  defp lock_units(units, schema, actor) do
+    locked =
+      units
+      |> Enum.filter(& &1.answerable)
+      |> Enum.map(&unit_field/1)
+      |> Enum.uniq()
+      |> Enum.filter(&Proposals.locked_unit?(schema, &1, actor))
+
+    Enum.map(units, fn unit ->
+      if unit.answerable and unit_field(unit) in locked,
+        do: locked_unit(unit),
+        else: unit
+    end)
+  end
+
+  defp unit_field(unit), do: unit.key |> String.split("/", parts: 2) |> hd()
+
+  defp locked_unit(unit) do
+    unit
+    |> Map.take([:key, :kind, :label, :format, :block_uid])
+    |> Map.merge(%{
+      answerable: false,
+      locked: true,
+      reason:
+        "This field is locked for you: only a superuser can change it, so it cannot be translated in a " <>
+          "proposal. Leave it out of the answer."
+    })
   end
 
   # Not answerable with text; listed with the first batch, as the form's work
@@ -215,7 +248,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
         Error.fail!("There is a #{language} version already: read its work with id #{version.id}.")
 
       language in missing ->
-        new_translation(schema, entry, head, language, after_key)
+        new_translation(schema, entry, head, language, after_key, actor)
 
       true ->
         Error.fail!(
@@ -224,13 +257,14 @@ defmodule Brando.Content.Proposals.TranslationWork do
     end
   end
 
-  defp new_translation(schema, entry, head, language, after_key) do
+  defp new_translation(schema, entry, head, language, after_key, actor) do
     {:ok, %{units: all, positions: positions}} = Work.new_translation_units(schema, entry.id)
+    all = lock_units(all, schema, actor)
 
     head
     |> Map.merge(%{
       new_translation: language,
-      total: length(all),
+      total: Enum.count(all, & &1.answerable),
       note:
         "The units a new #{language} translation of this entry gets, before it exists, keyed as its work " <>
           "items will be. One proposal creates and fills in the translation: create_translation with a ref R, " <>

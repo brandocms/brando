@@ -533,8 +533,45 @@ defmodule Brando.Content.Proposals.TranslateTest do
       }
 
       editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
-      assert problems([op], editor) == [{0, :protected_field, nil}]
+      assert problems([op], editor) == [{0, :protected_field, "subtitle"}]
       assert problems([op], Factory.insert(:random_user, role: :superuser)) == []
+    end
+
+    test "a locked field's unit is outside an editor's batch, which the editor can answer", c do
+      alias Brando.Content.Proposals.Tools
+      alias Brando.SyncLockedTest.Article, as: LockedArticle
+
+      {:ok, source} =
+        Brando.SyncLockedTest.create_article(
+          %{title: "Tittel", slug: "laast-#{c.source.id}", subtitle: "Undertittel", language: "no", status: "draft"},
+          c.user
+        )
+
+      {:ok, target} = Translations.create_target(LockedArticle, source.id, :en, c.user)
+      editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      context = %Tools.Context{actor: editor}
+      args = %{"content_type" => "Brando.SyncLockedTest.Article", "id" => target.id}
+      assert {:ok, work} = Tools.call("translation_work", args, context)
+
+      assert %{answerable: false, locked: true, reason: _} = Enum.find(work.units, &(&1.key == "subtitle"))
+      assert %{answerable: true} = Enum.find(work.units, &(&1.key == "title"))
+
+      op = %Translate{target: {LockedArticle, target.id}, source_digest: work.source_digest, texts: %{"title" => "Title"}}
+      assert problems([op], editor) == []
+
+      op = %{op | texts: %{"title" => "Title", "subtitle" => "Subtitle"}}
+      assert problems([op], editor) == [{0, :extra_key, "subtitle"}]
+
+      # The units a new translation would have, read on a source without one
+      {:ok, other} =
+        Brando.SyncLockedTest.create_article(
+          %{title: "Annen", slug: "annen-#{c.source.id}", subtitle: "Undertittel", language: "no", status: "draft"},
+          c.user
+        )
+
+      args = %{"content_type" => "Brando.SyncLockedTest.Article", "id" => other.id, "language" => "en"}
+      assert {:ok, work} = Tools.call("translation_work", args, context)
+      assert %{answerable: false, locked: true} = Enum.find(work.units, &(&1.key == "subtitle"))
     end
 
     test "an actor who may not update the translation", c do

@@ -764,7 +764,7 @@ defmodule Brando.Content.Proposals do
 
         check ++
           answered_before(op, proposal) ++
-          translated_texts(op.texts, by_key) ++ translated_fields(op, schema, actor) ++ translated_links(op.texts)
+          translated_texts(op.texts, by_key) ++ translated_fields(op, schema, actor, check) ++ translated_links(op.texts)
 
       {:error, problem} ->
         [problem]
@@ -935,18 +935,29 @@ defmodule Brando.Content.Proposals do
   end
 
   # A field's text: the field is not one a proposal may write, or one the
-  # forms lock, as `set_fields` refuses them.
-  defp translated_fields(op, schema, actor) do
+  # forms lock, as `set_fields` refuses them. `translation_work` leaves such
+  # a unit out of the batch, so it is refused as extra already; this refuses
+  # a token that holds it anyway.
+  defp translated_fields(op, schema, actor, check) do
+    extra = for %{code: :extra_key, key: key} <- check, do: key
+
+    for key <- Enum.uniq(answered_keys(op)), key not in extra, locked_unit?(schema, key, actor) do
+      key_problem(:protected_field, key, dgettext("content_proposals", "A proposal cannot change this field."))
+    end
+  end
+
+  @doc """
+  Whether a translation unit `key` of `schema` is in a field a proposal by
+  `actor` may not write: one no proposal writes, or one the forms lock for
+  anyone but a superuser. Text in blocks is never locked.
+  """
+  @spec locked_unit?(module(), String.t(), term()) :: boolean()
+  def locked_unit?(schema, key, actor) do
     blocks = Enum.map(schema.__blocks_fields__(), &"entry_#{&1.name}")
+    field = key |> String.split("/", parts: 2) |> hd()
+    fields = %{field => nil}
 
-    fields =
-      for key <- answered_keys(op),
-          field = key |> String.split("/", parts: 2) |> hd(),
-          field not in blocks,
-          into: %{},
-          do: {field, nil}
-
-    Enum.uniq(protected_fields(fields, schema) ++ locked_fields(fields, schema, actor))
+    field not in blocks and protected_fields(fields, schema) ++ locked_fields(fields, schema, actor) != []
   end
 
   defp translated_links(texts) when is_map(texts), do: link_problems(%{texts: texts})

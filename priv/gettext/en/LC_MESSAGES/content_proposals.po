@@ -193,6 +193,11 @@ msgstr ""
 msgid "A newer version of this proposal exists. Review it instead."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal cannot change this field."
+msgstr ""
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "A proposal cannot create or change %{name} entries. It can only change the content types list_content_types lists."
