@@ -34,12 +34,11 @@ defmodule Brando.Content.Proposals.TranslationWork do
   @batch_units 60
   @other_limit 40
 
-  @answer_note "Translate each unit's source into the translation's language and answer the batch with one " <>
-                 "translate operation in prepare_proposal: its source_digest, texts {key: translation} for the units " <>
-                 "you translate, and reviewed [key] for those whose current text is right as it is. Every unit of " <>
-                 "the batch is answered once. Keep the format: html keeps every tag and attribute of the source, " <>
-                 "markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly as they " <>
-                 "are. When next_offset is set, read the next batch with it."
+  @answer_note "Translate each unit's source into the translation's language, unit by unit by its key; a review " <>
+                 "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
+                 "the source, markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly " <>
+                 "as they are. source_digest is the batch's token, which an answer to the batch is checked against. " <>
+                 "When next_offset is set, read the next batch with it."
 
   @doc "Runs the tool for `args` as `actor`."
   def run(args, actor) do
@@ -136,14 +135,11 @@ defmodule Brando.Content.Proposals.TranslationWork do
           head,
           :note,
           "Read a version's work with its id; a version in_trash has none until it is restored. For a language in missing_languages, call again with language " <>
-            "to read the units a new translation would have: create it with create_translation and translate " <>
-            "it in the same proposal."
+            "to read the units a new translation would have."
         )
 
       version = Enum.find(versions, &(&1.language == language and Map.get(&1, :in_trash))) ->
-        Error.fail!(
-          "The #{version.language} version is in the trash. It is restored, or deleted for good, in the admin."
-        )
+        Error.fail!("The #{version.language} version is in the trash. It is restored, or deleted for good, in the admin.")
 
       version = Enum.find(versions, &(&1.language == language)) ->
         Error.fail!("There is a #{language} version already: read its work with id #{version.id}.")
@@ -170,9 +166,8 @@ defmodule Brando.Content.Proposals.TranslationWork do
       units: units,
       source_digest: Work.token(%{type: to_string(schema), id: {:new, entry.id}, language: language}, units),
       note:
-        "The units a new #{language} translation of this entry gets, before it exists. Create it with " <>
-          "create_translation and answer them with translate operations on {\"new\": REF} in the same proposal. " <>
-          @answer_note
+        "The units a new #{language} translation of this entry gets, before it exists, keyed as its work " <>
+          "items will be. " <> @answer_note
     })
   end
 

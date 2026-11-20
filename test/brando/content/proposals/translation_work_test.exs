@@ -70,7 +70,7 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
       assert source_id == c.source.id
       assert %{key: "title", kind: "translate", format: "plain", source: "Tittel", current: "Tittel"} = title
       assert %{key: ^body, format: "html", source: "<p>Første avsnitt</p>", block_uid: _} = body_unit
-      assert result.note =~ "translate"
+      assert is_binary(result.note)
 
       # The token is the one the check takes for these units
       {:ok, %{units: units}} = Work.translation_units(Article, target.id)
@@ -182,6 +182,22 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
 
     assert id == page.id
     assert message =~ "not synchronized"
+  end
+
+  # The proposal operations that answer a batch or create a translation come
+  # with their own changes; until then the tool names none
+  test "names no proposal operation that prepare_proposal does not have", c do
+    {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    texts = [
+      Enum.find(Tools.definitions(), &(&1.name == "translation_work")).description,
+      call!(args(target.id), c.context).note,
+      call!(args(c.source.id), c.context).note
+    ]
+
+    {:ok, lone} = SyncTest.create_article(%{title: "Alene", slug: "alene", language: "no", status: "published"}, c.user)
+    texts = [call!(args(lone.id, %{"language" => "en"}), c.context).note | texts]
+
+    for text <- texts, do: refute(text =~ ~r/create_translation|translate operation/)
   end
 
   test "is offered over MCP as a read, and to the Assistant" do
