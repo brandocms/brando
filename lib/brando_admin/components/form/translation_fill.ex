@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
          version_id when is_integer(version_id) <- Translation.version_id(assigns),
          {:ok, work} <- Work.translation_units(assigns.schema, assigns.entry.id),
          true <- work.version_id == version_id || {:error, :stale},
-         [_ | _] = units <- units(work.units, keys) do
+         [_ | _] = units <- units(work.units, keys, targets(assigns.translation)) do
       run(socket, work, units)
     else
       {:error, :stale} -> toast(socket, gettext("The source changed. Save the translation, then translate with AI."))
@@ -72,9 +72,20 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     end
   end
 
-  defp units(units, keys) do
-    Enum.filter(units, &(WorkTranslation.translatable?(&1) and (keys == :all or &1.key in keys)))
+  defp units(units, keys, targets) do
+    Enum.filter(units, fn unit ->
+      WorkTranslation.translatable?(unit) and fillable?(targets[unit.key]) and (keys == :all or unit.key in keys)
+    end)
   end
+
+  @doc """
+  Whether the form can fill the text an item's target points at: not a
+  gallery's per-image texts, which are translated in the block.
+  """
+  def fillable?({:block, _uid, _module, ["refs", _name, "gallery" | _]}), do: false
+  def fillable?({kind, _, _, _}) when kind in [:block, :row], do: true
+  def fillable?({:field, _}), do: true
+  def fillable?(_target), do: false
 
   defp run(socket, work, units) do
     %{id: form_id, entry: entry, translation: state} = socket.assigns

@@ -728,7 +728,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
           <span :if={@ai or @acknowledge} class="translation-item-actions">
             <.ai_mark mark={ai_mark(@fill, item.path)} />
             <AIAction.button
-              :if={@ai}
+              :if={@ai and TranslationFill.fillable?(item.target)}
               size={:icon}
               data-testid="translation-ai-item"
               phx-click="translate_with_ai"
