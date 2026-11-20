@@ -49,6 +49,8 @@ defmodule Brando.MCP.Uploads do
   alias Brando.Uploads
   alias Brando.Users.User
 
+  require Logger
+
   @id_bytes 16
   @secret_bytes 32
   # Bandit waits for a whole `read_length` within `read_timeout`, so the
@@ -86,16 +88,54 @@ defmodule Brando.MCP.Uploads do
     Path.join(base, "brando-mcp-uploads-#{Brando.otp_app() || :brando}")
   end
 
-  # Only a directory the server has made its own takes an upload: not a
-  # link, and readable by the server alone (`chmod` fails on another user's)
+  # Makes the directory if need be, and checks it as `checked_root/0` does
   defp ensure_root do
     root = root()
 
     with :ok <- File.mkdir_p(Path.dirname(root)),
          :ok <- mkdir_or_exists(root),
-         {:ok, %File.Stat{type: :directory}} <- File.lstat(root) do
-      File.chmod(root, 0o700)
+         {:ok, _root} <- checked_root() do
+      :ok
     end
+  end
+
+  # Nothing is listed, read, written or removed under the directory unless
+  # the server has made it its own: not a link, and readable by the server
+  # alone (`chmod` fails on another user's). A refusal is logged once, so an
+  # operator can tell why every upload is refused.
+  defp checked_root do
+    root = root()
+
+    case File.lstat(root) do
+      {:ok, %File.Stat{type: :directory, mode: mode}} ->
+        if Bitwise.band(mode, 0o777) == 0o700 or File.chmod(root, 0o700) == :ok,
+          do: {:ok, root},
+          else: refuse_root(root, "the server cannot make it readable by itself alone")
+
+      {:ok, %File.Stat{type: type}} ->
+        refuse_root(root, "it is a #{type}")
+
+      {:error, :enoent} ->
+        {:error, :enoent}
+
+      {:error, reason} ->
+        refuse_root(root, "it cannot be read (#{reason})")
+    end
+  end
+
+  defp refuse_root(root, reason) do
+    key = {__MODULE__, :refused_root, root, reason}
+
+    unless :persistent_term.get(key, false) do
+      :persistent_term.put(key, true)
+
+      Logger.error(
+        "[Brando.MCP.Uploads] #{root} is not a directory of the server's own (#{reason}): " <>
+          "no upload is prepared, received, finished or swept there. Remove it, or set upload_dir."
+      )
+    end
+
+    {:error, :refused}
   end
 
   defp mkdir_or_exists(path) do
@@ -121,14 +161,22 @@ defmodule Brando.MCP.Uploads do
   """
   @spec prepare(Grant.t(), MCP.tenant(), String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
   def prepare(%Grant{} = grant, tenant, filename, folder) do
-    sweep()
-
-    if pending_count(grant.id) >= max_pending() do
-      {:error,
-       "This connection has #{max_pending()} uploads waiting to be finished. Finish them with brando_media_finish_upload, or wait until they expire."}
-    else
+    with :ok <- ensure_root(),
+         _swept = sweep(),
+         :ok <- room(grant) do
       create(grant, tenant, filename, folder)
+    else
+      {:error, message} when is_binary(message) -> {:error, message}
+      _ -> {:error, "The upload could not be prepared on the server. Try again."}
     end
+  end
+
+  defp room(grant) do
+    if pending_count(grant.id) >= max_pending(),
+      do:
+        {:error,
+         "This connection has #{max_pending()} uploads waiting to be finished. Finish them with brando_media_finish_upload, or wait until they expire."},
+      else: :ok
   end
 
   defp create(grant, tenant, filename, folder) do
@@ -148,8 +196,7 @@ defmodule Brando.MCP.Uploads do
       "keep_until" => now + keep_seconds()
     }
 
-    with :ok <- ensure_root(),
-         :ok <- File.mkdir(dir),
+    with :ok <- File.mkdir(dir),
          :ok <- File.chmod(dir, 0o700),
          :ok <- File.write(Path.join(dir, @meta), Jason.encode!(meta)) do
       {_cfg, limit, types} = limits()
@@ -177,6 +224,7 @@ defmodule Brando.MCP.Uploads do
 
   defp read_meta(id) do
     with true <- valid_id?(id),
+         {:ok, _root} <- checked_root(),
          {:ok, json} <- File.read(Path.join(dir(id), @meta)),
          {:ok, %{} = meta} <- Jason.decode(json) do
       {:ok, meta}
@@ -190,8 +238,7 @@ defmodule Brando.MCP.Uploads do
   defp pending_count(grant_id) do
     now = System.system_time(:second)
 
-    root()
-    |> list_ids()
+    list_ids()
     |> Enum.count(fn id ->
       case read_meta(id) do
         {:ok, %{"grant_id" => ^grant_id} = meta} -> usable?(id, meta, now)
@@ -226,9 +273,11 @@ defmodule Brando.MCP.Uploads do
   defp url_expired?(%{"expires_at" => expires_at}, now) when is_integer(expires_at), do: now > expires_at
   defp url_expired?(_meta, _now), do: true
 
-  defp list_ids(root) do
-    case File.ls(root) do
-      {:ok, names} -> Enum.filter(names, &valid_id?/1)
+  defp list_ids do
+    with {:ok, root} <- checked_root(),
+         {:ok, names} <- File.ls(root) do
+      Enum.filter(names, &valid_id?/1)
+    else
       _ -> []
     end
   end
@@ -241,8 +290,7 @@ defmodule Brando.MCP.Uploads do
   def sweep do
     now = System.system_time(:second)
 
-    root()
-    |> list_ids()
+    list_ids()
     |> Enum.count(fn id ->
       stale? =
         case read_meta(id) do
@@ -630,7 +678,7 @@ defmodule Brando.MCP.Uploads do
   @doc "Removes upload `id` and its bytes."
   @spec discard(String.t()) :: :ok
   def discard(id) do
-    if valid_id?(id), do: File.rm_rf(dir(id))
+    if valid_id?(id) and match?({:ok, _root}, checked_root()), do: File.rm_rf(dir(id))
     :ok
   end
 end

@@ -254,18 +254,42 @@ defmodule Brando.MCP.MediaTest do
       Uploads.discard(id)
     end
 
-    test "a directory the server cannot make its own is refused", %{tenant: tenant, token: token, dir: dir} do
+    test "a directory the server cannot make its own is refused, by every step, and said once in the log",
+         %{tenant: tenant, token: token, dir: dir} do
+      mcp_env(upload_dir: dir, upload_keep_minutes: 0)
+      {sent, url} = prepare!(tenant, token)
+      {_unsent, unsent_url} = prepare!(tenant, token)
+      assert put_bytes(url, @jpg).status == 200
+
+      # The uploads directory is now a link to another's directory, which
+      # holds what looks like an hour-old upload
       elsewhere = dir <> "-elsewhere"
-      File.mkdir_p!(elsewhere)
       on_exit(fn -> File.rm_rf(elsewhere) end)
-      File.mkdir_p!(dir)
-      mcp_env(upload_dir: dir)
+      File.rename!(Uploads.root(), elsewhere)
       File.ln_s!(elsewhere, Uploads.root())
+      theirs = Path.join(elsewhere, String.duplicate("A", 22))
+      File.mkdir_p!(theirs)
+      File.touch!(theirs, 0)
+      before = File.ls!(elsewhere) |> Enum.sort()
 
-      assert %{"isError" => true, "structuredContent" => %{"error" => "The upload could not be prepared" <> _}} =
-               call(tenant, token, "prepare_upload", %{"kind" => "image", "filename" => "a.jpg"})
+      log =
+        Brando.Test.OwnLog.capture(fn ->
+          assert %{"isError" => true, "structuredContent" => %{"error" => "The upload could not be prepared" <> _}} =
+                   call(tenant, token, "prepare_upload", %{"kind" => "image", "filename" => "a.jpg"})
 
-      assert File.ls!(elsewhere) == []
+          MCP.prune()
+          assert put_bytes(unsent_url, @jpg).status == 404
+
+          assert %{"isError" => true, "structuredContent" => %{"error" => "There is no such upload" <> _}} =
+                   call(tenant, token, "finish_upload", %{"upload_id" => sent})
+
+          call(tenant, token, "prepare_upload", %{"kind" => "image", "filename" => "a.jpg"})
+        end)
+
+      assert File.ls!(elsewhere) |> Enum.sort() == before
+      assert File.ls!(Path.join(elsewhere, sent)) |> Enum.sort() == ["bytes", "claimed", "meta.json", "received.json"]
+      assert [_one] = Regex.scan(~r/is not a directory of the server's own/, log)
+      assert log =~ Uploads.root()
     end
 
     test "upload_dir: nil, as the guide shows it, is the default directory, and pruning goes on",

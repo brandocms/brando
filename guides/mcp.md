@@ -343,7 +343,9 @@ Uploads wait in the application's own directory,
 directory, or in `upload_dir` (below) when it is set, readable by the server
 only, until they are finished. The directory around it is left as it is, and
 a directory of that name Brando cannot make its own (a link, or another
-user's) is refused. One not finished in time is removed when the connection's next
+user's) is refused: nothing in it is listed, read, written or removed, by
+the nightly purge either, and the log says once why every upload is refused.
+One not finished in time is removed when the connection's next
 upload is prepared and by the nightly purge. With more than one server
 node, set `upload_dir` to a directory every node shares.
 
