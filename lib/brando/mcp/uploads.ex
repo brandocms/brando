@@ -31,7 +31,9 @@ defmodule Brando.MCP.Uploads do
   the upload is finished, and anything not finished within `keep_minutes`
   (60) of preparing it is removed when the next upload is prepared and
   nightly (`Brando.MCP.prune/0`). A connection has at most `max_pending`
-  (10) uploads waiting at once.
+  (10) uploads waiting at once that can still be finished: one whose bytes
+  were refused, or whose URL passed its time with nothing sent, does not
+  count, and finishing it removes it.
 
   The pending directories are on the node that served the request: on more
   than one node, `upload_dir` must be shared between them.
@@ -154,16 +156,33 @@ defmodule Brando.MCP.Uploads do
     end
   end
 
+  # Only uploads that can still be finished hold a place: not one whose
+  # bytes were refused, nor a URL past its time that nothing was sent to
   defp pending_count(grant_id) do
+    now = System.system_time(:second)
+
     root()
     |> list_ids()
     |> Enum.count(fn id ->
       case read_meta(id) do
-        {:ok, %{"grant_id" => ^grant_id}} -> true
+        {:ok, %{"grant_id" => ^grant_id} = meta} -> usable?(id, meta, now)
         _ -> false
       end
     end)
   end
+
+  defp usable?(id, meta, now) do
+    dir = dir(id)
+
+    cond do
+      File.exists?(Path.join(dir, @failed)) -> false
+      File.exists?(Path.join(dir, @bytes)) or File.exists?(Path.join(dir, @claimed)) -> true
+      true -> not url_expired?(meta, now)
+    end
+  end
+
+  defp url_expired?(%{"expires_at" => expires_at}, now) when is_integer(expires_at), do: now > expires_at
+  defp url_expired?(_meta, _now), do: true
 
   defp list_ids(root) do
     case File.ls(root) do
@@ -474,7 +493,7 @@ defmodule Brando.MCP.Uploads do
   @spec take(String.t(), integer(), MCP.tenant()) :: {:ok, map()} | {:error, String.t()}
   def take(id, grant_id, tenant) do
     with {:ok, meta} <- own(id, grant_id, tenant),
-         :ok <- arrived(id),
+         :ok <- arrived(id, meta),
          {:ok, received} <- read_received(id),
          :ok <- take_once(id) do
       {:ok,
@@ -505,7 +524,8 @@ defmodule Brando.MCP.Uploads do
 
   defp unknown, do: "There is no such upload for this connection. Prepare one with brando_media_prepare_upload."
 
-  defp arrived(id) do
+  # An upload that can no longer be finished is removed as it is reported
+  defp arrived(id, meta) do
     dir = dir(id)
 
     cond do
@@ -513,10 +533,16 @@ defmodule Brando.MCP.Uploads do
         :ok
 
       File.exists?(Path.join(dir, @failed)) ->
-        {:error, "The upload failed: " <> (File.read!(Path.join(dir, @failed)) |> String.slice(0, 300))}
+        message = "The upload failed: " <> (Path.join(dir, @failed) |> File.read!() |> String.slice(0, 300))
+        discard(id)
+        {:error, message <> " Prepare a new upload."}
 
       File.exists?(Path.join(dir, @claimed)) ->
         {:error, "The upload is still arriving. Call again once the PUT has answered."}
+
+      url_expired?(meta, System.system_time(:second)) ->
+        discard(id)
+        {:error, "The upload URL expired before anything was sent to it. Prepare a new upload."}
 
       true ->
         {:error, "Nothing has been sent to the upload URL yet. Send the image with a PUT to upload_url first."}

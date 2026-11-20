@@ -328,7 +328,8 @@ environment: another connection, even the same person's, cannot finish the
 upload, and the URL answers only at the endpoint it was made for. It expires
 10 minutes after it is prepared; the bytes must have all arrived 10 minutes
 after the PUT starts, and the upload must be finished within the hour.
-A connection has at most 10 uploads waiting at once. A request whose
+A connection has at most 10 uploads waiting at once; one whose bytes were
+refused, or whose URL expired with nothing sent, does not count. A request whose
 `Content-Length` is over the image config's size limit is refused before a
 byte is read, and one sent without a length is cut off the moment it passes
 the limit; one whose first bytes are not an image type the config takes is

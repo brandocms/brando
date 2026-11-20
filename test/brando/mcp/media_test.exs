@@ -139,6 +139,36 @@ defmodule Brando.MCP.MediaTest do
       assert error =~ "2 uploads waiting"
     end
 
+    test "an upload that can no longer be used does not hold a place, and a failed finish removes it",
+         %{tenant: tenant, token: token, dir: dir} do
+      mcp_env(upload_dir: dir, upload_max_pending: 2)
+
+      # Refused bytes: the URL is used up
+      {refused, url} = prepare!(tenant, token)
+      assert put_bytes(url, "not an image at all").status == 415
+      prepare!(tenant, token)
+      {third, _url} = prepare!(tenant, token)
+
+      # Finishing the refused one says why and removes it
+      assert %{"isError" => true, "structuredContent" => %{"error" => "The upload failed" <> _}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => refused})
+
+      refute refused in pending(dir)
+
+      # A URL past its time that nothing was sent to
+      Uploads.discard(third)
+      mcp_env(upload_dir: dir, upload_max_pending: 2, upload_url_minutes: -1)
+      {expired, _url} = prepare!(tenant, token)
+      mcp_env(upload_dir: dir, upload_max_pending: 2)
+      prepare!(tenant, token)
+
+      assert %{"isError" => true, "structuredContent" => %{"error" => error}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => expired})
+
+      assert error =~ "expired"
+      refute expired in pending(dir)
+    end
+
     test "uploads not finished in time are removed when the next is prepared, and nightly",
          %{tenant: tenant, token: token, dir: dir} do
       mcp_env(upload_dir: dir, upload_keep_minutes: -1)
