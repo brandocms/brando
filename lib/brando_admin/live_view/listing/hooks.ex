@@ -144,6 +144,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
         update_list_entries(schema)
 
+      {:error, :group_has_synchronized_members} ->
+        send(self(), {:toast, synchronized_members_message(schema, entry_id)})
+
       {:error, {:fragments, :target_not_found}} ->
         send(
           self(),
@@ -171,8 +174,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    for entry_id <- ids do
-      apply(context, :"delete_#{singular}", [entry_id, user])
+    for entry_id <- ids,
+        {:error, :group_has_synchronized_members} <- [apply(context, :"delete_#{singular}", [entry_id, user])] do
+      send(self(), {:toast, synchronized_members_message(schema, entry_id)})
     end
 
     update_list_entries(schema)
@@ -370,6 +374,18 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   defp log_duplicate_error(singular, error) do
     Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
+  end
+
+  defp synchronized_members_message(schema, entry_id) do
+    if Brando.Translations.trashed_synchronized_targets?(schema, entry_id) do
+      gettext(
+        "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
+      )
+    else
+      gettext(
+        "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
+      )
+    end
   end
 
   defp translation_error_message({:error, :language_in_trash}),

@@ -3794,7 +3794,26 @@ defmodule Brando.Content.Proposals do
 
     case Kernel.apply(context, :"delete_#{singular}", [id, user]) do
       {:ok, _} -> :ok
+      {:error, :group_has_synchronized_members} -> Error.fail!(has_synchronized_members(schema, id))
       {:error, reason} -> Error.fail!(dgettext("content_proposals", "Undo failed: %{reason}", reason: inspect(reason)))
+    end
+  end
+
+  defp has_synchronized_members(schema, id) do
+    entry = Catalog.describe(Repo.get!(schema, id)).title
+
+    if Translations.trashed_synchronized_targets?(schema, id) do
+      dgettext(
+        "content_proposals",
+        "%{entry} became the source of synchronized translations after the proposal was applied, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before undoing.",
+        entry: entry
+      )
+    else
+      dgettext(
+        "content_proposals",
+        "%{entry} became the source of synchronized translations after the proposal was applied. Make them independent, or make one of them the source, before undoing.",
+        entry: entry
+      )
     end
   end
 

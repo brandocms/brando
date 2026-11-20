@@ -50,6 +50,16 @@ msgstr "%{entry} ble kilden i oversettelsesgruppen etter at forslaget ble utfør
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after the proposal was applied, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before undoing."
+msgstr "%{entry} ble kilden til synkroniserte oversettelser etter at forslaget ble utført, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde, før du angrer."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after the proposal was applied. Make them independent, or make one of them the source, before undoing."
+msgstr "%{entry} ble kilden til synkroniserte oversettelser etter at forslaget ble utført. Gjør dem selvstendige, eller gjør en av dem til kilde, før du angrer."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{field} cannot be changed by a proposal."
 msgstr "%{field} kan ikke endres av et forslag."
 

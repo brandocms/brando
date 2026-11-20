@@ -129,6 +129,15 @@ defmodule Brando.Translations.DeletedTranslationTest do
       assert [%{operation: 0, code: :language_in_trash}] = proposal.problems
     end
 
+    test "the source's delete is refused while the translation is in the trash, which counts", c do
+      assert {:error, :group_has_synchronized_members} = Pages.delete_page(c.page.id, c.user)
+      assert Translations.trashed_synchronized_targets?(Page, c.page.id)
+
+      {:ok, _} = Brando.Authorization.Boundary.restore(c.user, Repo.get!(Page, c.target.id))
+
+      refute Translations.trashed_synchronized_targets?(Page, c.page.id)
+    end
+
     test "the listing marks a version in the trash", c do
       versions = Translations.listing_status(Page, [c.page])[c.page.id]
 

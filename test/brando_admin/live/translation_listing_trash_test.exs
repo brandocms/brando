@@ -8,6 +8,7 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
 
   alias Brando.Pages.Page
   alias Brando.Translations
+  alias BrandoIntegration.Repo
 
   setup %{current_user: user} do
     put_test_env(Page, translatable: [mode: :synchronized])
@@ -34,5 +35,24 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
     # The version in the trash keeps its place, and no other was created
     %{group_id: group_id} = Translations.get_member(Page, c.source.id)
     assert [c.source.id, c.target.id] == Enum.map(Translations.list_members(group_id), & &1.entry_id)
+  end
+
+  # The listing's toast, from the user's channel
+  defp delete_toast(view, id) do
+    render_click(view, "delete_entry", %{"id" => to_string(id)})
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message}}
+    message
+  end
+
+  test "refusing to delete the source says when a translation in the trash counts", %{conn: conn} = c do
+    Brando.endpoint().subscribe("user:#{c.current_user.id}")
+    {:ok, view, _html} = live(conn, "/admin/pages")
+
+    in_trash = delete_toast(view, c.source.id)
+    {:ok, _} = Brando.Authorization.Boundary.restore(c.current_user, Repo.get!(Page, c.target.id))
+    synchronized = delete_toast(view, c.source.id)
+
+    refute Repo.get!(Page, c.source.id).deleted_at
+    assert in_trash != synchronized
   end
 end

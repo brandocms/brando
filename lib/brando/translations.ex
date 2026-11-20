@@ -1347,6 +1347,28 @@ defmodule Brando.Translations do
   def guard_delete(_, _), do: :ok
 
   @doc """
+  Whether a synchronized translation of the source `id` is in the trash: it
+  still counts for `guard_delete/2` until it is restored or purged, though the
+  listing does not show it.
+  """
+  def trashed_synchronized_targets?(module, id) do
+    case get_member(module, id) do
+      %Member{role: :source, group_id: group_id} ->
+        ids =
+          Repo.all(
+            from m in Member,
+              where: m.group_id == ^group_id and m.role == :target and m.synchronized == true,
+              select: m.entry_id
+          )
+
+        trashed_ids(module, ids) != []
+
+      _ ->
+        false
+    end
+  end
+
+  @doc """
   Takes entries of `schema` deleted for good out of their groups: their
   members go, with their pending versions and work items, and their languages
   are free again. A source's group goes with it; `guard_delete/2` lets a source
