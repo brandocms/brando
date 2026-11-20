@@ -151,6 +151,27 @@ defmodule Brando.Translations.SourcePreviousTest do
     assert %{source_previous: "Tittel"} = open_review(c, "title")
   end
 
+  test "a review answered from a version the source has since moved on from keeps no previous text", c do
+    retitle(c, "Ny tittel")
+    loaded = Translations.get_pending_version(Article, c.target.id)
+    retitle(c, "Nyere tittel")
+    assert %{source_previous: "Tittel"} = open_review(c, "title")
+
+    # The editor saves a translation of "Ny tittel", from the version it loaded
+    {:ok, _} =
+      Article
+      |> Repo.get!(c.target.id)
+      |> Repo.preload(Brando.Blueprint.preloads_for(Article))
+      |> Article.changeset(%{title: "New title"}, c.user)
+      |> SyncTest.update_article(c.user, editor_review: true)
+
+    {:ok, _} = Translations.target_saved(Article, c.target.id, %{version_id: loaded.id, acknowledged: []})
+
+    # Still to review against "Nyere tittel", but "Tittel" is no longer what
+    # the translation was written from
+    assert %{source_previous: nil} = open_review(c, "title")
+  end
+
   test "making a translation the source resets every member's texts to it", c do
     {:ok, _} = Translations.transfer_source(Article, c.target.id, c.user)
 

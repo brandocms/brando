@@ -843,6 +843,8 @@ defmodule Brando.Translations do
     reviewed_translate =
       for %{kind: :translate} = item <- reviewed.work_items, into: %{}, do: {item.path, item.source_digest}
 
+    reviewed_paths = MapSet.new(reviewed.work_items, & &1.path)
+
     acknowledged = MapSet.new(List.wrap(review[:acknowledged]))
     left = unapplied(saved, payload, schema, module_uids)
     timestamp = now()
@@ -863,6 +865,13 @@ defmodule Brando.Translations do
           # the editor worked, so the translation is to review now.
           completed? and item.kind == :translate and Map.has_key?(reviewed_translate, item.path) ->
             item |> Changeset.change(kind: :review) |> Repo.update!()
+
+          # Answered from the source's text the loaded version was computed
+          # against, which Brando does not keep: the source's text before the
+          # change is no longer what the translation was written from
+          completed? and item.kind == :review and is_binary(item.source_previous) and
+              MapSet.member?(reviewed_paths, item.path) ->
+            item |> Changeset.change(source_previous: nil) |> Repo.update!()
 
           true ->
             item
