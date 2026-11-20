@@ -774,6 +774,14 @@
   ins { text-decoration: none; background: var(--assistant-new); }
 }
 
+/* A translation's units: the source's text above its translation. */
+.assistant-translation {
+  dd { display: grid; gap: 2px; }
+  .assistant-translation-source { color: var(--assistant-muted); }
+  ins { justify-self: start; }
+  .assistant-translation-kept { color: var(--assistant-muted); font-style: italic; }
+}
+
 .assistant-inline-media {
   display: inline-flex;
   align-items: center;

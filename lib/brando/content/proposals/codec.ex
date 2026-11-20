@@ -30,6 +30,7 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "set_block_table", "target" => target, "block_uid" => uid, "rows" => [%{}]}
       %{"op" => "set_block_selection", "target" => target, "block_uid" => uid, "identifiers" => [id]}
       %{"op" => "replace_image_file", "asset" => %{"kind" => "image", "id" => old}, "with" => %{"kind" => "image", "id" => new}}
+      %{"op" => "translate", "target" => target, "source_digest" => token, "texts" => %{key => text}, "reviewed" => [key]}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video" | "file", "id" => 3}`, the alias
@@ -59,7 +60,8 @@ defmodule Brando.Content.Proposals.Codec do
     SetBlockText,
     SetBlockValues,
     SetFields,
-    SetRefConfig
+    SetRefConfig,
+    Translate
   }
 
   @doc "Decode one operation. `attachments` maps aliases to `{:image | :video, id}`."
@@ -103,6 +105,16 @@ defmodule Brando.Content.Proposals.Codec do
       source: source!(map["source"]),
       language: string!(map["language"], "language"),
       ref: string!(map["ref"], "ref")
+    }
+
+  # The answer's shape is checked with the rest of it, as a problem the
+  # client can correct (`Brando.Translations.Work.check/4`).
+  defp decode!("translate", map, _),
+    do: %Translate{
+      target: target!(map["target"]),
+      source_digest: string!(map["source_digest"], "source_digest"),
+      texts: if(is_nil(map["texts"]), do: %{}, else: map["texts"]),
+      reviewed: if(is_nil(map["reviewed"]), do: [], else: map["reviewed"])
     }
 
   defp decode!("set_fields", map, attachments),
@@ -268,6 +280,15 @@ defmodule Brando.Content.Proposals.Codec do
 
   def encode(%CreateTranslation{} = op),
     do: %{"op" => "create_translation", "source" => target(op.source), "language" => op.language, "ref" => op.ref}
+
+  def encode(%Translate{} = op),
+    do: %{
+      "op" => "translate",
+      "target" => target(op.target),
+      "source_digest" => op.source_digest,
+      "texts" => op.texts,
+      "reviewed" => op.reviewed
+    }
 
   def encode(%SetFields{} = op),
     do: %{

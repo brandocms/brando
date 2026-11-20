@@ -347,6 +347,85 @@ defmodule Brando.MCP.EndpointTest do
       end)
     end
 
+    # #3743's acceptance: create the English version of a synchronized
+    # entry, read its work, propose its texts in one proposal, apply
+    test "a client creates a synchronized entry's translation and fills it in with one proposal",
+         %{tenant: tenant, token: token} = c do
+      source =
+        MCP.in_tenant(tenant, fn ->
+          {:ok, module} =
+            Brando.Content.create_module(
+              Brando.Factory.params_for(:module,
+                name: %{"en" => "Text"},
+                namespace: %{"en" => "Content"},
+                help_text: %{},
+                code: "{% ref refs.body %}",
+                refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: ""}}}]
+              ),
+              c.current_user
+            )
+
+          {:ok, source} =
+            Brando.SyncTest.create_article(
+              %{title: "Tittel", slug: "tittel-work", language: "no", status: "published"},
+              c.current_user
+            )
+
+          Brando.TranslationFixtures.add_block(source, module, c.current_user, "<p>Første avsnitt</p>", 0)
+          source
+        end)
+
+      %{"result" => %{"structuredContent" => work}} =
+        call_tool(tenant, token, "translation_work", %{
+          "content_type" => "Brando.SyncTest.Article",
+          "id" => source.id,
+          "language" => "en"
+        })
+
+      english = %{"Tittel" => "Title", "<p>Første avsnitt</p>" => "<p>First paragraph</p>"}
+      texts = Map.new(work["units"], &{&1["key"], Map.fetch!(english, &1["source"])})
+
+      ops = [
+        %{
+          "op" => "create_translation",
+          "source" => %{"content_type" => "Brando.SyncTest.Article", "id" => source.id},
+          "language" => "en",
+          "ref" => "english"
+        },
+        %{
+          "op" => "translate",
+          "target" => %{"new" => "english"},
+          "source_digest" => work["source_digest"],
+          "texts" => texts
+        }
+      ]
+
+      %{"result" => %{"structuredContent" => review}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Translate into English", "operations" => ops})
+
+      assert %{"applicable" => true, "problems" => []} = review
+
+      MCP.in_tenant(tenant, fn ->
+        assert {:ok, _} = Proposals.approve(review["proposal_id"], 1, c.current_user)
+        assert {:ok, receipt} = Proposals.apply(review["proposal_id"], 1, c.current_user)
+        id = receipt.mappings["created"]["english"]
+
+        assert %{role: :target, synchronized: true, group_id: group_id} =
+                 Brando.Translations.get_member(Brando.SyncTest.Article, id)
+
+        assert %{role: :source, group_id: ^group_id} = Brando.Translations.get_member(Brando.SyncTest.Article, source.id)
+
+        {:ok, translation} = Brando.Translations.load_entry(Brando.SyncTest.Article, id)
+        assert translation.title == "Title"
+        assert [%{block: %{refs: [%{data: %{data: %{text: "<p>First paragraph</p>"}}}]}}] = translation.entry_blocks
+
+        assert Brando.SyncTest.Article
+               |> Brando.Translations.get_pending_version(id)
+               |> then(&((&1 && &1.work_items) || []))
+               |> Enum.all?(&(&1.resolved_at != nil))
+      end)
+    end
+
     test "a proposal prepared over the endpoint and applied in the admin names the client, the proposal and the approver",
          %{tenant: tenant, token: token} = c do
       op = %{

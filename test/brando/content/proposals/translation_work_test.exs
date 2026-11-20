@@ -333,21 +333,24 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
     assert message =~ "not synchronized"
   end
 
-  # The proposal operations that answer a batch or create a translation come
-  # with their own changes; until then the tool names none
-  test "names no proposal operation that prepare_proposal does not have", c do
+  # The notes tell a client how to answer a batch, and how one proposal
+  # creates and fills in a missing language, with operations prepare_proposal
+  # has
+  test "names how to answer a batch, with operations prepare_proposal has", c do
     {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+    prepare = Enum.find(Tools.definitions(), &(&1.name == "prepare_proposal")).description
 
-    texts = [
-      Enum.find(Tools.definitions(), &(&1.name == "translation_work")).description,
-      call!(args(target.id), c.context).note,
-      call!(args(c.source.id), c.context).note
-    ]
+    for op <- ~w(translate create_translation), do: assert(prepare =~ ~s({"op":"#{op}"))
+
+    for text <- [
+          Enum.find(Tools.definitions(), &(&1.name == "translation_work")).description,
+          call!(args(target.id), c.context).note
+        ],
+        do: assert(text =~ "translate operation" and text =~ "source_digest")
 
     {:ok, lone} = SyncTest.create_article(%{title: "Alene", slug: "alene", language: "no", status: "published"}, c.user)
-    texts = [call!(args(lone.id, %{"language" => "en"}), c.context).note | texts]
-
-    for text <- texts, do: refute(text =~ ~r/create_translation|translate operation/)
+    note = call!(args(lone.id, %{"language" => "en"}), c.context).note
+    assert note =~ "create_translation" and note =~ ~s(translate on {"new": R})
   end
 
   test "is offered over MCP as a read, and to the Assistant" do

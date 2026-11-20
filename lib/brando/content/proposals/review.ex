@@ -31,11 +31,13 @@ defmodule Brando.Content.Proposals.Review do
     SetBlockText,
     SetBlockValues,
     SetFields,
-    SetRefConfig
+    SetRefConfig,
+    Translate
   }
 
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
+  alias Brando.Translations
   alias Brando.Type.I18nString
 
   alias Brando.Content.Transfer.Catalog
@@ -119,7 +121,10 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp entry({schema, id} = target, entry, proposal) do
-    changes = field_changes(target, entry, proposal) ++ block_changes(target, entry, proposal)
+    changes =
+      field_changes(target, entry, proposal) ++
+        block_changes(target, entry, proposal) ++ translate_changes(target, proposal)
+
     described = Catalog.describe(entry)
 
     %{
@@ -127,6 +132,9 @@ defmodule Brando.Content.Proposals.Review do
       target: target,
       # An entry blocks are only copied from is read, not changed.
       action: if(target in Brando.Content.Proposals.sources(proposal.operations), do: :source, else: :update),
+      # A translation a translate operation fills in is saved as its form
+      # saves it, and is not published by the apply
+      translation?: Brando.Content.Proposals.translated?(proposal.operations, target),
       content_type: Brando.Blueprint.get_singular(schema),
       title: described.title,
       url: blank(described.url),
@@ -161,6 +169,8 @@ defmodule Brando.Content.Proposals.Review do
       operations: [Enum.find_index(proposal.operations, &(&1 == op))]
     }
 
+    changes = [change | translate_changes(target, proposal)]
+
     %{
       key: Proposal.key(target),
       target: target,
@@ -173,7 +183,7 @@ defmodule Brando.Content.Proposals.Review do
       admin_url: nil,
       status: "draft",
       live?: false,
-      changes: [change],
+      changes: changes,
       media: [],
       highlight: [],
       preview?: false,
@@ -181,6 +191,127 @@ defmodule Brando.Content.Proposals.Review do
       placeholders: [],
       problems: problems(proposal, target)
     }
+  end
+
+  # Each batch a translate operation answers, unit by unit: where the text
+  # is, the source's text and its translation, so the reviewer can check one
+  # against the other. A unit kept as it is shows the text the translation
+  # keeps. Units are placed and labelled from the translation's pending
+  # version, which the apply saves. The first batch also says what else that
+  # save brings (`pending`), while the proposal can still be applied: the
+  # pending version an applied one is read with is a later one. The source
+  # is read as the reviewer may read it.
+  defp translate_changes(target, proposal) do
+    ops = for {%Translate{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
+
+    case ops != [] && translate_context(target, proposal) do
+      %{} = context ->
+        keys = Enum.flat_map(ops, fn {op, _} -> Map.keys(texts_of(op)) ++ reviewed_of(op) end)
+        # Without read on the source, its text is not shown
+        described = Translations.Work.describe(context.schema, context.source || context.entry, context.entry, keys)
+        pending = Map.update!(context.pending, :open, &length(&1 -- keys))
+
+        for {{op, index}, nth} <- Enum.with_index(ops) do
+          %{
+            type: :translate,
+            language: context.language,
+            source_language: context.source_language,
+            units: translate_units(op, described, context.source != nil),
+            pending: if(nth == 0 and proposal.status in ~w(pending approved), do: pending),
+            operations: [index]
+          }
+        end
+
+      _ ->
+        []
+    end
+  end
+
+  defp translate_units(op, described, source?) do
+    texts = texts_of(op)
+    reviewed = reviewed_of(op)
+
+    for %{key: key} = unit <- described, Map.has_key?(texts, key) or key in reviewed do
+      %{
+        key: key,
+        label: unit.label,
+        source: if(source?, do: readable(unit.source)),
+        text: if(Map.has_key?(texts, key), do: readable(texts[key]), else: readable(unit.current)),
+        reviewed?: not Map.has_key?(texts, key)
+      }
+    end
+  end
+
+  defp texts_of(%Translate{texts: texts}) when is_map(texts),
+    do: for({key, text} <- texts, is_binary(key) and is_binary(text), into: %{}, do: {key, text})
+
+  defp texts_of(_op), do: %{}
+
+  defp reviewed_of(%Translate{reviewed: reviewed}) when is_list(reviewed), do: Enum.filter(reviewed, &is_binary/1)
+  defp reviewed_of(_op), do: []
+
+  # The translation the proposal creates is its source's copy: its units are
+  # the source's, labelled from it, and every text left unanswered stays in
+  # the source's language.
+  defp translate_context({:new, _} = target, proposal) do
+    with %CreateTranslation{source: {schema, source_id}, language: language} <-
+           Brando.Content.Proposals.translation(proposal.operations, target),
+         %{} = source <- readable_source(schema, source_id) do
+      open = for unit <- Translations.Work.prospective_units(schema, source), unit.answerable, do: unit.key
+
+      %{
+        schema: schema,
+        source: source,
+        entry: source,
+        language: language,
+        source_language: to_string(source.language),
+        pending: %{open: open, structure?: false, live?: false}
+      }
+    else
+      _ -> nil
+    end
+  end
+
+  # An existing translation is saved with its whole pending version: the
+  # text work it leaves open, and what its source changed in its structure.
+  defp translate_context({schema, id}, _proposal) do
+    with %{group_id: group_id, language: language} <- Translations.get_member(schema, id),
+         %{entry_id: source_id} <- Enum.find(Translations.list_members(group_id), &(&1.role == :source)),
+         {:ok, saved} <- Translations.load_entry(schema, id, with_deleted: true) do
+      source = readable_source(schema, source_id)
+      version = Translations.get_pending_version(schema, id)
+      entry = if version, do: Translations.pending_content(version, saved), else: saved
+
+      open =
+        for %{resolved_at: nil, kind: kind, path: path} <- (version && version.work_items) || [],
+            kind in [:translate, :review],
+            uniq: true,
+            do: path
+
+      %{
+        schema: schema,
+        source: source,
+        entry: entry,
+        language: language,
+        source_language: source && to_string(source.language),
+        pending: %{
+          open: open,
+          structure?: version != nil and Translations.structure_changed?(schema, saved, entry),
+          live?: Map.get(saved, :status) == :published
+        }
+      }
+    else
+      _ -> nil
+    end
+  end
+
+  defp readable_source(schema, id) do
+    with true <- Boundary.readable_entry?(schema, id),
+         {:ok, source} <- Translations.load_entry(schema, id) do
+      source
+    else
+      _ -> nil
+    end
   end
 
   defp new_entry({:new, ref} = target, schema, proposal) do

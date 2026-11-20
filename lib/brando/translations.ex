@@ -26,6 +26,7 @@ defmodule Brando.Translations do
   require Logger
 
   alias Brando.Blueprint.Unique
+  alias Brando.Content.Blocks
   alias Brando.Content.Identifier
   alias Brando.Repo
   alias Brando.Translations.Group
@@ -661,6 +662,17 @@ defmodule Brando.Translations do
     end
   end
 
+  @doc """
+  Whether `payload`, a pending version's content (`pending_content/2`),
+  differs from `saved`, the translation it was computed for, in what
+  follows the source: structure, media, links or source-controlled values.
+  Saving the pending version saves those with its text.
+  """
+  def structure_changed?(schema, saved, payload) do
+    uids = module_uids([saved, payload], schema)
+    owned_by_field(saved, schema, uids) != owned_by_field(payload, schema, uids)
+  end
+
   # Owned rows by the entry field their path starts with: a field is kept or
   # taken whole, never a mix of the saved and the pending version's rows.
   defp owned_by_field(entry, schema, module_uids) do
@@ -682,13 +694,18 @@ defmodule Brando.Translations do
     Enum.reduce(blocks_fields(schema), changeset, fn field, changeset ->
       case Changeset.get_change(changeset, field) do
         joins when is_list(joins) ->
-          Changeset.put_change(changeset, field, Enum.map(joins, &restore_join(&1, blocks)))
+          Changeset.put_change(changeset, field, joins |> kept_rows() |> Enum.map(&restore_join(&1, blocks)))
 
         _ ->
           changeset
       end
     end)
   end
+
+  # A row the changeset replaces (one `Brando.Drafts.Restore` left out) is
+  # left out again: `put_change/3` raises on a `:replace` changeset, and
+  # replaces the row again by itself.
+  defp kept_rows(rows), do: Enum.reject(rows, &match?(%Changeset{action: :replace}, &1))
 
   defp restore_join(%Changeset{} = join, blocks) do
     case Changeset.get_change(join, :block) do
@@ -724,6 +741,7 @@ defmodule Brando.Translations do
 
         rows =
           rows
+          |> kept_rows()
           |> Enum.with_index()
           |> Enum.map(fn {row, index} -> restore_row_identity(row, Enum.at(reference_rows, index)) end)
 
@@ -742,7 +760,7 @@ defmodule Brando.Translations do
   defp restore_children(block, blocks) do
     case Changeset.get_change(block, :children) do
       children when is_list(children) ->
-        Changeset.put_change(block, :children, Enum.map(children, &restore_child(&1, blocks)))
+        Changeset.put_change(block, :children, children |> kept_rows() |> Enum.map(&restore_child(&1, blocks)))
 
       _ ->
         block
@@ -1689,6 +1707,177 @@ defmodule Brando.Translations do
        end}
     end
   end
+
+  ## Saving answered work
+
+  @doc """
+  The changeset that saves `texts` (`%{path => text}`, paths as
+  `Brando.Translations.Sync` flattens them) into the synchronized
+  translation `entry_id`, as its form builds one: the saved translation
+  takes its pending version (`pending_content/2`), which carries the
+  structure and media its source dictates, with the texts written at their
+  paths. Nothing is written.
+
+  Returns `{:ok, changeset, version_id}`, `version_id` being the pending
+  version the changeset was built from (nil when the translation has none:
+  the texts are written into the saved translation), or `{:error, reason}`:
+  `:not_translation` for an entry that is not a synchronized translation,
+  `:not_found`, `:unbuildable` when the version cannot be put into a
+  changeset whole (a block whose module no longer matches it).
+  """
+  def work_changeset(schema, entry_id, texts, user) do
+    with %{member: %Member{role: :target, synchronized: true}, pending: pending} <- editor_state(schema, entry_id),
+         {:ok, saved} <- load_entry(schema, entry_id, with_deleted: true) do
+      payload = if pending, do: pending_content(pending, saved), else: saved
+      payload = Sync.put_entry_texts(payload, schema, texts, module_uids([payload], schema))
+
+      case payload_changeset(schema, saved, payload, user) do
+        {:ok, changeset} -> {:ok, changeset, pending && pending.id}
+        :error -> {:error, :unbuildable}
+      end
+    else
+      nil -> {:error, :not_translation}
+      %{} -> {:error, :not_translation}
+      _ -> {:error, :not_found}
+    end
+  end
+
+  # The pending version as the translation form restores it
+  # (`BrandoAdmin.Components.Form.Translation.restore_changeset/1`): the
+  # default form's fields, every block field and transformer, on top of the
+  # saved translation.
+  defp payload_changeset(schema, saved, payload, user) do
+    blueprint = schema.__form__(:default)
+
+    blocks =
+      Map.new(blueprint.blocks, fn field ->
+        {to_string(field.name), Brando.Drafts.Params.snapshot(Map.get(payload, :"entry_#{field.name}") || [])}
+      end)
+
+    transformers =
+      Map.new(blueprint.transformers, fn {name, _, _} ->
+        {to_string(name), Brando.Drafts.Params.snapshot(Map.get(payload, name) || [])}
+      end)
+
+    draft = %{
+      format_version: 1,
+      schema_version: Brando.Blueprint.Snapshot.get_current_version(schema),
+      base_fingerprint: Brando.Drafts.fingerprint(saved),
+      payload: %{
+        "main" => BrandoAdmin.Components.Form.Drafts.main_params(schema, blueprint, Changeset.change(payload)),
+        "blocks" => blocks,
+        "transformers" => transformers,
+        "modules" => Brando.Drafts.Modules.manifest(blocks)
+      }
+    }
+
+    # A block whose module no longer matches it would be left out, and with
+    # it the translation's text: refused rather than saved without it.
+    case Brando.Drafts.Restore.prepare(draft, saved, schema, user, accept_conflict: true, compatible_only: true) do
+      {:ok, changeset, []} -> {:ok, changeset}
+      _ -> :error
+    end
+  end
+
+  @doc """
+  Saves answered translation work into the synchronized translation
+  `entry_id` as its form saves it: `work_changeset/4` with the `texts`,
+  `check_target_save/4` against the pending version, its blocks rendered,
+  the context's update
+  with `editor_review: true`, then `target_saved/3` with that version and
+  every answered path acknowledged, so each answered work item is resolved,
+  a text rightly the same in both languages included.
+
+  `answer` holds `texts` (`%{path => text}`) and `acknowledged` (paths kept
+  as they are). Options: `:mutation`, more options for the context's update
+  (`show_notification: false`, `pubsub: false`). Run it in a transaction to
+  make the save and the resolution one.
+
+  Returns `{:ok, %{entry: entry, changeset: changeset, resolved: items,
+  open: count, stale: boolean}}`, `resolved` being the work items the save resolved
+  (`%{path, kind, source_digest, minor}`, for `reopen_work/3`), or
+  `{:error, reason}`: those of `work_changeset/4`,
+  `{:source_controlled, paths}`, or the update's error.
+  """
+  def save_work(schema, entry_id, answer, user, opts \\ []) do
+    texts = Map.get(answer, :texts) || %{}
+    acknowledged = Enum.uniq(Map.keys(texts) ++ (Map.get(answer, :acknowledged) || []))
+    mutation = Keyword.merge(Keyword.get(opts, :mutation, []), editor_review: true)
+    context = schema.__modules__().context
+    singular = schema.__naming__().singular
+
+    with {:ok, changeset, version_id} <- work_changeset(schema, entry_id, texts, user),
+         {:ok, changeset} <- check_target_save(schema, entry_id, changeset, version_id),
+         changeset = render_blocks(schema, changeset),
+         open = open_items(version_id),
+         {:ok, entry} <- apply(context, :"update_#{singular}", [changeset, user, mutation]),
+         {:ok, result} <- target_saved(schema, entry_id, %{version_id: version_id, acknowledged: acknowledged}) do
+      {:ok, Map.merge(result, %{entry: entry, changeset: changeset, resolved: resolved_items(open)})}
+    end
+  end
+
+  # Rendered before it is saved, as the form renders it: the update renders
+  # nothing for a changeset without a status change.
+  defp render_blocks(schema, changeset) do
+    if schema.__blocks_fields__() == [], do: changeset, else: Blocks.render_block_fields(changeset)
+  end
+
+  defp open_items(nil), do: []
+
+  defp open_items(version_id),
+    do: Repo.all(from(w in WorkItem, where: w.pending_version_id == ^version_id and is_nil(w.resolved_at)))
+
+  defp resolved_items([]), do: []
+
+  defp resolved_items(open) do
+    ids = Enum.map(open, & &1.id)
+
+    from(w in WorkItem, where: w.id in ^ids and not is_nil(w.resolved_at), order_by: w.id)
+    |> Repo.all()
+    |> Enum.map(&Map.take(&1, [:path, :kind, :source_digest, :minor]))
+  end
+
+  @doc """
+  Opens again work `save_work/5` resolved, after the translation's text is
+  put back (an undo): its pending version is recomputed against the saved
+  translation with `items` (`%{path, kind, source_digest, minor}`, as
+  `save_work/5` returns them) open again beside the work still open. A text
+  that is again the copy of the source's is to translate against the
+  source's current text, as before. Returns `{:ok, open_count}`; nothing is
+  done for an entry that is not a synchronized translation.
+  """
+  def reopen_work(schema, entry_id, items) do
+    with true <- synchronized?(schema),
+         %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
+      Repo.transaction(fn -> reopen_member_work(schema, member, items) end)
+    else
+      _ -> {:ok, 0}
+    end
+  end
+
+  defp reopen_member_work(schema, member, items) do
+    group = Repo.one!(from g in Group, where: g.id == ^member.group_id, lock: "FOR UPDATE")
+    current = current_pending(member.id)
+    open = if current, do: Enum.filter(current.work_items, &is_nil(&1.resolved_at)), else: []
+    reopened = Enum.map(items, &struct(WorkItem, Map.put(atomize_item(&1), :resolved_at, nil)))
+    previous = %{(current || %PendingVersion{member_id: member.id}) | work_items: open ++ reopened}
+
+    with {:ok, source} <- load_group_source(group),
+         do: sync_member(schema, source, member, group.source_generation, false, previous: previous, with_deleted: true)
+
+    open_count(member.id)
+  end
+
+  # As a receipt stores them: string keys, the kind a string
+  defp atomize_item(%{"path" => path, "kind" => kind} = item),
+    do: %{
+      path: path,
+      kind: String.to_existing_atom(kind),
+      source_digest: item["source_digest"],
+      minor: item["minor"] || false
+    }
+
+  defp atomize_item(%{} = item), do: Map.take(item, [:path, :kind, :source_digest, :minor])
 
   @doc """
   Loads an entry as synchronization reads it, with every preload its

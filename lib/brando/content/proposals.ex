@@ -36,6 +36,14 @@ defmodule Brando.Content.Proposals do
   `{:new, ref}` (`:use_translate`). `translation/2` gives the operation that
   creates a `{:new, ref}` translation, its source and language.
 
+  A `Translate` answers a batch of a synchronized translation's work
+  (`Brando.Translations.Work`): checked against the units as they are now,
+  and saved as the translation's form saves it
+  (`Brando.Translations.save_work/5`), not through the plain update the other
+  operations use. It is the only operation a proposal may have on the
+  translation it translates (`:translate_only`); on `{:new, ref}` it fills
+  in the translation a `CreateTranslation` creates, once it is created.
+
   `ReplaceImageFile` changes no entry: a library image takes another's file
   (`Brando.Content.Proposals.ImageReplacement`), in the same transaction as
   the entries. A proposal that replaced a file cannot be undone.
@@ -73,6 +81,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.SetBlockValues
   alias Brando.Content.Proposals.SetFields
   alias Brando.Content.Proposals.SetRefConfig
+  alias Brando.Content.Proposals.Translate
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.Catalog
   alias Brando.Content.Transfer.Dependencies
@@ -80,6 +89,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Drafts.Params
   alias Brando.Repo
   alias Brando.Translations
+  alias Brando.Translations.Work
   alias Brando.Utils
   alias BrandoAdmin.Components.Form.LockedFields
   alias Ecto.Changeset
@@ -330,15 +340,35 @@ defmodule Brando.Content.Proposals do
     problems
   end
 
+  defp check_operation(%Translate{} = op, proposal, actor, trees),
+    do: {translate_problems(op, proposal, actor), trees}
+
   defp check_operation(op, proposal, actor, trees) do
-    if Enum.any?(op_targets(op), &translation(proposal.operations, &1)) do
-      {[use_translate()], trees}
-    else
-      {problems, trees} = check(op, proposal, actor, trees)
-      {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
-      {problems ++ copy_problems ++ link_problems(op), trees}
+    cond do
+      Enum.any?(op_targets(op), &translation(proposal.operations, &1)) ->
+        {[use_translate()], trees}
+
+      Enum.any?(op_targets(op), &translated?(proposal.operations, &1)) ->
+        {[translate_only()], trees}
+
+      true ->
+        {problems, trees} = check(op, proposal, actor, trees)
+        {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
+        {problems ++ copy_problems ++ link_problems(op), trees}
     end
   end
+
+  # The translate operation saves through the translation's own save, which
+  # no other operation's change would go through.
+  defp translate_only,
+    do:
+      problem(
+        :translate_only,
+        dgettext(
+          "content_proposals",
+          "A translate operation in this proposal fills in this translation, and it can be the only kind of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
+        )
+      )
 
   # A translation the proposal creates has no blocks until it is applied, and
   # its structure follows its source: only its text is its own.
@@ -467,6 +497,10 @@ defmodule Brando.Content.Proposals do
 
   def translation(_operations, _target), do: nil
 
+  @doc "Whether a `Translate` among `operations` translates `target`."
+  @spec translated?([struct()], Proposal.target()) :: boolean()
+  def translated?(operations, target), do: Enum.any?(operations, &match?(%Translate{target: ^target}, &1))
+
   @doc """
   The entries `operations` only copy blocks from. They are read, to copy
   from, and locked while the proposal is applied, but not changed or saved.
@@ -556,6 +590,7 @@ defmodule Brando.Content.Proposals do
 
   defp freeze(%DeleteBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
   defp freeze(%ReplaceImageFile{} = op), do: op
+  defp freeze(%Translate{} = op), do: %{op | target: target(op.target)}
 
   # The files a replacement swaps, as they are now: never as the operation
   # given says.
@@ -709,6 +744,414 @@ defmodule Brando.Content.Proposals do
       asset_fields(op.fields, schema, actor) ++
       list_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
   end
+
+  ## Translate
+
+  # Checked against the translation's units as they are now: those of its
+  # pending version, or, for `{:new, ref}`, those the translation the proposal
+  # creates will have. Every problem names its unit.
+  defp translate_problems(%Translate{} = op, proposal, actor) do
+    case translate_work(op, proposal, actor) do
+      {:ok, schema, scope, units} ->
+        answer = %{texts: op.texts, reviewed: op.reviewed}
+        # Only a unit answered with text has a source and a format
+        by_key = for %{answerable: true} = unit <- units, into: %{}, do: {unit.key, unit}
+
+        check =
+          case Work.check(op.source_digest, scope, units, answer) do
+            :ok -> []
+            {:error, problems} -> Enum.map(problems, &work_problem(&1, units))
+          end
+
+        names = Map.new(units, &{&1.key, &1.label})
+
+        check ++
+          answered_before(op, proposal, names) ++
+          translated_texts(op.texts, by_key) ++
+          translated_fields(op, schema, actor, check, names) ++ translated_links(op.texts)
+
+      {:error, problem} ->
+        [problem]
+    end
+  end
+
+  defp translate_work(%Translate{target: {:new, _} = target}, proposal, actor) do
+    case translation(proposal.operations, target) do
+      %CreateTranslation{source: {schema, source_id}, language: language} ->
+        with :ok <- readable_source(schema, source_id, actor),
+             {:ok, %{units: units}} <- Work.new_translation_units(schema, source_id) do
+          {:ok, schema, %{type: to_string(schema), id: {:new, source_id}, language: language}, units}
+        else
+          {:error, %{code: _} = problem} -> {:error, problem}
+          {:error, _} -> {:error, translation_unavailable()}
+        end
+
+      nil ->
+        {:error,
+         problem(
+           :unknown_target,
+           dgettext(
+             "content_proposals",
+             "translate names {\"new\": ref}, and no create_translation in this proposal has that ref. Name the translation a create_translation creates, or an existing translation."
+           )
+         )}
+    end
+  end
+
+  defp translate_work(%Translate{target: {schema, id}}, _proposal, actor) do
+    case Work.translation_units(schema, id) do
+      {:ok, work} ->
+        with :ok <- readable_source(schema, work.source_id, actor),
+             do: {:ok, schema, %{type: to_string(schema), id: id, language: work.language}, work.units}
+
+      {:error, reason} ->
+        {:error, not_a_translation(reason)}
+    end
+  end
+
+  defp readable_source(schema, source_id, actor) do
+    case Error.protect(fn -> load!({schema, source_id}, actor, action: :read) end) do
+      {:ok, _source} -> :ok
+      {:error, _} -> {:error, translation_unavailable()}
+    end
+  end
+
+  defp translation_unavailable,
+    do:
+      problem(
+        :unknown_target,
+        dgettext("content_proposals", "The source of this translation is not available to you.")
+      )
+
+  defp not_a_translation(:not_synchronized),
+    do:
+      problem(
+        :not_translation,
+        dgettext(
+          "content_proposals",
+          "This content type is not synchronized: it has no translation work. Change its text with set_fields and set_block_text."
+        )
+      )
+
+  defp not_a_translation(:source),
+    do:
+      problem(
+        :not_translation,
+        dgettext(
+          "content_proposals",
+          "This entry is its group's source. translate fills in one of its translations: name the translation."
+        )
+      )
+
+  defp not_a_translation(:independent),
+    do:
+      problem(
+        :not_translation,
+        dgettext(
+          "content_proposals",
+          "This translation is independent: it no longer follows its source and has no translation work. Change its text with set_fields and set_block_text."
+        )
+      )
+
+  defp not_a_translation(_reason),
+    do:
+      problem(
+        :not_translation,
+        dgettext(
+          "content_proposals",
+          "This entry is not a synchronized translation, so it has no translation work to answer."
+        )
+      )
+
+  @work_codes %{
+    "stale" => :stale,
+    "source_changed" => :source_changed,
+    "extra" => :extra_key,
+    "missing" => :missing_key,
+    "duplicate" => :duplicate_key,
+    "malformed" => :malformed,
+    "not_text" => :not_text,
+    "blank" => :blank_text,
+    "html_changed" => :html_changed,
+    "placeholders_changed" => :placeholders_changed
+  }
+
+  # A problem of `Work.check/4`, in the admin's language, naming its unit by
+  # its label; the key is the problem's `key`. A source changed carries the
+  # label for the message of a recheck (`recheck_failed/1`); it is not stored.
+  defp work_problem(%{key: key, code: code}, units) do
+    unit = Enum.find(units, &(&1.key == key))
+    name = (unit && unit.label) || key
+    problem = key_problem(Map.fetch!(@work_codes, code), key, work_message(code, name, unit))
+    if code == "source_changed", do: Map.put(problem, :label, name), else: problem
+  end
+
+  defp work_message("stale", _name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "This source_digest is not one translation_work gave for this entry and language. Read the work again."
+      )
+
+  defp work_message("malformed", _name, _unit),
+    do: dgettext("content_proposals", "texts must be an object of {key: translation}, and reviewed a list of keys.")
+
+  defp work_message("source_changed", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "The source text of %{name} changed since it was read, or it no longer needs translation. Read translation_work again.",
+        name: name
+      )
+
+  defp work_message("extra", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} is not a unit of the batch this source_digest was read with. Leave it out.",
+        name: name
+      )
+
+  defp work_message("missing", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} is not answered. Give its translation in texts, or list it in reviewed to keep it.",
+        name: name
+      )
+
+  defp work_message("duplicate", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} is answered more than once. Give a text in texts or list it in reviewed, not both.",
+        name: name
+      )
+
+  defp work_message("not_text", name, _unit),
+    do: dgettext("content_proposals", "The translation of %{name} must be a string.", name: name)
+
+  defp work_message("blank", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "The translation of %{name} is empty. Translate the text, or list its key in reviewed.",
+        name: name
+      )
+
+  defp work_message("html_changed", name, unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "The translation of %{name} changed its HTML tags or attributes. Keep every tag of the source, in order, with its attributes exactly as they are: %{tags}",
+        name: name,
+        tags: Enum.join(Work.html_tags(unit_source(unit)), " ")
+      )
+
+  defp work_message("placeholders_changed", name, unit) do
+    case Work.placeholders(unit_source(unit)) do
+      [] ->
+        dgettext(
+          "content_proposals",
+          "The translation of %{name} has template placeholders, and its source has none. Leave them out.",
+          name: name
+        )
+
+      placeholders ->
+        dgettext(
+          "content_proposals",
+          "The translation of %{name} changed its template placeholders. Keep each exactly as the source has it: %{placeholders}",
+          name: name,
+          placeholders: Enum.join(Enum.sort(placeholders), " ")
+        )
+    end
+  end
+
+  defp unit_source(%{source: source}) when is_binary(source), do: source
+  defp unit_source(_unit), do: ""
+
+  # The message names the unit; its key is the problem's `key`.
+  defp key_problem(code, nil, message), do: problem(code, message)
+  defp key_problem(code, key, message), do: code |> problem(message) |> Map.put(:key, key)
+
+  # A key is answered once across the proposal's batches.
+  defp answered_before(%Translate{target: target} = op, proposal, names) do
+    earlier =
+      proposal.operations
+      |> Enum.take_while(&(&1 !== op))
+      |> Enum.flat_map(fn
+        %Translate{target: ^target} = earlier -> answered_keys(earlier)
+        _ -> []
+      end)
+      |> MapSet.new()
+
+    for key <- Enum.uniq(answered_keys(op)), MapSet.member?(earlier, key) do
+      key_problem(
+        :duplicate_key,
+        key,
+        dgettext("content_proposals", "An earlier translate operation in this proposal already answers %{name}.",
+          name: names[key] || key
+        )
+      )
+    end
+  end
+
+  defp answered_keys(%Translate{texts: texts, reviewed: reviewed}) do
+    keys = if is_map(texts), do: Map.keys(texts), else: []
+    reviewed = if is_list(reviewed), do: Enum.filter(reviewed, &is_binary/1), else: []
+    Enum.filter(keys, &is_binary/1) ++ reviewed
+  end
+
+  # The proposal's own rules for a text, by the unit's format, as
+  # `set_block_text` and `set_fields` apply them. A translation keeps the
+  # source's template placeholders (`Work.check/4` requires them), so those
+  # are taken out before a `{` is refused; any other is refused as anywhere.
+  defp translated_texts(texts, units) when is_map(texts) do
+    for {key, text} <- texts,
+        is_binary(text),
+        %{} = unit <- [units[key]],
+        message = translated_text_problem(unit, text),
+        do: key_problem(:unsafe_text, key, message)
+  end
+
+  defp translated_texts(_texts, _units), do: []
+
+  defp translated_text_problem(unit, text) do
+    rest = Enum.reduce(Work.placeholders(unit.source || ""), text, &String.replace(&2, &1, ""))
+    name = Map.get(unit, :label) || unit.key
+
+    if placeholders_moved?(unit, text),
+      do: placeholder_place_problem(name),
+      else: format_problem(unit, rest, name)
+  end
+
+  defp format_problem(unit, rest, name) do
+    cond do
+      unit.format == "html" -> rich_text_problem(rest, name)
+      unit.format == "markdown" -> rich_text_problem(checked_text("markdown", rest), name)
+      String.ends_with?(unit.key, "/url") -> address_problem(rest, name)
+      # A plain text whose source holds markup keeps it (`Work.check/4`)
+      Regex.match?(~r/<[a-z\/][^>]*>/i, unit.source || "") -> rich_text_problem(rest, name)
+      true -> plain_text_problem(rest, name)
+    end
+  end
+
+  # A placeholder the source has is taken out before a text is checked, so
+  # it must stay where the source has it: as text inside the same tags, or
+  # in the same attribute of the same tag, and never put into an attribute
+  # or a tag of the translation's own, where its output would become markup
+  # or an address the check never saw. Places are read from the parsed
+  # markup, as browsers read it; attribute values and other attributes do
+  # not count, so an address or an alt text may be translated around it.
+  @placeholder_pattern ~r/\{\{.*?\}\}|\{%.*?%\}|<%.*?%>/su
+
+  defp placeholders_moved?(unit, text) do
+    source = unit.source || ""
+
+    case Work.placeholders(source) do
+      [] ->
+        false
+
+      _ ->
+        placeholders = Enum.uniq(Work.placeholders(source) ++ Work.placeholders(text))
+        # The marker carries a nonce of this comparison, so no text can hold
+        # one and stand in for a placeholder it moved
+        nonce = 8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
+        places(unit, source, placeholders, nonce) != places(unit, text, placeholders, nonce)
+    end
+  end
+
+  # Each placeholder of `text` with its place, sorted: the placeholders are
+  # replaced by markers that survive parsing, and Markdown is rendered.
+  defp places(unit, text, placeholders, nonce) do
+    marker = fn index -> "zq#{nonce}x#{index}zq" end
+    pattern = Regex.compile!("zq#{nonce}x(\\d+)zq")
+    markers = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {p, marker.(i)} end)
+    names = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {Integer.to_string(i), p} end)
+
+    @placeholder_pattern
+    |> Regex.replace(text, &Map.fetch!(markers, &1))
+    |> placed(unit)
+    |> Brando.HTML.Tree.parse_fragment()
+    |> Enum.flat_map(&node_places(&1, [], pattern))
+    |> Enum.flat_map(fn {index, place} ->
+      case names do
+        %{^index => placeholder} -> [{placeholder, place}]
+        _ -> []
+      end
+    end)
+    |> Enum.sort()
+  end
+
+  defp placed(text, %{format: "markdown"}), do: checked_text("markdown", text)
+  defp placed(text, _unit), do: text
+
+  defp node_places(text, ancestors, pattern) when is_binary(text),
+    do: for(index <- marker_indexes(text, pattern), do: {index, {:text, ancestors}})
+
+  defp node_places({:comment, text}, ancestors, pattern),
+    do: for(index <- marker_indexes(text, pattern), do: {index, {:comment, ancestors}})
+
+  # A placeholder that became a tag's name has a place too: its output would
+  # be the tag
+  defp node_places({tag, attributes, children}, ancestors, pattern) do
+    in_name = for index <- marker_indexes(tag, pattern), do: {index, {:tag_name, ancestors}}
+
+    in_attributes =
+      for {name, value} <- attributes,
+          index <- marker_indexes(name <> " " <> value, pattern),
+          do: {index, {:attribute, tag, name}}
+
+    in_name ++ in_attributes ++ Enum.flat_map(children, &node_places(&1, [tag | ancestors], pattern))
+  end
+
+  defp node_places(_node, _ancestors, _pattern), do: []
+
+  defp marker_indexes(text, pattern) when is_binary(text),
+    do: pattern |> Regex.scan(text, capture: :all_but_first) |> List.flatten()
+
+  defp marker_indexes(_text, _pattern), do: []
+
+  defp placeholder_place_problem(name),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder where the source has it: as text inside the same tags, or in the same attribute of the same tag.",
+        name: name
+      )
+
+  # A field's text: the field is not one a proposal may write, or one the
+  # forms lock, as `set_fields` refuses them. `translation_work` leaves such
+  # a unit out of the batch, so it is refused as extra already; this refuses
+  # a token that holds it anyway.
+  defp translated_fields(op, schema, actor, check, names) do
+    extra = for %{code: :extra_key, key: key} <- check, do: key
+
+    for key <- Enum.uniq(answered_keys(op)), key not in extra, locked_unit?(schema, key, actor) do
+      key_problem(
+        :protected_field,
+        key,
+        dgettext("content_proposals", "A proposal cannot change %{name}.", name: names[key] || key)
+      )
+    end
+  end
+
+  @doc """
+  Whether a translation unit `key` of `schema` is in a field a proposal by
+  `actor` may not write: one no proposal writes, or one the forms lock for
+  anyone but a superuser. Text in blocks is never locked.
+  """
+  @spec locked_unit?(module(), String.t(), term()) :: boolean()
+  def locked_unit?(schema, key, actor) do
+    blocks = Enum.map(schema.__blocks_fields__(), &"entry_#{&1.name}")
+    field = key |> String.split("/", parts: 2) |> hd()
+    fields = %{field => nil}
+
+    field not in blocks and protected_fields(fields, schema) ++ locked_fields(fields, schema, actor) != []
+  end
+
+  defp translated_links(texts) when is_map(texts), do: link_problems(%{texts: texts})
+  defp translated_links(_texts), do: []
 
   # The source is read as the actor may read it.
   defp source_problems(op, source, proposal, actor) do
@@ -2029,11 +2472,60 @@ defmodule Brando.Content.Proposals do
 
   # A translation has no changeset: it is the source's copy, made as the
   # proposal is applied (`create_translation!/2`).
+  # A translation a `Translate` fills in is its pending version with the
+  # texts written in (`Translations.work_changeset/4`).
   defp materialize!(proposal, entries, user) do
     for {target, _} <- proposal.targets, is_nil(translation(proposal.operations, target)), into: %{} do
-      {target, target |> base_changeset(proposal, entries, user) |> put_blocks(target, proposal, entries, user)}
+      if translated?(proposal.operations, target),
+        do: {target, translated_changeset!(target, proposal, user)},
+        else: {target, target |> base_changeset(proposal, entries, user) |> put_blocks(target, proposal, entries, user)}
     end
   end
+
+  defp translated_changeset!({schema, id} = target, proposal, user) do
+    case Translations.work_changeset(schema, id, translated_answer(proposal, target).texts, user) do
+      {:ok, changeset, _version_id} -> changeset
+      {:error, reason} -> Error.fail!(translate_failed(reason))
+    end
+  end
+
+  # Every batch's answer to `target`, as one save
+  defp translated_answer(proposal, target) do
+    for %Translate{target: ^target} = op <- proposal.operations, reduce: %{texts: %{}, acknowledged: []} do
+      acc ->
+        texts = for {key, text} <- (is_map(op.texts) && op.texts) || %{}, is_binary(text), into: %{}, do: {key, text}
+        reviewed = if is_list(op.reviewed), do: Enum.filter(op.reviewed, &is_binary/1), else: []
+        %{texts: Map.merge(acc.texts, texts), acknowledged: acc.acknowledged ++ reviewed}
+    end
+  end
+
+  defp translate_failed({:source_controlled, paths}),
+    do:
+      dgettext(
+        "content_proposals",
+        "The translation's structure or media would no longer follow its source: %{paths}. Read translation_work again.",
+        paths: Enum.join(paths, ", ")
+      )
+
+  defp translate_failed(%Changeset{} = changeset),
+    do:
+      dgettext("content_proposals", "Entry validation: %{errors}",
+        errors: inspect(Changeset.traverse_errors(changeset, fn {message, _} -> message end))
+      )
+
+  defp translate_failed(:unbuildable),
+    do:
+      dgettext(
+        "content_proposals",
+        "The translation's pending version could not be opened. Open the translation in the admin, then read translation_work again."
+      )
+
+  defp translate_failed(_reason),
+    do:
+      dgettext(
+        "content_proposals",
+        "This entry is not a synchronized translation, so it has no translation work to answer."
+      )
 
   @doc """
   A `create_entry`'s fields as the new entry gets them. A content type with
@@ -3039,7 +3531,24 @@ defmodule Brando.Content.Proposals do
           set: [problems: Enum.map(problems, &encode_problem/1), status: "pending", approved_at: nil]
         )
 
-        Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
+        Error.fail!(recheck_failed(problems))
+    end
+  end
+
+  # A translation's source changed since the proposal was prepared: as for
+  # an entry that changed, the proposal is stale, and the message names the
+  # units.
+  defp recheck_failed(problems) do
+    case for(%{code: :source_changed} = problem <- problems, uniq: true, do: Map.get(problem, :label, problem.key)) do
+      [] ->
+        dgettext("content_proposals", "Resolve every blocking problem before applying.")
+
+      names ->
+        dgettext(
+          "content_proposals",
+          "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again.",
+          units: Enum.join(names, ", ")
+        )
     end
   end
 
@@ -3198,8 +3707,15 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  defp undo_entry!({key, schema, entry_id, _}, receipt, user),
-    do: restore!(schema, entry_id, receipt.before[key]["revision"], user)
+  # A translation's answered work is opened again once its text is back.
+  defp undo_entry!({key, schema, entry_id, _}, receipt, user) do
+    restore!(schema, entry_id, receipt.before[key]["revision"], user)
+
+    case (receipt.mappings["translated"] || %{})[key] do
+      [_ | _] = items -> {:ok, _} = Translations.reopen_work(schema, entry_id, items)
+      _ -> :ok
+    end
+  end
 
   # The translation leaves its group, and its alternate link goes with it. A
   # version that joined the group since keeps it, with its pending version
@@ -3509,6 +4025,7 @@ defmodule Brando.Content.Proposals do
 
   defp encode_problem(problem) do
     problem
+    |> Map.delete(:label)
     |> Map.update(:target, nil, &(&1 && Proposal.key(&1)))
     |> Map.new(fn {key, value} -> {to_string(key), if(key == :code, do: to_string(value), else: value)} end)
   end
@@ -3518,7 +4035,8 @@ defmodule Brando.Content.Proposals do
       code: String.to_existing_atom(problem["code"]),
       message: problem["message"],
       operation: problem["operation"],
-      target: problem["target"]
+      target: problem["target"],
+      key: problem["key"]
     }
   end
 
@@ -3585,13 +4103,13 @@ defmodule Brando.Content.Proposals do
       do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
 
     locked =
-      proposal.fingerprints
-      |> Map.keys()
-      |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
-      |> Enum.map(&load!(&1, actor, lock: true))
+      for target <- apply_lock_order(proposal),
+          entry = lock_target!(target, proposal, actor),
+          do: entry
 
     Transfer.lock_records!(%{fields: Enum.map(locked, &%{entry: &1}), bindings: %{}})
     entries = current!(proposal, actor)
+    check_translated_sources!(proposal)
     # The revision each entry is at now: undo restores it.
     revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
 
@@ -3606,29 +4124,25 @@ defmodule Brando.Content.Proposals do
 
     translations = for %CreateTranslation{} = op <- proposal.operations, do: {{:new, op.ref}, op}
 
+    # A translation `Translate` fills in is saved as its form saves it.
+    translated = translated_targets(proposal)
+
     # Create first: later stages resolve `{:new, ref}` to the saved id.
     # Otherwise entries are saved in the order the operations name them.
     # A translation is created in its turn among the creates.
-    {saved, groups} =
+    {saved, {groups, resolved}} =
       proposal
       |> materialize!(entries, user)
-      |> Enum.reject(fn {target, _cs} -> target in unchanged end)
+      |> Enum.reject(fn {target, _cs} -> target in unchanged or List.keymember?(translated, target, 0) end)
       |> Enum.map(fn {target, cs} ->
         if Proposal.key(target) in publish,
           do: {target, Changeset.put_change(cs, :status, :published)},
           else: {target, cs}
       end)
       |> Enum.concat(translations)
+      |> Enum.concat(translated)
       |> Enum.sort_by(fn {target, _} -> {!match?({:new, _}, target), first_mention(proposal, target)} end)
-      |> Enum.map_reduce(%{}, fn
-        {{:new, ref} = target, %CreateTranslation{} = op}, groups ->
-          {entry, group} = create_translation!(op, user)
-          {{target, entry, nil}, Map.put(groups, ref, group)}
-
-        {target, cs} = pair, groups ->
-          {^target, entry} = save!(pair, user)
-          {{target, entry, cs}, groups}
-      end)
+      |> Enum.map_reduce({%{}, %{}}, &save_target!(&1, &2, proposal, user))
 
     receipt =
       Repo.insert!(%Receipt{
@@ -3641,6 +4155,8 @@ defmodule Brando.Content.Proposals do
         mappings: %{
           "created" => for({{:new, ref}, entry, _cs} <- saved, into: %{}, do: {ref, entry.id}),
           "translations" => groups,
+          # The work items each translation's save resolved, opened again by undo
+          "translated" => Map.new(resolved, fn {key, items} -> {key, Enum.map(items, &stored_item/1)} end),
           "published" => publish,
           "effects" => encode_effects(proposal.effects),
           "replaced_images" => replaced
@@ -3650,6 +4166,164 @@ defmodule Brando.Content.Proposals do
     record |> Changeset.change(status: "applied") |> Repo.update!()
     {receipt, saved}
   end
+
+  @doc """
+  The rows an apply locks first, as `{schema, id}`, sorted as
+  `Brando.Content.Transfer.lock_records!/1` sorts them: the proposal's
+  entries and the sources its `translate` operations translate.
+
+  Sources are read from their group's members, without refreshing a
+  translation's pending version, which takes the group lock: a source locked
+  after that, or after the entries, could deadlock with a transfer import or
+  a Create translation that locks the source first.
+  """
+  @spec apply_lock_order(Proposal.t()) :: [{module(), pos_integer()}]
+  def apply_lock_order(proposal) do
+    proposal.fingerprints
+    |> Map.keys()
+    |> Enum.concat(translated_sources(proposal))
+    |> Enum.uniq()
+    |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+  end
+
+  defp translated_sources(proposal) do
+    for %Translate{target: target} <- proposal.operations, source = translated_source(target, proposal), do: source
+  end
+
+  defp translated_source({:new, _} = target, proposal) do
+    case translation(proposal.operations, target) do
+      %CreateTranslation{source: {_schema, id} = source} when is_integer(id) -> source
+      _ -> nil
+    end
+  end
+
+  defp translated_source({schema, id}, _proposal) do
+    with %{role: :target, group_id: group_id} <- Translations.get_member(schema, id),
+         %{entry_id: source_id} <- Enum.find(Translations.list_members(group_id), &(&1.role == :source)) do
+      {schema, source_id}
+    else
+      _ -> nil
+    end
+  end
+
+  # An entry the proposal changes is loaded under its lock; a source it
+  # only translates from is locked, and read again by the check.
+  defp lock_target!(target, proposal, actor) do
+    if Map.has_key?(proposal.fingerprints, target) do
+      load!(target, actor, lock: true)
+    else
+      {schema, id} = target
+      lock_source!(schema, id)
+      nil
+    end
+  end
+
+  @doc """
+  Checks every `translate` batch of `proposal` against its source again,
+  under the source's lock, and raises a transfer error naming
+  the units whose source text changed.
+
+  Called inside the apply's transaction, before any translation is created
+  or saved: a source saved after the recheck at approval would otherwise
+  have its new text overwritten by the translation of the text before.
+  """
+  @spec check_translated_sources!(Proposal.t()) :: :ok
+  def check_translated_sources!(proposal) do
+    problems =
+      for %Translate{} = op <- proposal.operations,
+          problem <- translated_source_problems(op, proposal),
+          do: problem
+
+    if problems != [], do: Error.fail!(recheck_failed(problems))
+    :ok
+  end
+
+  defp translated_source_problems(%Translate{target: {:new, _} = target} = op, proposal) do
+    %CreateTranslation{source: {schema, source_id}, language: language} = translation(proposal.operations, target)
+    lock_source!(schema, source_id)
+
+    case Work.new_translation_units(schema, source_id) do
+      {:ok, %{units: units}} ->
+        source_check(op, %{type: to_string(schema), id: {:new, source_id}, language: language}, units)
+
+      {:error, _} ->
+        Error.fail!(dgettext("content_proposals", "The source of this translation is not available to you."))
+    end
+  end
+
+  # The apply locked the source already (`apply_lock_order/1`); locking it
+  # again, before the work is read, holds when the check runs on its own.
+  defp translated_source_problems(%Translate{target: {schema, id} = target} = op, proposal) do
+    with {source_schema, source_id} <- translated_source(target, proposal),
+         do: lock_source!(source_schema, source_id)
+
+    case Work.translation_units(schema, id) do
+      {:ok, work} -> source_check(op, %{type: to_string(schema), id: id, language: work.language}, work.units)
+      {:error, reason} -> Error.fail!(not_a_translation(reason).message)
+    end
+  end
+
+  defp lock_source!(schema, source_id) do
+    Repo.one(from(e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE"))
+    :ok
+  end
+
+  defp source_check(op, scope, units) do
+    case Work.check(op.source_digest, scope, units, %{texts: op.texts, reviewed: op.reviewed}) do
+      :ok -> []
+      {:error, problems} -> Enum.map(problems, &work_problem(&1, units))
+    end
+  end
+
+  defp translated_targets(proposal) do
+    for {{schema, id} = target, _} <- proposal.targets,
+        is_integer(id),
+        translated?(proposal.operations, target),
+        do: {target, {:translate, schema, id}}
+  end
+
+  # One entry of the apply, in its turn. `groups` holds the translation
+  # groups created translations joined, `resolved` the work items each
+  # translated entry's save resolved.
+  defp save_target!({{:new, ref} = target, %CreateTranslation{} = op}, {groups, resolved}, proposal, user) do
+    {entry, group} = create_translation!(op, user)
+    groups = Map.put(groups, ref, group)
+
+    # Created first, then filled in, in the same transaction
+    if translated?(proposal.operations, target) do
+      result = save_translation!(elem(op.source, 0), entry.id, proposal, target, user)
+      {{target, result.entry, nil}, {groups, Map.put(resolved, Proposal.key(target), result.resolved)}}
+    else
+      {{target, entry, nil}, {groups, resolved}}
+    end
+  end
+
+  defp save_target!({target, {:translate, schema, id}}, {groups, resolved}, proposal, user) do
+    result = save_translation!(schema, id, proposal, target, user)
+    {{target, result.entry, result.changeset}, {groups, Map.put(resolved, Proposal.key(target), result.resolved)}}
+  end
+
+  defp save_target!({target, cs} = pair, acc, _proposal, user) do
+    {^target, entry} = save!(pair, user)
+    {{target, entry, cs}, acc}
+  end
+
+  # The translation form's save (`Translations.save_work/5`), inside the
+  # apply's transaction: every batch's texts written into its pending
+  # version, and every answered item resolved.
+  defp save_translation!(schema, id, proposal, target, user) do
+    case Translations.save_work(schema, id, translated_answer(proposal, target), user,
+           mutation: [show_notification: false, pubsub: false]
+         ) do
+      {:ok, result} -> result
+      {:error, reason} -> Error.fail!(translate_failed(reason))
+    end
+  end
+
+  defp stored_item(item), do: Map.new(item, fn {key, value} -> {to_string(key), stored_value(value)} end)
+
+  defp stored_value(value) when is_atom(value) and not is_boolean(value) and not is_nil(value), do: to_string(value)
+  defp stored_value(value), do: value
 
   # Publishing is the reviewer's choice at apply, per entry: new entries are
   # drafts otherwise, and drafts stay drafts. It takes the publish permission.
@@ -3661,7 +4335,8 @@ defmodule Brando.Content.Proposals do
       schema = target && proposal_schema(proposal, target)
 
       cond do
-        is_nil(schema) or not schema.has_trait(Brando.Trait.Status) or translation(proposal.operations, target) != nil ->
+        is_nil(schema) or not schema.has_trait(Brando.Trait.Status) or translation(proposal.operations, target) != nil or
+            translated?(proposal.operations, target) ->
           Error.fail!(dgettext("content_proposals", "Only entries in this proposal that have a status can be published."))
 
         Boundary.authorize(actor, :publish, schema) != :ok ->

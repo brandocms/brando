@@ -203,6 +203,45 @@ defmodule Brando.Translations.Work do
     end
   end
 
+  @doc """
+  Where each of `keys` is, what its source holds and what the translation
+  holds, for a review of an answer: `[%{key, label, format, source,
+  current}]` in the order of `entry`, the translation (its pending version's
+  content, as `Brando.Translations.pending_content/2` gives it), or the
+  source itself for one not created yet. A key the entry does not have comes
+  last, labelled by its path.
+  """
+  @spec describe(module(), struct(), struct(), [String.t()]) :: [map()]
+  def describe(schema, source, entry, keys) do
+    uids = Translations.module_uids([source, entry], schema)
+    source_texts = for {path, :text, value} <- Sync.flatten_entry(source, schema, nil, uids), into: %{}, do: {path, value}
+    entry_rows = Sync.flatten_entry(entry, schema, nil, uids)
+    current = for {path, :text, value} <- entry_rows, into: %{}, do: {path, value}
+    order = positions(entry_rows)
+    ctx = context(schema, entry)
+
+    keys
+    |> Enum.uniq()
+    |> Enum.sort_by(&place(order, &1))
+    |> Enum.map(fn key ->
+      target = Labels.target(key, ctx.blocks)
+
+      %{
+        key: key,
+        label: Labels.label(target, ctx.labels),
+        format: described_format(key, target, ctx),
+        source: Map.get(source_texts, key),
+        current: Map.get(current, key)
+      }
+    end)
+  end
+
+  defp described_format(key, target, ctx) do
+    format(key, target, ctx)
+  rescue
+    _ -> "plain"
+  end
+
   defp context(schema, entry) do
     %{
       entry: entry,
@@ -603,6 +642,21 @@ defmodule Brando.Translations.Work do
   end
 
   defp problem(key, code, message), do: %{key: key, code: code, message: message}
+
+  @doc """
+  The HTML tags in `text`, in order, with their attributes, as `check/4`
+  compares them.
+  """
+  @spec html_tags(String.t()) :: [String.t()]
+  def html_tags(text) when is_binary(text), do: @html_pattern |> Regex.scan(text) |> List.flatten()
+
+  @doc """
+  The template placeholders (`{{ }}`, `{% %}`, `<% %>`) in `text`, each once,
+  as `check/4` matches them.
+  """
+  @spec placeholders(String.t()) :: [String.t()]
+  def placeholders(text) when is_binary(text),
+    do: @placeholder_pattern |> Regex.scan(text) |> List.flatten() |> Enum.uniq()
 
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(nil), do: true

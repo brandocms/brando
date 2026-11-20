@@ -20,7 +20,7 @@ defmodule Brando.Content.Proposals.EntryLinks do
   @spec resolve(struct(), term()) :: struct()
   def resolve(op, actor) do
     op
-    |> update(:texts, &Map.new(&1, fn {key, text} -> {key, text(text, actor)} end))
+    |> update(:texts, &texts(&1, actor))
     |> update(:text, &text(&1, actor))
     |> update(:fields, &Map.new(&1, fn {key, value} -> {key, text(value, actor)} end))
     |> update(:values, &Map.new(&1, fn {key, value} -> {key, text(value, actor)} end))
@@ -32,6 +32,11 @@ defmodule Brando.Content.Proposals.EntryLinks do
       _ -> op
     end
   end
+
+  # A translate operation's texts may be shaped wrongly: that is a problem
+  # its check reports, not a crash here.
+  defp texts(texts, actor) when is_map(texts), do: Map.new(texts, fn {key, text} -> {key, text(text, actor)} end)
+  defp texts(texts, _actor), do: texts
 
   defp text(text, actor) when is_binary(text) do
     if String.contains?(text, "entry:") do
