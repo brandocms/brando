@@ -657,6 +657,22 @@ defmodule Brando.Content.Proposals.TranslateTest do
     assert heading == "#{c.prefix}/refs/heading/text"
   end
 
+  describe "the review" do
+    test "labels a unit in a block the source added from the pending version", c do
+      target = create_translation(c)
+      added = add_block(c.source, c.module, c.user, 1)
+      Translations.source_saved(load(c.source.id))
+      heading = "entry_blocks/#{added.uid}/refs/heading/text"
+
+      op = translate(target, %{heading => "Heading"}, keys: [heading])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert proposal.problems == []
+
+      assert [%{changes: [%{units: [unit]}]}] = Review.entries(proposal)
+      assert %{key: ^heading, label: "Text › Heading"} = unit
+    end
+  end
+
   test "the codec decodes and encodes it" do
     map = %{
       "op" => "translate",
