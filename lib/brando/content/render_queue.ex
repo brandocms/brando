@@ -79,7 +79,8 @@ defmodule Brando.Content.RenderQueue do
       a step of `BrandoAdmin.Work` work under `key`, which starts with
       `total:` the number of entries, or adds them to its count if it
       runs. `opts` are `start/4`'s, with its message as `:message`. A
-      waiting render that already counts for other work counts at once.
+      waiting render that already counts for work, other work or this
+      work for an earlier request, counts at once.
   """
   @spec enqueue_map(entries(), keyword()) :: [{:ok, Oban.Job.t()}]
   def enqueue_map(entries_by_schema, opts \\ []) do
@@ -147,12 +148,16 @@ defmodule Brando.Content.RenderQueue do
       end)
 
     updated = update_waiting(updates)
-    merged = for {job, args, meta} <- updates, MapSet.member?(updated, job.id), do: %{job | args: args, meta: meta}
+    merged = for {job, args, meta} <- updates, MapSet.member?(updated, job.id), do: {job, %{job | args: args, meta: meta}}
 
-    for job <- merged, counts_elsewhere?(job, work) do
+    # This request's step, when the job reports another: other work's, or
+    # this work's for an earlier request
+    for {job, _} <- merged, work && counts_already?(job) do
       {user, key, opts} = work
       Work.advance(user, key, :ok, Keyword.take(opts, [:global]))
     end
+
+    merged = Enum.map(merged, &elem(&1, 1))
 
     merged_keys = MapSet.new(merged, &entry_key(&1.args))
     {Enum.map(merged, &{:ok, &1}), Enum.reject(requests, &MapSet.member?(merged_keys, entry_key(&1)))}
@@ -224,10 +229,7 @@ defmodule Brando.Content.RenderQueue do
   defp held?(%{state: "scheduled", meta: %{@hold => holds}}) when is_list(holds), do: true
   defp held?(_job), do: false
 
-  defp counts_elsewhere?(_job, nil), do: false
-
-  defp counts_elsewhere?(%{meta: %{"brando_work" => tracked}}, {user, key, _opts}),
-    do: not (tracked["user_id"] == Work.user_id(user) and tracked["key"] == key)
+  defp counts_already?(job), do: is_map_key(job.meta, "brando_work")
 
   defp insert([], _hold, _work), do: []
 

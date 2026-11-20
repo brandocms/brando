@@ -443,6 +443,20 @@ defmodule Brando.Content.RenderQueueTest do
         assert tracked == ["other", "renders", "renders"]
       end)
     end
+    test "requested twice for the same work counts it twice, once as soon as it merges" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        user = Factory.insert(:random_user)
+        :ok = Phoenix.PubSub.subscribe(Brando.pubsub(), BrandoAdmin.Work.topic())
+
+        for _ <- 1..2, do: RenderQueue.enqueue_many(Fragment, [1], hold: "run", work: {user, "refresh"})
+
+        assert [job] = renders_by_entry()
+        assert job.meta["brando_work"]["step"]
+        total = receive_work(:start, 0, &(&1 + &2.total))
+        # The job reports one step when it runs, the rest have been reported
+        assert receive_work(:advance, 0, fn n, _ -> n + 1 end) + 1 == total
+      end)
+    end
   end
 
   describe "an entry's cascade queued again" do
@@ -460,6 +474,14 @@ defmodule Brando.Content.RenderQueueTest do
         assert [%{id: next}] = cascades(entry)
         assert next != job.id
       end)
+    end
+  end
+
+  defp receive_work(event, acc, fun) do
+    receive do
+      {:brando_work, {^event, {_, _, "refresh"}, attrs, _}} -> receive_work(event, fun.(acc, attrs), fun)
+    after
+      0 -> acc
     end
   end
 
