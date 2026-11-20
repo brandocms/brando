@@ -538,5 +538,23 @@ defmodule Brando.Images.ImageMaintenanceTest do
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2}}
     end
+
+    test "an image job left executing past its timeout does not hold a run" do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      job =
+        %{image_id: image.id, config_target: image.config_target, user_id: nil, field_full_path: [], silent: true}
+        |> Worker.ImageProcessor.new(meta: %{"image_size_run" => true})
+        |> Repo.insert!()
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+        set: [state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600)]
+      )
+
+      refute SizeRun.running?()
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [attempted_at: DateTime.utc_now()])
+      assert SizeRun.running?()
+    end
   end
 end

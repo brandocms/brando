@@ -79,17 +79,21 @@ defmodule Brando.Images.SizeRun do
 
   @doc """
   How many images the runs in the current site (or the run `run`) have
-  queued and not finished.
+  queued and not finished. A job left executing past the image worker's
+  timeout is not counted: its node is gone, and Oban's Lifeline may never
+  rescue it.
   """
   @spec remaining(String.t() | nil) :: non_neg_integer()
   def remaining(run \\ nil) do
     worker = Oban.Worker.to_string(Worker.ImageProcessor)
     args = TenantJob.attach(%{})
+    stale = DateTime.add(DateTime.utc_now(), -Worker.ImageProcessor.timeout(%Oban.Job{}), :millisecond)
 
     query =
       from j in Oban.Job,
         where:
           j.worker == ^worker and j.state in ^@unfinished_states and
+            (j.state != "executing" or j.attempted_at > ^stale) and
             fragment("? @> ?", j.args, ^args),
         select: count(j.id)
 
