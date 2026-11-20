@@ -50,8 +50,8 @@ defmodule Brando.MCP.Tools do
   # Left out: `list_attachments`, `attach_folder`, `request_media` and
   # `look_at_media` work with an Assistant conversation's attachments and
   # pictures, which a connected client does not have.
-  @offered ~w(list_content_types describe_content_type search_entries entry_outline list_modules describe_module
-              list_entry_media list_selection_options search_assets find_media_folders prepare_proposal)
+  @offered ~w(list_content_types describe_content_type search_entries entry_outline translation_work list_modules
+              describe_module list_entry_media list_selection_options search_assets find_media_folders prepare_proposal)
 
   @reads @offered -- ["prepare_proposal"]
 

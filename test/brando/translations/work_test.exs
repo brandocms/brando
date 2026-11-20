@@ -193,8 +193,9 @@ defmodule Brando.Translations.WorkTest do
         }
       ])
 
-      units = units(target)
-      assert %{kind: "awaiting_translation", answerable: false} = other = List.last(units)
+      assert [%{kind: "awaiting_translation", answerable: false} = other] =
+               Enum.reject(units(target), & &1.answerable)
+
       assert other.block_uid == target_block_uid(target)
       refute Map.has_key?(other, :source)
     end

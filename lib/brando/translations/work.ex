@@ -57,8 +57,12 @@ defmodule Brando.Translations.Work do
           optional(:block_uid) => String.t()
         }
 
-  @typedoc "What a token is for: the content type, the entry id and the translation's language."
-  @type scope :: %{type: String.t(), id: integer(), language: String.t()}
+  @typedoc """
+  What a token is for: the content type, the translation's id and its
+  language. For a translation that does not exist yet (`prospective_units/3`),
+  `id` is `{:new, source_id}`.
+  """
+  @type scope :: %{type: String.t(), id: integer() | {:new, integer()}, language: String.t()}
 
   @type problem :: %{key: String.t() | nil, code: String.t(), message: String.t()}
 
@@ -90,27 +94,31 @@ defmodule Brando.Translations.Work do
       %{member: %Member{synchronized: false}} ->
         {:error, :independent}
 
-      %{member: member, source: %{id: source_id, language: source_language}, pending: pending} ->
-        with {:ok, entry} <- Translations.load_entry(schema, entry_id, with_deleted: true),
-             {:ok, source} <- Translations.load_entry(schema, source_id) do
-          payload = if pending, do: Translations.pending_content(pending, entry), else: entry
-          items = if pending, do: pending.work_items, else: []
-          uids = Translations.module_uids([source, payload], schema)
-
-          {:ok,
-           %{
-             units: units(schema, payload, source, items, module_uids: uids),
-             source_id: source_id,
-             source_language: source_language,
-             language: member.language,
-             version_id: pending && pending.id
-           }}
-        else
-          _ -> {:error, :source_not_found}
-        end
+      %{member: member, source: %{id: _} = source, pending: pending} ->
+        read_translation(schema, entry_id, member, source, pending)
 
       _ ->
         {:error, :source_not_found}
+    end
+  end
+
+  defp read_translation(schema, entry_id, member, %{id: source_id, language: source_language}, pending) do
+    with {:ok, entry} <- Translations.load_entry(schema, entry_id, with_deleted: true),
+         {:ok, source} <- Translations.load_entry(schema, source_id) do
+      payload = if pending, do: Translations.pending_content(pending, entry), else: entry
+      items = if pending, do: pending.work_items, else: []
+      uids = Translations.module_uids([source, payload], schema)
+
+      {:ok,
+       %{
+         units: units(schema, payload, source, items, module_uids: uids),
+         source_id: source_id,
+         source_language: source_language,
+         language: member.language,
+         version_id: pending && pending.id
+       }}
+    else
+      _ -> {:error, :source_not_found}
     end
   end
 
@@ -448,13 +456,9 @@ defmodule Brando.Translations.Work do
   defp text_problems(unit, text) when is_binary(text) do
     source = unit.source || ""
 
-    cond do
-      String.trim(text) == "" and not blank?(source) ->
-        [problem(unit.key, "blank", "The translation is empty. Translate the text, or list the key in reviewed.")]
-
-      true ->
-        html_problems(unit.key, source, text) ++ placeholder_problems(unit.key, source, text)
-    end
+    if String.trim(text) == "" and not blank?(source),
+      do: [problem(unit.key, "blank", "The translation is empty. Translate the text, or list the key in reviewed.")],
+      else: html_problems(unit.key, source, text) ++ placeholder_problems(unit.key, source, text)
   end
 
   defp text_problems(unit, _text), do: [problem(unit.key, "not_text", "The translation must be a string.")]

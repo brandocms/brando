@@ -252,8 +252,8 @@ defmodule Brando.AI.Agent.Loop do
 
   # Tools that read content. Their results go stale when the editor writes
   # again: the editor may have saved the entry, or be asking about it anew.
-  @reads ~w(list_content_types describe_content_type search_entries entry_outline list_modules describe_module
-            list_attachments search_assets find_media_folders list_selection_options list_entry_media
+  @reads ~w(list_content_types describe_content_type search_entries entry_outline translation_work list_modules
+            describe_module list_attachments search_assets find_media_folders list_selection_options list_entry_media
             look_at_media)
   @stale Jason.encode!(%{
            stale:
@@ -395,6 +395,7 @@ defmodule Brando.AI.Agent.Loop do
   end
 
   defp progress("entry_outline", _), do: dgettext("ai_agent", "Reading an entry")
+  defp progress("translation_work", _), do: dgettext("ai_agent", "Reading a translation's work")
   defp progress("describe_module", _), do: dgettext("ai_agent", "Checking a module's slots")
   defp progress("list_modules", _), do: dgettext("ai_agent", "Looking at the available modules")
   defp progress("search_assets", _), do: dgettext("ai_agent", "Searching the media library")
