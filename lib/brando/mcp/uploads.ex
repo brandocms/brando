@@ -101,14 +101,15 @@ defmodule Brando.MCP.Uploads do
 
   # Nothing is listed, read, written or removed under the directory unless
   # the server has made it its own: not a link, and readable by the server
-  # alone (`chmod` fails on another user's). A refusal is logged once, so an
-  # operator can tell why every upload is refused.
+  # alone. The `chmod` is the check of whose it is, whatever its mode says:
+  # it fails on another user's. A refusal is logged once, so an operator can
+  # tell why every upload is refused.
   defp checked_root do
     root = root()
 
     case File.lstat(root) do
-      {:ok, %File.Stat{type: :directory, mode: mode}} ->
-        if Bitwise.band(mode, 0o777) == 0o700 or File.chmod(root, 0o700) == :ok,
+      {:ok, %File.Stat{type: :directory}} ->
+        if File.chmod(root, 0o700) == :ok,
           do: {:ok, root},
           else: refuse_root(root, "the server cannot make it readable by itself alone")
 

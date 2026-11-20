@@ -32,7 +32,10 @@ defmodule Brando.Plug.RequestLogTest do
           {"/mcp/site/prod/uploads/#{id}/s3cr3t", "PUT /mcp/site/prod/uploads/#{id}/[FILTERED]"},
           {"/mcp/%75ploads/#{id}/s3cr3t", "PUT /mcp/%75ploads/#{id}/[FILTERED]"},
           # A site may be keyed `uploads`
-          {"/mcp/uploads/prod/uploads/#{id}/s3cr3t", "PUT /mcp/uploads/prod/uploads/#{id}/[FILTERED]"}
+          {"/mcp/uploads/prod/uploads/#{id}/s3cr3t", "PUT /mcp/uploads/prod/uploads/#{id}/[FILTERED]"},
+          # `curl -T photo.jpg <url>/` adds the file's name
+          {"/mcp/uploads/#{id}/s3cr3t/photo.jpg", "PUT /mcp/uploads/#{id}/[FILTERED]/photo.jpg"},
+          {"/mcp/uploads/prod/uploads/#{id}/s3cr3t/photo.jpg", "PUT /mcp/uploads/prod/uploads/#{id}/[FILTERED]/photo.jpg"}
         ] do
       log = OwnLog.capture(fn -> assert RequestLog.level(Plug.Test.conn(:put, path), :error) == false end)
       assert log =~ logged

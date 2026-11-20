@@ -27,14 +27,14 @@ defmodule Brando.Plug.RequestLog do
   # A path whose segments start with (or, below the admin's path, contain)
   # one of these has a secret token in the segment after it. `:any` is any
   # one segment: an MCP upload URL's id, or its site and environment.
-  # `:last` is the token as the path's last segment: an upload URL is told
-  # from one at a site environment by its length, as `Brando.MCP.HTTP` does,
-  # since a site may be keyed `uploads`.
+  # The first that matches counts: an upload URL at a site environment comes
+  # before the plain one, since a site may be keyed `uploads`. Segments after
+  # the token change nothing: `curl -T photo.jpg <url>/` adds the file's name.
   @at_root [
     ["__p__"],
     ["__ssg_preview__"],
-    ["mcp", "uploads", :any, :last],
-    ["mcp", :any, :any, "uploads", :any, :last]
+    ["mcp", :any, :any, "uploads", :any],
+    ["mcp", "uploads", :any]
   ]
   @anywhere [["reset-password"], ["content-transfer", "download"], ["assistant", "shared"]]
 
@@ -89,7 +89,6 @@ defmodule Brando.Plug.RequestLog do
 
   defp after_marker([segment | rest], [segment | marker], index), do: after_marker(rest, marker, index + 1)
   defp after_marker([_segment | rest], [:any | marker], index), do: after_marker(rest, marker, index + 1)
-  defp after_marker([_token], [:last], index), do: index
   defp after_marker([_token | _rest], [], index), do: index
   defp after_marker(_decoded, _marker, _index), do: nil
 end
