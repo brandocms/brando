@@ -1044,7 +1044,6 @@ defmodule Brando.Content.Proposals do
   # markup, as browsers read it; attribute values and other attributes do
   # not count, so an address or an alt text may be translated around it.
   @placeholder_pattern ~r/\{\{.*?\}\}|\{%.*?%\}|<%.*?%>/su
-  @placeholder_marker ~r/zqbrandoplaceholder(\d+)zq/
 
   defp placeholders_moved?(unit, text) do
     source = unit.source || ""
@@ -1055,51 +1054,69 @@ defmodule Brando.Content.Proposals do
 
       _ ->
         placeholders = Enum.uniq(Work.placeholders(source) ++ Work.placeholders(text))
-        places(unit, source, placeholders) != places(unit, text, placeholders)
+        # The marker carries a nonce of this comparison, so no text can hold
+        # one and stand in for a placeholder it moved
+        nonce = 8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
+        places(unit, source, placeholders, nonce) != places(unit, text, placeholders, nonce)
     end
   end
 
   # Each placeholder of `text` with its place, sorted: the placeholders are
   # replaced by markers that survive parsing, and Markdown is rendered.
-  defp places(unit, text, placeholders) do
-    markers = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {p, "zqbrandoplaceholder#{i}zq"} end)
+  defp places(unit, text, placeholders, nonce) do
+    marker = fn index -> "zq#{nonce}x#{index}zq" end
+    pattern = Regex.compile!("zq#{nonce}x(\\d+)zq")
+    markers = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {p, marker.(i)} end)
     names = placeholders |> Enum.with_index() |> Map.new(fn {p, i} -> {Integer.to_string(i), p} end)
 
     @placeholder_pattern
     |> Regex.replace(text, &Map.fetch!(markers, &1))
     |> placed(unit)
     |> Brando.HTML.Tree.parse_fragment()
-    |> Enum.flat_map(&node_places(&1, []))
-    |> Enum.map(fn {index, place} -> {Map.fetch!(names, index), place} end)
+    |> Enum.flat_map(&node_places(&1, [], pattern))
+    |> Enum.flat_map(fn {index, place} ->
+      case names do
+        %{^index => placeholder} -> [{placeholder, place}]
+        _ -> []
+      end
+    end)
     |> Enum.sort()
   end
 
   defp placed(text, %{format: "markdown"}), do: checked_text("markdown", text)
   defp placed(text, _unit), do: text
 
-  defp node_places(text, ancestors) when is_binary(text),
-    do: for(index <- marker_indexes(text), do: {index, {:text, ancestors}})
+  defp node_places(text, ancestors, pattern) when is_binary(text),
+    do: for(index <- marker_indexes(text, pattern), do: {index, {:text, ancestors}})
 
-  defp node_places({:comment, text}, ancestors),
-    do: for(index <- marker_indexes(text), do: {index, {:comment, ancestors}})
+  defp node_places({:comment, text}, ancestors, pattern),
+    do: for(index <- marker_indexes(text, pattern), do: {index, {:comment, ancestors}})
 
-  defp node_places({tag, attributes, children}, ancestors) do
+  # A placeholder that became a tag's name has a place too: its output would
+  # be the tag
+  defp node_places({tag, attributes, children}, ancestors, pattern) do
+    in_name = for index <- marker_indexes(tag, pattern), do: {index, {:tag_name, ancestors}}
+
     in_attributes =
-      for {name, value} <- attributes, index <- marker_indexes(name <> " " <> value), do: {index, {:attribute, tag, name}}
+      for {name, value} <- attributes,
+          index <- marker_indexes(name <> " " <> value, pattern),
+          do: {index, {:attribute, tag, name}}
 
-    in_attributes ++ Enum.flat_map(children, &node_places(&1, [tag | ancestors]))
+    in_name ++ in_attributes ++ Enum.flat_map(children, &node_places(&1, [tag | ancestors], pattern))
   end
 
-  defp node_places(_node, _ancestors), do: []
+  defp node_places(_node, _ancestors, _pattern), do: []
 
-  defp marker_indexes(text),
-    do: @placeholder_marker |> Regex.scan(text, capture: :all_but_first) |> List.flatten()
+  defp marker_indexes(text, pattern) when is_binary(text),
+    do: pattern |> Regex.scan(text, capture: :all_but_first) |> List.flatten()
+
+  defp marker_indexes(_text, _pattern), do: []
 
   defp placeholder_place_problem(name),
     do:
       dgettext(
         "content_proposals",
-        "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder as text where the source has it, inside the same tags.",
+        "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder where the source has it: as text inside the same tags, or in the same attribute of the same tag.",
         name: name
       )
 

@@ -550,6 +550,33 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert problems([translate(target, texts)], c.user) == []
     end
 
+    # The marker a placeholder is swapped for is made for one comparison, so
+    # no text can carry one to stand in for a placeholder it moved
+    test "a placeholder made a tag's name is refused, also with marker-like text beside it", c do
+      target = with_source(c, %{intro: "Innledning om {{entry.title}}"})
+      intro = "#{c.prefix}/vars/intro/value"
+
+      for text <- [
+            ~s|Introduction <{{entry.title}} autofocus tabindex="0" onfocus="alert(1)">|,
+            ~s|zqbrandoplaceholder0zq <{{entry.title}} autofocus tabindex="0" onfocus="alert(1)">|
+          ] do
+        texts = Map.put(english(c), intro, text)
+        assert [{0, :unsafe_text, ^intro}] = problems([translate(target, texts)], c.user), text
+      end
+
+      # Marker-like text is only text
+      texts = Map.put(english(c), intro, "Introduction to {{entry.title}} zqbrandoplaceholder9zq")
+      assert problems([translate(target, texts)], c.user) == []
+    end
+
+    test "Markdown does not let a placeholder trade places with text in an address", c do
+      notes = "#{c.prefix}/refs/notes/text"
+
+      target = with_source(c, %{notes: "{{entry.title}} [x](https://example.com/side)"})
+      texts = Map.put(english(c), notes, "Page [x](https://example.com/{{entry.title}})")
+      assert [{0, :unsafe_text, ^notes}] = problems([translate(target, texts)], c.user)
+    end
+
     test "Markdown keeps a placeholder in an image's alt text", c do
       notes = "#{c.prefix}/refs/notes/text"
 

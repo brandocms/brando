@@ -145,8 +145,8 @@ msgstr "%{name} er ikke besvart. Gi oversettelsen i texts, eller list den i revi
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder as text where the source has it, inside the same tags."
-msgstr "%{name} legger en malplassholder i markering kilden ikke har rundt den. Behold hver plassholder som tekst der kilden har den, inne i de samme taggene."
+msgid "%{name} puts a template placeholder in markup the source does not have around it. Keep each placeholder where the source has it: as text inside the same tags, or in the same attribute of the same tag."
+msgstr "%{name} legger en malplassholder i markering kilden ikke har rundt den. Behold hver plassholder der kilden har den: som tekst inne i de samme taggene, eller i det samme attributtet på den samme taggen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
