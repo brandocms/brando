@@ -297,6 +297,26 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
       end
     end
 
+    # The focal point is saved before the image is processed, so processing
+    # sees no change: the save renders the entries that show the image
+    for {event, params} <- [
+          {"image_editor_save", %{"mode" => "replace", "focal_x" => 40, "focal_y" => 60}},
+          {"save_image", %{"image" => %{"focal" => %{"x" => "40", "y" => "60"}}}}
+        ] do
+      test "a focal point saved with #{event} renders the entries that show the image", ctx do
+        %{page: page, user: user, saved_image: image} = ctx
+        Repo.insert!(%Brando.Content.Var{key: "hero", type: :image, label: "Hero", page_id: page.id, image_id: image.id})
+        socket = page |> in_row(:image, image) |> drawer_socket(user, :image, [:vars, 0], :image, image)
+
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:noreply, _form} = Form.handle_event(unquote(event), unquote(Macro.escape(params)), socket)
+        end)
+
+        assert Repo.get!(Brando.Images.Image, image.id).focal == %Brando.Images.Focal{x: 40, y: 60}
+        assert [_render] = all_enqueued(worker: Brando.Worker.EntryRenderer, args: %{entry_id: page.id})
+      end
+    end
+
     # The same rows: a removed one pending, first, and the one the form shows at 0.
     defp with_removed_row(page, image, socket_fun) do
       removed = %Brando.Content.Var{id: 2, key: "old", type: :text, label: "Old"}
