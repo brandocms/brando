@@ -697,29 +697,645 @@ defmodule BrandoAdmin.TranslationFormTest do
     refute has_element?(view, "input[name='translation_review[version_id]']")
   end
 
-  # The pending version drops the translation's copy of the removed block and
-  # adds the new one: the changeset the save checks carries rows marked
-  # `:replace` (`Translations.check_target_save/4`), which raised before #3750.
-  # The save is refused as a change to source-controlled content: the form
-  # still sends the translation's copy of the dropped block
-  # (`entry_blocks/<its sync_uid>`). A drop alone, or an addition alone, saves.
-  @tag skip: "#3756: the form's save sends the block the source dropped, and is refused"
-  test "a translation saves after the source dropped a block and added another", %{conn: conn} = c do
-    [join] = load(c.source.id).entry_blocks
-    Repo.delete!(join)
-    Repo.delete!(join.block)
-    TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 0)
-    {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
-    version = Translations.get_pending_version(Article, c.target.id)
+  # The source drops blocks and adds others: the pending version holds the
+  # field as the source has it, and the translation's form saves it as it
+  # opened it. The pending version leaves the dropped rows out, so the
+  # changeset it is loaded from marks them `:replace` (#3756).
+  describe "the source dropped a block and added another" do
+    defp drop_block(join) do
+      Repo.delete!(join)
+      Repo.delete!(join.block)
+    end
 
-    view = open(conn, c.target.id)
-    await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
-    save(view)
+    # The source's next save makes the pending version.
+    defp source_saved(c) do
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
+      Translations.get_pending_version(Article, c.target.id)
+    end
 
-    assert Repo.get!(PendingVersion, version.id).status == :applied
-    saved = load(c.target.id)
-    source_blocks = load(c.source.id).entry_blocks
-    assert Enum.map(saved.entry_blocks, & &1.block.sync_uid) == Enum.map(source_blocks, & &1.block.sync_uid)
-    assert {saved.year, texts(saved)} == {2024, ["Nytt avsnitt"]}
+    defp open_version(conn, id, version) do
+      view = open(conn, id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+      view
+    end
+
+    defp assert_follows_source(c, version) do
+      assert Repo.get!(PendingVersion, version.id).status == :applied
+      saved = load(c.target.id)
+      assert block_ids(saved) == block_ids(load(c.source.id))
+      saved
+    end
+
+    # Each block's identity, with its children's, in order.
+    defp block_ids(entry), do: Enum.map(entry.entry_blocks, &block_id(&1.block))
+
+    defp block_id(block) do
+      children = block.children |> Enum.sort_by(&{&1.sequence, &1.id}) |> Enum.map(&block_id/1)
+      rows = block.table_rows |> Enum.sort_by(&{&1.sequence, &1.id}) |> Enum.map(& &1.sync_uid)
+      {block.sync_uid, children, rows}
+    end
+
+    test "a translation saves it", %{conn: conn} = c do
+      [join] = load(c.source.id).entry_blocks
+      drop_block(join)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 0)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert {saved.year, texts(saved)} == {2024, ["Nytt avsnitt"]}
+    end
+
+    test "a drop alone leaves the block out", %{conn: conn} = c do
+      c = pair(c, &TranslationFixtures.add_block(&1, c.module, c.current_user, "Andre avsnitt", 1))
+      translate(c.target, ["First paragraph", "Second paragraph"])
+
+      [first, _second] = load(c.source.id).entry_blocks
+      drop_block(first)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Second paragraph"]
+    end
+
+    test "several dropped and several added", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          TranslationFixtures.add_block(source, c.module, c.current_user, "Andre", 1)
+          TranslationFixtures.add_block(source, c.module, c.current_user, "Tredje", 2)
+        end)
+
+      [first, _second, third] = load(c.source.id).entry_blocks
+      drop_block(first)
+      drop_block(third)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Fjerde", 0)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Femte", 3)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Fjerde", "Andre", "Femte"]
+    end
+
+    test "a container's child dropped while a sibling is added", %{conn: conn} = c do
+      c = pair(c, &add_container(c, &1, ["Første barn", "Andre barn"]))
+      [_, %{block: container}] = load(c.source.id).entry_blocks
+
+      [first_child, _] = Repo.preload(container, :children).children |> Enum.sort_by(& &1.sequence)
+      Repo.delete!(first_child)
+      add_child(c, container, "Tredje barn", 2)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      [_, %{block: shown}] = saved.entry_blocks
+      assert length(shown.children) == 2
+    end
+
+    test "a table row dropped while another is added", %{conn: conn} = c do
+      c = pair(c, &add_table_block(c, &1, ["r1", "r2"]))
+      [_, %{block: block}] = load(c.source.id).entry_blocks
+
+      [r1, _] = Repo.preload(block, :table_rows).table_rows |> Enum.sort_by(& &1.sequence)
+      Repo.delete!(r1)
+      insert_row(block, "r3", 2)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      [_, %{block: table}] = saved.entry_blocks
+      assert Enum.map(Enum.sort_by(table.table_rows, & &1.sequence), & &1.sync_uid) == ["r2", "r3"]
+    end
+
+    test "a second editor in the entry saves it", %{conn: conn} = c do
+      [join] = load(c.source.id).entry_blocks
+      drop_block(join)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 0)
+      version = source_saved(c)
+
+      _first = open_version(conn, c.target.id, version)
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+      other_conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Nytt avsnitt"]
+    end
+
+    test "a reconnect saves it", %{conn: conn} = c do
+      [join] = load(c.source.id).entry_blocks
+      drop_block(join)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 0)
+      version = source_saved(c)
+
+      view = open_version(conn, c.target.id, version)
+      params = view |> render() |> form_params("#article_form_form")
+      kill_live(view)
+
+      # LiveView's recovery replays the form's last params into the new process.
+      view = open_version(conn, c.target.id, version)
+      view |> element("#article_form_form") |> render_change(params)
+      save(view)
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Nytt avsnitt"]
+    end
+
+    test "a source change while the form is open saves after the form takes it", %{conn: conn} = c do
+      first = change_year(c, 2024)
+      view = open_version(conn, c.target.id, first)
+
+      [join] = load(c.source.id).entry_blocks
+      drop_block(join)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 0)
+      change_year(c, 2030)
+
+      # The save writes the version the form opened with, then takes the new one.
+      view |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      second = Translations.get_pending_version(Article, c.target.id)
+
+      view |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+
+      Brando.EditSessionEditors.await(fn -> Repo.get!(PendingVersion, second.id).status == :applied end)
+      saved = load(c.target.id)
+      assert block_ids(saved) == block_ids(load(c.source.id))
+      assert {saved.year, texts(saved)} == {2030, ["Nytt avsnitt"]}
+    end
+
+    # The source moves a container's child into another container.
+    defp move_child(c) do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn", "Andre barn"])
+          add_container(c, source, ["Tredje barn"], 2)
+        end)
+
+      [_, %{block: from}, %{block: to}] = load(c.source.id).entry_blocks
+      [moved, _] = Repo.preload(from, :children).children |> Enum.sort_by(& &1.sequence)
+      moved |> Ecto.Changeset.change(parent_id: to.id, sequence: 1) |> Repo.update!()
+      {c, source_saved(c)}
+    end
+
+    defp assert_moved(c, version) do
+      saved = assert_follows_source(c, version)
+      [_, %{block: from}, %{block: to}] = saved.entry_blocks
+      assert {length(from.children), length(to.children)} == {1, 2}
+    end
+
+    test "a child the source moved to another container", %{conn: conn} = c do
+      {c, version} = move_child(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      assert_moved(c, version)
+    end
+
+    test "a child the source moved to another container, with a second editor in the entry", %{conn: conn} = c do
+      {c, version} = move_child(c)
+
+      # the translation's copy of the moved child, still in the first container
+      [_, %{block: from}, %{block: to}] = load(c.target.id).entry_blocks
+      [moved | _] = Enum.sort_by(from.children, & &1.sequence)
+
+      first = open_version(conn, c.target.id, version)
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+      second = open_version(other_conn, c.target.id, version)
+
+      # each shows the moved child once, in the container the source has it in
+      for view <- [first, second] do
+        assert view |> element("#child-#{moved.uid}") |> render() =~ ~s(data-parent_uid="#{to.uid}")
+      end
+
+      save(second)
+
+      assert_moved(c, version)
+    end
+
+    # Review: the roots take their forms one update at a time, so a child
+    # moving into a root drawn before the one it leaves showed in both in
+    # between (a duplicate DOM id) unless its parent let go of it first.
+    defp children(block), do: Repo.preload(block, :children, force: true).children |> Enum.sort_by(& &1.sequence)
+
+    defp move_to!(child, parent, sequence),
+      do: child |> Ecto.Changeset.change(parent_id: parent.id, sequence: sequence) |> Repo.update!()
+
+    defp assert_shown_under(view, child, parent),
+      do: assert(view |> element("#child-#{child.uid}") |> render() =~ ~s(data-parent_uid="#{parent.uid}"))
+
+    test "a child the source moved to an earlier container", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          add_container(c, source, ["Andre barn", "Tredje barn"], 2)
+        end)
+
+      [_, %{block: to}, %{block: from}] = load(c.source.id).entry_blocks
+      [moved, _] = children(from)
+      move_to!(moved, to, 1)
+      version = source_saved(c)
+
+      [_, %{block: shown_to}, %{block: shown_from}] = load(c.target.id).entry_blocks
+      [shown_moved, _] = Enum.sort_by(shown_from.children, & &1.sequence)
+
+      view = open_version(conn, c.target.id, version)
+      assert_shown_under(view, shown_moved, shown_to)
+      save(view)
+
+      saved = assert_follows_source(c, version)
+      [_, %{block: to}, %{block: from}] = saved.entry_blocks
+      assert {length(to.children), length(from.children)} == {2, 1}
+    end
+
+    test "a child the source moved out of a nested container into an earlier one", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          outer = add_container(c, source, [], 2)
+          inner = add_child(c, outer, "Indre", 0)
+          inner |> Ecto.Changeset.change(type: :container, module_id: nil) |> Repo.update!()
+          add_child(c, inner, "Indre barn", 0)
+          add_child(c, inner, "Andre indre barn", 1)
+        end)
+
+      [_, %{block: to}, %{block: outer}] = load(c.source.id).entry_blocks
+      [inner] = children(outer)
+      [moved, _] = children(inner)
+      move_to!(moved, to, 1)
+      version = source_saved(c)
+
+      [_, %{block: shown_to}, %{block: shown_outer}] = load(c.target.id).entry_blocks
+      [shown_inner] = shown_outer.children
+      shown_moved = Enum.find(shown_inner.children, &(&1.sync_uid == moved.sync_uid))
+
+      view = open_version(conn, c.target.id, version)
+      assert_shown_under(view, shown_moved, shown_to)
+      save(view)
+
+      assert_follows_source(c, version)
+    end
+
+    test "two children the source swapped between containers", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          add_container(c, source, ["Andre barn"], 2)
+        end)
+
+      [_, %{block: a}, %{block: b}] = load(c.source.id).entry_blocks
+      [first] = children(a)
+      [second] = children(b)
+      move_to!(first, b, 1)
+      move_to!(second, a, 1)
+      version = source_saved(c)
+
+      [_, %{block: shown_a}, %{block: shown_b}] = load(c.target.id).entry_blocks
+      [shown_first] = shown_a.children
+      [shown_second] = shown_b.children
+
+      view = open_version(conn, c.target.id, version)
+      assert_shown_under(view, shown_first, shown_b)
+      assert_shown_under(view, shown_second, shown_a)
+      save(view)
+
+      assert_follows_source(c, version)
+    end
+
+    test "a container whose only child the source moved out shows as empty to a second editor", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          add_container(c, source, ["Andre barn"], 2)
+        end)
+
+      [_, %{block: from}, %{block: to}] = load(c.source.id).entry_blocks
+      [moved] = Repo.preload(from, :children).children
+      moved |> Ecto.Changeset.change(parent_id: to.id, sequence: 1) |> Repo.update!()
+      version = source_saved(c)
+
+      [_, %{block: emptied}, _] = load(c.target.id).entry_blocks
+
+      _first = open_version(conn, c.target.id, version)
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      second = log_in_user(Phoenix.ConnTest.build_conn(), other) |> open_version(c.target.id, version)
+
+      # its only child is in the other container: it holds none, so it shows the empty hint
+      assert has_element?(second, "[data-block-uid='#{emptied.uid}'] .blocks-empty-instructions")
+      refute has_element?(second, "[data-block-uid='#{emptied.uid}'] .block-children")
+    end
+
+    # A block on an older version of its module: it keeps a variable the
+    # module no longer defines (`Brando.Content.StaleBlocks`), written past
+    # the changeset as a module save leaves it. The pending version holds it;
+    # the restore cannot carry it (`Brando.Drafts.Modules`), so it stays in
+    # the form as the translation has it.
+    defp make_stale(block) do
+      Repo.insert!(%Brando.Content.Var{
+        block_id: block.id,
+        type: :string,
+        key: "old",
+        label: %{"en" => "Old"},
+        value: "left over",
+        sequence: 0
+      })
+
+      block
+    end
+
+    defp add_stale_block(c, source, text, sequence),
+      do: source |> TranslationFixtures.add_block(c.module, c.current_user, text, sequence) |> make_stale()
+
+    defp add_stale_child_container(c, source) do
+      container = add_container(c, source, ["Første barn", "Gammelt barn"])
+      [_, stale] = Repo.preload(container, :children).children |> Enum.sort_by(& &1.sequence)
+      make_stale(stale)
+      container
+    end
+
+    defp child_texts(entry) do
+      for %{block: %{type: :container} = container} <- entry.entry_blocks,
+          child <- Enum.sort_by(container.children, &{&1.sequence, &1.id}),
+          do: hd(child.refs).data.data.text
+    end
+
+    test "a stale block the source kept stays and saves", %{conn: conn} = c do
+      c = pair(c, &add_stale_block(c, &1, "Gammelt avsnitt", 1))
+      translate(c.target, ["First paragraph", "Old paragraph"])
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "Old paragraph"]}
+      [_, %{block: stale}] = saved.entry_blocks
+      assert Enum.map(Repo.preload(stale, :vars, force: true).vars, & &1.key) == ["old"]
+    end
+
+    test "a stale block the source kept stays while another is dropped and added", %{conn: conn} = c do
+      c = pair(c, &add_stale_block(c, &1, "Gammelt avsnitt", 1))
+      translate(c.target, ["First paragraph", "Old paragraph"])
+
+      [first, _stale] = load(c.source.id).entry_blocks
+      drop_block(first)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 2)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Old paragraph", "Nytt avsnitt"]
+    end
+
+    test "a stale child the source kept stays and saves", %{conn: conn} = c do
+      c = pair(c, &add_stale_child_container(c, &1))
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert child_texts(saved) == ["Første barn", "Gammelt barn"]
+    end
+
+    test "a stale child the source kept stays while a sibling is dropped and another added", %{conn: conn} = c do
+      c = pair(c, &add_stale_child_container(c, &1))
+      [_, %{block: container}] = load(c.source.id).entry_blocks
+      [first_child, _] = Repo.preload(container, :children).children |> Enum.sort_by(& &1.sequence)
+      Repo.delete!(first_child)
+      add_child(c, container, "Tredje barn", 2)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert child_texts(saved) == ["Gammelt barn", "Tredje barn"]
+    end
+
+    # A stale multi module block, its entries below it.
+    defp add_stale_multi_block(c, source) do
+      {:ok, multi} =
+        Brando.Content.create_module(
+          Factory.params_for(:module,
+            name: %{"en" => "List"},
+            namespace: %{"en" => "Content"},
+            help_text: %{},
+            code: "<ul>{{ content }}</ul>",
+            multi: true,
+            refs: [],
+            vars: []
+          ),
+          c.current_user
+        )
+
+      entries =
+        for {text, i} <- Enum.with_index(["Første punkt", "Andre punkt"]),
+            do: c |> module_block(text, i) |> Map.put("type", "module_entry")
+
+      params = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "module",
+        "multi" => true,
+        "module_id" => multi.id,
+        "creator_id" => c.current_user.id,
+        "source" => to_string(Article.Blocks),
+        "children" => entries
+      }
+
+      block = %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
+      struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 1}) |> Repo.insert!()
+      make_stale(block)
+    end
+
+    # A stale block holding a region slot, a block in the slot.
+    defp add_stale_slot_block(c, source) do
+      block = add_stale_block(c, source, "Med område", 1)
+
+      uid = Brando.Utils.generate_uid()
+
+      slot =
+        Repo.insert!(%Block{
+          uid: uid,
+          sync_uid: uid,
+          type: :slot,
+          slot_kind: :region,
+          slot_name: "sidebar",
+          slot_module_set: "all",
+          source: Article.Blocks,
+          creator_id: c.current_user.id,
+          parent_id: block.id
+        })
+
+      add_child(c, slot, "I området", 0)
+      block
+    end
+
+    # The texts of a block's descendants, depth first, as saved.
+    defp subtree_texts(block) do
+      block
+      |> Repo.preload([children: :refs], force: true)
+      |> Map.fetch!(:children)
+      |> Enum.sort_by(&{&1.sequence, &1.id})
+      |> Enum.flat_map(fn child ->
+        Enum.map(child.refs, & &1.data.data.text) ++ subtree_texts(child)
+      end)
+    end
+
+    defp stale_subtree(entry),
+      do: entry.entry_blocks |> Enum.find(&(&1.block.vars != [])) |> then(&subtree_texts(&1.block))
+
+    defp add_stale_owner(c, source, :multi), do: add_stale_multi_block(c, source)
+    defp add_stale_owner(c, source, :slot), do: add_stale_slot_block(c, source)
+
+    defp drop_first_and_add(c) do
+      [first | _] = load(c.source.id).entry_blocks
+      drop_block(first)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 2)
+    end
+
+    for {name, build, texts} <- [
+          {"a stale multi block keeps its entries", :multi, ["Første punkt", "Andre punkt"]},
+          {"a stale block keeps the blocks in its slot", :slot, ["I området"]}
+        ] do
+      test name, %{conn: conn} = c do
+        c = pair(c, &add_stale_owner(c, &1, unquote(build)))
+        version = source_saved(c)
+
+        conn |> open_version(c.target.id, version) |> save()
+
+        saved = assert_follows_source(c, version)
+        assert stale_subtree(saved) == unquote(texts)
+      end
+
+      test "#{name} while another is dropped and added", %{conn: conn} = c do
+        c = pair(c, &add_stale_owner(c, &1, unquote(build)))
+        drop_first_and_add(c)
+        version = source_saved(c)
+
+        conn |> open_version(c.target.id, version) |> save()
+
+        saved = assert_follows_source(c, version)
+        assert stale_subtree(saved) == unquote(texts)
+      end
+    end
+
+    defp change_year(c, year) do
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: year}, c.current_user)
+      Translations.get_pending_version(Article, c.target.id)
+    end
+
+    defp module_block(c, text, sequence) do
+      %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.module.id,
+        "creator_id" => c.current_user.id,
+        "sequence" => sequence,
+        "source" => to_string(Article.Blocks),
+        "refs" => [
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "name" => "body",
+            "data" => %{"type" => "text", "data" => %{"text" => text}}
+          }
+        ]
+      }
+    end
+
+    # A source with the setup's block and what `build` adds, and its
+    # translation, translated.
+    defp pair(c, build) do
+      slug = "kilde-#{System.unique_integer([:positive])}"
+
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Kilde", slug: slug, language: "no", status: "published", year: 2020},
+          c.current_user
+        )
+
+      TranslationFixtures.add_block(source, c.module, c.current_user, "Første avsnitt", 0)
+      build.(source)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user, mark_translate: false)
+      %{c | source: source, target: target}
+    end
+
+    defp add_container(c, source, texts, sequence \\ 1) do
+      params = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "container",
+        "creator_id" => c.current_user.id,
+        "source" => to_string(Article.Blocks),
+        "children" => texts |> Enum.with_index() |> Enum.map(fn {text, i} -> module_block(c, text, i) end)
+      }
+
+      container = %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
+      struct(Article.Blocks, %{entry_id: source.id, block_id: container.id, sequence: sequence}) |> Repo.insert!()
+      container
+    end
+
+    defp add_child(c, container, text, sequence) do
+      params = Map.put(module_block(c, text, sequence), "parent_id", container.id)
+      %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
+    end
+
+    defp add_table_block(c, source, row_ids) do
+      template = Repo.insert!(%Brando.Content.TableTemplate{uid: Brando.Utils.generate_uid(), name: "Rows"})
+
+      Repo.insert!(%Brando.Content.Var{
+        type: :string,
+        key: "cell",
+        label: %{"en" => "Cell"},
+        table_template_id: template.id
+      })
+
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module,
+            name: %{"en" => "Table"},
+            namespace: %{"en" => "Content"},
+            help_text: %{},
+            code: "<table></table>",
+            refs: [],
+            vars: [],
+            table_template_id: template.id
+          ),
+          c.current_user
+        )
+
+      params = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => module.id,
+        "creator_id" => c.current_user.id,
+        "source" => to_string(Article.Blocks)
+      }
+
+      block = %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
+      struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 1}) |> Repo.insert!()
+      row_ids |> Enum.with_index() |> Enum.each(fn {id, i} -> insert_row(block, id, i) end)
+      block
+    end
+
+    defp insert_row(block, sync_uid, sequence) do
+      Repo.insert!(%Brando.Content.TableRow{
+        block_id: block.id,
+        sync_uid: sync_uid,
+        sequence: sequence,
+        vars: [%Brando.Content.Var{type: :string, key: "cell", label: %{"en" => "Cell"}, value: sync_uid, sequence: 0}]
+      })
+    end
   end
 end

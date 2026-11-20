@@ -339,13 +339,27 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
-    if Map.get(message, :source) == :translation and joined_with_work?(socket) do
+    translation? = Map.get(message, :source) == :translation
+
+    cond do
       # A synchronized translation's pending version, loaded by an editor who
       # joined an edit session that already holds unsaved work: the editor
       # who opened it first loaded the version, and the work is on top of it.
-      {:ok, socket}
-    else
-      {:ok, restore_draft(socket, changesets, originals)}
+      translation? and joined_with_work?(socket) ->
+        {:ok, socket}
+
+      # The pending version is the whole field as the source has it, so its
+      # blocks go where it has them and the ones it lacks go (`place?`). A
+      # row it leaves out comes as a `:replace` changeset (`put_assoc/3` in
+      # `Brando.Drafts.Restore`): a row it drops, not one it holds. A block
+      # the restore cannot carry because of its module comes as it is saved
+      # (`keep_saved`, `Form.Translation.restore_changeset/1`).
+      translation? ->
+        held = Enum.reject(changesets, &(&1.action == :replace))
+        {:ok, restore_draft(socket, held, originals, place?: true)}
+
+      true ->
+        {:ok, restore_draft(socket, changesets, originals)}
     end
   end
 
@@ -1819,10 +1833,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     assign(socket, :entry_blocks, entry_blocks)
   end
 
-  # `place?`: the copy is the whole field (a revision's working copy), so
-  # its blocks go where it has them, and the ones it lacks go. A recovery
-  # copy or a translation's version may predate blocks someone has saved
-  # since, so for them the blocks stay where the field has them.
+  # `place?`: the copy is the whole field (a revision's working copy, a
+  # translation's pending version), so its blocks go where it has them, and
+  # the ones it lacks go. A recovery copy may predate blocks someone has
+  # saved since, so for it the blocks stay where the field has them.
   @decorate span("brando.block_field.restore_draft", block_field: [:socket, :assigns, :block_field])
   defp restore_draft(socket, changesets, originals, opts \\ []) do
     Tracing.set_attributes(%{
@@ -1880,7 +1894,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         # Each root takes its form in an update of its own, so a block the
         # copy puts under another parent would show in both in between: its
         # parent lets go of it first.
-        release_leaving(socket.assigns.block_ops, tree)
+        copied_parent = for {parent, uids} <- tree, uid <- uids, into: %{}, do: {uid, parent}
+        release_leaving(socket.assigns.block_ops, copied_parent)
 
         for {uid, form} <- forms, uid in socket.assigns.root_order do
           send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
@@ -1890,8 +1905,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:entry_blocks, originals)
         |> assign(:seed_forms, Map.new(forms))
         |> apply_block_op({:replace_state, ops}, :replay)
+        |> keep_shown_seeds(socket.assigns.seed_forms)
         |> clear_undo()
     end
+  end
+
+  # A tab that does not edit takes no op (`apply_block_op/3`), so its roots
+  # stay as it shows them: one the copy left out keeps the form it had.
+  defp keep_shown_seeds(socket, shown) do
+    missing = Enum.reject(socket.assigns.root_order, &Map.has_key?(socket.assigns.seed_forms, &1))
+    update(socket, :seed_forms, &Map.merge(&1, Map.take(shown, missing)))
   end
 
   defp keep_restored(changeset, restored) when restored == %{}, do: changeset
@@ -1917,14 +1940,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     Enum.reduce(leftover, ops, fn uid, acc -> if Ops.known?(acc, uid), do: next!(acc, {:delete, uid}), else: acc end)
   end
 
-  # Tell each shown parent to let go of the children the copy puts under
-  # another parent, the deepest first: a parent let go of with its own
-  # component is gone before its turn.
-  defp release_leaving(%Ops{} = shown, tree) do
-    copied_parent = for {parent, uids} <- tree, uid <- uids, into: %{}, do: {uid, parent}
-
+  # Tell each shown parent to let go of the children `new_parent` (a uid's
+  # parent where it goes, `nil` for a root) puts under another parent, the
+  # deepest first: a parent let go of with its own component is gone before
+  # its turn.
+  defp release_leaving(%Ops{} = shown, new_parent) do
     shown.parents
-    |> Enum.filter(fn {uid, parent} -> Map.has_key?(copied_parent, uid) and copied_parent[uid] != parent end)
+    |> Enum.filter(fn {uid, parent} -> Map.has_key?(new_parent, uid) and new_parent[uid] != parent end)
     |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
     |> Enum.sort_by(fn {parent, _uids} -> -depth(shown, parent) end)
     |> Enum.each(fn {parent, uids} ->
@@ -2036,7 +2058,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp restore_into_session(socket, ops, base) do
     op = {:carry, ops, base}
-    {:ok, restored} = Ops.apply_op(socket.assigns.block_ops, op)
+    shown = socket.assigns.block_ops
+    {:ok, restored} = Ops.apply_op(shown, op)
+
+    # The roots are refreshed one update at a time, so a child the restore
+    # puts under another parent would show in both in between: its parent
+    # lets go of it first.
+    release_leaving(
+      shown,
+      for({uid, _} <- shown.parents, Ops.known?(restored, uid), into: %{}, do: {uid, restored.parents[uid]})
+    )
 
     socket
     |> show_state(restored, :all)

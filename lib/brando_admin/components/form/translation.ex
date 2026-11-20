@@ -259,7 +259,15 @@ defmodule BrandoAdmin.Components.Form.Translation do
       }
     }
 
-    case Brando.Drafts.Restore.prepare(draft, entry, schema, user, accept_conflict: true, compatible_only: true) do
+    # A block whose module no longer fits it (a leftover var or ref, a
+    # retyped ref) cannot be restored from the version: it stays in the form
+    # as the translation has it saved (`keep_saved`), so only the blocks the
+    # version itself leaves out leave the form.
+    case Brando.Drafts.Restore.prepare(draft, entry, schema, user,
+           accept_conflict: true,
+           compatible_only: true,
+           keep_saved: true
+         ) do
       {:ok, changeset, _issues} ->
         state = %{state | applied_version_id: state.pending.id}
         {:ok, changeset, assign(socket, :translation, state)}

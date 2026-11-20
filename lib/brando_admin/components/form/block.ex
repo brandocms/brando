@@ -832,7 +832,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:container_origin, fn -> Changeset.get_field(block_cs, :container_origin) || :local end)
     |> assign_new(:palette_origin, fn -> Changeset.get_field(block_cs, :palette_origin) || :local end)
     |> assign_new(:fragment_id, fn -> Changeset.get_field(block_cs, :fragment_id) end)
-    |> assign_new(:has_children?, fn -> assigns.children !== [] end)
+    |> assign_new(:has_children?, fn -> held_children(assigns.children) !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
     # Store original block_identifiers from database for restoring IDs when re-adding
     |> assign_new(:original_block_identifiers, fn -> loaded_block_identifiers(block_cs.data.block_identifiers) end)
@@ -2038,8 +2038,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:changesets, fn -> [] end)
   end
 
+  # A form's children (`form[:children].value`) are its changes, and those
+  # name a child the form lets go as a `:replace` changeset: one a materialized
+  # root (`BlockField.materialized_form/3`) no longer holds because it was
+  # moved to another parent, or a restored copy left out. It is not shown,
+  # and `has_children?` does not count it.
+  defp held_children(children) when is_list(children),
+    do: Enum.reject(children, &match?(%Ecto.Changeset{action: action} when action in [:replace, :delete], &1))
+
+  defp held_children(children), do: children
+
   defp do_assign_children(%{assigns: %{children: children}} = socket) do
     current_user_id = socket.assigns.current_user_id
+    children = held_children(children)
 
     children_forms =
       Map.new(children, &{extract_uid(&1), to_change_form(&1, %{}, current_user_id)})

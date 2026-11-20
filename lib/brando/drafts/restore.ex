@@ -6,7 +6,9 @@ defmodule Brando.Drafts.Restore do
   def prepare(draft, entry, schema, user, opts \\ []) do
     with :ok <- format(draft),
          :ok <- schema_version(draft, schema) do
-      {blocks, issues} = Modules.check(draft.payload["blocks"] || %{}, draft.payload["modules"] || %{})
+      {blocks, issues} =
+        Modules.check(draft.payload["blocks"] || %{}, draft.payload["modules"] || %{}, keep_saved: opts[:keep_saved])
+
       conflict? = draft.base_fingerprint != Brando.Drafts.fingerprint(entry)
 
       cond do
@@ -42,13 +44,29 @@ defmodule Brando.Drafts.Restore do
 
     join_schema = schema.__schema__(:association, assoc).queryable
     existing = Map.get(entry, assoc) || []
-    rows = Enum.map(block_rows, &block_row_changeset(&1, existing, join_schema, user))
+
+    rows =
+      block_rows
+      |> Enum.reject(&(Modules.kept?(&1) and is_nil(saved_row(existing, &1))))
+      |> Enum.map(&block_row_changeset(&1, existing, join_schema, user))
 
     Changeset.put_assoc(changeset, assoc, rows)
   end
 
+  # A block `Modules.check/3` kept as it is saved stays only where the entry
+  # has it: the same row, holding the same block.
+  defp saved_row(existing, row) do
+    Enum.find(existing, fn saved ->
+      to_string(saved.id) == to_string(row["id"]) and
+        (not Modules.kept?(row) or saved_block?(Map.get(saved, :block), row["block"] || row))
+    end)
+  end
+
+  defp saved_block?(%{id: id, uid: uid}, params), do: to_string(id) == to_string(params["id"]) and uid == params["uid"]
+  defp saved_block?(_block, _params), do: false
+
   defp block_row_changeset(row, existing, join_schema, user) do
-    base = Enum.find(existing, &(to_string(&1.id) == to_string(row["id"]))) || struct(join_schema)
+    base = saved_row(existing, row) || struct(join_schema)
     row = reconcile(row, base, block_tree: true)
     row = Map.put(row, "block", put_source(row["block"], join_schema))
     join_schema.changeset(base, row, user.id, true)
@@ -123,9 +141,13 @@ defmodule Brando.Drafts.Restore do
   defp reconcile_relation(rows, current, schema, opts) when is_list(rows) do
     current = if is_list(current), do: current, else: []
 
-    Enum.map(rows, fn params ->
-      base = Enum.find(current, &(Map.get(&1, :id) && to_string(&1.id) == to_string(params["id"]))) || struct(schema)
-      reconcile(params, base, opts)
+    Enum.flat_map(rows, fn params ->
+      base = Enum.find(current, &(Map.get(&1, :id) && to_string(&1.id) == to_string(params["id"])))
+
+      # a block kept as it is saved (`Modules.check/3`) only where the base holds it
+      if Modules.kept?(params) and not saved_block?(base, params),
+        do: [],
+        else: [reconcile(params, base || struct(schema), opts)]
     end)
   end
 
@@ -136,9 +158,17 @@ defmodule Brando.Drafts.Restore do
 
   defp reconcile_relation(value, _current, _schema, _opts), do: value
 
+  # A block kept as it is saved (`Modules.check/3`) has no children in its
+  # params, and gets none: an empty list would replace its saved subtree.
   defp put_source(block, source) do
-    block
-    |> Map.put("source", to_string(source))
-    |> Map.update("children", [], &Enum.map(&1, fn child -> put_source(child, source) end))
+    block = Map.put(block, "source", to_string(source))
+
+    case block do
+      %{"children" => children} when is_list(children) ->
+        Map.put(block, "children", Enum.map(children, &put_source(&1, source)))
+
+      _ ->
+        block
+    end
   end
 end
