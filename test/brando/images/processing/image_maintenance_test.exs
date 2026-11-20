@@ -647,6 +647,30 @@ defmodule Brando.Images.ImageMaintenanceTest do
       assert_receive {:work, "image-sizes", :finished, %Work{total: 3, done: 3, message: "3 images recreated"}}
     end
 
+    test "a run restated after a restart keeps the images that failed before it", %{user: user} do
+      images = for _ <- 1..2, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      failed_id =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          walk_and_wait(user)
+
+          [failed, _waiting] = image_jobs()
+          set_job(failed, state: "discarded", discarded_at: DateTime.utc_now())
+          forget(user)
+
+          # The watcher's next look
+          assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher().args)
+          failed_id = failed.args["image_id"]
+          assert %Work{status: :running, total: 2, done: 1, failed: 1, failed_items: [^failed_id]} = work(user)
+
+          assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+          failed_id
+        end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{total: 2, done: 2, failed: 1, failed_items: [^failed_id]}}
+      assert failed_id in Enum.map(images, & &1.id)
+    end
+
     test "an image job left executing past its timeout does not hold a run" do
       image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
 

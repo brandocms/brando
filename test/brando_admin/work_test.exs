@@ -165,6 +165,14 @@ defmodule BrandoAdmin.WorkTest do
     assert_receive {:work, "ended", :running, %Work{total: 1, done: 0}}
   end
 
+  test "resumed work that is not running starts with the failures given", %{user_id: user_id} do
+    Work.resume(user_id, "failures", "Walking", total: 3, counted: 2, failures: 2, failed_items: [4, 5])
+    assert_receive {:work, "failures", :running, %Work{total: 3, done: 2, failed: 2, failed_items: [4, 5]}}
+
+    Work.advance(user_id, "failures")
+    assert_receive {:work, "failures", :failed, %Work{done: 3, failed: 2, failed_items: [4, 5]}}
+  end
+
   test "failed steps keep what they were about, successful ones do not", %{user_id: user_id} do
     Work.start(user_id, "items", "Writing", total: 3)
     Work.advance(user_id, "items", :error, item: 1)

@@ -226,6 +226,8 @@ defmodule BrandoAdmin.Work.Registry do
       total: attrs[:total] || attrs[:remaining],
       open: attrs[:open] || false,
       done: attrs[:done] || 0,
+      failed: attrs[:failures] || 0,
+      failed_items: Enum.take(attrs[:failed_items] || [], @max_failed_items),
       done_message: attrs[:done_message],
       failed_message: attrs[:failed_message],
       timeout: attrs[:timeout] || Work.default_timeout(),

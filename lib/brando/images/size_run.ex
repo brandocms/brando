@@ -27,7 +27,11 @@ defmodule Brando.Images.SizeRun do
   #   * a batch counts the run's images so far, not its own on top, and skips
   #     the images the run already queued, so a retried batch comes out the
   #     same; it also says the run's work again (`BrandoAdmin.Work.resume/4`),
-  #     which a node restarted halfway has lost;
+  #     which a node restarted halfway has lost, with the run's failed
+  #     images. Those come from the jobs that gave up or were cancelled, and
+  #     Oban's Pruner deletes them (after 300 seconds by Brando's default):
+  #     work restated later than that, or an image whose job could not be
+  #     queued at all, is not counted as failed again;
   #   * an image queued again while the run's job for it waits (the image
   #     editor saving a focal point) takes over that job's place in the run
   #     (`carry_over/2`);
@@ -186,8 +190,10 @@ defmodule Brando.Images.SizeRun do
         {:snooze, @watch_every}
 
       remaining > 0 ->
-        # Says nothing new to a node that still has the work
-        resume(user, remaining, 0, false)
+        # Says nothing new to a node that still has the work. Of the run's
+        # finished images, only the failed ones are counted again
+        failed = failures(run)
+        resume(user, remaining + length(failed), length(failed), false, failed)
         {:snooze, @watch_every}
 
       args["settle"] ->
@@ -208,15 +214,32 @@ defmodule Brando.Images.SizeRun do
     end
   end
 
-  defp resume(user, total, counted, open) do
+  # The run's work said again: `counted` of `total` done, `failed` the
+  # images of those that failed (`failures/1`)
+  defp resume(user, total, counted, open, failed) do
+    opts = [total: total, counted: counted, open: open, failures: length(failed), failed_items: failed]
+
     Work.in_locale(user, fn ->
-      Work.resume(
-        user,
-        @work_key,
-        gettext("Recreating image sizes"),
-        [total: total, counted: counted, open: open] ++ work_opts()
-      )
+      Work.resume(user, @work_key, gettext("Recreating image sizes"), opts ++ work_opts())
     end)
+  end
+
+  # The images of the run's jobs that gave up or were cancelled, oldest
+  # first. Oban's Pruner deletes those older than its limit (300 seconds by
+  # default): a failure before that is not counted again.
+  defp failures(nil), do: []
+
+  defp failures(run) do
+    worker = Oban.Worker.to_string(Worker.ImageProcessor)
+
+    Brando.Repo.all(
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and j.state in ["discarded", "cancelled"] and
+            fragment("? ->> ?", j.meta, ^@meta_key) == ^run,
+        order_by: [asc: j.id],
+        select: fragment("(? ->> 'image_id')::bigint", j.args)
+    )
   end
 
   @doc "Ends the work of a run whose walk could not be queued."
@@ -255,7 +278,7 @@ defmodule Brando.Images.SizeRun do
 
     # After queueing: a batch that stops halfway has counted nothing, and
     # its retry counts the batch once
-    if Work.user_id(user), do: resume(user, total, total - remaining(run), true)
+    if Work.user_id(user), do: resume(user, total, total - remaining(run), true, failures(run))
     count
   end
 
