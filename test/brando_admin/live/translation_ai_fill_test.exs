@@ -145,6 +145,29 @@ defmodule BrandoAdmin.TranslationAIFillTest do
     view |> element(selector) |> render_change(params)
   end
 
+  # How many times `pid` calls `mfa` while `fun` runs
+  defp count_calls(pid, {module, name, arity} = mfa, fun) do
+    :erlang.trace_pattern(mfa, true, [:local])
+    :erlang.trace(pid, true, [:call])
+
+    try do
+      fun.()
+      :erlang.trace(pid, false, [:call])
+      count_traced(pid, module, name, arity, 0)
+    after
+      :erlang.trace_pattern(mfa, false, [:local])
+    end
+  end
+
+  defp count_traced(pid, module, name, arity, count) do
+    receive do
+      {:trace, ^pid, :call, {^module, ^name, args}} when length(args) == arity ->
+        count_traced(pid, module, name, arity, count + 1)
+    after
+      100 -> count
+    end
+  end
+
   defp save(view) do
     view |> form("#article_form_form") |> render_submit()
     assert_push_event(view, "b:submit", %{}, 2_000)
@@ -364,6 +387,75 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
       refute has_element?(view, "#{item("subtitle")}[data-ai]")
       refute has_element?(view, "#{item(block_key(target.id))}[data-ai]")
+    end
+
+    test "a run reads a block with many texts once per pass, not once per text", %{conn: conn, current_user: user} do
+      names = ~w(one two three four five six)
+
+      ref = fn name, text ->
+        %{name: name, uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: text}}}
+      end
+
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module,
+            name: %{"en" => "Texts"},
+            namespace: %{"en" => "Content"},
+            help_text: %{},
+            code: Enum.map_join(names, &"{% ref refs.#{&1} %}"),
+            refs: Enum.map(names, &ref.(&1, "Default"))
+          ),
+          user
+        )
+
+      {:ok, source} =
+        SyncTest.create_article(%{title: "Mange", slug: "mange", language: "no", status: "published"}, user)
+
+      block =
+        %Brando.Content.Block{}
+        |> Brando.Content.Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => module.id,
+            "creator_id" => user.id,
+            "source" => to_string(Article.Blocks),
+            "refs" =>
+              Enum.map(names, fn name ->
+                %{
+                  "uid" => Brando.Utils.generate_uid(),
+                  "name" => name,
+                  "data" => %{"type" => "text", "data" => %{"text" => "Tekst #{name}"}}
+                }
+              end)
+          },
+          user
+        )
+        |> Repo.insert!()
+
+      struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      answer(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+
+      count =
+        count_calls(view.pid, {BrandoAdmin.Components.Form.BlockField.Ops, :materialize_root, 2}, fn ->
+          translate_all(view)
+          render_async(view, 5_000)
+
+          await(fn ->
+            view
+            |> render()
+            |> form_params("#entry_block_form-#{uid}")
+            |> get_in(["entry_block", "block", "refs", "5", "data", "data", "text"]) ==
+              "EN Tekst six"
+          end)
+        end)
+
+      # Read when the run starts, read and filled when the reply comes, and
+      # shown from the store
+      assert count <= 3, "the root was materialized #{count} times"
     end
 
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
