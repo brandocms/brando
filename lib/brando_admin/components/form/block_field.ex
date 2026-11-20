@@ -519,11 +519,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # === Translate with AI (`Form.TranslationFill`) ===
 
-  # A run starts: the block texts it translates as they are now
-  # (`{key, uid, path}`), to tell when the reply comes whether one changed
-  # meanwhile, by this editor or another.
-  def update(%{event: "translation_fill_start", run: run, targets: targets}, socket) do
+  # A run starts: the block texts it would translate as they are now
+  # (`{key, uid, path}`), for the Form to choose what to send, and kept to
+  # tell when the reply comes whether one changed meanwhile, by this editor
+  # or another.
+  def update(%{event: "translation_fill_start", run: run, field: field, targets: targets}, socket) do
     baseline = Map.new(targets, fn {key, uid, path} -> {key, current_text(socket, uid, path)} end)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "translation_fill_read",
+      run: run,
+      field: field,
+      texts: baseline
+    )
+
     {:ok, assign(socket, :translation_fill, %{run: run, baseline: baseline})}
   end
 

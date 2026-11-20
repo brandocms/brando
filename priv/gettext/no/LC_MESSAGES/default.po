@@ -8032,6 +8032,11 @@ msgstr "Alle bilder uten alt-tekst har allerede et forslag under."
 msgid "Every module has a sketch."
 msgstr "Alle moduler har en skisse."
 
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "Every open text has been reviewed or changed. Translate one with its own AI action."
+msgstr "Alle åpne tekster er gjennomgått eller endret. Bruk KI-knappen på en tekst for å oversette den."
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
@@ -19376,6 +19381,7 @@ msgid "The blocks changed after you reviewed them. Review them again."
 msgstr "Blokkene ble endret etter at du gikk gjennom dem. Gå gjennom dem på nytt."
 
 #: lib/brando/ai.ex
+#: lib/brando_admin/components/form/translation_fill.ex
 #, elixir-autogen, elixir-format
 msgid "The blocks could not be read. Try again."
 msgstr "Blokkene kunne ikke leses. Prøv igjen."

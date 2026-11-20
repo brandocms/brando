@@ -1336,6 +1336,14 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :translation_fill_progress, run: run, step: step}, socket),
     do: {:ok, TranslationFill.progress(socket, run, step)}
 
+  # A BlockField's block texts as they are when a run starts, and one that
+  # did not answer with them.
+  def update(%{event: "translation_fill_read", run: run, field: field, texts: texts}, socket),
+    do: {:ok, TranslationFill.block_texts_read(socket, run, field, texts)}
+
+  def update(%{action: :translation_fill_unanswered, run: run}, socket),
+    do: {:ok, TranslationFill.unanswered(socket, run)}
+
   # A BlockField filled the block texts of a run, or kept the editor's.
   def update(%{event: "translation_filled", run: run, filled: filled, kept: kept}, socket),
     do: {:ok, TranslationFill.blocks_filled(socket, run, filled, kept)}

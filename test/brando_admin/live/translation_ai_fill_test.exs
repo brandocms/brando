@@ -45,6 +45,11 @@ defmodule BrandoAdmin.TranslationAIFillTest do
     entry
   end
 
+  defp set_body(id, text) do
+    ref = Enum.find(Repo.preload(hd(load(id).entry_blocks).block, :refs, force: true).refs, &(&1.name == "body"))
+    ref |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: text}}) |> Repo.update!()
+  end
+
   defp block_uid(id), do: hd(load(id).entry_blocks).block.uid
   defp block_key(id), do: "entry_blocks/#{hd(load(id).entry_blocks).block.sync_uid}/refs/body/text"
 
@@ -98,6 +103,46 @@ defmodule BrandoAdmin.TranslationAIFillTest do
         5_000 -> {:error, 504}
       end
     end)
+  end
+
+  # Answers each item with "EN " and its source, and sends the test each prompt
+  defp answer_and_report do
+    test = self()
+
+    Brando.AIStub.reply(fn prompt ->
+      send(test, {:prompt, prompt})
+      prompt |> items() |> Map.new(&{&1["n"], "EN " <> &1["source"]}) |> Jason.encode!()
+    end)
+  end
+
+  defp sent_sources do
+    assert_receive {:prompt, prompt}, 2_000
+    prompt |> items() |> Enum.map(& &1["source"]) |> Enum.sort()
+  end
+
+  defp change_main(view, fun) do
+    params = view |> render() |> form_params("#article_form_form") |> fun.()
+    view |> element("#article_form_form") |> render_change(params)
+  end
+
+  defp edit_title(view, title) do
+    change_main(view, fn params ->
+      params |> put_in(["article", "title"], title) |> Map.put("_target", ["article", "title"])
+    end)
+  end
+
+  defp tick_reviewed(view, key) do
+    change_main(view, fn params ->
+      params
+      |> put_in(["translation_review", "acknowledged"], [key])
+      |> Map.put("_target", ["translation_review", "acknowledged"])
+    end)
+  end
+
+  defp edit_block_text(view, uid, text) do
+    selector = "#entry_block_form-#{uid}"
+    params = view |> render() |> form_params(selector) |> put_in(@text, text) |> Map.put("_target", @text)
+    view |> element(selector) |> render_change(params)
   end
 
   defp save(view) do
@@ -255,6 +300,94 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert_received {:prompt, prompt}
       assert [%{"source" => "Ny", "translation" => "Old"}] = items(prompt)
       await(fn -> title(view) == "New" end)
+    end
+
+    test "translating every text leaves out what the editor changed or ticked Reviewed", %{conn: conn} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", subtitle: "Undertittel", slug: "tittel", language: "no", status: "published", year: 2020},
+          c.current_user
+        )
+
+      TranslationFixtures.add_block(source, c.module, c.current_user, "Første avsnitt", 0)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user)
+      answer_and_report()
+
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+      key = block_key(target.id)
+
+      edit_title(view, "My title")
+      tick_reviewed(view, key)
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Undertittel"]
+      await(fn -> render(view) =~ "EN Undertittel" end)
+      assert title(view) == "My title"
+      assert block_text(view, uid) == "Første avsnitt"
+      refute has_element?(view, "#{item("title")}[data-ai]")
+      refute has_element?(view, "#{item(key)}[data-ai]")
+
+      # An item's own action translates it, on the editor's word
+      translate_one(view, "title")
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Tittel"]
+      await(fn -> title(view) == "EN Tittel" end)
+    end
+
+    test "a second run leaves out the texts the first filled and the editor corrected", %{conn: conn, target: target} do
+      answer_and_report()
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+
+      translate_one(view, "title")
+      render_async(view, 5_000)
+      assert sent_sources() == ["Tittel"]
+      await(fn -> title(view) == "EN Tittel" end)
+
+      edit_title(view, "The title")
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Første avsnitt"]
+      await(fn -> block_text(view, uid) == "EN Første avsnitt" end)
+      assert title(view) == "The title"
+    end
+
+    test "a review sends the translation as the form has it, a field's and a block's",
+         %{conn: conn, current_user: user} = c do
+      source = source(c, "Gammel", "Gammel tekst")
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)
+      {:ok, _} = SyncTest.update_article(target.id, %{title: "Old"}, user)
+      set_body(target.id, "Old text")
+      {:ok, _} = SyncTest.update_article(source.id, %{title: "Ny"}, user)
+      set_body(source.id, "Ny tekst")
+      Translations.source_saved(load(source.id))
+
+      test = self()
+
+      Brando.AIStub.reply(fn prompt ->
+        send(test, {:prompt, prompt})
+        prompt |> items() |> Map.new(&{&1["n"], "New"}) |> Jason.encode!()
+      end)
+
+      view = open(conn, target.id)
+      key = block_key(target.id)
+      assert has_element?(view, item(key))
+
+      edit_title(view, "Old, edited")
+      edit_block_text(view, block_uid(target.id), "Old text, edited")
+      translate_one(view, "title")
+      render_async(view, 5_000)
+      assert_receive {:prompt, prompt}, 2_000
+      assert [%{"source" => "Ny", "translation" => "Old, edited"}] = items(prompt)
+
+      translate_one(view, key)
+      render_async(view, 5_000)
+      assert_receive {:prompt, prompt}, 2_000
+      assert [%{"source" => "Ny tekst", "translation" => "Old text, edited"}] = items(prompt)
     end
 
     test "a second editor in the entry sees the filled texts", %{conn: conn, target: target} do
