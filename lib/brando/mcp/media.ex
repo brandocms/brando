@@ -51,7 +51,7 @@ defmodule Brando.MCP.Media do
     }
   }
 
-  @stored ~s[Returns the image's asset for brando_content_prepare_proposal ({"kind":"image","id":N}), whether the library already had it (reused), and what of focal, title and alt was applied and not_applied. ] <>
+  @stored ~s[Returns the image's asset for brando_content_prepare_proposal ({"kind":"image","id":N}), the library folder it is in, whether the library already had it (reused), and what of focal, title and alt was applied and not_applied. ] <>
             "An image the library already has (the same bytes) is reused and keeps its own focal point and texts. " <>
             "The image is added to the library at once, before any proposal is applied; its sizes are made in the background."
 
@@ -288,10 +288,10 @@ defmodule Brando.MCP.Media do
   # A new image was created with them; one the library has keeps its own
   # (an editor may have set them)
   defp result(stored, ctx, attrs) do
-    {image, reused} =
+    {image, reused, folder} =
       case stored do
-        {:stored, image} -> {image, false}
-        {:reused, image} -> {image, true}
+        {:stored, image} -> {image, false, ctx.folder}
+        {:reused, image} -> {image, true, Intake.folder(image)}
       end
 
     named = attrs |> Map.keys() |> Enum.sort() |> Enum.map(&Atom.to_string/1)
@@ -305,7 +305,7 @@ defmodule Brando.MCP.Media do
      %{
        asset: %{kind: "image", id: image.id},
        reused: reused,
-       folder: ctx.folder,
+       folder: folder,
        applied: applied,
        not_applied: not_applied
      }

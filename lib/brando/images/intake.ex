@@ -32,7 +32,8 @@ defmodule Brando.Images.Intake do
   @type context :: %{
           cfg: struct(),
           config_target: String.t(),
-          folder_id: integer() | nil,
+          upload_root: String.t() | nil,
+          absolute_folder: String.t() | nil,
           folder: String.t() | nil,
           actor: term()
         }
@@ -49,23 +50,33 @@ defmodule Brando.Images.Intake do
   @doc """
   Where `actor`'s files go: the default image config, with `folder` (a path
   below its upload path, or one that starts with it) as the upload path and
-  overwriting off. The library folder is created when `actor` may add one.
+  overwriting off. The library folder is created when an image is stored in
+  it, if `actor` may add one.
   """
   @spec context(term(), String.t() | nil) :: context()
   def context(actor, folder) do
     {cfg, config_target} = Uploads.resolve_image_config(nil)
     root = FolderBrowser.upload_root(config_target)
     absolute = FolderBrowser.absolute_folder(folder, root)
-    folder_id = FolderBrowser.folder_id_for(absolute, root, actor, Image)
     cfg = cfg |> Map.put(:upload_path, absolute) |> Map.put(:overwrite, false)
 
     %{
       cfg: cfg,
       config_target: config_target,
-      folder_id: folder_id,
+      upload_root: root,
+      absolute_folder: absolute,
       folder: FolderBrowser.relative_folder(absolute, root),
       actor: actor
     }
+  end
+
+  @doc "The library folder `image` is in, below its config's upload path, or nil."
+  @spec folder(Image.t()) :: String.t() | nil
+  def folder(%Image{} = image) do
+    case FolderBrowser.folder_path_for_id(image.folder_id, FolderBrowser.upload_root(image.config_target)) do
+      "" -> nil
+      folder -> folder
+    end
   end
 
   @doc "The most bytes a file for `cfg` may have."
@@ -167,7 +178,8 @@ defmodule Brando.Images.Intake do
   end
 
   defp store_new(path, filename, type, ctx, attrs) do
-    meta = %{path: path, config_target: ctx.config_target, folder_id: ctx.folder_id, image_attrs: attrs}
+    folder_id = FolderBrowser.folder_id_for(ctx.absolute_folder, ctx.upload_root, ctx.actor, Image)
+    meta = %{path: path, config_target: ctx.config_target, folder_id: folder_id, image_attrs: attrs}
     entry = %{client_name: filename, client_type: type, client_size: File.stat!(path).size}
 
     case Uploads.store_upload(meta, entry, ctx.cfg, ctx.actor) do

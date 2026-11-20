@@ -386,6 +386,23 @@ defmodule Brando.MCP.MediaTest do
       assert [%Image{focal: %{x: 30, y: 30, mode: :center}}] = images()
     end
 
+    test "a reused image reports its own folder, and the folder asked for is not made",
+         %{tenant: tenant, token: token} do
+      {id, url} = prepare!(tenant, token, %{"folder" => "products"})
+      put_bytes(url, @jpg)
+
+      assert %{"structuredContent" => %{"folder" => "products"}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => id})
+
+      {id, url} = prepare!(tenant, token, %{"folder" => "elsewhere"})
+      put_bytes(url, @jpg)
+
+      assert %{"structuredContent" => %{"reused" => true, "folder" => "products"}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => id})
+
+      refute Brando.Repo.repo().exists?(from(f in Folder, where: f.name == "elsewhere"))
+    end
+
     test "a bad focal point is refused before the upload is used", %{tenant: tenant, token: token} do
       {id, url} = prepare!(tenant, token)
       put_bytes(url, @jpg)
@@ -649,6 +666,16 @@ defmodule Brando.MCP.MediaTest do
       end
 
       assert images() == []
+    end
+
+    test "a refused import makes no folder", %{tenant: tenant, token: token} do
+      html = WebhookReceiver.start(fn _request -> {200, "<html></html>"} end)
+
+      for url <- ["https://169.254.169.254/a.png", WebhookReceiver.url(html, "/a.png")] do
+        assert %{"isError" => true} = call(tenant, token, "import_url", %{"url" => url, "folder" => "refused"})
+      end
+
+      refute Brando.Repo.repo().exists?(from(f in Folder, where: f.name == "refused"))
     end
 
     test "does not follow a redirect", %{tenant: tenant, token: token} do
