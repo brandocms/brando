@@ -3150,6 +3150,7 @@ defmodule Brando.Content.Proposals do
 
   defp undo_saved!(saved, record, receipt, user) do
     Enum.each(saved, &undo_entry!(&1, receipt, user))
+    delete_emptied_groups!(receipt)
 
     record |> Changeset.change(status: "undone") |> Repo.update!()
 
@@ -3168,34 +3169,40 @@ defmodule Brando.Content.Proposals do
   defp undo_entry!({key, schema, entry_id, _}, receipt, user),
     do: restore!(schema, entry_id, receipt.before[key]["revision"], user)
 
-  # The translation leaves its group, and the group goes when the apply made
-  # it and only its source is left, so the group is as it was and the
-  # language is free again. A version that joined the group since keeps it,
-  # with its pending version and work. Its alternate link goes with it.
+  # The translation leaves its group, and its alternate link goes with it. A
+  # version that joined the group since keeps it, with its pending version
+  # and work.
   #
   # The group is locked as a source save's synchronization locks it. A
   # translation made the group's source since the apply is not deleted: the
-  # group would be left without one.
+  # group would be left without one. Making it the source does not take the
+  # group's lock, so the member is deleted only while it is still a target.
   defp delete_translation!(schema, entry_id, group, user) do
     group_id = group["group_id"]
     Repo.one(from(g in Translations.Group, where: g.id == ^group_id, lock: "FOR UPDATE"))
 
-    {own, others} =
-      group_id
-      |> Translations.list_members()
-      |> Enum.split_with(&(&1.entry_type == to_string(schema) and &1.entry_id == entry_id))
+    own =
+      from(m in Translations.Member,
+        where: m.group_id == ^group_id and m.entry_type == ^to_string(schema) and m.entry_id == ^entry_id
+      )
 
-    case own do
-      [%{role: :source}] -> Error.fail!(became_source(schema, entry_id))
-      [member] -> Repo.delete!(member)
-      [] -> :ok
-    end
-
-    if group["new_group"] and match?([%{role: :source}], others),
-      do: Repo.delete_all(from(g in Translations.Group, where: g.id == ^group_id))
+    {deleted, _} = Repo.delete_all(from(m in own, where: m.role == :target))
+    if deleted == 0 and Repo.one(from(m in own, select: count())) > 0, do: Error.fail!(became_source(schema, entry_id))
 
     if schema.has_alternates?(), do: Module.concat(schema, Alternate).delete(group["source_id"], entry_id)
     delete_entry!(schema, entry_id, user)
+  end
+
+  # A group the apply made goes when only its source is left, so the source
+  # is as it was and its languages are free again. Decided once every
+  # translation is undone: one proposal can create several versions, and only
+  # the first is recorded as having made the group.
+  defp delete_emptied_groups!(receipt) do
+    for {_ref, %{"new_group" => true, "group_id" => group_id}} <- receipt.mappings["translations"] || %{},
+        match?([%{role: :source}], Translations.list_members(group_id)),
+        do: Repo.delete_all(from(g in Translations.Group, where: g.id == ^group_id))
+
+    :ok
   end
 
   defp became_source(schema, entry_id) do
@@ -3650,6 +3657,12 @@ defmodule Brando.Content.Proposals do
 
   defp translation_failed(:forbidden),
     do: dgettext("content_proposals", "You do not have permission to create a translation of this entry.")
+
+  defp translation_failed(%Changeset{} = changeset),
+    do:
+      dgettext("content_proposals", "Entry validation: %{errors}",
+        errors: inspect(Changeset.traverse_errors(changeset, fn {message, _} -> message end))
+      )
 
   defp translation_failed(reason),
     do: dgettext("content_proposals", "The translation could not be created: %{reason}", reason: inspect(reason))

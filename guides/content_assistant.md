@@ -191,15 +191,17 @@ proposal is applied, an unpublished copy of the source joins the source's
 group, linked as an alternate, with every text it copied marked to translate;
 an entry not yet in a group becomes its source. It is checked like the
 admin's: the content type must be synchronized and able to copy entries, the
-editor must be able to read the source, create entries of its type and copy
-it, the language must be one of the site's and not the source's, and neither
+editor must be able to read the source, create and edit entries of its type
+and copy it, the language must be one of the site's and not the source's, and neither
 the group nor an earlier operation may already have that language. Named a
 translation instead of its source, the problem names the source. The checks
 run again when the proposal is applied, as the language may have been taken
 in the meantime. The new copy is made from the source as it is then, so other
 operations in the same proposal cannot change it as `{"new": R}`. **Undo**
-deletes the translation and takes it out of the group, and removes a group
-the proposal made, so the language can be created again.
+deletes the translation and takes it out of the group, so the language can be
+created again. A group the proposal made goes with it, unless another version
+has joined it since. A translation that has since been made its group's
+source cannot be undone: make another version the source first.
 
 ## Build with AI from the block editor
 

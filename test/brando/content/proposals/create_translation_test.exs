@@ -280,6 +280,41 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert Enum.map(items, & &1.id) == Enum.map(pending.work_items, & &1.id)
   end
 
+  # One proposal can create several versions, and only the first is recorded
+  # as having made the group. The test site has two languages, so the second
+  # is written into the receipt as the apply would have recorded it.
+  test "undo of a proposal that created two versions removes the group it made", c do
+    {:ok, proposal} = Proposals.propose([op(c)], c.user)
+    {:ok, receipt} = approve_and_apply(proposal, c.user)
+    %{group_id: group_id} = Translations.get_member(Article, c.source.id)
+
+    second = join_group(c, group_id)
+    entry = Brando.Content.Transfer.Catalog.load!(Article, second.entry_id, c.user, :update, [])
+
+    saved = %{
+      "schema" => to_string(Article),
+      "id" => entry.id,
+      "fingerprint" => Brando.Content.Transfer.entry_fingerprint(entry)
+    }
+
+    group = %{"group_id" => group_id, "new_group" => false, "source_id" => c.source.id}
+
+    receipt
+    |> Ecto.Changeset.change(
+      after: Map.put(receipt.after, "new:second", saved),
+      mappings:
+        receipt.mappings
+        |> put_in(["created", "second"], entry.id)
+        |> put_in(["translations", "second"], group)
+    )
+    |> Repo.update!()
+
+    assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+    assert Repo.get(Article, entry.id) == nil
+    assert Translations.get_member(Article, c.source.id) == nil
+    assert Repo.get(Translations.Group, group_id) == nil
+  end
+
   test "undo is refused when the translation has since become its group's source", c do
     {:ok, proposal} = Proposals.propose([op(c)], c.user)
     {:ok, receipt} = approve_and_apply(proposal, c.user)
@@ -337,6 +372,16 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, creator.id)
 
     assert codes([op(c)], creator) == [{0, :forbidden}]
+
+    # The same grants with update are enough, so update is what was missing
+    editor = Factory.insert(:random_user, role: :user)
+
+    {:ok, editors} =
+      Groups.create(Scope.standalone(c.user), %{name: "Article translators"}, [Catalog.get(:update, Article).key | grants])
+
+    {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), editors.id, editor.id)
+
+    assert codes([op(c)], editor) == []
   end
 
   test "an actor without create is refused, in legacy mode", c do
