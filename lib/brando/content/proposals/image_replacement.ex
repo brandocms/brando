@@ -138,7 +138,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
         with [] <- trashed(old) ++ trashed(new),
              [] <- changed(op.old, old) ++ changed(op.new, new),
              [] <- in_proposal(op, operations),
-             [] <- file_problems(old, new),
+             [] <- file_problems(old, new, op.new),
              [] <- in_use(new) do
           permissions(old, new, actor)
         end
@@ -255,9 +255,9 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   defp mentions?(_value, _asset), do: false
 
   # The first thing about NEW's file that OLD's config does not take.
-  defp file_problems(old, new) do
+  defp file_problems(old, new, snapshot) do
     {:ok, cfg} = Images.get_config_for(old)
-    facts = file_facts(new)
+    facts = known_facts(snapshot) || file_facts(new)
 
     cond do
       old.content_hash && old.content_hash == new.content_hash ->
@@ -333,6 +333,15 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
   defp types([]), do: dgettext("content_proposals", "no images")
   defp types(allowed), do: Intake.describe_types(allowed)
+
+  # What the snapshot read of NEW's bytes when the proposal was prepared.
+  # `changed/2` has found the row on the same path and `content_hash` since,
+  # so the same bytes: they are not read again at approval, inside the
+  # apply's transaction, or for a preview.
+  defp known_facts(%{"type" => type, "bytes" => bytes}) when is_binary(type) and is_integer(bytes),
+    do: %{type: type, bytes: bytes}
+
+  defp known_facts(_snapshot), do: nil
 
   # What NEW's bytes are and how many. A file kept only on the CDN is fetched
   # for this, and removed again.
