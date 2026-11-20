@@ -2160,7 +2160,16 @@ defmodule E2EFixtureController do
     send_resp(conn, 200, "")
   end
 
+  # The model as `on`, answering Translate with AI after a few seconds, so
+  # a screenshot can show a run in progress
+  def field_ai(conn, %{"action" => "slow"} = params) do
+    Application.put_env(:e2e_project, :field_ai_delay, 4_000)
+    field_ai(conn, %{params | "action" => "on"})
+  end
+
   def field_ai(conn, %{"action" => "off"}) do
+    Application.delete_env(:e2e_project, :field_ai_delay)
+
     case Application.get_env(:e2e_project, :field_ai_previous) do
       {nil} -> Application.delete_env(:brando, Brando.AI)
       {previous} -> Application.put_env(:brando, Brando.AI, previous)

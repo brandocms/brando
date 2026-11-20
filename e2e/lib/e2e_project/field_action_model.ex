@@ -20,6 +20,9 @@ defmodule E2eProject.FieldActionModel do
   # the items come as JSON, and each is answered with its source and " (AI)"
   # inside its last HTML tag, so the markup survives.
   def generate_text(model, "{\"items\":" <> _ = prompt, _opts) do
+    # `/e2e/field-ai/slow`: a run in progress, for a screenshot
+    Process.sleep(Application.get_env(:e2e_project, :field_ai_delay, 0))
+
     replies =
       prompt
       |> Jason.decode!()
