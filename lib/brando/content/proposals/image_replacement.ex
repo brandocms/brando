@@ -268,6 +268,19 @@ defmodule Brando.Content.Proposals.ImageReplacement do
           )
         ]
 
+      delivery(cfg) != delivery(new) ->
+        [
+          problem(
+            :different_delivery,
+            dgettext(
+              "content_proposals",
+              "Image %{new}'s file is delivered through another CDN than image %{old}'s field uses, so image %{old} would not find it. Upload the file again to image %{old}'s field.",
+              new: new.id,
+              old: old.id
+            )
+          )
+        ]
+
       is_nil(facts[:type]) ->
         [
           problem(
@@ -278,6 +291,21 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
       true ->
         kind_problems(facts[:type], type_from_path(old.path)) ++ config_problems(facts, cfg, old, new)
+    end
+  end
+
+  # The CDN an image config delivers through, if any: its own or, as the
+  # uploader falls back to it, the one for all images. OLD takes NEW's file
+  # where NEW's config put it, and reads and links it through its own.
+  defp delivery(%Image{} = image) do
+    {:ok, cfg} = Images.get_config_for(image)
+    delivery(cfg)
+  end
+
+  defp delivery(cfg) do
+    case Images.effective_cdn(cfg) do
+      %{enabled: true} = cdn -> {Map.get(cdn, :bucket), Map.get(cdn, :media_url)}
+      _ -> nil
     end
   end
 

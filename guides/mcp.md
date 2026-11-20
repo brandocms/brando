@@ -386,6 +386,9 @@ When the proposal is prepared, and again when it is approved and applied:
 - NEW's file is one OLD's image config takes, by type and size limit, and
   is an SVG only when OLD's is: an SVG has no sizes, and OLD's crops and
   focal point carry over.
+- NEW's image config delivers through the same CDN as OLD's, or neither
+  through one: OLD reads and links the file through its own config. An
+  image config can have a CDN of its own per field.
 - Nothing uses NEW yet: no entry, in the trash or not, no gallery, variable,
   recovery draft or module default, and no other operation of the proposal.
   Otherwise the proposal says so and points to swapping the references.

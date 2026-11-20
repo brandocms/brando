@@ -68,6 +68,17 @@ defmodule Brando.Content.Proposals.ImageReplacementConfigTest do
   describe "between preparing and approving" do
   end
 
+  test "an image whose config delivers through another CDN", c do
+    # OLD's config has no CDN; NEW's, a field's own, delivers through one
+    old = image!("a", {800, 600})
+    new = image!("b", {1600, 1200}, config_target: "image:Brando.BlueprintTest.Project:cover_cdn")
+    assert {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+    assert codes(proposal) == [:different_delivery]
+
+    # Two images of the same config
+    assert {:ok, %{problems: []}} = Proposals.propose([replace(old, image!("c", {1600, 1200}))], c.user)
+  end
+
   describe "a NEW only the CDN has" do
     import Mox
 
