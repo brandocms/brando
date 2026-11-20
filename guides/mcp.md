@@ -360,6 +360,54 @@ address the host resolves to, and connected to the address checked), no user
 name or password in the address, no redirects, at most the image config's
 size limit, within a minute.
 
+### Replace an image's file
+
+To put a better copy of a photo in place of the one the site has, a tool
+uploads it (above) and proposes the `replace_image_file` operation:
+
+```json
+{"op": "replace_image_file", "asset": {"kind": "image", "id": 12}, "with": {"kind": "image", "id": 87}}
+```
+
+On approval, image 12 (OLD) takes the file of image 87 (NEW): its path,
+dimensions, type, formats and `content_hash`. It keeps its id, focal point,
+title, alt text, credits, folder, image config and every place it is used,
+so every entry that shows it shows the new file. Its sizes are made again
+in the background, as for an upload, and NEW's record is removed, since its
+file is now OLD's. The other way to replace an image, which keeps OLD in the
+library and reviews each use, is to swap the references: `set_block_media`
+and `set_fields` to NEW.
+
+When the proposal is prepared, and again when it is approved and applied:
+
+- Both are images the person may read, in this site environment, and
+  neither is in the trash. They are not the same image, nor the same file.
+- NEW's file is one OLD's image config takes, by type and size limit, and
+  is an SVG only when OLD's is: an SVG has no sizes, and OLD's crops and
+  focal point carry over.
+- Nothing uses NEW yet: no entry, in the trash or not, no gallery, variable,
+  recovery draft or module default, and no other operation of the proposal.
+  Otherwise the proposal says so and points to swapping the references.
+- The person may update both images and every entry that shows OLD. The
+  problem names the entries they may read and counts the others.
+- Neither image has another file than when the proposal was prepared: of two
+  proposals replacing the same image, the second is refused once the first
+  is applied.
+
+The review, under **Assistant → From connected tools**, shows the two files
+side by side with their dimensions, the entries that show OLD, linked, and
+a warning when the proportions differ, since the focal point and crops carry
+over unchanged. Applying it changes the two images' rows in the proposal's
+transaction and moves no file, so an approval that fails anywhere leaves
+OLD as it was, with its files. What happens to OLD's previous files is in
+[Replacing an asset's bytes](media.md). A proposal that replaced an image's
+file has no undo.
+
+The proposal's line on the connection's live page says how many files it
+replaces, and Activity records the replacement on the image, with the
+proposal and the person who applied it. The entries that show the image are
+rendered again once its new sizes are made.
+
 ## Build from Figma
 
 A tool can rebuild a Figma frame as an entry: the person gives it the
