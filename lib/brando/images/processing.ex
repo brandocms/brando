@@ -316,6 +316,7 @@ defmodule Brando.Images.Processing do
           Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
         end
 
+        Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:image_maintenance, %{task: task, state: :started}})
         ok
 
       error ->

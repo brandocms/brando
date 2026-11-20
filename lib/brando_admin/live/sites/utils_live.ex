@@ -774,6 +774,11 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, update(socket, :search_index, &%{&1 | state: state, done: done, total: total})}
   end
 
+  # A run started, by this admin or another: both buttons wait for it
+  def handle_info({:image_maintenance, %{state: :started}}, socket) do
+    {:noreply, assign_image_tasks(socket)}
+  end
+
   def handle_info({:image_maintenance, %{state: state} = run}, socket) do
     socket = assign(socket, :image_run, run)
     {:noreply, if(state == :done, do: assign_image_tasks(socket), else: socket)}

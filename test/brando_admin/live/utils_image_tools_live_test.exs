@@ -217,5 +217,21 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
         refute has_element?(view, "#utils-image-sizes-running")
       end)
     end
+
+    # Pages already open hear that a run started, whoever started it
+    test "a run another admin starts disables both buttons on a page already open", %{conn: conn} do
+      other = Factory.insert(:random_user, role: :admin)
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+      refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.Processing.recreate_sizes_for_images(other)
+
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+        assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
+      end)
+    end
   end
 end
