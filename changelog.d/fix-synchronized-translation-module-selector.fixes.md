@@ -1,0 +1,1 @@
+- A Blueprint whose `source_controlled_fields` names a module's variables (`{:module, "uid", [:var]}`) compiles; it failed with "invalid quoted expression".
