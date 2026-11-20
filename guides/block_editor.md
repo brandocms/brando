@@ -87,7 +87,8 @@ guide.
 ### Background renders
 
 A change to a module, container, palette, fragment or global renders the
-entries that use it again in the background. A background render stores its
+entries that use it again in the background, and so does processing an image
+in a way that changes what its markup reads (see the media guide). A background render stores its
 HTML only if the entry was not written while it rendered, and otherwise
 renders again from what was saved, so it never stores over an editor's newer
 blocks. A save that stores over a background render that read newer modules
