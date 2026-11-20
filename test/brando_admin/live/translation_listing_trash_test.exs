@@ -89,7 +89,7 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
 
       assert has_element?(
                view,
-               "[id$='_create_translation_#{c.source.id}_lang_no'][phx-hook='Brando.ConfirmClick'][phx-confirm-click-destructive]"
+               "[id$='_create_translation_#{c.source.id}_lang_no_replace'][phx-hook='Brando.ConfirmClick'][phx-confirm-click-destructive]"
              )
 
       assert has_element?(view, "[id$='_create_translation_#{alone.id}_lang_no'][phx-click='create_entry_translation']")

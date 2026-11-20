@@ -720,6 +720,9 @@ defmodule BrandoAdmin.Components.Activity do
     end
   end
 
+  defp lines(%{action: :deleted, details: %{"purged" => true, "replaced" => true}}, _fields, _states),
+    do: [gettext("Deleted for good from the trash, to create a new translation in its language")]
+
   defp lines(%{action: :deleted, details: %{"purged" => true}}, _fields, _states),
     do: [gettext("Removed from the trash after %{days} days", days: @trash_days)]
 

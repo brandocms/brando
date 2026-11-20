@@ -6459,6 +6459,11 @@ msgstr[1] ""
 msgid "Deleted account"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted for good from the trash, to create a new translation in its language"
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deleted member"

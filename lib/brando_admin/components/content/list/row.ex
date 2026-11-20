@@ -383,7 +383,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           :for={lang <- @translation_langs}
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           :key={"create_translation_#{lang}"}
-          id={"action_#{@listing.name}_create_translation_#{@entry.id}_lang_#{lang}"}
+          id={"action_#{@listing.name}_create_translation_#{@entry.id}_lang_#{lang}#{if lang in @translations_in_trash, do: "_replace"}"}
           entry_id={@translation_source_id}
           language={lang}
           {create_translation_opts("create_entry_translation", @translation_source_id, lang, @translations_in_trash)}
@@ -394,7 +394,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           :for={lang <- @translation_langs}
           :if={@ai_configured? and BrandoAdmin.Authorization.allowed?(:create, @schema)}
           :key={"create_and_translate_#{lang}"}
-          id={"action_#{@listing.name}_create_and_translate_#{@entry.id}_lang_#{lang}"}
+          id={"action_#{@listing.name}_create_and_translate_#{@entry.id}_lang_#{lang}#{if lang in @translations_in_trash, do: "_replace"}"}
           entry_id={@translation_source_id}
           language={lang}
           ai

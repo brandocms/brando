@@ -113,6 +113,19 @@ defmodule Brando.Translations.ReplaceTrashedTargetTest do
       refute Repo.get(Page, c.target.id)
     end
 
+    # Trashing a published entry takes the publish permission, and deleting it
+    # for good takes no less: its status is still published in the trash
+    test "an editor who may delete but not publish does not replace a version trashed while published", c do
+      Repo.update_all(from(p in Page, where: p.id == ^c.target.id), set: [status: :published])
+      editor = editor(c.scope, @creates ++ ["brando.pages.delete"])
+
+      assert {:error, :language_in_trash} = Translations.replace_trashed_target(Page, c.page.id, :en, editor)
+      assert %{deleted_at: %DateTime{}} = Repo.get!(Page, c.target.id)
+
+      publisher = editor(c.scope, @creates ++ ["brando.pages.delete", "brando.pages.publish"])
+      assert {:ok, _} = Translations.replace_trashed_target(Page, c.page.id, :en, publisher)
+    end
+
     test "a create that fails leaves the version in the trash as it was", c do
       # May delete, but not create: the copy is refused after the delete
       editor = editor(c.scope, ~w(brando.admin.access brando.pages.read brando.pages.update brando.pages.delete))

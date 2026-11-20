@@ -6461,6 +6461,11 @@ msgstr[1] "Slettet %{count} videoer"
 msgid "Deleted account"
 msgstr "Slettet konto"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted for good from the trash, to create a new translation in its language"
+msgstr "Slettet for godt fra papirkurven, for å opprette en ny oversettelse på språket"
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deleted member"
