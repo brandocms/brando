@@ -283,7 +283,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     else
       error ->
         Logger.error("(!) Error creating a translation: #{inspect(error)}")
-        send(self(), {:toast, gettext("Could not create the translation")})
+        send(self(), {:toast, translation_error_message(error)})
     end
 
     {:halt, socket}
@@ -371,6 +371,12 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   defp log_duplicate_error(singular, error) do
     Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
   end
+
+  defp translation_error_message({:error, :language_in_trash}),
+    do: gettext("This language's version is in the trash. Restore it, or delete it for good, first.")
+
+  defp translation_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
+  defp translation_error_message(_error), do: gettext("Could not create the translation")
 
   defp copy_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
   defp copy_error_message({:error, :forbidden}), do: gettext("You do not have permission to do this.")

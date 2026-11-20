@@ -625,6 +625,11 @@ msgstr "Kildeteksten til %{name} er endret siden den ble lest, eller den trenger
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source's version in this language is in the trash. It is restored, or deleted for good, in the admin."
+msgstr "Kildens versjon på dette språket ligger i papirkurven. Den gjenopprettes, eller slettes for godt, i admin."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr "Statusen er publisert, utkast, deaktivert eller venter."
 

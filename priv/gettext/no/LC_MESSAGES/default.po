@@ -20724,6 +20724,11 @@ msgstr "Dette er for langt."
 msgid "This language already has a version."
 msgstr "Dette språket har allerede en versjon."
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This language's version is in the trash. Restore it, or delete it for good, first."
+msgstr "Versjonen på dette språket ligger i papirkurven. Gjenopprett den, eller slett den for godt, først."
+
 #: lib/brando_admin/components/form/input/blocks/map_block.ex
 #, elixir-autogen, elixir-format
 msgid "This map address can't be embedded."
