@@ -1525,7 +1525,7 @@ defmodule E2EFixtureController do
   end
 
   defp create_rich_text_vars_page do
-    user = get_admin_user()
+    user = create_norwegian_admin_user()
 
     vars =
       ~w(Første Andre Tredje)
