@@ -219,11 +219,14 @@ its source.
   is the same in every language version and across reads; its `kind`,
   *translate* or *review*; a `label` as the form's work list names it; the
   source's current text (`source`) and the translation's (`current`, left
-  out when it is the same, as a copy to translate is); its `format`,
+  out when it is the same, as a copy to translate is); for *review*, where
+  it is known, the source's text before the change (`source_previous`), so
+  the translation changes only as the source did; its `format`,
   `plain`, `html` or `markdown`; and in a block, the translation's own
   `block_uid`. A text too long to fit a result on its own is listed with
   `too_long` and a `reason` instead of its text: it is not answerable with
-  the tool, and is translated in the entry's form. A text in a field the
+  the tool, and is translated in the entry's form. A *review* unit that fits a
+result only without its `source_previous` is listed without it. A text in a field the
   person may not change through a proposal (one the forms lock for anyone
   but a superuser) is listed in its place with `locked` and a `reason`: it is
   not answerable either, and is outside the batch's token. Links waiting for a translation and values updated from
@@ -287,7 +290,10 @@ refused, while other entries in the proposal are not affected.
 
 The review shows each unit with its label, the source's text and the
 translation, so one can be checked against the other; a unit kept as it is
-shows the text it keeps, and says so. Units are placed and labelled from the
+shows the text it keeps, and says so. A *review* unit whose source's text
+before the change is known shows four texts: the source before (struck
+through) and now, and the translation before (struck through) and now,
+while the proposal can still be applied. Units are placed and labelled from the
 translation's pending version. Applying saves the translation as its form
 saves it (`Brando.Translations.save_work/5`): its whole pending version, with
 the texts written in and its blocks rendered, so its structure and media

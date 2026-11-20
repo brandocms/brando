@@ -1553,7 +1553,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # Each unit's source text above its translation, so one can be checked
   # against the other; a unit kept as it is shows the text it keeps, and
-  # says so.
+  # says so. A review unit whose source's text before the change is known
+  # shows it struck through above the source's text now, and the
+  # translation's text before above its new one.
   defp change(%{change: %{type: :translate}} = assigns) do
     ~H"""
     <span class="assistant-change-title" data-testid="assistant-translate">
@@ -1568,9 +1570,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <div :for={unit <- @change.units} data-key={unit.key} data-reviewed={to_string(unit.reviewed?)}>
         <dt>{unit.label}</dt>
         <dd>
+          <span
+            :if={unit[:source_previous] not in [nil, ""]}
+            class="assistant-translation-source"
+            lang={@change.source_language}
+          >
+            <del>{unit.source_previous}</del>
+          </span>
           <span :if={unit.source not in [nil, ""]} class="assistant-translation-source" lang={@change.source_language}>
             {unit.source}
           </span>
+          <del :if={unit[:before] not in [nil, ""]} lang={@change.language}>{unit.before}</del>
           <ins :if={!unit.reviewed?} lang={@change.language}>{unit.text}</ins>
           <span :if={unit.reviewed? and unit.text not in [nil, ""]} lang={@change.language}>{unit.text}</span>
           <span :if={unit.reviewed?} class="assistant-translation-kept">{gettext("Kept as it is")}</span>

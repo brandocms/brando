@@ -199,8 +199,9 @@ defmodule Brando.Content.Proposals.Review do
   # keeps. Units are placed and labelled from the translation's pending
   # version, which the apply saves. The first batch also says what else that
   # save brings (`pending`), while the proposal can still be applied: the
-  # pending version an applied one is read with is a later one. The source
-  # is read as the reviewer may read it.
+  # pending version an applied one is read with is a later one, so neither
+  # that nor a review's source before is shown for it. The source is read as
+  # the reviewer may read it.
   defp translate_changes(target, proposal) do
     ops = for {%Translate{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
 
@@ -210,14 +211,18 @@ defmodule Brando.Content.Proposals.Review do
         # Without read on the source, its text is not shown
         described = Translations.Work.describe(context.schema, context.source || context.entry, context.entry, keys)
         pending = Map.update!(context.pending, :open, &length(&1 -- keys))
+        open? = proposal.status in ~w(pending approved)
+        # The open reviews' texts before are those of the work the proposal
+        # answers only while it can still be applied
+        previous = if open?, do: context.previous, else: %{}
 
         for {{op, index}, nth} <- Enum.with_index(ops) do
           %{
             type: :translate,
             language: context.language,
             source_language: context.source_language,
-            units: translate_units(op, described, context.source != nil),
-            pending: if(nth == 0 and proposal.status in ~w(pending approved), do: pending),
+            units: translate_units(op, described, context.source != nil, previous),
+            pending: if(nth == 0 and open?, do: pending),
             operations: [index]
           }
         end
@@ -227,15 +232,21 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
-  defp translate_units(op, described, source?) do
+  # A review unit whose source's text before the change is known shows it,
+  # with the translation's text before the answer (`before`)
+  defp translate_units(op, described, source?, previous) do
     texts = texts_of(op)
     reviewed = reviewed_of(op)
 
     for %{key: key} = unit <- described, Map.has_key?(texts, key) or key in reviewed do
+      source_previous = if source?, do: Map.get(previous, key)
+
       %{
         key: key,
         label: unit.label,
+        source_previous: source_previous && readable(source_previous),
         source: if(source?, do: readable(unit.source)),
+        before: if(source_previous && Map.has_key?(texts, key), do: readable(unit.current)),
         text: if(Map.has_key?(texts, key), do: readable(texts[key]), else: readable(unit.current)),
         reviewed?: not Map.has_key?(texts, key)
       }
@@ -265,6 +276,7 @@ defmodule Brando.Content.Proposals.Review do
         entry: source,
         language: language,
         source_language: to_string(source.language),
+        previous: %{},
         pending: %{open: open, structure?: false, live?: false}
       }
     else
@@ -288,12 +300,19 @@ defmodule Brando.Content.Proposals.Review do
             uniq: true,
             do: path
 
+      previous =
+        for %{resolved_at: nil, kind: :review, path: path, source_previous: text} <- (version && version.work_items) || [],
+            is_binary(text),
+            into: %{},
+            do: {path, text}
+
       %{
         schema: schema,
         source: source,
         entry: entry,
         language: language,
         source_language: source && to_string(source.language),
+        previous: previous,
         pending: %{
           open: open,
           structure?: version != nil and Translations.structure_changed?(schema, saved, entry),

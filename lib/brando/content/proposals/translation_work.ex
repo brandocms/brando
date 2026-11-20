@@ -44,7 +44,9 @@ defmodule Brando.Content.Proposals.TranslationWork do
   @title_length 200
 
   @answer_note "Translate each unit's source into the translation's language, unit by unit by its key; a review " <>
-                 "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
+                 "unit's current text may already be right. Where a review unit has source_previous, the source's " <>
+                 "text before its change, make the smallest change to current that follows the change from " <>
+                 "source_previous to source, keeping its other wording. Keep the format: html keeps every tag and attribute of " <>
                  "the source, markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly " <>
                  "as they are. source_digest is the batch's token, which an answer to the batch is checked against. " <>
                  "Answer the batch with one translate operation in prepare_proposal, with this source_digest: each " <>

@@ -297,6 +297,25 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert open_items(target.id) == before
     end
 
+    test "undo opens a review again with the source's text before the change, from the receipt", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+
+      {:ok, proposal} = Proposals.propose([translate(target, %{"title" => "New title"}, keys: ["title"])], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+      assert open_items(target.id) == []
+
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+
+      assert [%{source_previous: "Tittel"}] =
+               for(
+                 %{resolved_at: nil, kind: :review, path: "title"} = item <-
+                   Translations.get_pending_version(Article, target.id).work_items,
+                 do: item
+               )
+    end
+
     test "a source changed between prepare and apply makes the proposal stale, naming the units", c do
       target = create_translation(c)
       heading = "#{c.prefix}/refs/heading/text"
@@ -898,6 +917,68 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
       assert [%{changes: [%{units: [unit]}]}] = Review.entries(proposal)
       assert %{key: "title", source: "Ny tittel", text: "Title", reviewed?: true} = unit
+    end
+
+    test "shows a review unit's source before and now, and its translation before and now", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+
+      op = translate(target, %{"title" => "New title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert proposal.problems == []
+
+      assert [%{changes: [%{units: [unit]}]}] = Review.entries(proposal)
+
+      assert %{
+               key: "title",
+               source_previous: "Tittel",
+               source: "Ny tittel",
+               before: "Title",
+               text: "New title",
+               reviewed?: false
+             } = unit
+    end
+
+    test "an applied proposal's review unit shows no before from a later review", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+
+      op = translate(target, %{"title" => "New title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      # A later change raises another review on the same path
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Nyere tittel"}, c.user)
+      assert {:review, "title"} in open_items(target.id)
+
+      {:ok, applied} = Proposals.get(proposal.id, c.user)
+      assert applied.status == "applied"
+      assert [%{changes: [%{units: [unit]}]}] = Review.entries(applied)
+      assert %{key: "title", source_previous: nil, before: nil, text: "New title"} = unit
+    end
+
+    test "a translate unit, and a review raised without the previous text, show no before", c do
+      target = create_translation(c)
+      heading = "#{c.prefix}/refs/heading/text"
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: Map.delete(english(c), heading)}, c.user)
+
+      # Synced before the texts were kept
+      from(m in Brando.Translations.Member, where: m.entry_id == ^target.id and m.role == :target)
+      |> Repo.update_all(set: [baseline_texts: %{}])
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+      assert {:review, "title"} in open_items(target.id)
+      assert {:translate, heading} in open_items(target.id)
+
+      op = translate(target, %{"title" => "New title", heading => "Heading"}, keys: ["title", heading])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert proposal.problems == []
+
+      assert [%{changes: [%{units: [title, heading_unit]}]}] = Review.entries(proposal)
+      assert %{key: "title", source_previous: nil, before: nil} = title
+      assert %{key: ^heading, source_previous: nil, before: nil} = heading_unit
     end
 
     test "labels a unit in a block the source added from the pending version", c do

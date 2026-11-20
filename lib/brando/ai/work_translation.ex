@@ -8,6 +8,9 @@ defmodule Brando.AI.WorkTranslation do
   A *translate* unit sends the source's text. A *review* unit sends the
   source's current text with the translation's current text, and the model
   is asked to bring the translation up to date rather than write it anew.
+  Where the unit has the source's text before the change (`source_previous`),
+  it is sent too, and the model is asked for the smallest change to the
+  translation that follows the source's change.
 
   Units are sent in batches of at most `:batch_chars` characters (12,000 by
   default), as JSON, so text over several lines and its markup arrive whole,
@@ -82,7 +85,9 @@ defmodule Brando.AI.WorkTranslation do
     |> Enum.chunk_while(
       {[], 0},
       fn unit, {batch, size} ->
-        unit_size = String.length(unit.source) + String.length(Map.get(unit, :current) || "")
+        unit_size =
+          String.length(unit.source) + String.length(Map.get(unit, :current) || "") +
+            String.length(previous_source(unit) || "")
 
         if batch != [] and size + unit_size > limit,
           do: {:cont, Enum.reverse(batch), {[unit], unit_size}},
@@ -108,7 +113,8 @@ defmodule Brando.AI.WorkTranslation do
   @doc """
   The system prompt and the prompt for a batch of `{unit, id}`: the items as
   JSON, each with its `format`, the `source` and, for a review, the
-  `translation` to bring up to date.
+  `translation` to bring up to date, with the source's text before the
+  change (`previous_source`) where it is known.
   """
   def prompt(batch, source_language, target_language) do
     source_name = Brando.AI.language_name(source_language)
@@ -121,6 +127,9 @@ defmodule Brando.AI.WorkTranslation do
     An item with a "translation" is an existing #{target_name} translation of an earlier version of the source: \
     bring it up to date with the source as it is now. Keep its wording where the source did not change, \
     and change only what the source's changes need.
+    When such an item also has a "previous_source", the source text the translation was made from, make the \
+    smallest change to the translation that follows the change from previous_source to source, and keep the rest \
+    of the translation word for word.
 
     RULES:
     - Keep every HTML tag in order, with its attributes exactly as they are; translate only the text between tags
@@ -134,6 +143,7 @@ defmodule Brando.AI.WorkTranslation do
       Enum.map(batch, fn {unit, id} ->
         %{"n" => id, "format" => Map.get(unit, :format, "plain"), "source" => unit.source}
         |> put_translation(unit)
+        |> put_previous_source(unit)
       end)
 
     {system_prompt, Jason.encode!(%{"items" => items})}
@@ -143,6 +153,16 @@ defmodule Brando.AI.WorkTranslation do
     do: Map.put(item, "translation", current)
 
   defp put_translation(item, _unit), do: item
+
+  defp put_previous_source(item, unit) do
+    case previous_source(unit) do
+      nil -> item
+      previous -> Map.put(item, "previous_source", previous)
+    end
+  end
+
+  defp previous_source(%{kind: "review", source_previous: previous}) when is_binary(previous), do: previous
+  defp previous_source(_unit), do: nil
 
   # The reply's JSON object, also inside a code fence or after a preamble
   defp parse(text) do

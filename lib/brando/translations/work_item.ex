@@ -16,7 +16,14 @@ defmodule Brando.Translations.WorkItem do
 
   `path` addresses the value, e.g. `"title"`,
   `"blocks/<sync_uid>/refs/lede/text"` or `"items/<uid>/label"`.
-  `source_digest` is the source text the item was raised against.
+  `source_digest` is the source text the item was raised against. A
+  `:review` item's `source_previous` is the source's text before the change
+  that raised it: the text the translation was last synced against, which it
+  keeps when the source changes again before the review is done. It is nil
+  for an item raised before brando_239, or by a member's first sync after it,
+  and is cleared when the source moves to another translation, and when a
+  save answers the review from a version the source has since changed: the
+  text that version was computed against is not kept.
   """
   use Ecto.Schema
 
@@ -27,6 +34,7 @@ defmodule Brando.Translations.WorkItem do
     field :path, :string
     field :kind, Ecto.Enum, values: [:translate, :review, :shared_update, :relinked, :awaiting_translation]
     field :source_digest, :string
+    field :source_previous, :string
     field :minor, :boolean, default: false
     field :resolved_at, :utc_datetime
     field :resolved_generation, :integer

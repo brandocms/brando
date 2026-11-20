@@ -79,7 +79,12 @@ defmodule Brando.Translations.Sync do
 
   `baseline` maps paths to the source digests this target was last synchronized
   with. Options: `:schema` (required), `:config` (defaults to the schema's
-  `__translatable_config__/0`), `:minor`, `:translate_all` and `:identifiers`.
+  `__translatable_config__/0`), `:minor`, `:translate_all`, `:baseline_texts`
+  and `:identifiers`.
+
+  `:baseline_texts` maps text paths to the source's texts of that sync
+  (`baseline_texts_for/4`): a `:review` item takes its path's text as
+  `source_previous`, the text before the change that raised it.
 
   `:translate_all` marks every text that is not empty `:translate`, as if it
   were new: the first version of a new translation, whose text is still the
@@ -101,8 +106,8 @@ defmodule Brando.Translations.Sync do
   option, links are copied as they are.
 
   Returns `payload` (the merged target), `work_items`
-  (`%{path, kind, source_digest, minor}`), `notes`, the `baseline` to store,
-  the payload's `paths`,
+  (`%{path, kind, source_digest, source_previous, minor}`), `notes`, the
+  `baseline` and `baseline_texts` to store, the payload's `paths`,
   the `fingerprint` of the payload and the `base_fingerprint` of the target.
   `changed?` is false when applying the payload would change nothing and no
   work was found.
@@ -124,6 +129,7 @@ defmodule Brando.Translations.Sync do
 
     work =
       work_items(source_rows, target_rows, payload_rows, baseline || %{},
+        baseline_texts: Keyword.get(opts, :baseline_texts) || %{},
         minor?: minor?,
         translate_all?: Keyword.get(opts, :translate_all, false),
         untranslated: Keyword.get(opts, :untranslated, MapSet.new())
@@ -138,6 +144,7 @@ defmodule Brando.Translations.Sync do
       work_items: work_items,
       notes: notes,
       baseline: baseline(source_rows),
+      baseline_texts: baseline_texts(source_rows),
       paths: MapSet.new(payload_rows, &elem(&1, 0)),
       source_fingerprint: fingerprint(source_rows),
       fingerprint: fingerprint,
@@ -159,6 +166,15 @@ defmodule Brando.Translations.Sync do
   def baseline_for(entry, schema, config \\ nil, module_uids \\ %{}) do
     config = config || schema.__translatable_config__()
     entry |> flatten(spec(schema, config, module_uids)) |> baseline()
+  end
+
+  @doc """
+  The texts `compute_pending/4` keeps beside the baseline for `entry` as a
+  source: its text paths' texts, for a review's `source_previous`.
+  """
+  def baseline_texts_for(entry, schema, config \\ nil, module_uids \\ %{}) do
+    config = config || schema.__translatable_config__()
+    entry |> flatten(spec(schema, config, module_uids)) |> baseline_texts()
   end
 
   @doc "Flattens an entry into `{path, class, value}` rows, in document order."
@@ -1248,7 +1264,8 @@ defmodule Brando.Translations.Sync do
     Map.put(struct, field, %Ecto.Association.NotLoaded{__field__: field, __owner__: module, __cardinality__: :one})
   end
 
-  defp awaiting_item(path), do: %{path: path, kind: :awaiting_translation, source_digest: nil, minor: false}
+  defp awaiting_item(path),
+    do: %{path: path, kind: :awaiting_translation, source_digest: nil, source_previous: nil, minor: false}
 
   defp clone(%{__meta__: %Ecto.Schema.Metadata{}} = struct) do
     struct
@@ -1323,6 +1340,7 @@ defmodule Brando.Translations.Sync do
       source: Map.new(source_rows, fn {path, _class, value} -> {path, value} end),
       target: Map.new(target_rows, fn {path, class, value} -> {path, {class, value}} end),
       baseline: baseline,
+      baseline_texts: flags[:baseline_texts],
       minor?: flags[:minor?],
       translate_all?: flags[:translate_all?],
       untranslated: flags[:untranslated]
@@ -1347,7 +1365,7 @@ defmodule Brando.Translations.Sync do
         []
 
       Map.has_key?(ctx.baseline, path) and ctx.baseline[path] != source_digest ->
-        [item(path, :review, source_digest)]
+        [%{item(path, :review, source_digest) | source_previous: Map.get(ctx.baseline_texts, path)}]
 
       true ->
         []
@@ -1376,7 +1394,8 @@ defmodule Brando.Translations.Sync do
       else: :shared_update
   end
 
-  defp item(path, kind, source_digest), do: %{path: path, kind: kind, source_digest: source_digest, minor: false}
+  defp item(path, kind, source_digest),
+    do: %{path: path, kind: kind, source_digest: source_digest, source_previous: nil, minor: false}
 
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(nil), do: true
@@ -1384,6 +1403,11 @@ defmodule Brando.Translations.Sync do
 
   defp baseline(rows) do
     for {path, class, value} <- rows, class in [:text, :shared], into: %{}, do: {path, digest(value)}
+  end
+
+  # The texts a review shows as the source's before
+  defp baseline_texts(rows) do
+    for {path, :text, value} <- rows, is_binary(value), into: %{}, do: {path, value}
   end
 
   defp fingerprint(rows), do: digest(rows)

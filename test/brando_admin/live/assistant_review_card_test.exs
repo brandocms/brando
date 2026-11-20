@@ -149,6 +149,59 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
       assert proposal.problems == []
       assert has_element?(view, ~s([data-testid="assistant-translate-pending"]))
     end
+
+    # A review unit: the source before and now, the translation before and now
+    test "shows a review unit's source and translation before and now", %{conn: conn, current_user: user} do
+      alias Brando.Translations
+      alias Brando.Translations.Work
+
+      {:ok, source} =
+        Brando.SyncTest.create_article(
+          %{title: "Fjordhuset", slug: "fjordhuset-review", language: "no", status: "published"},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Brando.SyncTest.Article, source.id, :en, user)
+
+      {:ok, _} =
+        Translations.save_work(Brando.SyncTest.Article, target.id, %{texts: %{"title" => "The fjord house"}}, user)
+
+      {:ok, _} = Brando.SyncTest.update_article(source.id, %{title: "Det nye fjordhuset"}, user)
+
+      {:ok, %{units: units}} = Work.translation_units(Brando.SyncTest.Article, target.id)
+      scope = %{type: "Elixir.Brando.SyncTest.Article", id: target.id, language: "en"}
+
+      op = %{
+        "op" => "translate",
+        "target" => %{"content_type" => "Brando.SyncTest.Article", "id" => target.id},
+        "source_digest" => Work.token(scope, Enum.filter(units, &(&1.key == "title"))),
+        "texts" => %{"title" => "The new fjord house"}
+      }
+
+      {view, proposal} = propose(conn, user, [op])
+      assert proposal.problems == []
+
+      unit = ~s([data-testid="assistant-translate"] ~ dl [data-key="title"] dd)
+
+      texts =
+        view
+        |> element(unit)
+        |> render()
+        |> Floki.parse_fragment!()
+        |> hd()
+        |> Floki.children()
+        |> Enum.filter(&match?({_tag, _attributes, _children}, &1))
+        |> Enum.map(&{elem(&1, 0), &1 |> Floki.text() |> String.trim()})
+
+      assert texts == [
+               {"span", "Fjordhuset"},
+               {"span", "Det nye fjordhuset"},
+               {"del", "The fjord house"},
+               {"ins", "The new fjord house"}
+             ]
+
+      assert has_element?(view, unit <> " .assistant-translation-source del")
+    end
   end
 
   defp card_text(view) do

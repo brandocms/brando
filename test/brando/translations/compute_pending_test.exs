@@ -206,6 +206,47 @@ defmodule Brando.Translations.ComputePendingTest do
     assert result.payload.title == "Title"
   end
 
+  describe "the source's previous text" do
+    test "a review item carries the text the translation was last synced against" do
+      {source, target, base} = pair()
+      texts = Sync.baseline_texts_for(source, Article)
+      [a, b] = source.entry_blocks
+      a = put_in(a.block.refs, [text_ref("body", "Første, endret")])
+
+      result =
+        compute(%{source | title: "Ny tittel", entry_blocks: [a, b]}, target, base, baseline_texts: texts)
+
+      previous = Map.new(result.work_items, &{&1.path, &1.source_previous})
+      assert previous == %{"title" => "Tittel", "entry_blocks/a/refs/body/text" => "Første"}
+    end
+
+    test "is left out without the texts of the last sync, and of other kinds of work" do
+      {source, target, base} = pair()
+      c = %Article.Blocks{sequence: 2, block: block("c", refs: [text_ref("body", "Ny")])}
+      source = %{source | title: "Ny tittel", entry_blocks: source.entry_blocks ++ [c]}
+
+      result = compute(source, target, base)
+
+      assert kinds(result) == [{:review, "title"}, {:translate, "entry_blocks/c/refs/body/text"}]
+      assert Enum.all?(result.work_items, &is_nil(&1.source_previous))
+    end
+
+    test "the texts to keep are the source's text rows, beside their digests" do
+      {source, target, base} = pair()
+      result = compute(%{source | title: "Ny tittel"}, target, base)
+
+      assert result.baseline_texts == %{
+               "title" => "Ny tittel",
+               "entry_blocks/a/refs/body/text" => "Første",
+               "entry_blocks/b/refs/body/text" => "Andre"
+             }
+
+      assert result.baseline_texts == Sync.baseline_texts_for(%{source | title: "Ny tittel"}, Article)
+      refute Map.has_key?(result.baseline_texts, "year")
+      assert Map.has_key?(result.baseline, "year")
+    end
+  end
+
   test "source-controlled fields and media follow the source" do
     {source, target, base} = pair()
     source = %{source | year: 2024, cover_id: 7}
