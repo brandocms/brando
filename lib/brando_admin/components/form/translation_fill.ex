@@ -320,10 +320,13 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   defp pending_text(unit), do: if(Map.has_key?(unit, :current), do: unit.current, else: unit.source)
 
-  defp same_text?(a, b), do: blank_as_empty(a) == blank_as_empty(b)
+  # Line endings aside: a browser sends a textarea's back as \n, so a stored
+  # \r\n text reads changed after the first `validate`
+  defp same_text?(a, b), do: comparable(a) == comparable(b)
 
-  defp blank_as_empty(nil), do: ""
-  defp blank_as_empty(text), do: text
+  defp comparable(nil), do: ""
+  defp comparable(text) when is_binary(text), do: String.replace(text, "\r\n", "\n")
+  defp comparable(text), do: text
 
   # A review brings the translation in the form up to date, not the stored one
   defp with_form_text(%{kind: "review"} = unit, text) when is_binary(text) do

@@ -803,6 +803,39 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       await(fn -> title(view) == "EN Tittel" end)
     end
 
+    test "translating every text sends a text with Windows line endings the browser sent back", %{conn: conn} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{
+            title: "Tittel",
+            subtitle: "Linje en\r\nLinje to",
+            slug: "tittel",
+            language: "no",
+            status: "published"
+          },
+          c.current_user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user)
+      answer_and_report()
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      # A browser sends a textarea's line endings as \r\n, and the form
+      # holds them as \n from the first `validate` on
+      change_main(view, fn params ->
+        params
+        |> put_in(["article", "subtitle"], "Linje en\nLinje to")
+        |> Map.put("_target", ["article", "featured"])
+      end)
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Linje en\r\nLinje to", "Tittel"]
+    end
+
     test "a second run leaves out the texts the first filled and the editor corrected", %{conn: conn, target: target} do
       answer_and_report()
       view = open(conn, target.id)
