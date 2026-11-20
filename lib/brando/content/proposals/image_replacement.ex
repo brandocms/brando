@@ -29,7 +29,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   OLD takes NEW's file: its path, dimensions, formats, `content_hash`,
   dominant colour, CDN flag and, until its own are made, NEW's sizes alone.
   Its config fingerprint is cleared, which is what makes its processing a
-  change the entries showing it render again for (`Brando.Images.Rerender`).
+  change the entries showing it render again for.
   An approval while NEW's sizes are still being made is refused, to be tried
   again (`ready!/1`). It
   keeps its id, focal point, title, alt text, credits, folder, config and
