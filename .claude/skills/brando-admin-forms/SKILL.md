@@ -100,7 +100,11 @@ Ordinary form rich text mounts its editor immediately. Block-owned rich text
 a sanitized display copy and creates the editor on click or keyboard activation. Never write that display copy back
 to the input: untouched HTML must survive save and recovery exactly. Incoming
 replacements update dormant previews and their inputs as well as active
-editors. Once activated, an editor stays mounted to retain undo history.
+editors. An entry form's rich text (a field, a subform row's field, a page
+variable; not a block's) shows what its hidden input holds after each patch,
+so a server write reaches a row's editor wherever the row has moved: write the
+form, not an event addressed to the editor, whose DOM id follows the row's
+position. Once activated, an editor stays mounted to retain undo history.
 Open a dormant editor programmatically with `brando:tiptap:activate` on its hook
 element, rather than assuming a `contenteditable=true` node already exists.
 
