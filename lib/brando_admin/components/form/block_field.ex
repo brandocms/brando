@@ -1894,7 +1894,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         # Each root takes its form in an update of its own, so a block the
         # copy puts under another parent would show in both in between: its
         # parent lets go of it first.
-        release_leaving(socket.assigns.block_ops, tree)
+        copied_parent = for {parent, uids} <- tree, uid <- uids, into: %{}, do: {uid, parent}
+        release_leaving(socket.assigns.block_ops, copied_parent)
 
         for {uid, form} <- forms, uid in socket.assigns.root_order do
           send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
@@ -1931,14 +1932,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     Enum.reduce(leftover, ops, fn uid, acc -> if Ops.known?(acc, uid), do: next!(acc, {:delete, uid}), else: acc end)
   end
 
-  # Tell each shown parent to let go of the children the copy puts under
-  # another parent, the deepest first: a parent let go of with its own
-  # component is gone before its turn.
-  defp release_leaving(%Ops{} = shown, tree) do
-    copied_parent = for {parent, uids} <- tree, uid <- uids, into: %{}, do: {uid, parent}
-
+  # Tell each shown parent to let go of the children `new_parent` (a uid's
+  # parent where it goes, `nil` for a root) puts under another parent, the
+  # deepest first: a parent let go of with its own component is gone before
+  # its turn.
+  defp release_leaving(%Ops{} = shown, new_parent) do
     shown.parents
-    |> Enum.filter(fn {uid, parent} -> Map.has_key?(copied_parent, uid) and copied_parent[uid] != parent end)
+    |> Enum.filter(fn {uid, parent} -> Map.has_key?(new_parent, uid) and new_parent[uid] != parent end)
     |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
     |> Enum.sort_by(fn {parent, _uids} -> -depth(shown, parent) end)
     |> Enum.each(fn {parent, uids} ->
@@ -2050,7 +2050,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp restore_into_session(socket, ops, base) do
     op = {:carry, ops, base}
-    {:ok, restored} = Ops.apply_op(socket.assigns.block_ops, op)
+    shown = socket.assigns.block_ops
+    {:ok, restored} = Ops.apply_op(shown, op)
+
+    # The roots are refreshed one update at a time, so a child the restore
+    # puts under another parent would show in both in between: its parent
+    # lets go of it first.
+    release_leaving(
+      shown,
+      for({uid, _} <- shown.parents, Ops.known?(restored, uid), into: %{}, do: {uid, restored.parents[uid]})
+    )
 
     socket
     |> show_state(restored, :all)

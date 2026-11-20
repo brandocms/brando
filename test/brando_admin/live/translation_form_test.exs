@@ -927,6 +927,95 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert_moved(c, version)
     end
 
+    # Review: the roots take their forms one update at a time, so a child
+    # moving into a root drawn before the one it leaves showed in both in
+    # between (a duplicate DOM id) unless its parent let go of it first.
+    defp children(block), do: Repo.preload(block, :children, force: true).children |> Enum.sort_by(& &1.sequence)
+
+    defp move_to!(child, parent, sequence),
+      do: child |> Ecto.Changeset.change(parent_id: parent.id, sequence: sequence) |> Repo.update!()
+
+    defp assert_shown_under(view, child, parent),
+      do: assert(view |> element("#child-#{child.uid}") |> render() =~ ~s(data-parent_uid="#{parent.uid}"))
+
+    test "a child the source moved to an earlier container", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          add_container(c, source, ["Andre barn", "Tredje barn"], 2)
+        end)
+
+      [_, %{block: to}, %{block: from}] = load(c.source.id).entry_blocks
+      [moved, _] = children(from)
+      move_to!(moved, to, 1)
+      version = source_saved(c)
+
+      [_, %{block: shown_to}, %{block: shown_from}] = load(c.target.id).entry_blocks
+      [shown_moved, _] = Enum.sort_by(shown_from.children, & &1.sequence)
+
+      view = open_version(conn, c.target.id, version)
+      assert_shown_under(view, shown_moved, shown_to)
+      save(view)
+
+      saved = assert_follows_source(c, version)
+      [_, %{block: to}, %{block: from}] = saved.entry_blocks
+      assert {length(to.children), length(from.children)} == {2, 1}
+    end
+
+    test "a child the source moved out of a nested container into an earlier one", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          outer = add_container(c, source, [], 2)
+          inner = add_child(c, outer, "Indre", 0)
+          inner |> Ecto.Changeset.change(type: :container, module_id: nil) |> Repo.update!()
+          add_child(c, inner, "Indre barn", 0)
+          add_child(c, inner, "Andre indre barn", 1)
+        end)
+
+      [_, %{block: to}, %{block: outer}] = load(c.source.id).entry_blocks
+      [inner] = children(outer)
+      [moved, _] = children(inner)
+      move_to!(moved, to, 1)
+      version = source_saved(c)
+
+      [_, %{block: shown_to}, %{block: shown_outer}] = load(c.target.id).entry_blocks
+      [shown_inner] = shown_outer.children
+      shown_moved = Enum.find(shown_inner.children, &(&1.sync_uid == moved.sync_uid))
+
+      view = open_version(conn, c.target.id, version)
+      assert_shown_under(view, shown_moved, shown_to)
+      save(view)
+
+      assert_follows_source(c, version)
+    end
+
+    test "two children the source swapped between containers", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          add_container(c, source, ["Andre barn"], 2)
+        end)
+
+      [_, %{block: a}, %{block: b}] = load(c.source.id).entry_blocks
+      [first] = children(a)
+      [second] = children(b)
+      move_to!(first, b, 1)
+      move_to!(second, a, 1)
+      version = source_saved(c)
+
+      [_, %{block: shown_a}, %{block: shown_b}] = load(c.target.id).entry_blocks
+      [shown_first] = shown_a.children
+      [shown_second] = shown_b.children
+
+      view = open_version(conn, c.target.id, version)
+      assert_shown_under(view, shown_first, shown_b)
+      assert_shown_under(view, shown_second, shown_a)
+      save(view)
+
+      assert_follows_source(c, version)
+    end
+
     test "a container whose only child the source moved out shows as empty to a second editor", %{conn: conn} = c do
       c =
         pair(c, fn source ->
