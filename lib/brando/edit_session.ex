@@ -259,9 +259,55 @@ defmodule Brando.EditSession do
   arrived after the save read the state. For a save that leaves the editor
   (save and close, save and create new): the block fields that would
   otherwise do it are going away.
+
+  The pending version is unset (`Data.reset_version/1`): the editor leaves
+  without loading what its save left pending, and the next form to decide
+  loads it.
   """
   @spec saved(struct()) :: :ok
-  def saved(%_{} = entry), do: rebase_all(entry, :own_save)
+  def saved(%_{} = entry) do
+    rebase_all(entry, :own_save)
+
+    case whereis(ref_for(entry)) do
+      pid when is_pid(pid) -> GenServer.cast(pid, {:reset_version, self()})
+      _ -> :ok
+    end
+
+    :ok
+  end
+
+  @doc """
+  Which pending version of a synchronized translation the caller's form
+  loads (`Data.take_version/3`): `{:load, id}` when it loads `wanted` and the
+  block fields take it too, `{:keep, id}` when the session's unsaved state
+  is built on `id` (`nil` for none) and the form loads only its own fields
+  from it. Options: `saved: true` after the form's own save, `adopt: true`
+  when it rejoins a replaced session with the version it holds.
+
+  `{:error, :no_session}` when no session runs for `ref`: the form decides
+  alone, as one without block fields does. A change is broadcast on the
+  session's topic as `{:edit_session_version, %{version, origin, epoch}}`.
+  """
+  @spec take_version(ref(), nil | integer(), keyword()) :: {:load | :keep, nil | integer()} | {:error, :no_session}
+  def take_version(ref, wanted, opts \\ []) do
+    case whereis(ref) do
+      nil -> {:error, :no_session}
+      pid -> GenServer.call(pid, {:take_version, self(), wanted, opts})
+    end
+  catch
+    :exit, _ -> {:error, :no_session}
+  end
+
+  @doc "The caller took `version` to load (`{:load, version}`) and could not: the session unsets it, if it still holds it."
+  @spec release_version(ref(), nil | integer()) :: :ok
+  def release_version(ref, version) do
+    case whereis(ref) do
+      nil -> :ok
+      pid -> GenServer.call(pid, {:release_version, self(), version})
+    end
+  catch
+    :exit, _ -> :ok
+  end
 
   @doc """
   This process is done bringing back the blocks of `group`, as the session
@@ -392,7 +438,18 @@ defmodule Brando.EditSession do
     {:reply, {:ok, info(session, field, pid, false)}, session}
   end
 
+  def handle_call({:take_version, pid, wanted, opts}, _from, session) do
+    {answer, data} = Data.take_version(session.data, wanted, opts)
+    {:reply, answer, put_version(session, data, pid)}
+  end
+
+  def handle_call({:release_version, pid, version}, _from, session),
+    do: {:reply, :ok, put_version(session, Data.release_version(session.data, version), pid)}
+
   @impl true
+  def handle_cast({:reset_version, pid}, session),
+    do: {:noreply, put_version(session, Data.reset_version(session.data), pid)}
+
   def handle_cast({:op, pid, field, op, seq}, session) do
     result =
       if read_only?(session, pid),
@@ -886,6 +943,20 @@ defmodule Brando.EditSession do
   defp cancel_stop(%{stop_timer: {_token, timer}} = session) do
     Process.cancel_timer(timer)
     %{session | stop_timer: nil}
+  end
+
+  # The pending version moved: every form in the entry hears it (routed to
+  # the Form by `BrandoAdmin.LiveView.Form.Hooks`).
+  defp put_version(session, data, origin) do
+    if data.version != session.data.version do
+      PubSub.broadcast(
+        Brando.pubsub(),
+        session.topic,
+        {:edit_session_version, %{version: data.version, origin: origin, epoch: data.epoch}}
+      )
+    end
+
+    %{session | data: data}
   end
 
   defp broadcast(session, field, message) do

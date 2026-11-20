@@ -31,6 +31,14 @@ defmodule Brando.EditSession.Data do
 
   `epoch` changes when the session process is replaced, which resets
   revision numbering.
+
+  ## The pending version
+
+  `version` is the synchronized translation's pending version the unsaved
+  state is built on (`Brando.Translations`): `:unset` until a form decides,
+  then the version's id, or `nil` for none. Every form in the entry loads
+  this one into its entry fields, so they and the block fields hold the
+  same version (`take_version/3`).
   """
 
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -45,14 +53,51 @@ defmodule Brando.EditSession.Data do
   # carry the saved changes over as unsaved ones.
   @mark_ttl_ms 15 * 60_000
 
-  defstruct epoch: nil, fields: %{}
+  defstruct epoch: nil, fields: %{}, version: :unset
 
   @type field :: atom() | String.t()
-  @type t :: %__MODULE__{epoch: integer(), fields: %{optional(field()) => map()}}
+  @type version :: :unset | nil | integer()
+  @type t :: %__MODULE__{epoch: integer(), fields: %{optional(field()) => map()}, version: version()}
 
   @doc "A session with no fields yet."
   @spec new(integer()) :: t()
   def new(epoch), do: %__MODULE__{epoch: epoch}
+
+  @doc "The pending version the session's unsaved state is built on."
+  @spec version(t()) :: version()
+  def version(%__MODULE__{version: version}), do: version
+
+  @doc """
+  A form asks which pending version to load, wanting `wanted` (the one the
+  database has now, `nil` for none).
+
+  * Unset: the form loads `wanted`, which becomes the session's
+    (`{:load, wanted}`).
+  * Set: the form keeps the session's, whatever it wanted (`{:keep,
+    version}`): the block fields hold it already.
+  * `saved: true`: the form saved, and loads what its save left pending,
+    which becomes the session's (`{:load, wanted}`).
+  * `adopt: true`: the form rejoins a replaced session holding `wanted`,
+    which becomes the session's if it is unset (`{:keep, version}`).
+  """
+  @spec take_version(t(), nil | integer(), keyword()) :: {{:load | :keep, nil | integer()}, t()}
+  def take_version(%__MODULE__{} = data, wanted, opts) do
+    cond do
+      opts[:saved] -> {{:load, wanted}, %{data | version: wanted}}
+      data.version != :unset -> {{:keep, data.version}, data}
+      opts[:adopt] -> {{:keep, wanted}, %{data | version: wanted}}
+      true -> {{:load, wanted}, %{data | version: wanted}}
+    end
+  end
+
+  @doc "The form that took `version` to load could not load it: unset it, if it is still the session's."
+  @spec release_version(t(), nil | integer()) :: t()
+  def release_version(%__MODULE__{version: version} = data, version), do: %{data | version: :unset}
+  def release_version(%__MODULE__{} = data, _version), do: data
+
+  @doc "Unset the version: the editor that saved leaves without loading what its save left pending."
+  @spec reset_version(t()) :: t()
+  def reset_version(%__MODULE__{} = data), do: %{data | version: :unset}
 
   @doc """
   Add an editor's view of `field`.
