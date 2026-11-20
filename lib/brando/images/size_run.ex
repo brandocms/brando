@@ -465,7 +465,7 @@ defmodule Brando.Images.SizeRun do
     images_failed? = pages["images_failed"] == true
 
     Work.in_locale(user, fn ->
-      message = result(pages["images"] || 0, images_failed?, total, failed)
+      message = result_message(pages["images"] || 0, images_failed?, total, failed)
 
       if images_failed? or failed > 0,
         do: Work.fail(user, @work_key, message),
@@ -475,8 +475,10 @@ defmodule Brando.Images.SizeRun do
     :ok
   end
 
-  # "65 images recreated, 14 pages updated"
-  defp result(images, images_failed?, pages, failed_pages) do
+  @doc false
+  # "65 images recreated, 14 pages updated", in the current locale
+  @spec result_message(non_neg_integer(), boolean(), non_neg_integer(), non_neg_integer()) :: String.t()
+  def result_message(images, images_failed?, pages, failed_pages) do
     images =
       cond do
         images_failed? -> gettext("Some images could not be recreated")
