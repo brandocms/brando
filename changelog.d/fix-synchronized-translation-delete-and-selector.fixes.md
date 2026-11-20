@@ -2,3 +2,4 @@
   Run `mix brando.gen.migrations` for `brando_238`, then `mix brando.migrate` before the new release starts.
   In a release, run `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` from the new release.
 - Deleting the source of synchronized translations, from the listing or by undoing a proposal, says why it is refused, and that a translation in the trash counts too.
+- Recovering a content import no longer deletes an entry made the source of synchronized translations since, and takes an entry it deletes out of its translation group.

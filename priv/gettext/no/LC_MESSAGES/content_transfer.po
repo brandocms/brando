@@ -83,6 +83,16 @@ msgstr[1] "%{count} elementer må gjennomgås"
 
 #: lib/brando/content/transfer/entries.ex
 #, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after this import, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source, before recovering."
+msgstr "%{entry} ble kilden til synkroniserte oversettelser etter importen, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde, før gjenoppretting."
+
+#: lib/brando/content/transfer/entries.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} became the source of synchronized translations after this import. Make them independent, or make one of them the source, before recovering."
+msgstr "%{entry} ble kilden til synkroniserte oversettelser etter importen. Gjør dem selvstendige, eller gjør en av dem til kilde, før gjenoppretting."
+
+#: lib/brando/content/transfer/entries.ex
+#, elixir-autogen, elixir-format
 msgid "%{value1} is already in use. Update the matching entry or choose another value."
 msgstr "%{value1} er allerede i bruk. Oppdater den eksisterende oppføringen eller velg en annen verdi."
 
