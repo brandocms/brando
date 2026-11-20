@@ -39,7 +39,11 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   cannot be written over, since its type may differ and every environment of
   a site shares the media folder (an environment copied from this one still
   shows OLD's previous file). `Brando.Media.OrphanCleanup` removes them once
-  no environment refers to them. A replacement has no undo.
+  no environment refers to them, and not before its grace period has passed
+  from the replacement (`Brando.Media.OrphanCleanup.hold_image_files/1`): the
+  entries that show OLD link them until they are rendered again, and a
+  visitor's cached page longer. The cleanup only removes files from the media
+  folder, never from a CDN. A replacement has no undo.
 
   It queues no renders: the entries that show OLD are rendered again when
   its new sizes are made.
@@ -556,6 +560,10 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
     discard_jobs(new_id)
     Repo.delete!(new)
+
+    # The entries that show OLD link its previous files until they are
+    # rendered again, and a cached page longer
+    Brando.Media.OrphanCleanup.hold_image_files(old)
 
     case Images.Processing.queue_processing(replaced, user, [], silent: true) do
       {:ok, _job} ->

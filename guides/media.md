@@ -315,8 +315,11 @@ is removed. Nothing is written over: the new file stays where it was uploaded
 and the image points at it, and a failed approval leaves the image on its
 previous file. That previous original and its sizes stay on disk, no longer
 referenced (another environment of the site may still show them), until
-`Brando.Media.OrphanCleanup` removes them. A replaced image file cannot be
-undone.
+`Brando.Media.OrphanCleanup` removes them, and for at least 24 hours from the
+replacement: the replacement marks them changed, since the entries that show
+the image link them until they are rendered again, and a visitor's cached page
+longer. The cleanup only removes files from the media folder; what was
+delivered to a CDN stays there. A replaced image file cannot be undone.
 
 Removing an optional field association is not permanent deletion of the shared
 asset. A `required: true` asset must remain present for a valid publishable entry.

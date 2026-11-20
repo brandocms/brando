@@ -124,6 +124,27 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     assert Proposals.replaced_images?(Proposals.receipt(proposal.id, c.user))
   end
 
+  test "OLD's previous files outlive the orphan cleanup's grace period, counted from the replacement", c do
+    small = "images/replace/small/portrait-#{System.unique_integer([:positive])}.jpg"
+    Brando.ImageFileFixtures.write_image(small, {700, 525})
+    Brando.ImageFileFixtures.write_image(String.replace_suffix(small, ".jpg", ".webp"), {700, 525})
+    old = image!("portrait", {800, 600}, sizes: %{"small" => small}, formats: [:jpg, :webp])
+    new = image!("portrait-better", {1600, 1200})
+
+    previous = [old.path, small, String.replace_suffix(small, ".jpg", ".webp")]
+    two_days_ago = System.os_time(:second) - 2 * 86_400
+
+    for path <- previous,
+        do: :ok = File.touch(Brando.Images.Utils.media_path(path), two_days_ago)
+
+    {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+    assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
+
+    # No image row names them now, but a page rendered before still links them
+    {:ok, report} = Brando.Media.OrphanCleanup.run(nil, dry_run: true)
+    assert Enum.filter(previous, &(&1 in report.deleted)) == []
+  end
+
   test "the review shows both files, the entries that use OLD and whether the proportions differ", c do
     old = image!("logo", {800, 600})
     same = image!("logo-same", {1600, 1200})
