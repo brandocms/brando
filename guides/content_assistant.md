@@ -195,9 +195,12 @@ its source.
   item's path (`"title"`, `"entry_blocks/<sync_uid>/refs/body/text"`), which
   is the same in every language version and across reads; its `kind`,
   *translate* or *review*; a `label` as the form's work list names it; the
-  source's current text (`source`) and the translation's (`current`); its
-  `format`, `plain`, `html` or `markdown`; and in a block, the translation's
-  own `block_uid`. Links waiting for a translation and values updated from
+  source's current text (`source`) and the translation's (`current`, left
+  out when it is the same, as a copy to translate is); its `format`,
+  `plain`, `html` or `markdown`; and in a block, the translation's own
+  `block_uid`. A text too long to fit a result on its own is listed with
+  `too_long` and a `reason` instead of its text: it is not answerable with
+  the tool, and is translated in the entry's form. Links waiting for a translation and values updated from
   the source are listed under `other` with the first batch, as many as fit,
   with their count in `other_total`; they are not answered with text.
 - **On a source**, its language versions with their open work, and the

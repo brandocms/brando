@@ -16,8 +16,8 @@ defmodule Brando.Translations.Work do
     * `label` — where the text is, as the form's work list names it
       (`Brando.Translations.Labels`).
     * `source` — the source's current text; `current` — the translation's
-      text in the pending version (for *translate*, usually the copy of the
-      source's).
+      text in the pending version, left out when it is the same as `source`
+      (for *translate*, usually: the copy of the source's).
     * `format` — `"plain"`, `"html"` or `"markdown"`.
     * `block_uid` — for a text in a block, the translation's own block.
 
@@ -221,11 +221,14 @@ defmodule Brando.Translations.Work do
       answerable: true,
       label: Labels.label(target, ctx.labels),
       format: format(path, target, ctx),
-      source: source,
-      current: current
+      source: source
     }
+    |> put_current(source, current)
     |> put_block_uid(target)
   end
+
+  defp put_current(unit, same, same), do: unit
+  defp put_current(unit, _source, current), do: Map.put(unit, :current, current)
 
   defp other_unit(path, kind, ctx) do
     target = Labels.target(path, ctx.blocks)
@@ -332,6 +335,10 @@ defmodule Brando.Translations.Work do
   with each unit's share of the token (`token_bytes/1`): at most
   `:max_units` (60). The first unit is taken whatever its size.
 
+  A unit that takes more than `:alone` bytes (no limit by default) cannot be
+  sent in any batch: it is listed without its text, not answerable, with
+  `too_long: true` and a `reason`, and is left out of the batch's token.
+
   `after` is the last key of the previous batch, read from `positions`
   (`translation_units/2`), so a unit resolved since that batch was read does
   not move the next one: the key need not be open any more. nil, or a key
@@ -347,6 +354,7 @@ defmodule Brando.Translations.Work do
         }
   def batch(units, positions, after_key, bytes, opts \\ []) do
     max_units = Keyword.get(opts, :max_units, 60)
+    alone = Keyword.get(opts, :alone)
     known? = follows?(units, positions, after_key)
 
     rest =
@@ -356,7 +364,7 @@ defmodule Brando.Translations.Work do
 
     {batch, _size} =
       Enum.reduce_while(rest, {[], 0}, fn unit, {acc, size} ->
-        unit_size = byte_size(Jason.encode!(unit)) + 1 + token_bytes(unit)
+        {unit, unit_size} = sized(unit, alone)
 
         cond do
           acc == [] -> {:cont, {[unit], unit_size}}
@@ -366,6 +374,31 @@ defmodule Brando.Translations.Work do
       end)
 
     %{units: Enum.reverse(batch), more: length(batch) < length(rest), restarted: after_key != nil and not known?}
+  end
+
+  defp sized(unit, alone) do
+    size = unit_bytes(unit)
+
+    if alone && size > alone do
+      unit = too_long(unit)
+      {unit, unit_bytes(unit)}
+    else
+      {unit, size}
+    end
+  end
+
+  defp unit_bytes(unit), do: byte_size(Jason.encode!(unit)) + 1 + token_bytes(unit)
+
+  defp too_long(unit) do
+    unit
+    |> Map.take([:key, :kind, :label, :format, :block_uid])
+    |> Map.merge(%{
+      answerable: false,
+      too_long: true,
+      reason:
+        "This text is too long to be read with translation_work, and cannot be translated here. " <>
+          "Translate it in the entry's form in the admin."
+    })
   end
 
   @doc """

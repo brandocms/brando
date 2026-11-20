@@ -34,9 +34,14 @@ defmodule Brando.Content.Proposals.TranslationWork do
   # The margin covers what is added after (`next_after`, `restarted`) and the
   # endpoint's link to its live page.
   @result_bytes 22_000
+  # `Brando.MCP.Tools.result_limit/0`, which the Assistant's loop shares;
+  # not called, as that would tie this module into a compile cycle
+  @result_limit 24_000
   @batch_units 60
   @other_limit 40
   @other_bytes 4_000
+  # other_note and other_total, beside the items
+  @other_note_bytes 400
 
   @answer_note "Translate each unit's source into the translation's language, unit by unit by its key; a review " <>
                  "unit's current text may already be right. Keep the format: html keeps every tag and attribute of " <>
@@ -119,26 +124,40 @@ defmodule Brando.Content.Proposals.TranslationWork do
 
   # The units take what the rest of the result leaves. Should the estimate
   # be short, units are left to the next batch until the result fits.
+  # A unit larger than a result holds with the most other items it can have
+  # is too long for any batch: `Work.batch/5` lists it without its text.
   defp put_batch(result, units, positions, after_key, scope) do
     skeleton = Map.merge(result, %{units: [], next_after: nil, source_digest: Work.token(scope, [])})
     budget = max(@result_bytes - byte_size(Jason.encode!(skeleton)), 0)
-    batch = Work.batch(units, positions, after_key, budget, max_units: @batch_units)
-    fit(result, batch, scope)
+    bare = skeleton |> Map.drop([:other, :other_total, :other_note]) |> Jason.encode!() |> byte_size()
+    alone = @result_bytes - bare - @other_bytes - @other_note_bytes
+    batch = Work.batch(units, positions, after_key, budget, max_units: @batch_units, alone: alone)
+    fit(result, Enum.reverse(batch.units), batch.more, batch, scope)
   end
 
-  defp fit(result, batch, scope) do
+  # The units last first, so the last read is at hand
+  defp fit(result, reversed, more?, batch, scope) do
+    units = Enum.reverse(reversed)
+
     full =
       result
-      |> Map.merge(%{next_after: next_after(batch), units: batch.units, source_digest: Work.token(scope, batch.units)})
+      |> Map.merge(%{
+        next_after: if(more?, do: hd(reversed).key),
+        units: units,
+        source_digest: Work.token(scope, units)
+      })
       |> put_restarted(batch)
 
-    if length(batch.units) > 1 and byte_size(Jason.encode!(full)) > Brando.MCP.Tools.result_limit(),
-      do: fit(result, %{batch | units: Enum.drop(batch.units, -1), more: true}, scope),
-      else: full
-  end
+    case reversed do
+      [_last | [_ | _] = kept] ->
+        if byte_size(Jason.encode!(full)) > @result_limit,
+          do: fit(result, kept, true, batch, scope),
+          else: full
 
-  defp next_after(%{more: true, units: units}), do: List.last(units).key
-  defp next_after(_batch), do: nil
+      _ ->
+        full
+    end
+  end
 
   defp put_restarted(result, %{restarted: true}) do
     Map.merge(result, %{

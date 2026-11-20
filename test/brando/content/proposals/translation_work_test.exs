@@ -60,6 +60,15 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
     target
   end
 
+  # The batches after `first`, each read after the last key of the one before
+  defp rest_batches(target, first, c) do
+    Stream.unfold(first.next_after, fn
+      nil -> nil
+      key -> (batch = call!(args(target.id, %{"after" => key}), c.context)) && {batch, batch.next_after}
+    end)
+    |> Enum.to_list()
+  end
+
   defp args(id, extra \\ %{}), do: Map.merge(%{"content_type" => @type_name, "id" => id}, extra)
 
   describe "a synchronized translation" do
@@ -79,7 +88,7 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
              } = result
 
       assert source_id == c.source.id
-      assert %{key: "title", kind: "translate", format: "plain", source: "Tittel", current: "Tittel"} = title
+      assert %{key: "title", kind: "translate", format: "plain", source: "Tittel"} = title
       assert %{key: ^body, format: "html", source: "<p>Første avsnitt</p>", block_uid: _} = body_unit
       assert is_binary(result.note)
 
@@ -110,6 +119,52 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
       assert Enum.uniq(Enum.map([first | rest], & &1.source_digest)) |> length() == length([first | rest])
     end
 
+    # A translate unit's copy is its source: sent once
+    test "a long text is read whole, its copy not repeated", c do
+      long = "<p>" <> String.duplicate("Et langt avsnitt med <strong>tekst</strong>. ", 270) <> "</p>"
+      assert byte_size(long) > 11_000
+      {:ok, source} = SyncTest.create_article(%{title: "T", slug: "t", language: "no", status: "published"}, c.user)
+      TranslationFixtures.add_block(source, c.module, c.user, long, 1)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+
+      first = call!(args(target.id), c.context)
+      batches = [first | rest_batches(target, first, c)]
+      assert Enum.all?(batches, &(byte_size(Jason.encode!(&1)) <= Brando.MCP.Tools.result_limit()))
+      units = Enum.flat_map(batches, & &1.units)
+
+      assert %{source: ^long, answerable: true} = unit = Enum.find(units, &(&1.source == long))
+      refute Map.has_key?(unit, :current)
+    end
+
+    # Too long for any result: named, without its text, and left to the editor
+    test "a text too long for a result is listed without it, and is not part of the batch", c do
+      long = "<p>" <> String.duplicate("Et svært langt avsnitt. ", 1_200) <> "</p>"
+      {:ok, source} = SyncTest.create_article(%{title: "T", slug: "t", language: "no", status: "published"}, c.user)
+      block = TranslationFixtures.add_block(source, c.module, c.user, long, 1)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+      key = "entry_blocks/#{block.uid}/refs/body/text"
+
+      first = call!(args(target.id), c.context)
+      batches = [first | rest_batches(target, first, c)]
+      assert Enum.all?(batches, &(byte_size(Jason.encode!(&1)) <= Brando.MCP.Tools.result_limit()))
+      result = Enum.find(batches, fn batch -> Enum.any?(batch.units, &(&1.key == key)) end)
+
+      assert %{answerable: false, too_long: true, reason: reason, label: "Text › Body"} =
+               unit = Enum.find(result.units, &(&1.key == key))
+
+      assert is_binary(reason)
+      refute Map.has_key?(unit, :source) or Map.has_key?(unit, :current)
+
+      # Not missing from an answer to the batch, and refused when answered
+      {:ok, %{units: now}} = Work.translation_units(Article, target.id)
+      scope = %{type: to_string(Article), id: target.id, language: "en"}
+      answer = Map.new(for %{answerable: true, key: k} <- result.units, do: {k, "T"})
+      assert :ok = Work.check(result.source_digest, scope, now, %{texts: answer, reviewed: []})
+
+      assert {:error, [%{code: "extra", key: ^key}]} =
+               Work.check(result.source_digest, scope, now, %{texts: Map.put(answer, key, "<p>x</p>"), reviewed: []})
+    end
+
     # The token, the other items and the head share the result with the units
     test "a first batch with many links waiting for their targets stays within a result", c do
       {:ok, source} =
@@ -127,7 +182,8 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
         for {block, n} <- blocks |> Enum.take(40) |> Enum.with_index() do
           %{
             pending_version_id: version.id,
-            path: "entry_blocks/#{block.uid}/vars/link_to_the_related_entry_shown_in_the_sidebar_beside_the_article_body_#{n}/identifier/#{100_000 + n}",
+            path:
+              "entry_blocks/#{block.uid}/vars/link_to_the_related_entry_shown_in_the_sidebar_beside_the_article_body_#{n}/identifier/#{100_000 + n}",
             kind: :awaiting_translation,
             inserted_at: now,
             updated_at: now
@@ -274,6 +330,9 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
   end
 
   test "is offered over MCP as a read, and to the Assistant" do
+    # The tool sizes its results for this limit
+    assert Brando.MCP.Tools.result_limit() == 24_000
+
     assert %{annotations: %{readOnlyHint: true, destructiveHint: false}} =
              Enum.find(MCP.Tools.list(), &(&1.name == "brando_content_translation_work"))
 

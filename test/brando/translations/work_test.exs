@@ -145,7 +145,8 @@ defmodule Brando.Translations.WorkTest do
       }
 
       assert Map.new(units, &{&1.key, {&1.format, &1.source}}) == expected
-      assert Enum.all?(units, &(&1.kind == "translate" and &1.answerable and &1.current == &1.source))
+      # A copy of the source's text is not sent twice
+      assert Enum.all?(units, &(&1.kind == "translate" and &1.answerable and not Map.has_key?(&1, :current)))
 
       # A block unit names the translation's own block, a field none
       units = by_key(units)
