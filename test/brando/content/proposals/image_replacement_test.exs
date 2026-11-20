@@ -151,6 +151,31 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     assert Enum.filter(previous, &(&1 in report.deleted)) == []
   end
 
+  # The replacement queues no render itself: OLD's sizes made again are a
+  # change to what its markup reads, and that renders the entries showing it
+  test "the entries that show OLD render again once its sizes are made", c do
+    old = image!("cover", {800, 600})
+    new = image!("cover-better", {1600, 1200})
+    place!(c, c.identity, old)
+    {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
+
+      renders = fn ->
+        Enum.filter(
+          all_enqueued(worker: Brando.Worker.EntryRenderer),
+          &(&1.args["entry_id"] == c.identity.id and &1.args["schema"] == "Elixir.Brando.Pages.Page")
+        )
+      end
+
+      assert renders.() == []
+      assert %{failure: 0, success: 1} = Oban.drain_queue(queue: :image_processing)
+      assert [%{priority: priority}] = renders.()
+      assert priority == Brando.Content.RenderQueue.bulk_priority()
+    end)
+  end
+
   test "an approval while NEW's sizes are being made is refused, to try again; prepared, it waits", c do
     old = image!("a", {800, 600})
     new = image!("b", {1600, 1200}, status: :unprocessed, sizes: %{})
