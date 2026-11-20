@@ -332,7 +332,10 @@ proposal with the modules that match.
   imported as a turned copy; other angles, a mirrored crop and the turn of
   an animated GIF or WebP (which would keep one frame) are not applied. A
   cropped image keeps its whole file, and a new one gets its focal point set
-  so the site shows the crop Figma shows; one the library already has keeps its own focal
+  so the site shows the crop Figma shows, and the sizes Brando cuts and the
+  share cards follow it too. A crop that spans the image's whole width or
+  height shows exactly; one that zooms in on both shows with more of the
+  image around it. One the library already has keeps its own focal
   point, and when several layers show one image, the first layer's crop
   sets it. Each answer says what was applied and what was not, naming the
   layer when only one of several missed it. It imports at most eight images per call; the

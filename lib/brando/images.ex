@@ -379,7 +379,7 @@ defmodule Brando.Images do
       title: image.title,
       credits: image.credits,
       alt: image.alt,
-      focal: if(image.focal, do: Map.take(image.focal, [:x, :y]), else: %{x: 50, y: 50}),
+      focal: if(image.focal, do: Map.take(image.focal, [:x, :y, :mode]), else: %{x: 50, y: 50}),
       sizes: %{},
       status: :unprocessed,
       folder_id: Brando.Media.Folders.upload_folder_id(nil, cfg)

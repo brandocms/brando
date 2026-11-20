@@ -70,7 +70,7 @@ defmodule Brando.Images.Image do
   end
 
   relations do
-    relation :focal, :embeds_one, module: Focal
+    relation :focal, :embeds_one, module: Focal, with: {Focal, :cast}
   end
 
   listings do

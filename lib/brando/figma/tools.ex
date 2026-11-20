@@ -61,7 +61,7 @@ defmodule Brando.Figma.Tools do
           "The originals placed in Figma are imported, not screenshots: one entry per image, with its asset (or why it failed) and the layers that show it (node_id, name, section as brando_figma_read_frame numbers them, from 0). " <>
           "Without node_ids, every image of the frame; at most #{Import.max_per_call()} distinct images per call: call again with next_offset until it is null. " <>
           "Only the images read_frame lists are imported, not hidden_fills. " <>
-          "An image shown turned 90, 180 or 270° is imported as a turned copy; another angle, a mirrored crop and the turn of an animated GIF or WebP are not applied. A cropped image keeps its whole file, with its focal point set so the site shows the crop Figma shows. " <>
+          "An image shown turned 90, 180 or 270° is imported as a turned copy; another angle, a mirrored crop and the turn of an animated GIF or WebP are not applied. A cropped image keeps its whole file, with its focal point set so the site, its cropped sizes and its share cards show the crop Figma shows (exactly when the crop spans the image's width or height; a crop that zooms in on both shows with more of the image around it). " <>
           "Each entry says what was applied and what was not (applied, not_applied), in words to pass on to the person; when several layers show the image, what one of them missed names that layer. " <>
           "An image the library already has is reused, so a second import adds nothing; a reused image keeps its own focal point. " <>
           "The images are added to the library at once, before any proposal is applied; their sizes are made in the background.",
