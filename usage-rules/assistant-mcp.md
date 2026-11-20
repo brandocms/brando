@@ -214,7 +214,7 @@ config :brando, Brando.MCP,
   authorize_per_minute: 30,       # consent screen checks per person
   max_request_bytes: 512_000,
   allowed_origins: [],            # browser origins allowed besides the site's own
-  upload_dir: nil,                # where uploads wait; the system's temporary directory by default
+  upload_dir: nil,                # uploads wait in a directory Brando makes here; the system's temporary directory by default
   upload_url_minutes: 10,         # an upload URL's life
   upload_transfer_minutes: 10,    # how long one PUT may take
   upload_keep_minutes: 60,        # an upload must be finished within this, from preparing it

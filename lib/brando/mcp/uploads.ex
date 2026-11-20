@@ -23,9 +23,9 @@ defmodule Brando.MCP.Uploads do
   `Brando.MCP.BodyLimit` refuses the parsed types before the parsers read
   them.
 
-  Pending uploads wait in a directory of their own under `upload_dir`
-  (the system's temporary directory by default), one per upload, readable by
-  the server only: what the prepare call was for, and the bytes once they
+  Pending uploads wait in the application's own directory (`root/0`) in
+  `upload_dir` (the system's temporary directory by default), one directory
+  per upload, readable by the server only: what the prepare call was for, and the bytes once they
   have all arrived. `take/3` (`brando_media_finish_upload`) hands the file
   to the connection that prepared it, once; the directory is removed when
   the upload is finished, and anything not finished within `keep_minutes`
@@ -74,9 +74,36 @@ defmodule Brando.MCP.Uploads do
   defp keep_seconds, do: MCP.config(:upload_keep_minutes, 60) * 60
   defp max_pending, do: MCP.config(:upload_max_pending, 10)
 
-  @doc "The directory pending uploads wait in."
+  @doc """
+  The directory pending uploads wait in: the application's own, in
+  `upload_dir` or the system's temporary directory. Brando makes it and
+  sweeps it; the directory around it is left as it is.
+  """
   @spec root() :: Path.t()
-  def root, do: MCP.config(:upload_dir, nil) || Path.join(System.tmp_dir!(), "brando-mcp-uploads")
+  def root do
+    base = MCP.config(:upload_dir, nil) || System.tmp_dir!()
+    Path.join(base, "brando-mcp-uploads-#{Brando.otp_app() || :brando}")
+  end
+
+  # Only a directory the server has made its own takes an upload: not a
+  # link, and readable by the server alone (`chmod` fails on another user's)
+  defp ensure_root do
+    root = root()
+
+    with :ok <- File.mkdir_p(Path.dirname(root)),
+         :ok <- mkdir_or_exists(root),
+         {:ok, %File.Stat{type: :directory}} <- File.lstat(root),
+         :ok <- File.chmod(root, 0o700) do
+      :ok
+    end
+  end
+
+  defp mkdir_or_exists(path) do
+    case File.mkdir(path) do
+      {:error, :eexist} -> :ok
+      result -> result
+    end
+  end
 
   @doc "The image config uploads are checked against: `{cfg, size limit, allowed types}`."
   @spec limits() :: {map(), pos_integer(), [String.t()]}
@@ -121,8 +148,7 @@ defmodule Brando.MCP.Uploads do
       "keep_until" => now + keep_seconds()
     }
 
-    with :ok <- File.mkdir_p(root()),
-         _ <- File.chmod(root(), 0o700),
+    with :ok <- ensure_root(),
          :ok <- File.mkdir(dir),
          :ok <- File.chmod(dir, 0o700),
          :ok <- File.write(Path.join(dir, @meta), Jason.encode!(meta)) do

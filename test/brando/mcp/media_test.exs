@@ -131,7 +131,7 @@ defmodule Brando.MCP.MediaTest do
 
   defp secret(url), do: Path.basename(URI.parse(url).path)
 
-  defp pending(dir), do: if(File.exists?(dir), do: File.ls!(dir), else: [])
+  defp pending, do: if(File.exists?(Uploads.root()), do: File.ls!(Uploads.root()), else: [])
 
   test "the three tools are offered: the URL import reaches out, the upload does not",
        %{tenant: tenant, token: token} do
@@ -197,7 +197,7 @@ defmodule Brando.MCP.MediaTest do
       assert %{"isError" => true, "structuredContent" => %{"error" => "The upload failed" <> _}} =
                call(tenant, token, "finish_upload", %{"upload_id" => refused})
 
-      refute refused in pending(dir)
+      refute refused in pending()
 
       # A URL past its time that nothing was sent to
       Uploads.discard(third)
@@ -210,20 +210,62 @@ defmodule Brando.MCP.MediaTest do
                call(tenant, token, "finish_upload", %{"upload_id" => expired})
 
       assert error =~ "expired"
-      refute expired in pending(dir)
+      refute expired in pending()
     end
 
     test "uploads not finished in time are removed when the next is prepared, and nightly",
          %{tenant: tenant, token: token, dir: dir} do
       mcp_env(upload_dir: dir, upload_keep_minutes: -1)
       {first, _url} = prepare!(tenant, token)
-      assert pending(dir) == [first]
+      assert pending() == [first]
 
       {second, _url} = prepare!(tenant, token)
-      assert pending(dir) == [second]
+      assert pending() == [second]
 
       MCP.prune()
-      assert pending(dir) == []
+      assert pending() == []
+    end
+
+    test "a configured upload_dir is left as it is: the uploads wait in a directory of their own in it",
+         %{tenant: tenant, token: token, dir: dir} do
+      File.mkdir_p!(dir)
+      File.chmod!(dir, 0o755)
+      # Something of the operator's, named like an upload, long expired
+      theirs = Path.join(dir, String.duplicate("A", 22))
+      File.mkdir_p!(theirs)
+      File.touch!(theirs, 0)
+
+      mcp_env(upload_dir: dir, upload_keep_minutes: -1)
+      {id, _url} = prepare!(tenant, token)
+      MCP.prune()
+
+      assert File.dir?(theirs)
+      assert File.stat!(dir).mode |> Bitwise.band(0o777) == 0o755
+      assert Path.dirname(Uploads.root()) == dir
+      assert File.stat!(Uploads.root()).mode |> Bitwise.band(0o777) == 0o700
+      refute File.exists?(Path.join(dir, id))
+    end
+
+    test "the default directory is the application's own", %{tenant: tenant, token: token} do
+      mcp_env(upload_dir: nil)
+      assert Path.basename(Uploads.root()) == "brando-mcp-uploads-#{Brando.otp_app()}"
+      assert Path.dirname(Uploads.root()) == System.tmp_dir!()
+      {id, _url} = prepare!(tenant, token)
+      Uploads.discard(id)
+    end
+
+    test "a directory the server cannot make its own is refused", %{tenant: tenant, token: token, dir: dir} do
+      elsewhere = dir <> "-elsewhere"
+      File.mkdir_p!(elsewhere)
+      on_exit(fn -> File.rm_rf(elsewhere) end)
+      File.mkdir_p!(dir)
+      mcp_env(upload_dir: dir)
+      File.ln_s!(elsewhere, Uploads.root())
+
+      assert %{"isError" => true, "structuredContent" => %{"error" => "The upload could not be prepared" <> _}} =
+               call(tenant, token, "prepare_upload", %{"kind" => "image", "filename" => "a.jpg"})
+
+      assert File.ls!(elsewhere) == []
     end
 
     test "upload_dir: nil, as the guide shows it, is the default directory, and pruning goes on",
@@ -248,7 +290,7 @@ defmodule Brando.MCP.MediaTest do
 
   describe "an upload" do
     test "is stored as an editor's upload, in the uploads folder, and found again by its bytes",
-         %{tenant: tenant, token: token, dir: dir} do
+         %{tenant: tenant, token: token} do
       assert %{"structuredContent" => result} = upload!(tenant, token, @jpg)
       assert %{"asset" => %{"kind" => "image", "id" => id}, "reused" => false, "folder" => "uploads"} = result
 
@@ -258,7 +300,7 @@ defmodule Brando.MCP.MediaTest do
       assert is_binary(hash)
 
       # The pending bytes are gone once finished
-      assert pending(dir) == []
+      assert pending() == []
 
       # The same bytes again: the image the library has
       assert %{"structuredContent" => %{"asset" => %{"id" => ^id}, "reused" => true}} = upload!(tenant, token, @jpg)
@@ -453,14 +495,14 @@ defmodule Brando.MCP.MediaTest do
       assert %{"structuredContent" => %{"asset" => _}} = call(tenant, token, "finish_upload", %{"upload_id" => id})
     end
 
-    test "an undeclared body is cut off as soon as it passes the size limit", %{tenant: tenant, token: token, dir: dir} do
+    test "an undeclared body is cut off as soon as it passes the size limit", %{tenant: tenant, token: token} do
       {id, url} = prepare!(tenant, token)
       body = @jpg <> :binary.copy(<<0>>, @limit)
       assert %{"error" => "The image is larger" <> _} = put_bytes(url, body) |> json_response(413)
 
       # No partial bytes are left behind
-      refute File.exists?(Path.join([dir, id, "bytes.part"]))
-      refute File.exists?(Path.join([dir, id, "bytes"]))
+      refute File.exists?(Path.join([Uploads.root(), id, "bytes.part"]))
+      refute File.exists?(Path.join([Uploads.root(), id, "bytes"]))
 
       assert %{"isError" => true, "structuredContent" => %{"error" => "The upload failed: The image is larger" <> _}} =
                call(tenant, token, "finish_upload", %{"upload_id" => id})
@@ -507,7 +549,7 @@ defmodule Brando.MCP.MediaTest do
       mcp_env(upload_dir: dir, upload_transfer_minutes: -1)
       {id, url} = prepare!(tenant, token)
       assert %{"error" => "The upload took too long" <> _} = put_bytes(url, @jpg) |> json_response(408)
-      refute File.exists?(Path.join([dir, id, "bytes"]))
+      refute File.exists?(Path.join([Uploads.root(), id, "bytes"]))
     end
   end
 
@@ -520,8 +562,8 @@ defmodule Brando.MCP.MediaTest do
 
       assert_raise RuntimeError, "closed", fn -> put_bytes(url, @jpg, [], :put, DroppingAdapter) end
 
-      refute File.exists?(Path.join([dir, id, "bytes.part"]))
-      refute File.exists?(Path.join([dir, id, "bytes"]))
+      refute File.exists?(Path.join([Uploads.root(), id, "bytes.part"]))
+      refute File.exists?(Path.join([Uploads.root(), id, "bytes"]))
       assert {_id, _url} = prepare!(tenant, token)
 
       assert %{"isError" => true, "structuredContent" => %{"error" => "The upload failed" <> _}} =

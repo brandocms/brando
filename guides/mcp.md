@@ -336,9 +336,12 @@ byte is read, and one sent without a length is cut off the moment it passes
 the limit; one whose first bytes are not an image type the config takes is
 cut off there.
 
-Uploads wait in a directory of their own under the system's temporary
-directory (`upload_dir` below), readable by the server only, until they are
-finished. One not finished in time is removed when the connection's next
+Uploads wait in the application's own directory,
+`brando-mcp-uploads-<otp_app>`, which Brando makes in the system's temporary
+directory, or in `upload_dir` (below) when it is set, readable by the server
+only, until they are finished. The directory around it is left as it is, and
+a directory of that name Brando cannot make its own (a link, or another
+user's) is refused. One not finished in time is removed when the connection's next
 upload is prepared and by the nightly purge. With more than one server
 node, set `upload_dir` to a directory every node shares.
 
@@ -533,7 +536,7 @@ config :brando, Brando.MCP,
   authorize_per_minute: 30,       # consent screen checks per person
   max_request_bytes: 512_000,
   allowed_origins: [],            # browser origins allowed besides the site's own
-  upload_dir: nil,                # where uploads wait; the system's temporary directory by default
+  upload_dir: nil,                # uploads wait in a directory Brando makes here; the system's temporary directory by default
   upload_url_minutes: 10,         # an upload URL's life
   upload_transfer_minutes: 10,    # how long one PUT may take
   upload_keep_minutes: 60,        # an upload must be finished within this, from preparing it
