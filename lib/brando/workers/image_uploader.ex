@@ -70,14 +70,19 @@ defmodule Brando.Worker.ImageUploader do
   end
 
   defp upload(%Oban.Job{id: job_id} = job, image_id, user_id, field_full_path, opts) do
-    with {:ok, image} <- Images.get_image(image_id),
-         {:ok, config} <- Images.get_config_for(image.config_target),
-         :ok <- CDN.upload_image_files(image, config, user_id || :system, opts),
+    with {:ok, before} <- Images.get_image(image_id),
+         {:ok, config} <- Images.get_config_for(before.config_target),
+         :ok <- CDN.upload_image_files(before, config, user_id || :system, opts),
          {:newer_upload, false} <- {:newer_upload, CDN.newer_image_upload?(image_id, job_id)},
          nil <- processing(image_id, job),
          # Marking the upload done is the system's work: the uploader's role
          # may have changed since, and only their progress display is theirs
-         {:ok, image} <- Images.update_image(image, %{cdn: true}, :system) do
+         {:ok, image} <- Images.update_image(before, %{cdn: true}, :system) do
+      # The entries that show it were rendered with the media folder's
+      # addresses, whose files go with `keep_local_copy: false`: they render
+      # again with the CDN's. Never held, a size run's image or not: the
+      # local files go on the next line
+      Images.Rerender.after_processing(before, image)
       CDN.remove_local_copies(image, config)
       broadcast_status(image, field_full_path, :updated)
     else

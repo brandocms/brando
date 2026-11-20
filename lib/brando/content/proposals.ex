@@ -4,9 +4,10 @@ defmodule Brando.Content.Proposals do
   @moduledoc """
   Reviewed content changes across several saved entries.
 
-  A proposal is a list of semantic operations — `CreateEntry`,
-  `CreateTranslation`, `SetFields`, `InsertBlock`, `SetBlockMedia`, `SetBlockValues`, `SetBlockText`, `MoveBlock`
-  and `DeleteBlock` — that `prepare/2` resolves against the actor's content,
+  A proposal is a list of semantic operations — `CreateEntry`, `CreateTranslation`,
+  `SetFields`, `InsertBlock`, `SetBlockMedia`, `SetBlockValues`, `SetBlockText`, `MoveBlock`,
+  `DeleteBlock` and the others in `Brando.Content.Proposals.Codec` — that
+  `prepare/2` resolves against the actor's content,
   validates and freezes. Block operations address any block of a field by its
   uid, including the children of multi modules, containers and slots, and
   are checked in order against the field as the earlier operations leave it
@@ -34,6 +35,10 @@ defmodule Brando.Content.Proposals do
   the copy has no blocks before then: other operations may not name it as
   `{:new, ref}` (`:use_translate`). `translation/2` gives the operation that
   creates a `{:new, ref}` translation, its source and language.
+
+  `ReplaceImageFile` changes no entry: a library image takes another's file
+  (`Brando.Content.Proposals.ImageReplacement`), in the same transaction as
+  the entries. A proposal that replaced a file cannot be undone.
   """
   import Ecto.Query, only: [from: 2]
   import Kernel, except: [apply: 3]
@@ -51,12 +56,14 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.DeleteBlock
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.EntryLinks
+  alias Brando.Content.Proposals.ImageReplacement
   alias Brando.Content.Proposals.InsertBlock
   alias Brando.Content.Proposals.MoveBlock
   alias Brando.Content.Proposals.Proposal
   alias Brando.Content.Proposals.Receipt
   alias Brando.Content.Proposals.Record
   alias Brando.Content.Proposals.RefConfig
+  alias Brando.Content.Proposals.ReplaceImageFile
   alias Brando.Content.Proposals.SetBlockActive
   alias Brando.Content.Proposals.SetBlockDetails
   alias Brando.Content.Proposals.SetBlockMedia
@@ -100,7 +107,7 @@ defmodule Brando.Content.Proposals do
   defp prepare!(operations, actor) do
     Transfer.ensure_scope!(actor)
     user = user!(actor)
-    operations = Enum.map(operations, &(&1 |> freeze() |> EntryLinks.resolve(actor)))
+    operations = Enum.map(operations, &(&1 |> freeze() |> EntryLinks.resolve(actor) |> snapshot(actor)))
     catalogued!(operations)
     creates = creates(operations)
 
@@ -548,6 +555,12 @@ defmodule Brando.Content.Proposals do
     do: %{op | target: target(op.target), field: to_string(op.field), ref: op.ref && to_string(op.ref)}
 
   defp freeze(%DeleteBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
+  defp freeze(%ReplaceImageFile{} = op), do: op
+
+  # The files a replacement swaps, as they are now: never as the operation
+  # given says.
+  defp snapshot(%ReplaceImageFile{} = op, actor), do: ImageReplacement.snapshot(op, actor)
+  defp snapshot(op, _actor), do: op
 
   defp module_reference(reference) do
     Content.SharedLibrary.reference(reference)
@@ -679,6 +692,9 @@ defmodule Brando.Content.Proposals do
         source_problems(op, {schema, id}, proposal, actor)
     end
   end
+
+  defp check(%ReplaceImageFile{} = op, proposal, actor),
+    do: ImageReplacement.problems(op, proposal.operations, actor)
 
   defp check(%SetFields{target: {:new, _}}, _, _),
     do: [problem(:unknown_target, dgettext("content_proposals", "Set the fields of a new entry when creating it."))]
@@ -1883,6 +1899,7 @@ defmodule Brando.Content.Proposals do
         ]),
       moved_blocks: changed.([MoveBlock]),
       deletions: deleted |> Enum.uniq() |> Enum.reject(&(elem(&1, 1) in inserted)) |> length(),
+      replaced_images: Enum.count(proposal.operations, &match?(%ReplaceImageFile{}, &1)),
       live: for({target, %{status: :published}} <- existing, do: target)
     }
   end
@@ -2799,16 +2816,20 @@ defmodule Brando.Content.Proposals do
   # A ref is a name inside one proposal, so a created entry is told apart by
   # its content type, language and address (`created/1`). One without an
   # address overlaps with nothing.
+  # An image a replacement swaps counts as touched, both of them.
   defp touched(operations) do
     creates =
       for %type{ref: ref} = op <- operations, type in [CreateEntry, CreateTranslation], into: %{}, do: {ref, created(op)}
 
-    for op <- operations, target <- changed_targets(op), not is_nil(target), into: MapSet.new() do
-      case target do
-        {:new, ref} -> creates[ref] || {:new, make_ref()}
-        target -> target
+    entries =
+      for op <- operations, target <- changed_targets(op), not is_nil(target), into: MapSet.new() do
+        case target do
+          {:new, ref} -> creates[ref] || {:new, make_ref()}
+          target -> target
+        end
       end
-    end
+
+    for %ReplaceImageFile{asset: old, with: new} <- operations, image <- [old, new], into: entries, do: image
   end
 
   # The slug, or the uri (pages), or the key under its parent key
@@ -2991,6 +3012,7 @@ defmodule Brando.Content.Proposals do
         proposal = rebuild!(record, actor)
         current!(proposal, actor)
         recheck!(proposal, record, actor)
+        ImageReplacement.ready!(proposal.operations)
       end
 
       {:ok, record} = Repo.transaction(fn -> approve!(id, version, actor) end)
@@ -3109,10 +3131,20 @@ defmodule Brando.Content.Proposals do
       record.status != "applied" or is_nil(receipt) ->
         Error.fail!(dgettext("content_proposals", "Only an applied proposal can be undone."))
 
+      replaced_images?(receipt) ->
+        Error.fail!(
+          dgettext("content_proposals", "This proposal replaced an image's file, and a replaced file cannot be undone.")
+        )
+
       true ->
         :ok
     end
   end
+
+  @doc "Whether the proposal of `receipt` replaced an image's file: such a proposal has no undo."
+  @spec replaced_images?(Receipt.t() | nil) :: boolean()
+  def replaced_images?(%Receipt{mappings: mappings}), do: (mappings || %{})["replaced_images"] not in [nil, []]
+  def replaced_images?(_receipt), do: false
 
   defp saved_entries(receipt) do
     for {key, %{"schema" => name, "id" => entry_id, "fingerprint" => fingerprint}} <- receipt.after do
@@ -3232,7 +3264,8 @@ defmodule Brando.Content.Proposals do
 
   @doc """
   Load `version` of proposal `id` for a colleague it was shared with, to
-  review it read-only. The viewer must be able to read its entries; only the
+  review it read-only. The viewer must be able to read its entries, and the
+  images it replaces files of (`ImageReplacement.readable!/3`); only the
   proposing user can approve and apply it.
   """
   @spec get_shared(Ecto.UUID.t(), integer(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
@@ -3247,7 +3280,9 @@ defmodule Brando.Content.Proposals do
       if record.status not in ~w(pending approved applied),
         do: Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
 
-      rebuild!(record, viewer, :read)
+      proposal = rebuild!(record, viewer, :read)
+      ImageReplacement.readable!(proposal.operations, viewer, record.status == "applied")
+      proposal
     end)
   end
 
@@ -3343,6 +3378,7 @@ defmodule Brando.Content.Proposals do
       end)
 
     with {:ok, {receipt, saved}} <- result do
+      ImageReplacement.after_commit(receipt.mappings["replaced_images"] || [])
       Enum.each(saved, &after_apply(&1, actor))
       {:ok, receipt}
     end
@@ -3508,6 +3544,7 @@ defmodule Brando.Content.Proposals do
       updated_blocks: effects["updated_blocks"],
       moved_blocks: effects["moved_blocks"] || 0,
       deletions: effects["deletions"],
+      replaced_images: effects["replaced_images"] || 0,
       live: live
     }
   end
@@ -3558,6 +3595,11 @@ defmodule Brando.Content.Proposals do
     # The revision each entry is at now: undo restores it.
     revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
 
+    # Before the entries are saved, so what they render shows the new file.
+    replaced =
+      for %ReplaceImageFile{} = op <- proposal.operations,
+          do: ImageReplacement.apply!(op, proposal.operations, actor, user)
+
     # An entry blocks are only copied from is not saved, unless it is
     # published as the proposal is applied.
     unchanged = Enum.reject(sources(proposal.operations), &(Proposal.key(&1) in publish))
@@ -3600,7 +3642,8 @@ defmodule Brando.Content.Proposals do
           "created" => for({{:new, ref}, entry, _cs} <- saved, into: %{}, do: {ref, entry.id}),
           "translations" => groups,
           "published" => publish,
-          "effects" => encode_effects(proposal.effects)
+          "effects" => encode_effects(proposal.effects),
+          "replaced_images" => replaced
         }
       })
 

@@ -107,11 +107,13 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   # Either recreate run blocks both buttons, until its last image is
-  # processed: they queue the same jobs. While one goes on, only it is read.
-  defp assign_size_run(socket, %{running?: running?, remaining: remaining}) do
+  # processed and the pages that show its images are rendered again: they
+  # queue the same jobs. While one goes on, only it is read.
+  defp assign_size_run(socket, %{running?: running?, remaining: remaining, pages: pages}) do
     socket
     |> update(:image_tasks, &Map.put(&1, "recreate_sizes", running?))
     |> assign(:image_sizes_remaining, remaining)
+    |> assign(:image_sizes_pages, pages)
   end
 
   defp poll_image_tasks(%{assigns: %{image_tasks: %{"recreate_sizes" => true}, image_tasks_poll: false}} = socket) do
@@ -329,15 +331,24 @@ defmodule BrandoAdmin.Sites.UtilsLive do
                 :if={@image_tasks["recreate_sizes"] && !BrandoAdmin.Work.running?(@work[@image_sizes_key])}
                 id="utils-image-sizes-running"
                 data-remaining={@image_sizes_remaining}
+                data-pages={@image_sizes_pages}
               >
-                {if @image_sizes_remaining > 0,
-                  do:
-                    ngettext(
+                <%= cond do %>
+                  <% @image_sizes_remaining > 0 -> %>
+                    {ngettext(
                       "Recreating image sizes: %{count} image left",
                       "Recreating image sizes: %{count} images left",
                       @image_sizes_remaining
-                    ),
-                  else: gettext("Recreating image sizes")}
+                    )}
+                  <% @image_sizes_pages > 0 -> %>
+                    {ngettext(
+                      "Updating pages: %{count} page left",
+                      "Updating pages: %{count} pages left",
+                      @image_sizes_pages
+                    )}
+                  <% true -> %>
+                    {gettext("Recreating image sizes")}
+                <% end %>
               </small>
               <small :if={@image_failures} id="utils-image-failures" data-count={@image_failures.count}>
                 {ngettext(

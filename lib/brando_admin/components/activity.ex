@@ -22,6 +22,9 @@ defmodule BrandoAdmin.Components.Activity do
   @mcp_setting "Elixir.Brando.MCP.Setting"
   # Utilities → Clear content caches (`Brando.Cache.clear_content/1`)
   @cache "Elixir.Brando.Cache"
+  # A library image whose file an applied proposal replaced
+  # (`Brando.Content.Proposals.ImageReplacement`)
+  @image "Elixir.Brando.Images.Image"
   # A schedule whose user's account is gone (`Brando.Worker.EntryPublisher`)
   @gone_schedulers ["scheduler_missing", "scheduler_inactive"]
 
@@ -589,6 +592,10 @@ defmodule BrandoAdmin.Components.Activity do
     fields = fields_phrase(schema(event.schema), event.fields || [])
     event |> lines(fields, states) |> Enum.reject(&is_nil/1)
   end
+
+  defp lines(%{schema: @image, details: %{"replaced_file" => %{"from" => from}}}, _fields, _states)
+       when is_binary(from),
+       do: [gettext("Its file replaced; it had %{file}", file: from)]
 
   # Webhooks (`Brando.Webhooks`) are settings, not entries
   defp lines(%{schema: @webhook, details: %{"webhook" => "secret_rotated"}}, _fields, _states),

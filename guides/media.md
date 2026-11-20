@@ -140,9 +140,35 @@ Changing size definitions does not regenerate existing images by itself. Each
 processed image records a fingerprint of the sizes and formats it was made
 with, and **Utilities → Image sizes** counts the images whose config has changed
 since; **Recreate changed images** reprocesses only those. The row counts the
-images as each one is recreated, names any that could not be, with a link to
-it, and keeps both buttons disabled until the last image is done, for every
-admin. Confirm the new size paths exist before rendering them. A requested size absent from `image.sizes`
+images as each one is recreated, and names any that could not be, with a link
+to it.
+
+The pages that show a recreated image then render again, so the site serves
+its new sizes: this is the run's second step, "Updating pages", with a count
+of its own. The result names both counts ("65 images recreated, 14 pages
+updated"), and a page that could not be rendered fails the run. Both buttons
+stay disabled until the last page is rendered, for every admin. When no
+page has been rendered for 25 minutes (the render queue held up),
+the run ends as failed and says how many pages are still waiting; their
+renders stay queued and run when the queue does. Each page
+renders once per run, however many of the run's images it shows; if the run
+stops halfway, its pages render by themselves within 15 minutes.
+
+Whenever an image is processed, from a run, the image editor's crop or a new
+file, the entries that show it render again if processing changed anything
+their markup reads from the image (its sizes, formats or dimensions, or the
+config it was made with: a size whose width or crop ratio changed under the
+same name keeps its path, but its `srcset` width and its crop do not). An
+image that Recreate changed images adopts counts as changed too, and so does
+a focal point saved in the image editor or the image drawer, and an image
+whose CDN upload marks it as on the CDN: its pages were rendered with the
+media folder's addresses, and with `keep_local_copy: false` those files go.
+The
+entries are those with it in a block's ref or variable, a page variable, a gallery they
+show, or an asset field, and the entries that show such an entry through its
+identifier or a datasource (a listing of projects showing each cover). A
+global set's image is not followed: the pages that print it render again
+when the global set is saved. Confirm the new size paths exist before rendering them. A requested size absent from `image.sizes`
 is a configuration/processing error, not a fallback image.
 
 ### Images made before fingerprints
@@ -303,6 +329,23 @@ record, URL, metadata, folder, and existing references. The latter affects every
 use of that asset. A failed replacement retains the original.
 If a stable URL is cached outside Brando, refresh the CDN/browser cache after a
 replacement; Brando cannot invalidate an arbitrary proxy automatically.
+
+The file browser writes the new bytes over the old ones, at the same path, so
+the old bytes are gone once it succeeds. **An image's file** is replaced by a
+reviewed proposal from a connected tool (`replace_image_file`, see
+[Connected AI tools](mcp.md)), with another library image's file. The image
+keeps its record, focal point, texts, folder, config and references; its path,
+dimensions, type and `content_hash` become the new file's, so its URLs change,
+and its sizes are made again in the background. The image the file came from
+is removed. Nothing is written over: the new file stays where it was uploaded
+and the image points at it, and a failed approval leaves the image on its
+previous file. That previous original and its sizes stay on disk, no longer
+referenced (another environment of the site may still show them), until
+`Brando.Media.OrphanCleanup` removes them, and for at least 24 hours from the
+replacement: the replacement marks them changed, since the entries that show
+the image link them until they are rendered again, and a visitor's cached page
+longer. The cleanup only removes files from the media folder; what was
+delivered to a CDN stays there. A replaced image file cannot be undone.
 
 Removing an optional field association is not permanent deletion of the shared
 asset. A `required: true` asset must remain present for a valid publishable entry.

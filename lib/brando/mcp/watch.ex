@@ -207,8 +207,14 @@ defmodule Brando.MCP.Watch do
 
   defp output("entry_outline", %{"title" => title}), do: %{"title" => cut(title, @text_limit)}
 
-  defp output("prepare_proposal", data),
-    do: %{"version" => integer(data["version"]), "applicable" => data["applicable"] == true}
+  defp output("prepare_proposal", data) do
+    output = %{"version" => integer(data["version"]), "applicable" => data["applicable"] == true}
+
+    case data["effects"] do
+      %{"replaced_images" => count} when is_integer(count) and count > 0 -> Map.put(output, "replaced_images", count)
+      _ -> output
+    end
+  end
 
   defp output("read_frame", data), do: %{"frame" => frame_name(data)}
 

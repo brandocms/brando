@@ -17,9 +17,9 @@ defmodule Brando.Images.SizeRun do
   #
   # Whether a run is going on comes from the jobs, not from that work, which
   # only its admin sees: `running?/0` is true while the walk or any image it
-  # queued is waiting or being processed, for every admin, on every node. Its
-  # watcher does not count: once the images are done, the run is over, and
-  # another can start before the watcher's last look.
+  # queued is waiting or being processed, for every admin, on every node, and
+  # then while its watcher follows the pages that show its images (the
+  # second step, below). Another run starts only after that.
   #
   # The jobs are the truth, and the work follows them. Each run has an id, in
   # the walk's arguments and each image job's meta:
@@ -40,14 +40,23 @@ defmodule Brando.Images.SizeRun do
   #     it when they are done and their reports did not: a walk that gave up,
   #     a job cancelled or discarded without running. Such a run failed.
   #
-  # A run's work ends with its images: the last image's report ends it by
-  # the count, and the watcher fails what is left once the images are done
-  # (`images_done/2`). A step after the images goes there; see that
-  # function.
+  # A run has a second step: the entries that show its images render again
+  # (`Brando.Images.Rerender`). Each image whose processing changed what a
+  # render reads queues them, held under the run's key (`hold_key/1`) and
+  # tagged with the run's id (`Brando.Content.RenderRun`), so a page that
+  # shows many of the run's images renders once. Once the images are done,
+  # the watcher releases the key (`images_done/2`) and follows the run's
+  # renders, as "Updating pages" with their own count, to the last one
+  # (`pages/2`). Only then does the work end, naming both counts: the last
+  # image's report does not end it, so a run with a watcher closes it there.
+  # A run that dies leaves its held renders to run by themselves at the
+  # maximum hold (`Brando.Content.RenderQueue.max_hold/0`).
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Content.RenderQueue
+  alias Brando.Content.RenderRun
   alias Brando.Images.Processing
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Worker
@@ -65,30 +74,68 @@ defmodule Brando.Images.SizeRun do
   # what is left
   @watch_every 2
   @settle_after 1
+  # The pages step ends, as failed, after this long without a page updated
+  # (the queue held up): its renders stay queued. Shorter than the work's
+  # own timeout, which would end it first, with nothing said of the pages
+  @pages_stall to_timeout(minute: 25)
 
   @doc "The `BrandoAdmin.Work` key a run reports under."
   @spec work_key() :: String.t()
   def work_key, do: @work_key
+
+  @doc "The key a run's renders are held under (`RenderQueue.enqueue_map/2`)."
+  @spec hold_key(String.t()) :: String.t()
+  def hold_key(run), do: @work_key <> ":" <> run
+
+  @doc """
+  How an image job with `meta` queues the renders of the entries that show
+  its image (`Brando.Images.Rerender.after_processing/3`): held under its
+  run's key and tagged with the run, for a job of a run; as they are for
+  any other.
+  """
+  @spec render_options(map() | nil) :: keyword()
+  def render_options(%{@meta_key => run}) when is_binary(run), do: run_render_options(run)
+  def render_options(_meta), do: []
+
+  @doc "How the run `run` queues renders (`render_options/1`): none for no run."
+  @spec run_render_options(String.t() | nil) :: keyword()
+  def run_render_options(run) when is_binary(run), do: [hold: hold_key(run), run: run]
+  def run_render_options(_run), do: []
 
   @doc "The image maintenance tasks that are a run."
   @spec tasks() :: [String.t()]
   def tasks, do: @tasks
 
   @doc """
-  Is a run going on in the current site: its walk unfinished, or
-  an image it queued waiting or being processed?
+  Is a run going on in the current site: its walk unfinished, an image it
+  queued waiting or being processed, or its watcher still to see its pages
+  rendered?
   """
   @spec running?() :: boolean()
   def running?, do: status().running?
 
   @doc """
-  Whether a run is going on (`running?/0`) and how many images it has left
-  (`remaining/0`), read once.
+  Whether a run is going on (`running?/0`), how many images it has left
+  (`remaining/0`) and, once those are done, how many pages it has left to
+  render, read once.
   """
-  @spec status() :: %{running?: boolean(), remaining: non_neg_integer()}
+  @spec status() :: %{running?: boolean(), remaining: non_neg_integer(), pages: non_neg_integer()}
   def status do
     remaining = remaining()
-    %{running?: remaining > 0 or walking?(), remaining: remaining}
+
+    cond do
+      remaining > 0 ->
+        %{running?: true, remaining: remaining, pages: 0}
+
+      walking?() ->
+        %{running?: true, remaining: 0, pages: 0}
+
+      true ->
+        case watching() do
+          [] -> %{running?: false, remaining: 0, pages: 0}
+          runs -> %{running?: true, remaining: 0, pages: pages_left(runs)}
+        end
+    end
   end
 
   @doc """
@@ -120,9 +167,7 @@ defmodule Brando.Images.SizeRun do
   defp of_run(query, run), do: from(j in query, where: fragment("? ->> ?", j.meta, ^@meta_key) == ^run)
 
   # The walk of either task, or `run`'s walk, unfinished. A watcher is not
-  # a walk: once its walk and images are done, the run is over, though the
-  # watcher has yet to look (and a watcher left executing by a node that is
-  # gone holds nothing). A walk left executing past its timeout is not
+  # a walk (`watching/0`). A walk left executing past its timeout is not
   # counted, as an image's job is not (`remaining/1`).
   defp walking?(run \\ nil) do
     worker = Oban.Worker.to_string(Worker.ImageMaintenance)
@@ -140,6 +185,51 @@ defmodule Brando.Images.SizeRun do
         limit: 1
 
     Brando.Repo.one(query) == true
+  end
+
+  # The runs whose watcher is unfinished: their pages may be left to render.
+  # A watcher left executing by a node that is gone holds nothing, and its
+  # run's held renders run by themselves; one whose last look has ended the
+  # run holds nothing either.
+  defp watching(except \\ nil) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+    args = TenantJob.attach(%{"watch" => true})
+    stale = DateTime.add(DateTime.utc_now(), -Worker.ImageMaintenance.timeout(%Oban.Job{}), :millisecond)
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and j.state in ^@unfinished_states and
+            (j.state != "executing" or j.attempted_at > ^stale) and fragment("? @> ?", j.args, ^args) and
+            not fragment("? @> ?", j.args, ^%{"ended" => true}),
+        select: fragment("? ->> 'run'", j.args),
+        distinct: true
+
+    query |> Brando.Repo.all() |> Enum.reject(&(is_nil(&1) or &1 == except))
+  end
+
+  # The entries with a render of `runs` waiting or running, each once. One
+  # left executing well past its timeout is not counted (`RenderRun`).
+  defp pages_left(runs) do
+    worker = "Brando.Worker.EntryRenderer"
+    stale = DateTime.add(DateTime.utc_now(), -2, :minute)
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and j.state in ^@unfinished_states and
+            (j.state != "executing" or j.attempted_at > ^stale) and
+            fragment("jsonb_exists_any(? -> 'brando_runs', ?::text[])", j.meta, ^runs) and
+            fragment("? ->> 'tenant_prefix' IS NOT DISTINCT FROM ?", j.args, ^Brando.Tenant.current_prefix()),
+        select:
+          fragment(
+            "count(DISTINCT (? ->> 'tenant_prefix', regexp_replace(? ->> 'schema', '^Elixir\\.', ''), ? ->> 'entry_id'))",
+            j.args,
+            j.args,
+            j.args
+          )
+
+    Brando.Repo.one(query, prefix: "public")
   end
 
   @doc """
@@ -179,13 +269,16 @@ defmodule Brando.Images.SizeRun do
   end
 
   @doc """
-  The watcher's look at its run, `args` its job's arguments: `{:snooze, s}`
-  while the walk or any of the run's images is unfinished. Once they are all
-  done it looks once more, a moment later, and then ends the run's work if
-  it is still running: a report never came.
+  The watcher's look at its run, `job` its job: `{:snooze, s}` while the
+  walk or any of the run's images is unfinished. Once they are all done it
+  looks once more, a moment later, and then follows the run's pages
+  (`pages/2`). The watcher is one job row: a look that has more to say to
+  the next writes it into the row's arguments, and snoozes.
   """
-  @spec watch(map(), Processing.user()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
-  def watch(%{"run" => run} = args, user) do
+  @spec watch(Oban.Job.t(), Processing.user()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
+  def watch(%Oban.Job{args: %{"pages" => _}} = job, user), do: pages(job, user)
+
+  def watch(%Oban.Job{args: %{"run" => run}} = job, user) do
     remaining = remaining(run)
 
     cond do
@@ -199,11 +292,11 @@ defmodule Brando.Images.SizeRun do
         # Says nothing new to a node that still has the work. Of the run's
         # finished images, only the failed ones are counted again
         failed = failures(run)
-        resume(user, remaining + length(failed), length(failed), false, failed)
+        resume(user, remaining + length(failed), length(failed), true, failed)
         {:snooze, @watch_every}
 
       true ->
-        images_done(args, user)
+        images_done(job, user)
     end
   end
 
@@ -233,31 +326,278 @@ defmodule Brando.Images.SizeRun do
     requeued > 0
   end
 
-  # The run's walk and images are done, and this is where its work ends. The
-  # last image's report has ended it by the count, unless that report never
-  # came (a walk that gave up, a job cancelled or discarded without running):
-  # the watcher looks once more, a moment later, and fails what is left.
-  #
-  # A step after the images (#3735: "Updating N pages", the renders of the
-  # entries that show the recreated images) goes here. It then has to keep
-  # the work from ending by the count first: close it here rather than after
-  # the walk, start the step, and give it a watch of its own before the
-  # work ends.
-  defp images_done(%{"settle" => true}, user) do
-    # The run is over as soon as its images are: another may have started
-    # since, and the work under the key is that one's
-    unless running?(), do: Work.fail(user, @work_key)
+  # The run's walk and images are done: its renders are released, and a
+  # moment later, once the last image's report is in, the watcher starts
+  # following them (`pages/2`). The work does not end before: the last
+  # image's report counts, and an image whose report never came (a walk
+  # that gave up, a job cancelled or discarded without running) fails the
+  # run at the end.
+  defp images_done(%Oban.Job{args: %{"settle" => true} = args} = job, user) do
+    pages = %{
+      "images" => images(args, user),
+      "images_failed" => images_failed?(args, user),
+      "seen" => %{},
+      "since" => System.os_time(:second)
+    }
+
+    pages(%{job | args: args |> Map.delete("settle") |> Map.put("pages", pages)}, user)
+  end
+
+  defp images_done(%Oban.Job{args: %{"run" => run} = args} = job, _user) do
+    RenderQueue.release(hold_key(run))
+    snooze(job, args |> with_count(run) |> Map.put("settle", true), @settle_after)
+  end
+
+  # The walk's count, as its last batch wrote it into the watcher's row
+  # (`close/3`): arguments the look was fetched with before that lack it,
+  # and a missing count reads as a walk that gave up
+  defp with_count(args, run) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and fragment("? @> ?", j.args, ^TenantJob.attach(%{"run" => run, "watch" => true})) and
+            fragment("jsonb_typeof(? -> 'queued') = 'number'", j.args),
+        order_by: [desc: j.id],
+        limit: 1,
+        select: fragment("(? ->> 'queued')::integer", j.args)
+
+    case Brando.Repo.one(query) do
+      nil -> args
+      queued -> Map.put(args, "queued", queued)
+    end
+  end
+
+  # The next look reads `args`: they are written into the watcher's row,
+  # which Oban then schedules again. A job with no row (Oban's inline
+  # testing mode) has its next look as a job of its own.
+  defp snooze(%Oban.Job{id: nil}, args, seconds) do
+    case args |> Worker.ImageMaintenance.new(schedule_in: seconds) |> Oban.insert() do
+      {:ok, _job} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp snooze(%Oban.Job{id: id}, args, seconds) do
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^id), set: [args: args])
+    {:snooze, seconds}
+  end
+
+  # How many images the run queued: the walk's count, which its last batch
+  # gives the watcher (`close/3`), or the work's
+  defp images(%{"queued" => queued}, _user) when is_integer(queued), do: queued
+
+  defp images(_args, user) do
+    case Work.get(user, @work_key) do
+      %Work{total: total} when is_integer(total) -> total
+      _ -> 0
+    end
+  end
+
+  # A walk that never closed (it gave up), an image that failed, or one
+  # whose report never came
+  defp images_failed?(%{"run" => run} = args, user) do
+    work = Work.get(user, @work_key)
+
+    not is_integer(args["queued"]) or failures(run) != [] or
+      match?(%Work{failed: failed} when failed > 0, work) or
+      match?(%Work{total: total, done: done} when is_integer(total) and done < total, work)
+  end
+
+  # The run's second step, one look: releases the run's renders (again: a
+  # held render the run queued since is released too) and counts its pages,
+  # the entries its renders are for. While any is left, it reports the count
+  # and snoozes, its arguments carrying the pages it has seen settle: the
+  # Pruner deletes finished jobs (after 300 seconds by Brando's default),
+  # and a page counted once stays counted. A page whose render is queued
+  # again counts as left until that one settles. When none is left, the work
+  # ends, with the images' count and the pages', failed when an image or a
+  # page failed.
+  defp pages(%Oban.Job{args: %{"run" => run, "pages" => pages} = args} = job, user) do
+    RenderQueue.release(hold_key(run))
+    %{seen: seen, left: left, total: total, failed: failed, since: since} = count_pages(run, pages)
+    # Another run's work is under the key now: this one's watcher was left
+    # behind by a node that went down, and is late
+    ours? = watching(run) == [] and not walking_other?(run)
+
+    cond do
+      left == [] ->
+        end_pages(job, ours?, fn -> end_run(user, pages, total, failed) end)
+
+      System.os_time(:second) - since > div(@pages_stall, 1000) ->
+        end_pages(job, ours?, fn -> end_run(user, pages, map_size(seen), failed, length(left)) end)
+
+      true ->
+        if ours?, do: report_pages(user, run, pages, map_size(seen), total)
+
+        pages =
+          Map.merge(pages, %{"seen" => seen, "left" => left, "since" => since, "reported" => [map_size(seen), total]})
+
+        snooze(job, Map.put(args, "pages", pages), @watch_every)
+    end
+  end
+
+  # The run's pages in this site (a run's renders are queued in its site):
+  # those seen settle, by entry, those left, and when a page last finished
+  defp count_pages(run, pages) do
+    site = Brando.Tenant.current_prefix()
+    states = for {{prefix, _, _}, _} = entry <- RenderRun.render_states(run), prefix == site, into: %{}, do: entry
+    left = unsettled(states)
+    seen = Map.merge(pages["seen"] || %{}, vanished(pages, states))
+    seen = seen |> Map.merge(settled(states)) |> Map.drop(left)
+    failed = Enum.count(seen, fn {_entry, outcome} -> outcome == "failed" end)
+    %{seen: seen, left: left, total: map_size(seen) + length(left), failed: failed, since: since(pages, seen)}
+  end
+
+  defp end_pages(job, ours?, end_run) do
+    ended(job)
+    if ours?, do: end_run.()
     :ok
   end
 
-  defp images_done(args, _user) do
-    args
-    |> Map.put("settle", true)
-    |> Worker.ImageMaintenance.new(schedule_in: @settle_after)
-    |> Oban.insert()
-    |> case do
-      {:ok, _job} -> :ok
-      {:error, reason} -> {:error, reason}
+  # The run is over before the work ends, though the watcher's row is still
+  # executing: an admin's view reads the jobs when the work ends
+  # (`watching/1`)
+  defp ended(%Oban.Job{id: nil}), do: :ok
+
+  defp ended(%Oban.Job{id: id, args: args}) do
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^id), set: [args: Map.put(args, "ended", true)])
+    :ok
+  end
+
+  # When a page last finished, in Unix seconds: now, when one did since the
+  # last look, or the step began now
+  defp since(%{"since" => since, "seen" => before}, seen) when is_integer(since) do
+    if Enum.any?(seen, fn {entry, outcome} -> before[entry] != outcome end), do: System.os_time(:second), else: since
+  end
+
+  defp since(_pages, _seen), do: System.os_time(:second)
+
+  # As the jobs table holds an entry: the same entry queued as a module or
+  # its name is one page
+  defp entry_id({prefix, schema, entry_id}), do: Enum.join([prefix || "", schema, entry_id], "|")
+
+  # "done" or "failed" for each entry whose renders have all settled, as its
+  # last render ended (`RenderRun.render_states/1` has it first): one queued
+  # again after a render that failed decides. A render cancelled or given up
+  # failed; one left executing by a node that is gone too.
+  defp settled(states) do
+    for {entry, [last | _] = entry_states} <- states,
+        not Enum.any?(entry_states, &(&1 in @unfinished_states)),
+        into: %{} do
+      failed? = last in ~w(discarded cancelled stale)
+      {entry_id(entry), if(failed?, do: "failed", else: "done")}
+    end
+  end
+
+  # The pages left at the last look whose renders are gone from the table:
+  # they finished, and the Pruner deleted them (completed ones 300 seconds
+  # after they were scheduled), as `RenderRun` counts them
+  defp vanished(pages, states) do
+    present = MapSet.new(Map.keys(states), &entry_id/1)
+    for entry <- pages["left"] || [], not MapSet.member?(present, entry), into: %{}, do: {entry, "done"}
+  end
+
+  defp unsettled(states) do
+    for {entry, entry_states} <- states, Enum.any?(entry_states, &(&1 in @unfinished_states)), do: entry_id(entry)
+  end
+
+  defp walking_other?(run) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+    args = TenantJob.attach(%{})
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and j.state in ^@unfinished_states and fragment("? @> ?", j.args, ^args) and
+            fragment("? ->> 'task'", j.args) in ^@tasks and fragment("? ->> 'run'", j.args) != ^run,
+        select: true,
+        limit: 1
+
+    Brando.Repo.one(query) == true
+  end
+
+  # Says the work again for a node that lost it, then the pages' count,
+  # when it changed since the last look
+  defp report_pages(user, run, pages, settled, total) do
+    if Work.user_id(user), do: Work.in_locale(user, fn -> say_pages(user, run, pages, settled, total) end)
+    :ok
+  end
+
+  defp say_pages(user, run, pages, settled, total) do
+    message = gettext("Updating pages")
+
+    unless Work.running?(Work.get(user, @work_key)) do
+      failed = failures(run)
+      opts = [total: total, counted: settled, open: true, failures: length(failed), failed_items: failed]
+      Work.resume(user, @work_key, message, opts ++ work_opts())
+    end
+
+    if pages["reported"] != [settled, total],
+      do: Work.update(user, @work_key, message, total: total, done: settled)
+  end
+
+  # `waiting`: the pages still to render when the step gave up on them
+  defp end_run(user, pages, total, failed, waiting \\ 0) do
+    images_failed? = pages["images_failed"] == true
+
+    Work.in_locale(user, fn ->
+      message = result_message(pages["images"] || 0, images_failed?, total, failed, waiting)
+
+      if images_failed? or failed > 0 or waiting > 0,
+        do: Work.fail(user, @work_key, message),
+        else: Work.finish(user, @work_key, message)
+    end)
+
+    :ok
+  end
+
+  @doc """
+  The message a run ends with, in the current locale: "65 images recreated,
+  14 pages updated", from the images it queued, whether any failed, the
+  pages it updated and those it could not, and the pages still waiting when
+  the pages step gave up on them.
+  """
+  @spec result_message(non_neg_integer(), boolean(), non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
+          String.t()
+  def result_message(images, images_failed?, pages, failed_pages, waiting \\ 0)
+
+  def result_message(images, images_failed?, pages, failed_pages, waiting) when waiting > 0 do
+    gettext("%{images}, %{pages}",
+      images: result_message(images, images_failed?, pages, failed_pages),
+      pages:
+        ngettext(
+          "%{count} page is still waiting to be updated",
+          "%{count} pages are still waiting to be updated",
+          waiting
+        )
+    )
+  end
+
+  def result_message(images, images_failed?, pages, failed_pages, _waiting) do
+    images =
+      cond do
+        images_failed? -> gettext("Some images could not be recreated")
+        images == 0 -> gettext("No images to recreate")
+        true -> ngettext("%{count} image recreated", "%{count} images recreated", images)
+      end
+
+    cond do
+      pages == 0 ->
+        images
+
+      failed_pages > 0 ->
+        gettext("%{images}, %{pages}",
+          images: images,
+          pages: ngettext("%{count} page could not be updated", "%{count} pages could not be updated", failed_pages)
+        )
+
+      true ->
+        gettext("%{images}, %{pages}",
+          images: images,
+          pages: ngettext("%{count} page updated", "%{count} pages updated", pages)
+        )
     end
   end
 
@@ -357,34 +697,58 @@ defmodule Brando.Images.SizeRun do
   reports none: the image is counted once, when the replaced job ends. The
   work can then end before the new job is done, and does not hear of it
   failing. The run, read from the jobs, goes on until the new job is done.
+
+  An image whose file replaced another's (`replace_image_file`) hands its
+  place to the image it replaced, whose job is then queued. A job that
+  already took over a place keeps it.
   """
   @spec carry_over(Ecto.Changeset.t(), [%{state: String.t(), meta: map()}]) :: Ecto.Changeset.t()
   def carry_over(changeset, deleted) do
+    meta = Ecto.Changeset.get_field(changeset, :meta) || %{}
+
     case Enum.find(deleted, &(&1.state in @unfinished_states and Map.has_key?(&1.meta || %{}, @meta_key))) do
       nil ->
         changeset
 
+      # A job that took over one place keeps it
+      _replaced when is_map_key(meta, @meta_key) ->
+        changeset
+
       %{state: state, meta: replaced} ->
         keys = if state == "executing", do: [@meta_key], else: [@meta_key, Work.meta_key()]
-        meta = Ecto.Changeset.get_field(changeset, :meta) || %{}
         Ecto.Changeset.put_change(changeset, :meta, Map.merge(meta, Map.take(replaced, keys)))
     end
   end
 
   @doc """
-  No more images: the run ends when the last queued one is done, or at once
-  when `queued`, the run's count, is none.
+  No more images. A run with a watcher (`run`, its id) gives it the count,
+  `queued`, and its work goes on to the pages (`pages/2`), even with none
+  queued: the images it adopted may have pages to render. A run without one
+  ends when the last queued image is done, or at once when there were none.
   """
-  @spec close(Processing.user(), non_neg_integer()) :: :ok
-  def close(user, queued) do
-    Work.in_locale(user, fn ->
-      done =
-        if queued == 0,
-          do: gettext("No images to recreate"),
-          else: ngettext("%{count} image recreated", "%{count} images recreated", queued)
+  @spec close(Processing.user(), non_neg_integer(), String.t() | nil) :: :ok
+  def close(user, queued, run \\ nil) do
+    if is_nil(run) or tell_watcher(run, queued) == 0,
+      do: Work.in_locale(user, fn -> Work.close(user, @work_key, done: closed(queued)) end)
 
-      Work.close(user, @work_key, done: done)
-    end)
+    :ok
+  end
+
+  defp closed(0), do: gettext("No images to recreate")
+  defp closed(queued), do: ngettext("%{count} image recreated", "%{count} images recreated", queued)
+
+  # Returns how many watchers it told: none when the run has none
+  defp tell_watcher(run, queued) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+    args = TenantJob.attach(%{"run" => run, "watch" => true})
+
+    query =
+      from j in Oban.Job,
+        where: j.worker == ^worker and j.state in ^@unfinished_states and fragment("? @> ?", j.args, ^args),
+        update: [set: [args: fragment("? || ?", j.args, type(^%{"queued" => queued}, :map))]]
+
+    {count, _} = Brando.Repo.update_all(query, [])
+    count
   end
 
   defp mark(changeset, user, image, run) do

@@ -2,6 +2,8 @@ defmodule Brando.Worker.ImageProcessor do
   @moduledoc false
   use Oban.Worker, queue: :image_processing, max_attempts: 5
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Assets.CompletedCallback
   alias Brando.Assets.ProcessingStatus
   alias Brando.Images
@@ -72,12 +74,22 @@ defmodule Brando.Worker.ImageProcessor do
       end
 
     case result do
-      {:processed, image, config, user} ->
-        finish_processing(image, original, config, user, field_full_path)
+      {:processed, processed, config, user} ->
+        # The entries that show it render again when a render reads anything
+        # processing changed: held, within a size run, until its images are
+        # done. Before the callback: a job that fails after the record is
+        # stored is retried, and the retry reads the stored record as before
+        Images.Rerender.after_processing(image, processed, Images.SizeRun.render_options(job.meta))
+        finish_processing(processed, original, config, user, field_full_path)
+        broadcast_status(processed, field_full_path, :updated)
 
       {:not_updated, error} ->
         Images.discard_restored_original(image, original)
         error
+
+      :file_replaced ->
+        Images.discard_restored_original(image, original)
+        :ok
 
       {:error, :too_many_pixels} ->
         Images.discard_restored_original(image, original)
@@ -110,12 +122,25 @@ defmodule Brando.Worker.ImageProcessor do
       )
 
     # The sizes are the system's work, written whatever the uploader's role is
-    # by now; the uploader is still the one the callback and progress are for
-    case Images.update_image(image, image_params, :system) do
-      {:ok, image} -> {:processed, image, config, user}
-      error -> {:not_updated, error}
-    end
+    # by now; the uploader is still the one the callback and progress are for.
+    # Written only while the image has the file this run loaded: one given
+    # another since (`replace_image_file`) has a job of its own for it
+    {:ok, result} =
+      Brando.Repo.transaction(fn ->
+        with true <- file_unchanged?(image),
+             {:ok, image} <- Images.update_image(image, image_params, :system) do
+          {:processed, image, config, user}
+        else
+          false -> :file_replaced
+          error -> {:not_updated, error}
+        end
+      end)
+
+    result
   end
+
+  defp file_unchanged?(%{id: id, path: path}),
+    do: Brando.Repo.one(from(i in Images.Image, where: i.id == ^id, select: i.path, lock: "FOR UPDATE")) == path
 
   # A callback that raises fails the job before the image is handed over
   defp finish_processing(image, original, config, user, field_full_path) do
@@ -129,7 +154,6 @@ defmodule Brando.Worker.ImageProcessor do
 
     Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
     ProcessingStatus.broadcast(:image, image, :done)
-    broadcast_status(image, field_full_path, :updated)
   end
 
   # Images uploaded before Brando recorded upright dimensions have those of

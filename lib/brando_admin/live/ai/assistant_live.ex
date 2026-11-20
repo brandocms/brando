@@ -21,6 +21,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   alias Brando.AI.Agent
   alias Brando.Content.Proposals
+  alias Brando.Content.Proposals.ImageReplacement
   alias Brando.Content.Proposals.Review
   alias Brando.Repo
   alias BrandoAdmin.Components.ImagePicker
@@ -64,6 +65,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        proposal: nil,
        unloadable_id: nil,
        review: [],
+       replacements: [],
        media: %{},
        receipt: nil,
        error: nil,
@@ -153,6 +155,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        proposal: nil,
        unloadable_id: nil,
        review: [],
+       replacements: [],
        receipt: nil,
        error: nil
      )
@@ -192,6 +195,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <.review
           proposal={@proposal}
           review={@review}
+          replacements={@replacements}
           media={@media}
           aliases={%{}}
           receipt={nil}
@@ -437,6 +441,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <.review
             proposal={@proposal}
             review={@review}
+            replacements={@replacements}
             media={@media}
             aliases={aliases(@conversation)}
             receipt={@receipt}
@@ -744,6 +749,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   attr :proposal, :any, required: true
   attr :review, :list, required: true
+  attr :replacements, :list, default: [], doc: "the image files it replaces (`ImageReplacement.review/1`)"
   attr :media, :map, required: true
   attr :aliases, :map, default: %{}
   attr :receipt, :any, required: true
@@ -819,6 +825,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         problems?: assigns.proposal.problems != [],
         general_problems: Enum.filter(assigns.proposal.problems, &(is_nil(&1[:operation]) and is_nil(&1[:target]))),
         entry_problems: for(entry <- assigns.review, problem <- entry.problems, do: {entry, problem}),
+        replacement_problems:
+          for(replacement <- assigns.replacements, problem <- replacement.problems, do: {replacement, problem}),
+        replaced: length(assigns.replacements),
         can_leave_out?: can_leave_out?(assigns),
         under_review?: under_review?(assigns)
       )
@@ -878,6 +887,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <li :for={{entry, problem} <- @entry_problems}>
             <a href={"#card-#{entry.key}"}>{entry.title}</a> {problem.message}
           </li>
+          <li :for={{replacement, problem} <- @replacement_problems}>
+            <a href={"#replacement-#{replacement.old.id}"}>{replacement_title(replacement)}</a> {problem.message}
+          </li>
           <li :for={problem <- @general_problems}>{problem.message}</li>
         </ul>
       </div>
@@ -892,9 +904,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <span :if={!(item[:saved_url] || item[:admin_url])}>{item.title}</span>
             <span class="badge" data-testid="assistant-receipt-badge">{receipt_badge(item, @receipt)}</span>
           </li>
+          <li :for={replacement <- @replacements}>
+            <span>{replacement_title(replacement)}</span>
+            <span class="badge" data-testid="assistant-receipt-badge">{gettext("File replaced")}</span>
+          </li>
         </ul>
+        <p :if={@replaced > 0 and @proposal.status == "applied"}>
+          {gettext("A replaced image file cannot be undone, so this proposal has no undo.")}
+        </p>
         <button
-          :if={@proposal.status == "applied"}
+          :if={@proposal.status == "applied" and @replaced == 0}
           type="button"
           class="btn assistant-undo"
           phx-click="undo"
@@ -915,7 +934,19 @@ defmodule BrandoAdmin.AI.AssistantLive do
         shareable?={page_shareable?(@proposal)}
       />
 
-      <div :if={!@preview} class="assistant-section-head">
+      <div :if={!@preview and @replacements != []} class="assistant-section-head">
+        <h3>{gettext("Image files")}</h3>
+      </div>
+      <div :if={!@preview and @replacements != []} class="assistant-cards">
+        <.replacement
+          :for={replacement <- @replacements}
+          replacement={replacement}
+          can_leave_out?={@can_leave_out?}
+          applied={!is_nil(@receipt)}
+        />
+      </div>
+
+      <div :if={!@preview and (@review != [] or @replacements == [])} class="assistant-section-head">
         <h3>{gettext("Changes by entry")}</h3>
       </div>
       <div :if={!@preview} class="assistant-cards">
@@ -1021,7 +1052,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <div :if={!@shared and @under_review?} class="assistant-apply-bar">
         <div class="assistant-apply-summary">
           <strong>{entry_summary(@proposal.effects)}</strong>
-          <span>{block_summary(@proposal.effects)}</span>
+          <span :if={@entry_changes > 0 or @replaced == 0}>{block_summary(@proposal.effects)}</span>
         </div>
         <div class="assistant-apply-actions">
           <button
@@ -1049,12 +1080,151 @@ defmodule BrandoAdmin.AI.AssistantLive do
             disabled={@problems? or @applying}
             phx-disable-with={gettext("Applying…")}
           >
-            {apply_label(@entry_changes, @live)}<.icon name="arrow-right" />
+            {apply_label(@entry_changes, @live, @replaced)}<.icon name="arrow-right" />
           </button>
         </div>
       </div>
     </div>
     """
+  end
+
+  attr :replacement, :map, required: true
+  attr :can_leave_out?, :boolean, default: false
+  attr :applied, :boolean, default: false
+
+  # An image whose file the proposal replaces: the file it has and the one
+  # it takes, side by side as they were prepared, and every entry that shows
+  # it, since they all change.
+  defp replacement(assigns) do
+    assigns =
+      assign(assigns,
+        total: length(assigns.replacement.entries) + assigns.replacement.hidden
+      )
+
+    ~H"""
+    <article
+      class={["assistant-card assistant-replacement", @replacement.problems != [] && "has-problems"]}
+      id={"replacement-#{@replacement.old.id}"}
+    >
+      <div class="assistant-card-body">
+        <header>
+          <span class="assistant-card-type">{gettext("Image")} #{@replacement.old.id}</span>
+          <span class="assistant-replacement-actions">
+            <button
+              :if={@can_leave_out?}
+              type="button"
+              class="assistant-leave-out"
+              phx-click="leave_out"
+              phx-value-operations={Enum.join(@replacement.operations, ",")}
+              phx-value-subject={gettext("replacing the file of image %{id}", id: @replacement.old.id)}
+              title={gettext("Leave this change out of the proposal")}
+            >
+              <.icon name="x" /><span>{gettext("Leave out")}</span>
+            </button>
+            <span class="badge badge--ai" data-testid="assistant-action-replace-file">
+              {if(@applied, do: gettext("File replaced"), else: gettext("Replace file"))}
+            </span>
+          </span>
+        </header>
+        <h4>{replacement_title(@replacement)}</h4>
+
+        <div class="assistant-replacement-files">
+          <.replacement_file
+            file={@replacement.old}
+            label={if(@applied, do: gettext("Before"), else: gettext("Now"))}
+            class="is-old"
+          />
+          <span class="assistant-replacement-arrow" aria-hidden="true"><.icon name="arrow-right" /></span>
+          <.replacement_file
+            file={@replacement.new}
+            label={if(@applied, do: gettext("After"), else: gettext("Proposed"))}
+            class="is-new"
+          />
+        </div>
+
+        <p class="assistant-replacement-keeps">
+          {gettext(
+            "The image keeps its id, title, alt text, credits, focal point and folder. Its sizes are made again from the new file."
+          )}
+        </p>
+
+        <div :if={@replacement.proportions_differ?} class="assistant-feedback is-warning" role="status">
+          {gettext(
+            "The proportions differ. The focal point and every crop carry over unchanged, so check how the image is framed where it is used."
+          )}
+        </div>
+
+        <div class="assistant-replacement-uses">
+          <strong :if={@total > 0}>
+            {ngettext("Changes %{count} entry that shows it", "Changes %{count} entries that show it", @total)}
+          </strong>
+          <strong :if={@total == 0}>{gettext("No entry shows it")}</strong>
+          <ul :if={@total > 0}>
+            <li :for={entry <- @replacement.entries}>
+              <.link :if={entry.url} navigate={entry.url}>{entry.label}</.link>
+              <span :if={!entry.url}>{entry.label}</span>
+              <small>{entry.type}</small>
+            </li>
+            <li :if={@replacement.hidden > 0} class="is-hidden">
+              {ngettext("%{count} entry you cannot see", "%{count} entries you cannot see", @replacement.hidden)}
+            </li>
+          </ul>
+        </div>
+
+        <ul :if={@replacement.problems != []} class="assistant-problems">
+          <li :for={problem <- @replacement.problems}><.icon name="triangle-alert" />{problem.message}</li>
+        </ul>
+      </div>
+    </article>
+    """
+  end
+
+  attr :file, :map, required: true
+  attr :label, :string, required: true
+  attr :class, :string, default: nil
+
+  defp replacement_file(assigns) do
+    assigns = assign(assigns, :src, replacement_src(assigns.file.image))
+
+    ~H"""
+    <figure class={["assistant-replacement-file", @class]}>
+      <span class="assistant-replacement-frame">
+        <img
+          :if={@src}
+          src={@src}
+          width={@file.width}
+          height={@file.height}
+          alt=""
+          loading="lazy"
+        />
+        <.icon :if={!@src} name="image" />
+      </span>
+      <figcaption>
+        <span class="assistant-replacement-label">{@label}</span>
+        <span :if={@file.name} class="assistant-replacement-name" title={@file.name}>{@file.name}</span>
+        <span class="assistant-replacement-meta">
+          {Enum.join(Enum.reject([dimensions(@file), @file.type], &is_nil/1), " · ")}
+        </span>
+      </figcaption>
+    </figure>
+    """
+  end
+
+  defp replacement_title(%{old: %{name: name, id: id}}),
+    do: name || gettext("Image #%{id}", id: id)
+
+  defp dimensions(%{width: width, height: height}) when is_integer(width) and is_integer(height),
+    do: "#{width} × #{height}"
+
+  defp dimensions(_file), do: nil
+
+  # Uncropped, so the proportions show; the original while it has no sizes.
+  defp replacement_src(nil), do: nil
+
+  defp replacement_src(image) do
+    image |> Sources.candidates(uncropped: true) |> Sources.src(480) || image_url(image)
+  rescue
+    _ -> nil
   end
 
   attr :entry, :map, required: true
@@ -1761,8 +1931,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   def handle_event("share_review", _, socket) do
     case socket.assigns.review do
-      [_, _ | _] = review -> {:noreply, assign(socket, :share_choice, Enum.map(review, & &1.key))}
-      _ -> handle_event("share_review", %{"keys" => Enum.map(socket.assigns.review, & &1.key)}, socket)
+      [_, _ | _] = review ->
+        {:noreply, assign(socket, :share_choice, Enum.map(review, & &1.key))}
+
+      # Only image files replaced: no entry to choose, the whole proposal
+      [] ->
+        token = Proposals.share_token(socket.assigns.proposal)
+        {:noreply, assign(socket, review_link: Brando.endpoint().url() <> "/admin/assistant/shared/" <> token)}
+
+      review ->
+        handle_event("share_review", %{"keys" => Enum.map(review, & &1.key)}, socket)
     end
   end
 
@@ -2063,6 +2241,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
          shared: %{by: owner && owner.name, token: token, keys: keys},
          proposal: proposal,
          review: proposal |> Review.entries() |> Enum.filter(&(is_nil(keys) or &1.key in keys)),
+         # A link made for some entries leaves the image files out
+         replacements: if(is_nil(keys), do: ImageReplacement.review(proposal), else: []),
          receipt: nil,
          error: nil,
          preview: nil
@@ -2397,8 +2577,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp assign_proposal(socket) do
     socket =
       case proposal_id(socket.assigns) do
-        nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: [], error: nil) |> assign_media()
-        id -> assign_proposal(socket, id)
+        nil ->
+          socket
+          |> assign(proposal: nil, unloadable_id: nil, review: [], replacements: [], error: nil)
+          |> assign_media()
+
+        id ->
+          assign_proposal(socket, id)
       end
 
     if page_shareable?(socket.assigns.proposal), do: socket, else: assign(socket, :share_url, nil)
@@ -2414,7 +2599,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
         review = proposal |> Review.entries() |> with_saved_urls(receipt)
 
         socket
-        |> assign(proposal: proposal, unloadable_id: nil, review: review, receipt: receipt)
+        |> assign(
+          proposal: proposal,
+          unloadable_id: nil,
+          review: review,
+          replacements: ImageReplacement.review(proposal),
+          receipt: receipt
+        )
         |> assign_media()
 
       # One that can no longer be reviewed or applied, such as one naming a
@@ -2423,7 +2614,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
       # shows no reason.
       {:error, message} ->
         unloadable_id = if Proposals.discardable?(id, user), do: id
-        assign(socket, proposal: nil, unloadable_id: unloadable_id, review: [], error: unloadable_id && message)
+
+        assign(socket,
+          proposal: nil,
+          unloadable_id: unloadable_id,
+          review: [],
+          replacements: [],
+          error: unloadable_id && message
+        )
     end
   end
 
@@ -2813,6 +3011,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     updated_blocks = effect_count(effects, :updated_blocks)
     moved_blocks = effect_count(effects, :moved_blocks)
     deletions = effect_count(effects, :deletions)
+    replaced = effect_count(effects, :replaced_images)
 
     [
       {creates, ngettext("new entry", "new entries", creates)},
@@ -2820,11 +3019,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
       {inserted_blocks, ngettext("new block", "new blocks", inserted_blocks)},
       {updated_blocks, ngettext("changed block", "changed blocks", updated_blocks)},
       {moved_blocks, ngettext("moved block", "moved blocks", moved_blocks)},
-      {deletions, ngettext("deletion", "deletions", deletions)}
+      {deletions, ngettext("deletion", "deletions", deletions)},
+      {replaced, ngettext("replaced image file", "replaced image files", replaced)}
     ]
-    # Deletions are always shown: "0 deletions" is a fact worth stating.
+    # Deletions are always shown: "0 deletions" is a fact worth stating, but
+    # not of a proposal that only replaces image files.
     |> Enum.with_index()
-    |> Enum.filter(fn {{count, _}, index} -> count > 0 or index == 5 end)
+    |> Enum.filter(fn {{count, _}, index} -> count > 0 or (index == 5 and (creates + updates > 0 or replaced == 0)) end)
     |> Enum.map(&elem(&1, 0))
   end
 
@@ -2842,7 +3043,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp entry_summary(effects) do
     [
       (effects[:creates] || 0) > 0 && ngettext("%{count} new entry", "%{count} new entries", effects[:creates]),
-      (effects[:updates] || 0) > 0 && ngettext("%{count} updated entry", "%{count} updated entries", effects[:updates])
+      (effects[:updates] || 0) > 0 && ngettext("%{count} updated entry", "%{count} updated entries", effects[:updates]),
+      (effects[:replaced_images] || 0) > 0 &&
+        ngettext("%{count} image file replaced", "%{count} image files replaced", effects[:replaced_images])
     ]
     |> Enum.filter(& &1)
     |> Enum.join(" · ")
@@ -2896,9 +3099,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp humanize(name), do: name |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
-  defp apply_label(changes, 0), do: ngettext("Apply %{count} entry change", "Apply %{count} entry changes", changes)
+  defp apply_label(0, 0, replaced) when replaced > 0,
+    do: ngettext("Replace %{count} image file", "Replace %{count} image files", replaced)
 
-  defp apply_label(changes, live) do
+  defp apply_label(changes, live, replaced) when replaced > 0,
+    do:
+      apply_label(changes, live, 0) <>
+        " · " <> ngettext("replace %{count} image file", "replace %{count} image files", replaced)
+
+  defp apply_label(changes, 0, _replaced),
+    do: ngettext("Apply %{count} entry change", "Apply %{count} entry changes", changes)
+
+  defp apply_label(changes, live, _replaced) do
     ngettext("Apply %{count} entry change", "Apply %{count} entry changes", changes) <>
       " · " <> ngettext("affects %{count} live page", "affects %{count} live pages", live)
   end

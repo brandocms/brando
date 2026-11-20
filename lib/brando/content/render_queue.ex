@@ -107,14 +107,16 @@ defmodule Brando.Content.RenderQueue do
   """
   @spec release(String.t()) :: non_neg_integer()
   def release(key) when is_binary(key) do
-    # The jobs of every site share one table: this site's, as they were queued
-    site = Brando.Tenant.Job.attach(%{})
+    # The jobs of every site share one table: this site's, as they were
+    # queued. Compared as a value: a site without a prefix (no tenancy) has
+    # none in its jobs, and `@>` with no prefix would match every site's
+    site = Brando.Tenant.Job.attach(%{})["tenant_prefix"]
 
     query =
       from(j in Oban.Job,
         where: j.worker == @worker_name and j.state == "scheduled",
         where: fragment("? @> ?", j.meta, type(^%{@hold => [key]}, :map)),
-        where: fragment("? @> ?", j.args, type(^site, :map))
+        where: fragment("?->>'tenant_prefix' IS NOT DISTINCT FROM ?", j.args, ^site)
       )
 
     {count, _} = Brando.Repo.update_all(query, set: [state: "available", scheduled_at: DateTime.utc_now()])
