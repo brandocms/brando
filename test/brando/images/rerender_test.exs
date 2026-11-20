@@ -245,12 +245,41 @@ defmodule Brando.Images.RerenderTest do
   defp jobs(worker), do: all_enqueued(worker: worker)
   defp delete_job(job), do: Repo.delete_all(from(j in Oban.Job, where: j.id == ^job.id))
 
-  # Runs the watcher's next look itself, as its job, and takes it off the
-  # queue: the next one is the job it queued
-  defp look do
+  # Runs the watcher's next look on its row, as Oban would: the row is
+  # executing while it looks, and then done, or waits for its next look.
+  # `args` stands in for what the job was fetched with.
+  defp look(args \\ nil) do
+    {result, job} = look_executing(args)
+    ack(job, result)
+    if match?({:snooze, _}, result), do: :ok, else: result
+  end
+
+  # The look, with its row left executing
+  defp look_executing(args \\ nil) do
     [job] = jobs(Worker.ImageMaintenance)
-    delete_job(job)
-    perform_job(Worker.ImageMaintenance, job.args)
+    now = DateTime.utc_now()
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "executing", attempted_at: now])
+    job = %{Repo.get!(Oban.Job, job.id) | state: "executing", attempted_at: now}
+    {Worker.ImageMaintenance.perform(if(args, do: %{job | args: args}, else: job)), job}
+  end
+
+  defp ack(job, {:snooze, seconds}) do
+    at = DateTime.add(DateTime.utc_now(), seconds)
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "scheduled", scheduled_at: at])
+  end
+
+  defp ack(job, _result) do
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+      set: [state: "completed", completed_at: DateTime.utc_now()]
+    )
+  end
+
+  defp watchers do
+    Repo.all(
+      from(j in Oban.Job,
+        where: j.worker == "Brando.Worker.ImageMaintenance" and fragment("? @> ?", j.args, ^%{"watch" => true})
+      )
+    )
   end
 
   defp run_id do
@@ -420,6 +449,18 @@ defmodule Brando.Images.RerenderTest do
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
+    end
+
+    test "keeps one job row through its looks", %{user: user} do
+      page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run_images(user)
+        assert :ok = look()
+        assert :ok = look()
+        assert :ok = look()
+        assert [_watcher] = watchers()
+      end)
     end
 
     test "counts a page whose failed render was queued again and rendered as updated", %{user: user} do

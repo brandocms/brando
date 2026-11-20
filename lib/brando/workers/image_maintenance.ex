@@ -41,7 +41,7 @@ defmodule Brando.Worker.ImageMaintenance do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"watch" => true, "user_id" => user_id}} = job) do
-    TenantJob.run(job, fn -> SizeRun.watch(job.args, job_user(user_id)) end)
+    TenantJob.run(job, fn -> SizeRun.watch(job, job_user(user_id)) end)
   end
 
   def perform(%Oban.Job{args: %{"task" => task}} = job) when task in @tasks do

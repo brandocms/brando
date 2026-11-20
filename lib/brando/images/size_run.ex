@@ -287,15 +287,16 @@ defmodule Brando.Images.SizeRun do
   end
 
   @doc """
-  The watcher's look at its run, `args` its job's arguments: `{:snooze, s}`
-  while the walk or any of the run's images is unfinished. Once they are all
-  done it looks once more, a moment later, and then ends the run's work if
-  it is still running: a report never came.
+  The watcher's look at its run, `job` its job: `{:snooze, s}` while the
+  walk or any of the run's images is unfinished. Once they are all done it
+  looks once more, a moment later, and then follows the run's pages
+  (`pages/2`). The watcher is one job row: a look that has more to say to
+  the next writes it into the row's arguments, and snoozes.
   """
-  @spec watch(map(), Processing.user()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
-  def watch(%{"pages" => _} = args, user), do: pages(args, user)
+  @spec watch(Oban.Job.t(), Processing.user()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
+  def watch(%Oban.Job{args: %{"pages" => _}} = job, user), do: pages(job, user)
 
-  def watch(%{"run" => run} = args, user) do
+  def watch(%Oban.Job{args: %{"run" => run}} = job, user) do
     remaining = remaining(run)
 
     cond do
@@ -313,7 +314,7 @@ defmodule Brando.Images.SizeRun do
         {:snooze, @watch_every}
 
       true ->
-        images_done(args, user)
+        images_done(job, user)
     end
   end
 
@@ -349,26 +350,29 @@ defmodule Brando.Images.SizeRun do
   # image's report counts, and an image whose report never came (a walk
   # that gave up, a job cancelled or discarded without running) fails the
   # run at the end.
-  defp images_done(%{"run" => run, "settle" => true} = args, user) do
+  defp images_done(%Oban.Job{args: %{"settle" => true} = args} = job, user) do
     pages = %{"images" => images(args, user), "images_failed" => images_failed?(args, user), "seen" => %{}}
-
-    args
-    |> Map.delete("settle")
-    |> Map.put("pages", pages)
-    |> pages(user, run)
+    pages(%{job | args: args |> Map.delete("settle") |> Map.put("pages", pages)}, user)
   end
 
-  defp images_done(%{"run" => run} = args, _user) do
+  defp images_done(%Oban.Job{args: %{"run" => run} = args} = job, _user) do
     RenderQueue.release(hold_key(run))
+    snooze(job, Map.put(args, "settle", true), @settle_after)
+  end
 
-    args
-    |> Map.put("settle", true)
-    |> Worker.ImageMaintenance.new(schedule_in: @settle_after)
-    |> Oban.insert()
-    |> case do
+  # The next look reads `args`: they are written into the watcher's row,
+  # which Oban then schedules again. A job with no row (Oban's inline
+  # testing mode) has its next look as a job of its own.
+  defp snooze(%Oban.Job{id: nil}, args, seconds) do
+    case args |> Worker.ImageMaintenance.new(schedule_in: seconds) |> Oban.insert() do
       {:ok, _job} -> :ok
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp snooze(%Oban.Job{id: id}, args, seconds) do
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^id), set: [args: args])
+    {:snooze, seconds}
   end
 
   # How many images the run queued: the walk's count, which its last batch
@@ -396,16 +400,14 @@ defmodule Brando.Images.SizeRun do
   # The run's second step, one look: releases the run's renders (again: a
   # held render the run queued since is released too) and counts its pages,
   # the entries its renders are for. While any is left, it reports the count
-  # and queues its next look, which carries the pages it has seen settle:
-  # the Pruner deletes finished jobs (after 300 seconds by Brando's
-  # default), and a page counted once stays counted. A page whose render is
-  # queued again counts as left until that one settles. When none is left,
-  # the work ends, with the images' count and the pages', failed when an
-  # image or a page failed.
-  @spec pages(map(), Processing.user()) :: :ok | {:error, term()}
-  def pages(%{"run" => run} = args, user), do: pages(args, user, run)
-
-  defp pages(%{"pages" => pages} = args, user, run) do
+  # and snoozes, its arguments carrying the pages it has seen settle: the
+  # Pruner deletes finished jobs (after 300 seconds by Brando's default),
+  # and a page counted once stays counted. A page whose render is queued
+  # again counts as left until that one settles. When none is left, the work
+  # ends, with the images' count and the pages', failed when an image or a
+  # page failed.
+  @spec pages(Oban.Job.t(), Processing.user()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
+  def pages(%Oban.Job{args: %{"run" => run, "pages" => pages} = args} = job, user) do
     RenderQueue.release(hold_key(run))
 
     # This site's: a run's renders are queued in its site
@@ -425,15 +427,8 @@ defmodule Brando.Images.SizeRun do
       :ok
     else
       if ours?, do: report_pages(user, run, pages, map_size(seen), total)
-
-      args
-      |> Map.put("pages", Map.merge(pages, %{"seen" => seen, "reported" => [map_size(seen), total]}))
-      |> Worker.ImageMaintenance.new(schedule_in: @watch_every)
-      |> Oban.insert()
-      |> case do
-        {:ok, _job} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
+      pages = Map.merge(pages, %{"seen" => seen, "reported" => [map_size(seen), total]})
+      snooze(job, Map.put(args, "pages", pages), @watch_every)
     end
   end
 
