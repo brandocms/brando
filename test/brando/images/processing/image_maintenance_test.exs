@@ -671,6 +671,20 @@ defmodule Brando.Images.ImageMaintenanceTest do
       assert failed_id in Enum.map(images, & &1.id)
     end
 
+    test "an image saved again while its run's job is processed is still counted", %{user: user} do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        [job] = image_jobs()
+        set_job(job, state: "executing", attempted_at: DateTime.utc_now())
+
+        assert {:ok, _} = Processing.queue_processing(image, user, [], silent: true)
+        assert SizeRun.remaining() == 1
+        assert SizeRun.running?()
+      end)
+    end
+
     test "an image job left executing past its timeout does not hold a run" do
       image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
 

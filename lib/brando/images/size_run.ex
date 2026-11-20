@@ -32,9 +32,9 @@ defmodule Brando.Images.SizeRun do
   #     Oban's Pruner deletes them (after 300 seconds by Brando's default):
   #     work restated later than that, or an image whose job could not be
   #     queued at all, is not counted as failed again;
-  #   * an image queued again while the run's job for it waits (the image
-  #     editor saving a focal point) takes over that job's place in the run
-  #     (`carry_over/2`);
+  #   * an image queued again while the run's job for it waits or is being
+  #     processed (the image editor saving a focal point) takes over that
+  #     job's place in the run (`carry_over/2`);
   #   * a watcher job (`watch/2`), queued with the walk, waits for the walk and
   #     the run's images, says the work again for a restarted node, and ends
   #     it when they are done and their reports did not: a walk that gave up,
@@ -57,8 +57,6 @@ defmodule Brando.Images.SizeRun do
   @meta_key "image_size_run"
   @tasks ~w(recreate_sizes recreate_changed_sizes)
   @unfinished_states ~w(available scheduled executing retryable)
-  # A replaced job still waiting hands its place in the run on
-  @waiting_states ~w(available scheduled retryable)
   # Images can wait behind other image work; a stalled run is given up later
   @timeout to_timeout(minute: 30)
   # How often the watcher looks, in seconds, and how long it gives the last
@@ -301,13 +299,18 @@ defmodule Brando.Images.SizeRun do
   end
 
   @doc """
-  An image queued again while a run's job for it waits takes over that
-  job's place in the run: `deleted` are the jobs replaced, with their
-  `:state` and `:meta`. A job already being processed reports itself.
+  An image queued again while a run's job for it is unfinished takes over
+  that job's place in the run: `deleted` are the jobs replaced, with their
+  `:state` and `:meta`.
+
+  A job replaced while it is being processed still reports its step when
+  it ends, and so does the job that takes its place: that image is counted
+  twice, and the work can end one image early. The run, read from the
+  jobs, goes on until the new job is done.
   """
   @spec carry_over(Ecto.Changeset.t(), [%{state: String.t(), meta: map()}]) :: Ecto.Changeset.t()
   def carry_over(changeset, deleted) do
-    case Enum.find(deleted, &(&1.state in @waiting_states and Map.has_key?(&1.meta || %{}, @meta_key))) do
+    case Enum.find(deleted, &(&1.state in @unfinished_states and Map.has_key?(&1.meta || %{}, @meta_key))) do
       nil ->
         changeset
 
