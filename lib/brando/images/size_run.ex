@@ -40,9 +40,10 @@ defmodule Brando.Images.SizeRun do
   #     it when they are done and their reports did not: a walk that gave up,
   #     a job cancelled or discarded without running. Such a run failed.
   #
-  # Later steps of the same run (re-rendering the entries that show a recreated
-  # image) can join its count with `BrandoAdmin.Work.start/4` and `total:`
-  # after its walk, before the last image's step is in.
+  # A run's work ends with its images: the last image's report ends it by
+  # the count, and the watcher fails what is left once the images are done
+  # (`images_done/2`). A step after the images goes there; see that
+  # function.
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
@@ -198,21 +199,36 @@ defmodule Brando.Images.SizeRun do
         resume(user, remaining + length(failed), length(failed), false, failed)
         {:snooze, @watch_every}
 
-      args["settle"] ->
-        # The run is over as soon as its images are: another may have
-        # started since, and the work under the key is that one's
-        unless running?(), do: Work.fail(user, @work_key)
-        :ok
-
       true ->
-        args
-        |> Map.put("settle", true)
-        |> Worker.ImageMaintenance.new(schedule_in: @settle_after)
-        |> Oban.insert()
-        |> case do
-          {:ok, _job} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        images_done(args, user)
+    end
+  end
+
+  # The run's walk and images are done, and this is where its work ends. The
+  # last image's report has ended it by the count, unless that report never
+  # came (a walk that gave up, a job cancelled or discarded without running):
+  # the watcher looks once more, a moment later, and fails what is left.
+  #
+  # A step after the images (#3735: "Updating N pages", the renders of the
+  # entries that show the recreated images) goes here. It then has to keep
+  # the work from ending by the count first: close it here rather than after
+  # the walk, start the step, and give it a watch of its own before the
+  # work ends.
+  defp images_done(%{"settle" => true}, user) do
+    # The run is over as soon as its images are: another may have started
+    # since, and the work under the key is that one's
+    unless running?(), do: Work.fail(user, @work_key)
+    :ok
+  end
+
+  defp images_done(args, _user) do
+    args
+    |> Map.put("settle", true)
+    |> Worker.ImageMaintenance.new(schedule_in: @settle_after)
+    |> Oban.insert()
+    |> case do
+      {:ok, _job} -> :ok
+      {:error, reason} -> {:error, reason}
     end
   end
 
