@@ -307,19 +307,31 @@ defmodule Brando.Images.Processing do
   end
 
   # Begun before the insert: a job run inline reports the run as it is queued.
-  # Its watcher ends it however the walk and the images end.
+  # Its watcher ends it however the walk and the images end. The walk and its
+  # watcher are queued in one transaction: a walk that closed before its
+  # watcher was there would end the run itself, without the pages.
   defp start_size_run(task, user) do
     run = SizeRun.begin(user)
     args = maintenance_args(task, user)
 
-    case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
-      {:ok, _job} = ok ->
-        with {:error, reason} <- SizeRun.queue_watcher(args, run) do
-          Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
-        end
+    queue = fn ->
+      case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
+        {:ok, job} ->
+          with {:error, reason} <- SizeRun.queue_watcher(args, run) do
+            Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
+          end
 
+          job
+
+        {:error, reason} ->
+          Brando.Repo.rollback(reason)
+      end
+    end
+
+    case Brando.Repo.transaction(queue) do
+      {:ok, job} ->
         Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:image_maintenance, %{task: task, state: :started}})
-        ok
+        {:ok, job}
 
       error ->
         SizeRun.abort(user)

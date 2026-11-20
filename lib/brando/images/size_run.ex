@@ -357,7 +357,28 @@ defmodule Brando.Images.SizeRun do
 
   defp images_done(%Oban.Job{args: %{"run" => run} = args} = job, _user) do
     RenderQueue.release(hold_key(run))
-    snooze(job, Map.put(args, "settle", true), @settle_after)
+    snooze(job, args |> with_count(run) |> Map.put("settle", true), @settle_after)
+  end
+
+  # The walk's count, as its last batch wrote it into the watcher's row
+  # (`close/3`): arguments the look was fetched with before that lack it,
+  # and a missing count reads as a walk that gave up
+  defp with_count(args, run) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and fragment("? @> ?", j.args, ^TenantJob.attach(%{"run" => run, "watch" => true})) and
+            fragment("jsonb_typeof(? -> 'queued') = 'number'", j.args),
+        order_by: [desc: j.id],
+        limit: 1,
+        select: fragment("(? ->> 'queued')::integer", j.args)
+
+    case Brando.Repo.one(query) do
+      nil -> args
+      queued -> Map.put(args, "queued", queued)
+    end
   end
 
   # The next look reads `args`: they are written into the watcher's row,

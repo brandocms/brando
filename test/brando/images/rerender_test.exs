@@ -451,6 +451,23 @@ defmodule Brando.Images.RerenderTest do
       assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
     end
 
+    # A walk that closes while the watcher looks: the count is in its row
+    # (#3742 review)
+    test "reads its images' count from its row, not from arguments fetched before the walk closed", %{user: user} do
+      page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run_images(user)
+        [watcher] = jobs(Worker.ImageMaintenance)
+        assert watcher.args["queued"] == 1
+
+        assert :ok = look(Map.delete(watcher.args, "queued"))
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
+    end
+
     test "keeps one job row through its looks", %{user: user} do
       page_with(user, [image()])
 
