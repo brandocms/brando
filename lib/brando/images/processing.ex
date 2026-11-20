@@ -296,9 +296,10 @@ defmodule Brando.Images.Processing do
 
     with {:ok, :allowed} <- Boundary.run(user, :update, Image, fn _ -> {:ok, :allowed} end) do
       cond do
+        # A run's watcher, still to take its last look, does not hold the next
         recreate? and SizeRun.running?() -> {:error, :already_running}
-        image_maintenance_running?(task) -> {:error, :already_running}
         recreate? -> start_size_run(task, user)
+        image_maintenance_running?(task) -> {:error, :already_running}
         true -> insert_image_maintenance(task, user)
       end
     end

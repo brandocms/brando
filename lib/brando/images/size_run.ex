@@ -16,9 +16,10 @@ defmodule Brando.Images.SizeRun do
   #     when the last queued image is done, or at once when there were none.
   #
   # Whether a run is going on comes from the jobs, not from that work, which
-  # only its admin sees: `running?/0` is true while the walk, its watcher or
-  # any image it queued is waiting or being processed, for every admin, on
-  # every node.
+  # only its admin sees: `running?/0` is true while the walk or any image it
+  # queued is waiting or being processed, for every admin, on every node. Its
+  # watcher does not count: once the images are done, the run is over, and
+  # another can start before the watcher's last look.
   #
   # The jobs are the truth, and the work follows them. Each run has an id, in
   # the walk's arguments and each image job's meta:
@@ -71,7 +72,7 @@ defmodule Brando.Images.SizeRun do
   def tasks, do: @tasks
 
   @doc """
-  Is a run going on in the current site: its walk or watcher unfinished, or
+  Is a run going on in the current site: its walk unfinished, or
   an image it queued waiting or being processed?
   """
   @spec running?() :: boolean()
@@ -115,8 +116,9 @@ defmodule Brando.Images.SizeRun do
   defp of_run(query, nil), do: from(j in query, where: not is_nil(fragment("? -> ?", j.meta, ^@meta_key)))
   defp of_run(query, run), do: from(j in query, where: fragment("? ->> ?", j.meta, ^@meta_key) == ^run)
 
-  # The walk of either task, or `run`'s walk, unfinished. Without `run`, a
-  # watcher counts too.
+  # The walk of either task, or `run`'s walk, unfinished. A watcher is not
+  # a walk: once its walk and images are done, the run is over, though the
+  # watcher has yet to look.
   defp walking?(run \\ nil) do
     worker = Oban.Worker.to_string(Worker.ImageMaintenance)
     args = TenantJob.attach(if(run, do: %{"run" => run}, else: %{}))
@@ -125,14 +127,10 @@ defmodule Brando.Images.SizeRun do
       from j in Oban.Job,
         where:
           j.worker == ^worker and j.state in ^@unfinished_states and
-            fragment("? ->> 'task'", j.args) in ^@tasks and fragment("? @> ?", j.args, ^args),
+            fragment("? ->> 'task'", j.args) in ^@tasks and fragment("? @> ?", j.args, ^args) and
+            not fragment("? @> ?", j.args, ^%{"watch" => true}),
         select: true,
         limit: 1
-
-    query =
-      if run,
-        do: from(j in query, where: not fragment("? @> ?", j.args, ^%{"watch" => true})),
-        else: query
 
     Brando.Repo.one(query) == true
   end
@@ -193,7 +191,10 @@ defmodule Brando.Images.SizeRun do
         {:snooze, @watch_every}
 
       args["settle"] ->
-        Work.fail(user, @work_key)
+        # The run is over as soon as its images are: another may have
+        # started since, and the work under the key is that one's
+        unless running?(), do: Work.fail(user, @work_key)
+        :ok
 
       true ->
         args

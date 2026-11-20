@@ -379,7 +379,9 @@ defmodule Brando.Images.ImageMaintenanceTest do
         # Retrying or being processed still counts
         Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "retryable"])
         assert {:error, :already_running} = Processing.recreate_sizes_for_images(other)
-        Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "executing"])
+        Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"),
+          set: [state: "executing", attempted_at: DateTime.utc_now()]
+        )
         assert {:error, :already_running} = Processing.recreate_sizes_for_images(other)
 
         Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "completed"])
@@ -537,6 +539,42 @@ defmodule Brando.Images.ImageMaintenanceTest do
       end)
 
       assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2}}
+    end
+
+    defp watcher do
+      assert [watcher] = Enum.filter(all_enqueued(worker: Worker.ImageMaintenance), & &1.args["watch"])
+      watcher
+    end
+
+    defp flush_work do
+      receive do
+        {:work, _key, _status, _work} -> flush_work()
+      after
+        0 -> :ok
+      end
+    end
+
+    defp set_job(job, fields), do: Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: fields)
+
+    # The watcher's look comes up to seconds after the last image: the run
+    # is over when its walk and images are, and its watcher's late look
+    # leaves a run started since alone
+    test "a run whose images are done is over before its watcher looks", %{user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        old_watcher = watcher()
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        assert_receive {:work, "image-sizes", :finished, %Work{}}
+
+        refute SizeRun.running?()
+        assert {:ok, _} = Processing.recreate_sizes_for_images(user)
+        assert %Work{status: :running} = work(user)
+
+        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(old_watcher.args, "settle", true))
+        assert %Work{status: :running} = work(user)
+      end)
     end
 
     test "an image job left executing past its timeout does not hold a run" do
