@@ -21181,7 +21181,7 @@ msgstr "Overfør eierskap til"
 #, elixir-autogen, elixir-format
 msgid "Translate %{count} text into %{language}"
 msgid_plural "Translate %{count} texts into %{language}"
-msgstr[0] "Oversett 1 tekst til %{language}"
+msgstr[0] "Oversett %{count} tekst til %{language}"
 msgstr[1] "Oversett %{count} tekster til %{language}"
 
 #: lib/brando_admin/components/content/list/row.ex
