@@ -1905,8 +1905,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:entry_blocks, originals)
         |> assign(:seed_forms, Map.new(forms))
         |> apply_block_op({:replace_state, ops}, :replay)
+        |> keep_shown_seeds(socket.assigns.seed_forms)
         |> clear_undo()
     end
+  end
+
+  # A tab that does not edit takes no op (`apply_block_op/3`), so its roots
+  # stay as it shows them: one the copy left out keeps the form it had.
+  defp keep_shown_seeds(socket, shown) do
+    missing = Enum.reject(socket.assigns.root_order, &Map.has_key?(socket.assigns.seed_forms, &1))
+    update(socket, :seed_forms, &Map.merge(&1, Map.take(shown, missing)))
   end
 
   defp keep_restored(changeset, restored) when restored == %{}, do: changeset
