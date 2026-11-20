@@ -92,4 +92,48 @@ defmodule BrandoAdmin.Components.Form.TranslationFillTest do
       assert TranslationFill.field_value(changeset, {:row, "recipients", "r1", "name"}) == "Per"
     end
   end
+
+  # A saved row the editor removed stays in the relation as a changeset
+  # marked for removal until the save; it is no row of the form's, and
+  # writing it back raises ("cannot replace related").
+  describe "a subform with a saved row removed" do
+    test "fills another row of a has_many, and the removed row stays removed" do
+      article =
+        loaded(%Article{
+          id: 1,
+          items: [
+            loaded(%ArticleItem{id: 1, uid: "i1", label: "En"}),
+            loaded(%ArticleItem{id: 2, uid: "i2", label: "To"})
+          ]
+        })
+
+      changeset =
+        article |> Changeset.change() |> Changeset.put_assoc(:items, [Changeset.change(Enum.at(article.items, 1))])
+
+      assert {:ok, filled} = TranslationFill.put_field(changeset, {:row, "items", "i2", "label"}, "Two")
+      assert TranslationFill.field_value(filled, {:row, "items", "i2", "label"}) == "Two"
+      assert [%{label: "Two"}] = Changeset.apply_changes(filled).items
+
+      assert TranslationFill.field_value(changeset, {:row, "items", "i1", "label"}) == :error
+      assert TranslationFill.put_field(changeset, {:row, "items", "i1", "label"}, "One") == :error
+    end
+
+    test "fills another row of an embeds_many, and the removed row stays removed" do
+      form = %Form{
+        recipients: [
+          %Recipient{id: Ecto.UUID.generate(), uid: "r1", name: "Ola", email: "ola@example.com"},
+          %Recipient{id: Ecto.UUID.generate(), uid: "r2", name: "Kari", email: "kari@example.com"}
+        ]
+      }
+
+      changeset =
+        form |> Changeset.change() |> Changeset.put_embed(:recipients, [Changeset.change(Enum.at(form.recipients, 1))])
+
+      assert {:ok, filled} = TranslationFill.put_field(changeset, {:row, "recipients", "r2", "name"}, "Kari N.")
+      assert [%{name: "Kari N."}] = Changeset.apply_changes(filled).recipients
+      assert TranslationFill.field_value(changeset, {:row, "recipients", "r1", "name"}) == :error
+    end
+  end
+
+  defp loaded(struct), do: put_in(struct, [Access.key(:__meta__), Access.key(:state)], :loaded)
 end

@@ -44,6 +44,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   alias Brando.Translations
   alias Brando.Translations.Work
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.Visibility
@@ -204,7 +205,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   # The row's field has an input in the subform, and the row shows it
   defp row_shown?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, changeset, {:row, subform, key, field}) do
     with %{opts: opts} <- Enum.find(inputs, &(match?(%{name: name} when name != nil, &1) and to_string(&1.name) == field)),
-         {:ok, _kind, _assoc, rows} <- rows(changeset, subform),
+         {:ok, _relation, rows} <- rows(changeset, subform),
          {_index, row} <- find_row(rows, key) do
       not Visibility.hidden?(opts, Phoenix.HTML.FormData.to_form(row, []))
     else
@@ -573,7 +574,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   end
 
   def field_value(changeset, {:row, subform, key, field}) do
-    with {:ok, _kind, _assoc, rows} <- rows(changeset, subform),
+    with {:ok, _relation, rows} <- rows(changeset, subform),
          {_index, row} <- find_row(rows, key),
          {:ok, name} <- field_name(row, field) do
       Changeset.get_field(row, name)
@@ -593,15 +594,11 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   end
 
   def put_field(changeset, {:row, subform, key, field}, text) do
-    with {:ok, kind, assoc, rows} <- rows(changeset, subform),
+    with {:ok, relation, rows} <- rows(changeset, subform),
          {index, row} <- find_row(rows, key),
          {:ok, name} <- field_name(row, field) do
       rows = List.replace_at(rows, index, Changeset.put_change(row, name, text))
-
-      case kind do
-        :assoc -> {:ok, Changeset.put_assoc(changeset, assoc, rows)}
-        :embed -> {:ok, Changeset.put_embed(changeset, assoc, rows)}
-      end
+      {:ok, SubformHelpers.put_entries(changeset, relation, rows)}
     else
       _ -> :error
     end
@@ -618,26 +615,22 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     end
   end
 
-  # A has_many's or embeds_many's rows, as changesets
+  # A has_many's or embeds_many's rows, as changesets, without a saved row
+  # the editor removed (`SubformHelpers.current_entries/2`): it is no row of
+  # the form's, and writing it back raises
   defp rows(%Changeset{data: %schema{}} = changeset, subform) do
     with {:ok, name} <- existing_atom(subform),
-         kind when kind != nil <- relation_kind(schema, name),
-         rows when is_list(rows) <- relation_rows(changeset, kind, name) do
-      {:ok, kind, name, rows}
+         true <- many?(schema, name),
+         rows when is_list(rows) <- SubformHelpers.current_entries(changeset, name) do
+      {:ok, name, rows}
     else
       _ -> :error
     end
   end
 
-  defp relation_rows(changeset, :assoc, name), do: Changeset.get_assoc(changeset, name, :changeset)
-  defp relation_rows(changeset, :embed, name), do: Changeset.get_embed(changeset, name, :changeset)
-
-  defp relation_kind(schema, name) do
-    cond do
-      match?(%{cardinality: :many}, schema.__schema__(:association, name)) -> :assoc
-      match?(%{cardinality: :many}, schema.__schema__(:embed, name)) -> :embed
-      true -> nil
-    end
+  defp many?(schema, name) do
+    match?(%{cardinality: :many}, schema.__schema__(:association, name)) or
+      match?(%{cardinality: :many}, schema.__schema__(:embed, name))
   end
 
   # A row by the key `Brando.Translations.Sync` names it with: its uid, or a
