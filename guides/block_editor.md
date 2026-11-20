@@ -106,7 +106,9 @@ entries step by step, outside the `default` queue, holds their renders so
 each renders once: `enqueue_map(entries, hold: key)` at each step, then
 `Brando.Content.RenderQueue.release(key)` at the end, or after each batch of
 a long run. Held renders that are never released run 15 minutes after they
-were queued.
+were queued. Only work that holds keeps a render waiting: a save, a cascade
+or any other render queued without `hold:` for an entry whose render is held
+makes that render run now.
 
 <!-- usage-rules:start -->
 

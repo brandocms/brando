@@ -355,9 +355,8 @@ defmodule Brando.Content.RenderQueueTest do
         assert Enum.all?(held, fn {:ok, job} -> job.state == "scheduled" end)
         for {:ok, job} <- held, do: set_job(job, inserted_at: hours_ago(1))
 
-        # Later steps of the run, a cascade, another run that holds
+        # A later step of the run, another run that holds
         RenderQueue.enqueue_map(%{Fragment => [1]}, hold: "run-1")
-        RenderQueue.enqueue_map(%{Fragment => [2]})
         RenderQueue.enqueue_map(%{Fragment => [2]}, hold: "run-2")
         RenderQueue.enqueue_map(%{Fragment => [3]}, hold: "run-2")
 
@@ -367,6 +366,22 @@ defmodule Brando.Content.RenderQueueTest do
         assert RenderQueue.release("run-1") == 0
         assert RenderQueue.release("run-2") == 1
         assert Enum.all?(renders_by_entry(), &(&1.state == "available"))
+      end)
+    end
+
+    test "a request that does not hold makes a held render it merges into run now, in the bulk lane" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        [{:ok, held}] = RenderQueue.enqueue_map(%{Fragment => [12_345]}, hold: "run-1")
+
+        assert [{:ok, %{id: id, state: "available"}}] = RenderQueue.enqueue_map(%{Fragment => [12_345]})
+        assert id == held.id
+        assert [job] = all_enqueued(worker: EntryRenderer)
+        assert %{state: "available", priority: 5} = job
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+
+        # A later request that holds leaves it running now
+        RenderQueue.enqueue_map(%{Fragment => [12_345]}, hold: "run-2")
+        assert [%{state: "available"}] = all_enqueued(worker: EntryRenderer)
       end)
     end
 
@@ -457,6 +472,7 @@ defmodule Brando.Content.RenderQueueTest do
         assert tracked == ["other", "renders", "renders"]
       end)
     end
+
     test "requested twice for the same work counts it twice, once as soon as it merges" do
       Oban.Testing.with_testing_mode(:manual, fn ->
         user = Factory.insert(:random_user)

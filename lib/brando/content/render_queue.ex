@@ -24,10 +24,14 @@ defmodule Brando.Content.RenderQueue do
   alongside the renders it queues, so the lanes alone would render an entry
   it reaches once per step. It holds them instead:
   `enqueue_map(entries, hold: key)` queues the renders to run after a
-  maximum hold (15 minutes), and the renders queued for those entries
-  meanwhile merge into them. `release/1` makes them run now: at the end of
-  the work, or once per batch of a long one. A run that dies without
-  releasing still has its entries rendered when the hold runs out.
+  maximum hold (15 minutes), and the renders other holding work queues for
+  those entries meanwhile merge into them. `release/1` makes them run now:
+  at the end of the work, or once per batch of a long one. A run that dies
+  without releasing still has its entries rendered when the hold runs out.
+  Only a request that holds leaves a render held: one without `hold:` that
+  merges into a held render makes it run now (a bulk one in the bulk lane),
+  and a holding request that merges into a render waiting to run now leaves
+  it so.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -74,7 +78,8 @@ defmodule Brando.Content.RenderQueue do
 
     * `:hold` — a key: the renders inserted wait for `release/1` with it, or
       the maximum hold, and a held render this one merges into waits for
-      either key (see "Held renders")
+      either key (see "Held renders"). Without it, a held render this one
+      merges into runs now.
     * `:work` — `{user, key}` or `{user, key, opts}`: each render counts as
       a step of `BrandoAdmin.Work` work under `key`, which starts with
       `total:` the number of entries, or adds them to its count if it
@@ -139,7 +144,10 @@ defmodule Brando.Content.RenderQueue do
   # into them. Like `coalesce/4`, each update holds only while the job still
   # waits with the arguments and meta it was read with: one that has started,
   # or that another insert merged into since, gets a render of its own.
+  # Only a request that holds leaves a held render waiting: one that does
+  # not makes it run now.
   defp merge_waiting(requests, hold, work) do
+    now = DateTime.utc_now()
     by_key = Map.new(requests, &{entry_key(&1), &1})
 
     updates =
@@ -148,11 +156,16 @@ defmodule Brando.Content.RenderQueue do
       |> waiting()
       |> Enum.map(fn job ->
         more = Map.fetch!(by_key, entry_key(job.args))
-        {job, Freshness.merge(job.args, more), merged_meta(job, hold, work)}
+        {job, Freshness.merge(job.args, more), merged_meta(job, hold, work), is_nil(hold) and held?(job)}
       end)
 
-    updated = update_waiting(updates)
-    merged = for {job, args, meta} <- updates, MapSet.member?(updated, job.id), do: {job, %{job | args: args, meta: meta}}
+    updated = update_waiting(updates, now)
+
+    merged =
+      for {job, args, meta, release?} <- updates, MapSet.member?(updated, job.id) do
+        merged = %{job | args: args, meta: meta}
+        {job, if(release?, do: %{merged | state: "available", scheduled_at: now}, else: merged)}
+      end
 
     # This request's step, when the job reports another: other work's, or
     # this work's for an earlier request
@@ -184,29 +197,39 @@ defmodule Brando.Content.RenderQueue do
     |> Enum.uniq_by(&entry_key(&1.args))
   end
 
-  defp update_waiting([]), do: MapSet.new()
+  defp update_waiting([], _now), do: MapSet.new()
 
-  defp update_waiting(updates) do
-    ids = Enum.map(updates, fn {job, _, _} -> job.id end)
-    read_args = Enum.map(updates, fn {job, _, _} -> job.args end)
-    read_meta = Enum.map(updates, fn {job, _, _} -> job.meta end)
-    args = Enum.map(updates, fn {_, args, _} -> args end)
-    meta = Enum.map(updates, fn {_, _, meta} -> meta end)
+  defp update_waiting(updates, now) do
+    ids = Enum.map(updates, fn {job, _, _, _} -> job.id end)
+    read_args = Enum.map(updates, fn {job, _, _, _} -> job.args end)
+    read_meta = Enum.map(updates, fn {job, _, _, _} -> job.meta end)
+    args = Enum.map(updates, fn {_, args, _, _} -> args end)
+    meta = Enum.map(updates, fn {_, _, meta, _} -> meta end)
+    release = Enum.map(updates, fn {_, _, _, release?} -> release? end)
 
     query =
       from(j in Oban.Job,
         join:
           v in fragment(
-            "SELECT * FROM unnest(?::bigint[], ?::jsonb[], ?::jsonb[], ?::jsonb[], ?::jsonb[]) AS v(id, read_args, read_meta, args, meta)",
+            "SELECT * FROM unnest(?::bigint[], ?::jsonb[], ?::jsonb[], ?::jsonb[], ?::jsonb[], ?::boolean[]) AS v(id, read_args, read_meta, args, meta, release)",
             ^ids,
             ^read_args,
             ^read_meta,
             ^args,
-            ^meta
+            ^meta,
+            ^release
           ),
         on: j.id == v.id,
         where: j.state in @waiting and j.args == v.read_args and j.meta == v.read_meta,
-        update: [set: [args: v.args, meta: v.meta]],
+        update: [
+          set: [
+            args: v.args,
+            meta: v.meta,
+            state: fragment("CASE WHEN ? THEN 'available' ELSE ? END", v.release, j.state),
+            scheduled_at:
+              fragment("CASE WHEN ? THEN ? ELSE ? END", v.release, type(^now, :utc_datetime_usec), j.scheduled_at)
+          ]
+        ],
         select: j.id
       )
 
