@@ -2,6 +2,8 @@ defmodule Brando.Worker.ImageProcessor do
   @moduledoc false
   use Oban.Worker, queue: :image_processing, max_attempts: 5
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Assets.CompletedCallback
   alias Brando.Assets.ProcessingStatus
   alias Brando.Images
@@ -79,6 +81,10 @@ defmodule Brando.Worker.ImageProcessor do
         Images.discard_restored_original(image, original)
         error
 
+      :file_replaced ->
+        Images.discard_restored_original(image, original)
+        :ok
+
       {:error, :too_many_pixels} ->
         Images.discard_restored_original(image, original)
         broadcast_processing_error(image.id, field_full_path)
@@ -110,12 +116,25 @@ defmodule Brando.Worker.ImageProcessor do
       )
 
     # The sizes are the system's work, written whatever the uploader's role is
-    # by now; the uploader is still the one the callback and progress are for
-    case Images.update_image(image, image_params, :system) do
-      {:ok, image} -> {:processed, image, config, user}
-      error -> {:not_updated, error}
-    end
+    # by now; the uploader is still the one the callback and progress are for.
+    # Written only while the image has the file this run loaded: one given
+    # another since (`replace_image_file`) has a job of its own for it
+    {:ok, result} =
+      Brando.Repo.transaction(fn ->
+        with true <- file_unchanged?(image),
+             {:ok, image} <- Images.update_image(image, image_params, :system) do
+          {:processed, image, config, user}
+        else
+          false -> :file_replaced
+          error -> {:not_updated, error}
+        end
+      end)
+
+    result
   end
+
+  defp file_unchanged?(%{id: id, path: path}),
+    do: Brando.Repo.one(from(i in Images.Image, where: i.id == ^id, select: i.path, lock: "FOR UPDATE")) == path
 
   # A callback that raises fails the job before the image is handed over
   defp finish_processing(image, original, config, user, field_full_path) do
