@@ -15,7 +15,8 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   OLD's crops and focal point carry over. Nothing uses NEW yet
   (`Brando.Content.Usage.used?/2`), and no other operation of the proposal
   places it or replaces with it, since its record goes. The person may update
-  both images and every entry that uses OLD (`Brando.Content.Usage.owners/2`);
+  both images and every entry that uses OLD (`Brando.Content.Usage.owners/3`),
+  in the trash too;
   a refusal names the entries they may read and counts the others.
 
   The files as they were when the proposal was prepared are frozen with it
@@ -389,9 +390,14 @@ defmodule Brando.Content.Proposals.ImageReplacement do
     end
   end
 
-  # Every entry that shows OLD changes with it.
-  defp entry_permissions(old, actor) do
-    forbidden = old |> owners() |> Enum.reject(&updatable?(&1, actor))
+  # Every entry that shows OLD changes with it, and one in the trash once it
+  # is restored.
+  defp entry_permissions(%Image{id: id} = old, actor) do
+    forbidden =
+      :image
+      |> Usage.owners([id], include_deleted: true)
+      |> Map.get(id, [])
+      |> Enum.reject(&updatable?(&1, actor))
 
     if forbidden == [] do
       []

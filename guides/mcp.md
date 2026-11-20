@@ -389,8 +389,9 @@ When the proposal is prepared, and again when it is approved and applied:
 - Nothing uses NEW yet: no entry, in the trash or not, no gallery, variable,
   recovery draft or module default, and no other operation of the proposal.
   Otherwise the proposal says so and points to swapping the references.
-- The person may update both images and every entry that shows OLD. The
-  problem names the entries they may read and counts the others.
+- The person may update both images and every entry that shows OLD, in the
+  trash too, since restoring it shows the new file. The problem names the
+  entries they may read and counts the others.
 - Neither image has another file than when the proposal was prepared: of two
   proposals replacing the same image, the second is refused once the first
   is applied.

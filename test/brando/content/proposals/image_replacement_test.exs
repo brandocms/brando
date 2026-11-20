@@ -406,6 +406,59 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     assert :missing_asset in Enum.map(problems, & &1.code) or :forbidden in Enum.map(problems, & &1.code)
   end
 
+  test "an entry in the trash that shows OLD, or a gallery holding it, needs update too", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+
+    editor = Factory.insert(:random_user, role: :user)
+    images = [Catalog.get(:read, Image).key, Catalog.get(:update, Image).key, "brando.admin.access"]
+    {:ok, group} = Groups.create(Scope.standalone(c.user), %{name: "Image editors"}, images)
+    {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, editor.id)
+
+    trash! = fn page ->
+      Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [deleted_at: DateTime.utc_now()])
+    end
+
+    # Shown by a page in the trash
+    old = image!("a", {800, 600})
+    place!(c, c.identity, old)
+    trash!.(c.identity)
+
+    assert {:ok, %{problems: [%{code: :forbidden}]}} =
+             Proposals.propose([replace(old, image!("b", {1600, 1200}))], editor)
+
+    # In a gallery a page in the trash shows
+    in_gallery = image!("c", {800, 600})
+    gallery = Repo.insert!(%Brando.Galleries.Gallery{config_target: "default"})
+    Repo.insert!(%Brando.Galleries.GalleryObject{gallery_id: gallery.id, image_id: in_gallery.id, sequence: 0})
+    place!(c, c.naming, image!("d", {800, 600}))
+
+    block_id =
+      Repo.one!(
+        from(r in "content_refs",
+          join: b in "content_blocks",
+          on: b.id == r.block_id,
+          join: pb in "pages_blocks",
+          on: pb.block_id == b.id,
+          where: pb.entry_id == ^c.naming.id,
+          select: r.block_id,
+          limit: 1
+        )
+      )
+
+    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+
+    Repo.insert_all("content_refs", [
+      %{name: "gallery", uid: "galleryref", block_id: block_id, gallery_id: gallery.id, inserted_at: now, updated_at: now}
+    ])
+
+    trash!.(c.naming)
+
+    assert {:ok, %{problems: [%{code: :forbidden}]}} =
+             Proposals.propose([replace(in_gallery, image!("e", {1600, 1200}))], editor)
+  end
+
   describe "the operation's JSON" do
     test "decodes an image's asset or an attachment, and refuses other kinds" do
       assert {:ok, %ReplaceImageFile{asset: {:image, 1}, with: {:image, 7}}} =

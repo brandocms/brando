@@ -135,15 +135,17 @@ defmodule Brando.Content.Usage do
   The entries each of `ids` belongs to, as `%{id => [{schema, entry_id}]}`.
   Unlike `list/2`, a gallery is not an owner: an image or video in one
   belongs to the entries that show the gallery. Ids no entry uses are left
-  out.
+  out. Entries in the trash are left out too, unless `include_deleted: true`.
   """
-  @spec owners(kind(), [integer()]) :: %{optional(integer()) => [{module(), integer()}]}
-  def owners(_kind, []), do: %{}
+  @spec owners(kind(), [integer()], keyword()) :: %{optional(integer()) => [{module(), integer()}]}
+  def owners(kind, ids, opts \\ [])
+  def owners(_kind, [], _opts), do: %{}
 
-  def owners(kind, ids) when kind in @kinds do
-    references = references(kind, ids)
+  def owners(kind, ids, opts) when kind in @kinds do
+    opts = Keyword.take(opts, [:include_deleted])
+    references = references(kind, ids, opts)
     gallery_ids = for {_id, {@gallery, gallery_id}} <- references, uniq: true, do: gallery_id
-    gallery_owners = :gallery |> references(gallery_ids) |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    gallery_owners = :gallery |> references(gallery_ids, opts) |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     references
     |> Enum.flat_map(fn
