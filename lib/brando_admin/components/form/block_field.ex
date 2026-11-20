@@ -339,13 +339,25 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
-    if Map.get(message, :source) == :translation and joined_with_work?(socket) do
+    translation? = Map.get(message, :source) == :translation
+
+    cond do
       # A synchronized translation's pending version, loaded by an editor who
       # joined an edit session that already holds unsaved work: the editor
       # who opened it first loaded the version, and the work is on top of it.
-      {:ok, socket}
-    else
-      {:ok, restore_draft(socket, changesets, originals)}
+      translation? and joined_with_work?(socket) ->
+        {:ok, socket}
+
+      # The pending version is the whole field as the source has it, so its
+      # blocks go where it has them and the ones it lacks go (`place?`). A
+      # row it leaves out comes as a `:replace` changeset (`put_assoc/3` in
+      # `Brando.Drafts.Restore`): a row it drops, not one it holds.
+      translation? ->
+        held = Enum.reject(changesets, &(&1.action == :replace))
+        {:ok, restore_draft(socket, held, originals, place?: true)}
+
+      true ->
+        {:ok, restore_draft(socket, changesets, originals)}
     end
   end
 
@@ -1819,10 +1831,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     assign(socket, :entry_blocks, entry_blocks)
   end
 
-  # `place?`: the copy is the whole field (a revision's working copy), so
-  # its blocks go where it has them, and the ones it lacks go. A recovery
-  # copy or a translation's version may predate blocks someone has saved
-  # since, so for them the blocks stay where the field has them.
+  # `place?`: the copy is the whole field (a revision's working copy, a
+  # translation's pending version), so its blocks go where it has them, and
+  # the ones it lacks go. A recovery copy may predate blocks someone has
+  # saved since, so for it the blocks stay where the field has them.
   @decorate span("brando.block_field.restore_draft", block_field: [:socket, :assigns, :block_field])
   defp restore_draft(socket, changesets, originals, opts \\ []) do
     Tracing.set_attributes(%{
