@@ -725,11 +725,18 @@ defmodule Brando.Content.Blocks do
         where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
         select: {entry.id, field(entry, ^rich_field)}
 
-    for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
-      Repo.transaction(fn ->
-        update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
-      end)
-    end
+    updated =
+      for {id, html} <- Repo.all(query),
+          RichText.contains_identifier?(html, identifier_id),
+          {:ok, :updated} <- [
+            Repo.transaction(fn ->
+              update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
+            end)
+          ],
+          do: id
+
+    # In the bulk lane: a link that moved can reach any number of entries
+    if updated != [], do: enqueue_entry_map_for_render(%{module => updated})
   end
 
   defp update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url) do
@@ -742,7 +749,7 @@ defmodule Brando.Content.Blocks do
         {:updated, html} ->
           updated = entry |> Changeset.change([{rich_field, html}]) |> Repo.update!()
           Brando.Cache.Query.evict({:ok, updated})
-          enqueue_entry_for_render(%{schema: module, entry_id: id})
+          :updated
 
         :unchanged ->
           :ok
