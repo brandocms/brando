@@ -118,21 +118,28 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
   defp poll_image_tasks(socket), do: socket
 
-  # The images a run could not recreate, named from the work's failed steps
+  # The images a run could not recreate, named from the work's failed steps.
+  # The names are read again only when they change (they stop at a cap); the
+  # count always follows.
   defp assign_image_failures(socket, %BrandoAdmin.Work{failed_items: [_ | _] = ids, failed: failed}) do
-    if Enum.map(socket.assigns[:image_failures][:images] || [], & &1.id) == ids do
-      socket
-    else
-      images =
-        Brando.Repo.all(from i in Images.Image, where: i.id in ^ids, select: %{id: i.id, path: i.path})
-        |> Map.new(&{&1.id, &1})
+    named =
+      case socket.assigns[:image_failures] do
+        %{images: images} -> if Enum.map(images, & &1.id) == ids, do: images, else: name_images(ids)
+        _none -> name_images(ids)
+      end
 
-      named = Enum.map(ids, &(images[&1] || %{id: &1, path: nil}))
-      assign(socket, :image_failures, %{count: failed, images: named})
-    end
+    assign(socket, :image_failures, %{count: failed, images: named})
   end
 
   defp assign_image_failures(socket, _work), do: assign(socket, :image_failures, nil)
+
+  defp name_images(ids) do
+    images =
+      Brando.Repo.all(from i in Images.Image, where: i.id in ^ids, select: %{id: i.id, path: i.path})
+      |> Map.new(&{&1.id, &1})
+
+    Enum.map(ids, &(images[&1] || %{id: &1, path: nil}))
+  end
 
   def handle_work(%BrandoAdmin.Work{key: key} = work, socket) do
     if key == socket.assigns[:image_sizes_key] do

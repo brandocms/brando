@@ -233,5 +233,25 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
         assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
       end)
     end
+
+    test "the failure count keeps up past the images it names", %{conn: conn, current_user: user} do
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+
+      work = %BrandoAdmin.Work{
+        id: SizeRun.work_key(),
+        key: SizeRun.work_key(),
+        user_id: user.id,
+        total: 300,
+        done: 100,
+        failed: 100,
+        failed_items: Enum.to_list(1..100)
+      }
+
+      send(view.pid, {:work, SizeRun.work_key(), :running, work})
+      assert has_element?(view, "#utils-image-failures[data-count=\"100\"]")
+
+      send(view.pid, {:work, SizeRun.work_key(), :running, %{work | done: 250, failed: 250}})
+      assert has_element?(view, "#utils-image-failures[data-count=\"250\"]")
+    end
   end
 end
