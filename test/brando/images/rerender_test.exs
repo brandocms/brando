@@ -522,6 +522,23 @@ defmodule Brando.Images.RerenderTest do
                       %Work{message: "1 image recreated, 1 page is still waiting to be updated"}}
     end
 
+    # The Utilities row reads the jobs when the work ends
+    test "is over for every admin once its work has ended, while its watcher's last look runs", %{user: user} do
+      page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run_images(user)
+        assert :ok = look()
+        assert :ok = look()
+        assert %{failure: 0} = Oban.drain_queue(queue: :default)
+
+        {:ok, job} = look_executing()
+        assert_receive {:work, "image-sizes", :finished, %Work{}}
+        refute SizeRun.running?()
+        ack(job, :ok)
+      end)
+    end
+
     test "counts a page whose failed render was queued again and rendered as updated", %{user: user} do
       page = page_with(user, [image()])
 

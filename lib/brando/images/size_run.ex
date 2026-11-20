@@ -212,7 +212,8 @@ defmodule Brando.Images.SizeRun do
 
   # The runs whose watcher is unfinished: their pages may be left to render.
   # A watcher left executing by a node that is gone holds nothing, and its
-  # run's held renders run by themselves.
+  # run's held renders run by themselves; one whose last look has ended the
+  # run holds nothing either.
   defp watching(except \\ nil) do
     worker = Oban.Worker.to_string(Worker.ImageMaintenance)
     args = TenantJob.attach(%{"watch" => true})
@@ -222,7 +223,8 @@ defmodule Brando.Images.SizeRun do
       from j in Oban.Job,
         where:
           j.worker == ^worker and j.state in ^@unfinished_states and
-            (j.state != "executing" or j.attempted_at > ^stale) and fragment("? @> ?", j.args, ^args),
+            (j.state != "executing" or j.attempted_at > ^stale) and fragment("? @> ?", j.args, ^args) and
+            not fragment("? @> ?", j.args, ^%{"ended" => true}),
         select: fragment("? ->> 'run'", j.args),
         distinct: true
 
@@ -455,10 +457,12 @@ defmodule Brando.Images.SizeRun do
 
     cond do
       left == [] ->
+        ended(job)
         if ours?, do: end_run(user, pages, total, failed)
         :ok
 
       System.os_time(:second) - since > div(@pages_stall, 1000) ->
+        ended(job)
         if ours?, do: end_run(user, pages, map_size(seen), failed, length(left))
         :ok
 
@@ -470,6 +474,16 @@ defmodule Brando.Images.SizeRun do
 
         snooze(job, Map.put(args, "pages", pages), @watch_every)
     end
+  end
+
+  # The run is over before the work ends, though the watcher's row is still
+  # executing: an admin's view reads the jobs when the work ends
+  # (`watching/1`)
+  defp ended(%Oban.Job{id: nil}), do: :ok
+
+  defp ended(%Oban.Job{id: id, args: args}) do
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^id), set: [args: Map.put(args, "ended", true)])
+    :ok
   end
 
   # When a page last finished, in Unix seconds: now, when one did since the
