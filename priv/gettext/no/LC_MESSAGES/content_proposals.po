@@ -31,6 +31,11 @@ msgstr "%{entries} er endret etter at forslaget ble utført. Å angre ville over
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{entry} became its translation group's source after the proposal was applied. Undo would leave the group without a source: make another version the source first."
+msgstr "%{entry} ble kilden i oversettelsesgruppen etter at forslaget ble utført. Å angre ville latt gruppen stå uten kilde: gjør en annen versjon til kilde først."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{field} cannot be changed by a proposal."
 msgstr "%{field} kan ikke endres av et forslag."
 

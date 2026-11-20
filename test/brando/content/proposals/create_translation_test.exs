@@ -236,6 +236,64 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert Translations.list_members(source_member.group_id) == [Repo.reload!(source_member)]
   end
 
+  # Another version joins the group after the apply. The test site has two
+  # languages, so it joins under a third, with its own pending version.
+  defp join_group(c, group_id) do
+    {:ok, other} =
+      SyncTest.create_article(
+        %{title: "Titel", slug: "titel-#{System.unique_integer([:positive])}", language: "en", status: "draft"},
+        c.user
+      )
+
+    member =
+      Repo.insert!(%Translations.Member{
+        group_id: group_id,
+        entry_type: to_string(Article),
+        entry_id: other.id,
+        language: "de",
+        role: :target,
+        synchronized: true
+      })
+
+    {:ok, _} = Translations.resync_target(group_id, member.id)
+    Repo.reload!(member)
+  end
+
+  test "undo keeps a group another version joined after the apply, with that version's work", c do
+    {:ok, proposal} = Proposals.propose([op(c)], c.user)
+    {:ok, receipt} = approve_and_apply(proposal, c.user)
+    id = receipt.mappings["created"]["english"]
+    %{group_id: group_id} = source_member = Translations.get_member(Article, c.source.id)
+
+    later = join_group(c, group_id)
+    pending = Translations.get_pending_version(Article, later.entry_id)
+    assert pending.work_items != []
+
+    assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+    assert Repo.get(Article, id) == nil
+    assert Translations.get_member(Article, id) == nil
+    assert Translations.get_member(Article, c.source.id) == source_member
+    assert Translations.get_member(Article, later.entry_id) == later
+
+    assert %{id: pending_id, work_items: items} = Translations.get_pending_version(Article, later.entry_id)
+    assert pending_id == pending.id
+    assert Enum.map(items, & &1.id) == Enum.map(pending.work_items, & &1.id)
+  end
+
+  test "undo is refused when the translation has since become its group's source", c do
+    {:ok, proposal} = Proposals.propose([op(c)], c.user)
+    {:ok, receipt} = approve_and_apply(proposal, c.user)
+    id = receipt.mappings["created"]["english"]
+    {:ok, _} = Translations.transfer_source(Article, id, c.user)
+
+    assert {:error, _message} = Proposals.undo(proposal.id, c.user)
+    assert Repo.get(Article, id)
+    assert %{role: :source, group_id: group_id} = Translations.get_member(Article, id)
+    assert %{role: :target, group_id: ^group_id} = Translations.get_member(Article, c.source.id)
+    assert Translations.alternate_languages(Article, c.source.id) == ["en"]
+    assert {:ok, %{status: "applied"}} = Proposals.get(proposal.id, c.user)
+  end
+
   test "an actor without create is refused, with groups", c do
     put_test_env(:authorization_mode, :groups)
     {:ok, _} = Brando.Authorization.Migration.run()

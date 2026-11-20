@@ -3148,18 +3148,41 @@ defmodule Brando.Content.Proposals do
     do: restore!(schema, entry_id, receipt.before[key]["revision"], user)
 
   # The translation leaves its group, and the group goes when the apply made
-  # it, so the group is as it was and the language is free again. Its
-  # alternate link goes with it.
+  # it and only its source is left, so the group is as it was and the
+  # language is free again. A version that joined the group since keeps it,
+  # with its pending version and work. Its alternate link goes with it.
+  #
+  # The group is locked as a source save's synchronization locks it. A
+  # translation made the group's source since the apply is not deleted: the
+  # group would be left without one.
   defp delete_translation!(schema, entry_id, group, user) do
-    Repo.delete_all(
-      from(m in Translations.Member,
-        where: m.entry_type == ^to_string(schema) and m.entry_id == ^entry_id and m.group_id == ^group["group_id"]
-      )
-    )
+    group_id = group["group_id"]
+    Repo.one(from(g in Translations.Group, where: g.id == ^group_id, lock: "FOR UPDATE"))
 
-    if group["new_group"], do: Repo.delete_all(from(g in Translations.Group, where: g.id == ^group["group_id"]))
+    {own, others} =
+      group_id
+      |> Translations.list_members()
+      |> Enum.split_with(&(&1.entry_type == to_string(schema) and &1.entry_id == entry_id))
+
+    case own do
+      [%{role: :source}] -> Error.fail!(became_source(schema, entry_id))
+      [member] -> Repo.delete!(member)
+      [] -> :ok
+    end
+
+    if group["new_group"] and match?([%{role: :source}], others),
+      do: Repo.delete_all(from(g in Translations.Group, where: g.id == ^group_id))
+
     if schema.has_alternates?(), do: Module.concat(schema, Alternate).delete(group["source_id"], entry_id)
     delete_entry!(schema, entry_id, user)
+  end
+
+  defp became_source(schema, entry_id) do
+    dgettext(
+      "content_proposals",
+      "%{entry} became its translation group's source after the proposal was applied. Undo would leave the group without a source: make another version the source first.",
+      entry: Catalog.describe(Repo.get!(schema, entry_id)).title
+    )
   end
 
   defp restore!(schema, id, revision, user) do
