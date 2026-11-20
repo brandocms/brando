@@ -586,6 +586,80 @@
 
 .assistant-card-preview { justify-self: start; }
 
+/* An image whose file the proposal replaces: the two files side by side,
+   whole, so a change of proportions shows, and the entries that show it. */
+.assistant-replacement-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  .assistant-leave-out { position: static; }
+}
+
+.assistant-replacement:hover .assistant-leave-out { opacity: 1; }
+
+.assistant-replacement-files {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+/* Level with the middle of the frames */
+.assistant-replacement-arrow {
+  display: grid;
+  place-items: center;
+  height: 160px;
+  color: var(--assistant-faint);
+
+  [data-icon] { width: 16px; height: 16px; }
+}
+
+.assistant-replacement-file {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+
+  figcaption { display: grid; gap: 2px; min-width: 0; font-size: var(--brando-text-sm); }
+}
+
+.assistant-replacement-frame {
+  display: grid;
+  place-items: center;
+  height: 160px;
+  overflow: hidden;
+  border: 1px solid var(--assistant-line);
+  border-radius: 6px;
+  background: var(--assistant-surface);
+  color: var(--assistant-muted);
+
+  img { width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+  [data-icon] { width: 24px; height: 24px; }
+}
+
+.assistant-replacement-label { color: var(--assistant-muted); font-size: var(--brando-text-xs); letter-spacing: .08em; text-transform: uppercase; }
+.assistant-replacement-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assistant-replacement-meta { color: var(--assistant-muted); }
+.assistant-replacement-keeps { color: var(--assistant-muted); font-size: var(--brando-text-sm); }
+
+.assistant-replacement-uses {
+  display: grid;
+  gap: 8px;
+  font-size: var(--brando-text-md);
+
+  strong { font-weight: 500; }
+  ul { display: grid; gap: 4px; }
+  li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+  small { color: var(--assistant-muted); font-size: var(--brando-text-xs); }
+  .is-hidden { color: var(--assistant-muted); }
+}
+
+@media (max-width: 600px) {
+  .assistant-replacement-frame,
+  .assistant-replacement-arrow { height: 112px; }
+}
+
 /* Facts the assistant left for the editor, as [[…]] in the content. */
 .assistant-placeholders {
   display: grid;

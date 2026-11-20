@@ -448,11 +448,18 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   defp subjects(%{"op" => "create_entry", "content_type" => type}), do: [{type, nil}]
 
+  defp subjects(%{"op" => "replace_image_file"} = op) do
+    for %{"kind" => "image", "id" => id} <- [op["asset"], op["with"]], do: {:image, id}
+  end
+
   defp subjects(%{} = op) do
     for %{"content_type" => type, "id" => id} <- [op["target"], op["to"]], do: {type, id}
   end
 
   defp subjects(_op), do: []
+
+  defp readable_subject?({:image, id}, reader),
+    do: is_integer(id) and Boundary.authorize_record(reader, :read, Image, id) == :ok
 
   defp readable_subject?({type, id}, reader) do
     case Codec.schema(type) do
@@ -482,7 +489,8 @@ defmodule BrandoAdmin.MCP.WatchLive do
       {effects["inserted_blocks"], &ngettext("%{count} new block", "%{count} new blocks", &1)},
       {effects["updated_blocks"], &ngettext("%{count} changed block", "%{count} changed blocks", &1)},
       {effects["moved_blocks"], &ngettext("%{count} moved block", "%{count} moved blocks", &1)},
-      {effects["deletions"], &ngettext("%{count} deletion", "%{count} deletions", &1)}
+      {effects["deletions"], &ngettext("%{count} deletion", "%{count} deletions", &1)},
+      {effects["replaced_images"], &ngettext("%{count} image file replaced", "%{count} image files replaced", &1)}
     ]
     |> Enum.filter(fn {count, _label} -> is_integer(count) and count > 0 end)
     |> Enum.map(fn {count, label} -> label.(count) end)

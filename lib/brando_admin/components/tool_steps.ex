@@ -181,6 +181,21 @@ defmodule BrandoAdmin.Components.ToolSteps do
 
   defp step_text("attach_folder", _, _), do: gettext("Attached the folder's media")
 
+  # The Assistant keeps the whole result; the live page, its summary
+  defp step_text("prepare_proposal", args, %{"effects" => %{"replaced_images" => count}} = result)
+       when not is_map_key(result, "replaced_images"),
+       do: step_text("prepare_proposal", args, Map.put(result, "replaced_images", count))
+
+  defp step_text("prepare_proposal", _, %{"version" => version, "applicable" => true, "replaced_images" => count})
+       when is_integer(count) and count > 0,
+       do:
+         ngettext(
+           "Prepared version %{version} of the proposal, replacing the file of %{count} image",
+           "Prepared version %{version} of the proposal, replacing the files of %{count} images",
+           count,
+           version: strong(version)
+         )
+
   defp step_text("prepare_proposal", _, %{"version" => version, "applicable" => false}),
     do: gettext("Prepared version %{version}, with problems to fix", version: strong(version))
 

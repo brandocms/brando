@@ -195,6 +195,28 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       assert has_element?(view, card <> " h3", "Retitle the page")
     end
 
+    test "a proposal replacing an image's file counts it, and says so on its line",
+         %{conn: conn, tenant: tenant, token: token, grant: grant} do
+      old = Brando.ImageFileFixtures.file_image("old", {800, 600})
+      new = Brando.ImageFileFixtures.file_image("new", {1600, 1200})
+      {:ok, view, _html} = page(conn, grant)
+
+      op = %{
+        "op" => "replace_image_file",
+        "asset" => %{"kind" => "image", "id" => old.id},
+        "with" => %{"kind" => "image", "id" => new.id}
+      }
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Better photo", "operations" => [op]})
+
+      card = "[data-proposal-id='#{id}']"
+      assert has_element?(view, card <> " h3", "Better photo")
+      # The version, and the one replaced file
+      assert [_version, _replaced] =
+               view |> element(card <> " .mcp-watch-counts") |> render() |> String.split(" · ")
+    end
+
     test "a proposal with problems lists them", %{conn: conn, grant: grant, current_user: user} do
       record = proposal!(user)
 

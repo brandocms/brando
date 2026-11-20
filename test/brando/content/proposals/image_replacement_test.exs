@@ -26,47 +26,7 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     Brando.ProposalFixtures.context()
   end
 
-  # An image at images/replace/<name>.<ext> with its file written, as an
-  # upload stores it.
-  defp image!(name, {width, height}, opts \\ []) do
-    ext = Keyword.get(opts, :ext, "jpg")
-    path = "images/replace/#{name}-#{System.unique_integer([:positive])}.#{ext}"
-    file = Brando.Images.Utils.media_path(path)
-    File.mkdir_p!(Path.dirname(file))
-
-    case ext do
-      "svg" ->
-        File.write!(
-          file,
-          ~s(<svg xmlns="http://www.w3.org/2000/svg" width="#{width}" height="#{height}"><rect width="10" height="10" fill="##{System.unique_integer([:positive])}"/></svg>)
-        )
-
-      # Each image its own colour, so each file its own hash
-      _ ->
-        color = for _ <- 1..3, do: :rand.uniform(255)
-        width |> Elixir.Image.new!(height, color: color) |> Elixir.Image.write!(file)
-    end
-
-    hash = :sha256 |> :crypto.hash(File.read!(file)) |> Base.encode16(case: :lower)
-
-    :image
-    |> Factory.build(
-      Keyword.merge(
-        [
-          path: path,
-          width: width,
-          height: height,
-          formats: [String.to_existing_atom(if(ext == "jpg", do: "jpg", else: ext))],
-          sizes: %{},
-          content_hash: hash,
-          config_target: "default",
-          status: :processed
-        ],
-        Keyword.drop(opts, [:ext])
-      )
-    )
-    |> Repo.insert!()
-  end
+  defp image!(name, dimensions, opts \\ []), do: Brando.ImageFileFixtures.file_image(name, dimensions, opts)
 
   defp replace(old, new), do: %ReplaceImageFile{asset: {:image, old.id}, with: {:image, new.id}}
 

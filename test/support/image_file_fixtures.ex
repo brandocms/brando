@@ -60,4 +60,51 @@ defmodule Brando.ImageFileFixtures do
     File.mkdir_p!(Path.dirname(file))
     width |> Image.new!(height, color: [90, 120, 150]) |> Image.write!(file)
   end
+
+  @doc """
+  Inserts an image with its original written at
+  images/replace/<name>-<n>.<ext>, as an upload stores it, with the file's
+  `content_hash`. Each raster file has a colour of its own, so a hash of its
+  own. `opts`: `:ext` (`"jpg"`, `"png"` or `"svg"`), and image fields.
+  """
+  def file_image(name, {width, height}, opts \\ []) do
+    ext = Keyword.get(opts, :ext, "jpg")
+    path = "images/replace/#{name}-#{System.unique_integer([:positive])}.#{ext}"
+    file = Brando.Images.Utils.media_path(path)
+    File.mkdir_p!(Path.dirname(file))
+
+    case ext do
+      "svg" ->
+        fill = "##{System.unique_integer([:positive])}"
+
+        File.write!(
+          file,
+          ~s(<svg xmlns="http://www.w3.org/2000/svg" width="#{width}" height="#{height}"><rect width="10" height="10" fill="#{fill}"/></svg>)
+        )
+
+      _ ->
+        color = for _ <- 1..3, do: :rand.uniform(255)
+        width |> Image.new!(height, color: color) |> Image.write!(file)
+    end
+
+    hash = :sha256 |> :crypto.hash(File.read!(file)) |> Base.encode16(case: :lower)
+
+    :image
+    |> Factory.build(
+      Keyword.merge(
+        [
+          path: path,
+          width: width,
+          height: height,
+          formats: [String.to_existing_atom(ext)],
+          sizes: %{},
+          content_hash: hash,
+          config_target: "default",
+          status: :processed
+        ],
+        Keyword.delete(opts, :ext)
+      )
+    )
+    |> Brando.Repo.insert!()
+  end
 end
