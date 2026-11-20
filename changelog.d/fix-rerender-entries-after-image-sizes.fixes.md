@@ -1,0 +1,3 @@
+- Recreated image sizes reach the site: when processing changes what an image's markup reads (its sizes, formats, dimensions or size settings), when its focal point is saved, and when it goes on the CDN, the entries that show it, and the entries that list those through their identifier or a datasource, render again. Utilities → Image sizes renders each page once per run, as its second step ("Updating pages", counted apart from the images), and ends only when the last page is rendered, or as failed after 25 minutes in which no page was.
+
+- `Brando.Content.RenderQueue.release/1` on a site without a tenant prefix no longer releases other sites' held renders.

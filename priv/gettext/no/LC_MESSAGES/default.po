@@ -501,6 +501,27 @@ msgid_plural "%{count} open items"
 msgstr[0] "%{count} åpent element"
 msgstr[1] "%{count} åpne elementer"
 
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page could not be updated"
+msgid_plural "%{count} pages could not be updated"
+msgstr[0] "%{count} side kunne ikke oppdateres"
+msgstr[1] "%{count} sider kunne ikke oppdateres"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page is still waiting to be updated"
+msgid_plural "%{count} pages are still waiting to be updated"
+msgstr[0] "%{count} side venter fortsatt på å bli oppdatert"
+msgstr[1] "%{count} sider venter fortsatt på å bli oppdatert"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page updated"
+msgid_plural "%{count} pages updated"
+msgstr[0] "%{count} side oppdatert"
+msgstr[1] "%{count} sider oppdatert"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} place needs your input"
@@ -769,6 +790,11 @@ msgstr "%{host}: skriv bare inn en vert, for eksempel www.example.com, uten prot
 #, elixir-autogen, elixir-format
 msgid "%{host}: the installation itself uses this host, for its admin, media or CDN."
 msgstr "%{host}: installasjonen bruker selv denne verten, til admin, media eller CDN."
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{images}, %{pages}"
+msgstr "%{images}, %{pages}"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
@@ -21727,6 +21753,18 @@ msgid "Updates 1 module"
 msgid_plural "Updates %{count} modules"
 msgstr[0] "Oppdaterer 1 modul"
 msgstr[1] "Oppdaterer %{count} moduler"
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "Updating pages"
+msgstr "Oppdaterer sider"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Updating pages: %{count} page left"
+msgid_plural "Updating pages: %{count} pages left"
+msgstr[0] "Oppdaterer sider: %{count} side igjen"
+msgstr[1] "Oppdaterer sider: %{count} sider igjen"
 
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/file_drawer.ex

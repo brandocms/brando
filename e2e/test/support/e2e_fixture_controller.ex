@@ -54,6 +54,17 @@ defmodule E2EFixtureController do
         "image-sizes-running" ->
           create_image_sizes_run()
 
+        # A run whose images are done, rendering the pages that show them;
+        # then the run done, and one with a page it could not render
+        "image-sizes-pages" ->
+          create_image_sizes_pages()
+
+        "image-sizes-pages-done" ->
+          end_image_sizes_run(0)
+
+        "image-sizes-pages-failed" ->
+          end_image_sizes_run(1)
+
         # An image Utilities → Image sizes recreates (the seeds have none)
         "image-sizes-image" ->
           create_image_sizes_image()
@@ -1262,6 +1273,71 @@ defmodule E2EFixtureController do
     SizeRun.begin(user)
     Work.start(user, SizeRun.work_key(), nil, total: 65, timeout: 60_000)
     Work.update(user, SizeRun.work_key(), nil, done: 12)
+    user
+  end
+
+  # Inserted as rows: the E2E server runs jobs inline when Oban inserts them.
+  # The watcher in its pages step, 11 of the run's 14 renders left, and the
+  # admin's work at 3 of 14 pages
+  defp create_image_sizes_pages do
+    alias Brando.Images.SizeRun
+    alias BrandoAdmin.Work
+
+    user = get_admin_user()
+    run = Ecto.UUID.generate()
+
+    %{task: "recreate_sizes", user_id: user.id, run: run, watch: true, pages: %{"seen" => %{}}}
+    |> Brando.Tenant.Job.attach()
+    |> Brando.Worker.ImageMaintenance.new(schedule_in: 60)
+    |> Brando.Repo.insert!()
+
+    for entry_id <- 1..11 do
+      %{schema: "Elixir.Brando.Pages.Page", entry_id: 100_000 + entry_id}
+      |> Brando.Tenant.Job.attach()
+      |> Brando.Worker.EntryRenderer.new(meta: %{"brando_runs" => [run]}, schedule_in: 60)
+      |> Ecto.Changeset.delete_change(:unique)
+      |> Brando.Repo.insert!()
+    end
+
+    Work.in_locale(user, fn ->
+      Work.start(
+        user,
+        SizeRun.work_key(),
+        Gettext.dgettext(Brando.Gettext, "default", "Updating pages"),
+        total: 14,
+        open: true,
+        timeout: 60_000
+      )
+    end)
+
+    Work.update(user, SizeRun.work_key(), nil, done: 3)
+    user
+  end
+
+  # Ends the run `create_image_sizes_pages/0` left, as its watcher's last
+  # look does: for a page already open, which hears the work end
+  defp end_image_sizes_run(failed_pages) do
+    import Ecto.Query, only: [from: 2]
+
+    alias Brando.Images.SizeRun
+    alias BrandoAdmin.Work
+
+    user = get_admin_user()
+    workers = ["Brando.Worker.ImageMaintenance", "Brando.Worker.EntryRenderer"]
+    Brando.Repo.delete_all(from(j in Oban.Job, where: j.worker in ^workers))
+
+    # Running, also after another shot ended it
+    unless Work.running?(Work.get(user, SizeRun.work_key())),
+      do: Work.start(user, SizeRun.work_key(), nil, total: 14, open: true, timeout: 60_000)
+
+    Work.in_locale(user, fn ->
+      message = SizeRun.result_message(65, false, 14, failed_pages)
+
+      if failed_pages > 0,
+        do: Work.fail(user, SizeRun.work_key(), message),
+        else: Work.finish(user, SizeRun.work_key(), message)
+    end)
+
     user
   end
 

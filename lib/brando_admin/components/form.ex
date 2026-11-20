@@ -6557,6 +6557,11 @@ defmodule BrandoAdmin.Components.Form do
         # status/sizes since the drawer was opened.
         {:ok, updated_image} = Images.get_image(image.id)
 
+        # Processing sees the focal point already saved: the entries that
+        # show the image render again from here
+        if Map.has_key?(validated_changeset.changes, :focal),
+          do: Images.Rerender.after_refocus(image, updated_image)
+
         Brando.Blueprint.AfterSave.run(
           Images.Image,
           updated_image,
@@ -7443,7 +7448,12 @@ defmodule BrandoAdmin.Components.Form do
       )
       |> Map.put(:action, :update)
 
-    Images.update_image(changeset, current_user)
+    with {:ok, updated_image} <- Images.update_image(changeset, current_user) do
+      # Processing sees the focal point already saved: the entries that show
+      # the image render again from here
+      Images.Rerender.after_refocus(image, updated_image)
+      {:ok, updated_image}
+    end
   end
 
   # A form field's input name at a path as the form names it:

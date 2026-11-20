@@ -36,6 +36,13 @@ defmodule Brando.Content.RenderRun do
     {with_runs([run], fun), run}
   end
 
+  @doc """
+  Runs `fun` as part of the run `run`, a run id of the caller's own (an
+  image size run's, say): the render jobs it queues carry it.
+  """
+  @spec within_run(String.t(), (-> term)) :: term
+  def within_run(run, fun) when is_binary(run) and is_function(fun, 0), do: with_runs([run], fun)
+
   @doc "Runs `fun` within the runs of `job`, so the jobs it queues belong to them too."
   @spec within(Oban.Job.t(), (-> term)) :: term
   def within(%Oban.Job{meta: %{@meta => runs}}, fun) when is_list(runs) and runs != [], do: with_runs(runs, fun)
@@ -103,6 +110,36 @@ defmodule Brando.Content.RenderRun do
           ]
         )
     end
+  end
+
+  @doc """
+  The run's render jobs in the jobs table now, by entry: `%{{tenant_prefix,
+  schema, entry_id} => [state]}`, with `schema` as the jobs carry it, newest
+  job first. A job that the Pruner has deleted is not there.
+  """
+  @spec render_states(String.t()) :: %{optional({String.t() | nil, String.t(), term}) => [String.t()]}
+  def render_states(run) do
+    query =
+      from(j in Oban.Job,
+        where: j.worker == @renderer,
+        where: fragment("? @> ?", j.meta, type(^%{@meta => [run]}, :map)),
+        order_by: [desc: j.id],
+        select: {j.args, j.state, j.attempted_at}
+      )
+
+    query
+    |> Repo.all(prefix: "public")
+    |> Enum.group_by(
+      fn {args, _state, _at} -> {args["tenant_prefix"], schema(args["schema"]), args["entry_id"]} end,
+      fn {_args, state, at} -> if state == "executing" and stale?(at), do: "stale", else: state end
+    )
+  end
+
+  # A render left executing well past its timeout: its node is gone
+  defp stale?(nil), do: false
+
+  defp stale?(attempted_at) do
+    DateTime.diff(DateTime.utc_now(), attempted_at, :millisecond) > :timer.minutes(2)
   end
 
   @doc "Where the run's jobs are now: `await/2` once, without waiting."

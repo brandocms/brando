@@ -102,7 +102,8 @@ defmodule Brando.Images.Processing do
   (as `:system`). The run writes as the system, so `user` needs the right to
   update images: `{:error, :forbidden}` otherwise. Returns
   `{:error, :already_running}` while an earlier run is unfinished: until the
-  last image it queued is processed (`Brando.Images.SizeRun`).
+  last image it queued is processed, and the pages that show its images are
+  rendered again (`Brando.Images.SizeRun`).
   """
   @spec recreate_sizes_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | :forbidden | term}
   def recreate_sizes_for_images(user), do: start_image_maintenance("recreate_sizes", user)
@@ -296,7 +297,7 @@ defmodule Brando.Images.Processing do
 
     with {:ok, :allowed} <- Boundary.run(user, :update, Image, fn _ -> {:ok, :allowed} end) do
       cond do
-        # A run's watcher, still to take its last look, does not hold the next
+        # Until its watcher has seen the pages that show its images rendered
         recreate? and SizeRun.running?() -> {:error, :already_running}
         recreate? -> start_size_run(task, user)
         image_maintenance_running?(task) -> {:error, :already_running}
@@ -306,23 +307,35 @@ defmodule Brando.Images.Processing do
   end
 
   # Begun before the insert: a job run inline reports the run as it is queued.
-  # Its watcher ends it however the walk and the images end.
+  # Its watcher ends it however the walk and the images end. The walk and its
+  # watcher are queued in one transaction: a walk that closed before its
+  # watcher was there would end the run itself, without the pages.
   defp start_size_run(task, user) do
     run = SizeRun.begin(user)
     args = maintenance_args(task, user)
 
-    case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
-      {:ok, _job} = ok ->
-        with {:error, reason} <- SizeRun.queue_watcher(args, run) do
-          Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
-        end
-
+    case Brando.Repo.transaction(fn -> queue_size_run(args, run) end) do
+      {:ok, job} ->
         Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:image_maintenance, %{task: task, state: :started}})
-        ok
+        {:ok, job}
 
       error ->
         SizeRun.abort(user)
         error
+    end
+  end
+
+  defp queue_size_run(args, run) do
+    case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
+      {:ok, job} ->
+        with {:error, reason} <- SizeRun.queue_watcher(args, run) do
+          Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
+        end
+
+        job
+
+      {:error, reason} ->
+        Brando.Repo.rollback(reason)
     end
   end
 
@@ -374,6 +387,7 @@ defmodule Brando.Images.Processing do
         |> Brando.Repo.update!()
       end
 
+    rerender(images_by_id, updated_images)
     {:ok, Enum.map(updated_images, & &1.id)}
   end
 
@@ -403,7 +417,15 @@ defmodule Brando.Images.Processing do
         |> Brando.Repo.update!()
       end
 
+    rerender(images_by_id, updated_images)
     {:ok, Enum.map(updated_images, & &1.id)}
+  end
+
+  # The entries that show the images whose processing changed what a render
+  # reads render again, once (`Brando.Images.Rerender`)
+  defp rerender(before_by_id, updated) do
+    changed = for image <- updated, Images.Rerender.changed?(before_by_id[image.id], image), do: image.id
+    Images.Rerender.queue(changed)
   end
 
   # An image no operations can be made for keeps the sizes it has, and the
