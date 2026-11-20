@@ -13,6 +13,7 @@ defmodule Brando.Content.Proposals.Codec do
   name any in the catalogue.
 
       %{"op" => "create_entry", "content_type" => "…", "ref" => "case", "fields" => %{}}
+      %{"op" => "create_translation", "source" => %{"content_type" => "…", "id" => 12}, "language" => "en", "ref" => "en"}
       %{"op" => "set_fields", "target" => target, "fields" => %{}}
       %{"op" => "insert_block", "target" => target, "field" => "blocks", "module" => "local:12",
         "parent" => uid | nil, "placement" => "append" | %{"before" => uid} | %{"after" => uid},
@@ -44,6 +45,7 @@ defmodule Brando.Content.Proposals.Codec do
   alias Brando.Content.Proposals.{
     CopyBlock,
     CreateEntry,
+    CreateTranslation,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
@@ -92,6 +94,13 @@ defmodule Brando.Content.Proposals.Codec do
       schema: writable!(map["content_type"]),
       ref: string!(map["ref"], "ref"),
       fields: values(map!(map["fields"]), attachments)
+    }
+
+  defp decode!("create_translation", map, _),
+    do: %CreateTranslation{
+      source: source!(map["source"]),
+      language: string!(map["language"], "language"),
+      ref: string!(map["ref"], "ref")
     }
 
   defp decode!("set_fields", map, attachments),
@@ -242,6 +251,9 @@ defmodule Brando.Content.Proposals.Codec do
       "ref" => op.ref,
       "fields" => Map.new(op.fields, fn {key, value} -> {key, value(value)} end)
     }
+
+  def encode(%CreateTranslation{} = op),
+    do: %{"op" => "create_translation", "source" => target(op.source), "language" => op.language, "ref" => op.ref}
 
   def encode(%SetFields{} = op),
     do: %{
@@ -446,6 +458,12 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp target!(_),
     do: invalid!(dgettext("content_proposals", "A target is {content_type, id} or {new: ref}."))
+
+  # A translation is made of a saved entry.
+  defp source!(%{"content_type" => _, "id" => _} = source), do: target!(source)
+
+  defp source!(_),
+    do: invalid!(dgettext("content_proposals", "source is a saved entry: {content_type, id}."))
 
   defp schema!(name) do
     case schema(name) do
