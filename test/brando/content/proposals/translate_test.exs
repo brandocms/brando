@@ -651,13 +651,27 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
     assert [
              %{key: "title", label: "Title", source: "Tittel", text: "Title", reviewed?: false},
-             %{key: heading, label: "Text › Heading", source: "Overskrift", text: nil, reviewed?: true}
+             %{key: heading, label: "Text › Heading", source: "Overskrift", text: "Overskrift", reviewed?: true}
            ] = units
 
     assert heading == "#{c.prefix}/refs/heading/text"
   end
 
   describe "the review" do
+    test "shows the translation's text for a unit marked reviewed", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+      assert {:review, "title"} in open_items(target.id)
+
+      op = translate(target, %{}, keys: ["title"], reviewed: ["title"])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert proposal.problems == []
+
+      assert [%{changes: [%{units: [unit]}]}] = Review.entries(proposal)
+      assert %{key: "title", source: "Ny tittel", text: "Title", reviewed?: true} = unit
+    end
+
     test "labels a unit in a block the source added from the pending version", c do
       target = create_translation(c)
       added = add_block(c.source, c.module, c.user, 1)

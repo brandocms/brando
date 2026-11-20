@@ -195,8 +195,8 @@ defmodule Brando.Content.Proposals.Review do
 
   # Each batch a translate operation answers, unit by unit: where the text
   # is, the source's text and its translation, so the reviewer can check one
-  # against the other. A unit kept as it is shows the source's text only.
-  # Units are placed and labelled from the translation's pending
+  # against the other. A unit kept as it is shows the text the translation
+  # keeps. Units are placed and labelled from the translation's pending
   # version, which the apply saves. The source is read as the reviewer may
   # read it.
   defp translate_changes(target, proposal) do
@@ -232,7 +232,7 @@ defmodule Brando.Content.Proposals.Review do
         key: key,
         label: unit.label,
         source: if(source?, do: readable(unit.source)),
-        text: if(Map.has_key?(texts, key), do: readable(texts[key])),
+        text: if(Map.has_key?(texts, key), do: readable(texts[key]), else: readable(unit.current)),
         reviewed?: not Map.has_key?(texts, key)
       }
     end
