@@ -391,6 +391,23 @@ defmodule Brando.Content.Proposals.TranslateTest do
       Repo.transaction(fn -> Proposals.check_translated_sources!(proposal) end)
     end
 
+    test "the sources are locked with the apply's other rows, in its sorted order", c do
+      target = create_translation(c)
+      {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)
+      assert Proposals.apply_lock_order(proposal) == [{Article, c.source.id}, {Article, target.id}]
+
+      units = Work.new_translation_units(Article, c.source.id) |> elem(1) |> Map.fetch!(:units)
+      digest = Work.token(%{type: to_string(Article), id: {:new, c.source.id}, language: "en"}, units)
+
+      ops = [
+        %CreateTranslation{source: {Article, c.source.id}, language: "en", ref: "english"},
+        %Translate{target: {:new, "english"}, source_digest: digest, texts: english(c)}
+      ]
+
+      {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {Article, c.source.id} in Proposals.apply_lock_order(proposal)
+    end
+
     test "refuses a batch whose source text changed, naming the unit", c do
       target = create_translation(c)
       {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)

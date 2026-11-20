@@ -4083,10 +4083,9 @@ defmodule Brando.Content.Proposals do
       do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
 
     locked =
-      proposal.fingerprints
-      |> Map.keys()
-      |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
-      |> Enum.map(&load!(&1, actor, lock: true))
+      for target <- apply_lock_order(proposal),
+          entry = lock_target!(target, proposal, actor),
+          do: entry
 
     Transfer.lock_records!(%{fields: Enum.map(locked, &%{entry: &1}), bindings: %{}})
     entries = current!(proposal, actor)
@@ -4148,12 +4147,67 @@ defmodule Brando.Content.Proposals do
     {receipt, saved}
   end
 
-  @doc false
-  # Inside the apply's transaction, before any translation is created or
-  # saved: each translated source is locked, and every batch checked against
-  # it again. A source saved after `recheck!/3` ran would otherwise have its
-  # new text overwritten by the translation of the text before.
-  # Public for its test: the race it closes cannot be staged.
+  @doc """
+  The rows an apply locks first, as `{schema, id}`, sorted as
+  `Brando.Content.Transfer.lock_records!/1` sorts them: the proposal's
+  entries and the sources its `translate` operations translate.
+
+  Sources are read from their group's members, without refreshing a
+  translation's pending version, which takes the group lock: a source locked
+  after that, or after the entries, could deadlock with a transfer import or
+  a Create translation that locks the source first.
+  """
+  @spec apply_lock_order(Proposal.t()) :: [{module(), pos_integer()}]
+  def apply_lock_order(proposal) do
+    proposal.fingerprints
+    |> Map.keys()
+    |> Enum.concat(translated_sources(proposal))
+    |> Enum.uniq()
+    |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+  end
+
+  defp translated_sources(proposal) do
+    for %Translate{target: target} <- proposal.operations, source = translated_source(target, proposal), do: source
+  end
+
+  defp translated_source({:new, _} = target, proposal) do
+    case translation(proposal.operations, target) do
+      %CreateTranslation{source: {_schema, id} = source} when is_integer(id) -> source
+      _ -> nil
+    end
+  end
+
+  defp translated_source({schema, id}, _proposal) do
+    with %{role: :target, group_id: group_id} <- Translations.get_member(schema, id),
+         %{entry_id: source_id} <- Enum.find(Translations.list_members(group_id), &(&1.role == :source)) do
+      {schema, source_id}
+    else
+      _ -> nil
+    end
+  end
+
+  # An entry the proposal changes is loaded under its lock; a source it
+  # only translates from is locked, and read again by the check.
+  defp lock_target!(target, proposal, actor) do
+    if Map.has_key?(proposal.fingerprints, target) do
+      load!(target, actor, lock: true)
+    else
+      {schema, id} = target
+      lock_source!(schema, id)
+      nil
+    end
+  end
+
+  @doc """
+  Checks every `translate` batch of `proposal` against its source again,
+  under the source's lock, and raises a transfer error naming
+  the units whose source text changed.
+
+  Called inside the apply's transaction, before any translation is created
+  or saved: a source saved after the recheck at approval would otherwise
+  have its new text overwritten by the translation of the text before.
+  """
+  @spec check_translated_sources!(Proposal.t()) :: :ok
   def check_translated_sources!(proposal) do
     problems =
       for %Translate{} = op <- proposal.operations,
@@ -4177,12 +4231,14 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  defp translated_source_problems(%Translate{target: {schema, id}} = op, _proposal) do
-    with {:ok, %{source_id: source_id}} <- Work.translation_units(schema, id),
-         :ok <- lock_source!(schema, source_id),
-         {:ok, work} <- Work.translation_units(schema, id) do
-      source_check(op, %{type: to_string(schema), id: id, language: work.language}, work.units)
-    else
+  # The apply locked the source already (`apply_lock_order/1`); locking it
+  # again, before the work is read, holds when the check runs on its own.
+  defp translated_source_problems(%Translate{target: {schema, id} = target} = op, proposal) do
+    with {source_schema, source_id} <- translated_source(target, proposal),
+         do: lock_source!(source_schema, source_id)
+
+    case Work.translation_units(schema, id) do
+      {:ok, work} -> source_check(op, %{type: to_string(schema), id: id, language: work.language}, work.units)
       {:error, reason} -> Error.fail!(not_a_translation(reason).message)
     end
   end
