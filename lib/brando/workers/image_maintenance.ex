@@ -6,9 +6,10 @@ defmodule Brando.Worker.ImageMaintenance do
   # library in memory or runs into its timeout. The chained job keeps the
   # original arguments, including the tenant prefix `Brando.Tenant.Job` attached.
   #
-  # The recreate tasks are a run of `Brando.Images.SizeRun`: each batch adds
-  # its images to the run's count before queueing them, and the last batch
-  # closes the run, which ends when the last image is processed.
+  # The recreate tasks are a run of `Brando.Images.SizeRun`: each batch
+  # queues its images and counts them in the run's work, and the last batch
+  # closes the run, which ends when the last image is processed. A job with
+  # "watch" in its arguments is the run's watcher (`SizeRun.watch/2`).
   #
   # "recreate_changed_sizes" first adopts the images processed before configs
   # were recorded whose files already match (`Brando.Images.Adoption`), and
@@ -37,6 +38,10 @@ defmodule Brando.Worker.ImageMaintenance do
   @batch_size 100
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"watch" => true, "user_id" => user_id}} = job) do
+    TenantJob.run(job, fn -> SizeRun.watch(job.args, job_user(user_id)) end)
+  end
+
   def perform(%Oban.Job{args: %{"task" => task}} = job) when task in @tasks do
     TenantJob.run(job, fn -> run_batch(task, job.args) end)
   end
@@ -52,7 +57,7 @@ defmodule Brando.Worker.ImageMaintenance do
     counts =
       images
       |> only_changed(task)
-      |> run_tasks(task, user)
+      |> run_tasks(task, user, args)
 
     args = Map.merge(args, counts, fn _key, total, count -> total + count end)
 
@@ -107,19 +112,24 @@ defmodule Brando.Worker.ImageMaintenance do
 
   # Images processed before configs were recorded are kept when their files
   # already match their config; only the rest are recreated.
-  defp run_tasks(images, "recreate_changed_sizes", user) do
+  defp run_tasks(images, "recreate_changed_sizes", user, args) do
     {adopted, rest} = Adoption.adopt(images)
-    %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user)}
+    %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user, run_opts(args))}
   end
 
   # The per-image work is already a job of its own, so this only enqueues it,
   # for `user`'s progress.
-  defp run_tasks(images, "recreate_sizes", user), do: %{"queued" => SizeRun.queue(images, user)}
+  defp run_tasks(images, "recreate_sizes", user, args),
+    do: %{"queued" => SizeRun.queue(images, user, run_opts(args))}
 
-  defp run_tasks(images, task, user) do
+  defp run_tasks(images, task, user, _args) do
     Enum.each(images, &run_task(task, &1, user))
     %{}
   end
+
+  # The run's count before this batch, carried in the arguments, so a retry
+  # counts the same
+  defp run_opts(args), do: [run: args["run"], counted: args["queued"] || 0]
 
   defp run_task("dominant_colors", image, _user) do
     case Processing.set_dominant_color(image, :system) do

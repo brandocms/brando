@@ -38,15 +38,18 @@ defmodule Brando.Images.Processing do
         silent: Keyword.get(opts, :silent, false)
       })
 
-    Brando.Repo.delete_all(
-      from j in Oban.Job,
-        where: fragment("? @> ?", j.args, ^args)
-    )
+    {_count, replaced} =
+      Brando.Repo.delete_all(
+        from j in Oban.Job,
+          where: fragment("? @> ?", j.args, ^args),
+          select: %{state: j.state, meta: j.meta}
+      )
 
     prepare = Keyword.get(opts, :prepare, & &1)
 
     args
     |> Worker.ImageProcessor.new(replace_args: true)
+    |> SizeRun.carry_over(replaced)
     |> prepare.()
     |> Oban.insert()
   end
@@ -301,12 +304,18 @@ defmodule Brando.Images.Processing do
     end
   end
 
-  # Begun before the insert: a job run inline reports the run as it is queued
+  # Begun before the insert: a job run inline reports the run as it is queued.
+  # Its watcher ends it however the walk and the images end.
   defp start_size_run(task, user) do
-    SizeRun.begin(user)
+    run = SizeRun.begin(user)
+    args = maintenance_args(task, user)
 
-    case insert_image_maintenance(task, user) do
+    case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
       {:ok, _job} = ok ->
+        with {:error, reason} <- SizeRun.queue_watcher(args, run) do
+          Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
+        end
+
         ok
 
       error ->
@@ -316,11 +325,13 @@ defmodule Brando.Images.Processing do
   end
 
   defp insert_image_maintenance(task, user) do
-    %{task: task, user_id: Brando.Users.job_user_id(user)}
-    |> TenantJob.attach()
+    task
+    |> maintenance_args(user)
     |> Worker.ImageMaintenance.new()
     |> Oban.insert()
   end
+
+  defp maintenance_args(task, user), do: TenantJob.attach(%{task: task, user_id: Brando.Users.job_user_id(user)})
 
   @doc """
   Recreates sizes for an image field.

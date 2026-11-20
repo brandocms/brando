@@ -178,6 +178,28 @@ defmodule BrandoAdmin.Work do
   end
 
   @doc """
+  Says again what `start/4` started, for work that may have been lost: the
+  registry is in memory, so a node restarted halfway knows no work that
+  started before. Takes the options of `start/4`, with `:total` the count
+  so far, not added to it, and `:counted`, the steps already in.
+
+  Work that is not running starts, as given, with `:counted` steps done.
+  Running work keeps its state, its count and its steps: only a larger
+  `:total` replaces its own, so saying it again changes nothing.
+  """
+  @spec resume(user(), String.t(), String.t(), keyword()) :: :ok
+  def resume(user, key, message, opts \\ []) do
+    attrs =
+      opts
+      |> Keyword.take([:total, :timeout, :toast, :open])
+      |> Map.new()
+      |> Map.merge(%{message: message, done: opts[:counted], done_message: opts[:done], failed_message: opts[:failed]})
+      |> put_scope(opts)
+
+    report(user, key, :resume, attrs)
+  end
+
+  @doc """
   Reports progress: a new message (nil keeps the last one) and `:percent`.
   Work that is not known yet starts.
 

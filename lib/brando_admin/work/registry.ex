@@ -101,6 +101,14 @@ defmodule BrandoAdmin.Work.Registry do
 
   def apply_op(:start, _ended_or_nil, key, attrs, at), do: new(key, attrs, at)
 
+  # Running work keeps all but a larger total; other work starts again
+  def apply_op(:resume, %Work{status: :running, total: total} = work, _key, attrs, at)
+      when is_integer(total) and is_integer(attrs.total) and attrs.total > total,
+      do: %{work | total: attrs.total, updated_at: at}
+
+  def apply_op(:resume, %Work{status: :running}, _key, _attrs, _at), do: nil
+  def apply_op(:resume, _ended_or_nil, key, attrs, at), do: new(key, attrs, at)
+
   def apply_op(:update, nil, key, attrs, at), do: new(key, attrs, at)
 
   def apply_op(:update, %Work{} = work, _key, attrs, at) do

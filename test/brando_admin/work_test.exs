@@ -126,6 +126,25 @@ defmodule BrandoAdmin.WorkTest do
     refute_receive {:work, "gone", _, _}, 100
   end
 
+  # The registry is in memory: work lost with a restarted node is said again
+  test "resumed work starts as given when it is not running, and keeps its count when it is", %{user_id: user_id} do
+    Work.resume(user_id, "lost", "Walking", total: 5, counted: 2, open: true, timeout: 60_000, failed: "Some failed")
+
+    assert_receive {:work, "lost", :running,
+                    %Work{total: 5, done: 2, open: true, timeout: 60_000, failed_message: "Some failed"}}
+
+    Work.advance(user_id, "lost")
+    assert_receive {:work, "lost", :running, %Work{done: 3}}
+
+    # Said again: nothing changes, and a smaller total does not shrink it
+    Work.resume(user_id, "lost", "Walking", total: 5, counted: 0, open: false)
+    Work.resume(user_id, "lost", "Walking", total: 4, counted: 0, open: false)
+    refute_receive {:work, "lost", _, _}, 100
+
+    Work.resume(user_id, "lost", "Walking", total: 8, counted: 0, open: false)
+    assert_receive {:work, "lost", :running, %Work{total: 8, done: 3, open: true}}
+  end
+
   test "failed steps keep what they were about, successful ones do not", %{user_id: user_id} do
     Work.start(user_id, "items", "Writing", total: 3)
     Work.advance(user_id, "items", :error, item: 1)
