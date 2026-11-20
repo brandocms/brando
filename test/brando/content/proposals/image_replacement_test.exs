@@ -145,6 +145,43 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     assert Enum.filter(previous, &(&1 in report.deleted)) == []
   end
 
+  test "an approval while NEW's sizes are being made is refused, to try again; prepared, it waits", c do
+    old = image!("a", {800, 600})
+    new = image!("b", {1600, 1200}, status: :unprocessed, sizes: %{})
+
+    # A tool prepares it right after uploading
+    {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+    assert proposal.problems == []
+
+    assert {:error, _message} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, stored} = Proposals.get(proposal.id, c.user)
+    assert {stored.status, stored.problems} == {"pending", []}
+    unchanged!(old)
+
+    # Once they are made, it is approved
+    Repo.update_all(from(i in Image, where: i.id == ^new.id),
+      set: [status: :processed, sizes: %{"small" => "images/replace/small/b.jpg"}]
+    )
+
+    assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
+  end
+
+  test "a size OLD's config has and NEW's sizes lack stays OLD's own until its sizes are made", c do
+    old = image!("a", {800, 600}, sizes: %{"small" => "images/replace/small/a.jpg", "large" => "images/replace/large/a.jpg"})
+    new = image!("b", {1600, 1200}, sizes: %{"small" => "images/replace/small/b.jpg"})
+
+    {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
+    end)
+
+    assert Repo.get!(Image, old.id).sizes == %{
+             "small" => "images/replace/small/b.jpg",
+             "large" => "images/replace/large/a.jpg"
+           }
+  end
+
   test "the review shows both files, the entries that use OLD and whether the proportions differ", c do
     old = image!("logo", {800, 600})
     same = image!("logo-same", {1600, 1200})

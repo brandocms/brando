@@ -26,7 +26,9 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
   Inside the proposal's transaction, with both rows locked and checked again,
   OLD takes NEW's file: its path, dimensions, formats, `content_hash`,
-  dominant colour, CDN flag and, until its own are made, NEW's sizes. It
+  dominant colour, CDN flag and, until its own are made, NEW's sizes, or its
+  own of a size NEW lacks. An approval while NEW's sizes are still being made
+  is refused, to be tried again (`ready!/1`). It
   keeps its id, focal point, title, alt text, credits, folder, config and
   every reference. NEW's record is deleted, with its jobs that have not
   started, and OLD's sizes are queued to be made again, as for an upload.
@@ -525,6 +527,33 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   ## Apply
 
   @doc """
+  Fails the approval of `operations` while the sizes of an image whose file
+  replaces another are still being made: OLD shows NEW's sizes until its own
+  are. Not a problem of the proposal, which a tool prepares right after
+  uploading: the approval is tried again in a moment.
+  """
+  @spec ready!([struct()]) :: :ok
+  def ready!(operations) when is_list(operations) do
+    ids = for %ReplaceImageFile{with: {:image, id}} <- operations, do: id
+
+    Repo.all(from(i in Image, where: i.id in ^ids and i.status != :processed))
+    |> Enum.each(&ready!/1)
+  end
+
+  def ready!(%Image{status: :processed}), do: :ok
+
+  def ready!(%Image{id: id}),
+    do:
+      Error.fail!(
+        dgettext(
+          "content_proposals",
+          "The sizes of image %{id} are still being made. Approve the proposal again in a moment.",
+          id: id
+        )
+      )
+
+
+  @doc """
   Replace OLD's file with NEW's, inside the proposal's transaction, as
   `actor` (`user` is who the sizes are made for). Both rows are locked and
   checked again; a problem fails the whole proposal. Returns what the
@@ -541,6 +570,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
     old = Repo.get!(Image, old_id)
     new = Repo.get!(Image, new_id)
+    ready!(new)
 
     replaced =
       old
@@ -552,7 +582,8 @@ defmodule Brando.Content.Proposals.ImageReplacement do
         content_hash: new.content_hash,
         dominant_color: new.dominant_color,
         cdn: new.cdn,
-        sizes: new.sizes || %{},
+        # A size NEW lacks stays OLD's own until OLD's sizes are made
+        sizes: Map.merge(old.sizes || %{}, new.sizes || %{}),
         status: :unprocessed,
         config_fingerprint: nil
       )

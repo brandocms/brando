@@ -373,8 +373,9 @@ On approval, image 12 (OLD) takes the file of image 87 (NEW): its path,
 dimensions, type, formats and `content_hash`. It keeps its id, focal point,
 title, alt text, credits, folder, image config and every place it is used,
 so every entry that shows it shows the new file. Its sizes are made again
-in the background, as for an upload, and NEW's record is removed, since its
-file is now OLD's. The other way to replace an image, which keeps OLD in the
+in the background, as for an upload; until they are, OLD shows NEW's sizes,
+and its own of a size NEW lacks. NEW's record is removed, since its file is
+now OLD's. The other way to replace an image, which keeps OLD in the
 library and reviews each use, is to swap the references: `set_block_media`
 and `set_fields` to NEW.
 
@@ -393,6 +394,10 @@ When the proposal is prepared, and again when it is approved and applied:
 - Neither image has another file than when the proposal was prepared: of two
   proposals replacing the same image, the second is refused once the first
   is applied.
+
+An approval while NEW's own sizes are still being made (just after the
+upload, with image processing busy) is refused, to be tried again in a
+moment; the proposal stays as it is.
 
 The review, under **Assistant → From connected tools**, shows the two files
 side by side with their dimensions, the entries that show OLD, linked, and

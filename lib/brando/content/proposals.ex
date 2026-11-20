@@ -2790,6 +2790,7 @@ defmodule Brando.Content.Proposals do
         proposal = rebuild!(record, actor)
         current!(proposal, actor)
         recheck!(proposal, record, actor)
+        ImageReplacement.ready!(proposal.operations)
       end
 
       {:ok, record} = Repo.transaction(fn -> approve!(id, version, actor) end)
