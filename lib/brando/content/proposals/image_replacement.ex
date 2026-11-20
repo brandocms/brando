@@ -634,7 +634,6 @@ defmodule Brando.Content.Proposals.ImageReplacement do
         )
       )
 
-
   @doc """
   Replace OLD's file with NEW's, inside the proposal's transaction, as
   `actor` (`user` is who the sizes are made for). Both rows are locked and

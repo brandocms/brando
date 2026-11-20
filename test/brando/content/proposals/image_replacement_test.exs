@@ -167,7 +167,9 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
   end
 
   test "a size OLD's config has and NEW's sizes lack stays OLD's own until its sizes are made", c do
-    old = image!("a", {800, 600}, sizes: %{"small" => "images/replace/small/a.jpg", "large" => "images/replace/large/a.jpg"})
+    old =
+      image!("a", {800, 600}, sizes: %{"small" => "images/replace/small/a.jpg", "large" => "images/replace/large/a.jpg"})
+
     new = image!("b", {1600, 1200}, sizes: %{"small" => "images/replace/small/b.jpg"})
 
     {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
