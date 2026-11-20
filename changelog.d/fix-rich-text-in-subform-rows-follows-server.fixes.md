@@ -1,0 +1,2 @@
+- A rich text in a subform row or a page's rich-text variable shows a change the server makes to it (another editor's, Translate with AI, a save elsewhere), also after its rows were moved, added or removed, and typing there no longer brings the old text back.
+- Removing a row of an `embeds_many` subform no longer crashes the other editors' forms of the entry.

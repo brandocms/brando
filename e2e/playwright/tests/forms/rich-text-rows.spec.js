@@ -1,15 +1,12 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
+import { quoteRows, editorOf, inputOf, expectTexts, expectInputs, retype, append, drag } from '../../test-support/richTextRows'
 
 // A rich text in a subform's row follows a change the server makes to it
 // (#3757): another editor's, after the rows moved, in an embeds_many row
 // (an article's quotes, E2eProject.SyncTest.Article) and in a page's
 // rich-text variable (a has_many row). The visible editor shows what its
 // hidden input holds, and typing there builds on it.
-
-const quoteRows = page => page.locator('[id$="quotes-sortable"] > .subform-entry')
-const editorOf = row => row.locator('.ProseMirror')
-const inputOf = row => row.locator('input.tiptap-text')
 
 async function openArticle(page, quotes) {
   const response = await page.request.post('/e2e/synchronized-translation', {
@@ -26,34 +23,6 @@ async function open(page, path, rows, count) {
   await syncLV(page)
   await expect(rows(page)).toHaveCount(count)
   await expect(editorOf(rows(page).first())).toBeVisible()
-}
-
-// textContent: a page variable's editor is in a closed disclosure
-const expectTexts = (page, rows, texts) =>
-  expect.poll(() => rows(page).locator('.ProseMirror').allTextContents()).toEqual(texts)
-
-const expectInputs = (page, rows, texts) =>
-  expect.poll(() => rows(page).locator('input.tiptap-text').evaluateAll(inputs => inputs.map(input => input.value))).toEqual(
-    texts.map(text => `<p>${text}</p>`)
-  )
-
-// Replaces a row's text and leaves the field, which ships it
-async function retype(page, row, text) {
-  await editorOf(row).click()
-  await page.keyboard.press('ControlOrMeta+a')
-  await page.keyboard.type(text)
-  await expect(inputOf(row)).toHaveValue(`<p>${text}</p>`)
-  await editorOf(row).blur()
-  await syncLV(page)
-}
-
-// Types at the end of a row's text and leaves the field
-async function append(page, row, text) {
-  await editorOf(row).click()
-  await page.keyboard.press('ControlOrMeta+End')
-  await page.keyboard.type(text)
-  await editorOf(row).blur()
-  await syncLV(page)
 }
 
 test('another editor’s change to a row’s rich text shows in the row, and typing there keeps it', async ({ page, secondUserPage }) => {
@@ -77,26 +46,6 @@ test('another editor’s change to a row’s rich text shows in the row, and typ
 
   expect(errors).toEqual([])
 })
-
-// As `pages/draft-reorder.spec.js`: Sortable's fallback drag starts once the
-// pointer has moved (`.sortable-fallback`), and reorders once it has crossed
-// the target's swap threshold, which the ghost (`is-sorting`) shows
-async function drag(page, rows, from, to) {
-  await syncLV(page)
-  const handle = rows(page).nth(from).locator('.subform-handle')
-  await rows(page).nth(to).scrollIntoViewIfNeeded()
-  await handle.scrollIntoViewIfNeeded()
-  const source = await handle.boundingBox()
-  const target = await rows(page).nth(to).locator('.subform-handle').boundingBox()
-  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(source.x + source.width / 2 + 12, source.y + source.height / 2, { steps: 4 })
-  await expect(page.locator('.sortable-fallback')).toBeVisible()
-  await page.mouse.move(target.x + target.width / 2, target.y + (to < from ? 2 : target.height - 2), { steps: 25 })
-  await expect.poll(() => rows(page).evaluateAll(els => els.findIndex(el => el.classList.contains('is-sorting')))).toBe(to)
-  await page.mouse.up()
-  await syncLV(page)
-}
 
 test('a row’s rich text follows another editor’s change after rows were moved, added and removed', async ({ page, secondUserPage }) => {
   const errors = []

@@ -2495,7 +2495,7 @@ defmodule E2EFixtureController do
     add_sync_block.(source, "Første avsnitt", 0)
 
     if params["source_only"],
-      do: json(conn, %{source_id: source.id}),
+      do: json(conn, %{source_id: source.id, quote_uids: Enum.map(source.quotes, & &1.uid)}),
       else: translate_synchronized(conn, source, user, add_sync_block, params)
   end
 
