@@ -126,6 +126,11 @@ defmodule E2EFixtureController do
         "mcp-proposals" ->
           create_mcp_proposals()
 
+        # A proposal from a connected tool creating the English version of a
+        # Norwegian synchronized article
+        "mcp-create-translation" ->
+          create_mcp_translation_proposal()
+
         "assistant-block-swap" ->
           create_block_swap_proposal()
 
@@ -855,6 +860,31 @@ defmodule E2EFixtureController do
       {:ok, %{applicable: true}} =
         Tools.call("prepare_proposal", %{"summary" => summary, "operations" => [op]}, context)
     end
+
+    user
+  end
+
+  defp create_mcp_translation_proposal do
+    user = get_admin_user()
+    alias Brando.Content.Proposals.Tools
+
+    {:ok, source} =
+      E2eProject.SyncTest.create_article(
+        %{title: "Fjordhuset", slug: "fjordhuset", language: "no", status: "published", year: 2020},
+        user
+      )
+
+    op = %{
+      "op" => "create_translation",
+      "source" => %{"content_type" => "E2eProject.SyncTest.Article", "id" => source.id},
+      "language" => "en",
+      "ref" => "english"
+    }
+
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+    {:ok, %{applicable: true}} =
+      Tools.call("prepare_proposal", %{"summary" => "Create the English version", "operations" => [op]}, context)
 
     user
   end
