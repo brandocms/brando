@@ -383,6 +383,43 @@ defmodule Brando.Content.Proposals.TranslateTest do
     end
   end
 
+  describe "the source checked again under its lock, in the apply's transaction" do
+    # A source saved after the recheck, while the apply waits for the
+    # proposal lock: the race cannot be staged, so the step is called as the
+    # apply calls it, after the source changed.
+    defp check_sources(proposal) do
+      Repo.transaction(fn -> Proposals.check_translated_sources!(proposal) end)
+    end
+
+    test "refuses a batch whose source text changed, naming the unit", c do
+      target = create_translation(c)
+      {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      assert {:ok, :ok} = check_sources(proposal)
+
+      {1, _} = Repo.update_all(from(a in Article, where: a.id == ^c.source.id), set: [title: "I morgen"])
+
+      assert_raise Brando.Content.Transfer.Error, ~r/title/, fn -> check_sources(proposal) end
+    end
+
+    test "refuses a batch for a translation the proposal creates whose source text changed", c do
+      units = Work.new_translation_units(Article, c.source.id) |> elem(1) |> Map.fetch!(:units)
+      digest = Work.token(%{type: to_string(Article), id: {:new, c.source.id}, language: "en"}, units)
+
+      ops = [
+        %CreateTranslation{source: {Article, c.source.id}, language: "en", ref: "english"},
+        %Translate{target: {:new, "english"}, source_digest: digest, texts: english(c)}
+      ]
+
+      {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert {:ok, :ok} = check_sources(proposal)
+
+      {1, _} = Repo.update_all(from(a in Article, where: a.id == ^c.source.id), set: [title: "I morgen"])
+
+      assert_raise Brando.Content.Transfer.Error, ~r/title/, fn -> check_sources(proposal) end
+    end
+  end
+
   describe "refused, per unit" do
     setup c, do: %{target: create_translation(c)}
 

@@ -3908,6 +3908,7 @@ defmodule Brando.Content.Proposals do
 
     Transfer.lock_records!(%{fields: Enum.map(locked, &%{entry: &1}), bindings: %{}})
     entries = current!(proposal, actor)
+    check_translated_sources!(proposal)
     # The revision each entry is at now: undo restores it.
     revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
 
@@ -3963,6 +3964,57 @@ defmodule Brando.Content.Proposals do
 
     record |> Changeset.change(status: "applied") |> Repo.update!()
     {receipt, saved}
+  end
+
+  @doc false
+  # Inside the apply's transaction, before any translation is created or
+  # saved: each translated source is locked, and every batch checked against
+  # it again. A source saved after `recheck!/3` ran would otherwise have its
+  # new text overwritten by the translation of the text before.
+  # Public for its test: the race it closes cannot be staged.
+  def check_translated_sources!(proposal) do
+    problems =
+      for %Translate{} = op <- proposal.operations,
+          problem <- translated_source_problems(op, proposal),
+          do: problem
+
+    if problems != [], do: Error.fail!(recheck_failed(problems))
+    :ok
+  end
+
+  defp translated_source_problems(%Translate{target: {:new, _} = target} = op, proposal) do
+    %CreateTranslation{source: {schema, source_id}, language: language} = translation(proposal.operations, target)
+    lock_source!(schema, source_id)
+
+    case Work.new_translation_units(schema, source_id) do
+      {:ok, %{units: units}} ->
+        source_check(op, %{type: to_string(schema), id: {:new, source_id}, language: language}, units)
+
+      {:error, _} ->
+        Error.fail!(dgettext("content_proposals", "The source of this translation is not available to you."))
+    end
+  end
+
+  defp translated_source_problems(%Translate{target: {schema, id}} = op, _proposal) do
+    with {:ok, %{source_id: source_id}} <- Work.translation_units(schema, id),
+         :ok <- lock_source!(schema, source_id),
+         {:ok, work} <- Work.translation_units(schema, id) do
+      source_check(op, %{type: to_string(schema), id: id, language: work.language}, work.units)
+    else
+      {:error, reason} -> Error.fail!(not_a_translation(reason).message)
+    end
+  end
+
+  defp lock_source!(schema, source_id) do
+    Repo.one(from(e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE"))
+    :ok
+  end
+
+  defp source_check(op, scope, units) do
+    case Work.check(op.source_digest, scope, units, %{texts: op.texts, reviewed: op.reviewed}) do
+      :ok -> []
+      {:error, problems} -> Enum.map(problems, &work_problem/1)
+    end
   end
 
   defp translated_targets(proposal) do
