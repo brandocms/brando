@@ -240,7 +240,10 @@ defmodule Brando.Content.Proposals.ImageReplacement do
     image_fields =
       for %{name: name, type: :image} <- Brando.Blueprint.Assets.__assets__(schema), do: "#{name}_id"
 
-    Enum.any?(fields, fn {key, value} -> value == id and to_string(key) in image_fields end)
+    # As the entry's changeset casts it: `"87"` is the image too
+    Enum.any?(fields, fn {key, value} ->
+      (is_integer(value) or is_binary(value)) and to_string(value) == to_string(id) and to_string(key) in image_fields
+    end)
   rescue
     _ -> false
   end
@@ -618,7 +621,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   def ready!(operations) when is_list(operations) do
     ids = for %ReplaceImageFile{with: {:image, id}} <- operations, do: id
 
-    Repo.all(from(i in Image, where: i.id in ^ids and i.status != :processed))
+    Repo.all(from(i in Image, where: i.id in ^ids and (is_nil(i.status) or i.status != :processed)))
     |> Enum.each(&ready!/1)
   end
 
@@ -663,8 +666,10 @@ defmodule Brando.Content.Proposals.ImageReplacement do
         content_hash: new.content_hash,
         dominant_color: new.dominant_color,
         cdn: new.cdn,
-        # A size NEW lacks stays OLD's own until OLD's sizes are made
-        sizes: Map.merge(old.sizes || %{}, new.sizes || %{}),
+        # NEW's alone: every file `sizes` names is deleted when OLD's own are
+        # made (`ImageProcessor`), and OLD's previous ones are still linked
+        # by the pages rendered before. A size NEW lacks is missing until then.
+        sizes: new.sizes || %{},
         status: :unprocessed,
         config_fingerprint: nil
       )

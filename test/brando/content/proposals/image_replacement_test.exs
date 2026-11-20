@@ -128,10 +128,14 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     small = "images/replace/small/portrait-#{System.unique_integer([:positive])}.jpg"
     Brando.ImageFileFixtures.write_image(small, {700, 525})
     Brando.ImageFileFixtures.write_image(String.replace_suffix(small, ".jpg", ".webp"), {700, 525})
-    old = image!("portrait", {800, 600}, sizes: %{"small" => small}, formats: [:jpg, :webp])
+    # A size of OLD's own config, which NEW's sizes lack
+    wide = String.replace(small, "/small/", "/wide/")
+    Brando.ImageFileFixtures.write_image(wide, {1400, 1050})
+    Brando.ImageFileFixtures.write_image(String.replace_suffix(wide, ".jpg", ".webp"), {1400, 1050})
+    old = image!("portrait", {800, 600}, sizes: %{"small" => small, "wide" => wide}, formats: [:jpg, :webp])
     new = image!("portrait-better", {1600, 1200})
 
-    previous = [old.path, small, String.replace_suffix(small, ".jpg", ".webp")]
+    previous = [old.path] ++ Enum.flat_map([small, wide], &[&1, String.replace_suffix(&1, ".jpg", ".webp")])
     two_days_ago = System.os_time(:second) - 2 * 86_400
 
     for path <- previous,
@@ -140,7 +144,9 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
     assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
 
-    # No image row names them now, but a page rendered before still links them
+    # No image row names them now, but a page rendered before still links
+    # them: OLD's own sizes have been made, and they are all still there
+    assert Enum.reject(previous, &File.exists?(Brando.Images.Utils.media_path(&1))) == []
     {:ok, report} = Brando.Media.OrphanCleanup.run(nil, dry_run: true)
     assert Enum.filter(previous, &(&1 in report.deleted)) == []
   end
@@ -166,7 +172,7 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
   end
 
-  test "a size OLD's config has and NEW's sizes lack stays OLD's own until its sizes are made", c do
+  test "OLD takes NEW's sizes alone until its own are made, not its previous file's", c do
     old =
       image!("a", {800, 600}, sizes: %{"small" => "images/replace/small/a.jpg", "large" => "images/replace/large/a.jpg"})
 
@@ -178,10 +184,7 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
       assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
     end)
 
-    assert Repo.get!(Image, old.id).sizes == %{
-             "small" => "images/replace/small/b.jpg",
-             "large" => "images/replace/large/a.jpg"
-           }
+    assert Repo.get!(Image, old.id).sizes == %{"small" => "images/replace/small/b.jpg"}
   end
 
   test "the review shows both files, the entries that use OLD and whether the proportions differ", c do
@@ -301,6 +304,11 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
           }
         ])
 
+      assert {:ok, proposal} = Proposals.propose([set, replace(old, new)], c.user)
+      assert {1, :asset_in_use} in Enum.map(proposal.problems, &{&1.operation, &1.code})
+
+      # The id as a string is cast to the same image
+      set = %{set | fields: Map.new(set.fields, fn {key, value} -> {key, to_string(value)} end)}
       assert {:ok, proposal} = Proposals.propose([set, replace(old, new)], c.user)
       assert {1, :asset_in_use} in Enum.map(proposal.problems, &{&1.operation, &1.code})
     end

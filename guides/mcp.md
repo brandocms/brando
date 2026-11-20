@@ -374,8 +374,8 @@ dimensions, type, formats and `content_hash`. It keeps its id, focal point,
 title, alt text, credits, folder, image config and every place it is used,
 so every entry that shows it shows the new file. Its sizes are made again
 in the background, as for an upload; until they are, OLD shows NEW's sizes,
-and its own of a size NEW lacks. NEW's record is removed, since its file is
-now OLD's. The other way to replace an image, which keeps OLD in the
+and a size of its own config that NEW lacks is missing. NEW's record is
+removed, since its file is now OLD's. The other way to replace an image, which keeps OLD in the
 library and reviews each use, is to swap the references: `set_block_media`
 and `set_fields` to NEW.
 
