@@ -509,6 +509,24 @@ defmodule Brando.Images.RerenderTest do
         assert [_render] = renders_of(page)
       end)
     end
+
+    # A completed callback raises for a retry; so do a timeout and a node
+    # stopping. The retry reads the stored sizes as they were before it.
+    test "renders its entries when its job fails after the sizes were stored", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+      config = Application.get_env(:brando, Brando.Images, [])
+      default = Keyword.fetch!(config, :default_config)
+      callback = fn _image, _user -> raise "the callback failed" end
+      put_test_env(Brando.Images, Keyword.put(config, :default_config, Map.put(default, :completed_callback, callback)))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.queue_processing(image, user, [], silent: true)
+        assert %{failure: 1} = Oban.drain_queue(queue: :image_processing)
+      end)
+
+      assert [_render] = renders_of(page)
+    end
   end
 
   describe "the entries that show an image" do

@@ -73,10 +73,12 @@ defmodule Brando.Worker.ImageProcessor do
 
     case result do
       {:processed, processed, config, user} ->
-        finish_processing(processed, original, config, user, field_full_path)
         # The entries that show it render again when a render reads anything
-        # processing changed: held, within a size run, until its images are done
+        # processing changed: held, within a size run, until its images are
+        # done. Before the callback: a job that fails after the record is
+        # stored is retried, and the retry reads the stored record as before
         Images.Rerender.after_processing(image, processed, Images.SizeRun.render_options(job.meta))
+        finish_processing(processed, original, config, user, field_full_path)
         broadcast_status(processed, field_full_path, :updated)
 
       {:not_updated, error} ->
