@@ -153,8 +153,11 @@ stops halfway, its pages render by themselves within 15 minutes.
 
 Whenever an image is processed, from a run, the image editor's crop or a new
 file, the entries that show it render again if processing changed anything
-their markup reads from the image (its sizes, formats or dimensions): the
-entries with it in a block's ref or variable, a page variable, a gallery they
+their markup reads from the image (its sizes, formats or dimensions, or the
+config it was made with: a size whose width or crop ratio changed under the
+same name keeps its path, but its `srcset` width and its crop do not). An
+image that Recreate changed images adopts counts as changed too. The
+entries are those with it in a block's ref or variable, a page variable, a gallery they
 show, or an asset field, and the entries that show such an entry through its
 identifier or a datasource (a listing of projects showing each cover). A
 global set's image is not followed: the pages that print it render again

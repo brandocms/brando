@@ -402,7 +402,7 @@ defmodule Brando.Images.ImageMaintenanceTest do
       end)
     end
 
-    test "a run with nothing to recreate ends at once", %{user: user} do
+    test "a run with nothing to recreate ends at its watcher's look", %{user: user} do
       Oban.Testing.with_testing_mode(:manual, fn ->
         assert {:ok, _} = Processing.recreate_sizes_for_images(user)
         assert %Work{status: :running, total: 0} = work(user)

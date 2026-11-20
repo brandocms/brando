@@ -14,6 +14,7 @@ defmodule Brando.Images.RerenderTest do
   alias Brando.Content.RenderQueue
   alias Brando.Content.Var
   alias Brando.Factory
+  alias Brando.ImageFileFixtures
   alias Brando.Images.Image
   alias Brando.Images.Processing
   alias Brando.Images.Rerender
@@ -54,6 +55,14 @@ defmodule Brando.Images.RerenderTest do
     }
 
     put_test_env(Brando.Images, Keyword.merge(config, default_config: default, default_srcset: %{default: @with_2xlarge}))
+  end
+
+  # The site's "large" size, at another width under the same key
+  defp resize_large(size) do
+    config = Application.get_env(:brando, Brando.Images, [])
+    default = Keyword.fetch!(config, :default_config)
+    sizes = {:standard, %{"large" => %{"size" => size, "quality" => 75}}}
+    put_test_env(Brando.Images, Keyword.put(config, :default_config, %{default | sizes: sizes}))
   end
 
   # Processed from the fixture original, with no dimensions recorded, so the
@@ -411,6 +420,27 @@ defmodule Brando.Images.RerenderTest do
 
       assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
     end
+
+    # Its files match its config: only its config fingerprint is written
+    test "renders the entries of an image it adopts", %{user: user} do
+      image = ImageFileFixtures.unrecorded_image("rerender-#{System.unique_integer([:positive])}")
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.recreate_sizes_for_changed_images(user)
+        Oban.drain_queue(queue: :default)
+        run = run_id()
+        assert Repo.get!(Image, image.id).config_fingerprint
+        assert jobs(Worker.ImageProcessor) == []
+
+        assert [%{state: "scheduled", meta: %{"brando_hold" => [hold]}}] = renders_of(page)
+        assert hold == SizeRun.hold_key(run)
+        watch()
+      end)
+
+      assert [%{state: "completed"}] = renders_of(page)
+      assert_receive {:work, "image-sizes", :finished, %Work{message: "No images to recreate, 1 page updated"}}
+    end
   end
 
   describe "one image processed outside a run" do
@@ -457,6 +487,28 @@ defmodule Brando.Images.RerenderTest do
         assert renders_of(page) == []
       end)
     end
+
+    # An operator changes "large" from 1700 to 2000: the files change, and
+    # their paths, the formats and the dimensions do not. The srcset reads
+    # the widths from the config.
+    test "renders its entries when a size changed under the same key", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.queue_processing(image, user, [], silent: true)
+        Oban.drain_queue(queue: :image_processing)
+        Enum.each(renders_of(page), &delete_job/1)
+        sizes = Repo.get!(Image, image.id).sizes
+
+        resize_large("2000")
+        assert {:ok, _} = Processing.queue_processing(image, user, [], silent: true)
+        Oban.drain_queue(queue: :image_processing)
+
+        assert Repo.get!(Image, image.id).sizes == sizes
+        assert [_render] = renders_of(page)
+      end)
+    end
   end
 
   describe "the entries that show an image" do
@@ -481,9 +533,11 @@ defmodule Brando.Images.RerenderTest do
       assert Rerender.entries([image.id]) == %{}
     end
 
-    test "adopting an image changes nothing a render reads" do
+    # A size changed under its key changes the srcset's widths and the
+    # crop, read from the config the fingerprint is of
+    test "a changed config fingerprint changes what a render reads" do
       image = image()
-      refute Rerender.changed?(image, %{image | config_fingerprint: "0123456789ab"})
+      assert Rerender.changed?(image, %{image | config_fingerprint: "0123456789ab"})
       assert Rerender.changed?(image, %{image | sizes: Map.put(image.sizes, "2xlarge", "image/2xlarge/1.jpg")})
       assert Rerender.changed?(image, %{image | width: 1200})
     end

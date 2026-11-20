@@ -9,11 +9,13 @@ defmodule Brando.Images.Rerender do
   # picture markup (`Brando.HTML.Images`) takes the path, the sizes and
   # formats, the dimensions, the CDN flag, the dominant color, the focal
   # point, the texts, the fetch priority and the config target (for the
-  # config's srcset). Processing writes the sizes, formats, dimensions,
+  # config's srcset), and the config fingerprint: a size changed under the
+  # same key keeps its path, and the srcset's widths and the crop's ratio
+  # come from the config. Processing writes the sizes, formats, dimensions,
   # status and config fingerprint; when none of the inputs changed, the
   # stored renders are the same and nothing is queued. Adopting an image
-  # (`Brando.Images.Adoption`) writes only its config fingerprint, which no
-  # render reads, so it queues nothing either.
+  # (`Brando.Images.Adoption`) writes its config fingerprint, so a size run
+  # queues the renders of the images it adopts too (`after_adoption/2`).
   #
   # The entries (`entries/1`) are queued once, in the bulk render lane
   # (`Brando.Content.RenderQueue.enqueue_map/2`):
@@ -43,7 +45,8 @@ defmodule Brando.Images.Rerender do
 
   require Logger
 
-  @render_inputs ~w(path sizes formats width height cdn dominant_color focal alt title credits fetchpriority config_target)a
+  @render_inputs ~w(path sizes formats width height cdn dominant_color focal alt title credits fetchpriority config_target
+                    config_fingerprint)a
 
   @doc "What a render reads from an image record."
   @spec render_inputs(map()) :: map()
@@ -79,6 +82,22 @@ defmodule Brando.Images.Rerender do
   rescue
     error ->
       Logger.error("==> Image #{processed.id}: its entries were not queued to render: #{Exception.message(error)}")
+      []
+  end
+
+  @doc """
+  Queues the renders of the entries that show the images in `adopted`, whose
+  config fingerprint adoption wrote, with the options of
+  `after_processing/3`. Never raises.
+  """
+  @spec after_adoption([map()], keyword()) :: [{:ok, Oban.Job.t()}]
+  def after_adoption([], _opts), do: []
+
+  def after_adoption(adopted, opts) do
+    queue(Enum.map(adopted, & &1.id), opts)
+  rescue
+    error ->
+      Logger.error("==> Adopted images: their entries were not queued to render: #{Exception.message(error)}")
       []
   end
 

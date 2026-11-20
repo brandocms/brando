@@ -90,8 +90,13 @@ defmodule Brando.Images.SizeRun do
   any other.
   """
   @spec render_options(map() | nil) :: keyword()
-  def render_options(%{@meta_key => run}) when is_binary(run), do: [hold: hold_key(run), run: run]
+  def render_options(%{@meta_key => run}) when is_binary(run), do: run_render_options(run)
   def render_options(_meta), do: []
+
+  @doc "How the run `run` queues renders (`render_options/1`): none for no run."
+  @spec run_render_options(String.t() | nil) :: keyword()
+  def run_render_options(run) when is_binary(run), do: [hold: hold_key(run), run: run]
+  def run_render_options(_run), do: []
 
   @doc "The image maintenance tasks that are a run."
   @spec tasks() :: [String.t()]
@@ -616,13 +621,13 @@ defmodule Brando.Images.SizeRun do
 
   @doc """
   No more images. A run with a watcher (`run`, its id) gives it the count,
-  `queued`, and its work goes on to the pages (`pages/2`), or ends at once
-  when the count is none. A run without one ends when the last queued image
-  is done.
+  `queued`, and its work goes on to the pages (`pages/2`), even with none
+  queued: the images it adopted may have pages to render. A run without one
+  ends when the last queued image is done, or at once when there were none.
   """
   @spec close(Processing.user(), non_neg_integer(), String.t() | nil) :: :ok
   def close(user, queued, run \\ nil) do
-    if queued == 0 or is_nil(run) or tell_watcher(run, queued) == 0,
+    if is_nil(run) or tell_watcher(run, queued) == 0,
       do: Work.in_locale(user, fn -> Work.close(user, @work_key, done: closed(queued)) end)
 
     :ok

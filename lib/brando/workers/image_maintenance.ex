@@ -28,6 +28,7 @@ defmodule Brando.Worker.ImageMaintenance do
   alias Brando.Images.Adoption
   alias Brando.Images.Image
   alias Brando.Images.Processing
+  alias Brando.Images.Rerender
   alias Brando.Images.SizeRun
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Users
@@ -110,8 +111,11 @@ defmodule Brando.Worker.ImageMaintenance do
   # already match their config; only the rest are recreated.
   # A retried batch picks fewer: the images processed since match their
   # config. The run counts the batch's images it queued, picked now or not.
+  # Adopting writes the config fingerprint, which a render reads: the pages
+  # that show an adopted image render again with the run's.
   defp run_tasks(batch, "recreate_changed_sizes", user, args) do
     {adopted, rest} = batch |> only_changed() |> Adoption.adopt()
+    Rerender.after_adoption(adopted, SizeRun.run_render_options(args["run"]))
     %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user, [batch: batch] ++ run_opts(args))}
   end
 
