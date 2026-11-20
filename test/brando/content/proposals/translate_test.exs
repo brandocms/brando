@@ -882,6 +882,17 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert %{key: ^heading, label: "Text › Heading"} = unit
     end
 
+    test "says what else the apply saves only while the proposal can be applied", c do
+      target = create_translation(c)
+      {:ok, proposal} = Proposals.propose([translate(target, %{"title" => "Title"}, keys: ["title"])], c.user)
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+      assert open_items(target.id) != []
+
+      {:ok, applied} = Proposals.get(proposal.id, c.user)
+      assert applied.status == "applied"
+      assert [%{changes: [%{type: :translate, pending: nil}]}] = Review.entries(applied)
+    end
+
     test "says what else the apply saves: the source's structure changes and the texts left", c do
       target = create_translation(c)
       keys = ["title"]

@@ -198,7 +198,9 @@ defmodule Brando.Content.Proposals.Review do
   # against the other. A unit kept as it is shows the text the translation
   # keeps. Units are placed and labelled from the translation's pending
   # version, which the apply saves. The first batch also says what else that
-  # save brings (`pending`). The source is read as the reviewer may read it.
+  # save brings (`pending`), while the proposal can still be applied: the
+  # pending version an applied one is read with is a later one. The source
+  # is read as the reviewer may read it.
   defp translate_changes(target, proposal) do
     ops = for {%Translate{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
 
@@ -215,7 +217,7 @@ defmodule Brando.Content.Proposals.Review do
             language: context.language,
             source_language: context.source_language,
             units: translate_units(op, described, context.source != nil),
-            pending: if(nth == 0, do: pending),
+            pending: if(nth == 0 and proposal.status in ~w(pending approved), do: pending),
             operations: [index]
           }
         end
