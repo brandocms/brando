@@ -345,6 +345,11 @@ msgstr "Bilde %{new} er samme fil som bilde %{old}."
 
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
+msgid "Image %{new}'s file is delivered through another CDN than image %{old}'s field uses, so image %{old} would not find it. Upload the file again to image %{old}'s field."
+msgstr "Filen til bilde %{new} leveres gjennom et annet CDN enn feltet til bilde %{old} bruker, så bilde %{old} ville ikke funnet den. Last opp filen på nytt i feltet til bilde %{old}."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
 msgid "Image %{old}'s field takes %{types}; the file of image %{new} is %{type}."
 msgstr "Feltet til bilde %{old} tar %{types}; filen til bilde %{new} er %{type}."
 
@@ -522,6 +527,11 @@ msgstr "Modulen har ingen tekstplass som heter %{name}."
 #, elixir-autogen, elixir-format
 msgid "The module has no variable %{key}."
 msgstr "Modulen har ingen variabel som heter %{key}."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The sizes of image %{id} are still being made. Approve the proposal again in a moment."
+msgstr "Størrelsene til bilde %{id} lages fortsatt. Godkjenn forslaget på nytt om litt."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -740,6 +750,11 @@ msgid "You may not change image %{ids}."
 msgid_plural "You may not change images %{ids}."
 msgstr[0] "Du har ikke lov til å endre bilde %{ids}."
 msgstr[1] "Du har ikke lov til å endre bildene %{ids}."
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "You may not see the images this proposal replaces."
+msgstr "Du har ikke lov til å se bildene dette forslaget erstatter."
 
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format

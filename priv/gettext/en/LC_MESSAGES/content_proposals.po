@@ -345,6 +345,11 @@ msgstr ""
 
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
+msgid "Image %{new}'s file is delivered through another CDN than image %{old}'s field uses, so image %{old} would not find it. Upload the file again to image %{old}'s field."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
 msgid "Image %{old}'s field takes %{types}; the file of image %{new} is %{type}."
 msgstr ""
 
@@ -521,6 +526,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The module has no variable %{key}."
+msgstr ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "The sizes of image %{id} are still being made. Approve the proposal again in a moment."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -740,6 +750,11 @@ msgid "You may not change image %{ids}."
 msgid_plural "You may not change images %{ids}."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando/content/proposals/image_replacement.ex
+#, elixir-autogen, elixir-format
+msgid "You may not see the images this proposal replaces."
+msgstr ""
 
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
