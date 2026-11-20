@@ -30,6 +30,7 @@ defmodule Brando.Content.Proposals.SynchronizedTranslationTest do
   alias Brando.SyncTest.Article
   alias Brando.Translations
   alias Brando.Translations.Member
+  alias Brando.Utils
 
   setup do
     user = Factory.insert(:random_user)
@@ -42,8 +43,8 @@ defmodule Brando.Content.Proposals.SynchronizedTranslationTest do
           help_text: %{},
           code: "{% ref refs.body %}",
           refs: [
-            %{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}},
-            %{name: "photo", uid: Brando.Utils.generate_uid(), data: %{type: "picture", data: %{}}}
+            %{name: "body", uid: Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}},
+            %{name: "photo", uid: Utils.generate_uid(), data: %{type: "picture", data: %{}}}
           ],
           vars: [%{key: "kicker", type: "string", label: "Kicker"}]
         ),
@@ -66,18 +67,18 @@ defmodule Brando.Content.Proposals.SynchronizedTranslationTest do
 
   defp add_block(article, module, user, sequence) do
     params = %{
-      "uid" => Brando.Utils.generate_uid(),
+      "uid" => Utils.generate_uid(),
       "type" => "module",
       "module_id" => module.id,
       "creator_id" => user.id,
       "source" => to_string(Article.Blocks),
       "refs" => [
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => Utils.generate_uid(),
           "name" => "body",
           "data" => %{"type" => "text", "data" => %{"text" => "<p>Tekst</p>"}}
         },
-        %{"uid" => Brando.Utils.generate_uid(), "name" => "photo", "data" => %{"type" => "picture", "data" => %{}}}
+        %{"uid" => Utils.generate_uid(), "name" => "photo", "data" => %{"type" => "picture", "data" => %{}}}
       ]
     }
 
