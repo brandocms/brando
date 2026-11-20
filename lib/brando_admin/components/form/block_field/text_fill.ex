@@ -20,8 +20,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.TextFill do
   alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain.Blocks.VideoBlock
 
-  @text_wrappers Brando.AI.Translation.text_ref_wrapper_types()
-
   @doc "The block with `uid` in a block tree (its children at any depth), or nil."
   def find_block(%Block{uid: uid} = block, uid), do: block
 
@@ -95,7 +93,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.TextFill do
 
   defp locate(_block, _path), do: :error
 
-  defp ref_text(%wrapper{data: data}, "text") when wrapper in @text_wrappers, do: {:ok, ["text"], Map.get(data, :text)}
+  defp ref_text(%wrapper{data: data}, "text") do
+    if wrapper in Brando.AI.Translation.text_ref_wrapper_types(), do: {:ok, ["text"], Map.get(data, :text)}, else: :error
+  end
 
   defp ref_text(%PictureBlock{data: data}, field) when field in ~w(title credits alt),
     do: {:ok, [field], Map.get(data, String.to_existing_atom(field))}
