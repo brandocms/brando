@@ -43,6 +43,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   alias Brando.Translations
   alias Brando.Translations.Work
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.Translation
   alias Ecto.Changeset
 
@@ -74,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
          version_id when is_integer(version_id) <- Translation.version_id(assigns),
          {:ok, work} <- Work.translation_units(assigns.schema, assigns.entry.id),
          true <- work.version_id == version_id || {:error, :stale},
-         [_ | _] = units <- units(work.units, keys, targets(assigns.translation)) do
+         [_ | _] = units <- units(work.units, keys, targets(assigns.translation), writable(assigns)) do
       read(socket, work, units, keys)
     else
       {:error, :stale} -> toast(socket, gettext("The source changed. Save the translation, then translate with AI."))
@@ -88,20 +89,44 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   # share. A legacy `:user` account may not.
   defp may_write?(%{current_user: user, entry: entry}), do: Brando.Authorization.Boundary.may_update?(user, entry)
 
-  defp units(units, keys, targets) do
+  defp units(units, keys, targets, writable) do
     Enum.filter(units, fn unit ->
-      WorkTranslation.translatable?(unit) and fillable?(targets[unit.key]) and (keys == :all or unit.key in keys)
+      target = targets[unit.key]
+
+      WorkTranslation.translatable?(unit) and fillable?(target) and writable.(unit.key, target) and
+        (keys == :all or unit.key in keys)
     end)
   end
 
   @doc """
   Whether the form can fill the text an item's target points at: not a
-  gallery's per-image texts, which are translated in the block.
+  gallery's per-image texts, which are translated in the block, and not an
+  address (a link's `url`), which is not sent to the model and stays the
+  editor's.
   """
   def fillable?({:block, _uid, _module, ["refs", _name, "gallery" | _]}), do: false
-  def fillable?({kind, _, _, _}) when kind in [:block, :row], do: true
+  def fillable?({:block, _uid, _module, path}) when is_list(path), do: List.last(path) != "url"
+  def fillable?({:row, _subform, _key, field}), do: field != "url"
   def fillable?({:field, _}), do: true
   def fillable?(_target), do: false
+
+  # Whether this editor's form can change a target: not a field locked for
+  # them (`LockedFields`), nor a block text in a block field this form has
+  # none of
+  defp writable(assigns) do
+    locked = assigns.schema |> LockedFields.keys(assigns.form_blueprint, assigns.current_user) |> Enum.map(&to_string/1)
+    block_fields = Enum.map(assigns.form_blueprint.blocks || [], &to_string(&1.name))
+
+    fn
+      _key, {:field, field} -> field not in locked
+      key, {:block, _uid, _module, _path} -> block_field(key) in block_fields
+      _key, _target -> true
+    end
+  end
+
+  # The block field a block text's key is in: `entry_<field>/…`
+  defp block_field("entry_" <> rest), do: rest |> String.split("/", parts: 2) |> hd()
+  defp block_field(_key), do: nil
 
   # How long the BlockFields have to answer with their texts
   @read_ms 10_000

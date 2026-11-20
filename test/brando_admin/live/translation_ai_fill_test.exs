@@ -341,6 +341,31 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       refute has_element?(view, "#translation-panel [data-ai-status]")
     end
 
+    test "a field locked for this editor, and blocks the form has no field for, are not sent", %{conn: conn} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", subtitle: "Undertittel", slug: "tittel", language: "no", status: "published", year: 2020},
+          c.current_user
+        )
+
+      TranslationFixtures.add_block(source, c.module, c.current_user, "Første avsnitt", 0)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user)
+      answer_and_report()
+
+      # The `:locked` form: `subtitle` is read-only, and it has no block field
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}/locked", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Tittel"]
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
+      refute has_element?(view, "#{item("subtitle")}[data-ai]")
+      refute has_element?(view, "#{item(block_key(target.id))}[data-ai]")
+    end
+
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
       source = source(c, "Gammel", "Gammel tekst")
       {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)

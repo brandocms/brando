@@ -6,6 +6,21 @@ defmodule BrandoAdmin.Components.Form.TranslationFillTest do
   alias BrandoAdmin.Components.Form.TranslationFill
   alias Ecto.Changeset
 
+  describe "fillable?/1" do
+    test "an address is not filled: it stays the editor's" do
+      refute TranslationFill.fillable?({:row, "vars", "link", "url"})
+      refute TranslationFill.fillable?({:block, "b1", "m1", ["vars", "link", "url"]})
+      refute TranslationFill.fillable?({:block, "b1", "m1", ["rows", "r1", "vars", "link", "url"]})
+    end
+
+    test "a text is filled" do
+      assert TranslationFill.fillable?({:field, "title"})
+      assert TranslationFill.fillable?({:row, "vars", "link", "link_text"})
+      assert TranslationFill.fillable?({:block, "b1", "m1", ["vars", "link", "link_text"]})
+      assert TranslationFill.fillable?({:block, "b1", "m1", ["refs", "body", "text"]})
+    end
+  end
+
   describe "a row of an embeds_many subform" do
     setup do
       form = %Form{
