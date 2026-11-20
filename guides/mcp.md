@@ -181,7 +181,9 @@ are marked with the tool's name, "From Claude via MCP", and wait under
 `review_url`, the proposal's review there, and, when an entry the proposal
 creates or changes has a page preview, `preview_url`: the review opened on
 the first such entry's page (`?preview=<entry key>`), which is the link to
-give the person.
+give the person. A proposal can create a synchronized entry's version in
+another language with `create_translation`, as the admin's **Create
+translation** does ([Language versions](content_assistant.md#language-versions)).
 
 With them, three tools that add images to the media library (below):
 `brando_media_prepare_upload`, `brando_media_finish_upload` and

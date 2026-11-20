@@ -45,6 +45,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{entry} became its translation group's source after the proposal was applied. Undo would leave the group without a source: make another version the source first."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{field} cannot be changed by a proposal."
 msgstr ""
 
@@ -90,6 +95,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{language} is not one of the site's languages for %{name} entries."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} cannot hold a {, which the page could read as Liquid."
 msgstr ""
 
@@ -101,6 +111,16 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} does not accept this media type."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} entries are not synchronized translations. Create the version in another language with create_entry instead."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} entries cannot be copied, so they cannot be translated."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -230,6 +250,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "An earlier operation in this proposal already creates this version."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "An entry has no earlier revision to go back to."
 msgstr ""
 
@@ -276,6 +301,11 @@ msgstr ""
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "Could not queue the image's sizes: %{error}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Creating a translation takes permission to edit %{name} entries as well, which you do not have."
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex
@@ -535,7 +565,22 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source already has a version in this language. Change that version instead."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source is already in this language."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation could not be created: %{reason}"
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -608,9 +653,24 @@ msgstr ""
 msgid "This content type is not registered on this site."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a translation. Create translations from its group's source, %{source}."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is a translation. Create translations from its group's source."
+msgstr ""
+
 #: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This entry is not part of the proposal."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is the translation an earlier operation creates. Its blocks and fields are copied from its source when the proposal is applied, and its structure follows the source: write its text with a translate operation instead."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -731,6 +791,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "You do not have permission to create a translation of this entry."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "You do not have permission to create this entry."
 msgstr ""
 
@@ -814,6 +879,11 @@ msgstr ""
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "rows is a list of objects."
+msgstr ""
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "source is a saved entry: {content_type, id}."
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex

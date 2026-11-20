@@ -452,6 +452,9 @@ defmodule BrandoAdmin.MCP.WatchLive do
 
   defp subjects(%{"op" => "create_entry", "content_type" => type}), do: [{type, nil}]
 
+  defp subjects(%{"op" => "create_translation", "source" => %{"content_type" => type, "id" => id}}),
+    do: [{type, nil}, {type, id}]
+
   defp subjects(%{"op" => "replace_image_file"} = op) do
     for %{"kind" => "image", "id" => id} <- [op["asset"], op["with"]], do: {:image, id}
   end

@@ -312,6 +312,41 @@ defmodule Brando.MCP.EndpointTest do
       assert %{origin: "mcp", client: "Test Client", status: "pending"} = proposal
     end
 
+    test "prepare_proposal takes a create_translation, which applies as the admin's Create translation",
+         %{tenant: tenant, token: token} = c do
+      {source, op} =
+        MCP.in_tenant(tenant, fn ->
+          {:ok, source} =
+            Brando.SyncTest.create_article(
+              %{title: "Tittel", slug: "tittel-mcp", language: "no", status: "published"},
+              c.current_user
+            )
+
+          {source,
+           %{
+             "op" => "create_translation",
+             "source" => %{"content_type" => "Brando.SyncTest.Article", "id" => source.id},
+             "language" => "en",
+             "ref" => "english"
+           }}
+        end)
+
+      %{"result" => %{"structuredContent" => review}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Translate", "operations" => [op]})
+
+      assert %{"applicable" => true, "problems" => []} = review
+      # The translation is made when the proposal is applied: nothing to preview
+      refute review["preview_url"]
+
+      MCP.in_tenant(tenant, fn ->
+        assert {:ok, _} = Proposals.approve(review["proposal_id"], 1, c.current_user)
+        assert {:ok, receipt} = Proposals.apply(review["proposal_id"], 1, c.current_user)
+        id = receipt.mappings["created"]["english"]
+        assert %{role: :target} = Brando.Translations.get_member(Brando.SyncTest.Article, id)
+        assert %{role: :source} = Brando.Translations.get_member(Brando.SyncTest.Article, source.id)
+      end)
+    end
+
     test "a proposal prepared over the endpoint and applied in the admin names the client, the proposal and the approver",
          %{tenant: tenant, token: token} = c do
       op = %{

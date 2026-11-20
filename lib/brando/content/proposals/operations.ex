@@ -7,6 +7,21 @@ defmodule Brando.Content.Proposals.CreateEntry do
   defstruct [:schema, :ref, fields: %{}]
 end
 
+defmodule Brando.Content.Proposals.CreateTranslation do
+  @moduledoc """
+  Create the `language` version of `source` (`{schema, id}`) in its
+  synchronized translation group, as the editor's Create translation does
+  (`Brando.Translations.create_target/5`): an unpublished copy, linked as an
+  alternate, with every text it copied marked to translate. A source not yet
+  in a group becomes its source. Other operations name the new entry as
+  `{:new, ref}`.
+  """
+  @enforce_keys [:source, :language, :ref]
+  defstruct [:source, :language, :ref]
+
+  @type t :: %__MODULE__{source: {module(), integer()}, language: String.t(), ref: String.t()}
+end
+
 defmodule Brando.Content.Proposals.SetFields do
   @moduledoc """
   Change attributes of an existing entry. `target` is `{schema, id}`.

@@ -882,13 +882,18 @@ defmodule Brando.Translations do
   Synchronizes every synchronized target of a group from its source.
 
   Runs under a lock on the group, so concurrent source saves are applied in
-  order, and bumps the group's `source_generation`.
+  order, and bumps the group's `source_generation`. Returns
+  `{:error, :group_not_found}` for a group deleted since the save, as undoing
+  a proposal that created its first translation deletes it.
   """
   def sync_group(group_id, opts \\ []) do
     minor? = Keyword.get(opts, :minor, false)
 
     Repo.transaction(fn ->
-      group = Repo.one!(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE")
+      group =
+        Repo.one(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE") ||
+          Repo.rollback(:group_not_found)
+
       schema = String.to_existing_atom(group.entry_type)
       generation = group.source_generation + 1
 

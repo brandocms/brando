@@ -4,8 +4,8 @@ defmodule Brando.Content.Proposals do
   @moduledoc """
   Reviewed content changes across several saved entries.
 
-  A proposal is a list of semantic operations — `CreateEntry`, `SetFields`,
-  `InsertBlock`, `SetBlockMedia`, `SetBlockValues`, `SetBlockText`, `MoveBlock`,
+  A proposal is a list of semantic operations — `CreateEntry`, `CreateTranslation`,
+  `SetFields`, `InsertBlock`, `SetBlockMedia`, `SetBlockValues`, `SetBlockText`, `MoveBlock`,
   `DeleteBlock` and the others in `Brando.Content.Proposals.Codec` — that
   `prepare/2` resolves against the actor's content,
   validates and freezes. Block operations address any block of a field by its
@@ -30,6 +30,12 @@ defmodule Brando.Content.Proposals do
   Block values cannot yet reference an entry the proposal creates — the entry
   would be a draft — so such a value is a blocking `:draft_dependency`.
 
+  A `CreateTranslation` makes the source's copy in its synchronized group
+  when the proposal is applied (`Brando.Translations.create_target/5`), so
+  the copy has no blocks before then: other operations may not name it as
+  `{:new, ref}` (`:use_translate`). `translation/2` gives the operation that
+  creates a `{:new, ref}` translation, its source and language.
+
   `ReplaceImageFile` changes no entry: a library image takes another's file
   (`Brando.Content.Proposals.ImageReplacement`), in the same transaction as
   the entries. A proposal that replaced a file cannot be undone.
@@ -46,6 +52,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.CopyBlock
   alias Brando.Content.Proposals.CreateEntry
+  alias Brando.Content.Proposals.CreateTranslation
   alias Brando.Content.Proposals.DeleteBlock
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.EntryLinks
@@ -72,6 +79,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Transfer.Error
   alias Brando.Drafts.Params
   alias Brando.Repo
+  alias Brando.Translations
   alias Brando.Utils
   alias BrandoAdmin.Components.Form.LockedFields
   alias Ecto.Changeset
@@ -101,7 +109,7 @@ defmodule Brando.Content.Proposals do
     user = user!(actor)
     operations = Enum.map(operations, &(&1 |> freeze() |> EntryLinks.resolve(actor) |> snapshot(actor)))
     catalogued!(operations)
-    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
+    creates = creates(operations)
 
     entries =
       operations
@@ -273,6 +281,7 @@ defmodule Brando.Content.Proposals do
   end
 
   defp written_schemas(%CreateEntry{schema: schema}), do: [schema]
+  defp written_schemas(%CreateTranslation{source: {schema, _id}}), do: [schema]
   defp written_schemas(op), do: for({schema, _id} <- op_targets(op), schema != :new, do: schema)
 
   @doc """
@@ -322,10 +331,26 @@ defmodule Brando.Content.Proposals do
   end
 
   defp check_operation(op, proposal, actor, trees) do
-    {problems, trees} = check(op, proposal, actor, trees)
-    {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
-    {problems ++ copy_problems ++ link_problems(op), trees}
+    if Enum.any?(op_targets(op), &translation(proposal.operations, &1)) do
+      {[use_translate()], trees}
+    else
+      {problems, trees} = check(op, proposal, actor, trees)
+      {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
+      {problems ++ copy_problems ++ link_problems(op), trees}
+    end
   end
+
+  # A translation the proposal creates has no blocks until it is applied, and
+  # its structure follows its source: only its text is its own.
+  defp use_translate,
+    do:
+      problem(
+        :use_translate,
+        dgettext(
+          "content_proposals",
+          "This entry is the translation an earlier operation creates. Its blocks and fields are copied from its source when the proposal is applied, and its structure follows the source: write its text with a translate operation instead."
+        )
+      )
 
   # An insert or copy that adds its uid clears an earlier failure of it.
   defp record_failure(%op_type{uid: uid} = op, index, problems, trees, failed) when op_type in [InsertBlock, CopyBlock] do
@@ -416,7 +441,31 @@ defmodule Brando.Content.Proposals do
 
   # The entries an operation touches: its target, and a copy's destination.
   defp op_targets(%CopyBlock{target: target, to_target: to}) when not is_nil(to), do: [target, to]
+  # A translation's source is read when the operation is checked and copied
+  # as it is when the proposal is applied: it is not one of the entries the
+  # proposal changes or holds a baseline of.
+  defp op_targets(%CreateTranslation{}), do: []
   defp op_targets(op), do: [Map.get(op, :target)]
+
+  # The new entries, `{:new, ref} => schema`: created entries and translations.
+  defp creates(operations) do
+    Map.new(
+      for %type{ref: ref} = op <- operations, type in [CreateEntry, CreateTranslation], do: {{:new, ref}, new_schema(op)}
+    )
+  end
+
+  defp new_schema(%CreateEntry{schema: schema}), do: schema
+  defp new_schema(%CreateTranslation{source: {schema, _id}}), do: schema
+
+  @doc """
+  The `CreateTranslation` among `operations` that creates `target`, or `nil`:
+  `{:new, ref}` resolves to the translation of its `source` in its `language`.
+  """
+  @spec translation([struct()], Proposal.target()) :: CreateTranslation.t() | nil
+  def translation(operations, {:new, ref}),
+    do: Enum.find(operations, &match?(%CreateTranslation{ref: ^ref}, &1))
+
+  def translation(_operations, _target), do: nil
 
   @doc """
   The entries `operations` only copy blocks from. They are read, to copy
@@ -435,9 +484,11 @@ defmodule Brando.Content.Proposals do
 
   defp changed_targets(%CopyBlock{to_target: to}) when not is_nil(to), do: [to]
   defp changed_targets(%CreateEntry{ref: ref}), do: [{:new, ref}]
+  defp changed_targets(%CreateTranslation{ref: ref}), do: [{:new, ref}]
   defp changed_targets(op), do: [Map.get(op, :target)]
 
   defp freeze(%CreateEntry{} = op), do: %{op | ref: to_string(op.ref), fields: stringify(op.fields)}
+  defp freeze(%CreateTranslation{} = op), do: %{op | ref: to_string(op.ref), language: to_string(op.language)}
   defp freeze(%SetFields{} = op), do: %{op | target: target(op.target), fields: stringify(op.fields)}
 
   defp freeze(%SetRefConfig{} = op),
@@ -587,7 +638,7 @@ defmodule Brando.Content.Proposals do
   end
 
   defp check(%CreateEntry{} = op, proposal, actor) do
-    duplicate? = Enum.count(proposal.operations, &match?(%CreateEntry{ref: ref} when ref == op.ref, &1)) > 1
+    duplicate? = duplicate_ref?(op, proposal)
 
     problems =
       cond do
@@ -610,6 +661,38 @@ defmodule Brando.Content.Proposals do
     problems ++ text_fields(op.fields)
   end
 
+  defp check(%CreateTranslation{source: {schema, id}} = op, proposal, actor) do
+    cond do
+      duplicate_ref?(op, proposal) ->
+        [problem(:duplicate_ref, dgettext("content_proposals", "Two new entries use the same reference."))]
+
+      not Translations.synchronized?(schema) ->
+        [
+          problem(
+            :not_synchronized,
+            dgettext(
+              "content_proposals",
+              "%{name} entries are not synchronized translations. Create the version in another language with create_entry instead.",
+              name: Codec.content_type(schema)
+            )
+          )
+        ]
+
+      not Translations.duplicable?(schema) ->
+        [
+          problem(
+            :not_duplicable,
+            dgettext("content_proposals", "%{name} entries cannot be copied, so they cannot be translated.",
+              name: Codec.content_type(schema)
+            )
+          )
+        ]
+
+      true ->
+        source_problems(op, {schema, id}, proposal, actor)
+    end
+  end
+
   defp check(%ReplaceImageFile{} = op, proposal, actor),
     do: ImageReplacement.problems(op, proposal.operations, actor)
 
@@ -626,6 +709,139 @@ defmodule Brando.Content.Proposals do
       asset_fields(op.fields, schema, actor) ++
       list_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
   end
+
+  # The source is read as the actor may read it.
+  defp source_problems(op, source, proposal, actor) do
+    case Error.protect(fn -> load!(source, actor, action: :read) end) do
+      {:ok, source} -> translation_problems(op, source, proposal, actor)
+      {:error, message} -> [problem(:unknown_target, message)]
+    end
+  end
+
+  defp duplicate_ref?(op, proposal) do
+    Enum.count(proposal.operations, fn
+      %type{ref: ref} when type in [CreateEntry, CreateTranslation] -> ref == op.ref
+      _ -> false
+    end) > 1
+  end
+
+  # What the editor's Create translation checks, in the listing and the form,
+  # and `Brando.Translations.create_target/5` under them.
+  defp translation_problems(op, %schema{} = source, proposal, actor) do
+    cond do
+      Boundary.authorize(actor, :create, schema) != :ok or Boundary.authorize(actor, :duplicate, source) != :ok ->
+        [
+          problem(
+            :forbidden,
+            dgettext("content_proposals", "You do not have permission to create a translation of this entry.")
+          )
+        ]
+
+      # The apply reads the new translation back as the actor may edit it,
+      # and translating it is editing it.
+      Boundary.authorize(actor, :update, schema) != :ok ->
+        [
+          problem(
+            :forbidden,
+            dgettext(
+              "content_proposals",
+              "Creating a translation takes permission to edit %{name} entries as well, which you do not have.",
+              name: Codec.content_type(schema)
+            )
+          )
+        ]
+
+      true ->
+        language_problems(op, source, proposal, actor)
+    end
+  end
+
+  defp language_problems(%CreateTranslation{language: language} = op, %schema{} = source, proposal, actor) do
+    member = Translations.get_member(schema, source.id)
+    earlier = Enum.take_while(proposal.operations, &(&1 !== op))
+
+    cond do
+      match?(%{role: :target}, member) ->
+        [not_source(schema, member, actor)]
+
+      language not in Enum.map(entry_languages(schema), & &1.code) ->
+        [
+          problem(
+            :unknown_language,
+            dgettext("content_proposals", "%{language} is not one of the site's languages for %{name} entries.",
+              language: inspect(language),
+              name: Codec.content_type(schema)
+            )
+          )
+        ]
+
+      language == to_string(source.language) ->
+        [problem(:same_language, dgettext("content_proposals", "The source is already in this language."))]
+
+      language in group_languages(schema, source, member) ->
+        [
+          problem(
+            :language_exists,
+            dgettext(
+              "content_proposals",
+              "The source already has a version in this language. Change that version instead."
+            )
+          )
+        ]
+
+      Enum.any?(earlier, &same_translation?(&1, op, member)) ->
+        [
+          problem(
+            :language_exists,
+            dgettext("content_proposals", "An earlier operation in this proposal already creates this version.")
+          )
+        ]
+
+      true ->
+        []
+    end
+  end
+
+  # Named a translation, the client is told which entry the group's source is.
+  defp not_source(schema, member, actor) do
+    source =
+      Enum.find_value(Translations.list_members(member.group_id), fn
+        %{role: :source, entry_id: id} -> id
+        _ -> nil
+      end)
+
+    readable? = source && readable?(schema, source, actor)
+
+    message =
+      if readable?,
+        do:
+          dgettext(
+            "content_proposals",
+            "This entry is a translation. Create translations from its group's source, %{source}.",
+            source: Jason.encode!(Codec.target({schema, source}))
+          ),
+        else: dgettext("content_proposals", "This entry is a translation. Create translations from its group's source.")
+
+    problem(:not_source, message)
+  end
+
+  # The languages the source's group holds, and those of the independent
+  # versions it is linked to as alternates.
+  defp group_languages(schema, source, member) do
+    members = if member, do: Enum.map(Translations.list_members(member.group_id), & &1.language), else: []
+    members ++ Translations.alternate_languages(schema, source.id)
+  end
+
+  defp same_translation?(%CreateTranslation{source: {schema, id}, language: language}, op, member) do
+    {op_schema, op_id} = op.source
+
+    schema == op_schema and language == op.language and
+      (id == op_id or
+         (member != nil and
+            match?(%{group_id: group_id} when group_id == member.group_id, Translations.get_member(schema, id))))
+  end
+
+  defp same_translation?(_earlier, _op, _member), do: false
 
   defp saved_tree(target, field, proposal) do
     case Map.get(proposal.targets, target) do
@@ -1667,7 +1883,7 @@ defmodule Brando.Content.Proposals do
     end
 
     %{
-      creates: Enum.count(proposal.operations, &match?(%CreateEntry{}, &1)),
+      creates: Enum.count(proposal.operations, &(&1.__struct__ in [CreateEntry, CreateTranslation])),
       updates: length(existing),
       inserted_blocks: length(inserted),
       updated_blocks:
@@ -1811,10 +2027,12 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
+  # A translation has no changeset: it is the source's copy, made as the
+  # proposal is applied (`create_translation!/2`).
   defp materialize!(proposal, entries, user) do
-    Map.new(proposal.targets, fn {target, _} ->
+    for {target, _} <- proposal.targets, is_nil(translation(proposal.operations, target)), into: %{} do
       {target, target |> base_changeset(proposal, entries, user) |> put_blocks(target, proposal, entries, user)}
-    end)
+    end
   end
 
   @doc """
@@ -2600,7 +2818,8 @@ defmodule Brando.Content.Proposals do
   # address overlaps with nothing.
   # An image a replacement swaps counts as touched, both of them.
   defp touched(operations) do
-    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {op.ref, created(op)}
+    creates =
+      for %type{ref: ref} = op <- operations, type in [CreateEntry, CreateTranslation], into: %{}, do: {ref, created(op)}
 
     entries =
       for op <- operations, target <- changed_targets(op), not is_nil(target), into: MapSet.new() do
@@ -2616,6 +2835,9 @@ defmodule Brando.Content.Proposals do
   # The slug, or the uri (pages), or the key under its parent key
   # (fragments), or else the title, as the create gives it: trimmed and
   # case-insensitive, without slug generation. A blank value is no address.
+  # A translation is the same when it is of the same source, in the same language.
+  defp created(%CreateTranslation{source: {schema, id}, language: language}), do: {:translation, schema, id, language}
+
   defp created(%CreateEntry{schema: schema, fields: fields}) do
     fields = Map.new(fields, fn {key, value} -> {to_string(key), value} end)
     address = Enum.find_value(~w(slug uri key title), &address(&1, fields))
@@ -2960,6 +3182,7 @@ defmodule Brando.Content.Proposals do
 
   defp undo_saved!(saved, record, receipt, user) do
     Enum.each(saved, &undo_entry!(&1, receipt, user))
+    delete_emptied_groups!(receipt)
 
     record |> Changeset.change(status: "undone") |> Repo.update!()
 
@@ -2968,10 +3191,58 @@ defmodule Brando.Content.Proposals do
     |> Repo.update!()
   end
 
-  defp undo_entry!({key, schema, entry_id, _}, receipt, user) do
-    if String.starts_with?(key, "new:"),
-      do: delete_entry!(schema, entry_id, user),
-      else: restore!(schema, entry_id, receipt.before[key]["revision"], user)
+  defp undo_entry!({"new:" <> ref, schema, entry_id, _}, receipt, user) do
+    case receipt.mappings["translations"][ref] do
+      nil -> delete_entry!(schema, entry_id, user)
+      group -> delete_translation!(schema, entry_id, group, user)
+    end
+  end
+
+  defp undo_entry!({key, schema, entry_id, _}, receipt, user),
+    do: restore!(schema, entry_id, receipt.before[key]["revision"], user)
+
+  # The translation leaves its group, and its alternate link goes with it. A
+  # version that joined the group since keeps it, with its pending version
+  # and work.
+  #
+  # The group is locked as a source save's synchronization locks it. A
+  # translation made the group's source since the apply is not deleted: the
+  # group would be left without one. Making it the source does not take the
+  # group's lock, so the member is deleted only while it is still a target.
+  defp delete_translation!(schema, entry_id, group, user) do
+    group_id = group["group_id"]
+    Repo.one(from(g in Translations.Group, where: g.id == ^group_id, lock: "FOR UPDATE"))
+
+    own =
+      from(m in Translations.Member,
+        where: m.group_id == ^group_id and m.entry_type == ^to_string(schema) and m.entry_id == ^entry_id
+      )
+
+    {deleted, _} = Repo.delete_all(from(m in own, where: m.role == :target))
+    if deleted == 0 and Repo.one(from(m in own, select: count())) > 0, do: Error.fail!(became_source(schema, entry_id))
+
+    if schema.has_alternates?(), do: Module.concat(schema, Alternate).delete(group["source_id"], entry_id)
+    delete_entry!(schema, entry_id, user)
+  end
+
+  # A group the apply made goes when only its source is left, so the source
+  # is as it was and its languages are free again. Decided once every
+  # translation is undone: one proposal can create several versions, and only
+  # the first is recorded as having made the group.
+  defp delete_emptied_groups!(receipt) do
+    for {_ref, %{"new_group" => true, "group_id" => group_id}} <- receipt.mappings["translations"] || %{},
+        match?([%{role: :source}], Translations.list_members(group_id)),
+        do: Repo.delete_all(from(g in Translations.Group, where: g.id == ^group_id))
+
+    :ok
+  end
+
+  defp became_source(schema, entry_id) do
+    dgettext(
+      "content_proposals",
+      "%{entry} became its translation group's source after the proposal was applied. Undo would leave the group without a source: make another version the source first.",
+      entry: Catalog.describe(Repo.get!(schema, entry_id)).title
+    )
   end
 
   defp restore!(schema, id, revision, user) do
@@ -3117,6 +3388,9 @@ defmodule Brando.Content.Proposals do
   # traits' after-save work, then notifications and broadcasts. The sync of
   # synchronized translations was queued by the context mutation that saved
   # the entry.
+  # A translation is made as the admin makes it, without an after-save.
+  defp after_apply({target, entry, nil}, actor), do: announce({target, entry}, actor)
+
   defp after_apply({target, entry, changeset}, actor) do
     try do
       Brando.Blueprint.AfterSave.run(entry.__struct__, entry, changeset, user!(actor))
@@ -3170,7 +3444,7 @@ defmodule Brando.Content.Proposals do
         {:error, message} -> Error.fail!(message)
       end
 
-    creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
+    creates = creates(operations)
 
     entries =
       for op <- operations,
@@ -3330,9 +3604,12 @@ defmodule Brando.Content.Proposals do
     # published as the proposal is applied.
     unchanged = Enum.reject(sources(proposal.operations), &(Proposal.key(&1) in publish))
 
+    translations = for %CreateTranslation{} = op <- proposal.operations, do: {{:new, op.ref}, op}
+
     # Create first: later stages resolve `{:new, ref}` to the saved id.
     # Otherwise entries are saved in the order the operations name them.
-    saved =
+    # A translation is created in its turn among the creates.
+    {saved, groups} =
       proposal
       |> materialize!(entries, user)
       |> Enum.reject(fn {target, _cs} -> target in unchanged end)
@@ -3341,10 +3618,16 @@ defmodule Brando.Content.Proposals do
           do: {target, Changeset.put_change(cs, :status, :published)},
           else: {target, cs}
       end)
+      |> Enum.concat(translations)
       |> Enum.sort_by(fn {target, _} -> {!match?({:new, _}, target), first_mention(proposal, target)} end)
-      |> Enum.map(fn {target, cs} = pair ->
-        {^target, entry} = save!(pair, user)
-        {target, entry, cs}
+      |> Enum.map_reduce(%{}, fn
+        {{:new, ref} = target, %CreateTranslation{} = op}, groups ->
+          {entry, group} = create_translation!(op, user)
+          {{target, entry, nil}, Map.put(groups, ref, group)}
+
+        {target, cs} = pair, groups ->
+          {^target, entry} = save!(pair, user)
+          {{target, entry, cs}, groups}
       end)
 
     receipt =
@@ -3357,6 +3640,7 @@ defmodule Brando.Content.Proposals do
         after: Map.new(saved, fn {target, entry, _cs} -> saved_fingerprint({target, entry}, actor) end),
         mappings: %{
           "created" => for({{:new, ref}, entry, _cs} <- saved, into: %{}, do: {ref, entry.id}),
+          "translations" => groups,
           "published" => publish,
           "effects" => encode_effects(proposal.effects),
           "replaced_images" => replaced
@@ -3377,7 +3661,7 @@ defmodule Brando.Content.Proposals do
       schema = target && proposal_schema(proposal, target)
 
       cond do
-        is_nil(schema) or not schema.has_trait(Brando.Trait.Status) ->
+        is_nil(schema) or not schema.has_trait(Brando.Trait.Status) or translation(proposal.operations, target) != nil ->
           Error.fail!(dgettext("content_proposals", "Only entries in this proposal that have a status can be published."))
 
         Boundary.authorize(actor, :publish, schema) != :ok ->
@@ -3388,6 +3672,43 @@ defmodule Brando.Content.Proposals do
       end
     end
   end
+
+  # The editor's Create translation, inside the apply's transaction and lock:
+  # `create_target/5` nests its own transaction in it, so a refusal here, or a
+  # failure later in the apply, rolls the whole apply back. The checks run
+  # again first, as the language may have been taken since the proposal was
+  # approved. Returns the translation and its group, with whether this apply
+  # made the group, for undo.
+  defp create_translation!(%CreateTranslation{source: {schema, id}, language: language}, user) do
+    had_group? = Translations.get_member(schema, id) != nil
+
+    case Translations.create_target(schema, id, language, user) do
+      {:ok, entry} ->
+        %{group_id: group_id} = Translations.get_member(schema, entry.id)
+        {entry, %{"group_id" => group_id, "new_group" => !had_group?, "source_id" => id}}
+
+      {:error, reason} ->
+        Error.fail!(translation_failed(reason))
+    end
+  end
+
+  defp translation_failed(:language_exists),
+    do: dgettext("content_proposals", "The source already has a version in this language. Change that version instead.")
+
+  defp translation_failed(:not_source),
+    do: dgettext("content_proposals", "This entry is a translation. Create translations from its group's source.")
+
+  defp translation_failed(:forbidden),
+    do: dgettext("content_proposals", "You do not have permission to create a translation of this entry.")
+
+  defp translation_failed(%Changeset{} = changeset),
+    do:
+      dgettext("content_proposals", "Entry validation: %{errors}",
+        errors: inspect(Changeset.traverse_errors(changeset, fn {message, _} -> message end))
+      )
+
+  defp translation_failed(reason),
+    do: dgettext("content_proposals", "The translation could not be created: %{reason}", reason: inspect(reason))
 
   defp proposal_schema(_proposal, {schema, id}) when is_integer(id), do: schema
   defp proposal_schema(proposal, target), do: Map.get(proposal.targets, target)
@@ -3438,7 +3759,7 @@ defmodule Brando.Content.Proposals do
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
-      %CreateEntry{ref: ref} -> {:new, ref} == target
+      %type{ref: ref} when type in [CreateEntry, CreateTranslation] -> {:new, ref} == target
       op -> target in op_targets(op)
     end)
   end

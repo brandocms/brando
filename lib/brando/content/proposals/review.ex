@@ -18,6 +18,7 @@ defmodule Brando.Content.Proposals.Review do
     BlockTree,
     CopyBlock,
     CreateEntry,
+    CreateTranslation,
     DeleteBlock,
     InsertBlock,
     MoveBlock,
@@ -74,8 +75,9 @@ defmodule Brando.Content.Proposals.Review do
     |> Enum.find_value(fn {target, value} ->
       schema = if match?({:new, _}, target), do: value, else: elem(target, 0)
 
-      if target not in sources and Brando.LivePreview.has_live_preview_target(schema),
-        do: Proposal.key(target)
+      if target not in sources and is_nil(Brando.Content.Proposals.translation(proposal.operations, target)) and
+           Brando.LivePreview.has_live_preview_target(schema),
+         do: Proposal.key(target)
     end)
   end
 
@@ -109,32 +111,11 @@ defmodule Brando.Content.Proposals.Review do
     entries |> Enum.flat_map(& &1.media) |> Enum.concat(context) |> Enum.uniq()
   end
 
-  defp entry({:new, ref} = target, schema, proposal) do
-    %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
-    fields = Brando.Content.Proposals.new_entry_fields(schema, fields)
-
-    changes = [%{type: :create, fields: fields |> order_fields() |> Enum.map(fn {k, v} -> field_view(schema, k, v) end)}]
-    changes = changes ++ block_changes(target, nil, proposal)
-
-    %{
-      key: Proposal.key(target),
-      target: target,
-      action: :create,
-      content_type: Brando.Blueprint.get_singular(schema),
-      title: fields["title"] || fields["name"] || ref,
-      url: nil,
-      address: nil,
-      admin_url: nil,
-      status: "draft",
-      live?: false,
-      changes: changes,
-      media: media_of(changes),
-      highlight: uids_of(changes),
-      preview?: Brando.LivePreview.has_live_preview_target(schema),
-      preview_targets: preview_targets(schema),
-      placeholders: placeholders(target, schema, proposal),
-      problems: problems(proposal, target)
-    }
+  defp entry({:new, _ref} = target, schema, proposal) do
+    case Brando.Content.Proposals.translation(proposal.operations, target) do
+      nil -> new_entry(target, schema, proposal)
+      op -> translation(target, schema, op, proposal)
+    end
   end
 
   defp entry({schema, id} = target, entry, proposal) do
@@ -154,6 +135,72 @@ defmodule Brando.Content.Proposals.Review do
       status: to_string(Map.get(entry, :status) || ""),
       live?: target in (proposal.effects[:live] || []),
       languages: languages(entry, proposal),
+      changes: changes,
+      media: media_of(changes),
+      highlight: uids_of(changes),
+      preview?: Brando.LivePreview.has_live_preview_target(schema),
+      preview_targets: preview_targets(schema),
+      placeholders: placeholders(target, schema, proposal),
+      problems: problems(proposal, target)
+    }
+  end
+
+  # The copy is made as the proposal is applied, so it has no page to preview
+  # yet, and it stays unpublished: its texts are still to translate. Its title
+  # is the source's, as the copy keeps it. The source is read as the reviewer
+  # may read it.
+  defp translation(target, schema, %CreateTranslation{source: {_, id}} = op, proposal) do
+    source = Boundary.readable_entry?(schema, id) && Brando.Repo.get(schema, id)
+    readable? = !!source
+    title = if readable?, do: Catalog.describe(source).title, else: nil
+
+    change = %{
+      type: :create_translation,
+      language: op.language,
+      source: %{title: title, id: id, admin_url: readable? && admin_url(schema, id)},
+      operations: [Enum.find_index(proposal.operations, &(&1 == op))]
+    }
+
+    %{
+      key: Proposal.key(target),
+      target: target,
+      action: :create,
+      translation?: true,
+      content_type: Brando.Blueprint.get_singular(schema),
+      title: title || op.ref,
+      url: nil,
+      address: nil,
+      admin_url: nil,
+      status: "draft",
+      live?: false,
+      changes: [change],
+      media: [],
+      highlight: [],
+      preview?: false,
+      preview_targets: [],
+      placeholders: [],
+      problems: problems(proposal, target)
+    }
+  end
+
+  defp new_entry({:new, ref} = target, schema, proposal) do
+    %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
+    fields = Brando.Content.Proposals.new_entry_fields(schema, fields)
+
+    changes = [%{type: :create, fields: fields |> order_fields() |> Enum.map(fn {k, v} -> field_view(schema, k, v) end)}]
+    changes = changes ++ block_changes(target, nil, proposal)
+
+    %{
+      key: Proposal.key(target),
+      target: target,
+      action: :create,
+      content_type: Brando.Blueprint.get_singular(schema),
+      title: fields["title"] || fields["name"] || ref,
+      url: nil,
+      address: nil,
+      admin_url: nil,
+      status: "draft",
+      live?: false,
       changes: changes,
       media: media_of(changes),
       highlight: uids_of(changes),
@@ -978,9 +1025,12 @@ defmodule Brando.Content.Proposals.Review do
       problem_target = problem[:target]
 
       (problem_target && (problem_target == target or problem_target == key)) ||
-        (is_integer(problem[:operation]) && Map.get(Enum.at(proposal.operations, problem.operation), :target) == target)
+        (is_integer(problem[:operation]) && operation_target(Enum.at(proposal.operations, problem.operation)) == target)
     end)
   end
+
+  defp operation_target(%CreateTranslation{ref: ref}), do: {:new, ref}
+  defp operation_target(op), do: Map.get(op, :target)
 
   # A text field's change shows what differs in it, like a block's text. A
   # field that is not rich text holds what it says: `<b>` in one is on the page
@@ -1078,7 +1128,7 @@ defmodule Brando.Content.Proposals.Review do
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
-      %CreateEntry{ref: ref} -> {:new, ref} == target
+      %type{ref: ref} when type in [CreateEntry, CreateTranslation] -> {:new, ref} == target
       %CopyBlock{to_target: to} = op when not is_nil(to) -> target in [op.target, to]
       op -> Map.get(op, :target) == target
     end) || 0
