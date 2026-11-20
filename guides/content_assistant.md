@@ -292,7 +292,8 @@ The review shows each unit with its label, the source's text and the
 translation, so one can be checked against the other; a unit kept as it is
 shows the text it keeps, and says so. A *review* unit whose source's text
 before the change is known shows four texts: the source before (struck
-through) and now, and the translation before (struck through) and now. Units are placed and labelled from the
+through) and now, and the translation before (struck through) and now,
+while the proposal can still be applied. Units are placed and labelled from the
 translation's pending version. Applying saves the translation as its form
 saves it (`Brando.Translations.save_work/5`): its whole pending version, with
 the texts written in and its blocks rendered, so its structure and media
