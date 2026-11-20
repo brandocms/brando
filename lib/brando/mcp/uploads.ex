@@ -92,9 +92,8 @@ defmodule Brando.MCP.Uploads do
 
     with :ok <- File.mkdir_p(Path.dirname(root)),
          :ok <- mkdir_or_exists(root),
-         {:ok, %File.Stat{type: :directory}} <- File.lstat(root),
-         :ok <- File.chmod(root, 0o700) do
-      :ok
+         {:ok, %File.Stat{type: :directory}} <- File.lstat(root) do
+      File.chmod(root, 0o700)
     end
   end
 
