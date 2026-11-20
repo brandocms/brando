@@ -85,6 +85,8 @@ defmodule Brando.MCP.MediaTest do
   defp images,
     do: Brando.Repo.all(from(i in Image, where: is_nil(i.deleted_at) and like(i.path, "%uploads/%"), order_by: :id))
 
+  defp secret(url), do: Path.basename(URI.parse(url).path)
+
   defp pending(dir), do: if(File.exists?(dir), do: File.ls!(dir), else: [])
 
   test "the three tools are offered: the URL import reaches out, the upload does not",
@@ -103,7 +105,7 @@ defmodule Brando.MCP.MediaTest do
                call(tenant, token, "prepare_upload", %{"kind" => "image", "filename" => "photo.jpg"})
 
       assert %{"upload_id" => id, "upload_url" => url, "expires_at" => expires, "max_bytes" => @limit} = result
-      assert url == MCP.resource(tenant) <> "/uploads/" <> id <> "/" <> List.last(String.split(url, "/"))
+      assert url == MCP.resource(tenant) <> "/uploads/" <> id <> "/" <> secret(url)
       assert "image/jpeg" in result["types"]
       {:ok, expires, 0} = DateTime.from_iso8601(expires)
       assert DateTime.diff(expires, DateTime.utc_now()) in 590..600
@@ -196,7 +198,7 @@ defmodule Brando.MCP.MediaTest do
                       }}
 
       # The URL is a credential: never on the page or in Activity
-      refute Jason.encode!(prepared) =~ List.last(String.split(url, "/"))
+      refute Jason.encode!(prepared) =~ secret(url)
 
       put_bytes(url, @jpg)
       call(tenant, token, "finish_upload", %{"upload_id" => id})
@@ -209,7 +211,7 @@ defmodule Brando.MCP.MediaTest do
       assert %Event{source: :mcp, details: %{"tool" => "brando_media_finish_upload"}} = Brando.Repo.get!(Event, event_id)
 
       refute Brando.Repo.repo().exists?(
-               from(e in Event, where: fragment("?::text LIKE ?", e.details, ^"%#{List.last(String.split(url, "/"))}%"))
+               from(e in Event, where: fragment("?::text LIKE ?", e.details, ^"%#{secret(url)}%"))
              )
     end
 
@@ -309,9 +311,9 @@ defmodule Brando.MCP.MediaTest do
       for bad <- [
             base <> id <> "/" <> String.duplicate("A", 43),
             base <> id <> "/",
-            base <> String.duplicate("A", 22) <> "/" <> List.last(String.split(url, "/")),
+            base <> String.duplicate("A", 22) <> "/" <> secret(url),
             base <> "..%2F..%2Fetc/x",
-            base <> "%2E%2E/" <> List.last(String.split(url, "/"))
+            base <> "%2E%2E/" <> secret(url)
           ] do
         assert {404, _headers, _body} = Plug.Test.sent_resp(put_bytes(bad, @jpg)), bad
       end

@@ -53,7 +53,7 @@ defmodule Brando.MCP.Media do
     }
   }
 
-  @stored "Returns the image's asset for brando_content_prepare_proposal ({\"kind\":\"image\",\"id\":N}), whether the library already had it (reused), and what of focal, title and alt was applied and not_applied. " <>
+  @stored ~s[Returns the image's asset for brando_content_prepare_proposal ({"kind":"image","id":N}), whether the library already had it (reused), and what of focal, title and alt was applied and not_applied. ] <>
             "An image the library already has (the same bytes) is reused and keeps its own focal point and texts. " <>
             "The image is added to the library at once, before any proposal is applied; its sizes are made in the background."
 
@@ -231,7 +231,7 @@ defmodule Brando.MCP.Media do
   # The last part of the address's path, without its query
   defp url_name(url) do
     case URI.parse(url) do
-      %URI{path: path} when is_binary(path) -> path |> String.split("/") |> List.last() |> URI.decode()
+      %URI{path: path} when is_binary(path) -> path |> Path.basename() |> URI.decode()
       _ -> nil
     end
   rescue

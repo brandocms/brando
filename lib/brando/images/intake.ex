@@ -119,9 +119,10 @@ defmodule Brando.Images.Intake do
         "image/" <> name -> String.upcase(name)
       end)
 
-    case names do
-      [one] -> one
-      names -> Enum.join(Enum.drop(names, -1), ", ") <> " and " <> List.last(names)
+    case Enum.split(names, -1) do
+      {[], [one]} -> one
+      {names, [last]} -> Enum.join(names, ", ") <> " and " <> last
+      {[], []} -> ""
     end
   end
 
@@ -148,22 +149,19 @@ defmodule Brando.Images.Intake do
   def store(path, filename, type, ctx, on_new \\ &{:stored, &1}) do
     hash = hash(path)
 
-    store = fn ->
-      case existing(hash, ctx) do
-        %Image{} = image ->
-          {:reused, image}
-
-        nil ->
-          case store_new(path, filename, type, ctx) do
-            {:stored, image} -> on_new.(image)
-            error -> error
-          end
-      end
-    end
-
     hash
-    |> Images.with_file_lock(ctx.config_target, store)
+    |> Images.with_file_lock(ctx.config_target, fn -> reuse_or_store(hash, path, filename, type, ctx, on_new) end)
     |> queue_sizes(ctx.actor)
+  end
+
+  defp reuse_or_store(hash, path, filename, type, ctx, on_new) do
+    with nil <- existing(hash, ctx),
+         {:stored, image} <- store_new(path, filename, type, ctx) do
+      on_new.(image)
+    else
+      %Image{} = image -> {:reused, image}
+      error -> error
+    end
   end
 
   defp store_new(path, filename, type, ctx) do

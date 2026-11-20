@@ -318,10 +318,12 @@ defmodule Brando.MCP.Uploads do
         :ok
 
       [value] ->
-        case MCP.HTTP.parse_length(value) do
-          nil -> {:error, 400, "The Content-Length is not a number."}
-          length when length > limit -> {:error, 413, too_large(limit)}
-          _ -> :ok
+        # Not `Brando.MCP.HTTP.parse_length/1`: this module is reached from
+        # `Brando.MCP.prune/0`, and the endpoint must not be from there
+        case Integer.parse(value) do
+          {length, ""} when length > limit -> {:error, 413, too_large(limit)}
+          {length, ""} when length >= 0 -> :ok
+          _ -> {:error, 400, "The Content-Length is not a number."}
         end
 
       _ ->
