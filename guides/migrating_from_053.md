@@ -653,8 +653,11 @@ sender first, before the first compile.
 - **Languages of deleted translations.** `brando_238` removes the
   synchronized-translation memberships of entries already deleted for good,
   with their pending work, so their languages can be translated again; a
-  group whose source was deleted goes too. A translation in the trash keeps
-  its membership. Run `mix brando.gen.migrations` for it, then
+  group with no entry left goes too. A translation in the trash keeps its
+  membership. A group whose source was deleted but which still has
+  translations stays as it was, and the migration logs it: hand the source
+  role on to one of them, or make them independent. Run
+  `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. See
   [Synchronized translations](i18n.md#synchronized-translations).
 - **Markup in option labels.** A select, multi-select or radio shows its

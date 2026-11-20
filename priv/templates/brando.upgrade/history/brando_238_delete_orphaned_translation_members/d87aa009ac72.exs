@@ -10,9 +10,14 @@ defmodule Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers do
   creating that language again was refused as if the version were still
   there. Brando now removes the member when its entry goes
   (`Brando.Translations.entries_deleted/2`); this removes those left behind,
-  with their pending versions and work items. A group whose source is gone
-  goes too, as it does when a source is deleted now; the independent versions
-  left in it stay as they are, outside any group.
+  with their pending versions and work items. A group with no member left
+  whose entry exists goes too.
+
+  A group whose source is gone but which still has a member whose entry
+  exists is kept as it is, its source's member too, and logged: its
+  synchronized translations keep their pending versions and work, and
+  `Brando.Translations.transfer_source/3` can still make one of them the
+  source.
 
   A member whose entry is in the trash is kept: it still holds its language
   until the entry is restored or purged. A member of an entry type no
@@ -20,15 +25,29 @@ defmodule Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers do
   environments without the translation tables.
   """
 
+  require Logger
+
   def up do
     for prefix <- prefixes(), table?(prefix, "translation_group_members") do
-      for {type, table} <- entry_tables(prefix), do: delete_orphans(prefix, type, table)
+      orphans = Enum.flat_map(entry_tables(prefix), fn {type, table} -> orphans(prefix, type, table) end)
+      orphan_ids = Enum.map(orphans, &elem(&1, 0))
+      live = live_groups(prefix, orphan_ids)
+      {kept, deleted} = Enum.split_with(orphans, fn {_, group_id, role} -> role == "source" and group_id in live end)
+
+      for {_, group_id, _} <- kept do
+        Logger.warning(
+          "[brando_238] #{prefix}: kept translation group #{group_id}, whose source is gone; its translations remain"
+        )
+      end
+
+      repo().query!(
+        ~s{DELETE FROM "#{prefix}".translation_group_members WHERE id = ANY($1)},
+        [Enum.map(deleted, &elem(&1, 0))]
+      )
 
       repo().query!("""
       DELETE FROM "#{prefix}".translation_groups g
-      WHERE NOT EXISTS (
-        SELECT 1 FROM "#{prefix}".translation_group_members m WHERE m.group_id = g.id AND m.role = 'source'
-      )
+      WHERE NOT EXISTS (SELECT 1 FROM "#{prefix}".translation_group_members m WHERE m.group_id = g.id)
       """)
     end
   end
@@ -36,14 +55,30 @@ defmodule Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers do
   # The rows are gone for good
   def down, do: :ok
 
-  defp delete_orphans(prefix, type, table) do
-    repo().query!(
-      """
-      DELETE FROM "#{prefix}".translation_group_members m
-      WHERE m.entry_type = $1 AND NOT EXISTS (SELECT 1 FROM #{table} e WHERE e.id = m.entry_id)
-      """,
-      [type]
-    )
+  # `{member id, group id, role}` of each member of `type` whose entry is gone
+  defp orphans(prefix, type, table) do
+    %{rows: rows} =
+      repo().query!(
+        """
+        SELECT m.id, m.group_id, m.role FROM "#{prefix}".translation_group_members m
+        WHERE m.entry_type = $1 AND NOT EXISTS (SELECT 1 FROM #{table} e WHERE e.id = m.entry_id)
+        """,
+        [type]
+      )
+
+    Enum.map(rows, &List.to_tuple/1)
+  end
+
+  # Groups with a member whose entry exists, or whose entry type no blueprint
+  # defines any longer
+  defp live_groups(prefix, orphan_ids) do
+    %{rows: rows} =
+      repo().query!(
+        ~s{SELECT DISTINCT group_id FROM "#{prefix}".translation_group_members WHERE NOT (id = ANY($1))},
+        [orphan_ids]
+      )
+
+    Enum.map(rows, &hd/1)
   end
 
   # `{entry type, quoted table}` for each entry type the members name whose

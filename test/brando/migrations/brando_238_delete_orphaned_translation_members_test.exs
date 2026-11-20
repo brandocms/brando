@@ -4,6 +4,7 @@ defmodule Brando.Migrations.Brando238DeleteOrphanedTranslationMembersTest do
   use Brando.ConnCase
 
   import Brando.MigrationTemplates
+  import ExUnit.CaptureLog
 
   alias Brando.Factory
   alias Brando.SyncTest.Article
@@ -67,7 +68,7 @@ defmodule Brando.Migrations.Brando238DeleteOrphanedTranslationMembersTest do
     article
   end
 
-  test "removes members whose entries are gone, and groups whose source is gone" do
+  test "removes members whose entries are gone, and groups with no member left whose entry exists" do
     user = Factory.insert(:random_user)
     source = article!(user, "no")
     lone = article!(user, "en")
@@ -81,10 +82,18 @@ defmodule Brando.Migrations.Brando238DeleteOrphanedTranslationMembersTest do
     orphan = member!(kept_group, @article, gone, "en", "target")
     version = pending!(orphan)
 
-    # A deleted source, with an independent version left in its group
+    # A source deleted without the guard, with a synchronized translation
+    # left in its group: the group stays as it was, for `transfer_source/3`
     gone_group = group!()
-    member!(gone_group, @article, gone - 1, "no", "source")
-    independent = member!(gone_group, @article, lone.id, "en", "target")
+    gone_source = member!(gone_group, @article, gone - 1, "no", "source")
+    translation = member!(gone_group, @article, lone.id, "en", "target")
+    work = pending!(translation)
+
+    # A group with no member whose entry exists
+    empty_group = group!()
+    member!(empty_group, @article, gone - 2, "no", "source")
+    empty_target = member!(empty_group, @article, gone - 3, "en", "target")
+    empty_work = pending!(empty_target)
 
     # A translation in the trash, and an entry type no blueprint defines
     page_group = group!()
@@ -99,15 +108,27 @@ defmodule Brando.Migrations.Brando238DeleteOrphanedTranslationMembersTest do
     # An environment from before synchronized translations
     create_environment(@bare)
 
-    up(@template)
+    # The test config logs errors only
+    migration = Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers
+    Logger.put_module_level(migration, :warning)
+    on_exit(fn -> Logger.delete_module_level(migration) end)
+    log = capture_log([level: :warning], fn -> up(@template) end)
 
     assert exists?("translation_group_members", source_member)
     refute exists?("translation_group_members", orphan)
     refute exists?("translation_pending_versions", version)
     assert exists?("translation_groups", kept_group)
 
-    refute exists?("translation_groups", gone_group)
-    refute exists?("translation_group_members", independent)
+    assert exists?("translation_groups", gone_group)
+    assert exists?("translation_group_members", gone_source)
+    assert exists?("translation_group_members", translation)
+    assert exists?("translation_pending_versions", work)
+    assert log =~ "translation group #{gone_group},"
+    refute log =~ "translation group #{empty_group},"
+
+    refute exists?("translation_groups", empty_group)
+    refute exists?("translation_group_members", empty_target)
+    refute exists?("translation_pending_versions", empty_work)
 
     assert exists?("translation_group_members", in_trash)
     assert exists?("translation_group_members", unknown)
