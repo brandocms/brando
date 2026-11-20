@@ -1668,7 +1668,7 @@ defmodule BrandoAdmin.TranslationFormTest do
         )
 
       Brando.EditSession.sync_saved(entry)
-      new_uid = List.last(load(c.target.id).entry_blocks).block.uid
+      [_, %{block: %{uid: new_uid}}] = load(c.target.id).entry_blocks
       await(fn -> Brando.EditSessionEditors.shown_text(view, new_uid) == "New paragraph" end)
       refute has_element?(view, "#translation-panel [data-translation-behind]")
 
