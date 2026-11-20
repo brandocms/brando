@@ -334,7 +334,7 @@ proposal with the modules that match.
   cropped image keeps its whole file, and a new one gets its focal point set
   so the site shows the crop Figma shows, and the sizes Brando cuts and the
   share cards follow it too. A crop that spans the image's whole width or
-  height shows exactly; one that zooms in on both shows with more of the
+  height shows exactly in a box of the layer's proportions; one that zooms in on both shows with more of the
   image around it. One the library already has keeps its own focal
   point, and when several layers show one image, the first layer's crop
   sets it. Each answer says what was applied and what was not, naming the

@@ -305,8 +305,8 @@ export default app => ({
 
     this.imageWidth = payload.image_width
     this.imageHeight = payload.image_height
-    this.focalX = payload.focal_x || 50
-    this.focalY = payload.focal_y || 50
+    this.focalX = payload.focal_x ?? 50
+    this.focalY = payload.focal_y ?? 50
     this.cropGroups = payload.crop_groups || []
     this.zoom = 1
     this.freeformMode = this.cropGroups.length === 0
