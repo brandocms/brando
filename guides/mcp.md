@@ -721,9 +721,10 @@ And the attacks the review asked about:
   that does not exist.
 - **Oversized, unsized or slow bodies.** A declared length over the limit is
   refused before reading; the bytes are counted as they arrive and the PUT
-  is cut off past the limit, 15 seconds without bytes, or 10 minutes after
-  it started. JSON and form bodies are refused before the endpoint's parser
-  reads them (with `Brando.MCP.BodyLimit`). What was written is removed.
+  is cut off past the limit, when 64 KB take longer than 15 seconds to
+  arrive, or 10 minutes after it started. JSON and form bodies are refused
+  before the endpoint's parser reads them (with `Brando.MCP.BodyLimit`).
+  What was written is removed, also when the client goes away mid-upload.
 - **Mislabelled files.** The type is read from the first bytes, whatever the
   name or `Content-Type` say, and the store checks it again with the
   config's types, the pixel limit and an SVG's contents.

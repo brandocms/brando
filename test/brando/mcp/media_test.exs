@@ -18,6 +18,49 @@ defmodule Brando.MCP.MediaTest do
   alias Brando.WebhookReceiver
   alias BrandoAdmin.Images.FolderBrowser
 
+  # A server's connection as Bandit's behaves: each read is told to the test,
+  # and the read after `Process.get(:raise_on_read)` reads raises, as
+  # Bandit's read raises when the client goes away or stops sending
+  defmodule DroppingAdapter do
+    @moduledoc false
+    @behaviour Plug.Conn.Adapter
+    alias Plug.Adapters.Test.Conn, as: Test
+
+    @impl true
+    def read_req_body(payload, opts) do
+      send(self(), {:read_body, opts})
+      reads = Process.get(:reads, 0)
+      Process.put(:reads, reads + 1)
+
+      if reads >= Process.get(:raise_on_read, 0),
+        do: raise("closed"),
+        else: Test.read_req_body(payload, opts)
+    end
+
+    @impl true
+    defdelegate send_resp(payload, status, headers, body), to: Test
+    @impl true
+    defdelegate send_file(payload, status, headers, path, offset, length), to: Test
+    @impl true
+    defdelegate send_chunked(payload, status, headers), to: Test
+    @impl true
+    defdelegate chunk(payload, body), to: Test
+    @impl true
+    defdelegate push(payload, path, headers), to: Test
+    @impl true
+    defdelegate inform(payload, status, headers), to: Test
+    @impl true
+    defdelegate upgrade(payload, protocol, opts), to: Test
+    @impl true
+    defdelegate get_peer_data(payload), to: Test
+    @impl true
+    defdelegate get_sock_data(payload), to: Test
+    @impl true
+    defdelegate get_ssl_data(payload), to: Test
+    @impl true
+    defdelegate get_http_protocol(payload), to: Test
+  end
+
   @jpg File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
   @png File.read!(Path.expand("../../fixtures/sample.png", __DIR__))
   @limit 10_240_000
@@ -67,8 +110,9 @@ defmodule Brando.MCP.MediaTest do
   # A PUT as curl -T sends it: no Content-Type, no credentials but the URL.
   # (`Phoenix.ConnTest` wants a Content-Type with a body, so the endpoint is
   # called as the server would.)
-  defp put_bytes(url, body, headers \\ [], method \\ :put) do
+  defp put_bytes(url, body, headers \\ [], method \\ :put, adapter \\ nil) do
     conn = %{Plug.Test.conn(method, URI.parse(url).path, body) | host: BrandoAdmin.AdminHost.endpoint_host()}
+    conn = if adapter, do: %{conn | adapter: {adapter, elem(conn.adapter, 1)}}, else: conn
 
     headers
     |> Enum.reduce(conn, fn {key, value}, conn -> put_req_header(conn, key, value) end)
@@ -445,6 +489,35 @@ defmodule Brando.MCP.MediaTest do
       {id, url} = prepare!(tenant, token)
       assert %{"error" => "The upload took too long" <> _} = put_bytes(url, @jpg) |> json_response(408)
       refute File.exists?(Path.join([dir, id, "bytes"]))
+    end
+  end
+
+  describe "reading the bytes" do
+    test "a connection that goes away mid-upload leaves no bytes, and the upload holds no place",
+         %{tenant: tenant, token: token, dir: dir} do
+      mcp_env(upload_dir: dir, upload_max_pending: 1)
+      {id, url} = prepare!(tenant, token)
+      Process.put(:raise_on_read, 0)
+
+      assert_raise RuntimeError, "closed", fn -> put_bytes(url, @jpg, [], :put, DroppingAdapter) end
+
+      refute File.exists?(Path.join([dir, id, "bytes.part"]))
+      refute File.exists?(Path.join([dir, id, "bytes"]))
+      assert {_id, _url} = prepare!(tenant, token)
+
+      assert %{"isError" => true, "structuredContent" => %{"error" => "The upload failed" <> _}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => id})
+    end
+
+    # Bandit waits for a whole `read_length` within `read_timeout`, so a read
+    # of 1 MB failed an upload sending less than 67 KB a second
+    test "is read in pieces small enough for a slow connection", %{tenant: tenant, token: token} do
+      {_id, url} = prepare!(tenant, token)
+      Process.put(:raise_on_read, 1_000)
+      assert put_bytes(url, @jpg, [], :put, DroppingAdapter).status == 200
+      assert_received {:read_body, opts}
+      assert opts[:read_length] <= 64_000
+      assert opts[:length] <= 64_000
     end
   end
 

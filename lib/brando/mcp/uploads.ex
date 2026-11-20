@@ -50,7 +50,10 @@ defmodule Brando.MCP.Uploads do
 
   @id_bytes 16
   @secret_bytes 32
-  @chunk 1_000_000
+  # Bandit waits for a whole `read_length` within `read_timeout`, so the
+  # pieces are small enough for a slow connection (4 KB a second), and the
+  # transfer's deadline is checked after each
+  @chunk 64_000
   @read_timeout 15_000
   @meta "meta.json"
   @received "received.json"
@@ -377,6 +380,13 @@ defmodule Brando.MCP.Uploads do
         {:ok, io} ->
           try do
             read_loop(conn, io, %{size: 0, head: "", type: nil, limit: limit, types: types, deadline: deadline})
+          rescue
+            # Bandit raises when the client goes away or stops sending: the
+            # upload is failed before the error goes on to the server
+            error ->
+              File.close(io)
+              mark_failed(id, partial, "The upload was cut off. Prepare a new upload and send it again.")
+              reraise error, __STACKTRACE__
           after
             File.close(io)
           end
@@ -407,9 +417,13 @@ defmodule Brando.MCP.Uploads do
   end
 
   defp failed(conn, id, partial, status, message) do
+    mark_failed(id, partial, message)
+    conn |> put_resp_header("connection", "close") |> reply(status, %{error: message})
+  end
+
+  defp mark_failed(id, partial, message) do
     File.rm(partial)
     File.write(Path.join(dir(id), @failed), message)
-    conn |> put_resp_header("connection", "close") |> reply(status, %{error: message})
   end
 
   defp read_loop(conn, io, state) do
