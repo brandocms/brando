@@ -10154,6 +10154,11 @@ msgid_plural "Kept %{count} versions here."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept as it is"
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Kept as it is unless you replace it"
@@ -21150,6 +21155,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Transfer ownership to"
 msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Translate %{count} text into %{language}"
+msgid_plural "Translate %{count} texts into %{language}"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format

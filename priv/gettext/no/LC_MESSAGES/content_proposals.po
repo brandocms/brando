@@ -220,6 +220,11 @@ msgstr "Et mål trenger en numerisk id."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "A translate operation in this proposal fills in this translation, and it can be the only kind of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
+msgstr "En translate-operasjon i dette forslaget fyller ut denne oversettelsen, og den kan være den eneste typen operasjon på den: strukturen følger kilden, og teksten lagres slik oversettelsesskjemaet lagrer den. Legg denne endringen i et annet forslag, eller teksten i translate-operasjonen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "A uid can be at most %{count} characters long."
 msgstr "En uid kan ha høyst %{count} tegn."
 
@@ -252,6 +257,11 @@ msgstr "Et anker starter med en bokstav og inneholder bokstaver, sifre, - og _."
 #, elixir-autogen, elixir-format
 msgid "An earlier operation in this proposal already creates this version."
 msgstr "En tidligere operasjon i dette forslaget oppretter allerede denne versjonen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "An earlier translate operation in this proposal already answers this unit."
+msgstr "En tidligere translate-operasjon i dette forslaget besvarer allerede denne enheten."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -575,6 +585,16 @@ msgstr "Kilden er allerede på dette språket."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again."
+msgstr "Kilden til en oversettelse ble endret etter at dette forslaget ble laget, i %{units}. Oversett de tekstene på nytt."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source of this translation is not available to you."
+msgstr "Kilden til denne oversettelsen er ikke tilgjengelig for deg."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr "Statusen er publisert, utkast, deaktivert eller venter."
 
@@ -582,6 +602,16 @@ msgstr "Statusen er publisert, utkast, deaktivert eller venter."
 #, elixir-autogen, elixir-format
 msgid "The translation could not be created: %{reason}"
 msgstr "Oversettelsen kunne ikke opprettes: %{reason}"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation's pending version could not be opened. Open the translation in the admin, then read translation_work again."
+msgstr "Den ventende versjonen av oversettelsen kunne ikke åpnes. Åpne oversettelsen i admin, og les translation_work på nytt."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation's structure or media would no longer follow its source: %{paths}. Read translation_work again."
+msgstr "Strukturen eller mediene i oversettelsen ville ikke lenger følge kilden: %{paths}. Les translation_work på nytt."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -655,6 +685,11 @@ msgstr "Denne innholdstypen er ikke registrert på dette nettstedet."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This content type is not synchronized: it has no translation work. Change its text with set_fields and set_block_text."
+msgstr "Denne innholdstypen er ikke synkronisert: den har ikke oversettelsesarbeid. Endre teksten med set_fields og set_block_text."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "This entry is a translation. Create translations from its group's source, %{source}."
 msgstr "Denne oppføringen er en oversettelse. Opprett oversettelser fra kilden i gruppen, %{source}."
 
@@ -662,6 +697,16 @@ msgstr "Denne oppføringen er en oversettelse. Opprett oversettelser fra kilden 
 #, elixir-autogen, elixir-format
 msgid "This entry is a translation. Create translations from its group's source."
 msgstr "Denne oppføringen er en oversettelse. Opprett oversettelser fra kilden i gruppen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is its group's source. translate fills in one of its translations: name the translation."
+msgstr "Denne oppføringen er kilden i gruppen. translate fyller ut en av oversettelsene: oppgi oversettelsen."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is not a synchronized translation, so it has no translation work to answer."
+msgstr "Denne oppføringen er ikke en synkronisert oversettelse, så den har ikke oversettelsesarbeid å besvare."
 
 #: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
@@ -743,6 +788,11 @@ msgstr "Dette forslaget er ikke lenger til gjennomgang."
 #, elixir-autogen, elixir-format
 msgid "This proposal replaced an image's file, and a replaced file cannot be undone."
 msgstr "Dette forslaget erstattet filen til et bilde, og en erstattet fil kan ikke angres."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This translation is independent: it no longer follows its source and has no translation work. Change its text with set_fields and set_block_text."
+msgstr "Denne oversettelsen er uavhengig: den følger ikke lenger kilden og har ikke oversettelsesarbeid. Endre teksten med set_fields og set_block_text."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -900,3 +950,8 @@ msgstr "den nye oppføringen"
 #, elixir-autogen, elixir-format
 msgid "the new entry %{ref}"
 msgstr "den nye oppføringen %{ref}"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "translate names {\"new\": ref}, and no create_translation in this proposal has that ref. Name the translation a create_translation creates, or an existing translation."
+msgstr "translate oppgir {\"new\": ref}, og ingen create_translation i dette forslaget har den ref-en. Oppgi oversettelsen en create_translation oppretter, eller en eksisterende oversettelse."

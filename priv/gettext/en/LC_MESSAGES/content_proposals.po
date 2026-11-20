@@ -220,6 +220,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "A translate operation in this proposal fills in this translation, and it can be the only kind of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "A uid can be at most %{count} characters long."
 msgstr ""
 
@@ -251,6 +256,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "An earlier operation in this proposal already creates this version."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "An earlier translate operation in this proposal already answers this unit."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -575,12 +585,32 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The source of this translation is not available to you."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The translation could not be created: %{reason}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation's pending version could not be opened. Open the translation in the admin, then read translation_work again."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation's structure or media would no longer follow its source: %{paths}. Read translation_work again."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -655,12 +685,27 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This content type is not synchronized: it has no translation work. Change its text with set_fields and set_block_text."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "This entry is a translation. Create translations from its group's source, %{source}."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "This entry is a translation. Create translations from its group's source."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is its group's source. translate fills in one of its translations: name the translation."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This entry is not a synchronized translation, so it has no translation work to answer."
 msgstr ""
 
 #: lib/brando/content/proposals/preview.ex
@@ -742,6 +787,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal replaced an image's file, and a replaced file cannot be undone."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This translation is independent: it no longer follows its source and has no translation work. Change its text with set_fields and set_block_text."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -899,4 +949,9 @@ msgstr ""
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "the new entry %{ref}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "translate names {\"new\": ref}, and no create_translation in this proposal has that ref. Name the translation a create_translation creates, or an existing translation."
 msgstr ""
