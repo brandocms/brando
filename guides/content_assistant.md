@@ -183,6 +183,36 @@ translations need no matching change: applying runs the same after-save work
 as an editor's save, so they get pending versions with the source's structure,
 media and new text to translate.
 
+### Translation work
+
+`translation_work` reads what a synchronized translation needs, from its
+pending version (what the form opens), not the saved entry. It is a read
+tool: the Assistant and connected tools both have it, with the same
+permissions as the person, who must be allowed to read the translation and
+its source.
+
+- **On a translation**, its open work as units. Each has a `key`, the work
+  item's path (`"title"`, `"entry_blocks/<sync_uid>/refs/body/text"`), which
+  is the same in every language version and across reads; its `kind`,
+  *translate* or *review*; a `label` as the form's work list names it; the
+  source's current text (`source`) and the translation's (`current`); its
+  `format`, `plain`, `html` or `markdown`; and in a block, the translation's
+  own `block_uid`. Links waiting for a translation and values updated from
+  the source are listed under `other`, as the form lists them; they are not
+  answered with text.
+- **On a source**, its language versions with their open work, and the
+  languages without one. With `language` naming one of those, the units a new
+  translation in it would have, keyed as its work items will be.
+- **On any other entry**, a message saying what it is.
+
+A long entry's work comes in batches that fit a result, read in turn with
+`offset`. Each batch carries its own `source_digest`, an opaque token the
+answer to that batch is checked against (`Brando.Translations.Work.check/4`):
+an answer is refused, unit by unit and with every problem at once, when the
+source's text changed since the batch was read, when a key is missing,
+extra or answered twice, or when a translation lost the source's HTML tags
+or its template placeholders (`{{ }}`, `{% %}`, `<% %>`).
+
 ## Build with AI from the block editor
 
 A block field shows **Build with AI** next to its label when the assistant

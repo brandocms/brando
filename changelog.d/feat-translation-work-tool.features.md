@@ -1,0 +1,1 @@
+- The Assistant and connected MCP tools can read a synchronized translation's open work with `translation_work`: the texts to translate or review, with the source's text, the translation's and their format, in batches, and for a source the languages it has no version in yet.
