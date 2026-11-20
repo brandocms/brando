@@ -98,6 +98,30 @@ defmodule Brando.Images.SizeRun do
   def run_render_options(run) when is_binary(run), do: [hold: hold_key(run), run: run]
   def run_render_options(_run), do: []
 
+  @doc """
+  How a later step for image `image_id` (its CDN upload) queues the renders
+  of the entries that show it: as its run's image job does
+  (`render_options/1`) while the run that processed it goes on; as any
+  other once it is over.
+  """
+  @spec render_options_for(integer()) :: keyword()
+  def render_options_for(image_id) do
+    worker = Oban.Worker.to_string(Worker.ImageProcessor)
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and fragment("? ->> 'image_id'", j.args) == ^to_string(image_id) and
+            fragment("? @> ?", j.args, ^TenantJob.attach(%{})) and
+            not is_nil(fragment("? -> ?", j.meta, ^@meta_key)),
+        order_by: [desc: j.id],
+        limit: 1,
+        select: fragment("? ->> ?", j.meta, ^@meta_key)
+
+    run = Brando.Repo.one(query)
+    if run in watching(), do: run_render_options(run), else: []
+  end
+
   @doc "The image maintenance tasks that are a run."
   @spec tasks() :: [String.t()]
   def tasks, do: @tasks

@@ -108,6 +108,71 @@ defmodule Brando.Worker.ImageUploaderTest do
 
   defp local?(path), do: File.exists?(Path.join(Storage.current_media_root(), path))
 
+  # Its pages were rendered with the media folder's addresses, whose files
+  # go (`keep_local_copy: false`): they render again with the CDN's
+  test "an image put on the CDN renders the entries that show it again", %{dir: dir} do
+    image = image_with_files(dir, ["thumb", "large"])
+    page = Factory.insert(:page)
+    Repo.insert!(%Brando.Content.Var{type: :image, key: "photo", label: "Photo", page_id: page.id, image_id: image.id})
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, _job} = Brando.CDN.queue_upload(image, :system, [])
+      assert %{failure: 0} = Oban.drain_queue(queue: :default)
+    end)
+
+    assert Repo.get!(Image, image.id).cdn
+
+    assert [render] =
+             Repo.all(
+               from(j in Oban.Job,
+                 where:
+                   j.worker == "Brando.Worker.EntryRenderer" and
+                     fragment("(? ->> 'entry_id')::bigint", j.args) == ^page.id
+               )
+             )
+
+    assert render.priority == Brando.Content.RenderQueue.bulk_priority()
+    refute Map.has_key?(render.meta, "brando_hold")
+  end
+
+  # Processed by a size run that is still going on: its renders are held
+  # under the run's key, and the run counts them
+  test "an image a size run processed and put on the CDN renders with the run", %{dir: dir} do
+    image = image_with_files(dir, ["thumb", "large"])
+    page = Factory.insert(:page)
+    Repo.insert!(%Brando.Content.Var{type: :image, key: "photo", label: "Photo", page_id: page.id, image_id: image.id})
+    run = Ecto.UUID.generate()
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      processed =
+        %{image_id: image.id}
+        |> Brando.Worker.ImageProcessor.new(meta: %{"image_size_run" => run})
+        |> Oban.insert!()
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^processed.id), set: [state: "completed"])
+
+      {:ok, _watcher} =
+        %{task: "recreate_sizes", user_id: nil, run: run, watch: true}
+        |> Brando.Worker.ImageMaintenance.new(schedule_in: 60)
+        |> Oban.insert()
+
+      {:ok, _job} = Brando.CDN.queue_upload(image, :system, [])
+      assert %{failure: 0} = Oban.drain_queue(queue: :default)
+    end)
+
+    assert [render] =
+             Repo.all(
+               from(j in Oban.Job,
+                 where:
+                   j.worker == "Brando.Worker.EntryRenderer" and
+                     fragment("(? ->> 'entry_id')::bigint", j.args) == ^page.id
+               )
+             )
+
+    assert render.meta["brando_hold"] == [Brando.Images.SizeRun.hold_key(run)]
+    assert run in render.meta["brando_runs"]
+  end
+
   test "an image whose files are all uploaded is on the CDN, and its local files go", %{dir: dir} do
     image = image_with_files(dir, ["thumb", "large"])
 
