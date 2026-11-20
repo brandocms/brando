@@ -346,7 +346,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # joined an edit session that already holds unsaved work: the editor
       # who opened it first loaded the version, and the work is on top of it.
       translation? and joined_with_work?(socket) ->
-        {:ok, socket}
+        {:ok, assign(socket, :joined_with_work?, false)}
 
       # The pending version is the whole field as the source has it, so its
       # blocks go where it has them and the ones it lacks go (`place?`). A
@@ -356,7 +356,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # (`keep_saved`, `Form.Translation.restore_changeset/1`).
       translation? ->
         held = Enum.reject(changesets, &(&1.action == :replace))
-        {:ok, restore_draft(socket, held, originals, place?: true)}
+        {:ok, socket |> assign(:joined_with_work?, false) |> restore_draft(held, originals, place?: true)}
 
       true ->
         {:ok, restore_draft(socket, changesets, originals)}
@@ -1021,6 +1021,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> assign(:session_base, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
         |> adopt_session(ref, info, Keyword.put(opts, :also, reread))
+        |> note_joined_with_work()
         |> rescue_own(rescues, payloads)
         |> announce_join()
 
@@ -2061,10 +2062,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> tap(fn socket -> send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty") end)
   end
 
-  defp joined_with_work?(%{assigns: %{edit_session: %Replica{}}} = socket),
-    do: not Ops.pristine?(socket.assigns.block_ops, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
-
+  # Whether the session held unsaved work when this field joined it: read
+  # once, by the first pending version the field is given. Work the field
+  # took on since is not it: on a reconnect LiveView replays the editor's
+  # typing into the block forms before the form loads the version again.
+  defp joined_with_work?(%{assigns: %{edit_session: %Replica{}}} = socket), do: !!socket.assigns[:joined_with_work?]
   defp joined_with_work?(_socket), do: false
+
+  defp note_joined_with_work(socket),
+    do:
+      assign(
+        socket,
+        :joined_with_work?,
+        not Ops.pristine?(socket.assigns.block_ops, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
+      )
 
   # Build with AI opens the content assistant for this entry and field. It is
   # offered when the assistant has a model, the user may use it, and the

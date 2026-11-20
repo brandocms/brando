@@ -847,6 +847,58 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert texts(saved) == ["Nytt avsnitt"]
     end
 
+    @block_text ["entry_block", "block", "refs", "0", "data", "data", "text"]
+
+    # The editor types in a block the version keeps and the form reconnects.
+    # LiveView's recovery replays the main form and the block's form into the
+    # new process as it mounts, before the form loads the version again.
+    for {name, expired?} <- [{"within the session's grace period", false}, {"after the session ended", true}] do
+      test "typing in a block, then a reconnect #{name}", %{conn: conn} = c do
+        # Brando's tests end a session as its last editor leaves
+        unless unquote(expired?), do: put_test_env(Brando.EditSession, grace_period: 30_000)
+        c = pair(c, &TranslationFixtures.add_block(&1, c.module, c.current_user, "Andre avsnitt", 1))
+        translate(c.target, ["First paragraph", "Second paragraph"])
+
+        [first, _second] = load(c.source.id).entry_blocks
+        drop_block(first)
+        TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 2)
+        version = source_saved(c)
+
+        [_, %{block: %{uid: uid}}] = load(c.target.id).entry_blocks
+        view = open_version(conn, c.target.id, version)
+        edit_block_text(view, uid, "Typed paragraph")
+        html = render(view)
+        main = form_params(html, "#article_form_form")
+        block = form_params(html, "#entry_block_form-#{uid}")
+        kill_live(view)
+
+        ref = Brando.EditSession.ref(Article, c.target.id, "en")
+        session = Brando.EditSession.whereis(ref)
+
+        # the session holds the typing, or it ends and nobody holds it any more
+        if unquote(expired?) do
+          if session do
+            monitor = Process.monitor(session)
+            assert_receive {:DOWN, ^monitor, :process, _, _}, 2_000
+          end
+        else
+          assert session
+        end
+
+        view = open(conn, c.target.id)
+        view |> element("#article_form_form") |> render_change(main)
+        view |> element("#entry_block_form-#{uid}") |> render_change(Map.put(block, "_target", @block_text))
+        await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+        # the version loads after the replay, and leaves the typing as it is
+        assert block_text(view, uid) == "Typed paragraph"
+        save(view)
+
+        saved = assert_follows_source(c, version)
+        assert texts(saved) == ["Typed paragraph", "Nytt avsnitt"]
+        if pid = Brando.EditSession.whereis(ref), do: GenServer.stop(pid, :normal)
+      end
+    end
+
     # The source changes again while an editor has typed in a block: another
     # editor opening the entry updates the form (presence), which must not
     # take the newer version over the typing. The save writes the version the
@@ -885,8 +937,6 @@ defmodule BrandoAdmin.TranslationFormTest do
       saved = load(c.target.id)
       assert {saved.year, hd(texts(saved))} == {2024, "Typed paragraph"}
     end
-
-    @block_text ["entry_block", "block", "refs", "0", "data", "data", "text"]
 
     defp block_text(view, uid),
       do: view |> render() |> form_params("#entry_block_form-#{uid}") |> get_in(@block_text)
