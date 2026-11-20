@@ -120,15 +120,19 @@ defmodule Brando.Images.SizeRun do
 
   # The walk of either task, or `run`'s walk, unfinished. A watcher is not
   # a walk: once its walk and images are done, the run is over, though the
-  # watcher has yet to look.
+  # watcher has yet to look (and a watcher left executing by a node that is
+  # gone holds nothing). A walk left executing past its timeout is not
+  # counted, as an image's job is not (`remaining/1`).
   defp walking?(run \\ nil) do
     worker = Oban.Worker.to_string(Worker.ImageMaintenance)
     args = TenantJob.attach(if(run, do: %{"run" => run}, else: %{}))
+    stale = DateTime.add(DateTime.utc_now(), -Worker.ImageMaintenance.timeout(%Oban.Job{}), :millisecond)
 
     query =
       from j in Oban.Job,
         where:
           j.worker == ^worker and j.state in ^@unfinished_states and
+            (j.state != "executing" or j.attempted_at > ^stale) and
             fragment("? ->> 'task'", j.args) in ^@tasks and fragment("? @> ?", j.args, ^args) and
             not fragment("? @> ?", j.args, ^%{"watch" => true}),
         select: true,

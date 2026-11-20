@@ -685,6 +685,30 @@ defmodule Brando.Images.ImageMaintenanceTest do
       end)
     end
 
+    # The node was killed mid-batch: the walk stays executing until Lifeline
+    # rescues it, if it ever does
+    test "a walk left executing past its timeout does not hold its run", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        set_job(walk, state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600))
+
+        refute SizeRun.running?()
+        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher().args, "settle", true))
+      end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{}}
+    end
+
+    test "a watcher left executing does not hold a run", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        set_job(walk, state: "completed")
+        set_job(watcher(), state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600))
+
+        refute SizeRun.running?()
+      end)
+    end
+
     test "an image job left executing past its timeout does not hold a run" do
       image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
 
