@@ -237,7 +237,7 @@ defmodule Brando.SoftDelete.Query do
 
     trashed = Enum.map(entries, & &1.id)
 
-    case in_savepoint(fn -> if trashed != [], do: purge_rows(schema, trashed) end) do
+    case in_savepoint(fn -> purge_rows_now(schema, trashed) end) do
       :ok ->
         for entry <- entries, Brando.Activity.logged?(schema) do
           Brando.Activity.deleted(entry, actor, false, %{"purged" => true})
@@ -249,6 +249,9 @@ defmodule Brando.SoftDelete.Query do
         {:error, {:referenced, constraint}}
     end
   end
+
+  defp purge_rows_now(_schema, []), do: :ok
+  defp purge_rows_now(schema, ids), do: purge_rows(schema, ids)
 
   # The ids of the rows deleted
   defp purge_ids(schema, ids) do

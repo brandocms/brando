@@ -290,15 +290,17 @@ defmodule Brando.Translations do
     with :ok <- ensure_duplicable(schema),
          :ok <- ensure_language_known(schema, language),
          :ok <- ensure_no_linked_version(schema, source_id, language) do
-      Repo.transaction(fn ->
-        with {:ok, source_member} <- source_member(schema, source_id, actor),
-             :ok <- purge_trashed_version(schema, source_member, language, actor),
-             {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
-          target
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+      Repo.transaction(fn -> replace_target(schema, source_id, language, actor, mark_translate?) end)
+    end
+  end
+
+  defp replace_target(schema, source_id, language, actor, mark_translate?) do
+    with {:ok, source_member} <- source_member(schema, source_id, actor),
+         :ok <- purge_trashed_version(schema, source_member, language, actor),
+         {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
+      target
+    else
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
