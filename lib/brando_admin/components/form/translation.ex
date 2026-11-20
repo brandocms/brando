@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   alias Brando.Drafts.Modules
   alias Brando.Drafts.Params
   alias Brando.Translations
+  alias Brando.Translations.Labels
   alias BrandoAdmin.Components.Form.Drafts
 
   @doc "Assigns the translation state of the form's entry."
@@ -50,8 +51,6 @@ defmodule BrandoAdmin.Components.Form.Translation do
   # A synchronized schema's entry that has no translations yet: it becomes the
   # source when the first one is created.
   defp unlinked(schema, entry, user) do
-    taken = [to_string(entry.language) | Translations.alternate_languages(schema, entry.id)]
-
     %{
       schema: schema,
       entry_id: entry.id,
@@ -60,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       language: to_string(entry.language),
       source: nil,
       members: [],
-      missing_languages: languages_except(schema, taken),
+      missing_languages: missing_languages(schema, entry),
       can_create?: can_create?(schema, user),
       pending: nil,
       payload: nil,
@@ -86,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       language: member.language,
       source: source && Map.put(source, :url, admin_url(schema, source.id)),
       members: members(schema, member.group_id),
-      missing_languages: missing_languages(schema, member.group_id, source),
+      missing_languages: missing_languages(schema, entry),
       can_create?: can_create?(schema, user),
       pending: pending,
       payload: payload,
@@ -127,22 +126,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   defp open_count(_member), do: 0
 
-  # Languages without a version in the group, or linked to the source as an
-  # existing, independent alternate — those are not joined to the group.
-  defp missing_languages(schema, group_id, source) do
-    members = group_id |> Translations.list_members() |> Enum.map(& &1.language)
-    alternates = if source, do: Translations.alternate_languages(schema, source.id), else: []
-    languages_except(schema, members ++ alternates)
-  end
-
-  # The site's languages (`Brando.Languages`) the schema's language type holds
-  defp languages_except(schema, taken) do
-    site = Brando.Languages.codes()
-
-    for value <- Ecto.Enum.values(schema, :language), to_string(value) in site, to_string(value) not in taken do
-      code = to_string(value)
-      %{code: code, label: language_label(code)}
-    end
+  # Languages without a version (`Translations.missing_languages/2`)
+  defp missing_languages(schema, entry) do
+    for code <- Translations.missing_languages(schema, entry), do: %{code: code, label: language_label(code)}
   end
 
   # Block and row membership, order and nesting. A source that only moves or
@@ -308,8 +294,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp items(_schema, nil, _payload, _language), do: []
 
   defp items(schema, pending, payload, language) do
-    labels = field_labels(schema)
-    blocks = block_index(schema, payload)
+    labels = Labels.field_labels(schema)
+    blocks = Labels.block_index(schema, payload)
 
     open = Enum.filter(pending.work_items, &is_nil(&1.resolved_at))
     titles = linked_titles(open, blocks)
@@ -317,10 +303,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
     open
     |> Enum.sort_by(&{kind_order(&1.kind), &1.path})
     |> Enum.map(fn item ->
-      target = target(item.path, blocks)
+      target = Labels.target(item.path, blocks)
       entries = linked_entries(item, target, blocks, titles, to_string(language))
       linked = if entries == [], do: nil, else: Enum.map_join(entries, ", ", & &1.title)
-      base = label(item.path, target, labels)
+      base = Labels.label(target, labels)
 
       %{
         path: item.path,
@@ -375,7 +361,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp linked_ids(_item, _target, _blocks), do: []
 
   defp linked_titles(items, blocks) do
-    ids = items |> Enum.flat_map(&linked_ids(&1, target(&1.path, blocks), blocks)) |> Enum.uniq()
+    ids = items |> Enum.flat_map(&linked_ids(&1, Labels.target(&1.path, blocks), blocks)) |> Enum.uniq()
 
     if ids == [] do
       %{}
@@ -400,138 +386,6 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp kind_order(:shared_update), do: 2
   defp kind_order(:relinked), do: 3
   defp kind_order(:awaiting_translation), do: 4
-
-  # Where a work item's path points in the form: a field, a block (by uid) or a
-  # subform row.
-  defp target(path, blocks) do
-    case String.split(path, "/") do
-      ["entry_" <> _field, identity | rest] ->
-        case blocks[identity] do
-          nil -> {:field, path}
-          block -> {:block, block.uid, block.module_name, rest}
-        end
-
-      [field] ->
-        {:field, field}
-
-      # A tree relation waiting for an entry's translation: `parent/12`
-      [field, id] ->
-        if id =~ ~r/^\d+$/, do: {:field, field}, else: {:field, path}
-
-      [subform, uid, field] ->
-        {:row, subform, uid, field}
-
-      _ ->
-        {:field, path}
-    end
-  end
-
-  defp block_index(schema, payload) do
-    fields =
-      if function_exported?(schema, :__blocks_fields__, 0),
-        do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
-        else: []
-
-    fields
-    |> Enum.flat_map(fn field ->
-      case Map.get(payload, field) do
-        joins when is_list(joins) -> Enum.map(joins, & &1.block)
-        _ -> []
-      end
-    end)
-    |> Enum.flat_map(&walk/1)
-    |> Map.new(fn block ->
-      vars = if is_list(block.vars), do: block.vars, else: []
-      links = if is_list(block.block_identifiers), do: Enum.map(block.block_identifiers, & &1.identifier_id), else: []
-
-      {block.sync_uid || block.uid, %{uid: block.uid, module_name: module_name(block), vars: vars, identifier_ids: links}}
-    end)
-  end
-
-  defp walk(nil), do: []
-
-  defp walk(block) do
-    children = if is_list(block.children), do: block.children, else: []
-    [block | Enum.flat_map(children, &walk/1)]
-  end
-
-  # A block the pending version added has no module preloaded; its name is
-  # looked up by id.
-  defp module_name(%{module: %{name: name}}), do: localized(name)
-
-  defp module_name(%{module_id: id} = block) when is_integer(id) do
-    case Brando.Content.fetch_module(id, block.module_origin || :local) do
-      %{name: name} -> localized(name)
-      _ -> gettext("Block")
-    end
-  end
-
-  defp module_name(_block), do: gettext("Block")
-
-  defp localized(name) when is_map(name),
-    do: name[Gettext.get_locale(Brando.Gettext)] || name["en"] || name |> Map.values() |> List.first()
-
-  defp localized(name) when is_binary(name), do: name
-  defp localized(_name), do: gettext("Block")
-
-  defp label(_path, {:block, _uid, module_name, rest}, _labels), do: Enum.join([module_name | block_part(rest)], " › ")
-
-  defp label(_path, {:row, subform, _uid, field}, labels),
-    do: "#{labels[subform] || humanize(subform)} › #{labels[field] || humanize(field)}"
-
-  defp label(_path, {:field, field}, labels), do: labels[field] || labels[field <> "_id"] || humanize(field)
-
-  defp block_part(["refs", name, "text"]), do: [humanize(name)]
-  defp block_part(["refs", name, "media"]), do: [humanize(name), gettext("media")]
-  defp block_part(["refs", name, "gallery" | _]), do: [humanize(name), gettext("gallery")]
-  # An HTML ref's `text` parameter
-  defp block_part(["refs", name, "values", key]), do: [humanize(name), humanize(key)]
-  defp block_part(["refs", name, field]), do: [humanize(name), humanize(field)]
-  defp block_part(["vars", key, "media"]), do: [humanize(key), gettext("media")]
-  defp block_part(["vars", key, "url"]), do: [humanize(key), "URL"]
-  defp block_part(["vars", key | _]), do: [humanize(key)]
-  defp block_part(["rows", _row, "vars", key | _]), do: [gettext("Table"), humanize(key)]
-  defp block_part(["identifiers" | _]), do: [gettext("Related entries")]
-  defp block_part(["identifier_metas" | _]), do: [gettext("Related entries")]
-  defp block_part(_rest), do: []
-
-  # Labels from the form, translated in the schema's domain, as the inputs
-  # show them.
-  defp field_labels(schema) do
-    naming = schema.__naming__()
-    domain = String.downcase("#{naming.domain}_#{naming.schema}")
-    gettext_module = schema.__modules__().gettext
-
-    case schema.__form__() do
-      %{tabs: tabs} ->
-        for tab <- tabs, fieldset <- tab.fields, input <- fieldset.fields, reduce: %{} do
-          acc ->
-            acc
-            |> put_label(input, gettext_module, domain)
-            |> put_sub_labels(input, gettext_module, domain)
-        end
-
-      _ ->
-        %{}
-    end
-  end
-
-  defp put_label(acc, %{name: name} = input, gettext_module, domain) do
-    text = Map.get(input, :label) || (Map.get(input, :opts) || [])[:label]
-
-    if is_binary(text),
-      do: Map.put(acc, to_string(name), Gettext.dgettext(gettext_module, domain, text)),
-      else: acc
-  end
-
-  defp put_label(acc, _input, _gettext_module, _domain), do: acc
-
-  defp put_sub_labels(acc, %Brando.Blueprint.Forms.Subform{sub_fields: fields}, gettext_module, domain),
-    do: Enum.reduce(fields, acc, &put_label(&2, &1, gettext_module, domain))
-
-  defp put_sub_labels(acc, _input, _gettext_module, _domain), do: acc
-
-  defp humanize(name), do: name |> to_string() |> Phoenix.Naming.humanize()
 
   ## Rendering
 

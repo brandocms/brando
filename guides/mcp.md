@@ -160,9 +160,10 @@ connect.
 
 The tools are the Assistant's own (`Brando.Content.Proposals.Tools`), named
 `brando_content_…` as in BrandoMCP: `list_content_types`,
-`describe_content_type`, `search_entries`, `entry_outline`, `list_modules`,
-`describe_module`, `list_entry_media`, `list_selection_options`,
-`search_assets`, `find_media_folders` and `prepare_proposal`. The tools that
+`describe_content_type`, `search_entries`, `entry_outline`,
+`translation_work`, `list_modules`, `describe_module`, `list_entry_media`,
+`list_selection_options`, `search_assets`, `find_media_folders` and
+`prepare_proposal`. The tools that
 work with an Assistant conversation's attachments (`list_attachments`,
 `attach_folder`, `request_media`, `look_at_media`) are left out. A tool added
 to the registry later is not offered here until it is added to
@@ -175,7 +176,7 @@ and picked, but not created or changed; Brando's own records (users, global
 sets, menus, vars, modules, site settings) are refused too, and the tool gets
 an error. Results are bounded as in the Assistant: 20 results, 160-character
 excerpts (a text is whole when `entry_outline` reads one block), 24 KB per
-result. Proposals
+result; `translation_work` returns a long entry's work in batches instead. Proposals
 are marked with the tool's name, "From Claude via MCP", and wait under
 **Assistant → From connected tools**. `prepare_proposal` answers with
 `review_url`, the proposal's review there, and, when an entry the proposal

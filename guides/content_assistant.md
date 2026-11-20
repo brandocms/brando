@@ -203,6 +203,44 @@ created again. A group the proposal made goes with it, unless another version
 has joined it since. A translation that has since been made its group's
 source cannot be undone: make another version the source first.
 
+### Translation work
+
+`translation_work` reads what a synchronized translation needs, from its
+pending version (what the form opens), not the saved entry. It is a read
+tool: the Assistant and connected tools both have it, with the same
+permissions as the person, who must be allowed to read the translation and
+its source.
+
+- **On a translation**, its open work as units. Each has a `key`, the work
+  item's path (`"title"`, `"entry_blocks/<sync_uid>/refs/body/text"`), which
+  is the same in every language version and across reads; its `kind`,
+  *translate* or *review*; a `label` as the form's work list names it; the
+  source's current text (`source`) and the translation's (`current`, left
+  out when it is the same, as a copy to translate is); its `format`,
+  `plain`, `html` or `markdown`; and in a block, the translation's own
+  `block_uid`. A text too long to fit a result on its own is listed with
+  `too_long` and a `reason` instead of its text: it is not answerable with
+  the tool, and is translated in the entry's form. Links waiting for a translation and values updated from
+  the source are listed under `other` with the first batch, as many as fit,
+  with their count in `other_total`; they are not answered with text.
+- **On a source**, its language versions with their open work, and the
+  languages without one. A version in the trash is marked `in_trash`, without
+  its work; its language is still taken. With `language` naming one of those, the units a new
+  translation in it would have, keyed as its work items will be.
+- **On any other entry**, a message saying what it is.
+
+A long entry's work comes in batches that fit a result. The next batch is
+read with `after`, the previous result's `next_after`: the key the batch
+ended with. It follows that key's place in the entry, so applying a batch,
+which resolves its units, does not move the next one; a key the entry no
+longer has starts from the beginning, and the result says so (`restarted`).
+Each batch carries its own `source_digest`, an opaque token the
+answer to that batch is checked against (`Brando.Translations.Work.check/4`):
+an answer is refused, unit by unit and with every problem at once, when the
+source's text changed since the batch was read, when a key is missing,
+extra or answered twice, or when a translation lost the source's HTML tags
+or its template placeholders (`{{ }}`, `{% %}`, `<% %>`).
+
 ## Build with AI from the block editor
 
 A block field shows **Build with AI** next to its label when the assistant

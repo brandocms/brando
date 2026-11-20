@@ -1737,6 +1737,7 @@ msgstr ""
 msgid "The selected entry has been deleted."
 msgstr ""
 
+#: lib/brando/content/proposals/translation_work.ex
 #: lib/brando/content/transfer/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The selected entry is no longer available."

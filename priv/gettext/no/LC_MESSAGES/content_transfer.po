@@ -1729,6 +1729,7 @@ msgstr "Relasjonen %{value1} har en innholdstype som ikke er kompatibel."
 msgid "The selected entry has been deleted."
 msgstr "Den valgte oppføringen er slettet."
 
+#: lib/brando/content/proposals/translation_work.ex
 #: lib/brando/content/transfer/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The selected entry is no longer available."

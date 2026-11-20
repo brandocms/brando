@@ -3365,10 +3365,10 @@ msgid "Best match"
 msgstr "Beste treff"
 
 #: lib/brando/frontend_edit/text.ex
+#: lib/brando/translations/labels.ex
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/notes_drawer.ex
-#: lib/brando_admin/components/form/translation.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
@@ -15375,8 +15375,8 @@ msgstr "Avvis"
 msgid "Rejected type [%{rejected}]. Allowed: %{allowed}"
 msgstr "Avvist filtype [%{rejected}]. Tillatt: %{allowed}"
 
+#: lib/brando/translations/labels.ex
 #: lib/brando_admin/components/form/draft_preview.ex
-#: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen
 msgid "Related entries"
 msgstr "Relaterte innlegg"
@@ -18831,7 +18831,7 @@ msgstr "System"
 msgid "System information"
 msgstr "Systeminformasjon"
 
-#: lib/brando_admin/components/form/translation.ex
+#: lib/brando/translations/labels.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Table"
@@ -23739,7 +23739,7 @@ msgstr "fra %{source}"
 msgid "from the entry"
 msgstr "fra oppføringen"
 
-#: lib/brando_admin/components/form/translation.ex
+#: lib/brando/translations/labels.ex
 #, elixir-autogen, elixir-format
 msgid "gallery"
 msgstr "galleri"
@@ -23900,6 +23900,7 @@ msgid_plural "loose block trees"
 msgstr[0] "løst blokktre"
 msgstr[1] "løse blokktrær"
 
+#: lib/brando/translations/labels.ex
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "media"

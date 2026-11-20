@@ -89,6 +89,11 @@ msgstr ""
 
 #: lib/brando/ai/agent/loop.ex
 #, elixir-autogen, elixir-format
+msgid "Reading a translation's work"
+msgstr ""
+
+#: lib/brando/ai/agent/loop.ex
+#, elixir-autogen, elixir-format
 msgid "Reading an entry"
 msgstr ""
 

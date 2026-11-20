@@ -30,6 +30,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
   alias Brando.Content.Proposals.Review
+  alias Brando.Content.Proposals.TranslationWork
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Media.Folders
   alias Brando.Type.I18nString
@@ -115,6 +116,28 @@ defmodule Brando.Content.Proposals.Tools do
             description:
               "Read only this block and everything below it, in full: texts whole, as stored (rich text as HTML, Markdown as Markdown)."
           }
+        },
+        required: ["content_type", "id"]
+      }
+    },
+    %{
+      name: "translation_work",
+      description:
+        "Read what a synchronized translation needs: its open work as units, from its pending version (what the editor's form opens), not the saved entry. " <>
+          "Each unit has a key (stable across reads), kind (translate: text copied from the source; review: the source's text changed), label, format (plain, html or markdown: keep the markup), source (the source's current text), current (the translation's text, left out when it is the same as source, as a copy to translate is) and, in a block, block_uid. A text too long for a result is listed with too_long and a reason instead of its text: it is not answerable here, and is translated in the admin. " <>
+          "Long entries come in batches: each has its own source_digest, the token an answer to it is checked against; read the next with after: the previous result's next_after (a key: the next batch follows its place in the entry, so applying a batch moves nothing). " <>
+          "On a synchronized source (or an entry of a synchronized type without translations), it lists the language versions with their open work and the languages without one; with language, the units a new translation in that language would have. " <>
+          "Other entries are described with a message.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          content_type: %{type: "string"},
+          id: %{type: "integer"},
+          language: %{
+            type: "string",
+            description: "On a source: a language without a version, to read the units its new translation would have."
+          },
+          after: %{type: "string", description: "Where the batch starts: after this key, an earlier result's next_after."}
         },
         required: ["content_type", "id"]
       }
@@ -442,6 +465,8 @@ defmodule Brando.Content.Proposals.Tools do
       if budget == 0 or byte_size(Jason.encode!(outline)) <= @outline_bytes, do: outline
     end)
   end
+
+  defp run("translation_work", args, %{actor: actor}), do: TranslationWork.run(args, actor)
 
   defp run("list_modules", args, %{actor: actor}) do
     schema = readable_schema!(args["content_type"], actor)
