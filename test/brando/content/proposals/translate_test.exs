@@ -239,6 +239,18 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert %{status: :published, title: "Title"} = Repo.get!(Article, target.id)
     end
 
+    test "the translation's blocks are rendered in its language", c do
+      target = create_translation(c)
+      {:ok, _} = SyncTest.update_article(target.id, %{status: "published"}, c.user)
+
+      {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      rendered = Repo.get!(Article, target.id).rendered_blocks
+      assert rendered =~ "First"
+      refute rendered =~ "Første"
+    end
+
     test "it cannot be published at apply", c do
       target = create_translation(c)
       {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)
@@ -456,6 +468,10 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert body =~ "paragraph"
       assert open_items(id) == []
       assert Repo.get!(Article, id).status == :draft
+      # Rendered in its own language, not the source's
+      rendered = Repo.get!(Article, id).rendered_blocks
+      assert rendered =~ "First"
+      refute rendered =~ "Første"
 
       # Undo removes it
       assert {:ok, _} = Proposals.undo(proposal.id, c.user)

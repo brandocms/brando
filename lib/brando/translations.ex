@@ -26,6 +26,7 @@ defmodule Brando.Translations do
   require Logger
 
   alias Brando.Blueprint.Unique
+  alias Brando.Content.Blocks
   alias Brando.Content.Identifier
   alias Brando.Repo
   alias Brando.Translations.Group
@@ -1764,7 +1765,8 @@ defmodule Brando.Translations do
   @doc """
   Saves answered translation work into the synchronized translation
   `entry_id` as its form saves it: `work_changeset/4` with the `texts`,
-  `check_target_save/4` against the pending version, the context's update
+  `check_target_save/4` against the pending version, its blocks rendered,
+  the context's update
   with `editor_review: true`, then `target_saved/3` with that version and
   every answered path acknowledged, so each answered work item is resolved,
   a text rightly the same in both languages included.
@@ -1789,11 +1791,18 @@ defmodule Brando.Translations do
 
     with {:ok, changeset, version_id} <- work_changeset(schema, entry_id, texts, user),
          {:ok, changeset} <- check_target_save(schema, entry_id, changeset, version_id),
+         changeset = render_blocks(schema, changeset),
          open = open_items(version_id),
          {:ok, entry} <- apply(context, :"update_#{singular}", [changeset, user, mutation]),
          {:ok, result} <- target_saved(schema, entry_id, %{version_id: version_id, acknowledged: acknowledged}) do
       {:ok, Map.merge(result, %{entry: entry, changeset: changeset, resolved: resolved_items(open)})}
     end
+  end
+
+  # Rendered before it is saved, as the form renders it: the update renders
+  # nothing for a changeset without a status change.
+  defp render_blocks(schema, changeset) do
+    if schema.__blocks_fields__() == [], do: changeset, else: Blocks.render_block_fields(changeset)
   end
 
   defp open_items(nil), do: []
