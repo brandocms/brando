@@ -1149,6 +1149,49 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       for unit <- texts, do: await(fn -> has_element?(view, "#{item(unit.key)}[data-ai='filled']") end)
     end
 
+    # A link variable that allows no custom text draws no input for its
+    # stored text: it is not sent, and has no AI action
+    test "leaves out a link's text the variable draws no input for", %{conn: conn, current_user: user} do
+      answer_and_report()
+
+      page =
+        Factory.insert(:page,
+          title: "Kontakt",
+          uri: "kontakt-#{System.unique_integer([:positive])}",
+          language: :no,
+          creator: user,
+          vars: [
+            %Brando.Content.Var{
+              type: :link,
+              key: "cta",
+              label: "Lenke",
+              link_type: :url,
+              value: "/no/kontakt",
+              link_text: "Kontakt oss",
+              link_allow_custom_text: false,
+              creator: user
+            }
+          ]
+        )
+
+      {:ok, target} = Translations.create_target(Brando.Pages.Page, page.id, :en, user)
+      {view, _html} = live_form(conn, "/admin/pages/update/#{target.id}", "page_form")
+      version = Translations.get_pending_version(Brando.Pages.Page, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      assert has_element?(view, item("vars/cta/link_text"))
+      refute has_element?(view, "#{item("vars/cta/link_text")} [data-testid=translation-ai-item]")
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      sources = sent_sources()
+      assert "Kontakt" in sources
+      refute "Kontakt oss" in sources
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
+      refute has_element?(view, "#{item("vars/cta/link_text")}[data-ai='filled']")
+    end
+
     defp address?(unit) do
       BrandoAdmin.Components.Form.TranslationFill.address?(
         Brando.Pages.Page,

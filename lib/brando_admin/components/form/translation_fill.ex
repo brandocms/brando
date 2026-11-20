@@ -129,7 +129,8 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
       and would be lost at its next `validate`. The Meta drawer's title and
       description are inputs of a schema with the Meta trait, and a subform
       drawn by its own component with no inputs declared (a page's
-      `component :vars`) shows its rows' fields
+      `component :vars`) shows its rows' fields, but for a link variable's
+      text when the variable allows no custom text
     * a block text in a block field the form has none of
   """
   def fillable(%{schema: schema, form_blueprint: blueprint, current_user: user, form: form}) do
@@ -149,7 +150,8 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
         field not in locked and (field in meta or shown?(inputs[field], form))
 
       _key, {:row, subform, _row, _field} = target ->
-        not address?(schema, target) and subform not in locked and row_shown?(inputs[subform], form.source, target)
+        not address?(schema, target) and subform not in locked and row_shown?(inputs[subform], form.source, target) and
+          not hidden_link_text?(schema, form.source, target)
 
       _key, _target ->
         false
@@ -214,6 +216,14 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   end
 
   defp row_shown?(_subform, _changeset, _target), do: false
+
+  # A link variable's text, which the variable draws an input for only when
+  # it allows custom text (`RenderVar`)
+  defp hidden_link_text?(schema, changeset, {:row, subform, key, "link_text"}) do
+    variables?(schema, subform) and field_value(changeset, {:row, subform, key, "link_allow_custom_text"}) != true
+  end
+
+  defp hidden_link_text?(_schema, _changeset, _target), do: false
 
   # The block field a block text's key is in: `entry_<field>/…`
   defp block_field("entry_" <> rest), do: rest |> String.split("/", parts: 2) |> hd()
