@@ -2,8 +2,12 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
   use Brando.LiveCase, async: true
   use Oban.Testing, repo: BrandoIntegration.Repo
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Factory
+  alias Brando.Images.SizeRun
   alias Brando.Worker.ImageMaintenance
+  alias BrandoAdmin.Work.Registry
 
   setup do
     put_test_env(:authorization_mode, :legacy)
@@ -65,6 +69,12 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
     assert has_element?(view, "button.btn--primary[phx-click=recreate_changed_image_sizes]")
   end
 
+  # The run's work reaches the view through the registry
+  defp render_work(view) do
+    Registry.sync()
+    render(view)
+  end
+
   test "keeps unrecorded images that already match and says how many it recreated", %{conn: conn} do
     Brando.Repo.update_all(Brando.Images.Image, set: [config_fingerprint: "0123456789ab"])
     matching = Brando.ImageFileFixtures.unrecorded_image("utils-match")
@@ -79,8 +89,10 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
              Brando.Images.Processing.current_fingerprint("default")
 
     recreated = Brando.Repo.aggregate(Brando.Images.Image, :count) - 1
-    assert has_element?(view, "#utils-image-run", "1 image already matched its settings")
-    assert has_element?(view, "#utils-image-run", "#{recreated} images recreated")
+    render_work(view)
+    assert has_element?(view, "#utils-image-run[data-adopted=\"1\"]")
+    assert has_element?(view, "#work-status-image-sizes[data-status=finished]", "#{recreated} images recreated")
+    refute has_element?(view, "#utils-image-failures")
   end
 
   test "either recreate run blocks both buttons", %{conn: conn, current_user: user} do
@@ -104,7 +116,7 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
       {:ok, view, _} = live(conn, "/admin/config/utils")
 
       assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
-      assert has_element?(view, "small", "Running in the background")
+      assert has_element?(view, "#utils-image-sizes-running")
       # The other tool is tracked separately.
       refute has_element?(view, "button[phx-click=recalculate_dominant_colors][disabled]")
 
@@ -134,5 +146,155 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
       # The context refuses the user the view held, too
       assert {:error, :forbidden} = Brando.Images.Processing.recreate_sizes_for_images(user)
     end)
+  end
+
+  describe "a run of Image sizes" do
+    setup do
+      # Only this test's images
+      Brando.Repo.update_all(Brando.Images.Image, set: [config_target: nil])
+      :ok
+    end
+
+    test "shows the run's count, and names the images it could not recreate", %{conn: conn} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+      broken = Factory.insert(:image, path: "images/avatars/broken.unknown")
+
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+      view |> element("button[phx-click=recreate_image_sizes]") |> render_click()
+      render_work(view)
+
+      assert has_element?(view, "#work-status-image-sizes[data-status=failed]")
+      assert has_element?(view, "#utils-image-failures[data-count=\"1\"]")
+
+      assert has_element?(
+               view,
+               ~s(#utils-image-failures a[data-image-id="#{broken.id}"][href="/admin/assets/images/update/#{broken.id}"]),
+               "broken.unknown"
+             )
+
+      refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+    end
+
+    test "a run with nothing to recreate says so at once", %{conn: conn} do
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+      view |> element("button[phx-click=recreate_image_sizes]") |> render_click()
+      render_work(view)
+
+      assert has_element?(view, "#work-status-image-sizes[data-status=finished]")
+      refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+    end
+
+    # Another admin's run, opened or reloaded while its images wait: the
+    # page has no work of its own for it, and asks the jobs
+    test "images another admin's run queued keep both buttons disabled until they are done", %{conn: conn} do
+      other = Factory.insert(:random_user)
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert SizeRun.queue([image], other) == 1
+        assert [job] = all_enqueued(worker: Brando.Worker.ImageProcessor)
+
+        {:ok, view, _} = live(conn, "/admin/config/utils")
+
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+        assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
+        assert has_element?(view, "#utils-image-sizes-running[data-remaining=\"1\"]")
+        refute has_element?(view, "#work-status-image-sizes[data-status]")
+
+        # A forged click queues nothing
+        render_click(view, "recreate_image_sizes")
+        render_click(view, "recreate_changed_image_sizes")
+        assert [] = all_enqueued(worker: ImageMaintenance)
+
+        # Still waiting at the next check
+        send(view.pid, :check_image_tasks)
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+
+        Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "completed"])
+        send(view.pid, :check_image_tasks)
+
+        refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+        refute has_element?(view, "#utils-image-sizes-running")
+      end)
+    end
+
+    # Pages already open hear that a run started, whoever started it
+    test "a run another admin starts disables both buttons on a page already open", %{conn: conn} do
+      other = Factory.insert(:random_user, role: :admin)
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+      refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.Processing.recreate_sizes_for_images(other)
+
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+        assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
+      end)
+    end
+
+    test "the failure count keeps up past the images it names", %{conn: conn, current_user: user} do
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+
+      work = %BrandoAdmin.Work{
+        id: SizeRun.work_key(),
+        key: SizeRun.work_key(),
+        user_id: user.id,
+        total: 300,
+        done: 100,
+        failed: 100,
+        failed_items: Enum.to_list(1..100)
+      }
+
+      send(view.pid, {:work, SizeRun.work_key(), :running, work})
+      assert has_element?(view, "#utils-image-failures[data-count=\"100\"]")
+
+      send(view.pid, {:work, SizeRun.work_key(), :running, %{work | done: 250, failed: 250}})
+      assert has_element?(view, "#utils-image-failures[data-count=\"250\"]")
+    end
+
+    test "a check while a run goes on reads only the run", %{conn: conn, current_user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.Processing.recreate_sizes_for_images(user)
+        {:ok, view, _} = live(conn, "/admin/config/utils")
+
+        test = self()
+        pid = view.pid
+        handler = "utils-image-check-#{inspect(pid)}"
+
+        :telemetry.attach(
+          handler,
+          [:brando_integration, :repo, :query],
+          fn _event, _measurements, meta, _config ->
+            if self() == pid, do: send(test, {:query, meta.source, meta.query})
+          end,
+          nil
+        )
+
+        try do
+          send(pid, :check_image_tasks)
+          render(view)
+        after
+          :telemetry.detach(handler)
+        end
+
+        queries = collect_queries([])
+        refute Enum.any?(queries, fn {source, _query} -> source == "images" end)
+        # How many images are left, and whether the walk is: once each
+        assert Enum.count(queries, fn {source, _query} -> source == "oban_jobs" end) == 2
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+      end)
+    end
+  end
+
+  defp collect_queries(acc) do
+    receive do
+      {:query, source, query} -> collect_queries([{source, query} | acc])
+    after
+      0 -> acc
+    end
   end
 end

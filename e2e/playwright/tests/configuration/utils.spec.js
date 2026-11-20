@@ -42,3 +42,38 @@ test('runs administrative utilities and displays system information', async ({ p
   await syncLV(page)
   await expect(page.getByText('Recalculating dominant colors in the background.')).toBeAttached()
 })
+
+// E2E runs Oban inline, so the run ends within the click: what is left to
+// see is how it ended. The fixture adds an image that recreates and one that
+// cannot (no image type).
+test('Image sizes counts a run and names the image it could not recreate', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/image-sizes-broken-image')).ok()).toBe(true)
+  await page.goto('/admin/config/utils')
+  await syncLV(page)
+
+  const row = page.locator('#utils-image-sizes')
+  const recreateAll = row.locator('button[phx-click=recreate_image_sizes]')
+  await recreateAll.click()
+  await page.locator('dialog[open] .admin-dialog-button.is-primary').click()
+  await syncLV(page)
+
+  await expect(row.locator('#work-status-image-sizes')).toHaveAttribute('data-status', 'failed')
+  const failures = row.locator('#utils-image-failures')
+  await expect(failures).toHaveAttribute('data-count', '1')
+  const link = failures.locator('a[data-image-id]')
+  await expect(link).toHaveCount(1)
+  await expect(link).toHaveText('broken.unknown')
+  await expect(link).toHaveAttribute('href', /^\/admin\/assets\/images\/update\/\d+$/)
+
+  // The run is over: both of its images are done
+  await expect(recreateAll).toBeEnabled()
+  await expect(row.locator('#utils-image-sizes-running')).toHaveCount(0)
+
+  // The name leads to the image in the media library
+  const href = await link.getAttribute('href')
+  await link.click()
+  await expect(page).toHaveURL(href)
+  await syncLV(page)
+  await expect(page.locator('#utils-image-sizes')).toHaveCount(0)
+  await expect(page.locator('form')).not.toHaveCount(0)
+})

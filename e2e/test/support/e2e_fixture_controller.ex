@@ -48,6 +48,31 @@ defmodule E2EFixtureController do
         "loose-blocks" ->
           create_loose_blocks()
 
+        # Utilities → Image sizes partway through a run the E2E admin started:
+        # images waiting, and its work at 12 of 65. The work is in the
+        # registry's memory, not the sandbox, so it gives up after a minute.
+        "image-sizes-running" ->
+          create_image_sizes_run()
+
+        # An image Utilities → Image sizes recreates (the seeds have none)
+        "image-sizes-image" ->
+          create_image_sizes_image()
+          get_admin_user()
+
+        # And one it cannot recreate (no image type)
+        "image-sizes-broken-image" ->
+          create_image_sizes_image()
+
+          Brando.Repo.insert!(%Brando.Images.Image{
+            path: "images/site/default/broken.unknown",
+            config_target: "default",
+            width: 100,
+            height: 100,
+            status: :processed
+          })
+
+          get_admin_user()
+
         "media-upload" ->
           create_media_upload_module()
 
@@ -1124,6 +1149,49 @@ defmodule E2EFixtureController do
       )
 
     {page, uids}
+  end
+
+  # An image with its original and no sizes yet: recreating it makes them
+  # (the directory avatar's sizes are its original, which a recreate deletes)
+  defp create_image_sizes_image do
+    relative_path = Path.join("images", "e2e-sizes-#{System.unique_integer([:positive])}.jpg")
+    path = Path.join(Brando.config(:media_path), relative_path)
+    File.mkdir_p!(Path.dirname(path))
+    File.cp!(Path.expand("../../playwright/fixtures/image2.jpg", __DIR__), path)
+
+    Brando.Repo.insert!(%Brando.Images.Image{
+      path: relative_path,
+      status: :processed,
+      width: 292,
+      height: 173,
+      config_target: "default",
+      formats: [:jpg],
+      sizes: %{}
+    })
+  end
+
+  defp create_image_sizes_run do
+    import Ecto.Query, only: [from: 2]
+
+    alias Brando.Images.SizeRun
+    alias BrandoAdmin.Work
+
+    user = get_admin_user()
+    for _ <- 1..3, do: create_image_sizes_image()
+    images = Brando.Repo.all(from(i in Brando.Images.Image, where: not is_nil(i.config_target), limit: 3))
+
+    # Inserted as rows: the E2E server runs jobs inline when Oban inserts them
+    for image <- images do
+      %{image_id: image.id, config_target: image.config_target, user_id: user.id, field_full_path: [], silent: true}
+      |> Brando.Tenant.Job.attach()
+      |> Brando.Worker.ImageProcessor.new(meta: %{"image_size_run" => true})
+      |> Brando.Repo.insert!()
+    end
+
+    SizeRun.begin(user)
+    Work.start(user, SizeRun.work_key(), nil, total: 65, timeout: 60_000)
+    Work.update(user, SizeRun.work_key(), nil, done: 12)
+    user
   end
 
   defp create_loose_blocks do

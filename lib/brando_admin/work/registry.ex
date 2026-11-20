@@ -12,12 +12,21 @@ defmodule BrandoAdmin.Work.Registry do
   Work leaves the table when it finishes, fails or times out. The table is
   lost with the node: running work started before a restart reappears with
   its next report, as `update/4` starts work it does not know.
+
+  Work its count ended (the last step in, or closed with its steps in) is
+  remembered for ten seconds, and a
+  `resume/4` for its key in that time is dropped: one read before the last
+  step reported can arrive after it, and would start the work again with
+  nothing left to count it. A `start/4` forgets the end. A restarted node
+  remembers no end, and resumes.
   """
   use GenServer
 
   alias BrandoAdmin.Work
 
   @table __MODULE__
+  # How long an end by the count holds back a resume of its key
+  @remember_end to_timeout(second: 10)
 
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
@@ -57,14 +66,31 @@ defmodule BrandoAdmin.Work.Registry do
   @impl true
   def handle_info({:brando_work, {op, table_key, attrs, at}}, state) do
     current = get(table_key)
+    if op == :start, do: :ets.delete(@table, {:ended, table_key})
+    # It just ended: the resume was read before
+    held_back? = op == :resume and is_nil(current) and ended?(table_key)
 
     case apply_op(op, current, table_key, attrs, at) do
-      nil -> :ok
+      nil ->
+        :ok
+
+      _work when held_back? ->
+        :ok
+
       # Nothing to show for: only the timeout starts again
-      work when op == :touch -> store(table_key, work)
-      work -> store_and_tell(table_key, work)
+      work when op == :touch ->
+        store(table_key, work)
+
+      work ->
+        store_and_tell(table_key, work)
+        remember_end(op, table_key, work)
     end
 
+    {:noreply, state}
+  end
+
+  def handle_info({:forget_end, table_key, version}, state) do
+    :ets.match_delete(@table, {{:ended, table_key}, version, :_})
     {:noreply, state}
   end
 
@@ -90,6 +116,7 @@ defmodule BrandoAdmin.Work.Registry do
       | message: attrs.message || work.message,
         percent: attrs[:percent],
         total: join_total(work.total, attrs[:total]),
+        open: Map.get(attrs, :open, work.open),
         done_message: attrs[:done_message] || work.done_message,
         failed_message: attrs[:failed_message] || work.failed_message,
         timeout: attrs[:timeout] || work.timeout,
@@ -99,6 +126,14 @@ defmodule BrandoAdmin.Work.Registry do
   end
 
   def apply_op(:start, _ended_or_nil, key, attrs, at), do: new(key, attrs, at)
+
+  # Running work keeps all but a larger total; other work starts again
+  def apply_op(:resume, %Work{status: :running, total: total} = work, _key, attrs, at)
+      when is_integer(total) and is_integer(attrs.total) and attrs.total > total,
+      do: %{work | total: attrs.total, updated_at: at}
+
+  def apply_op(:resume, %Work{status: :running}, _key, _attrs, _at), do: nil
+  def apply_op(:resume, _ended_or_nil, key, attrs, at), do: new(key, attrs, at)
 
   def apply_op(:update, nil, key, attrs, at), do: new(key, attrs, at)
 
@@ -119,18 +154,29 @@ defmodule BrandoAdmin.Work.Registry do
   def apply_op(:touch, %Work{status: :running} = work, _key, _attrs, at), do: %{work | updated_at: at}
   def apply_op(:touch, _work, _key, _attrs, _at), do: nil
 
-  def apply_op(:advance, %Work{status: :running, total: total} = work, _key, %{result: result}, at)
+  def apply_op(:advance, %Work{status: :running, total: total} = work, _key, %{result: result} = attrs, at)
       when is_integer(total) do
-    work = %{work | done: work.done + 1, failed: work.failed + if(result == :error, do: 1, else: 0), updated_at: at}
+    work = %{work | done: work.done + 1, updated_at: at}
 
-    cond do
-      work.done < total -> work
-      work.failed > 0 -> %{work | status: :failed, message: work.failed_message}
-      true -> %{work | status: :finished, message: work.done_message}
-    end
+    work
+    |> count_failed(result, attrs[:item])
+    |> end_when_counted()
   end
 
   def apply_op(:advance, _work, _key, _attrs, _at), do: nil
+
+  # No more steps: ends once the counted ones are in
+  def apply_op(:close, %Work{status: :running} = work, _key, attrs, at) do
+    end_when_counted(%{
+      work
+      | open: false,
+        done_message: attrs[:done_message] || work.done_message,
+        failed_message: attrs[:failed_message] || work.failed_message,
+        updated_at: at
+    })
+  end
+
+  def apply_op(:close, _work, _key, _attrs, _at), do: nil
 
   # Nothing running under the key: nothing to end (a job that ended its work
   # itself, then Oban giving it up)
@@ -141,6 +187,28 @@ defmodule BrandoAdmin.Work.Registry do
     default = if op == :finish, do: work.done_message, else: work.failed_message
     %{work | status: status, message: attrs.message || default, percent: nil, updated_at: at}
   end
+
+  # Enough of a failed step's items to name them, not a whole library's
+  @max_failed_items 100
+
+  defp count_failed(work, :ok, _item), do: work
+
+  defp count_failed(work, :error, item) do
+    items =
+      if is_nil(item) or length(work.failed_items) >= @max_failed_items,
+        do: work.failed_items,
+        else: work.failed_items ++ [item]
+
+    %{work | failed: work.failed + 1, failed_items: items}
+  end
+
+  defp end_when_counted(%Work{open: true} = work), do: work
+  defp end_when_counted(%Work{total: total, done: done} = work) when not is_integer(total) or done < total, do: work
+
+  defp end_when_counted(%Work{failed: failed} = work) when failed > 0,
+    do: %{work | status: :failed, message: work.failed_message}
+
+  defp end_when_counted(work), do: %{work | status: :finished, message: work.done_message}
 
   # A batch that starts while one runs joins its count
   defp join_total(current, more) when is_integer(current) and is_integer(more), do: current + more
@@ -156,7 +224,10 @@ defmodule BrandoAdmin.Work.Registry do
       message: attrs[:message],
       percent: attrs[:percent],
       total: attrs[:total] || attrs[:remaining],
+      open: attrs[:open] || false,
       done: attrs[:done] || 0,
+      failed: attrs[:failures] || 0,
+      failed_items: Enum.take(attrs[:failed_items] || [], @max_failed_items),
       done_message: attrs[:done_message],
       failed_message: attrs[:failed_message],
       timeout: attrs[:timeout] || Work.default_timeout(),
@@ -165,6 +236,17 @@ defmodule BrandoAdmin.Work.Registry do
       updated_at: at
     }
   end
+
+  defp ended?(table_key), do: :ets.member(@table, {:ended, table_key})
+
+  # Under a key `list/1` and `get/1` do not match
+  defp remember_end(op, table_key, %Work{status: status}) when op in [:advance, :close] and status != :running do
+    version = System.unique_integer([:monotonic])
+    :ets.insert(@table, {{:ended, table_key}, version, nil})
+    Process.send_after(self(), {:forget_end, table_key, version}, @remember_end)
+  end
+
+  defp remember_end(_op, _table_key, _work), do: :ok
 
   defp store(table_key, %Work{} = work) do
     if work.status == :running do

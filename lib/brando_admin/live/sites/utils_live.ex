@@ -3,16 +3,24 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
   import Phoenix.Component
 
   alias Brando.Authorization.{Boundary, Configuration, Engine, Scope}
   alias Brando.Images
+  alias Brando.Images.SizeRun
   alias Brando.Search
   alias BrandoAdmin.Components.Activity
   alias BrandoAdmin.Components.AuthorizationTools
   alias BrandoAdmin.Components.SystemCheck
+  alias BrandoAdmin.Components.Work
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
+  on_mount BrandoAdmin.Work
+
+  # How often a page checks whether a run of Image sizes is still going on:
+  # its jobs decide, whoever started it and wherever they run
+  @image_tasks_poll to_timeout(second: 2)
 
   # What writes group grants asks for the password, a code or a passkey when the
   # session has not confirmed lately, as the groups screen does. The report,
@@ -74,25 +82,75 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     })
   end
 
-  # Recreate changed images reports how many images it kept and how many it
-  # recreated; the latest run's counts show under the tool.
+  # Recreate changed images reports how many images already matched their
+  # settings; the latest walk's count shows under the tool. The run itself
+  # reports to its admin as work (`SizeRun`), shown with `Work.status`.
   defp subscribe_image_tasks(socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), Images.Processing.topic())
-    assign(socket, :image_run, nil)
+
+    socket
+    |> assign(:image_run, nil)
+    |> assign(:image_sizes_key, SizeRun.work_key())
+    |> assign(:image_tasks_poll, false)
+    |> assign_image_failures(socket.assigns.work[SizeRun.work_key()])
   end
 
   defp assign_image_tasks(socket) do
-    recreate_sizes? = Images.Processing.image_maintenance_running?("recreate_sizes")
-    recreate_changed_sizes? = Images.Processing.image_maintenance_running?("recreate_changed_sizes")
-
     socket
     |> assign(:image_tasks, %{
-      # Either recreate run blocks both buttons; they queue the same jobs.
-      "recreate_sizes" => recreate_sizes? or recreate_changed_sizes?,
       "dominant_colors" => Images.Processing.image_maintenance_running?("dominant_colors")
     })
+    |> assign_size_run(SizeRun.status())
     |> assign(:changed_images, Images.Processing.count_changed_images())
     |> assign_unsynced_media()
+    |> poll_image_tasks()
+  end
+
+  # Either recreate run blocks both buttons, until its last image is
+  # processed: they queue the same jobs. While one goes on, only it is read.
+  defp assign_size_run(socket, %{running?: running?, remaining: remaining}) do
+    socket
+    |> update(:image_tasks, &Map.put(&1, "recreate_sizes", running?))
+    |> assign(:image_sizes_remaining, remaining)
+  end
+
+  defp poll_image_tasks(%{assigns: %{image_tasks: %{"recreate_sizes" => true}, image_tasks_poll: false}} = socket) do
+    Process.send_after(self(), :check_image_tasks, @image_tasks_poll)
+    assign(socket, :image_tasks_poll, true)
+  end
+
+  defp poll_image_tasks(socket), do: socket
+
+  # The images a run could not recreate, named from the work's failed steps.
+  # The names are read again only when they change (they stop at a cap); the
+  # count always follows.
+  defp assign_image_failures(socket, %BrandoAdmin.Work{failed_items: [_ | _] = ids, failed: failed}) do
+    named =
+      case socket.assigns[:image_failures] do
+        %{images: images} -> if Enum.map(images, & &1.id) == ids, do: images, else: name_images(ids)
+        _none -> name_images(ids)
+      end
+
+    assign(socket, :image_failures, %{count: failed, images: named})
+  end
+
+  defp assign_image_failures(socket, _work), do: assign(socket, :image_failures, nil)
+
+  defp name_images(ids) do
+    images =
+      Brando.Repo.all(from i in Images.Image, where: i.id in ^ids, select: %{id: i.id, path: i.path})
+      |> Map.new(&{&1.id, &1})
+
+    Enum.map(ids, &(images[&1] || %{id: &1, path: nil}))
+  end
+
+  def handle_work(%BrandoAdmin.Work{key: key} = work, socket) do
+    if key == socket.assigns[:image_sizes_key] do
+      socket = assign_image_failures(socket, work)
+      if BrandoAdmin.Work.running?(work), do: socket, else: assign_image_tasks(socket)
+    else
+      socket
+    end
   end
 
   # With no image files in the media folder every image looks changed, and
@@ -266,7 +324,37 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               <h3>{gettext("Image sizes")}</h3><p>
                 {gettext("Recreate the sizes and formats of images from their originals, using the current image settings.")}
               </p>
-              <small :if={@image_tasks["recreate_sizes"]}>{gettext("Running in the background")}</small>
+              <Work.status key={@image_sizes_key} work={@work[@image_sizes_key]} />
+              <small
+                :if={@image_tasks["recreate_sizes"] && !BrandoAdmin.Work.running?(@work[@image_sizes_key])}
+                id="utils-image-sizes-running"
+                data-remaining={@image_sizes_remaining}
+              >
+                {if @image_sizes_remaining > 0,
+                  do:
+                    ngettext(
+                      "Recreating image sizes: %{count} image left",
+                      "Recreating image sizes: %{count} images left",
+                      @image_sizes_remaining
+                    ),
+                  else: gettext("Recreating image sizes")}
+              </small>
+              <small :if={@image_failures} id="utils-image-failures" data-count={@image_failures.count}>
+                {ngettext(
+                  "%{count} image could not be recreated:",
+                  "%{count} images could not be recreated:",
+                  @image_failures.count
+                )}
+                <%= for {image, index} <- Enum.with_index(Enum.take(@image_failures.images, 10)) do %>
+                  {if index > 0, do: ", "}<.link
+                    navigate={"/admin/assets/images/update/#{image.id}"}
+                    data-image-id={image.id}
+                  >{image_name(image)}</.link>
+                <% end %>
+                <span :if={@image_failures.count > 10}>
+                  {gettext("and %{count} more", count: @image_failures.count - 10)}
+                </span>
+              </small>
               <small :if={!@image_tasks["recreate_sizes"] && @changed_images > 0}>
                 {ngettext(
                   "%{count} image was made with older settings",
@@ -280,12 +368,12 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               <small :if={!@image_tasks["recreate_sizes"] && @changed_images == 0} class="utils-empty-status">
                 {gettext("All images match their settings")}
               </small>
-              <small :if={@image_run} id="utils-image-run">
+              <small :if={@image_run} id="utils-image-run" data-adopted={@image_run.adopted}>
                 {ngettext(
                   "%{count} image already matched its settings",
                   "%{count} images already matched their settings",
                   @image_run.adopted
-                )} · {ngettext("%{count} image recreated", "%{count} images recreated", @image_run.recreated)}
+                )}
               </small>
             </div>
             <div class="utils-row-actions">
@@ -426,16 +514,17 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, assign_sitemap(socket)}
   end
 
+  # The row shows the run's work, so no toast says it started
   def handle_event("recreate_image_sizes", _, socket) do
     socket.assigns.current_user
     |> Images.Processing.recreate_sizes_for_images()
-    |> image_task_started(socket, gettext("Recreating image sizes in the background."))
+    |> image_task_started(assign(socket, :image_run, nil), nil)
   end
 
   def handle_event("recreate_changed_image_sizes", _, socket) do
     socket.assigns.current_user
     |> Images.Processing.recreate_sizes_for_changed_images()
-    |> image_task_started(socket, gettext("Recreating changed image sizes in the background."))
+    |> image_task_started(assign(socket, :image_run, nil), nil)
   end
 
   def handle_event("recalculate_dominant_colors", _, socket) do
@@ -445,7 +534,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp image_task_started({:ok, _job}, socket, message) do
-    send(self(), {:toast, message})
+    if message, do: send(self(), {:toast, message})
     {:noreply, assign_image_tasks(socket)}
   end
 
@@ -463,6 +552,9 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     send(self(), {:toast, gettext("The operation could not be completed. Check the application logs and try again.")})
     {:noreply, socket}
   end
+
+  defp image_name(%{path: path}) when is_binary(path), do: Path.basename(path)
+  defp image_name(%{id: id}), do: gettext("Image #%{id}", id: id)
 
   defp sitemap_generated(%{key: key, name: name}) do
     if key == Brando.Tenant.environment_key_of(Brando.Tenant.current_prefix()),
@@ -692,9 +784,25 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, update(socket, :search_index, &%{&1 | state: state, done: done, total: total})}
   end
 
+  # A run started, by this admin or another: both buttons wait for it
+  def handle_info({:image_maintenance, %{state: :started}}, socket) do
+    {:noreply, assign_image_tasks(socket)}
+  end
+
   def handle_info({:image_maintenance, %{state: state} = run}, socket) do
     socket = assign(socket, :image_run, run)
     {:noreply, if(state == :done, do: assign_image_tasks(socket), else: socket)}
+  end
+
+  # While a run goes on, a check reads only the run; the rest is read again
+  # when it ends
+  def handle_info(:check_image_tasks, socket) do
+    socket = assign(socket, :image_tasks_poll, false)
+
+    case SizeRun.status() do
+      %{running?: true} = status -> {:noreply, socket |> assign_size_run(status) |> poll_image_tasks()}
+      _ended -> {:noreply, assign_image_tasks(socket)}
+    end
   end
 
   # Results made for a superuser are shown only while the viewer still is one

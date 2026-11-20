@@ -1,0 +1,1 @@
+- `BrandoAdmin.Work` takes `open: true` for work counted in batches, ended by `Work.close/3`, keeps the `item:` of failed steps in `failed_items`, and `Work.resume/4` restates work a restarted node has lost.

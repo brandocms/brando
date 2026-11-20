@@ -134,6 +134,9 @@
   .utils-maintenance-list small { display: block; font-size: var(--brando-text-xs); color: var(--utils-muted); margin-top: 8px; }
   .utils-maintenance-list .utils-empty-status { display: flex; align-items: center; gap: 6px; }
   .utils-empty-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--brando-faint); }
+  /* A run's work (Image sizes), in line with the row's notes */
+  .utils-maintenance-list .work-status[data-status] { display: flex; margin-top: 8px; font-size: var(--brando-text-xs); }
+  #utils-image-failures a { color: inherit; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
   .utils-maintenance-list .btn { min-width: 140px; }
   .utils-maintenance-list .utils-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
   .utils-system-info { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--utils-line); }

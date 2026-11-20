@@ -121,9 +121,10 @@ defmodule Brando.Images.ImageMaintenanceTest do
     assert Repo.get!(Image, matching.id).config_fingerprint == current
     assert Repo.get!(Image, differing.id).config_fingerprint == nil
 
-    # The counts add up over the batches.
+    # The counts add up over the batches. `:done` is the end of the walk:
+    # the images are only queued.
     assert_received {:image_maintenance, %{task: "recreate_changed_sizes", state: :running}}
-    assert_received {:image_maintenance, %{task: "recreate_changed_sizes", state: :done, adopted: 1, recreated: 2}}
+    assert_received {:image_maintenance, %{task: "recreate_changed_sizes", state: :done, adopted: 1, queued: 2}}
   end
 
   test "processing stores the fingerprint of the config it used", %{user: user} do
@@ -280,5 +281,472 @@ defmodule Brando.Images.ImageMaintenanceTest do
       refute Processing.image_maintenance_running?("dominant_colors")
       assert {:ok, _job} = Processing.set_dominant_color_for_images(user)
     end)
+  end
+
+  # A run reports to its admin as work, counting each image as its job ends,
+  # and is going on, for every admin, while any image it queued is unfinished
+  describe "a run of Image sizes" do
+    alias Brando.Images.SizeRun
+    alias BrandoAdmin.Work
+
+    setup %{user: user} do
+      # Only this test's images: the fixtures' (the user's avatar) are not configured
+      Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [config_target: nil])
+      Work.subscribe(user)
+      :ok
+    end
+
+    defp work(user) do
+      BrandoAdmin.Work.Registry.sync()
+      Work.get(user, SizeRun.work_key())
+    end
+
+    defp image_jobs, do: all_enqueued(worker: Worker.ImageProcessor)
+
+    test "counts each image when it is processed, not when it is queued, and ends after the last", %{user: user} do
+      images = for _ <- 1..3, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        # As `Processing.recreate_sizes_for_images/1` starts it, in batches of
+        # two: the run is counted across them
+        SizeRun.begin(user)
+
+        assert {:ok, _} =
+                 %{task: "recreate_sizes", user_id: user.id, batch_size: 2}
+                 |> Worker.ImageMaintenance.new()
+                 |> Oban.insert()
+
+        assert %{success: 2, failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+        assert Enum.sort(Enum.map(image_jobs(), & &1.args["image_id"])) == Enum.sort(Enum.map(images, & &1.id))
+
+        # Walked and queued: nothing is recreated yet
+        assert %Work{status: :running, total: 3, done: 0} = work(user)
+        assert SizeRun.running?()
+        assert SizeRun.remaining() == 3
+
+        # One image at a time: hold back all but one
+        [_first | later] = image_jobs()
+        later_ids = Enum.map(later, & &1.id)
+        in_an_hour = DateTime.add(DateTime.utc_now(), 3600)
+
+        Repo.update_all(from(j in Oban.Job, where: j.id in ^later_ids),
+          set: [state: "scheduled", scheduled_at: in_an_hour]
+        )
+
+        assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :image_processing)
+        assert %Work{status: :running, total: 3, done: 1} = work(user)
+        assert SizeRun.running?()
+
+        assert %{success: 2, failure: 0} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{done: 3, failed: 0, message: "3 images recreated"}}
+      refute SizeRun.running?()
+    end
+
+    test "a failed image is counted and named", %{user: user} do
+      ok = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+      broken = Factory.insert(:image, path: "images/avatars/broken.unknown")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.recreate_sizes_for_images(user)
+        Oban.drain_queue(queue: :default, with_recursion: true)
+        Oban.drain_queue(queue: :image_processing, with_scheduled: true, with_recursion: true)
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{} = work}, 1000
+      assert %Work{total: 2, done: 2, failed: 1, failed_items: [broken_id]} = work
+      assert broken_id == broken.id
+      assert Repo.get!(Image, ok.id).status == :processed
+      refute SizeRun.running?()
+    end
+
+    test "a second run does not start while the first one's images wait, whoever started it", %{user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+      other = Factory.insert(:random_user)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.recreate_sizes_for_images(user)
+        Oban.drain_queue(queue: :default, with_recursion: true)
+
+        # The walk is done (its watcher waits with the image)
+        assert [%{args: %{"watch" => true}}] = all_enqueued(worker: Worker.ImageMaintenance)
+        assert SizeRun.running?()
+        assert {:error, :already_running} = Processing.recreate_sizes_for_images(user)
+        assert {:error, :already_running} = Processing.recreate_sizes_for_changed_images(other)
+
+        # Retrying or being processed still counts
+        Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "retryable"])
+        assert {:error, :already_running} = Processing.recreate_sizes_for_images(other)
+
+        Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"),
+          set: [state: "executing", attempted_at: DateTime.utc_now()]
+        )
+
+        assert {:error, :already_running} = Processing.recreate_sizes_for_images(other)
+
+        Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor"), set: [state: "completed"])
+        watch()
+        refute SizeRun.running?()
+        assert {:ok, _} = Processing.recreate_sizes_for_images(other)
+      end)
+    end
+
+    test "an image queued outside a run does not hold one", %{user: user} do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.queue_processing(image, user)
+        refute SizeRun.running?()
+      end)
+    end
+
+    test "a run with nothing to recreate ends at once", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Processing.recreate_sizes_for_images(user)
+        assert %Work{status: :running, total: 0} = work(user)
+
+        Oban.drain_queue(queue: :default, with_recursion: true)
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 0, done: 0, message: "No images to recreate"}}
+      refute SizeRun.running?()
+    end
+
+    # The jobs are the truth: the work follows them when they are replaced,
+    # retried, cancelled, or outlive the node that counted them
+
+    defp walk_and_wait(user) do
+      assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+      Oban.drain_queue(queue: :default, with_recursion: true)
+      walk
+    end
+
+    # The run's watcher, once its images are done, ends what is left of it
+    defp watch, do: Oban.drain_queue(queue: :default, with_scheduled: true, with_recursion: true)
+
+    test "an image saved again while its run's job waits is still counted", %{user: user} do
+      images = for _ <- 1..2, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+
+        # The image editor saves a focal point: the waiting job is replaced
+        assert {:ok, _} = Processing.queue_processing(hd(images), user, [], silent: true)
+        assert SizeRun.remaining() == 2
+
+        assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2, failed: 0}}
+    end
+
+    test "a run whose job is cancelled from outside ends, as failed", %{user: user} do
+      for _ <- 1..2, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+
+        [cancelled | _] = image_jobs()
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^cancelled.id), set: [state: "cancelled"])
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{total: 2, done: 1}}
+      refute SizeRun.running?()
+    end
+
+    test "a retried batch counts and queues its images once", %{user: user} do
+      for _ <- 1..2, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        assert :ok = perform_job(Worker.ImageMaintenance, walk.args)
+        first = Enum.map(image_jobs(), & &1.id)
+
+        # The attempt queued its images and failed after: Oban runs it again
+        assert :ok = perform_job(Worker.ImageMaintenance, walk.args)
+        assert Enum.sort(Enum.map(image_jobs(), & &1.id)) == Enum.sort(first)
+        assert %Work{total: 2} = work(user)
+
+        assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2}}
+    end
+
+    test "a walk that gives up still lets its run end", %{user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^walk.id), set: [state: "discarded"])
+
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{}}
+      refute SizeRun.running?()
+    end
+
+    # The registry is in memory: a restarted node knows no run
+    defp forget(user) do
+      Work.fail(user, SizeRun.work_key())
+      assert_receive {:work, "image-sizes", :failed, %Work{}}
+    end
+
+    test "a run's next batch after a restart reports it as it was started", %{user: user} do
+      for _ <- 1..3, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        SizeRun.begin(user)
+
+        assert {:ok, _} =
+                 %{task: "recreate_sizes", user_id: user.id, batch_size: 2}
+                 |> Worker.ImageMaintenance.new()
+                 |> Oban.insert()
+
+        # The first batch
+        assert %{success: 1} = Oban.drain_queue(queue: :default)
+        forget(user)
+
+        assert %{success: 1} = Oban.drain_queue(queue: :default)
+
+        assert %Work{status: :running, total: 3, done: 0, open: false, timeout: 1_800_000} = run = work(user)
+        assert run.message
+        assert run.failed_message
+
+        assert %{success: 3} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 3, done: 3}}
+    end
+
+    test "a run restarted after its walk is reported again until its images are done", %{user: user} do
+      for _ <- 1..2, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        forget(user)
+
+        # The watcher's next look
+        Oban.drain_queue(queue: :default, with_scheduled: true)
+        assert %Work{status: :running, total: 2, done: 0} = work(user)
+
+        assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 2, done: 2}}
+    end
+
+    defp watcher do
+      assert [watcher] = Enum.filter(all_enqueued(worker: Worker.ImageMaintenance), & &1.args["watch"])
+      watcher
+    end
+
+    defp flush_work do
+      receive do
+        {:work, _key, _status, _work} -> flush_work()
+      after
+        0 -> :ok
+      end
+    end
+
+    defp set_job(job, fields), do: Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: fields)
+
+    # The watcher's look comes up to seconds after the last image: the run
+    # is over when its walk and images are, and its watcher's late look
+    # leaves a run started since alone
+    test "a run whose images are done is over before its watcher looks", %{user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        old_watcher = watcher()
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        assert_receive {:work, "image-sizes", :finished, %Work{}}
+
+        refute SizeRun.running?()
+        assert {:ok, _} = Processing.recreate_sizes_for_images(user)
+        assert %Work{status: :running} = work(user)
+
+        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(old_watcher.args, "settle", true))
+        assert %Work{status: :running} = work(user)
+      end)
+    end
+
+    # The watcher reads one image left; that image's report ends the work
+    # before the watcher's resume reaches the registry
+    test "the watcher's late resume does not bring back a run that has ended", %{user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        [job] = image_jobs()
+        watcher = watcher()
+
+        # The watcher's read, while the job runs
+        assert SizeRun.remaining() == 1
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        assert_receive {:work, "image-sizes", :finished, %Work{}}
+
+        flush_work()
+
+        # Its resume, after the report
+        set_job(job, state: "executing", attempted_at: DateTime.utc_now())
+        assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher.args)
+        set_job(job, state: "completed")
+        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher.args, "settle", true))
+        BrandoAdmin.Work.Registry.sync()
+      end)
+
+      refute_received {:work, "image-sizes", _, _}
+    end
+
+    # The attempt queued its images and failed after: the images processed
+    # before the retry now match their config
+    test "a retried batch of changed images counts the images it queued before", %{user: user} do
+      images =
+        for _ <- 1..3, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg", config_fingerprint: "0123456789ab")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run = SizeRun.begin(user)
+        args = %{"task" => "recreate_changed_sizes", "user_id" => user.id, "batch_size" => 2, "run" => run}
+
+        assert :ok = perform_job(Worker.ImageMaintenance, args)
+        # Its next batch was never queued
+        Repo.delete_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageMaintenance"))
+
+        [first | later] = image_jobs()
+        for job <- later, do: set_job(job, state: "scheduled", scheduled_at: DateTime.add(DateTime.utc_now(), 3600))
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing)
+
+        refute Processing.changed_config?(
+                 Repo.get!(Image, first.args["image_id"]),
+                 Processing.current_fingerprint("default")
+               )
+
+        assert :ok = perform_job(Worker.ImageMaintenance, args)
+        assert [next] = all_enqueued(worker: Worker.ImageMaintenance)
+        assert next.args["queued"] == 2
+        assert :ok = perform_job(Worker.ImageMaintenance, next.args)
+
+        queued_ids =
+          Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.ImageProcessor", select: j.args["image_id"]))
+
+        assert Enum.sort(queued_ids) == Enum.sort(Enum.map(images, & &1.id))
+        assert %Work{total: 3, open: false, message: "Recreating image sizes"} = work(user)
+
+        assert %{success: 2} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{total: 3, done: 3, message: "3 images recreated"}}
+    end
+
+    test "a run restated after a restart keeps the images that failed before it", %{user: user} do
+      images = for _ <- 1..2, do: Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      failed_id =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          walk_and_wait(user)
+
+          [failed, _waiting] = image_jobs()
+          set_job(failed, state: "discarded", discarded_at: DateTime.utc_now())
+          forget(user)
+
+          # The watcher's next look
+          assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher().args)
+          failed_id = failed.args["image_id"]
+          assert %Work{status: :running, total: 2, done: 1, failed: 1, failed_items: [^failed_id]} = work(user)
+
+          assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+          failed_id
+        end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{total: 2, done: 2, failed: 1, failed_items: [^failed_id]}}
+      assert failed_id in Enum.map(images, & &1.id)
+    end
+
+    test "an image saved again while its run's job is processed is still counted", %{user: user} do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        [job] = image_jobs()
+        set_job(job, state: "executing", attempted_at: DateTime.utc_now())
+
+        assert {:ok, _} = Processing.queue_processing(image, user, [], silent: true)
+        assert SizeRun.remaining() == 1
+        assert SizeRun.running?()
+
+        # The replaced job reports the image's step when it ends: the new one
+        # is the run's, and reports none
+        assert [%{meta: meta}] = image_jobs()
+        assert Map.has_key?(meta, "image_size_run")
+        refute Map.has_key?(meta, Work.meta_key())
+      end)
+    end
+
+    # The node was killed mid-batch: the walk stays executing until Lifeline
+    # rescues it, if it ever does, with the rest of the images not queued
+    test "a walk left executing past its timeout goes back in the queue at its watcher's next look", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        set_job(walk, state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600))
+        refute SizeRun.running?()
+
+        assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher().args)
+        assert Repo.get!(Oban.Job, walk.id).state == "available"
+        assert SizeRun.running?()
+      end)
+
+      refute_received {:work, "image-sizes", :failed, %Work{}}
+    end
+
+    test "a walk left executing past its timeout and out of attempts is given up, and its run ends", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        stale = DateTime.add(DateTime.utc_now(), -3600)
+        set_job(walk, state: "executing", attempted_at: stale, attempt: walk.max_attempts)
+
+        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher().args, "settle", true))
+        assert Repo.get!(Oban.Job, walk.id).state == "discarded"
+        refute SizeRun.running?()
+      end)
+
+      assert_receive {:work, "image-sizes", :failed, %Work{}}
+    end
+
+    test "a watcher left executing does not hold a run", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        set_job(walk, state: "completed")
+        set_job(watcher(), state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600))
+
+        refute SizeRun.running?()
+      end)
+    end
+
+    test "an image job left executing past its timeout does not hold a run" do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      job =
+        %{image_id: image.id, config_target: image.config_target, user_id: nil, field_full_path: [], silent: true}
+        |> Worker.ImageProcessor.new(meta: %{"image_size_run" => true})
+        |> Repo.insert!()
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+        set: [state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600)]
+      )
+
+      refute SizeRun.running?()
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [attempted_at: DateTime.utc_now()])
+      assert SizeRun.running?()
+    end
   end
 end

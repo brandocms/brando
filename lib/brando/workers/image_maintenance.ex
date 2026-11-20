@@ -6,6 +6,11 @@ defmodule Brando.Worker.ImageMaintenance do
   # library in memory or runs into its timeout. The chained job keeps the
   # original arguments, including the tenant prefix `Brando.Tenant.Job` attached.
   #
+  # The recreate tasks are a run of `Brando.Images.SizeRun`: each batch
+  # queues its images and counts them in the run's work, and the last batch
+  # closes the run, which ends when the last image is processed. A job with
+  # "watch" in its arguments is the run's watcher (`SizeRun.watch/2`).
+  #
   # "recreate_changed_sizes" first adopts the images processed before configs
   # were recorded whose files already match (`Brando.Images.Adoption`), and
   # queues only the rest. It carries the counts from batch to batch in its
@@ -22,6 +27,7 @@ defmodule Brando.Worker.ImageMaintenance do
   alias Brando.Images.Adoption
   alias Brando.Images.Image
   alias Brando.Images.Processing
+  alias Brando.Images.SizeRun
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Users
 
@@ -32,6 +38,10 @@ defmodule Brando.Worker.ImageMaintenance do
   @batch_size 100
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"watch" => true, "user_id" => user_id}} = job) do
+    TenantJob.run(job, fn -> SizeRun.watch(job.args, job_user(user_id)) end)
+  end
+
   def perform(%Oban.Job{args: %{"task" => task}} = job) when task in @tasks do
     TenantJob.run(job, fn -> run_batch(task, job.args) end)
   end
@@ -44,10 +54,7 @@ defmodule Brando.Worker.ImageMaintenance do
     batch_size = Map.get(args, "batch_size", @batch_size)
     images = next_batch(task, Map.get(args, "after_id", 0), batch_size)
 
-    counts =
-      images
-      |> only_changed(task)
-      |> run_tasks(task, user)
+    counts = run_tasks(images, task, user, args)
 
     args = Map.merge(args, counts, fn _key, total, count -> total + count end)
 
@@ -88,7 +95,7 @@ defmodule Brando.Worker.ImageMaintenance do
   # Filtered after the batch is read rather than in the query, since the
   # current fingerprint comes from code, not the database. Each target's is
   # resolved once per batch.
-  defp only_changed(images, "recreate_changed_sizes") do
+  defp only_changed(images) do
     current =
       images
       |> Enum.map(& &1.config_target)
@@ -98,25 +105,28 @@ defmodule Brando.Worker.ImageMaintenance do
     Enum.filter(images, &Processing.changed_config?(&1, current[&1.config_target]))
   end
 
-  defp only_changed(images, _task), do: images
-
   # Images processed before configs were recorded are kept when their files
   # already match their config; only the rest are recreated.
-  defp run_tasks(images, "recreate_changed_sizes" = task, user) do
-    {adopted, rest} = Adoption.adopt(images)
-    Enum.each(rest, &run_task(task, &1, user))
-    %{"adopted" => length(adopted), "recreated" => length(rest)}
-  end
-
-  defp run_tasks(images, task, user) do
-    Enum.each(images, &run_task(task, &1, user))
-    %{}
+  # A retried batch picks fewer: the images processed since match their
+  # config. The run counts the batch's images it queued, picked now or not.
+  defp run_tasks(batch, "recreate_changed_sizes", user, args) do
+    {adopted, rest} = batch |> only_changed() |> Adoption.adopt()
+    %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user, [batch: batch] ++ run_opts(args))}
   end
 
   # The per-image work is already a job of its own, so this only enqueues it,
   # for `user`'s progress.
-  defp run_task(task, image, user) when task in ["recreate_sizes", "recreate_changed_sizes"],
-    do: Processing.queue_processing(image, user, [], silent: true)
+  defp run_tasks(images, "recreate_sizes", user, args),
+    do: %{"queued" => SizeRun.queue(images, user, run_opts(args))}
+
+  defp run_tasks(images, task, user, _args) do
+    Enum.each(images, &run_task(task, &1, user))
+    %{}
+  end
+
+  # The run's count before this batch, carried in the arguments, so a retry
+  # counts the same
+  defp run_opts(args), do: [run: args["run"], counted: args["queued"] || 0]
 
   defp run_task("dominant_colors", image, _user) do
     case Processing.set_dominant_color(image, :system) do
@@ -136,20 +146,26 @@ defmodule Brando.Worker.ImageMaintenance do
 
   defp finish("recreate_changed_sizes" = task, args) do
     Logger.info(
-      "==> Recreate changed images: #{args["adopted"] || 0} already matched their config, #{args["recreated"] || 0} recreated"
+      "==> Recreate changed images: #{args["adopted"] || 0} already matched their config, #{args["queued"] || 0} queued"
     )
 
     progress(task, :done, args)
-    :ok
+    close_run(args)
   end
 
+  defp finish("recreate_sizes", args), do: close_run(args)
   defp finish(_task, _args), do: :ok
+
+  defp close_run(%{"user_id" => user_id} = args) do
+    SizeRun.close(job_user(user_id), args["queued"] || 0)
+    :ok
+  end
 
   defp progress("recreate_changed_sizes" = task, state, args) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       Processing.topic(),
-      {:image_maintenance, %{task: task, state: state, adopted: args["adopted"] || 0, recreated: args["recreated"] || 0}}
+      {:image_maintenance, %{task: task, state: state, adopted: args["adopted"] || 0, queued: args["queued"] || 0}}
     )
   end
 
