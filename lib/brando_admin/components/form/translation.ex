@@ -32,8 +32,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
   alias Brando.Drafts.Params
   alias Brando.EditSession
   alias Brando.Translations
-  alias Brando.Translations.PendingVersion
   alias Brando.Translations.Labels
+  alias Brando.Translations.PendingVersion
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.TranslationFill
@@ -103,9 +103,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp build(schema, entry, state, previous, user) do
     %{member: member, source: source, pending: current} = state
     entry_id = entry.id
-    decided? = match?(%{decided?: true}, previous)
-    held = if decided?, do: previous.applied_version_id
-    pending = if decided?, do: held_version(current, held, member), else: current
+    {decided?, held, pending} = held(previous, current, member)
     payload = pending && Translations.pending_content(pending, entry)
 
     %{
@@ -136,6 +134,12 @@ defmodule BrandoAdmin.Components.Form.Translation do
       ai?: ai?(member)
     }
   end
+
+  # Whether the form decided, the version id it holds, and that version.
+  defp held(%{decided?: true, applied_version_id: held}, current, member),
+    do: {true, held, held_version(current, held, member)}
+
+  defp held(_previous, current, _member), do: {false, nil, current}
 
   # The version the form holds: the current one, or one superseded since
   # (they stay in the table), or none.

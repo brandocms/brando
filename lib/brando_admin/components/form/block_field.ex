@@ -338,30 +338,26 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      |> assign(:restored_blocks, restored)}
   end
 
-  def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
-    translation? = Map.get(message, :source) == :translation
-
-    cond do
-      # A synchronized translation's pending version. It comes here only from
-      # the form that decided to load it (`Form.Translation.decide/2`): the
-      # edit session held no version, so the version is carried onto what
-      # the field holds, typing replayed on a reconnect included. A form
-      # that joins a session holding one sends nothing.
-      #
-      # The pending version is the whole field as the source has it, so its
-      # blocks go where it has them and the ones it lacks go (`place?`). A
-      # row it leaves out comes as a `:replace` changeset (`put_assoc/3` in
-      # `Brando.Drafts.Restore`): a row it drops, not one it holds. A block
-      # the restore cannot carry because of its module comes as it is saved
-      # (`keep_saved`, `Form.Translation.restore_changeset/1`).
-      translation? ->
-        held = Enum.reject(changesets, &(&1.action == :replace))
-        {:ok, restore_draft(socket, held, originals, place?: true)}
-
-      true ->
-        {:ok, restore_draft(socket, changesets, originals)}
-    end
+  # A synchronized translation's pending version (`source: :translation`).
+  # It comes here only from the form that decided to load it
+  # (`Form.Translation.decide/2`): the edit session held no version, so the
+  # version is carried onto what the field holds, typing replayed on a
+  # reconnect included. A form that joins a session holding one sends
+  # nothing.
+  #
+  # The pending version is the whole field as the source has it, so its
+  # blocks go where it has them and the ones it lacks go (`place?`). A row
+  # it leaves out comes as a `:replace` changeset (`put_assoc/3` in
+  # `Brando.Drafts.Restore`): a row it drops, not one it holds. A block the
+  # restore cannot carry because of its module comes as it is saved
+  # (`keep_saved`, `Form.Translation.restore_changeset/1`).
+  def update(%{event: "restore_draft", source: :translation, changesets: changesets, entry_blocks: originals}, socket) do
+    held = Enum.reject(changesets, &(&1.action == :replace))
+    {:ok, restore_draft(socket, held, originals, place?: true)}
   end
+
+  def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals}, socket),
+    do: {:ok, restore_draft(socket, changesets, originals)}
 
   # duplicate block (that is an entry block)
   # this is received when the block is done gathering all its children changesets
