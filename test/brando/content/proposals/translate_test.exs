@@ -297,6 +297,25 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert open_items(target.id) == before
     end
 
+    test "undo opens a review again with the source's text before the change, from the receipt", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+
+      {:ok, proposal} = Proposals.propose([translate(target, %{"title" => "New title"}, keys: ["title"])], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+      assert open_items(target.id) == []
+
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+
+      assert [%{source_previous: "Tittel"}] =
+               for(
+                 %{resolved_at: nil, kind: :review, path: "title"} = item <-
+                   Translations.get_pending_version(Article, target.id).work_items,
+                 do: item
+               )
+    end
+
     test "a source changed between prepare and apply makes the proposal stale, naming the units", c do
       target = create_translation(c)
       heading = "#{c.prefix}/refs/heading/text"
