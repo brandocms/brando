@@ -486,6 +486,27 @@ msgid_plural "%{count} open items"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page could not be updated"
+msgid_plural "%{count} pages could not be updated"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page is still waiting to be updated"
+msgid_plural "%{count} pages are still waiting to be updated"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page updated"
+msgid_plural "%{count} pages updated"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} place needs your input"
@@ -753,6 +774,11 @@ msgstr ""
 #: lib/brando/environments/environment.ex
 #, elixir-autogen, elixir-format
 msgid "%{host}: the installation itself uses this host, for its admin, media or CDN."
+msgstr ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "%{images}, %{pages}"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex
@@ -21648,6 +21674,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Updates 1 module"
 msgid_plural "Updates %{count} modules"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/images/size_run.ex
+#, elixir-autogen, elixir-format
+msgid "Updating pages"
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Updating pages: %{count} page left"
+msgid_plural "Updating pages: %{count} pages left"
 msgstr[0] ""
 msgstr[1] ""
 

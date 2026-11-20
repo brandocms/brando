@@ -8,8 +8,9 @@ defmodule Brando.Worker.ImageMaintenance do
   #
   # The recreate tasks are a run of `Brando.Images.SizeRun`: each batch
   # queues its images and counts them in the run's work, and the last batch
-  # closes the run, which ends when the last image is processed. A job with
-  # "watch" in its arguments is the run's watcher (`SizeRun.watch/2`).
+  # gives the run's watcher the count. The run ends when the pages that show
+  # its images are rendered again. A job with "watch" in its arguments is the
+  # run's watcher (`SizeRun.watch/2`).
   #
   # "recreate_changed_sizes" first adopts the images processed before configs
   # were recorded whose files already match (`Brando.Images.Adoption`), and
@@ -27,6 +28,7 @@ defmodule Brando.Worker.ImageMaintenance do
   alias Brando.Images.Adoption
   alias Brando.Images.Image
   alias Brando.Images.Processing
+  alias Brando.Images.Rerender
   alias Brando.Images.SizeRun
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Users
@@ -39,7 +41,7 @@ defmodule Brando.Worker.ImageMaintenance do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"watch" => true, "user_id" => user_id}} = job) do
-    TenantJob.run(job, fn -> SizeRun.watch(job.args, job_user(user_id)) end)
+    TenantJob.run(job, fn -> SizeRun.watch(job, job_user(user_id)) end)
   end
 
   def perform(%Oban.Job{args: %{"task" => task}} = job) when task in @tasks do
@@ -109,8 +111,11 @@ defmodule Brando.Worker.ImageMaintenance do
   # already match their config; only the rest are recreated.
   # A retried batch picks fewer: the images processed since match their
   # config. The run counts the batch's images it queued, picked now or not.
+  # Adopting writes the config fingerprint, which a render reads: the pages
+  # that show an adopted image render again with the run's.
   defp run_tasks(batch, "recreate_changed_sizes", user, args) do
     {adopted, rest} = batch |> only_changed() |> Adoption.adopt()
+    Rerender.after_adoption(adopted, SizeRun.run_render_options(args["run"]))
     %{"adopted" => length(adopted), "queued" => SizeRun.queue(rest, user, [batch: batch] ++ run_opts(args))}
   end
 
@@ -157,7 +162,7 @@ defmodule Brando.Worker.ImageMaintenance do
   defp finish(_task, _args), do: :ok
 
   defp close_run(%{"user_id" => user_id} = args) do
-    SizeRun.close(job_user(user_id), args["queued"] || 0)
+    SizeRun.close(job_user(user_id), args["queued"] || 0, args["run"])
     :ok
   end
 

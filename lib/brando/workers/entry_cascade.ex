@@ -35,6 +35,30 @@ defmodule Brando.Worker.EntryCascade do
 
     Logger.info("==> [OBAN] Running cascade for #{inspect(schema)} ##{entry_id}")
 
+    # The entry's own save rendered it, unless it says it did not
+    # (`Brando.Content.Blocks.enqueue_entry_cascade/4`)
+    rendered = if args["render_entry"], do: nil, else: entry
+
+    # Merge, deduplicate, then run through shared pipeline once.
+    # reject_blocks_belonging_to_entry internally calls
+    # list_root_block_ids_by_source and list_entry_ids_for_root_blocks_by_source,
+    # returning a %{schema => [entry_ids]} map ready for enqueue_entry_map_for_render.
+    schema
+    |> showing_block_ids(identifier_id)
+    |> BlockReferences.reject_blocks_belonging_to_entry(rendered)
+    |> RenderQueue.enqueue_map()
+
+    :ok
+  end
+
+  @doc """
+  The blocks that show an entry of `schema` from elsewhere: those listing
+  its schema through a datasource, and those that reach the entry through
+  its identifier (`identifier_id`, or nil for none) in a variable, a ref's
+  rich text or a rich-text variable.
+  """
+  @spec showing_block_ids(module(), integer() | nil) :: [integer()]
+  def showing_block_ids(schema, identifier_id) do
     datasource_block_ids =
       if Registry.datasource?(schema) do
         BlockReferences.list_block_ids_using_datamodule(schema)
@@ -47,25 +71,12 @@ defmodule Brando.Worker.EntryCascade do
         var_ids = Blocks.list_block_ids_using_identifier(identifier_id)
         ref_ids = Blocks.list_block_ids_with_identifier_in_refs(identifier_id)
         html_var_ids = Blocks.list_block_ids_with_identifier_in_html_vars(identifier_id)
-        Enum.uniq(var_ids ++ ref_ids ++ html_var_ids)
+        var_ids ++ ref_ids ++ html_var_ids
       else
         []
       end
 
-    # The entry's own save rendered it, unless it says it did not
-    # (`Brando.Content.Blocks.enqueue_entry_cascade/4`)
-    rendered = if args["render_entry"], do: nil, else: entry
-
-    # Merge, deduplicate, then run through shared pipeline once.
-    # reject_blocks_belonging_to_entry internally calls
-    # list_root_block_ids_by_source and list_entry_ids_for_root_blocks_by_source,
-    # returning a %{schema => [entry_ids]} map ready for enqueue_entry_map_for_render.
-    (datasource_block_ids ++ identifier_block_ids)
-    |> Enum.uniq()
-    |> BlockReferences.reject_blocks_belonging_to_entry(rendered)
-    |> RenderQueue.enqueue_map()
-
-    :ok
+    Enum.uniq(datasource_block_ids ++ identifier_block_ids)
   end
 
   @impl Oban.Worker

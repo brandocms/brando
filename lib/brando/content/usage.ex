@@ -144,6 +144,19 @@ defmodule Brando.Content.Usage do
   end
 
   @doc """
+  The entries that hold any of `ids` in a Blueprint asset field of the kind
+  (a project's `cover_id`), out of the trash, as `[{schema, entry_id}]`:
+  the subset of `owners/2` that other entries may show through the entry's
+  identifier.
+  """
+  @spec field_owners(:image | :video | :gallery | :file, [integer()]) :: [{module(), integer()}]
+  def field_owners(_kind, []), do: []
+
+  def field_owners(kind, ids) when kind in [:image, :video, :gallery, :file] do
+    kind |> in_fields(ids, []) |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+  end
+
+  @doc """
   Where an entry shows each of `ids`, with what the place keeps of its own:
 
     * `{id, {:ref, data}}` - a block's ref, with its block data as stored

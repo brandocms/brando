@@ -218,6 +218,66 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
       end)
     end
 
+    # Another admin's run, its images done and the pages that show them
+    # rendering: both buttons wait for the pages too
+    test "pages another admin's run renders keep both buttons disabled until they are rendered", %{conn: conn} do
+      other = Factory.insert(:random_user)
+      run = Ecto.UUID.generate()
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, watcher} =
+          %{task: "recreate_sizes", user_id: other.id, run: run, watch: true, pages: %{"seen" => %{}}}
+          |> ImageMaintenance.new(schedule_in: 2)
+          |> Oban.insert()
+
+        renders =
+          Brando.Content.RenderRun.within_run(run, fn ->
+            Brando.Content.RenderQueue.enqueue_map(%{Brando.Pages.Page => [101, 102]})
+          end)
+
+        {:ok, view, _} = live(conn, "/admin/config/utils")
+
+        assert has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+        assert has_element?(view, "button[phx-click=recreate_changed_image_sizes][disabled]")
+        assert has_element?(view, "#utils-image-sizes-running[data-remaining=\"0\"][data-pages=\"2\"]")
+
+        # One rendered, at the next check
+        [{:ok, first}, {:ok, _second}] = renders
+        Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^first.id), set: [state: "completed"])
+        send(view.pid, :check_image_tasks)
+        assert has_element?(view, "#utils-image-sizes-running[data-pages=\"1\"]")
+
+        # The watcher saw the last one
+        Brando.Repo.update_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.EntryRenderer"),
+          set: [state: "completed"]
+        )
+
+        Brando.Repo.update_all(from(j in Oban.Job, where: j.id == ^watcher.id), set: [state: "completed"])
+        send(view.pid, :check_image_tasks)
+
+        refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
+        refute has_element?(view, "#utils-image-sizes-running")
+      end)
+    end
+
+    test "the run's own admin sees its pages counted apart from its images", %{conn: conn, current_user: user} do
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+
+      work = %BrandoAdmin.Work{
+        id: SizeRun.work_key(),
+        key: SizeRun.work_key(),
+        user_id: user.id,
+        message: "Updating pages",
+        total: 14,
+        done: 3,
+        failed: 0
+      }
+
+      send(view.pid, {:work, SizeRun.work_key(), :running, work})
+      assert has_element?(view, "#work-status-image-sizes[data-status=running] .work-count", "3 / 14")
+      refute has_element?(view, "#utils-image-failures")
+    end
+
     # Pages already open hear that a run started, whoever started it
     test "a run another admin starts disables both buttons on a page already open", %{conn: conn} do
       other = Factory.insert(:random_user, role: :admin)

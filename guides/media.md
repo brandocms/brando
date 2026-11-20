@@ -140,9 +140,35 @@ Changing size definitions does not regenerate existing images by itself. Each
 processed image records a fingerprint of the sizes and formats it was made
 with, and **Utilities → Image sizes** counts the images whose config has changed
 since; **Recreate changed images** reprocesses only those. The row counts the
-images as each one is recreated, names any that could not be, with a link to
-it, and keeps both buttons disabled until the last image is done, for every
-admin. Confirm the new size paths exist before rendering them. A requested size absent from `image.sizes`
+images as each one is recreated, and names any that could not be, with a link
+to it.
+
+The pages that show a recreated image then render again, so the site serves
+its new sizes: this is the run's second step, "Updating pages", with a count
+of its own. The result names both counts ("65 images recreated, 14 pages
+updated"), and a page that could not be rendered fails the run. Both buttons
+stay disabled until the last page is rendered, for every admin. When no
+page has been rendered for 25 minutes (the render queue held up),
+the run ends as failed and says how many pages are still waiting; their
+renders stay queued and run when the queue does. Each page
+renders once per run, however many of the run's images it shows; if the run
+stops halfway, its pages render by themselves within 15 minutes.
+
+Whenever an image is processed, from a run, the image editor's crop or a new
+file, the entries that show it render again if processing changed anything
+their markup reads from the image (its sizes, formats or dimensions, or the
+config it was made with: a size whose width or crop ratio changed under the
+same name keeps its path, but its `srcset` width and its crop do not). An
+image that Recreate changed images adopts counts as changed too, and so does
+a focal point saved in the image editor or the image drawer, and an image
+whose CDN upload marks it as on the CDN: its pages were rendered with the
+media folder's addresses, and with `keep_local_copy: false` those files go.
+The
+entries are those with it in a block's ref or variable, a page variable, a gallery they
+show, or an asset field, and the entries that show such an entry through its
+identifier or a datasource (a listing of projects showing each cover). A
+global set's image is not followed: the pages that print it render again
+when the global set is saved. Confirm the new size paths exist before rendering them. A requested size absent from `image.sizes`
 is a configuration/processing error, not a fallback image.
 
 ### Images made before fingerprints
