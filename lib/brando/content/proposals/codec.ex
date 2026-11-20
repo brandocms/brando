@@ -460,7 +460,7 @@ defmodule Brando.Content.Proposals.Codec do
     do: invalid!(dgettext("content_proposals", "A target is {content_type, id} or {new: ref}."))
 
   # A translation is made of a saved entry.
-  defp source!(%{"content_type" => _, "id" => _} = source), do: target!(source)
+  defp source!(%{"content_type" => _, "id" => _} = source) when not is_map_key(source, "new"), do: target!(source)
 
   defp source!(_),
     do: invalid!(dgettext("content_proposals", "source is a saved entry: {content_type, id}."))

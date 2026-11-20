@@ -364,6 +364,7 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert Codec.encode(op) == map
 
     assert {:error, _} = Codec.decode(%{map | "source" => %{"new" => "x"}})
+    assert {:error, _} = Codec.decode(%{map | "source" => Map.put(map["source"], "new", "x")})
     assert {:error, _} = Codec.decode(Map.delete(map, "language"))
   end
 end
