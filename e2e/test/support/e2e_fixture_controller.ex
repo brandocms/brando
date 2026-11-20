@@ -44,6 +44,10 @@ defmodule E2EFixtureController do
         "revision-panel" ->
           create_revision_panel()
 
+        # A page with three rich-text variables (rich-text-rows.spec.js)
+        "rich-text-vars-page" ->
+          create_rich_text_vars_page()
+
         # Utilities → Loose blocks: three block trees no entry links to
         "loose-blocks" ->
           create_loose_blocks()
@@ -1520,6 +1524,33 @@ defmodule E2EFixtureController do
     user
   end
 
+  defp create_rich_text_vars_page do
+    user = get_admin_user()
+
+    vars =
+      ~w(Første Andre Tredje)
+      |> Enum.with_index()
+      |> Enum.map(fn {text, index} ->
+        %{
+          key: "text_#{index}",
+          type: :rich_text,
+          label: text,
+          value: "<p>#{text}</p>",
+          placement: :content,
+          sequence: index,
+          creator_id: user.id
+        }
+      end)
+
+    {:ok, _page} =
+      Brando.Pages.create_page(
+        %{title: "Rich text variables", uri: "rich-text-variables", language: "en", template: "default.html", status: :draft, vars: vars},
+        user
+      )
+
+    user
+  end
+
   defp create_revision_panel do
     user = create_norwegian_admin_user()
     {_filename, avatar} = create_directory_avatar()
@@ -2429,8 +2460,9 @@ defmodule E2EFixtureController do
           status: "published",
           year: 2020,
           items: [%{label: "Mer", link: "/mer"}],
-          # A rich text in a subform's row (translate-with-ai.spec.js)
-          quotes: if(params["rich_quote"], do: [%{text: "<p>Sitatet</p>"}], else: [])
+          # Rich texts in a subform's rows (translate-with-ai.spec.js,
+          # rich-text-rows.spec.js): one, or a row per text in `quotes`
+          quotes: synchronized_quotes(params)
         },
         user
       )
@@ -2466,6 +2498,10 @@ defmodule E2EFixtureController do
       do: json(conn, %{source_id: source.id}),
       else: translate_synchronized(conn, source, user, add_sync_block, params)
   end
+
+  defp synchronized_quotes(%{"quotes" => texts}) when is_list(texts), do: Enum.map(texts, &%{text: "<p>#{&1}</p>"})
+  defp synchronized_quotes(%{"rich_quote" => quote}) when quote not in [nil, ""], do: [%{text: "<p>Sitatet</p>"}]
+  defp synchronized_quotes(_params), do: []
 
   defp translate_synchronized(conn, source, user, add_sync_block, params) do
     alias E2eProject.SyncTest
