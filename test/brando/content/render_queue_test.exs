@@ -4,8 +4,10 @@ defmodule Brando.Content.RenderQueueTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.RenderQueue
+  alias Brando.Content.RenderRun
   alias Brando.Factory
   alias Brando.Pages.Fragment
+  alias Brando.Pages.Page
   alias Brando.Repo
   alias Brando.Worker.EntryRenderer
 
@@ -264,6 +266,242 @@ defmodule Brando.Content.RenderQueueTest do
     end
   end
 
+  describe "bulk renders" do
+    setup do
+      preserve_cache([:globals, {Brando.Cache.Freshness, :tokens}])
+    end
+
+    @tag :capture_log
+    test "an editor's render queued after 500 bulk renders runs before them" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        bulk = RenderQueue.enqueue_many(Page, Enum.to_list(1_000_001..1_000_500))
+        assert length(bulk) == 500
+        {:ok, editor} = RenderQueue.enqueue(%{schema: Page, entry_id: 2_000_000})
+
+        # The queue's producer takes one at a time (`limit: 1`)
+        Oban.drain_queue(queue: :default, with_limit: 1)
+
+        assert Repo.get!(Oban.Job, editor.id).state != "available"
+        assert Repo.aggregate(from(j in Oban.Job, where: j.state == "available"), :count) == 500
+      end)
+    end
+
+    test "for an entry with a render waiting adds no job, whatever its age, and keeps the tokens and runs of both" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        # Queued long ago by another node, for its own run
+        {_, their_run} =
+          RenderRun.track(fn ->
+            %{schema: Fragment, entry_id: 12_345, site_caches: %{"globals" => "their-token"}}
+            |> Brando.Tenant.Job.attach()
+            |> EntryRenderer.new()
+            |> RenderRun.tag()
+            |> Oban.insert()
+          end)
+
+        [theirs] = all_enqueued(worker: EntryRenderer, args: %{entry_id: 12_345})
+        set_job(theirs, inserted_at: hours_ago(1), scheduled_at: hours_ago(1))
+
+        # This node rebuilds its globals for a write of its own
+        Brando.Cache.rebuild_after_commit(:globals)
+        {[{:ok, merged}], our_run} = RenderRun.track(fn -> RenderQueue.enqueue_map(%{Fragment => [12_345, 12_345]}) end)
+
+        assert merged.id == theirs.id
+        assert [job] = all_enqueued(worker: EntryRenderer, args: %{entry_id: 12_345})
+        assert %{"globals" => ["their-token", ours]} = job.args["site_caches"]
+        assert is_binary(ours)
+        assert Enum.sort(job.meta["brando_runs"]) == Enum.sort([their_run, our_run])
+      end)
+    end
+
+    test "deduplicate the set and insert the others in the bulk lane" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        result = RenderQueue.enqueue_map(%{Fragment => [1, 2, 2], "Elixir.Brando.Pages.Fragment" => [1, 3]})
+
+        assert [_, _, _] = result
+        jobs = all_enqueued(worker: EntryRenderer)
+        assert Enum.sort(Enum.map(jobs, & &1.args["entry_id"])) == [1, 2, 3]
+        assert Enum.all?(jobs, &(&1.priority == RenderQueue.bulk_priority() and &1.state == "available"))
+        assert Enum.all?(jobs, &(&1.tags == ["render_entry"]))
+      end)
+    end
+
+    test "an interactive render merging into a bulk one moves it to the front" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        [{:ok, bulk}] = RenderQueue.enqueue_many(Fragment, [12_345])
+        set_job(bulk, inserted_at: hours_ago(1))
+
+        assert {:ok, %{id: id}} = RenderQueue.enqueue(%{schema: Fragment, entry_id: 12_345})
+        assert id == bulk.id
+        assert [%{priority: 0, state: "available"}] = all_enqueued(worker: EntryRenderer)
+      end)
+    end
+
+    test "an interactive render merging into a held one makes it run now, first" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        [{:ok, held}] = RenderQueue.enqueue_map(%{Fragment => [12_345]}, hold: "run-1")
+        set_job(held, inserted_at: hours_ago(1))
+
+        assert {:ok, %{id: id}} = RenderQueue.enqueue(%{schema: Fragment, entry_id: 12_345})
+        assert id == held.id
+        assert [job] = all_enqueued(worker: EntryRenderer)
+        assert %{priority: 0, state: "available"} = job
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+    end
+
+    test "held renders merge, and release together" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        held = RenderQueue.enqueue_map(%{Fragment => [1, 2]}, hold: "run-1")
+        assert Enum.all?(held, fn {:ok, job} -> job.state == "scheduled" end)
+        for {:ok, job} <- held, do: set_job(job, inserted_at: hours_ago(1))
+
+        # A later step of the run, another run that holds
+        RenderQueue.enqueue_map(%{Fragment => [1]}, hold: "run-1")
+        RenderQueue.enqueue_map(%{Fragment => [2]}, hold: "run-2")
+        RenderQueue.enqueue_map(%{Fragment => [3]}, hold: "run-2")
+
+        assert [%{state: "scheduled"}, %{state: "scheduled"}, %{state: "scheduled"}] = renders_by_entry()
+        assert RenderQueue.release("run-1") == 2
+        assert [%{state: "available"}, %{state: "available"}, %{state: "scheduled"}] = renders_by_entry()
+        assert RenderQueue.release("run-1") == 0
+        assert RenderQueue.release("run-2") == 1
+        assert Enum.all?(renders_by_entry(), &(&1.state == "available"))
+      end)
+    end
+
+    test "a request that does not hold makes a held render it merges into run now, in the bulk lane" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        [{:ok, held}] = RenderQueue.enqueue_map(%{Fragment => [12_345]}, hold: "run-1")
+
+        assert [{:ok, %{id: id, state: "available"}}] = RenderQueue.enqueue_map(%{Fragment => [12_345]})
+        assert id == held.id
+        assert [job] = all_enqueued(worker: EntryRenderer)
+        assert %{state: "available", priority: 5} = job
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+
+        # A later request that holds leaves it running now
+        RenderQueue.enqueue_map(%{Fragment => [12_345]}, hold: "run-2")
+        assert [%{state: "available"}] = all_enqueued(worker: EntryRenderer)
+      end)
+    end
+
+    test "held renders release in the site that holds them" do
+      put_test_env(:tenancy_mode, :multi)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for prefix <- ~w(tenant_one_live tenant_two_live) do
+          Brando.Tenant.with_prefix(prefix, fn -> RenderQueue.enqueue_map(%{Fragment => [1]}, hold: "run") end)
+        end
+
+        assert Brando.Tenant.with_prefix("tenant_one_live", fn -> RenderQueue.release("run") end) == 1
+        states = Map.new(renders_by_entry(), &{&1.args["tenant_prefix"], &1.state})
+        assert states == %{"tenant_one_live" => "available", "tenant_two_live" => "scheduled"}
+      end)
+    end
+
+    test "a bulk request merges into the waiting render of its own site only" do
+      put_test_env(:tenancy_mode, :multi)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for prefix <- ~w(tenant_one_live tenant_two_live tenant_one_live) do
+          Brando.Tenant.with_prefix(prefix, fn -> RenderQueue.enqueue_map(%{Fragment => [1]}) end)
+        end
+
+        prefixes = Enum.map(all_enqueued(worker: EntryRenderer), & &1.args["tenant_prefix"])
+        assert Enum.sort(prefixes) == ~w(tenant_one_live tenant_two_live)
+      end)
+    end
+
+    @tag :capture_log
+    test "held renders run by themselves after the maximum hold" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        RenderQueue.enqueue_map(%{Fragment => [1, 2]}, hold: "a-run-that-died")
+        max_hold = RenderQueue.max_hold()
+        assert max_hold == :timer.minutes(15)
+
+        Oban.drain_queue(
+          queue: :default,
+          with_scheduled: DateTime.add(DateTime.utc_now(), max_hold - 60_000, :millisecond)
+        )
+
+        assert Enum.all?(renders_by_entry(), &(&1.state == "scheduled"))
+
+        Oban.drain_queue(
+          queue: :default,
+          with_scheduled: DateTime.add(DateTime.utc_now(), max_hold + 1_000, :millisecond)
+        )
+
+        assert [] = all_enqueued(worker: EntryRenderer)
+      end)
+    end
+
+    test "for N entries makes the same number of queries" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        queries = fn ids ->
+          # Half of them have a render waiting
+          RenderQueue.enqueue_many(Fragment, Enum.take_every(ids, 2))
+          count_queries(fn -> RenderQueue.enqueue_many(Fragment, ids) end)
+        end
+
+        few = queries.(Enum.to_list(1..4))
+        assert few > 0
+        assert queries.(Enum.to_list(101..300)) == few
+      end)
+    end
+
+    test "past the most parameters one statement takes, queue them all, held or not, and merge into them" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        ids = Enum.to_list(1..7_000)
+
+        assert length(RenderQueue.enqueue_many(Page, ids)) == 7_000
+        assert length(RenderQueue.enqueue_many(Fragment, ids, hold: "run-1")) == 7_000
+        # Each merges into the one waiting
+        assert length(RenderQueue.enqueue_many(Page, ids, hold: "run-1")) == 7_000
+
+        assert Repo.aggregate(from(j in Oban.Job, where: j.state == "available"), :count) == 7_000
+        assert Repo.aggregate(from(j in Oban.Job, where: j.state == "scheduled"), :count) == 7_000
+        assert RenderQueue.release("run-1") == 7_000
+      end)
+    end
+
+    test "counts its renders as steps of work" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        user = Factory.insert(:random_user)
+        :ok = Phoenix.PubSub.subscribe(Brando.pubsub(), BrandoAdmin.Work.topic())
+
+        # One waits for other work, and counts at once
+        {:ok, _} =
+          %{schema: Fragment, entry_id: 1}
+          |> EntryRenderer.new()
+          |> BrandoAdmin.Work.track(user, "other", step: true)
+          |> Oban.insert()
+
+        RenderQueue.enqueue_many(Fragment, [1, 2, 3], work: {user, "renders", message: "Updating pages"})
+
+        assert_received {:brando_work, {:start, {_, _, "renders"}, %{total: 3, message: "Updating pages"}, _}}
+        assert_received {:brando_work, {:advance, {_, _, "renders"}, %{result: :ok}, _}}
+
+        tracked = for job <- renders_by_entry(), do: job.meta["brando_work"]["key"]
+        assert tracked == ["other", "renders", "renders"]
+      end)
+    end
+
+    test "requested twice for the same work counts it twice, once as soon as it merges" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        user = Factory.insert(:random_user)
+        :ok = Phoenix.PubSub.subscribe(Brando.pubsub(), BrandoAdmin.Work.topic())
+
+        for _ <- 1..2, do: RenderQueue.enqueue_many(Fragment, [1], hold: "run", work: {user, "refresh"})
+
+        assert [job] = renders_by_entry()
+        assert job.meta["brando_work"]["step"]
+        total = receive_work(:start, 0, &(&1 + &2.total))
+        # The job reports one step when it runs, the rest have been reported
+        assert receive_work(:advance, 0, fn n, _ -> n + 1 end) + 1 == total
+      end)
+    end
+  end
+
   describe "an entry's cascade queued again" do
     test "before it starts coalesces into it, and after it has started runs after it" do
       Oban.Testing.with_testing_mode(:manual, fn ->
@@ -279,6 +517,41 @@ defmodule Brando.Content.RenderQueueTest do
         assert [%{id: next}] = cascades(entry)
         assert next != job.id
       end)
+    end
+  end
+
+  defp receive_work(event, acc, fun) do
+    receive do
+      {:brando_work, {^event, {_, _, "refresh"}, attrs, _}} -> receive_work(event, fun.(acc, attrs), fun)
+    after
+      0 -> acc
+    end
+  end
+
+  defp renders_by_entry, do: Enum.sort_by(all_enqueued(worker: EntryRenderer), & &1.args["entry_id"])
+
+  defp hours_ago(hours), do: DateTime.add(DateTime.utc_now(), -hours * 3600)
+
+  defp count_queries(fun) do
+    handler = "render-queue-#{System.unique_integer([:positive])}"
+    event = Repo.repo().config()[:telemetry_prefix] ++ [:query]
+    test = self()
+    :ok = :telemetry.attach(handler, event, fn _, _, _, _ -> if self() == test, do: send(test, :query) end, nil)
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    count_received(0)
+  end
+
+  defp count_received(n) do
+    receive do
+      :query -> count_received(n + 1)
+    after
+      0 -> n
     end
   end
 

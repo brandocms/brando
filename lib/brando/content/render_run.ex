@@ -5,7 +5,7 @@ defmodule Brando.Content.RenderRun do
   #
   # `track/1` gives the work a run id. Every `EntryRenderer` and `EntryCascade`
   # job queued while it runs carries the id in its meta (`tag/1`), and so does
-  # a waiting job the work's render coalesced into (`RenderQueue.coalesce/3`):
+  # a waiting job the work's render coalesced into (`RenderQueue.coalesce/4`):
   # that one renders for it. A job of the run hands the id on to the jobs it
   # queues (`within/2`): a cascade queues the renders of the entries that list
   # the one saved, and the render of a fragment those of the entries that embed it.
@@ -60,12 +60,17 @@ defmodule Brando.Content.RenderRun do
   @spec tag(Ecto.Changeset.t()) :: Ecto.Changeset.t()
   def tag(changeset) do
     case current() do
-      [] ->
-        changeset
+      [] -> changeset
+      _runs -> Ecto.Changeset.put_change(changeset, :meta, tag_meta(Ecto.Changeset.get_field(changeset, :meta) || %{}))
+    end
+  end
 
-      runs ->
-        meta = Ecto.Changeset.get_field(changeset, :meta) || %{}
-        Ecto.Changeset.put_change(changeset, :meta, Map.update(meta, @meta, runs, &Enum.uniq(&1 ++ runs)))
+  @doc "A job's meta with the current runs added to the runs it has."
+  @spec tag_meta(map()) :: map()
+  def tag_meta(meta) do
+    case current() do
+      [] -> meta
+      runs -> Map.update(meta, @meta, runs, &Enum.uniq(&1 ++ runs))
     end
   end
 

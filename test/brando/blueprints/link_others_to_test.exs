@@ -142,6 +142,23 @@ defmodule Brando.Blueprint.LinkOthersToTest do
     end
   end
 
+  test "a rich-text link rewritten queues its entries' renders in the bulk lane" do
+    {_target, identifier} = insert_case(%{})
+    summary = ~s(<p><a href="https://client.example/work" data-identifier-id="#{identifier.id}">the work</a></p>)
+
+    holders =
+      for n <- 1..2,
+          do: Brando.Repo.insert!(%Case{title: "Holder #{n}", slug: "holder-#{n}", type: :full_case, summary: summary})
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(identifier.id, "/cases/client-work")
+
+      jobs = all_enqueued(worker: Brando.Worker.EntryRenderer)
+      assert Enum.sort(Enum.map(jobs, & &1.args["entry_id"])) == Enum.map(holders, & &1.id)
+      assert Enum.all?(jobs, &(&1.priority == Brando.Content.RenderQueue.bulk_priority()))
+    end)
+  end
+
   describe "stored links elsewhere follow the destination" do
     test "rich text in an html var, in a block or a table cell" do
       {target, identifier} = insert_case(%{})

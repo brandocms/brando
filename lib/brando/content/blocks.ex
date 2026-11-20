@@ -725,11 +725,31 @@ defmodule Brando.Content.Blocks do
         where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
         select: {entry.id, field(entry, ^rich_field)}
 
-    for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
-      Repo.transaction(fn ->
-        update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
-      end)
-    end
+    ids = for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id), do: id
+    rewrite_rich_text_identifier_links(ids, [], module, rich_field, identifier_id, new_url)
+  end
+
+  # In the bulk lane: a link that moved can reach any number of entries
+  defp rewrite_rich_text_identifier_links([], updated, module, _rich_field, _identifier_id, _new_url) do
+    if updated != [], do: enqueue_entry_map_for_render(%{module => Enum.reverse(updated)})
+  end
+
+  defp rewrite_rich_text_identifier_links([id | ids], updated, module, rich_field, identifier_id, new_url) do
+    result =
+      try do
+        Repo.transaction(fn ->
+          update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
+        end)
+      catch
+        # Each rewrite has committed by itself: the entries rewritten before
+        # this one still get their renders
+        kind, reason ->
+          rewrite_rich_text_identifier_links([], updated, module, rich_field, identifier_id, new_url)
+          :erlang.raise(kind, reason, __STACKTRACE__)
+      end
+
+    updated = if result == {:ok, :updated}, do: [id | updated], else: updated
+    rewrite_rich_text_identifier_links(ids, updated, module, rich_field, identifier_id, new_url)
   end
 
   defp update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url) do
@@ -742,7 +762,7 @@ defmodule Brando.Content.Blocks do
         {:updated, html} ->
           updated = entry |> Changeset.change([{rich_field, html}]) |> Repo.update!()
           Brando.Cache.Query.evict({:ok, updated})
-          enqueue_entry_for_render(%{schema: module, entry_id: id})
+          :updated
 
         :unchanged ->
           :ok
@@ -890,12 +910,14 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Enqueues every entry in a schema-to-entry-ids map for rendering.
+  Enqueues every entry in a schema-to-entry-ids map for rendering, in the
+  bulk lane (`Brando.Content.RenderQueue.enqueue_map/2`).
   """
   defdelegate enqueue_entry_map_for_render(entry_map), to: Brando.Content.RenderQueue, as: :enqueue_map
 
   @doc """
-  Enqueues all `ids` for `schema` for rendering.
+  Enqueues all `ids` for `schema` for rendering, in the bulk lane
+  (`Brando.Content.RenderQueue.enqueue_many/3`).
   """
   defdelegate enqueue_entries_for_render(schema, ids), to: Brando.Content.RenderQueue, as: :enqueue_many
 

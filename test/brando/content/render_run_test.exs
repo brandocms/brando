@@ -121,6 +121,41 @@ defmodule Brando.Content.RenderRunTest do
     end)
   end
 
+  # Bulk work queues in one insert, and merges into renders already waiting
+  # (`RenderQueue.enqueue_map/2`): the run follows both
+  test "follows renders queued in bulk, and one they merged into", c do
+    manual(fn ->
+      RenderQueue.enqueue(%{schema: Page, entry_id: c.identity.id})
+      [waiting] = jobs()
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [inserted_at: ~U[2026-01-01 00:00:00Z]])
+
+      {_, run} =
+        Definitions.track_refresh(fn -> RenderQueue.enqueue_map(%{Page => [c.identity.id, c.naming.id]}) end)
+
+      assert [_, _] = jobs()
+      assert %{rendered: 0, pending: [_, _], timed_out: true} = Definitions.await_refresh(run, timeout: 0)
+
+      Oban.drain_queue(queue: :default)
+      assert %{rendered: 2, failed: [], pending: [], timed_out: false} = Definitions.await_refresh(run, timeout: 0)
+    end)
+  end
+
+  test "follows held renders once released", c do
+    manual(fn ->
+      {_, run} =
+        Definitions.track_refresh(fn ->
+          RenderQueue.enqueue_map(%{Page => [c.identity.id, c.naming.id]}, hold: "run")
+        end)
+
+      Oban.drain_queue(queue: :default)
+      assert %{rendered: 0, pending: [_, _]} = Definitions.refresh_status(run)
+
+      RenderQueue.release("run")
+      Oban.drain_queue(queue: :default)
+      assert %{rendered: 2, failed: [], pending: []} = Definitions.refresh_status(run)
+    end)
+  end
+
   # The render of a fragment queues the entries that embed it, and a cascade
   # the entries that list the one saved: the run follows those too
   test "a job of the run marks the jobs it queues", c do

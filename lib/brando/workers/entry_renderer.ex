@@ -1,8 +1,10 @@
 defmodule Brando.Worker.EntryRenderer do
   @moduledoc false
-  # Renders of an entry queued within 5 seconds and not started coalesce
-  # (`Brando.Content.RenderQueue.enqueue/2`). One running, or waiting to
-  # retry, gets another after it: it may have read the entry before the write.
+  # Renders of an entry queued while one waits (not started, however long
+  # ago it was queued) coalesce into it (`Brando.Content.RenderQueue`). One
+  # running, or waiting to retry, gets another after it: it may have read
+  # the entry before the write. Bulk renders run at a lower priority than a
+  # save's own, and may be held (`RenderQueue.enqueue_map/2`).
   #
   # A render whose block template fails stores nothing
   # (`Brando.Content.Blocks.render_entry/2` logs which blocks) and cancels the
@@ -12,7 +14,7 @@ defmodule Brando.Worker.EntryRenderer do
   use Oban.Worker,
     queue: :default,
     max_attempts: 5,
-    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: 5, states: [:available, :scheduled]]
+    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: :infinity, states: [:available, :scheduled]]
 
   import Ecto.Query, only: [from: 2]
 
