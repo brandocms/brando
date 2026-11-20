@@ -336,12 +336,15 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   defp rows(%Changeset{data: %schema{}} = changeset, subform) do
     with {:ok, name} <- existing_atom(subform),
          kind when kind != nil <- relation_kind(schema, name),
-         rows when is_list(rows) <- Changeset.get_assoc(changeset, name, :changeset) do
+         rows when is_list(rows) <- relation_rows(changeset, kind, name) do
       {:ok, kind, name, rows}
     else
       _ -> :error
     end
   end
+
+  defp relation_rows(changeset, :assoc, name), do: Changeset.get_assoc(changeset, name, :changeset)
+  defp relation_rows(changeset, :embed, name), do: Changeset.get_embed(changeset, name, :changeset)
 
   defp relation_kind(schema, name) do
     cond do
