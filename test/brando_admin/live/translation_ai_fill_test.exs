@@ -12,6 +12,7 @@ defmodule BrandoAdmin.TranslationAIFillTest do
   alias Brando.Translations
 
   @text ["entry_block", "block", "refs", "0", "data", "data", "text"]
+  @child_text ["child_block", "refs", "0", "data", "data", "text"]
 
   setup %{current_user: user} do
     {:ok, module} =
@@ -456,6 +457,161 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       # Read when the run starts, read and filled when the reply comes, and
       # shown from the store
       assert count <= 3, "the root was materialized #{count} times"
+    end
+
+    test "a block text changed during the run keeps the editor's text", %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+      key = block_key(target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+      edit_block_text(view, uid, "My paragraph")
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> title(view) == "EN Tittel" end)
+      await(fn -> has_element?(view, "#{item(key)}[data-ai='kept']") end)
+
+      assert block_text(view, uid) == "My paragraph"
+    end
+
+    test "a child block's text changed during the run keeps the editor's text",
+         %{conn: conn, current_user: user, module: module} do
+      {:ok, source} =
+        SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "published"}, user)
+
+      child = fn text, sequence ->
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "creator_id" => user.id,
+          "sequence" => sequence,
+          "source" => to_string(Article.Blocks),
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "body",
+              "data" => %{"type" => "text", "data" => %{"text" => text}}
+            }
+          ]
+        }
+      end
+
+      container =
+        %Brando.Content.Block{}
+        |> Brando.Content.Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "container",
+            "creator_id" => user.id,
+            "source" => to_string(Article.Blocks),
+            "children" => [child.("Første", 0), child.("Andre", 1)]
+          },
+          user
+        )
+        |> Repo.insert!()
+
+      struct(Article.Blocks, %{entry_id: source.id, block_id: container.id, sequence: 0}) |> Repo.insert!()
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+
+      [first, second] = hd(load(target.id).entry_blocks).block.children |> Enum.sort_by(& &1.sequence)
+      key = fn block -> "entry_blocks/#{block.sync_uid}/refs/body/text" end
+
+      child_text = fn view, block ->
+        view |> render() |> form_params("#child_block_form-#{block.uid}") |> get_in(@child_text)
+      end
+
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      selector = "#child_block_form-#{first.uid}"
+
+      params =
+        view |> render() |> form_params(selector) |> put_in(@child_text, "My first") |> Map.put("_target", @child_text)
+
+      view |> element(selector) |> render_change(params)
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> child_text.(view, second) == "EN Andre" end)
+      await(fn -> has_element?(view, "#{item(key.(first))}[data-ai='kept']") end)
+
+      assert child_text.(view, first) == "My first"
+    end
+
+    test "a subform row's text changed during the run keeps the editor's text", %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", slug: "tittel", language: "no", status: "published", items: [%{label: "Første punkt"}]},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      key = "items/#{hd(load(target.id).items).uid}/label"
+
+      label = fn view ->
+        view |> render() |> form_params("#article_form_form") |> get_in(["article", "items", "0", "label"])
+      end
+
+      answer_when_told(&("EN " <> &1["source"]))
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+      assert has_element?(view, item(key))
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      change_main(view, fn params ->
+        params
+        |> put_in(["article", "items", "0", "label"], "My point")
+        |> Map.put("_target", ["article", "items", "0", "label"])
+      end)
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> title(view) == "EN Tittel" end)
+      await(fn -> has_element?(view, "#{item(key)}[data-ai='kept']") end)
+
+      assert label.(view) == "My point"
+    end
+
+    test "a second editor's change during the run is kept", %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+
+      view = open(conn, target.id)
+      other_view = open(other_conn, target.id)
+      uid = block_uid(target.id)
+      key = block_key(target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      # The other editor changes the title and the block's text
+      other_form = with_target(other_view, cid_of(other_view, "#article_form-el"))
+      render_hook(other_form, "focus", %{"field" => "article[title]"})
+      edit_title(other_view, "Their title")
+      render_hook(other_form, "blur", %{"field" => "article[title]"})
+      edit_block_text(other_view, uid, "Their paragraph")
+
+      await(fn -> title(view) == "Their title" end)
+      await(fn -> block_text(view, uid) == "Their paragraph" end)
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='kept']") end)
+      await(fn -> has_element?(view, "#{item(key)}[data-ai='kept']") end)
+
+      assert title(view) == "Their title"
+      assert block_text(view, uid) == "Their paragraph"
     end
 
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
