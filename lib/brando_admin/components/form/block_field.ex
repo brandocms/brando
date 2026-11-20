@@ -351,7 +351,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # The pending version is the whole field as the source has it, so its
       # blocks go where it has them and the ones it lacks go (`place?`). A
       # row it leaves out comes as a `:replace` changeset (`put_assoc/3` in
-      # `Brando.Drafts.Restore`): a row it drops, not one it holds.
+      # `Brando.Drafts.Restore`): a row it drops, not one it holds. A block
+      # the restore cannot carry because of its module comes as it is saved
+      # (`keep_saved`, `Form.Translation.restore_changeset/1`).
       translation? ->
         held = Enum.reject(changesets, &(&1.action == :replace))
         {:ok, restore_draft(socket, held, originals, place?: true)}

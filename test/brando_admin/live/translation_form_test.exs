@@ -877,6 +877,92 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, texts(saved)} == {2030, ["Nytt avsnitt"]}
     end
 
+    # A block on an older version of its module: it keeps a variable the
+    # module no longer defines (`Brando.Content.StaleBlocks`), written past
+    # the changeset as a module save leaves it. The pending version holds it;
+    # the restore cannot carry it (`Brando.Drafts.Modules`), so it stays in
+    # the form as the translation has it.
+    defp make_stale(block) do
+      Repo.insert!(%Brando.Content.Var{
+        block_id: block.id,
+        type: :string,
+        key: "old",
+        label: %{"en" => "Old"},
+        value: "left over",
+        sequence: 0
+      })
+
+      block
+    end
+
+    defp add_stale_block(c, source, text, sequence),
+      do: source |> TranslationFixtures.add_block(c.module, c.current_user, text, sequence) |> make_stale()
+
+    defp add_stale_child_container(c, source) do
+      container = add_container(c, source, ["Første barn", "Gammelt barn"])
+      [_, stale] = Repo.preload(container, :children).children |> Enum.sort_by(& &1.sequence)
+      make_stale(stale)
+      container
+    end
+
+    defp child_texts(entry) do
+      for %{block: %{type: :container} = container} <- entry.entry_blocks,
+          child <- Enum.sort_by(container.children, &{&1.sequence, &1.id}),
+          do: hd(child.refs).data.data.text
+    end
+
+    test "a stale block the source kept stays and saves", %{conn: conn} = c do
+      c = pair(c, &add_stale_block(c, &1, "Gammelt avsnitt", 1))
+      translate(c.target, ["First paragraph", "Old paragraph"])
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "Old paragraph"]}
+      [_, %{block: stale}] = saved.entry_blocks
+      assert Enum.map(Repo.preload(stale, :vars, force: true).vars, & &1.key) == ["old"]
+    end
+
+    test "a stale block the source kept stays while another is dropped and added", %{conn: conn} = c do
+      c = pair(c, &add_stale_block(c, &1, "Gammelt avsnitt", 1))
+      translate(c.target, ["First paragraph", "Old paragraph"])
+
+      [first, _stale] = load(c.source.id).entry_blocks
+      drop_block(first)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 2)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Old paragraph", "Nytt avsnitt"]
+    end
+
+    test "a stale child the source kept stays and saves", %{conn: conn} = c do
+      c = pair(c, &add_stale_child_container(c, &1))
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert child_texts(saved) == ["Første barn", "Gammelt barn"]
+    end
+
+    test "a stale child the source kept stays while a sibling is dropped and another added", %{conn: conn} = c do
+      c = pair(c, &add_stale_child_container(c, &1))
+      [_, %{block: container}] = load(c.source.id).entry_blocks
+      [first_child, _] = Repo.preload(container, :children).children |> Enum.sort_by(& &1.sequence)
+      Repo.delete!(first_child)
+      add_child(c, container, "Tredje barn", 2)
+      version = source_saved(c)
+
+      conn |> open_version(c.target.id, version) |> save()
+
+      saved = assert_follows_source(c, version)
+      assert child_texts(saved) == ["Gammelt barn", "Tredje barn"]
+    end
+
     defp change_year(c, year) do
       {:ok, _} = SyncTest.update_article(c.source.id, %{year: year}, c.current_user)
       Translations.get_pending_version(Article, c.target.id)

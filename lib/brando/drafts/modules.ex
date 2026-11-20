@@ -22,31 +22,50 @@ defmodule Brando.Drafts.Modules do
     Enum.reduce(block["children"] || [], acc, &collect/2)
   end
 
-  def check(block_fields, captured) do
+  @doc """
+  The blocks of `block_fields` whose modules still fit them, and an issue
+  for each one left out. With `keep_saved: true` a block left out is kept in
+  its place as a reference to the saved block (`kept?/1`): only its identity,
+  for `Brando.Drafts.Restore` to keep that block as it is saved, or to leave
+  it out when the entry has no such block.
+  """
+  def check(block_fields, captured, opts \\ []) do
     Enum.reduce(block_fields, {%{}, []}, fn {field, blocks}, {safe_fields, issues} ->
-      {safe, found} = check_blocks(blocks, captured)
+      {safe, found} = check_blocks(blocks, captured, opts)
       {Map.put(safe_fields, field, safe), issues ++ found}
     end)
   end
 
-  defp check_blocks(blocks, captured) do
-    Enum.reduce(blocks, {[], []}, &check_block(&1, &2, captured))
+  @doc "Whether `params` is a block `check/3` kept as it is saved."
+  def kept?(params), do: is_map(params) and Map.get(params, "__kept__") == true
+
+  defp check_blocks(blocks, captured, opts) do
+    Enum.reduce(blocks, {[], []}, &check_block(&1, &2, captured, opts))
   end
 
-  defp check_block(entry_block, {safe, issues}, captured) do
+  defp check_block(entry_block, {safe, issues}, captured, opts) do
     block = entry_block["block"] || entry_block
     current = if block["module_id"], do: fetch(block)
     old = Map.get(captured, key(block))
     reasons = reasons(block, old, current)
 
     if reasons == [] do
-      {children, child_issues} = check_blocks(block["children"] || [], captured)
+      {children, child_issues} = check_blocks(block["children"] || [], captured, opts)
       adapted = block |> Map.put("children", children) |> add_defaults(current)
       {safe ++ [put_adapted(entry_block, adapted)], issues ++ child_issues}
     else
       issue = %{uid: block["uid"], module_id: block["module_id"], reasons: reasons, content: entry_block}
+      safe = if opts[:keep_saved], do: safe ++ [kept(entry_block, block)], else: safe
       {safe, issues ++ [issue]}
     end
+  end
+
+  defp kept(entry_block, block) do
+    identity = %{"__kept__" => true, "id" => block["id"], "uid" => block["uid"]}
+
+    if entry_block["block"],
+      do: %{"__kept__" => true, "id" => entry_block["id"], "block" => identity},
+      else: identity
   end
 
   defp put_adapted(entry_block, adapted) do
