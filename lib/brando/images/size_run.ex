@@ -208,7 +208,8 @@ defmodule Brando.Images.SizeRun do
         where:
           j.worker == ^worker and j.state in ^@unfinished_states and
             (j.state != "executing" or j.attempted_at > ^stale) and
-            fragment("jsonb_exists_any(? -> 'brando_runs', ?::text[])", j.meta, ^runs),
+            fragment("jsonb_exists_any(? -> 'brando_runs', ?::text[])", j.meta, ^runs) and
+            fragment("? ->> 'tenant_prefix' IS NOT DISTINCT FROM ?", j.args, ^Brando.Tenant.current_prefix()),
         select:
           fragment(
             "count(DISTINCT (? ->> 'tenant_prefix', regexp_replace(? ->> 'schema', '^Elixir\\.', ''), ? ->> 'entry_id'))",
@@ -378,7 +379,9 @@ defmodule Brando.Images.SizeRun do
   defp pages(%{"pages" => pages} = args, user, run) do
     RenderQueue.release(hold_key(run))
 
-    states = RenderRun.render_states(run)
+    # This site's: a run's renders are queued in its site
+    site = Brando.Tenant.current_prefix()
+    states = for {{prefix, _, _}, _} = entry <- RenderRun.render_states(run), prefix == site, into: %{}, do: entry
     left = unsettled(states)
     seen = Map.merge(pages["seen"] || %{}, settled(states))
     seen = Map.drop(seen, left)
