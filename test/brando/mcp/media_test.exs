@@ -675,5 +675,26 @@ defmodule Brando.MCP.MediaTest do
       {:ok, _} = Brando.Authorization.Groups.remove_member(c.scope, creators.id, c.member.id)
       assert put_bytes(url, @jpg).status == 403
     end
+
+    test "a person who may create images but not update them sets a new image's focal point and texts",
+         %{tenant: tenant} = c do
+      group!(c, ["brando.admin.access", "brando.mcp.connect", "brando.images.read", "brando.images.create"])
+      token = connect_directly(c.member, tenant)["access_token"]
+      attrs = %{"focal" => %{"x" => 20, "y" => 70}, "title" => "Harbour", "alt" => "Boats"}
+
+      assert %{"structuredContent" => %{"asset" => %{"id" => id}, "applied" => ["alt", "focal", "title"]}} =
+               upload!(tenant, token, @jpg, attrs)
+
+      assert %Image{focal: %{x: 20, y: 70}, title: title, alt: alt} = Brando.Repo.get!(Image, id)
+      assert Map.values(title) == ["Harbour"]
+      assert Map.values(alt) == ["Boats"]
+
+      receiver = WebhookReceiver.start(fn _request -> {200, @png} end)
+
+      assert %{"structuredContent" => %{"asset" => %{"id" => png}, "applied" => ["alt", "focal", "title"]}} =
+               call(tenant, token, "import_url", Map.put(attrs, "url", WebhookReceiver.url(receiver, "/a.png")))
+
+      assert %Image{focal: %{x: 20, y: 70}} = Brando.Repo.get!(Image, png)
+    end
   end
 end

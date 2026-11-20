@@ -28,8 +28,6 @@ defmodule Brando.MCP.Media do
 
   import Ecto.Query, only: [from: 2]
 
-  require Logger
-
   @prefix "brando_media_"
   @default_folder "uploads"
   @download_timeout 60_000
@@ -176,7 +174,7 @@ defmodule Brando.MCP.Media do
         name = Path.rootname(upload.filename)
 
         upload.path
-        |> Intake.store(Intake.filename(name, upload.ext, "upload"), upload.type, ctx, &put_attributes(&1, attrs, actor))
+        |> Intake.store(Intake.filename(name, upload.ext, "upload"), upload.type, ctx, &{:stored, &1}, attrs)
         |> result(ctx, attrs)
       after
         Uploads.discard(id)
@@ -285,50 +283,23 @@ defmodule Brando.MCP.Media do
   defp mode("position"), do: {:ok, :position}
   defp mode(_mode), do: {:error, ~s[focal.mode is "center" or "position".]}
 
-  # A new image gets them, inside the store's lock; one the library has
-  # keeps its own (an editor may have set them)
-  defp put_attributes(image, attrs, _actor) when attrs == %{}, do: {:stored, image}
-
-  defp put_attributes(image, attrs, actor) do
-    case Images.update_image(image, attrs, actor) do
-      {:ok, image} ->
-        {:stored, image, :applied}
-
-      error ->
-        Logger.warning(
-          "[Brando.MCP.Media] Could not set the focal point and texts of image #{image.id}: #{inspect(error)}"
-        )
-
-        {:stored, image, :failed}
-    end
-  end
-
   defp result({:error, message}, _ctx, _attrs), do: {:error, message}
 
+  # A new image was created with them; one the library has keeps its own
+  # (an editor may have set them)
   defp result(stored, ctx, attrs) do
-    {image, reused, outcome} =
+    {image, reused} =
       case stored do
-        {:stored, image} -> {image, false, :applied}
-        {:stored, image, outcome} -> {image, false, outcome}
-        {:reused, image} -> {image, true, :reused}
+        {:stored, image} -> {image, false}
+        {:reused, image} -> {image, true}
       end
 
     named = attrs |> Map.keys() |> Enum.sort() |> Enum.map(&Atom.to_string/1)
 
     {applied, not_applied} =
-      case {outcome, named} do
-        {_outcome, []} ->
-          {[], []}
-
-        {:applied, named} ->
-          {named, []}
-
-        {:reused, named} ->
-          {[], Enum.map(named, &(&1 <> ": the library already had this image, so it keeps its own"))}
-
-        {:failed, named} ->
-          {[], Enum.map(named, &(&1 <> ": it could not be saved; the person can set it in the media library"))}
-      end
+      if reused,
+        do: {[], Enum.map(named, &(&1 <> ": the library already had this image, so it keeps its own"))},
+        else: {named, []}
 
     {:ok,
      %{
@@ -356,7 +327,7 @@ defmodule Brando.MCP.Media do
         name = name && Path.rootname(name)
 
         path
-        |> Intake.store(Intake.filename(name, ext, "image"), type, ctx, &put_attributes(&1, attrs, ctx.actor))
+        |> Intake.store(Intake.filename(name, ext, "image"), type, ctx, &{:stored, &1}, attrs)
         |> result(ctx, attrs)
       else
         {:error, message} when is_binary(message) -> {:error, message}

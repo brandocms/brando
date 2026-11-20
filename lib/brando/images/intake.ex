@@ -138,25 +138,27 @@ defmodule Brando.Images.Intake do
 
   @doc """
   Stores the file at `path` as `filename` of `type`, or reuses the image the
-  library has of the same bytes. `on_new` is called with a new image inside
-  the file lock, and returns what to report for it (`{:stored, image}` or
+  library has of the same bytes. A new image is created with `attrs` (its
+  `focal`, `title` and `alt`), under the permission to create it; a reused
+  one keeps its own. `on_new` is called with a new image inside the file
+  lock, and returns what to report for it (`{:stored, image}` or
   `{:stored, image, tag}`). Sizes are queued once the row is committed.
 
   Returns `{:stored, image}`, `{:stored, image, tag}`, `{:reused, image}` or
   `{:error, message}`.
   """
-  @spec store(Path.t(), String.t(), String.t(), context(), (Image.t() -> term())) :: term()
-  def store(path, filename, type, ctx, on_new \\ &{:stored, &1}) do
+  @spec store(Path.t(), String.t(), String.t(), context(), (Image.t() -> term()), map()) :: term()
+  def store(path, filename, type, ctx, on_new \\ &{:stored, &1}, attrs \\ %{}) do
     hash = hash(path)
 
     hash
-    |> Images.with_file_lock(ctx.config_target, fn -> reuse_or_store(hash, path, filename, type, ctx, on_new) end)
+    |> Images.with_file_lock(ctx.config_target, fn -> reuse_or_store(hash, path, filename, type, ctx, on_new, attrs) end)
     |> queue_sizes(ctx.actor)
   end
 
-  defp reuse_or_store(hash, path, filename, type, ctx, on_new) do
+  defp reuse_or_store(hash, path, filename, type, ctx, on_new, attrs) do
     with nil <- existing(hash, ctx),
-         {:stored, image} <- store_new(path, filename, type, ctx) do
+         {:stored, image} <- store_new(path, filename, type, ctx, attrs) do
       on_new.(image)
     else
       %Image{} = image -> {:reused, image}
@@ -164,8 +166,8 @@ defmodule Brando.Images.Intake do
     end
   end
 
-  defp store_new(path, filename, type, ctx) do
-    meta = %{path: path, config_target: ctx.config_target, folder_id: ctx.folder_id}
+  defp store_new(path, filename, type, ctx, attrs) do
+    meta = %{path: path, config_target: ctx.config_target, folder_id: ctx.folder_id, image_attrs: attrs}
     entry = %{client_name: filename, client_type: type, client_size: File.stat!(path).size}
 
     case Uploads.store_upload(meta, entry, ctx.cfg, ctx.actor) do
