@@ -320,6 +320,27 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       refute Map.has_key?(left, :skip_focused)
     end
 
+    test "the marks go when the form takes a newer pending version", %{conn: conn} = c do
+      answer(&("EN " <> &1["source"]))
+      view = open(conn, c.target.id)
+
+      translate_one(view, "title")
+      render_async(view, 5_000)
+      await(fn -> title(view) == "EN Tittel" end)
+      assert has_element?(view, "#{item("title")}[data-ai='filled']")
+      assert has_element?(view, "#translation-panel [data-ai-status='done']")
+
+      # The source changes, and the LiveView renders the form again: it
+      # takes the translation's new pending version.
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
+      newer = Translations.get_pending_version(Article, c.target.id).id
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{newer}']")
+
+      refute has_element?(view, "#translation-panel [data-ai]")
+      refute has_element?(view, "#translation-panel [data-ai-status]")
+    end
+
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
       source = source(c, "Gammel", "Gammel tekst")
       {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)

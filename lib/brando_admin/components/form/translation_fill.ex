@@ -387,15 +387,21 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     end
   end
 
-  @doc "Clears the marks of a pending version the form no longer holds."
+  @doc """
+  Clears the marks and the status line of a run for a pending version that
+  is no longer the one the form holds or the translation's pending one.
+  """
   def refresh(socket) do
-    case {socket.assigns[:translation_fill], Translation.version_id(socket.assigns)} do
-      {%{version_id: version_id}, version_id} -> socket
-      {%{status: :running} = fill, _} -> assign(socket, :translation_fill, %{fill | marks: %{}})
-      {nil, _} -> socket
+    case {socket.assigns[:translation_fill], Translation.version_id(socket.assigns), pending_id(socket.assigns)} do
+      {%{version_id: version_id}, version_id, version_id} -> socket
+      {%{status: :running} = fill, _, _} -> assign(socket, :translation_fill, %{fill | marks: %{}})
+      {nil, _, _} -> socket
       _ -> assign(socket, :translation_fill, nil)
     end
   end
+
+  defp pending_id(%{translation: %{pending: %{id: id}}}), do: id
+  defp pending_id(_assigns), do: nil
 
   @doc "Counts of a finished run's marks, for its status line."
   def counts(%{keys: keys, marks: marks}) do

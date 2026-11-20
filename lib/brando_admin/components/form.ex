@@ -1494,6 +1494,7 @@ defmodule BrandoAdmin.Components.Form do
     |> FrontendEditor.unless_frontend(&Drafts.init/1)
     |> then(&Drafts.keep_baseline(&1, &1.assigns[:opened_entry]))
     |> Translation.assign_state()
+    |> TranslationFill.refresh()
     |> FrontendEditor.unless_frontend(&schedule_translation_apply/1)
   end
 
