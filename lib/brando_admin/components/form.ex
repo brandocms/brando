@@ -1538,7 +1538,7 @@ defmodule BrandoAdmin.Components.Form do
 
     rich_fields = for {key, {:field, field}, _text} <- writes, key in written, do: field
     subforms = for {key, {:row, subform, _key, _field}, _text} <- writes, key in written, uniq: true, do: subform
-    relations = Enum.filter(relation_fields(socket), &(Atom.to_string(&1) in subforms))
+    relations = Enum.filter(relation_fields(socket) ++ embed_fields(socket), &(Atom.to_string(&1) in subforms))
     previous = socket.assigns.form.source
 
     socket
@@ -1553,9 +1553,11 @@ defmodule BrandoAdmin.Components.Form do
   # The browser shows the fields' old values until the written ones reach
   # it: a `validate` sent meanwhile carries them, and the written values are
   # kept over them (`drop_echoes/4`), as for another editor's change. A
-  # has_many's rows are kept the way another editor's save keeps them: the
-  # form revision moves (`redraw_relations/4`), and an event from the form
-  # before it leaves the relation as the form has it (`stale_relations/2`).
+  # has_many's or embeds_many's rows are kept the way another editor's save
+  # keeps a has_many's: the form revision moves (`redraw_relations/4`), and
+  # an event from the form before it leaves the relation as the form has it
+  # (`stale_relations/2`). `drop_echoes/4` alone would not keep an embed's: a
+  # keystroke in another of its rows names the embed as its target.
   defp replace_written_values(socket, previous, changeset) do
     replaced =
       socket
@@ -4272,6 +4274,10 @@ defmodule BrandoAdmin.Components.Form do
       socket |> assign(:form_rev, rev) |> assign(:taken_relations, taken)
     end
   end
+
+  # The embeds a subform's rows are in, which `relation_fields/1` leaves out
+  defp embed_fields(%{assigns: %{schema: schema}}),
+    do: Enum.filter(schema.__schema__(:embeds), &match?(%{cardinality: :many}, schema.__schema__(:embed, &1)))
 
   defp relation_keys(changeset, field),
     do: changeset |> SubformHelpers.current_entries(field) |> List.wrap() |> Enum.map(&SubformHelpers.row_key/1)

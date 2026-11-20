@@ -712,6 +712,68 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert has_element?(view, "#{item(key)}[data-ai='filled']")
     end
 
+    test "a keystroke in another row of an embeds_many subform sent before the fill reached the browser does not take it back",
+         %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{
+            title: "Tittel",
+            slug: "tittel",
+            language: "no",
+            status: "published",
+            quotes: [%{text: "Første sitat"}, %{text: "Andre sitat"}]
+          },
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      key = "quotes/#{hd(load(target.id).quotes).uid}/text"
+
+      quote_text = fn view, index ->
+        view |> render() |> form_params("#article_form_form") |> get_in(["article", "quotes", index, "text"])
+      end
+
+      answer_when_told(&("EN " <> &1["source"]))
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      translate_one(view, key)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      # The browser's form before the fill, with a keystroke in the other
+      # quote: it reaches the server after the fill.
+      before = view |> render() |> form_params("#article_form_form")
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> quote_text.(view, "0") == "EN Første sitat" end)
+
+      params =
+        before
+        |> put_in(["article", "quotes", "1", "text"], "Typed")
+        |> Map.put("_target", ["article", "quotes", "1", "text"])
+
+      view |> element("#article_form_form") |> render_change(params)
+
+      assert quote_text.(view, "0") == "EN Første sitat"
+      assert has_element?(view, "#{item(key)}[data-ai='filled']")
+
+      # The form the browser redraws keeps the text in the input with the
+      # focus, and sends it again with the next keystroke
+      params =
+        view
+        |> render()
+        |> form_params("#article_form_form")
+        |> put_in(["article", "quotes", "1", "text"], "Typed!")
+        |> Map.put("_target", ["article", "quotes", "1", "text"])
+
+      view |> element("#article_form_form") |> render_change(params)
+
+      assert quote_text.(view, "0") == "EN Første sitat"
+      assert quote_text.(view, "1") == "Typed!"
+    end
+
     test "a second editor's change during the run is kept", %{conn: conn, target: target} do
       answer_when_told(&("EN " <> &1["source"]))
       other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
