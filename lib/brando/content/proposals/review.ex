@@ -37,6 +37,7 @@ defmodule Brando.Content.Proposals.Review do
 
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
+  alias Brando.Translations
   alias Brando.Type.I18nString
 
   alias Brando.Content.Transfer.Catalog
@@ -203,34 +204,35 @@ defmodule Brando.Content.Proposals.Review do
       {schema, source, entry, language, source_language} ->
         keys = Enum.flat_map(ops, fn {op, _} -> Map.keys(texts_of(op)) ++ reviewed_of(op) end)
         # Without read on the source, its text is not shown
-        described = Brando.Translations.Work.describe(schema, source || entry, entry, keys)
+        described = Translations.Work.describe(schema, source || entry, entry, keys)
 
         for {op, index} <- ops do
-          texts = texts_of(op)
-          reviewed = reviewed_of(op)
-
-          units =
-            for %{key: key} = unit <- described, Map.has_key?(texts, key) or key in reviewed do
-              %{
-                key: key,
-                label: unit.label,
-                source: readable(source && unit.source),
-                text: if(Map.has_key?(texts, key), do: readable(texts[key])),
-                reviewed?: not Map.has_key?(texts, key)
-              }
-            end
-
           %{
             type: :translate,
             language: language,
             source_language: source_language,
-            units: units,
+            units: translate_units(op, described, source != nil),
             operations: [index]
           }
         end
 
       _ ->
         []
+    end
+  end
+
+  defp translate_units(op, described, source?) do
+    texts = texts_of(op)
+    reviewed = reviewed_of(op)
+
+    for %{key: key} = unit <- described, Map.has_key?(texts, key) or key in reviewed do
+      %{
+        key: key,
+        label: unit.label,
+        source: if(source?, do: readable(unit.source)),
+        text: if(Map.has_key?(texts, key), do: readable(texts[key])),
+        reviewed?: not Map.has_key?(texts, key)
+      }
     end
   end
 
@@ -256,9 +258,9 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp translate_context({schema, id}, _proposal) do
-    with %{group_id: group_id, language: language} <- Brando.Translations.get_member(schema, id),
-         %{entry_id: source_id} <- Enum.find(Brando.Translations.list_members(group_id), &(&1.role == :source)),
-         {:ok, entry} <- Brando.Translations.load_entry(schema, id, with_deleted: true) do
+    with %{group_id: group_id, language: language} <- Translations.get_member(schema, id),
+         %{entry_id: source_id} <- Enum.find(Translations.list_members(group_id), &(&1.role == :source)),
+         {:ok, entry} <- Translations.load_entry(schema, id, with_deleted: true) do
       source = readable_source(schema, source_id)
       {schema, source, entry, language, source && to_string(source.language)}
     else
@@ -268,7 +270,7 @@ defmodule Brando.Content.Proposals.Review do
 
   defp readable_source(schema, id) do
     with true <- Boundary.readable_entry?(schema, id),
-         {:ok, source} <- Brando.Translations.load_entry(schema, id) do
+         {:ok, source} <- Translations.load_entry(schema, id) do
       source
     else
       _ -> nil
