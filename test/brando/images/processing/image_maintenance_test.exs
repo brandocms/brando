@@ -577,6 +577,34 @@ defmodule Brando.Images.ImageMaintenanceTest do
       end)
     end
 
+    # The watcher reads one image left; that image's report ends the work
+    # before the watcher's resume reaches the registry
+    test "the watcher's late resume does not bring back a run that has ended", %{user: user} do
+      Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        walk_and_wait(user)
+        [job] = image_jobs()
+        watcher = watcher()
+
+        # The watcher's read, while the job runs
+        assert SizeRun.remaining() == 1
+        assert %{success: 1} = Oban.drain_queue(queue: :image_processing, with_scheduled: true)
+        assert_receive {:work, "image-sizes", :finished, %Work{}}
+
+        flush_work()
+
+        # Its resume, after the report
+        set_job(job, state: "executing", attempted_at: DateTime.utc_now())
+        assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher.args)
+        set_job(job, state: "completed")
+        assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher.args, "settle", true))
+        BrandoAdmin.Work.Registry.sync()
+      end)
+
+      refute_received {:work, "image-sizes", _, _}
+    end
+
     test "an image job left executing past its timeout does not hold a run" do
       image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg")
 

@@ -12,12 +12,21 @@ defmodule BrandoAdmin.Work.Registry do
   Work leaves the table when it finishes, fails or times out. The table is
   lost with the node: running work started before a restart reappears with
   its next report, as `update/4` starts work it does not know.
+
+  Work its count ended (the last step in, or closed with its steps in) is
+  remembered for ten seconds, and a
+  `resume/4` for its key in that time is dropped: one read before the last
+  step reported can arrive after it, and would start the work again with
+  nothing left to count it. A `start/4` forgets the end. A restarted node
+  remembers no end, and resumes.
   """
   use GenServer
 
   alias BrandoAdmin.Work
 
   @table __MODULE__
+  # How long an end by the count holds back a resume of its key
+  @remember_end to_timeout(second: 10)
 
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
@@ -57,14 +66,31 @@ defmodule BrandoAdmin.Work.Registry do
   @impl true
   def handle_info({:brando_work, {op, table_key, attrs, at}}, state) do
     current = get(table_key)
+    if op == :start, do: :ets.delete(@table, {:ended, table_key})
+    # It just ended: the resume was read before
+    held_back? = op == :resume and is_nil(current) and ended?(table_key)
 
     case apply_op(op, current, table_key, attrs, at) do
-      nil -> :ok
+      nil ->
+        :ok
+
+      _work when held_back? ->
+        :ok
+
       # Nothing to show for: only the timeout starts again
-      work when op == :touch -> store(table_key, work)
-      work -> store_and_tell(table_key, work)
+      work when op == :touch ->
+        store(table_key, work)
+
+      work ->
+        store_and_tell(table_key, work)
+        remember_end(op, table_key, work)
     end
 
+    {:noreply, state}
+  end
+
+  def handle_info({:forget_end, table_key, version}, state) do
+    :ets.match_delete(@table, {{:ended, table_key}, version, :_})
     {:noreply, state}
   end
 
@@ -208,6 +234,17 @@ defmodule BrandoAdmin.Work.Registry do
       updated_at: at
     }
   end
+
+  defp ended?(table_key), do: :ets.member(@table, {:ended, table_key})
+
+  # Under a key `list/1` and `get/1` do not match
+  defp remember_end(op, table_key, %Work{status: status}) when op in [:advance, :close] and status != :running do
+    version = System.unique_integer([:monotonic])
+    :ets.insert(@table, {{:ended, table_key}, version, nil})
+    Process.send_after(self(), {:forget_end, table_key, version}, @remember_end)
+  end
+
+  defp remember_end(_op, _table_key, _work), do: :ok
 
   defp store(table_key, %Work{} = work) do
     if work.status == :running do

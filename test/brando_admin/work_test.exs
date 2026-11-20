@@ -145,6 +145,26 @@ defmodule BrandoAdmin.WorkTest do
     assert_receive {:work, "lost", :running, %Work{total: 8, done: 3, open: true}}
   end
 
+  # A resume read before the last step reported can arrive after it
+  test "work its count just ended is not resumed, until it is started again", %{user_id: user_id} do
+    Work.start(user_id, "ended", "Walking", total: 1)
+    assert_receive {:work, "ended", :running, %Work{}}
+    Work.advance(user_id, "ended")
+    assert_receive {:work, "ended", :finished, %Work{}}
+
+    Work.resume(user_id, "ended", "Walking", total: 1, counted: 0)
+    refute_receive {:work, "ended", _, _}, 100
+
+    # A new start forgets the end; work ended otherwise resumes
+    Work.start(user_id, "ended", "Walking", total: 1)
+    Work.fail(user_id, "ended")
+    assert_receive {:work, "ended", :running, %Work{}}
+    assert_receive {:work, "ended", :failed, %Work{}}
+
+    Work.resume(user_id, "ended", "Walking", total: 1, counted: 0)
+    assert_receive {:work, "ended", :running, %Work{total: 1, done: 0}}
+  end
+
   test "failed steps keep what they were about, successful ones do not", %{user_id: user_id} do
     Work.start(user_id, "items", "Writing", total: 3)
     Work.advance(user_id, "items", :error, item: 1)
