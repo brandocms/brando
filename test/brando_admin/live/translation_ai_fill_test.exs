@@ -147,23 +147,22 @@ defmodule BrandoAdmin.TranslationAIFillTest do
   end
 
   # How many times `pid` calls `mfa` while `fun` runs
-  defp count_calls(pid, {module, name, arity} = mfa, fun) do
+  defp count_calls(pid, {module, name, _arity} = mfa, fun) do
     :erlang.trace_pattern(mfa, true, [:local])
     :erlang.trace(pid, true, [:call])
 
     try do
       fun.()
       :erlang.trace(pid, false, [:call])
-      count_traced(pid, module, name, arity, 0)
+      count_traced(pid, module, name, 0)
     after
       :erlang.trace_pattern(mfa, false, [:local])
     end
   end
 
-  defp count_traced(pid, module, name, arity, count) do
+  defp count_traced(pid, module, name, count) do
     receive do
-      {:trace, ^pid, :call, {^module, ^name, args}} when length(args) == arity ->
-        count_traced(pid, module, name, arity, count + 1)
+      {:trace, ^pid, :call, {^module, ^name, _args}} -> count_traced(pid, module, name, count + 1)
     after
       100 -> count
     end

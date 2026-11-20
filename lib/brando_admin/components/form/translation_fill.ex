@@ -105,10 +105,14 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   editor's.
   """
   def fillable?({:block, _uid, _module, ["refs", _name, "gallery" | _]}), do: false
-  def fillable?({:block, _uid, _module, path}) when is_list(path), do: List.last(path) != "url"
+  def fillable?({:block, _uid, _module, path}) when is_list(path), do: not address?(path)
   def fillable?({:row, _subform, _key, field}), do: field != "url"
   def fillable?({:field, _}), do: true
   def fillable?(_target), do: false
+
+  defp address?(["url"]), do: true
+  defp address?([_ | rest]), do: address?(rest)
+  defp address?([]), do: false
 
   # Whether this editor's form can change a target: not a field locked for
   # them (`LockedFields`), nor a block text in a block field this form has
@@ -193,18 +197,18 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   @doc "A BlockField's block texts for run `run`, by key (`:error` for one it has not)."
   def block_texts_read(socket, run, field, texts) do
     case socket.assigns[:translation_fill] do
-      %{run: ^run, reading: %{waiting: waiting} = reading} = fill ->
-        if MapSet.member?(waiting, field) do
-          reading = %{reading | texts: Map.merge(reading.texts, texts), waiting: MapSet.delete(waiting, field)}
-          socket = assign(socket, :translation_fill, %{fill | reading: reading})
-          if MapSet.size(reading.waiting) == 0, do: begin(socket), else: socket
-        else
-          socket
-        end
+      %{run: ^run, reading: %{waiting: waiting}} = fill ->
+        if MapSet.member?(waiting, field), do: take_block_texts(socket, fill, field, texts), else: socket
 
       _ ->
         socket
     end
+  end
+
+  defp take_block_texts(socket, %{reading: reading} = fill, field, texts) do
+    reading = %{reading | texts: Map.merge(reading.texts, texts), waiting: MapSet.delete(reading.waiting, field)}
+    socket = assign(socket, :translation_fill, %{fill | reading: reading})
+    if MapSet.size(reading.waiting) == 0, do: begin(socket), else: socket
   end
 
   @doc "A BlockField did not answer with its texts: the run does not start."

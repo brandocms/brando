@@ -2233,29 +2233,32 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     known
     |> Enum.group_by(fn {_key, uid, _path, _text} -> Ops.root_of(ops, uid) end)
     |> Enum.reduce({socket, [], Enum.map(lost, &elem(&1, 0))}, fn {root, texts}, {socket, filled, kept} ->
-      case read_root(socket, ops, root) do
-        {:ok, materialized, root_block} ->
-          {fill, changed} =
-            Enum.split_with(texts, fn {key, uid, path, _text} ->
-              current = text_in(root_block, uid, path)
-              current != :error and Map.has_key?(baseline, key) and current == baseline[key]
-            end)
-
-          kept = kept ++ Enum.map(changed, &elem(&1, 0))
-
-          case fill do
-            [] ->
-              {socket, filled, kept}
-
-            fill ->
-              {socket, keys} = fill_root(socket, root, materialized, root_block, fill)
-              {refresh_filled_root(socket, root), filled ++ keys, kept ++ (Enum.map(fill, &elem(&1, 0)) -- keys)}
-          end
-
-        :error ->
-          {socket, filled, kept ++ Enum.map(texts, &elem(&1, 0))}
-      end
+      {socket, root_filled, root_kept} = fill_read_root(socket, ops, root, texts, baseline)
+      {socket, filled ++ root_filled, kept ++ root_kept}
     end)
+  end
+
+  defp fill_read_root(socket, ops, root, texts, baseline) do
+    case read_root(socket, ops, root) do
+      {:ok, materialized, root_block} ->
+        {fill, changed} =
+          Enum.split_with(texts, fn {key, uid, path, _text} ->
+            current = text_in(root_block, uid, path)
+            current != :error and Map.has_key?(baseline, key) and current == baseline[key]
+          end)
+
+        changed = Enum.map(changed, &elem(&1, 0))
+
+        if fill == [] do
+          {socket, [], changed}
+        else
+          {socket, keys} = fill_root(socket, root, materialized, root_block, fill)
+          {refresh_filled_root(socket, root), keys, changed ++ (Enum.map(fill, &elem(&1, 0)) -- keys)}
+        end
+
+      :error ->
+        {socket, [], Enum.map(texts, &elem(&1, 0))}
+    end
   end
 
   # A filled root is shown from the store. The root the editor works in is
