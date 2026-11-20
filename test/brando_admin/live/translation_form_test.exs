@@ -927,6 +927,29 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert_moved(c, version)
     end
 
+    test "a container whose only child the source moved out shows as empty to a second editor", %{conn: conn} = c do
+      c =
+        pair(c, fn source ->
+          add_container(c, source, ["Første barn"])
+          add_container(c, source, ["Andre barn"], 2)
+        end)
+
+      [_, %{block: from}, %{block: to}] = load(c.source.id).entry_blocks
+      [moved] = Repo.preload(from, :children).children
+      moved |> Ecto.Changeset.change(parent_id: to.id, sequence: 1) |> Repo.update!()
+      version = source_saved(c)
+
+      [_, %{block: emptied}, _] = load(c.target.id).entry_blocks
+
+      _first = open_version(conn, c.target.id, version)
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      second = log_in_user(Phoenix.ConnTest.build_conn(), other) |> open_version(c.target.id, version)
+
+      # its only child is in the other container: it holds none, so it shows the empty hint
+      assert has_element?(second, "[data-block-uid='#{emptied.uid}'] .blocks-empty-instructions")
+      refute has_element?(second, "[data-block-uid='#{emptied.uid}'] .block-children")
+    end
+
     # A block on an older version of its module: it keeps a variable the
     # module no longer defines (`Brando.Content.StaleBlocks`), written past
     # the changeset as a module save leaves it. The pending version holds it;
