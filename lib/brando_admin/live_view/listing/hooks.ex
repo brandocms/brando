@@ -269,16 +269,22 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     end
   end
 
+  # "Create translation", and "Create and translate", which opens the new
+  # translation's form with Translate with AI started there
+  # (`?translate=ai`, `BrandoAdmin.LiveView.Form.Hooks`): the editor checks
+  # and saves the texts, nothing is saved here.
   defp handle_listing_event(
-         "create_entry_translation",
+         event,
          %{"id" => source_id, "language" => language},
          %{assigns: %{current_user: user, schema: schema}} = socket,
          _listing_schema
-       ) do
+       )
+       when event in ["create_entry_translation", "create_entry_translation_with_ai"] do
     with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
          {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
       update_list_entries(schema)
       update_url = schema.__admin_route__(:update, [target.id])
+      update_url = if event == "create_entry_translation_with_ai", do: update_url <> "?translate=ai", else: update_url
       send(self(), {:set_content_language_and_navigate, language, update_url})
     else
       error ->

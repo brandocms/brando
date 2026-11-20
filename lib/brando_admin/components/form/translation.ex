@@ -20,7 +20,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
   alias Brando.Drafts.Params
   alias Brando.Translations
   alias Brando.Translations.Labels
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Drafts
+  alias BrandoAdmin.Components.Form.TranslationFill
 
   @doc "Assigns the translation state of the form's entry."
   def assign_state(%{assigns: %{schema: schema, entry: %{id: id} = entry}} = socket) when not is_nil(id) do
@@ -68,7 +70,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
       changes?: false,
       applied_version_id: nil,
       acknowledged: [],
-      stale?: false
+      stale?: false,
+      ai?: false
     }
   end
 
@@ -96,9 +99,14 @@ defmodule BrandoAdmin.Components.Form.Translation do
       # the same entry, so a reconnecting form does not apply it twice.
       applied_version_id: previous && previous.entry_id == entry_id && previous.applied_version_id,
       acknowledged: (previous && previous.entry_id == entry_id && previous.acknowledged) || [],
-      stale?: false
+      stale?: false,
+      # Translate with AI (`Form.TranslationFill`), where AI is configured
+      ai?: ai?(member)
     }
   end
+
+  defp ai?(%{role: :target, synchronized: true}), do: Brando.AI.configured?()
+  defp ai?(_member), do: false
 
   defp can_create?(schema, user) do
     Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok
@@ -392,6 +400,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
   attr :state, :map, required: true
   attr :form_name, :string, required: true
   attr :target, :any, required: true
+  attr :fill, :map, default: nil, doc: "Translate with AI's run (`Form.TranslationFill`)"
+  attr :editing, :boolean, default: true, doc: "whether this tab edits the entry"
 
   @doc "The translation panel at the top of the entry form."
   def panel(%{state: %{role: :source}} = assigns) do
@@ -442,10 +452,13 @@ defmodule BrandoAdmin.Components.Form.Translation do
   end
 
   def panel(assigns) do
+    groups = Enum.group_by(assigns.state.items, & &1.kind)
+
     assigns =
       assign(assigns,
-        groups: Enum.group_by(assigns.state.items, & &1.kind),
-        count: length(assigns.state.items)
+        groups: groups,
+        count: length(assigns.state.items),
+        ai?: assigns.state.ai? and (Map.has_key?(groups, :translate) or Map.has_key?(groups, :review))
       )
 
     ~H"""
@@ -498,11 +511,22 @@ defmodule BrandoAdmin.Components.Form.Translation do
           </span>
         </p>
 
+        <.ai_fill
+          :if={@ai?}
+          fill={@fill}
+          target={@target}
+          editing={@editing}
+        />
+
         <.work_group
           :if={@groups[:translate]}
           title={gettext("Needs translation")}
           items={@groups[:translate]}
           state={@state}
+          fill={@fill}
+          ai={@ai?}
+          editing={@editing}
+          target={@target}
           acknowledge
         />
         <.work_group
@@ -510,6 +534,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
           title={gettext("Changed in the source — review the translation")}
           items={@groups[:review]}
           state={@state}
+          fill={@fill}
+          ai={@ai?}
+          editing={@editing}
+          target={@target}
           acknowledge
         />
         <.work_group
@@ -592,19 +620,96 @@ defmodule BrandoAdmin.Components.Form.Translation do
     """
   end
 
+  attr :fill, :map, required: true
+  attr :target, :any, required: true
+  attr :editing, :boolean, required: true
+
+  # Translate with AI over every open text, and how the run went
+  defp ai_fill(assigns) do
+    assigns =
+      assign(assigns,
+        running?: TranslationFill.running?(assigns.fill),
+        status: assigns.fill && assigns.fill.status
+      )
+
+    ~H"""
+    <div class="translation-ai">
+      <AIAction.button
+        data-testid="translation-ai-all"
+        phx-click="translate_with_ai"
+        phx-target={@target}
+        busy={@running?}
+        disabled={@running? or not @editing}
+      >
+        {gettext("Translate with AI")}
+      </AIAction.button>
+      <p :if={@status == :running} class="translation-ai-status" data-ai-status="running" role="status">
+        {ai_running_text(@fill)}
+        <progress
+          :if={elem(@fill.progress, 1) > 1}
+          max={elem(@fill.progress, 1)}
+          value={elem(@fill.progress, 0)}
+          aria-label={gettext("Translating with AI")}
+        />
+      </p>
+      <p :if={@status == :done} class="translation-ai-status" data-ai-status="done" role="status">
+        {ai_done_text(@fill)}
+      </p>
+      <p :if={@status == :failed} class="translation-ai-status is-error" data-ai-status="failed" role="alert">
+        {gettext("Translating with AI failed. Nothing was changed; try again.")}
+      </p>
+      <p :if={@status == :dropped} class="translation-ai-status is-error" data-ai-status="dropped" role="alert">
+        {gettext("The source changed while AI was translating, so nothing was filled in. Save, then try again.")}
+      </p>
+    </div>
+    """
+  end
+
+  defp ai_running_text(fill) do
+    ngettext("Translating %{count} text with AI…", "Translating %{count} texts with AI…", length(fill.keys))
+  end
+
+  defp ai_done_text(fill) do
+    %{filled: filled, not_filled: not_filled} = TranslationFill.counts(fill)
+    done = ngettext("AI filled in %{count} text.", "AI filled in %{count} texts.", filled)
+
+    rest =
+      if not_filled > 0,
+        do:
+          " " <>
+            ngettext(
+              "%{count} was not filled in; see why below.",
+              "%{count} were not filled in; see why below.",
+              not_filled
+            ),
+        else: ""
+
+    done <> rest <> " " <> gettext("Check the texts, then save.")
+  end
+
   attr :title, :string, required: true
   attr :description, :string, default: nil
   attr :items, :list, required: true
   attr :state, :map, required: true
   attr :acknowledge, :boolean, default: false
+  attr :fill, :map, default: nil
+  attr :ai, :boolean, default: false
+  attr :editing, :boolean, default: true
+  attr :target, :any, default: nil
 
   defp work_group(assigns) do
+    assigns = assign(assigns, :running?, TranslationFill.running?(assigns.fill))
+
     ~H"""
     <div class="translation-group">
       <h3>{@title} <span>{length(@items)}</span></h3>
       <p :if={@description} class="translation-group-description">{@description}</p>
       <ul>
-        <li :for={item <- @items}>
+        <li
+          :for={item <- @items}
+          data-translation-item={item.path}
+          data-ai={ai_mark_value(ai_mark(@fill, item.path))}
+        >
           <span :if={item.entries == []} class="translation-item-label">{item.label}</span>
           <span :if={item.entries != []} class="translation-item-label">
             {item.base_label} →
@@ -620,20 +725,72 @@ defmodule BrandoAdmin.Components.Form.Translation do
               >{entry.title}</.link><span :if={!entry.url}>{entry.title}</span>
             <% end %>
           </span>
-          <label :if={@acknowledge} class="translation-ack">
-            <input
-              type="checkbox"
-              name="translation_review[acknowledged][]"
-              value={item.path}
-              checked={item.path in @state.acknowledged}
+          <span :if={@ai or @acknowledge} class="translation-item-actions">
+            <.ai_mark mark={ai_mark(@fill, item.path)} />
+            <AIAction.button
+              :if={@ai}
+              size={:icon}
+              data-testid="translation-ai-item"
+              phx-click="translate_with_ai"
+              phx-value-key={item.path}
+              phx-target={@target}
+              busy={@running? and item.path in @fill.keys}
+              disabled={@running? or not @editing}
+              aria-label={gettext("Translate %{label} with AI", label: item.label)}
+              data-tooltip={gettext("Translate with AI")}
             />
-            {gettext("Reviewed")}
-          </label>
+            <label :if={@acknowledge} class="translation-ack">
+              <input
+                type="checkbox"
+                name="translation_review[acknowledged][]"
+                value={item.path}
+                checked={item.path in @state.acknowledged}
+              />
+              {gettext("Reviewed")}
+            </label>
+          </span>
         </li>
       </ul>
     </div>
     """
   end
+
+  defp ai_mark(%{marks: marks}, path), do: Map.get(marks, path)
+  defp ai_mark(_fill, _path), do: nil
+
+  defp ai_mark_value({:skipped, _code}), do: "skipped"
+  defp ai_mark_value(mark) when is_atom(mark) and not is_nil(mark), do: to_string(mark)
+  defp ai_mark_value(_mark), do: nil
+
+  attr :mark, :any, required: true
+
+  # What Translate with AI did with an item: filled it in, kept the
+  # editor's text, or left it with the reason
+  defp ai_mark(%{mark: :filled} = assigns) do
+    ~H"""
+    <span class="badge badge--ai">{gettext("Filled in by AI")}</span>
+    """
+  end
+
+  defp ai_mark(%{mark: :kept} = assigns) do
+    ~H"""
+    <span class="translation-ai-reason" data-ai-reason>{gettext("Changed during the run: your text was kept")}</span>
+    """
+  end
+
+  defp ai_mark(%{mark: {:skipped, code}} = assigns) do
+    assigns = assign(assigns, :reason, skipped_reason(code))
+
+    ~H"""
+    <span class="translation-ai-reason is-error" data-ai-reason>{@reason}</span>
+    """
+  end
+
+  defp ai_mark(assigns), do: ~H""
+
+  defp skipped_reason("html_changed"), do: gettext("Not filled in: AI lost the formatting or links")
+  defp skipped_reason("placeholders_changed"), do: gettext("Not filled in: AI changed the template placeholders")
+  defp skipped_reason(_code), do: gettext("Not filled in: AI returned no text")
 
   attr :state, :map, required: true
   attr :target, :any, required: true

@@ -1,0 +1,313 @@
+defmodule BrandoAdmin.TranslationAIFillTest do
+  # Translate with AI on a synchronized translation's work list (#3749): the
+  # model's texts fill the form as unsaved changes, for the editor to check
+  # and save. The model is a stub.
+  use Brando.LiveCase
+
+  import Brando.EditSessionEditors, only: [await: 1]
+
+  alias Brando.SyncTest
+  alias Brando.SyncTest.Article
+  alias Brando.TranslationFixtures
+  alias Brando.Translations
+
+  @text ["entry_block", "block", "refs", "0", "data", "data", "text"]
+
+  setup %{current_user: user} do
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          name: %{"en" => "Text"},
+          namespace: %{"en" => "Content"},
+          help_text: %{},
+          code: "{% ref refs.body %}",
+          refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
+        ),
+        user
+      )
+
+    %{module: module}
+  end
+
+  defp source(c, title, text, language \\ "no") do
+    {:ok, source} =
+      SyncTest.create_article(
+        %{title: title, slug: Brando.Utils.slugify(title), language: language, status: "published", year: 2020},
+        c.current_user
+      )
+
+    TranslationFixtures.add_block(source, c.module, c.current_user, text, 0)
+    source
+  end
+
+  defp load(id) do
+    {:ok, entry} = SyncTest.get_article(%{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(Article)})
+    entry
+  end
+
+  defp block_uid(id), do: hd(load(id).entry_blocks).block.uid
+  defp block_key(id), do: "entry_blocks/#{hd(load(id).entry_blocks).block.sync_uid}/refs/body/text"
+
+  defp open_items(id) do
+    case Translations.get_pending_version(Article, id) do
+      nil -> []
+      version -> for item <- version.work_items, is_nil(item.resolved_at), do: item.path
+    end
+  end
+
+  defp open(conn, id, query \\ "") do
+    {view, _html} = live_form(conn, "/admin/articles/update/#{id}#{query}", "article_form")
+    version = Translations.get_pending_version(Article, id)
+    await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+    await_selector(view, "[data-block-uid]")
+    view
+  end
+
+  defp title(view), do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "title"])
+  defp block_text(view, uid), do: view |> render() |> form_params("#entry_block_form-#{uid}") |> get_in(@text)
+
+  defp item(key), do: "#translation-panel [data-translation-item='#{key}']"
+
+  defp translate_all(view), do: view |> element("#translation-panel [data-testid=translation-ai-all]") |> render_click()
+
+  defp translate_one(view, key),
+    do: view |> element("#{item(key)} [data-testid=translation-ai-item]") |> render_click()
+
+  # The items the prompt sends
+  defp items(prompt) do
+    [json] = Regex.run(~r/\{"items":.*\}/s, prompt)
+    json |> Jason.decode!() |> Map.fetch!("items")
+  end
+
+  # Answers each item with `fun` of it
+  defp answer(fun) do
+    Brando.AIStub.reply(fn prompt -> prompt |> items() |> Map.new(&{&1["n"], fun.(&1)}) |> Jason.encode!() end)
+  end
+
+  # A model that waits for the test before it answers: `{:ai_waiting, pid}`
+  # comes first, then `send(pid, :answer)`.
+  defp answer_when_told(fun) do
+    test = self()
+
+    Brando.AIStub.reply(fn prompt ->
+      send(test, {:ai_waiting, self()})
+
+      receive do
+        :answer -> prompt |> items() |> Map.new(&{&1["n"], fun.(&1)}) |> Jason.encode!()
+      after
+        5_000 -> {:error, 504}
+      end
+    end)
+  end
+
+  defp save(view) do
+    view |> form("#article_form_form") |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 2_000)
+    view |> form("#article_form_form") |> render_submit()
+    assert_redirect(view, 3_000)
+  end
+
+  describe "with AI configured" do
+    setup %{current_user: user} = c do
+      Brando.AIStub.configure()
+      source = source(c, "Tittel", "Første avsnitt")
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      %{source: source, target: target}
+    end
+
+    test "fills every open text as unsaved changes, and the save resolves them", %{conn: conn, target: target} do
+      answer(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+      key = block_key(target.id)
+
+      translate_all(view)
+      render_async(view, 5_000)
+      await(fn -> block_text(view, uid) == "EN Første avsnitt" end)
+
+      assert title(view) == "EN Tittel"
+      assert has_element?(view, "#{item("title")}[data-ai='filled']")
+      assert has_element?(view, "#{item(key)}[data-ai='filled']")
+
+      # Nothing is saved, and the work stays open
+      assert load(target.id).title == "Tittel"
+      assert Enum.sort(open_items(target.id)) == Enum.sort(["title", key])
+
+      save(view)
+
+      saved = load(target.id)
+      assert saved.title == "EN Tittel"
+
+      assert hd(saved.entry_blocks).block.refs |> hd() |> Map.get(:data) |> Map.get(:data) |> Map.get(:text) ==
+               "EN Første avsnitt"
+
+      assert open_items(target.id) == []
+    end
+
+    test "an item's own action fills only that item", %{conn: conn, target: target} do
+      answer(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+
+      translate_one(view, "title")
+      render_async(view, 5_000)
+      await(fn -> title(view) == "EN Tittel" end)
+
+      assert block_text(view, uid) == "Første avsnitt"
+      assert has_element?(view, "#{item("title")}[data-ai='filled']")
+      refute has_element?(view, "#{item(block_key(target.id))}[data-ai]")
+    end
+
+    test "a text the reply lost markup in is not filled, and says why", %{conn: conn} = c do
+      source = source(c, "Kilde", ~s(<p>Første <a href="https://example.com/">avsnitt</a></p>))
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user)
+
+      answer(fn
+        %{"format" => "html"} -> "First paragraph"
+        item -> "EN " <> item["source"]
+      end)
+
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+      key = block_key(target.id)
+
+      translate_all(view)
+      render_async(view, 5_000)
+      await(fn -> title(view) == "EN Kilde" end)
+
+      assert has_element?(view, "#{item(key)}[data-ai='skipped'] [data-ai-reason]")
+      assert block_text(view, uid) =~ "Første"
+    end
+
+    test "an AI error changes nothing and tells the editor", %{conn: conn, target: target} do
+      Brando.AIStub.reply(fn _prompt -> {:error, 500} end)
+      view = open(conn, target.id)
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert has_element?(view, "#translation-panel [data-ai-status='failed'][role='alert']")
+      assert title(view) == "Tittel"
+      refute has_element?(view, "#translation-panel [data-ai='filled']")
+    end
+
+    test "a result for a pending version the source has since replaced is dropped", %{conn: conn} = c do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, c.target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      # The source changes while the model works: the translation gets a new
+      # pending version.
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
+      send(model, :answer)
+      render_async(view, 5_000)
+
+      assert has_element?(view, "#translation-panel [data-ai-status='dropped']")
+      assert title(view) == "Tittel"
+    end
+
+    test "a text the editor changed during the run keeps the editor's text", %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      uid = block_uid(target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+
+      params =
+        view
+        |> render()
+        |> form_params("#article_form_form")
+        |> put_in(["article", "title"], "My title")
+        |> Map.put("_target", ["article", "title"])
+
+      view |> element("#article_form_form") |> render_change(params)
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> block_text(view, uid) == "EN Første avsnitt" end)
+
+      assert title(view) == "My title"
+      assert has_element?(view, "#{item("title")}[data-ai='kept']")
+    end
+
+    test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
+      source = source(c, "Gammel", "Gammel tekst")
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)
+      {:ok, _} = SyncTest.update_article(target.id, %{title: "Old"}, user)
+      {:ok, _} = SyncTest.update_article(source.id, %{title: "Ny"}, user)
+
+      test = self()
+
+      Brando.AIStub.reply(fn prompt ->
+        send(test, {:prompt, prompt})
+        prompt |> items() |> Map.new(&{&1["n"], "New"}) |> Jason.encode!()
+      end)
+
+      view = open(conn, target.id)
+      assert has_element?(view, "#{item("title")}")
+
+      translate_one(view, "title")
+      render_async(view, 5_000)
+
+      assert_received {:prompt, prompt}
+      assert [%{"source" => "Ny", "translation" => "Old"}] = items(prompt)
+      await(fn -> title(view) == "New" end)
+    end
+
+    test "a second editor in the entry sees the filled texts", %{conn: conn, target: target} do
+      answer(&("EN " <> &1["source"]))
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+
+      view = open(conn, target.id)
+      other_view = open(other_conn, target.id)
+      uid = block_uid(target.id)
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      await(fn -> title(other_view) == "EN Tittel" end)
+      await(fn -> block_text(other_view, uid) == "EN Første avsnitt" end)
+    end
+
+    test "the listing creates the translation and starts translating in its form",
+         %{conn: conn, current_user: user} = c do
+      answer(&("EN " <> &1["source"]))
+      # The listing shows the content language, English
+      source = source(c, "Alone", "Text", "en")
+      {:ok, view, _html} = live(conn, "/admin/articles")
+      await_selector(view, "[id$='_create_and_translate_#{source.id}_lang_no']")
+
+      view |> element("[id$='_create_and_translate_#{source.id}_lang_no']") |> render_click()
+
+      assert %{group_id: group_id} = Translations.get_member(Article, source.id)
+      assert [%{entry_id: target_id}] = group_id |> Translations.list_members() |> Enum.filter(&(&1.language == "no"))
+      assert_redirect(view, "/admin/articles/update/#{target_id}?translate=ai")
+
+      form = open(conn, target_id, "?translate=ai")
+      await(fn -> render_async(form, 1_000) && title(form) == "EN Alone" end)
+      assert has_element?(form, "#{item("title")}[data-ai='filled']")
+      assert load(target_id).title == "Alone"
+      _ = user
+    end
+  end
+
+  describe "without AI configured" do
+    test "offers no AI actions", %{conn: conn, current_user: user} = c do
+      source = source(c, "Tittel", "Første avsnitt")
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      view = open(conn, target.id)
+
+      assert has_element?(view, item("title"))
+      refute has_element?(view, "[data-testid^=translation-ai]")
+
+      alone = source(c, "Alone", "Text", "en")
+      {:ok, listing, _html} = live(conn, "/admin/articles")
+      await_selector(listing, "[id$='_create_translation_#{alone.id}_lang_no']")
+      refute has_element?(listing, "[id*='_create_and_translate_']")
+    end
+  end
+end
