@@ -364,19 +364,18 @@ defmodule Brando.Images.SizeRun do
   """
   @spec carry_over(Ecto.Changeset.t(), [%{state: String.t(), meta: map()}]) :: Ecto.Changeset.t()
   def carry_over(changeset, deleted) do
-    marked? = Map.has_key?(Ecto.Changeset.get_field(changeset, :meta) || %{}, @meta_key)
+    meta = Ecto.Changeset.get_field(changeset, :meta) || %{}
 
     case Enum.find(deleted, &(&1.state in @unfinished_states and Map.has_key?(&1.meta || %{}, @meta_key))) do
-      # A job that took over one place keeps it
-      _replaced when marked? ->
+      nil ->
         changeset
 
-      nil ->
+      # A job that took over one place keeps it
+      _replaced when is_map_key(meta, @meta_key) ->
         changeset
 
       %{state: state, meta: replaced} ->
         keys = if state == "executing", do: [@meta_key], else: [@meta_key, Work.meta_key()]
-        meta = Ecto.Changeset.get_field(changeset, :meta) || %{}
         Ecto.Changeset.put_change(changeset, :meta, Map.merge(meta, Map.take(replaced, keys)))
     end
   end
