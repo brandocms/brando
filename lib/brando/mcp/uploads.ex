@@ -76,7 +76,7 @@ defmodule Brando.MCP.Uploads do
 
   @doc "The directory pending uploads wait in."
   @spec root() :: Path.t()
-  def root, do: MCP.config(:upload_dir, Path.join(System.tmp_dir!(), "brando-mcp-uploads"))
+  def root, do: MCP.config(:upload_dir, nil) || Path.join(System.tmp_dir!(), "brando-mcp-uploads")
 
   @doc "The image config uploads are checked against: `{cfg, size limit, allowed types}`."
   @spec limits() :: {map(), pos_integer(), [String.t()]}

@@ -225,6 +225,25 @@ defmodule Brando.MCP.MediaTest do
       MCP.prune()
       assert pending(dir) == []
     end
+
+    test "upload_dir: nil, as the guide shows it, is the default directory, and pruning goes on",
+         %{tenant: tenant, token: token, grant: grant} do
+      mcp_env(upload_dir: nil)
+      {id, _url} = prepare!(tenant, token)
+      on_exit(fn -> Uploads.discard(id) end)
+      assert String.starts_with?(Uploads.root(), System.tmp_dir!())
+      assert File.dir?(Path.join(Uploads.root(), id))
+
+      MCP.revoke_grant(grant, :system, "test")
+      assert MCP.prune() > 0
+
+      # A sweep that cannot run does not keep the tokens from going
+      Brando.Repo.update_all(MCP.Token, set: [expires_at: DateTime.add(DateTime.utc_now(), -5, :second)])
+      _ = connect_directly(Brando.Factory.insert(:random_user, role: :admin) |> enable_two_factor(), tenant)
+      Brando.Repo.update_all(MCP.Token, set: [expires_at: DateTime.add(DateTime.utc_now(), -5, :second)])
+      mcp_env(upload_dir: 42)
+      assert MCP.prune() > 0
+    end
   end
 
   describe "an upload" do
