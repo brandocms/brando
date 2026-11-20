@@ -294,6 +294,23 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert {:ok, %{status: "applied"}} = Proposals.get(proposal.id, c.user)
   end
 
+  test "undo of a proposal that also changed the source leaves no synchronization that fails", c do
+    ops = [%SetFields{target: {Article, c.source.id}, fields: %{"subtitle" => "Endret"}}, op(c)]
+    {:ok, proposal} = Proposals.propose(ops, c.user)
+    assert proposal.problems == []
+    {:ok, _receipt} = approve_and_apply(proposal, c.user)
+
+    jobs =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+        all_enqueued(worker: Brando.Worker.TranslationSync)
+      end)
+
+    assert Translations.get_member(Article, c.source.id) == nil
+    assert jobs != []
+    for job <- jobs, do: assert(:ok = perform_job(Brando.Worker.TranslationSync, job.args))
+  end
+
   test "an actor without create is refused, with groups", c do
     put_test_env(:authorization_mode, :groups)
     {:ok, _} = Brando.Authorization.Migration.run()

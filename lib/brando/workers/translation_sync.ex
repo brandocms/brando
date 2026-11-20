@@ -35,6 +35,8 @@ defmodule Brando.Worker.TranslationSync do
         {:ok, _} -> refresh_listing(group_id)
         # The source was deleted since the save; there is nothing to sync from.
         {:error, :source_not_found} -> {:cancel, :source_not_found}
+        # The group is gone since the save; its entries have nothing to follow.
+        {:error, :group_not_found} -> :ok
         {:error, reason} -> {:error, reason}
       end
     end)
