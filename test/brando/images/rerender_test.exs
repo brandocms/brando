@@ -430,6 +430,16 @@ defmodule Brando.Images.RerenderTest do
       refute SizeRun.running?()
     end
 
+    test "renders its entries when recreated for its config target at once", %{user: user} do
+      page = page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, [_id]} = Processing.recreate_sizes_for_image_field("default", :system)
+      end)
+
+      assert [%{state: "available"}] = renders_of(page)
+    end
+
     test "renders nothing when processing changed nothing a render reads", %{user: user} do
       image = image()
       page = page_with(user, [image])

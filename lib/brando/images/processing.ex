@@ -102,7 +102,8 @@ defmodule Brando.Images.Processing do
   (as `:system`). The run writes as the system, so `user` needs the right to
   update images: `{:error, :forbidden}` otherwise. Returns
   `{:error, :already_running}` while an earlier run is unfinished: until the
-  last image it queued is processed (`Brando.Images.SizeRun`).
+  last image it queued is processed, and the pages that show its images are
+  rendered again (`Brando.Images.SizeRun`).
   """
   @spec recreate_sizes_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | :forbidden | term}
   def recreate_sizes_for_images(user), do: start_image_maintenance("recreate_sizes", user)
@@ -374,6 +375,7 @@ defmodule Brando.Images.Processing do
         |> Brando.Repo.update!()
       end
 
+    rerender(images_by_id, updated_images)
     {:ok, Enum.map(updated_images, & &1.id)}
   end
 
@@ -403,7 +405,15 @@ defmodule Brando.Images.Processing do
         |> Brando.Repo.update!()
       end
 
+    rerender(images_by_id, updated_images)
     {:ok, Enum.map(updated_images, & &1.id)}
+  end
+
+  # The entries that show the images whose processing changed what a render
+  # reads render again, once (`Brando.Images.Rerender`)
+  defp rerender(before_by_id, updated) do
+    changed = for image <- updated, Images.Rerender.changed?(before_by_id[image.id], image), do: image.id
+    Images.Rerender.queue(changed)
   end
 
   # An image no operations can be made for keeps the sizes it has, and the
