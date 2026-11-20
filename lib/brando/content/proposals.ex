@@ -89,6 +89,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Drafts.Params
   alias Brando.Repo
   alias Brando.Translations
+  alias Brando.Translations.Sync
   alias Brando.Translations.Work
   alias Brando.Utils
   alias BrandoAdmin.Components.Form.LockedFields
@@ -352,11 +353,98 @@ defmodule Brando.Content.Proposals do
         {[translate_only()], trees}
 
       true ->
-        {problems, trees} = check(op, proposal, actor, trees)
-        {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
-        {problems ++ copy_problems ++ link_problems(op), trees}
+        case follows_source_problems(op) do
+          [] ->
+            {problems, trees} = check(op, proposal, actor, trees)
+            {copy_problems, trees} = check_copy_destination(op, proposal, actor, trees)
+            {problems ++ copy_problems ++ link_problems(op), trees}
+
+          problems ->
+            {problems, trees}
+        end
     end
   end
+
+  # A synchronized translation follows its source: its structure, media and
+  # source-controlled values are the source's, and its text is translation
+  # work, saved by translate as its form saves it. Of what a proposal
+  # changes, only the fields that are its language's own stay writable:
+  # those the synchronization leaves to each language (`Sync`'s `:local`
+  # class), and those it does not touch at all, such as its status.
+  defp follows_source_problems(%SetFields{target: {schema, _id} = target, fields: fields}) do
+    if synchronized_translation?(target) do
+      classes = followed_fields(schema)
+
+      for key <- fields |> Map.keys() |> Enum.sort(),
+          class = followed_field(classes, key),
+          do: field_follows_source(key, class)
+    else
+      []
+    end
+  end
+
+  defp follows_source_problems(op) do
+    if Enum.any?(changed_targets(op), &synchronized_translation?/1), do: [follows_source()], else: []
+  end
+
+  defp synchronized_translation?({schema, id}) when is_atom(schema) and schema != :new and not is_nil(id) do
+    Translations.synchronized?(schema) and
+      match?(%{role: :target, synchronized: true}, Translations.get_member(schema, id))
+  end
+
+  defp synchronized_translation?(_target), do: false
+
+  # The entry fields whose rows follow the source (`:shared`, `:structure`)
+  # or are translation work (`:text`), by name. A media field or a parent is
+  # named in its rows without `_id`.
+  defp followed_fields(schema) do
+    schema
+    |> struct()
+    |> Sync.flatten_entry(schema)
+    |> Enum.reject(&match?({_path, :local, _value}, &1))
+    |> Enum.group_by(fn {path, _class, _value} -> path |> String.split("/", parts: 2) |> hd() end, &elem(&1, 1))
+  end
+
+  defp followed_field(classes, key) do
+    case Map.get(classes, key) || Map.get(classes, String.replace_suffix(key, "_id", "")) do
+      nil -> nil
+      found -> if Enum.all?(found, &(&1 == :text)), do: :text, else: :source
+    end
+  end
+
+  defp field_follows_source(key, :text) do
+    key_problem(
+      :follows_source,
+      key,
+      dgettext(
+        "content_proposals",
+        "%{field} is text of a synchronized translation, which is translation work: write it with a translate operation, which saves it as the translation form does.",
+        field: key
+      )
+    )
+  end
+
+  defp field_follows_source(key, :source) do
+    key_problem(
+      :follows_source,
+      key,
+      dgettext(
+        "content_proposals",
+        "%{field} of a synchronized translation follows its source: change it in the source, and the translation follows.",
+        field: key
+      )
+    )
+  end
+
+  defp follows_source,
+    do:
+      problem(
+        :follows_source,
+        dgettext(
+          "content_proposals",
+          "This entry is a synchronized translation: its structure, media and source-controlled fields follow its source, and its text is filled in with translate. Make this change in the source, or write the text with a translate operation."
+        )
+      )
 
   # The translate operation saves through the translation's own save, which
   # no other operation's change would go through.
