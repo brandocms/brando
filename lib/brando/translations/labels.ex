@@ -11,6 +11,8 @@ defmodule Brando.Translations.Labels do
   """
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Translations.Sync
+
   @typedoc """
   Where a work item's path points: a field, a block (by its `uid` in the
   translation, with its module's name and the rest of the path) or a
@@ -23,7 +25,7 @@ defmodule Brando.Translations.Labels do
 
   @doc """
   The blocks of `payload` at any depth, by the identity work item paths use
-  (`sync_uid`, else `uid`): each block's `uid`, module name, variables, the
+  (`Brando.Translations.Sync.block_identities/1`): each block's `uid`, module name, variables, the
   identifier ids it links to, and the block itself.
   """
   def block_index(schema, payload) do
@@ -35,17 +37,19 @@ defmodule Brando.Translations.Labels do
     fields
     |> Enum.flat_map(fn field ->
       case Map.get(payload, field) do
-        joins when is_list(joins) -> Enum.map(joins, & &1.block)
-        _ -> []
+        joins when is_list(joins) ->
+          blocks = Enum.map(joins, & &1.block)
+          identities = Sync.block_identities(blocks)
+          blocks |> Enum.flat_map(&walk/1) |> Enum.map(&{identities[&1.uid], &1})
+
+        _ ->
+          []
       end
     end)
-    |> Enum.flat_map(&walk/1)
-    |> Map.new(fn block ->
+    |> Map.new(fn {identity, block} ->
       vars = if is_list(block.vars), do: block.vars, else: []
       links = if is_list(block.block_identifiers), do: Enum.map(block.block_identifiers, & &1.identifier_id), else: []
-
-      {block.sync_uid || block.uid,
-       %{uid: block.uid, module_name: module_name(block), vars: vars, identifier_ids: links, block: block}}
+      {identity, %{uid: block.uid, module_name: module_name(block), vars: vars, identifier_ids: links, block: block}}
     end)
   end
 

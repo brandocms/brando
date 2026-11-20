@@ -270,13 +270,13 @@ defmodule Brando.Translations.Work do
     end
   end
 
-  # Rows by `sync_uid`, as `Sync` keys them
+  # Rows by their identity, as `Sync` keys them
   defp row_var(block, row, key) do
     rows = if is_list(block.table_rows), do: block.table_rows, else: []
 
-    case Enum.find(rows, &(&1.sync_uid == row)) do
+    case Enum.find(Sync.row_identities(rows), fn {_row, identity} -> identity == row end) do
       nil -> nil
-      found -> find(found, :vars, :key, key)
+      {found, _identity} -> find(found, :vars, :key, key)
     end
   end
 

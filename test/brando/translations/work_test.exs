@@ -201,6 +201,54 @@ defmodule Brando.Translations.WorkTest do
     end
   end
 
+  # Units name blocks and rows by the identity `Sync` gives them
+  describe "identities" do
+    defp text_items(entry, suffix) do
+      for {path, :text, _} <- Brando.Translations.Sync.flatten_entry(entry, Article),
+          String.ends_with?(path, suffix),
+          do: %{path: path, kind: :translate}
+    end
+
+    test "two blocks with the same sync_uid: the second is named by its uid, as Sync names it", c do
+      second = Brando.TranslationFixtures.add_block(c.source, c.module, c.user, "<p>Andre</p>", 1)
+
+      for block <- [c.block, second],
+          do: block |> Ecto.Changeset.change(sync_uid: "dup") |> Repo.update!()
+
+      source = load(c.source.id)
+      items = text_items(source, "/refs/body/text")
+
+      assert Enum.map(items, & &1.path) == [
+               "entry_blocks/dup/refs/body/text",
+               "entry_blocks/#{second.uid}/refs/body/text"
+             ]
+
+      assert [first_unit, second_unit] = Work.units(Article, source, source, items)
+      assert %{block_uid: first_uid, format: "html", source: @body} = first_unit
+      assert first_uid == c.block.uid
+      assert %{block_uid: second_uid, format: "html", source: "<p>Andre</p>"} = second_unit
+      assert second_uid == second.uid
+    end
+
+    test "a table row without sync_uid is found by its position, as Sync keys it", c do
+      row = Repo.insert!(%TableRow{block_id: c.block.id, sequence: 1})
+
+      Repo.insert!(%Var{
+        key: "note",
+        type: :rich_text,
+        value: "<p>Merknad</p>",
+        label: %{"en" => "note"},
+        table_row_id: row.id,
+        sequence: 0
+      })
+
+      source = load(c.source.id)
+      assert [%{path: path} = item] = text_items(source, "/vars/note/value")
+      assert path =~ "/rows/#"
+      assert [%{format: "html"}] = Work.units(Article, source, source, [item])
+    end
+  end
+
   test "a source's units for a missing language are those its new translation gets", c do
     {:ok, prospective} = Work.new_translation_units(Article, c.source.id)
     assert Enum.all?(prospective, &(&1.kind == "translate" and not Map.has_key?(&1, :block_uid)))

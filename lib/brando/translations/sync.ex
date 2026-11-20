@@ -1251,9 +1251,16 @@ defmodule Brando.Translations.Sync do
 
   # --- Identity ---------------------------------------------------------------
 
-  # A block's identity is its `sync_uid`, or its `uid` when it has none or when
-  # another block in the same tree already claimed the `sync_uid` — a copy made
-  # by a path that did not reset it. Keyed by `uid`, which is unique.
+  @doc """
+  The identities of a blocks field's `blocks` (the top level; children are
+  walked), by `uid`, as work item paths use them. A block's identity is its
+  `sync_uid`, or its `uid` when it has none or when another block in the same
+  tree already claimed the `sync_uid` — a copy made by a path that did not
+  reset it.
+  """
+  def block_identities(blocks), do: identities(blocks)
+
+  # Keyed by `uid`, which is unique.
   defp identities(blocks) do
     {ids, _seen} = walk_identities(blocks, {%{}, MapSet.new()})
     ids
@@ -1275,7 +1282,12 @@ defmodule Brando.Translations.Sync do
     end)
   end
 
-  defp row_identities(rows) do
+  @doc """
+  The identities of a block's loaded table `rows`, by row, as work item paths
+  use them: a row's `sync_uid`, or `"#<index>"` when it has none or another
+  row already claimed it.
+  """
+  def row_identities(rows) do
     {ids, _} =
       rows
       |> Enum.with_index()
