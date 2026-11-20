@@ -770,9 +770,11 @@ defmodule Brando.Content.Blocks do
     end
   end
 
+  # The module's own rich-text columns: `__rich_text_fields__/0` also names
+  # the rich-text inputs of its subforms, which are no columns of the module
   defp rich_text_fields_for(module) do
     if function_exported?(module, :__rich_text_fields__, 0) do
-      module.__rich_text_fields__()
+      Enum.filter(module.__rich_text_fields__(), &(&1 in module.__schema__(:fields)))
     else
       []
     end
