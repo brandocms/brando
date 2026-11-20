@@ -478,6 +478,24 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   ## Review
 
   @doc """
+  Fails unless `viewer` may read the images `operations` replace and the
+  ones whose files replace them, for a review shared with them: the review
+  shows both files. Once applied, NEW's record is gone and OLD decides.
+  """
+  @spec readable!([struct()], term(), boolean()) :: :ok
+  def readable!(operations, viewer, applied?) do
+    ids =
+      for %ReplaceImageFile{asset: {:image, old_id}, with: {:image, new_id}} <- operations,
+          id <- if(applied?, do: [old_id], else: [old_id, new_id]),
+          uniq: true,
+          do: id
+
+    if Enum.all?(ids, &readable(&1, viewer)),
+      do: :ok,
+      else: Error.fail!(dgettext("content_proposals", "You may not see the images this proposal replaces."))
+  end
+
+  @doc """
   What the reviewer sees of each `replace_image_file` of `proposal`: the two
   files as they were prepared, whether their proportions differ, and the
   entries that use OLD (those the viewer may read, with their admin links,

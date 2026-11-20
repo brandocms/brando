@@ -484,6 +484,34 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
              Proposals.propose([replace(in_gallery, image!("e", {1600, 1200}))], editor)
   end
 
+  test "a shared review needs read on both images, and on OLD once NEW is gone", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+
+    old = image!("a", {800, 600})
+    new = image!("b", {1600, 1200})
+    {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+    assert proposal.problems == []
+
+    colleague = Factory.insert(:random_user, role: :user)
+    {:ok, access} = Groups.create(Scope.standalone(c.user), %{name: "Admins"}, ["brando.admin.access"])
+    {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), access.id, colleague.id)
+
+    # No entries to read, and not the images
+    assert {:error, _} = Proposals.get_shared(proposal.id, proposal.version, colleague)
+
+    {:ok, readers} = Groups.create(Scope.standalone(c.user), %{name: "Image readers"}, [Catalog.get(:read, Image).key])
+    {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), readers.id, colleague.id)
+    assert {:ok, _} = Proposals.get_shared(proposal.id, proposal.version, colleague)
+
+    # Applied, NEW's record is gone: OLD decides
+    assert {:ok, _} = approve_and_apply(proposal, c.user)
+    assert {:ok, _} = Proposals.get_shared(proposal.id, proposal.version, colleague)
+    {:ok, :ok} = Groups.remove_member(Scope.standalone(c.user), readers.id, colleague.id)
+    assert {:error, _} = Proposals.get_shared(proposal.id, proposal.version, colleague)
+  end
+
   describe "the operation's JSON" do
     test "decodes an image's asset or an attachment, and refuses other kinds" do
       assert {:ok, %ReplaceImageFile{asset: {:image, 1}, with: {:image, 7}}} =

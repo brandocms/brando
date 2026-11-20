@@ -2993,7 +2993,8 @@ defmodule Brando.Content.Proposals do
 
   @doc """
   Load `version` of proposal `id` for a colleague it was shared with, to
-  review it read-only. The viewer must be able to read its entries; only the
+  review it read-only. The viewer must be able to read its entries, and the
+  images it replaces files of (`ImageReplacement.readable!/3`); only the
   proposing user can approve and apply it.
   """
   @spec get_shared(Ecto.UUID.t(), integer(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
@@ -3008,7 +3009,9 @@ defmodule Brando.Content.Proposals do
       if record.status not in ~w(pending approved applied),
         do: Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
 
-      rebuild!(record, viewer, :read)
+      proposal = rebuild!(record, viewer, :read)
+      ImageReplacement.readable!(proposal.operations, viewer, record.status == "applied")
+      proposal
     end)
   end
 
