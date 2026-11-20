@@ -6,6 +6,7 @@ defmodule Brando.Images.Processing do
   alias Brando.Images
   alias Brando.Images.Image
   alias Brando.Images.Operations
+  alias Brando.Images.SizeRun
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Type.ImageConfig
   alias Brando.Uploads.Store
@@ -22,7 +23,10 @@ defmodule Brando.Images.Processing do
   @type user :: User.t() | :system
 
   @doc """
-  Queue an image for processing
+  Queue an image for processing.
+
+  Options: `:silent`, and `:prepare`, a function given the job's changeset
+  before it is inserted (to track it, say).
   """
   def queue_processing(image, user, field_full_path \\ [], opts \\ []) do
     args =
@@ -39,8 +43,11 @@ defmodule Brando.Images.Processing do
         where: fragment("? @> ?", j.args, ^args)
     )
 
+    prepare = Keyword.get(opts, :prepare, & &1)
+
     args
     |> Worker.ImageProcessor.new(replace_args: true)
+    |> prepare.()
     |> Oban.insert()
   end
 
@@ -91,7 +98,8 @@ defmodule Brando.Images.Processing do
   one for processing, so it is safe to call from the admin or a release shell
   (as `:system`). The run writes as the system, so `user` needs the right to
   update images: `{:error, :forbidden}` otherwise. Returns
-  `{:error, :already_running}` while an earlier run is unfinished.
+  `{:error, :already_running}` while an earlier run is unfinished: until the
+  last image it queued is processed (`Brando.Images.SizeRun`).
   """
   @spec recreate_sizes_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | :forbidden | term}
   def recreate_sizes_for_images(user), do: start_image_maintenance("recreate_sizes", user)
@@ -102,9 +110,10 @@ defmodule Brando.Images.Processing do
 
   Images processed before Brando recorded configs are first adopted when
   their files already match their config (`Brando.Images.Adoption`), and only
-  the rest are recreated. The run broadcasts how many of each on `topic/0`, as
-  `{:image_maintenance, %{task: "recreate_changed_sizes", state: :running | :done,
-  adopted: n, recreated: n}}`.
+  the rest are queued to be recreated. The walk broadcasts how many of each on
+  `topic/0`, as `{:image_maintenance, %{task: "recreate_changed_sizes", state:
+  :running | :done, adopted: n, queued: n}}`; `:done` is the end of the walk,
+  not of the run, which `Brando.Images.SizeRun` reports.
 
   Runs in the background like `recreate_sizes_for_images/1`, and neither starts
   while the other is unfinished.
@@ -275,22 +284,25 @@ defmodule Brando.Images.Processing do
     Brando.Repo.one(query) == true
   end
 
-  # Both recreate tasks queue the same per-image jobs, so one waits for the other.
-  @recreate_tasks ~w(recreate_sizes recreate_changed_sizes)
-
   # The run writes as the system, so starting it needs the right to update
-  # images, read afresh, in both authorization modes.
+  # images, read afresh, in both authorization modes. Both recreate tasks
+  # queue the same per-image jobs, so one waits for the other, and for the
+  # last image the other queued.
   defp start_image_maintenance(task, user) do
-    blocking = if task in @recreate_tasks, do: @recreate_tasks, else: [task]
+    recreate? = task in SizeRun.tasks()
 
     with {:ok, :allowed} <- Boundary.run(user, :update, Image, fn _ -> {:ok, :allowed} end) do
-      if Enum.any?(blocking, &image_maintenance_running?/1) do
+      if (recreate? and SizeRun.running?()) or image_maintenance_running?(task) do
         {:error, :already_running}
       else
+        # Before the insert: a job run inline reports the run as it is queued
+        if recreate?, do: SizeRun.begin(user)
+
         %{task: task, user_id: Brando.Users.job_user_id(user)}
         |> TenantJob.attach()
         |> Worker.ImageMaintenance.new()
         |> Oban.insert()
+        |> tap(&if(recreate? and not match?({:ok, _}, &1), do: SizeRun.abort(user)))
       end
     end
   end

@@ -90,6 +90,50 @@ defmodule BrandoAdmin.WorkTest do
     refute_receive {:work, "batch", _, _}, 100
   end
 
+  test "open work counts its batches and ends only after it is closed and its steps are in", %{user_id: user_id} do
+    Work.start(user_id, "walk", "Walking", total: 0, open: true, done: "Walked")
+    Work.start(user_id, "walk", nil, total: 1)
+    assert_receive {:work, "walk", :running, %Work{total: 1, open: true}}
+
+    # The first batch is in before the next is counted: still running
+    Work.advance(user_id, "walk")
+    assert_receive {:work, "walk", :running, %Work{done: 1, total: 1}}
+
+    Work.start(user_id, "walk", nil, total: 2)
+    assert_receive {:work, "walk", :running, %Work{total: 3, open: true, message: "Walking"}}
+
+    Work.close(user_id, "walk", done: "3 walked")
+    assert_receive {:work, "walk", :running, %Work{open: false}}
+
+    Work.advance(user_id, "walk")
+    assert_receive {:work, "walk", :running, %Work{done: 2}}
+    Work.advance(user_id, "walk")
+    assert_receive {:work, "walk", :finished, %Work{done: 3, message: "3 walked"}}
+  end
+
+  test "closing open work whose steps are in, or that has none, ends it at once", %{user_id: user_id} do
+    Work.start(user_id, "none", "Walking", total: 0, open: true, done: "Walked")
+    Work.close(user_id, "none")
+    assert_receive {:work, "none", :finished, %Work{total: 0, message: "Walked"}}
+
+    Work.start(user_id, "some", "Walking", total: 1, open: true, failed: "Some failed")
+    Work.advance(user_id, "some", :error, item: 7)
+    Work.close(user_id, "some")
+    assert_receive {:work, "some", :failed, %Work{done: 1, failed: 1, failed_items: [7], message: "Some failed"}}
+
+    # Nothing running: nothing to close
+    Work.close(user_id, "gone")
+    refute_receive {:work, "gone", _, _}, 100
+  end
+
+  test "failed steps keep what they were about, successful ones do not", %{user_id: user_id} do
+    Work.start(user_id, "items", "Writing", total: 3)
+    Work.advance(user_id, "items", :error, item: 1)
+    Work.advance(user_id, "items", :ok, item: 2)
+    Work.advance(user_id, "items", :error)
+    assert_receive {:work, "items", :failed, %Work{failed: 2, failed_items: [1]}}
+  end
+
   test "a batch that starts over keeps what it counted", %{user_id: user_id} do
     Work.start(user_id, "batch", "Writing", total: 3)
     Work.advance(user_id, "batch")
@@ -228,6 +272,19 @@ defmodule BrandoAdmin.WorkTest do
 
       assert_receive {:work, "steps", :running, %Work{done: 1}}
       assert_receive {:work, "steps", :failed, %Work{done: 2, failed: 1, message: "Some failed"}}
+    end
+
+    test "a failed step job names its item", %{user_id: user_id} do
+      Work.start(user_id, "named", "Writing", total: 2)
+
+      for {result, item} <- [{"ok", 1}, {"cancel", 2}] do
+        %{"result" => result}
+        |> DoneWorker.new()
+        |> Work.track(user_id, "named", step: true, item: item)
+        |> Oban.insert!()
+      end
+
+      assert_receive {:work, "named", :failed, %Work{done: 2, failed: 1, failed_items: [2]}}
     end
 
     test "a job that hands its work on ends it only when it fails", %{user_id: user_id} do

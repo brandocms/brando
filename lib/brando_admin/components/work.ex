@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Work do
     """
   end
 
-  defp progress(%Work{total: total, done: done}) when is_integer(total), do: "#{done} / #{total}"
+  defp progress(%Work{total: total, done: done}) when is_integer(total) and total > 0, do: "#{done} / #{total}"
   defp progress(%Work{percent: percent}) when is_number(percent), do: "#{round(percent)}%"
   defp progress(_work), do: nil
 end

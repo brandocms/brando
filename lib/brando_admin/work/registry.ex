@@ -90,6 +90,7 @@ defmodule BrandoAdmin.Work.Registry do
       | message: attrs.message || work.message,
         percent: attrs[:percent],
         total: join_total(work.total, attrs[:total]),
+        open: Map.get(attrs, :open, work.open),
         done_message: attrs[:done_message] || work.done_message,
         failed_message: attrs[:failed_message] || work.failed_message,
         timeout: attrs[:timeout] || work.timeout,
@@ -119,18 +120,29 @@ defmodule BrandoAdmin.Work.Registry do
   def apply_op(:touch, %Work{status: :running} = work, _key, _attrs, at), do: %{work | updated_at: at}
   def apply_op(:touch, _work, _key, _attrs, _at), do: nil
 
-  def apply_op(:advance, %Work{status: :running, total: total} = work, _key, %{result: result}, at)
+  def apply_op(:advance, %Work{status: :running, total: total} = work, _key, %{result: result} = attrs, at)
       when is_integer(total) do
-    work = %{work | done: work.done + 1, failed: work.failed + if(result == :error, do: 1, else: 0), updated_at: at}
+    work = %{work | done: work.done + 1, updated_at: at}
 
-    cond do
-      work.done < total -> work
-      work.failed > 0 -> %{work | status: :failed, message: work.failed_message}
-      true -> %{work | status: :finished, message: work.done_message}
-    end
+    work
+    |> count_failed(result, attrs[:item])
+    |> end_when_counted()
   end
 
   def apply_op(:advance, _work, _key, _attrs, _at), do: nil
+
+  # No more steps: ends once the counted ones are in
+  def apply_op(:close, %Work{status: :running} = work, _key, attrs, at) do
+    end_when_counted(%{
+      work
+      | open: false,
+        done_message: attrs[:done_message] || work.done_message,
+        failed_message: attrs[:failed_message] || work.failed_message,
+        updated_at: at
+    })
+  end
+
+  def apply_op(:close, _work, _key, _attrs, _at), do: nil
 
   # Nothing running under the key: nothing to end (a job that ended its work
   # itself, then Oban giving it up)
@@ -141,6 +153,28 @@ defmodule BrandoAdmin.Work.Registry do
     default = if op == :finish, do: work.done_message, else: work.failed_message
     %{work | status: status, message: attrs.message || default, percent: nil, updated_at: at}
   end
+
+  # Enough of a failed step's items to name them, not a whole library's
+  @max_failed_items 100
+
+  defp count_failed(work, :ok, _item), do: work
+
+  defp count_failed(work, :error, item) do
+    items =
+      if is_nil(item) or length(work.failed_items) >= @max_failed_items,
+        do: work.failed_items,
+        else: work.failed_items ++ [item]
+
+    %{work | failed: work.failed + 1, failed_items: items}
+  end
+
+  defp end_when_counted(%Work{open: true} = work), do: work
+  defp end_when_counted(%Work{total: total, done: done} = work) when not is_integer(total) or done < total, do: work
+
+  defp end_when_counted(%Work{failed: failed} = work) when failed > 0,
+    do: %{work | status: :failed, message: work.failed_message}
+
+  defp end_when_counted(work), do: %{work | status: :finished, message: work.done_message}
 
   # A batch that starts while one runs joins its count
   defp join_total(current, more) when is_integer(current) and is_integer(more), do: current + more
@@ -156,6 +190,7 @@ defmodule BrandoAdmin.Work.Registry do
       message: attrs[:message],
       percent: attrs[:percent],
       total: attrs[:total] || attrs[:remaining],
+      open: attrs[:open] || false,
       done: attrs[:done] || 0,
       done_message: attrs[:done_message],
       failed_message: attrs[:failed_message],
