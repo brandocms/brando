@@ -735,6 +735,9 @@ defmodule Brando.Content.Proposals.Tools do
         Enum.map(proposal.problems, fn problem ->
           %{operation: problem[:operation], code: problem.code, message: problem.message}
           |> Map.merge(if(problem[:target], do: %{target: target_key(problem.target)}, else: %{}))
+          # The translation unit a translate problem is about; its label in
+          # the message repeats for every block of the same module.
+          |> Map.merge(if(problem[:key], do: %{key: problem.key}, else: %{}))
         end),
       effects:
         proposal.effects

@@ -575,6 +575,16 @@ defmodule Brando.Content.Proposals.TranslateTest do
       refute norwegian["title"] == english["title"]
     end
 
+    test "the review prepare_proposal returns gives each problem's unit key", c do
+      body = "#{c.prefix}/refs/body/text"
+      texts = Map.put(english(c), body, "<p>First paragraph on {{ entry.title }}</p>")
+
+      {:ok, proposal} = Proposals.propose([translate(c.target, texts)], c.user)
+      review = Brando.Content.Proposals.Tools.review(proposal)
+
+      assert [%{operation: 0, code: :html_changed, key: ^body}] = review.problems
+    end
+
     test "a token for another entry, or a changed one", c do
       assert [{0, :stale, nil}] = problems([translate(c.target, english(c), digest: "nonsense")], c.user)
 
