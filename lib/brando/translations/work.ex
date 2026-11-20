@@ -604,6 +604,14 @@ defmodule Brando.Translations.Work do
 
   defp problem(key, code, message), do: %{key: key, code: code, message: message}
 
+  @doc """
+  The template placeholders (`{{ }}`, `{% %}`, `<% %>`) in `text`, each once,
+  as `check/4` matches them.
+  """
+  @spec placeholders(String.t()) :: [String.t()]
+  def placeholders(text) when is_binary(text),
+    do: @placeholder_pattern |> Regex.scan(text) |> List.flatten() |> Enum.uniq()
+
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(nil), do: true
   defp blank?(_value), do: false

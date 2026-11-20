@@ -1705,7 +1705,7 @@ defmodule Brando.Translations do
   the texts are written into the saved translation), or `{:error, reason}`:
   `:not_translation` for an entry that is not a synchronized translation,
   `:not_found`, `:unbuildable` when the version cannot be put into a
-  changeset.
+  changeset whole (a block whose module no longer matches it).
   """
   def work_changeset(schema, entry_id, texts, user) do
     with %{member: %Member{role: :target, synchronized: true}, pending: pending} <- editor_state(schema, entry_id),
@@ -1753,8 +1753,10 @@ defmodule Brando.Translations do
       }
     }
 
+    # A block whose module no longer matches it would be left out, and with
+    # it the translation's text: refused rather than saved without it.
     case Brando.Drafts.Restore.prepare(draft, saved, schema, user, accept_conflict: true, compatible_only: true) do
-      {:ok, changeset, _issues} -> {:ok, changeset}
+      {:ok, changeset, []} -> {:ok, changeset}
       _ -> :error
     end
   end
@@ -1772,8 +1774,8 @@ defmodule Brando.Translations do
   (`show_notification: false`, `pubsub: false`). Run it in a transaction to
   make the save and the resolution one.
 
-  Returns `{:ok, %{entry: entry, resolved: items, open: count, stale:
-  boolean}}`, `resolved` being the work items the save resolved
+  Returns `{:ok, %{entry: entry, changeset: changeset, resolved: items,
+  open: count, stale: boolean}}`, `resolved` being the work items the save resolved
   (`%{path, kind, source_digest, minor}`, for `reopen_work/3`), or
   `{:error, reason}`: those of `work_changeset/4`,
   `{:source_controlled, paths}`, or the update's error.
@@ -1790,7 +1792,7 @@ defmodule Brando.Translations do
          open = open_items(version_id),
          {:ok, entry} <- apply(context, :"update_#{singular}", [changeset, user, mutation]),
          {:ok, result} <- target_saved(schema, entry_id, %{version_id: version_id, acknowledged: acknowledged}) do
-      {:ok, Map.merge(result, %{entry: entry, resolved: resolved_items(open)})}
+      {:ok, Map.merge(result, %{entry: entry, changeset: changeset, resolved: resolved_items(open)})}
     end
   end
 
