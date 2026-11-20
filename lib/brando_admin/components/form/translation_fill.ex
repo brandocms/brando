@@ -12,7 +12,8 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   was when it started (`baseline`): a field here, a block's text in its
   BlockField (`"translation_fill_start"`). A text that changed by the time
   the reply comes, by this editor or another, keeps its text and is marked
-  `:kept`. A reply for another entry, or for a pending version the form no
+  `:kept`; so does a field with another editor's change held while this
+  editor is in it, which the form takes when they leave it. A reply for another entry, or for a pending version the form no
   longer holds or that has since been replaced, is dropped.
 
   Fields are written by the Form through its local-change path
@@ -452,9 +453,12 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     # A text the editor no longer has where it was (a block removed since)
     lost = for {key, _text} <- block_texts, not Map.has_key?(targets, key), into: %{}, do: {key, :kept}
 
+    held = held_fields(socket)
+
     {writes, kept} =
       Enum.split_with(field_texts, fn {key, _text} ->
-        field_value(socket.assigns.form.source, targets[key]) == Map.get(fill.baseline, key)
+        field_value(socket.assigns.form.source, targets[key]) == Map.get(fill.baseline, key) and
+          not held?(targets[key], held)
       end)
 
     marks =
@@ -466,6 +470,14 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     socket = assign(socket, :translation_fill, %{fill | status: :done, marks: marks})
     {socket, Enum.map(writes, fn {key, text} -> {key, targets[key], text} end)}
   end
+
+  # The fields with another editor's change held while this editor is in
+  # them (the Form's `held_remote`): it is not in the form yet, and is put
+  # in when the editor leaves the field, so the field has changed.
+  defp held_fields(socket), do: for({field, _change} <- socket.assigns[:held_remote] || %{}, do: to_string(field))
+
+  defp held?({:field, field}, held), do: field in held
+  defp held?(_target, _held), do: false
 
   @doc "Marks what the Form wrote (`:filled`) and could not write (`:kept`)."
   def fields_written(socket, written, failed), do: mark(socket, nil, written, failed)

@@ -744,6 +744,37 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert block_text(view, uid) == "Their paragraph"
     end
 
+    test "a second editor's change to the field this editor is in during the run is kept",
+         %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+
+      view = open(conn, target.id)
+      other_view = open(other_conn, target.id)
+      form = with_target(view, cid_of(view, "#article_form-el"))
+
+      # This editor is in the title: another editor's change to it is held
+      # until they leave it
+      render_hook(form, "focus", %{"field" => "article[title]"})
+      translate_one(view, "title")
+      assert_receive {:ai_waiting, model}, 2_000
+
+      other_form = with_target(other_view, cid_of(other_view, "#article_form-el"))
+      render_hook(other_form, "focus", %{"field" => "article[title]"})
+      edit_title(other_view, "Their title")
+      render_hook(other_form, "blur", %{"field" => "article[title]"})
+
+      send(model, :answer)
+      render_async(view, 5_000)
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='kept']") end)
+
+      render_hook(form, "blur", %{"field" => "article[title]"})
+
+      await(fn -> title(view) == "Their title" end)
+      assert title(other_view) == "Their title"
+    end
+
     test "a review item sends the source's text and the translation's", %{conn: conn, current_user: user} = c do
       source = source(c, "Gammel", "Gammel tekst")
       {:ok, target} = Translations.create_target(Article, source.id, :en, user, mark_translate: false)
