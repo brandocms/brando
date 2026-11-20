@@ -292,19 +292,34 @@ defmodule Brando.Images.Processing do
     recreate? = task in SizeRun.tasks()
 
     with {:ok, :allowed} <- Boundary.run(user, :update, Image, fn _ -> {:ok, :allowed} end) do
-      if (recreate? and SizeRun.running?()) or image_maintenance_running?(task) do
-        {:error, :already_running}
-      else
-        # Before the insert: a job run inline reports the run as it is queued
-        if recreate?, do: SizeRun.begin(user)
-
-        %{task: task, user_id: Brando.Users.job_user_id(user)}
-        |> TenantJob.attach()
-        |> Worker.ImageMaintenance.new()
-        |> Oban.insert()
-        |> tap(&if(recreate? and not match?({:ok, _}, &1), do: SizeRun.abort(user)))
+      cond do
+        recreate? and SizeRun.running?() -> {:error, :already_running}
+        image_maintenance_running?(task) -> {:error, :already_running}
+        recreate? -> start_size_run(task, user)
+        true -> insert_image_maintenance(task, user)
       end
     end
+  end
+
+  # Begun before the insert: a job run inline reports the run as it is queued
+  defp start_size_run(task, user) do
+    SizeRun.begin(user)
+
+    case insert_image_maintenance(task, user) do
+      {:ok, _job} = ok ->
+        ok
+
+      error ->
+        SizeRun.abort(user)
+        error
+    end
+  end
+
+  defp insert_image_maintenance(task, user) do
+    %{task: task, user_id: Brando.Users.job_user_id(user)}
+    |> TenantJob.attach()
+    |> Worker.ImageMaintenance.new()
+    |> Oban.insert()
   end
 
   @doc """

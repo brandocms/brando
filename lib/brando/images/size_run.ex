@@ -1,28 +1,27 @@
 defmodule Brando.Images.SizeRun do
-  @moduledoc """
-  A run of Utilities → Image sizes: **Recreate image sizes** or **Recreate
-  changed images**, from the click to the last image processed.
-
-  `Brando.Worker.ImageMaintenance` walks the images in batches and queues an
-  `ImageProcessor` job for each image to recreate. The run reports to the
-  admin who started it as `BrandoAdmin.Work` under `work_key/0`, counting each
-  image when its job succeeds or gives up:
-
-    * `begin/1`, before the walk is queued, starts the work, open (more
-      batches may follow) and with nothing counted yet;
-    * `queue/2`, per batch, adds the batch's images to the count, then
-      queues them, each tracked as a step that names its image when it fails;
-    * `close/2`, after the last batch, says there are no more: the work ends
-      when the last queued image is done, or at once when there were none.
-
-  Whether a run is going on comes from the jobs, not from that work, which
-  only its admin sees: `running?/0` is true while the walk or any image it
-  queued is waiting or being processed, for every admin, on every node.
-
-  Later steps of the same run (re-rendering the entries that show a recreated
-  image) can join its count with `BrandoAdmin.Work.start/4` and `total:`
-  before the last image's step is in, as `queue/2` does.
-  """
+  @moduledoc false
+  # A run of Utilities → Image sizes: **Recreate image sizes** or **Recreate
+  # changed images**, from the click to the last image processed.
+  #
+  # `Brando.Worker.ImageMaintenance` walks the images in batches and queues an
+  # `ImageProcessor` job for each image to recreate. The run reports to the
+  # admin who started it as `BrandoAdmin.Work` under `work_key/0`, counting each
+  # image when its job succeeds or gives up:
+  #
+  #   * `begin/1`, before the walk is queued, starts the work, open (more
+  #     batches may follow) and with nothing counted yet;
+  #   * `queue/2`, per batch, adds the batch's images to the count, then
+  #     queues them, each tracked as a step that names its image when it fails;
+  #   * `close/2`, after the last batch, says there are no more: the work ends
+  #     when the last queued image is done, or at once when there were none.
+  #
+  # Whether a run is going on comes from the jobs, not from that work, which
+  # only its admin sees: `running?/0` is true while the walk or any image it
+  # queued is waiting or being processed, for every admin, on every node.
+  #
+  # Later steps of the same run (re-rendering the entries that show a recreated
+  # image) can join its count with `BrandoAdmin.Work.start/4` and `total:`
+  # before the last image's step is in, as `queue/2` does.
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
