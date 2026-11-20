@@ -900,6 +900,49 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert %{key: "title", source: "Ny tittel", text: "Title", reviewed?: true} = unit
     end
 
+    test "shows a review unit's source before and now, and its translation before and now", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+
+      op = translate(target, %{"title" => "New title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert proposal.problems == []
+
+      assert [%{changes: [%{units: [unit]}]}] = Review.entries(proposal)
+
+      assert %{
+               key: "title",
+               source_previous: "Tittel",
+               source: "Ny tittel",
+               before: "Title",
+               text: "New title",
+               reviewed?: false
+             } = unit
+    end
+
+    test "a translate unit, and a review raised without the previous text, show no before", c do
+      target = create_translation(c)
+      heading = "#{c.prefix}/refs/heading/text"
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: Map.delete(english(c), heading)}, c.user)
+
+      # Synced before the texts were kept
+      from(m in Brando.Translations.Member, where: m.entry_id == ^target.id and m.role == :target)
+      |> Repo.update_all(set: [baseline_texts: %{}])
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+      assert {:review, "title"} in open_items(target.id)
+      assert {:translate, heading} in open_items(target.id)
+
+      op = translate(target, %{"title" => "New title", heading => "Heading"}, keys: ["title", heading])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert proposal.problems == []
+
+      assert [%{changes: [%{units: [title, heading_unit]}]}] = Review.entries(proposal)
+      assert %{key: "title", source_previous: nil, before: nil} = title
+      assert %{key: ^heading, source_previous: nil, before: nil} = heading_unit
+    end
+
     test "labels a unit in a block the source added from the pending version", c do
       target = create_translation(c)
       added = add_block(c.source, c.module, c.user, 1)

@@ -166,6 +166,51 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
     end
 
     # The token, the other items and the head share the result with the units
+    # The translation translated and saved, then the source's body changed
+    defp reviewed_body(c, before, translated, now) do
+      {:ok, source} = SyncTest.create_article(%{title: "T", slug: "t", language: "no", status: "published"}, c.user)
+      block = TranslationFixtures.add_block(source, c.module, c.user, before, 1)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
+      key = "entry_blocks/#{block.uid}/refs/body/text"
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: %{"title" => "T", key => translated}}, c.user)
+
+      [ref] = Brando.Repo.preload(block, :refs).refs
+      ref |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: now}}) |> Brando.Repo.update!()
+      {:ok, source} = Translations.load_entry(Article, source.id)
+      Translations.source_saved(source)
+
+      {target, key}
+    end
+
+    test "a review unit has the source's text before the change", c do
+      {target, key} = reviewed_body(c, "<p>Første avsnitt</p>", "<p>First paragraph</p>", "<p>Første, endret</p>")
+
+      assert %{units: [unit]} = call!(args(target.id), c.context)
+
+      assert %{
+               key: ^key,
+               kind: "review",
+               answerable: true,
+               source_previous: "<p>Første avsnitt</p>",
+               source: "<p>Første, endret</p>",
+               current: "<p>First paragraph</p>"
+             } = unit
+    end
+
+    test "a review unit that fits a result only without its previous text is read without it", c do
+      # About 8 KB of text with its translation, and 12 KB before the change
+      text = fn word -> "<p>" <> String.duplicate("#{word} ", 1_150) <> "</p>" end
+      before = "<p>" <> String.duplicate("Gammel tekst ", 900) <> "</p>"
+      {target, key} = reviewed_body(c, before, text.("Old"), text.("Ny"))
+
+      result = call!(args(target.id), c.context)
+      assert byte_size(Jason.encode!(result)) <= Brando.MCP.Tools.result_limit()
+
+      assert [%{key: ^key, kind: "review", answerable: true, source: source} = unit] = result.units
+      assert source == text.("Ny")
+      refute Map.has_key?(unit, :source_previous)
+    end
+
     test "a first batch with many links waiting for their targets stays within a result", c do
       {:ok, source} =
         SyncTest.create_article(%{title: "Mange", slug: "mange", language: "no", status: "published"}, c.user)

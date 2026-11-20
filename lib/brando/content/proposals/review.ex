@@ -216,7 +216,7 @@ defmodule Brando.Content.Proposals.Review do
             type: :translate,
             language: context.language,
             source_language: context.source_language,
-            units: translate_units(op, described, context.source != nil),
+            units: translate_units(op, described, context.source != nil, context.previous),
             pending: if(nth == 0 and proposal.status in ~w(pending approved), do: pending),
             operations: [index]
           }
@@ -227,15 +227,21 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
-  defp translate_units(op, described, source?) do
+  # A review unit whose source's text before the change is known shows it,
+  # with the translation's text before the answer (`before`)
+  defp translate_units(op, described, source?, previous) do
     texts = texts_of(op)
     reviewed = reviewed_of(op)
 
     for %{key: key} = unit <- described, Map.has_key?(texts, key) or key in reviewed do
+      source_previous = if source?, do: Map.get(previous, key)
+
       %{
         key: key,
         label: unit.label,
+        source_previous: source_previous && readable(source_previous),
         source: if(source?, do: readable(unit.source)),
+        before: if(source_previous && Map.has_key?(texts, key), do: readable(unit.current)),
         text: if(Map.has_key?(texts, key), do: readable(texts[key]), else: readable(unit.current)),
         reviewed?: not Map.has_key?(texts, key)
       }
@@ -265,6 +271,7 @@ defmodule Brando.Content.Proposals.Review do
         entry: source,
         language: language,
         source_language: to_string(source.language),
+        previous: %{},
         pending: %{open: open, structure?: false, live?: false}
       }
     else
@@ -288,12 +295,19 @@ defmodule Brando.Content.Proposals.Review do
             uniq: true,
             do: path
 
+      previous =
+        for %{resolved_at: nil, kind: :review, path: path, source_previous: text} <- (version && version.work_items) || [],
+            is_binary(text),
+            into: %{},
+            do: {path, text}
+
       %{
         schema: schema,
         source: source,
         entry: entry,
         language: language,
         source_language: source && to_string(source.language),
+        previous: previous,
         pending: %{
           open: open,
           structure?: version != nil and Translations.structure_changed?(schema, saved, entry),
