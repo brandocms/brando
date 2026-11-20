@@ -520,11 +520,14 @@ defmodule Brando.Translations do
   @doc """
   Recomputes one synchronized target's pending version against its saved
   content, at the group's current source generation. Unresolved work carries
-  over; nothing new is asked for review.
+  over; nothing new is asked for review. `{:error, :group_not_found}` when the
+  group is gone, its source deleted since.
   """
   def resync_target(group_id, member_id) do
     Repo.transaction(fn ->
-      group = Repo.one!(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE")
+      group =
+        Repo.one(from g in Group, where: g.id == ^group_id, lock: "FOR UPDATE") ||
+          Repo.rollback(:group_not_found)
 
       with %Member{role: :target, synchronized: true} = member <- Repo.get(Member, member_id),
            {:ok, source} <- load_group_source(group) do

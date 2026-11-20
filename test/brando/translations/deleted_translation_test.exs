@@ -97,6 +97,17 @@ defmodule Brando.Translations.DeletedTranslationTest do
       assert %Article{} = Repo.get(Article, target.id)
     end
 
+    test "a resync queued before the source was deleted finds its group gone, and is done", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      %{group_id: group_id, id: member_id} = Translations.get_member(Article, target.id)
+      {:ok, _} = Translations.make_independent(Article, target.id, c.user)
+      {:ok, _} = SyncTest.delete_article(c.source.id, c.user)
+
+      assert {:error, :group_not_found} = Translations.resync_target(group_id, member_id)
+
+      assert :ok = perform_job(Brando.Worker.TranslationSync, %{"group_id" => group_id, "member_id" => member_id})
+    end
+
     test "a source with synchronized translations is still refused", c do
       {:ok, _target} = Translations.create_target(Article, c.source.id, :en, c.user)
 

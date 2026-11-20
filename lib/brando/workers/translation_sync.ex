@@ -24,6 +24,8 @@ defmodule Brando.Worker.TranslationSync do
     TenantJob.run(job, fn ->
       case Brando.Translations.resync_target(group_id, member_id) do
         {:ok, _} -> refresh_listing(group_id)
+        # The source was deleted since the save, and its group with it
+        {:error, :group_not_found} -> :ok
         {:error, reason} -> {:error, reason}
       end
     end)
