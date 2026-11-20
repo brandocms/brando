@@ -711,10 +711,7 @@ defmodule Brando.Content.Proposals do
 
   # What the editor's Create translation checks, in the listing and the form,
   # and `Brando.Translations.create_target/5` under them.
-  defp translation_problems(%CreateTranslation{language: language} = op, %schema{} = source, proposal, actor) do
-    member = Translations.get_member(schema, source.id)
-    earlier = Enum.take_while(proposal.operations, &(&1 !== op))
-
+  defp translation_problems(op, %schema{} = source, proposal, actor) do
     cond do
       Boundary.authorize(actor, :create, schema) != :ok or Boundary.authorize(actor, :duplicate, source) != :ok ->
         [
@@ -724,6 +721,30 @@ defmodule Brando.Content.Proposals do
           )
         ]
 
+      # The apply reads the new translation back as the actor may edit it,
+      # and translating it is editing it.
+      Boundary.authorize(actor, :update, schema) != :ok ->
+        [
+          problem(
+            :forbidden,
+            dgettext(
+              "content_proposals",
+              "Creating a translation takes permission to edit %{name} entries as well, which you do not have.",
+              name: Codec.content_type(schema)
+            )
+          )
+        ]
+
+      true ->
+        language_problems(op, source, proposal, actor)
+    end
+  end
+
+  defp language_problems(%CreateTranslation{language: language} = op, %schema{} = source, proposal, actor) do
+    member = Translations.get_member(schema, source.id)
+    earlier = Enum.take_while(proposal.operations, &(&1 !== op))
+
+    cond do
       match?(%{role: :target}, member) ->
         [not_source(schema, member, actor)]
 

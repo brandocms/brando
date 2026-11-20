@@ -324,6 +324,21 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert codes([op(c)], editor) == [{0, :forbidden}]
   end
 
+  test "an actor who may create but not update is refused when the proposal is prepared, with groups", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+    creator = Factory.insert(:random_user, role: :user)
+
+    grants =
+      Enum.map([:read, :create, :duplicate], &Catalog.get(&1, Article).key) ++ ["brando.admin.access"]
+
+    {:ok, group} = Groups.create(Scope.standalone(c.user), %{name: "Article creators"}, grants)
+    {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, creator.id)
+
+    assert codes([op(c)], creator) == [{0, :forbidden}]
+  end
+
   test "an actor without create is refused, in legacy mode", c do
     editor = Factory.insert(:random_user, role: :user)
     assert codes([op(c)], editor) == [{0, :forbidden}]

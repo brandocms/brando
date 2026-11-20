@@ -264,6 +264,11 @@ msgstr ""
 msgid "Content changed after this proposal was prepared. Review it again."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Creating a translation takes permission to edit %{name} entries as well, which you do not have."
+msgstr ""
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Deactivated"

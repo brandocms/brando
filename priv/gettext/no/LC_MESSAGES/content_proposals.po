@@ -264,6 +264,11 @@ msgstr "Velg oppføringer blant blokkens valg (list_selection_options)."
 msgid "Content changed after this proposal was prepared. Review it again."
 msgstr "Innholdet er endret etter at forslaget ble laget. Se gjennom det på nytt."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Creating a translation takes permission to edit %{name} entries as well, which you do not have."
+msgstr "Å opprette en oversettelse krever også tillatelse til å redigere %{name}-oppføringer, og den har du ikke."
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Deactivated"
