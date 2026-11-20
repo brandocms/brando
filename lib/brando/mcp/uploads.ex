@@ -32,8 +32,9 @@ defmodule Brando.MCP.Uploads do
   (60) of preparing it is removed when the next upload is prepared and
   nightly (`Brando.MCP.prune/0`). A connection has at most `max_pending`
   (10) uploads waiting at once that can still be finished: one whose bytes
-  were refused, or whose URL passed its time with nothing sent, does not
-  count, and finishing it removes it.
+  were refused, whose URL passed its time with nothing sent, or whose PUT
+  stopped without a word and is past its transfer time, does not count,
+  and finishing it removes it.
 
   The pending directories are on the node that served the request: on more
   than one node, `upload_dir` must be shared between them.
@@ -204,9 +205,22 @@ defmodule Brando.MCP.Uploads do
 
     cond do
       File.exists?(Path.join(dir, @failed)) -> false
-      File.exists?(Path.join(dir, @bytes)) or File.exists?(Path.join(dir, @claimed)) -> true
+      File.exists?(Path.join(dir, @bytes)) -> true
+      File.exists?(Path.join(dir, @claimed)) -> not stalled?(dir, now)
       true -> not url_expired?(meta, now)
     end
+  end
+
+  # A PUT whose process died without a word (Bandit kills an HTTP/2 stream's
+  # process when the peer closes; a node can go down) leaves its claim and
+  # no bytes: past the transfer's deadline, and the last read's timeout
+  # after it, nothing can arrive any more
+  defp stalled?(dir, now) do
+    not File.exists?(Path.join(dir, @bytes)) and
+      case File.stat(Path.join(dir, @claimed), time: :posix) do
+        {:ok, %{mtime: claimed_at}} -> claimed_at + div(transfer_ms() + @read_timeout, 1000) < now
+        _ -> false
+      end
   end
 
   defp url_expired?(%{"expires_at" => expires_at}, now) when is_integer(expires_at), do: now > expires_at
@@ -575,6 +589,10 @@ defmodule Brando.MCP.Uploads do
         message = "The upload failed: " <> (Path.join(dir, @failed) |> File.read!() |> String.slice(0, 300))
         discard(id)
         {:error, message <> " Prepare a new upload."}
+
+      stalled?(dir, System.system_time(:second)) ->
+        discard(id)
+        {:error, "The upload failed: it stopped arriving and never finished. Prepare a new upload."}
 
       File.exists?(Path.join(dir, @claimed)) ->
         {:error, "The upload is still arriving. Call again once the PUT has answered."}

@@ -587,6 +587,35 @@ defmodule Brando.MCP.MediaTest do
                call(tenant, token, "finish_upload", %{"upload_id" => id})
     end
 
+    # Over HTTP/2 Bandit kills the stream's process when the peer closes, and
+    # a node can be killed mid-PUT: neither `rescue` nor `after` runs
+    test "a PUT that died without a word holds no place once its time is up, and finishing it says it failed",
+         %{tenant: tenant, token: token, dir: dir} do
+      mcp_env(upload_dir: dir, upload_max_pending: 1)
+      {id, _url} = prepare!(tenant, token)
+      upload = Path.join(Uploads.root(), id)
+      File.write!(Path.join(upload, "claimed"), "")
+      File.write!(Path.join(upload, "bytes.part"), binary_part(@jpg, 0, 100))
+
+      # Still within its transfer time: it may yet arrive
+      assert %{"isError" => true, "structuredContent" => %{"error" => "This connection has 1 uploads" <> _}} =
+               call(tenant, token, "prepare_upload", %{"kind" => "image", "filename" => "a.jpg"})
+
+      assert %{"isError" => true, "structuredContent" => %{"error" => "The upload is still arriving" <> _}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => id})
+
+      # Past it
+      past = System.os_time(:second) - 11 * 60 - 60
+      File.touch!(Path.join(upload, "claimed"), past)
+
+      assert {_id, _url} = prepare!(tenant, token)
+
+      assert %{"isError" => true, "structuredContent" => %{"error" => "The upload failed" <> _}} =
+               call(tenant, token, "finish_upload", %{"upload_id" => id})
+
+      refute id in pending()
+    end
+
     # Bandit waits for a whole `read_length` within `read_timeout`, so a read
     # of 1 MB failed an upload sending less than 67 KB a second
     test "is read in pieces small enough for a slow connection", %{tenant: tenant, token: token} do

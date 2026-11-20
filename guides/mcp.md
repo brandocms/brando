@@ -330,7 +330,9 @@ upload, and the URL answers only at the endpoint it was made for. It expires
 10 minutes after it is prepared; the bytes must have all arrived 10 minutes
 after the PUT starts, and the upload must be finished within the hour.
 A connection has at most 10 uploads waiting at once; one whose bytes were
-refused, or whose URL expired with nothing sent, does not count. A request whose
+refused, whose URL expired with nothing sent, or whose PUT stopped without
+an answer and is past its 10 minutes, does not count, and finishing it says
+it failed. A request whose
 `Content-Length` is over the image config's size limit is refused before a
 byte is read, and one sent without a length is cut off the moment it passes
 the limit; one whose first bytes are not an image type the config takes is
@@ -728,7 +730,10 @@ And the attacks the review asked about:
   is cut off past the limit, when 64 KB take longer than 15 seconds to
   arrive, or 10 minutes after it started. JSON and form bodies are refused
   before the endpoint's parser reads them (with `Brando.MCP.BodyLimit`).
-  What was written is removed, also when the client goes away mid-upload.
+  What was written is removed, also when the client goes away mid-upload;
+  when the request's process dies without a word (an HTTP/2 stream the
+  peer closed, a node going down), the upload counts as failed once its
+  10 minutes are up, and its bytes go with it when it is finished or swept.
 - **Mislabelled files.** The type is read from the first bytes, whatever the
   name or `Content-Type` say, and the store checks it again with the
   config's types, the pixel limit and an SVG's contents.
