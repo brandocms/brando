@@ -437,7 +437,9 @@ defmodule Brando.Translations do
 
   The former source becomes a synchronized target. Every member's baseline is
   reset to the new source, so the switch itself raises no review work; the next
-  source save synchronizes structure from the new source.
+  source save synchronizes structure from the new source. Reviews still open
+  stay open, read against the new source, without the former source's text
+  before the change (`source_previous`).
   """
   def transfer_source(schema, new_source_id, _actor) do
     with %Member{role: :target, synchronized: true} = new_source <- get_member(schema, new_source_id),
@@ -454,6 +456,7 @@ defmodule Brando.Translations do
         |> Repo.update_all(set: [baseline: baseline, baseline_texts: baseline_texts, updated_at: naive_now()])
 
         supersede_pending(new_source.id)
+        forget_previous_texts(new_source.group_id)
 
         # A source keeps no baseline. The member was loaded without its texts,
         # so they are written whatever the struct holds
@@ -1518,6 +1521,24 @@ defmodule Brando.Translations do
         where: v.member_id == ^member_id and v.status == :pending,
         preload: [:work_items]
     )
+  end
+
+  # The reviews still open in a group whose source moved are read against the
+  # new source: the former source's text before the change is not its before
+  defp forget_previous_texts(group_id) do
+    versions =
+      from(v in PendingVersion,
+        join: m in Member,
+        on: m.id == v.member_id,
+        where: m.group_id == ^group_id and v.status == :pending,
+        select: v.id
+      )
+
+    from(w in WorkItem,
+      where: w.pending_version_id in subquery(versions) and w.kind == :review and is_nil(w.resolved_at),
+      where: not is_nil(w.source_previous)
+    )
+    |> Repo.update_all(set: [source_previous: nil])
   end
 
   defp supersede_pending(member_id) do
