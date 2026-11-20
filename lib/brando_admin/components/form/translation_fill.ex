@@ -69,6 +69,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     assigns = socket.assigns
 
     with true <- available?(assigns) and assigns.tab_editing? and connected?(socket),
+         true <- may_write?(assigns),
          false <- running?(assigns[:translation_fill]),
          version_id when is_integer(version_id) <- Translation.version_id(assigns),
          {:ok, work} <- Work.translation_units(assigns.schema, assigns.entry.id),
@@ -81,6 +82,11 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
       _ -> socket
     end
   end
+
+  # The editor may change the entry: the check a clicked run (a `:write`
+  # event, `EventGuard`) and one the form starts itself (`?translate=ai`)
+  # share. A legacy `:user` account may not.
+  defp may_write?(%{current_user: user, entry: entry}), do: Brando.Authorization.Boundary.may_update?(user, entry)
 
   defp units(units, keys, targets) do
     Enum.filter(units, fn unit ->

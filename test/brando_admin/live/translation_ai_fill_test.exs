@@ -406,6 +406,42 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       await(fn -> block_text(other_view, uid) == "EN Første avsnitt" end)
     end
 
+    test "a link with translate=ai starts nothing for a legacy account that may not write",
+         %{target: target} do
+      answer_and_report()
+      reader = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      view = open(log_in_user(build_conn(), reader), target.id, "?translate=ai")
+
+      refute_receive {:prompt, _}, 500
+      refute has_element?(view, "#translation-panel [data-ai-status]")
+      assert title(view) == "Tittel"
+    end
+
+    # With groups, a member who may only read cannot open the form; one who
+    # may update gets the run.
+    test "a link with translate=ai starts a run for a group member who may update",
+         %{current_user: user, target: target} do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      scope = Scope.standalone(user)
+
+      {:ok, group} =
+        Groups.create(scope, %{name: "Article editors"}, [
+          Catalog.get(:access, :backend).key,
+          Catalog.get(:read, Article).key,
+          Catalog.get(:update, Article).key
+        ])
+
+      {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+      answer_and_report()
+      view = open(log_in_user(build_conn(), editor), target.id, "?translate=ai")
+
+      assert sent_sources() == ["Første avsnitt", "Tittel"]
+      await(fn -> render_async(view, 1_000) && title(view) == "EN Tittel" end)
+    end
+
     test "the listing creates the translation and starts translating in its form",
          %{conn: conn, current_user: user} = c do
       answer(&("EN " <> &1["source"]))
