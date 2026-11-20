@@ -847,6 +847,56 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert texts(saved) == ["Nytt avsnitt"]
     end
 
+    # The source changes again while an editor has typed in a block: another
+    # editor opening the entry updates the form (presence), which must not
+    # take the newer version over the typing. The save writes the version the
+    # form holds, then takes the newer one.
+    test "a newer version waits while the form holds unsaved block work", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      [%{block: %{uid: uid}} | _] = load(c.target.id).entry_blocks
+      edit_block_text(view, uid, "Typed paragraph")
+
+      [join | _] = load(c.source.id).entry_blocks
+      drop_block(join)
+      second = change_year(c, 2030)
+      refute second.id == first.id
+
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+      _other = open(other_conn, c.target.id)
+      await_selector(view, "[data-presence-user-id='#{other.id}']")
+      # The update schedules a version it takes 100 ms later
+      # (`schedule_translation_apply/1`); what is asserted is that none comes.
+      Process.sleep(250)
+
+      assert has_element?(view, "input[name='translation_review[version_id]'][value='#{first.id}']")
+      assert has_element?(view, "input[name='article[year]'][value='2024']")
+      assert block_text(view, uid) == "Typed paragraph"
+
+      view |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+
+      # the save wrote the version the form held, and the form takes the newer one
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      saved = load(c.target.id)
+      assert {saved.year, hd(texts(saved))} == {2024, "Typed paragraph"}
+    end
+
+    @block_text ["entry_block", "block", "refs", "0", "data", "data", "text"]
+
+    defp block_text(view, uid),
+      do: view |> render() |> form_params("#entry_block_form-#{uid}") |> get_in(@block_text)
+
+    defp edit_block_text(view, uid, text) do
+      selector = "#entry_block_form-#{uid}"
+      params = view |> render() |> form_params(selector) |> put_in(@block_text, text) |> Map.put("_target", @block_text)
+      view |> element(selector) |> render_change(params)
+    end
+
     test "a source change while the form is open saves after the form takes it", %{conn: conn} = c do
       first = change_year(c, 2024)
       view = open_version(conn, c.target.id, first)

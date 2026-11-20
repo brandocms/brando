@@ -34,7 +34,10 @@ defmodule BrandoAdmin.Components.Form.Translation do
       state ->
         previous = socket.assigns[:translation]
 
-        state = build(schema, socket.assigns.entry, state, previous, socket.assigns.current_user)
+        state =
+          schema
+          |> build(socket.assigns.entry, state, previous, socket.assigns.current_user)
+          |> keep_held_version(previous)
 
         state =
           case socket.assigns[:translation_acknowledged] do
@@ -104,6 +107,19 @@ defmodule BrandoAdmin.Components.Form.Translation do
       ai?: ai?(member)
     }
   end
+
+  # A newer pending version, read while the form holds an earlier one (a
+  # parent update: presence, a heavy entry's blocks): the form keeps the one
+  # it holds, its work and its content, until its save writes it. Its
+  # changes are unsaved in the form, as may be the editor's work on top of
+  # them, in its fields and its block fields; the save then takes the newer
+  # one (`stale?`). After a save the state is built anew.
+  defp keep_held_version(%{pending: %{id: id}} = state, %{entry_id: entry_id, applied_version_id: held} = previous)
+       when is_integer(held) and held != id and entry_id == state.entry_id do
+    Map.merge(state, Map.take(previous, [:pending, :payload, :items, :structure_changed?, :changes?]))
+  end
+
+  defp keep_held_version(state, _previous), do: state
 
   defp ai?(%{role: :target, synchronized: true}), do: Brando.AI.configured?()
   defp ai?(_member), do: false

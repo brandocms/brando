@@ -69,6 +69,9 @@ defmodule BrandoAdmin.TranslationAIFillTest do
     view
   end
 
+  defp held_version(view),
+    do: view |> render() |> form_params("#article_form_form") |> get_in(["translation_review", "version_id"])
+
   defp title(view), do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "title"])
   defp block_text(view, uid), do: view |> render() |> form_params("#entry_block_form-#{uid}") |> get_in(@text)
 
@@ -287,12 +290,15 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       render_async(view, 5_000)
       assert has_element?(view, "#translation-panel [data-ai-status='dropped']")
 
-      # The LiveView renders the form again (another editor joins, say): it
-      # takes the translation's new pending version
-      newer = Translations.get_pending_version(Article, c.target.id).id
+      # The LiveView renders the form again (another editor joins, say): the
+      # form keeps the version it holds until its save
+      held = held_version(view)
       Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
-      await_selector(view, "input[name='translation_review[version_id]'][value='#{newer}']")
+      # what is asserted is that no version is taken 100 ms later
+      # (`schedule_translation_apply/1`)
+      Process.sleep(250)
 
+      assert held_version(view) == held
       assert has_element?(view, "#translation-panel [data-ai-status='dropped']")
     end
 
@@ -363,7 +369,7 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       refute Map.has_key?(left, :skip_focused)
     end
 
-    test "the marks go when the form takes a newer pending version", %{conn: conn} = c do
+    test "the marks go when the form takes a newer pending version after its save", %{conn: conn} = c do
       answer(&("EN " <> &1["source"]))
       view = open(conn, c.target.id)
 
@@ -373,12 +379,23 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert has_element?(view, "#{item("title")}[data-ai='filled']")
       assert has_element?(view, "#translation-panel [data-ai-status='done']")
 
-      # The source changes, and the LiveView renders the form again: it
-      # takes the translation's new pending version.
+      # The source changes, and the LiveView renders the form again: the form
+      # keeps the version it holds, and the filled title, until its save,
+      # which writes them and takes the translation's new pending version.
+      held = held_version(view)
       {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2024}, c.current_user)
-      newer = Translations.get_pending_version(Article, c.target.id).id
       Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
-      await_selector(view, "input[name='translation_review[version_id]'][value='#{newer}']")
+      Process.sleep(250)
+      assert held_version(view) == held
+      assert title(view) == "EN Tittel"
+      assert has_element?(view, "#{item("title")}[data-ai='filled']")
+
+      view |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      await(fn -> held_version(view) not in [nil, held] end)
 
       refute has_element?(view, "#translation-panel [data-ai]")
       refute has_element?(view, "#translation-panel [data-ai-status]")
