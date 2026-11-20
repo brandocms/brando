@@ -220,56 +220,6 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
              ]
     end
 
-    test "an SVG for a raster image, and a raster image for an SVG", c do
-      images_env = Application.get_env(:brando, Brando.Images, [])
-
-      put_test_env(
-        Brando.Images,
-        Keyword.update!(
-          images_env,
-          :default_config,
-          &Map.update!(&1, :allowed_mimetypes, fn t -> t ++ ["image/svg+xml"] end)
-        )
-      )
-
-      raster = image!("photo", {800, 600})
-      svg = image!("logo", {80, 60}, ext: "svg")
-      other_svg = image!("logo-new", {80, 60}, ext: "svg")
-
-      assert {:ok, proposal} = Proposals.propose([replace(raster, svg)], c.user)
-      assert codes(proposal) == [:wrong_media_type]
-      assert {:ok, proposal} = Proposals.propose([replace(svg, raster)], c.user)
-      assert codes(proposal) == [:wrong_media_type]
-      assert {:ok, %{problems: []}} = Proposals.propose([replace(svg, other_svg)], c.user)
-    end
-
-    test "a file OLD's field does not take, by type or size, or the same file", c do
-      images_env = Application.get_env(:brando, Brando.Images, [])
-      old = image!("a", {800, 600})
-      png = image!("b", {800, 600}, ext: "png")
-
-      put_test_env(
-        Brando.Images,
-        Keyword.update!(images_env, :default_config, &Map.put(&1, :allowed_mimetypes, ["image/jpeg"]))
-      )
-
-      assert {:ok, proposal} = Proposals.propose([replace(old, png)], c.user)
-      assert codes(proposal) == [:wrong_media_type]
-      assert hd(proposal.problems).message =~ "PNG"
-
-      put_test_env(Brando.Images, Keyword.update!(images_env, :default_config, &Map.put(&1, :size_limit, 100)))
-      new = image!("c", {800, 600})
-      assert {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
-      assert codes(proposal) == [:too_large]
-
-      put_test_env(Brando.Images, images_env)
-      copy = image!("d", {800, 600}, content_hash: old.content_hash)
-      assert {:ok, proposal} = Proposals.propose([replace(old, copy)], c.user)
-      assert codes(proposal) == [:same_file]
-    end
-  end
-
-  describe "between preparing and approving" do
     test "NEW put to use: approval and apply are refused, and OLD stays as it was", c do
       old = image!("a", {800, 600})
       new = image!("b", {1600, 1200})

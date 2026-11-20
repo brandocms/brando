@@ -3,7 +3,9 @@ defmodule BrandoAdmin.AssistantImageReplacementLiveTest do
   # From connected tools: both files side by side with their dimensions, the
   # entries that show the image, linked, a warning when the proportions
   # differ, and once applied, no undo.
-  use Brando.LiveCase
+  # One at a time with the other proposal tests: ProposalFixtures inserts pages
+  # whose URIs concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.{InsertBlock, Tools}
