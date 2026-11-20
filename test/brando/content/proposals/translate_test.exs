@@ -394,6 +394,30 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert [{0, :not_translation, nil}] = problems([op], c.user)
     end
 
+    test "a field the forms lock, for anyone but a superuser", c do
+      alias Brando.SyncLockedTest.Article, as: LockedArticle
+
+      {:ok, source} =
+        Brando.SyncLockedTest.create_article(
+          %{title: "Tittel", slug: "laast-#{c.source.id}", subtitle: "Undertittel", language: "no", status: "draft"},
+          c.user
+        )
+
+      {:ok, target} = Translations.create_target(LockedArticle, source.id, :en, c.user)
+      {:ok, %{units: units}} = Work.translation_units(LockedArticle, target.id)
+      digest = Work.token(%{type: to_string(LockedArticle), id: target.id, language: "en"}, units)
+
+      op = %Translate{
+        target: {LockedArticle, target.id},
+        source_digest: digest,
+        texts: %{"title" => "Title", "subtitle" => "Subtitle"}
+      }
+
+      editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      assert problems([op], editor) == [{0, :protected_field, nil}]
+      assert problems([op], Factory.insert(:random_user, role: :superuser)) == []
+    end
+
     test "an actor who may not update the translation", c do
       put_test_env(:authorization_mode, :groups)
       {:ok, _} = Brando.Authorization.Migration.run()
