@@ -428,7 +428,6 @@ defmodule Brando.Images.SizeRun do
       match?(%Work{total: total, done: done} when is_integer(total) and done < total, work)
   end
 
-  @doc false
   # The run's second step, one look: releases the run's renders (again: a
   # held render the run queued since is released too) and counts its pages,
   # the entries its renders are for. While any is left, it reports the count
@@ -438,33 +437,19 @@ defmodule Brando.Images.SizeRun do
   # again counts as left until that one settles. When none is left, the work
   # ends, with the images' count and the pages', failed when an image or a
   # page failed.
-  @spec pages(Oban.Job.t(), Processing.user()) :: :ok | {:snooze, pos_integer()} | {:error, term()}
-  def pages(%Oban.Job{args: %{"run" => run, "pages" => pages} = args} = job, user) do
+  defp pages(%Oban.Job{args: %{"run" => run, "pages" => pages} = args} = job, user) do
     RenderQueue.release(hold_key(run))
-
-    # This site's: a run's renders are queued in its site
-    site = Brando.Tenant.current_prefix()
-    states = for {{prefix, _, _}, _} = entry <- RenderRun.render_states(run), prefix == site, into: %{}, do: entry
-    left = unsettled(states)
-    seen = Map.merge(pages["seen"] || %{}, vanished(pages, states))
-    seen = seen |> Map.merge(settled(states)) |> Map.drop(left)
-    total = map_size(seen) + length(left)
-    failed = Enum.count(seen, fn {_entry, outcome} -> outcome == "failed" end)
-    since = since(pages, seen)
+    %{seen: seen, left: left, total: total, failed: failed, since: since} = count_pages(run, pages)
     # Another run's work is under the key now: this one's watcher was left
     # behind by a node that went down, and is late
     ours? = watching(run) == [] and not walking_other?(run)
 
     cond do
       left == [] ->
-        ended(job)
-        if ours?, do: end_run(user, pages, total, failed)
-        :ok
+        end_pages(job, ours?, fn -> end_run(user, pages, total, failed) end)
 
       System.os_time(:second) - since > div(@pages_stall, 1000) ->
-        ended(job)
-        if ours?, do: end_run(user, pages, map_size(seen), failed, length(left))
-        :ok
+        end_pages(job, ours?, fn -> end_run(user, pages, map_size(seen), failed, length(left)) end)
 
       true ->
         if ours?, do: report_pages(user, run, pages, map_size(seen), total)
@@ -474,6 +459,24 @@ defmodule Brando.Images.SizeRun do
 
         snooze(job, Map.put(args, "pages", pages), @watch_every)
     end
+  end
+
+  # The run's pages in this site (a run's renders are queued in its site):
+  # those seen settle, by entry, those left, and when a page last finished
+  defp count_pages(run, pages) do
+    site = Brando.Tenant.current_prefix()
+    states = for {{prefix, _, _}, _} = entry <- RenderRun.render_states(run), prefix == site, into: %{}, do: entry
+    left = unsettled(states)
+    seen = Map.merge(pages["seen"] || %{}, vanished(pages, states))
+    seen = seen |> Map.merge(settled(states)) |> Map.drop(left)
+    failed = Enum.count(seen, fn {_entry, outcome} -> outcome == "failed" end)
+    %{seen: seen, left: left, total: map_size(seen) + length(left), failed: failed, since: since(pages, seen)}
+  end
+
+  defp end_pages(job, ours?, end_run) do
+    ended(job)
+    if ours?, do: end_run.()
+    :ok
   end
 
   # The run is over before the work ends, though the watcher's row is still
@@ -499,12 +502,14 @@ defmodule Brando.Images.SizeRun do
   defp entry_id({prefix, schema, entry_id}), do: Enum.join([prefix || "", schema, entry_id], "|")
 
   # "done" or "failed" for each entry whose renders have all settled, as its
-  # last render ended: one queued again after a render that failed decides.
-  # A render cancelled or given up failed; one left executing by a node that
-  # is gone too.
+  # last render ended (`RenderRun.render_states/1` has it first): one queued
+  # again after a render that failed decides. A render cancelled or given up
+  # failed; one left executing by a node that is gone too.
   defp settled(states) do
-    for {entry, entry_states} <- states, not Enum.any?(entry_states, &(&1 in @unfinished_states)), into: %{} do
-      failed? = List.last(entry_states) in ~w(discarded cancelled stale)
+    for {entry, [last | _] = entry_states} <- states,
+        not Enum.any?(entry_states, &(&1 in @unfinished_states)),
+        into: %{} do
+      failed? = last in ~w(discarded cancelled stale)
       {entry_id(entry), if(failed?, do: "failed", else: "done")}
     end
   end
@@ -571,9 +576,12 @@ defmodule Brando.Images.SizeRun do
     :ok
   end
 
-  @doc false
-  # "65 images recreated, 14 pages updated", in the current locale, and how
-  # many pages are still waiting when the step gave up on them
+  @doc """
+  The message a run ends with, in the current locale: "65 images recreated,
+  14 pages updated", from the images it queued, whether any failed, the
+  pages it updated and those it could not, and the pages still waiting when
+  the pages step gave up on them.
+  """
   @spec result_message(non_neg_integer(), boolean(), non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
           String.t()
   def result_message(images, images_failed?, pages, failed_pages, waiting \\ 0)

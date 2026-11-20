@@ -314,21 +314,7 @@ defmodule Brando.Images.Processing do
     run = SizeRun.begin(user)
     args = maintenance_args(task, user)
 
-    queue = fn ->
-      case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
-        {:ok, job} ->
-          with {:error, reason} <- SizeRun.queue_watcher(args, run) do
-            Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
-          end
-
-          job
-
-        {:error, reason} ->
-          Brando.Repo.rollback(reason)
-      end
-    end
-
-    case Brando.Repo.transaction(queue) do
+    case Brando.Repo.transaction(fn -> queue_size_run(args, run) end) do
       {:ok, job} ->
         Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:image_maintenance, %{task: task, state: :started}})
         {:ok, job}
@@ -336,6 +322,20 @@ defmodule Brando.Images.Processing do
       error ->
         SizeRun.abort(user)
         error
+    end
+  end
+
+  defp queue_size_run(args, run) do
+    case args |> Map.put(:run, run) |> Worker.ImageMaintenance.new() |> Oban.insert() do
+      {:ok, job} ->
+        with {:error, reason} <- SizeRun.queue_watcher(args, run) do
+          Logger.warning("==> Image sizes: the run's watcher could not be queued: #{inspect(reason)}")
+        end
+
+        job
+
+      {:error, reason} ->
+        Brando.Repo.rollback(reason)
     end
   end
 
