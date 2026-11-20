@@ -196,8 +196,9 @@ and copy it, the language must be one of the site's and not the source's, and ne
 the group nor an earlier operation may already have that language. Named a
 translation instead of its source, the problem names the source. The checks
 run again when the proposal is applied, as the language may have been taken
-in the meantime. The new copy is made from the source as it is then, so other
-operations in the same proposal cannot change it as `{"new": R}`. **Undo**
+in the meantime. The new copy is made from the source as it is then, so the
+only operation that may name it as `{"new": R}` is `translate`, which fills
+in its text (below). **Undo**
 deletes the translation and takes it out of the group, so the language can be
 created again. A group the proposal made goes with it, unless another version
 has joined it since. A translation that has since been made its group's
@@ -240,6 +241,52 @@ an answer is refused, unit by unit and with every problem at once, when the
 source's text changed since the batch was read, when a key is missing,
 extra or answered twice, or when a translation lost the source's HTML tags
 or its template placeholders (`{{ }}`, `{% %}`, `<% %>`).
+
+### Translating with a proposal
+
+A batch is answered with a `translate` operation:
+
+```json
+{"op": "translate", "target": {"content_type": T, "id": N} | {"new": R},
+ "source_digest": D, "texts": {KEY: TEXT}, "reviewed": [KEY]}
+```
+
+`source_digest` is the batch's token, `texts` the translation of each unit by
+its key, and `reviewed` the keys of units that are right as they are, such as
+a name that is the same in both languages. One operation answers one batch;
+a long entry is several `translate` operations on the same translation, in
+one proposal, and each key is answered once across them. On `{"new": R}` it
+fills in the translation a `create_translation` in the same proposal creates:
+read the units a new translation would have with `translation_work` on the
+source and `language`, so one proposal creates the version and translates it.
+
+When the proposal is prepared, each answer is checked against the batch's
+units as they are now, and every problem names its unit: a source text
+changed since it was read, keys missing, extra or answered twice, a blank
+text, lost HTML tags or template placeholders, an answer shaped wrongly.
+Each text then takes the rules the other text operations apply, by the
+unit's format: safe rich text for `html` (Markdown is checked as the HTML it
+renders), no markup in `plain` text, and entry links resolved. A proposal's
+text holds no `{` anywhere else, but a translation keeps the source's
+template placeholders, so those are allowed, and required, exactly as the
+source has them; any other `{` is refused. The editor must be able to edit
+the translation and read its source, and a field the forms lock is refused
+as in `set_fields`. `translate` is the only operation a proposal may have on
+the translation it translates: another operation on the same entry is
+refused, while other entries in the proposal are not affected.
+
+The review shows each unit with its label, the source's text and the
+translation, so one can be checked against the other; units kept as they are
+say so. Applying saves the translation as its form saves it
+(`Brando.Translations.save_work/5`): from its pending version, with the
+texts written in, so its structure and media still follow the source, and
+every answered unit's work is resolved, a text kept the same included. The
+others stay open. A published translation is updated and stays published,
+an unpublished one stays unpublished, and the apply offers no publishing for
+it. Everything is checked again when the proposal is approved and applied: a
+source changed since makes the proposal stale, and the message names the
+units. **Undo** puts the texts back and opens the work the apply resolved
+again, so the translation's work list is as it was.
 
 ## Build with AI from the block editor
 
