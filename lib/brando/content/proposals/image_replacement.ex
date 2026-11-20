@@ -27,9 +27,11 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
   Inside the proposal's transaction, with both rows locked and checked again,
   OLD takes NEW's file: its path, dimensions, formats, `content_hash`,
-  dominant colour, CDN flag and, until its own are made, NEW's sizes, or its
-  own of a size NEW lacks. An approval while NEW's sizes are still being made
-  is refused, to be tried again (`ready!/1`). It
+  dominant colour, CDN flag and, until its own are made, NEW's sizes alone.
+  Its config fingerprint is cleared, which is what makes its processing a
+  change the entries showing it render again for (`Brando.Images.Rerender`).
+  An approval while NEW's sizes are still being made is refused, to be tried
+  again (`ready!/1`). It
   keeps its id, focal point, title, alt text, credits, folder, config and
   every reference. NEW's record is deleted, with its jobs that have not
   started, and OLD's sizes are queued to be made again, as for an upload. A

@@ -170,7 +170,11 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
       end
 
       assert renders.() == []
+      # The one change its processing is sure to make, when NEW was made
+      # for the same config
+      assert Repo.get!(Image, old.id).config_fingerprint == nil
       assert %{failure: 0, success: 1} = Oban.drain_queue(queue: :image_processing)
+      assert is_binary(Repo.get!(Image, old.id).config_fingerprint)
       assert [%{priority: priority}] = renders.()
       assert priority == Brando.Content.RenderQueue.bulk_priority()
     end)
