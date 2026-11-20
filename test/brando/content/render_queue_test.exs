@@ -399,6 +399,19 @@ defmodule Brando.Content.RenderQueueTest do
       end)
     end
 
+    test "a bulk request merges into the waiting render of its own site only" do
+      put_test_env(:tenancy_mode, :multi)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for prefix <- ~w(tenant_one_live tenant_two_live tenant_one_live) do
+          Brando.Tenant.with_prefix(prefix, fn -> RenderQueue.enqueue_map(%{Fragment => [1]}) end)
+        end
+
+        prefixes = Enum.map(all_enqueued(worker: EntryRenderer), & &1.args["tenant_prefix"])
+        assert Enum.sort(prefixes) == ~w(tenant_one_live tenant_two_live)
+      end)
+    end
+
     @tag :capture_log
     test "held renders run by themselves after the maximum hold" do
       Oban.Testing.with_testing_mode(:manual, fn ->

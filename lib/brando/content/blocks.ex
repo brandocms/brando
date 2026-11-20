@@ -725,18 +725,31 @@ defmodule Brando.Content.Blocks do
         where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
         select: {entry.id, field(entry, ^rich_field)}
 
-    updated =
-      for {id, html} <- Repo.all(query),
-          RichText.contains_identifier?(html, identifier_id),
-          {:ok, :updated} <- [
-            Repo.transaction(fn ->
-              update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
-            end)
-          ],
-          do: id
+    ids = for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id), do: id
+    rewrite_rich_text_identifier_links(ids, [], module, rich_field, identifier_id, new_url)
+  end
 
-    # In the bulk lane: a link that moved can reach any number of entries
-    if updated != [], do: enqueue_entry_map_for_render(%{module => updated})
+  # In the bulk lane: a link that moved can reach any number of entries
+  defp rewrite_rich_text_identifier_links([], updated, module, _rich_field, _identifier_id, _new_url) do
+    if updated != [], do: enqueue_entry_map_for_render(%{module => Enum.reverse(updated)})
+  end
+
+  defp rewrite_rich_text_identifier_links([id | ids], updated, module, rich_field, identifier_id, new_url) do
+    result =
+      try do
+        Repo.transaction(fn ->
+          update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
+        end)
+      catch
+        # Each rewrite has committed by itself: the entries rewritten before
+        # this one still get their renders
+        kind, reason ->
+          rewrite_rich_text_identifier_links([], updated, module, rich_field, identifier_id, new_url)
+          :erlang.raise(kind, reason, __STACKTRACE__)
+      end
+
+    updated = if result == {:ok, :updated}, do: [id | updated], else: updated
+    rewrite_rich_text_identifier_links(ids, updated, module, rich_field, identifier_id, new_url)
   end
 
   defp update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url) do
