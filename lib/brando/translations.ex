@@ -1981,8 +1981,11 @@ defmodule Brando.Translations do
   translation with `items` (`%{path, kind, source_digest, source_previous, minor}`, as
   `save_work/5` returns them) open again beside the work still open. A text
   that is again the copy of the source's is to translate against the
-  source's current text, as before. Returns `{:ok, open_count}`; nothing is
-  done for an entry that is not a synchronized translation.
+  source's current text, as before. Where the source changed a path again
+  since, the item opened again replaces the open one, against the source's
+  current text, with the text it was written from. Returns
+  `{:ok, open_count}`; nothing is done for an entry that is not a
+  synchronized translation.
   """
   def reopen_work(schema, entry_id, items) do
     with true <- synchronized?(schema),
@@ -1998,12 +2001,23 @@ defmodule Brando.Translations do
     current = current_pending(member.id)
     open = if current, do: Enum.filter(current.work_items, &is_nil(&1.resolved_at)), else: []
     reopened = Enum.map(items, &struct(WorkItem, Map.put(atomize_item(&1), :resolved_at, nil)))
-    previous = %{(current || %PendingVersion{member_id: member.id}) | work_items: open ++ reopened}
+    previous = %{(current || %PendingVersion{member_id: member.id}) | work_items: reopen_into(open, reopened)}
 
     with {:ok, source} <- load_group_source(group),
          do: sync_member(schema, source, member, group.source_generation, false, previous: previous, with_deleted: true)
 
     open_count(member.id)
+  end
+
+  # One open item per path: a path the source changed again since the work
+  # was resolved keeps the reopened item, the translation being back at the
+  # text it was written from, against the source's current text
+  defp reopen_into(open, reopened) do
+    digests = Map.new(open, &{&1.path, &1.source_digest})
+    reopened_paths = MapSet.new(reopened, & &1.path)
+
+    Enum.reject(open, &MapSet.member?(reopened_paths, &1.path)) ++
+      Enum.map(reopened, &%{&1 | source_digest: Map.get(digests, &1.path, &1.source_digest)})
   end
 
   # As a receipt stores them: string keys, the kind a string

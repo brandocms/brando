@@ -172,6 +172,30 @@ defmodule Brando.Translations.SourcePreviousTest do
     assert %{source_previous: nil} = open_review(c, "title")
   end
 
+  test "work opened again after another source change leaves one review on the path, with its previous text", c do
+    retitle(c, "Ny tittel")
+
+    {:ok, revision} =
+      Brando.Revisions.create_revision(
+        Repo.get!(Article, c.target.id) |> Repo.preload(Brando.Blueprint.preloads_for(Article)),
+        c.user
+      )
+
+    {:ok, result} = Translations.save_work(Article, c.target.id, %{texts: %{"title" => "New title"}}, c.user)
+    retitle(c, "Nyere tittel")
+    assert %{source_previous: "Ny tittel"} = open_review(c, "title")
+
+    {:ok, _} = Brando.Revisions.set_entry_to_revision(Article, c.target.id, revision.revision, c.user)
+    {:ok, _} = Translations.reopen_work(Article, c.target.id, result.resolved)
+
+    # The translation is back at its text from "Tittel"
+    assert [%{source_previous: "Tittel"}] =
+             Enum.filter(
+               Translations.get_pending_version(Article, c.target.id).work_items,
+               &(&1.path == "title" and is_nil(&1.resolved_at))
+             )
+  end
+
   test "making a translation the source resets every member's texts to it", c do
     {:ok, _} = Translations.transfer_source(Article, c.target.id, c.user)
 
