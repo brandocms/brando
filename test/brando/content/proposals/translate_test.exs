@@ -487,6 +487,26 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert problems([translate(c.target, texts)], c.user) == [{0, :extra_key, "year"}]
     end
 
+    test "each problem names its unit by its label, in the admin's language", c do
+      body = "#{c.prefix}/refs/body/text"
+      texts = english(c) |> Map.delete(body) |> Map.put("title", " ")
+
+      messages = fn ->
+        {:ok, proposal} = Proposals.prepare([translate(c.target, texts)], c.user)
+        Map.new(proposal.problems, &{&1.key, &1.message})
+      end
+
+      english = messages.()
+      assert english[body] =~ "Text › Body"
+      refute english[body] =~ body
+      assert english["title"] =~ "Title"
+
+      norwegian = Gettext.with_locale(Brando.Gettext, "no", messages)
+      assert Map.keys(norwegian) == Map.keys(english)
+      refute norwegian[body] == english[body]
+      refute norwegian["title"] == english["title"]
+    end
+
     test "a token for another entry, or a changed one", c do
       assert [{0, :stale, nil}] = problems([translate(c.target, english(c), digest: "nonsense")], c.user)
 

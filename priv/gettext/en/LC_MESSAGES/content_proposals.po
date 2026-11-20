@@ -130,6 +130,21 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} is answered more than once. Give a text in texts or list it in reviewed, not both."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is not a unit of the batch this source_digest was read with. Leave it out."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is not answered. Give its translation in texts, or list it in reviewed to keep it."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} takes a web, mail or phone address."
 msgstr ""
 
@@ -195,7 +210,7 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "A proposal cannot change this field."
+msgid "A proposal cannot change %{name}."
 msgstr ""
 
 #: lib/brando/content/proposals/codec.ex
@@ -265,7 +280,7 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "An earlier translate operation in this proposal already answers this unit."
+msgid "An earlier translate operation in this proposal already answers %{name}."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -600,12 +615,42 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source text of %{name} changed since it was read, or it no longer needs translation. Read translation_work again."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The translation could not be created: %{reason}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} changed its HTML tags or attributes. Keep every tag of the source, in order, with its attributes exactly as they are: %{tags}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} changed its template placeholders. Keep each exactly as the source has it: %{placeholders}"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} has template placeholders, and its source has none. Leave them out."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} is empty. Translate the text, or list its key in reviewed."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} must be a string."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -796,6 +841,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This source_digest is not one translation_work gave for this entry and language. Read the work again."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "This translation is independent: it no longer follows its source and has no translation work. Change its text with set_fields and set_block_text."
 msgstr ""
 
@@ -939,6 +989,11 @@ msgstr ""
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "source is a saved entry: {content_type, id}."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "texts must be an object of {key: translation}, and reviewed a list of keys."
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex

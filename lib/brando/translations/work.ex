@@ -644,6 +644,13 @@ defmodule Brando.Translations.Work do
   defp problem(key, code, message), do: %{key: key, code: code, message: message}
 
   @doc """
+  The HTML tags in `text`, in order, with their attributes, as `check/4`
+  compares them.
+  """
+  @spec html_tags(String.t()) :: [String.t()]
+  def html_tags(text) when is_binary(text), do: @html_pattern |> Regex.scan(text) |> List.flatten()
+
+  @doc """
   The template placeholders (`{{ }}`, `{% %}`, `<% %>`) in `text`, each once,
   as `check/4` matches them.
   """

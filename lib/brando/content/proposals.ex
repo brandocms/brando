@@ -760,12 +760,15 @@ defmodule Brando.Content.Proposals do
         check =
           case Work.check(op.source_digest, scope, units, answer) do
             :ok -> []
-            {:error, problems} -> Enum.map(problems, &work_problem/1)
+            {:error, problems} -> Enum.map(problems, &work_problem(&1, units))
           end
 
+        names = Map.new(units, &{&1.key, &1.label})
+
         check ++
-          answered_before(op, proposal) ++
-          translated_texts(op.texts, by_key) ++ translated_fields(op, schema, actor, check) ++ translated_links(op.texts)
+          answered_before(op, proposal, names) ++
+          translated_texts(op.texts, by_key) ++
+          translated_fields(op, schema, actor, check, names) ++ translated_links(op.texts)
 
       {:error, problem} ->
         [problem]
@@ -873,16 +876,104 @@ defmodule Brando.Content.Proposals do
     "placeholders_changed" => :placeholders_changed
   }
 
-  defp work_problem(%{key: key, code: code, message: message}),
-    do: key_problem(Map.fetch!(@work_codes, code), key, message)
+  # A problem of `Work.check/4`, in the admin's language, naming its unit by
+  # its label; the key is the problem's `key`.
+  defp work_problem(%{key: key, code: code}, units) do
+    unit = Enum.find(units, &(&1.key == key))
+    name = (unit && unit.label) || key
+    key_problem(Map.fetch!(@work_codes, code), key, work_message(code, name, unit))
+  end
 
-  # The unit's key leads the message, so a client that reads only messages
-  # knows which text to correct.
+  defp work_message("stale", _name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "This source_digest is not one translation_work gave for this entry and language. Read the work again."
+      )
+
+  defp work_message("malformed", _name, _unit),
+    do: dgettext("content_proposals", "texts must be an object of {key: translation}, and reviewed a list of keys.")
+
+  defp work_message("source_changed", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "The source text of %{name} changed since it was read, or it no longer needs translation. Read translation_work again.",
+        name: name
+      )
+
+  defp work_message("extra", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} is not a unit of the batch this source_digest was read with. Leave it out.",
+        name: name
+      )
+
+  defp work_message("missing", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} is not answered. Give its translation in texts, or list it in reviewed to keep it.",
+        name: name
+      )
+
+  defp work_message("duplicate", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "%{name} is answered more than once. Give a text in texts or list it in reviewed, not both.",
+        name: name
+      )
+
+  defp work_message("not_text", name, _unit),
+    do: dgettext("content_proposals", "The translation of %{name} must be a string.", name: name)
+
+  defp work_message("blank", name, _unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "The translation of %{name} is empty. Translate the text, or list its key in reviewed.",
+        name: name
+      )
+
+  defp work_message("html_changed", name, unit),
+    do:
+      dgettext(
+        "content_proposals",
+        "The translation of %{name} changed its HTML tags or attributes. Keep every tag of the source, in order, with its attributes exactly as they are: %{tags}",
+        name: name,
+        tags: Enum.join(Work.html_tags(unit_source(unit)), " ")
+      )
+
+  defp work_message("placeholders_changed", name, unit) do
+    case Work.placeholders(unit_source(unit)) do
+      [] ->
+        dgettext(
+          "content_proposals",
+          "The translation of %{name} has template placeholders, and its source has none. Leave them out.",
+          name: name
+        )
+
+      placeholders ->
+        dgettext(
+          "content_proposals",
+          "The translation of %{name} changed its template placeholders. Keep each exactly as the source has it: %{placeholders}",
+          name: name,
+          placeholders: Enum.join(Enum.sort(placeholders), " ")
+        )
+    end
+  end
+
+  defp unit_source(%{source: source}) when is_binary(source), do: source
+  defp unit_source(_unit), do: ""
+
+  # The message names the unit; its key is the problem's `key`.
   defp key_problem(code, nil, message), do: problem(code, message)
-  defp key_problem(code, key, message), do: code |> problem("#{key}: #{message}") |> Map.put(:key, key)
+  defp key_problem(code, key, message), do: code |> problem(message) |> Map.put(:key, key)
 
   # A key is answered once across the proposal's batches.
-  defp answered_before(%Translate{target: target} = op, proposal) do
+  defp answered_before(%Translate{target: target} = op, proposal, names) do
     earlier =
       proposal.operations
       |> Enum.take_while(&(&1 !== op))
@@ -896,7 +987,9 @@ defmodule Brando.Content.Proposals do
       key_problem(
         :duplicate_key,
         key,
-        dgettext("content_proposals", "An earlier translate operation in this proposal already answers this unit.")
+        dgettext("content_proposals", "An earlier translate operation in this proposal already answers %{name}.",
+          name: names[key] || key
+        )
       )
     end
   end
@@ -939,11 +1032,15 @@ defmodule Brando.Content.Proposals do
   # forms lock, as `set_fields` refuses them. `translation_work` leaves such
   # a unit out of the batch, so it is refused as extra already; this refuses
   # a token that holds it anyway.
-  defp translated_fields(op, schema, actor, check) do
+  defp translated_fields(op, schema, actor, check, names) do
     extra = for %{code: :extra_key, key: key} <- check, do: key
 
     for key <- Enum.uniq(answered_keys(op)), key not in extra, locked_unit?(schema, key, actor) do
-      key_problem(:protected_field, key, dgettext("content_proposals", "A proposal cannot change this field."))
+      key_problem(
+        :protected_field,
+        key,
+        dgettext("content_proposals", "A proposal cannot change %{name}.", name: names[key] || key)
+      )
     end
   end
 
@@ -4025,7 +4122,7 @@ defmodule Brando.Content.Proposals do
   defp source_check(op, scope, units) do
     case Work.check(op.source_digest, scope, units, %{texts: op.texts, reviewed: op.reviewed}) do
       :ok -> []
-      {:error, problems} -> Enum.map(problems, &work_problem/1)
+      {:error, problems} -> Enum.map(problems, &work_problem(&1, units))
     end
   end
 

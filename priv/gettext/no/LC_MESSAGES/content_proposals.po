@@ -130,6 +130,21 @@ msgstr "%{name} inneholder kode som bare en superbruker endrer."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} is answered more than once. Give a text in texts or list it in reviewed, not both."
+msgstr "%{name} er besvart mer enn én gang. Gi en tekst i texts eller list den i reviewed, ikke begge."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is not a unit of the batch this source_digest was read with. Leave it out."
+msgstr "%{name} er ikke en del av bunken denne source_digest ble lest med. Utelat den."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is not answered. Give its translation in texts, or list it in reviewed to keep it."
+msgstr "%{name} er ikke besvart. Gi oversettelsen i texts, eller list den i reviewed for å beholde den."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} takes a web, mail or phone address."
 msgstr "%{name} tar en nett-, e-post- eller telefonadresse."
 
@@ -195,8 +210,8 @@ msgstr "Det finnes en nyere versjon av forslaget. Se gjennom den i stedet."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "A proposal cannot change this field."
-msgstr "Et forslag kan ikke endre dette feltet."
+msgid "A proposal cannot change %{name}."
+msgstr "Et forslag kan ikke endre %{name}."
 
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
@@ -265,8 +280,8 @@ msgstr "En tidligere operasjon i dette forslaget oppretter allerede denne versjo
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "An earlier translate operation in this proposal already answers this unit."
-msgstr "En tidligere translate-operasjon i dette forslaget besvarer allerede denne enheten."
+msgid "An earlier translate operation in this proposal already answers %{name}."
+msgstr "En tidligere oversettelsesoperasjon i dette forslaget besvarer allerede %{name}."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -600,6 +615,11 @@ msgstr "Kilden til denne oversettelsen er ikke tilgjengelig for deg."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source text of %{name} changed since it was read, or it no longer needs translation. Read translation_work again."
+msgstr "Kildeteksten til %{name} er endret siden den ble lest, eller den trenger ikke lenger oversettelse. Les translation_work på nytt."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr "Statusen er publisert, utkast, deaktivert eller venter."
 
@@ -607,6 +627,31 @@ msgstr "Statusen er publisert, utkast, deaktivert eller venter."
 #, elixir-autogen, elixir-format
 msgid "The translation could not be created: %{reason}"
 msgstr "Oversettelsen kunne ikke opprettes: %{reason}"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} changed its HTML tags or attributes. Keep every tag of the source, in order, with its attributes exactly as they are: %{tags}"
+msgstr "Oversettelsen av %{name} endret HTML-taggene eller attributtene. Behold hver tagg fra kilden, i samme rekkefølge, med attributtene nøyaktig som de er: %{tags}"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} changed its template placeholders. Keep each exactly as the source has it: %{placeholders}"
+msgstr "Oversettelsen av %{name} endret malplassholderne. Behold hver av dem nøyaktig som kilden har dem: %{placeholders}"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} has template placeholders, and its source has none. Leave them out."
+msgstr "Oversettelsen av %{name} har malplassholdere, og kilden har ingen. Utelat dem."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} is empty. Translate the text, or list its key in reviewed."
+msgstr "Oversettelsen av %{name} er tom. Oversett teksten, eller list nøkkelen i reviewed."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The translation of %{name} must be a string."
+msgstr "Oversettelsen av %{name} må være en tekststreng."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -796,6 +841,11 @@ msgstr "Dette forslaget erstattet filen til et bilde, og en erstattet fil kan ik
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This source_digest is not one translation_work gave for this entry and language. Read the work again."
+msgstr "Denne source_digest er ikke en translation_work ga for denne oppføringen og dette språket. Les arbeidet på nytt."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "This translation is independent: it no longer follows its source and has no translation work. Change its text with set_fields and set_block_text."
 msgstr "Denne oversettelsen er uavhengig: den følger ikke lenger kilden og har ikke oversettelsesarbeid. Endre teksten med set_fields og set_block_text."
 
@@ -940,6 +990,11 @@ msgstr "rows er en liste med objekter."
 #, elixir-autogen, elixir-format
 msgid "source is a saved entry: {content_type, id}."
 msgstr "source er en lagret oppføring: {content_type, id}."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "texts must be an object of {key: translation}, and reviewed a list of keys."
+msgstr "texts må være et objekt av {nøkkel: oversettelse}, og reviewed en liste med nøkler."
 
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
