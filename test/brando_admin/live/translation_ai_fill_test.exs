@@ -481,6 +481,33 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       _ = conn
     end
 
+    # A row's editor cannot yet be given a text from the server (#3757)
+    test "a rich text in a subform's row is not sent and has no AI action", %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", slug: "tittel", language: "no", status: "published", quotes: [%{text: "<p>Sitatet</p>"}]},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      key = "quotes/#{hd(load(target.id).quotes).uid}/text"
+      answer_and_report()
+
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}/rich_quotes", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+      assert has_element?(view, item(key))
+      assert has_element?(view, "#{item("title")} [data-testid=translation-ai-item]")
+      refute has_element?(view, "#{item(key)} [data-testid=translation-ai-item]")
+
+      translate_all(view)
+      render_async(view, 5_000)
+
+      assert sent_sources() == ["Tittel"]
+      await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
+      refute has_element?(view, "#{item(key)}[data-ai]")
+    end
+
     test "a run reads a block with many texts once per pass, not once per text", %{conn: conn, current_user: user} do
       names = ~w(one two three four five six)
 
@@ -1115,7 +1142,8 @@ defmodule BrandoAdmin.TranslationAIFillTest do
               value: "/no/kontakt",
               link_text: "Kontakt oss",
               creator: user
-            }
+            },
+            %Brando.Content.Var{type: :rich_text, key: "body", label: "Tekst", value: "<p>Brødtekst</p>", creator: user}
           ]
         )
 
@@ -1123,24 +1151,27 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       %{target: target}
     end
 
-    test "sends every text unit but an address, and gives each its AI action", %{conn: conn, target: target} do
+    test "sends every text unit but an address or a variable's rich text, and gives each its AI action",
+         %{conn: conn, target: target} do
       answer_and_report()
       {:ok, work} = Brando.Translations.Work.translation_units(Brando.Pages.Page, target.id)
       units = Enum.filter(work.units, &Brando.AI.WorkTranslation.translatable?/1)
-      {addresses, texts} = Enum.split_with(units, &address?/1)
+      # A rich-text variable's editor cannot yet be given a text from the
+      # server (#3757): the editor translates it
+      {held, texts} = Enum.split_with(units, &(address?(&1) or &1.key == "vars/body/value"))
 
       # The page's own texts: the title, the meta title and description, and
-      # both variables
+      # the text and link variables
       keys = Enum.map(texts, & &1.key)
       assert Enum.all?(~w(title meta_title meta_description vars/intro/value vars/cta/link_text), &(&1 in keys))
-      assert Enum.map(addresses, & &1.key) == ["vars/cta/url"]
+      assert held |> Enum.map(& &1.key) |> Enum.sort() == ["vars/body/value", "vars/cta/url"]
 
       {view, _html} = live_form(conn, "/admin/pages/update/#{target.id}", "page_form")
       version = Translations.get_pending_version(Brando.Pages.Page, target.id)
       await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
 
       for unit <- texts, do: assert(has_element?(view, "#{item(unit.key)} [data-testid=translation-ai-item]"))
-      for unit <- addresses, do: refute(has_element?(view, "#{item(unit.key)} [data-testid=translation-ai-item]"))
+      for unit <- held, do: refute(has_element?(view, "#{item(unit.key)} [data-testid=translation-ai-item]"))
 
       translate_all(view)
       render_async(view, 5_000)

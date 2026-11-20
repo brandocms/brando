@@ -507,6 +507,27 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # A rich text in a subform's rows (TranslationAIFillTest), which
+    # Translate with AI leaves to the editor
+    form :rich_quotes do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+        end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+          end
+        end
+      end
+    end
+
     # No input for some translatable texts (TranslationAIFillTest): the
     # subtitle shows only for a featured article, and the items' rows have
     # no label
