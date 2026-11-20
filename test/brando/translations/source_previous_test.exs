@@ -43,7 +43,38 @@ defmodule Brando.Translations.SourcePreviousTest do
 
   defp body(block), do: "entry_blocks/#{block.uid}/refs/body/text"
 
-  defp member(entry), do: Translations.get_member(Article, entry.id)
+  defp member(entry) do
+    member = Translations.get_member(Article, entry.id)
+    %{member | baseline_texts: Repo.one(from m in Member, where: m.id == ^member.id, select: m.baseline_texts)}
+  end
+
+  defp queries(fun) do
+    parent = self()
+    handler = "source-previous-#{inspect(make_ref())}"
+
+    :telemetry.attach(
+      handler,
+      Brando.repo().config()[:telemetry_prefix] ++ [:query],
+      fn _, _, meta, _ -> if self() == parent, do: send(parent, {handler, meta.query}) end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    collect(handler, [])
+  end
+
+  defp collect(handler, acc) do
+    receive do
+      {^handler, query} -> collect(handler, [query | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
 
   defp retitle(c, title), do: {:ok, _} = SyncTest.update_article(c.source.id, %{title: title}, c.user)
 
@@ -136,5 +167,34 @@ defmodule Brando.Translations.SourcePreviousTest do
 
     assert member(c.target).baseline_texts == %{}
     assert member(c.source).baseline_texts["title"] == "Tittel"
+  end
+
+  test "the listing and a member's lookup leave the source's texts unread", c do
+    sql =
+      queries(fn ->
+        Translations.listing_status(Article, [%{id: c.source.id}, %{id: c.target.id}])
+        Translations.get_member(Article, c.target.id)
+        Translations.list_members(Translations.get_member(Article, c.target.id).group_id)
+      end)
+
+    assert sql != []
+    refute Enum.any?(sql, &(&1 =~ "baseline_texts"))
+  end
+
+  test "a sync of a member looked up by get_member reads its kept texts", c do
+    member = member(c.target)
+
+    from(m in Member, where: m.id == ^member.id)
+    |> Repo.update_all(
+      set: [
+        baseline: Map.put(member.baseline, "title", "stale"),
+        baseline_texts: Map.put(member.baseline_texts, "title", "Gammel tittel")
+      ]
+    )
+
+    {:ok, _} = Translations.target_saved(Article, c.target.id)
+
+    assert %{source_previous: "Gammel tittel"} = open_review(c, "title")
+    assert member(c.target).baseline_texts["title"] == "Tittel"
   end
 end

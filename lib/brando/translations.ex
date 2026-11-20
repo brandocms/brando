@@ -994,6 +994,7 @@ defmodule Brando.Translations do
 
     case load_entry(schema, member.entry_id, Keyword.take(opts, [:with_deleted])) do
       {:ok, target} ->
+        member = with_baseline_texts(member)
         previous = if previous == :current, do: current_pending(member.id), else: previous
         uids = module_uids([source, target], schema)
 
@@ -1024,6 +1025,12 @@ defmodule Brando.Translations do
       _ ->
         {member.id, :target_not_found}
     end
+  end
+
+  # The member with the texts it keeps beside its baseline, which a member is
+  # loaded without: what the sync reads, and compares its new texts with
+  defp with_baseline_texts(%Member{id: id} = member) do
+    %{member | baseline_texts: Repo.one(from m in Member, where: m.id == ^id, select: m.baseline_texts) || %{}}
   end
 
   @doc """
