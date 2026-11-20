@@ -228,12 +228,10 @@ defmodule Brando.Content.Proposals.ImageReplacement do
 
   defp mentions?(_value, _asset), do: false
 
+  # The first thing about NEW's file that OLD's config does not take.
   defp file_problems(old, new) do
     {:ok, cfg} = Images.get_config_for(old)
     facts = file_facts(new)
-    old_type = type_from_path(old.path)
-    allowed = Intake.allowed_types(cfg)
-    limit = Intake.size_limit(cfg)
 
     cond do
       old.content_hash && old.content_hash == new.content_hash ->
@@ -252,13 +250,28 @@ defmodule Brando.Content.Proposals.ImageReplacement do
           )
         ]
 
-      facts[:type] == @svg and old_type != @svg ->
-        [problem(:wrong_media_type, dgettext("content_proposals", "An SVG can only replace an SVG."))]
+      true ->
+        kind_problems(facts[:type], type_from_path(old.path)) ++ config_problems(facts, cfg, old, new)
+    end
+  end
 
-      facts[:type] != @svg and old_type == @svg ->
-        [problem(:wrong_media_type, dgettext("content_proposals", "An SVG can only be replaced with an SVG."))]
+  # An SVG has no sizes, and a raster image's crops mean nothing to one.
+  defp kind_problems(@svg, @svg), do: []
 
-      facts[:type] not in allowed ->
+  defp kind_problems(@svg, _old_type),
+    do: [problem(:wrong_media_type, dgettext("content_proposals", "An SVG can only replace an SVG."))]
+
+  defp kind_problems(_type, @svg),
+    do: [problem(:wrong_media_type, dgettext("content_proposals", "An SVG can only be replaced with an SVG."))]
+
+  defp kind_problems(_type, _old_type), do: []
+
+  defp config_problems(%{type: type, bytes: bytes}, cfg, old, new) do
+    allowed = Intake.allowed_types(cfg)
+    limit = Intake.size_limit(cfg)
+
+    cond do
+      type not in allowed ->
         [
           problem(
             :wrong_media_type,
@@ -268,12 +281,12 @@ defmodule Brando.Content.Proposals.ImageReplacement do
               old: old.id,
               new: new.id,
               types: types(allowed),
-              type: Intake.describe_types([facts[:type]])
+              type: Intake.describe_types([type])
             )
           )
         ]
 
-      facts[:bytes] > limit ->
+      bytes > limit ->
         [
           problem(
             :too_large,
@@ -298,23 +311,29 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   # What NEW's bytes are and how many. A file kept only on the CDN is fetched
   # for this, and removed again.
   defp file_facts(%Image{} = image) do
-    with {:ok, restored} <- Images.restore_original(image) do
-      try do
-        with {:ok, path} <- Brando.Tenant.Storage.media_file(image.path),
-             {:ok, %File.Stat{size: bytes}} <- File.stat(path),
-             {:ok, head} <- ContentType.head(path) do
-          %{type: ContentType.image(head), bytes: bytes}
-        else
-          _ -> %{}
+    case Images.restore_original(image) do
+      {:ok, restored} ->
+        try do
+          read_facts(image.path)
+        after
+          Images.discard_restored_original(image, restored)
         end
-      after
-        Images.discard_restored_original(image, restored)
-      end
-    else
-      _ -> %{}
+
+      _ ->
+        %{}
     end
   rescue
     _ -> %{}
+  end
+
+  defp read_facts(media_path) do
+    with {:ok, path} <- Brando.Tenant.Storage.media_file(media_path),
+         {:ok, %File.Stat{size: bytes}} <- File.stat(path),
+         {:ok, head} <- ContentType.head(path) do
+      %{type: ContentType.image(head), bytes: bytes}
+    else
+      _ -> %{}
+    end
   end
 
   defp type_from_path(path) when is_binary(path) do
