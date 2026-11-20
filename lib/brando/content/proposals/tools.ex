@@ -1142,17 +1142,24 @@ defmodule Brando.Content.Proposals.Tools do
         nil
 
       {role, versions} ->
-        language_versions(role, readable_versions(entry, versions, actor))
+        language_versions(role, readable_versions(entry, versions, actor), follows_source?(entry, role))
     end
   end
 
-  defp language_versions(_role, []), do: nil
+  # From the entry's own membership: the versions listed are only those the
+  # actor may read, and the source may not be among them
+  defp follows_source?(%schema{id: id}, :target),
+    do: match?(%{synchronized: true}, Brando.Translations.get_member(schema, id))
 
-  defp language_versions(role, versions) do
+  defp follows_source?(_entry, _role), do: false
+
+  defp language_versions(_role, [], false), do: nil
+
+  defp language_versions(role, versions, follows?) do
     %{
       role: role && to_string(role),
       versions: versions,
-      note: language_note(role, versions)
+      note: language_note(role, follows?)
     }
   end
 
@@ -1161,17 +1168,13 @@ defmodule Brando.Content.Proposals.Tools do
       "Synchronized versions get this entry's structure and media when a proposal is applied, with its new text to translate. " <>
         "A proposal changes a synchronized version only with translate (its text) and set_fields on its own fields, such as its status or slug."
 
-  # A translation follows its source when the source is listed as synchronized.
-  defp language_note(:target, versions) do
-    if Enum.any?(versions, & &1.synchronized),
-      do:
-        "This entry is a synchronized translation: it follows its source. Write its text with translate (read translation_work first); " <>
-          "set_fields may set only its own fields, such as its status or slug. Change its structure, media and other fields in the source: " <>
-          "any other operation on this entry is refused.",
-      else: language_note(nil, versions)
-  end
+  defp language_note(:target, true),
+    do:
+      "This entry is a synchronized translation: it follows its source. Write its text with translate (read translation_work first); " <>
+        "set_fields may set only its own fields, such as its status or slug. Change its structure, media and other fields in the source: " <>
+        "any other operation on this entry is refused."
 
-  defp language_note(_role, _versions),
+  defp language_note(_role, _follows?),
     do: "Change another language version only when the editor asks; it is its own entry."
 
   defp readable_versions(%schema{}, versions, actor) do

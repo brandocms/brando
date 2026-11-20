@@ -129,6 +129,12 @@ defmodule Brando.Content.Proposals.SynchronizedTranslationTest do
 
       assert problems([op], c.user) == []
     end
+
+    test "the language, its place in the group, is refused", c do
+      op = %SetFields{target: {Article, c.target.id}, fields: %{"language" => "no"}}
+
+      assert problems([op], c.user) == [{0, :follows_source, "language"}]
+    end
   end
 
   describe "block operations" do
@@ -199,6 +205,11 @@ defmodule Brando.Content.Proposals.SynchronizedTranslationTest do
       }
 
       assert refused(op, c.user)
+
+      # The problem is the translation's, not the entry the block comes from
+      {:ok, proposal} = Proposals.prepare([op], c.user)
+      assert [%{target: target}] = proposal.problems
+      assert target == {Article, c.target.id}
     end
 
     test "copy_block from the translation to another entry is not refused", c do

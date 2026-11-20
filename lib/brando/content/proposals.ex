@@ -392,8 +392,13 @@ defmodule Brando.Content.Proposals do
     end
   end
 
+  # The problem is on the translation: for a copy from another entry, that is
+  # the destination, not the entry the operation names first
   defp follows_source_problems(op) do
-    if Enum.any?(changed_targets(op), &synchronized_translation?/1), do: [follows_source()], else: []
+    case Enum.find(changed_targets(op), &synchronized_translation?/1) do
+      nil -> []
+      target -> [Map.put(follows_source(), :target, target)]
+    end
   end
 
   defp synchronized_translation?({schema, id}) when is_atom(schema) and schema != :new and not is_nil(id) do
@@ -414,6 +419,10 @@ defmodule Brando.Content.Proposals do
     |> Enum.group_by(fn {path, _class, _value} -> path |> String.split("/", parts: 2) |> hd() end, &elem(&1, 1))
   end
 
+  # The language is the version's place in its group, which no field change
+  # moves
+  defp followed_field(_classes, "language"), do: :language
+
   defp followed_field(classes, key) do
     case Map.get(classes, key) || Map.get(classes, String.replace_suffix(key, "_id", "")) do
       nil -> nil
@@ -427,7 +436,19 @@ defmodule Brando.Content.Proposals do
       key,
       dgettext(
         "content_proposals",
-        "%{field} is text of a synchronized translation, which is translation work: write it with a translate operation, which saves it as the translation form does.",
+        "%{field} is text of a synchronized translation, which is translation work: write it with a translate operation, which saves it as the translation form does. A text with no open work (translation_work does not list it) is changed by the editor in the translation's form.",
+        field: key
+      )
+    )
+  end
+
+  defp field_follows_source(key, :language) do
+    key_problem(
+      :follows_source,
+      key,
+      dgettext(
+        "content_proposals",
+        "%{field} of a synchronized translation is its place in its translation group and cannot be changed.",
         field: key
       )
     )
@@ -4246,6 +4267,7 @@ defmodule Brando.Content.Proposals do
     Transfer.lock_records!(%{fields: Enum.map(locked, &%{entry: &1}), bindings: %{}})
     entries = current!(proposal, actor)
     check_translated_sources!(proposal)
+    check_follows_source!(proposal)
     # The revision each entry is at now: undo restores it.
     revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
 
@@ -4352,6 +4374,23 @@ defmodule Brando.Content.Proposals do
       lock_source!(schema, id)
       nil
     end
+  end
+
+  # An entry made a synchronized translation since the last recheck (another
+  # version became its group's source) is not saved by an operation that would
+  # now be refused. Read under the apply's row locks; the membership itself
+  # is not locked, so a transfer committing during the save is still missed.
+  defp check_follows_source!(proposal) do
+    if Enum.any?(proposal.operations, &(not match?(%Translate{}, &1) and follows_source_problems(&1) != [])),
+      do:
+        Error.fail!(
+          dgettext(
+            "content_proposals",
+            "An entry in this proposal has become a synchronized translation since it was approved. Prepare the proposal again."
+          )
+        )
+
+    :ok
   end
 
   @doc """
