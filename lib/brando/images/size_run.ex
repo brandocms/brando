@@ -189,6 +189,9 @@ defmodule Brando.Images.SizeRun do
     remaining = remaining(run)
 
     cond do
+      requeued_walk?(run) ->
+        {:snooze, @watch_every}
+
       walking?(run) ->
         {:snooze, @watch_every}
 
@@ -202,6 +205,32 @@ defmodule Brando.Images.SizeRun do
       true ->
         images_done(args, user)
     end
+  end
+
+  # The run's walk, left executing past its timeout by a node that is gone,
+  # goes back in its queue: the rest of the images are still to be queued,
+  # and a batch that runs again counts and queues its images once. Oban's
+  # Lifeline does the same an hour later, or never where an app's own Oban
+  # config has none, and by then the run would have ended without them. A
+  # walk out of attempts is given up, and the run ends as one whose walk did.
+  defp requeued_walk?(run) do
+    worker = Oban.Worker.to_string(Worker.ImageMaintenance)
+    args = TenantJob.attach(%{"run" => run})
+    stale = DateTime.add(DateTime.utc_now(), -Worker.ImageMaintenance.timeout(%Oban.Job{}), :millisecond)
+
+    left =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and j.state == "executing" and j.attempted_at <= ^stale and
+            fragment("? @> ?", j.args, ^args) and not fragment("? @> ?", j.args, ^%{"watch" => true})
+
+    {requeued, _} = Brando.Repo.update_all(from(j in left, where: j.attempt < j.max_attempts), set: [state: "available"])
+
+    Brando.Repo.update_all(from(j in left, where: j.attempt >= j.max_attempts),
+      set: [state: "discarded", discarded_at: DateTime.utc_now()]
+    )
+
+    requeued > 0
   end
 
   # The run's walk and images are done, and this is where its work ends. The
@@ -324,9 +353,10 @@ defmodule Brando.Images.SizeRun do
   `:state` and `:meta`.
 
   A job replaced while it is being processed still reports its step when
-  it ends, and so does the job that takes its place: that image is counted
-  twice, and the work can end one image early. The run, read from the
-  jobs, goes on until the new job is done.
+  it ends, so the job that takes its place carries the run's mark and
+  reports none: the image is counted once, when the replaced job ends. The
+  work can then end before the new job is done, and does not hear of it
+  failing. The run, read from the jobs, goes on until the new job is done.
   """
   @spec carry_over(Ecto.Changeset.t(), [%{state: String.t(), meta: map()}]) :: Ecto.Changeset.t()
   def carry_over(changeset, deleted) do
@@ -334,9 +364,10 @@ defmodule Brando.Images.SizeRun do
       nil ->
         changeset
 
-      %{meta: replaced} ->
+      %{state: state, meta: replaced} ->
+        keys = if state == "executing", do: [@meta_key], else: [@meta_key, Work.meta_key()]
         meta = Ecto.Changeset.get_field(changeset, :meta) || %{}
-        Ecto.Changeset.put_change(changeset, :meta, Map.merge(meta, Map.take(replaced, [@meta_key, Work.meta_key()])))
+        Ecto.Changeset.put_change(changeset, :meta, Map.merge(meta, Map.take(replaced, keys)))
     end
   end
 

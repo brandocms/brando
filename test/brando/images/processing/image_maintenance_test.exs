@@ -682,18 +682,40 @@ defmodule Brando.Images.ImageMaintenanceTest do
         assert {:ok, _} = Processing.queue_processing(image, user, [], silent: true)
         assert SizeRun.remaining() == 1
         assert SizeRun.running?()
+
+        # The replaced job reports the image's step when it ends: the new one
+        # is the run's, and reports none
+        assert [%{meta: meta}] = image_jobs()
+        assert Map.has_key?(meta, "image_size_run")
+        refute Map.has_key?(meta, Work.meta_key())
       end)
     end
 
     # The node was killed mid-batch: the walk stays executing until Lifeline
-    # rescues it, if it ever does
-    test "a walk left executing past its timeout does not hold its run", %{user: user} do
+    # rescues it, if it ever does, with the rest of the images not queued
+    test "a walk left executing past its timeout goes back in the queue at its watcher's next look", %{user: user} do
       Oban.Testing.with_testing_mode(:manual, fn ->
         assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
         set_job(walk, state: "executing", attempted_at: DateTime.add(DateTime.utc_now(), -3600))
-
         refute SizeRun.running?()
+
+        assert {:snooze, _} = perform_job(Worker.ImageMaintenance, watcher().args)
+        assert Repo.get!(Oban.Job, walk.id).state == "available"
+        assert SizeRun.running?()
+      end)
+
+      refute_received {:work, "image-sizes", :failed, %Work{}}
+    end
+
+    test "a walk left executing past its timeout and out of attempts is given up, and its run ends", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, walk} = Processing.recreate_sizes_for_images(user)
+        stale = DateTime.add(DateTime.utc_now(), -3600)
+        set_job(walk, state: "executing", attempted_at: stale, attempt: walk.max_attempts)
+
         assert :ok = perform_job(Worker.ImageMaintenance, Map.put(watcher().args, "settle", true))
+        assert Repo.get!(Oban.Job, walk.id).state == "discarded"
+        refute SizeRun.running?()
       end)
 
       assert_receive {:work, "image-sizes", :failed, %Work{}}
