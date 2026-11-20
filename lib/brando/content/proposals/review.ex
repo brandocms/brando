@@ -199,8 +199,9 @@ defmodule Brando.Content.Proposals.Review do
   # keeps. Units are placed and labelled from the translation's pending
   # version, which the apply saves. The first batch also says what else that
   # save brings (`pending`), while the proposal can still be applied: the
-  # pending version an applied one is read with is a later one. The source
-  # is read as the reviewer may read it.
+  # pending version an applied one is read with is a later one, so neither
+  # that nor a review's source before is shown for it. The source is read as
+  # the reviewer may read it.
   defp translate_changes(target, proposal) do
     ops = for {%Translate{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
 
@@ -210,14 +211,18 @@ defmodule Brando.Content.Proposals.Review do
         # Without read on the source, its text is not shown
         described = Translations.Work.describe(context.schema, context.source || context.entry, context.entry, keys)
         pending = Map.update!(context.pending, :open, &length(&1 -- keys))
+        open? = proposal.status in ~w(pending approved)
+        # The open reviews' texts before are those of the work the proposal
+        # answers only while it can still be applied
+        previous = if open?, do: context.previous, else: %{}
 
         for {{op, index}, nth} <- Enum.with_index(ops) do
           %{
             type: :translate,
             language: context.language,
             source_language: context.source_language,
-            units: translate_units(op, described, context.source != nil, context.previous),
-            pending: if(nth == 0 and proposal.status in ~w(pending approved), do: pending),
+            units: translate_units(op, described, context.source != nil, previous),
+            pending: if(nth == 0 and open?, do: pending),
             operations: [index]
           }
         end

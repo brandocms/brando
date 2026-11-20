@@ -921,6 +921,25 @@ defmodule Brando.Content.Proposals.TranslateTest do
              } = unit
     end
 
+    test "an applied proposal's review unit shows no before from a later review", c do
+      target = create_translation(c)
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: english(c)}, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel"}, c.user)
+
+      op = translate(target, %{"title" => "New title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      # A later change raises another review on the same path
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Nyere tittel"}, c.user)
+      assert {:review, "title"} in open_items(target.id)
+
+      {:ok, applied} = Proposals.get(proposal.id, c.user)
+      assert applied.status == "applied"
+      assert [%{changes: [%{units: [unit]}]}] = Review.entries(applied)
+      assert %{key: "title", source_previous: nil, before: nil, text: "New title"} = unit
+    end
+
     test "a translate unit, and a review raised without the previous text, show no before", c do
       target = create_translation(c)
       heading = "#{c.prefix}/refs/heading/text"
