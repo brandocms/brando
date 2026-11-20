@@ -158,9 +158,17 @@ defmodule Brando.Drafts.Restore do
 
   defp reconcile_relation(value, _current, _schema, _opts), do: value
 
+  # A block kept as it is saved (`Modules.check/3`) has no children in its
+  # params, and gets none: an empty list would replace its saved subtree.
   defp put_source(block, source) do
-    block
-    |> Map.put("source", to_string(source))
-    |> Map.update("children", [], &Enum.map(&1, fn child -> put_source(child, source) end))
+    block = Map.put(block, "source", to_string(source))
+
+    case block do
+      %{"children" => children} when is_list(children) ->
+        Map.put(block, "children", Enum.map(children, &put_source(&1, source)))
+
+      _ ->
+        block
+    end
   end
 end

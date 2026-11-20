@@ -1013,6 +1013,113 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert child_texts(saved) == ["Gammelt barn", "Tredje barn"]
     end
 
+    # A stale multi module block, its entries below it.
+    defp add_stale_multi_block(c, source) do
+      {:ok, multi} =
+        Brando.Content.create_module(
+          Factory.params_for(:module,
+            name: %{"en" => "List"},
+            namespace: %{"en" => "Content"},
+            help_text: %{},
+            code: "<ul>{{ content }}</ul>",
+            multi: true,
+            refs: [],
+            vars: []
+          ),
+          c.current_user
+        )
+
+      entries =
+        for {text, i} <- Enum.with_index(["Første punkt", "Andre punkt"]),
+            do: c |> module_block(text, i) |> Map.put("type", "module_entry")
+
+      params = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "module",
+        "multi" => true,
+        "module_id" => multi.id,
+        "creator_id" => c.current_user.id,
+        "source" => to_string(Article.Blocks),
+        "children" => entries
+      }
+
+      block = %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
+      struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 1}) |> Repo.insert!()
+      make_stale(block)
+    end
+
+    # A stale block holding a region slot, a block in the slot.
+    defp add_stale_slot_block(c, source) do
+      block = add_stale_block(c, source, "Med område", 1)
+
+      uid = Brando.Utils.generate_uid()
+
+      slot =
+        Repo.insert!(%Block{
+          uid: uid,
+          sync_uid: uid,
+          type: :slot,
+          slot_kind: :region,
+          slot_name: "sidebar",
+          slot_module_set: "all",
+          source: Article.Blocks,
+          creator_id: c.current_user.id,
+          parent_id: block.id
+        })
+
+      add_child(c, slot, "I området", 0)
+      block
+    end
+
+    # The texts of a block's descendants, depth first, as saved.
+    defp subtree_texts(block) do
+      block
+      |> Repo.preload([children: :refs], force: true)
+      |> Map.fetch!(:children)
+      |> Enum.sort_by(&{&1.sequence, &1.id})
+      |> Enum.flat_map(fn child ->
+        Enum.map(child.refs, & &1.data.data.text) ++ subtree_texts(child)
+      end)
+    end
+
+    defp stale_subtree(entry),
+      do: entry.entry_blocks |> Enum.find(&(&1.block.vars != [])) |> then(&subtree_texts(&1.block))
+
+    defp add_stale_owner(c, source, :multi), do: add_stale_multi_block(c, source)
+    defp add_stale_owner(c, source, :slot), do: add_stale_slot_block(c, source)
+
+    defp drop_first_and_add(c) do
+      [first | _] = load(c.source.id).entry_blocks
+      drop_block(first)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 2)
+    end
+
+    for {name, build, texts} <- [
+          {"a stale multi block keeps its entries", :multi, ["Første punkt", "Andre punkt"]},
+          {"a stale block keeps the blocks in its slot", :slot, ["I området"]}
+        ] do
+      test name, %{conn: conn} = c do
+        c = pair(c, &add_stale_owner(c, &1, unquote(build)))
+        version = source_saved(c)
+
+        conn |> open_version(c.target.id, version) |> save()
+
+        saved = assert_follows_source(c, version)
+        assert stale_subtree(saved) == unquote(texts)
+      end
+
+      test "#{name} while another is dropped and added", %{conn: conn} = c do
+        c = pair(c, &add_stale_owner(c, &1, unquote(build)))
+        drop_first_and_add(c)
+        version = source_saved(c)
+
+        conn |> open_version(c.target.id, version) |> save()
+
+        saved = assert_follows_source(c, version)
+        assert stale_subtree(saved) == unquote(texts)
+      end
+    end
+
     defp change_year(c, year) do
       {:ok, _} = SyncTest.update_article(c.source.id, %{year: year}, c.current_user)
       Translations.get_pending_version(Article, c.target.id)
