@@ -2427,7 +2427,9 @@ defmodule E2EFixtureController do
           language: params["source_language"] || "no",
           status: "published",
           year: 2020,
-          items: [%{label: "Mer", link: "/mer"}]
+          items: [%{label: "Mer", link: "/mer"}],
+          # A rich text in a subform's row (translate-with-ai.spec.js)
+          quotes: if(params["rich_quote"], do: [%{text: "<p>Sitatet</p>"}], else: [])
         },
         user
       )

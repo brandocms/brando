@@ -1537,7 +1537,8 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     rich_fields = for {key, {:field, field}, _text} <- writes, key in written, do: field
-    subforms = for {key, {:row, subform, _key, _field}, _text} <- writes, key in written, uniq: true, do: subform
+    rows = for {key, {:row, _, _, _} = target, _text} <- writes, key in written, do: target
+    subforms = for {:row, subform, _key, _field} <- rows, uniq: true, do: subform
     relations = Enum.filter(relation_fields(socket) ++ embed_fields(socket), &(Atom.to_string(&1) in subforms))
     previous = socket.assigns.form.source
 
@@ -1546,9 +1547,16 @@ defmodule BrandoAdmin.Components.Form do
     |> put_written_form(to_form(changeset, []))
     |> replace_written_values(previous, changeset)
     |> redraw_relations(previous, changeset, relations)
-    |> force_svelte_remounts(rich_fields)
+    |> then(&force_svelte_remounts(&1, rich_fields, row_inputs(&1.assigns.form, rows)))
     |> TranslationFill.fields_written(written, failed)
   end
+
+  # The inputs of the rows' written fields. A rich text among them (a
+  # subform's `:rich_text` input, a page's rich-text variable) keeps its
+  # mounted document over a patch of its hidden input, so it is given the
+  # written text as a top-level rich-text field is (`force_svelte_remounts/3`);
+  # an input of another kind has no editor with that id to take it.
+  defp row_inputs(form, rows), do: for(target <- rows, input = TranslationFill.row_input(form, target), do: input)
 
   # The browser shows the fields' old values until the written ones reach
   # it: a `validate` sent meanwhile carries them, and the written values are
@@ -2974,7 +2982,9 @@ defmodule BrandoAdmin.Components.Form do
       message: "Missing form `#{inspect(name)}` for `#{inspect(schema)}`"
   end
 
-  defp force_svelte_remounts(socket, fields \\ []) do
+  # `inputs`: rich-text inputs outside the schema's own fields (a subform
+  # row's) whose editors take their input's value too.
+  defp force_svelte_remounts(socket, fields \\ [], inputs \\ []) do
     revision = Map.get(socket.assigns, :tiptap_revision, 0) + 1
     names = if fields == :all, do: :all, else: Enum.map(fields, &to_string/1)
 
@@ -2998,6 +3008,17 @@ defmodule BrandoAdmin.Components.Form do
         else
           current
         end
+      end)
+
+    socket =
+      Enum.reduce(inputs, socket, fn input, current ->
+        push_event(current, "b:tiptap:update", %{
+          id: "#{input.id}-rich-text",
+          html: input.value || "",
+          epoch: current.assigns[:tiptap_epoch],
+          revision: revision,
+          source: "replacement"
+        })
       end)
 
     socket

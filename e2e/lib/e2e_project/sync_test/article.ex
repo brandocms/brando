@@ -47,6 +47,9 @@ defmodule E2eProject.SyncTest.Article do
       on_replace: :delete,
       preload_order: [asc: :sequence],
       cast: true
+
+    # A rich text in a subform's rows (translate-with-ai.spec.js, `quotes`)
+    relation :quotes, :embeds_many, module: E2eProject.SyncTest.ArticleQuote, on_replace: :delete
   end
 
   listings do
@@ -79,8 +82,40 @@ defmodule E2eProject.SyncTest.Article do
             input :link, :text
           end
         end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+          end
+        end
       end
     end
+  end
+end
+
+defmodule E2eProject.SyncTest.ArticleQuote do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "E2eProject",
+    domain: "SyncTest",
+    schema: "ArticleQuote",
+    singular: "article_quote",
+    plural: "article_quotes"
+
+  data_layer :embedded
+
+  trait Brando.Trait.EnsureUID
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :uid, :string
+    attribute :text, :text
   end
 end
 
