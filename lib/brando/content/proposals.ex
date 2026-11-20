@@ -1018,8 +1018,13 @@ defmodule Brando.Content.Proposals do
     rest = Enum.reduce(Work.placeholders(unit.source || ""), text, &String.replace(&2, &1, ""))
     name = Map.get(unit, :label) || unit.key
 
+    if placeholders_moved?(unit, text),
+      do: placeholder_place_problem(name),
+      else: format_problem(unit, rest, name)
+  end
+
+  defp format_problem(unit, rest, name) do
     cond do
-      placeholders_moved?(unit, text) -> placeholder_place_problem(name)
       unit.format == "html" -> rich_text_problem(rest, name)
       unit.format == "markdown" -> rich_text_problem(checked_text("markdown", rest), name)
       String.ends_with?(unit.key, "/url") -> address_problem(rest, name)
