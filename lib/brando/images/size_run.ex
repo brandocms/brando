@@ -435,8 +435,8 @@ defmodule Brando.Images.SizeRun do
     site = Brando.Tenant.current_prefix()
     states = for {{prefix, _, _}, _} = entry <- RenderRun.render_states(run), prefix == site, into: %{}, do: entry
     left = unsettled(states)
-    seen = Map.merge(pages["seen"] || %{}, settled(states))
-    seen = Map.drop(seen, left)
+    seen = Map.merge(pages["seen"] || %{}, vanished(pages, states))
+    seen = seen |> Map.merge(settled(states)) |> Map.drop(left)
     total = map_size(seen) + length(left)
     failed = Enum.count(seen, fn {_entry, outcome} -> outcome == "failed" end)
     # Another run's work is under the key now: this one's watcher was left
@@ -448,7 +448,7 @@ defmodule Brando.Images.SizeRun do
       :ok
     else
       if ours?, do: report_pages(user, run, pages, map_size(seen), total)
-      pages = Map.merge(pages, %{"seen" => seen, "reported" => [map_size(seen), total]})
+      pages = Map.merge(pages, %{"seen" => seen, "left" => left, "reported" => [map_size(seen), total]})
       snooze(job, Map.put(args, "pages", pages), @watch_every)
     end
   end
@@ -466,6 +466,14 @@ defmodule Brando.Images.SizeRun do
       failed? = List.last(entry_states) in ~w(discarded cancelled stale)
       {entry_id(entry), if(failed?, do: "failed", else: "done")}
     end
+  end
+
+  # The pages left at the last look whose renders are gone from the table:
+  # they finished, and the Pruner deleted them (completed ones 300 seconds
+  # after they were scheduled), as `RenderRun` counts them
+  defp vanished(pages, states) do
+    present = MapSet.new(Map.keys(states), &entry_id/1)
+    for entry <- pages["left"] || [], not MapSet.member?(present, entry), into: %{}, do: {entry, "done"}
   end
 
   defp unsettled(states) do

@@ -468,6 +468,24 @@ defmodule Brando.Images.RerenderTest do
       assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
     end
 
+    test "counts a page whose render was pruned between two looks as updated", %{user: user} do
+      page = page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run_images(user)
+        assert :ok = look()
+        assert :ok = look()
+        assert %Work{total: 1, done: 0, message: "Updating pages"} = work(user)
+
+        # Rendered, and deleted by the Pruner, before the next look
+        [render] = renders_of(page)
+        delete_job(render)
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
+    end
+
     test "keeps one job row through its looks", %{user: user} do
       page_with(user, [image()])
 
