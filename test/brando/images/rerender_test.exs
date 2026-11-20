@@ -12,6 +12,7 @@ defmodule Brando.Images.RerenderTest do
   alias Brando.Content.Block
   alias Brando.Content.Blocks
   alias Brando.Content.RenderQueue
+  alias Brando.Content.RenderRun
   alias Brando.Content.Var
   alias Brando.Factory
   alias Brando.ImageFileFixtures
@@ -415,6 +416,27 @@ defmodule Brando.Images.RerenderTest do
         assert %Work{total: 1, message: "Updating pages"} = work(user)
 
         Repo.delete_all(from(j in Oban.Job, where: fragment("?->>'tenant_prefix' = ?", j.args, ^other)))
+        watch()
+      end)
+
+      assert_receive {:work, "image-sizes", :finished, %Work{message: "1 image recreated, 1 page updated"}}
+    end
+
+    test "counts a page whose failed render was queued again and rendered as updated", %{user: user} do
+      page = page_with(user, [image()])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        run_images(user)
+        run = run_id()
+        [render] = renders_of(page)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^render.id), set: [state: "discarded"])
+
+        # Queued again within the run (an image of the run processed again)
+        RenderRun.within_run(run, fn ->
+          RenderQueue.enqueue_map(%{Page => [page.id]}, hold: SizeRun.hold_key(run))
+        end)
+
+        assert [%{state: "discarded"}, %{state: "scheduled"}] = renders_of(page)
         watch()
       end)
 

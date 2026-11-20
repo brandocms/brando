@@ -17,9 +17,9 @@ defmodule Brando.Images.SizeRun do
   #
   # Whether a run is going on comes from the jobs, not from that work, which
   # only its admin sees: `running?/0` is true while the walk or any image it
-  # queued is waiting or being processed, for every admin, on every node. Its
-  # watcher does not count: once the images are done, the run is over, and
-  # another can start before the watcher's last look.
+  # queued is waiting or being processed, for every admin, on every node, and
+  # then while its watcher follows the pages that show its images (the
+  # second step, below). Another run starts only after that.
   #
   # The jobs are the truth, and the work follows them. Each run has an id, in
   # the walk's arguments and each image job's meta:
@@ -441,12 +441,13 @@ defmodule Brando.Images.SizeRun do
   # its name is one page
   defp entry_id({prefix, schema, entry_id}), do: Enum.join([prefix || "", schema, entry_id], "|")
 
-  # "done" or "failed" for each entry whose renders have all settled. A
-  # render cancelled or given up failed; one left executing by a node that
+  # "done" or "failed" for each entry whose renders have all settled, as its
+  # last render ended: one queued again after a render that failed decides.
+  # A render cancelled or given up failed; one left executing by a node that
   # is gone too.
   defp settled(states) do
     for {entry, entry_states} <- states, not Enum.any?(entry_states, &(&1 in @unfinished_states)), into: %{} do
-      failed? = Enum.any?(entry_states, &(&1 in ~w(discarded cancelled stale)))
+      failed? = List.last(entry_states) in ~w(discarded cancelled stale)
       {entry_id(entry), if(failed?, do: "failed", else: "done")}
     end
   end

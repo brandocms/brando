@@ -114,8 +114,8 @@ defmodule Brando.Content.RenderRun do
 
   @doc """
   The run's render jobs in the jobs table now, by entry: `%{{tenant_prefix,
-  schema, entry_id} => [state]}`, with `schema` as the jobs carry it. A job
-  that the Pruner has deleted is not there.
+  schema, entry_id} => [state]}`, with `schema` as the jobs carry it, oldest
+  job first. A job that the Pruner has deleted is not there.
   """
   @spec render_states(String.t()) :: %{optional({String.t() | nil, String.t(), term}) => [String.t()]}
   def render_states(run) do
@@ -123,6 +123,7 @@ defmodule Brando.Content.RenderRun do
       from(j in Oban.Job,
         where: j.worker == @renderer,
         where: fragment("? @> ?", j.meta, type(^%{@meta => [run]}, :map)),
+        order_by: j.id,
         select: {j.args, j.state, j.attempted_at}
       )
 
