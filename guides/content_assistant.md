@@ -201,7 +201,8 @@ its source.
   the source are listed under `other`, as the form lists them; they are not
   answered with text.
 - **On a source**, its language versions with their open work, and the
-  languages without one. With `language` naming one of those, the units a new
+  languages without one. A version in the trash is marked `in_trash`, without
+  its work; its language is still taken. With `language` naming one of those, the units a new
   translation in it would have, keyed as its work items will be.
 - **On any other entry**, a message saying what it is.
 

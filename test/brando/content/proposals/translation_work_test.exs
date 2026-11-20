@@ -151,6 +151,23 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
       assert {:error, _} = Tools.call("translation_work", args(c.source.id, %{"language" => "xx"}), c.context)
     end
 
+    test "marks a version in the trash, without pointing at its work, and keeps its language taken", c do
+      # Pages have a trash; synchronized for this test
+      put_test_env(Brando.Pages.Page, translatable: [mode: :synchronized])
+      page = Factory.insert(:page, title: "Om oss", uri: "om-oss", language: :no, creator: c.user)
+      {:ok, target} = Translations.create_target(Brando.Pages.Page, page.id, :en, c.user)
+      {:ok, _} = Brando.Pages.delete_page(target.id, c.user)
+      page_args = &Map.merge(%{"content_type" => "Brando.Pages.Page", "id" => page.id}, &1)
+
+      assert %{versions: [version], missing_languages: []} = call!(page_args.(%{}), c.context)
+      assert %{language: "en", in_trash: true} = version
+      refute Map.has_key?(version, :open)
+
+      assert {:error, message} = Tools.call("translation_work", page_args.(%{"language" => "en"}), c.context)
+      refute message =~ "#{target.id}"
+      assert message =~ "trash"
+    end
+
     test "an entry without translations yet is a source with every other language missing", c do
       assert %{role: "source", versions: [], missing_languages: ["en"]} = call!(args(c.source.id), c.context)
       assert %{new_translation: "en", total: 2} = call!(args(c.source.id, %{"language" => "en"}), c.context)

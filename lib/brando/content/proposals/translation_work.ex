@@ -21,6 +21,8 @@ defmodule Brando.Content.Proposals.TranslationWork do
   """
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Transfer.{Catalog, Error}
   alias Brando.Translations
@@ -104,13 +106,26 @@ defmodule Brando.Content.Proposals.TranslationWork do
   defp source(schema, entry, language, offset, actor) do
     missing = Translations.missing_languages(schema, entry)
 
-    versions =
+    listed =
       schema
       |> Translations.listing_status([entry], actor)
       |> Map.get(entry.id, [])
       |> Enum.reject(&(&1.entry_id == entry.id))
-      |> Enum.map(fn version ->
-        %{language: version.language, id: version.entry_id, synchronized: version.synchronized, open: version.counts}
+
+    trashed = trashed_ids(schema, Enum.map(listed, & &1.entry_id))
+
+    # A version in the trash still holds its language; its work is read once
+    # it is restored
+    versions =
+      Enum.map(listed, fn version ->
+        if version.entry_id in trashed,
+          do: %{language: version.language, id: version.entry_id, in_trash: true},
+          else: %{
+            language: version.language,
+            id: version.entry_id,
+            synchronized: version.synchronized,
+            open: version.counts
+          }
       end)
 
     head = Map.merge(head(schema, entry), %{role: "source", versions: versions, missing_languages: missing})
@@ -120,9 +135,14 @@ defmodule Brando.Content.Proposals.TranslationWork do
         Map.put(
           head,
           :note,
-          "Read a version's work with its id. For a language in missing_languages, call again with language " <>
+          "Read a version's work with its id; a version in_trash has none until it is restored. For a language in missing_languages, call again with language " <>
             "to read the units a new translation would have: create it with create_translation and translate " <>
             "it in the same proposal."
+        )
+
+      version = Enum.find(versions, &(&1.language == language and Map.get(&1, :in_trash))) ->
+        Error.fail!(
+          "The #{version.language} version is in the trash. It is restored, or deleted for good, in the admin."
         )
 
       version = Enum.find(versions, &(&1.language == language)) ->
@@ -154,6 +174,15 @@ defmodule Brando.Content.Proposals.TranslationWork do
           "create_translation and answer them with translate operations on {\"new\": REF} in the same proposal. " <>
           @answer_note
     })
+  end
+
+  defp trashed_ids(schema, ids) do
+    if ids != [] and :deleted_at in schema.__schema__(:fields) do
+      from(e in schema, where: e.id in ^ids and not is_nil(e.deleted_at), select: e.id)
+      |> Brando.Repo.all()
+    else
+      []
+    end
   end
 
   defp not_synchronized(schema, entry) do
