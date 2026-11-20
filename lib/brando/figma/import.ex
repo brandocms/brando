@@ -43,8 +43,6 @@ defmodule Brando.Figma.Import do
   alias Brando.Uploads.ContentType
   alias Elixir.Image, as: Vimage
 
-  require Logger
-
   @max_per_call 8
   # Layers listed per image: a placeholder used all over a frame stays one entry
   @max_layers 10
@@ -180,9 +178,12 @@ defmodule Brando.Figma.Import do
       name = if turned == 0, do: first.name, else: "#{first.name} #{turned}"
       crop = if turned == turn, do: first[:crop], else: unturn(first[:crop], turn)
 
-      # An image the library has keeps its focal point: an editor may have set it
+      # A new image is created with its focal point, under the permission to
+      # create it; an image the library has keeps its own: an editor may have set it
+      {on_new, attrs} = crop_focal(crop)
+
       path
-      |> Intake.store(Intake.filename(name, ext, "figma"), type, ctx, &put_focal({:stored, &1}, crop, ctx.actor))
+      |> Intake.store(Intake.filename(name, ext, "figma"), type, ctx, on_new, attrs)
       |> upright(turned == turn)
     else
       {:error, message} when is_binary(message) -> {:error, message}
@@ -229,18 +230,10 @@ defmodule Brando.Figma.Import do
   defp write_options(ext) when ext in ["jpg", "webp"], do: [quality: 95]
   defp write_options(_ext), do: []
 
-  defp put_focal({:stored, image}, crop, actor) when is_map(crop) do
-    case Images.update_image(image, %{focal: Map.put(focal(crop), :mode, :position)}, actor) do
-      {:ok, image} ->
-        {:stored, image, :focal}
+  defp crop_focal(crop) when is_map(crop),
+    do: {&{:stored, &1, :focal}, %{focal: Map.put(focal(crop), :mode, :position)}}
 
-      error ->
-        Logger.warning("[Brando.Figma] Could not set the focal point of image #{image.id}: #{inspect(error)}")
-        {:stored, image, :focal_failed}
-    end
-  end
-
-  defp put_focal(result, _crop, _actor), do: result
+  defp crop_focal(_crop), do: {&{:stored, &1}, %{}}
 
   # The focal point is rendered as CSS `object-position: x% y%`, which lines
   # up the point p% across the image with the point p% across the box: the

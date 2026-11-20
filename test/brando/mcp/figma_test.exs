@@ -825,6 +825,35 @@ defmodule Brando.MCP.FigmaTest do
     end
   end
 
+  describe "with group authorization" do
+    setup %{tenant: tenant} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      Brando.Authorization.Boundary.put_scope(nil)
+      owner = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      member = Brando.Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{}) |> enable_two_factor()
+      {:ok, _} = Brando.Authorization.Migration.run()
+      :ok = MCP.put_figma_token(tenant, @token, owner)
+      %{owner: owner, member: member, scope: Brando.Authorization.Scope.standalone(owner)}
+    end
+
+    test "a person who may create images but not update them gets a new image's focal point from the crop",
+         %{tenant: tenant} = c do
+      keys = ["brando.admin.access", "brando.mcp.connect", "brando.images.read", "brando.images.create"]
+      {:ok, group} = Brando.Authorization.Groups.create(c.scope, %{name: "Figma creators"}, keys)
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(c.scope, group.id, c.member.id)
+      token = connect_directly(c.member, tenant)["access_token"]
+
+      crop = fill("p", %{"scaleMode" => "STRETCH", "imageTransform" => [[1, 0, 0], [0, 0.3635, 0.3453]]})
+      stub_layers(pictures(), [layer("9:1", [crop])])
+
+      assert %{"images" => [%{"applied" => ["focal point from the Figma crop"], "asset" => %{"id" => id}}]} =
+               import!(tenant, token)
+
+      assert %Image{focal: %{x: 50, y: 54, mode: :position}} = Brando.Repo.get!(Image, id)
+    end
+  end
+
   describe "the token" do
     test "is stored encrypted, shown by its last four characters, and removed", %{tenant: tenant, user: user} do
       assert MCP.figma_token_status(tenant) == nil
