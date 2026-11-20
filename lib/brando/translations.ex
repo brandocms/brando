@@ -683,13 +683,18 @@ defmodule Brando.Translations do
     Enum.reduce(blocks_fields(schema), changeset, fn field, changeset ->
       case Changeset.get_change(changeset, field) do
         joins when is_list(joins) ->
-          Changeset.put_change(changeset, field, Enum.map(joins, &restore_join(&1, blocks)))
+          Changeset.put_change(changeset, field, joins |> kept_rows() |> Enum.map(&restore_join(&1, blocks)))
 
         _ ->
           changeset
       end
     end)
   end
+
+  # A row the changeset replaces (one `Brando.Drafts.Restore` left out) is
+  # left out again: `put_change/3` raises on a `:replace` changeset, and
+  # replaces the row again by itself.
+  defp kept_rows(rows), do: Enum.reject(rows, &match?(%Changeset{action: :replace}, &1))
 
   defp restore_join(%Changeset{} = join, blocks) do
     case Changeset.get_change(join, :block) do
@@ -725,6 +730,7 @@ defmodule Brando.Translations do
 
         rows =
           rows
+          |> kept_rows()
           |> Enum.with_index()
           |> Enum.map(fn {row, index} -> restore_row_identity(row, Enum.at(reference_rows, index)) end)
 
@@ -743,7 +749,7 @@ defmodule Brando.Translations do
   defp restore_children(block, blocks) do
     case Changeset.get_change(block, :children) do
       children when is_list(children) ->
-        Changeset.put_change(block, :children, Enum.map(children, &restore_child(&1, blocks)))
+        Changeset.put_change(block, :children, children |> kept_rows() |> Enum.map(&restore_child(&1, blocks)))
 
       _ ->
         block

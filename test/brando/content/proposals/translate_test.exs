@@ -6,6 +6,7 @@ defmodule Brando.Content.Proposals.TranslateTest do
   use Brando.ConnCase, async: true, group: :shared_locks
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.Block
   alias Brando.Content.Proposals
@@ -61,7 +62,7 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
   # A rich text with a link and a placeholder, a header, Markdown, a
   # picture's title and alt text, and a string and a rich text variable
-  defp add_block(article, module, user) do
+  defp add_block(article, module, user, sequence \\ 0) do
     ref = fn name, type, data ->
       %{"uid" => Brando.Utils.generate_uid(), "name" => name, "data" => %{"type" => type, "data" => data}}
     end
@@ -89,14 +90,17 @@ defmodule Brando.Content.Proposals.TranslateTest do
           ]),
         do: Repo.insert!(%{var | label: %{"en" => var.key}, block_id: block.id, sequence: index})
 
-    struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
+    struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
     block
   end
 
   # The English translations of every text
-  defp english(c) do
+  defp english(c), do: Map.put(english_block(c.prefix), "title", "Title")
+
+  defp english_block(prefix) do
+    c = %{prefix: prefix}
+
     %{
-      "title" => "Title",
       "#{c.prefix}/refs/body/text" => ~s(<p>First <a href="https://example.com/">paragraph</a> on {{ entry.title }}</p>),
       "#{c.prefix}/refs/heading/text" => "Heading",
       "#{c.prefix}/refs/notes/text" => "**Note** this",
@@ -310,6 +314,72 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert {:ok, %{status: "pending", problems: problems}} = Proposals.get(proposal.id, c.user)
       assert [%{code: :source_changed, key: ^heading}] = problems
       assert %{title: "Tittel"} = saved_texts(target.id)
+    end
+  end
+
+  describe "a translation whose source changed its structure" do
+    # A translated translation whose source then gets a new block, loses its
+    # second, replaces its first's image and changes a field it controls: the
+    # pending version carries that structure, with the new block's texts to
+    # translate.
+    setup c do
+      second = add_block(c.source, c.module, c.user, 1)
+      second = "entry_blocks/#{second.uid}"
+      target = create_translation(c)
+      texts = english(c) |> Map.merge(english_block(second)) |> Map.put("#{second}/refs/heading/text", "Second heading")
+      {:ok, _} = Translations.save_work(Article, target.id, %{texts: texts}, c.user)
+
+      added = add_block(c.source, c.module, c.user, 2)
+
+      Repo.delete_all(
+        from(j in Article.Blocks,
+          where: j.entry_id == ^c.source.id and j.block_id != ^c.block.id and j.block_id != ^added.id
+        )
+      )
+
+      image = Factory.insert(:image)
+
+      Repo.update_all(from(r in Brando.Content.Ref, where: r.block_id == ^c.block.id and r.name == "photo"),
+        set: [image_id: image.id]
+      )
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+      Translations.source_saved(load(c.source.id))
+
+      %{target: target, added: "entry_blocks/#{added.uid}", image: image}
+    end
+
+    defp blocks(id) do
+      for join <- load(id).entry_blocks do
+        refs = Map.new(join.block.refs, &{&1.name, &1})
+        {refs["heading"].data.data.text, refs["photo"].image_id}
+      end
+    end
+
+    test "is saved with that structure, and undo puts back the translation and its open work", c do
+      before = open_items(c.target.id)
+      assert {:shared_update, "year"} in before
+      assert {:shared_update, "#{c.prefix}/refs/photo/media"} in before
+      assert {:translate, "#{c.added}/refs/heading/text"} in before
+
+      texts = Map.put(english_block(c.added), "#{c.added}/refs/heading/text", "New heading")
+      {:ok, proposal} = Proposals.propose([translate(c.target, texts)], c.user)
+      assert proposal.problems == []
+      {:ok, receipt} = approve_and_apply(proposal, c.user)
+
+      # The source's new block, translated, in place of the one it lost
+      assert blocks(c.target.id) == [{"Heading", c.image.id}, {"New heading", nil}]
+      assert %{year: 2001} = Repo.get!(Article, c.target.id)
+      assert open_items(c.target.id) == []
+      assert Repo.get!(Article, c.target.id).rendered_blocks =~ "First"
+
+      resolved = receipt.mappings["translated"][Proposal.key({Article, c.target.id})]
+      assert Enum.sort(Enum.map(resolved, &{String.to_existing_atom(&1["kind"]), &1["path"]})) == before
+
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+      assert blocks(c.target.id) == [{"Heading", nil}, {"Second heading", nil}]
+      assert %{year: nil} = Repo.get!(Article, c.target.id)
+      assert open_items(c.target.id) == before
     end
   end
 
