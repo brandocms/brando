@@ -1577,6 +1577,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </dd>
       </div>
     </dl>
+    <p :if={pending_note(@change[:pending])} class="assistant-placement" data-testid="assistant-translate-pending">
+      {pending_note(@change[:pending])}
+    </p>
     """
   end
 
@@ -1833,6 +1836,35 @@ defmodule BrandoAdmin.AI.AssistantLive do
     </dl>
     """
   end
+
+  # Applying a translate operation saves the translation's whole pending
+  # version, as its form's save does: what its source changed comes along,
+  # and the texts this proposal does not answer stay to translate.
+  defp pending_note(%{open: open, structure?: structure?, live?: live?}) when open > 0 or structure? do
+    structure =
+      cond do
+        structure? and live? ->
+          gettext(
+            "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated, and they go to the live page."
+          )
+
+        structure? ->
+          gettext(
+            "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated."
+          )
+
+        true ->
+          nil
+      end
+
+    texts =
+      if open > 0,
+        do: ngettext("%{count} other text is left to translate.", "%{count} other texts are left to translate.", open)
+
+    Enum.join(Enum.reject([structure, texts], &is_nil/1), " ")
+  end
+
+  defp pending_note(_pending), do: nil
 
   ## Events
 

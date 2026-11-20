@@ -499,6 +499,13 @@ msgid_plural "%{count} open items"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} other text is left to translate."
+msgid_plural "%{count} other texts are left to translate."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/images/size_run.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} page could not be updated"
@@ -2971,6 +2978,16 @@ msgid "Apply with 1 failure"
 msgid_plural "Apply with %{count} failures"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated, and they go to the live page."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated."
+msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format

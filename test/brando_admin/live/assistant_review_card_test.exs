@@ -97,6 +97,60 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
     end
   end
 
+  describe "a translate operation" do
+    # Its apply saves the translation's whole pending version: the card says
+    # so when that version brings more than the proposal's texts.
+    test "says what else the apply saves", %{conn: conn, current_user: user} do
+      alias Brando.Translations
+      alias Brando.Translations.Work
+
+      {:ok, source} =
+        Brando.SyncTest.create_article(
+          %{title: "Fjordhuset", slug: "fjordhuset-translate", language: "no", status: "published"},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Brando.SyncTest.Article, source.id, :en, user)
+
+      op = fn ->
+        {:ok, %{units: units}} = Work.translation_units(Brando.SyncTest.Article, target.id)
+        scope = %{type: "Elixir.Brando.SyncTest.Article", id: target.id, language: "en"}
+
+        %{
+          "op" => "translate",
+          "target" => %{"content_type" => "Brando.SyncTest.Article", "id" => target.id},
+          "source_digest" => Work.token(scope, Enum.filter(units, &(&1.key == "title"))),
+          "texts" => %{"title" => "The fjord house"}
+        }
+      end
+
+      {view, proposal} = propose(conn, user, [op.()])
+      assert proposal.problems == []
+      assert has_element?(view, ~s([data-testid="assistant-translate"]))
+      refute has_element?(view, ~s([data-testid="assistant-translate-pending"]))
+
+      {:ok, module} =
+        Brando.Content.create_module(
+          Brando.Factory.params_for(:module,
+            name: %{"en" => "Text"},
+            namespace: %{"en" => "Content"},
+            help_text: %{},
+            code: "{% ref refs.body %}",
+            refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: ""}}}]
+          ),
+          user
+        )
+
+      Brando.TranslationFixtures.add_block(source, module, user, "<p>Nytt avsnitt</p>", 0)
+      {:ok, source} = Translations.load_entry(Brando.SyncTest.Article, source.id)
+      Translations.source_saved(source)
+
+      {view, proposal} = propose(conn, user, [op.()])
+      assert proposal.problems == []
+      assert has_element?(view, ~s([data-testid="assistant-translate-pending"]))
+    end
+  end
+
   defp card_text(view) do
     view
     |> element(~s([data-testid="assistant-create-translation"]))

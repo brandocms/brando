@@ -685,6 +685,18 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert [%{changes: [%{units: [unit]}]}] = Review.entries(proposal)
       assert %{key: ^heading, label: "Text › Heading"} = unit
     end
+
+    test "says what else the apply saves: the source's structure changes and the texts left", c do
+      target = create_translation(c)
+      keys = ["title"]
+      {:ok, proposal} = Proposals.propose([translate(target, %{"title" => "Title"}, keys: keys)], c.user)
+      assert [%{changes: [%{pending: %{open: 7, structure?: false}}]}] = Review.entries(proposal)
+
+      add_block(c.source, c.module, c.user, 1)
+      Translations.source_saved(load(c.source.id))
+      {:ok, proposal} = Proposals.propose([translate(target, %{"title" => "Title"}, keys: keys)], c.user)
+      assert [%{changes: [%{pending: %{open: 14, structure?: true}}]}] = Review.entries(proposal)
+    end
   end
 
   test "the codec decodes and encodes it" do

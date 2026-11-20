@@ -662,6 +662,17 @@ defmodule Brando.Translations do
     end
   end
 
+  @doc """
+  Whether `payload`, a pending version's content (`pending_content/2`),
+  differs from `saved`, the translation it was computed for, in what
+  follows the source: structure, media, links or source-controlled values.
+  Saving the pending version saves those with its text.
+  """
+  def structure_changed?(schema, saved, payload) do
+    uids = module_uids([saved, payload], schema)
+    owned_by_field(saved, schema, uids) != owned_by_field(payload, schema, uids)
+  end
+
   # Owned rows by the entry field their path starts with: a field is kept or
   # taken whole, never a mix of the saved and the pending version's rows.
   defp owned_by_field(entry, schema, module_uids) do
