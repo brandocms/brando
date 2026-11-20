@@ -1,0 +1,1 @@
+- A synchronized translation's work list has **Translate with AI**, for every open text or one item at a time: the texts fill the form as unsaved changes for the editor to check and save, and the listing's **Create and translate [XX]** creates a translation and starts it there.
