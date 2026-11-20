@@ -1912,8 +1912,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   def handle_event("share_review", _, socket) do
     case socket.assigns.review do
-      [_, _ | _] = review -> {:noreply, assign(socket, :share_choice, Enum.map(review, & &1.key))}
-      _ -> handle_event("share_review", %{"keys" => Enum.map(socket.assigns.review, & &1.key)}, socket)
+      [_, _ | _] = review ->
+        {:noreply, assign(socket, :share_choice, Enum.map(review, & &1.key))}
+
+      # Only image files replaced: no entry to choose, the whole proposal
+      [] ->
+        token = Proposals.share_token(socket.assigns.proposal)
+        {:noreply, assign(socket, review_link: Brando.endpoint().url() <> "/admin/assistant/shared/" <> token)}
+
+      review ->
+        handle_event("share_review", %{"keys" => Enum.map(review, & &1.key)}, socket)
     end
   end
 

@@ -60,6 +60,12 @@ defmodule BrandoAdmin.AssistantImageReplacementLiveTest do
     # Same proportions: no warning
     refute has_element?(view, card <> " .assistant-feedback.is-warning")
 
+    # Shared for review, with no entry to choose: the whole proposal, its files too
+    view |> element(".assistant-share button") |> render_click()
+    link = view |> element("#assistant-review-link") |> render() |> Floki.parse_fragment!() |> Floki.attribute("value")
+    {:ok, shared, _html} = live(c.conn, link |> hd() |> URI.parse() |> Map.get(:path))
+    assert has_element?(shared, card <> " .assistant-replacement-file.is-new img[width='1600']")
+
     view |> element("button.assistant-apply") |> render_click()
     assert has_element?(view, "[data-testid=assistant-receipt-badge]")
     refute has_element?(view, "button.assistant-undo")
