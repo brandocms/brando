@@ -1121,7 +1121,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
             >
               <.icon name="x" /><span>{gettext("Leave out")}</span>
             </button>
-            <span class="badge badge--ai" data-testid="assistant-action-replace-file">{gettext("Replace file")}</span>
+            <span class="badge badge--ai" data-testid="assistant-action-replace-file">
+              {if(@applied, do: gettext("File replaced"), else: gettext("Replace file"))}
+            </span>
           </span>
         </header>
         <h4>{replacement_title(@replacement)}</h4>
@@ -2991,9 +2993,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
       {deletions, ngettext("deletion", "deletions", deletions)},
       {replaced, ngettext("replaced image file", "replaced image files", replaced)}
     ]
-    # Deletions are always shown: "0 deletions" is a fact worth stating.
+    # Deletions are always shown: "0 deletions" is a fact worth stating, but
+    # not of a proposal that only replaces image files.
     |> Enum.with_index()
-    |> Enum.filter(fn {{count, _}, index} -> count > 0 or index == 5 end)
+    |> Enum.filter(fn {{count, _}, index} -> count > 0 or (index == 5 and (creates + updates > 0 or replaced == 0)) end)
     |> Enum.map(&elem(&1, 0))
   end
 

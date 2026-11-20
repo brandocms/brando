@@ -126,6 +126,16 @@ defmodule E2EFixtureController do
         "mcp-watch-empty" ->
           create_mcp_watch(false)
 
+        # A proposal from a connected tool, waiting for review, that replaces
+        # the file of the Index page's share image (also two projects'
+        # listing image) with a better copy of the same proportions; the
+        # "-wide" one with a copy cut wider
+        "mcp-image-replacement" ->
+          create_image_replacement_proposal({2400, 1800})
+
+        "mcp-image-replacement-wide" ->
+          create_image_replacement_proposal({2400, 1350})
+
         "mcp-unloadable-proposal" ->
           create_unloadable_mcp_proposal()
 
@@ -912,6 +922,67 @@ defmodule E2EFixtureController do
       Tools.call("prepare_proposal", %{"summary" => "Add the harbour page", "operations" => [op]}, context)
 
     user
+  end
+
+  defp create_image_replacement_proposal(new_dimensions) do
+    alias Brando.Content.Proposals.Tools
+
+    user = get_admin_user()
+    old = create_labelled_image("harbour", {1600, 1200}, "Harbour", [32, 64, 96])
+    new = create_labelled_image("harbour-better", new_dimensions, "Harbour, better", [96, 120, 60])
+    index = Brando.Repo.get_by!(Brando.Pages.Page, uri: "index", language: "en")
+    index |> Ecto.Changeset.change(meta_image_id: old.id) |> Brando.Repo.update!()
+
+    for slug <- ["test-project-alpha", "test-project-beta"],
+        project = Brando.Repo.get_by(E2eProject.Projects.Project, slug: slug),
+        do: project |> Ecto.Changeset.change(listing_image_id: old.id) |> Brando.Repo.update!()
+
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+    op = %{
+      "op" => "replace_image_file",
+      "asset" => %{"kind" => "image", "id" => old.id},
+      "with" => %{"kind" => "image", "id" => new.id}
+    }
+
+    {:ok, %{applicable: true}} =
+      Tools.call("prepare_proposal", %{"summary" => "Use the better harbour photo", "operations" => [op]}, context)
+
+    user
+  end
+
+  # A landscape of `{width, height}` with `label` on it, saved with its
+  # small size and square thumb as image processing would, with its hash.
+  defp create_labelled_image(name, {width, height}, label, color) do
+    name = "e2e-#{name}-#{System.unique_integer([:positive])}"
+    {:ok, base} = Image.new(width, height, color: color)
+    {:ok, text} = Image.Text.text(label, font_size: div(height, 8), text_fill_color: :white)
+    {:ok, original} = Image.compose(base, text, x: :center, y: :middle)
+
+    write = fn image, folder ->
+      relative = Path.join(["images", "site", "default", folder, name <> ".jpg"])
+      path = Path.join(Brando.config(:media_path), relative)
+      File.mkdir_p!(Path.dirname(path))
+      Image.write!(image, path, quality: 82)
+      relative
+    end
+
+    {:ok, small} = Image.resize(original, 700 / width)
+    {:ok, thumb} = Image.thumbnail(original, 400, crop: :center)
+    path = write.(original, "original")
+    file = Path.join(Brando.config(:media_path), path)
+
+    Brando.Repo.insert!(%Brando.Images.Image{
+      path: path,
+      status: :processed,
+      width: width,
+      height: height,
+      config_target: "default",
+      formats: [:jpg],
+      content_hash: :sha256 |> :crypto.hash(File.read!(file)) |> Base.encode16(case: :lower),
+      focal: %Brando.Images.Focal{x: 50, y: 50},
+      sizes: %{"small" => write.(small, "small"), "thumb" => write.(thumb, "thumb")}
+    })
   end
 
   # A 1875x2500 portrait with fine detail, saved in the E2E app's sizes as

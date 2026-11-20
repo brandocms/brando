@@ -624,6 +624,7 @@
 }
 
 .assistant-replacement-frame {
+  position: relative;
   display: grid;
   place-items: center;
   height: 160px;
@@ -633,7 +634,9 @@
   background: var(--assistant-surface);
   color: var(--assistant-muted);
 
-  img { width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+  /* The whole file, letterboxed in the frame: out of the grid's flow, so
+     its height is the frame's */
+  img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   [data-icon] { width: 24px; height: 24px; }
 }
 
