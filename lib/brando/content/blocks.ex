@@ -890,12 +890,14 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Enqueues every entry in a schema-to-entry-ids map for rendering.
+  Enqueues every entry in a schema-to-entry-ids map for rendering, in the
+  bulk lane (`Brando.Content.RenderQueue.enqueue_map/2`).
   """
   defdelegate enqueue_entry_map_for_render(entry_map), to: Brando.Content.RenderQueue, as: :enqueue_map
 
   @doc """
-  Enqueues all `ids` for `schema` for rendering.
+  Enqueues all `ids` for `schema` for rendering, in the bulk lane
+  (`Brando.Content.RenderQueue.enqueue_many/3`).
   """
   defdelegate enqueue_entries_for_render(schema, ids), to: Brando.Content.RenderQueue, as: :enqueue_many
 
