@@ -127,8 +127,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
       # The version the form holds (`nil` for none), once it decided.
       applied_version_id: held,
       decided?: decided?,
-      # what the form decides next follows its own save (`decide/2`)
-      saved?: false,
+      # what the form decides next follows its own save (`decide/2`), until
+      # it decides: a parent update in between keeps it
+      saved?: match?(%{saved?: true}, previous),
       waiting?: decided? and waiting?(current, pending),
       behind?: match?(%{behind?: true}, previous),
       acknowledged: (previous && previous.acknowledged) || [],
@@ -315,7 +316,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   @doc "The form loads `version`'s content from now on: the state is rebuilt on it."
   def hold(%{assigns: %{translation: state}} = socket, version) do
     socket
-    |> assign(:translation, %{state | decided?: true, applied_version_id: version, behind?: false})
+    |> assign(:translation, %{state | decided?: true, saved?: false, applied_version_id: version, behind?: false})
     |> assign_state()
     # the notice of a save whose version the source had moved past stays
     |> then(fn %{assigns: %{translation: held}} = socket ->

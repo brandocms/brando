@@ -1682,6 +1682,27 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, texts(saved)} == {2024, ["First paragraph", "New paragraph"]}
     end
 
+    # 11. The save schedules the form's decision 100 ms later; a parent
+    # update (presence) in between rebuilds the state, and the decision
+    # still follows the save: the form loads what it left pending.
+    test "a parent update between the save and the decision does not keep the version just saved",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      type_title(view, "Typed title")
+      second = change_source_again(c, 2030)
+
+      save_and_stay(view)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
+
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      refute third.id == first.id
+      assert second.id && held_version(view) == to_string(third.id)
+      assert shown_title(view) == "Typed title"
+      assert load(c.target.id).title == "Typed title"
+    end
+
     # 10. A type without block fields saves without collecting blocks
     # (`saved_entry/3`): Save and continue decides again all the same, and
     # loads what the save left pending.
