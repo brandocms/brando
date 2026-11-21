@@ -24,6 +24,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `event_tag_received` through Form and
   `lib/brando_admin/components/form/transformer.ex`. Preserve already collected
   state: `assign_transformer_statuses` deliberately initializes only once.
+  A transformer also loads its rows once; after a save that stays on the
+  form, the Form hands it the saved rows (`entry_saved`), which make the
+  rows it sent saved rows, so the next save doesn't insert them again.
   Updating a transformer row also requires `stream_insert`; changing an assign
   alone does not update the streamed DOM.
 - Match delivery IDs to the rendered component: transformer IDs use the HTML
@@ -49,7 +52,12 @@ area in [the section map](form-map.md) and grep for the names it lists.
   ("Entry field sync" in Form): `validate` marks the field `_target` names
   and other inputs whose value it changed; a change Form makes itself must
   go through `put_local_form/2` (or `put_written_form/2` when no browser
-  event follows), or it never ships. Received values go through
+  event follows), or it never ships. A value the form's rich-text check
+  refused (`Brando.RichText.refused?/2`, the field or a row) never ships,
+  from `pending_changes` or from a recovery's `share_recovered/3`, and stays
+  in `unshipped_fields` until corrected (a recovered one too), so another
+  editor's save keeps it; the others still see it marked
+  (`broadcast_dirty_fields`). Received values go through
   `apply_field_change/3`, which drops the browser's param for the field (the
   form shows a param before a saved value), and only when their clock is
   newer. Form recovery (`recover_form`) marks only the fields the Form hook

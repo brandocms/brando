@@ -646,6 +646,16 @@ handlers, script addresses) is a validation error on the field: see the
 `:rich_text` inputs of the form the editor saves from, those in its subforms'
 rows included, so an input that only a named form declares as rich text is
 checked when that form saves; any other save checks the default form's.
+The form checks as the editor types, and a value it refuses stays in that
+editor's form: the other editors of the entry see the field marked as being
+edited, and keep the last value it sent them until the editor corrects it.
+
+A template prints a top-level field as rich text when the default form draws
+it as a `:rich_text` input, or when only named forms draw it, each as a
+`:rich_text` input; when forms disagree, the default form decides. A field in
+a subform's rows prints as rich text when any form draws it as a `:rich_text`
+input, so plain text such as `John <john@example.com>` typed in a row another
+form draws as plain text loses the bracketed part.
 
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,

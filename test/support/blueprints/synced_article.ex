@@ -399,7 +399,8 @@ defmodule Brando.SyncTest.Article do
     end
 
     # Rich text in a transformer's rows, which the form checks once it puts
-    # them on the entry (RefusedAndRepeatedSavesTest)
+    # them on the entry (RefusedAndRepeatedSavesTest, TransformerSavesTest).
+    # With a listing, a row's fields are drawn only once it is opened.
     form :transformer_rich_items do
       tab "Content" do
         fieldset do
@@ -409,6 +410,7 @@ defmodule Brando.SyncTest.Article do
           inputs_for :items do
             cardinality :many
             style {:transformer, :cover}
+            listing &Brando.SyncTest.ItemSummary.row/1
 
             input :label, :text
             input :link, :rich_text
@@ -810,6 +812,18 @@ defmodule Brando.SyncTest.ArticleAuthorLink do
     relation :author, :belongs_to, module: Brando.SyncTest.ArticleAuthor
     relation :blocks, :has_many, module: :blocks
     relation :related_entries, :entries
+  end
+end
+
+defmodule Brando.SyncTest.ItemSummary do
+  @moduledoc false
+  # A transformer row's listing (`:transformer_rich_items`, TransformerSaveTest.Album)
+  use Phoenix.Component
+
+  def row(assigns) do
+    ~H"""
+    <strong>{@entry.label}</strong>
+    """
   end
 end
 

@@ -239,3 +239,57 @@ defmodule Brando.RichTextRows.Plain do
     end
   end
 end
+
+defmodule Brando.RichTextRows.Disagreeing do
+  @moduledoc false
+  # Forms that disagree on a top-level field, and one only named forms draw
+  # (Brando.Villain.RichTextTemplateReadsTest). Only structs are built:
+  # there is no table.
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "RichTextRows",
+    schema: "Disagreeing",
+    singular: "disagreeing",
+    plural: "disagreeings",
+    gettext_module: Brando.Gettext
+
+  identifier "{{ entry.title }}"
+  persist_identifier false
+
+  attributes do
+    attribute :title, :string
+    attribute :intro, :text
+    attribute :aside, :text
+  end
+
+  forms do
+    # `intro` is rich text here and plain text in `form :plain`
+    form do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :intro, :rich_text
+        end
+      end
+    end
+
+    # `aside` is drawn only by named forms, each as rich text
+    form :plain do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :intro, :textarea
+          input :aside, :rich_text
+        end
+      end
+    end
+
+    form :aside do
+      tab "Content" do
+        fieldset do
+          input :aside, :rich_text
+        end
+      end
+    end
+  end
+end

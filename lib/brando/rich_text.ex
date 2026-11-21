@@ -117,6 +117,23 @@ defmodule Brando.RichText do
 
   def recheck_form(changeset, _form), do: changeset
 
+  @doc """
+  Whether the rich-text check refused `field`'s value in `changeset`: the
+  field, or a field of one of its rows, has the check's unsafe-rich-text
+  error. A value the check rewrote and accepted is not refused.
+  """
+  def refused?(%Changeset{} = changeset, field) do
+    Enum.any?(changeset.errors, &match?({^field, {@unsafe_message, _}}, &1)) or
+      case Map.fetch(changeset.changes, field) do
+        {:ok, rows} when is_list(rows) -> Enum.any?(rows, &refused_row?/1)
+        {:ok, %Changeset{} = row} -> refused_row?(row)
+        _ -> false
+      end
+  end
+
+  defp refused_row?(%Changeset{errors: errors}), do: Enum.any?(errors, &match?({_, {@unsafe_message, _}}, &1))
+  defp refused_row?(_row), do: false
+
   defp drop_unsafe_errors(%Changeset{} = changeset, fields) do
     errors = Enum.reject(changeset.errors, fn {field, {message, _}} -> field in fields and message == @unsafe_message end)
 
@@ -155,12 +172,17 @@ defmodule Brando.RichText do
   end
 
   # The `:rich_text` inputs at the top of a form, not in its subforms
-  defp top_level_fields(%{tabs: tabs}) do
+  defp top_level_fields(form), do: for({name, :rich_text} <- top_level_inputs(form), do: name)
+
+  # `{name, type}` for each input at the top of a form
+  defp top_level_inputs(%{tabs: tabs}) do
     for tab <- tabs,
         fieldset <- tab.fields,
-        %Brando.Blueprint.Forms.Input{type: :rich_text, name: name} <- Map.get(fieldset, :fields, []),
-        do: name
+        %Brando.Blueprint.Forms.Input{type: type, name: name} <- Map.get(fieldset, :fields, []),
+        do: {name, type}
   end
+
+  defp top_level_inputs(_form), do: []
 
   @doc """
   Validates the rich-text inputs in the rows of the subforms `relations` in
@@ -172,6 +194,35 @@ defmodule Brando.RichText do
   def validate_subform_rows(changeset, form, relations) do
     specs = for {relation, _} = spec <- subform_fields(form), relation in relations, do: spec
     validate_rows(changeset, specs)
+  end
+
+  @doc """
+  The fields of `module` that are printed as rich text: those its default
+  form draws as a `:rich_text` input at its top level
+  (`__rich_text_fields__/0`), and those only named forms draw, each as a
+  `:rich_text` input. A field the default form draws as any other input
+  is not, nor is one a named form draws as rich text and another as any
+  other input: when forms disagree, the default form decides.
+
+  A save checks by other rules: the default form
+  (`__rich_text_fields__/0`, `validate_blueprint/2`), and the form it comes
+  from (`validate_form/2`).
+  """
+  @spec fields_for_printing(module()) :: [atom()]
+  def fields_for_printing(module) when is_atom(module) do
+    if function_exported?(module, :__forms__, 0) do
+      inputs = for form <- module.__forms__(), input <- top_level_inputs(form), do: input
+
+      rich_everywhere =
+        for {name, types} <- Enum.group_by(inputs, &elem(&1, 0), &elem(&1, 1)),
+            Enum.all?(types, &(&1 == :rich_text)),
+            do: name
+
+      default = if function_exported?(module, :__rich_text_fields__, 0), do: module.__rich_text_fields__(), else: []
+      Enum.uniq(default ++ Enum.sort(rich_everywhere))
+    else
+      []
+    end
   end
 
   @doc """

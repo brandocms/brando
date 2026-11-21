@@ -97,7 +97,8 @@ updates), `event: "provide_root_blocks"`, `"provide_transformer_data"`,
 `handle_event("save_form"`, the `handle_event("save"` clauses, `save_entry`,
 `mutation_opts`, `saved_entry_with_blocks`, `refresh_saved_entry_with_blocks`,
 `redirect_after_save`, `assoc_all_block_fields`, `assoc_all_transformer_fields`,
-`fetch_transformer_data`, `reset_transformer_changesets`, `push_errors`,
+`fetch_transformer_data`, `hand_saved_rows_to_transformers`,
+`reset_transformer_changesets`, `push_errors`,
 `group_constraint_items`, `store_revision`, `maybe_offer_permalink_redirect`,
 `after_translation_save`.
 

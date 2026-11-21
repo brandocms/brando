@@ -260,6 +260,12 @@ defmodule BrandoIntegrationWeb.LivePreview do
     end
   end
 
+  # An album's transformer rows (TransformerSavesTest)
+  preview_target Brando.TransformerSaveTest.Album do
+    template {BrandoIntegrationWeb.PageHTML, "rows"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+  end
+
   # The current site's frontend (`Brando.Site.Frontend`) picks the layout and
   # the template, and gives its assigns
   preview_target Brando.Pages.Page do

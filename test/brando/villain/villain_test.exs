@@ -626,6 +626,14 @@ defmodule Brando.VillainTest do
             opts: %{module: :blocks},
             type: :has_many
           }
+        ],
+        "Elixir.Brando.TransformerSaveTest.Reel": [
+          %Brando.Blueprint.Relations.Relation{
+            __identifier__: :blocks,
+            name: :blocks,
+            opts: %{module: :blocks},
+            type: :has_many
+          }
         ]
       ]
       |> Enum.map(fn {k, v} -> {k, strip_spark_metadata(v)} end)
