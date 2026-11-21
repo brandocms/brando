@@ -167,7 +167,8 @@ defmodule Brando.Villain.TemplateLiveElementsTest do
             ~s(<p style="text-align: center;">A <strong>b</strong> <em>c</em></p>),
             ~s(<p><a href="https://example.com/" target="_blank" rel="noopener noreferrer">a</a></p>),
             ~s(<p><a href="/x" data-identifier-id="4" class="action-button">a</a></p>),
-            ~s(<h2 class="lead">A</h2><ul><li>b</li></ul><p><span style="color: #ff0000;">c</span><sub>1</sub><sup>2</sup></p>)
+            ~s(<h2 class="lead">A</h2><ul><li>b</li></ul><p><span style="color: #ff0000;">c</span><sub>1</sub><sup>2</sup></p>),
+            ~s(<ol start="3"><li>Third</li></ol>)
           ] do
         assert Captions.caption_html(caption) == caption
       end
@@ -182,6 +183,7 @@ defmodule Brando.Villain.TemplateLiveElementsTest do
 
       assert Captions.caption_html(~s(<p><em>a</em></p><svg><circle r="1"/></svg>)) == "<p><em>a</em></p>"
       assert Captions.library_html(~s(<p>Old</p><img src="x">)) == "<p>Old</p>"
+      assert Captions.caption_html(~s|<ol start="expression(1)" type="a"><li>A</li></ol>|) == "<ol><li>A</li></ol>"
     end
 
     test "a title without the editor's markup is text, as before" do

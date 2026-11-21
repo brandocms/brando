@@ -114,7 +114,8 @@ defmodule Brando.Captions do
   # Only the elements the rich-text editor makes in a caption, and on them only
   # the attributes it gives them: a link's address when rich text allows it,
   # its target, `rel`, class and identifier; a paragraph's or heading's class
-  # and alignment; a span's class, colour and jump-anchor id; a footnote's uid.
+  # and alignment; a span's class, colour and jump-anchor id; a footnote's uid;
+  # the number an ordered list starts at.
   # Any other element is left out and its text kept as text, the content of a
   # `script` or `style` too.
   defp editor_markup(nil), do: nil
@@ -146,6 +147,7 @@ defmodule Brando.Captions do
   defp editor_attribute?("span", {"data-type", type}), do: type == "jump-anchor"
   defp editor_attribute?("span", {"id", _id}), do: true
   defp editor_attribute?("sup", {"data-footnote-uid", _uid}), do: true
+  defp editor_attribute?("ol", {"start", start}), do: start =~ ~r/\A-?[0-9]+\z/
   defp editor_attribute?(tag, {"class", _class}), do: tag in ["span" | @aligned]
   defp editor_attribute?(_tag, _attr), do: false
 
