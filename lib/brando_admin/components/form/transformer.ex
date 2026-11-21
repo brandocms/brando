@@ -322,6 +322,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # --- Initialization ---
 
   defp initialize(socket) do
+    streamed? = socket.assigns.initialized?
     field = socket.assigns.field
     subform = socket.assigns.subform
 
@@ -377,12 +378,17 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:layout, if(subform.listing, do: Map.get(subform, :layout, :list), else: :list))
      |> assign(:image_max_size, image_max_size)
      |> assign(:video_max_size, video_max_size(video_cfg))
-     # Without this the stream prefixes its DOM ids ("transformer_items-<id>"),
-     # and every handler that looks an entry up by the dom_id the markup sent
-     # back — toggle, remove, field edits, reorder — silently matches nothing.
-     |> stream_configure(:transformer_items, dom_id: & &1.id)
+     |> configure_stream(streamed?)
      |> stream(:transformer_items, stream_entries, reset: true)}
   end
+
+  # Without this the stream prefixes its DOM ids ("transformer_items-<id>"),
+  # and every handler that looks an entry up by the dom_id the markup sent
+  # back — toggle, remove, field edits, reorder — silently matches nothing.
+  # Once only: a restored copy (`restore_draft`) initializes the items again,
+  # and LiveView refuses to configure a stream already streamed.
+  defp configure_stream(socket, true = _streamed?), do: socket
+  defp configure_stream(socket, false), do: stream_configure(socket, :transformer_items, dom_id: & &1.id)
 
   # Mirrors Brando.Uploads' resolution so the browser can reject an oversized
   # file before it registers a placeholder for it.
@@ -1336,6 +1342,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   Rebuilds an item from a recovered changeset, keeping invalid params as
   inline changes so the user's input survives.
 
+  A saved row keeps the row as source, and the recovered values that differ
+  from it are its changes, as an editor's edits are: they stay this editor's
+  when another editor's save brings the row again (`entry_saved_elsewhere`).
   Unsaved rows get a plain map as source. Assets for `asset_fields` are
   resolved from the restored foreign keys for display only, as they may
   differ from the saved row's preloads.
@@ -1343,14 +1352,20 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   def recovery_item(cs, asset_fields) do
     entry = Ecto.Changeset.apply_changes(cs)
 
-    source =
-      if is_nil(entry.id),
-        do:
-          entry
-          |> Map.from_struct()
-          |> Map.delete(:__meta__)
-          |> Map.reject(fn {_, v} -> match?(%Ecto.Association.NotLoaded{}, v) end),
-        else: entry
+    {source, recovered} =
+      cond do
+        is_nil(entry.id) ->
+          {entry
+           |> Map.from_struct()
+           |> Map.delete(:__meta__)
+           |> Map.reject(fn {_, v} -> match?(%Ecto.Association.NotLoaded{}, v) end), %{}}
+
+        cs.data.id == entry.id ->
+          {cs.data, Map.take(entry, Map.keys(cs.changes))}
+
+        true ->
+          {entry, %{}}
+      end
 
     # Restored FKs may differ from the saved row's preloaded assets. Resolve
     # those for display without putting asset structs into the save params.
@@ -1366,7 +1381,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     invalid = Map.new(cs.errors, fn {key, _} -> {key, cs.params && cs.params[to_string(key)]} end)
 
     new_item("transformer-item-#{entry.id || Ecto.UUID.generate()}", source, is_new: is_nil(entry.id))
-    |> Map.put(:changes, invalid)
+    |> Map.put(:changes, Map.merge(recovered, invalid))
     |> Map.put(:assets, assets)
   end
 

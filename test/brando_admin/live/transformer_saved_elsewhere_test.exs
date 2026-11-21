@@ -127,9 +127,36 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     await(fn -> saved_title(article) == title end)
   end
 
+  # B's recovery copy, as the browser captures it while B types
+  defp capture(form) do
+    params = %{"main" => browser_form(form, []), "blocks" => %{}, "generation" => 1, "request_id" => 1}
+    form |> form_target() |> render_hook("draft_capture", params)
+  end
+
+  defp latest_copy(article) do
+    Repo.one(
+      from d in Brando.Drafts.EntryDraft,
+        where: d.entry_id == ^article.id and is_nil(d.resolved_at),
+        order_by: [desc: d.id],
+        limit: 1
+    )
+  end
+
+  # B's connection drops; the reopened form restores B's recovery copy
+  defp reconnect_and_restore(form, conn, article, kind, tab) do
+    await(fn -> latest_copy(article) != nil end)
+    kill_live(form.view)
+    form = open(conn, article, kind, tab)
+    form |> form_target() |> render_hook("draft_restore", %{"id" => latest_copy(article).id})
+    settle(form.view)
+    form
+  end
+
   defp rows(article) do
     Repo.all(from i in ArticleItem, where: i.article_id == ^article.id, order_by: i.sequence, select: {i.label, i.id})
   end
+
+  defp form_title(%{view: view, id: id}), do: Ecto.Changeset.get_field(form_assigns(view, id).form.source, :title)
 
   defp saved_title(article), do: Repo.one(from a in "synctest_articles", where: a.id == ^article.id, select: a.title)
 
@@ -245,6 +272,30 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         await_taken(b, [{"A, by B", a_id}, {"B, by A", b_id}, {"C", c_id}])
         save_title(b, article, "Saved by B")
         assert rows(article) == [{"A, by B", a_id}, {"B, by A", b_id}, {"C", c_id}]
+      end
+    end
+  end
+
+  for kind <- ["with blocks", "without blocks"] do
+    describe "#{kind}, B's edit restored after a reconnect" do
+      # The restored copy is B's unsaved edit as any other: A's save of
+      # another field leaves it in B's row, and B's save writes it.
+      test "stays B's after A saves another field", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        set_field(b, dom_id_of(b, "A"), "label", "A, by B")
+        capture(b)
+        b = reconnect_and_restore(b, b_conn, article, unquote(kind), "b")
+        [{"A", a_id}, {"B", b_id}, {"C", c_id}] = rows(article)
+        await_taken(b, [{"A, by B", a_id}, {"B", b_id}, {"C", c_id}])
+
+        save_title(a, article, "Saved by A")
+        await(fn -> form_title(b) == "Saved by A" end)
+        settle(b.view)
+        assert shown(b) == [{"A, by B", a_id}, {"B", b_id}, {"C", c_id}]
+
+        save_title(b, article, "Saved by B")
+        assert rows(article) == [{"A, by B", a_id}, {"B", b_id}, {"C", c_id}]
       end
     end
   end
