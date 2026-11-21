@@ -64,12 +64,27 @@ defmodule BrandoAdmin.RichTextFormInUseTest do
 
   # "Save and continue editing": two submits, the first collects the
   # blocks, the second writes.
-  defp save(view) do
+  # `params`: what the browser sends, the form as it shows it by default
+  defp save(view, params \\ %{}) do
     view |> form_of() |> render_hook("save_redirect_target", %{})
-    view |> element("#article_form_form") |> render_submit()
+    view |> element("#article_form_form") |> render_submit(params)
     assert_push_event(view, "b:submit", %{}, 5_000)
-    view |> element("#article_form_form") |> render_submit()
+    view |> element("#article_form_form") |> render_submit(params)
     render(view)
+  end
+
+  defp other_editor(article, form) do
+    other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    open(log_in_user(Phoenix.ConnTest.build_conn(), other), article, form)
+  end
+
+  # Another editor types `html` into the subtitle and leaves the field: the
+  # value reaches `view`'s form as a field change, with no cast
+  defp other_types_subtitle(other_view, view, html) do
+    type(other_view, "subtitle", html)
+    other_view |> form_of() |> render_hook("focus", %{"field" => "article[subtitle]"})
+    other_view |> form_of() |> render_hook("blur", %{"field" => "article[subtitle]"})
+    await(fn -> Ecto.Changeset.get_field(form_source(view), :subtitle) == html end)
   end
 
   # The revision is stored once the blocks arrive; a refused one shows the
@@ -118,6 +133,28 @@ defmodule BrandoAdmin.RichTextFormInUseTest do
       await(fn -> saved(article).subtitle == @commented end)
     end
 
+    # The browser still sends the subtitle it showed before the other
+    # editor's change: the form keeps the other editor's value over it, and
+    # that value is what the save stores, so it is checked
+    for {other_form, html} <- [
+          {"notes", ~s{<p><a href="javascript:alert(1)">link</a></p>}},
+          {nil, ~s{<p onclick="alert(1)">text</p>}}
+        ] do
+      test "is refused on save when another editor's change on the #{other_form || "default"} form put it there",
+           %{conn: conn, article: article} do
+        view = open(conn, article, "notes")
+        other_view = other_editor(article, unquote(other_form))
+        stale = view |> render() |> form_params("#article_form_form")
+        assert stale["article"]["subtitle"] == "Stored"
+
+        other_types_subtitle(other_view, view, unquote(html))
+        save(view, stale)
+
+        assert Keyword.has_key?(form_source(view).errors, :subtitle)
+        assert saved(article).subtitle == "Stored"
+      end
+    end
+
     test "is refused in a stored revision", %{conn: conn, article: article} do
       view = open(conn, article, "notes")
       revisions = fn -> Brando.Repo.aggregate(from(r in Revision, where: r.entry_id == ^article.id), :count) end
@@ -135,15 +172,11 @@ defmodule BrandoAdmin.RichTextFormInUseTest do
     test "is refused in a stored revision when another editor's change put it there",
          %{conn: conn, article: article} do
       view = open(conn, article, "notes")
-      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
-      other_view = open(log_in_user(Phoenix.ConnTest.build_conn(), other), article, nil)
+      other_view = other_editor(article, nil)
       revisions = fn -> Brando.Repo.aggregate(from(r in Revision, where: r.entry_id == ^article.id), :count) end
       before = revisions.()
 
-      type(other_view, "subtitle", hd(@unsafe))
-      other_view |> form_of() |> render_hook("focus", %{"field" => "article[subtitle]"})
-      other_view |> form_of() |> render_hook("blur", %{"field" => "article[subtitle]"})
-      await(fn -> Ecto.Changeset.get_field(form_source(view), :subtitle) == hd(@unsafe) end)
+      other_types_subtitle(other_view, view, hd(@unsafe))
 
       store_revision(view)
 

@@ -2603,8 +2603,10 @@ defmodule BrandoAdmin.Components.Form do
   # another editor's save replaced them (`stale_relations/2`), so their
   # params don't reach the cast, where a relation that can't replace a row
   # would raise for the rows they lack. The schema's changeset checks rich
-  # text by the default form; the form in use checks its own after it
-  # (`Brando.RichText.validate_form/2`).
+  # text by the default form; the form in use checks its own last
+  # (`Brando.RichText.validate_form/2`), on the changeset it will save: a
+  # value put back from the form (another editor's, which entered it with
+  # no cast) is checked too.
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
   defp cast_entry_edit(socket, entry, params, target, stale) do
     %{schema: schema, current_user: current_user} = socket.assigns
@@ -2621,10 +2623,10 @@ defmodule BrandoAdmin.Components.Form do
     entry
     |> schema.changeset(params, current_user)
     |> derive_locked_slugs(entry, params, socket)
-    |> Brando.RichText.validate_form(blueprint)
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
     |> keep_fields(current, stale)
+    |> then(fn {changeset, echoed} -> {Brando.RichText.validate_form(changeset, blueprint), echoed} end)
   end
 
   # A locked slug left empty is generated from its source, which the cast
