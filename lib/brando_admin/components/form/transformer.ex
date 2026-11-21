@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:picking_dom_id, nil)
      |> assign(:editing_dom_id, nil)
      |> assign(:sent_dom_ids, [])
+     |> assign(:base_ids, [])
      |> assign(:upload_errors, [])}
   end
 
@@ -131,6 +132,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         do: Enum.map(socket.assigns.items, &saved_item(&1, Map.get(saved, &1.dom_id), socket.assigns.asset_fields)),
         else: socket.assigns.items
 
+    # The rows the items are built on (`entry_saved_elsewhere`), when every
+    # row lined up
+    taken? = lined_up? and map_size(saved) == length(rows)
+
     # A listing draws the row it gets (its id, say): a row that was new and is
     # now saved is drawn again, under the DOM id it has. Rows that were saved
     # before keep their cards, and with them what the browser put on a card
@@ -140,7 +145,78 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         acc -> stream_insert(acc, :transformer_items, stream_entry(item))
       end
 
-    {:ok, socket |> assign(:items, items) |> assign(:sent_dom_ids, [])}
+    {:ok,
+     socket
+     |> assign(:items, items)
+     |> assign(:sent_dom_ids, [])
+     |> assign(:base_ids, if(taken?, do: Enum.map(rows, & &1.id), else: Map.get(socket.assigns, :base_ids, [])))}
+  end
+
+  # Another editor saved the entry, and the Form took the save
+  # (`take_saved_entry`): these are the rows the entry holds now. The items
+  # become those rows, with this editor's unsaved changes kept (`base_ids`
+  # are the rows the items were built on, to tell them): a row it added, a
+  # value it changed and has not saved (over the saved value, as an entry
+  # field this editor changed keeps its value), a row it removed, and its
+  # order when it reordered the rows. A row only the save has goes after the
+  # row it follows there. A row the save removed goes, with any change made
+  # to it here. With no unsaved change here, the items are the saved rows
+  # as they are, and the next save leaves them alone.
+  def update(%{event: "entry_saved_elsewhere"}, %{assigns: %{initialized?: false}} = socket), do: {:ok, socket}
+
+  def update(%{event: "entry_saved_elsewhere", rows: rows}, socket) do
+    %{items: items, base_ids: base, asset_fields: asset_fields} = socket.assigns
+    rows = Enum.sort_by(rows, &Map.get(&1, :sequence))
+    saved_ids = Enum.map(rows, & &1.id)
+    by_id = Map.new(rows, &{&1.id, &1})
+    items = Enum.map(items, &unsaved_item/1)
+
+    held = for item <- items, not item.is_new, do: item.source.id
+    by_held_id = Map.new(for item <- items, not item.is_new, do: {item.source.id, item})
+    removed = base -- held
+    reordered? = Enum.filter(held, &(&1 in base)) != Enum.filter(base, &(&1 in held))
+
+    ids =
+      if reordered? do
+        held
+        |> Enum.filter(&Map.has_key?(by_id, &1))
+        |> insert_after_predecessors(Enum.reject(saved_ids, &(&1 in held or &1 in removed)), saved_ids)
+      else
+        Enum.reject(saved_ids, &(&1 in removed))
+      end
+
+    taken =
+      Enum.map(ids, fn id ->
+        row = Map.fetch!(by_id, id)
+        fresh = recovery_item(change(row, %{}), asset_fields)
+
+        case Map.fetch(by_held_id, id) do
+          {:ok, item} -> %{item | source: row, assets: Map.merge(fresh.assets, own_assets(item, asset_fields))}
+          :error -> fresh
+        end
+      end)
+
+    order = Enum.map(items, & &1.dom_id)
+    own_new = for item <- items, item.is_new, do: item.dom_id
+    by_dom_id = Map.new(taken ++ Enum.filter(items, & &1.is_new), &{&1.dom_id, &1})
+
+    items =
+      taken
+      |> Enum.map(& &1.dom_id)
+      |> insert_after_predecessors(own_new, order)
+      |> Enum.map(&Map.fetch!(by_dom_id, &1))
+
+    shown = MapSet.new(items, & &1.dom_id)
+
+    {:ok,
+     socket
+     |> assign(:items, items)
+     |> assign(:base_ids, saved_ids)
+     |> update(:open_entries, &MapSet.intersection(&1, shown))
+     |> update(:editing_dom_id, &if(MapSet.member?(shown, &1), do: &1))
+     |> update(:picking_dom_id, &if(MapSet.member?(shown, &1), do: &1))
+     |> stream(:transformer_items, Enum.map(items, &stream_entry/1), reset: true)
+     |> notify_relation_change()}
   end
 
   def update(%{event: "image_updated", image: image}, socket) do
@@ -292,6 +368,14 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     items = Enum.map(existing, &recovery_item(&1, asset_fields))
 
+    # The saved rows the items are built on: a recovered copy's items can
+    # differ from them (`entry_saved_elsewhere`)
+    base_ids =
+      case Map.get(field.form.data, subform.name) do
+        rows when is_list(rows) -> Enum.map(rows, & &1.id)
+        _ -> for item <- items, not item.is_new, do: item.source.id
+      end
+
     stream_entries = Enum.map(items, &stream_entry/1)
 
     image_max_size = (image_cfg && Brando.Utils.try_path(image_cfg, [:size_limit])) || 4_000_000
@@ -312,6 +396,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      socket
      |> assign(:initialized?, true)
      |> assign(:items, items)
+     |> assign(:base_ids, base_ids)
      |> assign(:relation_key, subform.name)
      |> assign(:image_field, image_field)
      |> assign(:video_field, video_field)
@@ -1330,6 +1415,36 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     data = resolve_item_data(item)
     assets = Map.new(asset_fields, &{&1, resolve_asset(item, data, &1)})
     %{item | source: row, is_new: false, assets: assets}
+  end
+
+  # The item with only the changes it holds unsaved: a value its source
+  # holds already was saved (the changes stay after a save, `saved_item/3`).
+  defp unsaved_item(%{is_new: true} = item), do: item
+
+  defp unsaved_item(item),
+    do: %{item | changes: Map.reject(item.changes, fn {key, value} -> Map.get(item.source, key) == value end)}
+
+  # The assets an item shows that this editor picked or uploaded and has
+  # not saved.
+  defp own_assets(item, asset_fields) do
+    for field <- asset_fields, Map.has_key?(item.changes, :"#{field}_id"), into: %{} do
+      {field, Map.get(item.assets, field)}
+    end
+  end
+
+  # `list` with each of `added` placed after its nearest predecessor in
+  # `order` that `list` holds (first when none), and after the entries
+  # right behind it that `order` doesn't have: the other editor's.
+  defp insert_after_predecessors(list, added, order) do
+    known = MapSet.new(order)
+
+    Enum.reduce(added, list, fn key, acc ->
+      predecessor = order |> Enum.take_while(&(&1 != key)) |> Enum.reverse() |> Enum.find(&(&1 in acc))
+      start = if predecessor, do: Enum.find_index(acc, &(&1 == predecessor)) + 1, else: 0
+      {head, tail} = Enum.split(acc, start)
+      {passed, rest} = Enum.split_while(tail, &(not MapSet.member?(known, &1)))
+      head ++ passed ++ [key | rest]
+    end)
   end
 
   # --- Placeholder helpers ---

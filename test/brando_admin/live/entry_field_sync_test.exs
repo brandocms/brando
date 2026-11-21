@@ -478,6 +478,24 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     assert_both(%{a: c.a, b: b}, %{"title" => "Om oss, typed offline"})
   end
 
+  # The same when the others' join reply reaches the tab after its
+  # recovered form: the recovery shipped the typing with a new clock,
+  # which the older value in the reply doesn't beat (`take_newer/2`).
+  test "typing done offline survives a join reply after the recovery", c do
+    edit(c.b, "title", "Om oss, B")
+    await_shown(c.a, "title", "Om oss, B")
+    offline = c.b |> render() |> form_params("#page_form_form") |> put_in(["page", "title"], "Om oss, typed offline")
+    kill_live(c.b)
+
+    :sys.suspend(c.a.pid)
+    b = open(c.other_conn, c.page)
+    recovered = offline |> Map.put("__offline_edits", "page[title]") |> Map.put("_target", ["image_editor_upload"])
+    b |> form() |> render_hook("recover_form", recovered)
+    :sys.resume(c.a.pid)
+
+    assert_both(%{a: c.a, b: b}, %{"title" => "Om oss, typed offline"})
+  end
+
   # A tab that was alone gets its unsaved form back from the browser. An
   # editor who opens the entry later gets those values too, or their save
   # would revert them.

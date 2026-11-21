@@ -1,0 +1,1 @@
+- When two editors have an entry open, a transformer subform (a gallery, say) shows the rows the other editor saved, and the next save keeps them, instead of deleting the rows the other editor added.

@@ -27,6 +27,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   A transformer also loads its rows once; after a save that stays on the
   form, the Form hands it the saved rows (`entry_saved`), which make the
   rows it sent saved rows, so the next save doesn't insert them again.
+  After another editor's save (`take_saved_entry`), it hands it that save's
+  rows (`entry_saved_elsewhere`): the transformer takes them under its own
+  unsaved changes, told from the rows it was built on (`base_ids`).
   Updating a transformer row also requires `stream_insert`; changing an assign
   alone does not update the streamed DOM.
 - Match delivery IDs to the rendered component: transformer IDs use the HTML
