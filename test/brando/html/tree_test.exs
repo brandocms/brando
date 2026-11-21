@@ -173,10 +173,15 @@ defmodule Brando.HTML.TreeTest do
     test "finding noscripts is linear in the input" do
       html = fn titles -> "<noscript>a</noscript>" <> String.duplicate("<title>a ", titles) end
 
-      assert [{"noscript", [], ["a"]}, {"title", [], [_]}] = Tree.parse_fragment(html.(10))
+      # Each measured parse must also be a whole one: a scan that gave up early
+      # on a large input would count few reductions.
+      parse = fn titles ->
+        reductions(fn ->
+          assert [{"noscript", [], ["a"]}, {"title", [], [_]}] = Tree.parse_fragment(html.(titles))
+        end)
+      end
 
-      ratio =
-        reductions(fn -> Tree.parse_fragment(html.(8000)) end) / reductions(fn -> Tree.parse_fragment(html.(2000)) end)
+      ratio = parse.(8000) / parse.(2000)
 
       assert ratio < 8, "4 times the input took #{Float.round(ratio, 1)} times the reductions"
     end
