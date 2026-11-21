@@ -1,0 +1,1 @@
+- Translate with AI fills rich texts in subform rows and rich-text page variables too.

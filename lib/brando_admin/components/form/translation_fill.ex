@@ -120,9 +120,6 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   AI action. Not:
 
     * a gallery's per-image texts, which are translated in the block
-    * a rich text in a subform's row (a `:rich_text` input in a subform, a
-      page's rich-text variable): the server cannot yet give a row's editor
-      a text (#3757), and the editor translates it
     * an address (a link's `url`, `address?/2`), which is not sent to the
       model and stays the editor's
     * a field or a subform's row locked for this editor (`LockedFields`:
@@ -229,24 +226,8 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   defp fillable_row?(schema, subform_input, changeset, target) do
     not address?(schema, target) and row_shown?(subform_input, changeset, target) and
-      not hidden_link_text?(schema, changeset, target) and
-      not row_rich_text?(schema, subform_input, changeset, target)
+      not hidden_link_text?(schema, changeset, target)
   end
-
-  # A rich text in a subform's row: the subform's input for the field is a
-  # `:rich_text`, or the row is a rich-text variable, whose `value`
-  # `RenderVar` draws in a rich-text editor
-  defp row_rich_text?(schema, subform_input, changeset, {:row, subform, _key, field} = target) do
-    declared_rich_text?(subform_input, field) or
-      (variables?(schema, subform) and field == "value" and
-         field_value(changeset, put_elem(target, 3, "type")) == :rich_text)
-  end
-
-  defp declared_rich_text?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, field) do
-    Enum.any?(inputs, &(match?(%Brando.Blueprint.Forms.Input{type: :rich_text}, &1) and to_string(&1.name) == field))
-  end
-
-  defp declared_rich_text?(_subform_input, _field), do: false
 
   # The block field a block text's key is in: `entry_<field>/…`
   defp block_field("entry_" <> rest), do: rest |> String.split("/", parts: 2) |> hd()
