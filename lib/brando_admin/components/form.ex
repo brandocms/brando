@@ -4610,10 +4610,13 @@ defmodule BrandoAdmin.Components.Form do
     transformers_ready? = !Enum.any?(Map.values(socket.assigns.transformer_changesets), &is_nil/1)
 
     if blocks_ready? && transformers_ready? do
+      %{block_changesets: block_changesets, transformer_changesets: transformer_changesets} = socket.assigns
+      put_again = Enum.map(Map.keys(block_changesets), &:"entry_#{&1}") ++ Map.keys(transformer_changesets)
+
       changeset =
-        socket.assigns.block_changesets
-        |> assoc_all_block_fields(socket.assigns.form.source)
-        |> assoc_all_transformer_fields(socket.assigns.transformer_changesets, socket.assigns.form_blueprint)
+        block_changesets
+        |> assoc_all_block_fields(without_rows(socket.assigns.form.source, put_again))
+        |> assoc_all_transformer_fields(transformer_changesets, socket.assigns.form_blueprint)
 
       socket
       |> store_revision(changeset)
@@ -8729,6 +8732,21 @@ defmodule BrandoAdmin.Components.Form do
     delivered
     |> Enum.reduce(changeset, fn {field_name, data}, acc -> Changeset.put_assoc(acc, field_name, data) end)
     |> Brando.RichText.validate_subform_rows(form_blueprint, Keyword.keys(delivered))
+  end
+
+  # The rows of `fields` a refused revision or save left in the form: the
+  # revision puts them again from what the block fields and transformers
+  # send now, so they no longer decide whether it is valid.
+  defp without_rows(changeset, fields) do
+    changes = Map.drop(changeset.changes, fields)
+    errors = Keyword.drop(changeset.errors, fields)
+
+    %{
+      changeset
+      | changes: changes,
+        errors: errors,
+        valid?: errors == [] and Enum.all?(Map.values(changes), &valid_change?/1)
+    }
   end
 
   defp store_revision(socket, changeset) do

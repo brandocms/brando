@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import Ecto.Query, only: [from: 2]
   import ExUnit.CaptureLog, only: [with_log: 1]
 
   alias BrandoAdmin.Components.Form
@@ -79,6 +80,68 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
 
       saved = Brando.Repo.get!(Brando.Content.Palette, ctx.palette.id)
       assert Enum.map(saved.colors, & &1.name) == Enum.map(ctx.palette.colors, & &1.name)
+    end
+  end
+
+  describe "a revision refused for a transformer row" do
+    alias Brando.SyncTest.Article
+
+    setup %{user: user} do
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Rows", slug: "rows", language: "en", status: "published", items: [%{label: "A", sequence: 0}]},
+          user
+        )
+
+      %{article: Brando.Repo.preload(article, :items, force: true)}
+    end
+
+    defp article_socket(ctx) do
+      %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
+      |> Component.assign(:id, "article_form")
+      |> Component.assign(:schema, Article)
+      |> Component.assign(:singular, "article")
+      |> Component.assign(:entry, ctx.article)
+      |> Component.assign(:entry_id, ctx.article.id)
+      |> Component.assign(:current_user, ctx.user)
+      |> Component.assign(:form_blueprint, Article.__form__(:transformer_rich_items))
+      |> Component.assign(:form, Phoenix.Component.to_form(Ecto.Changeset.change(ctx.article)))
+      |> Component.assign(:block_changesets, %{})
+      |> Component.assign(:transformer_changesets, %{items: nil})
+    end
+
+    # The rows the transformer sends the form: the stored row with `link`
+    defp rows(ctx, link), do: [Ecto.Changeset.change(hd(ctx.article.items), %{link: link, sequence: 0})]
+
+    defp revisions(article) do
+      Brando.Repo.aggregate(
+        from(r in Brando.Revisions.Revision, where: r.entry_type == ^to_string(Article) and r.entry_id == ^article.id),
+        :count
+      )
+    end
+
+    test "is stored once the row is corrected", ctx do
+      before = revisions(ctx.article)
+
+      unsafe =
+        article_socket(ctx)
+        |> Component.assign(:transformer_changesets, %{items: rows(ctx, ~s{<p onclick="x()">Row</p>})})
+
+      {socket, _log} = with_log(fn -> Form.event_tag_received(unsafe, :store_revision) end)
+
+      assert revisions(ctx.article) == before
+      # What the editor sees after the refusal: the row's error in the form
+      refute socket.assigns.form.source.valid?
+      assert [row] = Ecto.Changeset.get_change(socket.assigns.form.source, :items)
+      assert Keyword.has_key?(row.errors, :link)
+      assert socket.assigns.transformer_changesets == %{items: nil}
+
+      _socket =
+        socket
+        |> Component.assign(:transformer_changesets, %{items: rows(ctx, "<p>Row</p>")})
+        |> Form.event_tag_received(:store_revision)
+
+      assert revisions(ctx.article) == before + 1
     end
   end
 end

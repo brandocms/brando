@@ -398,6 +398,25 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # Rich text in a transformer's rows, which the form checks once it puts
+    # them on the entry (RefusedAndRepeatedSavesTest)
+    form :transformer_rich_items do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :items do
+            cardinality :many
+            style {:transformer, :cover}
+
+            input :label, :text
+            input :link, :rich_text
+          end
+        end
+      end
+    end
+
     form :custom_item_entries do
       tab "Content" do
         fieldset do
