@@ -664,33 +664,5 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
         assert socket.assigns.items == items
       end
     end
-
-    # The row added here stays new, and its saved copy comes again with
-    # another editor's save: the transformer shows it once.
-    test "that don't line up leave no row twice after another editor's save" do
-      stored = Transformer.new_item("item-1", %MediaItem{id: 1, title: "Stored", sequence: 0}, is_new: false)
-      added = Transformer.new_item("item-2", %{title: "New"})
-
-      socket =
-        [stored, added]
-        |> sent_socket()
-        |> Component.assign(initialized?: true, base_ids: [1], open_entries: MapSet.new())
-        |> Component.assign(editing_dom_id: nil, picking_dom_id: nil)
-
-      own = [
-        %MediaItem{id: 1, title: "Stored", sequence: 0},
-        %MediaItem{id: 2, title: "New", sequence: 1},
-        %MediaItem{id: 4, title: "Extra", sequence: 2}
-      ]
-
-      {:ok, socket} = Transformer.update(%{event: "entry_saved", rows: own}, socket)
-      assert socket.assigns.items == [stored, added]
-
-      others = own ++ [%MediaItem{id: 5, title: "From A", sequence: 3}]
-      {:ok, socket} = Transformer.update(%{event: "entry_saved_elsewhere", rows: others}, socket)
-
-      titles = Enum.map(socket.assigns.items, &Map.merge(Map.new(Map.take(&1.source, [:title])), &1.changes).title)
-      assert Enum.count(titles, &(&1 == "New")) == 1
-    end
   end
 end

@@ -114,11 +114,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # added here is no longer new, so the next save updates it, or leaves it
   # alone when nothing changed, rather than deleting it and inserting a copy.
   # Changes made since the rows were sent stay. Rows that don't line up with
-  # what was sent are left as they are. The saved rows are the base either
-  # way (`base_ids`): a row this editor holds as new is then its own over the
-  # saved copy it can't tell, which another editor's save brings again
-  # (`entry_saved_elsewhere`), so the row isn't shown twice. Its next save
-  # writes the rows as it shows them.
+  # what was sent are left as they are.
   def update(%{event: "entry_saved", rows: rows}, socket) do
     sent = socket.assigns.sent_dom_ids
     rows = Enum.sort_by(rows, &Map.get(&1, :sequence))
@@ -150,7 +146,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      socket
      |> assign(:items, items)
      |> assign(:sent_dom_ids, [])
-     |> assign(:base_ids, Enum.map(rows, & &1.id))}
+     |> put_base_ids(lined_up? and map_size(saved) == length(rows), rows)}
   end
 
   # Another editor saved the entry, and the Form took the save
@@ -1442,6 +1438,11 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       {field, Map.get(item.assets, field)}
     end
   end
+
+  # The rows the items are built on (`entry_saved_elsewhere`): the saved
+  # ones, once every row lined up
+  defp put_base_ids(socket, true = _taken?, rows), do: assign(socket, :base_ids, Enum.map(rows, & &1.id))
+  defp put_base_ids(socket, false = _taken?, _rows), do: socket
 
   # The saved rows the items are built on: a recovered copy's items can
   # differ from them (`entry_saved_elsewhere`)
