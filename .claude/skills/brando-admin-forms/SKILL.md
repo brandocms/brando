@@ -100,9 +100,15 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `Translation.catch_up/2`): it rebuilds on the saved entry without the
   editor's own unsaved entry fields (`discard_entry_edits`, shipping saved
   values for the ones it had shipped) and decides again as at mount. It does
-  so at once when the editor has none (`own_entry_edits`: `unsaved_edits`
-  less received values, the held version's own and the last-editor stamp),
-  otherwise from the panel's button (`"load_session_version"`). A read-only client (no update permission, a tab that
+  so by itself when the editor has none (`own_entry_edits`: `unsaved_edits`
+  less received values, the held version's own and the last-editor stamp)
+  and is in no entry field (`maybe_catch_up`, asked again on `"blur"`: a
+  rich text commits after a pause), otherwise from the panel's button
+  (`"load_session_version"`); never while the form saves or holds a
+  working copy. Any version load keeps the values received from other
+  editors (`keep_received`, so they don't ship back as this editor's) and
+  records the replaced input values as the AI fill does, against a
+  `validate` sent before the load reached the browser. A read-only client (no update permission, a tab that
   does not edit) shows a version without setting it; after a session crash
   the first form back puts its held version on the new session unless it
   is `behind?`. A form without block fields decides alone. Coverage
