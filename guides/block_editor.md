@@ -397,7 +397,8 @@ decoded again, as rich text is sanitized when read, and it prints as markup.
 On other text, what it decoded is escaped as a plain field is when read:
 `{{ entry.title | url_decode }}` prints `%3Cb%3E` as the text `<b>`, a filter
 after it or a comparison sees `&lt;b&gt;`, and `raw` after it prints the
-markup, as it does for a plain field.
+markup, as it does for a plain field. To cut a decoded query string apart,
+split on the escaped character: `split: "&amp;"`, not `split: "&"`.
 `url_decode` leaves a `%` as typed when two hex digits do not follow it, or
 when its escape does not decode to a whole UTF-8 character (`5%be off`).
 
