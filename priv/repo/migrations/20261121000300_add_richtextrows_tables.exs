@@ -29,5 +29,11 @@ defmodule BrandoIntegration.Repo.Migrations.AddRichtextrowsTables do
       add :text, :text
       add :quotes, :jsonb
     end
+
+    create table(:richtextrows_disagreeings) do
+      add :title, :text
+      add :intro, :text
+      add :aside, :text
+    end
   end
 end

@@ -243,8 +243,9 @@ end
 defmodule Brando.RichTextRows.Disagreeing do
   @moduledoc false
   # Forms that disagree on a top-level field, and one only named forms draw
-  # (Brando.Villain.RichTextTemplateReadsTest). Only structs are built:
-  # there is no table.
+  # (Brando.Villain.RichTextTemplateReadsTest). Only structs are built; the
+  # table is there because a moved identifier's links are looked for in every
+  # Blueprint with rich text.
   use Brando.Blueprint,
     application: "Brando",
     domain: "RichTextRows",
