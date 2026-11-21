@@ -2828,9 +2828,18 @@ msgid "Another editor removed the block you were changing."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Load them in the translation panel to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
-msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Load them to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation, and newer changes from the source were loaded into the form. They are not saved yet."
 msgstr ""
 
 #: lib/brando/environments/environment.ex
@@ -10778,6 +10787,11 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Load revision %{revision} into the editor? Unsaved editor changes will be replaced."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Load the newer changes"
 msgstr ""
 
 #: lib/brando_admin/components/form/entry_skeleton.ex

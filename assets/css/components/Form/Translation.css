@@ -40,6 +40,12 @@
   color: var(--brando-attention-ink);
 }
 
+/* Behind the edit session: the explanation, then the button that loads the
+   session's version. */
+.translation-behind { display: grid; gap: 12px; padding: 12px; }
+.translation-behind p { max-width: 80ch; }
+.translation-notice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .translation-done, .translation-summary span { color: var(--translation-muted); }
 .translation-summary { display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 500; }
 .translation-summary span { font-weight: 400; }

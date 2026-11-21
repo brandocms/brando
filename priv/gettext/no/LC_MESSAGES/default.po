@@ -2828,10 +2828,19 @@ msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
 
 #: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Load them in the translation panel to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
+msgstr "En annen redaktør lagret denne oversettelsen, og blokkene har nå nyere endringer fra kilden. Last dem inn i oversettelsespanelet for å lagre. Ulagrede endringer i de andre feltene erstattes; endringene dine i blokkene beholdes."
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
-msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
-msgstr "En annen redaktør lagret denne oversettelsen, og blokkene har nå nyere endringer fra kilden. Last inn siden på nytt for å lagre: endringene dine i blokkene beholdes, ulagrede endringer i de andre feltene gjør ikke det."
+msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Load them to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
+msgstr "En annen redaktør lagret denne oversettelsen, og blokkene har nå nyere endringer fra kilden. Last dem inn for å lagre. Ulagrede endringer i de andre feltene erstattes; endringene dine i blokkene beholdes."
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation, and newer changes from the source were loaded into the form. They are not saved yet."
+msgstr "En annen redaktør lagret denne oversettelsen, og nyere endringer fra kilden ble lastet inn i skjemaet. De er ikke lagret ennå."
 
 #: lib/brando/environments/environment.ex
 #: lib/brando/tenant/registry.ex
@@ -10779,6 +10788,11 @@ msgstr "Last eldre hendelser"
 #, elixir-autogen, elixir-format
 msgid "Load revision %{revision} into the editor? Unsaved editor changes will be replaced."
 msgstr "Laste versjon %{revision} inn i editoren? Ulagrede endringer i editoren blir erstattet."
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Load the newer changes"
+msgstr "Last inn de nyere endringene"
 
 #: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
