@@ -215,7 +215,8 @@ test('two editors in a translation load one version, and the one left behind loa
 
 // The second editor is typing in the title when the first saves: the form
 // stays behind and refuses to save, and the notice's button loads the
-// session's version over the typing.
+// session's version over the typing. What the first editor typed after
+// their save and shipped stays theirs, on both pages and in the save.
 test('an editor left behind with typing in a field loads the newer version with the button', async ({ page, secondUserPage }, testInfo) => {
   test.setTimeout(120000)
   const errors = []
@@ -246,6 +247,15 @@ test('an editor left behind with typing in a field loads the newer version with 
   await expect(behind).toBeVisible()
   await expect(otherPanel.locator('input[name="translation_review[version_id]"]')).toHaveValue(first)
 
+  // The first editor types a subtitle and leaves the field: it ships
+  const subtitle = page.locator('textarea[name="article[subtitle]"]')
+  const otherSubtitle = secondUserPage.locator('textarea[name="article[subtitle]"]')
+  await subtitle.click()
+  await subtitle.fill('Subtitle from the first')
+  await syncLV(page)
+  await subtitle.press('Tab')
+  await expect(otherSubtitle).toHaveValue('Subtitle from the first', { timeout: 10000 })
+
   await behind.scrollIntoViewIfNeeded()
   await secondUserPage.screenshot({ path: testInfo.outputPath('translation-behind-desktop.png') })
   await secondUserPage.setViewportSize({ width: 390, height: 844 })
@@ -258,13 +268,23 @@ test('an editor left behind with typing in a field loads the newer version with 
   await expect(behind).toHaveCount(0, { timeout: 10000 })
   await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
   await expect(title).toHaveValue(saved)
+  await expect(otherSubtitle).toHaveValue('Subtitle from the first')
+
+  // Moving through the fields ships nothing of the first editor's back
+  await secondUserPage.locator('input[name="article[slug]"]').click()
+  await title.click()
+  await syncLV(secondUserPage)
+  await syncLV(page)
+  await expect(subtitle).toHaveValue('Subtitle from the first')
 
   await saveAndContinue(secondUserPage)
   await expect(otherPanel.locator('.translation-structure')).toHaveCount(0, { timeout: 15000 })
+  await expect(subtitle).toHaveValue('Subtitle from the first')
   await secondUserPage.reload()
   await syncLV(secondUserPage)
   await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
   await expect(title).toHaveValue(saved)
+  await expect(otherSubtitle).toHaveValue('Subtitle from the first')
 
   expect(errors).toEqual([])
 })

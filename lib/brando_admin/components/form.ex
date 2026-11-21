@@ -1552,15 +1552,21 @@ defmodule BrandoAdmin.Components.Form do
   # loaded into the entry's fields: its copy of the translation's own values
   # is older than what is saved, and saving it would take that write back.
   # The form shows the fields as saved; the blocks are the session's.
+  #
+  # The values the form holds from other editors' typing stay
+  # (`keep_received/3`): they are theirs, not this editor's to ship.
   defp load_translation(socket, how) do
     if socket.assigns.translation.applied_version_id && Translation.changes?(socket.assigns) &&
          not kept_from_older_save?(socket, how) do
+      received = Map.take(synced_values(socket), received_fields(socket))
+
       case Translation.restore_changeset(socket) do
         {:ok, changeset, socket} ->
-          socket
-          |> reset_locked_values()
-          |> put_locked_values(changeset)
-          |> apply_restored_changeset(changeset, :translation, nil, blocks: how == :load)
+          socket = socket |> reset_locked_values() |> put_locked_values(changeset)
+
+          apply_restored_changeset(socket, keep_received(socket, changeset, received), :translation, nil,
+            blocks: how == :load
+          )
 
         :error ->
           send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
@@ -1584,6 +1590,20 @@ defmodule BrandoAdmin.Components.Form do
 
       :error ->
         socket
+    end
+  end
+
+  # Values received from other editors go on the loaded changeset as
+  # received, so the load changes nothing in those fields: they are neither
+  # marked as this editor's (`put_local_form/2`) nor shipped back. A field
+  # this editor may not change keeps what the version holds.
+  defp keep_received(socket, changeset, received) do
+    {_fields, belongs_to} = sync_fields(socket)
+    locked = locked_keys(socket)
+    asset_fk_map = build_asset_fk_map(changeset.data.__struct__)
+
+    for {field, value} <- received, field not in locked, reduce: changeset do
+      changeset -> apply_field_change(changeset, %{field: field, value: value, assoc?: field in belongs_to}, asset_fk_map)
     end
   end
 

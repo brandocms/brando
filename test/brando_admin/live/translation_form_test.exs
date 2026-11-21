@@ -1753,6 +1753,78 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.slug, saved.year} == {"written-elsewhere", 2024}
     end
 
+    # Typing as the browser sends it: the field takes the focus, the value
+    # changes, and leaving the field ships it to the other editors.
+    defp type_and_leave(view, field, value) do
+      name = "article[#{field}]"
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("focus", %{"field" => name})
+      params = view |> render() |> form_params("#article_form_form") |> put_in(["article", field], value)
+      view |> element("#article_form_form") |> render_change(Map.put(params, "_target", ["article", field]))
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("blur", %{"field" => name})
+    end
+
+    defp type_field(view, field, value) do
+      params = view |> render() |> form_params("#article_form_form") |> put_in(["article", field], value)
+      view |> element("#article_form_form") |> render_change(Map.put(params, "_target", ["article", field]))
+    end
+
+    defp click_through(view, field) do
+      name = "article[#{field}]"
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("focus", %{"field" => name})
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("blur", %{"field" => name})
+    end
+
+    # Another editor typed a title after their save and shipped it; the form
+    # behind, with its own typing elsewhere, loads the version with its
+    # button. The title it received is theirs: it stays in the form, does not
+    # ship back as this editor's, and is what this editor's save stores.
+    test "a value another editor typed survives the button's load and is not shipped back", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      # typing that has not shipped yet: the first editor's save leaves it
+      type_field(other, "subtitle", "Typed subtitle")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      type_and_leave(view, "title", "Title from the first")
+      await_selector(other, "input[name='article[title]'][value='Title from the first']")
+
+      load_session_version(other)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert {shown_title(other), shown_year(other)} == {"Title from the first", "2030"}
+
+      click_through(other, "slug")
+      render(view)
+      assert shown_title(view) == "Title from the first"
+
+      save(other)
+      assert load(c.target.id).title == "Title from the first"
+    end
+
+    # A form that joins gets the other editors' unsaved values, then loads
+    # the session's version (`{:keep, …}`): the values stay theirs.
+    test "a form joining keeps the values other editors typed when it loads the session's version",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      type_and_leave(view, "title", "Title from the first")
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      await_selector(other, "input[name='article[title]'][value='Title from the first']")
+
+      click_through(other, "slug")
+      render(view)
+      assert shown_title(view) == "Title from the first"
+      assert shown_title(other) == "Title from the first"
+    end
+
     # A form without block fields has no edit session, so another editor's
     # save never puts it behind: nothing of this applies to it. It holds its
     # version until its own save, as before.
