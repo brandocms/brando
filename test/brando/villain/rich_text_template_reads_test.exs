@@ -37,10 +37,11 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
     end
 
     test "prints as markup through raw and a filter" do
-      html = render_entry("{{ entry.subtitle | raw }}|{{ entry.subtitle | truncate: 500 | raw }}", %Article{
-        title: "T",
-        subtitle: @typed
-      })
+      html =
+        render_entry("{{ entry.subtitle | raw }}|{{ entry.subtitle | truncate: 500 | raw }}", %Article{
+          title: "T",
+          subtitle: @typed
+        })
 
       assert html == @typed <> "|" <> @typed
     end
@@ -55,7 +56,15 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
     test "a save still checks by the default form" do
       assert :subtitle not in Article.__rich_text_fields__()
 
-      params = %{title: "A", slug: "a", language: "en", status: "published", creator_id: 1, subtitle: "<p>A</p><!-- n -->"}
+      params = %{
+        title: "A",
+        slug: "a",
+        language: "en",
+        status: "published",
+        creator_id: 1,
+        subtitle: "<p>A</p><!-- n -->"
+      }
+
       changeset = Article.changeset(%Article{}, params, :system)
       assert Changeset.get_change(changeset, :subtitle) == "<p>A</p><!-- n -->"
     end
