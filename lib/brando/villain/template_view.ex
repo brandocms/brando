@@ -501,6 +501,16 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
+  The number of a plain map's pairs a loop reads (`pairs/1`), none hidden
+  from a template, and nil for a view of a record.
+  """
+  @spec pair_count(t()) :: non_neg_integer() | nil
+  def pair_count(%__MODULE__{value: value}) when is_struct(value), do: nil
+
+  def pair_count(%__MODULE__{value: value, mode: mode}),
+    do: Enum.count(value, fn {key, _} -> not hidden?(value, key, mode) end)
+
+  @doc """
   `value` with every user reduced to `@user_fields` and every credential field
   emptied, all the way down, for printing it whole (`{% inspect %}`).
   """

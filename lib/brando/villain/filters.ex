@@ -51,6 +51,10 @@ defmodule Brando.Villain.Filters do
       {__MODULE__, :map, [key]} when is_list(value) ->
         value |> TemplateView.map(key, context) |> TemplateView.filter_result(:map, nil, context)
 
+      # A map's pairs as a loop reads them: none hidden from the template
+      {__MODULE__, :size, []} when is_struct(value, TemplateView) ->
+        TemplateView.pair_count(value) || size(TemplateView.unwrap(value), context)
+
       _ ->
         view_mode = TemplateView.view_mode([value | function_args])
         args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
@@ -577,8 +581,8 @@ defmodule Brando.Villain.Filters do
 
   @doc """
   Returns the number of characters in a string or the number of items in an array.
-  A map has the number of its pairs, and a record or any other value without
-  text 0, as in Liquid.
+  A map has the number of its pairs, those a template can read, and a record
+  or any other value without text 0, as in Liquid.
 
   ## Examples
 

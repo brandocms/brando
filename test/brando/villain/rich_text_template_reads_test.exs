@@ -106,6 +106,12 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
       assert Filters.size(%{"a" => 1, "b" => 2}, %{}) == 2
     end
 
+    test "of a map counts only the pairs a template can read" do
+      entry = Map.put(%Entry{title: "T"}, :meta, %{"a" => 1, "token" => "x", "api_key" => "y"})
+      template = "{{ entry.meta | size }}|{% for p in entry.meta %}{{ p[0] }}{% endfor %}"
+      assert render_entry(template, entry) == "1|a"
+    end
+
     test "of text and lists is as before" do
       entry = %Entry{title: "Ti{tle", quotes: [%Quote{text: @safe}, %Quote{text: @safe}]}
       assert render_entry("{{ entry.title | size }} {{ entry.quotes | size }}", entry) == "6 2"
