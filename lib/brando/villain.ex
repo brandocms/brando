@@ -79,9 +79,7 @@ defmodule Brando.Villain do
       "brando.footnotes": opts[:footnotes] != false
     })
 
-    RenderScope.run(fn ->
-      FrontendEdit.annotation_scope(annotate?, fn -> do_parse(entry_blocks_list, entry, opts) end)
-    end)
+    render_scope(annotate?, fn -> do_parse(entry_blocks_list, entry, opts) end)
   end
 
   @doc """
@@ -176,11 +174,16 @@ defmodule Brando.Villain do
   def render_block(%{__struct__: block_module} = block, entry, opts) when block_module == @block_module do
     check_opts!(opts)
     annotate? = opts[:annotate_blocks] == true
-    RenderScope.run(fn -> FrontendEdit.annotation_scope(annotate?, fn -> do_render_block(block, entry, opts) end) end)
+    render_scope(annotate?, fn -> do_render_block(block, entry, opts) end)
   end
 
   def render_block(%{block: block} = _entry_block, entry, opts) do
     render_block(block, entry, opts)
+  end
+
+  # One render, with what nested renders share
+  defp render_scope(annotate?, fun) do
+    RenderScope.run(fn -> TemplateView.rich_text_scope(fn -> FrontendEdit.annotation_scope(annotate?, fun) end) end)
   end
 
   # An option Brando no longer reads fails loudly rather than being ignored
@@ -517,7 +520,11 @@ defmodule Brando.Villain do
   defp global_value({key, global}, escape?), do: {key, global_value(global, escape?)}
 
   defp global_value(%{type: type, value: value}, true) when type in [:rich_text, :html],
-    do: value |> Brando.RichText.render_html() |> Brando.Villain.InertLiquid.encode_all()
+    do:
+      value
+      |> Brando.RichText.render_html()
+      |> Brando.Villain.InertLiquid.encode_all()
+      |> TemplateView.read_as_rich_text()
 
   defp global_value(%{type: type, value: value}, _escape?) when type in [:rich_text, :html],
     do: Brando.RichText.render_html(value)
@@ -688,7 +695,9 @@ defmodule Brando.Villain do
   # carries on to find the other blocks that fail; its output is not used.
   # Any other render raises it.
   defp liquex_render(parsed_doc, context) do
-    Liquex.Render.render!([], parsed_doc, Brando.Villain.Tags.Output.reset(context))
+    TemplateView.rich_text_scope(fn ->
+      Liquex.Render.render!([], parsed_doc, Brando.Villain.Tags.Output.reset(context))
+    end)
   rescue
     error ->
       if RenderFailures.collecting?() and not RenderFailures.transient?(error) do

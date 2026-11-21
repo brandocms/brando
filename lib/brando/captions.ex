@@ -90,8 +90,14 @@ defmodule Brando.Captions do
   braces are entities either way: Liquid in a caption is text.
   """
   def caption_html(text) do
-    if is_binary(text) and markup?(text), do: rich_html(text), else: library_html(text)
+    if rich?(text), do: rich_html(text), else: library_html(text)
   end
+
+  @doc """
+  Whether a picture's title is rich text, which `caption_html/1` prints as
+  its markup, and not plain text, which it escapes.
+  """
+  def rich?(text), do: is_binary(text) and markup?(text)
 
   @doc """
   Markup for a placement's rich-text caption: as `normalize/1` stores it, with
