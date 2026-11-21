@@ -1590,6 +1590,23 @@ defmodule Brando.EditSessionTest do
       assert EditSession.take_version(ref, 9) == {:load, 9}
     end
 
+    # An event the browser sent before the form caught up carries the ticks
+    # of the version it showed then (`Form.Translation.put_acknowledged/2`):
+    # they are not taken for the version the form holds now.
+    test "review ticks sent for another version than the form holds are not taken" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, translation: %{acknowledged: [], applied_version_id: 9}}
+      }
+
+      params = fn version -> %{"translation_review" => %{"version_id" => version, "acknowledged" => ["title"]}} end
+
+      stale = BrandoAdmin.Components.Form.Translation.put_acknowledged(socket, params.("7"))
+      assert stale.assigns.translation.acknowledged == []
+
+      current = BrandoAdmin.Components.Form.Translation.put_acknowledged(socket, params.("9"))
+      assert current.assigns.translation.acknowledged == ["title"]
+    end
+
     test "without a session the form decides alone" do
       assert EditSession.take_version(new_ref(), 7) == {:error, :no_session}
     end

@@ -1,5 +1,6 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, routeLiveSocket, dropConnection, restoreConnection } from '../../utils'
+import { quoteRows, editorOf, inputOf } from '../../test-support/richTextRows'
 
 // A Norwegian source with an English translation (E2EFixtureController
 // :synchronized_translation). The source added a block and changed the year,
@@ -145,14 +146,10 @@ test('a translation saves after the source dropped a block and added another', a
 // One pending version for the form and its blocks (#3760). Two editors: the
 // second opens after the source was saved again and gets the version the
 // first one's blocks are built on; the first saves, which loads the newer
-// version into the shared blocks, and the second's form, behind it, refuses
-// to save until it is reloaded.
-test('two editors in a translation load one version, and the one left behind reloads', async ({ page, secondUserPage }) => {
-  test.setTimeout(120000)
-  const errors = []
-  page.on('pageerror', error => errors.push(error.message))
-
-  const response = await page.request.post('/e2e/synchronized-translation')
+// version into the shared blocks, and the second's form, with no unsaved
+// typing in its fields, loads it in place and saves.
+const twoEditors = async (page, secondUserPage, data = {}) => {
+  const response = await page.request.post('/e2e/synchronized-translation', { data })
   expect(response.ok()).toBeTruthy()
   const { source_id: sourceId, target_id: targetId } = await response.json()
   const url = `/admin/sync_test/articles/update/${targetId}`
@@ -178,33 +175,154 @@ test('two editors in a translation load one version, and the one left behind rel
   await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2024')
   await expect(secondUserPage.locator('.blocks-wrapper .entry-block')).toHaveCount(2)
 
-  // The first editor saves: the newer version is loaded into the blocks
+  return { panel, otherPanel, first }
+}
+
+const saveAndContinue = async page => {
   await page.getByTestId('split-dropdown-button').click()
   await page.getByRole('button', { name: 'Save and continue editing' }).click()
+}
+
+test('two editors in a translation load one version, and the one left behind loads it in place', async ({ page, secondUserPage }, testInfo) => {
+  test.setTimeout(120000)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  const { otherPanel, first } = await twoEditors(page, secondUserPage)
+
+  // The first editor saves: the newer version is loaded into the blocks
+  await saveAndContinue(page)
   await expect(page.locator('input[name="article[year]"]')).toHaveValue('2030', { timeout: 15000 })
   await expect(page.locator('.blocks-wrapper .entry-block')).toHaveCount(3)
 
-  // ... and the second editor's, whose other fields hold the older one
-  await expect(otherPanel.locator('[data-translation-behind]')).toBeVisible({ timeout: 10000 })
-  await expect(secondUserPage.locator('.blocks-wrapper .entry-block')).toHaveCount(3)
-  await secondUserPage.getByTestId('split-dropdown-button').click()
-  await secondUserPage.getByRole('button', { name: 'Save and continue editing' }).click()
-  await syncLV(secondUserPage)
-  await expect(otherPanel.locator('[data-translation-behind]')).toBeVisible()
-
-  // The reload takes the session's version, and saves
-  await secondUserPage.reload()
-  await syncLV(secondUserPage)
+  // ... and into the second editor's other fields, without a reload
+  await expect(otherPanel.locator('[data-translation-caught-up]')).toBeVisible({ timeout: 10000 })
+  await expect(otherPanel.locator('input[name="translation_review[version_id]"]')).not.toHaveValue(first)
   await expect(otherPanel.locator('[data-translation-behind]')).toHaveCount(0)
-  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030', { timeout: 10000 })
-  await secondUserPage.getByTestId('split-dropdown-button').click()
-  await secondUserPage.getByRole('button', { name: 'Save and continue editing' }).click()
+  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
+  await expect(secondUserPage.locator('.blocks-wrapper .entry-block')).toHaveCount(3)
+  await otherPanel.locator('[data-translation-caught-up]').scrollIntoViewIfNeeded()
+  await secondUserPage.screenshot({ path: testInfo.outputPath('translation-caught-up-desktop.png') })
+
+  await saveAndContinue(secondUserPage)
   await expect(otherPanel.locator('.translation-structure')).toHaveCount(0, { timeout: 15000 })
 
   await secondUserPage.reload()
   await syncLV(secondUserPage)
   await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
   await expect(secondUserPage.locator('.blocks-wrapper .entry-block')).toHaveCount(3)
+
+  expect(errors).toEqual([])
+})
+
+// The second editor is typing in the title when the first saves: the form
+// stays behind and refuses to save, and the notice's button loads the
+// session's version over the typing. What the first editor typed after
+// their save and shipped stays theirs, on both pages and in the save.
+test('an editor left behind with typing in a field loads the newer version with the button', async ({ page, secondUserPage }, testInfo) => {
+  test.setTimeout(120000)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  const { otherPanel, first } = await twoEditors(page, secondUserPage)
+
+  const title = secondUserPage.locator('input[name="article[title]"]')
+  const saved = await title.inputValue()
+  await title.click()
+  await title.fill('Typed title')
+  await syncLV(secondUserPage)
+
+  await saveAndContinue(page)
+  await expect(page.locator('input[name="article[year]"]')).toHaveValue('2030', { timeout: 15000 })
+
+  const behind = otherPanel.locator('[data-translation-behind]')
+  await expect(behind).toBeVisible({ timeout: 10000 })
+  await expect(secondUserPage.locator('.blocks-wrapper .entry-block')).toHaveCount(3)
+  await expect(title).toHaveValue('Typed title')
+  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2024')
+
+  // A save is refused while behind
+  await saveAndContinue(secondUserPage)
+  const alert = secondUserPage.locator('dialog.admin-dialog--error[open]')
+  await expect(alert).toBeVisible({ timeout: 10000 })
+  await alert.locator('.admin-dialog-button.is-primary').click()
+  await expect(alert).toHaveCount(0)
+  await expect(behind).toBeVisible()
+  await expect(otherPanel.locator('input[name="translation_review[version_id]"]')).toHaveValue(first)
+
+  // The first editor types a subtitle and leaves the field: it ships
+  const subtitle = page.locator('textarea[name="article[subtitle]"]')
+  const otherSubtitle = secondUserPage.locator('textarea[name="article[subtitle]"]')
+  await subtitle.click()
+  await subtitle.fill('Subtitle from the first')
+  await syncLV(page)
+  await subtitle.press('Tab')
+  await expect(otherSubtitle).toHaveValue('Subtitle from the first', { timeout: 10000 })
+
+  await behind.scrollIntoViewIfNeeded()
+  await secondUserPage.screenshot({ path: testInfo.outputPath('translation-behind-desktop.png') })
+  await secondUserPage.setViewportSize({ width: 390, height: 844 })
+  await behind.scrollIntoViewIfNeeded()
+  expect(await noOverflow(secondUserPage)).toBeLessThanOrEqual(0)
+  await secondUserPage.screenshot({ path: testInfo.outputPath('translation-behind-mobile.png') })
+  await secondUserPage.setViewportSize({ width: 1440, height: 1000 })
+
+  await behind.getByTestId('translation-load-version').click()
+  await expect(behind).toHaveCount(0, { timeout: 10000 })
+  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
+  await expect(title).toHaveValue(saved)
+  await expect(otherSubtitle).toHaveValue('Subtitle from the first')
+
+  // Moving through the fields ships nothing of the first editor's back
+  await secondUserPage.locator('input[name="article[slug]"]').click()
+  await title.click()
+  await syncLV(secondUserPage)
+  await syncLV(page)
+  await expect(subtitle).toHaveValue('Subtitle from the first')
+
+  await saveAndContinue(secondUserPage)
+  await expect(otherPanel.locator('.translation-structure')).toHaveCount(0, { timeout: 15000 })
+  await expect(subtitle).toHaveValue('Subtitle from the first')
+  await secondUserPage.reload()
+  await syncLV(secondUserPage)
+  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
+  await expect(title).toHaveValue(saved)
+  await expect(otherSubtitle).toHaveValue('Subtitle from the first')
+
+  expect(errors).toEqual([])
+})
+
+// The second editor is in a rich text when the first saves: what they type
+// there commits only after a pause, so the form does not load the newer
+// version under them. Leaving the text with typing in it, they get the
+// button.
+test('an editor in a rich text when the other saves keeps typing, then loads with the button', async ({ page, secondUserPage }) => {
+  test.setTimeout(120000)
+  const errors = []
+  secondUserPage.on('pageerror', error => errors.push(error.message))
+  const { otherPanel, first } = await twoEditors(page, secondUserPage, { rich_quote: '1' })
+
+  const row = quoteRows(secondUserPage).first()
+  await editorOf(row).click()
+  await secondUserPage.keyboard.press('ControlOrMeta+End')
+  await syncLV(secondUserPage)
+
+  await saveAndContinue(page)
+  await expect(page.locator('input[name="article[year]"]')).toHaveValue('2030', { timeout: 15000 })
+  const behind = otherPanel.locator('[data-translation-behind]')
+  await expect(behind).toBeVisible({ timeout: 10000 })
+  await expect(otherPanel.locator('input[name="translation_review[version_id]"]')).toHaveValue(first)
+
+  await secondUserPage.keyboard.type(' and more')
+  await expect(editorOf(row)).toContainText('and more')
+  await editorOf(row).blur()
+  await syncLV(secondUserPage)
+  await expect(inputOf(row)).toHaveValue(/and more/)
+  await expect(behind).toBeVisible()
+  await expect(editorOf(row)).toContainText('and more')
+
+  await behind.getByTestId('translation-load-version').click()
+  await expect(behind).toHaveCount(0, { timeout: 10000 })
+  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
+  await expect(editorOf(row)).not.toContainText('and more')
 
   expect(errors).toEqual([])
 })

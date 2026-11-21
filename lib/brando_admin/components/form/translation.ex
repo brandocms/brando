@@ -22,8 +22,11 @@ defmodule BrandoAdmin.Components.Form.Translation do
   update reads the database again only to say that a newer version waits
   (`waiting?`). When the session moves on to a version with changes the
   form does not hold (another editor saved), the form is `behind?` and
-  refuses to save until it is reloaded (`session_moved/2`). A form without
-  block fields has no session and decides alone, at the same moments.
+  refuses to save (`session_moved/2`). It catches up in place, as a reload
+  would (`catch_up/2`): at once when the editor has no unsaved changes in
+  the entry's own fields, otherwise when they press the notice's button,
+  which replaces those changes. A form without block fields has no session
+  and decides alone, at the same moments.
   """
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
@@ -93,6 +96,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       saved?: false,
       waiting?: false,
       behind?: false,
+      caught_up?: false,
       acknowledged: [],
       stale?: false,
       ai?: false
@@ -132,6 +136,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
       saved?: match?(%{saved?: true}, previous),
       waiting?: decided? and waiting?(current, pending),
       behind?: match?(%{behind?: true}, previous),
+      # it caught up with the session in place (`catch_up/2`), until it
+      # decides again
+      caught_up?: match?(%{caught_up?: true}, previous),
       acknowledged: (previous && previous.acknowledged) || [],
       stale?: false,
       # Translate with AI (`Form.TranslationFill`), where AI is configured
@@ -316,7 +323,14 @@ defmodule BrandoAdmin.Components.Form.Translation do
   @doc "The form loads `version`'s content from now on: the state is rebuilt on it."
   def hold(%{assigns: %{translation: state}} = socket, version) do
     socket
-    |> assign(:translation, %{state | decided?: true, saved?: false, applied_version_id: version, behind?: false})
+    |> assign(:translation, %{
+      state
+      | decided?: true,
+        saved?: false,
+        applied_version_id: version,
+        behind?: false,
+        caught_up?: false
+    })
     |> assign_state()
     # the notice of a save whose version the source had moved past stays
     |> then(fn
@@ -342,7 +356,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   first load). The form takes a version it holds nothing different from:
   none, or one without changes (its work only). One with changes is in the
   block fields now but not in the entry fields: the form is behind, and
-  refuses to save until it is reloaded.
+  refuses to save until it catches up (`catch_up/2`).
   """
   def session_moved(%{assigns: %{translation: %{decided?: true, applied_version_id: held}}} = socket, version)
       when version != :unset and version != held do
@@ -357,6 +371,47 @@ defmodule BrandoAdmin.Components.Form.Translation do
   end
 
   def session_moved(socket, _version), do: socket
+
+  @doc """
+  A form behind the edit session takes its version in place, as a reload
+  would: it decides again (`decide/2`), which keeps the session's version
+  (or loads the current one, if the session holds none any more). The Form
+  puts its entry fields back as saved first. Returns what `decide/2`
+  returns; `nil` for the socket's state when the entry is no translation
+  any more.
+  """
+  #
+  # A review tick stays only on an item that is the same in the version
+  # caught up with: same path, raised against the same source text. A tick
+  # on a text the source changed again was for the older text.
+  def catch_up(%{assigns: %{translation: state}} = socket, session) do
+    reviewed = item_digests(state.pending)
+
+    socket
+    |> assign(:translation, %{state | decided?: false, applied_version_id: nil})
+    |> assign_state()
+    |> case do
+      %{assigns: %{translation: %{role: :target, synchronized?: true}}} = socket ->
+        {how, socket} = decide(socket, session)
+
+        {how,
+         update_state(socket, fn state ->
+           now = item_digests(state.pending)
+           ticks = Enum.filter(state.acknowledged, &(Map.has_key?(now, &1) and now[&1] == reviewed[&1]))
+           %{state | caught_up?: true, acknowledged: ticks}
+         end)}
+
+      socket ->
+        {:none, socket}
+    end
+  end
+
+  defp item_digests(%PendingVersion{work_items: items}) when is_list(items),
+    do: Map.new(items, &{&1.path, &1.source_digest})
+
+  defp item_digests(_version), do: %{}
+
+  defp update_state(%{assigns: %{translation: %{} = state}} = socket, fun), do: assign(socket, :translation, fun.(state))
 
   @doc "Whether the form refuses to save: the edit session moved on to a version it does not hold."
   def behind?(%{translation: %{behind?: true}}), do: true
@@ -442,12 +497,26 @@ defmodule BrandoAdmin.Components.Form.Translation do
       end
 
     case socket.assigns[:translation] do
-      %{} = state -> assign(socket, :translation, %{state | acknowledged: paths})
-      nil -> assign(socket, :translation_acknowledged, paths)
+      %{} = state ->
+        if other_version?(params, state),
+          do: socket,
+          else: assign(socket, :translation, %{state | acknowledged: paths})
+
+      nil ->
+        assign(socket, :translation_acknowledged, paths)
     end
   end
 
   def put_acknowledged(socket, _params), do: socket
+
+  # Ticks sent from the form as it showed another version than the one held
+  # now (an event in flight while the form caught up) are that version's:
+  # a text ticked there may have changed in the source since.
+  defp other_version?(%{"translation_review" => %{"version_id" => sent}}, %{applied_version_id: held})
+       when not is_nil(held),
+       do: to_string(sent) != to_string(held)
+
+  defp other_version?(_params, _state), do: false
 
   @doc "What the save reports to `Brando.Translations.target_saved/3`."
   def review(%{translation: %{} = state} = assigns),
@@ -560,6 +629,11 @@ defmodule BrandoAdmin.Components.Form.Translation do
   attr :target, :any, required: true
   attr :fill, :map, default: nil, doc: "Translate with AI's run (`Form.TranslationFill`)"
   attr :editing, :boolean, default: true, doc: "whether this tab edits the entry"
+
+  attr :loadable, :boolean,
+    default: true,
+    doc: "whether the form can load the session's version now: not while it saves or holds a working copy"
+
   attr :actionable, :any, default: MapSet.new(), doc: "the items with an AI action (`TranslationFill.actionable/1`)"
 
   @doc "The translation panel at the top of the entry form."
@@ -650,9 +724,36 @@ defmodule BrandoAdmin.Components.Form.Translation do
         value={@state.applied_version_id}
       />
 
-      <p :if={@state.behind?} class="translation-notice" role="alert" data-translation-behind>
+      <div :if={@state.behind?} class="translation-notice translation-behind" role="alert" data-translation-behind>
+        <p>
+          {gettext(
+            "Another editor saved this translation, and its blocks now have newer changes from the source. Load them to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
+          )}
+        </p>
+        <p :if={@editing and not @loadable}>
+          {gettext("They can be loaded once the revision you have open is closed, or the save in progress is done.")}
+        </p>
+        <div :if={@editing and @loadable} class="translation-notice-actions">
+          <button
+            type="button"
+            class="btn btn--sm"
+            phx-click="load_session_version"
+            phx-target={@target}
+            data-testid="translation-load-version"
+          >
+            {gettext("Load the newer changes")}
+          </button>
+        </div>
+      </div>
+
+      <p
+        :if={@state.caught_up? and not @state.behind?}
+        class="translation-notice"
+        role="status"
+        data-translation-caught-up
+      >
         {gettext(
-          "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+          "Another editor saved this translation, and newer changes from the source were loaded into the form. They are not saved yet."
         )}
       </p>
 

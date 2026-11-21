@@ -1,0 +1,1 @@
+- A synchronized translation whose blocks another editor's save moved on loads the newer changes in place instead of asking for a reload; an editor with unsaved changes in the entry's own fields loads them with a button in the translation panel, which replaces those changes and keeps the block changes.

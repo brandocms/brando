@@ -81,10 +81,21 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
          [_ | _] = units <- units(work.units, keys, targets(assigns.translation), fillable(assigns)) do
       read(socket, work, units, keys)
     else
-      {:error, :stale} -> toast(socket, gettext("The source changed. Save the translation, then translate with AI."))
+      {:error, :stale} -> toast(socket, stale_message(assigns))
       [] -> toast(socket, gettext("Nothing here needs translating."))
       _ -> socket
     end
+  end
+
+  # A form behind its edit session cannot save until it loads the newer
+  # version (`Translation.behind?/1`): it says so, rather than to save.
+  defp stale_message(assigns) do
+    if Translation.behind?(assigns),
+      do:
+        gettext(
+          "Another editor saved this translation. Load the newer changes in the translation panel, then translate with AI."
+        ),
+      else: gettext("The source changed. Save the translation, then translate with AI.")
   end
 
   # The editor may change the entry: the check a clicked run (a `:write`

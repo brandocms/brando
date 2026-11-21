@@ -780,7 +780,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   def main_params(socket, changeset), do: main_params(socket.assigns.schema, socket.assigns.form_blueprint, changeset)
 
   def main_params(schema, blueprint, changeset) do
-    names = Enum.flat_map(blueprint.tabs, &field_names/1)
+    names = input_names(blueprint)
     allowed = Enum.map(schema.__schema__(:fields), &to_string/1) ++ names
     blocks = Enum.map(blueprint.blocks, &"entry_#{&1.name}")
     transformers = Enum.map(blueprint.transformers, fn {name, _, _} -> to_string(name) end)
@@ -823,6 +823,9 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
     apply(schema.__modules__().context, :"get_#{schema.__naming__().singular}", [Map.put(query, :with_deleted, true)])
   end
+
+  @doc "The names of the inputs `blueprint` declares, in its tabs."
+  def input_names(blueprint), do: Enum.flat_map(blueprint.tabs, &field_names/1)
 
   defp field_names(%{fields: fields}), do: Enum.flat_map(fields, &field_names/1)
   defp field_names(%{name: name}) when not is_nil(name), do: [to_string(name)]

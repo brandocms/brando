@@ -1587,11 +1587,16 @@ defmodule BrandoAdmin.TranslationFormTest do
       stop_session(c)
     end
 
+    defp caught_up?(view), do: has_element?(view, "#translation-panel [data-translation-caught-up]")
+
+    defp load_session_version(view),
+      do: view |> element("#translation-panel [data-testid=translation-load-version]") |> render_click()
+
     # 5. One editor's save takes the newer version into the session: the
-    # other's block fields hold its blocks, its form the older version. That
-    # form refuses to submit and asks for a reload, which takes the
-    # session's version.
-    test "after one editor's save takes the newer version, the other's form does not submit the old one",
+    # other's block fields hold its blocks, its form the older version. A
+    # form with no unsaved typing in its entry fields loads the session's
+    # version into them in place, as a reload would, and says so.
+    test "after one editor's save takes the newer version, the other's form loads it in place and saves",
          %{conn: conn} = c do
       first = change_source(c)
       view = open_version(conn, c.target.id, first)
@@ -1603,9 +1608,40 @@ defmodule BrandoAdmin.TranslationFormTest do
       await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
       third = Translations.get_pending_version(Article, c.target.id)
       assert held_version(view) == to_string(third.id)
+
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert shown_year(other) == "2030"
+      assert caught_up?(other)
+      refute behind?(other)
+
+      save(other)
+      saved = assert_follows_source(c, third)
+      assert saved.year == 2030
+    end
+
+    # The form has unsaved typing in an entry field when the session moves
+    # on: it stays behind and refuses to submit. The panel's button loads the
+    # session's version, which replaces the typing in the entry fields and
+    # keeps the block edits (they are the session's); then it saves.
+    test "a form behind with typing in its fields refuses to save until its button loads the session's version",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      uid = first_block_uid(c)
+      type_title(other, "Typed title")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
       saved_at = load(c.target.id).updated_at
 
       await_selector(other, "#translation-panel [data-translation-behind]")
+      assert shown_title(other) == "Typed title"
+      assert held_version(other) == to_string(first.id)
+
       other |> element("button", "Save and continue editing") |> render_click()
       assert_push_event(other, "b:submit", %{}, 2_000)
       other |> form("#article_form_form") |> render_submit()
@@ -1613,13 +1649,447 @@ defmodule BrandoAdmin.TranslationFormTest do
       refute_push_event(other, "b:submit", %{}, 200)
       assert load(c.target.id).updated_at == saved_at
 
-      # the reload takes the session's version, and saves
-      kill_live(other)
-      other = open_version(other_conn, c.target.id, third)
-      assert shown_year(other) == "2030"
-      save(other)
+      # a block edit while behind goes to the session, and stays
+      Brando.EditSessionEditors.type(other, uid, "Typed paragraph")
+      load_session_version(other)
+
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      refute behind?(other)
+      assert {shown_year(other), shown_title(other)} == {"2030", "Tittel"}
+      assert Brando.EditSessionEditors.shown_text(other, uid) == "Typed paragraph"
+
+      # Save and continue editing, as chosen for the refused save
+      save_and_stay(other)
+      await(fn -> Repo.get!(PendingVersion, third.id).status == :applied end)
       saved = assert_follows_source(c, third)
-      assert saved.year == 2030
+      assert {saved.year, saved.title, hd(texts(saved))} == {2030, "Tittel", "Typed paragraph"}
+    end
+
+    # The session moves on twice while the form is behind: the button loads
+    # the latest version.
+    test "a form behind twice in a row loads the latest version", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      change_year(c, 2031)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2031']", 3_000)
+      fifth = Translations.get_pending_version(Article, c.target.id)
+      render(other)
+      assert behind?(other)
+      assert shown_title(other) == "Typed title"
+
+      load_session_version(other)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{fifth.id}']")
+      assert shown_year(other) == "2031"
+
+      save(other)
+      saved = assert_follows_source(c, fifth)
+      assert saved.year == 2031
+    end
+
+    test "a form without typing behind twice in a row loads each version in place", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "input[name='article[year]'][value='2030']", 3_000)
+
+      change_year(c, 2031)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2031']", 3_000)
+      fifth = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{fifth.id}']")
+      assert shown_year(other) == "2031"
+      refute behind?(other)
+
+      save(other)
+      assert load(c.target.id).year == 2031
+    end
+
+    # The translation is written from the listing while the form is behind:
+    # the session keeps the version its blocks are built on, computed before
+    # that write. Loading it does what a form joining with it does: the
+    # blocks are the session's, the entry fields as saved, since the
+    # version's older copy would take the write back.
+    test "a form behind a version computed before the translation's last save shows its fields as saved",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      {:ok, _} = SyncTest.update_article(c.target.id, %{slug: "written-elsewhere"}, c.current_user)
+      refute Translations.pending_base_current?(Article, c.target.id, third.id)
+
+      load_session_version(other)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      refute behind?(other)
+      # the source-controlled values the version holds arrive after the next save
+      assert {shown_title(other), shown_year(other)} == {"Tittel", "2024"}
+      await_selector(other, "input[name='article[slug]'][value='written-elsewhere']")
+
+      save(other)
+      saved = load(c.target.id)
+      assert {saved.slug, saved.year} == {"written-elsewhere", 2024}
+    end
+
+    # Typing as the browser sends it: the field takes the focus, the value
+    # changes, and leaving the field ships it to the other editors.
+    defp type_and_leave(view, field, value) do
+      name = "article[#{field}]"
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("focus", %{"field" => name})
+      params = view |> render() |> form_params("#article_form_form") |> put_in(["article", field], value)
+      view |> element("#article_form_form") |> render_change(Map.put(params, "_target", ["article", field]))
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("blur", %{"field" => name})
+    end
+
+    defp type_field(view, field, value) do
+      params = view |> render() |> form_params("#article_form_form") |> put_in(["article", field], value)
+      view |> element("#article_form_form") |> render_change(Map.put(params, "_target", ["article", field]))
+    end
+
+    defp click_through(view, field) do
+      name = "article[#{field}]"
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("focus", %{"field" => name})
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("blur", %{"field" => name})
+    end
+
+    # Another editor typed a title after their save and shipped it; the form
+    # behind, with its own typing elsewhere, loads the version with its
+    # button. The title it received is theirs: it stays in the form, does not
+    # ship back as this editor's, and is what this editor's save stores.
+    test "a value another editor typed survives the button's load and is not shipped back", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      # typing that has not shipped yet: the first editor's save leaves it
+      type_field(other, "subtitle", "Typed subtitle")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      type_and_leave(view, "title", "Title from the first")
+      await_selector(other, "input[name='article[title]'][value='Title from the first']")
+
+      load_session_version(other)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert {shown_title(other), shown_year(other)} == {"Title from the first", "2030"}
+
+      click_through(other, "slug")
+      render(view)
+      assert shown_title(view) == "Title from the first"
+
+      save(other)
+      assert load(c.target.id).title == "Title from the first"
+    end
+
+    # A form that joins gets the other editors' unsaved values, then loads
+    # the session's version (`{:keep, …}`): the values stay theirs.
+    test "a form joining keeps the values other editors typed when it loads the session's version",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      type_and_leave(view, "title", "Title from the first")
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      await_selector(other, "input[name='article[title]'][value='Title from the first']")
+
+      click_through(other, "slug")
+      render(view)
+      assert shown_title(view) == "Title from the first"
+      assert shown_title(other) == "Title from the first"
+    end
+
+    defp focus_field(view, field),
+      do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("focus", %{"field" => "article[#{field}]"})
+
+    defp blur_field(view, field),
+      do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("blur", %{"field" => "article[#{field}]"})
+
+    # The editor is in a field when the session moves on: what they type
+    # there may not have reached the form yet (a rich text commits after a
+    # pause), so the form waits. Leaving the field without typing, it
+    # catches up then.
+    test "a form whose editor is in a field catches up when they leave it untyped", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      focus_field(other, "title")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      assert held_version(other) == to_string(first.id)
+
+      blur_field(other, "title")
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert caught_up?(other)
+      assert shown_year(other) == "2030"
+    end
+
+    # The editor was typing in a rich text when the session moved on: its
+    # last words commit as they leave it (the debounce flushes on blur), so
+    # the form is behind with typing, and offers the button.
+    test "a form whose editor typed in a field before leaving it stays behind with the button", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      focus_field(other, "subtitle")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      type_field(other, "subtitle", "Typed before the pause")
+      blur_field(other, "subtitle")
+      render(other)
+      assert behind?(other)
+      assert has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+      assert held_version(other) == to_string(first.id)
+      assert shown_subtitle(other) == "Typed before the pause"
+    end
+
+    defp tick(view, path) do
+      params =
+        view
+        |> render()
+        |> form_params("#article_form_form")
+        |> Map.put("translation_review", %{"acknowledged" => [path]})
+
+      view |> element("#article_form_form") |> render_change(params)
+    end
+
+    defp ticked?(view, path),
+      do: has_element?(view, "input[name='translation_review[acknowledged][]'][value='#{path}'][checked]")
+
+    defp translate_item(version), do: Enum.find(version.work_items, &(&1.kind == :translate))
+
+    # A tick is for the source text the editor reviewed. The form catches up
+    # to a version where the source changed that text again: the tick goes.
+    test "a review tick on a text the source changed again does not carry onto the version caught up with",
+         %{conn: conn} = c do
+      first = change_source(c)
+      item = translate_item(first)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      tick(other, item.path)
+      assert ticked?(other, item.path)
+
+      [_, join] = load(c.source.id).entry_blocks
+      set_text(join.block, "Endret avsnitt")
+      change_year(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      assert Enum.any?(third.work_items, &(&1.path == item.path and &1.source_digest != item.source_digest))
+
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      refute ticked?(other, item.path)
+    end
+
+    # The same text, unchanged in the newer version: the tick stays.
+    test "a review tick on a text the source left alone stays on the version caught up with", %{conn: conn} = c do
+      first = change_source(c)
+      item = translate_item(first)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      tick(other, item.path)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      assert Enum.any?(third.work_items, &(&1.path == item.path and &1.source_digest == item.source_digest))
+
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert ticked?(other, item.path)
+    end
+
+    # A revision's working copy holds the form, its blocks detached from the
+    # session: loading the session's version would leave them shown as the
+    # session's. The form does not catch up by itself (the revision is the
+    # saved entry, so there is no typing), the button is not offered, and a
+    # forged click does nothing.
+    test "a form behind with a revision's working copy open offers no button and ignores a click", %{conn: conn} = c do
+      first = change_source(c)
+      {:ok, %{revision: number}} = Brando.Revisions.create_revision(load(c.target.id), c.current_user, false)
+      {:ok, {_revision, {^number, revision_entry}}} = Brando.Revisions.get_revision(Article, c.target.id, number)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      Phoenix.LiveView.send_update(other.pid, BrandoAdmin.Components.Form,
+        id: "article_form",
+        action: :load_working_copy,
+        revision: number,
+        revision_entry: revision_entry
+      )
+
+      render(other)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      refute has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+
+      other |> with_target(cid_of(other, "#article_form-el")) |> render_click("load_session_version", %{})
+      assert behind?(other)
+      assert held_version(other) == to_string(first.id)
+      {components, _, _} = :sys.get_state(other.pid).components
+      assert Enum.any?(components, fn {_cid, {_mod, _id, assigns, _, _}} -> assigns[:working_copy] == number end)
+    end
+
+    # The session moves on while the form's save collects its blocks: the
+    # button waits. The save is refused once it runs, and the button is back.
+    test "a form behind while its save is collecting offers no button and ignores a click", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      other |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(other, "b:submit", %{}, 2_000)
+      other |> form("#article_form_form") |> render_submit()
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      refute has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+      other |> with_target(cid_of(other, "#article_form-el")) |> render_click("load_session_version", %{})
+      assert held_version(other) == to_string(first.id)
+      assert shown_title(other) == "Typed title"
+
+      assert_push_event(other, "b:submit", %{}, 2_000)
+      other |> form("#article_form_form") |> render_submit()
+      assert_push_event(other, "b:alert", %{type: "error"}, 2_000)
+      assert has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+    end
+
+    # A keystroke the browser sent before the caught-up form reached it
+    # carries the older version's values (inert inputs submit too): they are
+    # the browser's old form, not this editor's edits, and do not ship.
+    test "a keystroke sent before the caught-up version reached the browser does not take it back",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      before = other |> render() |> form_params("#article_form_form")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+
+      params = before |> put_in(["article", "subtitle"], "Typed") |> Map.put("_target", ["article", "subtitle"])
+      other |> element("#article_form_form") |> render_change(params)
+      assert shown_year(other) == "2030"
+
+      blur_field(other, "subtitle")
+      render(view)
+      assert shown_year(view) == "2030"
+      assert shown_subtitle(view) == "Typed"
+    end
+
+    defp shown_subtitle(view),
+      do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "subtitle"])
+
+    # A form without block fields has no edit session, so another editor's
+    # save never puts it behind: nothing of this applies to it. It holds its
+    # version until its own save, as before.
+    test "a form without block fields is never behind another editor's save", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      {other, _} = live_form(other_conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{first.id}']")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      render(other)
+
+      refute behind?(other) or caught_up?(other)
+      refute has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+      assert held_version(other) == to_string(first.id)
+    end
+
+    # Translate with AI reads the work of the version the form holds, and
+    # refuses while the database has a newer one: a form behind starts no
+    # run. Once its button loads the session's version, the run fills.
+    test "translate with AI started while behind starts after the button loads the version", %{conn: conn} = c do
+      Brando.AIStub.configure()
+
+      Brando.AIStub.reply(fn prompt ->
+        [json] = Regex.run(~r/\{"items":.*\}/s, prompt)
+        json |> Jason.decode!() |> Map.fetch!("items") |> Map.new(&{&1["n"], "EN " <> &1["source"]}) |> Jason.encode!()
+      end)
+
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {other_user, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      Brando.endpoint().subscribe("user:#{other_user.id}")
+      other |> element("#translation-panel [data-testid=translation-ai-all]") |> render_click()
+      render_async(other, 1_000)
+      refute has_element?(other, "#translation-panel [data-ai-status]")
+      refute has_element?(other, "#translation-panel [data-ai='filled']")
+      # it says to load the newer changes, not to save first: the save is refused
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: told}}, 2_000
+      refute told == Gettext.gettext(Brando.Gettext, "The source changed. Save the translation, then translate with AI.")
+
+      load_session_version(other)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+
+      other |> element("#translation-panel [data-testid=translation-ai-all]") |> render_click()
+      render_async(other, 5_000)
+      await_selector(other, "#translation-panel [data-ai='filled']", 3_000)
+      save(other)
     end
 
     # 6. The second reverted attempt kept a flag no version consumed: a
@@ -1757,6 +2227,8 @@ defmodule BrandoAdmin.TranslationFormTest do
       view = open_version(conn, c.target.id, first)
       {_other, other_conn} = other_conn()
       other = open_version(other_conn, c.target.id, first)
+      # unsaved typing in an entry field keeps the form behind
+      type_title(other, "Typed title")
 
       change_source_again(c, 2030)
       save_and_stay(view)
