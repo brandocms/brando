@@ -100,7 +100,7 @@ defmodule Brando.TransformerSaveTest.Reel do
           inputs_for :items do
             cardinality :many
             style {:transformer, :cover}
-            listing &Brando.SyncTest.ItemSummary.row/1
+            listing &Brando.TransformerSaveTest.ReelRow.row/1
 
             input :label, :text
             input :link, :rich_text
@@ -108,6 +108,19 @@ defmodule Brando.TransformerSaveTest.Reel do
         end
       end
     end
+  end
+end
+
+defmodule Brando.TransformerSaveTest.ReelRow do
+  @moduledoc false
+  # A reel's row listing, which shows whether the row is saved
+  use Phoenix.Component
+
+  def row(assigns) do
+    ~H"""
+    <strong>{@entry.label}</strong>
+    <span :if={@entry.id} class="saved-row" data-row-id={@entry.id}></span>
+    """
   end
 end
 

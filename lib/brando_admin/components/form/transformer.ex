@@ -131,6 +131,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         do: Enum.map(socket.assigns.items, &saved_item(&1, Map.get(saved, &1.dom_id), socket.assigns.asset_fields)),
         else: socket.assigns.items
 
+    # A listing draws the row it gets (its id, say): the saved items are
+    # drawn again, under the DOM ids they have.
+    socket =
+      for {item, before} <- Enum.zip(items, socket.assigns.items), item != before, reduce: socket do
+        acc -> stream_insert(acc, :transformer_items, stream_entry(item))
+      end
+
     {:ok, socket |> assign(:items, items) |> assign(:sent_dom_ids, [])}
   end
 
