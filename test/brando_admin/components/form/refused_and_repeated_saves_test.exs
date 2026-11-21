@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import Ecto.Changeset, only: [change: 2]
   import Ecto.Query, only: [from: 2]
   import ExUnit.CaptureLog, only: [with_log: 1]
 
@@ -142,6 +143,80 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
         |> Form.event_tag_received(:store_revision)
 
       assert revisions(ctx.article) == before + 1
+    end
+  end
+
+  describe "a save without blocks that stays on the form" do
+    alias Brando.SyncTest.Article
+
+    setup %{user: user} do
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Rows", slug: "rows", language: "en", status: "published", items: [%{label: "A", sequence: 0}]},
+          user
+        )
+
+      %{article: Brando.Repo.preload(article, :items, force: true)}
+    end
+
+    defp blockless_socket(ctx) do
+      %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
+      |> Component.assign(:id, "article_form")
+      |> Component.assign(:schema, Article)
+      |> Component.assign(:singular, "article")
+      |> Component.assign(:context, Brando.SyncTest)
+      |> Component.assign(:entry, ctx.article)
+      |> Component.assign(:entry_id, ctx.article.id)
+      |> Component.assign(:current_user, ctx.user)
+      |> Component.assign(:form_blueprint, Article.__form__(:transformer_rich_items))
+      |> Component.assign(:form, Phoenix.Component.to_form(Ecto.Changeset.change(ctx.article)))
+      |> Component.assign(:has_blocks?, false)
+      |> Component.assign(:has_transformers?, true)
+      |> Component.assign(:all_transformers_received?, false)
+      |> Component.assign(:transformer_changesets, %{items: nil})
+      |> Component.assign(:processing, false)
+      |> Component.assign(:save_redirect_target, :self)
+      |> Component.assign(:live_preview_active?, false)
+      |> Component.assign(:fields_demanding_live_preview_reassign, [])
+    end
+
+    defp labels(article) do
+      Brando.SyncTest.ArticleItem
+      |> Brando.Repo.all()
+      |> Enum.filter(&(&1.article_id == article.id))
+      |> Enum.map(& &1.label)
+      |> Enum.sort()
+    end
+
+    # A save as the browser makes it: the first submit asks the
+    # transformers for their rows (`fetch_transformer_data`), which come
+    # back as `provide_transformer_data`, and a second submit writes. A form
+    # that holds rows it collected before writes on the first submit.
+    defp save(socket, title, rows) do
+      params = %{"article" => %{"title" => title, "slug" => "rows"}}
+      {:noreply, socket} = Form.handle_event("save", params, socket)
+
+      receive do
+        {:phoenix, :send_update, {_, %{event: "fetch_transformer_data"}}} ->
+          socket = Component.assign(socket, transformer_changesets: %{items: rows}, all_transformers_received?: true)
+          {:noreply, socket} = Form.handle_event("save", params, socket)
+          socket
+      after
+        500 -> socket
+      end
+    end
+
+    test "the next save writes the rows the transformer has then", ctx do
+      # As the Transformer sends them: a stored row as a changeset, a new
+      # one as a map (it keeps the row it added as new after the save)
+      [stored] = ctx.article.items
+      socket = save(blockless_socket(ctx), "Rows, saved", [change(stored, %{sequence: 0}), %{label: "New", sequence: 1}])
+      assert labels(ctx.article) == ["A", "New"]
+
+      _socket =
+        save(socket, "Rows, saved again", [change(stored, %{sequence: 0}), %{label: "New, edited", sequence: 1}])
+
+      assert labels(ctx.article) == ["A", "New, edited"]
     end
   end
 end

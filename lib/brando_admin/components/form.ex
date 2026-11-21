@@ -7803,8 +7803,10 @@ defmodule BrandoAdmin.Components.Form do
 
     # update entry! A revision's working copy is saved: it is the entry now.
     # A synchronized translation decides again, from what the save left
-    # pending, as one with block fields does.
+    # pending, as one with block fields does. The next save collects the
+    # transformer rows again, as one with block fields does.
     socket
+    |> reset_transformer_changesets()
     |> assign(:entry_id, entry.id)
     |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
