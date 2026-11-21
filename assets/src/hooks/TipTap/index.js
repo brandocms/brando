@@ -205,13 +205,18 @@ export default app => ({
   // Only an input the server hears from: one in a form with `phx-change`.
   // A popover's input (a gallery caption, `input_form`) names no form, and an
   // object config's form sends its values on Save: what the server renders
-  // into those is the stored text, never a change to show.
+  // into those is the stored text, never a change to show, and
+  // `followInput()` puts the editor's text back.
   entryRichText() {
     return this.el.dataset.tiptapType === 'rich_text' && !this.el.closest('[data-block-uid]') && !!this._input.form?.hasAttribute('phx-change')
   },
 
   followInput() {
-    if (!this.entryRichText()) return
+    if (this.el.dataset.tiptapType !== 'rich_text' || this.el.closest('[data-block-uid]')) return
+    // A form that is not followed is read on Save (the gallery caption's
+    // popover, an object config's form): its input keeps the editor's text,
+    // not the stored one a patch renders into it.
+    if (!this.entryRichText()) { this._input.value = this._shown; return }
     // Rejoining: the input keeps what the editor shows, and the recovered
     // form's patch is compared with that (`Presence/pendingInputs.js` would
     // otherwise take the recovered text for a stale keystroke of this

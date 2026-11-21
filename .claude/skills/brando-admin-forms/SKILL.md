@@ -105,7 +105,8 @@ variable; not a block's) shows what its hidden input holds after each patch,
 so a server write reaches a row's editor wherever the row has moved: write the
 form, not an event addressed to the editor, whose DOM id follows the row's
 position. Only an input in a form with `phx-change` is followed (a gallery
-caption's popover input names no form), and not during a rejoin: from
+caption's popover input names no form; such an input is read on Save, so
+after a patch it gets the editor's text back), and not during a rejoin: from
 `disconnected()` the input keeps the editor's text, and `reconnected()` puts
 in what the recovered form's patch changed it to, if anything (the join patch
 renders the saved entry), and follows that once; a recovered form that comes

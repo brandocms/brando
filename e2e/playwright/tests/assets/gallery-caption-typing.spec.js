@@ -3,9 +3,10 @@ import { syncLV } from '../../utils'
 
 // The caption popover's rich text is not part of the entry form (its input
 // names a form that does not exist), and the server hears of it only on
-// Save. A patch of the gallery while it is open (another image finishing
-// processing) renders the stored caption into its input: the editor keeps
-// what is being typed, and Save takes that.
+// Save, which reads the input. A patch of the gallery while it is open
+// (another image finishing processing) renders the stored caption into that
+// input: the editor keeps what is being typed and puts it back in the
+// input, and Save takes it without another keystroke.
 
 async function factory(page, schema, attributes) {
   const response = await page.request.post('/__e2e/db/factory', {
@@ -19,7 +20,7 @@ async function factory(page, schema, attributes) {
 // rich text's input alone
 const PENDING_INPUT_MS = 2000
 
-test('a caption being typed survives a gallery patch after a pause', async ({ page }) => {
+test('a caption being typed survives a gallery patch after a pause, and Save takes it', async ({ page }) => {
   test.setTimeout(120000)
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
@@ -71,13 +72,13 @@ test('a caption being typed survives a gallery patch after a pause', async ({ pa
 
   await expect(popover).toBeVisible()
   await expect(editor).toHaveText('En bildetekst')
-  await page.keyboard.type('!')
-  await expect(editor).toHaveText('En bildetekst!')
+  await expect(popover.locator('input.tiptap-text')).toHaveValue('<p>En bildetekst</p>')
 
+  // Saved without typing again
   await popover.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(popover).toHaveCount(0)
   await objects.first().getByRole('button', { name: 'Caption', exact: true }).click()
-  await expect(editor).toHaveText('En bildetekst!')
+  await expect(editor).toHaveText('En bildetekst')
 
   expect(errors).toEqual([])
 })
