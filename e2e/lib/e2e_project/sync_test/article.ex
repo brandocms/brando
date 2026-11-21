@@ -46,7 +46,9 @@ defmodule E2eProject.SyncTest.Article do
       module: E2eProject.SyncTest.ArticleItem,
       on_replace: :delete,
       preload_order: [asc: :sequence],
-      cast: true
+      cast: true,
+      sort_param: :sort_items_ids,
+      drop_param: :drop_items_ids
 
     # A rich text in a subform's rows (translate-with-ai.spec.js,
     # rich-text-rows.spec.js), which are moved and removed

@@ -663,8 +663,10 @@ menu is labelled: `"compact"` (the default, `¶` / `H2`), `"icon"` or
 leaves it out.
 
 Content links keep their target's identifier alongside the URL. When the
-target's URL changes, Brando updates the link in block text and ordinary
-rich-text fields and re-renders the owners; the link text stays as written.
+target's URL changes, Brando updates the link in block text, in ordinary
+rich-text fields and in the rich-text fields of the default form's subform
+rows (`embeds_one`, `embeds_many`, `has_one` and `has_many`), and re-renders
+the owners; the link text stays as written.
 The link dialog also takes external and relative URLs, page anchors, button
 appearance, new-tab behaviour and nofollow. Unsafe destinations are refused.
 Pasting keeps supported formatting and turns the rest into text.
@@ -1034,11 +1036,25 @@ use its domain instead. A subform contains only `input`s: subforms do not
 nest and cannot hold block editors.
 
 For `:many` subforms, new rows are cast through the relation, so the relation
-needs `cast: true` (embeds are always cast). Rows can be dragged into order
-when the related schema has `trait :sequenced` or the relation is an
-`embeds_many`. The parameter names for ordering and removal come from the
-relation's `sort_param:` and `drop_param:`, and default to
-`sort_<name>_ids` and `drop_<name>_ids`.
+needs `cast: true` (embeds are always cast). Reordering needs the relation's
+`sort_param:` and removing needs its `drop_param:`: the cast reads the new
+order and the removed rows from those params. An `embeds_many` or
+`has_many, cast: true` subform draws its drag handle only when the relation
+has `sort_param:`, and its remove button only when it has `drop_param:`; a
+relation without them gets a compile warning that names the line to add. Rows
+can be added either way. A transformer subform and one drawn by a custom
+`component` keep their own controls and get no warning.
+
+```elixir
+relation :links, :embeds_many,
+  module: MyApp.Articles.Link,
+  on_replace: :delete,
+  sort_param: :sort_links_ids,
+  drop_param: :drop_links_ids
+```
+
+Rows can be dragged into order when the relation has `sort_param:` and the
+related schema has `trait :sequenced` or the relation is an `embeds_many`.
 
 What a subform input cannot do: generate with `ai:`, use `update_relation:`
 on a select, take `:unless_superuser`, or carry footnotes.
@@ -1053,7 +1069,8 @@ on a select, take `:unless_superuser`, or carry footnotes.
   `entries`; `:one` (the default) for `belongs_to`, `has_one` and
   `embeds_one`.
 * A `:many` subform needs a `default`, and its relation needs `cast: true`
-  unless it is an embed.
+  unless it is an embed, and `sort_param:` and `drop_param:` to reorder and
+  remove rows.
 * A subform holds only `input`s: no nested subforms and no block editors.
 
 <!-- usage-rules:end -->

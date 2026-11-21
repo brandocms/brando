@@ -27,7 +27,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
     forms = Verifier.get_entities(dsl_state, [:forms])
 
     with :ok <- validate_entities(forms, &verify_form(context, &1)) do
-      case Enum.flat_map(forms, &deprecated_ai_warnings/1) do
+      case Enum.flat_map(forms, &deprecated_ai_warnings/1) ++ subform_control_warnings(context, forms) do
         [] -> :ok
         warnings -> {:warn, warnings}
       end
@@ -476,6 +476,47 @@ defmodule Brando.Blueprint.Forms.Verifier do
           &1.__schema__(:virtual_fields) ++ &1.__schema__(:associations) ++ &1.__schema__(:embeds))
     )
     |> MapSet.new()
+  end
+
+  # A many-subform reorders and removes rows through its relation's
+  # `sort_param` and `drop_param`; without one the cast drops the change,
+  # and the subform leaves its control out
+  # (`BrandoAdmin.Components.Form.Subform`). A transformer subform or one a
+  # custom `component` draws has its own controls. One warning per relation.
+  defp subform_control_warnings(%{module: module, relations: relations}, forms) do
+    for form <- forms,
+        %Forms.Subform{cardinality: :many, name: name, component: nil} = subform <- form_inputs(form),
+        not match?({:transformer, _}, subform.style),
+        relation = Enum.find(relations, &(&1.name == name)),
+        missing = missing_controls(relation),
+        missing != [] do
+      {name, {subform_control_message(module, relation, missing), Entity.anno(subform)}}
+    end
+    |> Enum.uniq_by(&elem(&1, 0))
+    |> Enum.map(&elem(&1, 1))
+  end
+
+  defp missing_controls(%{type: type, opts: opts}) when type in [:embeds_many, :has_many] do
+    if type == :embeds_many or Map.get(opts, :cast) == true,
+      do: Enum.reject([:sort_param, :drop_param], &Map.has_key?(opts, &1)),
+      else: []
+  end
+
+  defp missing_controls(_relation), do: []
+
+  defp subform_control_message(module, %{name: name, type: type}, missing) do
+    params = %{sort_param: :"sort_#{name}_ids", drop_param: :"drop_#{name}_ids"}
+    options = Enum.map_join(missing, ", ", &"#{&1}: #{inspect(params[&1])}")
+
+    lost =
+      Enum.map_join(missing, " or ", fn
+        :sort_param -> "reorder"
+        :drop_param -> "remove"
+      end)
+
+    "#{inspect(module)}: inputs_for #{inspect(name)} cannot #{lost} its rows: " <>
+      "relation #{inspect(name)}, #{inspect(type)} has no #{Enum.join(missing, " or ")}, so the subform leaves " <>
+      "that control out. Add `#{options}` to `relation #{inspect(name)}, #{inspect(type)}`."
   end
 
   # `ai:` on an input is deprecated: a warning at the input, with the

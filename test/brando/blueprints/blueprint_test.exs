@@ -331,7 +331,11 @@ defmodule Brando.Blueprint.BlueprintTest do
                %Brando.Blueprint.Relations.Relation{
                  __identifier__: :properties,
                  name: :properties,
-                 opts: %{module: Brando.BlueprintTest.Property},
+                 opts: %{
+                   module: Brando.BlueprintTest.Property,
+                   sort_param: :sort_properties_ids,
+                   drop_param: :drop_properties_ids
+                 },
                  type: :embeds_many
                }
              ])

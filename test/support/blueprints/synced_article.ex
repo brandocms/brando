@@ -63,10 +63,16 @@ defmodule Brando.SyncTest.Article do
       module: Brando.SyncTest.ArticleItem,
       on_replace: :delete,
       preload_order: [asc: :sequence],
-      cast: true
+      cast: true,
+      sort_param: :sort_items_ids,
+      drop_param: :drop_items_ids
 
     # An embeds_many subform with a text (TranslationAIFillTest)
-    relation :quotes, :embeds_many, module: Brando.SyncTest.ArticleQuote, on_replace: :delete
+    relation :quotes, :embeds_many,
+      module: Brando.SyncTest.ArticleQuote,
+      on_replace: :delete,
+      sort_param: :sort_quotes_ids,
+      drop_param: :drop_quotes_ids
 
     # A one-to-one subform with an image field (SubformRelationTest)
     relation :author, :has_one,

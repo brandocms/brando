@@ -43,7 +43,11 @@ defmodule Brando.Content.RichTextColumnsTest do
     end
 
     relations do
-      relation :quotes, :embeds_many, module: Quote, on_replace: :delete
+      relation :quotes, :embeds_many,
+        module: Quote,
+        on_replace: :delete,
+        sort_param: :sort_quotes_ids,
+        drop_param: :drop_quotes_ids
     end
 
     forms do

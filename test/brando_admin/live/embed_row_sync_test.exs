@@ -49,17 +49,21 @@ defmodule BrandoAdmin.EmbedRowSyncTest do
     assert quotes(b) == ["<p>Første</p>", "<p>Andre</p>", "<p>Tredje</p>"]
 
     params = a |> render() |> form_params("#article_form_form")
-    rows = params["article"]["quotes"] |> Map.delete("1")
+    assert params["article"]["sort_quotes_ids"] == ["0", "1", "2"]
 
+    # As the browser sends a click on the second row's remove button: every
+    # row's inputs stay in the form, and the button's value joins the drop
+    # param (`Brando.TableRows` copies it into a hidden input in the row,
+    # ahead of the subform's empty one)
     params =
       params
-      |> put_in(["article", "quotes"], rows)
-      |> Map.put("_target", ["article", "quotes", "0", "text"])
+      |> put_in(["article", "drop_quotes_ids"], ["1", ""])
+      |> Map.put("_target", ["article", "drop_quotes_ids"])
 
-    a |> form() |> render_hook("focus", %{"field" => "article[quotes][0][text]"})
-    # As the browser sends it, without the removed row's inputs (a form
-    # element's `render_change` would add them back)
     a |> form() |> render_hook("validate", params)
+    # A button sends no focus or blur: the removal ships when the editor
+    # next leaves a field
+    a |> form() |> render_hook("focus", %{"field" => "article[quotes][0][text]"})
     a |> form() |> render_hook("blur", %{"field" => "article[quotes][0][text]"})
 
     assert quotes(a) == ["<p>Første</p>", "<p>Tredje</p>"]

@@ -1,0 +1,1 @@
+- A content link in a subform row's rich text (`embeds_one`, `embeds_many`, `has_one` or `has_many`) follows its target's new URL, as one in an entry's own rich-text field does.
