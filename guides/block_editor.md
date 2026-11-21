@@ -269,8 +269,8 @@ values as Brando gives them:
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
   `url`, ref data read through `refs` and a datasource's `entries` read the same
-  way: `{{ entry.title }}` prints as text. A `:rich_text` input of any form,
-  at the top or in subform rows, and a text ref's `text`, arrive sanitized.
+  way: `{{ entry.title }}` prints as text. A field the forms draw as
+  `:rich_text` (see below) and a text ref's `text` arrive sanitized.
 - `{{ entry.embed | raw }}` is a template's opt-in, for a plain field whose
   markup you trust.
 
@@ -363,12 +363,16 @@ A filter of your own given such a field (`{{ entry.status | my_filter }}`) gets
 its text, and so does a tag given a variable assigned from it; given the record,
 or the field itself (`{% my_tag entry.status %}`), they get the atom.
 
-A field prints as rich text when any form of its schema draws it as a
-`:rich_text` input, at the top or in a subform's rows, since the stored value
-may hold markup. So a field one form draws as plain text and another as rich
-text prints as sanitized markup: plain text such as `John <john@example.com>`
-prints without the bracketed part. What a save checks is set by the form it
-comes from and the default form (see [Rich text](blueprint_forms.md#rich-text)).
+A field at the top of a form prints as rich text when the default form draws
+it as a `:rich_text` input, or when only named forms draw it, each as a
+`:rich_text` input. When forms disagree, the default form decides: a field it
+draws as a textarea prints as text, so what was typed there stays text even
+if another form draws the field as rich text. A field in a subform's rows
+prints as rich text when any form draws it as a `:rich_text` input, since the
+stored value may hold markup: plain text such as `John <john@example.com>`
+typed in a row another form draws as plain text prints without the bracketed
+part. What a save checks is set by the form it comes from and the default
+form (see [Rich text](blueprint_forms.md#rich-text)).
 
 Liquid in a value printed with `raw` stays text. `raw` reads escaped text as
 what it stands for. Rich text needs no `raw`: a rich-text field, a subform

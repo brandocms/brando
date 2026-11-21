@@ -1,13 +1,15 @@
 defmodule Brando.Villain.RichTextTemplateReadsTest do
   @moduledoc """
-  What a template author sees of rich text: a top-level field any form draws
-  as rich text prints as markup, `size` of a row gives 0, `markdown` on rich
+  What a template author sees of rich text: a top-level field only named
+  forms draw, all as rich text, prints as markup, and one forms disagree on
+  as the default form draws it, `size` of a row gives 0, `markdown` on rich
   text gives its markup, and one render sanitizes a field's value once.
   """
   # Sanitizer runs are counted with a trace session of its own, on this
   # process only
   use Brando.ConnCase, async: true
 
+  alias Brando.RichTextRows.Disagreeing
   alias Brando.RichTextRows.Entry
   alias Brando.RichTextRows.Quote
   alias Brando.SyncTest.Article
@@ -24,33 +26,56 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
 
   defp active_elements(html), do: html |> Floki.parse_fragment!() |> Floki.find("img, script, [onerror]")
 
-  describe "a top-level field only a named form draws as rich text" do
-    # `subtitle` is a `:textarea` in Article's default form and `:rich_text`
-    # in its `:notes` form
+  describe "a top-level field only named forms draw, all as rich text" do
+    # `aside` is drawn only by Disagreeing's `:plain` and `:aside` forms, each
+    # as rich text
     test "prints as sanitized markup" do
-      html = render_entry("{{ entry.subtitle }}", %Article{title: "T", subtitle: @safe})
+      html = render_entry("{{ entry.aside }}", %Disagreeing{title: "T", aside: @safe})
       assert html == @safe
 
-      html = render_entry("{{ entry.subtitle }}", %Article{title: "T", subtitle: @typed})
+      html = render_entry("{{ entry.aside }}", %Disagreeing{title: "T", aside: @typed})
       assert html == @typed
       assert active_elements(html) == []
     end
 
     test "prints as markup through raw and a filter" do
       html =
-        render_entry("{{ entry.subtitle | raw }}|{{ entry.subtitle | truncate: 500 | raw }}", %Article{
+        render_entry("{{ entry.aside | raw }}|{{ entry.aside | truncate: 500 | raw }}", %Disagreeing{
           title: "T",
-          subtitle: @typed
+          aside: @typed
         })
 
       assert html == @typed <> "|" <> @typed
     end
+  end
 
-    # The rows' rule, and its consequence: plain text typed in the form that
-    # draws the field as plain text prints as sanitized markup
-    test "plain text typed in the other form prints as sanitized markup" do
-      html = render_entry("{{ entry.subtitle }}", %Article{title: "T", subtitle: "John <john@example.com>"})
-      refute html =~ "john@example.com"
+  describe "a top-level field forms disagree on" do
+    # `subtitle` is a `:textarea` in Article's default form and `:rich_text`
+    # in its `:notes` form: the default form decides, so text typed in the
+    # textarea prints as text, as a plain field's does
+    test "prints as text when the default form draws it as plain text" do
+      typed = ~s(<a href="/help">Help</a>)
+      html = render_entry("{{ entry.subtitle }}|{{ entry.title }}", %Article{title: typed, subtitle: typed})
+      [subtitle, title] = String.split(html, "|")
+      assert subtitle == title
+      assert html |> Floki.parse_fragment!() |> Floki.find("a") == []
+    end
+
+    test "typed in the plain form stays inside an attribute" do
+      typed = ~s[x" onmouseover="alert(1)]
+      html = render_entry(~s(<div title="{{ entry.subtitle }}"></div>), %Article{title: "T", subtitle: typed})
+      assert [{"div", [{"title", ^typed}], []}] = Floki.parse_fragment!(html)
+    end
+
+    # `intro` is rich text in Disagreeing's default form and plain text in
+    # its `:plain` form
+    test "prints as sanitized markup when the default form draws it as rich text" do
+      html = render_entry("{{ entry.intro }}", %Disagreeing{title: "T", intro: @safe})
+      assert html == @safe
+
+      html = render_entry("{{ entry.intro }}", %Disagreeing{title: "T", intro: @typed})
+      assert html == @typed
+      assert active_elements(html) == []
     end
 
     test "a save still checks by the default form" do

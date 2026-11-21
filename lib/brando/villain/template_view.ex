@@ -6,7 +6,7 @@ defmodule Brando.Villain.TemplateView do
 
   It prints the way a `string` var does. A string is HTML-escaped when it is
   read, with its braces as character references, so markup or Liquid in a
-  field is printed as text. A field any form of its schema draws as rich text
+  field is printed as text. A field its schema's forms draw as rich text
   (`Brando.RichText.fields_for_printing/1`), a text ref's `text` and a
   placement's caption arrive sanitized, to print as markup, each value
   sanitized once in a render (`sanitize_rich_text/1`). So does a subform
@@ -599,7 +599,7 @@ defmodule Brando.Villain.TemplateView do
 
   defp rich_text?(%Var{type: type}, key) when type in [:rich_text, :html], do: to_string(key) == "value"
 
-  # A field any form of the schema draws as rich text, as for rows
+  # A field the default form draws as rich text, or only named forms do
   defp rich_text?(%struct{}, key),
     do: to_string(key) in Enum.map(Brando.RichText.fields_for_printing(struct), &Atom.to_string/1)
 
