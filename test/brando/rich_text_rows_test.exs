@@ -84,6 +84,12 @@ defmodule Brando.RichTextRowsTest do
     end
   end
 
+  test "a has_many row whose own form checks the text has the error once" do
+    changeset = changeset(%{checked_items: [%{text: hd(@unsafe)}]})
+    refute changeset.valid?
+    assert [%{errors: [text: _]}] = Changeset.get_change(changeset, :checked_items)
+  end
+
   describe "a rich-text page variable" do
     defp var_params(value), do: %{type: "rich_text", key: "intro", label: %{"en" => "Intro"}, value: value}
 
@@ -122,6 +128,17 @@ defmodule Brando.RichTextRowsTest do
       refute changeset(entry, %{quotes: [%{text: @stored, credit: "B"}]}).valid?
     end
 
+    test "a stored row keeps the text of one copy sent without its id, not of two" do
+      entry = %Entry{title: "Old", quotes: [%Quote{id: Ecto.UUID.generate(), text: @stored, credit: "A"}]}
+      copy = %{text: @stored, credit: "A"}
+
+      changeset = changeset(entry, %{quotes: [copy, copy]})
+      refute changeset.valid?
+      assert [kept, checked] = quotes(changeset)
+      assert kept.errors == []
+      assert Keyword.has_key?(checked.errors, :text)
+    end
+
     test "an unchanged embeds_one row keeps its text while the entry changes" do
       entry = %Entry{title: "Old", feature: %Feature{id: Ecto.UUID.generate(), text: @stored}}
 
@@ -137,6 +154,85 @@ defmodule Brando.RichTextRowsTest do
       assert changeset.valid?, inspect(errors(changeset))
 
       refute changeset(entry, %{items: [%{id: 1, label: "B", text: "<p onclick=\"y()\">New</p>"}]}).valid?
+    end
+  end
+
+  describe "a transformer subform's rows" do
+    # The admin form puts these rows on the entry's changeset after the
+    # entry's changeset ran (its save's assoc_all_transformer_fields/2), so
+    # they are checked there: built and collected by the transformer, put on
+    # the changeset, then Brando.RichText.validate_subform_rows/3.
+    alias Brando.Blueprint.Forms.Subform
+    alias BrandoAdmin.Components.Form.Transformer
+    alias Phoenix.Component
+
+    defp transformer_socket(items) do
+      %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
+      |> Component.assign(:items, items)
+      |> Component.assign(:form_id, "entry_form")
+      |> Component.assign(:relation_key, :items)
+      |> Component.assign(:relation_module, Item)
+      |> Component.assign(:image_field, nil)
+      |> Component.assign(:video_field, nil)
+      |> Component.assign(:subform, Enum.find(subforms(), &(&1.name == :items)))
+      |> Phoenix.LiveView.stream(:transformer_items, [])
+    end
+
+    defp subforms do
+      for tab <- Entry.__form__().tabs, fieldset <- tab.fields, %Subform{} = subform <- fieldset.fields, do: subform
+    end
+
+    # The rows the form's save puts on `entry`'s changeset after the editor
+    # typed `text` into the row `dom_id`
+    defp saved_with_edit(entry, items, dom_id, text) do
+      {:noreply, socket} =
+        Transformer.handle_event(
+          "update_field",
+          %{"dom_id" => dom_id, "field" => "text", "value" => text},
+          transformer_socket(items)
+        )
+
+      {:ok, _} = Transformer.update(%{event: "fetch_transformer_data", tag: "save"}, socket)
+
+      assert_receive {:phoenix, :send_update, {_, %{event: "provide_transformer_data", transformer_data: rows}}}
+
+      entry
+      |> changeset(%{title: "New"})
+      |> Changeset.put_assoc(:items, rows)
+      |> Brando.RichText.validate_subform_rows(Entry, [:items])
+    end
+
+    @entry %Entry{id: 1, title: "Old", items: [%Item{id: 1, entry_id: 1, label: "A", text: "<p>Old</p>"}]}
+
+    test "an edited stored row is refused with unsafe markup, the error on its text" do
+      item = Transformer.new_item("item-1", hd(@entry.items), is_new: false)
+
+      for html <- @unsafe do
+        changeset = saved_with_edit(@entry, [item], "item-1", html)
+        refute changeset.valid?, html
+        assert %{items: [%{text: [_]}]} = errors(changeset)
+      end
+
+      changeset = saved_with_edit(@entry, [item], "item-1", @commented)
+      assert changeset.valid?
+      assert [row] = Changeset.get_change(changeset, :items)
+      assert row_text(row) == @sanitized
+    end
+
+    test "a new row is refused with unsafe markup, the error on its text" do
+      stored = Transformer.new_item("item-1", hd(@entry.items), is_new: false)
+      new = Transformer.new_item("item-new", %{label: "B", text: nil})
+
+      for html <- @unsafe do
+        changeset = saved_with_edit(@entry, [stored, new], "item-new", html)
+        refute changeset.valid?, html
+        assert %{items: [%{}, %{text: [_]}]} = errors(changeset)
+      end
+
+      changeset = saved_with_edit(@entry, [stored, new], "item-new", @commented)
+      assert changeset.valid?
+      assert [_, row] = Changeset.get_change(changeset, :items)
+      assert row_text(row) == @sanitized
     end
   end
 

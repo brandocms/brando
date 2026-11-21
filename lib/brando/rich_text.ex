@@ -37,14 +37,19 @@ defmodule Brando.RichText do
 
   def normalize_url(_), do: {:error, :invalid_url}
 
+  @unsafe_message "contains unsafe rich text or a link with an unsupported address"
+
   def validate_fields(changeset, fields) do
     Enum.reduce(fields, changeset, &sanitize_change(&2, &1))
   end
 
   # The field stores the sanitized text: what was checked is what browsers
-  # parse.
+  # parse. A field already refused (a row its own changeset checked too)
+  # keeps its one error.
   defp sanitize_change(changeset, field) do
-    case Changeset.fetch_change(changeset, field) do
+    refused? = Enum.any?(changeset.errors, &match?({^field, {@unsafe_message, _}}, &1))
+
+    case !refused? && Changeset.fetch_change(changeset, field) do
       {:ok, nil} ->
         changeset
 
@@ -57,10 +62,10 @@ defmodule Brando.RichText do
             Changeset.put_change(changeset, field, clean)
 
           :error ->
-            Changeset.add_error(changeset, field, "contains unsafe rich text or a link with an unsupported address")
+            Changeset.add_error(changeset, field, @unsafe_message)
         end
 
-      :error ->
+      _ ->
         changeset
     end
   end
@@ -75,52 +80,54 @@ defmodule Brando.RichText do
 
     changeset
     |> validate_fields(fields)
-    |> validate_rows(subform_fields(module), changeset.data)
+    |> validate_rows(subform_fields(module))
   end
 
-  # `{relation, fields}` for each subform of the default form with rich
-  # text, `fields` holding nested subforms as `{relation, fields}` too.
+  @doc """
+  Validates the rich-text inputs in the rows of `module`'s subforms
+  `relations` in `changeset`, as `validate_blueprint/2` does for the rows a
+  cast puts there. For rows put on the changeset after `module`'s changeset
+  ran, like the admin form's transformer subforms.
+  """
+  def validate_subform_rows(changeset, module, relations) do
+    specs = for {relation, _} = spec <- subform_fields(module), relation in relations, do: spec
+    validate_rows(changeset, specs)
+  end
+
+  # `{relation, fields}` for each subform of the default form with rich text
   defp subform_fields(module) do
     case function_exported?(module, :__form__, 0) && module.__form__() do
       %{tabs: tabs} ->
         for tab <- tabs,
             fieldset <- tab.fields,
-            field <- Map.get(fieldset, :fields, []),
-            spec <- row_specs(field),
-            do: spec
+            %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields} <- Map.get(fieldset, :fields, []),
+            fields = row_fields(sub_fields),
+            fields != [],
+            do: {name, fields}
 
       _ ->
         []
     end
   end
 
-  defp row_specs(%Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields}) do
-    case Enum.flat_map(sub_fields, &row_field/1) do
-      [] -> []
-      fields -> [{name, fields}]
-    end
-  end
-
-  defp row_specs(_), do: []
-
-  defp row_field(%Brando.Blueprint.Forms.Input{type: :rich_text, name: name}), do: [name]
-  defp row_field(field), do: row_specs(field)
+  defp row_fields(sub_fields),
+    do: for(%Brando.Blueprint.Forms.Input{type: :rich_text, name: field} <- sub_fields, do: field)
 
   # The rows cast into `changeset`, checked as top-level rich text is: only
   # changed values. A row without a primary key (an embed sent without its
   # id) is cast as new on every save, so one kept exactly as stored keeps
-  # its text unchecked; its own subforms' rows are still checked.
-  defp validate_rows(changeset, specs, data) do
+  # its text unchecked; each stored row excuses one such row.
+  defp validate_rows(changeset, specs) do
     Enum.reduce(specs, changeset, fn {relation, fields}, changeset ->
-      stored = stored_rows(Map.get(data, relation))
+      stored = stored_rows(Map.get(changeset.data, relation))
 
       case Map.fetch(changeset.changes, relation) do
         {:ok, rows} when is_list(rows) ->
-          rows = Enum.map(rows, &validate_row(&1, fields, stored))
+          {rows, _stored} = Enum.map_reduce(rows, stored, &validate_row(&1, fields, &2))
           put_rows(changeset, relation, rows, Enum.all?(rows, &row_valid?/1))
 
         {:ok, %Changeset{} = row} ->
-          row = validate_row(row, fields, stored)
+          {row, _stored} = validate_row(row, fields, stored)
           put_rows(changeset, relation, row, row.valid?)
 
         _ ->
@@ -129,16 +136,15 @@ defmodule Brando.RichText do
     end)
   end
 
+  # The row, checked unless a stored row keeps it, and the stored rows left
   defp validate_row(%Changeset{action: action} = row, fields, stored) when action not in [:replace, :delete] do
-    {nested, plain} = Enum.split_with(fields, &is_tuple/1)
-
-    case Enum.find(stored, &kept?(row, &1)) do
-      nil -> row |> validate_fields(plain) |> validate_rows(nested, row.data)
-      kept -> validate_rows(row, nested, kept)
+    case Enum.split_while(stored, &(not kept?(row, &1))) do
+      {_, []} -> {validate_fields(row, fields), stored}
+      {before, [_kept | rest]} -> {row, before ++ rest}
     end
   end
 
-  defp validate_row(row, _fields, _stored), do: row
+  defp validate_row(row, _fields, stored), do: {row, stored}
 
   # The row's own columns (embeds included) as stored; a row sent without
   # its primary key is compared without it.

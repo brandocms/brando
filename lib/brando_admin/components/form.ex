@@ -8711,11 +8711,14 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp assoc_all_transformer_fields(changeset, transformer_changesets) do
-    Enum.reduce(transformer_changesets, changeset, fn
-      {_field_name, nil}, acc -> acc
-      {field_name, data}, acc -> Changeset.put_assoc(acc, field_name, data)
-    end)
+  # The rows join the entry after its changeset ran, so their rich text is
+  # checked here as a cast row's is.
+  defp assoc_all_transformer_fields(%Changeset{data: %schema{}} = changeset, transformer_changesets) do
+    delivered = for {field_name, data} <- transformer_changesets, data != nil, do: {field_name, data}
+
+    delivered
+    |> Enum.reduce(changeset, fn {field_name, data}, acc -> Changeset.put_assoc(acc, field_name, data) end)
+    |> Brando.RichText.validate_subform_rows(schema, Keyword.keys(delivered))
   end
 
   defp store_revision(socket, changeset) do

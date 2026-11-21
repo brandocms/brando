@@ -24,6 +24,7 @@ defmodule Brando.RichTextRows.Entry do
     relation :quotes, :embeds_many, module: Brando.RichTextRows.Quote, on_replace: :delete
     relation :feature, :embeds_one, module: Brando.RichTextRows.Feature, on_replace: :update
     relation :items, :has_many, module: Brando.RichTextRows.Item, on_replace: :delete, cast: true
+    relation :checked_items, :has_many, module: Brando.RichTextRows.CheckedItem, on_replace: :delete, cast: true
   end
 
   forms do
@@ -56,6 +57,14 @@ defmodule Brando.RichTextRows.Entry do
             default %{}
 
             input :label, :text
+            input :text, :rich_text
+          end
+
+          inputs_for :checked_items do
+            cardinality :many
+            style :inline
+            default %{}
+
             input :text, :rich_text
           end
         end
@@ -121,9 +130,44 @@ defmodule Brando.RichTextRows.Item do
   attributes do
     attribute :label, :string
     attribute :text, :text
+    # The transformer's save numbers its rows
+    attribute :sequence, :integer
   end
 
   relations do
     relation :entry, :belongs_to, module: Brando.RichTextRows.Entry
+  end
+end
+
+defmodule Brando.RichTextRows.CheckedItem do
+  @moduledoc false
+  # A row whose own default form checks its rich text as well
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "RichTextRows",
+    schema: "CheckedItem",
+    singular: "checked_item",
+    plural: "checked_items",
+    gettext_module: Brando.Gettext
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :text, :text
+  end
+
+  relations do
+    relation :entry, :belongs_to, module: Brando.RichTextRows.Entry
+  end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :text, :rich_text
+        end
+      end
+    end
   end
 end
