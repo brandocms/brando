@@ -4610,7 +4610,7 @@ defmodule BrandoAdmin.Components.Form do
       changeset =
         socket.assigns.block_changesets
         |> assoc_all_block_fields(socket.assigns.form.source)
-        |> assoc_all_transformer_fields(socket.assigns.transformer_changesets)
+        |> assoc_all_transformer_fields(socket.assigns.transformer_changesets, socket.assigns.form_blueprint)
 
       socket
       |> store_revision(changeset)
@@ -6281,7 +6281,7 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       block_changesets
       |> assoc_all_block_fields(changeset)
-      |> then(&assoc_all_transformer_fields(&1, socket.assigns.transformer_changesets))
+      |> then(&assoc_all_transformer_fields(&1, socket.assigns.transformer_changesets, socket.assigns.form_blueprint))
       |> Brando.Trait.Creator.stamp_if_edited(schema, current_user)
 
     fence = Blocks.render_fence(new_changeset)
@@ -6364,7 +6364,7 @@ defmodule BrandoAdmin.Components.Form do
       |> cast_entry_params(entry_or_default, entry_params, stale_relations(socket, params))
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
-      |> assoc_all_transformer_fields(socket.assigns.transformer_changesets)
+      |> assoc_all_transformer_fields(socket.assigns.transformer_changesets, form_blueprint)
 
     singular = schema.__naming__().singular
     context = schema.__modules__().context
@@ -6395,10 +6395,15 @@ defmodule BrandoAdmin.Components.Form do
         # under a spinner that never stops (say a `one_of` listing_image/
         # listing_video constraint) read as "saving is broken" rather than
         # "fix these fields".
+        #
+        # The next save collects the transformer rows again, as a failed
+        # save with blocks does: the editor may have corrected a row this
+        # save refused.
         {:noreply,
          socket
          |> assign(:processing, false)
          |> assign(:minor_save?, false)
+         |> reset_transformer_changesets()
          |> put_form(to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
 
@@ -6409,6 +6414,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:processing, false)
+         |> reset_transformer_changesets()
          |> source_controlled_error(paths)}
 
       # The context refused the account: a role or grant that may not write
@@ -6417,6 +6423,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:processing, false)
+         |> reset_transformer_changesets()
          |> forbidden_save_error()}
     end
   end
@@ -8711,11 +8718,14 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp assoc_all_transformer_fields(changeset, transformer_changesets) do
-    Enum.reduce(transformer_changesets, changeset, fn
-      {_field_name, nil}, acc -> acc
-      {field_name, data}, acc -> Changeset.put_assoc(acc, field_name, data)
-    end)
+  # The rows join the entry after its changeset ran, so their rich text is
+  # checked here as a cast row's is, by the form that draws them.
+  defp assoc_all_transformer_fields(changeset, transformer_changesets, form_blueprint) do
+    delivered = for {field_name, data} <- transformer_changesets, data != nil, do: {field_name, data}
+
+    delivered
+    |> Enum.reduce(changeset, fn {field_name, data}, acc -> Changeset.put_assoc(acc, field_name, data) end)
+    |> Brando.RichText.validate_subform_rows(form_blueprint, Keyword.keys(delivered))
   end
 
   defp store_revision(socket, changeset) do

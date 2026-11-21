@@ -85,4 +85,20 @@ defmodule BrandoAdmin.Components.Form.SubmitProcessingFlagTest do
     refute socket.assigns.processing,
            "the submit button stays disabled over its own validation errors"
   end
+
+  test "a rejected save collects the transformer rows again on the next save", ctx do
+    # The rows a save collected are the ones it was refused with: a row the
+    # editor corrects afterwards reaches the next save only if that save asks
+    # the transformers again.
+    form = %{Brando.Pages.Page.__form__(:default) | transformers: [{:fragments, nil, nil}]}
+
+    socket =
+      save_socket(ctx, form_blueprint: form, transformer_changesets: %{fragments: nil}, all_transformers_received?: true)
+
+    {{:noreply, socket}, _log} =
+      with_log(fn -> Form.handle_event("save", %{"page" => %{"title" => ""}}, socket) end)
+
+    refute socket.assigns.all_transformers_received?
+    assert socket.assigns.transformer_changesets == %{fragments: nil}
+  end
 end
