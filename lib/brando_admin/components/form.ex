@@ -6377,7 +6377,9 @@ defmodule BrandoAdmin.Components.Form do
         params,
         %{assigns: %{has_blocks?: false, all_transformers_received?: true}} = socket
       ) do
-    socket = ship_all_field_changes(socket)
+    # The token of the `b:submit` this write answers is used up, as in the
+    # save with blocks: the same token again is a save that wrote already.
+    socket = socket |> assign(:save_token, nil) |> ship_all_field_changes()
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -7659,6 +7661,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:entry_id, entry.id)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
+    |> hand_saved_rows_to_transformers()
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
@@ -7682,6 +7685,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:entry_id, entry.id)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
+    |> hand_saved_rows_to_transformers()
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
@@ -7836,6 +7840,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
+    |> hand_saved_rows_to_transformers()
     |> refresh_translation(stale?)
   end
 
@@ -8833,6 +8838,25 @@ defmodule BrandoAdmin.Components.Form do
         BrandoAdmin.Components.Form.Transformer,
         [id: transformer_id, event: "fetch_transformer_data", tag: tag],
         150
+      )
+    end
+
+    socket
+  end
+
+  # A save that stays on the form gives each transformer the rows it wrote,
+  # as the entry holds them now: the rows a transformer added are saved rows
+  # from then on, and the next save does not insert them again.
+  defp hand_saved_rows_to_transformers(socket) do
+    %{entry: entry, form: form, form_blueprint: form_blueprint} = socket.assigns
+
+    for {relation_key, _field, _default} <- extract_transformers(form_blueprint),
+        rows = Map.get(entry, relation_key),
+        is_list(rows) do
+      send_update(BrandoAdmin.Components.Form.Transformer,
+        id: "#{form.id}-transformer-#{relation_key}",
+        event: "entry_saved",
+        rows: rows
       )
     end
 

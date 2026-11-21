@@ -328,6 +328,28 @@ defmodule BrandoAdmin.SavedElsewhereTest.ShelfFormLive do
   end
 end
 
+defmodule BrandoAdmin.TransformerSaveTest.AlbumFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.TransformerSaveTest.Album
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="album_form"
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Album</:header>
+    </.live_component>
+    """
+  end
+end
+
 # Form `:media`, `:locked_media` or `:superuser_media` (LockedMediaDeliveriesTest), and
 # others by the live action
 defmodule BrandoAdmin.SyncTest.ArticleMediaFormLive do
@@ -435,6 +457,10 @@ defmodule BrandoIntegrationWeb.Router do
          BrandoAdmin.SyncTest.ArticleMediaFormLive,
          :transformer_item_entries
 
+    live "/articles/update/:entry_id/transformer_rich_items",
+         BrandoAdmin.SyncTest.ArticleMediaFormLive,
+         :transformer_rich_items
+
     live "/articles/update/:entry_id/custom_item_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :custom_item_entries
     live "/articles/update/:entry_id/author_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :author_entries
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
@@ -443,6 +469,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/meta-articles/update/:entry_id", BrandoAdmin.MetaDrawerTest.ActionsArticleFormLive, :update
     live "/shelves/update/:entry_id", BrandoAdmin.SavedElsewhereTest.ShelfFormLive, :default
     live "/shelves/update/:entry_id/title-only", BrandoAdmin.SavedElsewhereTest.ShelfFormLive, :title_only
+    live "/albums/update/:entry_id", BrandoAdmin.TransformerSaveTest.AlbumFormLive, :update
     live "/config/shop", BrandoIntegrationAdmin.ShopSettingsLive
     live "/config/undeclared", BrandoIntegrationAdmin.UndeclaredSettingsLive
   end

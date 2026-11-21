@@ -1,0 +1,1 @@
+- A row added in a transformer subform keeps its id through later saves that stay on the form: it is no longer deleted and inserted again as a copy on each save.
