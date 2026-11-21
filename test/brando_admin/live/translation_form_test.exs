@@ -1534,6 +1534,24 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.slug, hd(texts(saved))} == {"written-elsewhere", "Typed paragraph"}
     end
 
+    # A version's payload holds the translation's status from when it was
+    # computed, and a status change does not make a new version: loading the
+    # version must not take the status back.
+    test "a form loading a version computed before the translation was published keeps it published",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+
+      {:ok, _} = SyncTest.update_article(c.target.id, %{status: :published}, c.current_user)
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      save(other)
+      assert load(c.target.id).status == :published
+    end
+
     # 4. A reconnect within the grace period finds the session, which keeps
     # the version its blocks are built on: the entry fields load it too.
     test "a reconnect within the grace period after a second source save keeps the session's version",
