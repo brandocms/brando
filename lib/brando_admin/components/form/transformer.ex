@@ -36,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:open_entries, MapSet.new())
      |> assign(:picking_dom_id, nil)
      |> assign(:editing_dom_id, nil)
+     |> assign(:sent_dom_ids, [])
      |> assign(:upload_errors, [])}
   end
 
@@ -100,7 +101,46 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       tag: tag
     )
 
-    {:ok, maybe_warn_about_pending(socket, pending)}
+    {:ok,
+     socket
+     |> assign(:sent_dom_ids, Enum.map(ready, & &1.dom_id))
+     |> maybe_warn_about_pending(pending)}
+  end
+
+  # A save that stays on the form wrote the rows this transformer sent last,
+  # in the order sent (`sequence`). Each item sent becomes its saved row: one
+  # added here is no longer new, so the next save updates it, or leaves it
+  # alone when nothing changed, rather than deleting it and inserting a copy.
+  # Changes made since the rows were sent stay. Rows that don't line up with
+  # what was sent are left as they are.
+  def update(%{event: "entry_saved", rows: rows}, socket) do
+    sent = socket.assigns.sent_dom_ids
+    rows = Enum.sort_by(rows, &Map.get(&1, :sequence))
+    saved = if length(rows) == length(sent), do: Map.new(Enum.zip(sent, rows)), else: %{}
+
+    lined_up? =
+      Enum.all?(socket.assigns.items, fn item ->
+        case Map.fetch(saved, item.dom_id) do
+          {:ok, row} -> item.is_new or row.id == item.source.id
+          :error -> true
+        end
+      end)
+
+    items =
+      if lined_up?,
+        do: Enum.map(socket.assigns.items, &saved_item(&1, Map.get(saved, &1.dom_id), socket.assigns.asset_fields)),
+        else: socket.assigns.items
+
+    # A listing draws the row it gets (its id, say): a row that was new and is
+    # now saved is drawn again, under the DOM id it has. Rows that were saved
+    # before keep their cards, and with them what the browser put on a card
+    # (a drop highlight, a drag in progress).
+    socket =
+      for {item, before} <- Enum.zip(items, socket.assigns.items), before.is_new and not item.is_new, reduce: socket do
+        acc -> stream_insert(acc, :transformer_items, stream_entry(item))
+      end
+
+    {:ok, socket |> assign(:items, items) |> assign(:sent_dom_ids, [])}
   end
 
   def update(%{event: "image_updated", image: image}, socket) do
@@ -1277,6 +1317,16 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp new_item_dom_id, do: "transformer-item-new-#{System.unique_integer([:positive])}"
+
+  # The item as its saved row. The assets it shows stay as they are: the row
+  # may come without them preloaded.
+  defp saved_item(item, nil, _asset_fields), do: item
+
+  defp saved_item(item, row, asset_fields) do
+    data = resolve_item_data(item)
+    assets = Map.new(asset_fields, &{&1, resolve_asset(item, data, &1)})
+    %{item | source: row, is_new: false, assets: assets}
+  end
 
   # --- Placeholder helpers ---
 

@@ -24,6 +24,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `event_tag_received` through Form and
   `lib/brando_admin/components/form/transformer.ex`. Preserve already collected
   state: `assign_transformer_statuses` deliberately initializes only once.
+  A transformer also loads its rows once; after a save that stays on the
+  form, the Form hands it the saved rows (`entry_saved`), which make the
+  rows it sent saved rows, so the next save doesn't insert them again.
   Updating a transformer row also requires `stream_insert`; changing an assign
   alone does not update the streamed DOM.
 - Match delivery IDs to the rendered component: transformer IDs use the HTML

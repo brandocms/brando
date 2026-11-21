@@ -328,6 +328,50 @@ defmodule BrandoAdmin.SavedElsewhereTest.ShelfFormLive do
   end
 end
 
+defmodule BrandoAdmin.TransformerSaveTest.AlbumFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.TransformerSaveTest.Album
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="album_form"
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Album</:header>
+    </.live_component>
+    """
+  end
+end
+
+defmodule BrandoAdmin.TransformerSaveTest.ReelFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.TransformerSaveTest.Reel
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="reel_form"
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Reel</:header>
+    </.live_component>
+    """
+  end
+end
+
 # Any form of the note, by the live action (RichTextDefaultFormTest)
 defmodule BrandoAdmin.RichTextDefaultFormTest.NoteFormLive do
   @moduledoc false
@@ -459,6 +503,10 @@ defmodule BrandoIntegrationWeb.Router do
          BrandoAdmin.SyncTest.ArticleMediaFormLive,
          :transformer_item_entries
 
+    live "/articles/update/:entry_id/transformer_rich_items",
+         BrandoAdmin.SyncTest.ArticleMediaFormLive,
+         :transformer_rich_items
+
     live "/articles/update/:entry_id/custom_item_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :custom_item_entries
     live "/articles/update/:entry_id/author_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :author_entries
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
@@ -467,6 +515,9 @@ defmodule BrandoIntegrationWeb.Router do
     live "/meta-articles/update/:entry_id", BrandoAdmin.MetaDrawerTest.ActionsArticleFormLive, :update
     live "/shelves/update/:entry_id", BrandoAdmin.SavedElsewhereTest.ShelfFormLive, :default
     live "/shelves/update/:entry_id/title-only", BrandoAdmin.SavedElsewhereTest.ShelfFormLive, :title_only
+    live "/albums/update/:entry_id", BrandoAdmin.TransformerSaveTest.AlbumFormLive, :update
+    live "/reels/create", BrandoAdmin.TransformerSaveTest.ReelFormLive, :create
+    live "/reels/update/:entry_id", BrandoAdmin.TransformerSaveTest.ReelFormLive, :update
     live "/rich-notes/update/:entry_id", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :default
     live "/rich-notes/update/:entry_id/omitted", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :omitted
     live "/rich-notes/update/:entry_id/plain", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :plain

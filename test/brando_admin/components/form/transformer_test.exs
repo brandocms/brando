@@ -624,4 +624,44 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
       refute Transformer.build_placeholder(%{"ref" => 1}, %Subform{}, Item, %{})
     end
   end
+
+  # The rows a save that stays on the form wrote (`entry_saved`), against the
+  # items the transformer sent for it (`fetch_transformer_data`)
+  describe "the rows a save wrote" do
+    defp sent_socket(items) do
+      items
+      |> hd()
+      |> recovery_socket()
+      |> Component.assign(:items, items)
+      |> Component.assign(:asset_fields, [:cover])
+      |> Component.assign(:sent_dom_ids, Enum.map(items, & &1.dom_id))
+    end
+
+    test "make a row added here the saved row, keeping changes since" do
+      stored = Transformer.new_item("item-1", %MediaItem{id: 1, title: "Stored", sequence: 0}, is_new: false)
+      added = %{Transformer.new_item("item-2", %{title: "New"}) | changes: %{title: "New, edited"}}
+      rows = [%MediaItem{id: 2, title: "New", sequence: 1}, %MediaItem{id: 1, title: "Stored", sequence: 0}]
+
+      {:ok, socket} = Transformer.update(%{event: "entry_saved", rows: rows}, sent_socket([stored, added]))
+
+      assert [%{source: %MediaItem{id: 1}}, %{source: %MediaItem{id: 2}, is_new: false} = saved] = socket.assigns.items
+      assert saved.changes == %{title: "New, edited"}
+      assert saved.assets == %{cover: nil}
+      assert socket.assigns.sent_dom_ids == []
+    end
+
+    test "that don't line up with what was sent leave the items as they are" do
+      stored = Transformer.new_item("item-1", %MediaItem{id: 1, title: "Stored", sequence: 0}, is_new: false)
+      added = Transformer.new_item("item-2", %{title: "New"})
+      items = [stored, added]
+
+      for rows <- [
+            [%MediaItem{id: 3, sequence: 0}, %MediaItem{id: 2, sequence: 1}],
+            [%MediaItem{id: 1, sequence: 0}]
+          ] do
+        {:ok, socket} = Transformer.update(%{event: "entry_saved", rows: rows}, sent_socket(items))
+        assert socket.assigns.items == items
+      end
+    end
+  end
 end
