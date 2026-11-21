@@ -314,18 +314,16 @@ defmodule Brando.Content.DefinitionsReleaseTest do
       Task.async(fn -> drain() end)
     end
 
-    defp drain_broken do
+    # Points the jobs waiting at an entry that is gone, and runs them. Given
+    # as apply!'s :on_progress, it runs in the wait, which starts once the
+    # apply has queued every job and looks again only after this returns: no
+    # job arrives between the rewrite and the drain to run with its own args.
+    defp drain_broken(_progress) do
       Repo.update_all(from(j in Oban.Job, where: j.state == "available"),
         set: [args: %{"schema" => "Brando.Pages.Page", "entry_id" => -1}]
       )
 
       Oban.drain_queue(queue: :default)
-
-      receive do
-        :stop -> :ok
-      after
-        10 -> drain_broken()
-      end
     end
 
     defp drain do
@@ -369,12 +367,6 @@ defmodule Brando.Content.DefinitionsReleaseTest do
     end
 
     test "a render that fails makes apply! raise, after saying what was applied", c do
-      # Points the run's renders at an entry that is gone, and runs them
-      task =
-        Task.async(fn ->
-          Oban.Testing.with_testing_mode(:manual, fn -> drain_broken() end)
-        end)
-
       {:ok, agent} = Agent.start_link(fn -> [] end)
 
       assert_raise RuntimeError, ~r/entries failed to render/, fn ->
@@ -382,13 +374,12 @@ defmodule Brando.Content.DefinitionsReleaseTest do
           Release.apply!(:all,
             path: c.dir,
             user: c.user.id,
-            info: &Agent.update(agent, fn lines -> [&1 | lines] end)
+            info: &Agent.update(agent, fn lines -> [&1 | lines] end),
+            on_progress: &drain_broken/1
           )
         end)
       end
 
-      send(task.pid, :stop)
-      Task.await(task)
       text = agent |> Agent.get(& &1) |> Enum.reverse() |> Enum.join("\n")
       assert text =~ "Applied 1 definition changes"
       assert text =~ "failed"
