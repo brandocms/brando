@@ -38,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:editing_dom_id, nil)
      |> assign(:sent_dom_ids, [])
      |> assign(:base_ids, [])
+     |> assign(:dropped_refs, MapSet.new())
      |> assign(:upload_errors, [])}
   end
 
@@ -178,11 +179,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         end
       end)
 
+    dropped = Enum.reject(items, &(&1.is_new or Map.has_key?(by_id, &1.source.id)))
     items = with_own_new_items(taken, items)
     shown = MapSet.new(items, & &1.dom_id)
 
     {:ok,
      socket
+     |> drop_uploads(dropped)
      |> assign(:items, items)
      |> assign(:base_ids, Enum.map(rows, & &1.id))
      |> update(:open_entries, &MapSet.intersection(&1, shown))
@@ -276,8 +279,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp redraw_for_reads(socket, _previous), do: socket
 
+  # A file for a row another editor's save removed (`drop_uploads/2`) is
+  # left out.
   defp deliver(socket, ref, asset_field, asset, append_fun) do
+    dropped? = MapSet.member?(socket.assigns.dropped_refs, ref)
+
     case find_upload(socket.assigns.items, ref) do
+      nil when dropped? -> {:ok, update(socket, :dropped_refs, &MapSet.delete(&1, ref))}
       nil -> {:ok, append_fun.(socket, asset)}
       {index, :pending} -> {:ok, resolve_pending_item(socket, index, asset_field, asset)}
       {index, :replacing} -> {:ok, resolve_replacement(socket, index, asset_field, asset)}
@@ -1762,6 +1770,15 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp maybe_abort_pending_upload(socket, _item), do: socket
+
+  # Rows another editor's save removed (`entry_saved_elsewhere`): a file
+  # dropped on one to replace its asset stops uploading, and if it lands
+  # anyway, it adds no row (`deliver/5`).
+  defp drop_uploads(socket, items) do
+    for %{replacing: %{ref: ref}} = item <- items, reduce: socket do
+      acc -> acc |> maybe_abort_pending_upload(item) |> update(:dropped_refs, &MapSet.put(&1, ref))
+    end
+  end
 
   # The field an `update_field` may change: one of the subform's inputs, and
   # not an asset (those have their own picker).

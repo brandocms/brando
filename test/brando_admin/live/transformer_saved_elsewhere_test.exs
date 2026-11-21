@@ -90,6 +90,18 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     form |> transformer_target() |> render_hook("update_field", %{"dom_id" => dom_id, "field" => field, "value" => value})
   end
 
+  # The sticky UploadManager hands a finished upload to the transformer
+  defp deliver_upload(%{view: view} = form, ref, asset) do
+    Phoenix.LiveView.send_update(view.pid, Transformer,
+      id: transformer(form).id,
+      event: "upload_complete",
+      ref: ref,
+      asset: asset
+    )
+
+    settle(view)
+  end
+
   defp remove_row(form, label),
     do: form |> transformer_target() |> render_hook("remove_entry", %{"dom_id" => dom_id_of(form, label)})
 
@@ -297,6 +309,29 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         save_title(b, article, "Saved by B")
         assert rows(article) == [{"A, by B", a_id}, {"B", b_id}, {"C", c_id}]
       end
+    end
+  end
+
+  describe "B replacing the file of a row A removed" do
+    test "stops the upload, and the file that lands adds no row", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+      a = open(a_conn, article, "without blocks", "a")
+      b = open(b_conn, article, "without blocks", "b")
+      file = %{"ref" => "tf-replaceb", "filename" => "new.jpg", "size" => 10, "kind" => "image"}
+      b |> transformer_target() |> render_hook("register_replacement", %{"dom_id" => dom_id_of(b, "B"), "file" => file})
+
+      remove_row(a, "B")
+      save(a)
+      [{"A", a_id}, {"C", c_id}] = rows(article)
+
+      await_taken(b, [{"A", a_id}, {"C", c_id}])
+      assert_push_event(b.view, "transformer:abort_upload", %{ref: "tf-replaceb"})
+
+      image = Factory.insert(:image)
+      deliver_upload(b, "tf-replaceb", image)
+      assert shown(b) == [{"A", a_id}, {"C", c_id}]
+
+      save_title(b, article, "Saved by B")
+      assert rows(article) == [{"A", a_id}, {"C", c_id}]
     end
   end
 

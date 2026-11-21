@@ -78,6 +78,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
   defp recovery_socket(item) do
     %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
     |> Component.assign(:items, [item])
+    |> Component.assign(:dropped_refs, MapSet.new())
     |> Component.assign(:form_id, "collection_form")
     |> Component.assign(:relation_key, :items)
     |> Component.assign(:relation_module, MediaItem)
