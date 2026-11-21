@@ -182,7 +182,7 @@ const saveAndContinue = async page => {
   await page.getByRole('button', { name: 'Save and continue editing' }).click()
 }
 
-test('two editors in a translation load one version, and the one left behind loads it in place', async ({ page, secondUserPage }) => {
+test('two editors in a translation load one version, and the one left behind loads it in place', async ({ page, secondUserPage }, testInfo) => {
   test.setTimeout(120000)
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
@@ -199,6 +199,8 @@ test('two editors in a translation load one version, and the one left behind loa
   await expect(otherPanel.locator('[data-translation-behind]')).toHaveCount(0)
   await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
   await expect(secondUserPage.locator('.blocks-wrapper .entry-block')).toHaveCount(3)
+  await otherPanel.locator('[data-translation-caught-up]').scrollIntoViewIfNeeded()
+  await secondUserPage.screenshot({ path: testInfo.outputPath('translation-caught-up-desktop.png') })
 
   await saveAndContinue(secondUserPage)
   await expect(otherPanel.locator('.translation-structure')).toHaveCount(0, { timeout: 15000 })
@@ -237,7 +239,10 @@ test('an editor left behind with typing in a field loads the newer version with 
 
   // A save is refused while behind
   await saveAndContinue(secondUserPage)
-  await syncLV(secondUserPage)
+  const alert = secondUserPage.locator('dialog.admin-dialog--error[open]')
+  await expect(alert).toBeVisible({ timeout: 10000 })
+  await alert.locator('.admin-dialog-button.is-primary').click()
+  await expect(alert).toHaveCount(0)
   await expect(behind).toBeVisible()
   await expect(otherPanel.locator('input[name="translation_review[version_id]"]')).toHaveValue(first)
 
