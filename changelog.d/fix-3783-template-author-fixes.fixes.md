@@ -4,4 +4,4 @@
 
 - `markdown` on rich text gives its markup, sanitized as when it was read, instead of `<!-- raw HTML omitted -->`.
 
-- A rich-text field read many times in one render is sanitized once.
+- A rich-text field read many times in one render is sanitized once, and so is a rich-text var given to `markdown`.

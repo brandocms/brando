@@ -9,6 +9,11 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
   # process only
   use Brando.ConnCase, async: true
 
+  alias Brando.Content
+  alias Brando.Content.Block
+  alias Brando.Content.Var
+  alias Brando.Factory
+  alias Brando.Pages.Page
   alias Brando.RichTextRows.Disagreeing
   alias Brando.RichTextRows.Entry
   alias Brando.RichTextRows.Quote
@@ -200,6 +205,29 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
       {html, runs} = count_sanitizer_runs(fn -> render_entry(template, entry) end)
       assert html =~ "<em>long</em>"
       assert runs == 2
+    end
+
+    test "happens once for a rich-text var in a render, markdown on it included" do
+      user = Factory.insert(:random_user)
+      code = "{{ body }}|{{ body | markdown }}|{{ body | markdown }}"
+      {:ok, module} = Content.create_module(Factory.params_for(:module, %{code: code}), user)
+
+      block = %Block{
+        type: :module,
+        active: true,
+        module_id: module.id,
+        uid: Brando.Utils.generate_uid(),
+        vars: [%Var{key: "body", label: "B", type: :rich_text, value: @safe}],
+        refs: []
+      }
+
+      {html, runs} =
+        count_sanitizer_runs(fn ->
+          Villain.parse([%{block: block}], %Page{title: "T", language: :en})
+        end)
+
+      assert html =~ Enum.join([@safe, @safe, @safe], "|")
+      assert runs == 1
     end
 
     test "starts again in the next render" do
