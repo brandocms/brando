@@ -30,9 +30,11 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
     %{article: article, other_conn: log_in_user(Phoenix.ConnTest.build_conn(), other)}
   end
 
+  # `form`: a named form, or nil for the default form
   defp open(conn, article, form) do
-    path = if form, do: "/admin/articles/update/#{article.id}/#{form}", else: "/admin/articles/update/#{article.id}"
-    {view, _html} = live_form(conn, path, "article_form")
+    {view, _html} =
+      live_form(conn, Enum.join(["/admin/articles/update", article.id | List.wrap(form)], "/"), "article_form")
+
     view
   end
 
