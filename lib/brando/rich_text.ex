@@ -84,31 +84,33 @@ defmodule Brando.RichText do
   end
 
   @doc """
-  Validates the rich-text inputs in the rows of `module`'s subforms
-  `relations` in `changeset`, as `validate_blueprint/2` does for the rows a
-  cast puts there. For rows put on the changeset after `module`'s changeset
-  ran, like the admin form's transformer subforms.
+  Validates the rich-text inputs in the rows of the subforms `relations` in
+  `changeset`, as `validate_blueprint/2` does for the rows a cast puts
+  there. For rows put on the changeset after the module's changeset ran,
+  like the admin form's transformer subforms. `form` is the form that
+  draws the rows, or a blueprint module for its default form.
   """
-  def validate_subform_rows(changeset, module, relations) do
-    specs = for {relation, _} = spec <- subform_fields(module), relation in relations, do: spec
+  def validate_subform_rows(changeset, form, relations) do
+    specs = for {relation, _} = spec <- subform_fields(form), relation in relations, do: spec
     validate_rows(changeset, specs)
   end
 
-  # `{relation, fields}` for each subform of the default form with rich text
-  defp subform_fields(module) do
-    case function_exported?(module, :__form__, 0) && module.__form__() do
-      %{tabs: tabs} ->
-        for tab <- tabs,
-            fieldset <- tab.fields,
-            %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields} <- Map.get(fieldset, :fields, []),
-            fields = row_fields(sub_fields),
-            fields != [],
-            do: {name, fields}
-
-      _ ->
-        []
-    end
+  # `{relation, fields}` for each subform with rich text of a form, or of a
+  # module's default form
+  defp subform_fields(%{tabs: tabs}) do
+    for tab <- tabs,
+        fieldset <- tab.fields,
+        %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields} <- Map.get(fieldset, :fields, []),
+        fields = row_fields(sub_fields),
+        fields != [],
+        do: {name, fields}
   end
+
+  defp subform_fields(module) when is_atom(module) and not is_nil(module) do
+    if function_exported?(module, :__form__, 0), do: subform_fields(module.__form__()), else: []
+  end
+
+  defp subform_fields(_), do: []
 
   defp row_fields(sub_fields),
     do: for(%Brando.Blueprint.Forms.Input{type: :rich_text, name: field} <- sub_fields, do: field)

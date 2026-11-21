@@ -236,6 +236,24 @@ defmodule Brando.RichTextRowsTest do
     end
   end
 
+  test "rows are checked by the form that draws them, not only by the default form" do
+    # The article's default form draws a quote's text as plain text; its
+    # `rich_quotes` form draws it as rich text.
+    article = Brando.SyncTest.Article
+
+    changeset =
+      article
+      |> struct()
+      |> Changeset.change()
+      |> Changeset.put_embed(:quotes, [%{text: hd(@unsafe)}])
+
+    assert Brando.RichText.validate_subform_rows(changeset, article, [:quotes]).valid?
+
+    refused = Brando.RichText.validate_subform_rows(changeset, article.__form__(:rich_quotes), [:quotes])
+    refute refused.valid?
+    assert [%{errors: [text: _]}] = Changeset.get_change(refused, :quotes)
+  end
+
   test "the entry's own rich text is still checked" do
     refute changeset(%{intro: hd(@unsafe)}).valid?
     assert changeset(%{intro: @safe}).valid?
