@@ -21,10 +21,27 @@ defmodule Brando.RichTextRows.Entry do
   end
 
   relations do
-    relation :quotes, :embeds_many, module: Brando.RichTextRows.Quote, on_replace: :delete
+    relation :quotes, :embeds_many,
+      module: Brando.RichTextRows.Quote,
+      on_replace: :delete,
+      sort_param: :sort_quotes_ids,
+      drop_param: :drop_quotes_ids
+
     relation :feature, :embeds_one, module: Brando.RichTextRows.Feature, on_replace: :update
-    relation :items, :has_many, module: Brando.RichTextRows.Item, on_replace: :delete, cast: true
-    relation :checked_items, :has_many, module: Brando.RichTextRows.CheckedItem, on_replace: :delete, cast: true
+
+    relation :items, :has_many,
+      module: Brando.RichTextRows.Item,
+      on_replace: :delete,
+      cast: true,
+      sort_param: :sort_items_ids,
+      drop_param: :drop_items_ids
+
+    relation :checked_items, :has_many,
+      module: Brando.RichTextRows.CheckedItem,
+      on_replace: :delete,
+      cast: true,
+      sort_param: :sort_checked_items_ids,
+      drop_param: :drop_checked_items_ids
   end
 
   forms do
