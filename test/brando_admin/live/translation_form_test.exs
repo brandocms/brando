@@ -2001,6 +2001,33 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert has_element?(other, "#translation-panel [data-testid=translation-load-version]")
     end
 
+    # A keystroke the browser sent before the caught-up form reached it
+    # carries the older version's values (inert inputs submit too): they are
+    # the browser's old form, not this editor's edits, and do not ship.
+    test "a keystroke sent before the caught-up version reached the browser does not take it back",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      before = other |> render() |> form_params("#article_form_form")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+
+      params = before |> put_in(["article", "subtitle"], "Typed") |> Map.put("_target", ["article", "subtitle"])
+      other |> element("#article_form_form") |> render_change(params)
+      assert shown_year(other) == "2030"
+
+      blur_field(other, "subtitle")
+      render(view)
+      assert shown_year(view) == "2030"
+      assert shown_subtitle(view) == "Typed"
+    end
+
     defp shown_subtitle(view),
       do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "subtitle"])
 

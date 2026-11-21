@@ -1549,7 +1549,12 @@ defmodule BrandoAdmin.Components.Form do
   # The form shows the fields as saved; the blocks are the session's.
   #
   # The values the form holds from other editors' typing stay
-  # (`keep_received/3`): they are theirs, not this editor's to ship.
+  # (`keep_received/3`): they are theirs, not this editor's to ship. An
+  # event the browser sent before the loaded values reached it carries the
+  # older ones, which do not take them back: the fields it has inputs for
+  # are recorded as the fill's are (`replace_loaded_values/4`,
+  # `redraw_relations/4`). A field without an input is not: the browser
+  # never sends it, and the save keeps it as saved.
   defp load_translation(socket, how) do
     if socket.assigns.translation.applied_version_id && Translation.changes?(socket.assigns) &&
          not kept_from_older_save?(socket, how) do
@@ -1558,10 +1563,16 @@ defmodule BrandoAdmin.Components.Form do
       case Translation.restore_changeset(socket) do
         {:ok, changeset, socket} ->
           socket = socket |> reset_locked_values() |> put_locked_values(changeset)
+          changeset = keep_received(socket, changeset, received)
+          previous = socket.assigns.form.source
 
-          apply_restored_changeset(socket, keep_received(socket, changeset, received), :translation, nil,
-            blocks: how == :load
-          )
+          inputs = socket.assigns.form_blueprint |> Drafts.input_names() |> MapSet.new()
+          shown? = &MapSet.member?(inputs, Atom.to_string(&1))
+
+          socket
+          |> apply_restored_changeset(changeset, :translation, nil, blocks: how == :load)
+          |> replace_loaded_values(previous, changeset, shown?)
+          |> redraw_relations(previous, changeset, Enum.filter(relation_fields(socket) ++ embed_fields(socket), shown?))
 
         :error ->
           send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
@@ -1602,6 +1613,16 @@ defmodule BrandoAdmin.Components.Form do
       :error ->
         socket
     end
+  end
+
+  defp replace_loaded_values(socket, previous, changeset, shown?) do
+    replaced =
+      socket
+      |> changed_fields(previous, changeset)
+      |> Enum.filter(shown?)
+      |> Enum.reduce(replaced_values(socket), &replace_value(&2, previous, changeset, &1))
+
+    assign(socket, :replaced_values, replaced)
   end
 
   # Values received from other editors go on the loaded changeset as
