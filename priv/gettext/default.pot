@@ -20493,6 +20493,11 @@ msgstr ""
 msgid "They are moved to the trash, and come back if the page is restored."
 msgstr ""
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "They keep the HTML they have now until the template or their content is fixed."

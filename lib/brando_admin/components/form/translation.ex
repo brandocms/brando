@@ -497,12 +497,26 @@ defmodule BrandoAdmin.Components.Form.Translation do
       end
 
     case socket.assigns[:translation] do
-      %{} = state -> assign(socket, :translation, %{state | acknowledged: paths})
-      nil -> assign(socket, :translation_acknowledged, paths)
+      %{} = state ->
+        if other_version?(params, state),
+          do: socket,
+          else: assign(socket, :translation, %{state | acknowledged: paths})
+
+      nil ->
+        assign(socket, :translation_acknowledged, paths)
     end
   end
 
   def put_acknowledged(socket, _params), do: socket
+
+  # Ticks sent from the form as it showed another version than the one held
+  # now (an event in flight while the form caught up) are that version's:
+  # a text ticked there may have changed in the source since.
+  defp other_version?(%{"translation_review" => %{"version_id" => sent}}, %{applied_version_id: held})
+       when not is_nil(held),
+       do: to_string(sent) != to_string(held)
+
+  defp other_version?(_params, _state), do: false
 
   @doc "What the save reports to `Brando.Translations.target_saved/3`."
   def review(%{translation: %{} = state} = assigns),
@@ -715,6 +729,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
           {gettext(
             "Another editor saved this translation, and its blocks now have newer changes from the source. Load them to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
           )}
+        </p>
+        <p :if={@editing and not @loadable}>
+          {gettext("They can be loaded once the revision you have open is closed, or the save in progress is done.")}
         </p>
         <div :if={@editing and @loadable} class="translation-notice-actions">
           <button

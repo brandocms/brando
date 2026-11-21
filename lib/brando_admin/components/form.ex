@@ -1383,7 +1383,7 @@ defmodule BrandoAdmin.Components.Form do
 
       true ->
         {how, socket} = Translation.decide(socket, translation_session(socket))
-        {:ok, load_translation(socket, how)}
+        {:ok, load_translation(socket, how, :opening)}
     end
   end
 
@@ -1555,7 +1555,13 @@ defmodule BrandoAdmin.Components.Form do
   # are recorded as the fill's are (`replace_loaded_values/4`,
   # `redraw_relations/4`). A field without an input is not: the browser
   # never sends it, and the save keeps it as saved.
-  defp load_translation(socket, how) do
+  #
+  # The replaced values are recorded for a form that catches up, whose
+  # browser may have sent an event before the load reached it. A form that
+  # opens has sent nothing but what a reconnect replays, which is the
+  # editor's own typing: recorded as replaced, it would show in the browser
+  # and never be saved.
+  defp load_translation(socket, how, moment) do
     if socket.assigns.translation.applied_version_id && Translation.changes?(socket.assigns) &&
          not kept_from_older_save?(socket, how) do
       received = Map.take(synced_values(socket), received_fields(socket))
@@ -1568,10 +1574,11 @@ defmodule BrandoAdmin.Components.Form do
 
           inputs = socket.assigns.form_blueprint |> Drafts.input_names() |> MapSet.new()
           shown? = &MapSet.member?(inputs, Atom.to_string(&1))
+          recorded? = recorded(moment, shown?)
 
           socket
           |> apply_restored_changeset(changeset, :translation, nil, blocks: how == :load)
-          |> replace_loaded_values(previous, changeset, shown?)
+          |> replace_loaded_values(previous, changeset, recorded?)
           |> redraw_relations(previous, changeset, Enum.filter(relation_fields(socket) ++ embed_fields(socket), shown?))
 
         :error ->
@@ -1608,12 +1615,17 @@ defmodule BrandoAdmin.Components.Form do
     case discard_entry_edits(socket) do
       {:ok, socket} ->
         {how, socket} = Translation.catch_up(socket, translation_session(socket))
-        if how == :none, do: socket, else: load_translation(socket, how)
+        if how == :none, do: socket, else: load_translation(socket, how, :catching_up)
 
       :error ->
         socket
     end
   end
+
+  defp recorded(:catching_up, shown?), do: shown?
+  defp recorded(_moment, _shown?), do: &never/1
+
+  defp never(_field), do: false
 
   defp replace_loaded_values(socket, previous, changeset, shown?) do
     replaced =
