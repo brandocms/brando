@@ -221,7 +221,7 @@ defmodule Brando.Villain.RawOnRichTextTest do
       for {{TemplateView, _} = key, _} <- Process.get(), do: Process.delete(key)
     end
 
-    defp marks, do: for({{TemplateView, _}, value} <- Process.get(), do: value)
+    defp marks, do: for({{TemplateView, _}, %MapSet{} = value} <- Process.get(), do: value)
 
     test "text with nothing for raw to decode is not marked" do
       TemplateView.read_as_rich_text("")
@@ -324,6 +324,32 @@ defmodule Brando.Villain.RawOnRichTextTest do
       # Text a template captured is new text, built from what it printed
       assert render_entry("{% capture c %}{{ entry.title }}{% endcapture %}{{ c | raw }}", %Entry{title: "<b>x</b>"}) ==
                "<b>x</b>"
+    end
+
+    test "decodes a plain field a filter passes on beside rich text" do
+      entry = %Entry{title: "<em>Hi</em>", intro: "<p>Tom &amp; Co</p>"}
+
+      assert render_entry("{{ entry.title | default: entry.intro | raw }}", entry) == "<em>Hi</em>"
+
+      pieces = ~s({% assign a = entry.intro | split: "</p>" %}{% assign b = entry.title | split: "|" %})
+      assert render_entry(pieces <> "{% assign all = a | concat: b %}{{ all | last | raw }}", entry) == "<em>Hi</em>"
+    end
+
+    test "leaves text a filter joined from rich text and a plain field whole" do
+      html = render_entry("{{ entry.intro | append: entry.title | raw }}", %{entry(@typed) | title: "<em>Hi</em>"})
+
+      assert active_elements(html) == []
+      assert html =~ "&lt;em&gt;Hi&lt;/em&gt;"
+    end
+
+    test "decodes a plain image title, which is escaped when read" do
+      image = Factory.build(:image, %{title: "<small>2024</small> R&D"})
+      context = Villain.get_base_context(%Page{title: "<small>2024</small> R&D", language: :en, meta_image: image})
+
+      assert Villain.parse_and_render("{{ entry.meta_image.title | raw }}", context) == "<small>2024</small> R&D"
+      # Read first without `raw`, it leaves the same text in another field decoding
+      template = "{{ entry.meta_image.title }}|{{ entry.title | raw }}"
+      assert Villain.parse_and_render(template, context) =~ "|<small>2024</small> R&D"
     end
 
     test "decodes rich text a template captured with other text around it" do

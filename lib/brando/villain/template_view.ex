@@ -277,7 +277,9 @@ defmodule Brando.Villain.TemplateView do
   The mark is the text itself, kept for the process: inside a render
   (`rich_text_scope/1`) until the outermost one ends, outside any render (a
   context made before its renders) at least the last #{@rich_texts_outside}
-  marks. Other text with the same characters is the same sanitized markup.
+  marks. Other text with the same characters counts as marked too: a plain
+  field whose escaped text equals rich text read in the same render is left
+  as it is by `raw`.
   """
   @spec read_as_rich_text(term()) :: term()
   def read_as_rich_text(text) when is_binary(text) do
@@ -315,17 +317,26 @@ defmodule Brando.Villain.TemplateView do
   @doc """
   A filter's `result` marked as read as rich text when one of its `inputs`
   (the value and arguments) was: text, or each text in a list it returned
-  (`split`), nested lists too.
+  (`split`), nested lists too. Text that is one of the inputs that was not
+  read as rich text is that input passed on (`default`, `first`, `concat`),
+  and stays unmarked.
   """
   @spec keep_rich_text(term(), term()) :: term()
   def keep_rich_text(result, inputs) when is_binary(result) or is_list(result) do
-    if rich_input?(inputs), do: mark_texts(result), else: result
+    if rich_input?(inputs), do: mark_texts(result, plain_texts(inputs, [])), else: result
   end
 
   def keep_rich_text(result, _inputs), do: result
 
-  defp mark_texts(list) when is_list(list), do: Enum.map(list, &mark_texts/1)
-  defp mark_texts(value), do: read_as_rich_text(value)
+  defp mark_texts(list, plain) when is_list(list), do: Enum.map(list, &mark_texts(&1, plain))
+  defp mark_texts(text, plain) when is_binary(text), do: if(text in plain, do: text, else: read_as_rich_text(text))
+  defp mark_texts(value, _plain), do: value
+
+  # The inputs' texts that were not read as rich text
+  defp plain_texts(list, plain) when is_list(list), do: Enum.reduce(list, plain, &plain_texts/2)
+  defp plain_texts({_key, value}, plain), do: plain_texts(value, plain)
+  defp plain_texts(text, plain) when is_binary(text), do: if(read_as_rich_text?(text), do: plain, else: [text | plain])
+  defp plain_texts(_value, plain), do: plain
 
   defp rich_input?(list) when is_list(list), do: Enum.any?(list, &rich_input?/1)
   defp rich_input?({_key, value}), do: rich_input?(value)
@@ -431,8 +442,11 @@ defmodule Brando.Villain.TemplateView do
       plain?(text) ->
         text
 
+      # A rich caption is not escaped when read; a plain title is, and `raw`
+      # reads it as it reads other escaped text
       struct in @captioned and to_string(key) in ["title", "caption"] ->
-        text |> Captions.caption_html() |> read_as_rich_text()
+        html = Captions.caption_html(text)
+        if Captions.rich?(text), do: read_as_rich_text(html), else: html
 
       rich_text?(value, key) or named?(rich, key) ->
         text |> Brando.RichText.render_html() |> InertLiquid.encode_all() |> read_as_rich_text()
