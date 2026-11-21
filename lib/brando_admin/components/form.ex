@@ -1389,19 +1389,14 @@ defmodule BrandoAdmin.Components.Form do
 
   # Another form in the entry moved the edit session's pending version
   # (`Brando.EditSession.take_version/3`, routed by the LiveView's hooks).
-  # A form left behind catches up at once when this editor has no unsaved
-  # changes in the entry's own fields; otherwise the editor does, with the
-  # translation panel's button (`"load_session_version"`).
+  # A form left behind catches up by itself when this editor has no unsaved
+  # changes in the entry's own fields (`maybe_catch_up/1`); otherwise the
+  # editor does, with the translation panel's button
+  # (`"load_session_version"`).
   def update(%{event: "session_version", version: version, origin: origin}, socket) do
-    if origin == self() do
-      {:ok, socket}
-    else
-      socket = Translation.session_moved(socket, version)
-
-      if Translation.behind?(socket.assigns) and own_entry_edits(socket) == [],
-        do: {:ok, catch_up_translation(socket)},
-        else: {:ok, socket}
-    end
+    if origin == self(),
+      do: {:ok, socket},
+      else: {:ok, socket |> Translation.session_moved(version) |> maybe_catch_up()}
   end
 
   # The edit session died and the block fields joined a new one: it learns
@@ -1582,6 +1577,15 @@ defmodule BrandoAdmin.Components.Form do
   # changes to them (`discard_entry_edits/1`), then the version decided
   # again and loaded (`{:keep, version}`, as a form that joins). The block
   # fields hold the session's blocks already, this editor's edits with them.
+  # Not while the editor is in an entry field: what they type there may not
+  # have reached the form yet (a rich text commits after a pause), and the
+  # load would replace it. Leaving the field asks again (`"blur"`).
+  defp maybe_catch_up(socket) do
+    if Translation.behind?(socket.assigns) and is_nil(socket.assigns[:focused_field]) and own_entry_edits(socket) == [],
+      do: catch_up_translation(socket),
+      else: socket
+  end
+
   defp catch_up_translation(socket) do
     case discard_entry_edits(socket) do
       {:ok, socket} ->
@@ -6054,11 +6058,11 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("blur", params, socket) do
     case params["field"] do
       nil ->
-        {:noreply, socket |> leave_field() |> ship_all_field_changes()}
+        {:noreply, socket |> leave_field() |> ship_all_field_changes() |> maybe_catch_up()}
 
       field ->
         if entry_field?(socket, field),
-          do: {:noreply, socket |> leave_field(field) |> ship_all_field_changes()},
+          do: {:noreply, socket |> leave_field(field) |> ship_all_field_changes() |> maybe_catch_up()},
           else: {:noreply, socket}
     end
   end

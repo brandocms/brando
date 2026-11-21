@@ -1,5 +1,6 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, routeLiveSocket, dropConnection, restoreConnection } from '../../utils'
+import { quoteRows, editorOf, inputOf } from '../../test-support/richTextRows'
 
 // A Norwegian source with an English translation (E2EFixtureController
 // :synchronized_translation). The source added a block and changed the year,
@@ -147,8 +148,8 @@ test('a translation saves after the source dropped a block and added another', a
 // first one's blocks are built on; the first saves, which loads the newer
 // version into the shared blocks, and the second's form, with no unsaved
 // typing in its fields, loads it in place and saves.
-const twoEditors = async (page, secondUserPage) => {
-  const response = await page.request.post('/e2e/synchronized-translation')
+const twoEditors = async (page, secondUserPage, data = {}) => {
+  const response = await page.request.post('/e2e/synchronized-translation', { data })
   expect(response.ok()).toBeTruthy()
   const { source_id: sourceId, target_id: targetId } = await response.json()
   const url = `/admin/sync_test/articles/update/${targetId}`
@@ -285,6 +286,43 @@ test('an editor left behind with typing in a field loads the newer version with 
   await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
   await expect(title).toHaveValue(saved)
   await expect(otherSubtitle).toHaveValue('Subtitle from the first')
+
+  expect(errors).toEqual([])
+})
+
+// The second editor is in a rich text when the first saves: what they type
+// there commits only after a pause, so the form does not load the newer
+// version under them. Leaving the text with typing in it, they get the
+// button.
+test('an editor in a rich text when the other saves keeps typing, then loads with the button', async ({ page, secondUserPage }) => {
+  test.setTimeout(120000)
+  const errors = []
+  secondUserPage.on('pageerror', error => errors.push(error.message))
+  const { otherPanel, first } = await twoEditors(page, secondUserPage, { rich_quote: '1' })
+
+  const row = quoteRows(secondUserPage).first()
+  await editorOf(row).click()
+  await secondUserPage.keyboard.press('ControlOrMeta+End')
+  await syncLV(secondUserPage)
+
+  await saveAndContinue(page)
+  await expect(page.locator('input[name="article[year]"]')).toHaveValue('2030', { timeout: 15000 })
+  const behind = otherPanel.locator('[data-translation-behind]')
+  await expect(behind).toBeVisible({ timeout: 10000 })
+  await expect(otherPanel.locator('input[name="translation_review[version_id]"]')).toHaveValue(first)
+
+  await secondUserPage.keyboard.type(' and more')
+  await expect(editorOf(row)).toContainText('and more')
+  await editorOf(row).blur()
+  await syncLV(secondUserPage)
+  await expect(inputOf(row)).toHaveValue(/and more/)
+  await expect(behind).toBeVisible()
+  await expect(editorOf(row)).toContainText('and more')
+
+  await behind.getByTestId('translation-load-version').click()
+  await expect(behind).toHaveCount(0, { timeout: 10000 })
+  await expect(secondUserPage.locator('input[name="article[year]"]')).toHaveValue('2030')
+  await expect(editorOf(row)).not.toContainText('and more')
 
   expect(errors).toEqual([])
 })

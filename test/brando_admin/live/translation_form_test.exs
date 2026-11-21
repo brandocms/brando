@@ -1825,6 +1825,63 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert shown_title(other) == "Title from the first"
     end
 
+    defp focus_field(view, field),
+      do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("focus", %{"field" => "article[#{field}]"})
+
+    defp blur_field(view, field),
+      do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("blur", %{"field" => "article[#{field}]"})
+
+    # The editor is in a field when the session moves on: what they type
+    # there may not have reached the form yet (a rich text commits after a
+    # pause), so the form waits. Leaving the field without typing, it
+    # catches up then.
+    test "a form whose editor is in a field catches up when they leave it untyped", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      focus_field(other, "title")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      assert held_version(other) == to_string(first.id)
+
+      blur_field(other, "title")
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert caught_up?(other)
+      assert shown_year(other) == "2030"
+    end
+
+    # The editor was typing in a rich text when the session moved on: its
+    # last words commit as they leave it (the debounce flushes on blur), so
+    # the form is behind with typing, and offers the button.
+    test "a form whose editor typed in a field before leaving it stays behind with the button", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      focus_field(other, "subtitle")
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+
+      type_field(other, "subtitle", "Typed before the pause")
+      blur_field(other, "subtitle")
+      render(other)
+      assert behind?(other)
+      assert has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+      assert held_version(other) == to_string(first.id)
+      assert shown_subtitle(other) == "Typed before the pause"
+    end
+
+    defp shown_subtitle(view),
+      do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "subtitle"])
+
     # A form without block fields has no edit session, so another editor's
     # save never puts it behind: nothing of this applies to it. It holds its
     # version until its own save, as before.
