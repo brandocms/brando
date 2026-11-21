@@ -65,6 +65,34 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
     """)
   end
 
+  # Postgres raises for the second update of a row of `table`, whichever row
+  # that is. The count is kept in a sequence, which a rollback does not take
+  # back: `update_attempts/0` reads it afterwards.
+  defp refuse_second_update(table) do
+    repo = Brando.Repo.repo()
+    repo.query!("CREATE SEQUENCE brando_test_update_attempts")
+
+    repo.query!("""
+    CREATE OR REPLACE FUNCTION brando_test_refuse_second_update() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF nextval('brando_test_update_attempts') > 1 THEN RAISE EXCEPTION 'refused by the test'; END IF;
+      RETURN NEW;
+    END $$
+    """)
+
+    repo.query!("""
+    CREATE TRIGGER brando_test_refuse_second_update BEFORE UPDATE ON #{table}
+    FOR EACH ROW EXECUTE FUNCTION brando_test_refuse_second_update()
+    """)
+  end
+
+  defp update_attempts do
+    %{rows: [[attempts, called]]} =
+      Brando.Repo.repo().query!("SELECT last_value, is_called FROM brando_test_update_attempts")
+
+    if called, do: attempts, else: 0
+  end
+
   # Stored as no embedded row can be loaded, with the text the scan looks
   # for: reading the column raises in Elixir, with no failed statement
   defp break_highlights(case_entry) do
@@ -293,7 +321,7 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
             do: Brando.Repo.insert!(%Chapter{case_id: parent.id, title: "#{n}", body: linked_html(c.identifier, c.url)})
 
       entry = article(%{subtitle: linked_html(c.identifier, c.url)})
-      refuse_updates("linktest_chapters", "OLD.id = #{second.id}")
+      refuse_second_update("linktest_chapters")
 
       {log, jobs} = restore(c)
       url = restored_url(c)
@@ -307,7 +335,8 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
       assert Brando.Repo.get!(Case, summary_holder.id).summary =~ ~s(href="#{url}")
       assert summary_holder.id in rendered(jobs, Case)
 
-      # The first chapter was rewritten before the second refused
+      # One chapter was rewritten before the other refused, in either order
+      assert update_attempts() == 2
       assert Brando.Repo.get!(Chapter, first.id).body == linked_html(c.identifier, c.url)
       assert Brando.Repo.get!(Chapter, second.id).body == linked_html(c.identifier, c.url)
       assert rendered(jobs, Chapter) == []
