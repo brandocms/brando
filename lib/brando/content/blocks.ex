@@ -730,13 +730,25 @@ defmodule Brando.Content.Blocks do
   revision restore saves the identifier in one), each step runs in a
   savepoint and a failed one is rolled back to it, its writes and queued
   renders with it.
+
+  A row is written once, by the first schema whose pass finds the link. An
+  entry rendered for it is rendered for each of `modules` on the same table
+  too, whichever of them came first.
   """
   def update_identifier_links_in_rich_text_fields(identifier_id, new_url, modules \\ identifier_link_modules()) do
     if RichText.allowed_uri?(new_url) do
+      tables = modules_by_table(modules)
+
       for {schema, target} <- rich_text_targets(modules),
-          do: update_identifier_links_in_schema(schema, target, identifier_id, new_url)
+          do: update_identifier_links_in_schema(schema, target, identifier_id, new_url, tables)
     end
   end
+
+  # The walked modules by their table: `{prefix, source}`
+  defp modules_by_table(modules),
+    do: modules |> Enum.uniq() |> Enum.group_by(&table_of/1)
+
+  defp table_of(module), do: {module.__schema__(:prefix), module.__schema__(:source)}
 
   @doc """
   The Blueprint modules whose rich text a moved identifier's links are
@@ -825,13 +837,13 @@ defmodule Brando.Content.Blocks do
     end
   end
 
-  defp update_identifier_links_in_schema(schema, target, identifier_id, new_url) do
+  defp update_identifier_links_in_schema(schema, target, identifier_id, new_url, tables) do
     isolate_identifier_link_step(schema, fn ->
       rewrites =
         column_rewrites(schema, target, identifier_id, new_url) ++
           Enum.flat_map(target.embeds, &embed_rewrites(schema, &1, identifier_id, new_url))
 
-      rewrite_identifier_links(rewrites, [])
+      rewrite_identifier_links(rewrites, [], tables)
     end)
   end
 
@@ -879,9 +891,9 @@ defmodule Brando.Content.Blocks do
 
   # In the bulk lane: a link that moved can reach any number of entries.
   # `rendered` is kept newest first and reversed once.
-  defp rewrite_identifier_links([], rendered), do: enqueue_rendered(Enum.reverse(rendered))
+  defp rewrite_identifier_links([], rendered, tables), do: enqueue_rendered(Enum.reverse(rendered), tables)
 
-  defp rewrite_identifier_links([rewrite | rewrites], rendered) do
+  defp rewrite_identifier_links([rewrite | rewrites], rendered, tables) do
     result =
       try do
         in_holder_transaction(rewrite)
@@ -890,7 +902,7 @@ defmodule Brando.Content.Blocks do
         # the entries rewritten before this one still get their renders. In
         # one, the step's savepoint takes them back.
         kind, reason ->
-          unless Repo.repo().in_transaction?(), do: enqueue_rendered(Enum.reverse(rendered))
+          unless Repo.repo().in_transaction?(), do: enqueue_rendered(Enum.reverse(rendered), tables)
           :erlang.raise(kind, reason, __STACKTRACE__)
       end
 
@@ -900,12 +912,20 @@ defmodule Brando.Content.Blocks do
         _ -> rendered
       end
 
-    rewrite_identifier_links(rewrites, rendered)
+    rewrite_identifier_links(rewrites, rendered, tables)
   end
 
   # Only entries the render can load: a row of a schema without a context
-  # function of its own is evicted, not rendered
-  defp enqueue_rendered(entries) do
+  # function of its own is evicted, not rendered. An entry is rendered for
+  # every walked module on its table as well: a later module's pass finds the
+  # row already rewritten and queues nothing. The cache is kept by table, so
+  # the eviction of the rewrite covers them.
+  defp enqueue_rendered(entries, tables) do
+    entries =
+      Enum.flat_map(entries, fn {schema, id} = entry ->
+        [entry | for(module <- Map.get(tables, table_of(schema), []), do: {module, id})]
+      end)
+
     case Enum.filter(Enum.uniq(entries), fn {schema, _id} -> Brando.Blueprint.EntryQuery.loadable?(schema) end) do
       [] -> :ok
       entries -> entries |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> enqueue_entry_map_for_render()

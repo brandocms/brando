@@ -86,6 +86,22 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
     """)
   end
 
+  # Counts the updates of rows of `table`, for `update_attempts/0`
+  defp count_updates(table) do
+    repo = Brando.Repo.repo()
+    repo.query!("CREATE SEQUENCE brando_test_update_attempts")
+
+    repo.query!("""
+    CREATE OR REPLACE FUNCTION brando_test_count_update() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN PERFORM nextval('brando_test_update_attempts'); RETURN NEW; END $$
+    """)
+
+    repo.query!("""
+    CREATE TRIGGER brando_test_count_update BEFORE UPDATE ON #{table}
+    FOR EACH ROW EXECUTE FUNCTION brando_test_count_update()
+    """)
+  end
+
   defp update_attempts do
     %{rows: [[attempts, called]]} =
       Brando.Repo.repo().query!("SELECT last_value, is_called FROM brando_test_update_attempts")
@@ -185,6 +201,25 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
 
         assert Brando.Repo.get!(Chapter, chapter.id).body =~ ~s(href="#{@new_url}")
         assert parent.id in rendered(jobs, Case), "the parent, for #{inspect(modules)}"
+      end
+    end
+  end
+
+  describe "two Blueprints on one table" do
+    test "both render the row, which is written once, whichever comes first" do
+      note = Brando.RichTextDefaultFormTest.Note
+      count_updates(Article.__schema__(:source))
+
+      for {modules, n} <- Enum.with_index([[note, Article], [Article, note]], 1) do
+        {_target, identifier} = insert_case(%{slug: "client-work-#{n}"})
+        entry = article(%{slug: "article-#{n}", subtitle: linked_html(identifier)})
+
+        jobs = rewrite(identifier, @new_url, modules)
+
+        assert Brando.Repo.get!(Article, entry.id).subtitle =~ ~s(href="#{@new_url}")
+        assert update_attempts() == n, "one write, for #{inspect(modules)}"
+        assert entry.id in rendered(jobs, Article), "Article, for #{inspect(modules)}"
+        assert entry.id in rendered(jobs, note), "Note, for #{inspect(modules)}"
       end
     end
   end

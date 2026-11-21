@@ -675,7 +675,8 @@ vars and in the `:rich_text` inputs of every form of each Blueprint with a
 table, whether it stores identifiers or not: at the top of a form and in its
 subform rows (`embeds_one`, `embeds_many`, `has_one` and `has_many`). It
 writes only the rows that hold a link to the target, keeps the link text as
-written, and re-renders the entries that hold them. Not followed: subform
+written, and re-renders the entries that hold them; a row in a table several
+Blueprints share is re-rendered for each of them. Not followed: subform
 rows nested inside other subform rows, a table every site shares
 (`Brando.Tenant.SharedTables`), whether a form or a subform draws its rows,
 unless its Blueprint stores identifiers, and
