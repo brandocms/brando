@@ -20,6 +20,7 @@ export default app => ({
     this._destroyed = false
     this._input = this.el.querySelector('.tiptap-text')
     this._field = this.el.dataset.tiptapType === 'rich_text' ? this._input.name : this.el.closest('.blocks-wrapper')?.dataset.blockField
+    this._shown = this._input.value
     // Only block-owned fields defer editing. Ordinary Blueprint inputs keep
     // their toolbar and editor available as soon as the form opens.
     if (this.el.dataset.tiptapType === 'block' || this.el.closest('.blocks-wrapper, .block-slot-drawer')) {
@@ -192,7 +193,87 @@ export default app => ({
     }
   },
 
+  // An entry form's rich text (a field, a subform row's field, a page
+  // variable; not a block's) shows what its hidden input holds. The server
+  // writes the input when it changes the text (another editor's change,
+  // Translate with AI, a replaced form), and a row's input is the one its row
+  // draws wherever the row has moved, so no event has to find the editor.
+  // `pendingInputs` keeps the input from taking a value older than what this
+  // editor typed; the server holds another editor's change to the field this
+  // editor is in until it leaves it.
+  //
+  // Only an input the server hears from: one in a form with `phx-change`.
+  // A popover's input (a gallery caption, `input_form`) names no form, and an
+  // object config's form sends its values on Save: what the server renders
+  // into those is the stored text, never a change to show, and
+  // `followInput()` puts the editor's text back.
+  entryRichText() {
+    return this.el.dataset.tiptapType === 'rich_text' && !this.el.closest('[data-block-uid]') && !!this._input.form?.hasAttribute('phx-change')
+  },
+
+  followInput() {
+    if (this.el.dataset.tiptapType !== 'rich_text' || this.el.closest('[data-block-uid]')) return
+    // A form that is not followed is read on Save (the gallery caption's
+    // popover, an object config's form): its input keeps the editor's text,
+    // not the stored one a patch renders into it.
+    if (!this.entryRichText()) { this._input.value = this._shown; return }
+    // Rejoining: the input keeps what the editor shows, and the recovered
+    // form's patch is compared with that (`Presence/pendingInputs.js` would
+    // otherwise take the recovered text for a stale keystroke of this
+    // editor's and keep the saved one). What the patches wrote, and how
+    // many there were, is remembered for `reconnected()`.
+    if (this._held) {
+      this._heldValue = this._input.value
+      this._heldPatches++
+      this._input.value = this._shown
+      // The hold is for a rejoin, whose patches and `reconnected()` run in
+      // one task. A patch while the socket is connected that no
+      // `reconnected()` follows ends it: LiveView puts a view whose nested
+      // view cannot join in a permanent error state, which disconnects its
+      // hooks and keeps patching them.
+      if (this.liveSocket.isConnected()) {
+        clearTimeout(this._holdTimer)
+        this._holdTimer = setTimeout(() => this._held && this.release(this._heldValue))
+      }
+      return
+    }
+    if (this._input.value === this._shown) return
+    this.replaceContent()
+  },
+
+  // A rejoin patches in the saved entry and then the recovered form, and
+  // calls `reconnected()` after both: following the first would replace a
+  // text the second gives back (resetting its undo history and moving the
+  // cursor). LiveView applies the recovered form right after the saved
+  // entry, so a patch after the first is the recovery's: its answer is put
+  // in once, whether it changed this input (another editor's change while
+  // this one was away, a removed row above) or left the saved entry's text
+  // (another editor's change saved while this one was away), and replaces
+  // the document if it differs from what the editor shows; the editor's
+  // own text given back leaves it alone. The saved entry alone is not
+  // taken: a recovered form that arrives after the rejoin is followed as
+  // any other patch.
+  disconnected() {
+    clearTimeout(this._holdTimer)
+    if (!this._held) { this._heldValue = null; this._heldPatches = 0 }
+    this._held = true
+  },
+
+  reconnected() {
+    this.release(this._heldPatches > 1 ? this._heldValue : null)
+  },
+
+  release(value) {
+    clearTimeout(this._holdTimer)
+    this._held = false
+    this._heldValue = null
+    this._heldPatches = 0
+    if (value != null && this.entryRichText()) this._input.value = value
+    this.followInput()
+  },
+
   updated() {
+    this.followInput()
     this.renderPreview()
     if (this._editor && this.configuration() !== this._configuration) {
       // A schema/configuration change is deliberate (e.g. module preview).
@@ -200,7 +281,7 @@ export default app => ({
       const content = this._editor.getHTML(), selection = this._editor.state.selection
       unmount(this._instance)
       this._editor = null
-      this._input.value = content
+      this._input.value = this._shown = content
       this._restoreSelection = { from: selection.from, to: selection.to }
       this.mount()
       this._linkRange = null; this._footnoteRange = null
@@ -294,6 +375,9 @@ export default app => ({
     this._aiListener = () => this.activate(null, () => this._instance?.openAi?.())
     this._activateListener = () => this.activate()
     this._compositionEnd = () => { if (this._pendingReplacement) { const payload = this._pendingReplacement; this._pendingReplacement = null; this.replaceContent(payload) } }
+    // What this editor writes to its input (typing, clearing) is shown already.
+    this._inputListener = event => { if (event.target === this._input) this._shown = this._input.value }
+    this.el.addEventListener('input', this._inputListener)
     this.el.addEventListener('brando:tiptap:clear', this._clearListener)
     this.el.addEventListener('brando:tiptap:ai', this._aiListener)
     this.el.addEventListener('brando:tiptap:activate', this._activateListener)
@@ -324,6 +408,7 @@ export default app => ({
     if (!this._editor) {
       if (revision != null) this._revision = revision
       this._input.value = html ?? this._input.value ?? ''
+      this._shown = this._input.value
       this.renderPreview()
       this.updateFootnoteNumbers()
       this.updateEditable()
@@ -335,12 +420,12 @@ export default app => ({
     }
     if (revision != null) this._revision = revision
     const doc = createDocument(html ?? this._input.value ?? '', this._editor.schema, this._editor.options.parseOptions)
-    if (doc.eq(this._editor.state.doc)) return
+    if (doc.eq(this._editor.state.doc)) { this._shown = this._input.value; return }
     this._linkRange = null; this._footnoteRange = null
     const state = EditorState.create({ schema: this._editor.schema, doc, plugins: this._editor.state.plugins, selection: Selection.near(doc.resolve(Math.min(this._editor.state.selection.from, doc.content.size))) })
     this._editor.view.updateState(state)
     this._editor.emit('transaction', { editor: this._editor, transaction: state.tr.setMeta('brando:replacement', true) })
-    this._input.value = this._editor.getHTML()
+    this._input.value = this._shown = this._editor.getHTML()
     renumberFootnotes(this.el)
   },
 
@@ -351,14 +436,16 @@ export default app => ({
   commitInput(onCommitted = () => {}) {
     const input = this._input, form = input?.form
     if (!form || !this._editor || this._destroyed) return
-    input.value = this._editor.getHTML()
+    input.value = this._shown = this._editor.getHTML()
     const fields = Array.from(new FormData(form)).filter(([, value]) => typeof value === 'string')
     this.pushEditorEvent('commit_tiptap', { form: new URLSearchParams(fields).toString(), target: input.name.match(/[^\[\]]+/g) }, onCommitted)
   },
 
   destroyed() {
     this._destroyed = true
+    clearTimeout(this._holdTimer)
     this._lockObserver?.disconnect()
+    this.el.removeEventListener('input', this._inputListener)
     this.el.removeEventListener('brando:tiptap:clear', this._clearListener)
     this.el.removeEventListener('brando:tiptap:ai', this._aiListener)
     this.el.removeEventListener('brando:tiptap:activate', this._activateListener)

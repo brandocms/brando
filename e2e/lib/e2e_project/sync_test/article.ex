@@ -48,8 +48,13 @@ defmodule E2eProject.SyncTest.Article do
       preload_order: [asc: :sequence],
       cast: true
 
-    # A rich text in a subform's rows (translate-with-ai.spec.js, `quotes`)
-    relation :quotes, :embeds_many, module: E2eProject.SyncTest.ArticleQuote, on_replace: :delete
+    # A rich text in a subform's rows (translate-with-ai.spec.js,
+    # rich-text-rows.spec.js), which are moved and removed
+    relation :quotes, :embeds_many,
+      module: E2eProject.SyncTest.ArticleQuote,
+      on_replace: :delete,
+      sort_param: :sort_quotes_ids,
+      drop_param: :drop_quotes_ids
   end
 
   listings do

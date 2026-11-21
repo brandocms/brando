@@ -1,0 +1,3 @@
+- A rich text in a subform row or a page's rich-text variable shows a change the server makes to it (another editor's, also one made while this editor's connection was down; Translate with AI; a save elsewhere), also after its rows were moved, added or removed, and typing there no longer brings the old text back.
+- Removing a row of an `embeds_many` subform no longer crashes the other editors' forms of the entry.
+- A gallery caption typed in its popover is saved as typed when another image finished processing while it was open; Save no longer takes the stored caption unless something was typed after that.

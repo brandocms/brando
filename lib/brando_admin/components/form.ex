@@ -3320,11 +3320,17 @@ defmodule BrandoAdmin.Components.Form do
     assoc? = field in belongs_to
 
     case Map.fetch(changeset.changes, field) do
-      {:ok, value} -> %{field: field, value: value, assoc?: assoc?}
+      {:ok, value} -> %{field: field, value: without_replaced_rows(value), assoc?: assoc?}
       :error when assoc? -> nil
       :error -> %{field: field, value: Map.get(changeset.data, field), assoc?: false}
     end
   end
+
+  # An embeds_many's change lists the rows it removed as `:replace`
+  # changesets, which the receiver can't put (Ecto raises): the rows left are
+  # the value, and the receiver's `on_replace` removes the others.
+  defp without_replaced_rows([%Changeset{} | _] = rows), do: Enum.reject(rows, &(&1.action == :replace))
+  defp without_replaced_rows(value), do: value
 
   # The fields that sync, and which of them are belongs_to associations.
   # has_many/many_to_many associations hold nested changesets the receiver
