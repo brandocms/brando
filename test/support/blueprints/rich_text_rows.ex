@@ -1,7 +1,8 @@
 defmodule Brando.RichTextRows.Entry do
   @moduledoc false
   # Rich text in each kind of subform row (Brando.RichTextRowsTest). Only
-  # changesets are built: there are no tables.
+  # changesets are built; the tables are there because a moved identifier's
+  # links are looked for in every Blueprint with a table.
   use Brando.Blueprint,
     application: "Brando",
     domain: "RichTextRows",
@@ -11,8 +12,7 @@ defmodule Brando.RichTextRows.Entry do
     gettext_module: Brando.Gettext
 
   identifier "{{ entry.title }}"
-  # No identifiers rows: a moved identifier's links are looked up in every
-  # module that persists them
+  # No identifiers rows of its own
   persist_identifier false
 
   attributes do
@@ -193,7 +193,7 @@ defmodule Brando.RichTextRows.Plain do
   @moduledoc false
   # A plain `text` column beside rows whose rich-text input is also named
   # `text` (Brando.RichTextParentColumnsTest). Only changesets and structs
-  # are built: there is no table.
+  # are built; the table is there for the same reason as the entries'.
   use Brando.Blueprint,
     application: "Brando",
     domain: "RichTextRows",
@@ -243,8 +243,9 @@ end
 defmodule Brando.RichTextRows.Disagreeing do
   @moduledoc false
   # Forms that disagree on a top-level field, and one only named forms draw
-  # (Brando.Villain.RichTextTemplateReadsTest). Only structs are built:
-  # there is no table.
+  # (Brando.Villain.RichTextTemplateReadsTest). Only structs are built; the
+  # table is there because a moved identifier's links are looked for in every
+  # Blueprint with rich text.
   use Brando.Blueprint,
     application: "Brando",
     domain: "RichTextRows",
