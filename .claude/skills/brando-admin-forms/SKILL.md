@@ -104,7 +104,11 @@ editors. An entry form's rich text (a field, a subform row's field, a page
 variable; not a block's) shows what its hidden input holds after each patch,
 so a server write reaches a row's editor wherever the row has moved: write the
 form, not an event addressed to the editor, whose DOM id follows the row's
-position. Once activated, an editor stays mounted to retain undo history.
+position. Only an input in a form with `phx-change` is followed (a gallery
+caption's popover input names no form), and not during a rejoin: from
+`disconnected()` the input keeps the editor's text, and `reconnected()`, after
+the recovered form is in, reads it once. Once activated, an editor stays
+mounted to retain undo history.
 Open a dormant editor programmatically with `brando:tiptap:activate` on its hook
 element, rather than assuming a `contenteditable=true` node already exists.
 

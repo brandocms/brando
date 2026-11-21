@@ -211,8 +211,28 @@ export default app => ({
   },
 
   followInput() {
-    if (this._input.value === this._shown || !this.entryRichText()) return
+    if (!this.entryRichText()) return
+    // Rejoining: the input keeps what the editor shows, and the recovered
+    // form's patch is compared with that (`Presence/pendingInputs.js` would
+    // otherwise take the recovered text for a stale keystroke of this
+    // editor's and keep the saved one).
+    if (this._held) { this._input.value = this._shown; return }
+    if (this._input.value === this._shown) return
     this.replaceContent()
+  },
+
+  // A rejoin patches in the saved text and then, in the same task, the
+  // recovered form, and calls `reconnected()` after both: following the
+  // first would replace a text the second gives back (resetting its undo
+  // history and moving the cursor). The input is read once, when the
+  // recovered form is in.
+  disconnected() {
+    this._held = true
+  },
+
+  reconnected() {
+    this._held = false
+    this.followInput()
   },
 
   updated() {
