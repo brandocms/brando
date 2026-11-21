@@ -59,7 +59,7 @@ defmodule Brando.Villain.Filters do
         view_mode = TemplateView.view_mode([value | function_args])
         args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
 
-        result = mod |> Kernel.apply(func, args) |> sanitize_decoded(func, args)
+        result = mod |> Kernel.apply(func, args) |> decoded_as_read(func, args, context)
 
         result
         |> TemplateView.filter_result(func, view_mode, context)
@@ -71,10 +71,11 @@ defmodule Brando.Villain.Filters do
     ArgumentError -> raise Liquex.Error, "Invalid filter #{function}"
   end
 
-  # Decoding rich text can make markup of what an editor typed (`%3Cimg`): it is
-  # sanitized again, as rich text is when read
-  defp sanitize_decoded(result, :url_decode, args), do: TemplateView.sanitize_decoded(result, args)
-  defp sanitize_decoded(result, _func, _args), do: result
+  # Decoding can make markup of what an editor typed (`%3Cimg`): rich text is
+  # sanitized again, as it is when read, and other text escaped, as a plain
+  # field is when read
+  defp decoded_as_read(result, :url_decode, args, context), do: TemplateView.decoded_as_read(result, args, context)
+  defp decoded_as_read(result, _func, _args, _context), do: result
 
   # Text from text read as rich text is too (`TemplateView.read_as_rich_text/1`),
   # except markup a project's filter returned as `{:safe, html}`
@@ -893,6 +894,11 @@ defmodule Brando.Villain.Filters do
   is a space and `%` with two hex digits the byte they give. A `%` that is
   not followed by two hex digits stays as typed, and so does an escape that
   does not decode to a whole UTF-8 character with the escapes after it.
+
+  In a template, what it decodes is read as its input was
+  (`Brando.Villain.TemplateView.decoded_as_read/3`): from rich text it is
+  sanitized again, and from any other text escaped as a plain field is, so
+  `%3Cb%3E` prints `<b>` as text.
 
   ## Examples
 

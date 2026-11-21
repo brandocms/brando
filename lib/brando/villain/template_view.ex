@@ -279,7 +279,7 @@ defmodule Brando.Villain.TemplateView do
   (`capture`) is new text, and not marked, unless it is the same text.
 
   Text without an entity, a `%` or a `<` is not marked: `raw` has nothing in
-  it to decode, nor `url_decode` (`sanitize_decoded/2`), and `markdown` no
+  it to decode, nor `url_decode` (`decoded_as_read/3`), and `markdown` no
   markup to keep (`rich_text_markup/1`).
 
   The mark is the text itself, kept for the process: inside a render
@@ -421,16 +421,24 @@ defmodule Brando.Villain.TemplateView do
   defp rich_input?(value), do: read_as_rich_text?(value)
 
   @doc """
-  The text a decoding filter (`url_decode`) gave, sanitized as rich text is
+  The text a decoding filter (`url_decode`) gave, read again as its input was:
+  decoded, what an editor typed in it can be markup. Sanitized as rich text is
   when read (`Brando.RichText.render_html/1`) when one of its `inputs` was read
-  as rich text: decoded, what an editor typed in it can be markup.
+  as rich text, and otherwise escaped as a plain field is when read, so a
+  filter after it, a comparison and `raw` get the same kind of text as from
+  a plain field. A Markdown template reads text as it is, and gets the
+  decoded text as it is.
   """
-  @spec sanitize_decoded(term(), term()) :: term()
-  def sanitize_decoded(result, inputs) when is_binary(result) do
-    if rich_input?(inputs), do: Brando.RichText.render_html(result), else: result
+  @spec decoded_as_read(term(), term(), Context.t()) :: term()
+  def decoded_as_read(result, inputs, context) when is_binary(result) do
+    cond do
+      rich_input?(inputs) -> Brando.RichText.render_html(result)
+      read_mode(:escape, context) == :escape -> escape(result)
+      true -> result
+    end
   end
 
-  def sanitize_decoded(result, _inputs), do: result
+  def decoded_as_read(result, _inputs, _context), do: result
 
   @doc """
   Runs `fun` as a render: text marked as read as rich text in it

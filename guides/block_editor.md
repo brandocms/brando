@@ -279,8 +279,9 @@ So:
 - In an attribute, write double quotes around the output.
 - Never put rich text in an attribute as it is:
   `content="{{ intro | strip_html | escape_once }}"`.
-- Do not `url_decode` a value you print: it turns `%3C` back into `<` after
-  every check. For a query string, `url_encode` the value.
+- `url_decode` prints what it decodes as text: `%3C` prints `<`, escaped as
+  a plain field is. Do not build an address with it: for a query string,
+  `url_encode` the value.
 - `escape` does not check an address's scheme, and neither does a link var's
   `.value`. Make a link from a link var with `{% link %}`, which drops a
   script address, or `link_url`.
@@ -288,7 +289,7 @@ So:
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}
 <figure title='{{ entry.title }}'>
-<a href="/search?q={{ query | url_decode }}">{{ query | url_decode }}</a>
+<a href="/search?q={{ query | url_decode }}">{{ query }}</a>
 
 {%- comment -%} Do {%- endcomment -%}
 <figure title="{{ entry.title }}">
@@ -393,6 +394,11 @@ other block field) reads as escaped text, and
 editor typed in a block stays text. Text a filter makes from it, or a piece of
 a `split`, `raw` leaves escaped. `url_decode` on rich text sanitizes what it
 decoded again, as rich text is sanitized when read, and it prints as markup.
+On other text, what it decoded is escaped as a plain field is when read:
+`{{ entry.title | url_decode }}` prints `%3Cb%3E` as the text `<b>`, a filter
+after it or a comparison sees `&lt;b&gt;`, and `raw` after it prints the
+markup, as it does for a plain field. To cut a decoded query string apart,
+split on the escaped character: `split: "&amp;"`, not `split: "&"`.
 `url_decode` leaves a `%` as typed when two hex digits do not follow it, or
 when its escape does not decode to a whole UTF-8 character (`5%be off`).
 

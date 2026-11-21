@@ -773,8 +773,9 @@ So:
 - In an attribute, write double quotes around the output.
 - Never put rich text in an attribute as it is:
   `content="{{ intro | strip_html | escape_once }}"`.
-- Do not `url_decode` a value you print: it turns `%3C` back into `<` after
-  every check. For a query string, `url_encode` the value.
+- `url_decode` prints what it decodes as text: `%3C` prints `<`, escaped as
+  a plain field is. Do not build an address with it: for a query string,
+  `url_encode` the value.
 - `escape` does not check an address's scheme, and neither does a link var's
   `.value`. Make a link from a link var with `{% link %}`, which drops a
   script address, or `link_url`.
@@ -782,7 +783,7 @@ So:
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}
 <figure title='{{ entry.title }}'>
-<a href="/search?q={{ query | url_decode }}">{{ query | url_decode }}</a>
+<a href="/search?q={{ query | url_decode }}">{{ query }}</a>
 
 {%- comment -%} Do {%- endcomment -%}
 <figure title="{{ entry.title }}">
