@@ -481,10 +481,12 @@ defmodule Brando.Blueprint.Forms.Verifier do
   # A many-subform reorders and removes rows through its relation's
   # `sort_param` and `drop_param`; without one the cast drops the change,
   # and the subform leaves its control out
-  # (`BrandoAdmin.Components.Form.Subform`). One warning per relation.
+  # (`BrandoAdmin.Components.Form.Subform`). A transformer subform or one a
+  # custom `component` draws has its own controls. One warning per relation.
   defp subform_control_warnings(%{module: module, relations: relations}, forms) do
     for form <- forms,
-        %Forms.Subform{cardinality: :many, name: name} = subform <- form_inputs(form),
+        %Forms.Subform{cardinality: :many, name: name, component: nil} = subform <- form_inputs(form),
+        not match?({:transformer, _}, subform.style),
         relation = Enum.find(relations, &(&1.name == name)),
         missing = missing_controls(relation),
         missing != [] do

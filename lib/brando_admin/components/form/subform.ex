@@ -382,10 +382,12 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   # A reorder or a removal reaches the cast of an `embeds_many` or a
-  # `has_many` only through the relation's `sort_param` or `drop_param`:
-  # without it the change is cast away, so the control is not drawn (the
-  # form warns when it compiles, `Brando.Blueprint.Forms.Verifier`)
-  defp control?(%Relations.Relation{type: type, opts: opts}, option) when type in [:embeds_many, :has_many],
+  # `has_many, cast: true` only through the relation's `sort_param` or
+  # `drop_param`: without it the change is cast away, so the control is not
+  # drawn (the form warns when it compiles, `Brando.Blueprint.Forms.Verifier`)
+  defp control?(%Relations.Relation{type: :embeds_many, opts: opts}, option), do: Map.has_key?(opts, option)
+
+  defp control?(%Relations.Relation{type: :has_many, opts: %{cast: true} = opts}, option),
     do: Map.has_key?(opts, option)
 
   defp control?(_relation, _option), do: true

@@ -1038,11 +1038,12 @@ nest and cannot hold block editors.
 For `:many` subforms, new rows are cast through the relation, so the relation
 needs `cast: true` (embeds are always cast). Reordering needs the relation's
 `sort_param:` and removing needs its `drop_param:`: the cast reads the new
-order and the removed rows from those params. A `has_many` or `embeds_many`
-subform draws its drag handle only when the relation has `sort_param:`, and
-its remove button only when it has `drop_param:`; a relation without them
-gets a compile warning that names the line to add. Rows can be added either
-way.
+order and the removed rows from those params. An `embeds_many` or
+`has_many, cast: true` subform draws its drag handle only when the relation
+has `sort_param:`, and its remove button only when it has `drop_param:`; a
+relation without them gets a compile warning that names the line to add. Rows
+can be added either way. A transformer subform and one drawn by a custom
+`component` keep their own controls and get no warning.
 
 ```elixir
 relation :links, :embeds_many,

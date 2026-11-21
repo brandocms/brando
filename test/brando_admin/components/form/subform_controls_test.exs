@@ -3,7 +3,9 @@ defmodule BrandoAdmin.Components.Form.SubformControlsTest do
   # removes them through its `drop_param`. Without the option the cast drops
   # the change without a word, so the subform draws no control for it, and
   # the form warns when it compiles.
-  use ExUnit.Case, async: true
+  # Synchronous: it captures stderr, where any concurrent compile warning
+  # would land too.
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO, only: [capture_io: 2]
   import Phoenix.LiveViewTest, only: [render_component: 2]
@@ -15,6 +17,35 @@ defmodule BrandoAdmin.Components.Form.SubformControlsTest do
 
   # `relations` is the blueprint's relations block, `style` its subforms'
   defp compile_holder(relations, style \\ :inline) do
+    forms =
+      quote do
+        forms do
+          form do
+            tab "Content" do
+              fieldset do
+                inputs_for :rows do
+                  cardinality :many
+                  style unquote(style)
+                  default %{}
+                  input :title, :text
+                end
+
+                inputs_for :parts do
+                  cardinality :many
+                  style unquote(style)
+                  default %{}
+                  input :title, :text
+                end
+              end
+            end
+          end
+        end
+      end
+
+    compile_holder_with(relations, forms)
+  end
+
+  defp compile_holder_with(relations, forms) do
     module = Module.concat(__MODULE__, "Holder#{System.unique_integer([:positive])}")
 
     stderr =
@@ -39,27 +70,7 @@ defmodule BrandoAdmin.Components.Form.SubformControlsTest do
 
               unquote(relations)
 
-              forms do
-                form do
-                  tab "Content" do
-                    fieldset do
-                      inputs_for :rows do
-                        cardinality :many
-                        style unquote(style)
-                        default %{}
-                        input :title, :text
-                      end
-
-                      inputs_for :parts do
-                        cardinality :many
-                        style unquote(style)
-                        default %{}
-                        input :title, :text
-                      end
-                    end
-                  end
-                end
-              end
+              unquote(forms)
             end
           end,
           "test/support/holder.ex"
@@ -117,6 +128,24 @@ defmodule BrandoAdmin.Components.Form.SubformControlsTest do
           cast: true,
           on_replace: :delete,
           drop_param: :drop_parts_ids
+      end
+    end
+  end
+
+  # A has_many the form does not cast: drawn as before the options mattered
+  defp uncast do
+    quote do
+      relations do
+        relation :rows, :embeds_many,
+          module: Brando.SubformControlsTest.Row,
+          on_replace: :delete,
+          sort_param: :sort_rows_ids,
+          drop_param: :drop_rows_ids
+
+        relation :parts, :has_many,
+          module: Brando.SubformControlsTest.Part,
+          foreign_key: :holder_id,
+          on_replace: :delete
       end
     end
   end
@@ -186,6 +215,58 @@ defmodule BrandoAdmin.Components.Form.SubformControlsTest do
       refute stderr =~ "drop_param: :drop_parts_ids"
     end
 
+    test "is not emitted for a transformer subform or one a custom component draws" do
+      # The shape `Brando.Blueprint.Relations` documents: the transformer
+      # draws its own controls and saves its rows with `put_assoc`
+      relations =
+        quote do
+          relations do
+            relation :rows, :embeds_many, module: Brando.SubformControlsTest.Row, on_replace: :delete
+
+            relation :media, :has_many,
+              module: Brando.SubformControlsTest.Media,
+              foreign_key: :holder_id,
+              on_replace: :delete,
+              cast: true
+          end
+        end
+
+      forms =
+        quote do
+          forms do
+            form do
+              tab "Content" do
+                fieldset do
+                  inputs_for :media do
+                    cardinality :many
+                    style {:transformer, :cover}
+                    default %{}
+                    input :cover, :image
+                    input :title, :text
+                  end
+
+                  inputs_for :rows do
+                    cardinality :many
+                    component Brando.SyncTest.ItemRows
+                    default %{}
+                    input :title, :text
+                  end
+                end
+              end
+            end
+          end
+        end
+
+      {_module, stderr} = compile_holder_with(relations, forms)
+      refute stderr =~ "sort_param"
+      refute stderr =~ "drop_param"
+    end
+
+    test "is not emitted for a has_many without cast: true" do
+      {_module, stderr} = compile_holder(uncast())
+      refute stderr =~ "relation :parts"
+    end
+
     test "is not emitted for a complete relation" do
       {_module, stderr} = compile_holder(complete())
       refute stderr =~ "sort_param"
@@ -240,6 +321,15 @@ defmodule BrandoAdmin.Components.Form.SubformControlsTest do
           assert has?(html, ~s([phx-hook="Brando.SortableEmbeds"])), "#{name}"
         end
       end
+    end
+
+    test "a has_many without cast: true keeps its handle and remove button" do
+      {module, _stderr} = compile_holder(uncast())
+
+      html = render_subform(module, :parts, :inline)
+      assert has?(html, "button.subform-handle")
+      assert has?(html, "button.subform-delete")
+      assert has?(html, ~s([phx-hook="Brando.SortableEmbeds"]))
     end
 
     test "each control follows its own option" do
