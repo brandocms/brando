@@ -132,10 +132,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         do: Enum.map(socket.assigns.items, &saved_item(&1, Map.get(saved, &1.dom_id), socket.assigns.asset_fields)),
         else: socket.assigns.items
 
-    # The rows the items are built on (`entry_saved_elsewhere`), when every
-    # row lined up
-    taken? = lined_up? and map_size(saved) == length(rows)
-
     # A listing draws the row it gets (its id, say): a row that was new and is
     # now saved is drawn again, under the DOM id it has. Rows that were saved
     # before keep their cards, and with them what the browser put on a card
@@ -149,7 +145,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      socket
      |> assign(:items, items)
      |> assign(:sent_dom_ids, [])
-     |> assign(:base_ids, if(taken?, do: Enum.map(rows, & &1.id), else: Map.get(socket.assigns, :base_ids, [])))}
+     |> put_base_ids(lined_up? and map_size(saved) == length(rows), rows)}
   end
 
   # Another editor saved the entry, and the Form took the save
@@ -167,26 +163,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   def update(%{event: "entry_saved_elsewhere", rows: rows}, socket) do
     %{items: items, base_ids: base, asset_fields: asset_fields} = socket.assigns
     rows = Enum.sort_by(rows, &Map.get(&1, :sequence))
-    saved_ids = Enum.map(rows, & &1.id)
-    by_id = Map.new(rows, &{&1.id, &1})
     items = Enum.map(items, &unsaved_item/1)
-
-    held = for item <- items, not item.is_new, do: item.source.id
     by_held_id = Map.new(for item <- items, not item.is_new, do: {item.source.id, item})
-    removed = base -- held
-    reordered? = Enum.filter(held, &(&1 in base)) != Enum.filter(base, &(&1 in held))
-
-    ids =
-      if reordered? do
-        held
-        |> Enum.filter(&Map.has_key?(by_id, &1))
-        |> insert_after_predecessors(Enum.reject(saved_ids, &(&1 in held or &1 in removed)), saved_ids)
-      else
-        Enum.reject(saved_ids, &(&1 in removed))
-      end
+    by_id = Map.new(rows, &{&1.id, &1})
 
     taken =
-      Enum.map(ids, fn id ->
+      Enum.map(saved_order(items, base, rows), fn id ->
         row = Map.fetch!(by_id, id)
         fresh = recovery_item(change(row, %{}), asset_fields)
 
@@ -196,22 +178,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         end
       end)
 
-    order = Enum.map(items, & &1.dom_id)
-    own_new = for item <- items, item.is_new, do: item.dom_id
-    by_dom_id = Map.new(taken ++ Enum.filter(items, & &1.is_new), &{&1.dom_id, &1})
-
-    items =
-      taken
-      |> Enum.map(& &1.dom_id)
-      |> insert_after_predecessors(own_new, order)
-      |> Enum.map(&Map.fetch!(by_dom_id, &1))
-
+    items = with_own_new_items(taken, items)
     shown = MapSet.new(items, & &1.dom_id)
 
     {:ok,
      socket
      |> assign(:items, items)
-     |> assign(:base_ids, saved_ids)
+     |> assign(:base_ids, Enum.map(rows, & &1.id))
      |> update(:open_entries, &MapSet.intersection(&1, shown))
      |> update(:editing_dom_id, &if(MapSet.member?(shown, &1), do: &1))
      |> update(:picking_dom_id, &if(MapSet.member?(shown, &1), do: &1))
@@ -368,14 +341,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     items = Enum.map(existing, &recovery_item(&1, asset_fields))
 
-    # The saved rows the items are built on: a recovered copy's items can
-    # differ from them (`entry_saved_elsewhere`)
-    base_ids =
-      case Map.get(field.form.data, subform.name) do
-        rows when is_list(rows) -> Enum.map(rows, & &1.id)
-        _ -> for item <- items, not item.is_new, do: item.source.id
-      end
-
     stream_entries = Enum.map(items, &stream_entry/1)
 
     image_max_size = (image_cfg && Brando.Utils.try_path(image_cfg, [:size_limit])) || 4_000_000
@@ -396,7 +361,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      socket
      |> assign(:initialized?, true)
      |> assign(:items, items)
-     |> assign(:base_ids, base_ids)
+     |> assign(:base_ids, base_ids(Map.get(field.form.data, subform.name), items))
      |> assign(:relation_key, subform.name)
      |> assign(:image_field, image_field)
      |> assign(:video_field, video_field)
@@ -1430,6 +1395,46 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     for field <- asset_fields, Map.has_key?(item.changes, :"#{field}_id"), into: %{} do
       {field, Map.get(item.assets, field)}
     end
+  end
+
+  # The rows the items are built on (`entry_saved_elsewhere`): the saved
+  # ones, once every row lined up
+  defp put_base_ids(socket, true = _taken?, rows), do: assign(socket, :base_ids, Enum.map(rows, & &1.id))
+  defp put_base_ids(socket, false = _taken?, _rows), do: socket
+
+  # The saved rows the items are built on: a recovered copy's items can
+  # differ from them (`entry_saved_elsewhere`)
+  defp base_ids(rows, _items) when is_list(rows), do: Enum.map(rows, & &1.id)
+  defp base_ids(_rows, items), do: for(item <- items, not item.is_new, do: item.source.id)
+
+  # The ids of the saved rows the items take, in order: less the rows this
+  # editor removed (from `base`, the rows the items were built on), in its
+  # order if it reordered them, with the rows only the save has after the
+  # row they follow there.
+  defp saved_order(items, base, rows) do
+    saved_ids = Enum.map(rows, & &1.id)
+    held = for item <- items, not item.is_new, do: item.source.id
+    removed = base -- held
+
+    if Enum.filter(held, &(&1 in base)) == Enum.filter(base, &(&1 in held)) do
+      Enum.reject(saved_ids, &(&1 in removed))
+    else
+      held
+      |> Enum.filter(&(&1 in saved_ids))
+      |> insert_after_predecessors(Enum.reject(saved_ids, &(&1 in held or &1 in removed)), saved_ids)
+    end
+  end
+
+  # The rows this editor added, among the taken rows, each after the item it
+  # followed here.
+  defp with_own_new_items(taken, items) do
+    own_new = Enum.filter(items, & &1.is_new)
+    by_dom_id = Map.new(taken ++ own_new, &{&1.dom_id, &1})
+
+    taken
+    |> Enum.map(& &1.dom_id)
+    |> insert_after_predecessors(Enum.map(own_new, & &1.dom_id), Enum.map(items, & &1.dom_id))
+    |> Enum.map(&Map.fetch!(by_dom_id, &1))
   end
 
   # `list` with each of `added` placed after its nearest predecessor in
