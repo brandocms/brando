@@ -1,0 +1,1 @@
+- Text an editor typed no longer reaches a page as a live element in three more ways: `raw` on a field of rendered blocks (`{{ entry.rendered_blocks | raw }}`) prints the stored HTML as it is, `url_decode` on rich text sanitizes what it decoded, and a picture's or image's title prints only the elements and attributes the caption editor makes.
