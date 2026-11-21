@@ -79,10 +79,16 @@ defmodule Brando.EditSession.Data do
     which becomes the session's (`{:load, wanted}`).
   * `adopt: true`: the form rejoins a replaced session holding `wanted`,
     which becomes the session's if it is unset (`{:keep, version}`).
+  * `read_only: true`: the form's block fields send nothing to the session,
+    so its unsaved state cannot be built on what the form loads. It keeps
+    the session's version, or with none set shows `wanted` without taking
+    it (`{:load, wanted}`, the session left unset).
   """
   @spec take_version(t(), nil | integer(), keyword()) :: {{:load | :keep, nil | integer()}, t()}
   def take_version(%__MODULE__{} = data, wanted, opts) do
     cond do
+      opts[:read_only] && data.version == :unset -> {{:load, wanted}, data}
+      opts[:read_only] -> {{:keep, data.version}, data}
       opts[:saved] -> {{:load, wanted}, %{data | version: wanted}}
       data.version != :unset -> {{:keep, data.version}, data}
       opts[:adopt] -> {{:keep, wanted}, %{data | version: wanted}}

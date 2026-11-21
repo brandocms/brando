@@ -1682,6 +1682,46 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, texts(saved)} == {2024, ["First paragraph", "New paragraph"]}
     end
 
+    # 12. Someone who may not change the entry shows the version without
+    # taking it: their block fields send nothing, so the session's blocks
+    # are not built on it. The editor who opens next loads it.
+    defp read_only_conn do
+      user = Brando.Test.Users.insert_user(role: :user)
+      log_in_user(Phoenix.ConnTest.build_conn(), user)
+    end
+
+    defp block_count(view), do: length(Regex.scan(~r/<form[^>]*id="entry_block_form-/, render(view)))
+
+    test "a read-only form that opens first leaves the version to the editor", %{conn: conn} = c do
+      first = change_source(c)
+      viewer = open_version(read_only_conn(), c.target.id, first)
+      assert shown_year(viewer) == "2024"
+      await(fn -> block_count(viewer) == 2 end)
+
+      view = open_version(conn, c.target.id, first)
+      assert shown_year(view) == "2024"
+      # the version's new block, in the editor's block field
+      await(fn -> block_count(view) == 2 end)
+      save(view)
+
+      saved = assert_follows_source(c, first)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "Nytt avsnitt"]}
+    end
+
+    test "a read-only form that opens after the editor keeps the session's version", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      await(fn -> block_count(view) == 2 end)
+
+      viewer = open_version(read_only_conn(), c.target.id, first)
+      assert shown_year(viewer) == "2024"
+      await(fn -> block_count(viewer) == 2 end)
+
+      save(view)
+      saved = assert_follows_source(c, first)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "Nytt avsnitt"]}
+    end
+
     # 11. The save schedules the form's decision 100 ms later; a parent
     # update (presence) in between rebuilds the state, and the decision
     # still follows the save: the form loads what it left pending.

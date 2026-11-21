@@ -452,13 +452,19 @@ defmodule Brando.EditSession do
     {:reply, {:ok, info(session, field, pid, false)}, session}
   end
 
+  # A client that may not change the entry (`read_only`) shows a version
+  # without taking it, and so has none to release.
   def handle_call({:take_version, pid, wanted, opts}, _from, session) do
+    opts = Keyword.put(opts, :read_only, read_only?(session, pid))
     {answer, data} = Data.take_version(session.data, wanted, opts)
     {:reply, answer, put_version(session, data, pid)}
   end
 
-  def handle_call({:release_version, pid, version}, _from, session),
-    do: {:reply, :ok, put_version(session, Data.release_version(session.data, version), pid)}
+  def handle_call({:release_version, pid, version}, _from, session) do
+    if read_only?(session, pid),
+      do: {:reply, :ok, session},
+      else: {:reply, :ok, put_version(session, Data.release_version(session.data, version), pid)}
+  end
 
   @impl true
   def handle_cast({:reset_version, pid}, session),

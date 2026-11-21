@@ -1583,6 +1583,10 @@ defmodule Brando.EditSessionTest do
       assert data |> Data.reset_version() |> Data.version() == :unset
       assert {{:keep, 3}, data} = Data.take_version(Data.new(2), 3, adopt: true)
       assert Data.version(data) == 3
+      # a read-only form shows a version without taking it
+      assert {{:load, 3}, unset} = Data.take_version(Data.new(2), 3, read_only: true, saved: true)
+      assert Data.version(unset) == :unset
+      assert {{:keep, 3}, ^data} = Data.take_version(data, 5, read_only: true)
     end
   end
 
