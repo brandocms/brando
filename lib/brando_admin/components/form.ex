@@ -3254,6 +3254,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # Ships the fields this editor changed since its last shipment. Used on
   # field blur and focus, save, and after an asset or a multi-select change.
+  # A field whose value the rich-text check refused doesn't ship
+  # (`pending_changes/1`) and stays unshipped: it is still this editor's
+  # edit, which another editor's save keeps (`unsaved_edits/6`), and ships
+  # once corrected.
   defp ship_all_field_changes(socket) do
     entry = socket.assigns[:entry]
 
@@ -3261,12 +3265,13 @@ defmodule BrandoAdmin.Components.Form do
       socket = apply_held_remote(socket)
       pending = if may_update?(socket), do: pending_changes(socket), else: []
       {changes, socket} = stamp(pending, socket)
+      changeset = socket.assigns.form.source
 
       if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
 
       socket
       |> mark_synced(changes)
-      |> assign(:unshipped_fields, MapSet.new())
+      |> assign(:unshipped_fields, MapSet.filter(unshipped_fields(socket), &Brando.RichText.refused?(changeset, &1)))
       |> broadcast_dirty_fields()
     else
       socket
@@ -3340,7 +3345,10 @@ defmodule BrandoAdmin.Components.Form do
   # neither has one cleared or typed into that didn't cast (`uncast?/2`).
   # Nor has a field this editor may not change (`LockedFields`), whatever put
   # it in the form (a recovery copy, another tab's): an editor it is not
-  # locked for would take it and could save it.
+  # locked for would take it and could save it. Nor has a value the form's
+  # rich-text check refused (`Brando.RichText.refused?/2`), in the field or
+  # in one of its rows: the others keep the last value it sent until the
+  # editor corrects it, which ships as any edit.
   defp pending_changes(socket) do
     changeset = socket.assigns.form.source
     synced = synced_values(socket)
@@ -3350,6 +3358,7 @@ defmodule BrandoAdmin.Components.Form do
     for field <- socket |> unshipped_fields() |> Enum.sort(),
         field not in locked,
         not uncast?(changeset, field),
+        not Brando.RichText.refused?(changeset, field),
         %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
         value != Map.get(synced, field, Map.get(changeset.data, field)),
         do: change
@@ -3691,7 +3700,8 @@ defmodule BrandoAdmin.Components.Form do
   #
   # A recovered value whose field has a newer clock known (the others sent
   # it with their join reply, but no value: they saved since) is older than
-  # the saved entry, and the field goes back to the saved value.
+  # the saved entry, and the field goes back to the saved value. A value the
+  # rich-text check refuses stays in this tab, as in `pending_changes/1`.
   defp share_recovered(socket, offline, entry_params) do
     socket = socket |> mark_local(offline) |> ship_all_field_changes()
     entry = socket.assigns[:entry]
@@ -3706,6 +3716,7 @@ defmodule BrandoAdmin.Components.Form do
         for field <- fields,
             Map.has_key?(entry_params, Atom.to_string(field)),
             not Map.has_key?(synced, field),
+            not Brando.RichText.refused?(changeset, field),
             %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
             value != Map.get(changeset.data, field),
             do: Map.put(change, :clock, {0, tab})

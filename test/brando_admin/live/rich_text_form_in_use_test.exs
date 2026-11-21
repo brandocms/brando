@@ -135,15 +135,14 @@ defmodule BrandoAdmin.RichTextFormInUseTest do
 
     # The browser still sends the subtitle it showed before the other
     # editor's change: the form keeps the other editor's value over it, and
-    # that value is what the save stores, so it is checked
-    for {other_form, html} <- [
-          {"notes", ~s{<p><a href="javascript:alert(1)">link</a></p>}},
-          {nil, ~s{<p onclick="alert(1)">text</p>}}
-        ] do
-      test "is refused on save when another editor's change on the #{other_form || "default"} form put it there",
-           %{conn: conn, article: article} do
+    # that value is what the save stores, so it is checked. The other editor
+    # is on the default form, which draws the subtitle as plain text; one on
+    # `notes` ships no value that form's check refuses
+    # (OtherEditorsReceiveTest).
+    for html <- [~s{<p><a href="javascript:alert(1)">link</a></p>}, ~s{<p onclick="alert(1)">text</p>}] do
+      test "is refused on save when another editor's change put it there: #{html}", %{conn: conn, article: article} do
         view = open(conn, article, "notes")
-        other_view = other_editor(article, unquote(other_form))
+        other_view = other_editor(article, nil)
         stale = view |> render() |> form_params("#article_form_form")
         assert stale["article"]["subtitle"] == "Stored"
 

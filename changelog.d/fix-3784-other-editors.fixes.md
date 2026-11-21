@@ -1,0 +1,1 @@
+- A rich-text value the admin form refuses is no longer sent to the other editors of the entry, where a save from a form that doesn't check that field could store it; the corrected value is sent as usual.
