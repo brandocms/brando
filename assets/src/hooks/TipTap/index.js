@@ -226,6 +226,15 @@ export default app => ({
       this._heldValue = this._input.value
       if (this._joinValue == null) this._joinValue = this._heldValue
       this._input.value = this._shown
+      // The hold is for a rejoin, whose patches and `reconnected()` run in
+      // one task. A patch while the socket is connected that no
+      // `reconnected()` follows ends it: LiveView puts a view whose nested
+      // view cannot join in a permanent error state, which disconnects its
+      // hooks and keeps patching them.
+      if (this.liveSocket.isConnected()) {
+        clearTimeout(this._holdTimer)
+        this._holdTimer = setTimeout(() => this._held && this.release(this._heldValue))
+      }
       return
     }
     if (this._input.value === this._shown) return
@@ -241,12 +250,17 @@ export default app => ({
   // shows; the editor's own text given back leaves it alone. A recovered
   // form that arrives after the rejoin is followed as any other patch.
   disconnected() {
+    clearTimeout(this._holdTimer)
     if (!this._held) { this._heldValue = null; this._joinValue = null }
     this._held = true
   },
 
   reconnected() {
-    const value = this._heldValue !== this._joinValue ? this._heldValue : null
+    this.release(this._heldValue !== this._joinValue ? this._heldValue : null)
+  },
+
+  release(value) {
+    clearTimeout(this._holdTimer)
     this._held = false
     this._heldValue = null
     this._joinValue = null
@@ -425,6 +439,7 @@ export default app => ({
 
   destroyed() {
     this._destroyed = true
+    clearTimeout(this._holdTimer)
     this._lockObserver?.disconnect()
     this.el.removeEventListener('input', this._inputListener)
     this.el.removeEventListener('brando:tiptap:clear', this._clearListener)

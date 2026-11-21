@@ -184,3 +184,24 @@ test('a row’s rich text typed in offline while another editor changed it shows
   await expectInputs(page, quoteRows, ['Første', 'Andre frakoblet'])
   expect(errors).toEqual([])
 })
+
+// LiveView disconnects a view's hooks for good when it puts the view in its
+// permanent error state (a nested view that cannot join), and keeps
+// patching them over the connected socket: the hold taken for a rejoin
+// ends with the first such patch. The error state is stood in for by
+// calling the row's hook as LiveView does then.
+test('a row’s rich text disconnected without a rejoin follows the next change the server makes', async ({ page, secondUserPage }) => {
+  test.setTimeout(90000)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await openBoth(page, secondUserPage, ['Første', 'Andre'])
+
+  await quoteRows(page).nth(1).locator('[phx-hook="Brando.TipTap"]').evaluate(el => {
+    window.liveSocket.owner(el, view => view.getHook(el).__disconnected())
+  })
+  await retype(secondUserPage, quoteRows(secondUserPage).nth(1), 'Endret')
+
+  await expectTexts(page, quoteRows, ['Første', 'Endret'])
+  await expectInputs(page, quoteRows, ['Første', 'Endret'])
+  expect(errors).toEqual([])
+})
