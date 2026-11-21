@@ -117,7 +117,7 @@ The parts are documented in these guides:
 This guide covers the rest: the root declaration, schema settings,
 identifiers, URLs, translations and the generated changeset.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ## Declaring a Blueprint
 
@@ -507,7 +507,7 @@ It runs, in order:
 `user` is the current user, or `:system` for work done by Brando or a job.
 Traits use it to stamp creators and editors, and relation casts pass it on.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ### Drafts
 
@@ -537,7 +537,7 @@ MyApp.Articles.update_article(id, %{"name" => "New name"}, user,
 
 <!-- usage-rules:end -->
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ## Compile-time checks
 
