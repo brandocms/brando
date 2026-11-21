@@ -166,10 +166,24 @@ defmodule Brando.HTML.TreeTest do
       assert Tree.parse_fragment(html) == Floki.parse_fragment!(html)
     end
 
+    # Counts reductions, not time, so a slow or loaded runner cannot fail it.
+    # Each unclosed `<title>` runs to the end of the input: a scan that
+    # searched from each one again would do about 16 times the work for 4
+    # times the input (the regex this scan replaced did), a linear one about 4.
     test "finding noscripts is linear in the input" do
-      html = "<noscript>a</noscript>" <> String.duplicate("<title>a ", 8000)
-      {microseconds, [{"noscript", [], ["a"]}, {"title", [], [_]}]} = :timer.tc(Tree, :parse_fragment, [html])
-      assert microseconds < 100_000
+      html = fn titles -> "<noscript>a</noscript>" <> String.duplicate("<title>a ", titles) end
+
+      # Each measured parse must also be a whole one: a scan that gave up early
+      # on a large input would count few reductions.
+      parse = fn titles ->
+        reductions(fn ->
+          assert [{"noscript", [], ["a"]}, {"title", [], [_]}] = Tree.parse_fragment(html.(titles))
+        end)
+      end
+
+      ratio = parse.(8000) / parse.(2000)
+
+      assert ratio < 8, "4 times the input took #{Float.round(ratio, 1)} times the reductions"
     end
 
     test "takes iodata" do
@@ -232,5 +246,17 @@ defmodule Brando.HTML.TreeTest do
     assert Enum.map(found, &Tree.attr(&1, "data-a")) == ["1", "2"]
     assert Tree.find(hd(tree), &match?({"p", _, _}, &1)) == [{"p", [{"data-a", "2"}], ["x"]}]
     assert Tree.attr({"p", [], []}, "data-a") == nil
+  end
+
+  # The reductions `fun` takes in a process of its own.
+  defp reductions(fun) do
+    fn ->
+      {:reductions, before} = Process.info(self(), :reductions)
+      fun.()
+      {:reductions, after_fun} = Process.info(self(), :reductions)
+      after_fun - before
+    end
+    |> Task.async()
+    |> Task.await(:infinity)
   end
 end
