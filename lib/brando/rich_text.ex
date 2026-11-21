@@ -121,6 +121,29 @@ defmodule Brando.RichText do
     validate_rows(changeset, specs)
   end
 
+  @doc """
+  The fields of `module`'s `relation` rows that are printed as rich text:
+  those a form of `module`, any of its forms, draws as a `:rich_text` input
+  in a subform on that relation. When forms disagree the field is rich
+  text, since the stored value may hold markup.
+  """
+  @spec row_fields_for_printing(module(), atom() | String.t()) :: [atom()]
+  def row_fields_for_printing(module, relation) when is_atom(module) do
+    if function_exported?(module, :__forms__, 0) do
+      relation = to_string(relation)
+
+      Enum.uniq(
+        for form <- module.__forms__(),
+            {name, fields} <- subform_fields(form),
+            Atom.to_string(name) == relation,
+            field <- fields,
+            do: field
+      )
+    else
+      []
+    end
+  end
+
   # `{relation, fields}` for each subform with rich text of a form, or of a
   # module's default form
   defp subform_fields(%{tabs: tabs}) do
