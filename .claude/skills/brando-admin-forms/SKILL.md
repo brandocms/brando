@@ -96,7 +96,13 @@ area in [the section map](form-map.md) and grep for the names it lists.
   newer one (`waiting?`); never load a version there. Another form moving
   the session (`{:edit_session_version, …}`, routed by the hooks) makes this
   one take a version without changes or be `behind?`, which refuses the
-  save until a reload. A read-only client (no update permission, a tab that
+  save. A form behind catches up in place (`catch_up_translation`,
+  `Translation.catch_up/2`): it rebuilds on the saved entry without the
+  editor's own unsaved entry fields (`discard_entry_edits`, shipping saved
+  values for the ones it had shipped) and decides again as at mount. It does
+  so at once when the editor has none (`own_entry_edits`: `unsaved_edits`
+  less received values, the held version's own and the last-editor stamp),
+  otherwise from the panel's button (`"load_session_version"`). A read-only client (no update permission, a tab that
   does not edit) shows a version without setting it; after a session crash
   the first form back puts its held version on the new session unless it
   is `behind?`. A form without block fields decides alone. Coverage
