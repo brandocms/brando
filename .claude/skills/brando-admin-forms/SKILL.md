@@ -96,7 +96,10 @@ area in [the section map](form-map.md) and grep for the names it lists.
   newer one (`waiting?`); never load a version there. Another form moving
   the session (`{:edit_session_version, …}`, routed by the hooks) makes this
   one take a version without changes or be `behind?`, which refuses the
-  save until a reload. A form without block fields decides alone. Coverage
+  save until a reload. A read-only client (no update permission, a tab that
+  does not edit) shows a version without setting it; after a session crash
+  the first form back puts its held version on the new session unless it
+  is `behind?`. A form without block fields decides alone. Coverage
   lives in the "one pending version" describe of
   `test/brando_admin/live/translation_form_test.exs`.
 - Read pending subform associations through the helpers in
