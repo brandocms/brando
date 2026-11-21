@@ -162,13 +162,19 @@ defmodule Brando.Villain.RichTextTemplateReadsTest do
   end
 
   describe "sanitizing rich text" do
-    # A process traces no calls to itself: a counter is the tracer
+    # A process traces no calls to itself: a counter is the tracer. A trace
+    # pattern matches only loaded code, and the code server loads a module on
+    # its first call: when no test before this one in the run had called
+    # Brando.RichText, the pattern matched nothing, without an error, and the
+    # render counted 0 runs. So the module is loaded first, and the pattern
+    # must match the one function.
     defp count_sanitizer_runs(fun) do
+      Code.ensure_loaded!(Brando.RichText)
       counter = spawn_link(fn -> count_calls(0) end)
       session = :trace.session_create(__MODULE__, counter, [])
 
       try do
-        :trace.function(session, {Brando.RichText, :render_html, 1}, true, [:global])
+        assert :trace.function(session, {Brando.RichText, :render_html, 1}, true, [:global]) == 1
         :trace.process(session, self(), true, [:call])
         result = fun.()
         :trace.process(session, self(), false, [:call])
