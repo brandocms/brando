@@ -36,6 +36,7 @@ defmodule Brando.Villain.Markdown do
   alias Brando.Villain.RenderScope
   alias Brando.Villain.RenderSourceQuery
   alias Brando.Villain.TemplateAdapter
+  alias Brando.Villain.TemplateView
   alias Liquex.Context
 
   @brando_env Application.compile_env(:brando, :env)
@@ -67,7 +68,9 @@ defmodule Brando.Villain.Markdown do
   # edit mode: no editor's render (`Brando.FrontendEdit.annotating?/0`), so
   # `get_entry` gives only a published entry.
   def render(entry_blocks, entry, opts) do
-    Brando.FrontendEdit.annotation_scope(false, fn -> do_render(entry_blocks, entry, opts) end)
+    Brando.FrontendEdit.annotation_scope(false, fn ->
+      TemplateView.rich_text_scope(fn -> do_render(entry_blocks, entry, opts) end)
+    end)
   end
 
   defp do_render(entry_blocks, entry, opts) do

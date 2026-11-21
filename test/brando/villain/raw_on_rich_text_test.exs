@@ -144,6 +144,13 @@ defmodule Brando.Villain.RawOnRichTextTest do
       end
     end
 
+    test "leaves typed markup as text through a capture of the value alone" do
+      html = render_entry("{% capture c %}{{ entry.intro }}{% endcapture %}{{ c | raw }}", entry(@typed))
+
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
+    end
+
     test "leaves typed markup in a rich-text global as text", %{user: user} do
       preserve_cache(:globals)
 
@@ -167,6 +174,137 @@ defmodule Brando.Villain.RawOnRichTextTest do
     end
   end
 
+  describe "raw on rich text a filter splits" do
+    test "leaves each piece of a split as text" do
+      for template <- [
+            ~s({{ entry.intro | split: "</p>" | first | raw }}),
+            ~s({{ entry.intro | split: "<p>" | last | raw }}),
+            ~s({% assign parts = entry.intro | split: "</p>" %}{{ parts[0] | raw }}),
+            ~s({% assign parts = entry.intro | split: "</p>" %}{% for p in parts %}{{ p | raw }}{% endfor %})
+          ] do
+        html = render_entry(template, entry(@typed))
+
+        assert active_elements(html) == [], template
+        assert html =~ "&lt;img", template
+      end
+    end
+
+    test "leaves each piece of a split rich-text variable as text", %{user: user} do
+      template = ~s({{ body | split: "</p>" | first | raw }})
+      var = %Var{key: "body", label: "B", type: :rich_text, value: @typed}
+      html = render(block(module!(user, template), vars: [var]))
+
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
+    end
+
+    test "marks the text items of nested lists" do
+      Brando.Villain.TemplateView.rich_text_scope(fn ->
+        rich = Brando.Villain.TemplateView.read_as_rich_text("&lt;b&gt;")
+        [[a], b, 1] = Brando.Villain.TemplateView.keep_rich_text([["&lt;i&gt;"], "&amp;", 1], [rich])
+
+        assert Brando.Villain.TemplateView.read_as_rich_text?(a)
+        assert Brando.Villain.TemplateView.read_as_rich_text?(b)
+      end)
+    end
+  end
+
+  describe "marks" do
+    alias Brando.Villain.TemplateView
+
+    setup do
+      clear_marks()
+      :ok
+    end
+
+    defp clear_marks do
+      for {{TemplateView, _} = key, _} <- Process.get(), do: Process.delete(key)
+    end
+
+    defp marks, do: for({{TemplateView, _}, value} <- Process.get(), do: value)
+
+    test "text with nothing for raw to decode is not marked" do
+      TemplateView.read_as_rich_text("")
+      TemplateView.read_as_rich_text("<p>plain</p>")
+
+      refute TemplateView.read_as_rich_text?("")
+      refute TemplateView.read_as_rich_text?("<p>plain</p>")
+      assert TemplateView.read_as_rich_text?(TemplateView.read_as_rich_text("<p>&amp;</p>"))
+    end
+
+    test "an empty rich-text field leaves raw decoding other text" do
+      entry = %Entry{title: "<em>Hi</em>", intro: "<p></p>"}
+
+      for template <- [
+            ~s({{ entry.title | replace: "zz", "" | raw }}),
+            ~s({{ entry.title | default: "" | raw }}),
+            ~s({{ entry.title | truncate: 50, "" | raw }}),
+            ~s({% assign s = "" %}{{ s | append: entry.title | raw }})
+          ] do
+        assert render_entry("{{ entry.intro | strip_html }}" <> template, entry) == "<em>Hi</em>", template
+      end
+    end
+
+    test "an empty rich-text variable is not marked", %{user: user} do
+      template = ~s({{ body }}{{ entry.title | default: "" | raw }})
+      var = %Var{key: "body", label: "B", type: :rich_text, value: ""}
+      page = %Page{title: "<em>Hi</em>", language: :en}
+
+      assert render(block(module!(user, template), vars: [var]), page) == "<em>Hi</em>"
+    end
+
+    test "reaching the cap keeps the newest marks" do
+      for n <- 1..998, do: TemplateView.read_as_rich_text("&amp;#{n}")
+      new = for n <- 1..3, do: TemplateView.read_as_rich_text("&lt;new#{n}&gt;")
+
+      assert Enum.all?(new, &TemplateView.read_as_rich_text?/1)
+
+      # And the memory stays bounded
+      for n <- 1..5_000, do: TemplateView.read_as_rich_text("&amp;more#{n}")
+      assert marks() |> Enum.map(&MapSet.size/1) |> Enum.sum() <= 2_000
+    end
+
+    test "rendering Markdown leaves no marks", %{user: user} do
+      module = module!(user, "{{ body }}{% for row in block.table_rows %}{{ row.vars[0].value }}{% endfor %}")
+      var = %Var{key: "body", label: "B", type: :rich_text, value: @typed}
+
+      blocks = [
+        %{block: block(module, vars: [var], table_rows: [%TableRow{vars: [%{var | key: "row"}]}])}
+      ]
+
+      assert Brando.Villain.Markdown.render(blocks, %Page{title: "T", language: :en}) =~ "img"
+      assert marks() == []
+    end
+  end
+
+  describe "raw on a caption" do
+    test "leaves typed markup in a picture ref's title as text", %{user: user} do
+      ref = %Ref{
+        name: "pic",
+        uid: Utils.generate_uid(),
+        active: true,
+        data: %Brando.Villain.Blocks.PictureBlock{
+          type: "picture",
+          data: %Brando.Villain.Blocks.PictureBlock.Data{title: @typed}
+        }
+      }
+
+      html = render(block(module!(user, "{{ refs.pic.data.data.title | raw }}"), refs: [ref]))
+
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
+    end
+
+    test "leaves typed markup in an image's title as text" do
+      image = Factory.build(:image, %{title: @typed})
+      context = Villain.get_base_context(%Page{title: "T", language: :en, meta_image: image})
+      html = Villain.parse_and_render("{{ entry.meta_image.title | raw }}", context)
+
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
+    end
+  end
+
   describe "raw on other text, as before" do
     test "decodes a plain field into its markup", %{user: user} do
       page = %Page{title: "<em>Hi</em> &amp; more", language: :en}
@@ -186,6 +324,11 @@ defmodule Brando.Villain.RawOnRichTextTest do
       # Text a template captured is new text, built from what it printed
       assert render_entry("{% capture c %}{{ entry.title }}{% endcapture %}{{ c | raw }}", %Entry{title: "<b>x</b>"}) ==
                "<b>x</b>"
+    end
+
+    test "decodes rich text a template captured with other text around it" do
+      html = render_entry("{% capture c %}<div>{{ entry.intro }}</div>{% endcapture %}{{ c | raw }}", entry(@typed))
+      assert [_] = active_elements(html)
     end
 
     test "a project's filter returning {:safe, html} decodes as before" do
