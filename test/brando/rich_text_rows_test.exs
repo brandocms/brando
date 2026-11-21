@@ -254,6 +254,128 @@ defmodule Brando.RichTextRowsTest do
     assert [%{errors: [text: _]}] = Changeset.get_change(refused, :quotes)
   end
 
+  describe "the form in use" do
+    # The article's `notes` form draws its subtitle as rich text and its
+    # `rich_quotes` form a quote's text; the default form draws both as
+    # plain text. The admin form checks the form it saves from
+    # (Brando.RichText.validate_form/2) after the schema's changeset, which
+    # checks by the default form.
+    alias Brando.SyncTest.Article
+
+    @article %{title: "Article", slug: "article", language: "en", status: "published", creator_id: 1}
+
+    defp article_changeset(params, form) do
+      %Article{}
+      |> Article.changeset(Map.merge(@article, params), :system)
+      |> Brando.RichText.validate_form(form)
+    end
+
+    test "a top-level rich-text input only a named form declares is refused with unsafe markup" do
+      for html <- @unsafe do
+        changeset = article_changeset(%{subtitle: html}, Article.__form__(:notes))
+        refute changeset.valid?, html
+        assert Keyword.has_key?(changeset.errors, :subtitle)
+      end
+
+      changeset = article_changeset(%{subtitle: @commented}, Article.__form__(:notes))
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :subtitle) == @sanitized
+    end
+
+    test "a subform row's rich-text input only a named form declares is refused with unsafe markup" do
+      for html <- @unsafe do
+        changeset = article_changeset(%{quotes: [%{text: "<p>Kept</p>"}, %{text: html}]}, Article.__form__(:rich_quotes))
+        refute changeset.valid?, html
+        assert [kept, refused] = Changeset.get_change(changeset, :quotes)
+        assert kept.errors == []
+        assert Keyword.has_key?(refused.errors, :text)
+      end
+
+      changeset = article_changeset(%{quotes: [%{text: @commented}]}, Article.__form__(:rich_quotes))
+      assert changeset.valid?
+      assert [row] = Changeset.get_change(changeset, :quotes)
+      assert row_text(row) == @sanitized
+    end
+
+    test "the same fields saved from the default form, where they are plain text, are stored as typed" do
+      for html <- [@commented | @unsafe] do
+        changeset = article_changeset(%{subtitle: html, quotes: [%{text: html}]}, Article.__form__())
+        assert changeset.valid?, html
+        assert Changeset.get_change(changeset, :subtitle) == html
+        assert [row] = Changeset.get_change(changeset, :quotes)
+        assert row_text(row) == html
+      end
+    end
+
+    test "an untouched field or row holding old unsafe text does not block the save" do
+      stored = ~s{<p onclick="x()">Old</p>}
+
+      article = %Article{
+        subtitle: stored,
+        quotes: [%Brando.SyncTest.ArticleQuote{id: Ecto.UUID.generate(), text: stored}]
+      }
+
+      [quote_row] = article.quotes
+
+      changeset =
+        article
+        |> Article.changeset(
+          Map.merge(@article, %{subtitle: stored, quotes: [%{id: quote_row.id, text: stored}]}),
+          :system
+        )
+        |> Brando.RichText.validate_form(Article.__form__(:notes))
+        |> Brando.RichText.validate_form(Article.__form__(:rich_quotes))
+
+      assert changeset.errors == []
+      assert Enum.all?(Changeset.get_change(changeset, :quotes, []), &(&1.errors == []))
+    end
+
+    # A refused changeset kept in the form whose value then changes with no
+    # cast (another editor corrects it): checked again, without the errors
+    # the earlier check left (Brando.RichText.recheck_form/2)
+    test "a field refused before is checked again once its value changes" do
+      form = Article.__form__(:notes)
+      refused = article_changeset(%{subtitle: hd(@unsafe)}, form)
+      refute refused.valid?
+
+      corrected = Changeset.put_change(refused, :subtitle, "<p>Fine</p>")
+      rechecked = Brando.RichText.recheck_form(corrected, form)
+      assert rechecked.valid?
+      assert rechecked.errors == []
+      assert Changeset.get_change(rechecked, :subtitle) == "<p>Fine</p>"
+
+      assert refused |> Brando.RichText.recheck_form(form) |> Map.fetch!(:errors) |> Keyword.has_key?(:subtitle)
+    end
+
+    test "a field refused before and checked again stays invalid when another error remains" do
+      form = Article.__form__(:notes)
+
+      rechecked =
+        %{subtitle: hd(@unsafe)}
+        |> article_changeset(form)
+        |> Changeset.add_error(:title, "is taken")
+        |> Changeset.put_change(:subtitle, "<p>Fine</p>")
+        |> Brando.RichText.recheck_form(form)
+
+      refute rechecked.valid?
+      assert Keyword.keys(rechecked.errors) == [:title]
+    end
+
+    test "a row refused before is checked again once its value changes" do
+      form = Article.__form__(:rich_quotes)
+      refused = article_changeset(%{quotes: [%{text: hd(@unsafe)}]}, form)
+      refute refused.valid?
+
+      [row] = Changeset.get_change(refused, :quotes)
+      corrected = Changeset.put_change(refused, :quotes, [Changeset.put_change(row, :text, "<p>Fine</p>")])
+      %{changes: %{quotes: [row]}} = rechecked = Brando.RichText.recheck_form(corrected, form)
+
+      assert rechecked.valid?
+      assert row.valid?
+      assert row.errors == []
+    end
+  end
+
   test "the entry's own rich text is still checked" do
     refute changeset(%{intro: hd(@unsafe)}).valid?
     assert changeset(%{intro: @safe}).valid?

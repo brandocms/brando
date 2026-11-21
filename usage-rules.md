@@ -846,8 +846,9 @@ values as Brando gives them:
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
   `url`, ref data read through `refs` and a datasource's `entries` read the same
-  way: `{{ entry.title }}` prints as text. A field declared `:rich_text` in the
-  entry's form, and a text ref's `text`, arrive sanitized.
+  way: `{{ entry.title }}` prints as text. A `:rich_text` input at the top of
+  the default form or in any form's subform rows, and a text ref's `text`,
+  arrive sanitized.
 - `{{ entry.embed | raw }}` is a template's opt-in, for a plain field whose
   markup you trust.
 

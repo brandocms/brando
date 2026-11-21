@@ -8,8 +8,12 @@ defmodule Brando.Villain.TemplateView do
   read, with its braces as character references, so markup or Liquid in a
   field is printed as text. A field declared as rich text
   (`__rich_text_fields__`, a text ref's `text`, a placement's caption) arrives
-  sanitized, to print as markup. A template opts in to a plain field's markup
-  with the `raw` filter (`Brando.Villain.Filters.raw/2`).
+  sanitized, to print as markup. So does a subform row's field that a form
+  of the row's owner draws as rich text
+  (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
+  names, also through a filter that selects or reorders the rows
+  (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
+  (`Brando.Villain.Filters.raw/2`).
 
   The view is a `Liquex.Drop` around the value, resolved one key at a time, so
   a render pays only for what its templates read and a heavy preload it never
@@ -41,10 +45,11 @@ defmodule Brando.Villain.TemplateView do
   alias Brando.Villain.Parser
   alias Liquex.Context
 
-  defstruct [:value, mode: :escape]
+  # `rich`: the fields of a subform row that its owner's forms draw as rich text
+  defstruct [:value, mode: :escape, rich: []]
 
   @type mode :: :escape | :processed | :raw | :names
-  @type t :: %__MODULE__{value: map(), mode: mode()}
+  @type t :: %__MODULE__{value: map(), mode: mode(), rich: [atom()]}
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
@@ -128,10 +133,10 @@ defmodule Brando.Villain.TemplateView do
     end
   end
 
-  def fetch(%__MODULE__{value: value, mode: mode}, key, %Context{} = context) do
+  def fetch(%__MODULE__{value: value, mode: mode} = view, key, %Context{} = context) do
     with false <- hidden?(value, key, mode),
          {:ok, field} <- Liquex.Indifferent.fetch(value, key) do
-      {:ok, value |> read(key, field, read_mode(mode, context)) |> atoms_as_text(context)}
+      {:ok, view |> read(key, field, read_mode(mode, context)) |> atoms_as_text(context)}
     else
       _ -> :error
     end
@@ -208,6 +213,36 @@ defmodule Brando.Villain.TemplateView do
   def filter_result(result, _filter, mode, context),
     do: result |> atom_text() |> wrap(read_mode(mode, context)) |> inert(context)
 
+  @doc """
+  Gives each subform row in a filter's `result` the rich-text fields it had
+  in the filter's `inputs` (the value and arguments, `with_rich_rows/3`), so
+  a row a filter selects or reorders (`first`, `reverse`, `sort`, `where`)
+  prints as it does in a loop. A filter reads the rows unwrapped, and a
+  value it computes is no row it was given.
+  """
+  @spec keep_rich_rows(term(), term()) :: term()
+  def keep_rich_rows(result, inputs) do
+    case rich_rows(inputs, %{}) do
+      rows when map_size(rows) == 0 -> result
+      rows -> put_rich_rows(result, rows)
+    end
+  end
+
+  defp rich_rows(%__MODULE__{rich: [_ | _] = rich} = view, acc), do: Map.put(acc, unwrap(view), rich)
+  defp rich_rows(list, acc) when is_list(list), do: Enum.reduce(list, acc, &rich_rows/2)
+  defp rich_rows({_key, value}, acc), do: rich_rows(value, acc)
+  defp rich_rows(_value, acc), do: acc
+
+  defp put_rich_rows(%__MODULE__{value: value} = view, rows) do
+    case Map.fetch(rows, value) do
+      {:ok, rich} -> %{view | rich: rich}
+      :error -> view
+    end
+  end
+
+  defp put_rich_rows(list, rows) when is_list(list), do: Enum.map(list, &put_rich_rows(&1, rows))
+  defp put_rich_rows(value, _rows), do: value
+
   defp wrap_records(value, context) when is_map(value), do: wrap_for(value, context)
   defp wrap_records(value, context) when is_list(value), do: Enum.map(value, &wrap_records(&1, context))
   defp wrap_records(value, _context), do: value
@@ -282,19 +317,54 @@ defmodule Brando.Villain.TemplateView do
   defp atoms_as_text(field, %Context{private: %{@raw_flag => true}}), do: field
   defp atoms_as_text(field, _context), do: atom_text(field)
 
-  defp read(value, key, field, :escape) when is_binary(field), do: read_text(value, key, field)
-  defp read(_value, _key, field, mode), do: wrap(field, mode)
+  defp read(view, key, field, :escape) when is_binary(field), do: read_text(view, key, field)
+  defp read(%{value: value}, key, field, mode), do: field |> wrap(mode) |> with_rich_rows(value, key)
 
-  defp read_text(%struct{} = value, key, text) do
+  defp read_text(%{value: %struct{} = value, rich: rich}, key, text) do
     cond do
       plain?(text) -> text
       struct in @captioned and to_string(key) in ["title", "caption"] -> Captions.caption_html(text)
-      rich_text?(value, key) -> text |> Brando.RichText.render_html() |> InertLiquid.encode_all()
+      rich_text?(value, key) or named?(rich, key) -> text |> Brando.RichText.render_html() |> InertLiquid.encode_all()
       true -> escape(text)
     end
   end
 
-  defp read_text(_value, _key, text), do: escape(text)
+  defp read_text(_view, _key, text), do: escape(text)
+
+  # A blueprint's subform rows, each view given the fields its owner's forms
+  # draw as rich text
+  defp with_rich_rows(rows, %struct{}, key) when is_list(rows) do
+    case rich_row_fields(rows, struct, key) do
+      [] -> rows
+      fields -> Enum.map(rows, &put_rich(&1, fields))
+    end
+  end
+
+  defp with_rich_rows(%__MODULE__{value: %_{}} = row, %struct{}, key) do
+    case rich_row_fields([row], struct, key) do
+      [] -> row
+      fields -> put_rich(row, fields)
+    end
+  end
+
+  defp with_rich_rows(field, _value, _key), do: field
+
+  defp rich_row_fields(rows, struct, key) do
+    if relation?(struct, key) and Enum.any?(rows, &match?(%__MODULE__{value: %_{}}, &1)),
+      do: Brando.RichText.row_fields_for_printing(struct, key),
+      else: []
+  end
+
+  defp relation?(struct, key) do
+    function_exported?(struct, :__schema__, 1) and
+      to_string(key) in Enum.map(struct.__schema__(:associations) ++ struct.__schema__(:embeds), &Atom.to_string/1)
+  end
+
+  defp put_rich(%__MODULE__{value: %_{}} = row, fields), do: %{row | rich: fields}
+  defp put_rich(row, _fields), do: row
+
+  defp named?([], _key), do: false
+  defp named?(fields, key), do: to_string(key) in Enum.map(fields, &Atom.to_string/1)
 
   defp rich_text?(%TextBlock.Data{}, key), do: to_string(key) == "text"
 

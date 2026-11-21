@@ -490,10 +490,19 @@ It runs, in order:
    `noembed`, `noframes`, `noscript`, `plaintext`, `template`, `title`);
    scripts, event handlers, LiveView bindings, embedded documents and
    script addresses are a validation error, on the row's field for a
-   subform. Only changed values are checked: a row kept exactly as stored
+   subform. A row's input makes only the row's field rich text, not a
+   column of the entry with the same name. Only changed values are checked: a row kept exactly as stored
    keeps its text. A transformer subform's rows join the entry after this
    changeset ran, so the admin form checks them the same way
    (`Brando.RichText.validate_subform_rows/3`) before it saves.
+
+   The admin form also checks the rich text of the form the editor saves
+   from (`Brando.RichText.validate_form/2`), on validate, on save and when
+   it stores a revision: a `:rich_text` input that only a named form
+   declares, at the top or in a subform's rows, is checked when that form
+   saves. A save that comes from no form (a context call, a proposal, the
+   MCP tools) is checked by the default form only, and a field another
+   form declares as rich text is not sanitized because of it.
 
 `user` is the current user, or `:system` for work done by Brando or a job.
 Traits use it to stamp creators and editors, and relation casts pass it on.

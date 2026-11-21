@@ -1,0 +1,1 @@
+- The admin form checks the rich text of the form an editor saves from: a `:rich_text` input that only a named form declares, at the top or in a subform's rows, is sanitized and refuses unsafe markup on save and when a revision is stored, as one in the default form does.

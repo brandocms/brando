@@ -84,6 +84,85 @@ defmodule Brando.RichText do
   end
 
   @doc """
+  Validates the rich-text inputs of `form`, the form an editor saves from
+  (`validate_fields/2`): its top-level `:rich_text` inputs and those in its
+  subforms' rows. A field `form` draws as plain text is left as it is.
+
+  The admin form runs it after the schema's changeset, which checks by the
+  default form (`validate_blueprint/2`), so a rich-text input only a named
+  form declares is checked when that form saves. A save that comes from no
+  form is checked by the default form only. `nil` checks nothing.
+  """
+  def validate_form(changeset, %{tabs: _} = form) do
+    changeset
+    |> validate_fields(top_level_fields(form))
+    |> validate_rows(subform_fields(form))
+  end
+
+  def validate_form(changeset, _form), do: changeset
+
+  @doc """
+  Checks `form`'s rich text again (`validate_form/2`) in a changeset an
+  earlier check refused and whose values may have changed since with no
+  cast, like the admin form's when another editor corrects a value: the
+  unsafe-rich-text errors that check left on `form`'s fields and rows are
+  dropped first. Any other error keeps the changeset invalid.
+  """
+  def recheck_form(changeset, %{tabs: _} = form) do
+    changeset
+    |> drop_unsafe_errors(top_level_fields(form))
+    |> drop_row_errors(subform_fields(form))
+    |> validate_form(form)
+  end
+
+  def recheck_form(changeset, _form), do: changeset
+
+  defp drop_unsafe_errors(%Changeset{} = changeset, fields) do
+    errors = Enum.reject(changeset.errors, fn {field, {message, _}} -> field in fields and message == @unsafe_message end)
+
+    if errors == changeset.errors,
+      do: changeset,
+      else: %{changeset | errors: errors, valid?: errors == [] and nested_valid?(changeset.changes)}
+  end
+
+  defp drop_unsafe_errors(row, _fields), do: row
+
+  defp drop_row_errors(changeset, specs) do
+    changeset =
+      Enum.reduce(specs, changeset, fn {relation, fields}, changeset ->
+        case Map.fetch(changeset.changes, relation) do
+          {:ok, rows} when is_list(rows) ->
+            put_in(changeset.changes[relation], Enum.map(rows, &drop_unsafe_errors(&1, fields)))
+
+          {:ok, %Changeset{} = row} ->
+            put_in(changeset.changes[relation], drop_unsafe_errors(row, fields))
+
+          _ ->
+            changeset
+        end
+      end)
+
+    %{changeset | valid?: changeset.errors == [] and nested_valid?(changeset.changes)}
+  end
+
+  # Whether the rows among `changes` are valid
+  defp nested_valid?(changes) do
+    Enum.all?(Map.values(changes), fn
+      %Changeset{valid?: valid?} -> valid?
+      [%Changeset{} | _] = rows -> Enum.all?(rows, &row_valid?/1)
+      _ -> true
+    end)
+  end
+
+  # The `:rich_text` inputs at the top of a form, not in its subforms
+  defp top_level_fields(%{tabs: tabs}) do
+    for tab <- tabs,
+        fieldset <- tab.fields,
+        %Brando.Blueprint.Forms.Input{type: :rich_text, name: name} <- Map.get(fieldset, :fields, []),
+        do: name
+  end
+
+  @doc """
   Validates the rich-text inputs in the rows of the subforms `relations` in
   `changeset`, as `validate_blueprint/2` does for the rows a cast puts
   there. For rows put on the changeset after the module's changeset ran,
@@ -93,6 +172,29 @@ defmodule Brando.RichText do
   def validate_subform_rows(changeset, form, relations) do
     specs = for {relation, _} = spec <- subform_fields(form), relation in relations, do: spec
     validate_rows(changeset, specs)
+  end
+
+  @doc """
+  The fields of `module`'s `relation` rows that are printed as rich text:
+  those a form of `module`, any of its forms, draws as a `:rich_text` input
+  in a subform on that relation. When forms disagree the field is rich
+  text, since the stored value may hold markup.
+  """
+  @spec row_fields_for_printing(module(), atom() | String.t()) :: [atom()]
+  def row_fields_for_printing(module, relation) when is_atom(module) do
+    if function_exported?(module, :__forms__, 0) do
+      relation = to_string(relation)
+
+      Enum.uniq(
+        for form <- module.__forms__(),
+            {name, fields} <- subform_fields(form),
+            Atom.to_string(name) == relation,
+            field <- fields,
+            do: field
+      )
+    else
+      []
+    end
   end
 
   # `{relation, fields}` for each subform with rich text of a form, or of a

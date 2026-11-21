@@ -640,6 +640,13 @@ input :introduction, :rich_text,
 `:rich_text` stores HTML. Configure its tools and named styles on the input;
 existing markup stays readable when a tool is turned off.
 
+The HTML is sanitized when it is saved, and unsafe markup (scripts, event
+handlers, script addresses) is a validation error on the field: see the
+[changeset pipeline](blueprints.md#the-changeset). The admin form checks the
+`:rich_text` inputs of the form the editor saves from, those in its subforms'
+rows included, so an input that only a named form declares as rich text is
+checked when that form saves; any other save checks the default form's.
+
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,
 `sup`, `color`, `unsetMarks`, `jumpAnchor`, `smartText` and `align`. An

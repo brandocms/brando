@@ -58,6 +58,7 @@ defmodule Brando.Villain.Filters do
         mod
         |> Kernel.apply(func, args)
         |> TemplateView.filter_result(func, view_mode, context)
+        |> TemplateView.keep_rich_rows([value | function_args])
     end
   rescue
     # credo:disable-for-next-line

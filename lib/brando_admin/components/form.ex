@@ -2602,7 +2602,11 @@ defmodule BrandoAdmin.Components.Form do
   # stay as the form has them: the browser sent the rows it showed before
   # another editor's save replaced them (`stale_relations/2`), so their
   # params don't reach the cast, where a relation that can't replace a row
-  # would raise for the rows they lack.
+  # would raise for the rows they lack. The schema's changeset checks the
+  # rich text that was cast, by the default form; the form checks last
+  # (`check_rich_text/3`), on the changeset it will save: a value put back
+  # from the form (another editor's, which entered it with no cast) is
+  # checked too.
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
   defp cast_entry_edit(socket, entry, params, target, stale) do
     %{schema: schema, current_user: current_user} = socket.assigns
@@ -2622,6 +2626,20 @@ defmodule BrandoAdmin.Components.Form do
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
     |> keep_fields(current, stale)
+    |> then(fn {changeset, echoed} -> {check_rich_text(changeset, socket, &Brando.RichText.validate_form/2), echoed} end)
+  end
+
+  # The rich text of the changeset the form saves, by the default form, as
+  # the schema's changeset checked what was cast, and by the form in use: a
+  # value put back from the form after the cast has passed neither check.
+  defp check_rich_text(changeset, socket, check) do
+    schema = socket.assigns.schema
+    default = if function_exported?(schema, :__form__, 0), do: schema.__form__()
+
+    [default, socket.assigns[:form_blueprint]]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.reduce(changeset, &check.(&2, &1))
   end
 
   # A locked slug left empty is generated from its source, which the cast
@@ -3554,8 +3572,11 @@ defmodule BrandoAdmin.Components.Form do
     sent? = &Map.has_key?(sent, Atom.to_string(&1))
     edited_relations = edited_relations(socket)
 
+    # A kept field can still differ from the form's: the rich-text check
+    # stores a value another editor typed as browsers parse it.
     edited =
       for field <- fields,
+          field not in echoed,
           field == target or (sent?.(field) and field_value(previous, field) != field_value(changeset, field)),
           do: field
 
@@ -4617,6 +4638,10 @@ defmodule BrandoAdmin.Components.Form do
         block_changesets
         |> assoc_all_block_fields(without_rows(socket.assigns.form.source, put_again))
         |> assoc_all_transformer_fields(transformer_changesets, socket.assigns.form_blueprint)
+        # The form's changeset may not come from a cast (another editor's
+        # field change, a working copy): checked here as a save checks it,
+        # again where an earlier check refused a value that has changed since
+        |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
 
       socket
       |> store_revision(changeset)
