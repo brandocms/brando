@@ -380,19 +380,36 @@ defmodule BrandoAdmin.Components.Form.Translation do
   returns; `nil` for the socket's state when the entry is no translation
   any more.
   """
+  #
+  # A review tick stays only on an item that is the same in the version
+  # caught up with: same path, raised against the same source text. A tick
+  # on a text the source changed again was for the older text.
   def catch_up(%{assigns: %{translation: state}} = socket, session) do
+    reviewed = item_digests(state.pending)
+
     socket
     |> assign(:translation, %{state | decided?: false, applied_version_id: nil})
     |> assign_state()
     |> case do
       %{assigns: %{translation: %{role: :target, synchronized?: true}}} = socket ->
         {how, socket} = decide(socket, session)
-        {how, update_state(socket, &%{&1 | caught_up?: true})}
+
+        {how,
+         update_state(socket, fn state ->
+           now = item_digests(state.pending)
+           ticks = Enum.filter(state.acknowledged, &(Map.has_key?(now, &1) and now[&1] == reviewed[&1]))
+           %{state | caught_up?: true, acknowledged: ticks}
+         end)}
 
       socket ->
         {:none, socket}
     end
   end
+
+  defp item_digests(%PendingVersion{work_items: items}) when is_list(items),
+    do: Map.new(items, &{&1.path, &1.source_digest})
+
+  defp item_digests(_version), do: %{}
 
   defp update_state(%{assigns: %{translation: %{} = state}} = socket, fun), do: assign(socket, :translation, fun.(state))
 

@@ -1879,6 +1879,64 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert shown_subtitle(other) == "Typed before the pause"
     end
 
+    defp tick(view, path) do
+      params =
+        view
+        |> render()
+        |> form_params("#article_form_form")
+        |> Map.put("translation_review", %{"acknowledged" => [path]})
+
+      view |> element("#article_form_form") |> render_change(params)
+    end
+
+    defp ticked?(view, path),
+      do: has_element?(view, "input[name='translation_review[acknowledged][]'][value='#{path}'][checked]")
+
+    defp translate_item(version), do: Enum.find(version.work_items, &(&1.kind == :translate))
+
+    # A tick is for the source text the editor reviewed. The form catches up
+    # to a version where the source changed that text again: the tick goes.
+    test "a review tick on a text the source changed again does not carry onto the version caught up with",
+         %{conn: conn} = c do
+      first = change_source(c)
+      item = translate_item(first)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      tick(other, item.path)
+      assert ticked?(other, item.path)
+
+      [_, join] = load(c.source.id).entry_blocks
+      set_text(join.block, "Endret avsnitt")
+      change_year(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      assert Enum.any?(third.work_items, &(&1.path == item.path and &1.source_digest != item.source_digest))
+
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      refute ticked?(other, item.path)
+    end
+
+    # The same text, unchanged in the newer version: the tick stays.
+    test "a review tick on a text the source left alone stays on the version caught up with", %{conn: conn} = c do
+      first = change_source(c)
+      item = translate_item(first)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      tick(other, item.path)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      assert Enum.any?(third.work_items, &(&1.path == item.path and &1.source_digest == item.source_digest))
+
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert ticked?(other, item.path)
+    end
+
     defp shown_subtitle(view),
       do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "subtitle"])
 
