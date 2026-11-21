@@ -185,6 +185,33 @@ defmodule BrandoAdmin.RichTextFormInUseTest do
     end
   end
 
+  describe "another editor's value the form's check rewrites" do
+    # `notes` draws the subtitle as rich text and stores it as browsers
+    # parse it. The other editor's value, kept over the browser's old form,
+    # stays theirs: the form must not take it for its own edit, or the next
+    # event from the old form would put the stored value back and ship it.
+    for value <- ["Rock & Roll", "<p>A subtitle</p><!-- note -->"] do
+      test "stays in both forms while the browser sends its old form: #{value}", %{conn: conn, article: article} do
+        value = unquote(value)
+        view = open(conn, article, "notes")
+        other_view = other_editor(article, nil)
+        stale = view |> render() |> form_params("#article_form_form")
+        other_types_subtitle(other_view, view, value)
+
+        for title <- ["T1", "T2"] do
+          params = stale |> put_in(["article", "title"], title) |> Map.put("_target", ["article", "title"])
+          view |> element("#article_form_form") |> render_change(params)
+          refute Ecto.Changeset.get_field(form_source(view), :subtitle) == "Stored"
+        end
+
+        view |> form_of() |> render_hook("focus", %{"field" => "article[title]"})
+        view |> form_of() |> render_hook("blur", %{"field" => "article[title]"})
+        await(fn -> Ecto.Changeset.get_field(form_source(other_view), :title) == "T2" end)
+        assert Ecto.Changeset.get_field(form_source(other_view), :subtitle) == value
+      end
+    end
+  end
+
   describe "a revision refused for another editor's value" do
     test "is stored once the other editor corrects the value", %{conn: conn, article: article} do
       view = open(conn, article, "notes")
