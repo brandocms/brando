@@ -215,23 +215,37 @@ export default app => ({
     // Rejoining: the input keeps what the editor shows, and the recovered
     // form's patch is compared with that (`Presence/pendingInputs.js` would
     // otherwise take the recovered text for a stale keystroke of this
-    // editor's and keep the saved one).
-    if (this._held) { this._input.value = this._shown; return }
+    // editor's and keep the saved one). What the patches wrote is
+    // remembered for `reconnected()`.
+    if (this._held) {
+      this._heldValue = this._input.value
+      if (this._joinValue == null) this._joinValue = this._heldValue
+      this._input.value = this._shown
+      return
+    }
     if (this._input.value === this._shown) return
     this.replaceContent()
   },
 
-  // A rejoin patches in the saved text and then, in the same task, the
-  // recovered form, and calls `reconnected()` after both: following the
-  // first would replace a text the second gives back (resetting its undo
-  // history and moving the cursor). The input is read once, when the
-  // recovered form is in.
+  // A rejoin patches in the saved entry and then the recovered form, and
+  // calls `reconnected()` after both: following the first would replace a
+  // text the second gives back (resetting its undo history and moving the
+  // cursor). The recovery's answer, when it changed this input (another
+  // editor's change while this one was away, a removed row above), is put
+  // in once, and replaces the document if it differs from what the editor
+  // shows; the editor's own text given back leaves it alone. A recovered
+  // form that arrives after the rejoin is followed as any other patch.
   disconnected() {
+    if (!this._held) { this._heldValue = null; this._joinValue = null }
     this._held = true
   },
 
   reconnected() {
+    const value = this._heldValue !== this._joinValue ? this._heldValue : null
     this._held = false
+    this._heldValue = null
+    this._joinValue = null
+    if (value != null && this.entryRichText()) this._input.value = value
     this.followInput()
   },
 
