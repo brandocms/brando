@@ -1658,7 +1658,9 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {shown_year(other), shown_title(other)} == {"2030", "Tittel"}
       assert Brando.EditSessionEditors.shown_text(other, uid) == "Typed paragraph"
 
-      save(other)
+      # Save and continue editing, as chosen for the refused save
+      save_and_stay(other)
+      await(fn -> Repo.get!(PendingVersion, third.id).status == :applied end)
       saved = assert_follows_source(c, third)
       assert {saved.year, saved.title, hd(texts(saved))} == {2030, "Tittel", "Typed paragraph"}
     end

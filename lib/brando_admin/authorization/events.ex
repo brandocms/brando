@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Components.Form" => [
       read:
-        ~w(blur browse_video_thumbnail change_preview_target close_preview_targets commit_tiptap draft_open draft_review focus keep_own_relation noop open_block_upload_folder_browser open_footnote open_image_editor open_own_image_editor push_submit push_submit_minor push_submit_new push_submit_redirect recover_drawer_state recover_form reset_file_field reset_image_field reset_video_field save_redirect_target select_tab set_video_aspect_ratio skip_permalink_redirect take_saved_relation tiptap_ai_cancel tiptap_link_dialog tiptap_link_result toggle_preview_targets toggle_revisions_drawer_status validate validate_file validate_image validate_video video_preview_dimensions),
+        ~w(blur browse_video_thumbnail change_preview_target close_preview_targets commit_tiptap draft_open draft_review focus keep_own_relation load_session_version noop open_block_upload_folder_browser open_footnote open_image_editor open_own_image_editor push_submit push_submit_minor push_submit_new push_submit_redirect recover_drawer_state recover_form reset_file_field reset_image_field reset_video_field save_redirect_target select_tab set_video_aspect_ratio skip_permalink_redirect take_saved_relation tiptap_ai_cancel tiptap_link_dialog tiptap_link_result toggle_preview_targets toggle_revisions_drawer_status validate validate_file validate_image validate_video video_preview_dimensions),
       own:
         ~w(draft_capture draft_clean draft_discard draft_dismiss draft_restore draft_restore_compatible open_live_preview open_live_preview_standalone recover_live_preview_state refresh_live_preview select_preview_target),
       checked: ~w(save save_form),

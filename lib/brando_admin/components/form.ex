@@ -1389,10 +1389,19 @@ defmodule BrandoAdmin.Components.Form do
 
   # Another form in the entry moved the edit session's pending version
   # (`Brando.EditSession.take_version/3`, routed by the LiveView's hooks).
+  # A form left behind catches up at once when this editor has no unsaved
+  # changes in the entry's own fields; otherwise the editor does, with the
+  # translation panel's button (`"load_session_version"`).
   def update(%{event: "session_version", version: version, origin: origin}, socket) do
-    if origin == self(),
-      do: {:ok, socket},
-      else: {:ok, Translation.session_moved(socket, version)}
+    if origin == self() do
+      {:ok, socket}
+    else
+      socket = Translation.session_moved(socket, version)
+
+      if Translation.behind?(socket.assigns) and own_entry_edits(socket) == [],
+        do: {:ok, catch_up_translation(socket)},
+        else: {:ok, socket}
+    end
   end
 
   # The edit session died and the block fields joined a new one: it learns
@@ -1559,6 +1568,22 @@ defmodule BrandoAdmin.Components.Form do
       end
     else
       socket
+    end
+  end
+
+  # The form takes the edit session's version in place, as a reload would:
+  # the entry's fields as saved, read again, without this editor's unsaved
+  # changes to them (`discard_entry_edits/1`), then the version decided
+  # again and loaded (`{:keep, version}`, as a form that joins). The block
+  # fields hold the session's blocks already, this editor's edits with them.
+  defp catch_up_translation(socket) do
+    case discard_entry_edits(socket) do
+      {:ok, socket} ->
+        {how, socket} = Translation.catch_up(socket, translation_session(socket))
+        if how == :none, do: socket, else: load_translation(socket, how)
+
+      :error ->
+        socket
     end
   end
 
@@ -4107,12 +4132,13 @@ defmodule BrandoAdmin.Components.Form do
 
   defp take_saved_entry(socket), do: socket
 
-  defp take_saved_entry(socket, entry) do
+  # `keep?` narrows the unsaved fields the form keeps (`discard_entry_edits/1`).
+  defp take_saved_entry(socket, entry, keep? \\ fn _field -> true end) do
     %{schema: schema, current_user: user, form: %{source: previous}} = socket.assigns
     saved = schema.changeset(entry, %{}, user)
     {fields, belongs_to} = sync_fields(socket)
     relations = relation_fields(socket)
-    kept = unsaved_edits(socket, previous, saved, fields, belongs_to, relations)
+    kept = socket |> unsaved_edits(previous, saved, fields, belongs_to, relations) |> Enum.filter(keep?)
 
     changeset = Enum.reduce(kept, saved, &carry_edit(&2, previous, socket.assigns.entry, &1, relations))
     taken = Enum.filter((fields -- belongs_to) ++ relations, &(&1 not in kept))
@@ -4147,6 +4173,70 @@ defmodule BrandoAdmin.Components.Form do
     |> preview_changed_fields(changed)
     |> broadcast_dirty_fields()
   end
+
+  # This editor's own unsaved changes to the entry's fields: what a save by
+  # another editor would leave in the form (`unsaved_edits/6`), less the
+  # values it only received from other editors (their typing, which the
+  # form shows as they do), those the pending version it holds put there,
+  # and the last-editor stamp the cast puts on any change
+  # (`Brando.Trait.Creator`).
+  defp own_entry_edits(%{assigns: %{schema: schema, current_user: user, entry: entry, form: form}} = socket) do
+    {fields, belongs_to} = sync_fields(socket)
+    relations = relation_fields(socket)
+    saved = schema.changeset(entry, %{}, user)
+
+    (unsaved_edits(socket, form.source, saved, fields, belongs_to, relations) --
+       [:updated_by_id, :edited_at | received_fields(socket)])
+    |> Enum.reject(&from_version?(socket, &1, relations))
+  end
+
+  defp from_version?(%{assigns: %{form: form, translation: %{payload: %_{} = payload}}}, field, relations) do
+    version = Changeset.change(payload)
+
+    if field in relations,
+      do: RelationRows.rows(form.source, field) == RelationRows.rows(version, field),
+      else: field_value(form.source, field) == field_value(version, field)
+  end
+
+  defp from_version?(_socket, _field, _relations), do: false
+
+  # Fields whose value the form holds from another editor's shipment: not
+  # changed here since, and stamped by another tab.
+  defp received_fields(socket) do
+    tab = BrandoAdmin.Presence.tab()
+    unshipped = unshipped_fields(socket)
+
+    for {field, _value} <- synced_values(socket),
+        not MapSet.member?(unshipped, field),
+        elem(clock(socket, field), 1) != tab,
+        do: field
+  end
+
+  # The entry's fields go back to the saved entry, read again, keeping only
+  # the values received from other editors: this editor's unsaved changes
+  # to them are dropped. Those it shipped are shipped again as saved, so
+  # the other editors drop them too.
+  defp discard_entry_edits(%{assigns: %{entry: %{id: id}}} = socket) when not is_nil(id) do
+    case fetch_entry(entry_source(socket), skip_blocks: true) do
+      {:ok, entry} ->
+        received = received_fields(socket)
+        shipped = Map.drop(synced_values(socket), received)
+
+        socket =
+          socket
+          |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry), &(&1 in received))
+          |> then(&assign(&1, :synced_values, Map.merge(synced_values(&1), shipped)))
+          |> mark_local(Map.keys(shipped))
+          |> ship_all_field_changes()
+
+        {:ok, socket}
+
+      :not_found ->
+        :error
+    end
+  end
+
+  defp discard_entry_edits(_socket), do: :error
 
   # Another editor saved while this form's save ran, and the save didn't
   # write: the form takes the other save in now.
@@ -5994,9 +6084,18 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
+  # The translation panel's button on a form behind its edit session: the
+  # form takes the session's version, replacing this editor's unsaved
+  # changes to the entry's own fields.
+  def handle_event("load_session_version", _params, socket) do
+    if Translation.behind?(socket.assigns),
+      do: {:noreply, catch_up_translation(socket)},
+      else: {:noreply, socket}
+  end
+
   # A synchronized translation whose edit session moved on to a version
   # this form does not hold (another editor saved): its blocks are that
-  # version's, its other fields are not. The reload takes the session's.
+  # version's, its other fields are not. The panel's button loads it.
   def handle_event("save", _params, %{assigns: %{translation: %{behind?: true}}} = socket) do
     {:noreply,
      socket
@@ -6005,7 +6104,7 @@ defmodule BrandoAdmin.Components.Form do
        title: gettext("Not saved"),
        message:
          gettext(
-           "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+           "Another editor saved this translation, and its blocks now have newer changes from the source. Load them in the translation panel to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
          ),
        type: "error"
      })}
