@@ -52,15 +52,14 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
   end
 
   describe "a kept field and an invalid row" do
-    # Another editor's save replaced `instructions` after the browser drew
-    # the form it sends (`_form_rev` older than the take): the form keeps
-    # its own value for it (`stale_relations/2`, `keep_field/3`). A color
-    # row in the same save has no name, which the row refuses.
+    # Another editor's change replaced `instructions`, and the browser still
+    # sends the value it showed before: an echo, for which the form keeps
+    # its own value (`replaced_values`, `drop_echoes/4`, `keep_field/3`). A
+    # color row in the same save has no name, which the row refuses.
     test "the save is refused, with the row's error, and the entry is left as it was", ctx do
-      socket = palette_socket(ctx, taken_relations: %{instructions: 10})
+      socket = palette_socket(ctx, replaced_values: %{instructions: ["From the old form"]})
 
       params = %{
-        "_form_rev" => "1",
         "palette" => %{
           "name" => ctx.palette.name,
           "instructions" => "From the old form",
