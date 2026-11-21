@@ -350,6 +350,28 @@ defmodule BrandoAdmin.TransformerSaveTest.AlbumFormLive do
   end
 end
 
+defmodule BrandoAdmin.TransformerSaveTest.ReelFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.TransformerSaveTest.Reel
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="reel_form"
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Reel</:header>
+    </.live_component>
+    """
+  end
+end
+
 # Form `:media`, `:locked_media` or `:superuser_media` (LockedMediaDeliveriesTest), and
 # others by the live action
 defmodule BrandoAdmin.SyncTest.ArticleMediaFormLive do
@@ -470,6 +492,8 @@ defmodule BrandoIntegrationWeb.Router do
     live "/shelves/update/:entry_id", BrandoAdmin.SavedElsewhereTest.ShelfFormLive, :default
     live "/shelves/update/:entry_id/title-only", BrandoAdmin.SavedElsewhereTest.ShelfFormLive, :title_only
     live "/albums/update/:entry_id", BrandoAdmin.TransformerSaveTest.AlbumFormLive, :update
+    live "/reels/create", BrandoAdmin.TransformerSaveTest.ReelFormLive, :create
+    live "/reels/update/:entry_id", BrandoAdmin.TransformerSaveTest.ReelFormLive, :update
     live "/config/shop", BrandoIntegrationAdmin.ShopSettingsLive
     live "/config/undeclared", BrandoIntegrationAdmin.UndeclaredSettingsLive
   end

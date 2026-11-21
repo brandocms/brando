@@ -168,6 +168,26 @@ defmodule BrandoAdmin.TransformerSavesTest do
     end
   end
 
+  describe "a row added with the entry, with blocks" do
+    # The create stays on the form (`push_patch` to the entry's update
+    # route); the form without blocks navigates to it instead.
+    test "is kept by the next save", %{conn: conn} do
+      tab = %{"brando_tab" => "reel", "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+      {view, _} = conn |> put_connect_params(tab) |> live_form("/admin/reels/create", "reel_form")
+      form = %{view: view, id: "reel_form", singular: "reel"}
+      await(fn -> form_assigns(view, "reel_form").tab_editing? end)
+
+      add_row(form, "New")
+      save(form, [{["reel", "title"], "Reel"}])
+      reel = Repo.one!(from a in "synctest_articles", where: a.title == "Reel", select: %{id: a.id})
+      assert_patch(view, "/admin/reels/update/#{reel.id}")
+      assert [{new, "New", nil}] = rows(reel)
+
+      save(form)
+      assert rows(reel) == [{new, "New", nil}]
+    end
+  end
+
   describe "a revision refused for a row, without blocks" do
     # What the live preview reads once the corrected revision is stored. The
     # refused changeset stays in the form (`store_revision/2`); the preview,
