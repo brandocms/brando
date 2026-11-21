@@ -182,6 +182,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     dropped = Enum.reject(items, &(&1.is_new or Map.has_key?(by_id, &1.source.id)))
     items = with_own_new_items(taken, items)
     shown = MapSet.new(items, & &1.dom_id)
+    fields = socket.assigns.relation_module.__schema__(:fields)
+    redraw? = Enum.map(items, &drawn(&1, fields)) != Enum.map(socket.assigns.items, &drawn(&1, fields))
 
     {:ok,
      socket
@@ -191,8 +193,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> update(:open_entries, &MapSet.intersection(&1, shown))
      |> update(:editing_dom_id, &if(MapSet.member?(shown, &1), do: &1))
      |> update(:picking_dom_id, &if(MapSet.member?(shown, &1), do: &1))
-     |> stream(:transformer_items, Enum.map(items, &stream_entry/1), reset: true)
-     |> notify_relation_change()}
+     |> redraw_taken(redraw?)}
   end
 
   def update(%{event: "image_updated", image: image}, socket) do
@@ -1395,6 +1396,24 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp new_item_dom_id, do: "transformer-item-new-#{System.unique_integer([:positive])}"
 
+  # What an item's card draws: a save that changed none of it leaves the
+  # card as it is (`entry_saved_elsewhere`).
+  defp drawn(item, fields),
+    do: {item.dom_id, Map.take(resolve_item_data(item), fields), item.assets, item.pending, item.replacing}
+
+  # The listing is drawn again only when another editor's save changed what
+  # it draws: a save of other fields (a title) leaves the cards as they are,
+  # and with them what the browser put on a card (a drop highlight, a drag
+  # in progress). The Form gets the list either way, as it rebuilt its
+  # entry on the save, without this editor's unsaved rows.
+  defp redraw_taken(socket, true = _redraw?),
+    do:
+      socket
+      |> stream(:transformer_items, Enum.map(socket.assigns.items, &stream_entry/1), reset: true)
+      |> notify_relation_change()
+
+  defp redraw_taken(socket, false), do: send_relation_change(socket)
+
   # The item as its saved row. The assets it shows stay as they are: the row
   # may come without them preloaded.
   defp saved_item(item, nil, _asset_fields), do: item
@@ -1795,8 +1814,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # it shows the relation as it was on mount. Push the current list whenever the
   # list itself changes (order, membership, fields, assets); not on progress ticks.
   # Recovery also needs this signal: transformer rows live outside the main form.
-  defp notify_relation_change(socket) do
-    socket = restream_listing_context(socket)
+  defp notify_relation_change(socket), do: socket |> restream_listing_context() |> send_relation_change()
+
+  defp send_relation_change(socket) do
     form_id = socket.assigns[:form_id]
 
     if form_id do

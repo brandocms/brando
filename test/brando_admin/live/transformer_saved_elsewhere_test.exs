@@ -102,6 +102,43 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     settle(view)
   end
 
+  # The stream updates a LiveView sends its browser while `fun` runs
+  defp watch_streams(%{view: view}, fun) do
+    :erlang.trace(view.pid, true, [:send])
+    fun.()
+    settle(view)
+    :erlang.trace(view.pid, false, [:send])
+    collect_streams([])
+  end
+
+  # A stream update that draws cards: inserts, deletes or a reset
+  defp drawn?([_ref, inserts, deletes | reset]), do: inserts != [] or deletes != [] or reset == [true]
+
+  defp collect_streams(acc) do
+    receive do
+      {:trace, _pid, :send, %Phoenix.Socket.Message{event: "diff", payload: diff}, _to} ->
+        collect_streams(acc ++ streams_in(diff))
+
+      {:trace, _pid, :send, %Phoenix.Socket.Reply{payload: %{diff: diff}}, _to} ->
+        collect_streams(acc ++ streams_in(diff))
+
+      {:trace, _pid, :send, _message, _to} ->
+        collect_streams(acc)
+    after
+      0 -> acc
+    end
+  end
+
+  defp streams_in(%{} = diff) do
+    Enum.flat_map(diff, fn
+      {:stream, stream} -> [stream]
+      {_key, value} -> streams_in(value)
+    end)
+  end
+
+  defp streams_in(list) when is_list(list), do: Enum.flat_map(list, &streams_in/1)
+  defp streams_in(_term), do: []
+
   defp remove_row(form, label),
     do: form |> transformer_target() |> render_hook("remove_entry", %{"dom_id" => dom_id_of(form, label)})
 
@@ -332,6 +369,34 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
 
       save_title(b, article, "Saved by B")
       assert rows(article) == [{"A", a_id}, {"C", c_id}]
+    end
+  end
+
+  for kind <- ["with blocks", "without blocks"] do
+    describe "#{kind}, A saving another field" do
+      # A redraw would wipe what the browser put on B's cards (a drag in
+      # progress, a drop highlight).
+      test "leaves B's listing as it is drawn", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        image = Factory.insert(:image)
+
+        Repo.update_all(from(i in ArticleItem, where: i.article_id == ^article.id and i.label == "B"),
+          set: [cover_id: image.id]
+        )
+
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        set_field(b, dom_id_of(b, "A"), "label", "A, by B")
+
+        streams =
+          watch_streams(b, fn ->
+            save_title(a, article, "Saved by A")
+            await(fn -> form_title(b) == "Saved by A" end)
+          end)
+
+        assert Enum.filter(streams, &drawn?/1) == []
+        assert Enum.map(shown(b), &elem(&1, 0)) == ["A, by B", "B", "C"]
+        assert Enum.map(transformer(b).items, &(&1.assets.cover && &1.assets.cover.id)) == [nil, image.id, nil]
+      end
     end
   end
 
