@@ -577,6 +577,8 @@ defmodule Brando.Villain.Filters do
 
   @doc """
   Returns the number of characters in a string or the number of items in an array.
+  A map has the number of its pairs, and a record or any other value without
+  text 0, as in Liquid.
 
   ## Examples
 
@@ -585,9 +587,18 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.size(~w(apples oranges peaches plums), %{})
       4
+
+      iex> Brando.Villain.Filters.size(%{"a" => 1}, %{})
+      1
   """
   def size(value, _) when is_list(value), do: length(value)
-  def size(value, _), do: with_braces_as_characters(to_string(value), &String.length/1)
+  def size(value, _) when is_map(value) and not is_struct(value), do: map_size(value)
+
+  def size(value, _) do
+    if String.Chars.impl_for(value),
+      do: with_braces_as_characters(to_string(value), &String.length/1),
+      else: 0
+  end
 
   @doc """
   Returns a substring of 1 character beginning at the index specified by the
@@ -1339,15 +1350,20 @@ defmodule Brando.Villain.Filters do
   """
   def markdown(%{value: str}, opts), do: markdown(str, opts)
 
+  # Rich text is markup already: it gives that, sanitized as when it was read.
   # A `string` or `text` var reaches Liquid escaped: its character references
   # are read back as the characters the editor typed, so its `>` quotes and
   # code spans stay Markdown. The HTML is safe (`Brando.Markdown`).
   def markdown(str, _) when is_binary(str) do
-    str
-    |> HtmlEntities.decode()
-    |> Brando.HTML.render_markdown()
-    |> Phoenix.HTML.safe_to_string()
-    |> Brando.Villain.InertLiquid.encode()
+    if html = TemplateView.rich_text_markup(str) do
+      html
+    else
+      str
+      |> HtmlEntities.decode()
+      |> Brando.HTML.render_markdown()
+      |> Phoenix.HTML.safe_to_string()
+      |> Brando.Villain.InertLiquid.encode()
+    end
   end
 
   @doc """

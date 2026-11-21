@@ -647,6 +647,11 @@ handlers, script addresses) is a validation error on the field: see the
 rows included, so an input that only a named form declares as rich text is
 checked when that form saves; any other save checks the default form's.
 
+A template prints a field as rich text when any form of the schema draws it
+as a `:rich_text` input, at the top or in a subform's rows. A field one form
+draws as plain text and another as rich text prints as sanitized markup, so
+plain text such as `John <john@example.com>` loses the bracketed part.
+
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,
 `sup`, `color`, `unsetMarks`, `jumpAnchor`, `smartText` and `align`. An

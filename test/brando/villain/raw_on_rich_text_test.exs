@@ -223,13 +223,15 @@ defmodule Brando.Villain.RawOnRichTextTest do
 
     defp marks, do: for({{TemplateView, _}, %MapSet{} = value} <- Process.get(), do: value)
 
-    test "text with nothing for raw to decode is not marked" do
+    # Markup is marked, for `markdown`: escaped text never holds a `<`
+    test "text with nothing for raw to decode and no markup is not marked" do
       TemplateView.read_as_rich_text("")
-      TemplateView.read_as_rich_text("<p>plain</p>")
+      TemplateView.read_as_rich_text("plain")
 
       refute TemplateView.read_as_rich_text?("")
-      refute TemplateView.read_as_rich_text?("<p>plain</p>")
+      refute TemplateView.read_as_rich_text?("plain")
       assert TemplateView.read_as_rich_text?(TemplateView.read_as_rich_text("<p>&amp;</p>"))
+      assert TemplateView.read_as_rich_text?(TemplateView.read_as_rich_text("<p>plain</p>"))
     end
 
     test "an empty rich-text field leaves raw decoding other text" do

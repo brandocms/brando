@@ -6,10 +6,11 @@ defmodule Brando.Villain.TemplateView do
 
   It prints the way a `string` var does. A string is HTML-escaped when it is
   read, with its braces as character references, so markup or Liquid in a
-  field is printed as text. A field declared as rich text
-  (`__rich_text_fields__`, a text ref's `text`, a placement's caption) arrives
-  sanitized, to print as markup. So does a subform row's field that a form
-  of the row's owner draws as rich text
+  field is printed as text. A field any form of its schema draws as rich text
+  (`Brando.RichText.fields_for_printing/1`), a text ref's `text` and a
+  placement's caption arrive sanitized, to print as markup, each value
+  sanitized once in a render (`sanitize_rich_text/1`). So does a subform
+  row's field that a form of the row's owner draws as rich text
   (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
   names, also through a filter that selects or reorders the rows
   (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
@@ -64,6 +65,9 @@ defmodule Brando.Villain.TemplateView do
   # Marked outside any render, as a context is made: kept for the renders that
   # use it, in two sets of at most this many, the current one and the one before
   @rich_texts_outside 1_000
+  # Rich text sanitized in a render (`sanitize_rich_text/1`), until the
+  # outermost one ends
+  @sanitized {__MODULE__, :sanitized_rich_texts}
 
   @user_fields ~w(id name email language role avatar active job_title same_as inserted_at updated_at deleted_at)a
   @user_keys @user_fields ++ Enum.map(@user_fields, &Atom.to_string/1)
@@ -274,8 +278,9 @@ defmodule Brando.Villain.TemplateView do
   holds through `assign` too. Text a template builds from printed output
   (`capture`) is new text, and not marked, unless it is the same text.
 
-  Text without an entity or a `%` is not marked: `raw` has nothing in it to
-  decode, nor `url_decode` (`sanitize_decoded/2`).
+  Text without an entity, a `%` or a `<` is not marked: `raw` has nothing in
+  it to decode, nor `url_decode` (`sanitize_decoded/2`), and `markdown` no
+  markup to keep (`rich_text_markup/1`).
 
   The mark is the text itself, kept for the process: inside a render
   (`rich_text_scope/1`) until the outermost one ends, outside any render (a
@@ -286,7 +291,7 @@ defmodule Brando.Villain.TemplateView do
   """
   @spec read_as_rich_text(term()) :: term()
   def read_as_rich_text(text) when is_binary(text) do
-    if String.contains?(text, ["&", "%"]), do: mark_rich_text(text)
+    if String.contains?(text, ["&", "%", "<"]), do: mark_rich_text(text)
     text
   end
 
@@ -333,6 +338,48 @@ defmodule Brando.Villain.TemplateView do
   end
 
   def rendered_blocks_html(_value), do: nil
+
+  @doc """
+  `text` sanitized again as rich text is when read (`sanitize_rich_text/1`)
+  when it was read as rich text (`read_as_rich_text/1`), as rich text or as a
+  filter's result from it, and nil for any other text, a field of rendered
+  blocks as it was read included. For `markdown`, which keeps rich text's
+  markup rather than reading it as Markdown.
+  """
+  @spec rich_text_markup(term()) :: String.t() | nil
+  def rich_text_markup(text) when is_binary(text) do
+    if mark(text) == true, do: sanitize_rich_text(text)
+  end
+
+  def rich_text_markup(_value), do: nil
+
+  @doc """
+  `text` sanitized as rich text is when read (`Brando.RichText.render_html/1`),
+  with every brace a character reference. In a render (`rich_text_scope/1`)
+  a value is sanitized once: what it gave is kept, with the value and as
+  sanitized itself, until the outermost render ends. Outside a render
+  nothing is kept.
+  """
+  @spec sanitize_rich_text(term()) :: term()
+  def sanitize_rich_text(text) when is_binary(text) do
+    if Process.get(@rich_depth, 0) == 0 do
+      sanitize(text)
+    else
+      case Process.get(@sanitized, %{}) do
+        %{^text => clean} ->
+          clean
+
+        sanitized ->
+          clean = sanitize(text)
+          Process.put(@sanitized, sanitized |> Map.put(text, clean) |> Map.put(clean, clean))
+          clean
+      end
+    end
+  end
+
+  def sanitize_rich_text(value), do: sanitize(value)
+
+  defp sanitize(value), do: value |> Brando.RichText.render_html() |> InertLiquid.encode_all()
 
   @doc "Whether `text` was read as rich text (`read_as_rich_text/1`)."
   @spec read_as_rich_text?(term()) :: boolean()
@@ -388,7 +435,8 @@ defmodule Brando.Villain.TemplateView do
   @doc """
   Runs `fun` as a render: text marked as read as rich text in it
   (`read_as_rich_text/1`) is let go when the outermost render ends, and text
-  marked before it is kept.
+  marked before it is kept. So is the rich text sanitized in it
+  (`sanitize_rich_text/1`).
   """
   @spec rich_text_scope((-> result)) :: result when result: term()
   def rich_text_scope(fun) do
@@ -401,6 +449,7 @@ defmodule Brando.Villain.TemplateView do
           fun.()
         after
           Process.delete(@rich_depth)
+          Process.delete(@sanitized)
           if outside, do: Process.put(@rich_texts, outside), else: Process.delete(@rich_texts)
         end
 
@@ -492,7 +541,7 @@ defmodule Brando.Villain.TemplateView do
         if Captions.rich?(text), do: read_as_rich_text(html), else: html
 
       rich_text?(value, key) or named?(rich, key) ->
-        text |> Brando.RichText.render_html() |> InertLiquid.encode_all() |> read_as_rich_text()
+        text |> sanitize_rich_text() |> read_as_rich_text()
 
       # Escaped as a plain field is, and `raw` prints the HTML as it is stored
       rendered_blocks?(value, key) ->
@@ -550,10 +599,9 @@ defmodule Brando.Villain.TemplateView do
 
   defp rich_text?(%Var{type: type}, key) when type in [:rich_text, :html], do: to_string(key) == "value"
 
-  defp rich_text?(%struct{}, key) do
-    function_exported?(struct, :__rich_text_fields__, 0) and
-      to_string(key) in Enum.map(struct.__rich_text_fields__(), &to_string/1)
-  end
+  # A field any form of the schema draws as rich text, as for rows
+  defp rich_text?(%struct{}, key),
+    do: to_string(key) in Enum.map(Brando.RichText.fields_for_printing(struct), &Atom.to_string/1)
 
   # Decoded first, as a heading is: a character reference typed into a title
   # (`&shy;`) is the character it names, and text escaped already stays as it is.

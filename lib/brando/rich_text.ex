@@ -175,6 +175,23 @@ defmodule Brando.RichText do
   end
 
   @doc """
+  The fields of `module` that are printed as rich text: those a form of
+  `module`, any of its forms, draws as a `:rich_text` input at its top
+  level. When forms disagree the field is rich text, since the stored value
+  may hold markup, as for rows (`row_fields_for_printing/2`).
+
+  A save checks by other rules: the default form
+  (`__rich_text_fields__/0`, `validate_blueprint/2`), and the form it comes
+  from (`validate_form/2`).
+  """
+  @spec fields_for_printing(module()) :: [atom()]
+  def fields_for_printing(module) when is_atom(module) do
+    if function_exported?(module, :__forms__, 0),
+      do: Enum.uniq(for(form <- module.__forms__(), field <- top_level_fields(form), do: field)),
+      else: []
+  end
+
+  @doc """
   The fields of `module`'s `relation` rows that are printed as rich text:
   those a form of `module`, any of its forms, draws as a `:rich_text` input
   in a subform on that relation. When forms disagree the field is rich
