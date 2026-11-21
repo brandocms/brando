@@ -65,9 +65,102 @@ defmodule Brando.RichText do
     end
   end
 
+  @doc """
+  Validates the rich-text inputs of `module`'s default form
+  (`validate_fields/2`), those in its subforms' rows included: a row is
+  cast by its own module's changeset, and an embedded module has no form.
+  """
   def validate_blueprint(changeset, module) do
     fields = if function_exported?(module, :__rich_text_fields__, 0), do: module.__rich_text_fields__(), else: []
-    validate_fields(changeset, fields)
+
+    changeset
+    |> validate_fields(fields)
+    |> validate_rows(subform_fields(module), changeset.data)
+  end
+
+  # `{relation, fields}` for each subform of the default form with rich
+  # text, `fields` holding nested subforms as `{relation, fields}` too.
+  defp subform_fields(module) do
+    case function_exported?(module, :__form__, 0) && module.__form__() do
+      %{tabs: tabs} ->
+        for tab <- tabs,
+            fieldset <- tab.fields,
+            field <- Map.get(fieldset, :fields, []),
+            spec <- row_specs(field),
+            do: spec
+
+      _ ->
+        []
+    end
+  end
+
+  defp row_specs(%Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields}) do
+    case Enum.flat_map(sub_fields, &row_field/1) do
+      [] -> []
+      fields -> [{name, fields}]
+    end
+  end
+
+  defp row_specs(_), do: []
+
+  defp row_field(%Brando.Blueprint.Forms.Input{type: :rich_text, name: name}), do: [name]
+  defp row_field(field), do: row_specs(field)
+
+  # The rows cast into `changeset`, checked as top-level rich text is: only
+  # changed values. A row without a primary key (an embed sent without its
+  # id) is cast as new on every save, so one kept exactly as stored keeps
+  # its text unchecked; its own subforms' rows are still checked.
+  defp validate_rows(changeset, specs, data) do
+    Enum.reduce(specs, changeset, fn {relation, fields}, changeset ->
+      stored = stored_rows(Map.get(data, relation))
+
+      case Map.fetch(changeset.changes, relation) do
+        {:ok, rows} when is_list(rows) ->
+          rows = Enum.map(rows, &validate_row(&1, fields, stored))
+          put_rows(changeset, relation, rows, Enum.all?(rows, &row_valid?/1))
+
+        {:ok, %Changeset{} = row} ->
+          row = validate_row(row, fields, stored)
+          put_rows(changeset, relation, row, row.valid?)
+
+        _ ->
+          changeset
+      end
+    end)
+  end
+
+  defp validate_row(%Changeset{action: action} = row, fields, stored) when action not in [:replace, :delete] do
+    {nested, plain} = Enum.split_with(fields, &is_tuple/1)
+
+    case Enum.find(stored, &kept?(row, &1)) do
+      nil -> row |> validate_fields(plain) |> validate_rows(nested, row.data)
+      kept -> validate_rows(row, nested, kept)
+    end
+  end
+
+  defp validate_row(row, _fields, _stored), do: row
+
+  # The row's own columns (embeds included) as stored; a row sent without
+  # its primary key is compared without it.
+  defp kept?(%Changeset{data: %module{}} = row, stored) do
+    applied = Changeset.apply_changes(row)
+    new? = applied |> Ecto.primary_key() |> Keyword.values() |> Enum.all?(&is_nil/1)
+    keys = if new?, do: module.__schema__(:fields) -- module.__schema__(:primary_key), else: module.__schema__(:fields)
+    Map.take(applied, keys) == Map.take(stored, keys)
+  end
+
+  defp kept?(_row, _stored), do: false
+
+  defp stored_rows(rows) when is_list(rows), do: rows
+  defp stored_rows(%Ecto.Association.NotLoaded{}), do: []
+  defp stored_rows(%{} = row), do: [row]
+  defp stored_rows(_), do: []
+
+  defp row_valid?(%Changeset{valid?: valid?}), do: valid?
+  defp row_valid?(_), do: true
+
+  defp put_rows(changeset, relation, rows, rows_valid?) do
+    %{changeset | changes: Map.put(changeset.changes, relation, rows), valid?: changeset.valid? and rows_valid?}
   end
 
   # Rich text is parsed as browsers parse it, by html5ever (through ammonia,
