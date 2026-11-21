@@ -121,6 +121,22 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
       assert rendered(jobs, Chapter) == []
     end
 
+    test "subform rows in a table every site shares are not walked, nor written" do
+      {_target, identifier} = insert_case()
+      put_test_env(:shared_tables, [ArticleItem.__schema__(:source)])
+
+      # Article's own table is a site's; the rows its `items` subform draws
+      # would be read across every site
+      entry = article(%{title: "Shared rows"})
+      item = Brando.Repo.insert!(%ArticleItem{article_id: entry.id, label: "Item", link: linked_html(identifier)})
+
+      refute List.keymember?(Blocks.rich_text_targets(Blocks.identifier_link_modules()), ArticleItem, 0)
+
+      rewrite(identifier)
+
+      assert Brando.Repo.get!(ArticleItem, item.id).link == linked_html(identifier)
+    end
+
     test "embedded and shared schemas are not walked by themselves" do
       modules = Blocks.identifier_link_modules()
 

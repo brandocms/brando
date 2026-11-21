@@ -677,7 +677,8 @@ subform rows (`embeds_one`, `embeds_many`, `has_one` and `has_many`). It
 writes only the rows that hold a link to the target, keeps the link text as
 written, and re-renders the entries that hold them. Not followed: subform
 rows nested inside other subform rows, a table every site shares
-(`Brando.Tenant.SharedTables`) unless its Blueprint stores identifiers, and
+(`Brando.Tenant.SharedTables`), whether a form or a subform draws its rows,
+unless its Blueprint stores identifiers, and
 Brando's own schemas other than pages and fragments, which keep their rich
 text in blocks. Block text, vars and each schema are updated separately: one
 that fails is logged and keeps the old address until the target's URL

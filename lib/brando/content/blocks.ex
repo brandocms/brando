@@ -748,10 +748,19 @@ defmodule Brando.Content.Blocks do
   """
   def identifier_link_modules do
     for module <- Enum.uniq(Brando.Blueprint.list_blueprints(:include_brando)),
-        source = module.__schema__(:source),
-        is_binary(source),
-        Brando.Content.Identifier.Registry.has_persistent_identifier?(module) or not shared_source?(module, source),
+        identifier_link_source?(module),
         do: module
+  end
+
+  # A schema whose rows a moved identifier's links are looked for in: one
+  # with a table, which is a site's own unless the schema persists
+  # identifiers. The walked modules and the rows their subforms draw from
+  # another table are both held to it.
+  defp identifier_link_source?(module) do
+    source = module.__schema__(:source)
+
+    is_binary(source) and
+      (Brando.Content.Identifier.Registry.has_persistent_identifier?(module) or not shared_source?(module, source))
   end
 
   defp shared_source?(module, source),
@@ -994,7 +1003,9 @@ defmodule Brando.Content.Blocks do
 
     * `fields` are rich-text columns of the schema's own rows: its own
       `:rich_text` inputs (`rich_text_fields_for/1`), and those of rows
-      another module draws as a `has_one` / `has_many` subform. `owners`
+      another module draws as a `has_one` / `has_many` subform, unless
+      their table is shared as `identifier_link_modules/0` leaves out a
+      module's. `owners`
       are the entries rendered when a row changes: `:self`, the row itself,
       and `{module, association}`, the row's parent.
     * `embeds` are `{column, fields}`: the rich-text inputs of the rows a
@@ -1008,7 +1019,10 @@ defmodule Brando.Content.Blocks do
     Enum.reduce(modules, [], fn module, targets ->
       targets = put_target(targets, module, %{fields: rich_text_fields_for(module), owners: [:self], embeds: []})
 
-      Enum.reduce(subform_rich_text_fields_for(module), targets, fn
+      module
+      |> subform_rich_text_fields_for()
+      |> Enum.filter(&identifier_link_subform?/1)
+      |> Enum.reduce(targets, fn
         {:embed, name, fields}, targets ->
           put_target(targets, module, %{fields: [], owners: [], embeds: [{name, fields}]})
 
@@ -1018,6 +1032,10 @@ defmodule Brando.Content.Blocks do
     end)
     |> Enum.reject(fn {_schema, target} -> target.fields == [] and target.embeds == [] end)
   end
+
+  # Rows in the entry's own column, or in a table held to the walked modules' rule
+  defp identifier_link_subform?({:embed, _name, _fields}), do: true
+  defp identifier_link_subform?({:assoc, %{related: related}, _fields}), do: identifier_link_source?(related)
 
   defp put_target(targets, _schema, %{fields: [], embeds: []}), do: targets
 
