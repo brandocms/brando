@@ -201,6 +201,23 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     form
   end
 
+  # B's other tab presses Edit here; the editing tab's browser answers with
+  # its recovery copy, which goes over
+  defp take_over(form, conn, article, kind, tab) do
+    {path, id, singular} = Map.fetch!(@forms, kind)
+    params = %{"brando_tab" => tab, "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+
+    {view, _} =
+      conn |> put_connect_params(params) |> live_form(String.replace(path, ":id", to_string(article.id)), id)
+
+    view |> element(~s([data-testid="tab-notice"] button[phx-click="brando_tab_claim"])) |> render_click()
+    assert_push_event(form.view, "b:draft-release", %{})
+    capture(form)
+    await(fn -> form_assigns(view, id).tab_editing? end)
+    settle(view)
+    %{view: view, id: id, singular: singular}
+  end
+
   defp rows(article) do
     Repo.all(from i in ArticleItem, where: i.article_id == ^article.id, order_by: i.sequence, select: {i.label, i.id})
   end
@@ -326,7 +343,7 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
   end
 
   for kind <- ["with blocks", "without blocks"] do
-    describe "#{kind}, B's edit restored after a reconnect" do
+    describe "#{kind}, B's edit restored from a recovery copy" do
       # The restored copy is B's unsaved edit as any other: A's save of
       # another field leaves it in B's row, and B's save writes it.
       test "stays B's after A saves another field", %{a_conn: a_conn, b_conn: b_conn, article: article} do
@@ -345,6 +362,37 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
 
         save_title(b, article, "Saved by B")
         assert rows(article) == [{"A, by B", a_id}, {"B", b_id}, {"C", c_id}]
+      end
+
+      # The copy holds the removed row as a removed changeset, put first:
+      # it is not a row after the restore, and B's save deletes it.
+      test "leaves out a row B removed, in the copy's order", %{b_conn: b_conn, article: article} do
+        b = open(b_conn, article, unquote(kind), "b")
+        [{"A", a_id}, {"B", b_id}, {"C", c_id}] = rows(article)
+        reorder(b, ["B", "C", "A"])
+        remove_row(b, "C")
+        capture(b)
+
+        b = reconnect_and_restore(b, b_conn, article, unquote(kind), "b")
+        assert shown(b) == [{"B", b_id}, {"A", a_id}]
+
+        save_title(b, article, "Saved by B")
+        assert rows(article) == [{"B", b_id}, {"A", a_id}]
+      end
+
+      # Another tab of B's takes editing over with the copy's rows, cast
+      # the same way.
+      test "a tab taking over leaves out a row B removed", %{b_conn: b_conn, article: article} do
+        b = open(b_conn, article, unquote(kind), "b")
+        [{"A", a_id}, {"B", b_id}, {"C", _}] = rows(article)
+        reorder(b, ["B", "C", "A"])
+        remove_row(b, "C")
+
+        other = take_over(b, b_conn, article, unquote(kind), "b2")
+        assert shown(other) == [{"B", b_id}, {"A", a_id}]
+
+        save_title(other, article, "Saved by B")
+        assert rows(article) == [{"B", b_id}, {"A", a_id}]
       end
     end
   end

@@ -346,8 +346,16 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     {image_field, image_cfg} = resolve_asset_field(relation_module, asset_fields, :image)
     {video_field, video_cfg} = resolve_asset_field(relation_module, asset_fields, :video)
 
-    # Get existing items from the changeset
-    existing = Ecto.Changeset.get_assoc(field.form.source, subform.name) || []
+    # Get existing items from the changeset. A recovery copy restored or
+    # handed over by another tab (`restore_draft`) holds each row the editor
+    # removed as a changeset `cast_assoc` marked for removal, put first: it
+    # is no row here, so the next save deletes it, and the other rows keep
+    # the copy's order.
+    existing =
+      field.form.source
+      |> Ecto.Changeset.get_assoc(subform.name)
+      |> List.wrap()
+      |> Enum.reject(&(&1.action in [:replace, :delete]))
 
     items = Enum.map(existing, &recovery_item(&1, asset_fields))
 
