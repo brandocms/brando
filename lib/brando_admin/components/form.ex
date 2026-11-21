@@ -3745,8 +3745,11 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     errors = Keyword.delete(changeset.errors, field)
+    # A row the cast refused in another field keeps the changeset refused:
+    # the repo raises for an invalid embed in a valid changeset
+    valid? = errors == [] and Enum.all?(Map.values(changes), &valid_change?/1)
 
-    %{changeset | changes: changes, errors: errors, valid?: errors == [], params: drop_param(changeset.params, field)}
+    %{changeset | changes: changes, errors: errors, valid?: valid?, params: drop_param(changeset.params, field)}
   end
 
   # The form shows a field's param before its saved value, so a field put
