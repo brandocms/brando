@@ -1,0 +1,2 @@
+- `url_decode` on text that is not rich text prints what it decoded as text, escaped as a plain field is when read, so `%3Cimg%20onerror=…%3E` typed in a plain field, a string var or a row field no longer prints a live element. A filter after it and a comparison see the escaped text (`&lt;`, `&amp;`), as with a plain field.
+  A template that decodes markup it trusts on purpose adds `raw`: `{{ value | url_decode | raw }}`.

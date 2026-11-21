@@ -1,9 +1,9 @@
 defmodule Brando.Villain.TemplateLiveElementsTest do
   @moduledoc """
-  Text an editor typed reaches the public page as text. Three ways it could
-  come out as a live element: `raw` on a field that stores rendered blocks,
-  `url_decode` on rich text, and a picture's or image's title holding markup
-  the caption editor does not make.
+  Text an editor typed reaches the public page as text. Ways it could come
+  out as a live element: `raw` on a field that stores rendered blocks,
+  `url_decode` on rich text or on plain text, and a picture's or image's
+  title holding markup the caption editor does not make.
   """
   use Brando.ConnCase, async: true
 
@@ -15,6 +15,8 @@ defmodule Brando.Villain.TemplateLiveElementsTest do
   alias Brando.Factory
   alias Brando.Pages.Page
   alias Brando.RichTextRows.Entry
+  alias Brando.RichTextRows.Item
+  alias Brando.RichTextRows.Quote
   alias Brando.Utils
   alias Brando.Villain
   alias Brando.Villain.Blocks.PictureBlock
@@ -135,8 +137,8 @@ defmodule Brando.Villain.TemplateLiveElementsTest do
       assert failing == []
     end
 
-    test "decodes plain text as before" do
-      assert render_entry("{{ entry.title | url_decode }}", %Entry{title: "Tom%20%26%20Jerry"}) == "Tom & Jerry"
+    test "decodes plain text, escaped as a plain field is" do
+      assert render_entry("{{ entry.title | url_decode }}", %Entry{title: "Tom%20%26%20Jerry"}) == "Tom &amp; Jerry"
     end
 
     # A `%` not followed by two hex digits stays as typed, and so does an
@@ -175,6 +177,98 @@ defmodule Brando.Villain.TemplateLiveElementsTest do
         assert html =~ "100% ", kind
         assert html =~ " 5%be", kind
       end
+    end
+  end
+
+  describe "url_decode on plain text" do
+    @encoded_tag "%3Cimg%20src=x%20onerror=alert(1)%3E"
+    @decoded_tag "<img src=x onerror=alert(1)>"
+
+    # Each kind of plain value, as a function that renders `{{ VALUE FILTERS }}`
+    # with `text` stored in it (or written in the template, for a literal)
+    defp plain_kinds do
+      [
+        {"a plain entry field", fn filters, text, _user -> render_entry("{{ entry.title #{filters} }}", plain(text)) end},
+        {"a plain field of an embeds_many row",
+         fn filters, text, _user -> render_entry("{{ entry.quotes[0].credit #{filters} }}", plain(text)) end},
+        {"a plain field of a has_many row",
+         fn filters, text, _user ->
+           render_entry("{% for row in entry.items %}{{ row.label #{filters} }}{% endfor %}", plain(text))
+         end},
+        {"a plain module variable",
+         fn filters, text, user ->
+           var = %Var{key: "heading", label: "H", type: :string, value: text}
+           render(block(module!(user, "{{ heading #{filters} }}"), vars: [var]))
+         end},
+        {"a string literal",
+         fn filters, text, user -> render(block(module!(user, ~s({{ "#{text}" #{filters} }})), [])) end},
+        {"a value from assign",
+         fn filters, text, _user ->
+           render_entry("{% assign t = entry.title %}{{ t #{filters} }}", plain(text))
+         end}
+      ]
+    end
+
+    defp plain(text),
+      do: %Entry{title: text, quotes: [%Quote{credit: text}], items: [%Item{label: text, text: "<p>x</p>"}]}
+
+    test "prints what it decoded as text, escaped as a plain field is", %{user: user} do
+      failing =
+        for {kind, fun} <- plain_kinds(),
+            html = fun.("| url_decode", @encoded_tag, user),
+            html != "&lt;img src=x onerror=alert(1)&gt;",
+            do: {kind, html}
+
+      assert failing == []
+    end
+
+    test "is escaped once assigned, and a filter after it gets escaped text", %{user: user} do
+      failing =
+        for {kind, fun} <- plain_kinds(),
+            {filters, expected} <- [
+              {"| url_decode | append: '!'", "&lt;img src=x onerror=alert(1)&gt;!"},
+              {"| url_decode | truncate: 100", "&lt;img src=x onerror=alert(1)&gt;"},
+              # What a plain field holding the decoded text gives to the same filter
+              {"| url_decode | size", "#{String.length("&lt;img src=x onerror=alert(1)&gt;")}"}
+            ],
+            html = fun.(filters, @encoded_tag, user),
+            html != expected,
+            do: {kind, filters, html}
+
+      assert failing == []
+
+      assert render_entry("{% assign t = entry.title | url_decode %}{{ t }}", plain(@encoded_tag)) ==
+               "&lt;img src=x onerror=alert(1)&gt;"
+    end
+
+    test "with raw after it, prints what raw prints of a plain field", %{user: user} do
+      failing =
+        for {kind, fun} <- plain_kinds(),
+            raw_of_plain = fun.("| raw", @decoded_tag, user),
+            html = fun.("| url_decode | raw", @encoded_tag, user),
+            html != raw_of_plain or html != @decoded_tag,
+            do: {kind, html, raw_of_plain}
+
+      assert failing == []
+    end
+
+    test "a comparison sees the escaped text, as with a plain field" do
+      template =
+        ~s({% assign t = entry.title | url_decode %}{% if t == "R&amp;D" %}escaped{% elsif t == "R&D" %}typed{% endif %})
+
+      assert render_entry(template, plain("R%26D")) == "escaped"
+      assert render_entry(~s({% if entry.title == "R&amp;D" %}escaped{% endif %}), plain("R&D")) == "escaped"
+    end
+
+    test "a Markdown template gets the decoded text as it is", %{user: user} do
+      {:ok, module} =
+        Content.create_module(
+          Factory.params_for(:module, %{code: "<p>x</p>", markdown_code: "{{ '%3Cb%3E a %26 b' | url_decode }}"}),
+          user
+        )
+
+      md = Villain.Markdown.render([%{block: block(module, [])}], %Page{title: "T", language: :en})
+      assert md =~ "<b> a & b"
     end
   end
 
