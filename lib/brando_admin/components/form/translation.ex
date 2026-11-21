@@ -325,11 +325,13 @@ defmodule BrandoAdmin.Components.Form.Translation do
   end
 
   @doc """
-  The form could not load the version it took: it decides again at the
-  next parent update, and the session lets go of the version.
+  The form could not load the version it decided on: it decides again at the
+  next parent update. With `how` `:load` it took the version for the
+  session, which lets go of it; one it kept (`:keep`) is the other forms',
+  on their blocks, and stays the session's.
   """
-  def undecide(%{assigns: %{translation: state}} = socket, session) do
-    if session, do: EditSession.release_version(session, state.applied_version_id)
+  def undecide(%{assigns: %{translation: state}} = socket, session, how) do
+    if session && how == :load, do: EditSession.release_version(session, state.applied_version_id)
     assign(socket, :translation, %{state | decided?: false, applied_version_id: nil})
   end
 

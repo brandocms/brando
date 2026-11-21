@@ -1548,7 +1548,7 @@ defmodule BrandoAdmin.Components.Form do
 
         :error ->
           send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
-          Translation.undecide(socket, translation_session(socket))
+          Translation.undecide(socket, translation_session(socket), how)
       end
     else
       socket

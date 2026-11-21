@@ -1565,6 +1565,31 @@ defmodule Brando.EditSessionTest do
       assert EditSession.take_version(ref, 9, adopt: true) == {:keep, 7}
     end
 
+    # The form loads the version it decided on, and the load fails
+    # (`Form.Translation.undecide/3`): the session lets go of it only if
+    # this form took it to load. One it kept is the other forms', on their
+    # blocks.
+    test "a form whose load failed releases the version only if it took it" do
+      ref = version_ref()
+      {:load, 7} = EditSession.take_version(ref, 7)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, translation: %{decided?: true, applied_version_id: 7}}
+      }
+
+      socket = BrandoAdmin.Components.Form.Translation.undecide(socket, ref, :keep)
+      refute socket.assigns.translation.decided?
+      assert EditSession.take_version(ref, 9) == {:keep, 7}
+
+      BrandoAdmin.Components.Form.Translation.undecide(
+        socket |> put_in([Access.key(:assigns), :translation, :applied_version_id], 7),
+        ref,
+        :load
+      )
+
+      assert EditSession.take_version(ref, 9) == {:load, 9}
+    end
+
     test "without a session the form decides alone" do
       assert EditSession.take_version(new_ref(), 7) == {:error, :no_session}
     end
