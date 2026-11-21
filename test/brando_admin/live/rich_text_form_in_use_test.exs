@@ -185,6 +185,23 @@ defmodule BrandoAdmin.RichTextFormInUseTest do
     end
   end
 
+  describe "a revision refused for another editor's value" do
+    test "is stored once the other editor corrects the value", %{conn: conn, article: article} do
+      view = open(conn, article, "notes")
+      other_view = other_editor(article, nil)
+      revisions = fn -> Brando.Repo.aggregate(from(r in Revision, where: r.entry_id == ^article.id), :count) end
+      before = revisions.()
+
+      other_types_subtitle(other_view, view, hd(@unsafe))
+      store_revision(view)
+      assert revisions.() == before
+
+      other_types_subtitle(other_view, view, "<p>Fine</p>")
+      view |> form_of() |> render_hook("store_revision", %{})
+      await(fn -> revisions.() == before + 1 end)
+    end
+  end
+
   describe "a subform row's rich-text input only a named form declares" do
     test "is refused with unsafe markup on save", %{conn: conn, article: article} do
       view = open(conn, article, "rich_quotes")

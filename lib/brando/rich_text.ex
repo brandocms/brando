@@ -101,6 +101,59 @@ defmodule Brando.RichText do
 
   def validate_form(changeset, _form), do: changeset
 
+  @doc """
+  Checks `form`'s rich text again (`validate_form/2`) in a changeset an
+  earlier check refused and whose values may have changed since with no
+  cast, like the admin form's when another editor corrects a value: the
+  unsafe-rich-text errors that check left on `form`'s fields and rows are
+  dropped first. Any other error keeps the changeset invalid.
+  """
+  def recheck_form(changeset, %{tabs: _} = form) do
+    changeset
+    |> drop_unsafe_errors(top_level_fields(form))
+    |> drop_row_errors(subform_fields(form))
+    |> validate_form(form)
+  end
+
+  def recheck_form(changeset, _form), do: changeset
+
+  defp drop_unsafe_errors(%Changeset{} = changeset, fields) do
+    errors = Enum.reject(changeset.errors, fn {field, {message, _}} -> field in fields and message == @unsafe_message end)
+
+    if errors == changeset.errors,
+      do: changeset,
+      else: %{changeset | errors: errors, valid?: errors == [] and nested_valid?(changeset.changes)}
+  end
+
+  defp drop_unsafe_errors(row, _fields), do: row
+
+  defp drop_row_errors(changeset, specs) do
+    changeset =
+      Enum.reduce(specs, changeset, fn {relation, fields}, changeset ->
+        case Map.fetch(changeset.changes, relation) do
+          {:ok, rows} when is_list(rows) ->
+            put_in(changeset.changes[relation], Enum.map(rows, &drop_unsafe_errors(&1, fields)))
+
+          {:ok, %Changeset{} = row} ->
+            put_in(changeset.changes[relation], drop_unsafe_errors(row, fields))
+
+          _ ->
+            changeset
+        end
+      end)
+
+    %{changeset | valid?: changeset.errors == [] and nested_valid?(changeset.changes)}
+  end
+
+  # Whether the rows among `changes` are valid
+  defp nested_valid?(changes) do
+    Enum.all?(Map.values(changes), fn
+      %Changeset{valid?: valid?} -> valid?
+      [%Changeset{} | _] = rows -> Enum.all?(rows, &row_valid?/1)
+      _ -> true
+    end)
+  end
+
   # The `:rich_text` inputs at the top of a form, not in its subforms
   defp top_level_fields(%{tabs: tabs}) do
     for tab <- tabs,

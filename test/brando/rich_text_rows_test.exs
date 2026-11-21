@@ -329,6 +329,51 @@ defmodule Brando.RichTextRowsTest do
       assert changeset.errors == []
       assert Enum.all?(Changeset.get_change(changeset, :quotes, []), &(&1.errors == []))
     end
+
+    # A refused changeset kept in the form whose value then changes with no
+    # cast (another editor corrects it): checked again, without the errors
+    # the earlier check left (Brando.RichText.recheck_form/2)
+    test "a field refused before is checked again once its value changes" do
+      form = Article.__form__(:notes)
+      refused = article_changeset(%{subtitle: hd(@unsafe)}, form)
+      refute refused.valid?
+
+      corrected = Changeset.put_change(refused, :subtitle, "<p>Fine</p>")
+      rechecked = Brando.RichText.recheck_form(corrected, form)
+      assert rechecked.valid?
+      assert rechecked.errors == []
+      assert Changeset.get_change(rechecked, :subtitle) == "<p>Fine</p>"
+
+      assert refused |> Brando.RichText.recheck_form(form) |> Map.fetch!(:errors) |> Keyword.has_key?(:subtitle)
+    end
+
+    test "a field refused before and checked again stays invalid when another error remains" do
+      form = Article.__form__(:notes)
+
+      rechecked =
+        %{subtitle: hd(@unsafe)}
+        |> article_changeset(form)
+        |> Changeset.add_error(:title, "is taken")
+        |> Changeset.put_change(:subtitle, "<p>Fine</p>")
+        |> Brando.RichText.recheck_form(form)
+
+      refute rechecked.valid?
+      assert Keyword.keys(rechecked.errors) == [:title]
+    end
+
+    test "a row refused before is checked again once its value changes" do
+      form = Article.__form__(:rich_quotes)
+      refused = article_changeset(%{quotes: [%{text: hd(@unsafe)}]}, form)
+      refute refused.valid?
+
+      [row] = Changeset.get_change(refused, :quotes)
+      corrected = Changeset.put_change(refused, :quotes, [Changeset.put_change(row, :text, "<p>Fine</p>")])
+      %{changes: %{quotes: [row]}} = rechecked = Brando.RichText.recheck_form(corrected, form)
+
+      assert rechecked.valid?
+      assert row.valid?
+      assert row.errors == []
+    end
   end
 
   test "the entry's own rich text is still checked" do

@@ -4617,8 +4617,9 @@ defmodule BrandoAdmin.Components.Form do
         |> assoc_all_block_fields(socket.assigns.form.source)
         |> assoc_all_transformer_fields(socket.assigns.transformer_changesets, socket.assigns.form_blueprint)
         # The form's changeset may not come from a cast (another editor's
-        # field change, a working copy): checked here as a save checks it
-        |> Brando.RichText.validate_form(socket.assigns.form_blueprint)
+        # field change, a working copy): checked here as a save checks it,
+        # again where an earlier check refused a value that has changed since
+        |> Brando.RichText.recheck_form(socket.assigns.form_blueprint)
 
       socket
       |> store_revision(changeset)
