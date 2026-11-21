@@ -301,3 +301,25 @@ test('a transformer string list row inserted above a value keeps every value thr
   await saveAndReload(page, url)
   await expect.poll(aliasValues).toEqual(['First one', 'First between', 'First two', ''])
 })
+
+// This transformer has no listing, so a row added here is drawn with its
+// fields at once, before it is saved
+test('a transformer row added before the save takes what is typed and is saved once', async ({ page }) => {
+  const url = await createClient(page)
+  await page.getByRole('button', { name: 'Ny rad', exact: true }).click()
+  await expect(rows(page)).toHaveCount(3)
+  const added = rows(page).nth(2)
+  await field(added, 'title').fill('Added title')
+  await added.getByRole('radio', { name: 'M', exact: true }).check()
+  await syncLV(page)
+
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL(/\/admin\/projects\/clients$/)
+  await page.goto(url)
+  await syncLV(page)
+  await expect(rows(page)).toHaveCount(3)
+  await expect(field(rows(page).nth(0), 'title')).toHaveValue('First')
+  await expect(field(rows(page).nth(1), 'title')).toHaveValue('Second')
+  await expect(field(rows(page).nth(2), 'title')).toHaveValue('Added title')
+  await expect(rows(page).nth(2).getByRole('radio', { name: 'M', exact: true })).toBeChecked()
+})

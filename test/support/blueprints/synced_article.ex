@@ -419,6 +419,27 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # A transformer without a listing, whose rows start with a label
+    # (TransformerUnsavedRowsTest): a row's fields are drawn as soon as it
+    # is added.
+    form :transformer_unlisted_items do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :items do
+            cardinality :many
+            style {:transformer, :cover}
+            default %{label: "Untitled"}
+
+            input :label, :text
+            input :link, :rich_text
+          end
+        end
+      end
+    end
+
     form :custom_item_entries do
       tab "Content" do
         fieldset do

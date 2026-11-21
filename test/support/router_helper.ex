@@ -507,6 +507,10 @@ defmodule BrandoIntegrationWeb.Router do
          BrandoAdmin.SyncTest.ArticleMediaFormLive,
          :transformer_rich_items
 
+    live "/articles/update/:entry_id/transformer_unlisted_items",
+         BrandoAdmin.SyncTest.ArticleMediaFormLive,
+         :transformer_unlisted_items
+
     live "/articles/update/:entry_id/custom_item_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :custom_item_entries
     live "/articles/update/:entry_id/author_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :author_entries
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
