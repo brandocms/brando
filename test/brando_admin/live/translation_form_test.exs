@@ -1338,4 +1338,544 @@ defmodule BrandoAdmin.TranslationFormTest do
       })
     end
   end
+
+  # A synchronized translation's form (its entry fields) and its block fields
+  # (the shared edit session) load one pending version: the session's
+  # (`Brando.EditSession.take_version/3`). The form decides at mount, at a
+  # reconnect and after its own save, never on a parent update (#3760).
+  describe "one pending version for the form and its block fields" do
+    @text Brando.EditSessionEditors.text_path()
+
+    defp held_version(view),
+      do: view |> render() |> form_params("#article_form_form") |> get_in(["translation_review", "version_id"])
+
+    defp shown_year(view), do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "year"])
+    defp shown_title(view), do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "title"])
+
+    defp type_title(view, title) do
+      params = view |> render() |> form_params("#article_form_form") |> put_in(["article", "title"], title)
+      view |> element("#article_form_form") |> render_change(Map.put(params, "_target", ["article", "title"]))
+    end
+
+    defp waiting?(view), do: has_element?(view, "#translation-panel [data-translation-waiting]")
+
+    # Save and continue editing: the form stays, and loads what the save
+    # leaves pending.
+    defp save_and_stay(view) do
+      view |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit()
+    end
+
+    defp other_conn do
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {other, log_in_user(Phoenix.ConnTest.build_conn(), other)}
+    end
+
+    defp first_block_uid(c), do: hd(load(c.target.id).entry_blocks).block.uid
+
+    defp stop_session(c) do
+      if pid = Brando.EditSession.whereis(Brando.EditSession.ref(Article, c.target.id, "en")),
+        do: GenServer.stop(pid, :normal)
+    end
+
+    # The source adds another block and changes the year again.
+    defp change_source_again(c, year) do
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Tredje avsnitt", 2)
+      change_year(c, year)
+    end
+
+    # 1. A presence update reads the newer version and leaves it waiting:
+    # the entry fields keep the version the block fields hold, and the
+    # editor's typing in both.
+    test "a newer version waits while the form holds unsaved block work", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+      type_title(view, "Typed title")
+
+      second = change_source_again(c, 2030)
+      refute second.id == first.id
+
+      {other, other_conn} = other_conn()
+      _other = open(other_conn, c.target.id)
+      await_selector(view, "[data-presence-user-id='#{other.id}']")
+      await_selector(view, "#translation-panel [data-translation-waiting]")
+      # On main the update scheduled a load 100 ms later
+      # (`schedule_translation_apply/1`); what is asserted is that none comes.
+      Process.sleep(250)
+
+      assert held_version(view) == to_string(first.id)
+      assert {shown_year(view), shown_title(view)} == {"2024", "Typed title"}
+      assert Brando.EditSessionEditors.shown_text(view, uid) == "Typed paragraph"
+
+      save_and_stay(view)
+
+      # the save wrote the version the form held, then the form loads the newer one
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      saved = load(c.target.id)
+      assert {saved.year, saved.title, hd(texts(saved))} == {2024, "Typed title", "Typed paragraph"}
+      refute waiting?(view)
+    end
+
+    # 2. The session ended while the editor was away: the reconnected form
+    # loads the version over the typing LiveView replayed, and the block
+    # fields take it whatever they hold (no `joined_with_work?`).
+    test "a reconnect after the session ended, with block typing replayed, saves the version's structure",
+         %{conn: conn} = c do
+      c = pair(c, &TranslationFixtures.add_block(&1, c.module, c.current_user, "Andre avsnitt", 1))
+      translate(c.target, ["First paragraph", "Second paragraph"])
+
+      [dropped, _second] = load(c.source.id).entry_blocks
+      drop_block(dropped)
+      TranslationFixtures.add_block(c.source, c.module, c.current_user, "Nytt avsnitt", 2)
+      version = source_saved(c)
+
+      [_, %{block: %{uid: uid}}] = load(c.target.id).entry_blocks
+      view = open_version(conn, c.target.id, version)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+      html = render(view)
+      main = form_params(html, "#article_form_form")
+      block = form_params(html, "#entry_block_form-#{uid}")
+      ref = Brando.EditSession.ref(Article, c.target.id, "en")
+      session = Brando.EditSession.whereis(ref)
+      # what the BlockField hook keeps in sessionStorage: the roots it shows
+      # and their forms
+      {:ok, %{state: %{order: root_uids}}} = Brando.EditSession.fetch(session, :blocks)
+      forms = Map.new(root_uids, &{"entry_block_form-#{&1}", form_params(html, "#entry_block_form-#{&1}")})
+      monitor = Process.monitor(session)
+      kill_live(view)
+      assert_receive {:DOWN, ^monitor, :process, _, _}, 2_000
+
+      view = open(conn, c.target.id)
+
+      # As it mounts, the BlockField hook sends the roots the new render
+      # lacks (the version's new block), before the form loads the version
+      # again (`maybeRecoverBlocks`); LiveView replays the forms.
+      current = Enum.map(load(c.target.id).entry_blocks, & &1.block.uid)
+      missing = root_uids -- current
+      assert missing != []
+      refute has_element?(view, "input[name='translation_review[version_id]']")
+
+      view
+      |> with_target("[phx-hook='Brando.BlockField']")
+      |> render_hook("recover_blocks", %{
+        "rootUids" => root_uids,
+        "currentUids" => current,
+        "missingUids" => missing,
+        "forms" => Map.take(forms, Enum.map(missing, &"entry_block_form-#{&1}")),
+        "childOrder" => %{}
+      })
+
+      view |> element("#article_form_form") |> render_change(main)
+      view |> element("#entry_block_form-#{uid}") |> render_change(Map.put(block, "_target", @text))
+
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+      await(fn -> Brando.EditSessionEditors.shown_text(view, uid) == "Typed paragraph" end)
+      save(view)
+
+      saved = assert_follows_source(c, version)
+      assert texts(saved) == ["Typed paragraph", "Nytt avsnitt"]
+    end
+
+    # 3. The second editor's entry fields load the version the session's
+    # blocks are built on, not the newer one; each save is accepted.
+    test "a second editor opening after a second source save gets the session's version; both save",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+
+      second = change_source_again(c, 2030)
+      refute second.id == first.id
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      assert shown_year(other) == "2024"
+      assert Brando.EditSessionEditors.shown_text(other, uid) == "Typed paragraph"
+      assert waiting?(other)
+
+      # the second editor saves and closes; the first is not behind it: the
+      # session is unset, and its form holds what was saved
+      save(other)
+      assert load(c.target.id).year == 2024
+      Brando.EditSessionEditors.await(fn -> Brando.EditSessionEditors.shows_saved?(view, uid) end)
+
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      saved = load(c.target.id)
+      assert {saved.year, hd(texts(saved))} == {2024, "Typed paragraph"}
+    end
+
+    # The session's version was computed before the translation was written
+    # from outside the session (the listing, a proposal). A form that joins
+    # keeps that version for its blocks, and shows the entry's fields as they
+    # are saved: the version's older copy would take the write back.
+    test "a form joining after the translation was written elsewhere does not bring the older values back",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+
+      {:ok, _} = SyncTest.update_article(c.target.id, %{slug: "written-elsewhere"}, c.current_user)
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      await_selector(other, "input[name='article[slug]'][value='written-elsewhere']")
+      assert Brando.EditSessionEditors.shown_text(other, uid) == "Typed paragraph"
+
+      save(other)
+      saved = load(c.target.id)
+      assert {saved.slug, hd(texts(saved))} == {"written-elsewhere", "Typed paragraph"}
+    end
+
+    # A version's payload holds the translation's status from when it was
+    # computed, and a status change does not make a new version: loading the
+    # version must not take the status back.
+    test "a form loading a version computed before the translation was published keeps it published",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+
+      {:ok, _} = SyncTest.update_article(c.target.id, %{status: :published}, c.current_user)
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      save(other)
+      assert load(c.target.id).status == :published
+    end
+
+    # 4. A reconnect within the grace period finds the session, which keeps
+    # the version its blocks are built on: the entry fields load it too.
+    test "a reconnect within the grace period after a second source save keeps the session's version",
+         %{conn: conn} = c do
+      put_test_env(Brando.EditSession, grace_period: 30_000)
+      on_exit(fn -> stop_session(c) end)
+
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+      html = render(view)
+      main = form_params(html, "#article_form_form")
+      block = form_params(html, "#entry_block_form-#{uid}")
+      kill_live(view)
+
+      second = change_source_again(c, 2030)
+      refute second.id == first.id
+      assert Brando.EditSession.whereis(Brando.EditSession.ref(Article, c.target.id, "en"))
+
+      view = open(conn, c.target.id)
+      view |> element("#article_form_form") |> render_change(main)
+      view |> element("#entry_block_form-#{uid}") |> render_change(Map.put(block, "_target", @text))
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{first.id}']")
+      assert shown_year(view) == "2024"
+      assert Brando.EditSessionEditors.shown_text(view, uid) == "Typed paragraph"
+      assert waiting?(view)
+
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      saved = load(c.target.id)
+      assert {saved.year, hd(texts(saved))} == {2024, "Typed paragraph"}
+      stop_session(c)
+    end
+
+    # 5. One editor's save takes the newer version into the session: the
+    # other's block fields hold its blocks, its form the older version. That
+    # form refuses to submit and asks for a reload, which takes the
+    # session's version.
+    test "after one editor's save takes the newer version, the other's form does not submit the old one",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      assert held_version(view) == to_string(third.id)
+      saved_at = load(c.target.id).updated_at
+
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      other |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(other, "b:submit", %{}, 2_000)
+      other |> form("#article_form_form") |> render_submit()
+      assert_push_event(other, "b:alert", %{type: "error"}, 2_000)
+      refute_push_event(other, "b:submit", %{}, 200)
+      assert load(c.target.id).updated_at == saved_at
+
+      # the reload takes the session's version, and saves
+      kill_live(other)
+      other = open_version(other_conn, c.target.id, third)
+      assert shown_year(other) == "2030"
+      save(other)
+      saved = assert_follows_source(c, third)
+      assert saved.year == 2030
+    end
+
+    # 6. The second reverted attempt kept a flag no version consumed: a
+    # version with only work items left it set, and the next version's
+    # blocks were skipped while its entry fields loaded.
+    test "a version with only work items, then one with structure", %{conn: conn, current_user: user} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{
+            title: "Ny kilde",
+            slug: "ny-kilde-#{System.unique_integer([:positive])}",
+            language: "no",
+            status: "published",
+            year: 2020
+          },
+          user
+        )
+
+      TranslationFixtures.add_block(source, c.module, user, "Avsnitt", 0)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      c = %{c | source: source, target: target}
+      work = Translations.get_pending_version(Article, target.id)
+
+      view = open_version(conn, target.id, work)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Paragraph")
+
+      TranslationFixtures.add_block(source, c.module, user, "Nytt avsnitt", 1)
+      change_year(c, 2024)
+      save_and_stay(view)
+
+      await_selector(view, "input[name='article[year]'][value='2024']", 3_000)
+      structure = Translations.get_pending_version(Article, target.id)
+      # the version's new block, in the block field
+      await(fn -> length(Regex.scan(~r/<form[^>]*id="entry_block_form-/, render(view))) == 2 end)
+      assert has_element?(view, "#translation-panel .translation-structure")
+      save(view)
+
+      saved = assert_follows_source(c, structure)
+      assert {saved.year, texts(saved)} == {2024, ["Paragraph", "Nytt avsnitt"]}
+    end
+
+    # 7. The first reverted attempt kept the held version by copying the
+    # previous state: a read with no pending version in between lost it.
+    test "a read with no pending version in between does not hide a waiting one", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+
+      Repo.update!(Ecto.Changeset.change(Repo.get!(PendingVersion, first.id), status: :superseded))
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
+      render(view)
+      refute waiting?(view)
+      assert held_version(view) == to_string(first.id)
+
+      change_year(c, 2030)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
+      await_selector(view, "#translation-panel [data-translation-waiting]")
+      assert held_version(view) == to_string(first.id)
+      assert shown_year(view) == "2024"
+    end
+
+    # 8. No block fields, no session: the form decides alone, at mount and
+    # after its save.
+    test "a form without block fields keeps its version across a presence update", %{conn: conn} = c do
+      first = change_year(c, 2024)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{first.id}']")
+
+      change_year(c, 2030)
+      {other, other_conn} = other_conn()
+      {_other, _} = live_form(other_conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(view, "[data-presence-user-id='#{other.id}']")
+      await_selector(view, "#translation-panel [data-translation-waiting]")
+      Process.sleep(250)
+
+      assert held_version(view) == to_string(first.id)
+    end
+
+    # 9. Applying a translate proposal writes the translation outside the
+    # form (`Translations.save_work/5`, then `EditSession.sync_saved/1`, as
+    # `Proposals.announce/2` does). The open form is not told as of
+    # another editor's save: its blocks take the written rows through the
+    # session, and its save still passes against the version it holds.
+    test "a translate proposal applied while the form is open", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      [item] = Enum.filter(first.work_items, &(&1.kind == :translate))
+
+      {:ok, %{entry: entry}} =
+        Translations.save_work(Article, c.target.id, %{texts: %{item.path => "New paragraph"}}, c.current_user,
+          mutation: [show_notification: false, pubsub: false]
+        )
+
+      Brando.EditSession.sync_saved(entry)
+      [_, %{block: %{uid: new_uid}}] = load(c.target.id).entry_blocks
+      await(fn -> Brando.EditSessionEditors.shown_text(view, new_uid) == "New paragraph" end)
+      refute has_element?(view, "#translation-panel [data-translation-behind]")
+
+      save(view)
+      saved = load(c.target.id)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "New paragraph"]}
+    end
+
+    # 13. The session crashes and the editors rejoin
+    # (`Brando.EditSessionRejoin`): the first form back tells the new
+    # session the version it holds, unless it is behind it.
+    defp session_version(c) do
+      pid = Brando.EditSession.whereis(Brando.EditSession.ref(Article, c.target.id, "en"))
+      :sys.get_state(pid).data.version
+    end
+
+    defp behind?(view), do: has_element?(view, "#translation-panel [data-translation-behind]")
+
+    test "after a crash, the first form back puts back the version both hold", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      target = load(c.target.id)
+
+      Brando.EditSessionRejoin.hold(view)
+      Brando.EditSessionRejoin.kill_session(target)
+      Brando.EditSessionRejoin.await_joined(other, target)
+      await(fn -> session_version(c) == first.id end)
+      Brando.EditSessionRejoin.release(view)
+      Brando.EditSessionRejoin.await_joined(view, target)
+      render(view)
+
+      assert session_version(c) == first.id
+      refute behind?(view) or behind?(other)
+    end
+
+    test "after a crash, a form behind the session does not put back its older version", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      target = load(c.target.id)
+
+      Brando.EditSessionRejoin.hold(view)
+      Brando.EditSessionRejoin.kill_session(target)
+      Brando.EditSessionRejoin.await_joined(other, target)
+      render(other)
+      Brando.EditSessionRejoin.release(view)
+      Brando.EditSessionRejoin.await_joined(view, target)
+      await(fn -> session_version(c) == third.id end)
+      render(view)
+
+      refute behind?(view)
+      assert behind?(other)
+      assert held_version(view) == to_string(third.id)
+    end
+
+    # 12. Someone who may not change the entry shows the version without
+    # taking it: their block fields send nothing, so the session's blocks
+    # are not built on it. The editor who opens next loads it.
+    defp read_only_conn do
+      user = Brando.Test.Users.insert_user(role: :user)
+      log_in_user(Phoenix.ConnTest.build_conn(), user)
+    end
+
+    defp block_count(view), do: length(Regex.scan(~r/<form[^>]*id="entry_block_form-/, render(view)))
+
+    test "a read-only form that opens first leaves the version to the editor", %{conn: conn} = c do
+      first = change_source(c)
+      viewer = open_version(read_only_conn(), c.target.id, first)
+      assert shown_year(viewer) == "2024"
+      await(fn -> block_count(viewer) == 2 end)
+
+      view = open_version(conn, c.target.id, first)
+      assert shown_year(view) == "2024"
+      # the version's new block, in the editor's block field
+      await(fn -> block_count(view) == 2 end)
+      save(view)
+
+      saved = assert_follows_source(c, first)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "Nytt avsnitt"]}
+    end
+
+    test "a read-only form that opens after the editor keeps the session's version", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      await(fn -> block_count(view) == 2 end)
+
+      viewer = open_version(read_only_conn(), c.target.id, first)
+      assert shown_year(viewer) == "2024"
+      await(fn -> block_count(viewer) == 2 end)
+
+      save(view)
+      saved = assert_follows_source(c, first)
+      assert {saved.year, texts(saved)} == {2024, ["First paragraph", "Nytt avsnitt"]}
+    end
+
+    # 11. The save schedules the form's decision 100 ms later; a parent
+    # update (presence) in between rebuilds the state, and the decision
+    # still follows the save: the form loads what it left pending.
+    test "a parent update between the save and the decision does not keep the version just saved",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      type_title(view, "Typed title")
+      second = change_source_again(c, 2030)
+
+      save_and_stay(view)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form")
+
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      refute third.id == first.id
+      assert second.id && held_version(view) == to_string(third.id)
+      assert shown_title(view) == "Typed title"
+      assert load(c.target.id).title == "Typed title"
+    end
+
+    # 10. A type without block fields saves without collecting blocks
+    # (`saved_entry/3`): Save and continue decides again all the same, and
+    # loads what the save left pending.
+    test "a type without block fields loads the newer version after Save and continue", %{conn: conn, current_user: user} do
+      {:ok, source} =
+        Brando.Forms.create_form(
+          %{
+            "title" => "Kontakt",
+            "key" => "kontakt-#{System.unique_integer([:positive])}",
+            "language" => "no",
+            "status" => "published",
+            "fields" => [%{"key" => "name", "type" => "text", "label" => "Navn"}]
+          },
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Brando.Forms.Form, source.id, :en, user, mark_translate: false)
+      {:ok, _} = Brando.Forms.update_form(source.id, %{"retention_days" => 30}, user)
+      first = Translations.get_pending_version(Brando.Forms.Form, target.id)
+
+      {view, _html} = live_form(conn, "/admin/config/forms/update/#{target.id}", "form_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{first.id}']")
+
+      {:ok, _} = Brando.Forms.update_form(source.id, %{"retention_days" => 90}, user)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "form_form")
+      await_selector(view, "#translation-panel [data-translation-waiting]")
+
+      view |> element("button", "Save and continue editing") |> render_click()
+      view |> form("#form_form_form") |> render_submit()
+
+      await_selector(view, "input[name='form[retention_days]'][value='90']", 3_000)
+      second = Translations.get_pending_version(Brando.Forms.Form, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{second.id}']")
+      refute waiting?(view)
+    end
+
+    defp await(fun), do: Brando.EditSessionEditors.await(fun)
+  end
 end

@@ -1368,32 +1368,43 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # The form decides which pending version it holds (`Translation.decide/2`):
+  # at mount, at a reconnect, after its own save. The block fields have
+  # joined the edit session by then, which holds the version their blocks
+  # are built on.
   def update(%{action: :apply_translation}, socket) do
     cond do
       not Translation.apply?(socket.assigns) ->
         {:ok, socket}
-
-      # Nothing to load, only work to list: the form stays as it was saved
-      not Translation.changes?(socket.assigns) ->
-        {:ok, Translation.mark_applied(socket)}
 
       not socket.assigns.blocks_ready? or socket.assigns.entry_loading? ->
         send_update_after(__MODULE__, [id: socket.assigns.id, action: :apply_translation], 100)
         {:ok, socket}
 
       true ->
-        case Translation.restore_changeset(socket) do
-          {:ok, changeset, socket} ->
-            {:ok,
-             socket
-             |> reset_locked_values()
-             |> put_locked_values(changeset)
-             |> apply_restored_changeset(changeset, :translation)}
+        {how, socket} = Translation.decide(socket, translation_session(socket))
+        {:ok, load_translation(socket, how)}
+    end
+  end
 
-          :error ->
-            send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
-            {:ok, socket}
-        end
+  # Another form in the entry moved the edit session's pending version
+  # (`Brando.EditSession.take_version/3`, routed by the LiveView's hooks).
+  def update(%{event: "session_version", version: version, origin: origin}, socket) do
+    if origin == self(),
+      do: {:ok, socket},
+      else: {:ok, Translation.session_moved(socket, version)}
+  end
+
+  # The edit session died and the block fields joined a new one: it learns
+  # the version this form holds, unless another form told it first. A form
+  # behind the session holds a version its blocks are past: it tells nothing.
+  def update(%{event: "edit_session_rejoined"}, socket) do
+    with %{decided?: true, behind?: false, applied_version_id: held} <- socket.assigns[:translation],
+         %{} = session <- translation_session(socket),
+         {:keep, version} <- Brando.EditSession.take_version(session, held, adopt: true) do
+      {:ok, Translation.session_moved(socket, version)}
+    else
+      _ -> {:ok, socket}
     end
   end
 
@@ -1517,9 +1528,52 @@ defmodule BrandoAdmin.Components.Form do
       %{assigns: %{translation: %{} = state}} = socket -> assign(socket, :translation, %{state | stale?: stale?})
       socket -> socket
     end)
+    |> Translation.after_save()
     |> TranslationFill.refresh(saved: true)
     |> schedule_translation_apply()
   end
+
+  # The version the form holds is loaded: into the entry fields, and with
+  # `:load` into the block fields too. With `:keep` the block fields hold it
+  # already, from the edit session. A version without changes is only
+  # marked held, its work listed.
+  #
+  # A version kept from the session that was computed before the translation
+  # was last saved (a write from the listing or a proposal since) is not
+  # loaded into the entry's fields: its copy of the translation's own values
+  # is older than what is saved, and saving it would take that write back.
+  # The form shows the fields as saved; the blocks are the session's.
+  defp load_translation(socket, how) do
+    if socket.assigns.translation.applied_version_id && Translation.changes?(socket.assigns) &&
+         not kept_from_older_save?(socket, how) do
+      case Translation.restore_changeset(socket) do
+        {:ok, changeset, socket} ->
+          socket
+          |> reset_locked_values()
+          |> put_locked_values(changeset)
+          |> apply_restored_changeset(changeset, :translation, nil, blocks: how == :load)
+
+        :error ->
+          send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
+          Translation.undecide(socket, translation_session(socket), how)
+      end
+    else
+      socket
+    end
+  end
+
+  defp kept_from_older_save?(%{assigns: %{schema: schema, entry: entry, translation: translation}}, :keep),
+    do: not Brando.Translations.pending_base_current?(schema, entry.id, translation.applied_version_id)
+
+  defp kept_from_older_save?(_socket, _how), do: false
+
+  # The entry's edit session, which holds the pending version: only a form
+  # with block fields has one.
+  defp translation_session(%{assigns: %{form_blueprint: %{blocks: [_ | _]}, entry: %{id: id} = entry}})
+       when not is_nil(id),
+       do: Brando.EditSession.ref_for(entry)
+
+  defp translation_session(_socket), do: nil
 
   # Field texts from Translate with AI, written as one change of the form
   # through its local-change path (`put_written_form/2`), so they reach the
@@ -5940,6 +5994,23 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
+  # A synchronized translation whose edit session moved on to a version
+  # this form does not hold (another editor saved): its blocks are that
+  # version's, its other fields are not. The reload takes the session's.
+  def handle_event("save", _params, %{assigns: %{translation: %{behind?: true}}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:processing, false)
+     |> push_event("b:alert", %{
+       title: gettext("Not saved"),
+       message:
+         gettext(
+           "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+         ),
+       type: "error"
+     })}
+  end
+
   def handle_event("save", params, %{assigns: %{draft_save_checked?: false}} = socket) do
     socket = Drafts.before_save(socket)
 
@@ -7490,7 +7561,7 @@ defmodule BrandoAdmin.Components.Form do
 
     Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
-    {socket, _stale?} = after_translation_save(socket, schema, entry)
+    {socket, stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     announce_save(socket, entry, mutation_type)
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
@@ -7500,17 +7571,17 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:take_after_save?, false)
      |> Drafts.saved(entry)
      |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
-       redirect_after_save(socket, entry, save)
+       redirect_after_save(socket, entry, stale?, save)
      end)}
   end
 
-  defp redirect_after_save(socket, entry, save) do
+  defp redirect_after_save(socket, entry, stale?, save) do
     %{schema: schema, mutation_type: mutation_type} = save
 
     maybe_redirected_socket =
       case save.save_redirect_target do
         :self ->
-          refresh_saved_entry(socket, entry, save)
+          refresh_saved_entry(socket, entry, stale?, save)
 
         :listing ->
           # if redirect_on_save is set in form, use this
@@ -7538,21 +7609,24 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:processing, false)
   end
 
-  defp refresh_saved_entry(socket, entry, %{schema: schema, mutation_type: :create}) do
+  defp refresh_saved_entry(socket, entry, _stale?, %{schema: schema, mutation_type: :create}) do
     generated_route = schema.__admin_route__(:update, [entry.id])
 
     push_navigate(socket, to: generated_route)
   end
 
-  defp refresh_saved_entry(socket, entry, %{schema: schema}) do
+  defp refresh_saved_entry(socket, entry, stale?, %{schema: schema}) do
     maybe_refresh_revisions(socket, schema)
 
     # update entry! A revision's working copy is saved: it is the entry now.
+    # A synchronized translation decides again, from what the save left
+    # pending, as one with block fields does.
     socket
     |> assign(:entry_id, entry.id)
     |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
+    |> refresh_translation(stale?)
   end
 
   # Crop was already applied via the HTTP replace_crop endpoint.
@@ -8071,10 +8145,10 @@ defmodule BrandoAdmin.Components.Form do
   # translation's pending version — into the form as unsaved changes: the main
   # form, every block field and every transformer.
   #
-  # `source` is `:translation` when the form loads a pending version on open:
-  # an editor who joins a translation others already work in finds the
-  # version, and their work, in the edit session, and the block fields keep
-  # it rather than load the version over it.
+  # `source` is `:translation` when the form loads a pending version
+  # (`load_translation/2`); an editor who joins a translation others already
+  # work in finds the version in the edit session, and the form then loads
+  # only its own fields (`blocks: false`).
   #
   # A recovery copy of a revision's working copy (`working_copy`, which
   # revision) is again a working copy of it: the block fields put its blocks
@@ -8189,13 +8263,16 @@ defmodule BrandoAdmin.Components.Form do
     {Enum.filter(fields, differs?), relations, transformers}
   end
 
-  defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
+  # `blocks: false`: the block fields hold the blocks already (a pending
+  # version the edit session holds, `load_translation/2`).
+  defp apply_restored_changeset(socket, changeset, source, working_copy, opts \\ []) do
     revision_entry = working_copy_revision(socket, working_copy)
     revised = revised_changeset(socket, revision_entry)
     {changeset, revised_assets} = put_revision_locked_fields(socket, changeset, revised, source)
     form = to_form(changeset)
+    block_fields = if Keyword.get(opts, :blocks, true), do: socket.assigns.form_blueprint.blocks, else: []
 
-    for field <- socket.assigns.form_blueprint.blocks do
+    for field <- block_fields do
       message = [
         id: "#{socket.assigns.id}-blocks-#{field.name}",
         event: "restore_draft",

@@ -1378,7 +1378,24 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
+  # The edit session's pending version moved (`Brando.EditSession.take_version/3`):
+  # the Form decides whether it still holds what the block fields do.
+  defp handle_hooks_block_sync_info({:edit_session_version, %{version: version, origin: origin}}, socket) do
+    if schema = socket.assigns[:schema] do
+      send_update(BrandoAdmin.Components.Form,
+        id: "#{schema.__naming__().singular}_form",
+        event: "session_version",
+        version: version,
+        origin: origin
+      )
+    end
+
+    {:halt, socket}
+  end
+
   # The session a BlockField replicates died (BlockField put the monitor).
+  # The BlockField joins a new one; then the Form tells it the pending
+  # version it holds.
   defp handle_hooks_block_sync_info({:DOWN, ref, :process, _pid, _reason}, socket) do
     case Process.delete({:brando_edit_session_monitor, ref}) do
       nil ->
@@ -1386,6 +1403,14 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
       component_id ->
         send_update(BrandoAdmin.Components.Form.BlockField, id: component_id, event: "edit_session_down")
+
+        if schema = socket.assigns[:schema],
+          do:
+            send_update(BrandoAdmin.Components.Form,
+              id: "#{schema.__naming__().singular}_form",
+              event: "edit_session_rejoined"
+            )
+
         {:halt, socket}
     end
   end

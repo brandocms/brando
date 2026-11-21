@@ -1607,6 +1607,27 @@ defmodule Brando.Translations do
     end
   end
 
+  @doc """
+  Whether pending version `version_id` of the translation `entry_id` was
+  computed from the translation as it is saved now. False once the
+  translation was saved since (from the listing, by a proposal): the
+  version's copy of the translation's own values is then older than what is
+  saved.
+  """
+  def pending_base_current?(schema, entry_id, version_id) do
+    with %Member{} = member <- get_member(schema, entry_id),
+         base when is_binary(base) <-
+           Repo.one(
+             from v in PendingVersion,
+               where: v.id == ^version_id and v.member_id == ^member.id,
+               select: v.base_fingerprint
+           ) do
+      not stale_base?(schema, member, base)
+    else
+      _ -> false
+    end
+  end
+
   defp stale_base?(schema, member, base) do
     case load_entry(schema, member.entry_id) do
       {:ok, target} -> Sync.base_fingerprint(target, schema, module_uids([target], schema)) != base

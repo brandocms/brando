@@ -2825,6 +2825,12 @@ msgstr ""
 msgid "Another editor removed the block you were changing."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+msgstr ""
+
 #: lib/brando/environments/environment.ex
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
@@ -20225,6 +20231,11 @@ msgstr ""
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "The source changed again while you were editing. Its newer changes are loaded below and are not saved yet."
+msgstr ""
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed again. Its changes are loaded when you save the translation."
 msgstr ""
 
 #: lib/brando_admin/components/form/translation.ex

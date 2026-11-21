@@ -1,0 +1,1 @@
+- A synchronized translation's fields and blocks load the same pending version: the form takes it when it opens and after its own save, never while the editor works; the panel says when the source changed again, and a form whose blocks another editor's save moved on asks for a reload instead of losing unsaved typing or being refused as a change to source-controlled content.

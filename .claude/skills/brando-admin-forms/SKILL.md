@@ -85,6 +85,23 @@ area in [the section map](form-map.md) and grep for the names it lists.
   save reaches the others only this way. Coverage
   lives in `test/brando_admin/live/entry_saved_elsewhere_test.exs` and
   `test/brando_admin/components/form/relation_rows_test.exs`.
+- A synchronized translation's pending version belongs to the entry's edit
+  session (`Brando.EditSession.take_version/3`, `Data.version`), so the
+  entry fields and the shared block fields load the same one. The Form
+  decides only at mount (a reconnect too) and after its own save
+  (`Form.Translation.decide/2`, from `action: :apply_translation`):
+  `{:load, id}` loads it into the fields and every block field,
+  `{:keep, id}` into the entry fields alone (the blocks are in the session).
+  A parent update rebuilds the state on the held version and only notes a
+  newer one (`waiting?`); never load a version there. Another form moving
+  the session (`{:edit_session_version, …}`, routed by the hooks) makes this
+  one take a version without changes or be `behind?`, which refuses the
+  save until a reload. A read-only client (no update permission, a tab that
+  does not edit) shows a version without setting it; after a session crash
+  the first form back puts its held version on the new session unless it
+  is `behind?`. A form without block fields decides alone. Coverage
+  lives in the "one pending version" describe of
+  `test/brando_admin/live/translation_form_test.exs`.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the
