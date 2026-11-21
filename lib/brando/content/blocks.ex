@@ -877,8 +877,9 @@ defmodule Brando.Content.Blocks do
 
   defp row_contains_identifier?(_row, _fields, _identifier_id), do: false
 
-  # In the bulk lane: a link that moved can reach any number of entries
-  defp rewrite_identifier_links([], rendered), do: enqueue_rendered(rendered)
+  # In the bulk lane: a link that moved can reach any number of entries.
+  # `rendered` is kept newest first and reversed once.
+  defp rewrite_identifier_links([], rendered), do: enqueue_rendered(Enum.reverse(rendered))
 
   defp rewrite_identifier_links([rewrite | rewrites], rendered) do
     result =
@@ -889,13 +890,13 @@ defmodule Brando.Content.Blocks do
         # the entries rewritten before this one still get their renders. In
         # one, the step's savepoint takes them back.
         kind, reason ->
-          unless Repo.repo().in_transaction?(), do: enqueue_rendered(rendered)
+          unless Repo.repo().in_transaction?(), do: enqueue_rendered(Enum.reverse(rendered))
           :erlang.raise(kind, reason, __STACKTRACE__)
       end
 
     rendered =
       case result do
-        {:updated, entries} -> rendered ++ entries
+        {:updated, entries} -> Enum.reverse(entries, rendered)
         _ -> rendered
       end
 
