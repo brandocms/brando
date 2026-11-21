@@ -1,0 +1,1 @@
+- A subform row's field that one form draws as plain text and another as rich text prints in templates as the default form draws it, so what was typed in the plain form no longer prints as live markup (a link, or an event handler breaking out of an attribute). A row field only named forms draw, each as rich text, still prints as sanitized markup.

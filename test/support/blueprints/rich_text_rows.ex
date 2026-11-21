@@ -242,10 +242,11 @@ end
 
 defmodule Brando.RichTextRows.Disagreeing do
   @moduledoc false
-  # Forms that disagree on a top-level field, and one only named forms draw
-  # (Brando.Villain.RichTextTemplateReadsTest). Only structs are built; the
-  # table is there because a moved identifier's links are looked for in every
-  # Blueprint with rich text.
+  # Forms that disagree on a field, at the top and in each kind of row, and
+  # fields only named forms draw (Brando.Villain.RichTextTemplateReadsTest,
+  # Brando.Villain.RichTextRowsPrintingTest). Only structs are built; the
+  # tables are there because a moved identifier's links are looked for in
+  # every Blueprint with rich text.
   use Brando.Blueprint,
     application: "Brando",
     domain: "RichTextRows",
@@ -263,24 +264,123 @@ defmodule Brando.RichTextRows.Disagreeing do
     attribute :aside, :text
   end
 
+  relations do
+    relation :quotes, :embeds_many,
+      module: Brando.RichTextRows.Quote,
+      on_replace: :delete,
+      sort_param: :sort_quotes_ids,
+      drop_param: :drop_quotes_ids
+
+    relation :feature, :embeds_one, module: Brando.RichTextRows.Feature, on_replace: :update
+
+    relation :notes, :embeds_many,
+      module: Brando.RichTextRows.Quote,
+      on_replace: :delete,
+      sort_param: :sort_notes_ids,
+      drop_param: :drop_notes_ids
+
+    relation :items, :has_many,
+      module: Brando.RichTextRows.DisagreeingItem,
+      on_replace: :delete,
+      preload_order: [asc: :sequence],
+      cast: true,
+      sort_param: :sort_items_ids,
+      drop_param: :drop_items_ids
+
+    relation :lead, :has_one, module: Brando.RichTextRows.DisagreeingItem, on_replace: :update, cast: true
+  end
+
   forms do
-    # `intro` is rich text here and plain text in `form :plain`
+    # `intro` is rich text here and plain text in `form :plain`. So are a
+    # feature's text, and the row fields drawn here as plain text are rich
+    # text in `form :plain`.
     form do
       tab "Content" do
         fieldset do
           input :title, :text
           input :intro, :rich_text
         end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :textarea
+            input :credit, :text
+          end
+
+          inputs_for :feature do
+            cardinality :one
+
+            input :text, :rich_text
+          end
+
+          inputs_for :items do
+            cardinality :many
+            style {:transformer, :cover}
+            add_entry false
+
+            input :text, :textarea
+          end
+
+          inputs_for :lead do
+            cardinality :one
+
+            input :text, :textarea
+          end
+        end
       end
     end
 
-    # `aside` is drawn only by named forms, each as rich text
+    # `aside` and a note's text are drawn only by named forms, each as rich
+    # text; a note's credit by named forms that disagree
     form :plain do
       tab "Content" do
         fieldset do
           input :title, :text
           input :intro, :textarea
           input :aside, :rich_text
+        end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+          end
+
+          inputs_for :feature do
+            cardinality :one
+
+            input :text, :textarea
+          end
+
+          inputs_for :notes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+            input :credit, :text
+          end
+
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+          end
+
+          inputs_for :lead do
+            cardinality :one
+
+            input :text, :rich_text
+          end
         end
       end
     end
@@ -290,7 +390,57 @@ defmodule Brando.RichTextRows.Disagreeing do
         fieldset do
           input :aside, :rich_text
         end
+
+        fieldset do
+          inputs_for :notes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+            input :credit, :rich_text
+          end
+        end
       end
     end
+  end
+end
+
+defmodule Brando.RichTextRows.DisagreeingItem do
+  @moduledoc false
+  # Disagreeing's `has_many` rows, drawn by a transformer in its default
+  # form, and its `has_one` row
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "RichTextRows",
+    schema: "DisagreeingItem",
+    singular: "disagreeing_item",
+    plural: "disagreeing_items",
+    gettext_module: Brando.Gettext
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :text, :text
+    # The transformer's save numbers its rows
+    attribute :sequence, :integer
+  end
+
+  assets do
+    asset :cover, :image,
+      cfg: [
+        allowed_mimetypes: ["image/jpeg", "image/png"],
+        default_size: "medium",
+        upload_path: Path.join("images", "richtextrows_items"),
+        random_filename: true,
+        size_limit: 10_240_000,
+        sizes: %{"medium" => %{"size" => "500x500", "quality" => 65, "crop" => true}},
+        srcset: [{"medium", "500w"}]
+      ]
+  end
+
+  relations do
+    relation :disagreeing, :belongs_to, module: Brando.RichTextRows.Disagreeing
   end
 end

@@ -1,0 +1,1 @@
+- `url_decode` keeps an escape that does not decode to a whole UTF-8 character as typed (`5%be off`), where on rich text it made the render fail with "Invalid filter url_decode".

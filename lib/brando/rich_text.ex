@@ -213,39 +213,57 @@ defmodule Brando.RichText do
     if function_exported?(module, :__forms__, 0) do
       inputs = for form <- module.__forms__(), input <- top_level_inputs(form), do: input
 
-      rich_everywhere =
-        for {name, types} <- Enum.group_by(inputs, &elem(&1, 0), &elem(&1, 1)),
-            Enum.all?(types, &(&1 == :rich_text)),
-            do: name
-
       default = if function_exported?(module, :__rich_text_fields__, 0), do: module.__rich_text_fields__(), else: []
-      Enum.uniq(default ++ Enum.sort(rich_everywhere))
+      Enum.uniq(default ++ rich_everywhere(inputs))
     else
       []
     end
   end
 
   @doc """
-  The fields of `module`'s `relation` rows that are printed as rich text:
-  those a form of `module`, any of its forms, draws as a `:rich_text` input
-  in a subform on that relation. When forms disagree the field is rich
-  text, since the stored value may hold markup.
+  The fields of `module`'s `relation` rows that are printed as rich text,
+  by the rule `fields_for_printing/1` has for top-level fields, read from
+  the inputs of the subforms on `relation`: those the default form draws
+  as a `:rich_text` input, and those only named forms draw, each as a
+  `:rich_text` input. When forms disagree on a field, the default form
+  decides, and a field it does not draw is not rich text.
+
+  A save checks rows by other rules: the default form
+  (`validate_blueprint/2`), and the form it comes from (`validate_form/2`).
   """
   @spec row_fields_for_printing(module(), atom() | String.t()) :: [atom()]
   def row_fields_for_printing(module, relation) when is_atom(module) do
     if function_exported?(module, :__forms__, 0) do
       relation = to_string(relation)
+      inputs = for form <- module.__forms__(), input <- subform_inputs(form, relation), do: input
 
-      Enum.uniq(
-        for form <- module.__forms__(),
-            {name, fields} <- subform_fields(form),
-            Atom.to_string(name) == relation,
-            field <- fields,
-            do: field
-      )
+      default = if function_exported?(module, :__form__, 0), do: module.__form__(), else: nil
+      default_rich = for {name, :rich_text} <- subform_inputs(default, relation), do: name
+      Enum.uniq(default_rich ++ rich_everywhere(inputs))
     else
       []
     end
+  end
+
+  # `{name, type}` for each input in a form's subforms on `relation`
+  defp subform_inputs(%{tabs: tabs}, relation) do
+    for tab <- tabs,
+        fieldset <- tab.fields,
+        %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields} <- Map.get(fieldset, :fields, []),
+        Atom.to_string(name) == relation,
+        %Brando.Blueprint.Forms.Input{type: type, name: field} <- sub_fields,
+        do: {field, type}
+  end
+
+  defp subform_inputs(_form, _relation), do: []
+
+  # The names among `{name, type}` inputs drawn only as `:rich_text`, sorted
+  defp rich_everywhere(inputs) do
+    Enum.sort(
+      for {name, types} <- Enum.group_by(inputs, &elem(&1, 0), &elem(&1, 1)),
+          Enum.all?(types, &(&1 == :rich_text)),
+          do: name
+    )
   end
 
   # `{relation, fields}` for each subform with rich text of a form, or of a
