@@ -108,9 +108,11 @@ position. Only an input in a form with `phx-change` is followed (a gallery
 caption's popover input names no form; such an input is read on Save, so
 after a patch it gets the editor's text back), and not during a rejoin: from
 `disconnected()` the input keeps the editor's text, and `reconnected()` puts
-in what the recovered form's patch changed it to, if anything (the join patch
-renders the saved entry), and follows that once; a recovered form that comes
-later is followed as any patch. Once activated, an editor stays mounted to
+in what the recovered form's patch left in it, changed or not (a text another
+editor saved meanwhile is in the join patch, which renders the saved entry,
+and the recovery keeps it), and follows that once. With only the join patch
+in, nothing is put in: a recovered form that comes later is followed as any
+patch. Once activated, an editor stays mounted to
 retain undo history.
 Open a dormant editor programmatically with `brando:tiptap:activate` on its hook
 element, rather than assuming a `contenteditable=true` node already exists.

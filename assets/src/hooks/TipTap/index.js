@@ -220,11 +220,11 @@ export default app => ({
     // Rejoining: the input keeps what the editor shows, and the recovered
     // form's patch is compared with that (`Presence/pendingInputs.js` would
     // otherwise take the recovered text for a stale keystroke of this
-    // editor's and keep the saved one). What the patches wrote is
-    // remembered for `reconnected()`.
+    // editor's and keep the saved one). What the patches wrote, and how
+    // many there were, is remembered for `reconnected()`.
     if (this._held) {
       this._heldValue = this._input.value
-      if (this._joinValue == null) this._joinValue = this._heldValue
+      this._heldPatches++
       this._input.value = this._shown
       // The hold is for a rejoin, whose patches and `reconnected()` run in
       // one task. A patch while the socket is connected that no
@@ -244,26 +244,30 @@ export default app => ({
   // A rejoin patches in the saved entry and then the recovered form, and
   // calls `reconnected()` after both: following the first would replace a
   // text the second gives back (resetting its undo history and moving the
-  // cursor). The recovery's answer, when it changed this input (another
-  // editor's change while this one was away, a removed row above), is put
-  // in once, and replaces the document if it differs from what the editor
-  // shows; the editor's own text given back leaves it alone. A recovered
-  // form that arrives after the rejoin is followed as any other patch.
+  // cursor). LiveView applies the recovered form right after the saved
+  // entry, so a patch after the first is the recovery's: its answer is put
+  // in once, whether it changed this input (another editor's change while
+  // this one was away, a removed row above) or left the saved entry's text
+  // (another editor's change saved while this one was away), and replaces
+  // the document if it differs from what the editor shows; the editor's
+  // own text given back leaves it alone. The saved entry alone is not
+  // taken: a recovered form that arrives after the rejoin is followed as
+  // any other patch.
   disconnected() {
     clearTimeout(this._holdTimer)
-    if (!this._held) { this._heldValue = null; this._joinValue = null }
+    if (!this._held) { this._heldValue = null; this._heldPatches = 0 }
     this._held = true
   },
 
   reconnected() {
-    this.release(this._heldValue !== this._joinValue ? this._heldValue : null)
+    this.release(this._heldPatches > 1 ? this._heldValue : null)
   },
 
   release(value) {
     clearTimeout(this._holdTimer)
     this._held = false
     this._heldValue = null
-    this._joinValue = null
+    this._heldPatches = 0
     if (value != null && this.entryRichText()) this._input.value = value
     this.followInput()
   },

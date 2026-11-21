@@ -205,3 +205,157 @@ test('a row’s rich text disconnected without a rejoin follows the next change 
   await expectInputs(page, quoteRows, ['Første', 'Endret'])
   expect(errors).toEqual([])
 })
+
+// Another editor's text saved while this one was away, with nothing typed
+// here: after the reconnect the editor and its input show the saved text,
+// and this editor's next save (of another field) keeps it.
+
+// Saves with the keyboard and waits for the write's reply
+async function save(page) {
+  await page.evaluate(() => {
+    window.richTextSaved = false
+    window.addEventListener('phx:b:draft-reset', () => { window.richTextSaved = true }, { once: true })
+  })
+  await page.keyboard.press('ControlOrMeta+s')
+  await page.waitForFunction(() => window.richTextSaved)
+  await syncLV(page)
+}
+
+// The editor, its input, and the two agreeing
+async function expectShown(field, text) {
+  await expect(editorOf(field)).toHaveText(text)
+  await expect(inputOf(field)).toHaveValue(`<p>${text}</p>`)
+}
+
+async function factory(page, schema, attributes) {
+  const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  return response.json()
+}
+
+async function changePlainField(page, input, text) {
+  await input.fill(text)
+  await input.blur()
+  await syncLV(page)
+}
+
+test('an entry’s own rich text another editor saved while this one was away shows and keeps the saved text', async ({ page, secondUserPage }) => {
+  test.setTimeout(90000)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await routeLiveSocket(page)
+
+  const summary = p => p.locator('[id$="_summary-rich-text"]')
+  const title = p => p.locator('input[name$="[title]"]').first()
+  // A project that saves: a client and an introduction, and the summary
+  // already saved
+  const client = await factory(page, 'E2eProject.Projects.Client', { name: 'Havglimt', slug: 'havglimt', status: 'published', language: 'en' })
+  const entry = await factory(page, 'E2eProject.Projects.Project', {
+    title: 'Havglimt retreat', slug: 'havglimt-retreat', client_id: client.id, status: 'published', language: 'en',
+    introduction: '<p>Rooms by the sea.</p>', summary: '<p>Gammel</p>',
+  })
+  const path = `/admin/projects/projects/update/${entry.id}`
+  for (const p of [page, secondUserPage]) {
+    await p.goto(path)
+    await syncLV(p)
+    await expectShown(summary(p), 'Gammel')
+  }
+
+  await dropConnection(page)
+  await retype(secondUserPage, summary(secondUserPage), 'Ny')
+  await save(secondUserPage)
+  await restoreConnection(page)
+
+  await expectShown(summary(page), 'Ny')
+
+  await changePlainField(page, title(page), 'Havglimt retreat endret')
+  await save(page)
+  await page.goto(path)
+  await syncLV(page)
+  await expect(title(page)).toHaveValue('Havglimt retreat endret')
+  await expectShown(summary(page), 'Ny')
+  expect(errors).toEqual([])
+})
+
+test('a row’s rich text another editor saved while this one was away shows and keeps the saved text', async ({ page, secondUserPage }) => {
+  test.setTimeout(90000)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await routeLiveSocket(page)
+  await openBoth(page, secondUserPage, ['Første', 'Gammel'])
+  const path = new URL(page.url()).pathname
+  const subtitle = p => p.locator('textarea[name$="[subtitle]"]').first()
+
+  await dropConnection(page)
+  await retype(secondUserPage, quoteRows(secondUserPage).nth(1), 'Ny')
+  await save(secondUserPage)
+  await restoreConnection(page)
+
+  await expectTexts(page, quoteRows, ['Første', 'Ny'])
+  await expectInputs(page, quoteRows, ['Første', 'Ny'])
+
+  await changePlainField(page, subtitle(page), 'Undertittel')
+  await save(page)
+  await page.goto(path)
+  await syncLV(page)
+  await expect(subtitle(page)).toHaveValue('Undertittel')
+  await expectTexts(page, quoteRows, ['Første', 'Ny'])
+  await expectInputs(page, quoteRows, ['Første', 'Ny'])
+
+  // Typed into, the text builds on the saved one
+  await dropConnection(page)
+  await retype(secondUserPage, quoteRows(secondUserPage).nth(1), 'Nyere')
+  await save(secondUserPage)
+  await restoreConnection(page)
+  await expectTexts(page, quoteRows, ['Første', 'Nyere'])
+  await append(page, quoteRows(page).nth(1), ' mer')
+  await save(page)
+  await page.goto(path)
+  await syncLV(page)
+  await expectInputs(page, quoteRows, ['Første', 'Nyere mer'])
+  expect(errors).toEqual([])
+})
+
+test('a rich-text page variable another editor saved while this one was away shows and keeps the saved text', async ({ page, secondUserPage }) => {
+  test.setTimeout(90000)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await routeLiveSocket(page)
+  expect((await page.request.post('/e2e/setup_fixtures/rich-text-vars-page')).ok()).toBe(true)
+
+  const varRows = p => p.locator('.subform--vars .vars-row')
+  const title = p => p.locator('input[name$="[title]"]').first()
+  await page.goto('/admin/pages')
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Rich text variables', exact: true }).click()
+  await expect(page).toHaveURL(/\/admin\/pages\/update\/\d+$/)
+  const path = new URL(page.url()).pathname
+  const openVars = async (p, tab) => {
+    await p.setViewportSize({ width: 1440, height: 2400 })
+    await p.goto(path)
+    await syncLV(p)
+    await p.getByRole('button', { name: tab, exact: true }).click()
+    await expect(varRows(p)).toHaveCount(3)
+  }
+  await openVars(page, 'Avansert')
+  await openVars(secondUserPage, 'Advanced')
+
+  await dropConnection(page)
+  const row = varRows(secondUserPage).nth(1)
+  await row.locator('.variable-header').click()
+  await retype(secondUserPage, row, 'Andre endret')
+  await save(secondUserPage)
+  await restoreConnection(page)
+
+  await expectTexts(page, varRows, ['Første', 'Andre endret', 'Tredje'])
+  await expectInputs(page, varRows, ['Første', 'Andre endret', 'Tredje'])
+
+  await page.getByRole('button', { name: 'Innhold', exact: true }).click()
+  await changePlainField(page, title(page), 'Rich text variables endret')
+  await save(page)
+  await openVars(page, 'Avansert')
+  await expect(title(page)).toHaveValue('Rich text variables endret')
+  await expectTexts(page, varRows, ['Første', 'Andre endret', 'Tredje'])
+  await expectInputs(page, varRows, ['Første', 'Andre endret', 'Tredje'])
+  expect(errors).toEqual([])
+})
