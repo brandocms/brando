@@ -1396,9 +1396,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The edit session died and the block fields joined a new one: it learns
-  # the version this form holds, unless another form told it first.
+  # the version this form holds, unless another form told it first. A form
+  # behind the session holds a version its blocks are past: it tells nothing.
   def update(%{event: "edit_session_rejoined"}, socket) do
-    with %{decided?: true, applied_version_id: held} <- socket.assigns[:translation],
+    with %{decided?: true, behind?: false, applied_version_id: held} <- socket.assigns[:translation],
          %{} = session <- translation_session(socket),
          {:keep, version} <- Brando.EditSession.take_version(session, held, adopt: true) do
       {:ok, Translation.session_moved(socket, version)}

@@ -1682,6 +1682,62 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, texts(saved)} == {2024, ["First paragraph", "New paragraph"]}
     end
 
+    # 13. The session crashes and the editors rejoin
+    # (`Brando.EditSessionRejoin`): the first form back tells the new
+    # session the version it holds, unless it is behind it.
+    defp session_version(c) do
+      pid = Brando.EditSession.whereis(Brando.EditSession.ref(Article, c.target.id, "en"))
+      :sys.get_state(pid).data.version
+    end
+
+    defp behind?(view), do: has_element?(view, "#translation-panel [data-translation-behind]")
+
+    test "after a crash, the first form back puts back the version both hold", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      target = load(c.target.id)
+
+      Brando.EditSessionRejoin.hold(view)
+      Brando.EditSessionRejoin.kill_session(target)
+      Brando.EditSessionRejoin.await_joined(other, target)
+      await(fn -> session_version(c) == first.id end)
+      Brando.EditSessionRejoin.release(view)
+      Brando.EditSessionRejoin.await_joined(view, target)
+      render(view)
+
+      assert session_version(c) == first.id
+      refute behind?(view) or behind?(other)
+    end
+
+    test "after a crash, a form behind the session does not put back its older version", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, c.target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      target = load(c.target.id)
+
+      Brando.EditSessionRejoin.hold(view)
+      Brando.EditSessionRejoin.kill_session(target)
+      Brando.EditSessionRejoin.await_joined(other, target)
+      render(other)
+      Brando.EditSessionRejoin.release(view)
+      Brando.EditSessionRejoin.await_joined(view, target)
+      await(fn -> session_version(c) == third.id end)
+      render(view)
+
+      refute behind?(view)
+      assert behind?(other)
+      assert held_version(view) == to_string(third.id)
+    end
+
     # 12. Someone who may not change the entry shows the version without
     # taking it: their block fields send nothing, so the session's blocks
     # are not built on it. The editor who opens next loads it.
