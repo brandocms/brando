@@ -368,11 +368,10 @@ it as a `:rich_text` input, or when only named forms draw it, each as a
 `:rich_text` input. When forms disagree, the default form decides: a field it
 draws as a textarea prints as text, so what was typed there stays text even
 if another form draws the field as rich text. A field in a subform's rows
-prints as rich text when any form draws it as a `:rich_text` input, since the
-stored value may hold markup: plain text such as `John <john@example.com>`
-typed in a row another form draws as plain text prints without the bracketed
-part. What a save checks is set by the form it comes from and the default
-form (see [Rich text](blueprint_forms.md#rich-text)).
+follows the same rule, read from the forms' subforms on that relation: the
+default form's subform decides when forms disagree, and a row field it does
+not draw then prints as text. What a save checks is set by the form it comes
+from and the default form (see [Rich text](blueprint_forms.md#rich-text)).
 
 Liquid in a value printed with `raw` stays text. `raw` reads escaped text as
 what it stands for. Rich text needs no `raw`: a rich-text field, a subform
@@ -391,6 +390,8 @@ other block field) reads as escaped text, and
 editor typed in a block stays text. Text a filter makes from it, or a piece of
 a `split`, `raw` leaves escaped. `url_decode` on rich text sanitizes what it
 decoded again, as rich text is sanitized when read, and it prints as markup.
+`url_decode` leaves a `%` as typed when two hex digits do not follow it, or
+when its escape does not decode to a whole UTF-8 character (`5%be off`).
 
 A picture's or image's title that holds the caption editor's markup prints only
 the elements that editor makes (paragraphs, headings, lists, line breaks,

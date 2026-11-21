@@ -10,7 +10,7 @@ defmodule Brando.Villain.TemplateView do
   (`Brando.RichText.fields_for_printing/1`), a text ref's `text` and a
   placement's caption arrive sanitized, to print as markup, each value
   sanitized once in a render (`sanitize_rich_text/1`). So does a subform
-  row's field that a form of the row's owner draws as rich text
+  row's field that its owner's forms draw as rich text, by the same rule
   (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
   names, also through a filter that selects or reorders the rows
   (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
