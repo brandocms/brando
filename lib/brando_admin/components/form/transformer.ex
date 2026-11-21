@@ -131,10 +131,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         do: Enum.map(socket.assigns.items, &saved_item(&1, Map.get(saved, &1.dom_id), socket.assigns.asset_fields)),
         else: socket.assigns.items
 
-    # A listing draws the row it gets (its id, say): the saved items are
-    # drawn again, under the DOM ids they have.
+    # A listing draws the row it gets (its id, say): a row that was new and is
+    # now saved is drawn again, under the DOM id it has. Rows that were saved
+    # before keep their cards, and with them what the browser put on a card
+    # (a drop highlight, a drag in progress).
     socket =
-      for {item, before} <- Enum.zip(items, socket.assigns.items), item != before, reduce: socket do
+      for {item, before} <- Enum.zip(items, socket.assigns.items), before.is_new and not item.is_new, reduce: socket do
         acc -> stream_insert(acc, :transformer_items, stream_entry(item))
       end
 
