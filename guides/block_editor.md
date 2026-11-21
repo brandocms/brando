@@ -392,7 +392,8 @@ A picture's or image's title that holds the caption editor's markup prints only
 the elements that editor makes (paragraphs, headings, lists, line breaks,
 emphasis, links, spans, subscript and superscript) with the attributes it gives
 them: a link's address, target, `rel`, class and identifier, a paragraph's or
-heading's class and alignment, a span's class, colour and anchor id. Any other
+heading's class and alignment, a span's class, colour and anchor id, the number
+an ordered list starts at. Any other
 element is left out and its text kept. A title without that markup is text.
 
 A user shows only `id`, `name`, `email`, `language`, `role`, `avatar`, `active`,
