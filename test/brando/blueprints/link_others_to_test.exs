@@ -243,6 +243,90 @@ defmodule Brando.Blueprint.LinkOthersToTest do
       assert stored.lead.body =~ ~s(href="/cases/client-work")
     end
 
+    test "an embeds_one without a primary key and embeds whose relation raises on a replace" do
+      {_target, identifier} = insert_case(%{})
+
+      holder =
+        Brando.Repo.insert!(%Case{
+          title: "Holder",
+          slug: "holder",
+          type: :full_case,
+          note: %Brando.LinkTest.Note{label: "Note", body: linked_html(identifier, "note")},
+          aside: %Highlight{title: "Aside", body: linked_html(identifier, "aside")},
+          archive: [
+            %Highlight{title: "Archived", body: linked_html(identifier, "archived")},
+            %Highlight{title: "Plain"}
+          ]
+        })
+
+      jobs = rewrite(identifier, "/cases/client-work")
+
+      stored = Brando.Repo.get!(Case, holder.id)
+      assert stored.note.label == "Note"
+      assert stored.note.body =~ ~s(href="/cases/client-work")
+      assert stored.note.body =~ "note"
+      assert stored.aside.id == holder.aside.id
+      assert stored.aside.title == "Aside"
+      assert stored.aside.body =~ ~s(href="/cases/client-work")
+      assert [%{title: "Archived", body: body} = archived, plain] = stored.archive
+      assert archived.id == hd(holder.archive).id
+      assert body =~ ~s(href="/cases/client-work")
+      assert plain == Enum.at(holder.archive, 1)
+
+      assert holder.id in Enum.map(jobs, & &1.args["entry_id"])
+    end
+
+    test "an embeds_many the entry's query leaves out" do
+      {_target, identifier} = insert_case(%{})
+
+      holder =
+        Brando.Repo.insert!(%Case{
+          title: "Holder",
+          slug: "holder",
+          type: :full_case,
+          extras: [%Highlight{title: "Extra", body: linked_html(identifier)}]
+        })
+
+      jobs = rewrite(identifier, "/cases/client-work")
+
+      [extra] = Brando.Repo.one!(Ecto.Query.from(c in Case, where: c.id == ^holder.id, select: c.extras))
+      assert extra.title == "Extra"
+      assert extra.body =~ ~s(href="/cases/client-work")
+      assert holder.id in Enum.map(jobs, & &1.args["entry_id"])
+    end
+
+    test "a has_many row detached before its rewrite is rewritten, and no case is rendered for it" do
+      {_target, identifier} = insert_case(%{})
+      holder = Brando.Repo.insert!(%Case{title: "Holder", slug: "holder", type: :full_case})
+      chapter = Brando.Repo.insert!(%Chapter{case_id: holder.id, title: "Linked", body: linked_html(identifier)})
+
+      # Another editor removes the row from its case (`on_replace: :nilify`)
+      # after the scan found it, before the rewrite locks it
+      test_pid = self()
+      handler = "detach-chapter-after-scan"
+
+      detach = fn _event, _measurements, %{source: source, query: query}, _config ->
+        if self() == test_pid and source == "linktest_chapters" and not (query =~ "FOR UPDATE") do
+          :telemetry.detach(handler)
+          Brando.Repo.update_all(Ecto.Query.where(Chapter, id: ^chapter.id), set: [case_id: nil])
+        end
+      end
+
+      :ok = :telemetry.attach(handler, BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query], detach, nil)
+
+      jobs =
+        try do
+          rewrite(identifier, "/cases/client-work")
+        after
+          :telemetry.detach(handler)
+        end
+
+      stored = Brando.Repo.get!(Chapter, chapter.id)
+      assert stored.case_id == nil
+      assert stored.body =~ ~s(href="/cases/client-work")
+      refute holder.id in Enum.map(jobs, & &1.args["entry_id"])
+    end
+
     test "an address the rich text refuses changes no row" do
       {_target, identifier} = insert_case(%{})
 

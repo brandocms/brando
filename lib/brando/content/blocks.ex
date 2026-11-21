@@ -822,74 +822,82 @@ defmodule Brando.Content.Blocks do
     end
   end
 
+  # The column is read by itself, so a relation the entry's query leaves out
+  # (`load_in_query: false`) is read too, and written with `update_all`: a
+  # changeset would go through the relation's `on_replace`, which refuses a
+  # changed row for `:raise`, and for `:update` on a row without a primary
+  # key. The rows keep their ids and every other key.
   defp update_locked_embed_identifier_link(module, name, fields, id, identifier_id, new_url) do
-    entry = Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
+    rows =
+      Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE", select: {entry.id, field(entry, ^name)})
 
-    with %{} <- entry,
-         {:updated, rows} <- relink_embedded_rows(Map.get(entry, name), fields, identifier_id, new_url) do
-      updated = entry |> Changeset.change() |> Changeset.put_embed(name, rows) |> Repo.update!()
+    with {_id, rows} <- rows,
+         {:updated, rows} <- relink_embedded_rows(rows, fields, identifier_id, new_url) do
+      set = [{name, rows} | autoupdated_fields(module)]
+
+      {1, [updated]} =
+        Repo.update_all(from(entry in module, where: entry.id == ^id, select: entry), set: set)
+
       Brando.Cache.Query.evict({:ok, updated})
       {:updated, id}
+    else
+      _ -> :ok
     end
   end
 
-  defp relink_embedded_rows(rows, fields, identifier_id, new_url) when is_list(rows) do
-    relinked = Enum.map(rows, &relink_row(&1, fields, identifier_id, new_url))
+  # What `Repo.update` would set: `updated_at` and any other `autoupdate`
+  defp autoupdated_fields(module) do
+    for {fields, {mod, fun, args}} <- module.__schema__(:autoupdate),
+        value = apply(mod, fun, args),
+        field <- fields,
+        do: {field, value}
+  end
 
-    if Enum.any?(relinked, &(&1.changes != %{})),
+  defp relink_embedded_rows(rows, fields, identifier_id, new_url) when is_list(rows) do
+    relinked = Enum.map(rows, &relink_row_struct(&1, fields, identifier_id, new_url))
+
+    if relinked != rows,
       do: {:updated, relinked},
       else: :unchanged
   end
 
   defp relink_embedded_rows(%{} = row, fields, identifier_id, new_url) do
-    relinked = relink_row(row, fields, identifier_id, new_url)
-    if relinked.changes != %{}, do: {:updated, relinked}, else: :unchanged
+    relinked = relink_row_struct(row, fields, identifier_id, new_url)
+    if relinked != row, do: {:updated, relinked}, else: :unchanged
   end
 
   defp relink_embedded_rows(_rows, _fields, _identifier_id, _new_url), do: :unchanged
 
-  defp relink_row(row, fields, identifier_id, new_url) do
-    changes =
-      for field <- fields,
-          {:updated, html} <- [RichText.update_identifier_url(Map.get(row, field), identifier_id, new_url)],
-          do: {field, html}
+  defp relink_row_struct(row, fields, identifier_id, new_url),
+    do: Map.merge(row, relinked_fields(row, fields, identifier_id, new_url))
 
-    row
-    |> Changeset.change(changes)
-    |> mark_unsaved_embedded_row()
+  defp relinked_fields(row, fields, identifier_id, new_url) do
+    for field <- fields,
+        {:updated, html} <- [RichText.update_identifier_url(Map.get(row, field), identifier_id, new_url)],
+        into: %{},
+        do: {field, html}
   end
 
-  # An embedded row stored without an id is given one, as a row added in
-  # the form would be: Ecto refuses to update a row it cannot identify
-  defp mark_unsaved_embedded_row(%{data: %{__meta__: _}} = changeset), do: changeset
-
-  defp mark_unsaved_embedded_row(%{data: data} = changeset) do
-    case data.__struct__.__schema__(:primary_key) do
-      [key] when is_nil(:erlang.map_get(key, data)) -> %{changeset | action: :insert}
-      _ -> changeset
-    end
-  end
-
+  # A row another editor detached from its entry (`on_replace: :nilify`)
+  # since the scan is rewritten, but has no entry to render
   defp update_locked_row_identifier_link(module, assoc, fields, id, identifier_id, new_url) do
     %{related: related, related_key: related_key, owner_key: owner_key} = assoc
     row = Repo.one(from row in related, where: row.id == ^id, lock: "FOR UPDATE")
+    changes = if row, do: relinked_fields(row, fields, identifier_id, new_url), else: %{}
 
-    with %{} <- row,
-         %{changes: changes} = changeset when changes != %{} <- relink_row(row, fields, identifier_id, new_url) do
-      updated = Repo.update!(changeset)
-      Brando.Cache.Query.evict({:ok, updated})
-      owner_value = Map.fetch!(updated, related_key)
-
-      case Repo.one(from entry in module, where: field(entry, ^owner_key) == ^owner_value) do
-        nil ->
-          :ok
-
-        entry ->
-          Brando.Cache.Query.evict({:ok, entry})
-          {:updated, entry.id}
-      end
+    if changes == %{} do
+      :ok
     else
-      _ -> :ok
+      updated = row |> Changeset.change(changes) |> Repo.update!()
+      Brando.Cache.Query.evict({:ok, updated})
+
+      with owner_value when not is_nil(owner_value) <- Map.fetch!(updated, related_key),
+           %{} = entry <- Repo.one(from entry in module, where: field(entry, ^owner_key) == ^owner_value) do
+        Brando.Cache.Query.evict({:ok, entry})
+        {:updated, entry.id}
+      else
+        _ -> :ok
+      end
     end
   end
 

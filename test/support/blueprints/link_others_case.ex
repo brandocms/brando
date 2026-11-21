@@ -35,6 +35,26 @@ defmodule Brando.LinkTest.Case do
 
     relation :lead, :embeds_one, module: Brando.LinkTest.Highlight, on_replace: :update
 
+    # Rows Ecto would not take back as a changeset: one without a primary
+    # key, Brando's default `on_replace: :update`; rows whose relation
+    # raises on a replace
+    relation :note, :embeds_one, module: Brando.LinkTest.Note
+    relation :aside, :embeds_one, module: Brando.LinkTest.Highlight, on_replace: :raise
+
+    relation :archive, :embeds_many,
+      module: Brando.LinkTest.Highlight,
+      on_replace: :raise,
+      sort_param: :sort_archive_ids,
+      drop_param: :drop_archive_ids
+
+    # Rows an entry's query leaves out
+    relation :extras, :embeds_many,
+      module: Brando.LinkTest.Highlight,
+      on_replace: :delete,
+      load_in_query: false,
+      sort_param: :sort_extras_ids,
+      drop_param: :drop_extras_ids
+
     relation :chapters, :has_many,
       module: Brando.LinkTest.Chapter,
       cast: true,
@@ -73,6 +93,30 @@ defmodule Brando.LinkTest.Case do
             input :body, :rich_text
           end
 
+          inputs_for :note do
+            input :body, :rich_text
+          end
+
+          inputs_for :aside do
+            input :body, :rich_text
+          end
+
+          inputs_for :archive do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :body, :rich_text
+          end
+
+          inputs_for :extras do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :body, :rich_text
+          end
+
           inputs_for :chapters do
             cardinality :many
             style :inline
@@ -103,6 +147,27 @@ defmodule Brando.LinkTest.Highlight do
 
   attributes do
     attribute :title, :string
+    attribute :body, :text
+  end
+end
+
+defmodule Brando.LinkTest.Note do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "LinkTest",
+    schema: "Note",
+    singular: "note",
+    plural: "notes",
+    gettext_module: Brando.Gettext
+
+  @primary_key false
+  data_layer :embedded
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :label, :string
     attribute :body, :text
   end
 end
