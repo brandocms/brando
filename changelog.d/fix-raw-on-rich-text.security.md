@@ -1,0 +1,2 @@
+- The `raw` filter no longer turns text an editor typed into rich text (a rich-text field, a subform row's, a text ref's text, a `rich_text` var or global) into live markup: it prints rich text as it prints without `raw`, also after a filter and through `assign`.
+  A subform row's rich text prints as markup without `raw`: remove `| raw` after it (`{{ row.text | raw }}` becomes `{{ row.text }}`). Rich text that a template `capture`s is decoded by `raw` as before, so do not `capture` rich text to print it with `raw`.

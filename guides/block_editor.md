@@ -362,8 +362,13 @@ A filter of your own given such a field (`{{ entry.status | my_filter }}`) gets
 its text, and so does a tag given a variable assigned from it; given the record,
 or the field itself (`{% my_tag entry.status %}`), they get the atom.
 
-Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
-it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with
+Liquid in a value printed with `raw` stays text. `raw` reads escaped text as
+what it stands for. Rich text needs no `raw`: a rich-text field, a subform
+row's, a text ref's `text` and a `rich_text` var or global arrive sanitized,
+and `raw` prints them as they print without it, so what an editor typed in them
+(`<img …>`) stays text. That holds after a filter (`{{ entry.body | truncate:
+100 | raw }}`) and through `assign`, not through `capture`: captured text is
+new text, which `raw` decodes. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with
 `R&amp;D`.
 
 A user shows only `id`, `name`, `email`, `language`, `role`, `avatar`, `active`,

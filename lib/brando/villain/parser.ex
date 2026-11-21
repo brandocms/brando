@@ -1770,7 +1770,7 @@ defmodule Brando.Villain.Parser do
   # Sanitized, and text to the entry's final Liquid pass. HEEx has no use for
   # this: what it prints is made inert after it (`Brando.Villain.HeexRenderer`).
   defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:rich_text, :html],
-    do: {key, Brando.Villain.InertLiquid.encode_all(value)}
+    do: {key, value |> Brando.Villain.InertLiquid.encode_all() |> Brando.Villain.TemplateView.read_as_rich_text()}
 
   defp maybe_escape_var({key, %{type: :link} = link}, _var, true), do: {key, escape_link_var(link)}
 

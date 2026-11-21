@@ -54,6 +54,14 @@ defmodule Brando.Villain.TemplateView do
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
 
+  # Text read as rich text (`read_as_rich_text/1`), and how deep in renders
+  # (`rich_text_scope/1`) the process is
+  @rich_texts {__MODULE__, :rich_texts}
+  @rich_depth {__MODULE__, :rich_text_depth}
+  # Marked outside any render, as a context is made: kept for the renders that
+  # use it, and no more than this many
+  @rich_texts_outside 1_000
+
   @user_fields ~w(id name email language role avatar active job_title same_as inserted_at updated_at deleted_at)a
   @user_keys @user_fields ++ Enum.map(@user_fields, &Atom.to_string/1)
 
@@ -256,6 +264,90 @@ defmodule Brando.Villain.TemplateView do
   defp inert(value, _context), do: value
 
   @doc """
+  Marks `text` as read as rich text, and returns it: sanitized markup whose
+  typed characters are entities, which was not escaped when read. `raw` leaves
+  such text as it is (`Brando.Villain.Filters.raw/2`), and a filter given it
+  returns text marked the same (`keep_rich_text/2`), so it holds through
+  `assign` too. Text a template builds from printed output (`capture`) is
+  new text, and not marked.
+
+  The mark is the text itself, kept for the process: inside a render
+  (`rich_text_scope/1`) until the outermost one ends, outside any render (a
+  context made before its renders) until more than #{@rich_texts_outside}
+  are kept. Other text with the same characters is the same sanitized markup.
+  """
+  @spec read_as_rich_text(term()) :: term()
+  def read_as_rich_text(text) when is_binary(text) do
+    texts = Process.get(@rich_texts, MapSet.new())
+
+    texts =
+      if Process.get(@rich_depth, 0) == 0 and MapSet.size(texts) >= @rich_texts_outside,
+        do: MapSet.new(),
+        else: texts
+
+    Process.put(@rich_texts, MapSet.put(texts, text))
+    text
+  end
+
+  def read_as_rich_text(value), do: value
+
+  @doc "Whether `text` was read as rich text (`read_as_rich_text/1`)."
+  @spec read_as_rich_text?(term()) :: boolean()
+  def read_as_rich_text?(text) when is_binary(text) do
+    case Process.get(@rich_texts) do
+      nil -> false
+      texts -> MapSet.member?(texts, text)
+    end
+  end
+
+  def read_as_rich_text?(_value), do: false
+
+  @doc """
+  A filter's text `result` marked as read as rich text when one of its
+  `inputs` (the value and arguments) was.
+  """
+  @spec keep_rich_text(term(), term()) :: term()
+  def keep_rich_text(result, inputs) when is_binary(result) do
+    if rich_input?(inputs), do: read_as_rich_text(result), else: result
+  end
+
+  def keep_rich_text(result, _inputs), do: result
+
+  defp rich_input?(list) when is_list(list), do: Enum.any?(list, &rich_input?/1)
+  defp rich_input?({_key, value}), do: rich_input?(value)
+  defp rich_input?(value), do: read_as_rich_text?(value)
+
+  @doc """
+  Runs `fun` as a render: text marked as read as rich text in it
+  (`read_as_rich_text/1`) is let go when the outermost render ends, and text
+  marked before it is kept.
+  """
+  @spec rich_text_scope((-> result)) :: result when result: term()
+  def rich_text_scope(fun) do
+    case Process.get(@rich_depth, 0) do
+      0 ->
+        outside = Process.get(@rich_texts)
+        Process.put(@rich_depth, 1)
+
+        try do
+          fun.()
+        after
+          Process.delete(@rich_depth)
+          if outside, do: Process.put(@rich_texts, outside), else: Process.delete(@rich_texts)
+        end
+
+      depth ->
+        Process.put(@rich_depth, depth + 1)
+
+        try do
+          fun.()
+        after
+          Process.put(@rich_depth, depth)
+        end
+    end
+  end
+
+  @doc """
   The `key` field of each of `items`, as a template reads it on the item
   (`{{ item.key }}`), for the `map` filter.
   """
@@ -322,10 +414,17 @@ defmodule Brando.Villain.TemplateView do
 
   defp read_text(%{value: %struct{} = value, rich: rich}, key, text) do
     cond do
-      plain?(text) -> text
-      struct in @captioned and to_string(key) in ["title", "caption"] -> Captions.caption_html(text)
-      rich_text?(value, key) or named?(rich, key) -> text |> Brando.RichText.render_html() |> InertLiquid.encode_all()
-      true -> escape(text)
+      plain?(text) ->
+        text
+
+      struct in @captioned and to_string(key) in ["title", "caption"] ->
+        Captions.caption_html(text)
+
+      rich_text?(value, key) or named?(rich, key) ->
+        text |> Brando.RichText.render_html() |> InertLiquid.encode_all() |> read_as_rich_text()
+
+      true ->
+        escape(text)
     end
   end
 

@@ -55,15 +55,22 @@ defmodule Brando.Villain.Filters do
         view_mode = TemplateView.view_mode([value | function_args])
         args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
 
-        mod
-        |> Kernel.apply(func, args)
+        result = Kernel.apply(mod, func, args)
+
+        result
         |> TemplateView.filter_result(func, view_mode, context)
         |> TemplateView.keep_rich_rows([value | function_args])
+        |> keep_rich_text(result, args)
     end
   rescue
     # credo:disable-for-next-line
     ArgumentError -> raise Liquex.Error, "Invalid filter #{function}"
   end
+
+  # Text from text read as rich text is too (`TemplateView.read_as_rich_text/1`),
+  # except markup a project's filter returned as `{:safe, html}`
+  defp keep_rich_text(filtered, {:safe, _html}, _args), do: filtered
+  defp keep_rich_text(filtered, _result, args), do: TemplateView.keep_rich_text(filtered, args)
 
   # Merges the tuples at the end of the argument list into a keyword list, but with string keys
   #     value, size, {"crop", direction}, {"filter", filter}
@@ -1008,8 +1015,12 @@ defmodule Brando.Villain.Filters do
   @doc """
   Prints text read from entry data as what it stands for, its markup live, where
   `{{ entry.title }}` would print it as text. The template's opt-in: use it only
-  for a field whose markup you trust. A rich-text field needs no `raw`: it
-  arrives sanitized, to print as it is. Liquid in the value stays text.
+  for a field whose markup you trust. Liquid in the value stays text.
+
+  Rich text needs no `raw`: it arrives sanitized, to print as it is, and `raw`
+  leaves it so, also after a filter or through `assign`
+  (`Brando.Villain.TemplateView.read_as_rich_text/1`). What an editor typed
+  in it stays text.
 
   ## Examples
 
@@ -1017,7 +1028,7 @@ defmodule Brando.Villain.Filters do
       "<em>Hi</em> &#123;{ x }}"
   """
   def raw(value, context) when is_binary(value) do
-    if Brando.Villain.Markdown.template_context?(context),
+    if Brando.Villain.Markdown.template_context?(context) or TemplateView.read_as_rich_text?(value),
       do: value,
       else: value |> HtmlEntities.decode() |> Brando.Villain.InertLiquid.encode_delimiters()
   end
