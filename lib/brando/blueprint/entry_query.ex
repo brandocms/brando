@@ -29,4 +29,15 @@ defmodule Brando.Blueprint.EntryQuery do
     opts = Map.put(opts, :preload, Preloads.for_schema(schema))
     apply(context, :"get_#{singular}", [opts])
   end
+
+  @doc """
+  Whether `get/2` can load an entry of `schema`: its context defines the
+  `get_<singular>/1` that `get/2` calls. A Blueprint whose rows are only
+  edited as another entry's subform rows may have none.
+  """
+  @spec loadable?(module()) :: boolean()
+  def loadable?(schema) do
+    context = schema.__modules__().context
+    Code.ensure_loaded?(context) and function_exported?(context, :"get_#{schema.__naming__().singular}", 1)
+  end
 end

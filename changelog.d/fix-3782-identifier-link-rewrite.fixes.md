@@ -1,0 +1,1 @@
+- When an entry's address changes, links to it are now also rewritten in rich text that only a named form draws, and in rich text of schemas without a stored identifier; a failure in one schema is logged and no longer stops the rewrite in the others, or a revision restore.

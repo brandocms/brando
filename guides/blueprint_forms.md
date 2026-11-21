@@ -670,10 +670,18 @@ menu is labelled: `"compact"` (the default, `¶` / `H2`), `"icon"` or
 leaves it out.
 
 Content links keep their target's identifier alongside the URL. When the
-target's URL changes, Brando updates the link in block text, in ordinary
-rich-text fields and in the rich-text fields of the default form's subform
-rows (`embeds_one`, `embeds_many`, `has_one` and `has_many`), and re-renders
-the owners; the link text stays as written.
+target's URL changes, Brando updates the link in block text, in rich-text
+vars and in the `:rich_text` inputs of every form of each Blueprint with a
+table, whether it stores identifiers or not: at the top of a form and in its
+subform rows (`embeds_one`, `embeds_many`, `has_one` and `has_many`). It
+writes only the rows that hold a link to the target, keeps the link text as
+written, and re-renders the entries that hold them. Not followed: subform
+rows nested inside other subform rows, a table every site shares
+(`Brando.Tenant.SharedTables`) unless its Blueprint stores identifiers, and
+Brando's own schemas other than pages and fragments, which keep their rich
+text in blocks. Block text, vars and each schema are updated separately: one
+that fails is logged and keeps the old address until the target's URL
+changes again, and the rest are still updated.
 The link dialog also takes external and relative URLs, page anchors, button
 appearance, new-tab behaviour and nofollow. Unsafe destinations are refused.
 Pasting keeps supported formatting and turns the rest into text.

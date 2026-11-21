@@ -193,6 +193,19 @@ defmodule Brando.LinkTest.Chapter do
   relations do
     relation :case, :belongs_to, module: Brando.LinkTest.Case
   end
+
+  # A row with a form of its own beside the case's subform: its rich text
+  # is found through both, and a row without a case through this one only
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :body, :rich_text
+        end
+      end
+    end
+  end
 end
 
 defmodule Brando.LinkTest do
