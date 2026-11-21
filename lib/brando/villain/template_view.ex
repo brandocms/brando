@@ -11,7 +11,8 @@ defmodule Brando.Villain.TemplateView do
   sanitized, to print as markup. So does a subform row's field that a form
   of the row's owner draws as rich text
   (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
-  names. A template opts in to a plain field's markup with the `raw` filter
+  names, also through a filter that selects or reorders the rows
+  (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
   (`Brando.Villain.Filters.raw/2`).
 
   The view is a `Liquex.Drop` around the value, resolved one key at a time, so
@@ -211,6 +212,36 @@ defmodule Brando.Villain.TemplateView do
 
   def filter_result(result, _filter, mode, context),
     do: result |> atom_text() |> wrap(read_mode(mode, context)) |> inert(context)
+
+  @doc """
+  Gives each subform row in a filter's `result` the rich-text fields it had
+  in the filter's `inputs` (the value and arguments, `with_rich_rows/3`), so
+  a row a filter selects or reorders (`first`, `reverse`, `sort`, `where`)
+  prints as it does in a loop. A filter reads the rows unwrapped, and a
+  value it computes is no row it was given.
+  """
+  @spec keep_rich_rows(term(), term()) :: term()
+  def keep_rich_rows(result, inputs) do
+    case rich_rows(inputs, %{}) do
+      rows when map_size(rows) == 0 -> result
+      rows -> put_rich_rows(result, rows)
+    end
+  end
+
+  defp rich_rows(%__MODULE__{rich: [_ | _] = rich} = view, acc), do: Map.put(acc, unwrap(view), rich)
+  defp rich_rows(list, acc) when is_list(list), do: Enum.reduce(list, acc, &rich_rows/2)
+  defp rich_rows({_key, value}, acc), do: rich_rows(value, acc)
+  defp rich_rows(_value, acc), do: acc
+
+  defp put_rich_rows(%__MODULE__{value: value} = view, rows) do
+    case Map.fetch(rows, value) do
+      {:ok, rich} -> %{view | rich: rich}
+      :error -> view
+    end
+  end
+
+  defp put_rich_rows(list, rows) when is_list(list), do: Enum.map(list, &put_rich_rows(&1, rows))
+  defp put_rich_rows(value, _rows), do: value
 
   defp wrap_records(value, context) when is_map(value), do: wrap_for(value, context)
   defp wrap_records(value, context) when is_list(value), do: Enum.map(value, &wrap_records(&1, context))

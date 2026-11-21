@@ -45,6 +45,29 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
         assert html =~ "Old"
       end
 
+      # A filter that selects or reorders the rows gives back rows that
+      # print as they do in a loop
+      for {filter, template} <- [
+            first: "{% assign r = entry.RELATION | first %}{{ r.FIELD }}",
+            reverse: "{% assign rs = entry.RELATION | reverse %}{% for r in rs %}{{ r.FIELD }}{% endfor %}",
+            sort: ~s({% assign rs = entry.RELATION | sort: "text" %}{% for r in rs %}{{ r.FIELD }}{% endfor %}),
+            where: ~s({% assign rs = entry.RELATION | where: "text" %}{% for r in rs %}{{ r.FIELD }}{% endfor %})
+          ] do
+        test "a row taken through #{filter} prints safe markup as markup" do
+          template = unquote(template) |> String.replace("RELATION", unquote(relation)) |> String.replace("FIELD", "text")
+          assert render(template, entry(@safe)) == @safe
+        end
+
+        test "a row taken through #{filter} prints old unsafe markup through raw as its text only" do
+          template =
+            unquote(template) |> String.replace("RELATION", unquote(relation)) |> String.replace("FIELD", "text | raw")
+
+          html = render(template, entry(@stored_unsafe))
+          refute html =~ "onclick"
+          assert html =~ "Old"
+        end
+      end
+
       test "a plain field of the row still prints escaped" do
         entry = %Entry{title: "T", quotes: [%Quote{credit: "<em>A</em>"}], items: [%Item{label: "<em>A</em>"}]}
         field = if unquote(relation) == "quotes", do: "credit", else: "label"
