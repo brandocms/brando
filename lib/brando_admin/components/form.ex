@@ -4145,17 +4145,29 @@ defmodule BrandoAdmin.Components.Form do
   # Tells the other editors which of our changed fields they do not have yet,
   # as input names (`page[title]`). Their forms mark those fields. That
   # includes has_many lists, which don't ship (`sync_fields/1`) and so stay
-  # ours until saved.
+  # ours until saved, and a field held back because the rich-text check
+  # refused its value (`pending_changes/1`): its value stays here, but the
+  # others see it is being edited.
   defp broadcast_dirty_fields(%{assigns: %{singular: singular, schema: schema}} = socket) do
+    changeset = socket.assigns.form.source
     {_fields, belongs_to} = sync_fields(socket)
     unshipped = schema.__schema__(:associations) -- (belongs_to ++ unsynced_field_keys(schema))
+    locked = locked_keys(socket)
 
-    lists = for {field, _} <- socket.assigns.form.source.changes, field in unshipped, do: field
+    lists = for {field, _} <- changeset.changes, field in unshipped, do: field
+
+    refused =
+      for field <- unshipped_fields(socket),
+          field not in locked,
+          Brando.RichText.refused?(changeset, field),
+          do: field
 
     socket
     |> pending_changes()
     |> Enum.map(& &1.field)
     |> Kernel.++(lists)
+    |> Kernel.++(refused)
+    |> Enum.uniq()
     |> Enum.map(&"#{singular}[#{&1}]")
     |> Enum.sort()
     |> then(&put_dirty_fields(socket, &1))

@@ -117,6 +117,32 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       await(fn -> quotes(b) == ["<p>Første</p>", "<p>Fixed</p>"] end)
     end
 
+    # The value stays out, but the field is marked as edited, so the other
+    # editor doesn't take it for untouched and type over the edit
+    test "is marked as edited in the other editor's form", %{conn: conn, article: article} = c do
+      a = open(conn, article, "notes")
+      b = open(c.other_conn, article, "notes")
+
+      type(a, "subtitle", @unsafe)
+      assert_push_event(b, "b:set_dirty_fields", %{fields: ["article[subtitle]"]}, 5_000)
+      leave(a, "article[subtitle]")
+      settle_both(a, b)
+      refute_push_event(b, "b:set_dirty_fields", %{fields: []})
+      assert subtitle(b) == "<p>Stored</p>"
+    end
+
+    test "in a row marks its relation as edited in the other editor's form", %{conn: conn, article: article} = c do
+      a = open(conn, article, "rich_quotes")
+      b = open(c.other_conn, article, "rich_quotes")
+
+      type(a, ["quotes", "1", "text"], @unsafe)
+      assert_push_event(b, "b:set_dirty_fields", %{fields: ["article[quotes]"]}, 5_000)
+      leave(a, "article[quotes][1][text]")
+      settle_both(a, b)
+      refute_push_event(b, "b:set_dirty_fields", %{fields: []})
+      assert quotes(b) == ["<p>Første</p>", "<p>Andre</p>"]
+    end
+
     # Not shipped, it is still this editor's edit. The other editor's form
     # has no subtitle, which its save leaves as stored.
     test "stays in the editor's form when the other editor saves", %{conn: conn, article: article} = c do

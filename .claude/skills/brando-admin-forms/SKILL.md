@@ -55,8 +55,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   event follows), or it never ships. A value the form's rich-text check
   refused (`Brando.RichText.refused?/2`, the field or a row) never ships,
   from `pending_changes` or from a recovery's `share_recovered/3`, and stays
-  in `unshipped_fields` until corrected, so another editor's save keeps
-  it. Received values go through
+  in `unshipped_fields` until corrected (a recovered one too), so another
+  editor's save keeps it; the others still see it marked
+  (`broadcast_dirty_fields`). Received values go through
   `apply_field_change/3`, which drops the browser's param for the field (the
   form shows a param before a saved value), and only when their clock is
   newer. Form recovery (`recover_form`) marks only the fields the Form hook

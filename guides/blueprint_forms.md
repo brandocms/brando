@@ -647,8 +647,8 @@ handlers, script addresses) is a validation error on the field: see the
 rows included, so an input that only a named form declares as rich text is
 checked when that form saves; any other save checks the default form's.
 The form checks as the editor types, and a value it refuses stays in that
-editor's form: the other editors of the entry keep the last value it sent
-them until the editor corrects it.
+editor's form: the other editors of the entry see the field marked as being
+edited, and keep the last value it sent them until the editor corrects it.
 
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,
