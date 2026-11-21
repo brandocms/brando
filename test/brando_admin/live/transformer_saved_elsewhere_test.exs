@@ -368,7 +368,7 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
       # it is not a row after the restore, and B's save deletes it.
       test "leaves out a row B removed, in the copy's order", %{b_conn: b_conn, article: article} do
         b = open(b_conn, article, unquote(kind), "b")
-        [{"A", a_id}, {"B", b_id}, {"C", c_id}] = rows(article)
+        [{"A", a_id}, {"B", b_id}, {"C", _}] = rows(article)
         reorder(b, ["B", "C", "A"])
         remove_row(b, "C")
         capture(b)
