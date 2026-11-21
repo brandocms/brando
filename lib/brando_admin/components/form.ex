@@ -4260,8 +4260,13 @@ defmodule BrandoAdmin.Components.Form do
 
   defp take_saved_entry(%{assigns: %{entry: %{id: id}}} = socket) when not is_nil(id) do
     case fetch_entry(entry_source(socket), skip_blocks: true) do
-      {:ok, entry} -> take_saved_entry(socket, with_form_blocks(entry, socket.assigns.entry))
-      :not_found -> socket
+      {:ok, entry} ->
+        socket
+        |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry))
+        |> hand_saved_rows_to_transformers("entry_saved_elsewhere")
+
+      :not_found ->
+        socket
     end
   end
 
@@ -8887,8 +8892,11 @@ defmodule BrandoAdmin.Components.Form do
 
   # A save that stays on the form gives each transformer the rows it wrote,
   # as the entry holds them now: the rows a transformer added are saved rows
-  # from then on, and the next save does not insert them again.
-  defp hand_saved_rows_to_transformers(socket) do
+  # from then on, and the next save does not insert them again. Another
+  # editor's save gives each the rows that save wrote
+  # (`entry_saved_elsewhere`), which it takes in under its own unsaved
+  # changes, so its next save keeps them.
+  defp hand_saved_rows_to_transformers(socket, event \\ "entry_saved") do
     %{entry: entry, form: form, form_blueprint: form_blueprint} = socket.assigns
 
     for {relation_key, _field, _default} <- extract_transformers(form_blueprint),
@@ -8896,7 +8904,7 @@ defmodule BrandoAdmin.Components.Form do
         is_list(rows) do
       send_update(BrandoAdmin.Components.Form.Transformer,
         id: "#{form.id}-transformer-#{relation_key}",
-        event: "entry_saved",
+        event: event,
         rows: rows
       )
     end

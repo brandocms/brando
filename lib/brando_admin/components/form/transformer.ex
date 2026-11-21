@@ -37,6 +37,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:picking_dom_id, nil)
      |> assign(:editing_dom_id, nil)
      |> assign(:sent_dom_ids, [])
+     |> assign(:base_ids, [])
+     |> assign(:dropped_refs, MapSet.new())
      |> assign(:upload_errors, [])}
   end
 
@@ -140,7 +142,58 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         acc -> stream_insert(acc, :transformer_items, stream_entry(item))
       end
 
-    {:ok, socket |> assign(:items, items) |> assign(:sent_dom_ids, [])}
+    {:ok,
+     socket
+     |> assign(:items, items)
+     |> assign(:sent_dom_ids, [])
+     |> put_base_ids(lined_up? and map_size(saved) == length(rows), rows)}
+  end
+
+  # Another editor saved the entry, and the Form took the save
+  # (`take_saved_entry`): these are the rows the entry holds now. The items
+  # become those rows, with this editor's unsaved changes kept (`base_ids`
+  # are the rows the items were built on, to tell them): a row it added, a
+  # value it changed and has not saved (over the saved value, as an entry
+  # field this editor changed keeps its value), a row it removed, and its
+  # order when it reordered the rows. A row only the save has goes after the
+  # row it follows there. A row the save removed goes, with any change made
+  # to it here. With no unsaved change here, the items are the saved rows
+  # as they are, and the next save leaves them alone.
+  def update(%{event: "entry_saved_elsewhere"}, %{assigns: %{initialized?: false}} = socket), do: {:ok, socket}
+
+  def update(%{event: "entry_saved_elsewhere", rows: rows}, socket) do
+    %{items: items, base_ids: base, asset_fields: asset_fields} = socket.assigns
+    rows = Enum.sort_by(rows, &Map.get(&1, :sequence))
+    items = Enum.map(items, &unsaved_item/1)
+    by_held_id = Map.new(for item <- items, not item.is_new, do: {item.source.id, item})
+    by_id = Map.new(rows, &{&1.id, &1})
+
+    taken =
+      Enum.map(saved_order(items, base, rows), fn id ->
+        row = Map.fetch!(by_id, id)
+        fresh = recovery_item(change(row, %{}), asset_fields)
+
+        case Map.fetch(by_held_id, id) do
+          {:ok, item} -> %{item | source: row, assets: Map.merge(fresh.assets, own_assets(item, asset_fields))}
+          :error -> fresh
+        end
+      end)
+
+    dropped = Enum.reject(items, &(&1.is_new or Map.has_key?(by_id, &1.source.id)))
+    items = with_own_new_items(taken, items)
+    shown = MapSet.new(items, & &1.dom_id)
+    fields = socket.assigns.relation_module.__schema__(:fields)
+    redraw? = Enum.map(items, &drawn(&1, fields)) != Enum.map(socket.assigns.items, &drawn(&1, fields))
+
+    {:ok,
+     socket
+     |> drop_uploads(dropped)
+     |> assign(:items, items)
+     |> assign(:base_ids, Enum.map(rows, & &1.id))
+     |> update(:open_entries, &MapSet.intersection(&1, shown))
+     |> update(:editing_dom_id, &if(MapSet.member?(shown, &1), do: &1))
+     |> update(:picking_dom_id, &if(MapSet.member?(shown, &1), do: &1))
+     |> redraw_taken(redraw?)}
   end
 
   def update(%{event: "image_updated", image: image}, socket) do
@@ -227,8 +280,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp redraw_for_reads(socket, _previous), do: socket
 
+  # A file for a row another editor's save removed (`drop_uploads/2`) is
+  # left out.
   defp deliver(socket, ref, asset_field, asset, append_fun) do
+    dropped? = MapSet.member?(socket.assigns.dropped_refs, ref)
+
     case find_upload(socket.assigns.items, ref) do
+      nil when dropped? -> {:ok, update(socket, :dropped_refs, &MapSet.delete(&1, ref))}
       nil -> {:ok, append_fun.(socket, asset)}
       {index, :pending} -> {:ok, resolve_pending_item(socket, index, asset_field, asset)}
       {index, :replacing} -> {:ok, resolve_replacement(socket, index, asset_field, asset)}
@@ -273,6 +331,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # --- Initialization ---
 
   defp initialize(socket) do
+    streamed? = socket.assigns.initialized?
     field = socket.assigns.field
     subform = socket.assigns.subform
 
@@ -287,8 +346,16 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     {image_field, image_cfg} = resolve_asset_field(relation_module, asset_fields, :image)
     {video_field, video_cfg} = resolve_asset_field(relation_module, asset_fields, :video)
 
-    # Get existing items from the changeset
-    existing = Ecto.Changeset.get_assoc(field.form.source, subform.name) || []
+    # Get existing items from the changeset. A recovery copy restored or
+    # handed over by another tab (`restore_draft`) holds each row the editor
+    # removed as a changeset `cast_assoc` marked for removal, put first: it
+    # is no row here, so the next save deletes it, and the other rows keep
+    # the copy's order.
+    existing =
+      field.form.source
+      |> Ecto.Changeset.get_assoc(subform.name)
+      |> List.wrap()
+      |> Enum.reject(&(&1.action in [:replace, :delete]))
 
     items = Enum.map(existing, &recovery_item(&1, asset_fields))
 
@@ -312,6 +379,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      socket
      |> assign(:initialized?, true)
      |> assign(:items, items)
+     |> assign(:base_ids, base_ids(Map.get(field.form.data, subform.name), items))
      |> assign(:relation_key, subform.name)
      |> assign(:image_field, image_field)
      |> assign(:video_field, video_field)
@@ -327,12 +395,17 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:layout, if(subform.listing, do: Map.get(subform, :layout, :list), else: :list))
      |> assign(:image_max_size, image_max_size)
      |> assign(:video_max_size, video_max_size(video_cfg))
-     # Without this the stream prefixes its DOM ids ("transformer_items-<id>"),
-     # and every handler that looks an entry up by the dom_id the markup sent
-     # back — toggle, remove, field edits, reorder — silently matches nothing.
-     |> stream_configure(:transformer_items, dom_id: & &1.id)
+     |> configure_stream(streamed?)
      |> stream(:transformer_items, stream_entries, reset: true)}
   end
+
+  # Without this the stream prefixes its DOM ids ("transformer_items-<id>"),
+  # and every handler that looks an entry up by the dom_id the markup sent
+  # back — toggle, remove, field edits, reorder — silently matches nothing.
+  # Once only: a restored copy (`restore_draft`) initializes the items again,
+  # and LiveView refuses to configure a stream already streamed.
+  defp configure_stream(socket, true = _streamed?), do: socket
+  defp configure_stream(socket, false), do: stream_configure(socket, :transformer_items, dom_id: & &1.id)
 
   # Mirrors Brando.Uploads' resolution so the browser can reject an oversized
   # file before it registers a placeholder for it.
@@ -1286,6 +1359,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   Rebuilds an item from a recovered changeset, keeping invalid params as
   inline changes so the user's input survives.
 
+  A saved row keeps the row as source, and the recovered values that differ
+  from it are its changes, as an editor's edits are: they stay this editor's
+  when another editor's save brings the row again (`entry_saved_elsewhere`).
   Unsaved rows get a plain map as source. Assets for `asset_fields` are
   resolved from the restored foreign keys for display only, as they may
   differ from the saved row's preloads.
@@ -1293,14 +1369,20 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   def recovery_item(cs, asset_fields) do
     entry = Ecto.Changeset.apply_changes(cs)
 
-    source =
-      if is_nil(entry.id),
-        do:
-          entry
-          |> Map.from_struct()
-          |> Map.delete(:__meta__)
-          |> Map.reject(fn {_, v} -> match?(%Ecto.Association.NotLoaded{}, v) end),
-        else: entry
+    {source, recovered} =
+      cond do
+        is_nil(entry.id) ->
+          {entry
+           |> Map.from_struct()
+           |> Map.delete(:__meta__)
+           |> Map.reject(fn {_, v} -> match?(%Ecto.Association.NotLoaded{}, v) end), %{}}
+
+        cs.data.id == entry.id ->
+          {cs.data, Map.take(entry, Map.keys(cs.changes))}
+
+        true ->
+          {entry, %{}}
+      end
 
     # Restored FKs may differ from the saved row's preloaded assets. Resolve
     # those for display without putting asset structs into the save params.
@@ -1316,11 +1398,29 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     invalid = Map.new(cs.errors, fn {key, _} -> {key, cs.params && cs.params[to_string(key)]} end)
 
     new_item("transformer-item-#{entry.id || Ecto.UUID.generate()}", source, is_new: is_nil(entry.id))
-    |> Map.put(:changes, invalid)
+    |> Map.put(:changes, Map.merge(recovered, invalid))
     |> Map.put(:assets, assets)
   end
 
   defp new_item_dom_id, do: "transformer-item-new-#{System.unique_integer([:positive])}"
+
+  # What an item's card draws: a save that changed none of it leaves the
+  # card as it is (`entry_saved_elsewhere`).
+  defp drawn(item, fields),
+    do: {item.dom_id, Map.take(resolve_item_data(item), fields), item.assets, item.pending, item.replacing}
+
+  # The listing is drawn again only when another editor's save changed what
+  # it draws: a save of other fields (a title) leaves the cards as they are,
+  # and with them what the browser put on a card (a drop highlight, a drag
+  # in progress). The Form gets the list either way, as it rebuilt its
+  # entry on the save, without this editor's unsaved rows.
+  defp redraw_taken(socket, true = _redraw?),
+    do:
+      socket
+      |> stream(:transformer_items, Enum.map(socket.assigns.items, &stream_entry/1), reset: true)
+      |> notify_relation_change()
+
+  defp redraw_taken(socket, false), do: send_relation_change(socket)
 
   # The item as its saved row. The assets it shows stay as they are: the row
   # may come without them preloaded.
@@ -1330,6 +1430,76 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     data = resolve_item_data(item)
     assets = Map.new(asset_fields, &{&1, resolve_asset(item, data, &1)})
     %{item | source: row, is_new: false, assets: assets}
+  end
+
+  # The item with only the changes it holds unsaved: a value its source
+  # holds already was saved (the changes stay after a save, `saved_item/3`).
+  defp unsaved_item(%{is_new: true} = item), do: item
+
+  defp unsaved_item(item),
+    do: %{item | changes: Map.reject(item.changes, fn {key, value} -> Map.get(item.source, key) == value end)}
+
+  # The assets an item shows that this editor picked or uploaded and has
+  # not saved.
+  defp own_assets(item, asset_fields) do
+    for field <- asset_fields, Map.has_key?(item.changes, :"#{field}_id"), into: %{} do
+      {field, Map.get(item.assets, field)}
+    end
+  end
+
+  # The rows the items are built on (`entry_saved_elsewhere`): the saved
+  # ones, once every row lined up
+  defp put_base_ids(socket, true = _taken?, rows), do: assign(socket, :base_ids, Enum.map(rows, & &1.id))
+  defp put_base_ids(socket, false = _taken?, _rows), do: socket
+
+  # The saved rows the items are built on: a recovered copy's items can
+  # differ from them (`entry_saved_elsewhere`)
+  defp base_ids(rows, _items) when is_list(rows), do: Enum.map(rows, & &1.id)
+  defp base_ids(_rows, items), do: for(item <- items, not item.is_new, do: item.source.id)
+
+  # The ids of the saved rows the items take, in order: less the rows this
+  # editor removed (from `base`, the rows the items were built on), in its
+  # order if it reordered them, with the rows only the save has after the
+  # row they follow there.
+  defp saved_order(items, base, rows) do
+    saved_ids = Enum.map(rows, & &1.id)
+    held = for item <- items, not item.is_new, do: item.source.id
+    removed = base -- held
+
+    if Enum.filter(held, &(&1 in base)) == Enum.filter(base, &(&1 in held)) do
+      Enum.reject(saved_ids, &(&1 in removed))
+    else
+      held
+      |> Enum.filter(&(&1 in saved_ids))
+      |> insert_after_predecessors(Enum.reject(saved_ids, &(&1 in held or &1 in removed)), saved_ids)
+    end
+  end
+
+  # The rows this editor added, among the taken rows, each after the item it
+  # followed here.
+  defp with_own_new_items(taken, items) do
+    own_new = Enum.filter(items, & &1.is_new)
+    by_dom_id = Map.new(taken ++ own_new, &{&1.dom_id, &1})
+
+    taken
+    |> Enum.map(& &1.dom_id)
+    |> insert_after_predecessors(Enum.map(own_new, & &1.dom_id), Enum.map(items, & &1.dom_id))
+    |> Enum.map(&Map.fetch!(by_dom_id, &1))
+  end
+
+  # `list` with each of `added` placed after its nearest predecessor in
+  # `order` that `list` holds (first when none), and after the entries
+  # right behind it that `order` doesn't have: the other editor's.
+  defp insert_after_predecessors(list, added, order) do
+    known = MapSet.new(order)
+
+    Enum.reduce(added, list, fn key, acc ->
+      predecessor = order |> Enum.take_while(&(&1 != key)) |> Enum.reverse() |> Enum.find(&(&1 in acc))
+      start = if predecessor, do: Enum.find_index(acc, &(&1 == predecessor)) + 1, else: 0
+      {head, tail} = Enum.split(acc, start)
+      {passed, rest} = Enum.split_while(tail, &(not MapSet.member?(known, &1)))
+      head ++ passed ++ [key | rest]
+    end)
   end
 
   # --- Placeholder helpers ---
@@ -1628,6 +1798,15 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp maybe_abort_pending_upload(socket, _item), do: socket
 
+  # Rows another editor's save removed (`entry_saved_elsewhere`): a file
+  # dropped on one to replace its asset stops uploading, and if it lands
+  # anyway, it adds no row (`deliver/5`).
+  defp drop_uploads(socket, items) do
+    for %{replacing: %{ref: ref}} = item <- items, reduce: socket do
+      acc -> acc |> maybe_abort_pending_upload(item) |> update(:dropped_refs, &MapSet.put(&1, ref))
+    end
+  end
+
   # The field an `update_field` may change: one of the subform's inputs, and
   # not an asset (those have their own picker).
   defp editable_field(assigns, field) do
@@ -1643,8 +1822,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # it shows the relation as it was on mount. Push the current list whenever the
   # list itself changes (order, membership, fields, assets); not on progress ticks.
   # Recovery also needs this signal: transformer rows live outside the main form.
-  defp notify_relation_change(socket) do
-    socket = restream_listing_context(socket)
+  defp notify_relation_change(socket), do: socket |> restream_listing_context() |> send_relation_change()
+
+  defp send_relation_change(socket) do
     form_id = socket.assigns[:form_id]
 
     if form_id do

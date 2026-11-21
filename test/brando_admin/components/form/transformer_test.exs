@@ -78,6 +78,7 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
   defp recovery_socket(item) do
     %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
     |> Component.assign(:items, [item])
+    |> Component.assign(:dropped_refs, MapSet.new())
     |> Component.assign(:form_id, "collection_form")
     |> Component.assign(:relation_key, :items)
     |> Component.assign(:relation_module, MediaItem)
@@ -662,6 +663,37 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
         {:ok, socket} = Transformer.update(%{event: "entry_saved", rows: rows}, sent_socket(items))
         assert socket.assigns.items == items
       end
+    end
+
+    # A saved while B's save was processing, with a row X added; the Form
+    # read B's rows back after A's save, so they hold X too and don't line
+    # up with what B sent. A's save reaches B next with the same rows. X is
+    # A's addition, not a row B removed: B keeps it, and B's next save
+    # writes it. B's row N may show twice here (its saved copy next to the
+    # new one B holds), which the editor sees; this asserts only on X.
+    test "that don't line up keep a row another editor's save added" do
+      stored = Transformer.new_item("item-1", %MediaItem{id: 1, title: "Stored", sequence: 0}, is_new: false)
+      added = Transformer.new_item("item-2", %{title: "New"})
+
+      socket =
+        [stored, added]
+        |> sent_socket()
+        |> Component.assign(initialized?: true, base_ids: [1], open_entries: MapSet.new())
+        |> Component.assign(editing_dom_id: nil, picking_dom_id: nil)
+
+      rows = [
+        %MediaItem{id: 1, title: "Stored", sequence: 0},
+        %MediaItem{id: 2, title: "New", sequence: 1},
+        %MediaItem{id: 4, title: "From A", sequence: 2}
+      ]
+
+      {:ok, socket} = Transformer.update(%{event: "entry_saved", rows: rows}, socket)
+      assert socket.assigns.items == [stored, added]
+
+      {:ok, socket} = Transformer.update(%{event: "entry_saved_elsewhere", rows: rows}, socket)
+
+      assert [%{is_new: false, changes: changes}] = Enum.filter(socket.assigns.items, &match?(%{source: %{id: 4}}, &1))
+      assert changes == %{}
     end
   end
 end
