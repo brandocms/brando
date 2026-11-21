@@ -121,7 +121,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                 id={"#{@field.id}-sortable"}
                 class={@table? && "subform-table-body"}
                 data-embeds={@embeds?}
-                phx-hook="Brando.SortableEmbeds"
+                phx-hook={@sortable? && "Brando.SortableEmbeds"}
                 data-sortable-handle=".subform-handle"
                 data-sortable-id={"#{@field.name}-sortable"}
                 data-sortable-selector=".subform-entry"
@@ -163,9 +163,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
                           )
                         }
                       />
-                      <.subentry_sequence :if={@sequenced?} />
+                      <.subentry_sequence :if={@sequenced? and @sortable?} />
                       <.subentry_remove
-                        :if={!@table? and !@listing?}
+                        :if={@removable? and !@table? and !@listing?}
                         name={"#{@field.form.name}[#{@drop_param}][]"}
                         index={sub_form.index}
                       />
@@ -195,6 +195,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                         {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
                       </button>
                       <.subentry_remove
+                        :if={@removable?}
                         name={"#{@field.form.name}[#{@drop_param}][]"}
                         index={sub_form.index}
                       />
@@ -219,6 +220,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                     </div>
                     <div :if={@table?} class="subform-row-end">
                       <.subentry_remove
+                        :if={@removable?}
                         name={"#{@field.form.name}[#{@drop_param}][]"}
                         index={sub_form.index}
                       />
@@ -375,7 +377,18 @@ defmodule BrandoAdmin.Components.Form.Subform do
     |> assign_new(:embeds?, fn -> match?(%Relations.Relation{type: :embeds_many}, relation.()) end)
     |> assign_new(:sort_param, fn -> relation_param(relation.(), :sort_param, :"sort_#{name}_ids") end)
     |> assign_new(:drop_param, fn -> relation_param(relation.(), :drop_param, :"drop_#{name}_ids") end)
+    |> assign_new(:sortable?, fn -> control?(relation.(), :sort_param) end)
+    |> assign_new(:removable?, fn -> control?(relation.(), :drop_param) end)
   end
+
+  # A reorder or a removal reaches the cast of an `embeds_many` or a
+  # `has_many` only through the relation's `sort_param` or `drop_param`:
+  # without it the change is cast away, so the control is not drawn (the
+  # form warns when it compiles, `Brando.Blueprint.Forms.Verifier`)
+  defp control?(%Relations.Relation{type: type, opts: opts}, option) when type in [:embeds_many, :has_many],
+    do: Map.has_key?(opts, option)
+
+  defp control?(_relation, _option), do: true
 
   # Entries can be reordered when they are embedded, or when the related
   # schema has the :sequenced trait

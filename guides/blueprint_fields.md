@@ -471,7 +471,9 @@ becomes its `sequence`. A form or API that sends an empty value (`nil`,
   one is preloaded by `sequence`. `has_one` passes Brando's check but Ecto
   rejects it.
 * `sort_param:` and `drop_param:` (`has_many`): the param names for ordering
-  and removing entries, used by subforms and multi-selects.
+  and removing entries, used by subforms and multi-selects. A subform draws
+  its drag handle only with `sort_param:` and its remove button only with
+  `drop_param:`.
 * `where:` and `defaults:`: Ecto's options.
 * `invalid_message:` and `force_update_on_change:`: passed to `cast_assoc`.
   Like `required_message:`, they need `cast: true`.

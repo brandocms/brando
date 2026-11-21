@@ -100,7 +100,10 @@ defmodule Brando.BlueprintTest.Project do
   end
 
   relations do
-    relation :properties, :embeds_many, module: Brando.BlueprintTest.Property
+    relation :properties, :embeds_many,
+      module: Brando.BlueprintTest.Property,
+      sort_param: :sort_properties_ids,
+      drop_param: :drop_properties_ids
   end
 
   assets do

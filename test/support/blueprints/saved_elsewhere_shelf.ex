@@ -28,7 +28,9 @@ defmodule Brando.SavedElsewhereTest.Shelf do
       module: Brando.SyncTest.ArticleItem,
       foreign_key: :article_id,
       preload_order: [asc: :sequence],
-      cast: true
+      cast: true,
+      sort_param: :sort_items_ids,
+      drop_param: :drop_items_ids
   end
 
   forms do

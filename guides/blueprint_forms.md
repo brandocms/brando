@@ -1036,11 +1036,24 @@ use its domain instead. A subform contains only `input`s: subforms do not
 nest and cannot hold block editors.
 
 For `:many` subforms, new rows are cast through the relation, so the relation
-needs `cast: true` (embeds are always cast). Rows can be dragged into order
-when the related schema has `trait :sequenced` or the relation is an
-`embeds_many`. The parameter names for ordering and removal come from the
-relation's `sort_param:` and `drop_param:`, and default to
-`sort_<name>_ids` and `drop_<name>_ids`.
+needs `cast: true` (embeds are always cast). Reordering needs the relation's
+`sort_param:` and removing needs its `drop_param:`: the cast reads the new
+order and the removed rows from those params. A `has_many` or `embeds_many`
+subform draws its drag handle only when the relation has `sort_param:`, and
+its remove button only when it has `drop_param:`; a relation without them
+gets a compile warning that names the line to add. Rows can be added either
+way.
+
+```elixir
+relation :links, :embeds_many,
+  module: MyApp.Articles.Link,
+  on_replace: :delete,
+  sort_param: :sort_links_ids,
+  drop_param: :drop_links_ids
+```
+
+Rows can be dragged into order when the relation has `sort_param:` and the
+related schema has `trait :sequenced` or the relation is an `embeds_many`.
 
 What a subform input cannot do: generate with `ai:`, use `update_relation:`
 on a select, take `:unless_superuser`, or carry footnotes.
@@ -1056,6 +1069,9 @@ on a select, take `:unless_superuser`, or carry footnotes.
   `embeds_one`.
 * A `:many` subform needs a `default`, and its relation needs `cast: true`
   unless it is an embed.
+* A `has_many` or `embeds_many` subform reorders rows only with the relation's
+  `sort_param:` and removes them only with its `drop_param:`; without them
+  the subform leaves the drag handle or remove button out.
 * A subform holds only `input`s: no nested subforms and no block editors.
 
 <!-- usage-rules:end -->

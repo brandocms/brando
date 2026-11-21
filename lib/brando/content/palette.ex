@@ -49,7 +49,11 @@ defmodule Brando.Content.Palette do
   end
 
   relations do
-    relation :colors, :embeds_many, module: Brando.Content.Palette.Color, on_replace: :delete
+    relation :colors, :embeds_many,
+      module: Brando.Content.Palette.Color,
+      on_replace: :delete,
+      sort_param: :sort_colors_ids,
+      drop_param: :drop_colors_ids
   end
 
   forms do

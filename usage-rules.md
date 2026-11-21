@@ -668,6 +668,9 @@ code that needs markup, such as a colour swatch, is passed as
   `embeds_one`.
 * A `:many` subform needs a `default`, and its relation needs `cast: true`
   unless it is an embed.
+* A `has_many` or `embeds_many` subform reorders rows only with the relation's
+  `sort_param:` and removes them only with its `drop_param:`; without them
+  the subform leaves the drag handle or remove button out.
 * A subform holds only `input`s: no nested subforms and no block editors.
 
 ## Blueprint migrations
