@@ -145,40 +145,6 @@ defmodule MyApp.Articles.Article do
 end
 ```
 
-### Declaring a Blueprint
-
-```elixir
-use Brando.Blueprint,
-  application: "MyApp",
-  domain: "Articles",
-  schema: "Article",
-  singular: "article",
-  plural: "articles",
-  gettext_module: MyAppAdmin.Gettext,
-  router_scope: :editorial,
-  extensions: [MyApp.BlueprintExtension]
-```
-
-Write the options as literals; `use` reads them before module attributes are
-evaluated.
-
-* `application`, `domain`, `schema` (required): PascalCase module segments.
-  Brando derives conventional module names from them: the context
-  `MyApp.Articles`, and the admin views `MyAppAdmin.Articles.ArticleListLive`
-  and `ArticleFormLive`.
-* `singular`, `plural` (required): snake_case names. They name the context
-  functions (`get_article`, `list_articles`) and admin route helpers, and are
-  the fallback labels in the admin.
-* `gettext_module`: the Gettext backend for `t/1` and admin labels. Default
-  `<application>Admin.Gettext`, such as `MyAppAdmin.Gettext`, which must
-  exist when the Blueprint compiles.
-* `router_scope`: an atom or string that admin route helpers include, for
-  admin routes declared in a named scope. With `router_scope: :editorial`, the
-  listing uses `admin_editorial_live_path` and the form
-  `admin_editorial_article_form_path`.
-* `extensions`: more Spark extensions for the Blueprint DSL, such as a JSON
-  API or GraphQL extension.
-
 ### Identifier
 
 An identifier is how an entry is named across the admin: in selects,
@@ -234,55 +200,6 @@ the site's default language when
 `scope_default_language_routes` is `false`). Use
 `route_i18n` for schemas with a `language` field whose routes are localized,
 and `route` otherwise.
-
-#### Drafts
-
-When `status` is `:draft`, the changeset only requires the required fields
-the [identifier](guides/blueprints.md#identifier) shows, usually the title. A draft can be saved
-half done, but never without the name it is listed by. Collision handling for
-unique fields is also skipped for drafts.
-
-#### Custom changesets
-
-Write extra changeset functions for other subsets of fields, and pass them to
-a mutation:
-
-```elixir
-def name_changeset(entry, params, _user \\ :system) do
-  entry
-  |> cast(params, [:name])
-  |> validate_required([:name])
-end
-```
-
-```elixir
-MyApp.Articles.update_article(id, %{"name" => "New name"}, user,
-  changeset: &MyApp.Articles.Article.name_changeset/3
-)
-```
-
-### Compile-time checks
-
-Brando checks a Blueprint in three stages:
-
-* `use Brando.Blueprint` checks its options.
-* While the module compiles, Brando checks the root settings, every
-  attribute, relation and asset with their options and constraints,
-  uniqueness scopes, duplicate field and column names, asset configs,
-  identifier and URL templates, datasources, metadata, translations,
-  listings, and the form inputs the admin form cannot open without (a
-  `:multi_select` on a has_many needs `relation_key:` and `relation:`; an
-  `:entries` input's `sources:` options must apply to identifiers). A
-  failure stops the compilation with a `Spark.Error.DslError` or
-  `Brando.Exception.BlueprintError` naming the section and entry.
-* After the module compiles, Brando checks the rest of the forms, which
-  need the related schemas compiled, and runs each trait's `validate/2`.
-  Form errors are printed as **warnings** and the module still compiles;
-  trait validation errors raise. Build with `mix compile --warnings-as-errors`
-  so form mistakes fail too.
-
-The checks need no database. Fix declarations reported after an upgrade; if
-a fix changes stored columns, follow [Blueprint migrations](guides/blueprint_migrations.md).
 
 ## Attributes, relations, and assets
 
@@ -878,7 +795,7 @@ So:
 Load a topic's rules before working in that area. These are all the topic
 files:
 
-- `brando:blueprint-reference` ([usage-rules/blueprint-reference.md](usage-rules/blueprint-reference.md)): absolute URLs for only some entries, Blueprint translations, enums, uniqueness, relation types, asset configs and deprecated declarations.
+- `brando:blueprint-reference` ([usage-rules/blueprint-reference.md](usage-rules/blueprint-reference.md)): `use Brando.Blueprint` options, absolute URLs for only some entries, Blueprint translations, drafts, custom changesets, compile-time checks, enums, uniqueness, relation types, asset configs and deprecated declarations.
 - `brando:admin-ui` ([usage-rules/admin-ui.md](usage-rules/admin-ui.md)): listing components and menu items, custom and selection actions, live updates, the form LiveView, select options, multi-selects and block editors.
 - `brando:generators` ([usage-rules/generators.md](usage-rules/generators.md)): running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents.
 - `brando:module-definitions` ([usage-rules/module-definitions.md](usage-rules/module-definitions.md)): exporting, editing and importing modules and their templates as files.

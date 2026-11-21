@@ -372,6 +372,30 @@ defmodule BrandoAdmin.TransformerSaveTest.ReelFormLive do
   end
 end
 
+# Any form of the note, by the live action (RichTextDefaultFormTest)
+defmodule BrandoAdmin.RichTextDefaultFormTest.NoteFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.RichTextDefaultFormTest.Note
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="note_form"
+      name={@live_action}
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Note</:header>
+    </.live_component>
+    """
+  end
+end
+
 # Form `:media`, `:locked_media` or `:superuser_media` (LockedMediaDeliveriesTest), and
 # others by the live action
 defmodule BrandoAdmin.SyncTest.ArticleMediaFormLive do
@@ -494,6 +518,9 @@ defmodule BrandoIntegrationWeb.Router do
     live "/albums/update/:entry_id", BrandoAdmin.TransformerSaveTest.AlbumFormLive, :update
     live "/reels/create", BrandoAdmin.TransformerSaveTest.ReelFormLive, :create
     live "/reels/update/:entry_id", BrandoAdmin.TransformerSaveTest.ReelFormLive, :update
+    live "/rich-notes/update/:entry_id", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :default
+    live "/rich-notes/update/:entry_id/omitted", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :omitted
+    live "/rich-notes/update/:entry_id/plain", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :plain
     live "/config/shop", BrandoIntegrationAdmin.ShopSettingsLive
     live "/config/undeclared", BrandoIntegrationAdmin.UndeclaredSettingsLive
   end
