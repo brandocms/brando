@@ -237,12 +237,9 @@ defmodule Brando.RichText do
       relation = to_string(relation)
       inputs = for form <- module.__forms__(), input <- subform_inputs(form, relation), do: input
 
-      default =
-        if function_exported?(module, :__form__, 0),
-          do: for({name, :rich_text} <- subform_inputs(module.__form__(), relation), do: name),
-          else: []
-
-      Enum.uniq(default ++ rich_everywhere(inputs))
+      default = if function_exported?(module, :__form__, 0), do: module.__form__(), else: nil
+      default_rich = for {name, :rich_text} <- subform_inputs(default, relation), do: name
+      Enum.uniq(default_rich ++ rich_everywhere(inputs))
     else
       []
     end
