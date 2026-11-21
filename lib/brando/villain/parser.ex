@@ -1716,8 +1716,18 @@ defmodule Brando.Villain.Parser do
 
   def process_vars(vars, opts) do
     escape? = Keyword.get(opts, :escape, false)
-    Map.new(vars, &(&1 |> process_var() |> maybe_escape_var(&1, escape?)))
+    Map.new(vars, &process_var(&1, escape?))
   end
+
+  # Sanitized once in a render (`TemplateView.sanitize_rich_text/1`), so a
+  # filter such as `markdown` on it reuses that, and text to the entry's final
+  # Liquid pass. HEEx has no use for this: what it prints is made inert after
+  # it (`Brando.Villain.HeexRenderer`).
+  defp process_var(%{key: key, type: type, value: value}, true) when type in [:rich_text, :html],
+    do:
+      {key, value |> Brando.Villain.TemplateView.sanitize_rich_text() |> Brando.Villain.TemplateView.read_as_rich_text()}
+
+  defp process_var(var, escape?), do: var |> process_var() |> maybe_escape_var(var, escape?)
 
   # On a link var whose text `escape_link_var/1` escaped
   @escaped_link :brando_escaped_link
@@ -1766,11 +1776,6 @@ defmodule Brando.Villain.Parser do
   # later, or a value stored before it was checked, is text.
   defp maybe_escape_var({key, value}, %{type: type}, true) when is_binary(value) and type not in [:rich_text, :html],
     do: {key, escape_var_value(value)}
-
-  # Sanitized, and text to the entry's final Liquid pass. HEEx has no use for
-  # this: what it prints is made inert after it (`Brando.Villain.HeexRenderer`).
-  defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:rich_text, :html],
-    do: {key, value |> Brando.Villain.InertLiquid.encode_all() |> Brando.Villain.TemplateView.read_as_rich_text()}
 
   defp maybe_escape_var({key, %{type: :link} = link}, _var, true), do: {key, escape_link_var(link)}
 
