@@ -2840,6 +2840,11 @@ msgstr ""
 msgid "Another editor saved this translation, and newer changes from the source were loaded into the form. They are not saved yet."
 msgstr ""
 
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation. Load the newer changes in the translation panel, then translate with AI."
+msgstr ""
+
 #: lib/brando/environments/environment.ex
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format

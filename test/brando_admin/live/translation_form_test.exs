@@ -2064,7 +2064,7 @@ defmodule BrandoAdmin.TranslationFormTest do
 
       first = change_source(c)
       view = open_version(conn, c.target.id, first)
-      {_other, other_conn} = other_conn()
+      {other_user, other_conn} = other_conn()
       other = open_version(other_conn, c.target.id, first)
       type_title(other, "Typed title")
 
@@ -2073,10 +2073,14 @@ defmodule BrandoAdmin.TranslationFormTest do
       await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
       await_selector(other, "#translation-panel [data-translation-behind]")
 
+      Brando.endpoint().subscribe("user:#{other_user.id}")
       other |> element("#translation-panel [data-testid=translation-ai-all]") |> render_click()
       render_async(other, 1_000)
       refute has_element?(other, "#translation-panel [data-ai-status]")
       refute has_element?(other, "#translation-panel [data-ai='filled']")
+      # it says to load the newer changes, not to save first: the save is refused
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: told}}, 2_000
+      refute told == Gettext.gettext(Brando.Gettext, "The source changed. Save the translation, then translate with AI.")
 
       load_session_version(other)
       third = Translations.get_pending_version(Article, c.target.id)

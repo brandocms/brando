@@ -2842,6 +2842,11 @@ msgstr "En annen redaktør lagret denne oversettelsen, og blokkene har nå nyere
 msgid "Another editor saved this translation, and newer changes from the source were loaded into the form. They are not saved yet."
 msgstr "En annen redaktør lagret denne oversettelsen, og nyere endringer fra kilden ble lastet inn i skjemaet. De er ikke lagret ennå."
 
+#: lib/brando_admin/components/form/translation_fill.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation. Load the newer changes in the translation panel, then translate with AI."
+msgstr "En annen redaktør lagret denne oversettelsen. Last inn de nyere endringene i oversettelsespanelet, og oversett så med KI."
+
 #: lib/brando/environments/environment.ex
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
