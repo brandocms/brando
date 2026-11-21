@@ -1,0 +1,1 @@
+- A row added to a transformer subform can be opened and typed in before the entry is saved; opening it, or adding it to a transformer without a listing, no longer crashes the form.

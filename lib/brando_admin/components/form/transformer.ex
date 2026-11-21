@@ -472,6 +472,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                     subform={@subform}
                     image_field={@image_field}
                     video_field={@video_field}
+                    relation_module={@relation_module}
                     myself={@myself}
                     current_user={@current_user}
                   />
@@ -529,6 +530,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
               subform={@subform}
               image_field={@image_field}
               video_field={@video_field}
+              relation_module={@relation_module}
               myself={@myself}
               current_user={@current_user}
             />
@@ -738,7 +740,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     item = assigns.item
     data = resolve_item_data(item)
 
-    changeset = change(data, item.changes)
+    # A row not saved yet holds a plain map, which `change/2` refuses; its
+    # fields are drawn from a struct of the related schema, as its listing is.
+    changeset = data |> item_struct(assigns.relation_module) |> change(item.changes)
     form = Phoenix.HTML.FormData.to_form(changeset, as: "transformer_item", id: item.dom_id)
 
     # Asset fields get their own picker row rather than a regular input — the
@@ -1382,13 +1386,16 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # assets attached, so `entry.image` works the same for a row loaded from the
   # database and a file dropped a second ago.
   defp listing_entry(data, relation_module, assets) do
-    entry = if is_struct(data), do: data, else: struct(relation_module, data)
+    entry = item_struct(data, relation_module)
 
     Enum.reduce(assets, entry, fn
       {nil, _asset}, acc -> acc
       {field, asset}, acc -> Map.put(acc, field, asset)
     end)
   end
+
+  defp item_struct(data, _relation_module) when is_struct(data), do: data
+  defp item_struct(data, relation_module), do: struct(relation_module, data)
 
   # An item's asset can come from three places: a preloaded association on an
   # existing row, an upload delivery, or a picker selection. The last two land in
