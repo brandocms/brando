@@ -3701,9 +3701,11 @@ defmodule BrandoAdmin.Components.Form do
   # A recovered value whose field has a newer clock known (the others sent
   # it with their join reply, but no value: they saved since) is older than
   # the saved entry, and the field goes back to the saved value. A value the
-  # rich-text check refuses stays in this tab, as in `pending_changes/1`.
+  # rich-text check refuses stays in this tab, as in `pending_changes/1`,
+  # marked as this editor's unshipped edit, so another editor's save keeps
+  # it (`unsaved_edits/6`) and it ships once corrected.
   defp share_recovered(socket, offline, entry_params) do
-    socket = socket |> mark_local(offline) |> ship_all_field_changes()
+    socket = socket |> mark_local(offline ++ refused_recovered(socket, entry_params)) |> ship_all_field_changes()
     entry = socket.assigns[:entry]
 
     if entry && entry.id && is_map(entry_params) && may_update?(socket) do
@@ -3736,6 +3738,22 @@ defmodule BrandoAdmin.Components.Form do
       socket
     end
   end
+
+  # The recovered fields whose value the rich-text check refuses, other than
+  # those holding a value received from the other editors.
+  defp refused_recovered(socket, entry_params) when is_map(entry_params) do
+    changeset = socket.assigns.form.source
+    synced = synced_values(socket)
+    {fields, _belongs_to} = sync_fields(socket)
+
+    for field <- fields,
+        Map.has_key?(entry_params, Atom.to_string(field)),
+        not Map.has_key?(synced, field),
+        Brando.RichText.refused?(changeset, field),
+        do: field
+  end
+
+  defp refused_recovered(_socket, _entry_params), do: []
 
   # The entry field `_target` names (`["page", "title"]` or a path into a
   # subform, `["page", "items", "0", "name"]`, which names the relation).

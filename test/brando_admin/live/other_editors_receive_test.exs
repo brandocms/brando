@@ -137,10 +137,12 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
     end
 
     # A recovered form ships what differs from the saved entry, as the
-    # oldest edit: not a value the check refuses
+    # oldest edit: not a value the check refuses, which stays this editor's
+    # edit, so the other editor's save keeps it. The other editor is on
+    # `notes` too, whose save sends the subtitle as the form holds it.
     test "stays out of the other editor's form after a reconnect", %{conn: conn, article: article} = c do
       a = open(conn, article, "notes")
-      b = open(c.other_conn, article, nil)
+      b = open(c.other_conn, article, "notes")
 
       type(a, "subtitle", @unsafe)
       recovered = a |> params() |> Map.put("_target", ["image_editor_upload"])
@@ -152,6 +154,18 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       assert Brando.RichText.refused?(form_source(a), :subtitle)
       settle_both(a, b)
       assert subtitle(b) == "<p>Stored</p>"
+
+      type(b, "title", "Lagret")
+      save(b)
+      await(fn -> Brando.Repo.get!(SyncTest.Article, article.id).title == "Lagret" end)
+      await(fn -> Ecto.Changeset.get_field(form_source(a), :title) == "Lagret" end)
+      assert subtitle(a) == @unsafe
+      assert Brando.RichText.refused?(form_source(a), :subtitle)
+      assert Brando.Repo.get!(SyncTest.Article, article.id).subtitle == "<p>Stored</p>"
+
+      type(a, "subtitle", "<p>Fixed</p>")
+      leave(a, "article[subtitle]")
+      await(fn -> subtitle(b) == "<p>Fixed</p>" end)
     end
   end
 
