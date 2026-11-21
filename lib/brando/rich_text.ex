@@ -117,6 +117,23 @@ defmodule Brando.RichText do
 
   def recheck_form(changeset, _form), do: changeset
 
+  @doc """
+  Whether the rich-text check refused `field`'s value in `changeset`: the
+  field, or a field of one of its rows, has the check's unsafe-rich-text
+  error. A value the check rewrote and accepted is not refused.
+  """
+  def refused?(%Changeset{} = changeset, field) do
+    Enum.any?(changeset.errors, &match?({^field, {@unsafe_message, _}}, &1)) or
+      case Map.fetch(changeset.changes, field) do
+        {:ok, rows} when is_list(rows) -> Enum.any?(rows, &refused_row?/1)
+        {:ok, %Changeset{} = row} -> refused_row?(row)
+        _ -> false
+      end
+  end
+
+  defp refused_row?(%Changeset{errors: errors}), do: Enum.any?(errors, &match?({_, {@unsafe_message, _}}, &1))
+  defp refused_row?(_row), do: false
+
   defp drop_unsafe_errors(%Changeset{} = changeset, fields) do
     errors = Enum.reject(changeset.errors, fn {field, {message, _}} -> field in fields and message == @unsafe_message end)
 
