@@ -1511,6 +1511,29 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, hd(texts(saved))} == {2024, "Typed paragraph"}
     end
 
+    # The session's version was computed before the translation was written
+    # from outside the session (the listing, a proposal). A form that joins
+    # keeps that version for its blocks, and shows the entry's fields as they
+    # are saved: the version's older copy would take the write back.
+    test "a form joining after the translation was written elsewhere does not bring the older values back",
+         %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      uid = first_block_uid(c)
+      Brando.EditSessionEditors.type(view, uid, "Typed paragraph")
+
+      {:ok, _} = SyncTest.update_article(c.target.id, %{slug: "written-elsewhere"}, c.current_user)
+
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      await_selector(other, "input[name='article[slug]'][value='written-elsewhere']")
+      assert Brando.EditSessionEditors.shown_text(other, uid) == "Typed paragraph"
+
+      save(other)
+      saved = load(c.target.id)
+      assert {saved.slug, hd(texts(saved))} == {"written-elsewhere", "Typed paragraph"}
+    end
+
     # 4. A reconnect within the grace period finds the session, which keeps
     # the version its blocks are built on: the entry fields load it too.
     test "a reconnect within the grace period after a second source save keeps the session's version",

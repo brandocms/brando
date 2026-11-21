@@ -1537,8 +1537,15 @@ defmodule BrandoAdmin.Components.Form do
   # `:load` into the block fields too. With `:keep` the block fields hold it
   # already, from the edit session. A version without changes is only
   # marked held, its work listed.
+  #
+  # A version kept from the session that was computed before the translation
+  # was last saved (a write from the listing or a proposal since) is not
+  # loaded into the entry's fields: its copy of the translation's own values
+  # is older than what is saved, and saving it would take that write back.
+  # The form shows the fields as saved; the blocks are the session's.
   defp load_translation(socket, how) do
-    if socket.assigns.translation.applied_version_id && Translation.changes?(socket.assigns) do
+    if socket.assigns.translation.applied_version_id && Translation.changes?(socket.assigns) &&
+         not kept_from_older_save?(socket, how) do
       case Translation.restore_changeset(socket) do
         {:ok, changeset, socket} ->
           socket
@@ -1554,6 +1561,11 @@ defmodule BrandoAdmin.Components.Form do
       socket
     end
   end
+
+  defp kept_from_older_save?(%{assigns: %{schema: schema, entry: entry, translation: translation}}, :keep),
+    do: not Brando.Translations.pending_base_current?(schema, entry.id, translation.applied_version_id)
+
+  defp kept_from_older_save?(_socket, _how), do: false
 
   # The entry's edit session, which holds the pending version: only a form
   # with block fields has one.
