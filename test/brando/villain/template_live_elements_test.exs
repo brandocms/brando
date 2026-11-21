@@ -138,6 +138,44 @@ defmodule Brando.Villain.TemplateLiveElementsTest do
     test "decodes plain text as before" do
       assert render_entry("{{ entry.title | url_decode }}", %Entry{title: "Tom%20%26%20Jerry"}) == "Tom & Jerry"
     end
+
+    # A `%` not followed by two hex digits stays as typed, and so does an
+    # escape that does not decode to a whole UTF-8 character: `%be` is the
+    # byte 0xBE, which starts no character
+    @percents [
+      {"100% sure", "100% sure"},
+      {"%", "%"},
+      {"%zz", "%zz"},
+      {"a trailing %4", "a trailing %4"},
+      {"50%25 off 100%", "50% off 100%"},
+      {"%4g%41+b%", "%4gA b%"},
+      {"5%be off, 9%E2 and %E2%82%AC", "5%be off, 9%E2 and €"},
+      {"%E2%82 then %E2%82%AC%E2", "%E2%82 then €%E2"}
+    ]
+
+    test "keeps a bare % in plain text as typed" do
+      for {typed, decoded} <- @percents do
+        assert Brando.Villain.Filters.url_decode(typed, %{}) == decoded, typed
+
+        # Filtered text that starts with `%` prints it as `&#37;`, so that no
+        # Liquid tag can begin there
+        html = render_entry("{{ entry.title | url_decode }}", %Entry{title: typed})
+        assert HtmlEntities.decode(html) == decoded, typed
+      end
+    end
+
+    test "keeps a bare % in rich text as typed, and sanitizes what it decoded", %{user: user} do
+      for {kind, fun} <- kinds(), {typed, decoded} <- @percents do
+        assert fun.("| url_decode", "<p>#{typed}</p>", user) == "<p>#{decoded}</p>", "#{kind}: #{typed}"
+      end
+
+      for {kind, fun} <- kinds() do
+        html = fun.("| url_decode", "<p>100% %3Cimg src=x onerror=alert(1)%3E 5%be</p>", user)
+        assert active_elements(html) == [], kind
+        assert html =~ "100% ", kind
+        assert html =~ " 5%be", kind
+      end
+    end
   end
 
   describe "picture and image titles" do

@@ -889,14 +889,55 @@ defmodule Brando.Villain.Filters do
   def upcase(value, _), do: String.upcase(to_string(value))
 
   @doc """
-  Decodes a string that has been encoded as a URL or by url_encode/2.
+  Decodes a string that has been encoded as a URL or by url_encode/2: `+`
+  is a space and `%` with two hex digits the byte they give. A `%` that is
+  not followed by two hex digits stays as typed, and so does an escape that
+  does not decode to a whole UTF-8 character with the escapes after it.
 
   ## Examples
 
       iex> Brando.Villain.Filters.url_decode("%27Stop%21%27+said+Fred", %{})
       "'Stop!' said Fred"
+
+      iex> Brando.Villain.Filters.url_decode("50%25 off 100%", %{})
+      "50% off 100%"
+
+      iex> Brando.Villain.Filters.url_decode("%E2%82%AC and 5%be", %{})
+      "€ and 5%be"
   """
-  def url_decode(value, _), do: URI.decode_www_form(to_string(value))
+  def url_decode(value, _), do: value |> to_string() |> decode_www_form(<<>>)
+
+  defguardp is_hex(char) when char in ?0..?9 or char in ?a..?f or char in ?A..?F
+
+  defp decode_www_form(<<?+, rest::binary>>, acc), do: decode_www_form(rest, <<acc::binary, ?\s>>)
+
+  defp decode_www_form(<<?%, hi, lo, rest::binary>>, acc) when is_hex(hi) and is_hex(lo) do
+    lead = String.to_integer(<<hi, lo>>, 16)
+
+    case decode_char(rest, <<lead>>, utf8_length(lead) - 1) do
+      {:ok, char, rest} -> decode_www_form(rest, <<acc::binary, char::binary>>)
+      :error -> decode_www_form(rest, <<acc::binary, ?%, hi, lo>>)
+    end
+  end
+
+  defp decode_www_form(<<char, rest::binary>>, acc), do: decode_www_form(rest, <<acc::binary, char>>)
+  defp decode_www_form(<<>>, acc), do: acc
+
+  # The escapes of one character after its first byte: `{:ok, char, rest}`
+  # when they make a valid UTF-8 character
+  defp decode_char(rest, bytes, 0), do: if(String.valid?(bytes), do: {:ok, bytes, rest}, else: :error)
+
+  defp decode_char(<<?%, hi, lo, rest::binary>>, bytes, more) when is_hex(hi) and is_hex(lo),
+    do: decode_char(rest, <<bytes::binary, String.to_integer(<<hi, lo>>, 16)>>, more - 1)
+
+  defp decode_char(_rest, _bytes, _more), do: :error
+
+  # How many bytes a UTF-8 character with this first byte has; 1 for a byte
+  # no character starts with, which `String.valid?/1` then refuses
+  defp utf8_length(byte) when byte in 0xC2..0xDF, do: 2
+  defp utf8_length(byte) when byte in 0xE0..0xEF, do: 3
+  defp utf8_length(byte) when byte in 0xF0..0xF4, do: 4
+  defp utf8_length(_byte), do: 1
 
   @doc """
   Encodes a string for a URL. Character references are encoded as the
