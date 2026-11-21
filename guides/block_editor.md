@@ -370,7 +370,10 @@ draws as a textarea prints as text, so what was typed there stays text even
 if another form draws the field as rich text. A field in a subform's rows
 follows the same rule, read from the forms' subforms on that relation: the
 default form's subform decides when forms disagree, and a row field it does
-not draw then prints as text. What a save checks is set by the form it comes
+not draw then prints as text. A row that is a record of a schema with forms of
+its own (a `has_many` or `has_one` relation) also prints a field as rich text
+when that schema's own forms draw it so, by the rule for top-level fields.
+What a save checks is set by the form it comes
 from and the default form (see [Rich text](blueprint_forms.md#rich-text)).
 
 Liquid in a value printed with `raw` stays text. `raw` reads escaped text as

@@ -655,7 +655,10 @@ it as a `:rich_text` input, or when only named forms draw it, each as a
 `:rich_text` input; when forms disagree, the default form decides. A field in
 a subform's rows follows the same rule, read from the subforms on that
 relation: when forms disagree, the default form's subform decides, and a row
-field it does not draw prints as text.
+field it does not draw prints as text. A row of a `has_many` or `has_one`
+relation is also a record of its own schema: a field that schema's own forms
+draw as rich text, by the rule for top-level fields, prints as rich text
+whatever the subform draws.
 
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,
