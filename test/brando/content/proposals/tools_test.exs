@@ -152,6 +152,16 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert id == english.id
     assert note =~ "structure and media"
 
+    # The translation is told it follows its source, until it is independent.
+    outline = call!("entry_outline", %{"content_type" => "Brando.SyncTest.Article", "id" => english.id}, c.context)
+    assert %{role: "target", versions: [%{id: source_id, synchronized: true}], note: note} = outline.languages
+    assert source_id == source.id
+    assert note =~ "synchronized translation"
+
+    {:ok, _} = Brando.Translations.make_independent(Brando.SyncTest.Article, english.id, c.user)
+    outline = call!("entry_outline", %{"content_type" => "Brando.SyncTest.Article", "id" => english.id}, c.context)
+    refute outline.languages.note =~ "synchronized translation"
+
     plain = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}, c.context)
     refute Map.has_key?(plain, :languages)
   end

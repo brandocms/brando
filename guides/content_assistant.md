@@ -183,6 +183,21 @@ translations need no matching change: applying runs the same after-save work
 as an editor's save, so they get pending versions with the source's structure,
 media and new text to translate.
 
+A synchronized translation follows its source, so a proposal changes it in
+two ways only. Its text is translation work, written with `translate`
+([Translating with a proposal](#translating-with-a-proposal)). Its own
+fields, those the synchronization leaves to each language, are set with
+`set_fields`: its status, and the fields that are neither text nor
+source-controlled, such as an article's slug or a page's address, template
+and search settings. Every other operation on it is refused, as is a
+`set_fields` on a text field, a source-controlled field, a media field, its
+parent or a subform, naming the field: change those in the source, and the
+translation follows, or write the text with `translate`. A block copied into
+it counts as an operation on it; one copied from it to another entry does
+not. The rule is checked again when the proposal is approved and applied, so
+a translation that became synchronized in the meantime refuses it then. An
+independent translation and a source are changed like any other entry.
+
 A proposal can also create a synchronized entry's version in a language its
 group lacks, as **Create translation** does in the admin
 (`{"op": "create_translation", "source": {…}, "language": "en", "ref": R}`,

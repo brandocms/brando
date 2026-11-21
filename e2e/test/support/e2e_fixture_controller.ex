@@ -2215,6 +2215,48 @@ defmodule E2EFixtureController do
     json(conn, %{images: images})
   end
 
+  # Pages as synchronized translations, which have a trash (the SyncTest
+  # article deletes for real). Application env outlives the sandbox, so a spec
+  # that turns it on turns it off again after each test.
+  def synchronized_pages(conn, %{"action" => "on"}) do
+    unless Application.get_env(:e2e_project, :synchronized_pages_previous),
+      do:
+        Application.put_env(:e2e_project, :synchronized_pages_previous, {Application.get_env(:brando, Brando.Pages.Page)})
+
+    previous = Application.get_env(:brando, Brando.Pages.Page) || []
+    Application.put_env(:brando, Brando.Pages.Page, Keyword.put(previous, :translatable, mode: :synchronized))
+    send_resp(conn, 200, "")
+  end
+
+  def synchronized_pages(conn, %{"action" => "off"}) do
+    case Application.get_env(:e2e_project, :synchronized_pages_previous) do
+      {nil} -> Application.delete_env(:brando, Brando.Pages.Page)
+      {previous} -> Application.put_env(:brando, Brando.Pages.Page, previous)
+      nil -> :ok
+    end
+
+    Application.delete_env(:e2e_project, :synchronized_pages_previous)
+    send_resp(conn, 200, "")
+  end
+
+  # An English page whose Norwegian translation is in the trash (#3762), with
+  # pages synchronized (`synchronized_pages/2`)
+  def trashed_page_translation(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+
+    {:ok, source} =
+      Brando.Pages.create_page(
+        %{title: "About us", uri: "about-us", language: "en", template: "default.html", status: :published},
+        user
+      )
+
+    {:ok, target} = Brando.Translations.create_target(Brando.Pages.Page, source.id, :no, user)
+    {:ok, _} = Brando.Pages.delete_page(target.id, user)
+    json(conn, %{source_id: source.id, target_id: target.id})
+  end
+
   # AI for the actions declared on fields, answered by a fake model
   # (E2eProject.FieldActionModel). Application env outlives the sandbox, so a
   # spec that turns it on turns it off again after each test.

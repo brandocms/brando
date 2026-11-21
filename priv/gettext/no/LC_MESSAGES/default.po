@@ -6263,6 +6263,12 @@ msgstr[1] "Slette %{name}? %{count} medlemmer mister tillatelsene fra denne grup
 msgid "Delete %{singular}?"
 msgstr "Slette %{singular}?"
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Delete and create"
+msgstr "Slett og opprett"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Delete environment"
@@ -6454,6 +6460,11 @@ msgstr[1] "Slettet %{count} videoer"
 #, elixir-autogen, elixir-format
 msgid "Deleted account"
 msgstr "Slettet konto"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted for good from the trash, to create a new translation in its language"
+msgstr "Slettet for godt fra papirkurven, for å opprette en ny oversettelse på språket"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -15902,6 +15913,12 @@ msgstr "Erstatt tabellen i %{block}"
 msgid "Replace the version here with the file’s"
 msgstr "Erstatt versjonen her med filens"
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the version in %{language}?"
+msgstr "Erstatte versjonen på %{language}?"
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Replace the video while keeping this reference’s settings."
@@ -20324,6 +20341,12 @@ msgstr "Verdien lagres med hver innsending; etiketten er det besøkende ser."
 msgid "The version here is replaced when you apply; the apply keeps it, and Revert brings it back. From then on this module follows the release’s files."
 msgstr "Versjonen her erstattes når du tar releasen i bruk; den tas vare på, og Tilbakestill henter den tilbake. Etter det følger modulen releasens filer."
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The version in %{language} is in the trash. Creating a new one deletes it for good."
+msgstr "Versjonen på %{language} ligger i papirkurven. Å opprette en ny sletter den for godt."
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The video is in the library. The form could not add it to the field it was uploaded for."
@@ -20804,6 +20827,7 @@ msgstr "Dette er for langt."
 msgid "This language already has a version."
 msgstr "Dette språket har allerede en versjon."
 
+#: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "This language's version is in the trash. Restore it from the trash instead."
