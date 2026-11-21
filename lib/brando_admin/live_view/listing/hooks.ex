@@ -276,16 +276,23 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   # "Create translation", and "Create and translate", which opens the new
   # translation's form with Translate with AI started there
   # (`?translate=ai`, `BrandoAdmin.LiveView.Form.Hooks`): the editor checks
-  # and saves the texts, nothing is saved here.
+  # and saves the texts, nothing is saved here. For a language whose version
+  # is in the trash the row asks first, and the confirmed event carries
+  # `replace`: that version is deleted for good and the new one created.
   defp handle_listing_event(
          event,
-         %{"id" => source_id, "language" => language},
+         %{"id" => source_id, "language" => language} = params,
          %{assigns: %{current_user: user, schema: schema}} = socket,
          _listing_schema
        )
        when event in ["create_entry_translation", "create_entry_translation_with_ai"] do
+    create =
+      if params["replace"] in [true, "true"],
+        do: &Brando.Translations.replace_trashed_target/4,
+        else: &Brando.Translations.create_target/4
+
     with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
-         {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
+         {:ok, target} <- create.(schema, source_id, language, user) do
       update_list_entries(schema)
       update_url = schema.__admin_route__(:update, [target.id])
       update_url = if event == "create_entry_translation_with_ai", do: update_url <> "?translate=ai", else: update_url

@@ -70,6 +70,8 @@ defmodule E2eProjectWeb.Router do
       get "/webhook-receiver/:inbox", E2EWebhookReceiverController, :list
       post "/mcp/:action", E2EFixtureController, :mcp
       post "/field-ai/:action", E2EFixtureController, :field_ai
+      post "/synchronized-pages/:action", E2EFixtureController, :synchronized_pages
+      post "/trashed-page-translation", E2EFixtureController, :trashed_page_translation
       post "/alt-text-image", E2EFixtureController, :alt_text_image
       post "/text-sinks/:action", E2EFixtureController, :text_sinks
       post "/work/:action", E2EFixtureController, :work

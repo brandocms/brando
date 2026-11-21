@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.TranslationFill
+  alias Phoenix.LiveView.JS
 
   @doc "Assigns the translation state of the form's entry."
   def assign_state(%{assigns: %{schema: schema, entry: %{id: id} = entry}} = socket) when not is_nil(id) do
@@ -80,6 +81,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       source: nil,
       members: [],
       missing_languages: missing_languages(schema, entry),
+      languages_in_trash: [],
       can_create?: can_create?(schema, user),
       pending: nil,
       payload: nil,
@@ -115,6 +117,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
       source: source && Map.put(source, :url, admin_url(schema, source.id)),
       members: members(schema, member.group_id),
       missing_languages: missing_languages(schema, entry),
+      languages_in_trash: languages_in_trash(schema, member.group_id),
       can_create?: can_create?(schema, user),
       pending: pending,
       payload: payload,
@@ -196,6 +199,18 @@ defmodule BrandoAdmin.Components.Form.Translation do
   # Languages without a version (`Translations.missing_languages/2`)
   defp missing_languages(schema, entry) do
     for code <- Translations.missing_languages(schema, entry), do: %{code: code, label: language_label(code)}
+  end
+
+  # Languages whose version is in the trash: it still holds its language, and
+  # creating a new one deletes it for good, after asking
+  # (`Translations.replace_trashed_target/5`)
+  defp languages_in_trash(schema, group_id) do
+    members = Translations.list_members(group_id)
+    trashed = Translations.trashed_ids(schema, Enum.map(members, & &1.entry_id))
+
+    for %{entry_id: entry_id, language: code} <- members,
+        entry_id in trashed,
+        do: %{code: code, label: language_label(code)}
   end
 
   # Block and row membership, order and nesting. A source that only moves or
@@ -755,13 +770,36 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   defp create_buttons(assigns) do
     ~H"""
-    <div :if={@state.can_create? and @state.missing_languages != []} class="translation-create">
+    <div
+      :if={@state.can_create? and (@state.missing_languages != [] or @state.languages_in_trash != [])}
+      class="translation-create"
+    >
       <span>{gettext("Create a translation")}</span>
       <button
         :for={language <- @state.missing_languages}
         type="button"
         class="translation-action"
         phx-click="create_translation"
+        phx-value-language={language.code}
+        phx-target={@target}
+      >
+        {language.label}
+      </button>
+      <button
+        :for={language <- @state.languages_in_trash}
+        type="button"
+        class="translation-action"
+        phx-hook="Brando.ConfirmClick"
+        id={"translation-create-#{language.code}"}
+        phx-confirm-click={JS.push("create_translation", value: %{language: language.code, replace: true}, target: @target)}
+        phx-confirm-click-title={gettext("Replace the version in %{language}?", language: language.label)}
+        phx-confirm-click-message={
+          gettext("The version in %{language} is in the trash. Creating a new one deletes it for good.",
+            language: language.label
+          )
+        }
+        phx-confirm-click-confirm={gettext("Delete and create")}
+        phx-confirm-click-destructive
         phx-value-language={language.code}
         phx-target={@target}
       >

@@ -7174,12 +7174,19 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, TranslationFill.start(socket, keys)}
   end
 
-  def handle_event("create_translation", %{"language" => language}, socket) do
+  # A language whose version is in the trash is confirmed first, and the event
+  # carries `replace`: that version is deleted for good and the new one created.
+  def handle_event("create_translation", %{"language" => language} = params, socket) do
     %{schema: schema, current_user: user, translation: state} = socket.assigns
     source_id = (state && state.source && state.source.id) || socket.assigns.entry.id
 
+    create =
+      if params["replace"] in [true, "true"],
+        do: &Brando.Translations.replace_trashed_target/4,
+        else: &Brando.Translations.create_target/4
+
     with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
-         {:ok, target} <- Brando.Translations.create_target(schema, source_id, language, user) do
+         {:ok, target} <- create.(schema, source_id, language, user) do
       BrandoAdmin.LiveView.Listing.update_list_entries(schema)
       {:noreply, push_navigate(socket, to: schema.__admin_route__(:update, [target.id]))}
     else
@@ -8461,11 +8468,23 @@ defmodule BrandoAdmin.Components.Form do
   defp translation_action_failed(socket, error) do
     message =
       case error do
-        {:error, :language_exists} -> gettext("This language already has a version.")
-        {:error, :not_duplicable} -> gettext("Translations can't be created: this content type can't be copied.")
-        {:error, :unauthorized} -> gettext("You do not have permission to do this.")
-        {:error, %{__exception__: true}} -> gettext("You do not have permission to do this.")
-        _ -> gettext("The translation could not be changed.")
+        {:error, :language_exists} ->
+          gettext("This language already has a version.")
+
+        {:error, :language_in_trash} ->
+          gettext("This language's version is in the trash. Restore it from the trash instead.")
+
+        {:error, :not_duplicable} ->
+          gettext("Translations can't be created: this content type can't be copied.")
+
+        {:error, :unauthorized} ->
+          gettext("You do not have permission to do this.")
+
+        {:error, %{__exception__: true}} ->
+          gettext("You do not have permission to do this.")
+
+        _ ->
+          gettext("The translation could not be changed.")
       end
 
     require Logger
