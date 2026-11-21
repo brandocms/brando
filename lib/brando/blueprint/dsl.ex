@@ -417,6 +417,9 @@ defmodule Brando.Blueprint.Dsl do
     end
   end
 
+  # The schema's own rich-text fields: the `:rich_text` inputs at the top of
+  # its default form. A subform's rows are their own module's fields, not
+  # the schema's (`Brando.RichText` walks them by relation).
   defp generated_rich_text_fields do
     quote location: :keep, unquote: false do
       def __rich_text_fields__ do
@@ -424,22 +427,13 @@ defmodule Brando.Blueprint.Dsl do
           %{tabs: tabs} ->
             for tab <- tabs,
                 fieldset <- tab.fields,
-                field <- fieldset.fields,
-                name <- extract_rich_text_names(field),
+                %Brando.Blueprint.Forms.Input{type: :rich_text, name: name} <- Map.get(fieldset, :fields, []),
                 do: name
 
           _ ->
             []
         end
       end
-
-      defp extract_rich_text_names(%Brando.Blueprint.Forms.Input{type: :rich_text, name: name}),
-        do: [name]
-
-      defp extract_rich_text_names(%Brando.Blueprint.Forms.Subform{sub_fields: sub_fields}),
-        do: Enum.flat_map(sub_fields, &extract_rich_text_names/1)
-
-      defp extract_rich_text_names(_), do: []
     end
   end
 

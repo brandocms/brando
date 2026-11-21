@@ -188,3 +188,54 @@ defmodule Brando.RichTextRows.CheckedItem do
     end
   end
 end
+
+defmodule Brando.RichTextRows.Plain do
+  @moduledoc false
+  # A plain `text` column beside rows whose rich-text input is also named
+  # `text` (Brando.RichTextParentColumnsTest). Only changesets and structs
+  # are built: there is no table.
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "RichTextRows",
+    schema: "Plain",
+    singular: "plain",
+    plural: "plains",
+    gettext_module: Brando.Gettext
+
+  identifier "{{ entry.title }}"
+  persist_identifier false
+
+  attributes do
+    attribute :title, :string
+    attribute :text, :text
+  end
+
+  relations do
+    relation :quotes, :embeds_many,
+      module: Brando.RichTextRows.Quote,
+      on_replace: :delete,
+      sort_param: :sort_quotes_ids,
+      drop_param: :drop_quotes_ids
+  end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :text, :textarea
+        end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :text, :rich_text
+          end
+        end
+      end
+    end
+  end
+end

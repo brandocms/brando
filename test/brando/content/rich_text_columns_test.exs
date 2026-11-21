@@ -72,7 +72,7 @@ defmodule Brando.Content.RichTextColumnsTest do
   end
 
   test "a schema's own rich-text inputs, not a subform's named like a map column" do
-    assert :settings in Note.__rich_text_fields__()
+    assert Note.__rich_text_fields__() == [:body]
     assert Brando.Content.Blocks.rich_text_fields_for(Note) == [:body]
   end
 

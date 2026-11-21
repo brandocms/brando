@@ -1,0 +1,1 @@
+- A plain column named like a subform row's rich-text input (say `text`) is no longer sanitized as rich text on save, printed as markup in a template or shown as rich text in a proposal review.

@@ -490,7 +490,8 @@ It runs, in order:
    `noembed`, `noframes`, `noscript`, `plaintext`, `template`, `title`);
    scripts, event handlers, LiveView bindings, embedded documents and
    script addresses are a validation error, on the row's field for a
-   subform. Only changed values are checked: a row kept exactly as stored
+   subform. A row's input makes only the row's field rich text, not a
+   column of the entry with the same name. Only changed values are checked: a row kept exactly as stored
    keeps its text. A transformer subform's rows join the entry after this
    changeset ran, so the admin form checks them the same way
    (`Brando.RichText.validate_subform_rows/3`) before it saves.
