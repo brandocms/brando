@@ -1937,6 +1937,70 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert ticked?(other, item.path)
     end
 
+    # A revision's working copy holds the form, its blocks detached from the
+    # session: loading the session's version would leave them shown as the
+    # session's. The form does not catch up by itself (the revision is the
+    # saved entry, so there is no typing), the button is not offered, and a
+    # forged click does nothing.
+    test "a form behind with a revision's working copy open offers no button and ignores a click", %{conn: conn} = c do
+      first = change_source(c)
+      {:ok, %{revision: number}} = Brando.Revisions.create_revision(load(c.target.id), c.current_user, false)
+      {:ok, {_revision, {^number, revision_entry}}} = Brando.Revisions.get_revision(Article, c.target.id, number)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      Phoenix.LiveView.send_update(other.pid, BrandoAdmin.Components.Form,
+        id: "article_form",
+        action: :load_working_copy,
+        revision: number,
+        revision_entry: revision_entry
+      )
+
+      render(other)
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      refute has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+
+      other |> with_target(cid_of(other, "#article_form-el")) |> render_click("load_session_version", %{})
+      assert behind?(other)
+      assert held_version(other) == to_string(first.id)
+      {components, _, _} = :sys.get_state(other.pid).components
+      assert Enum.any?(components, fn {_cid, {_mod, _id, assigns, _, _}} -> assigns[:working_copy] == number end)
+    end
+
+    # The session moves on while the form's save collects its blocks: the
+    # button waits. The save is refused once it runs, and the button is back.
+    test "a form behind while its save is collecting offers no button and ignores a click", %{conn: conn} = c do
+      first = change_source(c)
+      view = open_version(conn, c.target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, c.target.id, first)
+      type_title(other, "Typed title")
+
+      other |> element("button", "Save and continue editing") |> render_click()
+      assert_push_event(other, "b:submit", %{}, 2_000)
+      other |> form("#article_form_form") |> render_submit()
+
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      refute has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+      other |> with_target(cid_of(other, "#article_form-el")) |> render_click("load_session_version", %{})
+      assert held_version(other) == to_string(first.id)
+      assert shown_title(other) == "Typed title"
+
+      assert_push_event(other, "b:submit", %{}, 2_000)
+      other |> form("#article_form_form") |> render_submit()
+      assert_push_event(other, "b:alert", %{type: "error"}, 2_000)
+      assert has_element?(other, "#translation-panel [data-testid=translation-load-version]")
+    end
+
     defp shown_subtitle(view),
       do: view |> render() |> form_params("#article_form_form") |> get_in(["article", "subtitle"])
 

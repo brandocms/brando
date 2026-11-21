@@ -615,6 +615,11 @@ defmodule BrandoAdmin.Components.Form.Translation do
   attr :target, :any, required: true
   attr :fill, :map, default: nil, doc: "Translate with AI's run (`Form.TranslationFill`)"
   attr :editing, :boolean, default: true, doc: "whether this tab edits the entry"
+
+  attr :loadable, :boolean,
+    default: true,
+    doc: "whether the form can load the session's version now: not while it saves or holds a working copy"
+
   attr :actionable, :any, default: MapSet.new(), doc: "the items with an AI action (`TranslationFill.actionable/1`)"
 
   @doc "The translation panel at the top of the entry form."
@@ -711,7 +716,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
             "Another editor saved this translation, and its blocks now have newer changes from the source. Load them to save. Your unsaved changes to the other fields are replaced; your block changes are kept."
           )}
         </p>
-        <div :if={@editing} class="translation-notice-actions">
+        <div :if={@editing and @loadable} class="translation-notice-actions">
           <button
             type="button"
             class="btn btn--sm"

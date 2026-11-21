@@ -1586,6 +1586,13 @@ defmodule BrandoAdmin.Components.Form do
       else: socket
   end
 
+  #
+  # Not while the form saves, nor while a revision's working copy holds it:
+  # its blocks are detached from the session (`take_saved_entry/1` waits
+  # for the same).
+  defp catch_up_translation(%{assigns: %{processing: true}} = socket), do: socket
+  defp catch_up_translation(%{assigns: %{working_copy: revision}} = socket) when not is_nil(revision), do: socket
+
   defp catch_up_translation(socket) do
     case discard_entry_edits(socket) do
       {:ok, socket} ->
@@ -5350,6 +5357,7 @@ defmodule BrandoAdmin.Components.Form do
                 })
               }
               editing={@tab_editing?}
+              loadable={not @processing and is_nil(@working_copy)}
             />
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
