@@ -373,6 +373,21 @@ text (`append`) is left whole by `raw`. A `capture` is new text, which `raw`
 decodes: do not print a capture that holds rich text with `raw`. A comparison
 sees escaped text: `{% if entry.title == "R&D" %}` compares with `R&amp;D`.
 
+A field of rendered blocks (`rendered_blocks`, and `rendered_<name>` for each
+other block field) reads as escaped text, and
+`{{ entry.rendered_blocks | raw }}` prints the HTML as it is stored, so what an
+editor typed in a block stays text. Text a filter makes from it, or a piece of
+a `split`, `raw` leaves escaped. `url_decode` on rich text sanitizes what it
+decoded again, as rich text is sanitized when read, and it prints as markup.
+
+A picture's or image's title that holds the caption editor's markup prints only
+the elements that editor makes (paragraphs, headings, lists, line breaks,
+emphasis, links, spans, subscript and superscript) with the attributes it gives
+them: a link's address, target, `rel`, class and identifier, a paragraph's or
+heading's class and alignment, a span's class, colour and anchor id, the number
+an ordered list starts at. Any other
+element is left out and its text kept. A title without that markup is text.
+
 A user shows only `id`, `name`, `email`, `language`, `role`, `avatar`, `active`,
 `job_title`, `same_as` and its timestamps. No field with a credential word in its
 name (`password`, `secret`, `token`, `api_key` and the like) reaches a template,
