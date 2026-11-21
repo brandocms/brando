@@ -254,6 +254,83 @@ defmodule Brando.RichTextRowsTest do
     assert [%{errors: [text: _]}] = Changeset.get_change(refused, :quotes)
   end
 
+  describe "the form in use" do
+    # The article's `notes` form draws its subtitle as rich text and its
+    # `rich_quotes` form a quote's text; the default form draws both as
+    # plain text. The admin form checks the form it saves from
+    # (Brando.RichText.validate_form/2) after the schema's changeset, which
+    # checks by the default form.
+    alias Brando.SyncTest.Article
+
+    @article %{title: "Article", slug: "article", language: "en", status: "published", creator_id: 1}
+
+    defp article_changeset(params, form) do
+      %Article{}
+      |> Article.changeset(Map.merge(@article, params), :system)
+      |> Brando.RichText.validate_form(form)
+    end
+
+    test "a top-level rich-text input only a named form declares is refused with unsafe markup" do
+      for html <- @unsafe do
+        changeset = article_changeset(%{subtitle: html}, Article.__form__(:notes))
+        refute changeset.valid?, html
+        assert Keyword.has_key?(changeset.errors, :subtitle)
+      end
+
+      changeset = article_changeset(%{subtitle: @commented}, Article.__form__(:notes))
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :subtitle) == @sanitized
+    end
+
+    test "a subform row's rich-text input only a named form declares is refused with unsafe markup" do
+      for html <- @unsafe do
+        changeset = article_changeset(%{quotes: [%{text: "<p>Kept</p>"}, %{text: html}]}, Article.__form__(:rich_quotes))
+        refute changeset.valid?, html
+        assert [kept, refused] = Changeset.get_change(changeset, :quotes)
+        assert kept.errors == []
+        assert Keyword.has_key?(refused.errors, :text)
+      end
+
+      changeset = article_changeset(%{quotes: [%{text: @commented}]}, Article.__form__(:rich_quotes))
+      assert changeset.valid?
+      assert [row] = Changeset.get_change(changeset, :quotes)
+      assert row_text(row) == @sanitized
+    end
+
+    test "the same fields saved from the default form, where they are plain text, are stored as typed" do
+      for html <- [@commented | @unsafe] do
+        changeset = article_changeset(%{subtitle: html, quotes: [%{text: html}]}, Article.__form__())
+        assert changeset.valid?, html
+        assert Changeset.get_change(changeset, :subtitle) == html
+        assert [row] = Changeset.get_change(changeset, :quotes)
+        assert row_text(row) == html
+      end
+    end
+
+    test "an untouched field or row holding old unsafe text does not block the save" do
+      stored = ~s{<p onclick="x()">Old</p>}
+
+      article = %Article{
+        subtitle: stored,
+        quotes: [%Brando.SyncTest.ArticleQuote{id: Ecto.UUID.generate(), text: stored}]
+      }
+
+      [quote_row] = article.quotes
+
+      changeset =
+        article
+        |> Article.changeset(
+          Map.merge(@article, %{subtitle: stored, quotes: [%{id: quote_row.id, text: stored}]}),
+          :system
+        )
+        |> Brando.RichText.validate_form(Article.__form__(:notes))
+        |> Brando.RichText.validate_form(Article.__form__(:rich_quotes))
+
+      assert changeset.errors == []
+      assert Enum.all?(Changeset.get_change(changeset, :quotes, []), &(&1.errors == []))
+    end
+  end
+
   test "the entry's own rich text is still checked" do
     refute changeset(%{intro: hd(@unsafe)}).valid?
     assert changeset(%{intro: @safe}).valid?

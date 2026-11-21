@@ -2602,7 +2602,9 @@ defmodule BrandoAdmin.Components.Form do
   # stay as the form has them: the browser sent the rows it showed before
   # another editor's save replaced them (`stale_relations/2`), so their
   # params don't reach the cast, where a relation that can't replace a row
-  # would raise for the rows they lack.
+  # would raise for the rows they lack. The schema's changeset checks rich
+  # text by the default form; the form in use checks its own after it
+  # (`Brando.RichText.validate_form/2`).
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
   defp cast_entry_edit(socket, entry, params, target, stale) do
     %{schema: schema, current_user: current_user} = socket.assigns
@@ -2619,6 +2621,7 @@ defmodule BrandoAdmin.Components.Form do
     entry
     |> schema.changeset(params, current_user)
     |> derive_locked_slugs(entry, params, socket)
+    |> Brando.RichText.validate_form(blueprint)
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
     |> keep_fields(current, stale)
@@ -4611,6 +4614,9 @@ defmodule BrandoAdmin.Components.Form do
         socket.assigns.block_changesets
         |> assoc_all_block_fields(socket.assigns.form.source)
         |> assoc_all_transformer_fields(socket.assigns.transformer_changesets, socket.assigns.form_blueprint)
+        # The form's changeset may not come from a cast (another editor's
+        # field change, a working copy): checked here as a save checks it
+        |> Brando.RichText.validate_form(socket.assigns.form_blueprint)
 
       socket
       |> store_revision(changeset)

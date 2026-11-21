@@ -84,6 +84,32 @@ defmodule Brando.RichText do
   end
 
   @doc """
+  Validates the rich-text inputs of `form`, the form an editor saves from
+  (`validate_fields/2`): its top-level `:rich_text` inputs and those in its
+  subforms' rows. A field `form` draws as plain text is left as it is.
+
+  The admin form runs it after the schema's changeset, which checks by the
+  default form (`validate_blueprint/2`), so a rich-text input only a named
+  form declares is checked when that form saves. A save that comes from no
+  form is checked by the default form only. `nil` checks nothing.
+  """
+  def validate_form(changeset, %{tabs: _} = form) do
+    changeset
+    |> validate_fields(top_level_fields(form))
+    |> validate_rows(subform_fields(form))
+  end
+
+  def validate_form(changeset, _form), do: changeset
+
+  # The `:rich_text` inputs at the top of a form, not in its subforms
+  defp top_level_fields(%{tabs: tabs}) do
+    for tab <- tabs,
+        fieldset <- tab.fields,
+        %Brando.Blueprint.Forms.Input{type: :rich_text, name: name} <- Map.get(fieldset, :fields, []),
+        do: name
+  end
+
+  @doc """
   Validates the rich-text inputs in the rows of the subforms `relations` in
   `changeset`, as `validate_blueprint/2` does for the rows a cast puts
   there. For rows put on the changeset after the module's changeset ran,
