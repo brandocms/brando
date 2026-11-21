@@ -1682,6 +1682,42 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, texts(saved)} == {2024, ["First paragraph", "New paragraph"]}
     end
 
+    # 10. A type without block fields saves without collecting blocks
+    # (`saved_entry/3`): Save and continue decides again all the same, and
+    # loads what the save left pending.
+    test "a type without block fields loads the newer version after Save and continue", %{conn: conn, current_user: user} do
+      {:ok, source} =
+        Brando.Forms.create_form(
+          %{
+            "title" => "Kontakt",
+            "key" => "kontakt-#{System.unique_integer([:positive])}",
+            "language" => "no",
+            "status" => "published",
+            "fields" => [%{"key" => "name", "type" => "text", "label" => "Navn"}]
+          },
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Brando.Forms.Form, source.id, :en, user, mark_translate: false)
+      {:ok, _} = Brando.Forms.update_form(source.id, %{"retention_days" => 30}, user)
+      first = Translations.get_pending_version(Brando.Forms.Form, target.id)
+
+      {view, _html} = live_form(conn, "/admin/config/forms/update/#{target.id}", "form_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{first.id}']")
+
+      {:ok, _} = Brando.Forms.update_form(source.id, %{"retention_days" => 90}, user)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "form_form")
+      await_selector(view, "#translation-panel [data-translation-waiting]")
+
+      view |> element("button", "Save and continue editing") |> render_click()
+      view |> form("#form_form_form") |> render_submit()
+
+      await_selector(view, "input[name='form[retention_days]'][value='90']", 3_000)
+      second = Translations.get_pending_version(Brando.Forms.Form, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{second.id}']")
+      refute waiting?(view)
+    end
+
     defp await(fun), do: Brando.EditSessionEditors.await(fun)
   end
 end

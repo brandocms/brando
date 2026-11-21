@@ -7548,7 +7548,7 @@ defmodule BrandoAdmin.Components.Form do
 
     Brando.Blueprint.AfterSave.run(schema, entry, save.changeset, current_user)
 
-    {socket, _stale?} = after_translation_save(socket, schema, entry)
+    {socket, stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     announce_save(socket, entry, mutation_type)
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
@@ -7558,17 +7558,17 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:take_after_save?, false)
      |> Drafts.saved(entry)
      |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
-       redirect_after_save(socket, entry, save)
+       redirect_after_save(socket, entry, stale?, save)
      end)}
   end
 
-  defp redirect_after_save(socket, entry, save) do
+  defp redirect_after_save(socket, entry, stale?, save) do
     %{schema: schema, mutation_type: mutation_type} = save
 
     maybe_redirected_socket =
       case save.save_redirect_target do
         :self ->
-          refresh_saved_entry(socket, entry, save)
+          refresh_saved_entry(socket, entry, stale?, save)
 
         :listing ->
           # if redirect_on_save is set in form, use this
@@ -7596,21 +7596,24 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:processing, false)
   end
 
-  defp refresh_saved_entry(socket, entry, %{schema: schema, mutation_type: :create}) do
+  defp refresh_saved_entry(socket, entry, _stale?, %{schema: schema, mutation_type: :create}) do
     generated_route = schema.__admin_route__(:update, [entry.id])
 
     push_navigate(socket, to: generated_route)
   end
 
-  defp refresh_saved_entry(socket, entry, %{schema: schema}) do
+  defp refresh_saved_entry(socket, entry, stale?, %{schema: schema}) do
     maybe_refresh_revisions(socket, schema)
 
     # update entry! A revision's working copy is saved: it is the entry now.
+    # A synchronized translation decides again, from what the save left
+    # pending, as one with block fields does.
     socket
     |> assign(:entry_id, entry.id)
     |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
+    |> refresh_translation(stale?)
   end
 
   # Crop was already applied via the HTTP replace_crop endpoint.
