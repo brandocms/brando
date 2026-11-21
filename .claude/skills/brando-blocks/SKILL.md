@@ -642,7 +642,12 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   its replica go (no `:DOWN` rejoin) and calls `EditSession.detach/2`, which marks the
   session's revision; when that editor then writes the entry (activation, or a save, whose
   rejoin rebases even when the rows' ids did not change), the rebase keeps only ops after
-  the mark instead of carrying the replaced work back. Anything that replaces the editor's blocks
+  the mark instead of carrying the replaced work back. A synchronized translation's pending
+  version arrives as `restore_draft` with `source: :translation` and is carried onto the
+  field (`{:carry, ...}`) whatever it holds: only the form that took the version for the
+  session sends it (`EditSession.take_version/3` → `{:load, id}`); a form joining a session
+  that holds a version loads its entry fields alone. Do not bring back a per-field "joined
+  with work" skip. Anything that replaces the editor's blocks
   wholesale must go through the session as ops or detach like this — never leave the
   session holding work the editor no longer shows. Writes outside the editor (Assistant apply, revision
   activation in `Revisions.set_entry_to_revision`, content transfer, stale-block upgrades in

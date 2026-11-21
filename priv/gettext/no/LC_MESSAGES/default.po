@@ -2827,6 +2827,12 @@ msgstr "En annen redaktør fjernet blokken den lå i, så den slettede blokken b
 msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
 
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor saved this translation, and its blocks now have newer changes from the source. Reload the page to save: your block changes are kept, unsaved changes to the other fields are not."
+msgstr "En annen redaktør lagret denne oversettelsen, og blokkene har nå nyere endringer fra kilden. Last inn siden på nytt for å lagre: endringene dine i blokkene beholdes, ulagrede endringer i de andre feltene gjør ikke det."
+
 #: lib/brando/environments/environment.ex
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
@@ -20230,6 +20236,11 @@ msgstr "Nettstedets lagrede mål, %{target}, er ikke tillatt her eller i konfigu
 #, elixir-autogen, elixir-format
 msgid "The source changed again while you were editing. Its newer changes are loaded below and are not saved yet."
 msgstr "Kilden ble endret igjen mens du redigerte. De nyere endringene er lastet inn nedenfor og er ikke lagret ennå."
+
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "The source changed again. Its changes are loaded when you save the translation."
+msgstr "Kilden er endret igjen. Endringene lastes inn når du lagrer oversettelsen."
 
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
