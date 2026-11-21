@@ -13,7 +13,8 @@ defmodule Brando.Villain.TemplateView do
   (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
   names, also through a filter that selects or reorders the rows
   (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
-  (`Brando.Villain.Filters.raw/2`).
+  (`Brando.Villain.Filters.raw/2`). A field of rendered blocks is escaped too,
+  and `raw` prints it as it is stored (`read_as_rendered_blocks/2`).
 
   The view is a `Liquex.Drop` around the value, resolved one key at a time, so
   a render pays only for what its templates read and a heavy preload it never
@@ -54,8 +55,9 @@ defmodule Brando.Villain.TemplateView do
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
 
-  # Text read as rich text (`read_as_rich_text/1`), and how deep in renders
-  # (`rich_text_scope/1`) the process is
+  # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
+  # a field of rendered blocks it was read from (`read_as_rendered_blocks/2`)
+  # or `true`, and how deep in renders (`rich_text_scope/1`) the process is
   @rich_texts {__MODULE__, :rich_texts}
   @rich_texts_before {__MODULE__, :rich_texts_before}
   @rich_depth {__MODULE__, :rich_text_depth}
@@ -272,7 +274,8 @@ defmodule Brando.Villain.TemplateView do
   holds through `assign` too. Text a template builds from printed output
   (`capture`) is new text, and not marked, unless it is the same text.
 
-  Text without an entity is not marked: `raw` has nothing in it to decode.
+  Text without an entity or a `%` is not marked: `raw` has nothing in it to
+  decode, nor `url_decode` (`sanitize_decoded/2`).
 
   The mark is the text itself, kept for the process: inside a render
   (`rich_text_scope/1`) until the outermost one ends, outside any render (a
@@ -283,34 +286,62 @@ defmodule Brando.Villain.TemplateView do
   """
   @spec read_as_rich_text(term()) :: term()
   def read_as_rich_text(text) when is_binary(text) do
-    if String.contains?(text, "&"), do: mark_rich_text(text)
+    if String.contains?(text, ["&", "%"]), do: mark_rich_text(text)
     text
   end
 
   def read_as_rich_text(value), do: value
 
   # Outside a render, a full set becomes the one before it, so a lookup still
-  # finds the newest marks and no more than two sets are kept
-  defp mark_rich_text(text) do
-    texts = Process.get(@rich_texts, MapSet.new())
+  # finds the newest marks and no more than two sets are kept. A mark is not
+  # replaced: a filter that passes text on unchanged (`strip`) leaves the
+  # stored HTML it was read from with it.
+  defp mark_rich_text(text, source \\ true) do
+    texts = Process.get(@rich_texts, %{})
 
-    if Process.get(@rich_depth, 0) == 0 and MapSet.size(texts) >= @rich_texts_outside do
+    if Process.get(@rich_depth, 0) == 0 and map_size(texts) >= @rich_texts_outside do
       Process.put(@rich_texts_before, texts)
-      Process.put(@rich_texts, MapSet.new([text]))
+      Process.put(@rich_texts, %{text => source})
     else
-      Process.put(@rich_texts, MapSet.put(texts, text))
+      Process.put(@rich_texts, Map.put_new(texts, text, source))
     end
   end
 
+  @doc """
+  Marks `text`, a field of rendered blocks as it was read (escaped), as read
+  from the stored `html`, and returns it: `raw` prints that HTML as it is
+  (`rendered_blocks_html/1`). A filter given it returns text marked as rich
+  text (`keep_rich_text/2`), which `raw` leaves escaped, so what an editor
+  typed in a block stays text.
+  """
+  @spec read_as_rendered_blocks(String.t(), String.t()) :: String.t()
+  def read_as_rendered_blocks(text, html) do
+    if String.contains?(text, "&"), do: mark_rich_text(text, html)
+    text
+  end
+
+  @doc """
+  The stored HTML of the field of rendered blocks `text` was read from
+  (`read_as_rendered_blocks/2`), or nil.
+  """
+  @spec rendered_blocks_html(term()) :: String.t() | nil
+  def rendered_blocks_html(text) when is_binary(text) do
+    case mark(text) do
+      html when is_binary(html) -> html
+      _ -> nil
+    end
+  end
+
+  def rendered_blocks_html(_value), do: nil
+
   @doc "Whether `text` was read as rich text (`read_as_rich_text/1`)."
   @spec read_as_rich_text?(term()) :: boolean()
-  def read_as_rich_text?(text) when is_binary(text), do: marked?(@rich_texts, text) or marked?(@rich_texts_before, text)
+  def read_as_rich_text?(text) when is_binary(text), do: mark(text) != nil
   def read_as_rich_text?(_value), do: false
 
-  defp marked?(key, text) do
-    case Process.get(key) do
-      nil -> false
-      texts -> MapSet.member?(texts, text)
+  defp mark(text) do
+    with nil <- Process.get(@rich_texts, %{})[text] do
+      Process.get(@rich_texts_before, %{})[text]
     end
   end
 
@@ -341,6 +372,18 @@ defmodule Brando.Villain.TemplateView do
   defp rich_input?(list) when is_list(list), do: Enum.any?(list, &rich_input?/1)
   defp rich_input?({_key, value}), do: rich_input?(value)
   defp rich_input?(value), do: read_as_rich_text?(value)
+
+  @doc """
+  The text a decoding filter (`url_decode`) gave, sanitized as rich text is
+  when read (`Brando.RichText.render_html/1`) when one of its `inputs` was read
+  as rich text: decoded, what an editor typed in it can be markup.
+  """
+  @spec sanitize_decoded(term(), term()) :: term()
+  def sanitize_decoded(result, inputs) when is_binary(result) do
+    if rich_input?(inputs), do: Brando.RichText.render_html(result), else: result
+  end
+
+  def sanitize_decoded(result, _inputs), do: result
 
   @doc """
   Runs `fun` as a render: text marked as read as rich text in it
@@ -451,6 +494,10 @@ defmodule Brando.Villain.TemplateView do
       rich_text?(value, key) or named?(rich, key) ->
         text |> Brando.RichText.render_html() |> InertLiquid.encode_all() |> read_as_rich_text()
 
+      # Escaped as a plain field is, and `raw` prints the HTML as it is stored
+      rendered_blocks?(value, key) ->
+        text |> escape() |> read_as_rendered_blocks(text)
+
       true ->
         escape(text)
     end
@@ -492,6 +539,12 @@ defmodule Brando.Villain.TemplateView do
 
   defp named?([], _key), do: false
   defp named?(fields, key), do: to_string(key) in Enum.map(fields, &Atom.to_string/1)
+
+  # `rendered_blocks`, and `rendered_<name>` for each other block field
+  defp rendered_blocks?(%struct{}, key) do
+    function_exported?(struct, :__blocks_fields__, 0) and
+      to_string(key) in Enum.map(struct.__blocks_fields__(), &"rendered_#{&1.name}")
+  end
 
   defp rich_text?(%TextBlock.Data{}, key), do: to_string(key) == "text"
 

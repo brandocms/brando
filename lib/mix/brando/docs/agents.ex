@@ -35,7 +35,7 @@ defmodule Mix.Brando.Docs.Agents do
   # Sub-rule files, in index order, with when to load each.
   @topics [
     {"blueprint-reference", "Blueprint reference",
-     "absolute URLs for only some entries, Blueprint translations, enums, uniqueness, relation types, asset configs and deprecated declarations."},
+     "`use Brando.Blueprint` options, absolute URLs for only some entries, Blueprint translations, drafts, custom changesets, compile-time checks, enums, uniqueness, relation types, asset configs and deprecated declarations."},
     {"admin-ui", "Admin listings and forms in detail",
      "listing components and menu items, custom and selection actions, live updates, the form LiveView, select options, multi-selects and block editors."},
     {"generators", "Generators and migrations",

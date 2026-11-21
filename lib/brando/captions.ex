@@ -10,6 +10,10 @@ defmodule Brando.Captions do
   """
   alias Brando.HTML.Tree
 
+  # The markup the rich-text caption editor makes, which a rich-text library
+  # title would have held too. Anything else that looks like a tag is text.
+  @markup_tags ~w(p br em strong b i u a span sub sup h1 h2 h3 h4 h5 h6 ul ol li blockquote)
+
   @doc """
   Whether `text` holds any text. An emptied rich-text document is markup
   without text (`<p></p>`, `<p style="text-align: center;"><br></p>`,
@@ -61,8 +65,9 @@ defmodule Brando.Captions do
   end
 
   @doc """
-  Markup for a plain library text: escaped, or sanitized when it already holds
-  markup. Its braces are entities, so the entry's Liquid pass leaves a title
+  Markup for a plain library text: escaped, or, when it already holds the
+  caption editor's markup, that markup with only the elements and attributes
+  the editor makes. Its braces are entities, so the entry's Liquid pass leaves a title
   imported from a video provider as text.
   """
   def library_html(text) do
@@ -71,7 +76,7 @@ defmodule Brando.Captions do
         nil
 
       markup?(text) ->
-        if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
+        if present?(text), do: text |> editor_markup() |> Brando.Villain.InertLiquid.encode()
 
       # Escaped once: a legacy caption's `&amp;` is the `&` it stands for
       true ->
@@ -100,10 +105,51 @@ defmodule Brando.Captions do
   def rich?(text), do: is_binary(text) and markup?(text)
 
   @doc """
-  Markup for a placement's rich-text caption: as `normalize/1` stores it, with
-  its braces as entities, so the entry's Liquid pass leaves it as text.
+  Markup for a placement's rich-text caption: as `normalize/1` stores it,
+  with only the elements and attributes the caption editor makes, and its
+  braces as entities, so the entry's Liquid pass leaves it as text.
   """
-  def rich_html(text), do: text |> normalize() |> Brando.Villain.InertLiquid.encode_all()
+  def rich_html(text), do: text |> normalize() |> editor_markup() |> Brando.Villain.InertLiquid.encode_all()
+
+  # Only the elements the rich-text editor makes in a caption, and on them only
+  # the attributes it gives them: a link's address when rich text allows it,
+  # its target, `rel`, class and identifier; a paragraph's or heading's class
+  # and alignment; a span's class, colour and jump-anchor id; a footnote's uid;
+  # the number an ordered list starts at.
+  # Any other element is left out and its text kept as text, the content of a
+  # `script` or `style` too.
+  defp editor_markup(nil), do: nil
+
+  defp editor_markup(html) when is_binary(html) do
+    html
+    |> Tree.parse_fragment()
+    |> Tree.map(&editor_node/1)
+    |> Tree.to_html()
+  end
+
+  defp editor_node({tag, attrs, children}) when tag in @markup_tags,
+    do: {tag, Enum.filter(attrs, &editor_attribute?(tag, &1)), children}
+
+  defp editor_node({_tag, _attrs, children}), do: children
+  defp editor_node(text) when is_binary(text), do: text
+  defp editor_node(_comment), do: []
+
+  @aligned ~w(p h1 h2 h3 h4 h5 h6)
+  @alignment ~r/\Atext-align: ?(left|center|right|justify);?\z/
+  @color ~r/\Acolor: ?(#[0-9a-fA-F]{3,8}|rgba?\([0-9., %]+\)|[a-zA-Z]+);?\z/
+
+  defp editor_attribute?("a", {"href", href}), do: Brando.RichText.allowed_uri?(href)
+  defp editor_attribute?("a", {"target", target}), do: target in ~w(_blank _self _parent _top)
+  defp editor_attribute?("a", {"data-identifier-id", id}), do: id =~ ~r/\A[0-9]+\z/
+  defp editor_attribute?("a", {name, _value}), do: name in ~w(rel class)
+  defp editor_attribute?(tag, {"style", style}) when tag in @aligned, do: style =~ @alignment
+  defp editor_attribute?("span", {"style", style}), do: style =~ @color
+  defp editor_attribute?("span", {"data-type", type}), do: type == "jump-anchor"
+  defp editor_attribute?("span", {"id", _id}), do: true
+  defp editor_attribute?("sup", {"data-footnote-uid", _uid}), do: true
+  defp editor_attribute?("ol", {"start", start}), do: start =~ ~r/\A-?[0-9]+\z/
+  defp editor_attribute?(tag, {"class", _class}), do: tag in ["span" | @aligned]
+  defp editor_attribute?(_tag, _attr), do: false
 
   @doc "A rich-text caption reduced to basic markup, for previews in the admin."
   def preview_html(text) do
@@ -128,10 +174,6 @@ defmodule Brando.Captions do
   end
 
   def plain(_text), do: nil
-
-  # The markup the rich-text caption editor makes, which a rich-text library
-  # title would have held too. Anything else that looks like a tag is text.
-  @markup_tags ~w(p br em strong b i u a span sub sup h1 h2 h3 h4 h5 h6 ul ol li blockquote)
 
   defp markup?(text),
     do: text |> Tree.parse_fragment() |> Tree.find(&match?({tag, _, _} when tag in @markup_tags, &1)) != []
