@@ -1,1 +1,1 @@
-- A rich-text input in a subform's rows (`embeds_many`, `embeds_one`, or a `has_many` cast with the entry) is sanitized and checked on save like a top-level one, so unsafe markup in a row is refused with an error on that row.
+- A rich-text input in a subform's rows (`embeds_many`, `embeds_one`, a `has_many` cast with the entry, or a transformer subform's rows saved from the admin form) is sanitized and checked on save like a top-level one, so unsafe markup in a row is refused with an error on that row.

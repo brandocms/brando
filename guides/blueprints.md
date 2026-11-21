@@ -491,7 +491,9 @@ It runs, in order:
    scripts, event handlers, LiveView bindings, embedded documents and
    script addresses are a validation error, on the row's field for a
    subform. Only changed values are checked: a row kept exactly as stored
-   keeps its text.
+   keeps its text. A transformer subform's rows join the entry after this
+   changeset ran, so the admin form checks them the same way
+   (`Brando.RichText.validate_subform_rows/3`) before it saves.
 
 `user` is the current user, or `:system` for work done by Brando or a job.
 Traits use it to stamp creators and editors, and relation casts pass it on.
