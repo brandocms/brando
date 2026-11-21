@@ -663,8 +663,10 @@ menu is labelled: `"compact"` (the default, `¶` / `H2`), `"icon"` or
 leaves it out.
 
 Content links keep their target's identifier alongside the URL. When the
-target's URL changes, Brando updates the link in block text and ordinary
-rich-text fields and re-renders the owners; the link text stays as written.
+target's URL changes, Brando updates the link in block text, in ordinary
+rich-text fields and in the rich-text fields of the default form's subform
+rows (`embeds_one`, `embeds_many`, `has_one` and `has_many`), and re-renders
+the owners; the link text stays as written.
 The link dialog also takes external and relative URLs, page anchors, button
 appearance, new-tab behaviour and nofollow. Unsafe destinations are refused.
 Pasting keeps supported formatting and turns the rest into text.

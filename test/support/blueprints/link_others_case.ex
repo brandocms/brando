@@ -24,6 +24,25 @@ defmodule Brando.LinkTest.Case do
     attribute :summary, :text
   end
 
+  # Rich text in subform rows: in the case's own column, and in a table of
+  # their own
+  relations do
+    relation :highlights, :embeds_many,
+      module: Brando.LinkTest.Highlight,
+      on_replace: :delete,
+      sort_param: :sort_highlight_ids,
+      drop_param: :drop_highlight_ids
+
+    relation :lead, :embeds_one, module: Brando.LinkTest.Highlight, on_replace: :update
+
+    relation :chapters, :has_many,
+      module: Brando.LinkTest.Chapter,
+      cast: true,
+      on_replace: :delete,
+      sort_param: :sort_chapter_ids,
+      drop_param: :drop_chapter_ids
+  end
+
   forms do
     form do
       tab "Content" do
@@ -38,8 +57,76 @@ defmodule Brando.LinkTest.Case do
           # Rich-text links to other cases follow their destination
           input :summary, :rich_text
         end
+
+        fieldset do
+          inputs_for :highlights do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :title, :text
+            input :body, :rich_text
+          end
+
+          inputs_for :lead do
+            input :title, :text
+            input :body, :rich_text
+          end
+
+          inputs_for :chapters do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :title, :text
+            input :body, :rich_text
+          end
+        end
       end
     end
+  end
+end
+
+defmodule Brando.LinkTest.Highlight do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "LinkTest",
+    schema: "Highlight",
+    singular: "highlight",
+    plural: "highlights",
+    gettext_module: Brando.Gettext
+
+  data_layer :embedded
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :title, :string
+    attribute :body, :text
+  end
+end
+
+defmodule Brando.LinkTest.Chapter do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "LinkTest",
+    schema: "Chapter",
+    singular: "chapter",
+    plural: "chapters",
+    gettext_module: Brando.Gettext
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :title, :string
+    attribute :body, :text
+  end
+
+  relations do
+    relation :case, :belongs_to, module: Brando.LinkTest.Case
   end
 end
 

@@ -708,14 +708,24 @@ defmodule Brando.Content.Blocks do
 
   Walks all Blueprint schemas that have `:rich_text` form inputs,
   searches for entries containing `data-identifier-id="ID"` in those fields,
-  and updates the href to the new URL.
+  and updates the href to the new URL. The rich-text inputs of the default
+  form's subform rows are rewritten too (`subform_rich_text_fields_for/1`).
   """
   def update_identifier_links_in_rich_text_fields(identifier_id, new_url) do
     if RichText.allowed_uri?(new_url) do
-      for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando),
-          rich_field <- rich_text_fields_for(module) do
-        update_identifier_links_in_rich_text_field(module, rich_field, identifier_id, new_url)
+      for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando) do
+        update_identifier_links_in_module(module, identifier_id, new_url)
       end
+    end
+  end
+
+  defp update_identifier_links_in_module(module, identifier_id, new_url) do
+    for rich_field <- rich_text_fields_for(module) do
+      update_identifier_links_in_rich_text_field(module, rich_field, identifier_id, new_url)
+    end
+
+    for subform <- subform_rich_text_fields_for(module) do
+      update_identifier_links_in_subform(module, subform, identifier_id, new_url)
     end
   end
 
@@ -726,30 +736,72 @@ defmodule Brando.Content.Blocks do
         select: {entry.id, field(entry, ^rich_field)}
 
     ids = for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id), do: id
-    rewrite_rich_text_identifier_links(ids, [], module, rich_field, identifier_id, new_url)
+
+    rewrite_rich_text_identifier_links(ids, [], module, fn id ->
+      update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
+    end)
   end
+
+  # Rows stored in the entry's own column: the entry is the owner locked
+  defp update_identifier_links_in_subform(module, {:embed, name, fields}, identifier_id, new_url) do
+    query =
+      from entry in module,
+        where: fragment("CAST(? AS TEXT) ILIKE ?", field(entry, ^name), "%data-identifier-id%"),
+        select: {entry.id, field(entry, ^name)}
+
+    ids =
+      for {id, rows} <- Repo.all(query),
+          Enum.any?(List.wrap(rows), &row_contains_identifier?(&1, fields, identifier_id)),
+          do: id
+
+    rewrite_rich_text_identifier_links(ids, [], module, fn id ->
+      update_locked_embed_identifier_link(module, name, fields, id, identifier_id, new_url)
+    end)
+  end
+
+  # Rows in a table of their own: each row is the owner locked, and its
+  # entry is the one evicted and rendered
+  defp update_identifier_links_in_subform(module, {:assoc, assoc, fields}, identifier_id, new_url) do
+    %{related: related, related_key: related_key} = assoc
+    where = Enum.reduce(fields, dynamic(false), &dynamic([row], ^&2 or ilike(field(row, ^&1), "%data-identifier-id%")))
+    query = from row in related, where: ^where, where: not is_nil(field(row, ^related_key))
+
+    ids = for row <- Repo.all(query), row_contains_identifier?(row, fields, identifier_id), do: row.id
+
+    rewrite_rich_text_identifier_links(ids, [], module, fn id ->
+      update_locked_row_identifier_link(module, assoc, fields, id, identifier_id, new_url)
+    end)
+  end
+
+  defp row_contains_identifier?(%{} = row, fields, identifier_id),
+    do: Enum.any?(fields, &RichText.contains_identifier?(Map.get(row, &1), identifier_id))
+
+  defp row_contains_identifier?(_row, _fields, _identifier_id), do: false
 
   # In the bulk lane: a link that moved can reach any number of entries
-  defp rewrite_rich_text_identifier_links([], updated, module, _rich_field, _identifier_id, _new_url) do
-    if updated != [], do: enqueue_entry_map_for_render(%{module => Enum.reverse(updated)})
+  defp rewrite_rich_text_identifier_links([], updated, module, _rewrite) do
+    if updated != [], do: enqueue_entry_map_for_render(%{module => updated |> Enum.reverse() |> Enum.uniq()})
   end
 
-  defp rewrite_rich_text_identifier_links([id | ids], updated, module, rich_field, identifier_id, new_url) do
+  defp rewrite_rich_text_identifier_links([id | ids], updated, module, rewrite) do
     result =
       try do
-        Repo.transaction(fn ->
-          update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url)
-        end)
+        Repo.transaction(fn -> rewrite.(id) end)
       catch
         # Each rewrite has committed by itself: the entries rewritten before
         # this one still get their renders
         kind, reason ->
-          rewrite_rich_text_identifier_links([], updated, module, rich_field, identifier_id, new_url)
+          rewrite_rich_text_identifier_links([], updated, module, rewrite)
           :erlang.raise(kind, reason, __STACKTRACE__)
       end
 
-    updated = if result == {:ok, :updated}, do: [id | updated], else: updated
-    rewrite_rich_text_identifier_links(ids, updated, module, rich_field, identifier_id, new_url)
+    updated =
+      case result do
+        {:ok, {:updated, entry_id}} -> [entry_id | updated]
+        _ -> updated
+      end
+
+    rewrite_rich_text_identifier_links(ids, updated, module, rewrite)
   end
 
   defp update_locked_rich_text_identifier_link(module, rich_field, id, identifier_id, new_url) do
@@ -762,11 +814,126 @@ defmodule Brando.Content.Blocks do
         {:updated, html} ->
           updated = entry |> Changeset.change([{rich_field, html}]) |> Repo.update!()
           Brando.Cache.Query.evict({:ok, updated})
-          :updated
+          {:updated, id}
 
         :unchanged ->
           :ok
       end
+    end
+  end
+
+  defp update_locked_embed_identifier_link(module, name, fields, id, identifier_id, new_url) do
+    entry = Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
+
+    with %{} <- entry,
+         {:updated, rows} <- relink_embedded_rows(Map.get(entry, name), fields, identifier_id, new_url) do
+      updated = entry |> Changeset.change() |> Changeset.put_embed(name, rows) |> Repo.update!()
+      Brando.Cache.Query.evict({:ok, updated})
+      {:updated, id}
+    end
+  end
+
+  defp relink_embedded_rows(rows, fields, identifier_id, new_url) when is_list(rows) do
+    relinked = Enum.map(rows, &relink_row(&1, fields, identifier_id, new_url))
+
+    if Enum.any?(relinked, &(&1.changes != %{})),
+      do: {:updated, relinked},
+      else: :unchanged
+  end
+
+  defp relink_embedded_rows(%{} = row, fields, identifier_id, new_url) do
+    relinked = relink_row(row, fields, identifier_id, new_url)
+    if relinked.changes != %{}, do: {:updated, relinked}, else: :unchanged
+  end
+
+  defp relink_embedded_rows(_rows, _fields, _identifier_id, _new_url), do: :unchanged
+
+  defp relink_row(row, fields, identifier_id, new_url) do
+    changes =
+      for field <- fields,
+          {:updated, html} <- [RichText.update_identifier_url(Map.get(row, field), identifier_id, new_url)],
+          do: {field, html}
+
+    row
+    |> Changeset.change(changes)
+    |> mark_unsaved_embedded_row()
+  end
+
+  # An embedded row stored without an id is given one, as a row added in
+  # the form would be: Ecto refuses to update a row it cannot identify
+  defp mark_unsaved_embedded_row(%{data: %{__meta__: _}} = changeset), do: changeset
+
+  defp mark_unsaved_embedded_row(%{data: data} = changeset) do
+    case data.__struct__.__schema__(:primary_key) do
+      [key] when is_nil(:erlang.map_get(key, data)) -> %{changeset | action: :insert}
+      _ -> changeset
+    end
+  end
+
+  defp update_locked_row_identifier_link(module, assoc, fields, id, identifier_id, new_url) do
+    %{related: related, related_key: related_key, owner_key: owner_key} = assoc
+    row = Repo.one(from row in related, where: row.id == ^id, lock: "FOR UPDATE")
+
+    with %{} <- row,
+         %{changes: changes} = changeset when changes != %{} <- relink_row(row, fields, identifier_id, new_url) do
+      updated = Repo.update!(changeset)
+      Brando.Cache.Query.evict({:ok, updated})
+      owner_value = Map.fetch!(updated, related_key)
+
+      case Repo.one(from entry in module, where: field(entry, ^owner_key) == ^owner_value) do
+        nil ->
+          :ok
+
+        entry ->
+          Brando.Cache.Query.evict({:ok, entry})
+          {:updated, entry.id}
+      end
+    else
+      _ -> :ok
+    end
+  end
+
+  @doc """
+  The rich-text inputs of the subform rows in a blueprint `module`'s default
+  form that a moved identifier's URL is rewritten in: `{:embed, name, fields}`
+  for rows stored in the entry's column (`embeds_one`, `embeds_many`), and
+  `{:assoc, association, fields}` for rows with a table of their own
+  (`has_one`, `has_many`).
+  """
+  def subform_rich_text_fields_for(module) do
+    with true <- Brando.Blueprint.blueprint?(module),
+         %{tabs: tabs} <- module.__form__() do
+      for %{fields: fieldsets} <- tabs,
+          %{fields: inputs} <- fieldsets,
+          %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields} <- inputs,
+          subform = subform_rich_text_fields(module, name, sub_fields),
+          subform != nil,
+          uniq: true,
+          do: subform
+    else
+      _ -> []
+    end
+  end
+
+  defp subform_rich_text_fields(module, name, sub_fields) do
+    rich_names = for %Brando.Blueprint.Forms.Input{type: :rich_text, name: field} <- sub_fields, do: field
+
+    case {module.__schema__(:embed, name), module.__schema__(:association, name)} do
+      {%Ecto.Embedded{related: related}, _} ->
+        subform_entry(:embed, name, related, rich_names)
+
+      {nil, %Ecto.Association.Has{related: related} = assoc} ->
+        subform_entry(:assoc, assoc, related, rich_names)
+
+      _ ->
+        nil
+    end
+  end
+
+  defp subform_entry(kind, relation, related, rich_names) do
+    case Enum.filter(rich_names, &(&1 in related.__schema__(:fields))) do
+      [] -> nil
+      fields -> {kind, relation, fields}
     end
   end
 
