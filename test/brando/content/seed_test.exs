@@ -73,6 +73,24 @@ defmodule Brando.Content.SeedTest do
     end
   end
 
+  describe "upload_video/2" do
+    test "stores a video file, and refuses another", %{user: user} do
+      dir = Path.join(System.tmp_dir!(), "seed-video-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(dir)
+      on_exit(fn -> File.rm_rf(dir) end)
+
+      # An MP4's first box is all the upload checks
+      mp4 = Path.join(dir, "intro.mp4")
+      File.write!(mp4, <<0, 0, 0, 24, "ftypmp42", 0, 0, 0, 0, "mp42isom">> <> :binary.copy(<<0>>, 64))
+
+      assert {:ok, %Brando.Videos.Video{type: :upload} = video} = Seed.upload_video(mp4, user)
+      assert video.file_id
+
+      assert {:error, message} = Seed.upload_video(@jpg, user)
+      assert message =~ "not a video"
+    end
+  end
+
   describe "block/3" do
     test "sets text, header fields, vars and switches a ref off", %{user: user, module: module} do
       block =
@@ -129,6 +147,10 @@ defmodule Brando.Content.SeedTest do
       assert error.message =~ ~s(["heading", "wide"])
 
       assert_raise ArgumentError, ~r/no ref "image"/, fn -> Seed.block(module, user, refs: %{"image" => @jpg}) end
+
+      assert_raise ArgumentError, ~r/a gallery ref takes a list/, fn ->
+        Seed.block(module, user, refs: %{"slides" => @jpg})
+      end
 
       assert_raise ArgumentError, ~r/could not upload no\/such\.jpg/, fn ->
         Seed.block(module, user, refs: %{"cover" => "no/such.jpg"})

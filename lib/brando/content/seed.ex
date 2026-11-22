@@ -32,7 +32,7 @@ defmodule Brando.Content.Seed do
   alias Brando.Uploads.ContentType
   alias Ecto.Changeset
 
-  @media_refs ~w(picture video gallery file media)
+  @asset_hint %{"gallery" => "a list of images, videos or paths", "file" => "a Brando.Files.File"}
 
   @doc """
   Stores the image at `path` in the media library, as an editor's upload
@@ -99,15 +99,17 @@ defmodule Brando.Content.Seed do
 
   @doc """
   A new block of `module` (a saved `Brando.Content.Module`, its id, or the
-  `uid` its module definition gives it), as the block editor inserts it, with its module's default content and what
-  `opts` give. Pass it to `create_entry/4` or `add_blocks/4` to save it.
+  `uid` its module definition gives it), as the block editor inserts it,
+  with its module's default content and what `opts` give. Pass it to
+  `create_entry/4` or `add_blocks/4` to save it.
 
   `user` is the block's creator, and uploads the files named by path.
 
     * `refs:` — a map of ref names to their content:
       * a string: the text of a text, header or other text ref, or the path
-        of a file to upload for a picture, video or media ref
-        (`upload_image/3`, `upload_video/2`)
+        of a file to upload for a picture ref (an image), a video ref (a
+        video) or a media ref (by what the file holds), as `upload_image/3`
+        and `upload_video/2` do
       * a `Brando.Images.Image`, `Brando.Videos.Video` or `Brando.Files.File`
       * a list of images, videos or paths for a gallery ref: the block gets
         a new gallery of them. A saved `Brando.Galleries.Gallery` is used as is.
@@ -180,7 +182,10 @@ defmodule Brando.Content.Seed do
 
   defp put_ref(ref, value, module, user) when is_binary(value) do
     case Changeset.get_field(ref, :data) do
-      %{type: type} when type in @media_refs -> BlockContent.put_media(ref, media!(value, user), module, user)
+      %{type: "picture"} -> BlockContent.put_media(ref, upload!(:image, value, user), module, user)
+      %{type: "video"} -> BlockContent.put_media(ref, upload!(:video, value, user), module, user)
+      %{type: "media"} -> BlockContent.put_media(ref, media!(value, user), module, user)
+      %{type: type} when type in ~w(gallery file) -> raise ArgumentError, "a #{type} ref takes #{@asset_hint[type]}"
       _ -> BlockContent.put_text(ref, value)
     end
   end
@@ -207,7 +212,7 @@ defmodule Brando.Content.Seed do
 
   defp var_value(_type, value, _user) when is_boolean(value), do: value
   defp var_value(:gallery, items, user) when is_list(items), do: {:gallery, Enum.map(items, &media!(&1, user))}
-  defp var_value(type, path, user) when type in [:image, :video] and is_binary(path), do: media!(path, user)
+  defp var_value(type, path, user) when type in [:image, :video] and is_binary(path), do: upload!(type, path, user)
   defp var_value(:link, %{__struct__: schema, id: id}, _user) when is_integer(id), do: {:entry, schema, id}
 
   defp var_value(_type, %struct{} = asset, user)
@@ -220,11 +225,20 @@ defmodule Brando.Content.Seed do
   defp media!(%Brando.Videos.Video{id: id}, _user), do: {:video, id}
   defp media!(%Brando.Files.File{id: id}, _user), do: {:file, id}
 
+  # A path to a video file is uploaded as a video, any other as an image
   defp media!(path, user) when is_binary(path) do
-    result =
-      if match?([_ | _], path |> head() |> elem(1) |> ContentType.video()),
-        do: upload_video(path, user),
-        else: upload_image(path, user)
+    kind =
+      case head(path) do
+        {:ok, head} -> if ContentType.video(head) == [], do: :image, else: :video
+        # The upload says what is wrong
+        {:error, _} -> :image
+      end
+
+    upload!(kind, path, user)
+  end
+
+  defp upload!(kind, path, user) do
+    result = if kind == :video, do: upload_video(path, user), else: upload_image(path, user)
 
     case result do
       {:ok, asset} -> media!(asset, user)
