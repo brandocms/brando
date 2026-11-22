@@ -185,6 +185,103 @@ defmodule Brando.Assets.DevSiteTest do
       end
     end
 
+    # Vite serves its project's `public/` on its own origin, but the page
+    # names the files host-relative: the layout's favicon, and the fonts in
+    # the CSS Vite injects into the page
+    test "gets its project's public files on its hosts and the admin's, but no other site's host does" do
+      write_public("fonts/a.woff2", "project font")
+      write_public("images/b.svg", "project logo")
+
+      for host <- ["acme.test", "admin.test"] do
+        conn = Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", host), [])
+        assert conn.resp_body == "project font", host
+        assert Plug.Conn.get_resp_header(conn, "cache-control") == ["no-cache"], host
+        assert served_body("images/b.svg", host) == "project logo", host
+      end
+
+      for path <- ["fonts/a.woff2", "images/b.svg"] do
+        refute Brando.Plug.SiteAssets.call(conn_for(path, "beta.test"), []).halted, path
+      end
+
+      # Nor once another site is the dev site
+      Application.put_env(@host_app, :dev_site, "beta")
+      refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", "acme.test"), []).halted
+      refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", "admin.test"), []).halted
+    end
+
+    test "gets the release's file and a pinned set's before its project's public file", %{
+      acme: acme,
+      tmp_dir: tmp_dir
+    } do
+      write_public("fonts/moderat/moderat-regular.woff2", "project font")
+      write_public("favicon.ico", "project icon")
+      File.write!(Path.join(tmp_dir, "priv/static/favicon.ico"), "release icon")
+
+      for host <- ["acme.test", "admin.test"] do
+        assert served_body("fonts/moderat/moderat-regular.woff2", host) == "project font", host
+        refute Brando.Plug.SiteAssets.call(conn_for("favicon.ico", host), []).halted, host
+      end
+
+      acme |> activate_public_set() |> pin()
+
+      for host <- ["acme.test", "admin.test"] do
+        assert served_body("fonts/moderat/moderat-regular.woff2", host) == "set font", host
+        refute Brando.Plug.SiteAssets.call(conn_for("favicon.ico", host), []).halted, host
+      end
+    end
+
+    # On the admin's host, the project's file is the dev site's candidate,
+    # compared with other sites' as theirs are
+    test "gets no public file on the admin's host where another site holds other content", %{beta: beta} do
+      write_public("images/logo.svg", "project logo")
+      activate_public_set(beta)
+      refute Brando.Plug.SiteAssets.call(conn_for("images/logo.svg", "admin.test"), []).halted
+      assert served_body("images/logo.svg", "acme.test") == "project logo"
+
+      write_public("images/logo.svg", "set logo")
+      assert served_body("images/logo.svg", "admin.test") == "set logo"
+    end
+
+    test "gets nothing outside its project's public folder", %{tmp_dir: tmp_dir} do
+      write_public("images/b.svg", "project logo")
+      File.write!(Path.join(tmp_dir, "assets/sites/acme/secret.txt"), "secret")
+      outside = Path.join(tmp_dir, "outside")
+      File.mkdir_p!(outside)
+      File.write!(Path.join(outside, "secret.txt"), "secret")
+
+      public = Path.join(tmp_dir, "assets/sites/acme/public")
+      File.ln_s!(outside, Path.join(public, "linked"))
+      File.ln_s!(Path.join(outside, "secret.txt"), Path.join(public, "secret.txt"))
+      File.ln_s!("images", Path.join(public, "pictures"))
+
+      for path <- [
+            "../secret.txt",
+            "images/../../secret.txt",
+            Path.join(outside, "secret.txt"),
+            "linked/secret.txt",
+            "secret.txt",
+            "",
+            "images"
+          ] do
+        assert SiteAssets.dev_site_public_file("acme", path) == nil, path
+      end
+
+      for url_path <- [
+            "..%2Fsecret.txt",
+            "%2e%2e/secret.txt",
+            "images%2F..%2F..%2Fsecret.txt",
+            "images/..%5C..%5Csecret.txt",
+            "linked/secret.txt",
+            "secret.txt"
+          ],
+          host <- ["acme.test", "admin.test"] do
+        refute Brando.Plug.SiteAssets.call(conn_for(url_path, host), []).halted, "#{url_path} on #{host}"
+      end
+
+      # A symlink that stays inside the folder is followed
+      assert served_body("pictures/b.svg", "acme.test") == "project logo"
+    end
+
     test "names its own Vite project in the notice" do
       html = render_component(&HTML.include_assets/1)
       assert html =~ "<code>assets/sites/acme</code>"
@@ -554,6 +651,12 @@ defmodule Brando.Assets.DevSiteTest do
         as_site("acme")
         assert Manifest.read(:app).entries.files == ["/assets/acme-set.js"]
         assert Brando.Plug.SiteAssets.call(conn_for("assets/acme-set.js", "acme.test"), []).halted
+
+        write_public("fonts/a.woff2", "project font")
+
+        for host <- ["acme.test", "admin.test"] do
+          refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", host), []).halted, host
+        end
       end
     end
 
@@ -673,6 +776,13 @@ defmodule Brando.Assets.DevSiteTest do
 
     SiteAssets.invalidate_pinned(set)
     preview
+  end
+
+  # A file in the dev site's Vite project's `public/` folder
+  defp write_public(relative_path, content) do
+    file = Path.join("assets/sites/acme/public", relative_path)
+    File.mkdir_p!(Path.dirname(file))
+    File.write!(file, content)
   end
 
   defp served_body(relative_path, host) do
