@@ -163,9 +163,16 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     |> Plug.Conn.Query.encode()
   end
 
-  defp save(form, changes \\ []) do
+  defp save(form, changes \\ []), do: form |> collect(changes) |> then(&write(form, &1, changes))
+
+  # The first `save_form` collects the rows; the write waits for the second
+  defp collect(form, changes \\ []) do
     form |> form_target() |> render_hook("save_form", %{"form" => browser_form(form, changes), "stay" => true})
     assert_push_event(form.view, "b:submit", %{token: token}, 5_000)
+    token
+  end
+
+  defp write(form, token, changes \\ []) do
     form |> form_target() |> render_hook("save_form", %{"form" => browser_form(form, changes), "token" => token})
     settle(form.view)
   end
@@ -444,6 +451,33 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         assert Enum.filter(streams, &drawn?/1) == []
         assert Enum.map(shown(b), &elem(&1, 0)) == ["A, by B", "B", "C"]
         assert Enum.map(transformer(b).items, &(&1.assets.cover && &1.assets.cover.id)) == [nil, image.id, nil]
+      end
+    end
+  end
+
+  for kind <- ["with blocks", "without blocks"] do
+    describe "#{kind}, A saving inside B's save" do
+      # A's save lands after B's form collected its rows and before it
+      # writes them: B's rows read back after its save hold A's row too.
+      # B's own new row is B's saved row once, and A's row is B's to keep,
+      # not a row B removed.
+      test "keeps A's new row through B's saves, and B's new row once",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = Enum.sort(rows(article))
+        assert [{"A", _}, {"B", _}, {"C", _}, {"From A", _}, {"From B", _}] = saved
+
+        save_title(b, article, "Saved by B")
+        assert Enum.sort(rows(article)) == saved
+        assert Enum.sort(shown(b)) == saved
       end
     end
   end

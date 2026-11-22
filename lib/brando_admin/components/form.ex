@@ -4263,7 +4263,7 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, entry} ->
         socket
         |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry))
-        |> hand_saved_rows_to_transformers("entry_saved_elsewhere")
+        |> hand_saved_rows_to_transformers(:elsewhere)
 
       :not_found ->
         socket
@@ -7707,7 +7707,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:entry_id, entry.id)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
-    |> hand_saved_rows_to_transformers()
+    |> hand_saved_rows_to_transformers(entry)
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
@@ -7731,7 +7731,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:entry_id, entry.id)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
-    |> hand_saved_rows_to_transformers()
+    |> hand_saved_rows_to_transformers(entry)
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
@@ -7886,7 +7886,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
-    |> hand_saved_rows_to_transformers()
+    |> hand_saved_rows_to_transformers(entry)
     |> refresh_translation(stale?)
   end
 
@@ -8891,25 +8891,33 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A save that stays on the form gives each transformer the rows it wrote,
-  # as the entry holds them now: the rows a transformer added are saved rows
-  # from then on, and the next save does not insert them again. Another
-  # editor's save gives each the rows that save wrote
-  # (`entry_saved_elsewhere`), which it takes in under its own unsaved
-  # changes, so its next save keeps them.
-  defp hand_saved_rows_to_transformers(socket, event \\ "entry_saved") do
+  # as the save returned them (`saved`), and as the entry holds them now:
+  # the rows a transformer added are saved rows from then on, and the next
+  # save does not insert them again. Another editor's save gives each the
+  # rows that save wrote (`entry_saved_elsewhere`), which it takes in under
+  # its own unsaved changes, so its next save keeps them.
+  defp hand_saved_rows_to_transformers(socket, saved) do
     %{entry: entry, form: form, form_blueprint: form_blueprint} = socket.assigns
 
     for {relation_key, _field, _default} <- extract_transformers(form_blueprint),
         rows = Map.get(entry, relation_key),
         is_list(rows) do
-      send_update(BrandoAdmin.Components.Form.Transformer,
-        id: "#{form.id}-transformer-#{relation_key}",
-        event: event,
-        rows: rows
+      send_update(
+        BrandoAdmin.Components.Form.Transformer,
+        [id: "#{form.id}-transformer-#{relation_key}", rows: rows] ++ saved_rows_event(saved, relation_key)
       )
     end
 
     socket
+  end
+
+  defp saved_rows_event(:elsewhere, _relation_key), do: [event: "entry_saved_elsewhere"]
+
+  defp saved_rows_event(saved, relation_key) do
+    case Map.get(saved, relation_key) do
+      written when is_list(written) -> [event: "entry_saved", written: written]
+      _not_loaded -> [event: "entry_saved"]
+    end
   end
 
   defp reset_transformer_changesets(socket) do
