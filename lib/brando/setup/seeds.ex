@@ -255,21 +255,8 @@ defmodule Brando.Setup.Seeds do
   # With several sites the admin is not on a site's host
   defp admin_links?, do: Brando.Tenant.mode() != :multi
 
-  defp menu_item(key, sequence, text, url) do
-    %{
-      key: key,
-      status: :published,
-      sequence: sequence,
-      link: %{
-        type: :link,
-        key: "link",
-        label: "Link",
-        link_type: :url,
-        link_text: text,
-        value: url
-      }
-    }
-  end
+  defp menu_item(key, sequence, text, url),
+    do: text |> Content.Seed.menu_item(url, key: key) |> Map.put(:sequence, sequence)
 
   # ── Modules ───────────────────────────────────────────────────────────────
 

@@ -75,13 +75,11 @@ defmodule Brando.Test.BlocksTest do
 
     setup do
       put_test_env(:tenancy_mode, :multi)
-      repo = Brando.Repo.repo()
-      repo.query!(~s(CREATE SCHEMA "#{@prefix}"))
+      Brando.Repo.repo().query!(~s(CREATE SCHEMA "#{@prefix}"))
 
-      for table <-
-            ~w(content_modules content_blocks content_refs content_vars content_table_rows content_block_identifiers content_containers sites_identities pages pages_blocks pages_alternates pages_fragments content_palettes sites_global_sets navigation_menus navigation_items) do
-        repo.query!(~s|CREATE TABLE "#{@prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
-      end
+      # Every site table, as a provisioned environment has them: adding a
+      # block saves the entry through its context
+      Brando.TenantCloners.clone_structure("public", @prefix)
 
       :ok
     end
@@ -124,6 +122,7 @@ defmodule Brando.Test.BlocksTest do
             uri: "tenant-page",
             language: :en,
             template: "default.html",
+            status: :published,
             creator_id: user.id
           })
 

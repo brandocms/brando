@@ -4,10 +4,7 @@ defmodule Brando.Test.Blocks do
   entries. Imported by `use Brando.Test`; see `Brando.Test`.
   """
 
-  import Ecto.Query, only: [from: 2]
-
-  alias Brando.Content.{Block, Blocks, Module, Ref, Var}
-  alias Brando.Repo
+  alias Brando.Content.{Block, Module, Seed}
   alias Ecto.Changeset
 
   @doc """
@@ -59,112 +56,33 @@ defmodule Brando.Test.Blocks do
   @doc """
   An unsaved `Brando.Content.Block` for `module` (a saved module or its id),
   as the block editor inserts it, with `vars:` and `refs:` applied as
-  `render_block/2` describes.
+  `Brando.Content.Seed.block/3` describes.
   """
   @spec build_block(Module.t() | integer(), keyword()) :: Block.t()
-  def build_block(module, opts \\ [])
-  def build_block(%Module{id: id}, opts) when not is_nil(id), do: build_block(id, opts)
-
-  def build_block(module_id, opts) when is_integer(module_id) do
-    block =
-      module_id
-      |> Blocks.build_module_block(user_id(opts[:user]), nil, opts[:source], opts[:type] || :module)
-      |> Changeset.apply_changes()
-
-    %{
-      block
-      | vars: apply_vars(block.vars, Map.new(Keyword.get(opts, :vars, %{}))),
-        refs: apply_refs(block.refs, Map.new(Keyword.get(opts, :refs, %{})))
-    }
+  def build_block(module, opts \\ []) do
+    module
+    |> Seed.block(opts[:user], Keyword.take(opts, [:vars, :refs]))
+    |> Changeset.change(Keyword.take(opts, [:source, :type]))
+    |> Changeset.apply_changes()
   end
-
-  def build_block(%Module{}, _opts), do: raise(ArgumentError, "build_block/2 needs a saved module")
-
-  defp apply_vars(vars, overrides) do
-    unknown = Map.keys(overrides) -- Enum.map(vars, & &1.key)
-
-    if unknown != [] do
-      raise ArgumentError,
-            "the module has no var #{Enum.map_join(unknown, ", ", &inspect/1)}; it has #{inspect(Enum.map(vars, & &1.key))}"
-    end
-
-    Enum.map(vars, fn %Var{key: key} = var ->
-      case Map.fetch(overrides, key) do
-        {:ok, value} -> put_var(var, value)
-        :error -> var
-      end
-    end)
-  end
-
-  defp put_var(var, value) when is_boolean(value), do: %{var | value_boolean: value}
-  defp put_var(var, %Brando.Images.Image{} = image), do: %{var | image: image, image_id: image.id}
-  defp put_var(var, %Brando.Files.File{} = file), do: %{var | file: file, file_id: file.id}
-  defp put_var(var, %Brando.Videos.Video{} = video), do: %{var | video: video, video_id: video.id}
-  defp put_var(var, value), do: %{var | value: to_string(value)}
-
-  defp apply_refs(refs, overrides) do
-    unknown = Map.keys(overrides) -- Enum.map(refs, & &1.name)
-
-    if unknown != [] do
-      raise ArgumentError,
-            "the module has no ref #{Enum.map_join(unknown, ", ", &inspect/1)}; it has #{inspect(Enum.map(refs, & &1.name))}"
-    end
-
-    Enum.map(refs, fn %Ref{name: name} = ref ->
-      case Map.fetch(overrides, name) do
-        {:ok, value} -> put_ref(ref, value)
-        :error -> ref
-      end
-    end)
-  end
-
-  defp put_ref(ref, false), do: %{ref | active: false}
-  defp put_ref(ref, %Brando.Images.Image{} = image), do: %{ref | image: image, image_id: image.id}
-  defp put_ref(ref, %Brando.Videos.Video{} = video), do: %{ref | video: video, video_id: video.id}
-  defp put_ref(ref, %Brando.Files.File{} = file), do: %{ref | file: file, file_id: file.id}
-  defp put_ref(ref, %Brando.Galleries.Gallery{} = gallery), do: %{ref | gallery: gallery, gallery_id: gallery.id}
-
-  defp put_ref(%Ref{data: %{data: data} = block} = ref, fields) when is_map(fields) do
-    fields = Map.new(fields, fn {key, value} -> {to_existing_atom(key), value} end)
-    %{ref | data: %{block | data: struct!(data, fields)}}
-  end
-
-  defp to_existing_atom(key) when is_atom(key), do: key
-  defp to_existing_atom(key), do: String.to_existing_atom(key)
 
   @doc """
-  Add a block from `module` to `entry`'s block field and render the entry
-  again, as saving the form would. Returns the saved block.
+  Add a block from `module` to `entry`'s block field and save the entry
+  through its context, as saving the form would
+  (`Brando.Content.Seed.add_blocks/4`). Returns the saved block.
 
   Options: `vars:` and `refs:` as for `render_block/2`, `field:` (the
   first block field by default), `sequence:` (after the existing blocks by
-  default) and `user:`.
+  default) and `user:`, who saves the entry.
   """
   @spec insert_block(struct(), Module.t() | integer(), keyword()) :: Block.t()
-  def insert_block(%schema{id: entry_id} = entry, module, opts \\ []) do
-    field = opts[:field] || schema.__blocks_fields__() |> List.first() |> Map.fetch!(:name)
-    join = Elixir.Module.concat([schema, Phoenix.Naming.camelize(to_string(field))])
-    block = build_block(module, opts)
+  def insert_block(%schema{} = entry, module, opts \\ []) do
+    block = Seed.block(module, opts[:user], Keyword.take(opts, [:vars, :refs]))
+    seed_opts = [field: opts[:field], at: opts[:sequence]] |> Enum.reject(&is_nil(elem(&1, 1)))
+    {:ok, saved} = Seed.add_blocks(entry, [block], opts[:user], seed_opts)
+    field = seed_opts[:field] || schema.__blocks_fields__() |> List.first() |> Map.fetch!(:name)
+    uid = Changeset.get_field(block, :uid)
 
-    saved =
-      block.module_id
-      |> Blocks.build_module_block(user_id(opts[:user]), nil, join, :module)
-      |> Changeset.put_assoc(:refs, Enum.map(block.refs, &unload(&1, %Ref{}, [:image, :video, :file, :gallery])))
-      |> Changeset.put_assoc(:vars, Enum.map(block.vars, &unload(&1, %Var{}, [:image, :video, :file])))
-      |> Repo.insert!()
-
-    sequence =
-      opts[:sequence] ||
-        Repo.aggregate(from(j in join, where: j.entry_id == ^entry_id), :count)
-
-    Repo.insert!(struct(join, entry_id: entry_id, block_id: saved.id, sequence: sequence))
-    {:ok, _} = Blocks.render_entry(schema, entry.id)
-    saved
+    saved |> Map.fetch!(:"entry_#{field}") |> Enum.find_value(&(&1.block.uid == uid && &1.block))
   end
-
-  # The asset is saved already; the block keeps its id only.
-  defp unload(struct, empty, assocs), do: Map.merge(struct, Map.take(empty, assocs))
-
-  defp user_id(%{id: id}), do: id
-  defp user_id(_), do: nil
 end
