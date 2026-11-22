@@ -135,6 +135,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:replaced_values, %{})
      |> assign(:held_remote, %{})
      |> assign(:field_clocks, %{})
+     |> assign(:unsent_clocks, %{})
      |> assign(:blocks_detached?, false)
      |> assign(:working_copy, nil)
      |> assign(:hidden_block_fields, [])
@@ -3261,6 +3262,12 @@ defmodule BrandoAdmin.Components.Form do
   #   * `held_remote`: another editor's change to the field this editor is
   #     in. It applies when the editor leaves the field without having
   #     changed it; otherwise what they typed wins and is shipped.
+  #   * `field_clocks`: field => the clock of the value the other editors
+  #     hold (`stamp/2`, `take_newer/2`).
+  #   * `unsent_clocks`: field => the clock of a value this editor holds
+  #     back, typed offline and refused by the rich-text check
+  #     (`share_recovered/3`). A value older than it doesn't enter the form,
+  #     and it is never sent: it protects this form alone.
 
   # Ships the fields this editor changed since its last shipment. Used on
   # field blur and focus, save, and after an asset or a multi-select change.
@@ -3719,14 +3726,24 @@ defmodule BrandoAdmin.Components.Form do
   # marked as this editor's unshipped edit, so another editor's save keeps
   # it (`unsaved_edits/6`) and it ships once corrected.
   #
-  # A refused value gets a clock stamped now, without shipping, as an
-  # offline value that ships does: an older value in a join reply that
-  # arrives after the recovery loses to it (`take_newer/2`), and a real
-  # edit made since wins.
+  # A refused value typed offline gets a clock stamped now, as an offline
+  # value that ships does, but kept apart (`unsent_clocks`): a value from
+  # before the recovery, in a join reply that arrives after it, doesn't
+  # replace it (`receive_field_changes/2`), and a real edit made since
+  # wins. A refused value typed before the tab went offline gets none: an
+  # edit another editor made meanwhile is newer.
   defp share_recovered(socket, offline, entry_params) do
-    refused = refused_recovered(socket, entry_params)
-    {_stamped, socket} = refused |> Enum.map(&%{field: &1}) |> stamp(socket)
-    socket = socket |> mark_local(offline ++ refused) |> ship_all_field_changes()
+    changeset = socket.assigns.form.source
+
+    refused_offline = for field <- offline, Brando.RichText.refused?(changeset, field), do: %{field: field}
+    {unsent, _socket} = stamp(refused_offline, socket)
+
+    socket =
+      socket
+      |> assign(:unsent_clocks, Map.merge(unsent_clocks(socket), Map.new(unsent, &{&1.field, &1.clock})))
+      |> mark_local(offline ++ refused_recovered(socket, entry_params))
+      |> ship_all_field_changes()
+
     entry = socket.assigns[:entry]
 
     if entry && entry.id && is_map(entry_params) && may_update?(socket) do
@@ -3829,7 +3846,9 @@ defmodule BrandoAdmin.Components.Form do
   defp drop_param(params, _field), do: params
 
   # Another editor's changes. The field this editor is in is held until it
-  # leaves it (`apply_held_remote/1`); the rest apply now.
+  # leaves it (`apply_held_remote/1`); the rest apply now, except a value
+  # older than one this editor holds back (`unsent_clocks`): the others hold
+  # it, this form keeps its own.
   # A change to a field this editor may not change (`LockedFields`), from an
   # editor it isn't locked for, doesn't enter the form: its save keeps what
   # the form has (the entry's value, or a working copy's or translation's).
@@ -3837,13 +3856,15 @@ defmodule BrandoAdmin.Components.Form do
     locked = locked_keys(socket)
     changes = Enum.reject(changes, &(&1.field in locked))
     {changes, socket} = take_newer(changes, socket)
+    unsent = unsent_clocks(socket)
+    {outdone, changes} = Enum.split_with(changes, &(Map.get(&1, :clock, {0, ""}) <= Map.get(unsent, &1.field, {0, ""})))
     {held, changes} = Enum.split_with(changes, &focused_field?(socket, &1.field))
 
     held_remote = Enum.reduce(held, held_remote(socket), &Map.put(&2, &1.field, &1))
 
     socket
     |> apply_remote(changes)
-    |> mark_synced(held)
+    |> mark_synced(held ++ outdone)
     |> assign(:held_remote, held_remote)
   end
 
@@ -4058,6 +4079,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp field_clocks(socket), do: socket.assigns[:field_clocks] || %{}
+  defp unsent_clocks(socket), do: socket.assigns[:unsent_clocks] || %{}
 
   # Fields back to the saved value, as the entry loaded, like a change from
   # another editor: the browser's old value for them is an echo from then on.
@@ -8461,7 +8483,8 @@ defmodule BrandoAdmin.Components.Form do
   # Both tabs show the same saved entry, so the copy's rows are cast as they
   # are (`Restore.reconcile/2` is for a copy of an entry that may have
   # changed since), and checked by this form's rich-text check, as a
-  # `validate` is: a refused value stays this editor's unshipped edit.
+  # `validate` is: a refused value shows its error and stays this editor's
+  # unshipped edit.
   #
   # A revision's working copy left the edit session (`BlockField`, `detach`):
   # its blocks are in the copy alone, which is restored as a working copy
@@ -8478,7 +8501,11 @@ defmodule BrandoAdmin.Components.Form do
 
     case Brando.Drafts.Restore.prepare(copy, entry, schema, user, accept_conflict: true, compatible_only: true) do
       {:ok, changeset, _issues} ->
-        changeset = check_rich_text(changeset, socket, &Brando.RichText.validate_form/2)
+        changeset =
+          changeset
+          |> check_rich_text(socket, &Brando.RichText.validate_form/2)
+          |> Map.put(:action, :validate)
+
         apply_restored_changeset(socket, changeset, :recovery_copy, working_copy)
 
       _ ->
@@ -8507,6 +8534,7 @@ defmodule BrandoAdmin.Components.Form do
         entry
         |> schema.changeset(params, user)
         |> check_rich_text(socket, &Brando.RichText.validate_form/2)
+        |> Map.put(:action, :validate)
         |> to_form([])
 
       for name <- transformers do

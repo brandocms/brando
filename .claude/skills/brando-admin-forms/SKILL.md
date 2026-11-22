@@ -64,7 +64,8 @@ area in [the section map](form-map.md) and grep for the names it lists.
   without a `validate` runs the check first (`put_written_form/2`,
   `take_handed_over/3`), or `refused?` can't see them; a refused value goes
   to the editor's other tab with the uncast ones (`tab_release`), and a
-  recovered one gets a clock without shipping, so a late join reply loses. Received values go through
+  recovered one typed offline gets a clock of its own (`unsent_clocks`),
+  never sent, so an older value in a late join reply doesn't replace it. Received values go through
   `apply_field_change/3`, which drops the browser's param for the field (the
   form shows a param before a saved value), and only when their clock is
   newer. Form recovery (`recover_form`) marks only the fields the Form hook

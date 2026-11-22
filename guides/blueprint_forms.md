@@ -649,8 +649,10 @@ checked when that form saves; any other save checks the default form's.
 The form checks as the editor types, and text it writes itself (Translate
 with AI) the same way. A value it refuses stays in that editor's form: the
 other editors of the entry see the field marked as being edited, and keep the
-last value it sent them until the editor corrects it. The value goes along
-when the editor's other tab takes over, and stays after a reconnect.
+last value it sent them until the editor corrects it. The value goes along,
+with its error, when the editor's other tab takes over. After a reconnect, a
+value typed while offline stays; one typed before the connection dropped
+gives way to an edit another editor made meanwhile.
 
 A template prints a top-level field as rich text when the default form draws
 it as a `:rich_text` input, or when only named forms draw it, each as a
