@@ -1,0 +1,2 @@
+- A `has_many` or `has_one` row's field that the owner's subform draws as plain text prints as text in templates that reach the row through its owner, also when the row schema's own form draws it as rich text, so what an editor typed in the owner's textarea no longer prints as live markup (a link, or an event handler breaking out of an attribute). The same record printed as an entry of its own still prints by its own forms.
+  To keep printing such a field's markup, draw it as `:rich_text` in the owner's subform: `inputs_for :items do input :text, :rich_text end`.

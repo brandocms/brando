@@ -9,11 +9,12 @@ defmodule Brando.Villain.TemplateView do
   field is printed as text. A field its schema's forms draw as rich text
   (`Brando.RichText.fields_for_printing/1`), a text ref's `text` and a
   placement's caption arrive sanitized, to print as markup, each value
-  sanitized once in a render (`sanitize_rich_text/1`). So does a subform
-  row's field that its owner's forms draw as rich text, by the same rule
-  (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
-  names, also through a filter that selects or reorders the rows
-  (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
+  sanitized once in a render (`sanitize_rich_text/1`). A subform row read
+  through its owner prints by its owner's forms alone, by the same rule
+  (`Brando.RichText.row_fields_for_printing/2`), whatever the row schema's
+  own forms draw: the rows' views carry the names, none included, also
+  through a filter that selects or reorders the rows (`keep_rich_rows/2`).
+  A template opts in to a plain field's markup with the `raw` filter
   (`Brando.Villain.Filters.raw/2`). A field of rendered blocks is escaped too,
   and `raw` prints it as it is stored (`read_as_rendered_blocks/2`).
 
@@ -47,11 +48,12 @@ defmodule Brando.Villain.TemplateView do
   alias Brando.Villain.Parser
   alias Liquex.Context
 
-  # `rich`: the fields of a subform row that its owner's forms draw as rich text
-  defstruct [:value, mode: :escape, rich: []]
+  # `rich`: the fields of a subform row that its owner's forms draw as rich
+  # text, nil for a value not read as one
+  defstruct [:value, :rich, mode: :escape]
 
   @type mode :: :escape | :processed | :raw | :names
-  @type t :: %__MODULE__{value: map(), mode: mode(), rich: [atom()]}
+  @type t :: %__MODULE__{value: map(), mode: mode(), rich: [atom()] | nil}
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
@@ -243,7 +245,7 @@ defmodule Brando.Villain.TemplateView do
     end
   end
 
-  defp rich_rows(%__MODULE__{rich: [_ | _] = rich} = view, acc), do: Map.put(acc, unwrap(view), rich)
+  defp rich_rows(%__MODULE__{rich: rich} = view, acc) when is_list(rich), do: Map.put(acc, unwrap(view), rich)
   defp rich_rows(list, acc) when is_list(list), do: Enum.reduce(list, acc, &rich_rows/2)
   defp rich_rows({_key, value}, acc), do: rich_rows(value, acc)
   defp rich_rows(_value, acc), do: acc
@@ -558,7 +560,7 @@ defmodule Brando.Villain.TemplateView do
         html = Captions.caption_html(text)
         if Captions.rich?(text), do: read_as_rich_text(html), else: html
 
-      rich_text?(value, key) or named?(rich, key) ->
+      rich_text?(value, key, rich) ->
         text |> sanitize_rich_text() |> read_as_rich_text()
 
       # Escaped as a plain field is, and `raw` prints the HTML as it is stored
@@ -573,17 +575,17 @@ defmodule Brando.Villain.TemplateView do
   defp read_text(_view, _key, text), do: escape(text)
 
   # A blueprint's subform rows, each view given the fields its owner's forms
-  # draw as rich text
+  # draw as rich text, none included
   defp with_rich_rows(rows, %struct{}, key) when is_list(rows) do
     case rich_row_fields(rows, struct, key) do
-      [] -> rows
+      nil -> rows
       fields -> Enum.map(rows, &put_rich(&1, fields))
     end
   end
 
   defp with_rich_rows(%__MODULE__{value: %_{}} = row, %struct{}, key) do
     case rich_row_fields([row], struct, key) do
-      [] -> row
+      nil -> row
       fields -> put_rich(row, fields)
     end
   end
@@ -591,21 +593,12 @@ defmodule Brando.Villain.TemplateView do
   defp with_rich_rows(field, _value, _key), do: field
 
   defp rich_row_fields(rows, struct, key) do
-    if relation?(struct, key) and Enum.any?(rows, &match?(%__MODULE__{value: %_{}}, &1)),
-      do: Brando.RichText.row_fields_for_printing(struct, key),
-      else: []
-  end
-
-  defp relation?(struct, key) do
-    function_exported?(struct, :__schema__, 1) and
-      to_string(key) in Enum.map(struct.__schema__(:associations) ++ struct.__schema__(:embeds), &Atom.to_string/1)
+    if Enum.any?(rows, &match?(%__MODULE__{value: %_{}}, &1)),
+      do: Brando.RichText.row_fields_for_printing(struct, key)
   end
 
   defp put_rich(%__MODULE__{value: %_{}} = row, fields), do: %{row | rich: fields}
   defp put_rich(row, _fields), do: row
-
-  defp named?([], _key), do: false
-  defp named?(fields, key), do: to_string(key) in Enum.map(fields, &Atom.to_string/1)
 
   # `rendered_blocks`, and `rendered_<name>` for each other block field
   defp rendered_blocks?(%struct{}, key) do
@@ -613,13 +606,16 @@ defmodule Brando.Villain.TemplateView do
       to_string(key) in Enum.map(struct.__blocks_fields__(), &"rendered_#{&1.name}")
   end
 
-  defp rich_text?(%TextBlock.Data{}, key), do: to_string(key) == "text"
+  defp rich_text?(%TextBlock.Data{}, key, _rich), do: to_string(key) == "text"
 
-  defp rich_text?(%Var{type: type}, key) when type in [:rich_text, :html], do: to_string(key) == "value"
+  defp rich_text?(%Var{type: type}, key, _rich) when type in [:rich_text, :html], do: to_string(key) == "value"
 
   # A field the default form draws as rich text, or only named forms do
-  defp rich_text?(%struct{}, key),
+  defp rich_text?(%struct{}, key, nil),
     do: to_string(key) in Enum.map(Brando.RichText.fields_for_printing(struct), &Atom.to_string/1)
+
+  # A subform row's field by its owner's forms alone (`with_rich_rows/3`)
+  defp rich_text?(_row, key, rich), do: to_string(key) in Enum.map(rich, &Atom.to_string/1)
 
   # Decoded first, as a heading is: a character reference typed into a title
   # (`&shy;`) is the character it names, and text escaped already stays as it is.

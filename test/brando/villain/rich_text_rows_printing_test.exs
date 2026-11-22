@@ -5,8 +5,8 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
   # A row field is rich text for printing when the owning schema's forms
   # draw it as a `:rich_text` input in a subform on that relation: at least
   # one does and none draws it as another input, or, when they disagree,
-  # the default form does. The row's own module (embedded, or without a
-  # form) does not say so.
+  # the default form does. The row's own module does not say so, even
+  # when its own form draws the field as rich text.
   use Brando.ConnCase, async: true
 
   alias Brando.RichTextRows.CheckedItem
@@ -177,6 +177,9 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
 
     assert Brando.RichText.row_fields_for_printing(Entry, :quotes) == [:text]
     assert Brando.RichText.row_fields_for_printing(Brando.SyncTest.Article, :quotes) == []
+
+    # No form has a subform on it: no rule of the owner's
+    assert Brando.RichText.row_fields_for_printing(CheckedItem, :entry) == nil
   end
 
   test "a save checks rows by the form in use and the default form, as before" do
@@ -261,11 +264,8 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
       assert [%{errors: [text: _]}] = Changeset.get_change(changeset, :checked_items)
     end
 
-    # A link typed in the owner's textarea passes the row's check and prints
-    # live, and a typed quote ends the attribute it is printed in. Not fixed
-    # here: the owner's rule would print it as text, which changes what such
-    # sites print today (#3807).
-    @tag skip: "prints by the row's own form, not the owner's: Brando.Villain.TemplateView.read_text/3 (#3807)"
+    # A link typed in the owner's textarea passes the row's check, and prints
+    # as text, as the owner's form draws it
     test "prints typed markup as text, as the owner's form draws it" do
       entry = %PlainOwner{title: "T", checked_items: [%CheckedItem{text: ~s(<a href="/help">Help</a>)}]}
 
@@ -276,6 +276,38 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
       entry = %PlainOwner{title: "T", checked_items: [%CheckedItem{text: typed}]}
       html = render(~s(<div title="{{ entry.checked_items[0].text }}"></div>), entry)
       assert [{"div", [{"title", ^typed}], []}] = Floki.parse_fragment!(html)
+    end
+
+    # Each way a template reaches a row keeps the owner's rule with it
+    for template <- [
+          "{{ entry.checked_items.first.text }}",
+          "{% assign r = entry.checked_items | first %}{{ r.text }}",
+          "{% assign r = entry.checked_items[0] %}{{ r.text }}",
+          "{% assign rs = entry.checked_items %}{% for r in rs %}{{ r.text }}{% endfor %}",
+          ~s({% assign rs = entry.checked_items | where: "text" %}{% for r in rs %}{{ r.text }}{% endfor %}),
+          ~s({% assign rs = entry.checked_items | sort: "text" | reverse %}{{ rs[0].text }}),
+          ~s({{ entry.checked_items | map: "text" | join: "" }}),
+          "{% for r in entry.checked_items limit: 1 %}{{ r.text }}{% endfor %}"
+        ] do
+      test "prints typed markup as text through #{template}" do
+        entry = %PlainOwner{title: "T", checked_items: [%CheckedItem{text: ~s(<a href="/help">Help</a>)}]}
+        assert render(unquote(template), entry) == "&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;"
+      end
+    end
+
+    test "prints as markup through an owner whose form draws the field as rich text" do
+      entry = %Entry{title: "T", checked_items: [%CheckedItem{text: @safe}]}
+      assert render("{% for r in entry.checked_items %}{{ r.text }}{% endfor %}", entry) == @safe
+    end
+
+    test "prints as markup by its own form when printed as an entry of its own" do
+      assert render("{{ entry.text }}", %CheckedItem{text: @safe}) == @safe
+    end
+
+    # A belongs_to is no subform: its record prints by its own forms
+    test "the record it belongs to prints by that record's own forms" do
+      item = %CheckedItem{text: "x", entry: %Entry{title: "T", intro: @safe}}
+      assert render("{{ entry.entry.intro }}", item) == @safe
     end
   end
 end

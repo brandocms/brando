@@ -659,10 +659,14 @@ it as a `:rich_text` input, or when only named forms draw it, each as a
 `:rich_text` input; when forms disagree, the default form decides. A field in
 a subform's rows follows the same rule, read from the subforms on that
 relation: when forms disagree, the default form's subform decides, and a row
-field it does not draw prints as text. A row of a `has_many` or `has_one`
-relation is also a record of its own schema: a field that schema's own forms
-draw as rich text, by the rule for top-level fields, prints as rich text
-whatever the subform draws.
+field it does not draw prints as text. A row a template reaches through its
+owner prints by the owner's subforms alone, also through an index, a filter
+or `assign`: a `has_many` or `has_one` row's field that the row schema's own
+forms draw as rich text prints as text when the owner's subform draws it as
+plain text. Draw it as `:rich_text` in the owner's subform to print its
+markup. The same record printed as an entry of its own (in its own listing or
+detail template), or reached through a relation no form of the owner has a
+subform on, prints by its own schema's forms.
 
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,
