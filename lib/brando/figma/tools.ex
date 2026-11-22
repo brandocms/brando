@@ -70,6 +70,8 @@ defmodule Brando.Figma.Tools do
           "An image shown turned 90, 180 or 270° is imported as a turned copy; another angle, a mirrored crop and the turn of an animated GIF or WebP are not applied. A cropped image keeps its whole file, with its focal point set so the site, its cropped sizes and its share cards show the crop Figma shows (exactly, in a box of the layer's proportions, when the crop spans the image's width or height; a crop that zooms in on both shows with more of the image around it). " <>
           "Each entry says what was applied and what was not (applied, not_applied), in words to pass on to the person; when several layers show the image, what one of them missed names that layer. " <>
           "An image the library already has is reused, so a second import adds nothing; a reused image keeps its own focal point. " <>
+          "An image over the site's upload limit fails with the limit and its size; with fit: true it is imported as a copy scaled down on the server to fit the limit, never smaller than twice its largest use in the frame, as a JPEG (or WebP when transparent) if its own format does not fit, and its entry has fitted ({original, stored} pixel sizes, format when changed). " <>
+          "fit leaves the images within the limit as they are, so it can always be passed; an animated image is never scaled down. " <>
           "The images are added to the library at once, before any proposal is applied; their sizes are made in the background.",
       parameters: %{
         type: "object",
@@ -80,7 +82,12 @@ defmodule Brando.Figma.Tools do
             items: %{type: "string"},
             description: "Only the images of these layers (node_id from brando_figma_read_frame)."
           },
-          offset: %{type: "integer", description: "next_offset of the previous call."}
+          offset: %{type: "integer", description: "next_offset of the previous call."},
+          fit: %{
+            type: "boolean",
+            description:
+              "true to import a scaled-down copy of each image over the site's upload limit, instead of failing it."
+          }
         },
         required: ["url"]
       },
@@ -157,10 +164,16 @@ defmodule Brando.Figma.Tools do
   end
 
   defp run("import_images", link, token, args, actor, tenant) do
-    with {:ok, result} <- Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"]) do
+    with {:ok, fit} <- fit(args["fit"]),
+         {:ok, result} <-
+           Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"], fit: fit) do
       {:ok, with_expiry_note(result, tenant)}
     end
   end
+
+  defp fit(fit) when is_boolean(fit), do: {:ok, fit}
+  defp fit(nil), do: {:ok, false}
+  defp fit(_fit), do: {:error, "fit is true or false."}
 
   # In the token's last days, a note for the tool to pass on. Before the
   # guidance, which is cut to the room left.

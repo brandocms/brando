@@ -3929,6 +3929,16 @@ msgstr ""
 msgid "Cancelled"
 msgstr ""
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled a proposal"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled version %{version} of a proposal"
+msgstr ""
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot be read"
@@ -4257,6 +4267,13 @@ msgstr ""
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
+msgid "Checked %{count} of its proposals"
+msgid_plural "Checked %{count} of its proposals"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
 msgid "Checked a module's slots"
 msgstr ""
 
@@ -4268,6 +4285,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Checked its proposals"
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex

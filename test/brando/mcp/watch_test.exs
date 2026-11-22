@@ -99,6 +99,31 @@ defmodule Brando.MCP.WatchTest do
       refute Map.has_key?(event.details["input"] || %{}, "operations")
     end
 
+    test "listing proposals is told with how many, and a cancel with the proposal and its version",
+         %{tenant: tenant, token: token, grant: grant} = c do
+      c = Map.merge(c, page_context(c))
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", proposal_args(c))
+
+      Watch.subscribe(grant.id)
+
+      call_tool(tenant, token, "list_proposals")
+      assert_receive {Watch, %{state: :ok, tool: "list_proposals", details: listed}}
+      assert listed["output"] == %{"proposals" => 1}
+
+      assert BrandoAdmin.Components.ToolSteps.label("list_proposals", %{}, listed["output"]) ==
+               [{:text, "Checked 1 of its proposals"}]
+
+      call_tool(tenant, token, "cancel_proposal", %{"proposal_id" => id})
+      assert_receive {Watch, %{state: :ok, tool: "cancel_proposal", details: cancelled}}
+      assert cancelled["proposal"] == id
+      assert cancelled["output"] == %{"version" => 1}
+
+      assert BrandoAdmin.Components.ToolSteps.label("cancel_proposal", %{}, cancelled["output"]) ==
+               [{:text, "Cancelled version "}, {:strong, "1"}, {:text, " of a proposal"}]
+    end
+
     test "a proposal replacing an image's file is told with how many it replaces",
          %{tenant: tenant, token: token, grant: grant} do
       old = Brando.ImageFileFixtures.file_image("old", {800, 600})

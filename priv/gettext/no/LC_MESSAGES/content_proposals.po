@@ -533,6 +533,11 @@ msgstr "Plassering er «append», {before: uid} eller {after: uid}."
 msgid "Placement is \"append\", {before: uid}, {after: uid} or {into: uid}."
 msgstr "Plassering er \"append\", {before: uid}, {after: uid} eller {into: uid}."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Proposal %{id} is %{status}, so it cannot be cancelled. Only a pending or approved proposal can be cancelled."
+msgstr "Forslag %{id} er %{status}, så det kan ikke avbrytes. Bare et forslag som venter eller er godkjent kan avbrytes."
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Published"
@@ -730,6 +735,11 @@ msgstr "Det finnes ikke noe bilde %{id} du kan lese i mediebiblioteket."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "There is no proposal %{id} from this tool."
+msgstr "Det finnes ikke noe forslag %{id} fra dette verktøyet."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "There is no saved text %{ref} in block %{uid} of this entry and field to copy."
 msgstr "Det finnes ingen lagret tekst %{ref} i blokk %{uid} i denne oppføringen og dette feltet å kopiere."
 
@@ -870,6 +880,11 @@ msgstr "Dette forslaget har utløpt. Lag det på nytt."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This proposal is already applied, so it is no longer under review."
+msgstr "Dette forslaget er allerede utført, så det er ikke lenger til gjennomgang."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "This proposal is no longer available."
 msgstr "Dette forslaget finnes ikke lenger."
 
@@ -883,6 +898,16 @@ msgstr "Dette forslaget er ikke lenger til gjennomgang."
 #, elixir-autogen, elixir-format
 msgid "This proposal replaced an image's file, and a replaced file cannot be undone."
 msgstr "Dette forslaget erstattet filen til et bilde, og en erstattet fil kan ikke angres."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was applied and then undone, so it is no longer under review."
+msgstr "Dette forslaget ble utført og så angret, så det er ikke lenger til gjennomgang."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was cancelled, so it is no longer under review."
+msgstr "Dette forslaget ble forkastet, så det er ikke lenger til gjennomgang."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format

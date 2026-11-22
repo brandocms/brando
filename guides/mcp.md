@@ -200,6 +200,43 @@ With them, three tools that add images to the media library (below):
 `brando_figma_status`, which checks the site's Figma token
 ([Add the token](#add-the-token)).
 
+### Follow up on proposals
+
+Two content tools are offered only to connected tools, not to the
+Assistant, so a tool can check on its proposals instead of asking the
+person:
+
+- `brando_content_list_proposals` lists the tool's own proposals, newest
+  first, in every status: pending, approved, applied, undone, superseded
+  and cancelled. Each has its `proposal_id`, `version`, `summary` (cut to
+  300 characters, with `summary_cut: true`, when longer), `status`,
+  `changed_at` (when its status or its problems last changed), `expires_at`,
+  `expired: true` when a pending or approved one can no longer be
+  approved, and the entries it changes (`content_type` and `id`) and
+  creates (`content_type` and the proposal's `ref`, with the saved entry's
+  `id` once it is applied). A proposal that replaces an image's file names
+  that image in `replaced_images` (`kind`, `id`, and the image whose file
+  it takes, `with`), not in the entries, and does not list the entries
+  that use the image. A superseded one names the version that
+  replaced it as `superseded_by`. `changed_by` is `"person"` for an
+  approved, applied or undone proposal, since only the person can do those;
+  who stored a version or cancelled a proposal is not kept. It filters by
+  `status` and `proposal_id`, and gives 20 proposals, or up to 50 with
+  `limit`. It changes nothing.
+- `brando_content_cancel_proposal` cancels one of the tool's own proposals
+  while it is pending or approved, expired or not, as **Cancel** in the
+  admin does: content is untouched. An applied, undone, superseded or
+  cancelled proposal is refused with an error that names its status.
+
+A proposal stores the person and the client's name, not the connection, so
+a tool's own proposals are those the same person made over MCP from a
+client with the same name, in the same site environment. They stay the
+tool's after it is reconnected, and two connections of the same client for
+the same person share them. A proposal without a client name belongs to a
+tool that sends none. Another person's proposal, another client's, an
+Assistant conversation's and one from another site environment are not
+listed, and cancelling one answers that there is no such proposal.
+
 ### The site's guidance
 
 A connected tool gets the same site guidance as the Assistant, through the
@@ -239,7 +276,7 @@ on the site while it works: each call as it starts and as it ends, with what
 it was about ("Searched for “harbour” in Pages", "Read the Figma frame
 “Home”"), whether it worked and the error if not; the images
 an upload, an import from an address or `brando_figma_import_images` adds or
-reuses, with their thumbnails and library folder; and each proposal `prepare_proposal` stores, with its
+reuses, with their thumbnails and library folder; and each proposal `prepare_proposal` stores or `cancel_proposal` cancels, with its
 summary, counts, problems and links to its review and page preview. It opens
 on the connection's calls of the last hour (at most 50) from Activity, then
 follows the new ones; it changes nothing, and cannot steer the tool.
@@ -509,6 +546,23 @@ proposal with the modules that match.
   tool calls again for the rest. The images are added when the tool imports
   them, before anyone applies the proposal, and stay in the library if the
   proposal is discarded. Importing needs permission to upload images.
+- An image over the default image config's size limit is not imported: its
+  entry names the image, the limit, its size when Figma's answer gives it,
+  and what to do. The other images of the call are imported. Called with
+  `fit: true`, the tool imports a copy of such an image scaled down on the
+  server, the size limit unchanged: as large as fits under the limit, never
+  enlarged, and never smaller than twice the image's largest use in the frame
+  (for a crop, what the whole image needs for the part shown to be twice the
+  layer), counting the layers outside `node_ids` too. A picture that does
+  not fit in its own format at that size is stored as a JPEG, or as a WebP
+  when it has transparent pixels, if the image config takes that type; one
+  still over the limit, an animated GIF or WebP and one over the pixel limit
+  are refused with the reason. A copy turned as Figma shows it that comes
+  out over the limit is scaled down the same way. The entry says the image was fitted, with its original and
+  stored pixel sizes. `fit` leaves the images within the limit as they are.
+  It downloads an image up to 50 MB (or the size limit, when that is larger)
+  to scale it down; a site sets another cap with
+  `config :brando, Brando.Figma, fit_download_limit: 80_000_000`.
 - Figma's API cannot download videos. Upload them to the media library
   yourself, named so the tool can tell where each goes (after the Figma
   layer, for instance), and tell the tool the folder: it finds them with
@@ -757,6 +811,9 @@ What the endpoint does about each requirement in
    a proposal is applied, as an upload by the person would: only for
    someone who may create images, checked like an upload (type, contents,
    size, pixels), and never replacing or deleting an image.
+   `cancel_proposal` changes only a proposal's status: it cancels the
+   tool's own proposal while it is under review, and leaves content as it
+   is.
 5. **Scoped per site and environment.** The endpoint URL names the site
    environment; it is the token's audience, and every token, code and
    connection records its site and environment. A token is looked up only
@@ -876,7 +933,8 @@ And the attacks the review asked about:
 - **Figma downloads (SSRF).** The Figma API is called at its fixed address.
   The image URLs it answers with are fetched through the webhooks' address
   guard (public `https` addresses only, the checked address connected to, no
-  redirects), with a time limit and the image config's size limit, written to
+  redirects), with a time limit and the image config's size limit (with
+  `fit`, the import's own `fit_download_limit`), written to
   a temporary file and checked as an upload before anything is stored.
 - **The Figma token.** Encrypted at rest and bound to its site environment, so
   a copy of the column, or a ciphertext moved to another row, does not give

@@ -204,6 +204,17 @@ defmodule BrandoAdmin.Components.ToolSteps do
 
   defp step_text("prepare_proposal", _, _), do: gettext("Prepared the proposal")
 
+  # A connected tool's own proposals; the live page has the count, and the cancelled version
+  defp step_text("list_proposals", _, %{"proposals" => count}) when is_integer(count),
+    do: ngettext("Checked %{count} of its proposals", "Checked %{count} of its proposals", count)
+
+  defp step_text("list_proposals", _, _), do: gettext("Checked its proposals")
+
+  defp step_text("cancel_proposal", _, %{"version" => version}) when is_integer(version),
+    do: gettext("Cancelled version %{version} of a proposal", version: strong(version))
+
+  defp step_text("cancel_proposal", _, _), do: gettext("Cancelled a proposal")
+
   # The Figma tools of a connected tool (`Brando.Figma.Tools`)
   defp step_text("read_frame", args, %{"frame" => frame}) when is_binary(frame) do
     if is_integer(args["offset"]) and args["offset"] > 0,

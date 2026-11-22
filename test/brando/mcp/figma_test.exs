@@ -17,6 +17,7 @@ defmodule Brando.MCP.FigmaTest do
   alias BrandoAdmin.Images.FolderBrowser
   alias Elixir.Image, as: Picture
   alias Req.Test, as: ReqTest
+  alias Vix.Vips.Operation
 
   @png File.read!(Path.expand("../../fixtures/sample.png", __DIR__))
   @link "https://www.figma.com/design/35BOzFjfvJHJM6Wm50E3wA/Shared?node-id=2950-4703"
@@ -162,6 +163,107 @@ defmodule Brando.MCP.FigmaTest do
     {:ok, joined} = Vix.Vips.Operation.arrayjoin(frames, across: 1)
     {:ok, joined} = Vix.Vips.Image.mutate(joined, &Vix.Vips.MutableImage.set(&1, "page-height", :gint, 10))
     Picture.write!(joined, :memory, suffix: ".gif")
+  end
+
+  # Each ref's bytes, at /img/<ref>
+  defp serve(bodies), do: WebhookReceiver.start(fn %{path: "/img/" <> ref} -> {200, Map.fetch!(bodies, ref)} end)
+
+  defp boxed(id, fills, width, height),
+    do: Map.put(layer(id, fills), "absoluteBoundingBox", %{"x" => 0, "y" => 0, "width" => width, "height" => height})
+
+  # Noise in sRGB, which hardly compresses: `bands` 4 has an alpha channel
+  defp noise(width, height, bands \\ 3, sigma \\ 40.0) do
+    channels =
+      for _band <- 1..bands do
+        {:ok, channel} = Operation.gaussnoise(width, height, mean: 128.0, sigma: sigma)
+        {:ok, channel} = Operation.cast(channel, :VIPS_FORMAT_UCHAR)
+        channel
+      end
+
+    {:ok, joined} = Operation.bandjoin(channels)
+    {:ok, picture} = Operation.copy(joined, interpretation: :VIPS_INTERPRETATION_sRGB)
+    picture
+  end
+
+  defp png(picture), do: Picture.write!(picture, :memory, suffix: ".png")
+  defp jpeg(picture), do: Picture.write!(picture, :memory, suffix: ".jpg", quality: 95)
+
+  defp kb(bytes), do: "#{Float.round(bytes / 1_000, 1)} kB"
+
+  # The default image config's size limit, and the types it takes
+  defp put_size_limit(limit, types \\ nil) do
+    config = Application.get_env(:brando, Brando.Images, [])
+
+    default =
+      config[:default_config]
+      |> Map.put(:size_limit, limit)
+      |> then(&if(types, do: Map.put(&1, :allowed_mimetypes, types), else: &1))
+
+    put_test_env(Brando.Images, Keyword.put(config, :default_config, default))
+  end
+
+  defp stored_path(image), do: Path.join(Brando.Tenant.Storage.current_media_root(), image.path)
+
+  defp figma_tmp_dirs, do: Path.wildcard(Path.join(System.tmp_dir!(), "brando-figma-*"))
+
+  defp gif(picture), do: Picture.write!(picture, :memory, suffix: ".gif")
+
+  # A JPEG stored on its side, with an EXIF orientation that shows it upright
+  defp exif_rotated_jpeg(picture) do
+    {:ok, picture} = Vix.Vips.Image.mutate(picture, &Vix.Vips.MutableImage.set(&1, "orientation", :gint, 6))
+    jpeg(picture)
+  end
+
+  defp put_downloader(function),
+    do:
+      put_test_env(
+        Brando.Figma,
+        Keyword.put(Application.get_env(:brando, Brando.Figma, []), :downloader, {__MODULE__, function})
+      )
+
+  defp download(url, path, limit), do: Brando.Images.Intake.download(url, path, limit, too_large: :size)
+
+  @doc "A download whose scaled-down copy cannot be written: a directory is where it goes."
+  def download_with_unwritable_copy(url, path, limit) do
+    result = download(url, path, limit)
+    for format <- ~w(png jpg gif webp), do: File.mkdir_p!("#{path}-fitted.#{format}")
+    result
+  end
+
+  @doc """
+  A download. The second and later fail unless the first image's original is
+  deleted once that image is stored.
+  """
+  def download_after_first_stored(url, path, limit) do
+    dir = Path.dirname(path)
+    first = Path.join(dir, "0")
+    result = download(url, path, limit)
+
+    cond do
+      path == first ->
+        File.write!(first <> ".done", "")
+        result
+
+      eventually?(fn -> File.exists?(first <> ".done") and not File.exists?(first) end) ->
+        result
+
+      true ->
+        {:error, "The first image's original was kept."}
+    end
+  end
+
+  defp eventually?(check, tries \\ 200) do
+    cond do
+      check.() ->
+        true
+
+      tries == 0 ->
+        false
+
+      true ->
+        Process.sleep(10)
+        eventually?(check, tries - 1)
+    end
   end
 
   defp import!(tenant, token, args \\ %{}) do
@@ -995,6 +1097,459 @@ defmodule Brando.MCP.FigmaTest do
       assert %{"token_set" => true, "state" => "unreadable", "message" => message} = status(tenant, token)
       assert message =~ "can no longer be decrypted"
       refute_received {:figma, _, _}
+    end
+  end
+
+  describe "an image over the site's upload limit" do
+    setup %{tenant: tenant, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+      :ok
+    end
+
+    test "fails with its name, the limit and its size, and the other images are stored",
+         %{tenant: tenant, token: token} do
+      big = png(noise(200, 100))
+      small = png(Picture.new!(30, 10, color: :red))
+      put_size_limit(20_000)
+
+      stub_layers(serve(%{"big" => big, "small" => small}), [layer("30:1", [fill("big")]), layer("30:2", [fill("small")])])
+
+      assert %{"images" => [refused, stored]} = import!(tenant, token)
+
+      assert refused["error"] ==
+               ~s[The image "Photo 30:1" (30:1, image ref big) is #{kb(byte_size(big))}, over the site's upload limit of 20.0 kB. ] <>
+                 "Call again with fit: true to import a copy scaled down to fit the limit, or ask an administrator to raise it."
+
+      refute Map.has_key?(refused, "asset")
+      assert %{"asset" => %{"id" => id}} = stored
+      assert [%Image{id: ^id}] = images()
+    end
+
+    test "with fit, is a copy within the limit, at least twice its largest use; the others are stored as they are",
+         %{tenant: tenant, token: token} do
+      big = png(noise(400, 200))
+      small = png(Picture.new!(30, 10, color: :red))
+      put_size_limit(100_000)
+
+      # Twice the box is 100 by 50: a quarter of the image across
+      stub_layers(serve(%{"big" => big, "small" => small}), [
+        boxed("31:1", [fill("big")], 50, 25),
+        layer("31:2", [fill("small")])
+      ])
+
+      tmp = figma_tmp_dirs()
+      assert %{"images" => [fitted, as_is]} = import!(tenant, token, %{"fit" => true})
+      assert figma_tmp_dirs() -- tmp == []
+
+      assert %{
+               "fitted" => %{"original" => %{"width" => 400, "height" => 200}, "stored" => stored_size} = info,
+               "applied" => [applied],
+               "reused" => false,
+               "asset" => %{"id" => id}
+             } = fitted
+
+      refute Map.has_key?(info, "format")
+      assert %{"width" => width, "height" => height} = stored_size
+      assert width >= 100 and width < 400 and abs(width - height * 2) <= 1
+      assert applied == "scaled down from 400×200 to #{width}×#{height} to fit the site's upload limit"
+
+      by_id = Map.new(images(), &{&1.id, &1})
+      stored = by_id[id]
+      assert %Image{width: ^width, height: ^height} = stored
+      assert stored.path =~ ~r/\.png$/
+      size = File.stat!(stored_path(stored)).size
+      # As large as fits: near the limit, not far under it
+      assert size <= 100_000 and size > 60_000
+
+      refute Map.has_key?(as_is, "fitted")
+      assert File.read!(stored_path(by_id[as_is["asset"]["id"]])) == small
+
+      # Again: the same copy, reused
+      assert %{"images" => [%{"asset" => %{"id" => ^id}, "reused" => true, "fitted" => _}, _]} =
+               import!(tenant, token, %{"fit" => true})
+
+      assert length(images()) == 2
+    end
+
+    test "with fit, an image within the limit is stored byte for byte", %{tenant: tenant, token: token} do
+      original = png(noise(200, 100))
+      put_size_limit(byte_size(original))
+      stub_layers(serve(%{"p" => original}), [boxed("32:1", [fill("p")], 10, 5)])
+
+      assert %{"images" => [entry]} = import!(tenant, token, %{"fit" => true})
+      refute Map.has_key?(entry, "fitted")
+      assert [stored] = images()
+      assert File.read!(stored_path(stored)) == original
+    end
+
+    test "with fit, is never enlarged: a PNG that does not fit at its full size is stored as a JPEG",
+         %{tenant: tenant, token: token} do
+      picture = noise(200, 100)
+      original = png(picture)
+      jpeg = Picture.write!(picture, :memory, suffix: ".jpg", quality: 95)
+      assert byte_size(jpeg) * 1.3 < byte_size(original)
+      put_size_limit(round(byte_size(jpeg) * 1.2))
+
+      # The box is twice the image: it needs the full size
+      stub_layers(serve(%{"p" => original}), [boxed("33:1", [fill("p")], 400, 200)])
+
+      assert %{"images" => [entry]} = import!(tenant, token, %{"fit" => true})
+
+      assert %{
+               "fitted" => %{
+                 "original" => %{"width" => 200, "height" => 100},
+                 "stored" => %{"width" => 200, "height" => 100},
+                 "format" => "JPEG"
+               },
+               "applied" => ["scaled down from 200×100 to 200×100, as JPEG to fit the site's upload limit"]
+             } = entry
+
+      assert [%Image{width: 200, height: 100} = stored] = images()
+      assert stored.path =~ ~r/\.jpg$/
+      assert <<0xFF, 0xD8, _::binary>> = File.read!(stored_path(stored))
+    end
+
+    test "with fit, a transparent PNG that does not fit as a PNG is stored as a WebP",
+         %{tenant: tenant, token: token} do
+      picture = noise(200, 100, 4)
+      original = png(picture)
+      webp = Picture.write!(picture, :memory, suffix: ".webp", quality: 95)
+      assert byte_size(webp) * 1.3 < byte_size(original)
+      put_size_limit(round(byte_size(webp) * 1.2), ["image/jpeg", "image/png", "image/webp"])
+      stub_layers(serve(%{"p" => original}), [boxed("34:1", [fill("p")], 400, 200)])
+
+      assert %{"images" => [%{"fitted" => %{"format" => "WebP"}}]} = import!(tenant, token, %{"fit" => true})
+      assert [%Image{width: 200, height: 100} = stored] = images()
+      assert stored.path =~ ~r/\.webp$/
+      assert stored |> stored_path() |> Picture.open!() |> Picture.has_alpha?()
+    end
+
+    test "with fit, an image still over the limit at twice its largest use is refused, by that size",
+         %{tenant: tenant, token: token} do
+      put_size_limit(1_000)
+
+      # Twice the box is half the image
+      stub_layers(serve(%{"p" => png(noise(400, 200))}), [boxed("35:1", [fill("p")], 100, 50)])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+
+      assert error ==
+               ~s[The image "Photo 35:1" (35:1, image ref p) is still over the site's upload limit of 1.0 kB scaled down to 200×100, ] <>
+                 "twice its largest use in the frame, as JPEG. Ask an administrator to raise the limit."
+
+      assert images() == []
+    end
+
+    test "with fit, a cropped use counts by what the whole image needs for the crop to be twice its box",
+         %{tenant: tenant, token: token} do
+      put_size_limit(1_000)
+
+      # The top left quarter of the image in a box of 50 by 25: the whole
+      # image at half its size shows that quarter at 100 by 50
+      crop = fill("p", %{"scaleMode" => "STRETCH", "imageTransform" => [[0.5, 0, 0], [0, 0.5, 0]]})
+      stub_layers(serve(%{"p" => jpeg(noise(400, 200))}), [boxed("36:1", [crop], 50, 25)])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+      assert error =~ "is still over the site's upload limit of 1.0 kB scaled down to 200×100, twice its largest use"
+      refute error =~ "as JPEG"
+
+      # A box larger than the image needs its full size
+      stub_layers(serve(%{"p" => jpeg(noise(400, 200))}), [boxed("36:2", [crop], 400, 200)])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+      assert error =~ "scaled down to 400×200, its full size."
+    end
+
+    test "with fit, a turned image is fitted and turned", %{tenant: tenant, token: token} do
+      put_size_limit(100_000)
+
+      # Turned, the image is 200 by 400; twice the box is half of that
+      stub_layers(serve(%{"p" => png(noise(400, 200))}), [boxed("37:1", [fill("p", %{"rotation" => 90})], 50, 100)])
+
+      assert %{"images" => [entry]} = import!(tenant, token, %{"fit" => true})
+
+      assert %{
+               "fitted" => %{
+                 "original" => %{"width" => 200, "height" => 400},
+                 "stored" => %{"width" => width, "height" => height}
+               },
+               "applied" => ["scaled down from 200×400 to" <> _, "rotated 90°"]
+             } = entry
+
+      assert width >= 100 and width < 200 and abs(height - width * 2) <= 1
+      assert [%Image{width: ^width, height: ^height} = stored] = images()
+      assert File.stat!(stored_path(stored)).size <= 100_000
+    end
+
+    test "with fit, an animated image is refused, and the message says why", %{tenant: tenant, token: token} do
+      put_size_limit(100)
+      stub_layers(serve(%{"anim" => animated_gif()}), [layer("38:1", [fill("anim")])])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+
+      assert error =~
+               ~s[The image "Photo 38:1" (38:1, image ref anim) is over the site's upload limit of 100 bytes, and it is animated]
+
+      assert images() == []
+    end
+
+    test "over the import's own download limit, it is refused with that limit, with fit or without",
+         %{tenant: tenant, token: token} do
+      big = png(noise(200, 100))
+      put_size_limit(20_000)
+      put_test_env(Brando.Figma, Keyword.put(Application.get_env(:brando, Brando.Figma, []), :fit_download_limit, 30_000))
+      stub_layers(serve(%{"big" => big}), [layer("39:1", [fill("big")])])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+
+      assert error ==
+               ~s[The image "Photo 39:1" (39:1, image ref big) is #{kb(byte_size(big))}, over the 30.0 kB the import downloads to scale an image down. ] <>
+                 "Ask an administrator to raise the site's upload limit or the import's."
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token)
+      assert error =~ "over the site's upload limit of 20.0 kB. It is also over the 30.0 kB the import downloads"
+      refute error =~ "fit: true"
+    end
+
+    test "with fit, an image over the pixel limit is refused before it is decoded", %{tenant: tenant, token: token} do
+      put_size_limit(1_000)
+      put_test_env(Brando.Images, Keyword.put(Application.get_env(:brando, Brando.Images, []), :max_pixels, 10_000))
+      stub_layers(serve(%{"p" => png(noise(400, 200))}), [layer("40:1", [fill("p")])])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+      assert error == Brando.Images.PixelLimit.error_message()
+    end
+
+    test "with fit, the floor counts every use of the image in the frame, not only the layers imported",
+         %{tenant: tenant, token: token} do
+      put_size_limit(1_000)
+
+      # The thumbnail needs a quarter of the image; the hero, not imported, all of it
+      stub_layers(serve(%{"p" => png(noise(400, 200))}), [
+        boxed("41:1", [fill("p")], 50, 25),
+        boxed("41:2", [fill("p")], 200, 100)
+      ])
+
+      assert %{"images" => [%{"layers" => [%{"node_id" => "41:1"}], "error" => error}]} =
+               import!(tenant, token, %{"fit" => true, "node_ids" => ["41:1"]})
+
+      assert error =~ "is still over the site's upload limit of 1.0 kB scaled down to 400×200, its full size"
+    end
+
+    test "with fit, only the types the site takes are tried: a transparent PNG is not stored as a WebP it does not take",
+         %{tenant: tenant, token: token} do
+      picture = noise(200, 100, 4)
+      original = png(picture)
+      webp = Picture.write!(picture, :memory, suffix: ".webp", quality: 95)
+      assert byte_size(webp) * 1.3 < byte_size(original)
+      limit = round(byte_size(webp) * 1.2)
+      put_size_limit(limit)
+      stub_layers(serve(%{"p" => original}), [boxed("42:1", [fill("p")], 400, 200)])
+
+      {result, log} = ExUnit.CaptureLog.with_log(fn -> import!(tenant, token, %{"fit" => true}) end)
+      assert %{"images" => [%{"error" => error}]} = result
+
+      assert error ==
+               ~s[The image "Photo 42:1" (42:1, image ref p) is still over the site's upload limit of #{kb(limit)} scaled down to 200×100, ] <>
+                 "its full size. Ask an administrator to raise the limit."
+
+      refute log =~ "Rejected type"
+      assert images() == []
+    end
+
+    test "with fit, a transparent image no type the site takes can hold is refused with the types it takes",
+         %{tenant: tenant, token: token} do
+      put_size_limit(1_000)
+      transparent = Picture.write!(noise(200, 100, 4), :memory, suffix: ".webp")
+      stub_layers(serve(%{"p" => transparent}), [boxed("43:1", [fill("p")], 50, 25)])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+
+      assert error ==
+               ~s[The image "Photo 43:1" (43:1, image ref p) is over the site's upload limit of 1.0 kB, and a copy scaled down would be a WebP, ] <>
+                 "which the site does not take: it takes GIF, JPEG and PNG. Ask an administrator to raise the limit."
+    end
+
+    test "with fit, a single-frame GIF without transparency is stored as a JPEG", %{tenant: tenant, token: token} do
+      # Little noise: Vix reads this GIF with an alpha band, opaque here
+      original = gif(noise(200, 100, 3, 1.0))
+      assert original |> Picture.from_binary!() |> Picture.has_alpha?()
+      jpeg = original |> Picture.from_binary!() |> Picture.flatten!() |> jpeg()
+      assert byte_size(jpeg) * 1.3 < byte_size(original)
+      put_size_limit(round(byte_size(jpeg) * 1.2))
+      stub_layers(serve(%{"p" => original}), [boxed("44:1", [fill("p")], 400, 200)])
+
+      assert %{"images" => [%{"fitted" => %{"format" => "JPEG", "stored" => %{"width" => 200, "height" => 100}}}]} =
+               import!(tenant, token, %{"fit" => true})
+
+      assert [%Image{width: 200, height: 100} = stored] = images()
+      assert stored.path =~ ~r/\.jpg$/
+    end
+
+    test "with fit, the first try in the image's own format is at the scale its bytes suggest, not its full size",
+         %{tenant: tenant, token: token} do
+      # Noise packs the same at any size, so the first try, at
+      # sqrt(limit / bytes) less a margin, fits and is kept
+      original = png(noise(400, 200))
+      assert byte_size(original) > 100_000
+      put_size_limit(100_000)
+      stub_layers(serve(%{"p" => original}), [boxed("45:1", [fill("p")], 50, 25)])
+
+      assert %{"images" => [%{"fitted" => %{"stored" => %{"width" => width}}}]} = import!(tenant, token, %{"fit" => true})
+      expected = ceil(400 * :math.sqrt(100_000 / byte_size(original)) * 0.95)
+      assert abs(width - expected) <= 1
+    end
+
+    test "with fit, a download that packs worse than its copy is not stored smaller than fits",
+         %{tenant: tenant, token: token} do
+      # Saved without compression, far over the limit; as a PNG of its full
+      # size it is a few hundred bytes
+      {:ok, original} = Operation.pngsave_buffer(Picture.new!(400, 200, color: :red), compression: 0)
+      assert byte_size(original) > 200_000
+      put_size_limit(100_000)
+      stub_layers(serve(%{"p" => original}), [boxed("45:2", [fill("p")], 50, 25)])
+
+      assert %{"images" => [%{"fitted" => %{"stored" => %{"width" => 400, "height" => 200}}}]} =
+               import!(tenant, token, %{"fit" => true})
+    end
+
+    test "with fit, a 16-bit image with half-transparent pixels keeps its transparency",
+         %{tenant: tenant, token: token} do
+      # Alpha between 1000 and 26500 of 65535 in every pixel: above 255,
+      # and not opaque. The site does not take PNG, so the copy is a WebP,
+      # not a JPEG
+      {:ok, wide} = Operation.linear(noise(300, 150, 4), [100.0], [1000.0])
+      {:ok, wide} = Operation.cast(wide, :VIPS_FORMAT_USHORT)
+      {:ok, wide} = Operation.copy(wide, interpretation: :VIPS_INTERPRETATION_RGB16)
+      original = png(wide)
+      put_size_limit(50_000, ["image/jpeg", "image/webp"])
+      assert byte_size(original) > 50_000
+      stub_layers(serve(%{"p" => original}), [boxed("45:3", [fill("p")], 20, 10)])
+
+      assert %{"images" => [%{"fitted" => %{"format" => "WebP"}}]} = import!(tenant, token, %{"fit" => true})
+    end
+
+    test "each original is deleted once its image is stored, not at the end of the call",
+         %{tenant: tenant, token: token} do
+      put_downloader(:download_after_first_stored)
+      red = png(Picture.new!(30, 10, color: :red))
+      blue = png(Picture.new!(30, 10, color: :blue))
+      stub_layers(serve(%{"a" => red, "b" => blue}), [layer("46:1", [fill("a")]), layer("46:2", [fill("b")])])
+
+      assert %{"images" => [%{"asset" => _}, %{"asset" => _} = second]} = import!(tenant, token)
+      refute Map.has_key?(second, "error")
+    end
+
+    test "with fit, a copy that cannot be encoded is refused as such, not as over the limit",
+         %{tenant: tenant, token: token} do
+      # Transparent, so its copy would be a WebP, and wider than a WebP can be;
+      # the site does not take PNG
+      put_size_limit(1_000, ["image/jpeg", "image/webp"])
+      stub_layers(serve(%{"p" => png(noise(17_000, 2, 4))}), [layer("47:1", [fill("p")])])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+
+      assert error ==
+               ~s[The image "Photo 47:1" (47:1, image ref p) could not be scaled down: the copy could not be encoded.]
+    end
+
+    test "with fit, a copy that cannot be written fails that image, and the others are stored",
+         %{tenant: tenant, token: token} do
+      put_downloader(:download_with_unwritable_copy)
+      put_size_limit(100_000)
+      small = png(Picture.new!(30, 10, color: :red))
+
+      stub_layers(serve(%{"big" => png(noise(400, 200)), "small" => small}), [
+        boxed("48:1", [fill("big")], 50, 25),
+        layer("48:2", [fill("small")])
+      ])
+
+      assert %{"images" => [%{"error" => error}, %{"asset" => %{"id" => id}}]} = import!(tenant, token, %{"fit" => true})
+
+      assert error ==
+               ~s[The image "Photo 48:1" (48:1, image ref big) was scaled down, but the copy could not be written to a temporary file.]
+
+      assert [%Image{id: ^id}] = images()
+    end
+
+    test "with fit, a turned copy that comes out over the limit is fitted; without fit it is refused",
+         %{tenant: tenant, token: token} do
+      # Within the limit as saved, at a low quality; turned, it is written at a high one
+      original = Picture.write!(noise(200, 100), :memory, suffix: ".jpg", quality: 50)
+      limit = byte_size(original) + 100
+      put_size_limit(limit)
+      stub_layers(serve(%{"p" => original}), [boxed("49:1", [fill("p", %{"rotation" => 90})], 25, 50)])
+
+      assert %{"images" => [%{"error" => _}]} = import!(tenant, token)
+      assert images() == []
+
+      assert %{"images" => [entry]} = import!(tenant, token, %{"fit" => true})
+
+      assert %{
+               "fitted" => %{
+                 "original" => %{"width" => 100, "height" => 200},
+                 "stored" => %{"width" => width, "height" => height}
+               },
+               "applied" => ["scaled down from 100×200 to" <> _, "rotated 90°"]
+             } = entry
+
+      assert width >= 50 and width < 100 and abs(height - width * 2) <= 1
+      assert [%Image{width: ^width, height: ^height} = stored] = images()
+      assert File.stat!(stored_path(stored)).size <= limit
+    end
+
+    test "with fit, an image turned by its EXIF orientation is fitted upright", %{tenant: tenant, token: token} do
+      # 400 by 200 as stored, 200 by 400 as shown
+      original = exif_rotated_jpeg(noise(400, 200))
+      put_size_limit(div(byte_size(original), 2))
+      stub_layers(serve(%{"p" => original}), [boxed("50:1", [fill("p")], 50, 100)])
+
+      assert %{
+               "images" => [
+                 %{
+                   "fitted" => %{
+                     "original" => %{"width" => 200, "height" => 400},
+                     "stored" => %{"width" => width, "height" => height}
+                   }
+                 }
+               ]
+             } = import!(tenant, token, %{"fit" => true})
+
+      assert width >= 100 and width < 200 and abs(height - width * 2) <= 1
+      assert [%Image{width: ^width, height: ^height} = stored] = images()
+      file = stored |> stored_path() |> Picture.open!()
+      assert {Picture.width(file), Picture.height(file)} == {width, height}
+      assert Vix.Vips.Image.header_value(file, "orientation") in [{:ok, 1}, {:error, "No such field"}]
+    end
+
+    test "with fit, a portrait image is fitted by both its sides", %{tenant: tenant, token: token} do
+      put_size_limit(100_000)
+      stub_layers(serve(%{"p" => png(noise(200, 400))}), [boxed("51:1", [fill("p")], 25, 50)])
+
+      assert %{"images" => [%{"fitted" => %{"stored" => %{"width" => width, "height" => height}}}]} =
+               import!(tenant, token, %{"fit" => true})
+
+      assert width >= 50 and width < 200 and abs(height - width * 2) <= 1
+      assert [%Image{width: ^width, height: ^height} = stored] = images()
+      assert File.stat!(stored_path(stored)).size <= 100_000
+    end
+
+    test "with fit, a layer that fits the image in its box counts by the side the image fills",
+         %{tenant: tenant, token: token} do
+      put_size_limit(1_000)
+
+      # A box of 50 by 50 shows the image at 50 by 25
+      stub_layers(serve(%{"p" => png(noise(400, 200))}), [boxed("52:1", [fill("p", %{"scaleMode" => "FIT"})], 50, 50)])
+
+      assert %{"images" => [%{"error" => error}]} = import!(tenant, token, %{"fit" => true})
+      assert error =~ "scaled down to 100×50, twice its largest use"
+    end
+
+    test "fit is true or false", %{tenant: tenant, token: token, receiver: receiver} do
+      stub_figma(receiver)
+
+      assert %{"isError" => true, "content" => [%{"text" => "fit is true or false."}]} =
+               call(tenant, token, "import_images", %{"url" => @link, "fit" => "yes"})
     end
   end
 
