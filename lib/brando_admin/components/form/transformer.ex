@@ -68,7 +68,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   def update(%{event: "restore_draft", field: field}, socket) do
-    socket |> assign(:field, field) |> initialize()
+    socket |> drop_uploads(socket.assigns.items) |> assign(:field, field) |> initialize()
   end
 
   def update(%{event: "fetch_transformer_data", tag: tag}, socket) do
@@ -280,8 +280,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp redraw_for_reads(socket, _previous), do: socket
 
-  # A file for a row another editor's save removed (`drop_uploads/2`) is
-  # left out.
+  # A file for a card that stopped waiting for it (`drop_uploads/2`) is left
+  # out.
   defp deliver(socket, ref, asset_field, asset, append_fun) do
     dropped? = MapSet.member?(socket.assigns.dropped_refs, ref)
 
@@ -1046,7 +1046,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
       {:noreply,
        socket
-       |> maybe_abort_pending_upload(item)
+       |> drop_uploads([item])
        |> update_item(index, &%{&1 | replacing: state})}
     else
       _ -> {:noreply, socket}
@@ -1146,7 +1146,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
          socket
          |> assign(:items, updated_items)
          |> stream_delete(:transformer_items, stream_entry(item))
-         |> maybe_abort_pending_upload(item)
+         |> drop_uploads([item])
          |> notify_relation_change()}
     end
   end
@@ -1798,11 +1798,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp maybe_abort_pending_upload(socket, _item), do: socket
 
-  # Rows another editor's save removed (`entry_saved_elsewhere`): a file
-  # dropped on one to replace its asset stops uploading, and if it lands
+  # Cards that stop waiting for their upload: removed by the editor or by
+  # another editor's save (`entry_saved_elsewhere`), given a second file, or
+  # rebuilt from a restored recovery copy. The upload stops, and if it lands
   # anyway, it adds no row (`deliver/5`).
   defp drop_uploads(socket, items) do
-    for %{replacing: %{ref: ref}} = item <- items, reduce: socket do
+    for item <- items, %{ref: ref} <- [item.pending, Map.get(item, :replacing)], reduce: socket do
       acc -> acc |> maybe_abort_pending_upload(item) |> update(:dropped_refs, &MapSet.put(&1, ref))
     end
   end
