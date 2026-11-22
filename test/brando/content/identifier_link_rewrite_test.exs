@@ -1,3 +1,36 @@
+defmodule Brando.TrashLinkTest.Description do
+  @moduledoc false
+  # A page's meta description drawn as rich text, so that a rewrite given
+  # this module looks for links in it (IdentifierLinkRewriteTest). The
+  # entry rendered is the page itself, `Brando.Pages.Page` on the same
+  # table, which is in the trash.
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "TrashLinkTest",
+    schema: "Description",
+    singular: "description",
+    plural: "descriptions",
+    gettext_module: Brando.Gettext
+
+  table "pages"
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :meta_description, :text
+  end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :meta_description, :rich_text
+        end
+      end
+    end
+  end
+end
+
 defmodule Brando.Content.IdentifierLinkRewriteTest do
   # Where a moved identifier's rich-text links are rewritten, and what one
   # failing schema leaves for the others. Synchronous: some tests make a
@@ -469,6 +502,38 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
         end)
 
       refute_receive {:heard, _entry, _message}
+    end
+  end
+
+  describe "an entry in the trash" do
+    # Rewritten and rendered like any other: a restore does not render it,
+    # so the render now is what brings it back with the new address
+    test "has its links rewritten and its HTML rendered, and is restored with the new address" do
+      {_target, identifier} = insert_case()
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      module = Brando.ProposalFixtures.module!(user, "Description", "<div>{{ entry.meta_description }}</div>", [])
+      page = Brando.ProposalFixtures.page!(user, "Trashed", module)
+      trashed_at = DateTime.truncate(DateTime.utc_now(), :second)
+
+      Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id),
+        set: [meta_description: linked_html(identifier), deleted_at: trashed_at]
+      )
+
+      jobs = rewrite(identifier, @new_url, [Brando.TrashLinkTest.Description, Page])
+
+      assert Brando.Repo.get!(Page, page.id).meta_description == linked_html(identifier, @new_url)
+      assert [job] = for(job <- jobs, job.args["schema"] == to_string(Page), do: job)
+      assert job.args["entry_id"] == page.id
+
+      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
+      html = Brando.Repo.get!(Page, page.id).rendered_blocks
+      assert html =~ @new_url
+      refute html =~ @old_url
+
+      assert {:ok, restored} = Brando.Authorization.Boundary.restore(user, Brando.Repo.get!(Page, page.id))
+      assert restored.deleted_at == nil
+      assert restored.meta_description == linked_html(identifier, @new_url)
+      assert restored.rendered_blocks == html
     end
   end
 end
