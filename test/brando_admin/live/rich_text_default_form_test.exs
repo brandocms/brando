@@ -154,7 +154,6 @@ defmodule BrandoAdmin.RichTextDefaultFormTest do
       assert_push_event(view, "b:alert", %{type: "error", html: html})
       assert html =~ "Lede"
       refute log =~ "Could not get field"
-      refute log =~ "Changeset errors"
     end
 
     # The refused revision put its changeset in the form; the corrected one

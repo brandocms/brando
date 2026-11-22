@@ -180,6 +180,43 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
       assert {[], []} = grouped([{:title, "can't be blank"}])
     end
 
+    # A named form that leaves out a member of the set: that member goes by
+    # the default form's label, unlogged
+    defmodule ContactSchema do
+      @moduledoc false
+
+      alias Brando.Blueprint.Forms
+
+      def __modules__, do: %{gettext: Brando.Gettext}
+      def __naming__, do: %{domain: "ErrorTest", schema: "Contact"}
+      def has_trait(_trait), do: false
+
+      def __form__, do: form([:email, {:phone, "Mobile"}])
+      def __form__(:email_only), do: form([:email])
+
+      defp form(inputs) do
+        inputs =
+          for input <- inputs do
+            {name, label} = with name when is_atom(name) <- input, do: {name, nil}
+            %Forms.Input{name: name, type: :text, opts: if(label, do: [label: label], else: [])}
+          end
+
+        %Forms.Form{tabs: [%Forms.Tab{name: "Content", fields: [%Forms.Fieldset{fields: inputs}]}]}
+      end
+    end
+
+    test "names a member the form in use leaves out by the default form" do
+      opts = [validation: :one_of, one_of: [:email, :phone]]
+      changeset = %Ecto.Changeset{data: %{}, errors: [email: {"m", opts}, phone: {"m", opts}]}
+
+      {{items, consumed}, log} =
+        with_log(fn -> Form.group_constraint_items(changeset, ContactSchema.__form__(:email_only), ContactSchema) end)
+
+      refute log =~ "Could not get field"
+      assert items == ["Email or Mobile"]
+      assert consumed == [:email, :phone]
+    end
+
     test "does not repeat a set that several fields report" do
       {{items, _consumed}, log} =
         with_log(fn ->

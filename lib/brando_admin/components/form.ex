@@ -4691,7 +4691,7 @@ defmodule BrandoAdmin.Components.Form do
         |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
 
       socket
-      |> store_revision(changeset)
+      |> store_revision(changeset, put_again)
       |> clear_blocks_root_changesets()
       |> reset_transformer_changesets()
     else
@@ -8828,7 +8828,7 @@ defmodule BrandoAdmin.Components.Form do
     }
   end
 
-  defp store_revision(socket, changeset) do
+  defp store_revision(socket, changeset, put_again) do
     result =
       with :ok <- Brando.Authorization.Boundary.change(socket.assigns.current_user, :update, changeset),
            do: Changeset.apply_action(changeset, :update)
@@ -8844,7 +8844,7 @@ defmodule BrandoAdmin.Components.Form do
               action: :refresh_revisions
             )
 
-            clear_refused_values(socket)
+            clear_refused_values(socket, put_again)
 
           {:error, reason} ->
             revision_error(socket, reason)
@@ -8865,11 +8865,17 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A refused revision left its errors in the form; a value corrected
-  # without a cast (another editor's) would show them until its next cast
-  defp clear_refused_values(%{assigns: %{form: %{source: %{valid?: true}}}} = socket), do: socket
+  # without a cast (another editor's) would show them until its next cast.
+  # The stored revision put the rows of `put_again` from what the block
+  # fields and transformers sent, so the refused ones go.
+  defp clear_refused_values(%{assigns: %{form: %{source: %{valid?: true}}}} = socket, _put_again), do: socket
 
-  defp clear_refused_values(socket) do
-    source = check_rich_text(socket.assigns.form.source, socket, &Brando.RichText.recheck_form/2)
+  defp clear_refused_values(socket, put_again) do
+    source =
+      socket.assigns.form.source
+      |> without_rows(put_again)
+      |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
+
     put_form(socket, to_form(source, []))
   end
 
@@ -8973,7 +8979,7 @@ defmodule BrandoAdmin.Components.Form do
 
     # A field this form does not draw (a named form that leaves it out) can
     # still be refused: no input marks it, so the alert gives its messages
-    {drawn_keys, undrawn_keys} = Enum.split_with(error_keys -- grouped_keys, &ErrorTranslator.drawn?(&1, form))
+    {drawn_keys, undrawn_keys} = Enum.split_with(error_keys -- grouped_keys, &ErrorTranslator.drawn?(&1, form, schema))
 
     tab_with_first_error =
       (drawn_keys ++ error_keys)
@@ -8986,7 +8992,7 @@ defmodule BrandoAdmin.Components.Form do
       |> Kernel.++(group_items)
 
     # Include nested association errors as "parent → child → field" paths
-    nested_error_paths = flatten_nested_errors(traversed_errors)
+    nested_error_paths = traversed_errors |> Map.drop(undrawn_keys) |> flatten_nested_errors()
 
     all_error_items =
       for key <- translated_error_keys do
@@ -8998,10 +9004,8 @@ defmodule BrandoAdmin.Components.Form do
 
     undrawn_items =
       for key <- undrawn_keys do
-        messages = for {^key, error} <- changeset.errors, do: Primitives.translate_error(error)
-
-        "<li class=\"text-mono\">#{Alert.escape(ErrorTranslator.undrawn_label(key, schema))}: " <>
-          "#{Alert.escape(Enum.join(messages, ", "))}</li>"
+        {label, message} = ErrorTranslator.undrawn_entry(changeset, key, schema, &Primitives.translate_error/1)
+        "<li class=\"text-mono\">#{Alert.escape(label)}: #{Alert.escape(message)}</li>"
       end
 
     undrawn_notice =
@@ -9020,7 +9024,7 @@ defmodule BrandoAdmin.Components.Form do
 
     require Logger
 
-    Logger.debug("""
+    Logger.error("""
 
 
     Changeset errors:
@@ -9053,7 +9057,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
     |> Enum.uniq()
     |> Enum.reduce({[], []}, fn fields, {items, keys} ->
-      labels = Brando.Blueprint.Utils.translate_error_keys(fields, form, schema)
+      labels = Enum.map(fields, &ErrorTranslator.label_in(&1, form, schema))
       item = Enum.join(labels, " #{gettext("or")} ")
 
       {items ++ [item], keys ++ Enum.map(fields, &group_error_key(changeset, &1))}
