@@ -6,9 +6,10 @@ defmodule Brando.Migrations.Brando213AddMCPConnectionsTest do
 
   alias BrandoIntegration.Repo
 
-  # brando_232 adds the Figma token to mcp_settings
+  # brando_232 adds the Figma token to mcp_settings, brando_240 its expiry date
   @templates Enum.map(
-               ~w(brando_213_add_mcp_connections.exs brando_232_add_figma_token_to_mcp_settings.exs),
+               ~w(brando_213_add_mcp_connections.exs brando_232_add_figma_token_to_mcp_settings.exs
+                  brando_240_add_figma_token_expiry_to_mcp_settings.exs),
                &Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations/" <> &1)
              )
   @tables %{

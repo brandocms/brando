@@ -306,12 +306,20 @@ defmodule Brando.MCP do
 
   @doc """
   What the admin shows about `tenant`'s Figma token: nil without one, else
-  its last four characters (`hint`), when it was added and by whom, and
+  its last four characters (`hint`), when it was added and by whom, the
+  expiry date recorded with it (`expires_on`, nil when none was), and
   whether it can still be decrypted (`readable`: false after the encryption
   secret changed, and the tools then have no token).
   """
   @spec figma_token_status(tenant()) ::
-          nil | %{hint: String.t(), set_at: DateTime.t() | nil, set_by: User.t() | nil, readable: boolean()}
+          nil
+          | %{
+              hint: String.t(),
+              set_at: DateTime.t() | nil,
+              set_by: User.t() | nil,
+              expires_on: Date.t() | nil,
+              readable: boolean()
+            }
   def figma_token_status(tenant) do
     query = tenant |> setting_query() |> where([s], not is_nil(s.figma_token)) |> preload(:figma_token_set_by)
 
@@ -324,6 +332,7 @@ defmodule Brando.MCP do
           hint: setting.figma_token_hint,
           set_at: setting.figma_token_set_at,
           set_by: setting.figma_token_set_by,
+          expires_on: setting.figma_token_expires_on,
           readable: Brando.Crypto.decrypt(setting.figma_token, figma_context(tenant)) != :error
         }
     end
@@ -343,19 +352,39 @@ defmodule Brando.MCP do
   end
 
   @doc """
+  The expiry date recorded with `tenant`'s Figma token, or nil (no token, or
+  no date recorded with it).
+  """
+  @spec figma_token_expires_on(tenant()) :: Date.t() | nil
+  def figma_token_expires_on(tenant) do
+    tenant
+    |> setting_query()
+    |> where([s], not is_nil(s.figma_token))
+    |> select([s], s.figma_token_expires_on)
+    |> Repo.one()
+  end
+
+  @doc """
   Stores `token` as `tenant`'s Figma access token, as `actor`, who must be
   allowed to manage connections (`can_manage?/2`). It replaces any token
-  before it, and does not turn the endpoint on. Recorded in Activity without
-  the token.
+  before it, with its expiry date, and does not turn the endpoint on.
+  Recorded in Activity without the token.
+
+  Figma's API does not tell a token's expiry, so the administrator gives it:
+  `expires_on:`, a date from today on (`Brando.Figma.today/0`), or nil when
+  it is not known.
   """
-  @spec put_figma_token(tenant(), String.t(), User.t()) :: :ok | {:error, :forbidden | :invalid_token}
-  def put_figma_token(tenant, token, actor) when is_binary(token) do
+  @spec put_figma_token(tenant(), String.t(), User.t(), keyword()) ::
+          :ok | {:error, :forbidden | :invalid_token | :invalid_expiry}
+  def put_figma_token(tenant, token, actor, opts \\ []) when is_binary(token) do
     token = String.trim(token)
+    expires_on = Keyword.get(opts, :expires_on)
 
     cond do
       not can_manage?(actor, tenant) -> {:error, :forbidden}
       not valid_figma_token?(token) -> {:error, :invalid_token}
-      true -> store_figma_token(tenant, token, actor)
+      not valid_expiry?(expires_on) -> {:error, :invalid_expiry}
+      true -> store_figma_token(tenant, token, expires_on, actor)
     end
   end
 
@@ -363,7 +392,7 @@ defmodule Brando.MCP do
   @spec delete_figma_token(tenant(), User.t()) :: :ok | {:error, :forbidden}
   def delete_figma_token(tenant, actor) do
     if can_manage?(actor, tenant) do
-      store_figma_token(tenant, nil, actor)
+      store_figma_token(tenant, nil, nil, actor)
     else
       {:error, :forbidden}
     end
@@ -373,7 +402,11 @@ defmodule Brando.MCP do
   defp valid_figma_token?(token),
     do: byte_size(token) in 16..512 and String.match?(token, ~r/\A[\x21-\x7E]+\z/)
 
-  defp store_figma_token(tenant, token, actor) do
+  defp valid_expiry?(nil), do: true
+  defp valid_expiry?(%Date{} = date), do: Date.compare(date, Brando.Figma.today()) != :lt
+  defp valid_expiry?(_date), do: false
+
+  defp store_figma_token(tenant, token, expires_on, actor) do
     now = DateTime.utc_now()
 
     fields =
@@ -382,9 +415,16 @@ defmodule Brando.MCP do
           figma_token: Brando.Crypto.encrypt(token, figma_context(tenant)),
           figma_token_hint: String.slice(token, -4, 4),
           figma_token_set_at: now,
-          figma_token_set_by_id: actor.id
+          figma_token_set_by_id: actor.id,
+          figma_token_expires_on: expires_on
         ],
-        else: [figma_token: nil, figma_token_hint: nil, figma_token_set_at: nil, figma_token_set_by_id: nil]
+        else: [
+          figma_token: nil,
+          figma_token_hint: nil,
+          figma_token_set_at: nil,
+          figma_token_set_by_id: nil,
+          figma_token_expires_on: nil
+        ]
 
     setting =
       struct(

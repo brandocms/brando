@@ -196,7 +196,9 @@ or to use `translate` ([Language versions](content_assistant.md#language-version
 With them, three tools that add images to the media library (below):
 `brando_media_prepare_upload`, `brando_media_finish_upload` and
 `brando_media_import_url`. With a Figma token, two more:
-`brando_figma_read_frame` and `brando_figma_import_images`.
+`brando_figma_read_frame` and `brando_figma_import_images`; and
+`brando_figma_status`, which checks the site's Figma token
+([Add the token](#add-the-token)).
 
 ### Follow up on proposals
 
@@ -647,11 +649,37 @@ developers' part first. The Assistant's prompt never includes it.
 The tools call Figma with one access token per site environment, under
 **Configuration → Integrations → Connected AI tools → Figma**, which takes
 the same **Connected AI tools → Manage** permission as the switch. Create it
-in Figma under **Settings → Security → Personal access tokens**, with read
-access to file content (`file_content:read`), on the account of someone who
-can open the files to import. Figma limits how often its API answers by the
-owner's seat and plan: use the account of someone with a Full or Dev seat,
-since other seats get far fewer calls.
+in Figma under **Settings → Security → Personal access tokens**, on the
+account of someone who can open the files to import, with two scopes:
+
+- **File content: read** (`file_content:read`), which the tools read frames
+  and images with;
+- **Current user: read** (`current_user:read`), which checking the token
+  needs (below). A token without it still reads files, but cannot be
+  checked.
+
+Figma limits how often its API answers by the owner's seat and plan: use the
+account of someone with a Full or Dev seat, since other seats get far fewer
+calls.
+
+Figma's tokens expire after at most 90 days, and its API does not tell when.
+The form asks for the expiry you chose in Figma, 90 days from today unless
+changed, and takes today or a later date; leave it empty when you do not know
+it. The screen shows the date under the token, and warns from a week before
+it and after it. A token saved without a date shows "Expiry not recorded".
+Replacing the token replaces its date, and removing it clears it. The date
+is only what was typed: a passed date stops no call, since Figma decides.
+
+Once the screen is up, it asks Figma about the token (`GET /v1/me`) without
+holding the screen up, and **Test** asks again. It shows one of:
+
+- **Valid**, with the handle of the Figma account the token belongs to;
+- **Expired** or **Not valid**, with Figma's own words: replace the token;
+- **Not checked**, when the token may not read its account (no
+  `current_user:read`; it may still read files), or when Figma could not be
+  reached (a timeout, a network error, its call limit, an error at Figma, or
+  a refusal without Figma's error text, as from a proxy in front of it),
+  which says nothing about the token.
 
 The token is stored encrypted with `Brando.Crypto`, bound to its site
 environment, and never shown again: the screen shows its last four
@@ -660,6 +688,19 @@ asks for the password or a code when the session has not given one lately,
 and is recorded in Activity (without the token). Without a token, the Figma
 tools answer that an administrator adds one. Removing it keeps the images
 already imported.
+
+When Figma refuses a call, the tool says why: the token has expired, the
+token is not valid, the token lacks the permission to read files
+(`file_content:read`), or the token's owner cannot open the file, with
+Figma's own words (at most 200 characters). In the token's last week by its recorded
+date, `brando_figma_read_frame` and `brando_figma_import_images` carry a
+`token_note` for the tool to pass on. `brando_figma_status` lets a tool check
+before it starts: whether a token is set, its state as Figma answers now
+(`valid`, `expired`, `invalid`, `no_account_scope`, `unreachable`, or
+`unreadable` when it no longer decrypts), the account's handle, the recorded
+expiry date, and a `message` in words. It never returns the token, its last
+four characters or an email address. Without a token it answers so, rather
+than failing.
 
 ## Revoke
 
@@ -941,7 +982,8 @@ And the attacks the review asked about:
 - **The Figma token.** Encrypted at rest and bound to its site environment, so
   a copy of the column, or a ciphertext moved to another row, does not give
   the token. It reaches only Figma's API, in a header, and is never shown,
-  logged or returned to a tool. It gives a tool what its owner can open in
+  logged or returned to a tool; `brando_figma_status` returns the handle of
+  its account, not its email address. It gives a tool what its owner can open in
   Figma; a token for a narrow account limits that.
 - **Prompt injection.** A tool following instructions from content can only
   read what the person can read and prepare proposals; a person reviews

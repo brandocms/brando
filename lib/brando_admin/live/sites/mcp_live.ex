@@ -16,11 +16,16 @@ defmodule BrandoAdmin.Sites.MCPLive do
   revoking ask for the password, a code or a passkey when the session has
   not given one lately (`BrandoAdmin.Reauth`). The token is never shown
   again once saved: only its last four characters.
+
+  Once the page is up it asks Figma about the token (`Brando.Figma.check/1`,
+  without holding the page up), and Test asks again. The expiry date given
+  with the token shows under it, as a warning in its last week and after it.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
   alias Brando.AI.Agent.Guidance
+  alias Brando.Figma
   alias Brando.MCP
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Toast
@@ -29,6 +34,9 @@ defmodule BrandoAdmin.Sites.MCPLive do
   on_mount({BrandoAdmin.Reauth, events: ~w(enable disable revoke save_figma_token remove_figma_token)})
 
   def __authorization__, do: {:manage, :mcp}
+
+  # The expiry the token form suggests: Figma's longest
+  @figma_default_days 90
 
   def render(assigns) do
     ~H"""
@@ -164,6 +172,8 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <p :if={@figma} data-testid="mcp-figma-hint">
                 {figma_added(@figma)}
               </p>
+              <.figma_check :if={@figma && @figma.readable && @figma_check} check={@figma_check} />
+              <.figma_expiry :if={@figma} expiry={Figma.expiry(@figma.expires_on, @today)} />
               <p :if={@figma && !@figma.readable}>
                 {gettext(
                   "It can no longer be decrypted, as after a change of the encryption secret, so the tools cannot reach Figma. Replace it."
@@ -186,6 +196,17 @@ defmodule BrandoAdmin.Sites.MCPLive do
                   aria-describedby="mcp-figma-help"
                   data-testid="mcp-figma-token"
                 />
+                <label class="mcp-figma-expires">
+                  <span>{gettext("Expires")}</span>
+                  <input
+                    type="date"
+                    name="expires_on"
+                    value={Date.to_iso8601(Date.add(@today, @figma_default_days))}
+                    min={Date.to_iso8601(@today)}
+                    aria-describedby="mcp-figma-help"
+                    data-testid="mcp-figma-expires-on"
+                  />
+                </label>
                 <button type="submit" class="btn btn--primary" data-testid="mcp-figma-save">
                   {gettext("Save token")}
                 </button>
@@ -200,12 +221,25 @@ defmodule BrandoAdmin.Sites.MCPLive do
                 </button>
                 <small id="mcp-figma-help">
                   {gettext(
-                    "In Figma: Settings → Security → Personal access tokens, with read access to file content. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
+                    "In Figma: Settings → Security → Personal access tokens, with the scopes File content: read (file_content:read) and Current user: read (current_user:read), which checking the token needs. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
+                  )}
+                  {gettext(
+                    "Figma does not tell Brando when a token expires: give the expiry you chose in Figma, at most 90 days ahead, so this page can warn a week before. Leave it empty if you do not know it."
                   )}
                 </small>
               </form>
             </div>
             <div :if={@figma && !@figma_form?} class="integrations-actions">
+              <button
+                :if={@figma.readable}
+                type="button"
+                class="btn btn--quiet"
+                phx-click="test_figma_token"
+                disabled={@figma_check == :checking}
+                data-testid="mcp-figma-test"
+              >
+                {gettext("Test")}
+              </button>
               <button type="button" class="btn" phx-click="replace_figma_token" data-testid="mcp-figma-replace">
                 {gettext("Replace")}
               </button>
@@ -300,6 +334,87 @@ defmodule BrandoAdmin.Sites.MCPLive do
     </div>
     """
   end
+
+  # What Figma said of the token when the page asked (`Brando.Figma.check/1`)
+  attr :check, :any, required: true
+
+  defp figma_check(assigns) do
+    ~H"""
+    <p class="mcp-figma-check" data-testid="mcp-figma-check" data-state={check_state(@check)}>
+      <span class={["badge", check_tone(@check)]}>{check_label(@check)}</span>
+      <span :if={check_text(@check)}>{check_text(@check)}</span>
+    </p>
+    """
+  end
+
+  defp check_state({state, _detail}), do: to_string(state)
+  defp check_state(state), do: to_string(state)
+
+  defp check_tone({:valid, _handle}), do: "badge--success"
+  defp check_tone({state, _err}) when state in [:expired, :invalid], do: "badge--error"
+  defp check_tone(_check), do: nil
+
+  defp check_label({:valid, _handle}), do: gettext("Valid")
+  defp check_label({:expired, _err}), do: gettext("Expired")
+  defp check_label({:invalid, _err}), do: gettext("Not valid")
+  defp check_label({:no_account_scope, _err}), do: gettext("Not checked")
+  defp check_label(:unreachable), do: gettext("Not checked")
+  defp check_label(_checking), do: gettext("Checking with Figma…")
+
+  defp check_text({:valid, nil}), do: gettext("Figma accepts it.")
+  defp check_text({:valid, handle}), do: gettext("Figma accepts it, for the account %{handle}.", handle: handle)
+  defp check_text({:expired, _err}), do: gettext("Figma says it has expired. Replace it.")
+  defp check_text({:invalid, nil}), do: gettext("Figma does not accept it. Replace it.")
+
+  defp check_text({:invalid, err}),
+    do: gettext("Figma does not accept it. Replace it. Figma said: “%{error}”", error: err)
+
+  defp check_text({:no_account_scope, _err}),
+    do:
+      gettext(
+        "It may not read its own Figma account (the current_user:read scope), so it could not be checked. It may still read files. For the check, replace it with a token that also has current_user:read."
+      )
+
+  defp check_text(:unreachable), do: gettext("Figma could not be reached to check it. Try again in a moment.")
+  defp check_text(_checking), do: nil
+
+  # The expiry date recorded with the token (`Brando.Figma.expiry/2`)
+  attr :expiry, :any, required: true
+
+  defp figma_expiry(assigns) do
+    ~H"""
+    <p
+      class={["mcp-figma-expiry", warning?(@expiry) && "is-warning"]}
+      data-testid="mcp-figma-expiry"
+      data-expiry={expiry_state(@expiry)}
+    >
+      {expiry_text(@expiry)}
+    </p>
+    """
+  end
+
+  defp warning?({state, _date, _days}), do: state == :soon
+  defp warning?({state, _date}), do: state == :passed
+  defp warning?(_expiry), do: false
+
+  defp expiry_state(expiry) when is_atom(expiry), do: to_string(expiry)
+  defp expiry_state(expiry), do: expiry |> elem(0) |> to_string()
+
+  defp expiry_text(:not_recorded), do: gettext("Expiry not recorded.")
+  defp expiry_text({:later, date}), do: gettext("Expires %{date}.", date: day(date))
+  defp expiry_text({:soon, date, 0}), do: gettext("Expires today, %{date}. Replace it now.", date: day(date))
+
+  defp expiry_text({:soon, date, days}),
+    do:
+      ngettext(
+        "Expires %{date}, in %{count} day. Replace it before then.",
+        "Expires %{date}, in %{count} days. Replace it before then.",
+        days,
+        date: day(date)
+      )
+
+  defp expiry_text({:passed, date}),
+    do: gettext("Its expiry date, %{date}, has passed. Replace it if Figma no longer accepts it.", date: day(date))
 
   @guidance_max 12_000
 
@@ -434,9 +549,13 @@ defmodule BrandoAdmin.Sites.MCPLive do
          tenant: tenant,
          mounted?: MCP.mounted?(),
          secure?: MCP.secure_base?(),
-         figma_form?: false
+         figma_form?: false,
+         figma_check: nil,
+         figma_default_days: @figma_default_days,
+         today: Figma.today()
        )
        |> load()
+       |> check_figma_token()
        |> load_figma_guidance()}
     else
       {:ok, redirect(socket, to: "/admin/access-denied")}
@@ -452,6 +571,22 @@ defmodule BrandoAdmin.Sites.MCPLive do
       figma: MCP.figma_token_status(tenant)
     )
   end
+
+  # Asks Figma about the stored token once the page is up: the page does not
+  # wait for Figma. The token is read here, in the page's process, and only
+  # the call to Figma runs apart.
+  defp check_figma_token(socket) do
+    with true <- connected?(socket),
+         %{readable: true} <- socket.assigns.figma,
+         {:ok, token} <- Figma.token(socket.assigns.tenant) do
+      socket |> assign(:figma_check, :checking) |> start_async(:figma_check, fn -> Figma.check(token) end)
+    else
+      _no_token -> assign(socket, :figma_check, nil)
+    end
+  end
+
+  def handle_async(:figma_check, {:ok, check}, socket), do: {:noreply, assign(socket, :figma_check, check)}
+  def handle_async(:figma_check, {:exit, _reason}, socket), do: {:noreply, assign(socket, :figma_check, :unreachable)}
 
   defp load_figma_guidance(socket) do
     user = socket.assigns.current_user
@@ -515,16 +650,28 @@ defmodule BrandoAdmin.Sites.MCPLive do
   def handle_event("replace_figma_token", _params, socket), do: {:noreply, assign(socket, :figma_form?, true)}
   def handle_event("cancel_figma_token", _params, socket), do: {:noreply, assign(socket, :figma_form?, false)}
 
-  def handle_event("save_figma_token", %{"token" => token}, socket) do
+  # Another administrator may have replaced or removed the token since the
+  # page was loaded, and the day may have turned: Test shows the token
+  # stored now, on today's date
+  def handle_event("test_figma_token", _params, socket) do
+    figma = MCP.figma_token_status(socket.assigns.tenant)
+    {:noreply, socket |> assign(figma: figma, today: Figma.today()) |> check_figma_token()}
+  end
+
+  def handle_event("save_figma_token", %{"token" => token} = params, socket) do
     %{current_user: user, tenant: tenant} = socket.assigns
 
-    case MCP.put_figma_token(tenant, token, user) do
-      :ok ->
-        Toast.send_to(user, gettext("The Figma token was saved."))
-        {:noreply, socket |> assign(:figma_form?, false) |> load()}
-
+    with {:ok, expires_on} <- expires_on(params["expires_on"]),
+         :ok <- MCP.put_figma_token(tenant, token, user, expires_on: expires_on) do
+      Toast.send_to(user, gettext("The Figma token was saved."))
+      {:noreply, socket |> assign(figma_form?: false, today: Figma.today()) |> load() |> check_figma_token()}
+    else
       {:error, :invalid_token} ->
         Toast.send_to(user, gettext("That does not look like a Figma access token."), %{level: :error})
+        {:noreply, socket}
+
+      {:error, :invalid_expiry} ->
+        Toast.send_to(user, gettext("Give the expiry as a date from today on, or leave it empty."), %{level: :error})
         {:noreply, socket}
 
       {:error, _reason} ->
@@ -541,7 +688,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
       {:error, _reason} -> Toast.send_to(user, gettext("The Figma token could not be removed."), %{level: :error})
     end
 
-    {:noreply, socket |> assign(:figma_form?, false) |> load()}
+    {:noreply, socket |> assign(:figma_form?, false) |> load() |> check_figma_token()}
   end
 
   def handle_event("revoke", %{"id" => id}, socket) do
@@ -554,6 +701,17 @@ defmodule BrandoAdmin.Sites.MCPLive do
 
     {:noreply, load(socket)}
   end
+
+  defp expires_on(value) when value in [nil, ""], do: {:ok, nil}
+
+  defp expires_on(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> {:ok, date}
+      {:error, _reason} -> {:error, :invalid_expiry}
+    end
+  end
+
+  defp expires_on(_value), do: {:error, :invalid_expiry}
 
   defp toggle(socket, enabled?) do
     %{current_user: user, tenant: tenant} = socket.assigns
@@ -601,4 +759,5 @@ defmodule BrandoAdmin.Sites.MCPLive do
   end
 
   defp date(datetime), do: Brando.Utils.Datetime.format_datetime(datetime, "%-d %B %Y, %H:%M")
+  defp day(date), do: Brando.Utils.Datetime.format_datetime(date, "%-d %B %Y")
 end

@@ -668,6 +668,12 @@ sender first, before the first compile.
   synchronization, and review items raised before that have no previous
   text. Run `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
   [Synchronized translations](i18n.md#synchronized-translations).
+- **The Figma token's expiry.** `brando_240` adds
+  `mcp_settings.figma_token_expires_on`, the expiry date an administrator
+  gives when saving the Figma token, so the admin and the Figma tools warn a
+  week before it. A token saved before has no date recorded until it is
+  replaced. Run `mix brando.gen.migrations` for it, then `mix brando.migrate`.
+  See [Add the token](mcp.md#add-the-token).
 - **Proposal previews for connected AI tools.** `brando_241` adds
   `sites_previews.proposal_id`, the proposal a connected tool's short-lived
   preview link shows; it is empty for every existing shared preview. Run
