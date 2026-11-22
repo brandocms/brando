@@ -5,7 +5,9 @@ defmodule Brando.MCP.Setting do
   from. No row means off and no token. See `Brando.MCP` and `Brando.Figma`.
 
   `figma_token` is encrypted with `Brando.Crypto`; `figma_token_hint` is its
-  last four characters, for the admin to show.
+  last four characters, for the admin to show. `figma_token_expires_on` is
+  the expiry date the administrator gave when saving it (Figma's API does not
+  tell it), or nil.
   """
   use Ecto.Schema
 
@@ -22,6 +24,7 @@ defmodule Brando.MCP.Setting do
     field :figma_token_hint, :string
     field :figma_token_set_at, :utc_datetime_usec
     belongs_to :figma_token_set_by, Brando.Users.User
+    field :figma_token_expires_on, :date
     timestamps(type: :utc_datetime_usec)
   end
 end

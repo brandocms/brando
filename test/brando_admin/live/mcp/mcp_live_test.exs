@@ -19,6 +19,26 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
     %{tenant: MCP.tenant(nil, nil)}
   end
 
+  # Figma's GET /v1/me (a Req.Test stub in the test config)
+  defp stub_me(status, body) do
+    test = self()
+
+    Req.Test.stub(Brando.Figma, fn conn ->
+      send(test, {:figma, conn.request_path})
+      conn |> Plug.Conn.put_status(status) |> Req.Test.json(body)
+    end)
+  end
+
+  defp check_state(view) do
+    render_async(view)
+
+    view
+    |> element("[data-testid=mcp-figma-check]")
+    |> render()
+    |> then(&Regex.run(~r/data-state="([^"]+)"/, &1))
+    |> List.last()
+  end
+
   describe "Configuration → Connected AI tools" do
     test "is off at first, and turning it on and off is recorded", %{conn: conn, tenant: tenant, current_user: user} do
       {:ok, view, html} = live(conn, "/admin/config/mcp")
@@ -71,6 +91,7 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
 
     test "adds, replaces and removes the Figma token, showing only its last four characters",
          %{conn: conn, tenant: tenant} do
+      stub_me(200, %{"handle" => "Ada"})
       {:ok, view, html} = live(conn, "/admin/config/mcp")
       assert html =~ ~s(data-testid="mcp-figma-form")
       refute html =~ ~s(data-testid="mcp-figma-status")
@@ -110,6 +131,96 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       {:ok, _view, html} = live(conn, "/admin/config/activity")
       assert html =~ "Added the Figma access token"
       assert html =~ "Removed the Figma access token"
+    end
+
+    test "checks the token with Figma once the page is up, beside its hint, and Test asks again",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user)
+      stub_me(200, %{"id" => "1", "handle" => "Ada Designer", "email" => "ada@example.com"})
+
+      {:ok, view, html} = live(conn, "/admin/config/mcp")
+      # The page does not wait for Figma
+      assert html =~ ~s(data-state="checking")
+      assert check_state(view) == "valid"
+      assert has_element?(view, "[data-testid=mcp-figma-check]", "Ada Designer")
+      refute render(view) =~ "ada@example.com"
+      assert_received {:figma, "/v1/me"}
+
+      for {status, body, state} <- [
+            {401, %{"status" => 401, "err" => "Token has expired"}, "expired"},
+            {403, %{"status" => 403, "err" => "Invalid token"}, "invalid"},
+            {403,
+             %{
+               "status" => 403,
+               "err" => "Invalid scope(s): file_content:read. This endpoint requires the current_user:read scope"
+             }, "no_account_scope"},
+            {429, %{"status" => 429}, "unreachable"},
+            {500, %{"status" => 500}, "unreachable"}
+          ] do
+        stub_me(status, body)
+        view |> element("[data-testid=mcp-figma-test]") |> render_click()
+        assert check_state(view) == state, "#{status} #{inspect(body)}"
+      end
+
+      # Not invalid: it may still read files
+      stub_me(403, %{"status" => 403, "err" => "Invalid scope(s): file_content:read"})
+      view |> element("[data-testid=mcp-figma-test]") |> render_click()
+      assert check_state(view) == "no_account_scope"
+      assert has_element?(view, "[data-testid=mcp-figma-check]", "current_user:read")
+      refute has_element?(view, "[data-testid=mcp-figma-check] .badge--error")
+    end
+
+    test "a token that cannot be decrypted is not sent to Figma", %{conn: conn, tenant: tenant, current_user: user} do
+      :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user)
+      Repo.update_all(Setting, set: [figma_token: Brando.Crypto.encrypt("figd_first-token-1111", "another context")])
+      stub_me(200, %{"handle" => "Ada"})
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      render_async(view)
+      assert has_element?(view, "[data-testid=mcp-figma-unreadable]")
+      refute has_element?(view, "[data-testid=mcp-figma-check]")
+      refute has_element?(view, "[data-testid=mcp-figma-test]")
+      refute_received {:figma, _}
+    end
+
+    test "asks for the token's expiry, 90 days ahead unless changed, and warns in its last week and after it",
+         %{conn: conn, tenant: tenant} do
+      today = Brando.Figma.today()
+      stub_me(200, %{"handle" => "Ada"})
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      field = "[data-testid=mcp-figma-expires-on]"
+      assert has_element?(view, ~s(#{field}[value="#{Date.add(today, 90)}"][min="#{today}"]))
+
+      # A date before today is refused, and nothing is saved
+      view
+      |> form("[data-testid=mcp-figma-form]", %{token: "figd_first-token-1111", expires_on: Date.add(today, -1)})
+      |> render_submit()
+
+      assert MCP.figma_token(tenant) == :error
+
+      view
+      |> form("[data-testid=mcp-figma-form]", %{token: "figd_first-token-1111", expires_on: Date.add(today, 30)})
+      |> render_submit()
+
+      assert %{expires_on: expires_on} = MCP.figma_token_status(tenant)
+      assert expires_on == Date.add(today, 30)
+      assert has_element?(view, ~s([data-testid=mcp-figma-expiry][data-expiry="later"]))
+      refute has_element?(view, "[data-testid=mcp-figma-expiry].is-warning")
+      # The new token is checked as it is saved
+      assert check_state(view) == "valid"
+
+      for {days, state} <- [{7, "soon"}, {0, "soon"}, {-1, "passed"}] do
+        Repo.update_all(Setting, set: [figma_token_expires_on: Date.add(today, days)])
+        {:ok, view, _html} = live(conn, "/admin/config/mcp")
+        assert has_element?(view, ~s([data-testid=mcp-figma-expiry][data-expiry="#{state}"].is-warning))
+      end
+
+      # Replaced without a date: none recorded
+      view |> element("[data-testid=mcp-figma-replace]") |> render_click()
+      view |> form("[data-testid=mcp-figma-form]", %{token: "figd_second-token-2222", expires_on: ""}) |> render_submit()
+      assert %{expires_on: nil} = MCP.figma_token_status(tenant)
+      assert has_element?(view, ~s([data-testid=mcp-figma-expiry][data-expiry="not_recorded"]))
     end
 
     test "edits the guidance for building from Figma, as versions apart from the assistant's",

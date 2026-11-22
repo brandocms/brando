@@ -62,6 +62,11 @@ config :brando, Brando.IndexNow,
   endpoint: "http://localhost:#{e2e_port}/e2e/webhook-receiver/indexnow",
   req_options: []
 
+# Figma's API is never called from the E2E server: the MCP settings page
+# checks a stored token with Figma as it loads, and gets no answer here
+# (closed local port), which it shows as "could not reach Figma".
+config :brando, Brando.Figma, api_url: "http://127.0.0.1:9"
+
 # The E2E MCP client's metadata document comes from the test suite, not the
 # internet (Brando.MCP.ClientMetadata).
 config :brando, Brando.MCP, client_metadata_fetcher: {E2eProject.MCPClient, :fetch}

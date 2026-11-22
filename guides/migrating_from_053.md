@@ -668,6 +668,12 @@ sender first, before the first compile.
   synchronization, and review items raised before that have no previous
   text. Run `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
   [Synchronized translations](i18n.md#synchronized-translations).
+- **The Figma token's expiry.** `brando_240` adds
+  `mcp_settings.figma_token_expires_on`, the expiry date an administrator
+  gives when saving the Figma token, so the admin and the Figma tools warn a
+  week before it. A token saved before has no date recorded until it is
+  replaced. Run `mix brando.gen.migrations` for it, then `mix brando.migrate`.
+  See [Add the token](mcp.md#add-the-token).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

@@ -140,6 +140,10 @@ config :brando, Oban,
 # Webhook URLs, deploy hosts and served hosts are looked up in a stub, not real DNS
 # (test/support): a made-up host took seconds to fail on some resolvers.
 config :brando, Brando.Webhooks, resolver: {Brando.WebhookTestResolver, :resolve}
+# Figma's API is a Req.Test stub: a test that reaches Figma without stubbing
+# it fails rather than calling the real API (the MCP settings page checks a
+# stored token as it loads).
+config :brando, Brando.Figma, req_options: [plug: {Req.Test, Brando.Figma}]
 config :brando, Brando.Sites.DeployConfig, resolver: &Brando.WebhookTestResolver.resolve/2
 config :brando, Brando.Tenant.ServedHosts, resolver: Brando.ServedHostsTestResolver
 

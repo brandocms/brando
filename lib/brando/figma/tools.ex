@@ -1,8 +1,9 @@
 defmodule Brando.Figma.Tools do
   @moduledoc """
   The Figma tools the remote MCP endpoint offers (`Brando.MCP.Tools`, as
-  `brando_figma_…`): read a frame's sections, and import its images into the
-  media library for a proposal to use.
+  `brando_figma_…`): read a frame's sections, import its images into the
+  media library for a proposal to use, and check the site's Figma token
+  (`status`).
 
   They call Figma with the site environment's token (`Brando.Figma.token/1`)
   and run as the connection's person, in its site environment and
@@ -10,12 +11,17 @@ defmodule Brando.Figma.Tools do
   something before a person applies a proposal: images in the library
   folder `figma/<frame name as a slug>`, which a person needs the right to upload
   images for (`Brando.Figma.Import`).
+
+  In the token's last `Brando.Figma.warning_days/0` days by the expiry date
+  recorded with it, `read_frame` and `import_images` carry a `token_note` for
+  the tool to pass on. A passed date stops nothing: Figma decides.
   """
 
   alias Brando.AI.Agent.Guidance
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Figma.Import
+  alias Brando.MCP
   alias Brando.MCP.Tools, as: MCPTools
 
   @prefix "brando_figma_"
@@ -79,6 +85,19 @@ defmodule Brando.Figma.Tools do
         required: ["url"]
       },
       read_only: false
+    },
+    %{
+      name: "status",
+      description:
+        "Check the site's Figma token before starting from a Figma frame: whether one is set (token_set), " <>
+          "and its state as Figma answers now: valid (with the handle of the Figma account it belongs to), expired, invalid " <>
+          "(with Figma's own words under figma_error), no_account_scope (the token may not read its own account, so it " <>
+          "could not be checked; it may still read files), unreachable (Figma could not be asked; try again later), " <>
+          "or unreadable (stored but no longer decryptable). expires_on is the expiry date an administrator recorded " <>
+          "when saving the token, or null when none was. message says it all in words to pass on to the person: " <>
+          "when the token needs replacing, tell them an administrator replaces it in the Brando admin.",
+      parameters: %{type: "object", properties: %{}},
+      read_only: true
     }
   ]
 
@@ -101,11 +120,13 @@ defmodule Brando.Figma.Tools do
   prefix and authorization scope. `{:ok, result}` or `{:error, message}`.
   """
   @spec call(String.t(), map(), term(), Brando.MCP.tenant()) :: {:ok, map()} | {:error, String.t()}
+  def call("status", _args, _actor, tenant), do: {:ok, status(tenant)}
+
   def call(name, args, actor, tenant) when name in @names do
     with {:ok, link} <- Figma.parse_url(args["url"]),
          {:ok, offset} <- offset(args["offset"]),
          {:ok, token} <- Figma.token(tenant) do
-      run(name, link, token, Map.put(args, "offset", offset), actor)
+      run(name, link, token, Map.put(args, "offset", offset), actor, tenant)
     end
   end
 
@@ -113,27 +134,110 @@ defmodule Brando.Figma.Tools do
   defp offset(offset) when is_integer(offset) and offset >= 0, do: {:ok, offset}
   defp offset(_offset), do: {:error, "offset is a whole number, 0 or more."}
 
-  defp run("read_frame", link, token, %{"offset" => offset}, _actor) do
+  defp run("read_frame", link, token, %{"offset" => offset}, _actor, tenant) do
     with {:ok, node} <- Figma.node(token, link) do
       outline = Frame.outline(node)
       {page, next} = page(outline.sections, offset, @page_bytes)
 
-      result = %{
-        file_name: outline.file_name,
-        frame: outline.frame,
-        sections_total: length(outline.sections),
-        offset: offset,
-        sections: page,
-        next_offset: next
-      }
+      result =
+        with_expiry_note(
+          %{
+            file_name: outline.file_name,
+            frame: outline.frame,
+            sections_total: length(outline.sections),
+            offset: offset,
+            sections: page,
+            next_offset: next
+          },
+          tenant
+        )
 
       {:ok, if(offset == 0, do: with_guidance(result), else: result)}
     end
   end
 
-  defp run("import_images", link, token, args, actor) do
-    Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"])
+  defp run("import_images", link, token, args, actor, tenant) do
+    with {:ok, result} <- Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"]) do
+      {:ok, with_expiry_note(result, tenant)}
+    end
   end
+
+  # In the token's last days, a note for the tool to pass on. Before the
+  # guidance, which is cut to the room left.
+  defp with_expiry_note(result, tenant) do
+    case Figma.expiry_note(tenant) do
+      nil -> result
+      note -> Map.put(result, :token_note, note)
+    end
+  end
+
+  @connect_token "An administrator adds a Figma access token under Configuration → Integrations → Connected AI tools."
+  @replace_token "An administrator replaces it under Configuration → Integrations → Connected AI tools."
+
+  # What `brando_figma_status` answers: never the token, its hint or an email
+  defp status(tenant) do
+    case MCP.figma_token_status(tenant) do
+      nil ->
+        %{
+          token_set: false,
+          message: "No Figma token is set for this site, so the Figma tools cannot read Figma. " <> @connect_token
+        }
+
+      stored ->
+        expires_on = stored.expires_on
+        {state, fields, said} = state(Figma.check_token(tenant))
+        message = Enum.join([said, expiry_sentence(Figma.expiry(expires_on), state)], " ")
+
+        Map.merge(
+          %{token_set: true, state: state, expires_on: expires_on && Date.to_iso8601(expires_on), message: message},
+          fields
+        )
+    end
+  end
+
+  defp state({:valid, nil}), do: {"valid", %{handle: nil}, "The site's Figma token works."}
+
+  defp state({:valid, handle}),
+    do: {"valid", %{handle: handle}, "The site's Figma token works. It belongs to the Figma account “#{handle}”."}
+
+  defp state({:expired, err}),
+    do: {"expired", %{figma_error: err}, "The site's Figma token has expired. " <> @replace_token}
+
+  defp state({:invalid, err}) do
+    said = if err, do: " Figma said: “#{err}”.", else: ""
+    {"invalid", %{figma_error: err}, "Figma does not accept the site's token." <> said <> " " <> @replace_token}
+  end
+
+  defp state({:no_account_scope, err}) do
+    {"no_account_scope", %{figma_error: err},
+     "The site's Figma token could not be checked: it may not read its own Figma account " <>
+       "(Figma's current_user:read scope), which the check asks for. It may still read files, " <>
+       "so try the Figma tools; for the check to work, an administrator replaces it with a token that also has current_user:read."}
+  end
+
+  defp state(:unreachable),
+    do: {"unreachable", %{}, "Figma could not be reached to check the site's token. Try again in a moment."}
+
+  # Stored, but the tools have no token to call with
+  defp state(:no_token) do
+    {"unreadable", %{},
+     "The site's Figma token can no longer be decrypted, as after a change of the site's encryption secret, " <>
+       "so the Figma tools cannot reach Figma. " <> @replace_token}
+  end
+
+  defp expiry_sentence(:not_recorded, _state), do: "No expiry date was recorded when it was saved."
+
+  defp expiry_sentence({:later, date}, _state),
+    do: "It expires on #{Date.to_iso8601(date)}, by the date recorded with it."
+
+  defp expiry_sentence({:soon, date, days}, _state),
+    do: Figma.expiry_text(date, days) <> " It needs replacing before then."
+
+  defp expiry_sentence({:passed, date}, "valid"),
+    do: "The expiry date recorded with it, #{Date.to_iso8601(date)}, has passed, but Figma still accepts it."
+
+  defp expiry_sentence({:passed, date}, _state),
+    do: "The expiry date recorded with it was #{Date.to_iso8601(date)}."
 
   # The first page carries the guidance for building from Figma. Its
   # sections are the ones a page without guidance would have, so guidance

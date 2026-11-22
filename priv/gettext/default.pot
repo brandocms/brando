@@ -4285,6 +4285,11 @@ msgstr ""
 msgid "Checked the module “%{module}”"
 msgstr ""
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Checked the site's Figma token"
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checking"
@@ -4298,6 +4303,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checking structured data…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checking with Figma…"
 msgstr ""
 
 #: lib/brando_admin/components/two_factor.ex
@@ -8188,6 +8198,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
 #: lib/brando_admin/live/calendar_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Expires"
 msgstr ""
@@ -8195,6 +8206,23 @@ msgstr ""
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "Expires %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}, in %{count} day. Replace it before then."
+msgid_plural "Expires %{date}, in %{count} days. Replace it before then."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expires today, %{date}. Replace it now."
 msgstr ""
 
 #: lib/brando_admin/components/dashboard.ex
@@ -8205,6 +8233,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Expiry"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry not recorded."
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -8372,7 +8405,42 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "Figma accepts it, for the account %{handle}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma accepts it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "Figma access token"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma could not be reached to check it. Try again in a moment."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma does not accept it. Replace it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma does not accept it. Replace it. Figma said: “%{error}”"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma does not tell Brando when a token expires: give the expiry you chose in Figma, at most 90 days ahead, so this page can warn a week before. Leave it empty if you do not know it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma says it has expired. Replace it."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_preview_references.ex
@@ -8927,6 +8995,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Give the expiry as a date from today on, or leave it empty."
 msgstr ""
 
 #: lib/brando_admin/components/content/list/saved_views.ex
@@ -9698,7 +9771,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
-msgid "In Figma: Settings → Security → Personal access tokens, with read access to file content. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
+msgid "In Figma: Settings → Security → Personal access tokens, with the scopes File content: read (file_content:read) and Current user: read (current_user:read), which checking the token needs. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
@@ -10028,6 +10101,11 @@ msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "It may not read its own Figma account (the current_user:read scope), so it could not be checked. It may still read files. For the check, replace it with a token that also has current_user:read."
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "It names the site’s database schemas and folders, so it cannot be changed."
@@ -10105,6 +10183,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Its domains stop serving until the site is activated again. Nothing is deleted."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its expiry date, %{date}, has passed. Replace it if Figma no longer accepts it."
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -12872,6 +12955,7 @@ msgstr ""
 msgid "Not available in this installation"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not checked"
@@ -13081,6 +13165,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not used yet"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -19072,6 +19161,11 @@ msgstr ""
 msgid "Tenancy is disabled. Set tenancy_mode to single or multi before managing environments."
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test"
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Test event"
@@ -22364,6 +22458,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "VAT / organisation number"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Valid"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/form_fields.ex

@@ -4,6 +4,135 @@ defmodule Brando.FigmaTest do
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Figma.Import
+  alias Plug.Conn
+
+  # Figma's API is a Req.Test stub in the test config
+  defp answer(status, body) do
+    Req.Test.stub(Figma, fn conn ->
+      case body do
+        nil -> Conn.send_resp(conn, status, "")
+        body when is_binary(body) -> Conn.send_resp(conn, status, body)
+        body -> conn |> Conn.put_status(status) |> Req.Test.json(body)
+      end
+    end)
+  end
+
+  @link %{file_key: "35BOzFjfvJHJM6Wm50E3wA", node_id: "2950:4703"}
+
+  describe "why Figma refused" do
+    test "an expired token says so, as Figma's 401 and 403 put it" do
+      for {status, err} <- [{401, "Token has expired"}, {403, "Token expired"}] do
+        answer(status, %{"status" => status, "err" => err})
+
+        assert Figma.node("figd_token", @link) ==
+                 {:error,
+                  "The site's Figma token has expired. " <>
+                    "An administrator replaces it under Configuration → Integrations → Connected AI tools."}
+      end
+    end
+
+    test "a 401 is an invalid token, with Figma's words" do
+      answer(401, %{"status" => 401, "err" => "Invalid token"})
+      assert {:error, message} = Figma.node("figd_token", @link)
+      assert message =~ "Figma does not accept the site's token."
+      assert message =~ "Figma said: “Invalid token”."
+      assert message =~ "An administrator replaces it"
+      refute message =~ "shared"
+
+      answer(401, nil)
+
+      assert {:error, "Figma does not accept the site's token. An administrator replaces it" <> _} =
+               Figma.node("figd_token", @link)
+    end
+
+    test "a 403 is a file the token's owner cannot open, with Figma's words" do
+      answer(403, %{"status" => 403, "err" => "File not shared"})
+      assert {:error, message} = Figma.node("figd_token", @link)
+      assert message =~ "the token's owner cannot open this file. Check that the file is shared with them."
+      assert message =~ "Figma said: “File not shared”."
+
+      answer(403, "")
+      assert {:error, message} = Figma.node("figd_token", @link)
+      refute message =~ "Figma said"
+    end
+
+    test "Figma's words come as plain text on one line, cut at 200 characters" do
+      # As text, without a JSON content type
+      answer(401, Jason.encode!(%{"err" => "Bad\n\u0000token " <> String.duplicate("x", 300)}))
+      assert {:error, message} = Figma.node("figd_token", @link)
+      [_, said] = Regex.run(~r/Figma said: “(.*)”\./, message)
+      assert String.length(said) == 200
+      assert said =~ ~r/\ABad token x+\z/
+    end
+
+    test "other answers keep their messages" do
+      answer(404, %{"status" => 404, "err" => "Not found"})
+      assert {:error, "Figma has no such file" <> _} = Figma.node("figd_token", @link)
+      answer(500, nil)
+      assert {:error, "Figma answered 500. Try again in a moment."} = Figma.node("figd_token", @link)
+    end
+  end
+
+  describe "check/1" do
+    test "valid, with the account's handle and nothing else" do
+      test = self()
+
+      Req.Test.stub(Figma, fn conn ->
+        send(test, {:figma, conn.request_path, Conn.get_req_header(conn, "x-figma-token")})
+        Req.Test.json(conn, %{"id" => "1", "handle" => "Ada", "email" => "ada@example.com", "img_url" => "x"})
+      end)
+
+      assert Figma.check("figd_token") == {:valid, "Ada"}
+      assert_received {:figma, "/v1/me", ["figd_token"]}
+    end
+
+    test "expired or invalid, with Figma's words" do
+      answer(401, %{"status" => 401, "err" => "Token has expired"})
+      assert Figma.check("figd_token") == {:expired, "Token has expired"}
+
+      answer(403, %{"status" => 403, "err" => "Invalid token"})
+      assert Figma.check("figd_token") == {:invalid, "Invalid token"}
+
+      answer(401, nil)
+      assert Figma.check("figd_token") == {:invalid, nil}
+    end
+
+    # A token made with file_content:read alone reads files; /v1/me needs
+    # current_user:read. Figma documents no body for it: as Figma words it,
+    # under err or, in its newer endpoints' shape, message.
+    test "a token that may not read its account could not be checked: not invalid, not expired" do
+      err = "Invalid scope(s): file_content:read. This endpoint requires the current_user:read scope"
+
+      answer(403, %{"status" => 403, "err" => err})
+      assert Figma.check("figd_token") == {:no_account_scope, err}
+
+      answer(403, %{"status" => 403, "error" => true, "message" => err})
+      assert Figma.check("figd_token") == {:no_account_scope, err}
+    end
+
+    test "a limit, an error at Figma or no answer is not a verdict on the token" do
+      for status <- [429, 500, 503, 404] do
+        answer(status, %{"status" => status, "err" => "Invalid token"})
+        assert Figma.check("figd_token") == :unreachable
+      end
+
+      Req.Test.stub(Figma, &Req.Test.transport_error(&1, :timeout))
+      assert Figma.check("figd_token") == :unreachable
+    end
+  end
+
+  describe "expiry/2" do
+    @today ~D[2026-11-22]
+
+    test "not recorded, later, in its last seven days, and passed" do
+      assert Figma.expiry(nil, @today) == :not_recorded
+      assert Figma.expiry(~D[2026-11-30], @today) == {:later, ~D[2026-11-30]}
+      assert Figma.expiry(~D[2026-11-29], @today) == {:soon, ~D[2026-11-29], 7}
+      assert Figma.expiry(~D[2026-11-23], @today) == {:soon, ~D[2026-11-23], 1}
+      assert Figma.expiry(@today, @today) == {:soon, @today, 0}
+      assert Figma.expiry(~D[2026-11-21], @today) == {:passed, ~D[2026-11-21]}
+    end
+  end
 
   describe "parse_url/1" do
     test "takes the file and node of a design link, with the node id as the API writes it" do

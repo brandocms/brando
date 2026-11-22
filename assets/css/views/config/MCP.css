@@ -64,6 +64,17 @@
     }
     small { flex: 1 1 100%; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 1.5; }
   }
+  .mcp-figma-expires {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--brando-muted); font-size: var(--brando-text-sm);
+    input { flex: 0 0 auto; width: auto; font-family: inherit; }
+  }
+  /* What Figma said of the token, and its expiry, under the hint */
+  .mcp-figma-check { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .mcp-figma-expiry.is-warning {
+    justify-self: start; padding: 4px 10px; border-radius: 6px;
+    background: var(--brando-note); color: var(--brando-note-ink);
+  }
   /* The guidance for building from Figma: the editor, then the developers'
      text and the history, folded */
   /* One shrinking column, so a long history excerpt ellipsizes instead of

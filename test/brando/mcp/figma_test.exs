@@ -173,11 +173,12 @@ defmodule Brando.MCP.FigmaTest do
   defp images,
     do: Brando.Repo.all(from(i in Image, where: is_nil(i.deleted_at) and like(i.path, "%figma/%"), order_by: :id))
 
-  test "both tools are offered, and say that they reach Figma", %{tenant: tenant, token: token} do
+  test "the tools are offered, and say that they reach Figma", %{tenant: tenant, token: token} do
     %{"result" => %{"tools" => tools}} = rpc(tenant, token, "tools/list") |> json_response(200)
     by_name = Map.new(tools, &{&1["name"], &1["annotations"]})
 
     assert %{"readOnlyHint" => true, "openWorldHint" => true} = by_name["brando_figma_read_frame"]
+    assert %{"readOnlyHint" => true, "openWorldHint" => true} = by_name["brando_figma_status"]
 
     assert %{"readOnlyHint" => false, "destructiveHint" => false, "openWorldHint" => true} =
              by_name["brando_figma_import_images"]
@@ -810,7 +811,7 @@ defmodule Brando.MCP.FigmaTest do
     test "a Figma refusal is told as such", %{tenant: tenant, token: token, receiver: receiver} do
       stub_figma(receiver, status: 403)
 
-      assert %{"isError" => true, "content" => [%{"text" => "Figma refused the site's token" <> _}]} =
+      assert %{"isError" => true, "content" => [%{"text" => "Figma refused: the token's owner cannot open" <> _}]} =
                call(tenant, token, "import_images", %{"url" => @link})
 
       assert images() == []
@@ -821,6 +822,178 @@ defmodule Brando.MCP.FigmaTest do
       stub_figma(receiver)
       assert %{"isError" => true} = call(tenant, token, "read_frame", %{"url" => "https://example.com/x"})
       assert %{"isError" => true} = call(tenant, token, "read_frame", %{"url" => @link, "offset" => -1})
+      refute_received {:figma, _, _}
+    end
+  end
+
+  describe "the token's expiry" do
+    setup %{tenant: tenant, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+      :ok
+    end
+
+    defp expires_in(tenant, user, days),
+      do: :ok = MCP.put_figma_token(tenant, @token, user, expires_on: Date.add(Brando.Figma.today(), days))
+
+    test "read_frame and import_images carry a note in its last seven days, for the tool to pass on",
+         %{tenant: tenant, token: token, user: user, receiver: receiver} do
+      stub_figma(receiver)
+
+      expires_in(tenant, user, 8)
+      assert %{"structuredContent" => result} = call(tenant, token, "read_frame", %{"url" => @link})
+      refute Map.has_key?(result, "token_note")
+      refute Map.has_key?(import!(tenant, token), "token_note")
+
+      expires_in(tenant, user, 7)
+      assert %{"structuredContent" => %{"token_note" => note}} = call(tenant, token, "read_frame", %{"url" => @link})
+      assert note =~ "The site's Figma token expires on #{Date.add(Brando.Figma.today(), 7)}, in 7 days."
+      assert note =~ "Tell the person: An administrator replaces it"
+      assert %{"token_note" => ^note} = import!(tenant, token)
+
+      expires_in(tenant, user, 0)
+
+      assert %{"structuredContent" => %{"token_note" => "The site's Figma token expires today" <> _}} =
+               call(tenant, token, "read_frame", %{"url" => @link})
+    end
+
+    test "a date that has passed does not stop a call: Figma decides",
+         %{tenant: tenant, token: token, receiver: receiver} do
+      Brando.Repo.update_all(MCP.Setting, set: [figma_token_expires_on: Date.add(Brando.Figma.today(), -3)])
+      stub_figma(receiver)
+
+      assert %{"structuredContent" => %{"frame" => _} = result} = call(tenant, token, "read_frame", %{"url" => @link})
+      refute Map.has_key?(result, "token_note")
+    end
+
+    test "is from today on, replaced with the token, and cleared when it is removed", %{tenant: tenant, user: user} do
+      today = Brando.Figma.today()
+
+      assert {:error, :invalid_expiry} =
+               MCP.put_figma_token(tenant, "figd_other-token-9999", user, expires_on: Date.add(today, -1))
+
+      assert {:error, :invalid_expiry} = MCP.put_figma_token(tenant, "figd_other-token-9999", user, expires_on: "soon")
+      assert {:ok, @token} = MCP.figma_token(tenant)
+
+      :ok = MCP.put_figma_token(tenant, @token, user, expires_on: today)
+      assert %{expires_on: ^today} = MCP.figma_token_status(tenant)
+
+      # A token saved without a date has none recorded, not the old one
+      :ok = MCP.put_figma_token(tenant, @token, user)
+      assert %{expires_on: nil} = MCP.figma_token_status(tenant)
+
+      expires_in(tenant, user, 30)
+      :ok = MCP.delete_figma_token(tenant, user)
+      assert Brando.Repo.one(from(s in MCP.Setting, select: s.figma_token_expires_on)) == nil
+    end
+  end
+
+  describe "brando_figma_status" do
+    defp status(tenant, token) do
+      assert %{"structuredContent" => result} = call(tenant, token, "status", %{})
+      refute Map.has_key?(result, "error")
+      result
+    end
+
+    defp stub_me(status, body) do
+      test = self()
+
+      ReqTest.stub(Brando.Figma, fn conn ->
+        send(test, {:figma, conn.request_path, Plug.Conn.get_req_header(conn, "x-figma-token")})
+        conn |> Plug.Conn.put_status(status) |> ReqTest.json(body)
+      end)
+    end
+
+    test "without a token says so, as an answer rather than an error", %{tenant: tenant, token: token} do
+      assert %{"token_set" => false, "message" => "No Figma token is set" <> _} = result = status(tenant, token)
+      refute Map.has_key?(result, "state")
+      refute_received {:figma, _, _}
+
+      # The connection's live page names the step
+      assert inspect(BrandoAdmin.Components.ToolSteps.label("status", %{}, %{})) =~ "Checked the site's Figma token"
+    end
+
+    test "a valid token: the account's handle and the recorded expiry, never the token, its hint or an email",
+         %{tenant: tenant, token: token, user: user} do
+      expires_on = Date.add(Brando.Figma.today(), 60)
+      :ok = MCP.put_figma_token(tenant, @token, user, expires_on: expires_on)
+      stub_me(200, %{"id" => "42", "handle" => "Ada Designer", "email" => "ada@example.com", "img_url" => "https://x"})
+
+      result = status(tenant, token)
+
+      assert %{"token_set" => true, "state" => "valid", "handle" => "Ada Designer", "expires_on" => iso} = result
+      assert iso == Date.to_iso8601(expires_on)
+      assert result["message"] =~ "It belongs to the Figma account “Ada Designer”."
+      assert result["message"] =~ "It expires on #{iso}"
+      assert_received {:figma, "/v1/me", [@token]}
+
+      encoded = Jason.encode!(result)
+      refute encoded =~ "ada@example.com"
+      refute encoded =~ @token
+      refute encoded =~ "abcd"
+    end
+
+    test "an expired or invalid token, with Figma's words", %{tenant: tenant, token: token, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+
+      stub_me(401, %{"status" => 401, "err" => "Token has expired"})
+
+      assert %{"state" => "expired", "figma_error" => "Token has expired", "expires_on" => nil, "message" => message} =
+               status(tenant, token)
+
+      assert message =~ "has expired. An administrator replaces it"
+      assert message =~ "No expiry date was recorded"
+
+      stub_me(403, %{"status" => 403, "err" => "Invalid token"})
+      assert %{"state" => "invalid", "figma_error" => "Invalid token", "message" => message} = status(tenant, token)
+      assert message =~ "Figma said: “Invalid token”."
+    end
+
+    test "a token that may not read its own account could not be checked, and may still read files",
+         %{tenant: tenant, token: token, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+      err = "Invalid scope(s): file_content:read. This endpoint requires the current_user:read scope"
+      stub_me(403, %{"status" => 403, "err" => err})
+
+      assert %{"token_set" => true, "state" => "no_account_scope", "figma_error" => ^err, "message" => message} =
+               result = status(tenant, token)
+
+      refute Map.has_key?(result, "handle")
+      assert message =~ "could not be checked"
+      assert message =~ "current_user:read"
+      assert message =~ "It may still read files"
+      refute message =~ "does not accept"
+      refute message =~ "expired"
+    end
+
+    test "Figma not answering is not an invalid token", %{tenant: tenant, token: token, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+
+      for status <- [429, 502] do
+        stub_me(status, %{"status" => status, "err" => "Invalid token"})
+        assert %{"state" => "unreachable", "message" => "Figma could not be reached" <> _} = status(tenant, token)
+      end
+    end
+
+    test "warns in the token's last days, and says when the recorded date has passed",
+         %{tenant: tenant, token: token, user: user} do
+      today = Brando.Figma.today()
+      :ok = MCP.put_figma_token(tenant, @token, user, expires_on: Date.add(today, 3))
+      stub_me(200, %{"handle" => "Ada"})
+
+      assert status(tenant, token)["message"] =~ "expires on #{Date.add(today, 3)}, in 3 days. It needs replacing"
+
+      Brando.Repo.update_all(MCP.Setting, set: [figma_token_expires_on: Date.add(today, -2)])
+      assert %{"state" => "valid", "message" => message} = status(tenant, token)
+      assert message =~ "#{Date.add(today, -2)}, has passed, but Figma still accepts it."
+    end
+
+    test "a token that no longer decrypts is unreadable, and Figma is not asked",
+         %{tenant: tenant, token: token, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+      Brando.Repo.update_all(MCP.Setting, set: [figma_token: Brando.Crypto.encrypt(@token, "another context")])
+
+      assert %{"token_set" => true, "state" => "unreadable", "message" => message} = status(tenant, token)
+      assert message =~ "can no longer be decrypted"
       refute_received {:figma, _, _}
     end
   end

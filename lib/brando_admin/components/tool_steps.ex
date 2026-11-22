@@ -221,6 +221,7 @@ defmodule BrandoAdmin.Components.ToolSteps do
          )
 
   defp step_text("import_images", _, _), do: gettext("Imported images from a Figma frame")
+  defp step_text("status", _, _), do: gettext("Checked the site's Figma token")
 
   # The media tools of a connected tool (`Brando.MCP.Media`)
   defp step_text("prepare_upload", %{"filename" => filename}, _) when is_binary(filename),

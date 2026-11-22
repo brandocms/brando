@@ -8,7 +8,7 @@ defmodule Brando.Migrations.AddFigmaTokenToMCPSettingsTest do
   defp columns,
     do:
       rows(
-        "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'mcp_settings' AND column_name LIKE 'figma%' ORDER BY column_name",
+        "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'mcp_settings' AND column_name IN ('figma_token', 'figma_token_hint', 'figma_token_set_at', 'figma_token_set_by_id') ORDER BY column_name",
         []
       )
 
