@@ -11571,7 +11571,7 @@ msgstr "Mål nå"
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Measured on %{day}."
-msgstr "Målt %{day}."
+msgstr "Målt %{day}"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
