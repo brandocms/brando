@@ -859,30 +859,30 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         end}
       </:class_line>
     </RC.detail_head>
-    <RC.notice
-      :if={@stale > 0}
-      icon="info"
-      headline={
-        ngettext(
-          "1 block holds values the module no longer defines",
-          "%{count} blocks hold values the module no longer defines",
-          @stale
-        )
-      }
-    >
-      {gettext("Drop them, or move them onto a ref or var the module defines now.")}
-      <:actions>
-        <.link
-          navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
-          class="btn btn--sm"
-          data-testid="release-resolve-blocks"
-        >
-          {gettext("Resolve blocks")}
-        </.link>
-      </:actions>
-    </RC.notice>
     <RC.tabs tab={@tab} entries={length(@applied_entries)} tabs={~w(template entries)} />
     <div class="release-tab-body">
+      <RC.notice
+        :if={@stale > 0}
+        icon="info"
+        headline={
+          ngettext(
+            "1 block holds values the module no longer defines",
+            "%{count} blocks hold values the module no longer defines",
+            @stale
+          )
+        }
+      >
+        {gettext("Drop them, or move them onto a ref or var the module defines now.")}
+        <:actions>
+          <.link
+            navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
+            class="btn btn--sm"
+            data-testid="release-resolve-blocks"
+          >
+            {gettext("Resolve blocks")}
+          </.link>
+        </:actions>
+      </RC.notice>
       <%= if @tab == "entries" do %>
         <RC.entries
           entries={@applied_entries}
