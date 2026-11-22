@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../../assets/src/hooks/ImageEditor/cropGeometry.js', import.meta.url), 'utf8')
-const { calculateCropRegion, centerFocalOf, shiftFocalWithFrame } =
+const { calculateCropRegion, centerFocalOf, focalInRegion, shiftFocalWithFrame } =
   await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)
 
 // A 2500×1875 photo with a 1000×375 size: the frame is the full width, 937.5 rows tall.
@@ -76,4 +76,35 @@ test('dragging a converted frame moves it with the pointer until the edge', () =
 
   const pastEdge = shiftFocalWithFrame(start.y, 5000, region.height, H)
   assert.equal(calculateCropRegion(50, pastEdge, W, H, RATIO, 1).top, H - region.height)
+})
+
+// A 1000×1000 photo, square crop at 2× zoom, position-mode point (20, 50): the
+// editor exports columns 100–599, where the pin (column 200) is 20 % across.
+test('a zoomed export keeps a position-mode pin on its place in the photo', () => {
+  const region = calculateCropRegion(20, 50, 1000, 1000, 1, 2, 'position')
+  assert.deepEqual(region, { left: 100, top: 250, width: 500, height: 500 })
+
+  assert.deepEqual(focalInRegion(20, 50, region, 1000, 1000), { x: 20, y: 50 })
+})
+
+test('the server cuts the other sizes from a zoomed export where the previews showed them', () => {
+  const region = calculateCropRegion(20, 50, 1000, 1000, 1, 2, 'position')
+  const focal = focalInRegion(20, 50, region, 1000, 1000)
+
+  // The 1:2 preview at 2× zoom, against the band the server cuts at 1:2 from
+  // the exported file, in the same mode.
+  const preview = calculateCropRegion(20, 50, 1000, 1000, 0.5, 2, 'position')
+  const cut = calculateCropRegion(focal.x, focal.y, region.width, region.height, 0.5, 1, 'position')
+
+  assert.equal(preview.left, 150)
+  assert.deepEqual(
+    { left: region.left + cut.left, top: region.top + cut.top, width: cut.width, height: cut.height },
+    preview
+  )
+})
+
+test('a zoomed export re-expresses a centre-mode pin in the exported file', () => {
+  const region = { left: 0, top: 0, width: 500, height: 400 }
+
+  assert.deepEqual(focalInRegion(25, 25, region, 1000, 800), { x: 50, y: 50 })
 })

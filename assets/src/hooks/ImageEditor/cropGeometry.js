@@ -96,3 +96,35 @@ export function shiftFocalWithFrame(focal, delta, frame, image) {
 
   return Math.min(100, Math.max(0, focal + (moved / image) * 100))
 }
+
+/**
+ * Re-express a focal point in the coordinates of a region exported from the image.
+ *
+ * The focal is a percentage of the image it is stored on, and after a crop that
+ * image is the region — so a focal left in the original's coordinates points
+ * somewhere else entirely. Measured against the original, cropping the top
+ * left quarter of a 1000x800 image would save (25, 25) for a file whose centre
+ * is by definition (50, 50), and every `crop: true` size derived from it would
+ * be anchored toward the corner. The square `thumb` is the one that shows it
+ * worst, and `build_crop_groups/1` filters it out of the previews, so nothing
+ * in the editor would show the damage either.
+ *
+ * The pin keeps its place on the photo in either mode. For a position-mode
+ * point that leaves the percentages as they were, so the server cuts the
+ * other sizes from the exported file where the editor showed them.
+ *
+ * @param {number} focalX - Focal X in percentage of the original (0-100)
+ * @param {number} focalY - Focal Y in percentage of the original (0-100)
+ * @param {{ left: number, top: number, width: number, height: number }} region
+ * @param {number} origWidth - Original image width in pixels
+ * @param {number} origHeight - Original image height in pixels
+ * @returns {{ x: number, y: number }}
+ */
+export function focalInRegion(focalX, focalY, region, origWidth, origHeight) {
+  const toPercent = (px, start, size) => Math.max(0, Math.min(100, ((px - start) / size) * 100))
+
+  return {
+    x: toPercent((focalX / 100) * origWidth, region.left, region.width),
+    y: toPercent((focalY / 100) * origHeight, region.top, region.height)
+  }
+}

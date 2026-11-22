@@ -1,5 +1,9 @@
 import { minigl } from '@xdadda/mini-gl'
-import { calculateCropRegion, centerFocalOf, shiftFocalWithFrame } from './cropGeometry'
+import { calculateCropRegion, centerFocalOf, focalInRegion, shiftFocalWithFrame } from './cropGeometry'
+
+// How far, in display pixels, the pointer moves before a press on a crop frame
+// counts as a drag rather than a click.
+const DRAG_THRESHOLD = 3
 
 /**
  * Preset ratios for freeform crop mode.
@@ -730,7 +734,8 @@ export default app => ({
           const payload = {
             mode: 'replace',
             focal_x: Math.round(this.focalX),
-            focal_y: Math.round(this.focalY)
+            focal_y: Math.round(this.focalY),
+            focal_mode: this.focalMode
           }
           if (this.imageId) payload.image_id = this.imageId
           this.pushEventTo(this.el, 'image_editor_save', payload)
@@ -1066,16 +1071,18 @@ export default app => ({
     const dx = pos.x - state.startX
     const dy = pos.y - state.startY
 
-    if (state.mode === 'move') {
-      // A frame placed by a position-mode point reads as centre mode once
-      // dragged, as the server reads the point it saves. The drag goes on from
-      // the centre of the frame as it stood, so the frame does not jump.
-      if (this.focalMode === 'position' && (dx !== 0 || dy !== 0)) {
-        this.centerFocalOnFrame(state.startRegion)
-        state.startFocalX = this.focalX
-        state.startFocalY = this.focalY
-      }
+    // A frame placed by a position-mode point reads as centre mode once moved
+    // or resized: the move maths and the resize's scaling around the centre are
+    // centre-mode readings. The drag goes on from the centre of the frame as it
+    // stood, so the frame does not jump. A click that jitters keeps the mode.
+    if (this.focalMode === 'position') {
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return
+      this.centerFocalOnFrame(state.startRegion)
+      state.startFocalX = this.focalX
+      state.startFocalY = this.focalY
+    }
 
+    if (state.mode === 'move') {
       // Drag frame interior: move the focal by as much as the frame actually
       // moves, not by as much as the pointer did.
       //
@@ -1335,9 +1342,6 @@ export default app => ({
       this._remapFocalToRegion(r)
     } else if (this.cropGroups.length > 0 && this.zoom > 1) {
       const region = this.cropRegionFor(this.cropGroups[0].ratio)
-      // The saved file is this region and its point is re-expressed in it,
-      // which the server reads as a moved point: in centre mode.
-      if (this.focalMode === 'position') this.centerFocalOnFrame(region)
       exportCanvas.width = region.width
       exportCanvas.height = region.height
       ctx.drawImage(
@@ -1354,25 +1358,13 @@ export default app => ({
   },
 
   /**
-   * Re-express the focal point in the coordinates of the region we just exported.
-   *
-   * The focal is a percentage of the image it is stored on, and after a crop that
-   * image is the region — so a focal left in the original's coordinates points
-   * somewhere else entirely. Measured against the original, cropping the top
-   * left quarter of a 1000x800 image would save (25, 25) for a file whose centre
-   * is by definition (50, 50), and every `crop: true` size derived from it would
-   * be anchored toward the corner. The square `thumb` is the one that shows it
-   * worst, and `build_crop_groups/1` filters it out of the previews, so nothing
-   * here would show the damage either.
+   * Re-express the focal point in the coordinates of the region we just
+   * exported (`focalInRegion`), keeping its mode.
    */
   _remapFocalToRegion(region) {
-    const focalPxX = (this.focalX / 100) * this.imageWidth
-    const focalPxY = (this.focalY / 100) * this.imageHeight
-
-    const toPercent = (px, start, size) => Math.max(0, Math.min(100, ((px - start) / size) * 100))
-
-    this.focalX = toPercent(focalPxX, region.left, region.width)
-    this.focalY = toPercent(focalPxY, region.top, region.height)
+    const focal = focalInRegion(this.focalX, this.focalY, region, this.imageWidth, this.imageHeight)
+    this.focalX = focal.x
+    this.focalY = focal.y
   },
 
   /**
@@ -1384,6 +1376,7 @@ export default app => ({
 
     const focalX = Math.round(this.focalX)
     const focalY = Math.round(this.focalY)
+    const focalMode = this.focalMode
     const imageId = this.imageId
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content
     const hook = this
@@ -1397,6 +1390,7 @@ export default app => ({
       formData.append('image_id', String(imageId))
       formData.append('focal_x', String(focalX))
       formData.append('focal_y', String(focalY))
+      formData.append('focal_mode', focalMode)
 
       try {
         const response = await fetch('/admin/api/content/image/replace_crop', {
@@ -1414,6 +1408,7 @@ export default app => ({
             mode: 'replace',
             focal_x: focalX,
             focal_y: focalY,
+            focal_mode: focalMode,
             image_id: imageId,
             crop_applied: true
           })
@@ -1445,6 +1440,7 @@ export default app => ({
 
     const focalX = Math.round(this.focalX)
     const focalY = Math.round(this.focalY)
+    const focalMode = this.focalMode
 
     if (this.fromBlock) {
       const configTarget = this.configTarget
@@ -1457,6 +1453,7 @@ export default app => ({
           mode: 'new_copy',
           focal_x: focalX,
           focal_y: focalY,
+          focal_mode: focalMode,
           config_target: configTarget || 'default'
         })
 
@@ -1486,7 +1483,8 @@ export default app => ({
           this.pushEventTo(this.el, 'image_editor_save', {
             mode: 'new_copy',
             focal_x: focalX,
-            focal_y: focalY
+            focal_y: focalY,
+            focal_mode: focalMode
           })
         }
       }, 'image/jpeg', 0.95)

@@ -6623,7 +6623,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event(
         "image_editor_save",
-        %{"mode" => "new_copy", "focal_x" => x, "focal_y" => y} = params,
+        %{"mode" => "new_copy", "focal_x" => _x, "focal_y" => _y} = params,
         socket
       ) do
     # Store focal and config_target so they can be applied once the upload completes.
@@ -6635,7 +6635,7 @@ defmodule BrandoAdmin.Components.Form do
     # editor opened elsewhere before the upload finishes replaces `edit_image`.
     {:noreply,
      socket
-     |> assign(:image_editor_focal, %{x: x, y: y})
+     |> assign(:image_editor_focal, editor_focal(params))
      |> assign(:image_editor_config_target, config_target)
      |> assign(:image_editor_copy_of, socket.assigns.edit_image)}
   end
@@ -7909,13 +7909,10 @@ defmodule BrandoAdmin.Components.Form do
           img
       end
 
-    x = params["focal_x"]
-    y = params["focal_y"]
-
     changeset =
       image
       |> Images.Image.changeset(
-        %{focal: %{x: x, y: y}, status: :unprocessed},
+        %{focal: editor_focal(params), status: :unprocessed},
         current_user
       )
       |> Map.put(:action, :update)
@@ -7927,6 +7924,11 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, updated_image}
     end
   end
+
+  # The image editor's point with the mode the editor shows it in. A mode sent
+  # with the point is stored as sent, moved or not (`Images.Focal.cast/2`).
+  defp editor_focal(params),
+    do: %{x: params["focal_x"], y: params["focal_y"], mode: Images.Focal.mode(%{mode: params["focal_mode"]})}
 
   # A form field's input name at a path as the form names it:
   # `article[items][1][cover_id]`.
@@ -9119,7 +9121,7 @@ defmodule BrandoAdmin.Components.Form do
     changeset =
       new_image
       |> Images.Image.changeset(
-        %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
+        %{focal: focal, status: :unprocessed},
         current_user
       )
       |> Map.put(:action, :update)

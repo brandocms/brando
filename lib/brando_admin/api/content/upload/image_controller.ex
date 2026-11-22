@@ -10,9 +10,10 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
   Receives the image blob and image_id, replaces the original file,
   updates dimensions/focal/status, and queues reprocessing.
   """
-  def replace_crop(conn, %{"image_id" => image_id, "image" => upload, "focal_x" => fx, "focal_y" => fy}) do
+  def replace_crop(conn, %{"image_id" => image_id, "image" => upload, "focal_x" => fx, "focal_y" => fy} = params) do
     user = Brando.Utils.current_user(conn)
-    focal = %{x: String.to_integer(fx), y: String.to_integer(fy)}
+    mode = Brando.Images.Focal.mode(%{mode: params["focal_mode"]})
+    focal = %{x: String.to_integer(fx), y: String.to_integer(fy), mode: mode}
 
     with {:ok, image} <- Brando.Images.get_image(image_id),
          {:ok, binary_data} <- File.read(upload.path),
