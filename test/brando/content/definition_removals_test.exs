@@ -34,7 +34,14 @@ defmodule Brando.Content.DefinitionRemovalsTest do
     {:ok, _} = Definitions.export(path, user, uids: [module.uid])
     on_exit(fn -> File.rm_rf!(path) end)
 
-    %{user: user, module: module, identity: identity, naming: naming, path: path, exs: Path.join(path, "content/teaser.exs")}
+    %{
+      user: user,
+      module: module,
+      identity: identity,
+      naming: naming,
+      path: path,
+      exs: Path.join(path, "content/teaser.exs")
+    }
   end
 
   # The first block of `page` holds `value` in a `tagline` var
@@ -111,7 +118,7 @@ defmodule Brando.Content.DefinitionRemovalsTest do
       uid = c.module.uid
       assert "update module #{uid}: removes var tagline (1 of 6 blocks hold it, 1 entry)" in output
       resolve = "mix brando.modules resolve --uid #{uid} --user #{c.user.id} --drop var:tagline --apply"
-      assert "  resolve: " <> resolve in output
+      assert ("  resolve: " <> resolve) in output
 
       assert Repo.preload(module(c), :vars).vars == []
       assert var(holder, "tagline").value == "Kept words"
