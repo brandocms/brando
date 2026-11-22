@@ -1,0 +1,1 @@
+- A row an editor adds, inserts, removes or moves in a subform reaches the other editors of the entry at the click, not when the editor next leaves a field or saves.
