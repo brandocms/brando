@@ -20,7 +20,10 @@ defmodule Brando.Translations.Pairing do
   own, after checking that the group is as the plan saw it: an entry
   renamed, moved to another language, trashed or deleted, or linked by an
   editor since, leaves the group as it is, reported as `:changed`. Linking
-  copies no content and joins no synchronized group.
+  copies no content and joins no synchronized group. What follows a link
+  (`Brando.Translations.alternate_added/3`) is re-synchronized for every
+  linked group, those linked already included, so a run that stopped before
+  that is repaired by the next.
   """
 
   import Ecto.Query
@@ -58,6 +61,10 @@ defmodule Brando.Translations.Pairing do
   @spec apply(module(), [group()]) :: [group()]
   def apply(schema, plan) do
     fields = fields!(schema)
+
+    # Again for a group linked already: a run that stopped after writing its
+    # links may not have re-synchronized what follows them
+    for %{status: :linked, links: links} <- plan, do: linked(schema, Enum.uniq_by(links, &Enum.sort(Tuple.to_list(&1))))
 
     for %{status: :link} = group <- plan, do: apply_group(schema, fields, group)
   end

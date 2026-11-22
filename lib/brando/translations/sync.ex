@@ -1140,11 +1140,13 @@ defmodule Brando.Translations.Sync do
   # --- Tree relations ---------------------------------------------------------
 
   @doc """
-  The `belongs_to` relations of a schema with alternates that point at
-  entries with language versions: at the schema itself, like a page's parent,
-  or at another schema with alternates, like a fragment's page. They follow
-  the source, mapped onto the same entry's version in the target's language.
-  One listed in `language_controlled_fields` stays each language's own.
+  The `belongs_to` relations of a schema with alternates that follow the
+  source mapped onto the related entry's version in the target's language:
+  one that points at the schema itself, like a page's parent, unless it is
+  listed in `language_controlled_fields`; and a source-controlled one that
+  points at another schema with alternates, like a fragment's page
+  (`always_source_controlled`). Any other `belongs_to` is each language's own,
+  or copied as it is when source-controlled.
   """
   def tree_relations(schema, config \\ nil), do: schema |> tree_targets(config) |> Enum.map(&elem(&1, 0))
 
@@ -1154,21 +1156,23 @@ defmodule Brando.Translations.Sync do
 
     if alternates?(schema) do
       for %{type: :belongs_to, name: name, opts: opts} <- Relations.__relations__(schema),
-          opts[:module] == schema or alternates?(opts[:module]),
-          name not in Map.get(config, :language_controlled_fields, []),
+          tree_relation?(schema, name, opts[:module], config),
           do: {name, opts[:module]}
     else
       []
     end
   end
 
+  defp tree_relation?(schema, name, schema, config), do: name not in Map.get(config, :language_controlled_fields, [])
+  defp tree_relation?(_schema, name, module, config), do: name in config.source_controlled_fields and alternates?(module)
+
   defp alternates?(module) do
     is_atom(module) and Code.ensure_loaded?(module) and function_exported?(module, :has_alternates?, 0) and
       module.has_alternates?()
   end
 
-  # `:entries` maps each source id to its version in the target's language, or
-  # nil when there is none yet. Then the target keeps its own value and an
+  # `:entries` maps each relation's source id (`{name, id}`) to the entry's
+  # version in the target's language, or nil when there is none yet. Then the target keeps its own value and an
   # `:awaiting_translation` item records the field and the awaited id
   # (`parent/12`); a re-sync after that version is created fills it in.
   defp resolve_tree(payload, _target, _spec, nil, awaiting), do: {payload, awaiting}
@@ -1187,7 +1191,7 @@ defmodule Brando.Translations.Sync do
         {acc, awaiting}
 
       source_id ->
-        case Map.get(map, source_id) do
+        case Map.get(map, {name, source_id}) do
           # The path names the awaited entry, so only its translation re-syncs this
           nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item("#{name}/#{source_id}") | awaiting]}
           id -> {Map.put(acc, field, id), awaiting}

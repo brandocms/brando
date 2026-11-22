@@ -33,5 +33,41 @@ defmodule BrandoIntegration.Repo.Migrations.AddFragmentAlternates do
     end
 
     create unique_index(:authorization_test_snippets_alternates, [:entry_id, :linked_entry_id])
+
+    # Synchronized articles with a required category that has language links
+    # (`Brando.SyncCategoryTest`)
+    create table(:synctest_categories) do
+      add :title, :text
+      add :language, :text
+      timestamps()
+    end
+
+    create table(:synctest_categories_alternates) do
+      add :entry_id, references(:synctest_categories, on_delete: :delete_all)
+      add :linked_entry_id, references(:synctest_categories, on_delete: :delete_all)
+      timestamps()
+    end
+
+    create unique_index(:synctest_categories_alternates, [:entry_id, :linked_entry_id])
+
+    create table(:synctest_categorized_articles) do
+      add :title, :text
+      add :language, :text
+      add :status, :integer
+      add :category_id, references(:synctest_categories), null: false
+      add :page_id, references(:pages, on_delete: :nilify_all)
+      add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
+      timestamps()
+    end
+
+    create table(:synctest_categorized_articles_alternates) do
+      add :entry_id, references(:synctest_categorized_articles, on_delete: :delete_all)
+      add :linked_entry_id, references(:synctest_categorized_articles, on_delete: :delete_all)
+      timestamps()
+    end
+
+    create unique_index(:synctest_categorized_articles_alternates, [:entry_id, :linked_entry_id])
   end
 end

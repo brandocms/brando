@@ -32,8 +32,13 @@ defmodule Brando.Pages.Fragment do
   trait :timestamped
   # Language versions keep the same keys. Independent unless the application
   # configures it, as for pages: `config :brando, Brando.Pages.Fragment,
-  # translatable: [mode: :synchronized, ...]` (see the i18n guide).
-  trait :translatable, runtime_config: true, matched_by: [:parent_key, :key]
+  # translatable: [mode: :synchronized, ...]` (see the i18n guide). A
+  # synchronized translation belongs to its page's version in its language.
+  trait :translatable,
+    runtime_config: true,
+    matched_by: [:parent_key, :key],
+    always_source_controlled: [:page]
+
   trait :blocks
   trait :blocks_prevent_circular_references
   trait Brando.Pages.Fragment.KeyFormat

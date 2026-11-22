@@ -63,6 +63,17 @@ defmodule Brando.Trait.Translatable do
   one of its versions: a translation is not created beside it, and the form
   lists it next to the linked versions. In synchronized mode they are
   source-controlled.
+
+  ## Fields every synchronized translation follows
+
+      trait :translatable, runtime_config: true, always_source_controlled: [:page]
+
+  `always_source_controlled` lists fields that are source-controlled in
+  synchronized mode whatever `source_controlled_fields` the application
+  configures, as `Brando.Pages.Fragment` does for its page. A `belongs_to`
+  relation that is source-controlled and points at a schema with alternates
+  is pointed at the related entry's version in the translation's language
+  (see `Brando.Translations.Sync.tree_relations/2`).
   """
   use Brando.Trait
 
@@ -104,13 +115,14 @@ defmodule Brando.Trait.Translatable do
   end
 
   @doc """
-  `config` with the `matched_by` fields source-controlled in synchronized
-  mode: they hold the same values in every language version.
+  `config` with `fields` source-controlled in synchronized mode: the
+  `matched_by` attributes, which hold the same values in every language
+  version, and the `always_source_controlled` fields.
   """
-  def with_matched_by(%{mode: :synchronized} = config, [_ | _] = fields),
+  def with_always_controlled(%{mode: :synchronized} = config, [_ | _] = fields),
     do: %{config | source_controlled_fields: Enum.uniq(config.source_controlled_fields ++ fields)}
 
-  def with_matched_by(config, _fields), do: config
+  def with_always_controlled(config, _fields), do: config
 
   @doc """
   Validates every runtime translation config in the application's
@@ -148,7 +160,17 @@ defmodule Brando.Trait.Translatable do
     validate_fields!(module, mode, Keyword.get(opts, :source_controlled_fields, []))
     validate_language_controlled!(module, mode, opts)
     validate_matched_by!(module, Keyword.get(opts, :matched_by, []))
+    validate_always_controlled!(module, Keyword.get(opts, :always_source_controlled, []))
     true
+  end
+
+  defp validate_always_controlled!(module, fields) do
+    unless is_list(fields) and Enum.all?(fields, &(&1 in controllable_fields(module))) do
+      raise BlueprintError,
+        message:
+          "#{inspect(module)}: trait :translatable always_source_controlled must list attributes, assets or " <>
+            "belongs_to relations, got #{inspect(fields)}"
+    end
   end
 
   defp validate_matched_by!(module, fields) do

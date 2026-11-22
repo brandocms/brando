@@ -9,6 +9,8 @@ defmodule Brando.Trait.Translatable.Compiler do
       @translatable_config Brando.Trait.Translatable.config(unquote(config))
       @translatable_runtime Keyword.get(unquote(config), :runtime_config, false)
       @translatable_matched_by Keyword.get(unquote(config), :matched_by, [])
+      @translatable_always_controlled @translatable_matched_by ++
+                                        Keyword.get(unquote(config), :always_source_controlled, [])
 
       def has_alternates?, do: @translatable_alternates
       def __translatable_matched_by__, do: @translatable_matched_by
@@ -20,10 +22,13 @@ defmodule Brando.Trait.Translatable.Compiler do
         def __translatable_config__ do
           __MODULE__
           |> Brando.Trait.Translatable.RuntimeConfig.get(@translatable_config)
-          |> Brando.Trait.Translatable.with_matched_by(@translatable_matched_by)
+          |> Brando.Trait.Translatable.with_always_controlled(@translatable_always_controlled)
         end
       else
-        @translatable_config Brando.Trait.Translatable.with_matched_by(@translatable_config, @translatable_matched_by)
+        @translatable_config Brando.Trait.Translatable.with_always_controlled(
+                               @translatable_config,
+                               @translatable_always_controlled
+                             )
         def __translatable_config__, do: @translatable_config
       end
 
@@ -129,6 +134,8 @@ defmodule Brando.Trait.Translatable.Compiler do
 
             CacheQuery.evict_entry(unquote(parent_module), id)
             CacheQuery.evict_entry(unquote(parent_module), parent_id)
+
+            Brando.Translations.alternate_removed(unquote(parent_module), id, parent_id)
 
             res
           end
