@@ -261,9 +261,13 @@ defmodule Brando.Images.Intake do
   @doc """
   Downloads `url` to `path` through `Brando.Webhooks.URLGuard`, at most
   `limit` bytes, within `timeout` ms. `{:ok, path}` or `{:error, message}`,
-  safe to show; `who` names the server in a message about its answer.
+  safe to show; `who` names the server in a message about its answer. With
+  `too_large: :size`, a body over `limit` is `{:error, {:too_large, size}}`
+  instead, `size` being the bytes the response's `Content-Length` declares,
+  or nil.
   """
-  @spec download(String.t(), Path.t(), pos_integer(), keyword()) :: {:ok, Path.t()} | {:error, String.t()}
+  @spec download(String.t(), Path.t(), pos_integer(), keyword()) ::
+          {:ok, Path.t()} | {:error, String.t() | {:too_large, non_neg_integer() | nil}}
   def download(url, path, limit, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 60_000)
     who = Keyword.get(opts, :who, "The server")
@@ -278,13 +282,25 @@ defmodule Brando.Images.Intake do
       {:ok, path}
     else
       {:error, message} when is_binary(message) -> {:error, message}
-      %{error: :body_too_large} -> {:error, "The image is larger than #{Brando.Utils.human_size(limit)}."}
+      %{error: :body_too_large} = response -> too_large(response, limit, opts[:too_large])
       %{error: :timeout} -> {:error, "The download took too long."}
       %{error: :unwritable} -> {:error, "The download could not be written to a temporary file."}
       %{status: 200} -> {:error, "The download was cut off. Try again."}
       %{status: status} when status in 300..399 -> {:error, "#{who} answered with a redirect, which is not followed."}
       %{status: status} when is_integer(status) -> {:error, "#{who} answered #{status}."}
       _ -> {:error, "The image could not be downloaded."}
+    end
+  end
+
+  defp too_large(response, _limit, :size), do: {:error, {:too_large, declared_size(response.headers)}}
+  defp too_large(_response, limit, _tag), do: {:error, "The image is larger than #{Brando.Utils.human_size(limit)}."}
+
+  defp declared_size(headers) do
+    with {_name, value} <- List.keyfind(headers, "content-length", 0),
+         {size, ""} <- Integer.parse(String.trim(value)) do
+      size
+    else
+      _ -> nil
     end
   end
 

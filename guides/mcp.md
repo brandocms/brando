@@ -507,6 +507,21 @@ proposal with the modules that match.
   tool calls again for the rest. The images are added when the tool imports
   them, before anyone applies the proposal, and stay in the library if the
   proposal is discarded. Importing needs permission to upload images.
+- An image over the default image config's size limit is not imported: its
+  entry names the image, the limit, its size when Figma's answer gives it,
+  and what to do. The other images of the call are imported. Called with
+  `fit: true`, the tool imports a copy of such an image scaled down on the
+  server, the size limit unchanged: as large as fits under the limit, never
+  enlarged, and never smaller than twice the image's largest use in the frame
+  (for a crop, what the whole image needs for the part shown to be twice the
+  layer). A picture that does not fit in its own format at that size is
+  stored as a JPEG, or as a WebP when it has an alpha channel; one still over
+  the limit, an animated GIF or WebP and one over the pixel limit are refused
+  with the reason. The entry says the image was fitted, with its original and
+  stored pixel sizes. `fit` leaves the images within the limit as they are.
+  It downloads an image up to 50 MB (or the size limit, when that is larger)
+  to scale it down; a site sets another cap with
+  `config :brando, Brando.Figma, fit_download_limit: 80_000_000`.
 - Figma's API cannot download videos. Upload them to the media library
   yourself, named so the tool can tell where each goes (after the Figma
   layer, for instance), and tell the tool the folder: it finds them with
@@ -835,7 +850,8 @@ And the attacks the review asked about:
 - **Figma downloads (SSRF).** The Figma API is called at its fixed address.
   The image URLs it answers with are fetched through the webhooks' address
   guard (public `https` addresses only, the checked address connected to, no
-  redirects), with a time limit and the image config's size limit, written to
+  redirects), with a time limit and the image config's size limit (with
+  `fit`, the import's own `fit_download_limit`), written to
   a temporary file and checked as an upload before anything is stored.
 - **The Figma token.** Encrypted at rest and bound to its site environment, so
   a copy of the column, or a ciphertext moved to another row, does not give
