@@ -591,7 +591,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp usage_section(assigns) do
     usage = assigns.usage
     measured = Enum.filter(usage.days, &Day.measured?/1)
-    latest = if measured == [], do: get_in(usage.overview, [assigns.site.id, :measured]), else: List.last(measured)
+    latest = if measured == [], do: get_in(usage.overview, [assigns.site.id, :measured]), else: latest_day(measured)
 
     assigns =
       assigns
@@ -740,11 +740,13 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   # From the first to the last measurement of the 30 days: none without two
   defp storage_change([first, _ | _] = measured) do
-    last = List.last(measured)
+    last = latest_day(measured)
     %{since: first.day, bytes: Day.storage_bytes(last) - Day.storage_bytes(first)}
   end
 
   defp storage_change(_measured), do: nil
+
+  defp latest_day(days), do: Enum.max_by(days, & &1.day, Date)
 
   # 30 bars of requests per day, the busiest at full height
   defp traffic_bars(days, today) do
@@ -756,15 +758,18 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> Enum.with_index()
     |> Enum.map(fn {date, index} ->
       requests = Map.get(by_day, date, 0)
-      height = if peak == 0, do: 0, else: max(round(requests / peak * 48), if(requests > 0, do: 1, else: 0))
 
       %{
         x: index * 10 + 1,
-        height: height,
+        height: bar_height(requests, peak),
         title: gettext("%{day}: %{requests} requests", day: format_day(date), requests: format_count(requests))
       }
     end)
   end
+
+  # A day with requests is at least a pixel high
+  defp bar_height(0, _peak), do: 0
+  defp bar_height(requests, peak), do: max(round(requests / peak * 48), 1)
 
   # Each environment's database, its archives under it, newest first; an
   # archive of an environment the site no longer has after those that it has

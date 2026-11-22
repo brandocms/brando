@@ -2,12 +2,14 @@ defmodule Brando.Worker.SiteUsageTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import Ecto.Query, only: [from: 2]
   import ExUnit.CaptureLog
 
+  alias Brando.Repo
+  alias Brando.SiteAssetsFixtures
   alias Brando.Sites.Usage
   alias Brando.Sites.Usage.Day
   alias Brando.Sites.Usage.Measure
-  alias Brando.SiteAssetsFixtures
   alias Brando.SSG.Builds
   alias Brando.Tenant
   alias Brando.Tenant.Storage
@@ -43,10 +45,10 @@ defmodule Brando.Worker.SiteUsageTest do
   end
 
   defp create_schema(schema, rows) do
-    Brando.Repo.repo().query!(~s(CREATE SCHEMA "#{schema}"))
-    Brando.Repo.repo().query!(~s|CREATE TABLE "#{schema}".things (id bigserial PRIMARY KEY, body text)|)
+    Repo.repo().query!(~s(CREATE SCHEMA "#{schema}"))
+    Repo.repo().query!(~s|CREATE TABLE "#{schema}".things (id bigserial PRIMARY KEY, body text)|)
 
-    Brando.Repo.repo().query!(
+    Repo.repo().query!(
       ~s|INSERT INTO "#{schema}".things (body) SELECT repeat('y', 500) FROM generate_series(1, $1)|,
       [rows]
     )
@@ -147,10 +149,9 @@ defmodule Brando.Worker.SiteUsageTest do
       assert %{measured: %Day{media_bytes: 40, day: day}} = Usage.overview(today())[beta.id]
       assert day == today()
 
-      assert Brando.Repo.all(Day, prefix: "public")
-             |> Enum.filter(&(&1.site_id == beta.id))
-             |> Enum.map(& &1.day)
-             |> Enum.sort(Date) == [kept, today()]
+      assert Repo.all(from(day in Day, where: day.site_id == ^beta.id, order_by: day.day, select: day.day),
+               prefix: "public"
+             ) == [kept, today()]
     end
 
     test "is unique per day, and Measure now once per waiting job", %{acme: acme} do
@@ -179,7 +180,7 @@ defmodule Brando.Worker.SiteUsageTest do
       assert Usage.days(beta, today()) == []
 
       # A site deleted since it was queued is skipped
-      Brando.Repo.delete!(beta)
+      Repo.delete!(beta)
       assert :ok = perform_job(SiteUsage, %{"site_id" => beta.id})
     end
 
@@ -190,7 +191,7 @@ defmodule Brando.Worker.SiteUsageTest do
         assert :ok = perform_job(SiteUsage, %{"site_id" => acme.id})
       end
 
-      assert Brando.Repo.all(Day, prefix: "public") == []
+      assert Repo.all(Day, prefix: "public") == []
     end
   end
 end

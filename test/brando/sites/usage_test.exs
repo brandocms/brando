@@ -4,9 +4,9 @@ defmodule Brando.Sites.UsageTest do
 
   import Brando.MigrationTemplates, only: [copy_schema: 2, provision: 1, table?: 2]
 
+  alias Brando.SiteAssetsFixtures
   alias Brando.Sites.Usage
   alias Brando.Sites.Usage.Day
-  alias Brando.SiteAssetsFixtures
   alias Brando.Tenant
 
   @today ~D[2026-11-22]

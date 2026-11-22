@@ -5,10 +5,10 @@ defmodule Brando.Sites.UsageTrafficTest do
 
   import Plug.Conn
 
+  alias Brando.SiteAssetsFixtures
   alias Brando.Sites.Usage
   alias Brando.Sites.Usage.Day
   alias Brando.Sites.Usage.Traffic
-  alias Brando.SiteAssetsFixtures
   alias Brando.Tenant
 
   setup do
