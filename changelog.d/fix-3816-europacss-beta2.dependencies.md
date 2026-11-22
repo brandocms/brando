@@ -1,0 +1,2 @@
+- EuropaCSS `0.1.0-beta.2` (`@brandocms/europacss-cli` and `@brandocms/vite-plugin-europacss`) in the generated frontend and backend: token maps take breakpoint collection keys, `scale-from(n, breakpoint)` keeps a value in px below a breakpoint and scales it from there, and `@grid` follows `columns.count` per breakpoint.
+  A backend on `0.1.0-beta.0` fails `mix brando.doctor`'s EuropaCSS check until `mix brando.gen.backend --upgrade` and `mix brando.assets.setup --backend-only` move it.

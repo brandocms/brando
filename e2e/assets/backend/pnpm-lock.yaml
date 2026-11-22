@@ -174,11 +174,11 @@ importers:
         version: 5.0.0-beta.21
     devDependencies:
       '@brandocms/europacss-cli':
-        specifier: 0.1.0-beta.0
-        version: 0.1.0-beta.0
+        specifier: 0.1.0-beta.2
+        version: 0.1.0-beta.2
       '@brandocms/vite-plugin-europacss':
-        specifier: 0.1.0-beta.0
-        version: 0.1.0-beta.0(vite@8.3.3)
+        specifier: 0.1.0-beta.2
+        version: 0.1.0-beta.2(vite@8.3.3)
       '@sveltejs/vite-plugin-svelte':
         specifier: 7.3.1
         version: 7.3.1(svelte@5.57.2)(vite@8.3.3)
@@ -191,55 +191,55 @@ importers:
 
 packages:
 
-  '@brandocms/europacss-cli@0.1.0-beta.0':
-    resolution: {integrity: sha512-xsWlgAzbp+ERhJcPOMa4KZNOs90i6ONtT7GglmwyNjuiPyiKDE32yRcmJfrW6ZXvJ/PHyTxDCotfBN5JpiehwA==}
+  '@brandocms/europacss-cli@0.1.0-beta.2':
+    resolution: {integrity: sha512-CJ6wIPeLD3F/eLY5821CKfBP7mxg9yYu6b56uGUof9ly2tIzxXXCMpkC/3A2d+Cvm5jUTkkAjnm8zyX8qM4zUg==}
     engines: {node: ^22.12.0 || >=24.0.0}
     hasBin: true
 
-  '@brandocms/europacss-darwin-arm64@0.1.0-beta.0':
-    resolution: {integrity: sha512-yYF21E63t7TiYm9xUm2EpMEI2CJoa3lfnDWHNCrV6ODgXcgX8GZwiLiR8t3OZdukuSq3mEiLxAWcau/C5eaGug==}
+  '@brandocms/europacss-darwin-arm64@0.1.0-beta.2':
+    resolution: {integrity: sha512-d6I6NQWBAkhwxZHKwn7d6MkpDx4MKCohbULRzm0cZtp+uR+4vEOaDy+K+QUB1XFASRHgXOjmnd8BGugxzsYmLw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@brandocms/europacss-darwin-x64@0.1.0-beta.0':
-    resolution: {integrity: sha512-BwmrHKH5xLPybbvLZlDx3ehjN4p9n7HS0zy82RQUOBoV2c3xqiMRZN+Us/XlESdb6xVJgy6JojNixE74D6rMTQ==}
+  '@brandocms/europacss-darwin-x64@0.1.0-beta.2':
+    resolution: {integrity: sha512-hhiNqr3dp5yo9O52ZBf7JxBGC0GCoPwrJLE2Gm831bMJWjl/+ybAtiC8lrZR0WKBUuPo+3PGjO6uEfe20W9JEA==}
     cpu: [x64]
     os: [darwin]
 
-  '@brandocms/europacss-linux-arm64-gnu@0.1.0-beta.0':
-    resolution: {integrity: sha512-PRCdx1b2LV9Ae1LbIuf9GyKpUOhX49iPyBrexgGHmgu091Ay3BvYWioRZlN7hplvYMpP0dban9LXEwubYMt5ww==}
+  '@brandocms/europacss-linux-arm64-gnu@0.1.0-beta.2':
+    resolution: {integrity: sha512-DamxUHOwoR8vOKKmQd1srNI+ig0n+Phl5CuKyjBjdZikYRc0HRhwDWogxZ5DM2lZMo7vumpULZcJ/Zi17dz96Q==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@brandocms/europacss-linux-arm64-musl@0.1.0-beta.0':
-    resolution: {integrity: sha512-zhzTmUCt/3xQD5JnKd+MBQkhiKtZikHKXedRH6Emh8vOX9uUOLRZmiiFsuRICa5fd7T0uD67AxioPrL5vAdSvg==}
+  '@brandocms/europacss-linux-arm64-musl@0.1.0-beta.2':
+    resolution: {integrity: sha512-wG0SbYQiPCA7TcsnPBOw0PHSgLQtanQYVbnAj72KJ3tfkNQ6RBkNQUTysHBYcI0UYpzS2REUvxgRxt7eWN6Ojg==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@brandocms/europacss-linux-x64-gnu@0.1.0-beta.0':
-    resolution: {integrity: sha512-ULwZl98nqACRVtqSgKRJmfa3bqzgok7qoD41zm1mGIgq31mGpkv7sRw2kZ7WXjUAW319HCC5Uam4Akm/kZjBaw==}
+  '@brandocms/europacss-linux-x64-gnu@0.1.0-beta.2':
+    resolution: {integrity: sha512-7leEfseaHFZBPoDN1baD8qSm0ulXee8NtMmp9CaDiBbdMaClyXrn9asdS06/o+/hCGSrSTHVhwz9macQEWsXBw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@brandocms/europacss-linux-x64-musl@0.1.0-beta.0':
-    resolution: {integrity: sha512-5dJARPMbZ/55SAw6vXlFER6ZoYOsBUz2XRFG3w1fF95ONInAd1K3X9KhySEkOyOE8kPDhvuty3bv5AT/eguYIg==}
+  '@brandocms/europacss-linux-x64-musl@0.1.0-beta.2':
+    resolution: {integrity: sha512-M3u/MNhL7eafRyJWdatrDTtHm3ieDkLPKUasF3C7gSAhxuMtykIaFXpojgDaP0KWVaNmadCEiMsPOWwaSMGPIA==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@brandocms/europacss-win32-x64@0.1.0-beta.0':
-    resolution: {integrity: sha512-VgnmztGkbkpXDq1a1scIjhpKZy6rTk85OjXEhmWPk/ig7MWvR3Ck31KK6NdaROu8Oql3GQuzaFj4oGZDdG+qjQ==}
+  '@brandocms/europacss-win32-x64@0.1.0-beta.2':
+    resolution: {integrity: sha512-tWds/cbZ5IWIoRGMeVvrb97Rj2AGu4YAp0xUBngTJK654LOxSgVUEe9KoP6zOS9owfAYJwhnnua7CwERJ+x8tA==}
     cpu: [x64]
     os: [win32]
 
   '@brandocms/jupiter@5.0.0-beta.21':
     resolution: {integrity: sha512-DdAUu++waObs3a99m1nI+SEatUK0t2+C4TdlYQUpILI3FlrUYe3vPBpO7wacLRyFlBxnklZnHLuZ+FbbRT1Q9g==}
 
-  '@brandocms/vite-plugin-europacss@0.1.0-beta.0':
-    resolution: {integrity: sha512-Am4fGiwKifH+GagxQ0g8jgNfMfta7uuzVu/PnUAydmyPE+0IXO0KpXJotiMH5kguID2OBCE2+jj693pSDah8qA==}
+  '@brandocms/vite-plugin-europacss@0.1.0-beta.2':
+    resolution: {integrity: sha512-aSiqIa338t+OXjQ52azUfkOqSUF+wYTBkmX3PKiyFP7MQJKJ3+dFtraQhZUnTc9/eH+Ced2F5uRGO9or/mtgdQ==}
     engines: {node: ^22.12.0 || >=24.0.0}
     peerDependencies:
       vite: ^6.4.3 || ^8.3.0
@@ -649,35 +649,35 @@ packages:
 
 snapshots:
 
-  '@brandocms/europacss-cli@0.1.0-beta.0':
+  '@brandocms/europacss-cli@0.1.0-beta.2':
     optionalDependencies:
-      '@brandocms/europacss-darwin-arm64': 0.1.0-beta.0
-      '@brandocms/europacss-darwin-x64': 0.1.0-beta.0
-      '@brandocms/europacss-linux-arm64-gnu': 0.1.0-beta.0
-      '@brandocms/europacss-linux-arm64-musl': 0.1.0-beta.0
-      '@brandocms/europacss-linux-x64-gnu': 0.1.0-beta.0
-      '@brandocms/europacss-linux-x64-musl': 0.1.0-beta.0
-      '@brandocms/europacss-win32-x64': 0.1.0-beta.0
+      '@brandocms/europacss-darwin-arm64': 0.1.0-beta.2
+      '@brandocms/europacss-darwin-x64': 0.1.0-beta.2
+      '@brandocms/europacss-linux-arm64-gnu': 0.1.0-beta.2
+      '@brandocms/europacss-linux-arm64-musl': 0.1.0-beta.2
+      '@brandocms/europacss-linux-x64-gnu': 0.1.0-beta.2
+      '@brandocms/europacss-linux-x64-musl': 0.1.0-beta.2
+      '@brandocms/europacss-win32-x64': 0.1.0-beta.2
 
-  '@brandocms/europacss-darwin-arm64@0.1.0-beta.0':
+  '@brandocms/europacss-darwin-arm64@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/europacss-darwin-x64@0.1.0-beta.0':
+  '@brandocms/europacss-darwin-x64@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/europacss-linux-arm64-gnu@0.1.0-beta.0':
+  '@brandocms/europacss-linux-arm64-gnu@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/europacss-linux-arm64-musl@0.1.0-beta.0':
+  '@brandocms/europacss-linux-arm64-musl@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/europacss-linux-x64-gnu@0.1.0-beta.0':
+  '@brandocms/europacss-linux-x64-gnu@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/europacss-linux-x64-musl@0.1.0-beta.0':
+  '@brandocms/europacss-linux-x64-musl@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/europacss-win32-x64@0.1.0-beta.0':
+  '@brandocms/europacss-win32-x64@0.1.0-beta.2':
     optional: true
 
   '@brandocms/jupiter@5.0.0-beta.21':
@@ -689,9 +689,9 @@ snapshots:
       - react
       - react-dom
 
-  '@brandocms/vite-plugin-europacss@0.1.0-beta.0(vite@8.3.3)':
+  '@brandocms/vite-plugin-europacss@0.1.0-beta.2(vite@8.3.3)':
     dependencies:
-      '@brandocms/europacss-cli': 0.1.0-beta.0
+      '@brandocms/europacss-cli': 0.1.0-beta.2
       vite: 8.3.3
 
   '@jridgewell/gen-mapping@0.3.13':

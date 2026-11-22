@@ -9,8 +9,8 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@brandocms/europacss-cli": "0.1.0-beta.0",
-    "@brandocms/vite-plugin-europacss": "0.1.0-beta.0",
+    "@brandocms/europacss-cli": "0.1.0-beta.2",
+    "@brandocms/vite-plugin-europacss": "0.1.0-beta.2",
     "@vitejs/plugin-legacy": "^8.2.3",
     "eslint-plugin-unused-imports": "^4.2.0",
     "terser": "^5.39.0",
