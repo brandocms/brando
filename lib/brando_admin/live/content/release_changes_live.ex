@@ -872,7 +872,11 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     >
       {gettext("Drop them, or move them onto a ref or var the module defines now.")}
       <:actions>
-        <.link navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"} class="btn btn--sm">
+        <.link
+          navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
+          class="btn btn--sm"
+          data-testid="release-resolve-blocks"
+        >
           {gettext("Resolve blocks")}
         </.link>
       </:actions>
@@ -1145,8 +1149,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       {gettext(
         "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then the site doesn’t show them."
       )}
-      <ul>
-        <li :for={item <- @removing}>
+      <ul data-testid="release-removals">
+        <li :for={item <- @removing} data-uid={item.uid}>
           {item.name}: {removed_keys(item.removes.keys)} · {ngettext(
             "1 of %{total} blocks holds a value",
             "%{count} of %{total} blocks hold a value",

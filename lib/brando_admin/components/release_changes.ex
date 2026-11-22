@@ -191,6 +191,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             phx-click="select_row"
             phx-value-uid={"applied:" <> item["uid"]}
             data-testid="release-applied-row"
+            data-uid={item["uid"]}
           >
             <span></span>
             <div>
