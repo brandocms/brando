@@ -140,6 +140,9 @@ that links an entry to its translations.
 * `matched_by:`: the attributes an entry's language versions share, such as
   a fragment's keys. An entry with them in another language is one of its
   versions, linked or not.
+* `always_source_controlled:`: fields that are source-controlled in
+  synchronized mode whatever the application configures, such as a
+  fragment's page.
 
 The options are checked after the Blueprint compiles. Listings show the
 editor's content language and offer duplicate-to-language actions; the form
