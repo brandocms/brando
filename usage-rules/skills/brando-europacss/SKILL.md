@@ -254,9 +254,10 @@ pnpm exec europa studio --config europa.json5                           # local 
 
 Without `--config`, the CLI uses the built-in defaults, not the site's theme.
 `--debug-tokens`, or `debugTokens: true` in the Vite plugin (the site's
-`vite.config.js` sets it; builds leave the labels out), labels each generated
-font and spacing value with its token in the browser's dev tools:
-`gap: 149px; /* --ec-space-token: "spacing.projectRows"; */`.
+`vite.config.js` sets it; builds leave the labels out), labels generated font
+and spacing values with their token in the browser's dev tools:
+`padding-top: 24px; /* --ec-space-token: "spacing.md"; */`. beta.2 leaves
+`@space gap <token>` unlabelled at breakpoints where it scales.
 
 An unknown at-rule (a typo such as `@spcae`, or a removed one) is only a
 warning: it passes through, and the compile succeeds. Read the warnings, in
@@ -289,7 +290,7 @@ pnpm exec europa compare http://localhost:4000/ --frame frame.png --width 1440 \
 It writes `overlay.png` (page and design at 50%) and `diff.png`. With
 `--frame-json` (a Figma frame node, or a list of named boxes) it reports each
 text and image box's offset from the design in CSS pixels; the spacing labels
-from `debugTokens` name the tokens to look at for a gap. Exit status 1 means
+from `debugTokens` name the tokens to look at for a gap that is off. Exit status 1 means
 differences, 2 design elements it could not match. `europa studio`'s
 **Design frame** panel overlays the PNG on the page interactively.
 
@@ -298,9 +299,17 @@ differences, 2 design elements it could not match. `europa studio`'s
 `europa migrate` has no profile for native versions yet
 (brandocms/europacss#133), so compare the compiled CSS instead. Before
 bumping the packages, run
-`pnpm exec europa css/app.css --config europa.json5 -o /tmp/before.css`; after
-the bump, write `/tmp/after.css` the same way and diff the two. Expect only
-`@grid` to differ (`minmax(0, 1fr)` tracks, `column-gap`, `columns.count` per
-breakpoint). Then shorten the tokens and check that the output stays the
-same. A theme that used beta.1's `dpxScaleFrom` replaces it with
+`pnpm exec europa css/app.css --config europa.json5 -o /tmp/before.css`, and
+the same for every other entry (`css/critical.css` in the frontend); after
+the bump, compile them again and diff. Two layout changes are expected:
+
+- `@grid` takes `columns.count` per breakpoint with `minmax(0, 1fr)` tracks
+  and `column-gap`. In the admin, whose preset has 6 and 16 columns, a
+  `@grid` that was 12 columns no longer is.
+- A fractional span (`@column 2.5/12`, `@space width 0.5/11`) counts only
+  the gutters between its tracks, so it comes out wider; integer fractions
+  are unchanged. Subtract the half gutter to keep the old width:
+  `0.5:-0.5/11` is beta.0's `0.5/11`.
+
+Then shorten the tokens and check that the output stays the same. A theme that used beta.1's `dpxScaleFrom` replaces it with
 `scale-from()`; beta.2 fails the compile on the old setting and says so.
