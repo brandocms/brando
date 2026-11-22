@@ -580,11 +580,11 @@ Once the screen is up, it asks Figma about the token (`GET /v1/me`) without
 holding the screen up, and **Test** asks again. It shows one of:
 
 - **Valid**, with the handle of the Figma account the token belongs to;
-- **Expired** or **Not valid**, with Figma's own words when it gave any:
-  replace the token;
+- **Expired** or **Not valid**, with Figma's own words: replace the token;
 - **Not checked**, when the token may not read its account (no
   `current_user:read`; it may still read files), or when Figma could not be
-  reached (a timeout, a network error, its call limit or an error at Figma),
+  reached (a timeout, a network error, its call limit, an error at Figma, or
+  a refusal without Figma's error text, as from a proxy in front of it),
   which says nothing about the token.
 
 The token is stored encrypted with `Brando.Crypto`, bound to its site
@@ -596,8 +596,9 @@ tools answer that an administrator adds one. Removing it keeps the images
 already imported.
 
 When Figma refuses a call, the tool says why: the token has expired, the
-token is not valid, or the token's owner cannot open the file, with Figma's
-own words (at most 200 characters). In the token's last week by its recorded
+token is not valid, the token lacks the permission to read files
+(`file_content:read`), or the token's owner cannot open the file, with
+Figma's own words (at most 200 characters). In the token's last week by its recorded
 date, `brando_figma_read_frame` and `brando_figma_import_images` carry a
 `token_note` for the tool to pass on. `brando_figma_status` lets a tool check
 before it starts: whether a token is set, its state as Figma answers now

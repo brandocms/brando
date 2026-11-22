@@ -56,6 +56,25 @@ defmodule Brando.FigmaTest do
       refute message =~ "Figma said"
     end
 
+    test "a 403 about the token is the token's problem, not the file's sharing" do
+      # A token deleted in Figma, or mistyped
+      answer(403, %{"status" => 403, "err" => "Invalid token"})
+      assert {:error, message} = Figma.node("figd_token", @link)
+      assert message =~ "Figma does not accept the site's token."
+      assert message =~ "Figma said: “Invalid token”."
+      assert message =~ "An administrator replaces it"
+      refute message =~ "shared"
+
+      # A token made without file_content:read
+      err = "Invalid scope(s): current_user:read. This endpoint requires the file_content:read scope"
+      answer(403, %{"status" => 403, "err" => err})
+      assert {:error, message} = Figma.image_urls("figd_token", @link.file_key)
+      assert message =~ "The site's Figma token lacks the permission to read files (file_content:read)."
+      assert message =~ "Figma said: “#{err}”."
+      assert message =~ "An administrator replaces it"
+      refute message =~ "shared"
+    end
+
     test "Figma's words come as plain text on one line, cut at 200 characters" do
       # As text, without a JSON content type
       answer(401, Jason.encode!(%{"err" => "Bad\n\u0000token " <> String.duplicate("x", 300)}))
@@ -93,8 +112,16 @@ defmodule Brando.FigmaTest do
       answer(403, %{"status" => 403, "err" => "Invalid token"})
       assert Figma.check("figd_token") == {:invalid, "Invalid token"}
 
-      answer(401, nil)
-      assert Figma.check("figd_token") == {:invalid, nil}
+      answer(401, %{"status" => 401, "err" => "Invalid token"})
+      assert Figma.check("figd_token") == {:invalid, "Invalid token"}
+    end
+
+    # A proxy or block page in front of api.figma.com says nothing of the token
+    test "a 401 or 403 without Figma's error body could not reach Figma" do
+      for status <- [401, 403], body <- [nil, "<html>Blocked</html>", %{"status" => status}] do
+        answer(status, body)
+        assert Figma.check("figd_token") == :unreachable, "#{status} #{inspect(body)}"
+      end
     end
 
     # A token made with file_content:read alone reads files; /v1/me needs

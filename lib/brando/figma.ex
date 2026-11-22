@@ -144,11 +144,12 @@ defmodule Brando.Figma do
 
   @typedoc """
   What Figma says of a token (`check/1`): valid, with the handle of its
-  account; expired or invalid, with Figma's `err` text when it gave one;
+  account; expired or invalid, with Figma's `err` text;
   `:no_account_scope` when the token may not read its own account (it lacks
   `current_user:read`), so it could not be checked though it may still read
   files; or `:unreachable` when Figma could not be asked (a timeout, a
-  network error, 429 or a 5xx). The last two say nothing of the token.
+  network error, 429, a 5xx, or a 401 or 403 without Figma's error text).
+  The last two say nothing of the token.
   """
   @type check ::
           {:valid, String.t() | nil}
@@ -172,11 +173,12 @@ defmodule Brando.Figma do
 
   @doc """
   Asks Figma about `token` with `GET /v1/me`, which needs the token's
-  `current_user:read` scope. Only a 401 or 403 is an answer about the token:
-  expired when Figma's `err` says so; `:no_account_scope` when it names a
-  missing scope, as for a token made with `file_content:read` alone, which
-  still reads files; otherwise invalid. Anything else, a 429 and a 5xx
-  included, is `:unreachable`.
+  `current_user:read` scope. Only a 401 or 403 carrying Figma's error text
+  is an answer about the token: expired when Figma's `err` says so;
+  `:no_account_scope` when it names a missing scope, as for a token made with
+  `file_content:read` alone, which still reads files; otherwise invalid.
+  Anything else, a 401 or 403 without that text (a proxy or block page in
+  front of Figma), a 429 and a 5xx included, is `:unreachable`.
   """
   @spec check(String.t()) :: check()
   def check(token) do
@@ -185,16 +187,22 @@ defmodule Brando.Figma do
         {:valid, if(is_binary(body["handle"]), do: body["handle"])}
 
       {:refused, %Req.Response{status: status} = response} when status in [401, 403] ->
-        err = figma_error(response)
-
-        cond do
-          expired?(err) -> {:expired, err}
-          scope?(err) -> {:no_account_scope, err}
-          true -> {:invalid, err}
-        end
+        verdict(figma_error(response))
 
       _other ->
         :unreachable
+    end
+  end
+
+  # A 401 or 403 without Figma's error text came from something in front of
+  # Figma (a proxy or a block page): it says nothing of the token
+  defp verdict(nil), do: :unreachable
+
+  defp verdict(err) do
+    cond do
+      expired?(err) -> {:expired, err}
+      scope?(err) -> {:no_account_scope, err}
+      true -> {:invalid, err}
     end
   end
 
@@ -289,7 +297,11 @@ defmodule Brando.Figma do
       expired?(err) ->
         "The site's Figma token has expired. " <> @replace_token
 
-      status == 401 ->
+      scope?(err) ->
+        "The site's Figma token lacks the permission to read files (file_content:read)." <>
+          said(err) <> " " <> @replace_token
+
+      status == 401 or token?(err) ->
         "Figma does not accept the site's token." <> said(err) <> " " <> @replace_token
 
       true ->
@@ -316,6 +328,8 @@ defmodule Brando.Figma do
   defp said(err), do: " Figma said: “#{err}”."
 
   defp expired?(err), do: is_binary(err) and String.match?(err, ~r/expired/i)
+
+  defp token?(err), do: is_binary(err) and String.match?(err, ~r/token/i)
 
   # Figma's documentation gives no body for a missing scope; its answers name
   # the scope ("Invalid scope(s): … This endpoint requires the
