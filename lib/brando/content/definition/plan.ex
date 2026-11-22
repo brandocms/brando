@@ -70,18 +70,41 @@ defmodule Brando.Content.Definition.Plan do
   @doc """
   The `mix brando.modules resolve` command that drops what an update of
   `plan` leaves in blocks, as it runs in the current environment, or nil
-  when no block holds it. It names the plan's user, `ID` without one.
+  when no block holds it or the plan has no user to name. Each value is
+  quoted for a POSIX shell.
   """
-  def resolve_command(%__MODULE__{creator_id: user_id}, %{uid: uid, removes: %{keys: keys, blocks: blocks}})
-      when blocks > 0 do
+  def resolve_command(%__MODULE__{creator_id: user_id}, %{uid: uid, removes: %{held: held, blocks: blocks}})
+      when blocks > 0 and not is_nil(user_id) do
     environment =
       if Tenant.enabled?(),
-        do: " --site #{Tenant.current_site_key()} --environment #{Tenant.current_environment_key()}",
-        else: ""
+        do: ["--site", Tenant.current_site_key(), "--environment", Tenant.current_environment_key()],
+        else: []
 
-    drops = Enum.map_join(keys, " ", fn {kind, key} -> "--drop #{kind}:#{key}" end)
-    "mix brando.modules resolve --uid #{uid} --user #{user_id || "ID"}#{environment} #{drops} --apply"
+    drops = Enum.flat_map(held, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end)
+
+    (~w(mix brando.modules resolve --uid) ++ [uid, "--user", to_string(user_id)] ++ environment ++ drops ++ ["--apply"])
+    |> Enum.map_join(" ", &shell_quote/1)
   end
 
   def resolve_command(_plan, _item), do: nil
+
+  @doc """
+  The line that follows an update whose removed keys blocks hold: the
+  `resolve_command/2`, or without a user, where to resolve them. Nil when
+  no block holds them.
+  """
+  def resolve_line(plan, %{removes: %{blocks: blocks}} = item) when blocks > 0 do
+    case resolve_command(plan, item) do
+      nil -> "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
+      command -> "resolve: " <> command
+    end
+  end
+
+  def resolve_line(_plan, _item), do: nil
+
+  defp shell_quote(value) do
+    if value =~ ~r/\A[A-Za-z0-9_@%+=:,.\/-]+\z/,
+      do: value,
+      else: "'" <> String.replace(value, "'", ~S('\'')) <> "'"
+  end
 end

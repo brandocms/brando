@@ -654,9 +654,9 @@ defmodule Brando.Content.Definitions.Release do
   # An update that leaves values in blocks is followed by the command that
   # resolves them
   defp item_lines(plan, item) do
-    case Plan.resolve_command(plan, item) do
+    case Plan.resolve_line(plan, item) do
       nil -> [item_line(item)]
-      command -> [item_line(item), "    resolve: " <> command]
+      line -> [item_line(item), "    " <> line]
     end
   end
 
