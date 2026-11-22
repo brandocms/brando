@@ -1,1 +1,1 @@
-- The image editor's crop frames show the band the site cuts for an image whose focal point the Figma import placed, and dragging such a frame no longer makes it jump.
+- The image editor's crop frames show the band the site cuts for an image whose focal point the Figma import placed, and saving keeps the mode the editor shows: an untouched save, a zoomed crop or a copy keeps the placement, while a moved frame is saved as placed by hand. Dragging or resizing such a frame no longer makes it jump.
