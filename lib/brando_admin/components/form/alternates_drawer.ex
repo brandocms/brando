@@ -32,8 +32,14 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     |> assign(:unlinked_identifiers, identifiers(unlinked))
   end
 
-  # A schema without an identifier template makes none
-  defp identifiers(entries), do: entries |> Identifier.identifiers_for!() |> Enum.reject(&is_nil/1)
+  # A schema without an identifier template makes none. A linked version in
+  # the trash is listed as deleted, so its link can still be removed.
+  defp identifiers(entries) do
+    for entry <- entries, identifier = Identifier.identifier_for(entry), do: trashed(identifier, entry)
+  end
+
+  defp trashed(identifier, %{deleted_at: %DateTime{}}), do: %{identifier | status: :deleted}
+  defp trashed(identifier, _entry), do: identifier
 
   attr :id, :string
   attr :entry, :map

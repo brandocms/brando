@@ -51,6 +51,36 @@ defmodule BrandoAdmin.FragmentLanguageVersionsTest do
     assert linked?(norsk, third)
   end
 
+  test "lists a linked version in the trash as deleted, and unlinks it", %{conn: conn} do
+    norsk = Factory.insert(:fragment, title: "Bunn norsk", parent_key: "footer", key: "contact", language: :no)
+    english = Factory.insert(:fragment, title: "Footer English", parent_key: "footer", key: "contact", language: :en)
+    :ok = Fragment.Alternate.add(norsk.id, english.id)
+    Repo.update!(Ecto.Changeset.change(english, deleted_at: DateTime.utc_now(:second)))
+
+    {conn, _user} = log_in_as(conn)
+    {view, _html} = live_form(conn, "/admin/pages/fragments/update/#{norsk.id}", "fragment_form")
+
+    linked = "#fragment_form-alternates-drawer .alternates-linked article[data-id='#{english.id}']"
+    assert has_element?(view, "#{linked} .identifier-status[data-status='deleted']")
+
+    view |> element("#{linked} button[phx-click*=remove_entry]") |> render_click()
+
+    refute linked?(norsk, english) or linked?(english, norsk)
+    refute has_element?(view, linked)
+  end
+
+  test "an entry with a nil key has no versions by key, and its drawer opens" do
+    user = insert_user()
+    own = Repo.insert!(%Snippet{title: "No key", language: :no, creator_id: user.id})
+    Repo.insert!(%Snippet{title: "Also no key", language: :en, creator_id: user.id})
+
+    assert %{linked: [], unlinked: []} = Brando.Translations.language_versions(Snippet, own, nil)
+    assert "en" in Brando.Translations.missing_languages(Snippet, own)
+
+    html = render_component(AlternatesDrawer, id: "snippet-alternates", entry: own, current_user: nil, on_close: nil)
+    refute html =~ "Also no key"
+  end
+
   # Edge case 5
   describe "behind a record policy" do
     setup do
