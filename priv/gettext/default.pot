@@ -3059,7 +3059,7 @@ msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
-msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then the site doesn’t show them."
+msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -7304,11 +7304,6 @@ msgstr ""
 #: lib/brando_admin/components/form/input/gallery.ex
 #, elixir-autogen, elixir-format
 msgid "Drop media here to build your gallery"
-msgstr ""
-
-#: lib/brando_admin/live/content/release_changes_live.ex
-#, elixir-autogen, elixir-format
-msgid "Drop them, or move them onto a ref or var the module defines now."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/gallery_objects.ex
@@ -16552,6 +16547,7 @@ msgid_plural "Resolve %{count} blocks?"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/stale_blocks.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -20954,6 +20950,11 @@ msgstr ""
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
