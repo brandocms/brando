@@ -272,7 +272,7 @@ defmodule Brando.Translations.ComputePendingTest do
   describe "a parent in the same schema" do
     test "follows the source, mapped to its version in the target's language" do
       {source, target, base} = pair()
-      result = compute(%{source | parent_id: 10}, target, base, entries: %{10 => 20})
+      result = compute(%{source | parent_id: 10}, target, base, entries: %{{:parent, 10} => 20})
 
       assert result.payload.parent_id == 20
       assert {:shared_update, "parent"} in kinds(result)
@@ -280,7 +280,7 @@ defmodule Brando.Translations.ComputePendingTest do
 
     test "waits, keeping the target's own, while there is no version yet" do
       {source, target, base} = pair()
-      result = compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base, entries: %{10 => nil})
+      result = compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base, entries: %{{:parent, 10} => nil})
 
       assert result.payload.parent_id == 5
       assert {:awaiting_translation, "parent/10"} in kinds(result)
@@ -288,7 +288,7 @@ defmodule Brando.Translations.ComputePendingTest do
 
     test "has nothing to do when the target is already under the mapped parent" do
       {source, target, base} = pair()
-      result = compute(%{source | parent_id: 10}, %{target | parent_id: 20}, base, entries: %{10 => 20})
+      result = compute(%{source | parent_id: 10}, %{target | parent_id: 20}, base, entries: %{{:parent, 10} => 20})
 
       assert result.payload.parent_id == 20
       refute Enum.any?(kinds(result), &match?({_, "parent"}, &1))
@@ -297,7 +297,12 @@ defmodule Brando.Translations.ComputePendingTest do
     test "stays the translation's own when language-controlled" do
       {source, target, base} = pair()
       config = Brando.Trait.Translatable.config(mode: :synchronized, language_controlled_fields: [:parent])
-      result = compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base, config: config, entries: %{10 => 20})
+
+      result =
+        compute(%{source | parent_id: 10}, %{target | parent_id: 5}, base,
+          config: config,
+          entries: %{{:parent, 10} => 20}
+        )
 
       assert result.payload.parent_id == 5
       assert result.work_items == []
