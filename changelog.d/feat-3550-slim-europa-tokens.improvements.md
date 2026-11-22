@@ -1,1 +1,1 @@
-- A new install's `assets/frontend/europa.json5` holds only the tokens the installed CSS reads, each group with a comment on what to change first; the full worked theme is beside it as `europa.example.json5`, which nothing loads. Existing projects are unchanged.
+- A new install's `assets/frontend/europa.json5` holds only the tokens the installed CSS reads, each group with a comment on what to change first; the full worked theme is beside it as `europa.example.json5`, which nothing loads. An installed project keeps its own `europa.json5`; a rerun adds only the example.

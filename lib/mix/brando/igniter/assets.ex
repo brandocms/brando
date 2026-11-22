@@ -1009,6 +1009,11 @@ if Code.ensure_loaded?(Igniter) do
         Path.basename(target) == "pnpm-workspace.yaml" && Igniter.exists?(igniter, target) ->
           notice_workspace_gaps(igniter, target)
 
+        # The site's theme: every site edits it, and a later template's
+        # starting set is no reason to replace it
+        target == "assets/frontend/europa.json5" && Igniter.exists?(igniter, target) ->
+          igniter
+
         target == @backend_package ->
           Files.create(igniter, target, template_contents(file, project, brando_version(igniter)))
 

@@ -1,0 +1,1 @@
+- Rerunning `mix brando.install` (to add `--ai`, for example) no longer stops at an `assets/frontend/europa.json5` that differs from the template: the site's theme is kept as it is.
