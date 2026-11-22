@@ -911,7 +911,7 @@ defmodule Brando.Content.Proposals.Tools do
   defp preview_version!(nil), do: :proposed
   defp preview_version!("proposed"), do: :proposed
   defp preview_version!("before"), do: :before
-  defp preview_version!(version), do: Error.fail!("version is \"proposed\" or \"before\", not #{inspect(version)}.")
+  defp preview_version!(version), do: Error.fail!(~s(version is "proposed" or "before", not #{inspect(version)}.))
 
   defp preview_entry!(%{"new" => ref}) when is_binary(ref), do: {:new, ref}
 
@@ -929,7 +929,7 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp preview_entry!(_target),
-    do: Error.fail!("target is an entry of the proposal: {\"content_type\":T,\"id\":N} or {\"new\":R}.")
+    do: Error.fail!(~s(target is an entry of the proposal: {"content_type":T,"id":N} or {"new":R}.))
 
   defp preview_error(:not_created, _proposal, _target),
     do: "The proposal creates this entry, so it has no version before it. Leave out version, or use \"proposed\"."
