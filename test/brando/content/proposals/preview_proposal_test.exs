@@ -322,6 +322,25 @@ defmodule Brando.Content.Proposals.PreviewProposalTest do
       assert {:ok, %{shows: "before"}} = preview(mcp(c), id, page(c.identity), %{"version" => "before"})
     end
 
+    test "for a proposal that copies a block that is not there, in either version", c do
+      copies = [
+        %{"op" => "copy_block", "target" => page(c.identity), "block_uid" => "gone", "to" => page(c.naming)},
+        %{"op" => "copy_block", "target" => page(c.naming), "block_uid" => "gone"}
+      ]
+
+      for op <- copies do
+        assert {:ok, %{proposal_id: id, problems: [%{code: :unknown_block}]}} =
+                 Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => [op]}, mcp(c))
+
+        for version <- ["proposed", "before"] do
+          assert {:error, message} = preview(mcp(c), id, page(c.naming), %{"version" => version})
+          assert message =~ "has problems", "#{version}: #{message}"
+        end
+      end
+
+      assert Repo.aggregate(Preview, :count) == 0
+    end
+
     test "for a content type without a page preview, and for a translation", c do
       id =
         prepare!(mcp(c), [

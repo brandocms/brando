@@ -2812,10 +2812,21 @@ defmodule Brando.Content.Proposals do
   end
 
   defp copy_source(op, entries) do
-    {block, _parent, _index} =
-      entries |> Map.fetch!(op.target) |> Map.fetch!(:"entry_#{op.field}") |> BlockTree.find_saved(op.block_uid)
+    case entries |> Map.fetch!(op.target) |> Map.fetch!(:"entry_#{op.field}") |> BlockTree.find_saved(op.block_uid) do
+      {block, _parent, _index} -> Changeset.change(block)
+      nil -> copy_missing!()
+    end
+  end
 
-    Changeset.change(block)
+  # A proposal stored with problems (`previewable?/1`) can copy a block that
+  # is not there: its "before" preview builds the proposed version too
+  defp copy_missing! do
+    Error.fail!(
+      dgettext(
+        "content_proposals",
+        "The proposal has problems, so it cannot be previewed: it copies a block that is not there."
+      )
+    )
   end
 
   # `joins` is the field's root join rows as `[{uid, join_changeset}]`; child
@@ -2866,7 +2877,7 @@ defmodule Brando.Content.Proposals do
         {_side, anchor} -> parent_of(joins, anchor)
       end
 
-    original = find_block(joins, uid)
+    original = find_block(joins, uid) || copy_missing!()
     copy = Blocks.duplicate_block(original, user_id: user.id, uid: op.uid, uid_mapping: copy_uids(original, op.uid))
     # "append" puts the copy last among the original's siblings.
     attach({copy, joins}, to, placement, join_schema)

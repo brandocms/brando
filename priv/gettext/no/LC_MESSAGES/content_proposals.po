@@ -628,6 +628,11 @@ msgstr "Modulen har ingen tekstplass som heter %{name}."
 msgid "The module has no variable %{key}."
 msgstr "Modulen har ingen variabel som heter %{key}."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The proposal has problems, so it cannot be previewed: it copies a block that is not there."
+msgstr "Forslaget har problemer, så det kan ikke forhåndsvises: det kopierer en blokk som ikke finnes."
+
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "The sizes of image %{id} are still being made. Approve the proposal again in a moment."
