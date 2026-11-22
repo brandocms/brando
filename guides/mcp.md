@@ -514,10 +514,12 @@ proposal with the modules that match.
   server, the size limit unchanged: as large as fits under the limit, never
   enlarged, and never smaller than twice the image's largest use in the frame
   (for a crop, what the whole image needs for the part shown to be twice the
-  layer). A picture that does not fit in its own format at that size is
-  stored as a JPEG, or as a WebP when it has an alpha channel; one still over
-  the limit, an animated GIF or WebP and one over the pixel limit are refused
-  with the reason. The entry says the image was fitted, with its original and
+  layer), counting the layers outside `node_ids` too. A picture that does
+  not fit in its own format at that size is stored as a JPEG, or as a WebP
+  when it has transparent pixels, if the image config takes that type; one
+  still over the limit, an animated GIF or WebP and one over the pixel limit
+  are refused with the reason. A copy turned as Figma shows it that comes
+  out over the limit is scaled down the same way. The entry says the image was fitted, with its original and
   stored pixel sizes. `fit` leaves the images within the limit as they are.
   It downloads an image up to 50 MB (or the size limit, when that is larger)
   to scale it down; a site sets another cap with

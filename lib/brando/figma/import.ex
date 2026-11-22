@@ -37,13 +37,15 @@ defmodule Brando.Figma.Import do
   `fit_download_limit/0` and stored as a copy scaled down to fit the limit:
   as large as fits, never enlarged and never smaller than twice its largest
   use in the frame (by the layer's box, and for a crop, what the whole image
-  needs for the part shown to be twice the box). A JPEG, PNG or single-frame
-  GIF or WebP that cannot get under the limit at that size in its own format
-  is stored as a JPEG, or as a WebP when it has an alpha channel; one still
-  over the limit is refused, as is an animated image (a GIF or WebP of more
-  than one frame) and one over the pixel limit (`Brando.Images.PixelLimit`,
-  checked before it is decoded). The images within the limit are stored as
-  they are.
+  needs for the part shown to be twice the box), counting the layers the
+  call does not import. A turned copy that comes out over the limit is
+  scaled down the same way. A JPEG, PNG or single-frame GIF or WebP that
+  cannot get under the limit at that size in its own format is stored as a
+  JPEG, or as a WebP when it has transparent pixels, of the types the site
+  takes; one still over the limit is refused, as is an animated image (a GIF
+  or WebP of more than one frame) and one over the pixel limit
+  (`Brando.Images.PixelLimit`, checked before it is decoded). The images
+  within the limit are stored as they are.
 
   At most `max_per_call/0` distinct images are imported per call; the result
   says where the next call starts.
@@ -94,13 +96,15 @@ defmodule Brando.Figma.Import do
   def run(link, token, actor, opts \\ []) do
     with :ok <- Brando.Authorization.Media.authorize(actor, :image),
          {:ok, node} <- Figma.node(token, link),
-         {:ok, images} <- selected(Frame.images(node), opts[:node_ids]) do
+         frame_images = Frame.images(node),
+         {:ok, images} <- selected(frame_images, opts[:node_ids]) do
       refs = images |> Enum.map(&key/1) |> Enum.uniq()
       offset = max(opts[:offset] || 0, 0)
       page = Enum.slice(refs, offset, @max_per_call)
 
       folder = folder_path(node.document["name"])
-      results = import_page(page, images, link, token, %{actor: actor, folder: folder, fit: opts[:fit] == true})
+      ctx = %{actor: actor, folder: folder, fit: opts[:fit] == true, frame_images: frame_images}
+      results = import_page(page, images, link, token, ctx)
 
       with %{} <- results do
         next = offset + length(page)
@@ -130,9 +134,9 @@ defmodule Brando.Figma.Import do
 
   # Never over a file already stored, whatever the config says: an image
   # changed in Figma is a new file next to the old one (`Intake.context/2`)
-  defp import_page(page, images, link, token, %{actor: actor, folder: folder, fit: fit?}) do
+  defp import_page(page, images, link, token, %{actor: actor, folder: folder} = ctx) do
     with {:ok, urls} <- Figma.image_urls(token, link.file_key) do
-      import_all(page, urls, images, Intake.context(actor, folder), fit?)
+      import_all(page, urls, {images, ctx.frame_images}, Intake.context(actor, folder), ctx.fit)
     end
   end
 
@@ -160,12 +164,21 @@ defmodule Brando.Figma.Import do
   end
 
   # The first layer showing an asset names its file and gives its crop: one
-  # image shown with two crops keeps the first (the result says so)
-  defp import_all(keys, urls, images, ctx, fit?) do
+  # image shown with two crops keeps the first (the result says so). The
+  # size a copy is scaled down to counts every layer of the frame showing it,
+  # imported or not.
+  defp import_all(keys, urls, {images, frame_images}, ctx, fit?) do
     dir = Path.join(System.tmp_dir!(), "brando-figma-" <> Base.url_encode64(:crypto.strong_rand_bytes(9)))
     File.mkdir_p!(dir)
     uses = Enum.group_by(images, &key/1)
-    limits = %{site: Intake.size_limit(ctx.cfg), fit: fit? && max(Intake.size_limit(ctx.cfg), fit_download_limit())}
+    frame_uses = Enum.group_by(frame_images, &key/1)
+
+    limits = %{
+      site: Intake.size_limit(ctx.cfg),
+      fit: fit? && max(Intake.size_limit(ctx.cfg), fit_download_limit()),
+      types: Intake.allowed_types(ctx.cfg)
+    }
+
     limit = limits.fit || limits.site
 
     try do
@@ -178,17 +191,26 @@ defmodule Brando.Figma.Import do
         on_timeout: :kill_task,
         ordered: true
       )
-      |> Enum.zip(keys)
-      |> Map.new(fn
-        {{:ok, {key, {:ok, path}}}, key} -> {key, store(path, key, uses[key], ctx, limits)}
-        {{:ok, {key, {:error, {:too_large, size}}}}, key} -> {key, {:error, too_large(key, uses[key], size, limits)}}
-        {{:ok, {key, {:error, message}}}, key} -> {key, {:error, message}}
-        {{:exit, _reason}, key} -> {key, {:error, "The download took too long."}}
+      |> Stream.zip(Enum.with_index(keys))
+      |> Map.new(fn {downloaded, {key, index}} ->
+        result =
+          case downloaded do
+            {:ok, {^key, {:ok, path}}} -> store(path, key, {uses[key], frame_uses[key]}, ctx, limits)
+            {:ok, {^key, {:error, {:too_large, size}}}} -> {:error, too_large(key, uses[key], size, limits)}
+            {:ok, {^key, {:error, message}}} -> {:error, message}
+            {:exit, _reason} -> {:error, "The download took too long."}
+          end
+
+        discard(Path.join(dir, "#{index}"))
+        {key, result}
       end)
     after
       File.rm_rf(dir)
     end
   end
+
+  # A download and the copies made of it, once its image is stored or refused
+  defp discard(path), do: Enum.each([path | Path.wildcard(path <> "-*")], &File.rm/1)
 
   defp download(nil, _path, _limit), do: {:error, "Figma gave no download for this image."}
 
@@ -234,7 +256,7 @@ defmodule Brando.Figma.Import do
   # own, so it is reused only for the same picture turned the same way.
   # An animated image is stored as it is, upright: turning it would keep
   # only its first frame.
-  defp store(path, {_ref, turn} = key, [first | _] = uses, ctx, limits) do
+  defp store(path, {_ref, turn} = key, {[first | _], _frame_uses} = uses, ctx, limits) do
     with {:ok, head} <- ContentType.head(path),
          {:ok, type, ext} <- image_type(head),
          {:ok, %{path: path, type: type, ext: ext, turned: turned, fitted: fitted}} <-
@@ -257,60 +279,48 @@ defmodule Brando.Figma.Import do
   end
 
   # The file to store, its type and the turn it has, and how it was scaled
-  # down: only with `fit`, and only an image over the site's limit
-  defp prepare(path, type, ext, {_ref, turn} = key, uses, limits) do
-    if limits.fit && File.stat!(path).size > limits.site do
-      fit(path, type, ext, key, uses, limits.site)
-    else
-      with {:ok, path, turned} <- turn(path, turn, ext),
-           do: {:ok, %{path: path, type: type, ext: ext, turned: turned, fitted: nil}}
+  # down: only with `fit`, and only an image over the site's limit, as
+  # downloaded or as turned
+  defp prepare(path, type, ext, key, uses, limits) do
+    size = File.stat!(path).size
+
+    if limits.fit && size > limits.site,
+      do: fit(path, type, ext, key, uses, limits, size),
+      else: turned(path, type, ext, key, uses, limits)
+  end
+
+  defp turned(path, type, ext, {_ref, turn} = key, uses, limits) do
+    with {:ok, turned_path, turned} <- turn(path, turn, ext) do
+      turned_size = File.stat!(turned_path).size
+
+      if limits.fit && turned_size > limits.site,
+        do: fit(path, type, ext, key, uses, limits, turned_size),
+        else: {:ok, %{path: turned_path, type: type, ext: ext, turned: turned, fitted: nil}}
     end
   end
 
   @fit_formats %{"jpg" => "image/jpeg", "png" => "image/png", "gif" => "image/gif", "webp" => "image/webp"}
 
-  # A copy within `limit`, turned as Figma shows it, in the image's own
-  # format, else as a JPEG (or a WebP when it has an alpha channel). The
-  # header is read first: the pixel limit and the frames are checked before
-  # anything is decoded.
-  defp fit(path, type, ext, {_ref, turn} = key, uses, limit) do
+  # A copy within the site's limit, turned as Figma shows it, in the image's
+  # own format, else as a JPEG (or a WebP when it has transparent pixels),
+  # of the formats the site takes. The header is read first: the pixel limit
+  # and the frames are checked before anything is decoded. `over` is the
+  # bytes of the file known to be over the limit, which sets the scale the
+  # own format is first tried at.
+  defp fit(path, type, ext, {_ref, turn} = key, {uses, frame_uses}, limits, over) do
+    limit = limits.site
+
     with :ok <- Images.PixelLimit.check(path, Images.PixelLimit.open_options(type)),
          {:ok, img} <- Vimage.open(path),
          false <- Vimage.pages(img) > 1,
          {:ok, {upright, _flags}} <- Vimage.autorotate(img) do
       size = {Vimage.width(upright), Vimage.height(upright)}
       shown = turned_size(size, turn)
-      floor = floor_scale(uses, shown)
-      formats = Enum.uniq([ext, if(Vimage.has_alpha?(img), do: "webp", else: "jpg")])
-
-      case first_fit(formats, path, turn, size, floor, limit) do
-        {:ok, data, format, {width, height}} ->
-          fitted = "#{path}-fitted.#{format}"
-          File.write!(fitted, data)
-
-          {:ok,
-           %{
-             path: fitted,
-             type: Map.fetch!(@fit_formats, format),
-             ext: format,
-             turned: turn,
-             fitted:
-               %{
-                 original: dimensions(shown),
-                 stored: %{width: width, height: height},
-                 format: if(format != ext, do: format_name(format))
-               }
-               |> Map.reject(fn {_key, value} -> is_nil(value) end)
-           }}
-
-        {:over, format, {width, height}} ->
-          {:error,
-           subject(key, uses) <>
-             " is still over the site's upload limit of #{bytes(limit)} scaled down to #{width}×#{height}" <>
-             if(floor >= 1, do: ", its full size", else: ", twice its largest use in the frame") <>
-             if(format != ext, do: ", as #{format_name(format)}", else: "") <>
-             ". Ask an administrator to raise the limit."}
-      end
+      floor = floor_scale(frame_uses, shown)
+      fallback = if transparent?(img), do: "webp", else: "jpg"
+      tries = Enum.uniq_by([{ext, start_scale(over, limit, floor)}, {fallback, 1.0}], &elem(&1, 0))
+      copy = %{path: path, ext: ext, turn: turn, size: size, shown: shown, floor: floor, limit: limit}
+      fit_copy(tries, key, uses, copy, limits.types)
     else
       true ->
         {:error,
@@ -326,19 +336,95 @@ defmodule Brando.Figma.Import do
     end
   end
 
-  defp first_fit([format], path, turn, size, floor, limit), do: shrink(format, path, turn, size, floor, limit)
+  # The first of `tries` the site takes that fits, written next to the download
+  defp fit_copy(tries, key, uses, copy, types) do
+    case Enum.filter(tries, fn {format, _scale} -> Map.fetch!(@fit_formats, format) in types end) do
+      [] ->
+        {:error,
+         subject(key, uses) <>
+           " is over the site's upload limit of #{bytes(copy.limit)}, and a copy scaled down would be " <>
+           Enum.map_join(tries, " or ", &("a " <> format_name(elem(&1, 0)))) <>
+           ", which the site does not take: it takes #{Intake.describe_types(types)}. Ask an administrator to raise the limit."}
 
-  defp first_fit([format | rest], path, turn, size, floor, limit) do
-    case shrink(format, path, turn, size, floor, limit) do
-      {:ok, _data, _format, _dimensions} = fitted -> fitted
-      {:over, _format, _dimensions} -> first_fit(rest, path, turn, size, floor, limit)
+      tries ->
+        tries
+        |> first_fit(copy.path, copy.turn, copy.size, copy.floor, copy.limit)
+        |> fitted_copy(key, uses, copy)
     end
   end
 
-  # From the full size down, each try scaled by how far the last was over
-  # (bytes grow with the pixels, so with the square of the scale), never
+  defp fitted_copy({:ok, data, format, {width, height}}, key, uses, copy) do
+    fitted = "#{copy.path}-fitted.#{format}"
+
+    case File.write(fitted, data) do
+      :ok ->
+        {:ok,
+         %{
+           path: fitted,
+           type: Map.fetch!(@fit_formats, format),
+           ext: format,
+           turned: copy.turn,
+           fitted:
+             %{
+               original: dimensions(copy.shown),
+               stored: %{width: width, height: height},
+               format: if(format != copy.ext, do: format_name(format))
+             }
+             |> Map.reject(fn {_key, value} -> is_nil(value) end)
+         }}
+
+      {:error, _reason} ->
+        {:error, subject(key, uses) <> " was scaled down, but the copy could not be written to a temporary file."}
+    end
+  end
+
+  defp fitted_copy({:over, format, dimensions}, key, uses, copy),
+    do: {:error, still_over(key, uses, copy, dimensions, format)}
+
+  defp fitted_copy(:error, key, uses, _copy),
+    do: {:error, subject(key, uses) <> " could not be scaled down: the copy could not be encoded."}
+
+  defp still_over(key, uses, copy, {width, height}, format) do
+    subject(key, uses) <>
+      " is still over the site's upload limit of #{bytes(copy.limit)} scaled down to #{width}×#{height}" <>
+      if(copy.floor >= 1, do: ", its full size", else: ", twice its largest use in the frame") <>
+      if(format != copy.ext, do: ", as #{format_name(format)}", else: "") <>
+      ". Ask an administrator to raise the limit."
+  end
+
+  # Vix reads a GIF with an alpha band even when no pixel is transparent
+  defp transparent?(img) do
+    case Vimage.split_alpha(img) do
+      {_img, nil} ->
+        false
+
+      {_img, alpha} ->
+        case Vix.Vips.Operation.min(alpha) do
+          {:ok, {min, _extra}} -> min < 255
+          _ -> true
+        end
+    end
+  end
+
+  # The own format starts where its bytes say a copy fits (bytes grow with
+  # the pixels, so with the square of the scale), never under `floor`
+  defp start_scale(over, limit, floor), do: :math.sqrt(limit / over) |> Kernel.*(0.95) |> min(1.0) |> max(floor)
+
+  # The first format a copy fits in, else the last that was over, else
+  # :error when none could be encoded
+  defp first_fit(tries, path, turn, size, floor, limit) do
+    Enum.reduce_while(tries, :error, fn {format, scale}, last ->
+      case shrink(format, path, turn, size, floor, limit, scale) do
+        {:ok, _data, _format, _dimensions} = fitted -> {:halt, fitted}
+        {:over, _format, _dimensions} = over -> {:cont, over}
+        :error -> {:cont, last}
+      end
+    end)
+  end
+
+  # From `scale` down, each try scaled by how far the last was over, never
   # under `floor`; the last try is the floor.
-  defp shrink(format, path, turn, size, floor, limit, scale \\ 1.0, tries \\ @fit_tries) do
+  defp shrink(format, path, turn, size, floor, limit, scale, tries \\ @fit_tries) do
     case encode(path, format, turn, size, scale) do
       {:ok, data, dimensions} when byte_size(data) <= limit ->
         {:ok, data, format, dimensions}
@@ -351,7 +437,7 @@ defmodule Brando.Figma.Import do
         end
 
       :error ->
-        {:over, format, scaled(size, floor)}
+        :error
     end
   end
 
