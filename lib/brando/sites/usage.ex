@@ -59,7 +59,8 @@ defmodule Brando.Sites.Usage do
     existing = MapSet.new(Repo.all(from(site in Site, where: site.id in ^site_ids, select: site.id), @public_opts))
 
     rows =
-      for {site_id, day, requests, bytes} <- counts, MapSet.member?(existing, site_id),
+      for {site_id, day, requests, bytes} <- counts,
+          MapSet.member?(existing, site_id),
           do: %{site_id: site_id, day: day, requests: requests, bytes_sent: bytes}
 
     add =
