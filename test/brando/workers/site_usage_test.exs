@@ -112,6 +112,13 @@ defmodule Brando.Worker.SiteUsageTest do
       assert Measure.free_bytes(Path.join(root, "missing")) == nil
     end
 
+    # A LiveView traps exits: the port `df` runs in must not message it
+    test "asking for the free space leaves the caller no message", %{root: root} do
+      Process.flag(:trap_exit, true)
+      Measure.free_bytes(root)
+      refute_receive {:EXIT, _port, _reason}, 100
+    end
+
     test "a schema that does not exist has no size" do
       assert Measure.schema_bytes("tenant_usage-job-gone_production") == nil
     end

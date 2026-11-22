@@ -31,9 +31,27 @@ defmodule Brando.Sites.Usage.Measure do
   @doc """
   The free bytes on the volume holding `path`, as `df` reports them to an
   unprivileged user; nil when it cannot tell.
+
+  `df` runs in a process of its own: the port it runs in is linked to the
+  process that opens it, and a caller that traps exits, as a LiveView does,
+  would get that port's exit as a message.
   """
   @spec free_bytes(String.t()) :: non_neg_integer() | nil
   def free_bytes(path) do
+    {pid, ref} = spawn_monitor(fn -> exit({:free_bytes, df_available(path)}) end)
+
+    receive do
+      {:DOWN, ^ref, :process, ^pid, {:free_bytes, bytes}} -> bytes
+      {:DOWN, ^ref, :process, ^pid, _reason} -> nil
+    after
+      5_000 ->
+        Process.demonitor(ref, [:flush])
+        Process.exit(pid, :kill)
+        nil
+    end
+  end
+
+  defp df_available(path) do
     with {output, 0} <- System.cmd("df", ["-Pk", path], stderr_to_stdout: true),
          [_header, line | _] <- String.split(output, "\n", trim: true),
          [_filesystem, _blocks, _used, available | _] <- String.split(line),
