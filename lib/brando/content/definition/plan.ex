@@ -95,8 +95,11 @@ defmodule Brando.Content.Definition.Plan do
   """
   def resolve_line(plan, %{removes: %{blocks: blocks}} = item) when blocks > 0 do
     case resolve_command(plan, item) do
-      nil -> "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
-      command -> "resolve: " <> command
+      nil ->
+        "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
+
+      command ->
+        "resolve: " <> command
     end
   end
 

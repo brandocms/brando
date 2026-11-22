@@ -198,6 +198,7 @@ defmodule Brando.Content.Definition.Watcher do
     with {:ok, bundle} <- Definitions.read(path),
          {:ok, plan} <- Definitions.plan(bundle, user) do
       names = names(bundle)
+
       changes =
         plan.items
         |> Enum.reject(&(&1.action == :noop))

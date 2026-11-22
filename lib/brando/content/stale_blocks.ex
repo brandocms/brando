@@ -91,9 +91,10 @@ defmodule Brando.Content.StaleBlocks do
   def count(module), do: Blocks.count_stale_blocks(module)
 
   @doc """
-  The number of blocks behind `module`'s version that hold a ref or var it
-  no longer defines. A block can be behind with nothing left over, after a
-  sync that failed validation: `count/1` counts those too.
+  Of the blocks behind `module`'s version, how many hold a ref or var it no
+  longer defines: what an editor would lose or move in Resolve blocks. A
+  block can be behind with nothing left over, after a sync that failed
+  validation, and `count/1` counts those too.
   """
   @spec count_with_leftovers(Module.t()) :: non_neg_integer()
   def count_with_leftovers(%Module{} = module) do

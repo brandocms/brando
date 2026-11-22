@@ -621,7 +621,13 @@ defmodule Brando.Content.Definition.Importer do
       holders = holders(record, diff)
       held = holders |> Enum.map(&elem(&1, 0)) |> MapSet.new()
       blocks = holders |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
-      %{keys: keys, held: Enum.filter(keys, &MapSet.member?(held, &1)), blocks: length(blocks), entries: entry_count(blocks)}
+
+      %{
+        keys: keys,
+        held: Enum.filter(keys, &MapSet.member?(held, &1)),
+        blocks: length(blocks),
+        entries: entry_count(blocks)
+      }
     end
   end
 
