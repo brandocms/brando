@@ -170,8 +170,11 @@ defmodule Brando.MCP.FigmaOAuthConcurrencyTest do
     end)
 
     stub_figma(fn
-      "POST", "/v1/oauth/refresh", _ -> {200, %{"access_token" => "never", "expires_in" => 3600}}
-      "GET", _, _ -> {200, %{"name" => "File", "nodes" => %{"1:2" => %{"document" => %{"id" => "1:2", "type" => "FRAME"}}}}}
+      "POST", "/v1/oauth/refresh", _ ->
+        {200, %{"access_token" => "never", "expires_in" => 3600}}
+
+      "GET", _, _ ->
+        {200, %{"name" => "File", "nodes" => %{"1:2" => %{"document" => %{"id" => "1:2", "type" => "FRAME"}}}}}
     end)
 
     holder =

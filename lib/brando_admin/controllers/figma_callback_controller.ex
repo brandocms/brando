@@ -37,7 +37,10 @@ defmodule BrandoAdmin.FigmaCallbackController do
     end
   rescue
     error ->
-      Logger.error("[BrandoAdmin.FigmaCallbackController] Finishing a Figma connection raised #{inspect(error.__struct__)}")
+      Logger.error(
+        "[BrandoAdmin.FigmaCallbackController] Finishing a Figma connection raised #{inspect(error.__struct__)}"
+      )
+
       {"save_failed", nil}
   catch
     kind, _reason ->
