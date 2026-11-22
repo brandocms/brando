@@ -1490,7 +1490,8 @@ editor     per-site role; content editing without lifecycle mutation
 The superuser Sites screen at `/admin/sites` lists the sites and shows one
 at a time, named in the URL (`?site=acme`, or `?new` for the create form;
 without one, the admin's current site). It provisions sites, shows
-environment/page/media/last-edit summaries, renames a site (its key, which
+environment/page/last-edit summaries and each site's usage
+([Usage per site](#usage-per-site)), renames a site (its key, which
 names its schemas and folders, stays), changes lifecycle state and
 delivery ([Choose a delivery mode](#choose-a-delivery-mode)), grants or
 revokes roles, and sets each site's provider library group (see
@@ -1516,6 +1517,77 @@ registry row, assignment, media directory, and uploaded asset directory:
 Configure `site_delete_retention_days` to change the window. `force: true` is
 available to controlled recovery/migration code, but the admin UI never uses
 it.
+
+## Usage per site
+
+With `tenancy_mode: :multi`, the Sites screen shows a superuser what each
+site uses: in the list, each site's total storage as last measured and its
+requests in the last 30 days; on a site, a Usage section with its media, its
+kept static builds, each environment's database with its archives under it,
+the change in storage over the 30 days, its requests and bytes per day with a
+small trend, and the installation's total next to the free space on the media
+volume. "Measure now" measures one site at once, as for a site just imported,
+and the screen shows it when it lands. Nobody else sees any of it: in groups
+mode, reading the screen takes only the Sites read permission, so a delegated
+reader sees the screen without usage, and "Measure now" is refused for them.
+In `:none` and `:single` nothing is counted, measured or shown.
+
+Rows live in `public.sites_usage_days`, one per site per UTC day, and are kept
+13 months:
+
+```elixir
+config :brando, Brando.Sites.Usage,
+  retention_months: 13,
+  flush_interval: :timer.seconds(60)
+```
+
+**Storage** comes from `Brando.Worker.SiteUsage`, once a day at 05:45 UTC on
+its own `site_usage` queue: it measures every site and stores the snapshot on
+the day's row, then deletes rows past the retention period. A site whose
+measuring fails keeps its last snapshot, and the screen says which day a
+figure is from; a day with traffic and no measurement shows storage as
+unknown, never as zero, and no change is shown without two measurements in
+the 30 days. Folders are walked without following links inside them, and kept
+builds are measured whatever the site's delivery is today. An application
+with its own `config :brando, Oban` adds the queue and the cron entry itself;
+the System check names them when they are missing:
+
+```elixir
+queues: [site_usage: [limit: 1], ...],
+cron: [crontab: [{"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}}, ...]]
+```
+
+**Traffic** is counted by `Brando.Plug.Usage`, first in the endpoint:
+
+```elixir
+plug Brando.Plug.Usage
+plug Brando.Plug.SiteAssets
+plug Plug.Static, ...
+```
+
+A request counts for a site when its host is one of an active site's
+environment domains or redirect hosts, whatever answers it: a page, a static
+file, a media file, a redirect or a 404. The admin's host, a shared preview on
+it, an inactive site's host and a host no site has count for nobody. Nothing
+is stored but the site, the UTC day the request arrived, one request and the
+bytes of the response body as the application sent it: a file's length, or a
+range response's range, and 0 for HEAD and 304. Counts are kept in memory on
+each node and added to the day's row every minute and when the node stops.
+
+Limits:
+
+- These are operating figures, not invoices. A node that dies loses the counts
+  since its last flush; while the database is away, counts wait in memory, and
+  a write that committed while its answer was lost is counted twice.
+- A chunked response counts as a request with 0 bytes, and WebSocket and
+  long-poll connections (LiveView on a site's pages) are not counted: Phoenix
+  dispatches them before the endpoint's plugs.
+- A site published to another host (`rsync`, `s3`) shows what still reaches
+  this installation; the screen says where it is published to.
+- The installation's total is the sum of the measured sites. Databases on
+  another volume count in it but not in the free space, which is that of the
+  volume holding the media folder.
+- CPU and memory per site are not shown: every site runs in one VM.
 
 ## Copy content safely
 

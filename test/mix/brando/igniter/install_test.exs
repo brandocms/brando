@@ -49,6 +49,10 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~
              ~r{socket\(?\s*"/__livepreview/socket",\s*BrandoAdmin.LivePreviewSocket,\s*websocket: \[check_origin: false\],\s*longpoll: false}
 
+    # Each site's requests are counted first, whatever answers them
+    assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~
+             ~r/plug\(?Brando.Plug.Usage\)?\n\s*plug\(?Brando.Plug.SiteAssets\)?\n\s*plug\(?Plug.Static/
+
     assert IgniterCase.source(igniter, "lib/studio_web.ex") =~ "helpers: true"
 
     router = IgniterCase.source(igniter, "lib/studio_web/router.ex")
