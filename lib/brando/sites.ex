@@ -364,6 +364,12 @@ defmodule Brando.Sites do
   The unexpired preview a link's `key` opens, looked up by the key's hash
   (`Brando.Sites.Preview.hash_key/1`). An expired preview answers as an
   unknown key does, whether or not its purge has run.
+
+  A proposal's preview (`proposal_id`) also answers as unknown once its
+  proposal version is no longer under review: applied, superseded,
+  cancelled or undone, or past the proposal's own expiry. That is read from
+  the stored proposal in the same query, so the link dies on time whether
+  or not anything cleaned up after it.
   """
   @spec get_shared_preview(String.t()) :: {:ok, Preview.t()} | {:error, {:preview, :not_found}}
   def get_shared_preview(key) when is_binary(key) do
@@ -371,7 +377,10 @@ defmodule Brando.Sites do
 
     query =
       from p in Preview,
+        left_join: r in Brando.Content.Proposals.Record,
+        on: r.id == p.proposal_id,
         where: p.preview_key == ^Preview.hash_key(key) and p.expires_at > ^now,
+        where: is_nil(p.proposal_id) or (r.status in ~w(pending approved) and r.expires_at > ^now),
         limit: 1
 
     case Brando.Repo.one(query) do

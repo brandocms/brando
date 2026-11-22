@@ -268,6 +268,9 @@ defmodule Brando.MCP.EndpointTest do
 
       assert %{"readOnlyHint" => false, "destructiveHint" => true} =
                Enum.find(tools, &(&1["name"] == "brando_content_cancel_proposal")) |> Map.get("annotations")
+
+      assert %{"readOnlyHint" => true, "destructiveHint" => false} =
+               Enum.find(tools, &(&1["name"] == "brando_content_preview_proposal")) |> Map.get("annotations")
     end
 
     test "each one answers over JSON-RPC", %{tenant: tenant, token: token} = c do
@@ -501,6 +504,45 @@ defmodule Brando.MCP.EndpointTest do
 
       assert instructions =~ "brando_content_list_proposals"
       assert instructions =~ "brando_content_cancel_proposal"
+    end
+
+    test "preview_proposal gives a link that opens without a login, and the server's instructions name it",
+         %{tenant: tenant, token: token} = c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      op = %{"op" => "set_fields", "target" => target, "fields" => %{"title" => "Identity, from MCP"}}
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Retitle", "operations" => [op]})
+
+      args = %{"proposal_id" => id, "target" => target, "preview_target" => "blocks"}
+
+      assert %{"result" => %{"structuredContent" => %{"url" => url, "shows" => "proposed", "expires_at" => _}} = result} =
+               call_tool(tenant, token, "preview_proposal", args)
+
+      refute result["isError"]
+
+      conn = get(build_conn(), URI.parse(url).path)
+      assert html_response(conn, 200) =~ "Identity, from MCP"
+
+      MCP.in_tenant(tenant, fn ->
+        assert {:ok, %{title: "Identity"}} = Brando.Pages.get_page(%{matches: %{id: c.identity.id}})
+      end)
+
+      assert %{"result" => %{"isError" => true, "structuredContent" => %{"error" => error}}} =
+               call_tool(tenant, token, "preview_proposal", Map.put(args, "proposal_id", Ecto.UUID.generate()))
+
+      assert error =~ "no proposal"
+
+      assert [_prepare, %{details: %{"tool" => "preview_proposal", "ok" => true, "proposal" => ^id}}, failed] =
+               Repo.all(from e in Event, where: e.action == :tool_called, order_by: e.id)
+
+      assert %{details: %{"tool" => "preview_proposal", "ok" => false}} = failed
+
+      %{"result" => %{"instructions" => instructions}} =
+        rpc(tenant, token, "initialize", %{"protocolVersion" => "2025-06-18", "capabilities" => %{}})
+        |> json_response(200)
+
+      assert instructions =~ "brando_content_preview_proposal"
     end
 
     test "a proposal with a summary longer than the result limit is listed with it cut short, and cancels without it",

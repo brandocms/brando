@@ -291,6 +291,13 @@ defmodule BrandoIntegrationWeb.LivePreview do
     end
   end
 
+  # A type with a record policy (PreviewProposalTest)
+  preview_target Brando.SyncPolicyTest.Article do
+    template {BrandoIntegrationWeb.ArticleHTML, "titled"}
+    layout {BrandoIntegrationWeb.Layouts, "titled"}
+    assign :heading, fn entry -> "heading:#{entry.title}" end
+  end
+
   # A schema without block fields, whose layout reads the title
   preview_target Brando.MetaDrawerTest.ActionsArticle do
     template {BrandoIntegrationWeb.ArticleHTML, "titled"}

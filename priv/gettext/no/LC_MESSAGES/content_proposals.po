@@ -628,6 +628,11 @@ msgstr "Modulen har ingen tekstplass som heter %{name}."
 msgid "The module has no variable %{key}."
 msgstr "Modulen har ingen variabel som heter %{key}."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The proposal has problems, so it cannot be previewed: it copies a block that is not there."
+msgstr "Forslaget har problemer, så det kan ikke forhåndsvises: det kopierer en blokk som ikke finnes."
+
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "The sizes of image %{id} are still being made. Approve the proposal again in a moment."
@@ -954,6 +959,11 @@ msgstr "Ukjent operasjon %{op}."
 msgid "Unknown placement."
 msgstr "Ukjent plassering."
 
+#: lib/brando/content/proposals/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown preview target %{name}. This content type has: %{names}."
+msgstr "Ukjent forhåndsvisning %{name}. Denne innholdstypen har: %{names}."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown proposal origin."
@@ -990,6 +1000,11 @@ msgid "You may not change image %{ids}."
 msgid_plural "You may not change images %{ids}."
 msgstr[0] "Du har ikke lov til å endre bilde %{ids}."
 msgstr[1] "Du har ikke lov til å endre bildene %{ids}."
+
+#: lib/brando/content/proposals/preview.ex
+#, elixir-autogen, elixir-format
+msgid "You may not edit this entry as the proposal leaves it."
+msgstr "Du har ikke lov til å redigere denne oppføringen slik forslaget etterlater den."
 
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format

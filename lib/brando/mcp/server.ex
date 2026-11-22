@@ -37,7 +37,8 @@ defmodule Brando.MCP.Server do
     "Brando's content tools for one site environment: read content types, entries, modules and media, and prepare proposals.",
     "A proposal changes nothing until the person approves it in the Brando admin.",
     "To learn whether the person has approved, applied or cancelled your proposals, call brando_content_list_proposals instead of asking; " <>
-      "brando_content_cancel_proposal withdraws one of yours still under review.",
+      "brando_content_cancel_proposal withdraws one of yours still under review, " <>
+      "and brando_content_preview_proposal gives a link to a proposal's page that your browser opens without a login, before it is approved.",
     "The site's conventions come with the tools' results: read brando_content_describe_content_type before you build an entry, " <>
       "for its fields' descriptions and the site's guidance, and follow the guidance brando_figma_read_frame returns when you build from Figma."
   ]

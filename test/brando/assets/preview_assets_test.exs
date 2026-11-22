@@ -141,6 +141,21 @@ defmodule Brando.Assets.PreviewAssetsTest do
     end)
   end
 
+  test "a proposal's snapshot is not stored without its environment" do
+    user = Brando.Factory.insert(:random_user, avatar: nil)
+    proposal = insert_proposal(user)
+    changeset = page() |> Map.put(:key, "about") |> Ecto.Changeset.change()
+    previews = Repo.aggregate(Preview, :count, prefix: "public")
+
+    # The site resolves, its environment does not
+    Tenant.put_prefix(Tenant.prefix("acme", "gone"))
+
+    assert {:error, :missing_site_context} = LivePreview.share_proposal(Page, changeset, user, proposal.id, :site)
+
+    Tenant.put_prefix(nil)
+    assert Repo.aggregate(Preview, :count, prefix: "public") == previews
+  end
+
   test "a path no set holds stays unanswered on the admin's host" do
     for path <- ["robots.txt", "assets/missing.js", "assets/acme-one.js/x"] do
       refute served?(path, @admin_host), path
@@ -296,6 +311,27 @@ defmodule Brando.Assets.PreviewAssetsTest do
 
     SiteAssets.refresh_node_cache({:pinned, {:site_id, acme.id}})
     assert served?("assets/acme-three.js", @admin_host)
+  end
+
+  defp insert_proposal(user) do
+    Repo.insert!(
+      %Brando.Content.Proposals.Record{
+        id: Ecto.UUID.generate(),
+        version: 1,
+        scope: "acme:production",
+        actor_id: user.id,
+        origin: "mcp",
+        client: "Claude Code",
+        operations: [],
+        fingerprints: %{},
+        module_versions: [],
+        problems: [],
+        effects: %{},
+        status: "pending",
+        expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second)
+      },
+      prefix: "public"
+    )
   end
 
   defp page, do: %Page{title: "About", uri: "about", template: "default.html", language: :en, entry_blocks: []}

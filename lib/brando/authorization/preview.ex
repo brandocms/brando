@@ -104,6 +104,23 @@ defmodule Brando.Authorization.Preview do
     end
   end
 
+  @doc """
+  Whether `user` may have a public snapshot of the entry as `changeset`
+  leaves it for a connected tool's proposal preview
+  (`Brando.LivePreview.share_proposal/5`): what a private live preview
+  takes (`register/2`), to edit the entry as it would be, or to create it.
+  The export permission `authorize_share/2` adds is not taken.
+  """
+  def authorize_snapshot(user, changeset) do
+    if Engine.enabled?() do
+      if editable?(Boundary.actor_scope(user), Ecto.Changeset.apply_changes(changeset)),
+        do: :ok,
+        else: {:error, :forbidden}
+    else
+      :ok
+    end
+  end
+
   def cleanup(key), do: Cachex.del(:cache, cache_key(key))
 
   @doc "The scope `key` was registered under (`register/2`), or nil."

@@ -202,9 +202,9 @@ With them, three tools that add images to the media library (below):
 
 ### Follow up on proposals
 
-Two content tools are offered only to connected tools, not to the
-Assistant, so a tool can check on its proposals instead of asking the
-person:
+Three content tools are offered only to connected tools, not to the
+Assistant, so a tool can check on its proposals and see their pages instead
+of asking the person:
 
 - `brando_content_list_proposals` lists the tool's own proposals, newest
   first, in every status: pending, approved, applied, undone, superseded
@@ -227,6 +227,44 @@ person:
   while it is pending or approved, expired or not, as **Cancel** in the
   admin does: content is untouched. An applied, undone, superseded or
   cancelled proposal is refused with an error that names its status.
+- `brando_content_preview_proposal` returns `url`, a link to one entry's
+  page as one of the tool's own proposals would make it, before anyone
+  approves it, so the tool can compare the page with its design (a Figma
+  frame) and refine the proposal. It takes `proposal_id`, `target` (an
+  entry the proposal changes, `{"content_type", "id"}`, or creates,
+  `{"new": ref}`), `version` (`"proposed"`, the default, or `"before"`:
+  the entry as it is saved now, which a new entry does not have) and
+  `preview_target` (one of the content type's views; its default view
+  otherwise). The page is rendered by the site's own templates against the
+  site's frontend assets and stored as a snapshot, as the editor's **Get
+  shareable link** stores one; nothing else is saved.
+
+### Proposal preview links
+
+A link from `preview_proposal` opens in any browser without a login, for
+15 minutes (`expires_at` in the answer), and only while its proposal is
+pending or approved: once the proposal is applied, replaced, cancelled,
+undone or past its own expiry, the link answers 404. Approving it keeps the
+link. Each call gives a new link; an earlier one keeps working until its
+own 15 minutes are up, so two views of one entry can be compared side by
+side. A proposal that is no longer under review, or has problems, gets no
+link; its `before` version is still shown while it has problems.
+
+The tool gets a link only when the person could see the same page in the
+admin's own review: it is the person's proposal from this tool, and the
+person may edit the entry, both as it is and as the proposal leaves it (for
+a new entry, may create it). The export permission the editor's shareable
+link takes is not needed. A translation the proposal creates has no page of
+its own until it is applied: preview its source.
+
+In multi-site mode the link opens only under the site environment the
+proposal belongs to: on the admin's host and on that environment's own
+host, not on the same site's live host for a staging proposal, and nowhere
+once that environment is deleted. The page is served with
+`X-Robots-Tag: noindex, nofollow` and `Cache-Control: no-store`, and without
+a banner, so a screenshot of it is the page. Expired snapshots are removed
+as other shared previews are. The live page and Activity record each call
+with the proposal and the version it showed, not the link.
 
 A proposal stores the person and the client's name, not the connection, so
 a tool's own proposals are those the same person made over MCP from a
@@ -235,7 +273,8 @@ tool's after it is reconnected, and two connections of the same client for
 the same person share them. A proposal without a client name belongs to a
 tool that sends none. Another person's proposal, another client's, an
 Assistant conversation's and one from another site environment are not
-listed, and cancelling one answers that there is no such proposal.
+listed, and cancelling or previewing one answers that there is no such
+proposal.
 
 ### The site's guidance
 
@@ -277,7 +316,8 @@ it was about ("Searched for “harbour” in Pages", "Read the Figma frame
 “Home”"), whether it worked and the error if not; the images
 an upload, an import from an address or `brando_figma_import_images` adds or
 reuses, with their thumbnails and library folder; and each proposal `prepare_proposal` stores or `cancel_proposal` cancels, with its
-summary, counts, problems and links to its review and page preview. It opens
+summary, counts, problems and links to its review and page preview; a
+`preview_proposal` call says which version it showed, without its link. It opens
 on the connection's calls of the last hour (at most 50) from Activity, then
 follows the new ones; it changes nothing, and cannot steer the tool.
 
@@ -813,7 +853,10 @@ What the endpoint does about each requirement in
    size, pixels), and never replacing or deleting an image.
    `cancel_proposal` changes only a proposal's status: it cancels the
    tool's own proposal while it is under review, and leaves content as it
-   is.
+   is. `preview_proposal` stores only a snapshot of a page, readable by
+   anyone with its unguessable link for 15 minutes while the proposal is
+   under review; it takes the permissions the admin's own review preview
+   takes.
 5. **Scoped per site and environment.** The endpoint URL names the site
    environment; it is the token's audience, and every token, code and
    connection records its site and environment. A token is looked up only
