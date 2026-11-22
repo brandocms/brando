@@ -399,8 +399,11 @@ defmodule Brando.Figma.Import do
         false
 
       {_img, alpha} ->
+        # A 16-bit image counts its alpha to 65535
+        opaque = if Vix.Vips.Image.format(alpha) == :VIPS_FORMAT_USHORT, do: 65_535, else: 255
+
         case Vix.Vips.Operation.min(alpha) do
-          {:ok, {min, _extra}} -> min < 255
+          {:ok, {min, _extra}} -> min < opaque
           _ -> true
         end
     end
@@ -423,11 +426,19 @@ defmodule Brando.Figma.Import do
   end
 
   # From `scale` down, each try scaled by how far the last was over, never
-  # under `floor`; the last try is the floor.
+  # under `floor`; the last try is the floor. A first try that fits with
+  # room to spare is tried once larger (`larger_scale/3`).
   defp shrink(format, path, turn, size, floor, limit, scale, tries \\ @fit_tries) do
     case encode(path, format, turn, size, scale) do
       {:ok, data, dimensions} when byte_size(data) <= limit ->
-        {:ok, data, format, dimensions}
+        larger = if tries == @fit_tries, do: larger_scale(scale, limit, data)
+
+        with true <- is_float(larger),
+             {:ok, more, more_dimensions} when byte_size(more) <= limit <- encode(path, format, turn, size, larger) do
+          {:ok, more, format, more_dimensions}
+        else
+          _ -> {:ok, data, format, dimensions}
+        end
 
       {:ok, data, dimensions} ->
         cond do
@@ -440,6 +451,16 @@ defmodule Brando.Figma.Import do
         :error
     end
   end
+
+  # A first try under full size that fits in less than half the limit was
+  # started too low: the download packed worse than the copy does (a PNG
+  # saved without compression, a JPEG at full quality). It is tried once
+  # more at the scale its own bytes say fits, and the larger copy is kept
+  # when it does.
+  defp larger_scale(scale, limit, data) when scale < 1.0 and byte_size(data) * 2 < limit,
+    do: min(1.0, scale * :math.sqrt(limit / byte_size(data)) * 0.95)
+
+  defp larger_scale(_scale, _limit, _data), do: nil
 
   defp next_scale(scale, floor, limit, data), do: max(floor, scale * :math.sqrt(limit / byte_size(data)) * 0.95)
 

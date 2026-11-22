@@ -1215,16 +1215,45 @@ defmodule Brando.MCP.FigmaTest do
 
     test "with fit, the first try in the image's own format is at the scale its bytes suggest, not its full size",
          %{tenant: tenant, token: token} do
-      # Saved without compression, far over the limit; the first try is at
-      # sqrt(limit / bytes), less a margin, and fits
-      {:ok, original} = Operation.pngsave_buffer(Picture.new!(400, 200, color: :red), compression: 0)
-      assert byte_size(original) > 200_000
+      # Noise packs the same at any size, so the first try, at
+      # sqrt(limit / bytes) less a margin, fits and is kept
+      original = png(noise(400, 200))
+      assert byte_size(original) > 100_000
       put_size_limit(100_000)
       stub_layers(serve(%{"p" => original}), [boxed("45:1", [fill("p")], 50, 25)])
 
       assert %{"images" => [%{"fitted" => %{"stored" => %{"width" => width}}}]} = import!(tenant, token, %{"fit" => true})
       expected = ceil(400 * :math.sqrt(100_000 / byte_size(original)) * 0.95)
       assert abs(width - expected) <= 1
+    end
+
+    test "with fit, a download that packs worse than its copy is not stored smaller than fits",
+         %{tenant: tenant, token: token} do
+      # Saved without compression, far over the limit; as a PNG of its full
+      # size it is a few hundred bytes
+      {:ok, original} = Operation.pngsave_buffer(Picture.new!(400, 200, color: :red), compression: 0)
+      assert byte_size(original) > 200_000
+      put_size_limit(100_000)
+      stub_layers(serve(%{"p" => original}), [boxed("45:2", [fill("p")], 50, 25)])
+
+      assert %{"images" => [%{"fitted" => %{"stored" => %{"width" => 400, "height" => 200}}}]} =
+               import!(tenant, token, %{"fit" => true})
+    end
+
+    test "with fit, a 16-bit image with half-transparent pixels keeps its transparency",
+         %{tenant: tenant, token: token} do
+      # Alpha between 1000 and 26500 of 65535 in every pixel: above 255,
+      # and not opaque. The site does not take PNG, so the copy is a WebP,
+      # not a JPEG
+      {:ok, wide} = Operation.linear(noise(300, 150, 4), [100.0], [1000.0])
+      {:ok, wide} = Operation.cast(wide, :VIPS_FORMAT_USHORT)
+      {:ok, wide} = Operation.copy(wide, interpretation: :VIPS_INTERPRETATION_RGB16)
+      original = png(wide)
+      put_size_limit(50_000, ["image/jpeg", "image/webp"])
+      assert byte_size(original) > 50_000
+      stub_layers(serve(%{"p" => original}), [boxed("45:3", [fill("p")], 20, 10)])
+
+      assert %{"images" => [%{"fitted" => %{"format" => "WebP"}}]} = import!(tenant, token, %{"fit" => true})
     end
 
     test "each original is deleted once its image is stored, not at the end of the call",
