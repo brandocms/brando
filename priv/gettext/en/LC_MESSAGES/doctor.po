@@ -1131,6 +1131,11 @@ msgstr ""
 msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
 msgstr ""
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add site_usage: [limit: 1] to the queues and {\"45 5 * * *\", Brando.Worker.SiteUsage, args: %{\"all\" => true}} to the crontab in config :brando, Oban"
+msgstr ""
+
 #: lib/brando/doctor/checks/soft_delete_repo.ex
 #, elixir-autogen, elixir-format
 msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
@@ -1927,6 +1932,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "site usage is not measured"
 msgstr ""
 
 #: lib/brando/doctor.ex

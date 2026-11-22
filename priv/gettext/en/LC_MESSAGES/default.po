@@ -740,6 +740,11 @@ msgstr[1] ""
 msgid "%{count} words"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{day}: %{requests} requests"
+msgstr ""
+
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} gets an email with a link to choose a new password. The current password works until then."
@@ -1074,6 +1079,11 @@ msgstr ""
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
 msgid "%{step} (did not work)"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{storage} · %{requests} requests"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -2493,6 +2503,11 @@ msgstr ""
 msgid "All local modules in this workspace"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "All measured sites"
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "All members"
@@ -3076,6 +3091,12 @@ msgstr ""
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
+msgid "Archive"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "database"
 msgid "Archive"
 msgstr ""
 
@@ -3845,6 +3866,11 @@ msgstr ""
 msgid "By"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bytes served"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "CSS class"
@@ -4081,6 +4107,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Change settings of %{block}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Change since %{day}"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
@@ -6203,6 +6234,16 @@ msgstr ""
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Database"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Databases"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -8973,6 +9014,11 @@ msgstr ""
 msgid "Free"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Free on the media volume"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "From"
@@ -10126,6 +10172,7 @@ msgstr ""
 msgid "Inspecting…"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Installation"
@@ -10526,6 +10573,11 @@ msgid "Kept for %{count} day"
 msgid_plural "Kept for %{count} days"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept static builds"
+msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
@@ -11509,6 +11561,21 @@ msgstr ""
 #: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Maybe it was outdated and has been deleted?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Measure now"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Measured on %{day}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Measuring %{name} is queued."
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
@@ -13236,6 +13303,16 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Not included: %{rows}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not measured yet. The daily measuring, or Measure now, fills it in."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not measured · %{requests} requests"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex
@@ -15228,6 +15305,11 @@ msgstr ""
 msgid "Published on schedule"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published to %{target}. These are the requests this installation answered on the site’s hosts."
+msgstr ""
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Publishes"
@@ -16394,9 +16476,19 @@ msgstr ""
 msgid "Requested URLs that no longer exist but match an entry's slug. Creating a redirect adds it to the settings."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requests"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Requests for URLs that do not exist, over the last %{days} days. Add a redirect above when a page has moved."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requests per day, the last 30 days"
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
@@ -18743,6 +18835,11 @@ msgstr ""
 msgid "Sites with the same group key share the provider videos offered under “Add from …”."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Size"
+msgstr ""
+
 #: lib/brando_admin/live/content/module_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sketches with AI"
@@ -19084,6 +19181,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Stops all notifications on it and removes its delivery log."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Storage"
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -20138,6 +20240,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "The fragments of the pages deleted move to the nearest page above them that is not deleted, or to the homepage in their language. With neither, they stay on the site with no page."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The free space is that of the volume holding %{path}. Databases on another volume count in the total, not in the free space."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -21707,6 +21814,7 @@ msgstr ""
 msgid "Top searches"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Total"
@@ -21715,6 +21823,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Traffic from %{sources}, last %{days} days."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic, last 30 days"
 msgstr ""
 
 #: lib/brando/seo/crawlers.ex
@@ -22148,6 +22261,7 @@ msgid "Unique title"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr ""
@@ -22168,6 +22282,7 @@ msgid "Unknown build"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown environment"
 msgstr ""
@@ -22584,6 +22699,11 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Uploads to this field go to this folder"
 msgstr "Uploads to this field go to this folder"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Usage"
+msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex
 #, elixir-autogen, elixir-format
@@ -23284,6 +23404,11 @@ msgstr ""
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "What the icons mean"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "What the site stores, measured once a day, and the requests this installation answered on the site’s hosts, per UTC day."
 msgstr ""
 
 #: lib/brando_admin/live/forms/inbox_live.ex

@@ -271,6 +271,9 @@ defmodule E2EFixtureController do
 
         "multi-site-many" ->
           MultiSiteHosts.setup(get_admin_user(), many_sites: true)
+
+        "multi-site-usage" ->
+          MultiSiteHosts.setup(get_admin_user(), usage: true)
       end
 
     # Log the user in

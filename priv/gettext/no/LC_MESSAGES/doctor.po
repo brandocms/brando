@@ -1131,6 +1131,11 @@ msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
 msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
 msgstr "legg hver størrelse til i default_config, eller i feltets egne sizes; til da vises srcset uten den"
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add site_usage: [limit: 1] to the queues and {\"45 5 * * *\", Brando.Worker.SiteUsage, args: %{\"all\" => true}} to the crontab in config :brando, Oban"
+msgstr "legg site_usage: [limit: 1] til køene og {\"45 5 * * *\", Brando.Worker.SiteUsage, args: %{\"all\" => true}} til crontab i config :brando, Oban"
+
 #: lib/brando/doctor/checks/soft_delete_repo.ex
 #, elixir-autogen, elixir-format
 msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
@@ -1928,6 +1933,11 @@ msgstr "sett `config :brando, Brando.Mailer, from: …` til en adresse e-postlev
 #, elixir-autogen, elixir-format
 msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
 msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: …`"
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "site usage is not measured"
+msgstr "nettstedenes forbruk måles ikke"
 
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
