@@ -946,6 +946,10 @@ defmodule Brando.Content.Proposals.Tools do
       "The proposal has problems, so its page is not rendered. Fix them and call prepare_proposal again with replaces; version \"before\" still shows the saved page."
 
   defp preview_error(:forbidden, _proposal, _target), do: "You may not edit this entry, so it has no preview."
+
+  defp preview_error(:missing_site_context, _proposal, _target),
+    do: "This connection's site or environment could not be found, so the page has no link. Nothing was stored."
+
   defp preview_error(message, _proposal, _target) when is_binary(message), do: message
   defp preview_error(reason, _proposal, _target), do: "The page could not be stored: #{inspect(reason)}."
 

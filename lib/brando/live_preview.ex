@@ -645,9 +645,22 @@ defmodule Brando.LivePreview do
     expires_at = DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.add(@proposal_snapshot_ttl_minutes, :minute)
 
     with :ok <- Brando.Authorization.Preview.authorize_snapshot(user, changeset),
-         {:ok, url} <-
-           store_pinned(schema_module, changeset, user, %{}, target, expires_at, %{proposal_id: proposal_id}) do
+         {:ok, shared_from} <- proposal_shared_from(),
+         attrs = Map.put(shared_from, :proposal_id, proposal_id),
+         {:ok, url} <- store_pinned(schema_module, changeset, user, %{}, target, expires_at, attrs) do
       {:ok, url, expires_at}
+    end
+  end
+
+  # In multi-site mode a proposal's snapshot opens only under the site and
+  # environment it was shared from, so it is not stored without both
+  defp proposal_shared_from do
+    case {Brando.Tenant.mode(), shared_from()} do
+      {:multi, %{site_id: site_id, environment_id: environment_id}} when is_nil(site_id) or is_nil(environment_id) ->
+        {:error, :missing_site_context}
+
+      {_mode, shared_from} ->
+        {:ok, shared_from}
     end
   end
 

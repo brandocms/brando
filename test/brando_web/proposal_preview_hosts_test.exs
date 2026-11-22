@@ -82,6 +82,25 @@ defmodule BrandoWeb.ProposalPreviewHostsTest do
     assert get_preview(editors, @admin_host).status == 200
   end
 
+  test "a proposal's preview stored without its site or environment opens on no host", c do
+    keys = [
+      insert_preview(c, c.staging, site_id: nil, environment_id: nil),
+      insert_preview(c, c.staging, site_id: nil),
+      insert_preview(c, c.staging, environment_id: nil)
+    ]
+
+    for key <- keys, host <- [@admin_host, "acme.test", "staging.acme.test"] do
+      assert get_preview(key, host).status == 404, host
+    end
+
+    # An editor's link without a site opens on any site's host, as before
+    editors = insert_preview(c, c.staging, site_id: nil, environment_id: nil, proposal_id: nil)
+
+    for host <- ["acme.test", "staging.acme.test"] do
+      assert get_preview(editors, host).status == 200, host
+    end
+  end
+
   test "opens no more once the proposal is not under review, or has expired", c do
     key = insert_preview(c, c.staging)
 

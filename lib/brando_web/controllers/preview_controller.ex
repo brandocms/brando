@@ -15,7 +15,8 @@ defmodule BrandoWeb.PreviewController do
   while that proposal version is under review (`Sites.get_shared_preview/1`),
   and in multi-site mode only under the site and environment it was shared
   from: not on the same site's live host for a staging proposal, and nowhere
-  once that environment is deleted. It is answered with
+  once that environment is deleted or if it was stored without a site or an
+  environment. It is answered with
   `X-Robots-Tag: noindex, nofollow` and `Cache-Control: no-store`, and no
   banner, so a screenshot of it is the page.
   """
@@ -54,6 +55,11 @@ defmodule BrandoWeb.PreviewController do
       {:multi, _another_site_or_none} -> {:error, {:preview, :not_found}}
       _one_site -> :ok
     end
+  end
+
+  # A proposal's preview without its site has no host of its own to open on
+  defp same_site(_conn, %Preview{proposal_id: proposal_id}) when is_binary(proposal_id) do
+    if Brando.Tenant.mode() == :multi, do: {:error, {:preview, :not_found}}, else: :ok
   end
 
   defp same_site(_conn, _preview), do: :ok
