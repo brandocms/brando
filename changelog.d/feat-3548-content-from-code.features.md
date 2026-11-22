@@ -1,0 +1,1 @@
+- `Brando.Content.Seed` creates content from code (seed scripts, imports, data migrations) through the admin's contexts: blocks from modules with text, images, videos and galleries given as structs or file paths, entries, menu items and global values. The new Seeding guide has a seed script that Brando's tests run.
