@@ -794,7 +794,11 @@ Each directory has a `europa.json5`. The admin's extends Brando's preset
 (`./node_modules/@brandocms/brandojs/europa.json5`) and lists only what the
 application changes, such as theme colours; objects merge key by key with the
 preset's, and arrays and plain values replace them. The site's holds the
-site's own tokens: breakpoints, spacing, typography and colours.
+site's own tokens: breakpoints, spacing, typography and colours. A new site
+starts with the tokens its installed CSS and default modules read, each group
+with a comment on what to change first. Beside it, `europa.example.json5` is
+a fuller worked theme to copy tokens from (more type sizes, font families and
+spacing steps); nothing loads it, and the site may delete it.
 
 The admin's styles are in the cascade layers `reset, vendor, brando, app`, in
 that order. Put the application's admin rules in `@layer app { … }`, as the

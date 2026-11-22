@@ -1,0 +1,1 @@
+- A new install's `assets/frontend/europa.json5` holds only the tokens the installed CSS reads, each group with a comment on what to change first; the full worked theme is beside it as `europa.example.json5`, which nothing loads. Existing projects are unchanged.

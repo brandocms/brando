@@ -66,6 +66,15 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert length(Regex.scan(~r/\|> Brando\.Site\.Frontend\.put_page_assigns\(page\)\n\s+\|> render/, controller)) == 2
   end
 
+  test "a new install writes the site's theme and the worked example beside it", %{none: none} do
+    for file <- ~w(europa.json5 europa.example.json5) do
+      assert IgniterCase.source(none, "assets/frontend/#{file}") ==
+               File.read!("priv/templates/brando.install/assets/frontend/#{file}")
+    end
+
+    assert IgniterCase.source(none, "assets/frontend/vite.config.js") =~ "config: './europa.json5'"
+  end
+
   test "--site adds ico to static_paths/0 for the icons its layout links", %{multi: multi} do
     web = """
     defmodule StudioWeb do

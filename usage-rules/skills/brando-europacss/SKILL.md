@@ -29,6 +29,10 @@ compiler: the `europa` executable from `@brandocms/europacss-cli`, run by
   `extends`. Read its `breakpoints` and `breakpointCollections` before writing
   a query: they are not the admin's (`desktop_md` is 1280px here and 1200px
   in the admin preset).
+- **`assets/frontend/europa.example.json5`**, when the site still has it, is
+  a fuller worked theme that nothing loads. Copy a token the design needs
+  from it into `europa.json5` (more type sizes, the `sans` and `serif`
+  families, more spacing steps), rather than writing one from scratch.
 - Its tokens are px below `desktop_lg` and scale with the viewport from it,
   written `scale-from(n, desktop_lg)`. A new token follows the same pattern.
 - `dpx` is relative to `dpxViewportSize`: `20dpx` is 20px at that viewport
