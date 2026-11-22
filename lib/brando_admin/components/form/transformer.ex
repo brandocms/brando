@@ -156,9 +156,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       |> assign(:sent_dom_ids, [])
       |> put_base_ids(taken?, written)
 
-    if taken? and row_ids(rows) != row_ids(written),
-      do: {:ok, take_saved_rows(socket, rows)},
-      else: {:ok, socket}
+    {:ok, if(taken? and row_ids(rows) != row_ids(written), do: take_saved_rows(socket, rows), else: socket)}
   end
 
   # Another editor saved the entry, and the Form took the save

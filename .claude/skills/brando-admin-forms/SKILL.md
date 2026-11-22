@@ -25,8 +25,11 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `lib/brando_admin/components/form/transformer.ex`. Preserve already collected
   state: `assign_transformer_statuses` deliberately initializes only once.
   A transformer also loads its rows once; after a save that stays on the
-  form, the Form hands it the saved rows (`entry_saved`), which make the
-  rows it sent saved rows, so the next save doesn't insert them again.
+  form, the Form hands it the rows its save wrote, as the save returned
+  them (`written`), which make the rows it sent saved rows, so the next
+  save doesn't insert them again; and the rows read back after the save,
+  which also hold another editor's save that landed while this one ran
+  (the Form takes none then), taken in as below.
   After another editor's save (`take_saved_entry`), it hands it that save's
   rows (`entry_saved_elsewhere`): the transformer takes them under its own
   unsaved changes, told from the rows it was built on (`base_ids`).
