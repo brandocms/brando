@@ -7,7 +7,9 @@ defmodule Brando.AuthorizationTestPolicy do
   def authorize(scope, _action, entry) do
     # Lets a test make the check fail, as a broken policy or database would
     if error = Process.get(:authorization_test_policy_raises), do: raise(error)
-    entry.creator_id == scope.user_id
+    # Lets a test put an entry with this title out of reach, as a policy on a field can
+    denied_title = Process.get(:authorization_test_policy_denies_title)
+    entry.creator_id == scope.user_id and (is_nil(denied_title) or Map.get(entry, :title) != denied_title)
   end
 
   def scope(scope, :export, query),

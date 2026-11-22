@@ -31,6 +31,13 @@ defmodule Brando.Sites.Preview do
     attribute :preview_key, :text, required: true
     attribute :expires_at, :datetime, required: true
     attribute :html, :text, required: true
+
+    # The proposal version a connected AI tool's link shows
+    # (`Brando.Content.Proposals.Preview.snapshot/4`). Such a link opens only
+    # while that version is under review (`Brando.Sites.get_shared_preview/1`),
+    # and only under the site and environment it was shared from. Empty for
+    # an editor's shareable link.
+    attribute :proposal_id, :uuid
   end
 
   relations do
