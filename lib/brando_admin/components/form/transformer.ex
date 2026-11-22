@@ -1565,14 +1565,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp item_struct(data, _relation_module) when is_struct(data), do: data
-  # A Blueprint `default` may have string keys, which `struct/2` would drop;
-  # an edit (`changes`) is atom-keyed and wins over the default's value.
-  defp item_struct(data, relation_module) do
-    fields = relation_module |> struct() |> Map.keys() |> Map.new(&{to_string(&1), &1})
-    {strings, atoms} = Map.split_with(data, fn {key, _} -> is_binary(key) end)
-    from_strings = for {key, value} <- strings, field = fields[key], into: %{}, do: {field, value}
-    struct(relation_module, Map.merge(from_strings, atoms))
-  end
+  defp item_struct(data, relation_module), do: struct(relation_module, data)
 
   # An item's asset can come from three places: a preloaded association on an
   # existing row, an upload delivery, or a picker selection. The last two land in
@@ -1956,14 +1949,27 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     |> to_insertable_map()
   end
 
-  def build_default(%{default: default}, _relation_module, entry, asset) when is_function(default, 2) do
+  def build_default(%{default: default}, relation_module, entry, asset) when is_function(default, 2) do
     default
     |> then(& &1.(entry, asset))
     |> to_insertable_map()
+    |> atom_keys(relation_module)
   end
 
-  def build_default(%{default: default}, _relation_module, _entry, _asset) do
-    to_insertable_map(default)
+  def build_default(%{default: default}, relation_module, _entry, _asset) do
+    default
+    |> to_insertable_map()
+    |> atom_keys(relation_module)
+  end
+
+  # A Blueprint `default` may have string keys, as params do. The new row is
+  # shown with `struct/2`, which drops them, and saved with `put_assoc`, which
+  # raises on them, so they become the schema's field names; an atom key wins.
+  defp atom_keys(map, relation_module) do
+    fields = relation_module |> struct() |> Map.keys() |> Map.new(&{to_string(&1), &1})
+    {strings, atoms} = Map.split_with(map, fn {key, _} -> is_binary(key) end)
+    from_strings = for {key, value} <- strings, field = fields[key], into: %{}, do: {field, value}
+    Map.merge(from_strings, atoms)
   end
 
   defp to_insertable_map(%{__struct__: _} = struct) do
