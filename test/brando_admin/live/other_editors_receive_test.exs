@@ -38,6 +38,26 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
     view
   end
 
+  # A browser tab of the editor's: its id goes with every join
+  defp open_tab(conn, article, form, tab) do
+    params = %{"brando_tab" => tab, "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+    conn |> Phoenix.LiveViewTest.put_connect_params(params) |> open(article, form)
+  end
+
+  # `to` presses Edit here; `from`'s browser answers with its last capture
+  defp take_over(to, from) do
+    to |> element(~s([data-testid="tab-notice"] button[phx-click="brando_tab_claim"])) |> render_click()
+    assert_push_event(from, "b:draft-release", %{})
+    main = from |> params() |> Plug.Conn.Query.encode()
+
+    from
+    |> form_of()
+    |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => "r1"})
+
+    await(fn -> :sys.get_state(to.pid).socket.assigns.tab_access.mode == :editing end)
+    settle(to)
+  end
+
   defp form_of(view), do: with_target(view, cid_of(view, "#article_form-el"))
 
   defp params(view), do: view |> render() |> form_params("#article_form_form")
@@ -192,6 +212,94 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       type(a, "subtitle", "<p>Fixed</p>")
       leave(a, "article[subtitle]")
       await(fn -> subtitle(b) == "<p>Fixed</p>" end)
+    end
+
+    # Not shipped, the value has no clock from a shipment: the recovery
+    # stamps one, so the other editor's older value loses
+    test "typed offline stays when the join reply comes after the recovery", %{conn: conn, article: article} = c do
+      a = open(conn, article, "notes")
+      b = open(c.other_conn, article, "notes")
+
+      type(b, "subtitle", "<p>From B</p>")
+      leave(b, "article[subtitle]")
+      await(fn -> subtitle(a) == "<p>From B</p>" end)
+
+      recovered =
+        a
+        |> params()
+        |> put_in(["article", "subtitle"], @unsafe)
+        |> Map.put("__offline_edits", "article[subtitle]")
+        |> Map.put("_target", ["image_editor_upload"])
+
+      kill_live(a)
+
+      # B's join reply waits until A's recovered form is in
+      :sys.suspend(b.pid)
+      a = open(conn, article, "notes")
+      a |> form_of() |> render_hook("recover_form", recovered)
+      :sys.resume(b.pid)
+      settle_both(a, b)
+
+      assert subtitle(a) == @unsafe
+      assert subtitle(b) == "<p>From B</p>"
+    end
+  end
+
+  # The field sync leaves out a refused value, so the copy the editor's
+  # other tab hands over carries it, and the tab that takes over checks it
+  # by its own form: the value stays the editor's, refused and unshipped.
+  describe "a refused value when another of the editor's tabs takes over" do
+    test "goes over with the copy, with its error", %{conn: conn, article: article} = c do
+      a = open_tab(conn, article, "notes", "tab-a")
+      b = open_tab(conn, article, "notes", "tab-b")
+      other = open(c.other_conn, article, "notes")
+
+      type(a, "subtitle", @unsafe)
+      take_over(b, a)
+
+      assert subtitle(b) == @unsafe
+      assert Brando.RichText.refused?(form_source(b), :subtitle)
+
+      leave(b, "article[subtitle]")
+      settle_both(b, other)
+      assert subtitle(other) == "<p>Stored</p>"
+    end
+
+    # A revision's working copy goes over whole (`Restore.prepare/5`)
+    test "goes over with a working copy, with its error", %{conn: conn, article: article} = c do
+      entry =
+        SyncTest.Article
+        |> Brando.Repo.get!(article.id)
+        |> Brando.Repo.preload(Brando.Blueprint.preloads_for(SyncTest.Article))
+
+      {:ok, revision} = Brando.Revisions.create_revision(entry, c.current_user)
+      a = open_tab(conn, article, "notes", "tab-a")
+      b = open_tab(conn, article, "notes", "tab-b")
+
+      drawer = cid_of(a, "#article_form-revisions-drawer-tab-activity")
+      a |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision.revision})
+      settle(a)
+      type(a, "subtitle", @unsafe)
+      take_over(b, a)
+
+      assert subtitle(b) == @unsafe
+      assert Brando.RichText.refused?(form_source(b), :subtitle)
+    end
+
+    test "in a row goes over with the copy, checked by the form in use", %{conn: conn, article: article} = c do
+      a = open_tab(conn, article, "rich_quotes", "tab-a")
+      b = open_tab(conn, article, "rich_quotes", "tab-b")
+      other = open(c.other_conn, article, "rich_quotes")
+
+      type(a, ["quotes", "1", "text"], @unsafe)
+      take_over(b, a)
+
+      assert quotes(b) == ["<p>Første</p>", @unsafe]
+      assert Brando.RichText.refused?(form_source(b), :quotes)
+
+      leave(b, "article[quotes][1][text]")
+      settle_both(b, other)
+      assert quotes(other) == ["<p>Første</p>", "<p>Andre</p>"]
     end
   end
 

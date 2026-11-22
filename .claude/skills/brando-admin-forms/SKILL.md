@@ -60,7 +60,11 @@ area in [the section map](form-map.md) and grep for the names it lists.
   from `pending_changes` or from a recovery's `share_recovered/3`, and stays
   in `unshipped_fields` until corrected (a recovered one too), so another
   editor's save keeps it; the others still see it marked
-  (`broadcast_dirty_fields`). Received values go through
+  (`broadcast_dirty_fields`). Every path that puts values in the form
+  without a `validate` runs the check first (`put_written_form/2`,
+  `take_handed_over/3`), or `refused?` can't see them; a refused value goes
+  to the editor's other tab with the uncast ones (`tab_release`), and a
+  recovered one gets a clock without shipping, so a late join reply loses. Received values go through
   `apply_field_change/3`, which drops the browser's param for the field (the
   form shows a param before a saved value), and only when their clock is
   newer. Form recovery (`recover_form`) marks only the fields the Form hook

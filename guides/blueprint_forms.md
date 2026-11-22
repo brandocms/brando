@@ -646,9 +646,11 @@ handlers, script addresses) is a validation error on the field: see the
 `:rich_text` inputs of the form the editor saves from, those in its subforms'
 rows included, so an input that only a named form declares as rich text is
 checked when that form saves; any other save checks the default form's.
-The form checks as the editor types, and a value it refuses stays in that
-editor's form: the other editors of the entry see the field marked as being
-edited, and keep the last value it sent them until the editor corrects it.
+The form checks as the editor types, and text it writes itself (Translate
+with AI) the same way. A value it refuses stays in that editor's form: the
+other editors of the entry see the field marked as being edited, and keep the
+last value it sent them until the editor corrects it. The value goes along
+when the editor's other tab takes over, and stays after a reconnect.
 
 A template prints a top-level field as rich text when the default form draws
 it as a `:rich_text` input, or when only named forms draw it, each as a
