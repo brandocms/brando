@@ -208,7 +208,7 @@ person:
   first, in every status: pending, approved, applied, undone, superseded
   and cancelled. Each has its `proposal_id`, `version`, `summary` (cut to
   300 characters, with `summary_cut: true`, when longer), `status`,
-  `changed_at` (when its status last changed), `expires_at`,
+  `changed_at` (when its status or its problems last changed), `expires_at`,
   `expired: true` when a pending or approved one can no longer be
   approved, and the entries it changes (`content_type` and `id`) and
   creates (`content_type` and the proposal's `ref`, with the saved entry's

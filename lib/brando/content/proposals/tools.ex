@@ -322,7 +322,7 @@ defmodule Brando.Content.Proposals.Tools do
           "superseded (replaced by a newer version, superseded_by) or cancelled. " <>
           "Check here whether the person has approved or applied a proposal before a next step depends on it, instead of asking, " <>
           "and whether a proposal is still under review before you pass it as replaces. " <>
-          "Each proposal has proposal_id, version, summary (cut to #{@listed_summary} characters, with summary_cut: true, when longer), status, changed_at (when its status last changed), " <>
+          "Each proposal has proposal_id, version, summary (cut to #{@listed_summary} characters, with summary_cut: true, when longer), status, changed_at (when its status or its problems last changed), " <>
           "changed_by where it is known (\"person\": the person approved, applied or undid it in the admin), " <>
           "expires_at, expired: true when a pending or approved proposal can no longer be approved (prepare it again), " <>
           "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id). " <>
