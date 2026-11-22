@@ -177,6 +177,17 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     settle(form.view)
   end
 
+  defp flush_draft_dirty(%{view: view} = form) do
+    %{proxy: {ref, _topic, _}} = view
+    settle(view)
+
+    receive do
+      {^ref, {:push_event, "b:draft-dirty", _}} -> flush_draft_dirty(form)
+    after
+      0 -> :ok
+    end
+  end
+
   # B saves a field outside the transformer
   defp save_title(form, article, title) do
     save(form, [{[form.singular, "title"], title}])
@@ -474,6 +485,101 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
 
         saved = Enum.sort(rows(article))
         assert [{"A", _}, {"B", _}, {"C", _}, {"From A", _}, {"From B", _}] = saved
+
+        save_title(b, article, "Saved by B")
+        assert Enum.sort(rows(article)) == saved
+        assert Enum.sort(shown(b)) == saved
+      end
+
+      # Every row B shows is saved after its write: B's form has nothing
+      # left to recover.
+      test "leaves B's form without unsaved changes", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        flush_draft_dirty(b)
+        write(b, token)
+
+        assert Enum.sort(shown(b)) == Enum.sort(rows(article))
+        refute_push_event(b.view, "b:draft-dirty", %{}, 200)
+      end
+
+      # B's new row comes after its collect: it stays B's unsaved row
+      test "leaves B's form with a row added after collecting unsaved",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        add_row(b, "From B")
+        flush_draft_dirty(b)
+        write(b, token)
+
+        assert {"From B", nil} in shown(b)
+        assert_push_event(b.view, "b:draft-dirty", %{}, 1_000)
+      end
+
+      # A changes a row B holds and doesn't change: B's write leaves A's
+      # value, and B's form shows it, not the value B collected.
+      test "shows A's value in a row B didn't change", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        set_field(a, dom_id_of(a, "A"), "label", "A, by A")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = rows(article)
+        assert [{"A, by A", _}, {"B", _}, {"C", _}, {"From B", _}] = saved
+        assert shown(b) == saved
+
+        save_title(b, article, "Saved by B")
+        assert rows(article) == saved
+        assert shown(b) == saved
+      end
+
+      test "leaves a row B removed gone, and A's new row in B's form once",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        remove_row(b, "C")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = Enum.sort(rows(article))
+        assert [{"A", _}, {"B", _}, {"From A", _}] = saved
+        assert Enum.sort(shown(b)) == saved
+
+        save_title(b, article, "Saved by B")
+        assert Enum.sort(rows(article)) == saved
+        assert Enum.sort(shown(b)) == saved
+      end
+
+      test "drops a row A removed that B held and didn't change",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        remove_row(a, "B")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = Enum.sort(rows(article))
+        assert [{"A", _}, {"C", _}, {"From B", _}] = saved
+        assert Enum.sort(shown(b)) == saved
 
         save_title(b, article, "Saved by B")
         assert Enum.sort(rows(article)) == saved

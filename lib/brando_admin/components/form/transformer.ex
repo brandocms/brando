@@ -118,19 +118,25 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   #
   # `rows` are the rows the entry holds after the save, read back. Another
   # editor's save that landed after this transformer sent its rows (the
-  # Form takes no other save while its own runs) can have added rows or
-  # removed some: the items take them, on the written rows as their base,
-  # as after any other editor's save (`entry_saved_elsewhere`).
+  # Form takes no other save while its own runs) can have changed values
+  # this save left alone: an item stores the row read back with its id. It
+  # can also have added rows or removed some: the items take them, on the
+  # written rows as their base, as after any other editor's save
+  # (`entry_saved_elsewhere`).
   def update(%{event: "entry_saved", rows: rows} = assigns, socket) do
     written = Enum.sort_by(assigns[:written] || rows, &Map.get(&1, :sequence))
-    {items, taken?} = written_items(socket.assigns, written)
+    {items, taken?} = written_items(socket.assigns, written, Map.new(rows, &{&1.id, &1}))
+    fields = socket.assigns.relation_module.__schema__(:fields)
 
     # A listing draws the row it gets (its id, say): a row that was new and is
-    # now saved is drawn again, under the DOM id it has. Rows that were saved
-    # before keep their cards, and with them what the browser put on a card
-    # (a drop highlight, a drag in progress).
+    # now saved is drawn again, under the DOM id it has, and so is a row
+    # another editor's save changed. Rows that were saved before keep their
+    # cards, and with them what the browser put on a card (a drop
+    # highlight, a drag in progress).
     socket =
-      for {item, before} <- Enum.zip(items, socket.assigns.items), before.is_new and not item.is_new, reduce: socket do
+      for {item, before} <- Enum.zip(items, socket.assigns.items),
+          (before.is_new and not item.is_new) or drawn(item, fields) != drawn(before, fields),
+          reduce: socket do
         acc -> stream_insert(acc, :transformer_items, stream_entry(item))
       end
 
@@ -1374,19 +1380,18 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # it draws: a save of other fields (a title) leaves the cards as they are,
   # and with them what the browser put on a card (a drop highlight, a drag
   # in progress). The Form gets the list either way, as it rebuilt its
-  # entry on the save, without this editor's unsaved rows.
-  defp redraw_taken(socket, true = _redraw?),
+  # entry on the save, without this editor's unsaved rows; its recovery copy
+  # is out of date only when the items hold some (`edited?`).
+  defp redraw_taken(socket, true = _redraw?, edited?),
     do:
       socket
       |> stream(:transformer_items, Enum.map(socket.assigns.items, &stream_entry/1), reset: true)
-      |> notify_relation_change()
+      |> notify_relation_change(edited?)
 
-  defp redraw_taken(socket, false), do: send_relation_change(socket)
+  defp redraw_taken(socket, false, edited?), do: send_relation_change(socket, edited?)
 
   # The item as its saved row. The assets it shows stay as they are: the row
   # may come without them preloaded.
-  defp saved_item(item, nil, _asset_fields), do: item
-
   defp saved_item(item, row, asset_fields) do
     data = resolve_item_data(item)
     assets = Map.new(asset_fields, &{&1, resolve_asset(item, data, &1)})
@@ -1408,9 +1413,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     end
   end
 
-  # The items as the rows written for them, and whether every row written
-  # is one: none change when a row doesn't line up with what was sent.
-  defp written_items(%{items: items, sent_dom_ids: sent, asset_fields: asset_fields}, written) do
+  # The items as the rows written for them, each stored as the row read
+  # back with its id (`read`), and whether every row written is one: none
+  # change when a row doesn't line up with what was sent.
+  defp written_items(%{items: items, sent_dom_ids: sent, asset_fields: asset_fields}, written, read) do
     saved = if length(written) == length(sent), do: Map.new(Enum.zip(sent, written)), else: %{}
 
     lined_up? =
@@ -1422,8 +1428,34 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       end)
 
     if lined_up?,
-      do: {Enum.map(items, &saved_item(&1, Map.get(saved, &1.dom_id), asset_fields)), map_size(saved) == length(written)},
+      do:
+        {Enum.map(items, &saved_item(&1, Map.get(saved, &1.dom_id), asset_fields, read)),
+         map_size(saved) == length(written)},
       else: {items, false}
+  end
+
+  # The item as its written row, stored as the row read back with its id:
+  # another editor's save can have changed it after this save sent its
+  # rows. A change it holds that is the written value, where the row read
+  # back has another, was saved before and left alone by this save: the
+  # other editor's value is newer.
+  defp saved_item(item, nil, _asset_fields, _read), do: item
+
+  defp saved_item(item, written, asset_fields, read) do
+    item = saved_item(item, written, asset_fields)
+
+    case Map.fetch(read, written.id) do
+      {:ok, row} ->
+        changes =
+          Map.reject(item.changes, fn {key, value} ->
+            Map.get(written, key) == value and Map.get(row, key) != value
+          end)
+
+        %{item | source: row, changes: changes}
+
+      :error ->
+        item
+    end
   end
 
   # The items on the saved rows of another editor's save
@@ -1459,7 +1491,14 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     |> update(:open_entries, &MapSet.intersection(&1, shown))
     |> update(:editing_dom_id, &if(MapSet.member?(shown, &1), do: &1))
     |> update(:picking_dom_id, &if(MapSet.member?(shown, &1), do: &1))
-    |> redraw_taken(redraw?)
+    |> redraw_taken(redraw?, unsaved_rows?(items, rows))
+  end
+
+  # Whether the items differ from the saved rows: a row added, removed,
+  # moved, changed or with an upload in progress
+  defp unsaved_rows?(items, rows) do
+    Enum.any?(items, &(&1.is_new or &1.replacing != nil or unsaved_item(&1).changes != %{})) or
+      Enum.map(items, & &1.source.id) != Enum.map(rows, & &1.id)
   end
 
   defp row_ids(rows), do: MapSet.new(rows, & &1.id)
@@ -1840,9 +1879,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # it shows the relation as it was on mount. Push the current list whenever the
   # list itself changes (order, membership, fields, assets); not on progress ticks.
   # Recovery also needs this signal: transformer rows live outside the main form.
-  defp notify_relation_change(socket), do: socket |> restream_listing_context() |> send_relation_change()
+  defp notify_relation_change(socket, draft_dirty? \\ true),
+    do: socket |> restream_listing_context() |> send_relation_change(draft_dirty?)
 
-  defp send_relation_change(socket) do
+  defp send_relation_change(socket, draft_dirty?) do
     form_id = socket.assigns[:form_id]
 
     if form_id do
@@ -1850,7 +1890,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         id: form_id,
         event: "update_entry_relation",
         path: [socket.assigns.relation_key],
-        draft_dirty: true,
+        draft_dirty: draft_dirty?,
         updated_relation: relation_entries(socket)
       )
     end
