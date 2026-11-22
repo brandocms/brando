@@ -73,6 +73,15 @@ defmodule Brando.CaptionsTest do
     assert Captions.safe_preview(nil, nil) == nil
   end
 
+  test "safe_preview/2 keeps only what the caption editor makes, as the public site does" do
+    caption = ~s{<p><img src="https://elsewhere.test/pixel.gif">North <a href="javascript:alert(1)">wall</a></p>}
+
+    assert Captions.safe_preview(caption, nil) == {:safe, Captions.rich_html(caption)}
+    assert {:safe, html} = Captions.safe_preview(caption, nil)
+    refute html =~ "img"
+    refute html =~ "javascript"
+  end
+
   test "plain/1 strips markup to one line" do
     assert Captions.plain("<p><strong>North</strong> wall</p>") == "North wall"
     assert Captions.plain("<p></p>") == nil

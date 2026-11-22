@@ -1,0 +1,1 @@
+- Caption previews in the admin keep only the markup the caption editor makes, as the public site does, so a caption can no longer make another editor's browser load a remote image.

@@ -151,17 +151,13 @@ defmodule Brando.Captions do
   defp editor_attribute?(tag, {"class", _class}), do: tag in ["span" | @aligned]
   defp editor_attribute?(_tag, _attr), do: false
 
-  @doc "A rich-text caption reduced to basic markup, for previews in the admin."
-  def preview_html(text) do
-    if present?(text), do: HtmlSanitizeEx.basic_html(text)
-  end
-
   @doc """
   The caption to preview as `Phoenix.HTML.safe()` markup: the placement's
-  rich text reduced to basic markup, else the escaped library text, else `nil`.
+  rich text as the public site prints it (`rich_html/1`), else the escaped
+  library text, else `nil`.
   """
   def safe_preview(override, library_text) do
-    html = if present?(override), do: preview_html(override), else: library_html(library_text)
+    html = if present?(override), do: rich_html(override), else: library_html(library_text)
     if html, do: {:safe, html}
   end
 
