@@ -14,9 +14,9 @@ defmodule Brando.Content.DefinitionRemovalsTest do
   alias Brando.Content.Definitions.Release
   alias Brando.Content.Definitions.Release.{Batches, Review}
   alias Brando.Content.StaleBlocks
+  alias Brando.Pages.Page
   alias Brando.ProposalFixtures
   alias Brando.Repo
-  alias Brando.Pages.Page
 
   setup do
     user = Brando.Factory.insert(:random_user)
