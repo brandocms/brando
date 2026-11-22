@@ -9,7 +9,11 @@ defmodule Brando.MCP.Tools do
   added to the registry later is not offered over the network until it is
   added below. None of them approves, applies or deletes anything:
   `prepare_proposal` stores a proposal for the person to review in the admin,
-  marked as coming from the connected client.
+  marked as coming from the connected client. `list_proposals` lists the
+  client's own proposals with their status, and `cancel_proposal` cancels
+  one still under review (`Brando.Content.Proposals.connection_proposal/4`
+  says whose they are); these two are offered only here, not in the
+  Assistant.
 
   With them, the Figma tools (`Brando.Figma.Tools`, `brando_figma_…`): read
   a Figma frame, and import its images into the media library; and the
@@ -51,9 +55,13 @@ defmodule Brando.MCP.Tools do
   # `look_at_media` work with an Assistant conversation's attachments and
   # pictures, which a connected client does not have.
   @offered ~w(list_content_types describe_content_type search_entries entry_outline translation_work list_modules
-              describe_module list_entry_media list_selection_options search_assets find_media_folders prepare_proposal)
+              describe_module list_entry_media list_selection_options search_assets find_media_folders prepare_proposal
+              list_proposals cancel_proposal)
 
-  @reads @offered -- ["prepare_proposal"]
+  @reads @offered -- ["prepare_proposal", "cancel_proposal"]
+
+  # Cancelling a proposal cannot be taken back, though it leaves content as it is.
+  @destructive ["cancel_proposal"]
 
   # As BrandoMCP and the Assistant: a result never costs a model more here.
   @result_limit 24_000
@@ -73,7 +81,7 @@ defmodule Brando.MCP.Tools do
           inputSchema: definition.parameters,
           annotations: %{
             readOnlyHint: name in @reads,
-            destructiveHint: false,
+            destructiveHint: name in @destructive,
             idempotentHint: name in @reads,
             openWorldHint: false
           }

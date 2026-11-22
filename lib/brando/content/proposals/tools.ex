@@ -5,8 +5,10 @@ defmodule Brando.Content.Proposals.Tools do
 
   Every tool runs with the authenticated actor in `Context`; nothing a model
   sends can choose the user, site or environment. The tools read, except
-  `prepare_proposal`, which stores a proposal version for the user to review.
-  No tool approves or applies — that takes the user's click in the admin.
+  `prepare_proposal`, which stores a proposal version for the user to review,
+  and `cancel_proposal`, which cancels a connected tool's own proposal under
+  review. No tool approves or applies — that takes the user's click in the
+  admin.
 
   The same registry serves the admin's embedded agent and BrandoMCP's
   in-process content tools. Results are compact maps, bounded in size, so a
@@ -67,6 +69,12 @@ defmodule Brando.Content.Proposals.Tools do
                     inserted_at updated_at sequence edited_at content_modified_at rendered_blocks rendered_blocks_at)
 
   @statuses ~w(published draft disabled pending)
+
+  @proposal_limit 20
+  @max_proposal_limit 50
+  # The most characters of a summary list_proposals gives, so one long
+  # summary cannot push a list over the result limit
+  @listed_summary 300
 
   @definitions [
     %{
@@ -289,6 +297,7 @@ defmodule Brando.Content.Proposals.Tools do
       create_translation creates the version of a synchronized entry in another language, as the editor's Create translation does: when the proposal is applied, an unpublished copy of the source joins its translation group, linked as an alternate, with every text it copied marked to translate. One operation per language; name the group's source (entry_outline lists an entry's language versions). The copy is made from its source as the proposal is applied, and its structure follows the source, so only translate can name it as {"new":R}. For a content type that is not synchronized, create the other language's entry with create_entry.
       translate answers one batch of a synchronized translation's work as translation_work read it: source_digest is the batch's token, texts gives each unit's translation by its key, and reviewed lists the keys of units that are right as they are (a name the same in both languages). Answer every answerable unit of the batch once, in texts or reviewed; a long entry is several translate operations, one per batch, in one proposal. Keep each unit's format: html keeps the source's tags and attributes in order, markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly as the source has them; any other { is refused. Problems name the unit's key: correct those units and call again, or read translation_work again when the source changed. Applied, the translation is saved as its form saves it: its structure and media still follow its source, a published translation stays published, and each answered unit's work is resolved. translate is the only operation a proposal may have on the translation it translates. On any synchronized translation (entry_outline's language note says which entries are), every operation other than translate is refused, except set_fields on the fields that are its own, such as its status or slug: change its structure, media, source-controlled fields and anything copied into it in the source, and its text with translate. To create a translation and fill it in, put create_translation and translate on {"new":R} in one proposal, with the source_digest translation_work gave for that language on the source.
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Uids are unique across the site, not only in the entry: prefix yours, for example with the entry's ref or slug. Returns problems to fix; call again with the corrected operations. Outside an Assistant conversation it also returns review_url, where the user reviews the proposal, and preview_url when an entry has a page preview: the review opened on that page. Give the user preview_url when there is one.
+      Outside an Assistant conversation, list_proposals tells whether the person has approved, applied or cancelled your proposals, and cancel_proposal withdraws one still under review: check there instead of asking the person.
       """,
       parameters: %{
         type: "object",
@@ -303,19 +312,74 @@ defmodule Brando.Content.Proposals.Tools do
         },
         required: ["summary", "operations"]
       }
+    },
+    %{
+      name: "list_proposals",
+      origins: [:mcp],
+      description:
+        "List your own proposals: those this tool prepared for this person in this site environment, newest first, in every status. " <>
+          "status is pending (waiting for review), approved (approved, not yet applied), applied (saved), undone (applied, then undone), " <>
+          "superseded (replaced by a newer version, superseded_by) or cancelled. " <>
+          "Check here whether the person has approved or applied a proposal before a next step depends on it, instead of asking, " <>
+          "and whether a proposal is still under review before you pass it as replaces. " <>
+          "Each proposal has proposal_id, version, summary (cut to #{@listed_summary} characters, with summary_cut: true, when longer), status, changed_at (when its status or its problems last changed), " <>
+          "changed_by where it is known (\"person\": the person approved, applied or undid it in the admin), " <>
+          "expires_at, expired: true when a pending or approved proposal can no longer be approved (prepare it again), " <>
+          "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id). " <>
+          "A proposal that replaces an image's file lists it in replaced_images ({kind, id, with: {kind, id}}: the library image that takes the file of the one in with), " <>
+          "not in entries; the entries using that image are not listed.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          status: %{type: "string", enum: Proposals.Record.statuses(), description: "Only proposals in this status."},
+          proposal_id: %{type: "string", description: "Only this proposal."},
+          limit: %{type: "integer", default: @proposal_limit, maximum: @max_proposal_limit}
+        }
+      }
+    },
+    %{
+      name: "cancel_proposal",
+      origins: [:mcp],
+      description:
+        "Cancel one of your own proposals while it is pending or approved, such as a duplicate or one you no longer need. " <>
+          "Content is untouched, as when the person cancels it in the admin. An applied, undone, superseded or cancelled proposal " <>
+          "cannot be cancelled: the error names its status. Tell the person which proposal you cancelled and why.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          proposal_id: %{type: "string", description: "The proposal_id from prepare_proposal or list_proposals."}
+        },
+        required: ["proposal_id"]
+      }
     }
   ]
 
   @names Enum.map(@definitions, & &1.name)
 
-  @doc "Tool definitions: name, description and JSON-schema parameters."
+  # A definition with `origins` is offered only to calls from those origins;
+  # the others are offered to all.
+  @origins Map.new(@definitions, &{&1.name, Map.get(&1, :origins)})
+
+  @doc """
+  Tool definitions: name, description and JSON-schema parameters, and
+  `origins` on a tool offered only to calls from those origins (such as
+  `list_proposals`, for a tool connected over MCP).
+  """
   @spec definitions() :: [map()]
   def definitions, do: @definitions
+
+  @doc "The definitions of the tools offered to calls from `origin` (`:assistant` or `:mcp`)."
+  @spec definitions(atom()) :: [map()]
+  def definitions(origin), do: Enum.filter(@definitions, &offered?(&1.name, origin))
+
+  defp offered?(name, origin), do: @origins[name] in [nil, []] or origin in @origins[name]
 
   @doc "Call tool `name` with decoded JSON `args`."
   @spec call(String.t(), map(), Context.t()) :: {:ok, map()} | {:error, String.t()}
   def call(name, args, %Context{actor: actor} = context) when name in @names and not is_nil(actor) do
-    Error.protect(fn -> run(name, args || %{}, context) end)
+    if offered?(name, origin(context)),
+      do: Error.protect(fn -> run(name, args || %{}, context) end),
+      else: {:error, "Unknown tool #{inspect(name)}."}
   end
 
   def call(name, _args, %Context{actor: nil}) when name in @names,
@@ -695,6 +759,41 @@ defmodule Brando.Content.Proposals.Tools do
     end
   end
 
+  # A connected tool's own proposals (`Proposals.connection_proposal/4` says whose)
+  defp run("list_proposals", args, context) do
+    status = args["status"]
+
+    if not is_nil(status) and status not in Proposals.Record.statuses(),
+      do: Error.fail!("status is one of #{Enum.join(Proposals.Record.statuses(), ", ")}, not #{inspect(status)}.")
+
+    if not is_nil(args["proposal_id"]) and not is_binary(args["proposal_id"]),
+      do: Error.fail!("proposal_id is a proposal_id from prepare_proposal, not #{inspect(args["proposal_id"])}.")
+
+    proposals =
+      Proposals.list_connection(context.actor, context.client,
+        status: status,
+        id: args["proposal_id"],
+        limit: proposal_limit(args["limit"])
+      )
+
+    %{proposals: Enum.map(proposals, &listed_proposal/1)}
+  end
+
+  defp run("cancel_proposal", args, context) do
+    case Proposals.cancel_connection(args["proposal_id"], context.actor, context.client) do
+      {:ok, record} ->
+        %{
+          proposal_id: record.id,
+          version: record.version,
+          status: record.status,
+          note: "Cancelled. Content is untouched."
+        }
+
+      {:error, message} ->
+        Error.fail!(message)
+    end
+  end
+
   defp origin(%{origin: origin}) when not is_nil(origin), do: origin
   defp origin(%{conversation_id: nil}), do: :mcp
   defp origin(_context), do: :assistant
@@ -723,6 +822,88 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp replaces(_context, _args), do: nil
+
+  defp proposal_limit(limit) when is_integer(limit), do: limit |> max(1) |> min(@max_proposal_limit)
+  defp proposal_limit(_limit), do: @proposal_limit
+
+  defp listed_proposal(%{record: record, created: created, superseded_by: superseded_by}) do
+    expired? =
+      record.status in ~w(pending approved) and DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt
+
+    %{
+      proposal_id: record.id,
+      version: record.version,
+      status: record.status,
+      changed_at: record.updated_at,
+      expires_at: record.expires_at,
+      entries: proposal_entries(record.operations, created)
+    }
+    |> Map.merge(listed_summary(record.summary))
+    |> Map.merge(replaced_images(record.operations))
+    |> Map.merge(if(expired?, do: %{expired: true}, else: %{}))
+    |> Map.merge(if(superseded_by, do: %{superseded_by: superseded_by}, else: %{}))
+    # Only the person can approve, apply or undo their proposal. Who stored
+    # a version or cancelled one is not kept.
+    |> Map.merge(if(record.status in ~w(approved applied undone), do: %{changed_by: "person"}, else: %{}))
+  end
+
+  defp listed_summary(summary) when is_binary(summary) do
+    if String.length(summary) > @listed_summary,
+      do: %{summary: String.slice(summary, 0, @listed_summary - 1) <> "…", summary_cut: true},
+      else: %{summary: summary}
+  end
+
+  defp listed_summary(summary), do: %{summary: summary}
+
+  # The library images a stored proposal gives another image's file. The
+  # entries using them are not looked up.
+  defp replaced_images(operations) do
+    replaced =
+      for %{"op" => "replace_image_file", "asset" => asset, "with" => with} <- List.wrap(operations),
+          do: Map.put(stored_asset(asset), :with, stored_asset(with))
+
+    if replaced == [], do: %{}, else: %{replaced_images: Enum.uniq(replaced)}
+  end
+
+  defp stored_asset(%{"kind" => kind, "id" => id}), do: %{kind: kind, id: id}
+  defp stored_asset(_asset), do: %{}
+
+  # The entries a stored proposal changes and creates, read from its frozen
+  # operations without decoding them, so a proposal naming a content type
+  # the catalogue no longer lists is still listed.
+  defp proposal_entries(operations, created) do
+    operations = Enum.filter(List.wrap(operations), &is_map/1)
+    created_types = Map.new(for(op <- operations, {ref, type} <- created_entry(op), do: {ref, type}))
+
+    operations
+    |> Enum.flat_map(&changed_entries/1)
+    |> Enum.uniq()
+    |> Enum.map(fn
+      {:new, ref} ->
+        entry = %{content_type: created_types[ref], ref: ref}
+        if is_integer(created[ref]), do: Map.put(entry, :id, created[ref]), else: entry
+
+      {content_type, id} ->
+        %{content_type: content_type, id: id}
+    end)
+  end
+
+  defp created_entry(%{"op" => "create_entry", "ref" => ref, "content_type" => type}), do: [{ref, type}]
+
+  defp created_entry(%{"op" => "create_translation", "ref" => ref, "source" => %{"content_type" => type}}),
+    do: [{ref, type}]
+
+  defp created_entry(_op), do: []
+
+  # A copy to another entry changes only that one; a translation's source is only read.
+  defp changed_entries(%{"op" => op, "ref" => ref}) when op in ~w(create_entry create_translation), do: [{:new, ref}]
+  defp changed_entries(%{"op" => "copy_block", "to" => to}) when is_map(to), do: stored_entry(to)
+  defp changed_entries(%{"target" => target}), do: stored_entry(target)
+  defp changed_entries(_op), do: []
+
+  defp stored_entry(%{"new" => ref}), do: [{:new, ref}]
+  defp stored_entry(%{"content_type" => type, "id" => id}), do: [{type, id}]
+  defp stored_entry(_target), do: []
 
   @doc "A compact review of a stored proposal, as `prepare_proposal` returns it."
   @spec review(Proposals.Proposal.t()) :: map()

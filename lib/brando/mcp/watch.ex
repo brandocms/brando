@@ -177,7 +177,7 @@ defmodule Brando.MCP.Watch do
   `args`, which ended with `ok?` and the tool's structured result `data`
   (string keys): the arguments and the part of the result its line names
   (`"input"`, `"output"`), the error, the images an import or upload added
-  or reused and their folder, and the proposal it stored. Strings are cut short; no
+  or reused and their folder, and the proposal it stored or cancelled. Strings are cut short; no
   whole argument or result is kept. Written to the Activity event's details.
   """
   @spec summary(String.t(), map(), boolean(), map()) :: map()
@@ -225,6 +225,11 @@ defmodule Brando.MCP.Watch do
   defp output(name, data) when name in ["finish_upload", "import_url"],
     do: %{"images" => length(media_images(data)), "reused" => data["reused"] == true}
 
+  defp output("list_proposals", %{"proposals" => proposals}) when is_list(proposals),
+    do: %{"proposals" => length(proposals)}
+
+  defp output("cancel_proposal", data), do: %{"version" => integer(data["version"])}
+
   defp output(_name, _data), do: %{}
 
   defp extras("prepare_proposal", data) do
@@ -244,6 +249,9 @@ defmodule Brando.MCP.Watch do
 
   defp extras(name, data) when name in ["finish_upload", "import_url"],
     do: %{"folder" => cut(data["folder"], @text_limit), "images" => media_images(data)}
+
+  defp extras("cancel_proposal", data),
+    do: %{"proposal" => if(is_binary(data["proposal_id"]), do: data["proposal_id"])}
 
   defp extras(_name, _data), do: %{}
 

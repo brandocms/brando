@@ -3931,6 +3931,16 @@ msgstr "Avbryt verifisering"
 msgid "Cancelled"
 msgstr "Avbrutt"
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled a proposal"
+msgstr "Avbrøt et forslag"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled version %{version} of a proposal"
+msgstr "Avbrøt versjon %{version} av et forslag"
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot be read"
@@ -4259,6 +4269,13 @@ msgstr "Avkrysset"
 
 #: lib/brando_admin/components/tool_steps.ex
 #, elixir-autogen, elixir-format
+msgid "Checked %{count} of its proposals"
+msgid_plural "Checked %{count} of its proposals"
+msgstr[0] "Sjekket %{count} av sine forslag"
+msgstr[1] "Sjekket %{count} av sine forslag"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
 msgid "Checked a module's slots"
 msgstr "Sjekket plassene i en modul"
 
@@ -4271,6 +4288,11 @@ msgstr "Kontrolleres som e-postadresse; kan besvares"
 #, elixir-autogen, elixir-format
 msgid "Checked in %{ms} ms. Kept for ten minutes; Run again checks again."
 msgstr "Sjekket på %{ms} ms. Beholdes i ti minutter; Kjør igjen sjekker på nytt."
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Checked its proposals"
+msgstr "Sjekket sine forslag"
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
