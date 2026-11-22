@@ -10,24 +10,39 @@ defmodule BrandoAdmin.FigmaCallbackController do
 
   alias Brando.Figma.OAuth
 
+  require Logger
+
   @callback_suffix "/figma/callback"
 
   def show(conn, _params) do
-    # The query only: an endpoint without Plug.Parsers has no other params
-    params = fetch_query_params(conn).query_params
-    session_id = Brando.Users.token_id(get_session(conn, :user_token))
-
-    {outcome, tenant} =
-      case OAuth.finish(params, conn.assigns.current_user, session_id) do
-        {:ok, tenant} -> {"connected", tenant}
-        {:error, reason, tenant} -> {to_string(reason), tenant}
-      end
+    {outcome, tenant} = finish(conn)
 
     conn
     |> put_environment(tenant)
     |> put_resp_header("cache-control", "no-store")
     |> put_resp_header("referrer-policy", "no-referrer")
     |> redirect(to: settings_path(conn) <> "?" <> URI.encode_query(%{"figma" => outcome}))
+  end
+
+  # A failure is "could not save, try again", logged without the request,
+  # whose query carries Figma's code and the state
+  defp finish(conn) do
+    # The query only: an endpoint without Plug.Parsers has no other params
+    params = fetch_query_params(conn).query_params
+    session_id = Brando.Users.token_id(get_session(conn, :user_token))
+
+    case OAuth.finish(params, conn.assigns.current_user, session_id) do
+      {:ok, tenant} -> {"connected", tenant}
+      {:error, reason, tenant} -> {to_string(reason), tenant}
+    end
+  rescue
+    error ->
+      Logger.error("[BrandoAdmin.FigmaCallbackController] Finishing a Figma connection raised #{inspect(error.__struct__)}")
+      {"save_failed", nil}
+  catch
+    kind, _reason ->
+      Logger.error("[BrandoAdmin.FigmaCallbackController] Finishing a Figma connection failed (#{kind})")
+      {"save_failed", nil}
   end
 
   # Back in the site environment the connection was made for, should the

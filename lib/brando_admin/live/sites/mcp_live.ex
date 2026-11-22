@@ -236,6 +236,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <form
                 :if={!@figma_app or @figma_app_form?}
                 class="mcp-figma-form"
+                method="post"
                 phx-submit="save_figma_app"
                 data-testid="mcp-figma-app-form"
               >
@@ -372,6 +373,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <form
                 :if={!@figma or @figma_form?}
                 class="mcp-figma-form"
+                method="post"
                 phx-submit="save_figma_token"
                 data-testid="mcp-figma-form"
               >

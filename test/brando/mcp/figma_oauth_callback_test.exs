@@ -253,6 +253,27 @@ defmodule Brando.MCP.FigmaOAuthCallbackTest do
       refute inspect(setting(tenant)) =~ "access-1"
     end
 
+    test "a failure while finishing says nothing was saved, and the log carries neither the code nor the state",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      request = start!(conn, tenant, user)
+      stub_figma(fn "POST", "/v1/oauth/token", _ -> raise "the connection broke" end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          response = callback(conn, %{"state" => request["state"], "code" => "code-secret-1"})
+          send(self(), {:response, response})
+        end)
+
+      assert_received {:response, response}
+      assert outcome(response) == {"/admin/config/mcp", "save_failed"}
+      assert get_resp_header(response, "cache-control") == ["no-store"]
+      assert log =~ "Figma"
+      refute log =~ "code-secret-1"
+      refute log =~ request["state"]
+      refute log =~ "the connection broke"
+      assert no_connection?(tenant)
+    end
+
     test "needs a signed-in person", %{tenant: tenant, conn: conn, current_user: user} do
       request = start!(conn, tenant, user)
       response = callback(admin_conn(), %{"state" => request["state"], "code" => "code-1"})

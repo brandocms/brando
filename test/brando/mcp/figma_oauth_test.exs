@@ -93,6 +93,33 @@ defmodule Brando.MCP.FigmaOAuthTest do
       assert [%{"figma_app" => "replaced", "figma_oauth" => "removed"}, %{"figma_app" => "replaced"}, _] = activity()
     end
 
+    test "the same client id saved again clears a refused refresh, and the next call tries the refresh again",
+         %{tenant: tenant, user: user} do
+      tenant |> app!(user) |> connect!(expires_in: -60)
+
+      # A mistyped secret: Figma refuses the app, and the connection is marked
+      :ok = OAuth.put_app(tenant, client_id(), "a-mistyped-secret", user)
+      stub_figma(fn "POST", "/v1/oauth/refresh", _ -> {401, %{"error" => "invalid_client"}} end)
+      assert OAuth.access_token(tenant) == {:error, :needs_reconnect}
+      assert %{state: :needs_reconnect} = OAuth.status(tenant)
+      _asked = messages()
+
+      # The right one: the connection and its refresh token stay, the mark goes
+      :ok = OAuth.put_app(tenant, client_id(), client_secret(), user)
+      assert %{state: :connected} = OAuth.status(tenant)
+      assert decrypted(tenant, :refresh_token) == {:ok, "refresh-1"}
+
+      stub_figma(fn "POST", "/v1/oauth/refresh", _ -> {200, %{"access_token" => "access-2", "expires_in" => 3600}} end)
+      assert OAuth.access_token(tenant) == {:ok, "access-2"}
+      assert [{%{"refresh_token" => "refresh-1"}, _headers}] = refreshes()
+
+      # Refused again, it is marked again
+      :ok = OAuth.put_app(tenant, client_id(), "a-mistyped-secret", user)
+      Repo.update_all(MCP.Setting, set: [figma_oauth_expires_at: DateTime.add(DateTime.utc_now(), -60, :second)])
+      stub_figma(fn "POST", "/v1/oauth/refresh", _ -> {401, %{"error" => "invalid_client"}} end)
+      assert OAuth.access_token(tenant) == {:error, :needs_reconnect}
+    end
+
     test "removing it removes the connection too, and calls use the pasted token again", %{tenant: tenant, user: user} do
       :ok = MCP.put_figma_token(tenant, @token, user)
       tenant |> app!(user) |> connect!()
@@ -357,6 +384,52 @@ defmodule Brando.MCP.FigmaOAuthTest do
       end)
 
       assert {:ok, _node} = Figma.node({:oauth, tenant}, @link)
+    end
+
+    test "a token not yet expired is used when its early renewal gets no answer, and a later call renews it",
+         %{tenant: tenant} do
+      Repo.update_all(MCP.Setting, set: [figma_oauth_expires_at: DateTime.add(DateTime.utc_now(), 120, :second)])
+
+      for status <- [429, 502, 503] do
+        stub_figma(fn
+          "POST", "/v1/oauth/refresh", _ -> {status, %{"error" => "busy"}}
+          "GET", _, _ -> {200, @nodes}
+        end)
+
+        assert {:ok, %{file_name: "File"}} = Figma.node({:oauth, tenant}, @link)
+
+        assert [
+                 {:figma, "POST", "/v1/oauth/refresh", _, _},
+                 {:figma, "GET", _, _, %{"authorization" => "Bearer access-1"}}
+               ] = messages()
+      end
+
+      Req.Test.stub(Brando.Figma, fn conn ->
+        if conn.method == "POST",
+          do: Req.Test.transport_error(conn, :timeout),
+          else: Req.Test.json(conn, @nodes)
+      end)
+
+      assert {:ok, %{file_name: "File"}} = Figma.node({:oauth, tenant}, @link)
+      assert decrypted(tenant, :access_token) == {:ok, "access-1"}
+      assert decrypted(tenant, :refresh_token) == {:ok, "refresh-1"}
+      assert %{state: :connected} = OAuth.status(tenant)
+
+      stub_figma(fn "POST", "/v1/oauth/refresh", _ -> {200, %{"access_token" => "access-2", "expires_in" => 3600}} end)
+      assert OAuth.access_token(tenant) == {:ok, "access-2"}
+    end
+
+    test "after Figma answers 'expired', a renewal that gets no answer fails the call, though the token has time left",
+         %{tenant: tenant} do
+      Repo.update_all(MCP.Setting, set: [figma_oauth_expires_at: DateTime.add(DateTime.utc_now(), 120, :second)])
+
+      stub_figma(fn
+        "POST", "/v1/oauth/refresh", _ -> {503, %{"error" => "busy"}}
+        "GET", _, _ -> {401, %{"status" => 401, "err" => "Token expired"}}
+      end)
+
+      assert {:error, "Figma could not be reached to renew" <> _} = Figma.node({:oauth, tenant}, @link)
+      assert OAuth.access_token(tenant, "access-1") == {:error, :unreachable}
     end
 
     test "Figma refusing the refresh token marks the connection as needing a reconnect, recorded, and calls say so",

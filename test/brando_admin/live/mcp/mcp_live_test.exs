@@ -454,6 +454,13 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       assert has_element?(view, "[data-testid=mcp-figma-needs-repair]")
     end
 
+    test "the app's and the token's forms are posted, so a submit without the page's script puts no secret in a URL",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert has_element?(view, ~s([data-testid=mcp-figma-app-form][method=post]))
+      assert has_element?(view, ~s([data-testid=mcp-figma-form][method=post]))
+    end
+
     test "says how Figma's callback went", %{conn: conn, tenant: tenant, current_user: user} do
       Helpers.app!(tenant, user)
 

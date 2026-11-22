@@ -674,7 +674,10 @@ To connect an environment:
    give it the **redirect URL** the screen shows: the admin's callback,
    `<the site's URL><admin path>/config/mcp/figma/callback`, on the
    endpoint's configured URL (the admin host with multi-site tenancy) and
-   under the path the admin is mounted at. Give it two scopes:
+   under the path the admin is mounted at. In single-site mode and without
+   tenancy, use the admin on the endpoint's configured host when you
+   connect: the redirect URL is built from that host, and a callback that
+   arrives on another host does not find your session. Give it two scopes:
    **File content: read** (`file_content:read`), which the tools read frames
    and images with, and **Current user: read** (`current_user:read`), which
    connecting and checking need, to read the account's handle. A private app
@@ -714,7 +717,8 @@ waits a few seconds at most for that lock, then answers that it should try
 again in a moment. When Figma answers that a token has expired, it is renewed
 once and the request made again. When Figma does not answer a renewal (a
 timeout, its call limit, an error at Figma), nothing changes and a later call
-tries again. When Figma refuses the renewal, as after the access was revoked
+tries again. A renewal ahead of the expiry that fails so, or that cannot get
+the lock in time, goes on with the stored token while it has not expired. When Figma refuses the renewal, as after the access was revoked
 in Figma, the connection is marked **Needs reconnecting**, recorded in
 Activity, and the tools answer that an administrator reconnects Figma; they do
 not move over to a pasted token meanwhile. A connection that no longer
@@ -725,7 +729,9 @@ the same effect; save the app again if it says so, then reconnect.
 connected again; calls then use the pasted token again, if there is one, as
 the confirmation says. **Change app** opens the app's form: another client ID
 removes the connection, and Figma is connected again; the same client ID with
-a new secret keeps it. **Remove app** removes the connection too. Saving or
+a new secret keeps it, and clears **Needs reconnecting**, so that a secret
+corrected after Figma refused it needs no new connection (the next call tries
+the renewal again). **Remove app** removes the connection too. Saving or
 removing the app, connecting and disconnecting are recorded in Activity, and
 ask for the password or a code as the token does.
 

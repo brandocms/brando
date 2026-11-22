@@ -158,6 +158,149 @@ defmodule Brando.MCP.FigmaOAuthConcurrencyTest do
     assert Sandbox.unboxed_run(Repo, fn -> OAuth.connection_state(tenant) end) == :connected
   end
 
+  test "a call that cannot get the lock in time to renew a token that has not expired goes on with the stored token",
+       %{tenant: tenant} do
+    put_test_env(Brando.Figma, req_options: [plug: {Req.Test, Brando.Figma}], lock_timeout: 300)
+    test = self()
+
+    Sandbox.unboxed_run(Repo, fn ->
+      Repo.update_all(MCP.setting_query(tenant),
+        set: [figma_oauth_expires_at: DateTime.add(DateTime.utc_now(), 60, :second)]
+      )
+    end)
+
+    stub_figma(fn
+      "POST", "/v1/oauth/refresh", _ -> {200, %{"access_token" => "never", "expires_in" => 3600}}
+      "GET", _, _ -> {200, %{"name" => "File", "nodes" => %{"1:2" => %{"document" => %{"id" => "1:2", "type" => "FRAME"}}}}}
+    end)
+
+    holder =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            Repo.one(from s in MCP.setting_query(tenant), lock: "FOR UPDATE")
+            send(test, :locked)
+
+            receive do
+              :release -> :ok
+            after
+              5_000 -> :ok
+            end
+          end)
+        end)
+      end)
+
+    assert_receive :locked, 5_000
+
+    result =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn -> Figma.node({:oauth, tenant}, %{file_key: "k", node_id: "1:2"}) end)
+      end)
+      |> Task.await(5_000)
+
+    assert {:ok, %{file_name: "File"}} = result
+    assert_received {:figma, "GET", _, _, %{"authorization" => "Bearer access-1"}}
+    refute_received {:figma, "POST", "/v1/oauth/refresh", _, _}
+
+    send(holder.pid, :release)
+    Task.await(holder, 5_000)
+  end
+
+  test "a renewal that outlasts the database's hold on the transaction says to try again, keeping the refresh token",
+       %{tenant: tenant} do
+    # Limits shrunk so the test need not wait: the transaction is given
+    # twice the lock wait and Figma's connect and receive limits together
+    put_test_env(Brando.Figma,
+      req_options: [plug: {Req.Test, Brando.Figma}],
+      lock_timeout: 100,
+      connect_timeout: 100,
+      receive_timeout: 100
+    )
+
+    Sandbox.unboxed_run(Repo, fn ->
+      Repo.update_all(MCP.setting_query(tenant),
+        set: [figma_oauth_expires_at: DateTime.add(DateTime.utc_now(), -60, :second)]
+      )
+    end)
+
+    slow_refresh = fn wait ->
+      stub_figma(fn "POST", "/v1/oauth/refresh", _ ->
+        Process.sleep(wait)
+        {200, %{"access_token" => "access-#{wait}", "refresh_token" => "refresh-#{wait}", "expires_in" => 60}}
+      end)
+    end
+
+    # Longer than the lock wait and Figma's limits together, but within the
+    # transaction's: saved
+    slow_refresh.(400)
+    assert Sandbox.unboxed_run(Repo, fn -> OAuth.access_token(tenant, "access-1") end) == {:ok, "access-400"}
+
+    # Past the transaction's: nothing saved, and the call says to try again
+    slow_refresh.(1_000)
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        result = Sandbox.unboxed_run(Repo, fn -> OAuth.access_token(tenant, "access-400") end)
+        send(self(), {:result, result})
+      end)
+
+    assert_received {:result, {:error, :unreachable}}
+    refute log =~ "refresh-400"
+    refute log =~ "access-400"
+
+    Sandbox.unboxed_run(Repo, fn ->
+      assert OAuth.connection_state(tenant) == :connected
+      assert decrypted(tenant, :access_token, Repo) == {:ok, "access-400"}
+      assert decrypted(tenant, :refresh_token, Repo) == {:ok, "refresh-400"}
+    end)
+  end
+
+  test "a callback that cannot get the row's lock in time saves nothing, says to try again, and leaves the attempt",
+       %{tenant: tenant, user: user} do
+    put_test_env(Brando.Figma, req_options: [plug: {Req.Test, Brando.Figma}], lock_timeout: 300)
+    test = self()
+
+    {:ok, url} = Sandbox.unboxed_run(Repo, fn -> OAuth.disconnect(tenant, user) && OAuth.start(tenant, user, 7) end)
+    state = URI.decode_query(URI.parse(url).query)["state"]
+    stub_figma(fn _, _, _ -> {500, %{}} end)
+
+    holder =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            Repo.one(from s in MCP.setting_query(tenant), lock: "FOR UPDATE")
+            send(test, :locked)
+
+            receive do
+              :release -> :ok
+            after
+              5_000 -> :ok
+            end
+          end)
+        end)
+      end)
+
+    assert_receive :locked, 5_000
+    started = System.monotonic_time(:millisecond)
+
+    finishing =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn -> OAuth.finish(%{"state" => state, "code" => "code-1"}, user, 7) end)
+      end)
+
+    assert Task.yield(finishing, 3_000) == {:ok, {:error, :save_failed, nil}}
+    assert System.monotonic_time(:millisecond) - started < 3_000
+    refute_received {:figma, _, _, _, _}
+
+    send(holder.pid, :release)
+    Task.await(holder, 5_000)
+
+    Sandbox.unboxed_run(Repo, fn ->
+      assert OAuth.connection_state(tenant) == :none
+      refute is_nil(setting(tenant, Repo).figma_oauth_state_hash)
+    end)
+  end
+
   test "a connection that cannot be saved in time saves nothing, and says to try again", %{tenant: tenant, user: user} do
     put_test_env(Brando.Figma, req_options: [plug: {Req.Test, Brando.Figma}], lock_timeout: 300)
     test = self()

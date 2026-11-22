@@ -32,12 +32,21 @@ defmodule Brando.Figma.OAuth do
   `lock_timeout` for it): a call that finds that another has already stored a
   newer token uses that one. Figma's answer to a refresh may leave out the
   refresh token, which is then kept. A timeout, a 429 or a 5xx leaves
-  everything for a later call to try again; Figma refusing the refresh token
-  marks the connection as needing a reconnect.
+  everything for a later call to try again, and so does a lock not free in
+  time; an early refresh that fails so goes on with the stored token while it
+  has not expired. Figma refusing the refresh token marks the connection as
+  needing a reconnect, until it is made again or the app's credentials are
+  saved again with the same client id.
+
+  The refresh's transaction lasts at most twice the lock wait and Figma's
+  connect and receive limits together, so that a slow Figma ends the request
+  well before the database ends the transaction.
 
       config :brando, Brando.Figma,
         oauth_url: "https://www.figma.com/oauth",
-        lock_timeout: 5_000
+        lock_timeout: 5_000,
+        connect_timeout: 3_000,
+        receive_timeout: 5_000
   """
 
   import Ecto.Query
@@ -57,7 +66,8 @@ defmodule Brando.Figma.OAuth do
   @scopes "file_content:read,current_user:read"
   @pending_seconds 600
   @refresh_margin 300
-  @figma_timeout 10_000
+  @connect_timeout 3_000
+  @receive_timeout 5_000
   @lock_timeout 5_000
 
   @type tenant :: MCP.tenant()
@@ -232,6 +242,8 @@ defmodule Brando.Figma.OAuth do
     replaced? = setting != nil and not is_nil(setting.figma_client_id)
     disconnected? = setting != nil and not same_app? and not is_nil(setting.figma_oauth_connected_at)
 
+    # The same app with a corrected secret: the next call tries the refresh
+    # Figma refused again
     fields =
       [
         figma_client_id: Brando.Crypto.encrypt(client_id, context(tenant, :client_id)),
@@ -239,7 +251,7 @@ defmodule Brando.Figma.OAuth do
         figma_client_secret: Brando.Crypto.encrypt(client_secret, context(tenant, :client_secret)),
         figma_app_set_at: DateTime.utc_now(),
         figma_app_set_by_id: actor.id
-      ] ++ if(same_app?, do: [], else: connection_fields())
+      ] ++ if(same_app?, do: [figma_oauth_needs_reconnect: false], else: connection_fields())
 
     setting = upsert(tenant, setting, fields)
     details = %{"figma_app" => if(replaced?, do: "replaced", else: "added")}
@@ -359,19 +371,23 @@ defmodule Brando.Figma.OAuth do
   defp permitted(user, tenant), do: if(MCP.can_manage?(user, tenant), do: :ok, else: :forbidden)
 
   # The pending connection `state` names, taken off the row when it is this
-  # person's and session's and not past its time (then gone too)
+  # person's and session's and not past its time (then gone too). The row's
+  # lock not free in time leaves it for another try.
   defp claim(state, user, session_id) do
     hash = hash(state)
 
-    transaction(fn ->
-      query =
-        from(s in Setting, where: s.figma_oauth_state_hash == ^hash, lock: "FOR UPDATE", preload: [:site, :environment])
+    result =
+      lock_wait(fn ->
+        query =
+          from(s in Setting, where: s.figma_oauth_state_hash == ^hash, lock: "FOR UPDATE", preload: [:site, :environment])
 
-      case Repo.one(query) do
-        nil -> {:error, :unknown}
-        setting -> claim_locked(setting, pending(setting), user, session_id)
-      end
-    end)
+        case Repo.one(query) do
+          nil -> {:error, :unknown}
+          setting -> claim_locked(setting, pending(setting), user, session_id)
+        end
+      end)
+
+    if result == {:error, :busy}, do: {:error, :save_failed}, else: result
   end
 
   # A pending connection that no longer decrypts is of no use to anyone
@@ -491,7 +507,9 @@ defmodule Brando.Figma.OAuth do
   a newer one meanwhile. `{:error, reason}`: `:disconnected` (no connection
   any more), `:needs_reconnect`, `:needs_repair`, `:busy` (the lock was not
   free in time) or `:unreachable` (Figma did not answer the refresh; try
-  again later).
+  again later). The last two only after Figma answered "expired", or once
+  the stored token has expired: an early refresh that fails so gives the
+  stored token.
   """
   @spec access_token(tenant(), String.t() | nil) ::
           {:ok, String.t()} | {:error, :disconnected | :needs_reconnect | :needs_repair | :busy | :unreachable}
@@ -500,9 +518,22 @@ defmodule Brando.Figma.OAuth do
 
     with %Setting{} <- setting || {:error, :disconnected},
          {:ok, %{access: access}} <- usable(setting, tenant) do
-      if is_nil(rejected) and fresh?(setting.figma_oauth_expires_at),
-        do: {:ok, access},
-        else: refresh(tenant, rejected)
+      cond do
+        not is_nil(rejected) -> refresh(tenant, rejected)
+        fresh?(setting.figma_oauth_expires_at) -> {:ok, access}
+        true -> refresh_early(tenant, access, setting.figma_oauth_expires_at)
+      end
+    end
+  end
+
+  # Figma still takes the stored token until it expires
+  defp refresh_early(tenant, access, expires_at) do
+    case refresh(tenant, nil) do
+      {:error, reason} when reason in [:busy, :unreachable] ->
+        if DateTime.after?(expires_at, DateTime.utc_now()), do: {:ok, access}, else: {:error, reason}
+
+      result ->
+        result
     end
   end
 
@@ -526,6 +557,12 @@ defmodule Brando.Figma.OAuth do
         refresh_unless_done(setting, tenant, secrets, rejected)
       end
     end)
+  rescue
+    # The database ended the transaction (its timeout) before Figma answered:
+    # nothing was saved, so the refresh token is the one Figma still knows
+    DBConnection.ConnectionError ->
+      Logger.warning("[Brando.Figma.OAuth] The database connection ended while Figma renewed the access token")
+      {:error, :unreachable}
   end
 
   # Another call may have renewed the token while this one waited
@@ -582,8 +619,8 @@ defmodule Brando.Figma.OAuth do
           url: path,
           form: form,
           auth: {:basic, client_id <> ":" <> secret},
-          receive_timeout: @figma_timeout,
-          connect_options: [timeout: @figma_timeout],
+          receive_timeout: receive_timeout(),
+          connect_options: [timeout: connect_timeout()],
           retry: false,
           redirect: false
         ],
@@ -618,15 +655,30 @@ defmodule Brando.Figma.OAuth do
 
   ## The row
 
-  # Runs `fun` with `tenant`'s row locked (nil when there is none), waiting
-  # at most `lock_timeout` for the lock
+  # Runs `fun` with `tenant`'s row locked (nil when there is none)
   defp locked(tenant, fun) do
-    timeout = Keyword.get(config(), :lock_timeout, @lock_timeout)
+    lock_wait(fn -> tenant |> MCP.setting_query() |> lock("FOR UPDATE") |> Repo.one() |> fun.() end)
+  end
 
-    transaction(fn ->
-      Repo.repo().query!("SET LOCAL lock_timeout = '#{Integer.to_string(timeout)}ms'")
-      tenant |> MCP.setting_query() |> lock("FOR UPDATE") |> Repo.one() |> fun.()
-    end)
+  # Runs `fun` in a transaction whose row locks wait at most `lock_timeout`
+  # (`{:error, :busy}` past it), and which lasts long enough for that wait and
+  # a request to Figma, well within its timeout
+  defp lock_wait(fun) do
+    lock_timeout = lock_timeout()
+
+    result =
+      Repo.transaction(
+        fn ->
+          Repo.repo().query!("SET LOCAL lock_timeout = '#{Integer.to_string(lock_timeout)}ms'")
+          fun.()
+        end,
+        timeout: 2 * (lock_timeout + connect_timeout() + receive_timeout())
+      )
+
+    case result do
+      {:ok, result} -> result
+      {:error, reason} -> {:error, reason}
+    end
   rescue
     error in Postgrex.Error ->
       if match?(%{postgres: %{code: :lock_not_available}}, error),
@@ -634,12 +686,9 @@ defmodule Brando.Figma.OAuth do
         else: reraise(error, __STACKTRACE__)
   end
 
-  defp transaction(fun) do
-    case Repo.transaction(fun) do
-      {:ok, result} -> result
-      {:error, reason} -> {:error, reason}
-    end
-  end
+  defp lock_timeout, do: Keyword.get(config(), :lock_timeout, @lock_timeout)
+  defp connect_timeout, do: Keyword.get(config(), :connect_timeout, @connect_timeout)
+  defp receive_timeout, do: Keyword.get(config(), :receive_timeout, @receive_timeout)
 
   defp upsert(_tenant, %Setting{} = setting, fields) do
     {1, [setting]} =
