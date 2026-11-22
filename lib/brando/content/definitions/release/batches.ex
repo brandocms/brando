@@ -151,7 +151,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
     uids = Enum.map(restorable, & &1.uid)
 
     with {:ok, plan} <-
-           Definitions.plan(bundle, base.actor, base.plan_opts ++ [baseline: :database, select: uids, revert: true]) do
+           Definitions.plan(bundle, base.actor, base.plan_opts ++ [baseline: :database, select: uids]) do
       {revert, conflicts, irreversible} = split(plan, uids, superseded(restorable))
       {:ok, %{base | plan: plan, bundle: bundle, revert: revert, conflicts: conflicts, irreversible: irreversible}}
     end
@@ -246,7 +246,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
   end
 
   defp apply_revert(batch, preview, uids, revert_batch_id, user) do
-    opts = preview.plan_opts ++ [baseline: :database, select: uids, revert: true]
+    opts = preview.plan_opts ++ [baseline: :database, select: uids]
 
     with {:ok, plan} <- Definitions.plan(preview.bundle, preview.actor, opts),
          true <- Plan.applicable?(plan) || {:error, "edited while reverting; try again"},

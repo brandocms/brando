@@ -164,7 +164,9 @@ defmodule Brando.Content.DefinitionRemovalsTest do
       edit_vars!(c)
       import!(c)
 
-      File.write!(c.exs, String.replace(source, "var :tagline, :string", "var :tagline, :text"))
+      retyped = String.replace(source, ~s(var "tagline", "string"), ~s(var "tagline", "text"))
+      assert retyped != source
+      File.write!(c.exs, retyped)
       assert [%{action: :migration_required, reason: reason}] = plan!(c).items
       assert reason =~ ~s(var "tagline" returns as text while blocks ##{holder.id} hold a leftover of another type)
 

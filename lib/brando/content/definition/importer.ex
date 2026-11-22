@@ -1,9 +1,9 @@
 defmodule Brando.Content.Definition.Importer do
   @moduledoc false
 
-  alias Brando.Authorization.Boundary
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.{Block, Blocks, Module, ModuleDiff, Ref, TableTemplate, Var}
   alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Snapshot, Value}
   alias Brando.Content.Definitions
@@ -67,8 +67,7 @@ defmodule Brando.Content.Definition.Importer do
       mode: mode,
       replace: MapSet.new(replace),
       discard: MapSet.new(discard),
-      selection: selection,
-      revert: Keyword.get(opts, :revert, false)
+      selection: selection
     }
   end
 
@@ -124,8 +123,7 @@ defmodule Brando.Content.Definition.Importer do
       mode: plan.mode,
       replace: plan.replace,
       discard: plan.discard,
-      selection: plan.selection,
-      revert: plan.revert
+      selection: plan.selection
     }
 
     opts = Keyword.put_new_lazy(opts, :batch_id, &Ecto.UUID.generate/0)
@@ -189,7 +187,6 @@ defmodule Brando.Content.Definition.Importer do
       mode: settings.mode,
       replace: settings.replace,
       discard: settings.discard,
-      revert: settings.revert,
       latest: latest,
       snapshot_references: snapshot["references"],
       parents: parents(bundle["modules"]),
@@ -218,7 +215,6 @@ defmodule Brando.Content.Definition.Importer do
        mode: settings.mode,
        replace: settings.replace,
        discard: settings.discard,
-       revert: settings.revert,
        selection: settings.selection,
        # How the target's records were written as tokens, generated ones too
        snapshot_bindings: snapshot["references"]
