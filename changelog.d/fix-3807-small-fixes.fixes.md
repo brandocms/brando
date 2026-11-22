@@ -1,0 +1,1 @@
+- A translated field with no `label:` in its Blueprint names each language's input by the field's name, as its visible label does, so a screen reader no longer reads only the language.

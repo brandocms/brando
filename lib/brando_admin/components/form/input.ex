@@ -1622,7 +1622,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   # A blueprint label may arrive HTML-safe ({:safe, iodata}); an attribute
   # built by interpolation needs its text.
   defp label_text({:safe, _} = label), do: Phoenix.HTML.safe_to_string(label)
-  defp label_text(nil), do: ""
   defp label_text(label), do: to_string(label)
 
   # One tab per language over a single input area. Which tab is open lives
@@ -1682,7 +1681,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
       # One language has nothing to switch to: no tabs, just the input.
       |> assign(:tabs?, match?([_, _ | _], languages))
-      |> assign(:label_text, label_text(assigns[:label]))
+      # The label the field shows (`Primitives.field_base/1`): without one
+      # from the Blueprint, the field's name
+      |> assign(:label_text, label_text(assigns[:label] || Brando.Utils.humanize(to_string(assigns.field.field))))
       # A language is only missing once another has text; an empty field is
       # just empty, not missing a translation in every language.
       |> assign(:written?, Enum.any?(languages, fn {language, _} -> !blank_i18n?(value[language]) end))
