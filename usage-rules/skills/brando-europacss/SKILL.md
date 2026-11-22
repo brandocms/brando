@@ -168,7 +168,7 @@ inherits the scope; giving it a query of its own is an error.
 @space margin-y xl;            /* any property, plus margin-x|y, padding-x|y */
 @space padding-x container;    /* the container's padding only */
 @space translateY md;          /* also translateX|Z, scale */
-@space negate(blocks, blocksInner);  /* margin-top: calc(-blocks + blocksInner) */
+@space negate(blocks, md);     /* margin-top: calc(-blocks + md) */
 @space margin-left negate(1/4);      /* negates the gutter-adjusted width */
 @space! padding-top 0 $lg;
 
@@ -201,7 +201,7 @@ inherits the scope; giving it a query of its own is an error.
 Config-driven blocks (paths start with `theme.` here, unlike `theme()`):
 
 ```css
-@if theme.colors.dbg { … }     /* a truthy value; a missing key is an error */
+@if theme.colors.grid { … }    /* a truthy value; a missing key is an error */
 
 .stack {
   @iterate theme.spacing {
