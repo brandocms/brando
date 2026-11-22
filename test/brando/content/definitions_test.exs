@@ -373,10 +373,10 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:error, _} = Definitions.apply(conflicting, c.user)
   end
 
-  test "destructive changes block the entire bundle", c do
+  test "a change that needs a migration blocks the entire bundle", c do
     apply_bundle!(c.bundle, c.user)
     before = hero()
-    bundle = snapshot() |> edit(&Map.put(&1, "vars", []))
+    bundle = snapshot() |> edit(&put_in(&1, ["vars", Access.at(0), "type"], "string"))
     [definition] = c.bundle["modules"]
     new = definition |> Map.put("uid", "new-hero") |> Map.put("refs", [])
     bundle = Map.update!(bundle, "modules", &(&1 ++ [new]))

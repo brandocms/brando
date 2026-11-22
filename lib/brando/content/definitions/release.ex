@@ -477,7 +477,8 @@ defmodule Brando.Content.Definitions.Release do
   defp print_applied(%{report: report, result: result}, info) do
     report.items
     |> Enum.filter(&(Plan.selected?(report.plan, &1) and &1.action != :noop))
-    |> Enum.each(&info.(item_line(&1)))
+    |> Enum.flat_map(&item_lines(report.plan, &1))
+    |> Enum.each(info)
 
     info.("Applied #{length(result.changes)} definition changes from release #{report.version}")
     Enum.each(result.refresh, &(&1.status == :failed && info.("  Refresh failed for #{&1.uid}: #{&1.error}")))
@@ -610,7 +611,7 @@ defmodule Brando.Content.Definitions.Release do
     else
       [heading, "  " <> summary(report)] ++
         classes(report) ++
-        (report.items |> Enum.reject(&(&1.action == :noop)) |> Enum.map(&item_line/1)) ++
+        (report.items |> Enum.reject(&(&1.action == :noop)) |> Enum.flat_map(&item_lines(report.plan, &1))) ++
         ["Review: #{admin_url()}", "Apply: " <> apply_hint(report)]
     end
   end
@@ -650,9 +651,19 @@ defmodule Brando.Content.Definitions.Release do
     ["  Updates by kind: " <> text]
   end
 
+  # An update that leaves values in blocks is followed by the command that
+  # resolves them
+  defp item_lines(plan, item) do
+    case Plan.resolve_command(plan, item) do
+      nil -> [item_line(item)]
+      command -> [item_line(item), "    resolve: " <> command]
+    end
+  end
+
   defp item_line(item) do
     detail =
       case item do
+        %{action: :update, removes: %{}} -> Plan.removal_text(item)
         %{action: :update, class: class} -> "#{class || "update"}; #{item.entry_count} entries"
         %{action: :create} -> "new"
         %{state: :never_applied} -> item.reason <> " (replace: [#{inspect(item.uid)}])"

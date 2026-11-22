@@ -25,7 +25,9 @@ defmodule Mix.Tasks.Brando.Modules do
 
   Export requires a new output directory. Import prints a plan, refuses conflicts
   and structural migrations, and updates only the baseline lockfile after a
-  successful apply. `--dry-run` performs no database or file writes.
+  successful apply. `--dry-run` performs no database or file writes. An update
+  that removes a ref or var says how many blocks hold it, and prints the
+  `resolve` command that drops it from them after the import.
 
   `plan --release` plans the definitions the release ships
   (`config :brando, Brando.Content.Definitions, release_path: "priv/modules"`)
@@ -214,11 +216,12 @@ defmodule Mix.Tasks.Brando.Modules do
     plan = unwrap!(Definitions.plan(bundle, user, references: references))
 
     Enum.each(plan.items, fn item ->
-      detail = item.reason || Enum.join(item.fields, ", ")
+      detail =
+        Plan.removal_text(item) ||
+          "#{item.reason || Enum.join(item.fields, ", ")} (#{item.block_count} blocks, #{item.entry_count} entries)"
 
-      Mix.shell().info(
-        "#{item.action} #{item.kind} #{item.uid}: #{detail} (#{item.block_count} blocks, #{item.entry_count} entries)"
-      )
+      Mix.shell().info("#{item.action} #{item.kind} #{item.uid}: #{detail}")
+      if command = Plan.resolve_command(plan, item), do: Mix.shell().info("  resolve: #{command}")
     end)
 
     unless Plan.applicable?(plan), do: Mix.raise("Resolve the conflicts or required migrations before importing")

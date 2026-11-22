@@ -281,6 +281,11 @@ Some need something first:
 - **Never applied** from files: **Replace with the release's version**.
 - **Needs a migration**: shown, locked, with what blocks it.
 
+A row that removes a ref or var is ready, and says how many blocks hold a
+value for it: they keep the values after the apply, and the applied module's
+row links to **Resolve blocks**
+([Removing a ref or var](#removing-a-ref-or-var)).
+
 The confirmation repeats what the apply covers, the entries it re-renders,
 what it leaves out, and the entries that failed in Verify. After the apply, a
 banner follows the renders until every entry has rendered, and names those
@@ -771,24 +776,126 @@ and affected entry count:
 | `noop` | The target already has this complete definition. |
 | `update` | The baseline matches and the change can use existing synchronization. |
 | `conflict` | The target changed since export, or an update has no baseline. |
+| `migration_required` | The change would reinterpret content blocks hold; nothing applies it. |
 
 The baseline is the lockfile's when it was written for the target's
 database, and otherwise what was last applied to the target (see
 [Each database's own baseline](#each-database-s-own-baseline)).
-| `migration_required` | The proposed change needs an explicit content migration. |
 
 Changes to template source, metadata, ref configuration/defaults, var settings,
-options/layout and additive refs/vars can be applied. Existing block values
-continue to follow Brando's protected-content rules. Planning parses Liquid or
-compiles HEEx, but does not render every affected entry or prove that all
-datasource/runtime expressions will succeed.
+options/layout, added refs/vars and removed refs/vars can be applied. Existing
+block values continue to follow Brando's protected-content rules. Planning
+parses Liquid or compiles HEEx, but does not render every affected entry or
+prove that all datasource/runtime expressions will succeed.
 
-The importer blocks removed/retyped refs and vars, ref identity changes,
-moving existing children, removing child definitions, changing table columns,
-and changes to the module contract (engine, multi, datasource or table binding).
-There is no force switch that silently deletes editor content. Removing a
-top-level definition file does not delete its database module. Use an explicit
-migration for structural changes, then export a fresh baseline.
+These need a migration: a retyped ref or var, a changed ref identity, moving
+an existing child, removing a child definition, changing table columns, a
+change to the module contract (engine, multi, datasource or table binding),
+and a var added under a key that blocks still hold a leftover of another type
+for. There is no force switch that silently deletes or reinterprets editor
+content. Removing a top-level definition file does not delete its database
+module.
+
+### Removing a ref or var
+
+Delete the `ref` or `var` from the file and import. The import is an
+`update`, as the same edit saved in the admin is: the module no longer
+defines the key, and nothing an editor typed is deleted. Each block that
+holds a value for it keeps it as a leftover, stays on the older version and
+renders without it (see [Blocks left on an older version](#blocks-left-on-an-older-version)).
+The plan counts the blocks that hold the key, not every block of the module,
+and prints the command that drops it from them:
+
+```
+update module kulturslider: removes var link (5 of 13 blocks hold it, 3 entries)
+  resolve: mix brando.modules resolve --uid kulturslider --user 1 --drop var:link --apply
+```
+
+Run it as printed once the import has run; a tenant application's line has
+`--site` and `--environment`. When no block holds the key, there is no
+resolve line. Until it runs, a revert of the import (or the same var added
+back with the same type) gives the blocks their values back.
+
+### Renaming a ref or var
+
+A rename is a removal and an addition: rename the key in the file and in the
+template, import, then move the values with `--map OLD=NEW`:
+
+```sh
+mix brando.modules import --from priv/modules --user 1
+mix brando.modules resolve --uid kulturslider --user 1 --map title=heading
+mix brando.modules resolve --uid kulturslider --user 1 --map title=heading --apply
+```
+
+The first `resolve` is a dry run that lists what it moves and what it
+would replace; a mapping that loses content is refused, and **Resolve
+blocks** in the admin makes exceptions per block. Between the import and the
+resolve the blocks render the new key's default, so run the two together.
+
+A key added back with another type while blocks still hold its leftover is
+`migration_required`, and names the blocks: the next sync would read the
+stored value as the new type. Resolve the leftover first, or choose another
+key.
+
+### Moving values to child modules
+
+Values that move from a parent's blocks to its children's (row-level layout
+settings that become per-item ones) are a data migration in the project.
+Definitions are parsed, never evaluated, so a definition cannot carry one.
+Add the children's vars and import, then move the values through the block
+contexts, so entries get revisions and renders:
+
+```elixir
+defmodule MyApp.Release.MoveRowLayout do
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.Content.{Block, Blocks, Module}
+  alias Brando.Repo
+
+  # Copies each media row's `layout` onto its items' new `width` var
+  def run(user) do
+    row = Repo.get_by!(Module, uid: "media-row")
+    block_ids = Blocks.list_block_ids_using_module(row.id)
+
+    entries =
+      block_ids
+      |> Blocks.list_root_block_ids_by_source()
+      |> Blocks.list_entry_ids_for_root_blocks_by_source()
+
+    {:ok, _} =
+      Repo.transaction(fn ->
+        # A revision of each entry first, for History to restore
+        for {schema, ids} <- entries, schema.has_trait(Brando.Trait.Revisioned), id <- ids do
+          {:ok, _} = Brando.Revisions.create_revision(Repo.get!(schema, id), user, false)
+        end
+
+        blocks = Repo.all(from(b in Block, where: b.id in ^block_ids, preload: [:vars, children: :vars]))
+
+        for block <- blocks,
+            layout = Enum.find(block.vars, &(&1.key == "layout")),
+            child <- block.children,
+            width = Enum.find(child.vars, &(&1.key == "width")) do
+          width |> Ecto.Changeset.change(value: layout.value) |> Repo.update!()
+        end
+      end)
+
+    for {schema, ids} <- entries, id <- ids, do: Blocks.render_entry(schema, id)
+  end
+end
+```
+
+Then remove `layout` from the parent's file, import, and run the resolve line
+the plan prints to drop the old values.
+
+### In a release
+
+A release that removes a ref or var is ready to apply like any update:
+`Release.status/1` prints the same counts and resolve line, and the Release
+changes screen lists it under Ready to apply, saying the blocks keep the
+values until they are resolved. After the apply, the module's row links to
+**Resolve blocks**, where a server without Mix resolves them
+(`Brando.Content.StaleBlocks.apply/4` is the API it uses). Only what still
+needs a migration is shown locked.
 
 For a conflict, export the target into a new directory, review the admin changes
 against your edits, and apply your intended changes onto that fresh export.

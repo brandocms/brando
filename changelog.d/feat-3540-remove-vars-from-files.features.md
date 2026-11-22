@@ -1,0 +1,1 @@
+- A module definition file can remove a ref or var that blocks hold values for: `import`, the watcher and a release apply it as an update, the blocks keep the values until `mix brando.modules resolve` (or Resolve blocks in the admin) drops or moves them, and the plan prints the `resolve` command with the number of blocks that hold each removed key.
