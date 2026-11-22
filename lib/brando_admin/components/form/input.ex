@@ -1207,7 +1207,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   # Each row's aria-label ends with its number, which the `Brando.StringList`
   # hook rewrites when rows are inserted or removed.
-  defp string_list_label(%{label: label}) when not is_nil(label), do: label_text(label)
+  defp string_list_label(%{label: label}) when label not in [nil, :hidden], do: Options.label_text(label)
   defp string_list_label(%{field: field}), do: field.field |> to_string() |> Brando.Utils.humanize()
 
   defp drop_trailing_blanks(rows),
