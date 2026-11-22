@@ -235,6 +235,9 @@ defmodule Brando.Router do
         get "/config/cache", BrandoAdmin.MovedController, :utilities
         get "/content-transfer/download/:token", BrandoAdmin.ContentTransferDownloadController, :show
         get "/forms/:key/submissions/export", BrandoAdmin.FormSubmissionsExportController, :export
+        # Where Figma sends the browser back to (Brando.Figma.OAuth.redirect_url/0);
+        # not logged, for the code in its query
+        get "/config/mcp/figma/callback", BrandoAdmin.FigmaCallbackController, :show, log: false
 
         post "/environment", BrandoAdmin.EnvironmentController, :update
         post "/api/content/image/replace_crop", BrandoAdmin.API.Content.Upload.ImageController, :replace_crop

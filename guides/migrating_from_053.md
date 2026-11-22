@@ -679,6 +679,12 @@ sender first, before the first compile.
   preview link shows; it is empty for every existing shared preview. Run
   `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
   [Proposal preview links](mcp.md#proposal-preview-links).
+- **Connecting Figma with OAuth.** `brando_242` adds the site environment's
+  Figma app (its client ID and secret, encrypted) and the OAuth connection
+  made with it to `mcp_settings`. Every column starts empty: a site with a
+  pasted Figma token keeps using it, with its expiry date, until an
+  administrator connects Figma. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`. See [Connect Figma](mcp.md#connect-figma).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

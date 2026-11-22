@@ -675,6 +675,28 @@ defmodule BrandoAdmin.Components.Activity do
   defp lines(%{schema: @mcp_setting, details: %{"figma_token" => "removed"}}, _fields, _states),
     do: [gettext("Removed the Figma access token")]
 
+  defp lines(%{schema: @mcp_setting, details: %{"figma_app" => app} = details}, _fields, _states) do
+    [
+      case app do
+        "added" -> gettext("Saved the Figma app")
+        "replaced" -> gettext("Replaced the Figma app")
+        _removed -> gettext("Removed the Figma app")
+      end,
+      details["figma_oauth"] == "removed" && gettext("Removed the Figma connection made with the app before")
+    ]
+    |> Enum.filter(&is_binary/1)
+  end
+
+  defp lines(%{schema: @mcp_setting, details: %{"figma_oauth" => oauth}}, _fields, _states) do
+    case oauth do
+      "connected" -> [gettext("Connected Figma")]
+      "reconnected" -> [gettext("Reconnected Figma")]
+      "disconnected" -> [gettext("Disconnected Figma")]
+      "needs_reconnect" -> [gettext("Figma refused to renew the connection; it needs reconnecting")]
+      _other -> []
+    end
+  end
+
   defp lines(%{schema: schema}, _fields, _states) when schema in [@mcp_grant, @mcp_setting], do: []
 
   defp lines(%{action: :caches_cleared, details: details}, _fields, _states) do

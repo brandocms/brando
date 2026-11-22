@@ -248,10 +248,13 @@ defmodule Brando.MCP do
     |> Repo.repo().exists?()
   end
 
-  defp setting_query(%{site: nil, environment: nil}),
+  @doc false
+  # The settings row of `tenant`: the one with no site and no environment
+  # without tenancy
+  def setting_query(%{site: nil, environment: nil}),
     do: from(s in Setting, where: is_nil(s.site_id) and is_nil(s.environment_id))
 
-  defp setting_query(%{site: %{id: site_id}, environment: %{id: environment_id}}),
+  def setting_query(%{site: %{id: site_id}, environment: %{id: environment_id}}),
     do: from(s in Setting, where: s.site_id == ^site_id and s.environment_id == ^environment_id)
 
   @doc """

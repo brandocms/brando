@@ -71,9 +71,21 @@
   }
   /* What Figma said of the token, and its expiry, under the hint */
   .mcp-figma-check { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-  .mcp-figma-expiry.is-warning {
+  .mcp-figma-expiry.is-warning,
+  .mcp-figma-outcome.is-warning {
     justify-self: start; padding: 4px 10px; border-radius: 6px;
     background: var(--brando-note); color: var(--brando-note-ink);
+  }
+  /* The redirect URL to register the Figma app with, to copy */
+  .mcp-figma-redirect {
+    display: grid; gap: 4px; margin-top: 12px;
+    label { color: var(--brando-muted); font-size: var(--brando-text-sm); }
+    input {
+      min-width: 0; height: 30px; padding: 0 10px;
+      border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface-shaded);
+      color: var(--brando-ink); font-family: var(--brando-font-mono); font-size: var(--brando-text-md);
+      &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
+    }
   }
   /* The guidance for building from Figma: the editor, then the developers'
      text and the history, folded */

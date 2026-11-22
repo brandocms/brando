@@ -2797,6 +2797,11 @@ msgstr "Anker på denne siden"
 msgid "And %{count} more"
 msgstr "Og %{count} til"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Another client ID than the one saved removes the connection, and Figma has to be connected again. The same client ID with a new secret keeps it."
+msgstr "En annen klient-ID enn den som er lagret fjerner tilkoblingen, og Figma må kobles til på nytt. Samme klient-ID med en ny hemmelighet beholder den."
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Another editor has changed the blocks here since, so the move was not redone."
@@ -2886,6 +2891,21 @@ msgstr[1] "Alle med denne lenken kan se den foreslåtte siden i %{count} dager:"
 #, elixir-autogen, elixir-format
 msgid "App"
 msgstr "App"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "App client ID ends in %{hint}."
+msgstr "Appens klient-ID slutter på %{hint}."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "App client ID ends in %{hint}. Saved %{date} by %{name}."
+msgstr "Appens klient-ID slutter på %{hint}. Lagret %{date} av %{name}."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "App client ID ends in %{hint}. Saved %{date}."
+msgstr "Appens klient-ID slutter på %{hint}. Lagret %{date}."
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
@@ -3159,6 +3179,16 @@ msgstr "Som over"
 #, elixir-autogen, elixir-format
 msgid "As scheduled"
 msgstr "Som planlagt"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "As the Figma account %{handle}. Connected %{date} by %{name}."
+msgstr "Som Figma-kontoen %{handle}. Koblet til %{date} av %{name}."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "As the Figma account %{handle}. Connected %{date}."
+msgstr "Som Figma-kontoen %{handle}. Koblet til %{date}."
 
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -4021,6 +4051,11 @@ msgstr "Endre"
 msgid "Change %{ref} settings in %{block}"
 msgstr "Endre innstillinger for %{ref} i %{block}"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Change app"
+msgstr "Endre app"
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Change choices"
@@ -4711,6 +4746,16 @@ msgstr "Klikkrate"
 msgid "Clicks"
 msgstr "Klikk"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Client ID"
+msgstr "Klient-ID"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Client secret"
+msgstr "Klienthemmelighet"
+
 #: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/children_button.ex
 #: lib/brando_admin/components/content.ex
@@ -5060,6 +5105,7 @@ msgstr "Bekreft med passnøkkelen din: fingeravtrykk, ansikt, PIN-kode eller sik
 msgid "Conflict"
 msgstr "Konflikt"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Connect"
@@ -5069,6 +5115,11 @@ msgstr "Koble til"
 #, elixir-autogen, elixir-format
 msgid "Connect %{client}?"
 msgstr "Koble til %{client}?"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Figma"
+msgstr "Koble til Figma"
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
@@ -5102,6 +5153,16 @@ msgstr "Tilkoblet"
 msgid "Connected %{client}"
 msgstr "Koblet til %{client}"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected %{date} by %{name}."
+msgstr "Koblet til %{date} av %{name}."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected %{date}."
+msgstr "Koblet til %{date}."
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/mcp/watch_live.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
@@ -5110,6 +5171,11 @@ msgstr "Koblet til %{client}"
 #, elixir-autogen, elixir-format
 msgid "Connected AI tools"
 msgstr "Tilkoblede AI-verktøy"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Connected Figma"
+msgstr "Koblet til Figma"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -5148,8 +5214,18 @@ msgstr "Tilkoblede verktøy får dette med hver ramme de leser: hvordan designet
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
-msgid "Connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame. They see the Figma files the token's owner can open."
-msgstr "Tilkoblede verktøy leser en Figma-ramme fra lenken og importerer bildene til mediebiblioteket, i en mappe med rammens navn. De ser Figma-filene tokenets eier kan åpne."
+msgid "Connected tools reach Figma through this site's own Figma app, as the Figma account that connects it, and their access renews itself. Each environment registers its own app."
+msgstr "Tilkoblede verktøy når Figma gjennom nettstedets egen Figma-app, som Figma-kontoen som kobler den til, og tilgangen fornyer seg selv. Hvert miljø registrerer sin egen app."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools then can no longer read Figma, until it is connected again or an access token is added. The app stays, to connect again."
+msgstr "Tilkoblede verktøy kan da ikke lenger lese Figma, før den kobles til igjen eller et tilgangstoken legges til. Appen blir værende, så den kan kobles til igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected tools then read Figma with the access token ending in %{hint} again. The app stays, to connect again."
+msgstr "Tilkoblede verktøy leser da Figma med tilgangstokenet som slutter på %{hint} igjen. Appen blir værende, så den kan kobles til igjen."
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -6811,6 +6887,7 @@ msgstr "Forkaste de ulagrede gruppeendringene dine?"
 msgid "Discarded"
 msgstr "Forkastet"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect"
@@ -6820,6 +6897,11 @@ msgstr "Koble fra"
 #, elixir-autogen, elixir-format
 msgid "Disconnect %{client}?"
 msgstr "Koble fra %{client}?"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect Figma?"
+msgstr "Koble fra Figma?"
 
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/mcp/watch_live.ex
@@ -6836,6 +6918,11 @@ msgstr "Koblet fra %{client}"
 #, elixir-autogen, elixir-format
 msgid "Disconnected %{client}: a used token was presented again"
 msgstr "Koblet fra %{client}: et token som allerede var brukt, ble brukt igjen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnected Figma"
+msgstr "Koblet fra Figma"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -8444,8 +8531,33 @@ msgstr "Figma-tilgangstoken"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "Figma could not be connected. Save the app again, then connect."
+msgstr "Figma kunne ikke kobles til. Lagre appen på nytt, og koble deretter til."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma could not be disconnected."
+msgstr "Figma kunne ikke kobles fra."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "Figma could not be reached to check it. Try again in a moment."
 msgstr "Fikk ikke kontakt med Figma for å sjekke det. Prøv igjen om litt."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma did not accept the connection, so nothing was saved. Check the app's client secret and redirect URL, and try again."
+msgstr "Figma godtok ikke tilkoblingen, så ingenting ble lagret. Sjekk appens klienthemmelighet og omdirigerings-URL, og prøv igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma does not accept it. Reconnect."
+msgstr "Figma godtar den ikke. Koble til på nytt."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma does not accept it. Reconnect. Figma said: “%{error}”"
+msgstr "Figma godtar den ikke. Koble til på nytt. Figma sa: «%{error}»"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -8464,8 +8576,48 @@ msgstr "Figma forteller ikke Brando når et token utløper: oppgi utløpsdatoen 
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "Figma gave access, but the account it belongs to could not be read, so nothing was saved. Check that the app has the current_user:read scope, and try again."
+msgstr "Figma ga tilgang, men kontoen den tilhører kunne ikke leses, så ingenting ble lagret. Sjekk at appen har tilgangsområdet current_user:read, og prøv igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma gave access, but the connection could not be saved, so nothing was saved. Try again."
+msgstr "Figma ga tilgang, men tilkoblingen kunne ikke lagres, så ingenting ble lagret. Prøv igjen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma is connected."
+msgstr "Figma er koblet til."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma refused to renew the connection, as after it was revoked in Figma. Connected tools cannot reach Figma until it is reconnected, and do not use the access token meanwhile."
+msgstr "Figma nektet å fornye tilkoblingen, slik som når den er trukket tilbake i Figma. Tilkoblede verktøy når ikke Figma før den er koblet til på nytt, og bruker ikke tilgangstokenet i mellomtiden."
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Figma refused to renew the connection; it needs reconnecting"
+msgstr "Figma nektet å fornye tilkoblingen; den må kobles til på nytt"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma says it has expired, and it could not be renewed. Reconnect."
+msgstr "Figma sier at den har utløpt, og den kunne ikke fornyes. Koble til på nytt."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "Figma says it has expired. Replace it."
 msgstr "Figma sier at det er utløpt. Bytt det ut."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma was disconnected."
+msgstr "Figma ble koblet fra."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Figma was not connected: consent was not given."
+msgstr "Figma ble ikke koblet til: samtykke ble ikke gitt."
 
 #: lib/brando_admin/components/form/draft_preview_references.ex
 #: lib/brando_admin/components/form/input/blocks/file_block.ex
@@ -9795,6 +9947,11 @@ msgstr "Visninger"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "In Figma, create an app for this environment under figma.com/developers/apps, with the redirect URL above and the scopes File content: read (file_content:read) and Current user: read (current_user:read), and paste its client ID and secret here."
+msgstr "Opprett en app for dette miljøet i Figma under figma.com/developers/apps, med omdirigerings-URL-en over og tilgangsområdene File content: read (file_content:read) og Current user: read (current_user:read), og lim inn klient-ID-en og hemmeligheten her."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "In Figma: Settings → Security → Personal access tokens, with the scopes File content: read (file_content:read) and Current user: read (current_user:read), which checking the token needs. Use the account of someone with a Full or Dev seat: Figma limits API calls for other seats."
 msgstr "I Figma: Settings → Security → Personal access tokens, med tilgangene File content: read (file_content:read) og Current user: read (current_user:read), som sjekken av tokenet trenger. Bruk kontoen til noen med Full- eller Dev-plass: Figma begrenser API-kall for andre plasser."
 
@@ -10124,6 +10281,11 @@ msgid "It is used in one place: %{places}."
 msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] "Brukt ett sted: %{places}."
 msgstr[1] "Brukt på %{count} steder: %{places}."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "It may not read its own Figma account (the current_user:read scope), so it could not be checked. It may still read files. For the check, give the app current_user:read in Figma and reconnect."
+msgstr "Den kan ikke lese sin egen Figma-konto (tilgangsområdet current_user:read), så den kunne ikke sjekkes. Den kan fortsatt lese filer. For at sjekken skal virke, gi appen current_user:read i Figma og koble til på nytt."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -12003,6 +12165,16 @@ msgstr "Krever https"
 msgid "Needs migration"
 msgstr "Trenger migrering"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Needs reconnecting"
+msgstr "Må kobles til på nytt"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Needs repair"
+msgstr "Må repareres"
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Needs translation"
@@ -12991,6 +13163,11 @@ msgctxt "checkbox state"
 msgid "Not checked"
 msgstr "Ikke avkrysset"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not connected"
+msgstr "Ikke tilkoblet"
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
@@ -13428,6 +13605,16 @@ msgstr "Ingenting ble koblet til. Start på nytt fra appen."
 #, elixir-autogen, elixir-format
 msgid "Nothing was removed: %{reason}"
 msgstr "Ingenting ble fjernet: %{reason}"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing yet: connect Figma through an app, or add an access token, below."
+msgstr "Ingenting ennå: koble til Figma gjennom en app, eller legg til et tilgangstoken, nedenfor."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing, until Figma is reconnected below. The access token is not used meanwhile."
+msgstr "Ingenting, før Figma kobles til på nytt nedenfor. Tilgangstokenet brukes ikke i mellomtiden."
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -15335,6 +15522,16 @@ msgstr "Anbefalt av Google"
 msgid "Recommended by Google: %{property}"
 msgstr "Anbefalt av Google: %{property}"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Koble til på nytt"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnected Figma"
+msgstr "Koblet til Figma på nytt"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Recover this block’s content"
@@ -15466,6 +15663,11 @@ msgstr "Lever på nytt"
 #, elixir-autogen, elixir-format
 msgid "Redirect"
 msgstr "Omdiriger"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect URL"
+msgstr "Omdirigerings-URL"
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -15753,6 +15955,11 @@ msgstr "Fjern %{name}"
 msgid "Remove %{name} from %{group}? Permissions from other groups will be retained."
 msgstr "Fjerne %{name} fra %{group}? Tillatelser fra andre grupper beholdes."
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove app"
+msgstr "Fjern app"
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Remove cover image"
@@ -15824,6 +16031,11 @@ msgstr "Fjern tekstformatering"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "Remove the Figma app?"
+msgstr "Fjerne Figma-appen?"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "Remove the Figma token?"
 msgstr "Fjerne Figma-tokenet?"
 
@@ -15873,6 +16085,16 @@ msgstr "Fjernet fra papirkurven etter %{days} dager"
 #, elixir-autogen, elixir-format
 msgid "Removed the Figma access token"
 msgstr "Fjernet Figma-tilgangstokenet"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed the Figma app"
+msgstr "Fjernet Figma-appen"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Removed the Figma connection made with the app before"
+msgstr "Fjernet Figma-tilkoblingen som ble laget med den forrige appen"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
@@ -16101,6 +16323,11 @@ msgstr "Erstattet av en nyere versjon"
 #, elixir-autogen, elixir-format
 msgid "Replaced revision #%{revision}"
 msgstr "Erstattet versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Replaced the Figma app"
+msgstr "Erstattet Figma-appen"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
@@ -16983,6 +17210,11 @@ msgstr "Lagre og opprett ny"
 msgid "Save anyway"
 msgstr "Lagre likevel"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save app"
+msgstr "Lagre app"
+
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Save as new copy"
@@ -17158,6 +17390,11 @@ msgstr "Lagres bare for dette galleriet. Tom bruker teksten fra bildebiblioteket
 #, elixir-autogen, elixir-format
 msgid "Saved in"
 msgstr "Lagres i"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Saved the Figma app"
+msgstr "Lagret Figma-appen"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -19273,6 +19510,11 @@ msgstr "Koden virket ikke. Sjekk appen og prøv igjen."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "That connection attempt is unknown, or was used already, so nothing was saved. Connect again."
+msgstr "Det tilkoblingsforsøket er ukjent, eller allerede brukt, så ingenting ble lagret. Koble til på nytt."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "That connection is gone already."
 msgstr "Den tilkoblingen er allerede borte."
 
@@ -19289,6 +19531,11 @@ msgstr "Det virket ikke. Last inn siden på nytt og prøv igjen."
 #, elixir-autogen, elixir-format
 msgid "That does not look like a Figma access token."
 msgstr "Det ser ikke ut som et Figma-tilgangstoken."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "That does not look like a Figma app's client ID and secret."
+msgstr "Det ser ikke ut som klient-ID og hemmelighet for en Figma-app."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -19366,6 +19613,36 @@ msgstr "Klarte ikke lese KI-svaret"
 #, elixir-autogen, elixir-format
 msgid "The CSS and JavaScript packaged with the current application release are being served."
 msgstr "CSS og JavaScript fra gjeldende applikasjonsrelease er i bruk."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma app could not be removed."
+msgstr "Figma-appen kunne ikke fjernes."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma app could not be saved."
+msgstr "Figma-appen kunne ikke lagres."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma app or its connection changed while you were at Figma, so nothing was saved. Connect again if it is still needed."
+msgstr "Figma-appen eller tilkoblingen ble endret mens du var hos Figma, så ingenting ble lagret. Koble til på nytt hvis det fortsatt trengs."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma app was removed."
+msgstr "Figma-appen ble fjernet."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma app was saved."
+msgstr "Figma-appen ble lagret."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The Figma connection below. The access token is not used meanwhile."
+msgstr "Figma-tilkoblingen nedenfor. Tilgangstokenet brukes ikke i mellomtiden."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -19463,6 +19740,16 @@ msgstr "URL-en til en arbeidsflyt i Teams som poster i en kanal når den mottar 
 msgid "The ZIP must be no larger than 5 MB."
 msgstr "ZIP-filen kan ikke være større enn 5 MB."
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The access token below, until Figma is connected through the app."
+msgstr "Tilgangstokenet nedenfor, til Figma kobles til gjennom appen."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The access token below."
+msgstr "Tilgangstokenet nedenfor."
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The active revision cannot be scheduled."
@@ -19504,6 +19791,11 @@ msgstr "Appen identifiserte seg ikke på en måte Brando godtar."
 #, elixir-autogen, elixir-format
 msgid "The app was disconnected."
 msgstr "Appen ble koblet fra."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The app's client ID and secret can no longer be decrypted. Save them again."
+msgstr "Appens klient-ID og hemmelighet kan ikke lenger dekrypteres. Lagre dem på nytt."
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -19630,6 +19922,16 @@ msgstr "Den konfigurerte KI-modellen står ikke i modellkatalogen, så prisen og
 #, elixir-autogen, elixir-format
 msgid "The configured site was not found. Check the site configuration before preparing groups."
 msgstr "Det konfigurerte nettstedet ble ikke funnet. Kontroller nettstedskonfigurasjonen før du klargjør grupper."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The connection attempt took longer than ten minutes, so nothing was saved. Connect again."
+msgstr "Tilkoblingsforsøket tok mer enn ti minutter, så ingenting ble lagret. Koble til på nytt."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The connection can no longer be decrypted, as after a change of the encryption secret. Connected tools cannot reach Figma until it is connected again, and do not use the access token meanwhile."
+msgstr "Tilkoblingen kan ikke lenger dekrypteres, slik som etter en endring av krypteringshemmeligheten. Tilkoblede verktøy når ikke Figma før den er koblet til igjen, og bruker ikke tilgangstokenet i mellomtiden."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -21095,6 +21397,16 @@ msgid "This release has 1 module change that isn't applied yet"
 msgid_plural "This release has %{count} module changes that aren't applied yet"
 msgstr[0] "Denne releasen har 1 modulendring som ikke er tatt i bruk ennå"
 msgstr[1] "Denne releasen har %{count} modulendringer som ikke er tatt i bruk ennå"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "This removes the Figma connection too. Connected tools then can no longer read Figma, until an app is connected or an access token is added."
+msgstr "Dette fjerner også Figma-tilkoblingen. Tilkoblede verktøy kan da ikke lenger lese Figma, før en app kobles til eller et tilgangstoken legges til."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "This removes the Figma connection too. Connected tools then read Figma with the access token ending in %{hint}."
+msgstr "Dette fjerner også Figma-tilkoblingen. Tilkoblede verktøy leser da Figma med tilgangstokenet som slutter på %{hint}."
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
@@ -22936,6 +23248,11 @@ msgstr "Uke"
 msgid "What %{client} does in %{site} as %{person}, while it works. It saves nothing: you review what it proposes."
 msgstr "Hva %{client} gjør i %{site} som %{person}, mens det arbeider. Det lagrer ingenting: du går gjennom det det foreslår."
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "What connected tools read Figma with"
+msgstr "Hva tilkoblede verktøy leser Figma med"
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "What happens to %{key}"
@@ -23132,6 +23449,11 @@ msgstr "Med denne releasen"
 #, elixir-autogen, elixir-format
 msgid "With warnings only"
 msgstr "Bare med advarsler"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Without a connected Figma app, connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame, with a personal access token. They see the Figma files the token's owner can open."
+msgstr "Uten en tilkoblet Figma-app leser tilkoblede verktøy en Figma-ramme fra lenken og importerer bildene til mediebiblioteket, i en mappe oppkalt etter rammen, med et personlig tilgangstoken. De ser Figma-filene tokenets eier kan åpne."
 
 #: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -23504,6 +23826,11 @@ msgstr "Du har valgt for mange filer"
 #, elixir-autogen, elixir-format
 msgid "You have this entry open in another tab (opened %{time})"
 msgstr "Du har dette elementet åpent i en annen fane (åpnet %{time})"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "You may no longer manage these settings, so Figma was not connected."
+msgstr "Du kan ikke lenger administrere disse innstillingene, så Figma ble ikke koblet til."
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format

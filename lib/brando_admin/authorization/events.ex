@@ -389,8 +389,10 @@ defmodule BrandoAdmin.Authorization.Events do
       read: ~w(add_select_var_option)
     ],
     "BrandoAdmin.Sites.MCPLive" => [
-      read: ~w(cancel_figma_token discard_figma_guidance figma_guidance_draft replace_figma_token restore_figma_guidance),
-      write: ~w(disable enable remove_figma_token revoke save_figma_guidance save_figma_token test_figma_token)
+      read:
+        ~w(cancel_figma_app cancel_figma_token discard_figma_guidance edit_figma_app figma_guidance_draft replace_figma_token restore_figma_guidance),
+      write:
+        ~w(connect_figma disable disconnect_figma enable remove_figma_app remove_figma_token revoke save_figma_app save_figma_guidance save_figma_token test_figma_token)
     ],
     "BrandoAdmin.Sites.MarkdownSourcesLive" => [
       read: ~w(edit history new select_documents source_mode validate),

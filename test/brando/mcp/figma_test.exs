@@ -1100,6 +1100,102 @@ defmodule Brando.MCP.FigmaTest do
     end
   end
 
+  describe "with Figma connected through the site's app" do
+    setup %{tenant: tenant, user: user} do
+      # A pasted token in its last days: not what calls use now
+      :ok = MCP.put_figma_token(tenant, @token, user, expires_on: Date.add(Brando.Figma.today(), 3))
+      tenant |> Brando.FigmaOAuthHelpers.app!(user) |> Brando.FigmaOAuthHelpers.connect!(access: "oauth-access")
+      :ok
+    end
+
+    test "read_frame calls Figma with the connection, and carries no expiry note", %{tenant: tenant, token: token} do
+      Brando.FigmaOAuthHelpers.stub_figma(fn "GET", "/v1/files/35BOzFjfvJHJM6Wm50E3wA/nodes", _ ->
+        {200, %{"name" => "Shared", "nodes" => %{"2950:4703" => %{"document" => document(), "components" => %{}}}}}
+      end)
+
+      assert %{"structuredContent" => result} = call(tenant, token, "read_frame", %{"url" => @link})
+      assert result["file_name"] == "Shared"
+      refute Map.has_key?(result, "token_note")
+      assert_received {:figma, "GET", _, _, %{"authorization" => "Bearer oauth-access", "x-figma-token" => nil}}
+    end
+
+    test "import_images calls Figma with the connection for each request, and carries no expiry note",
+         %{tenant: tenant, token: token, receiver: receiver} do
+      stub_figma(receiver)
+
+      result = import!(tenant, token)
+      refute Map.has_key?(result, "token_note")
+      assert_received {:figma, "/v1/files/35BOzFjfvJHJM6Wm50E3wA/nodes", []}
+      assert_received {:figma, "/v1/files/35BOzFjfvJHJM6Wm50E3wA/images", []}
+    end
+
+    test "brando_figma_status says the site is connected, as which account, never a token or a secret",
+         %{tenant: tenant, token: token} do
+      Brando.FigmaOAuthHelpers.stub_figma(fn "GET", "/v1/me", _ ->
+        {200, %{"handle" => "Ada Designer", "email" => "ada@example.com"}}
+      end)
+
+      assert %{"structuredContent" => result} = call(tenant, token, "status", %{})
+
+      assert %{
+               "credential" => "oauth",
+               "oauth" => "connected",
+               "token_set" => true,
+               "state" => "valid",
+               "handle" => "Ada Designer",
+               "expires_on" => nil,
+               "message" => message
+             } = result
+
+      assert message =~ "connected to Figma, as the Figma account “Ada Designer”. Its access renews itself."
+      refute message =~ "expires"
+      assert_received {:figma, "GET", "/v1/me", _, %{"authorization" => "Bearer oauth-access"}}
+
+      encoded = Jason.encode!(result)
+
+      for secret <- [
+            "oauth-access",
+            "refresh-1",
+            @token,
+            "wxyz",
+            Brando.FigmaOAuthHelpers.client_secret(),
+            "ada@example.com"
+          ],
+          do: refute(encoded =~ secret)
+    end
+
+    test "a connection that needs reconnecting: the status says so, and the tools stop without reaching Figma",
+         %{tenant: tenant, token: token} do
+      Brando.Repo.update_all(MCP.Setting, set: [figma_oauth_needs_reconnect: true])
+      Brando.FigmaOAuthHelpers.stub_figma(fn _, _, _ -> {200, %{}} end)
+
+      assert %{
+               "structuredContent" =>
+                 %{"credential" => "oauth", "oauth" => "needs_reconnect", "state" => "needs_reconnect"} = result
+             } =
+               call(tenant, token, "status", %{})
+
+      assert result["message"] =~ "An administrator reconnects Figma"
+
+      assert %{"isError" => true, "content" => [%{"text" => text}]} = call(tenant, token, "read_frame", %{"url" => @link})
+      assert text =~ "An administrator reconnects Figma"
+      refute_received {:figma, _, _, _, _}
+    end
+
+    test "with the app saved but not connected, the pasted token is used, and the status says so",
+         %{tenant: tenant, token: token, user: user} do
+      :ok = Brando.Figma.OAuth.disconnect(tenant, user)
+      stub_me = fn -> Brando.FigmaOAuthHelpers.stub_figma(fn "GET", "/v1/me", _ -> {200, %{"handle" => "Ada"}} end) end
+      stub_me.()
+
+      assert %{"structuredContent" => %{"credential" => "token", "oauth" => "app_saved", "state" => "valid"} = result} =
+               call(tenant, token, "status", %{})
+
+      assert result["message"] =~ "saved but not connected yet; the tools use the pasted token until it is."
+      assert_received {:figma, "GET", "/v1/me", _, %{"x-figma-token" => @token, "authorization" => nil}}
+    end
+  end
+
   describe "an image over the site's upload limit" do
     setup %{tenant: tenant, user: user} do
       :ok = MCP.put_figma_token(tenant, @token, user)

@@ -85,17 +85,19 @@ defmodule Brando.Figma.Import do
   end
 
   @doc """
-  Imports the images of the frame `link` names, with `token`, as `actor`.
+  Imports the images of the frame `link` names, as `actor`, calling Figma
+  with `credential` (`Brando.Figma.credential/1`), which each request
+  resolves again.
 
   Options: `:node_ids`, only the images of these layers (as the frame's
   outline names them); `:offset`, where in the frame's distinct images to
   start; `:fit`, true to store a scaled-down copy of an image over the size
   limit.
   """
-  @spec run(Figma.link(), String.t(), term(), keyword()) :: {:ok, map()} | {:error, String.t()}
-  def run(link, token, actor, opts \\ []) do
+  @spec run(Figma.link(), Figma.credential(), term(), keyword()) :: {:ok, map()} | {:error, String.t()}
+  def run(link, credential, actor, opts \\ []) do
     with :ok <- Brando.Authorization.Media.authorize(actor, :image),
-         {:ok, node} <- Figma.node(token, link),
+         {:ok, node} <- Figma.node(credential, link),
          frame_images = Frame.images(node),
          {:ok, images} <- selected(frame_images, opts[:node_ids]) do
       refs = images |> Enum.map(&key/1) |> Enum.uniq()
@@ -104,7 +106,7 @@ defmodule Brando.Figma.Import do
 
       folder = folder_path(node.document["name"])
       ctx = %{actor: actor, folder: folder, fit: opts[:fit] == true, frame_images: frame_images}
-      results = import_page(page, images, link, token, ctx)
+      results = import_page(page, images, link, credential, ctx)
 
       with %{} <- results do
         next = offset + length(page)
@@ -130,12 +132,12 @@ defmodule Brando.Figma.Import do
   defp quarter(_rotation), do: 0
 
   # Nothing is fetched when the page is empty (an offset past the end)
-  defp import_page([], _images, _link, _token, _ctx), do: %{}
+  defp import_page([], _images, _link, _credential, _ctx), do: %{}
 
   # Never over a file already stored, whatever the config says: an image
   # changed in Figma is a new file next to the old one (`Intake.context/2`)
-  defp import_page(page, images, link, token, %{actor: actor, folder: folder} = ctx) do
-    with {:ok, urls} <- Figma.image_urls(token, link.file_key) do
+  defp import_page(page, images, link, credential, %{actor: actor, folder: folder} = ctx) do
+    with {:ok, urls} <- Figma.image_urls(credential, link.file_key) do
       import_all(page, urls, {images, ctx.frame_images}, Intake.context(actor, folder), ctx.fit)
     end
   end
