@@ -173,3 +173,54 @@ test('two inserted rows keep their places when another field patches the form, a
   await saved.getByRole('button', { name: 'Edit', exact: true }).click()
   await expectValues(saved.locator('.string-list[id$="_alternate_names"]'), ['Coaching', 'Advice', 'Guidance', 'Help', 'Support', ''])
 })
+
+// Another form on the page, such as an entry's notes drawer, submitted on
+// its own: the identity is not saved, so the inserted row stays pending
+const submitAnotherForm = async page => {
+  await page.evaluate(() => {
+    const form = document.createElement('form')
+    form.addEventListener('submit', event => event.preventDefault())
+    document.body.append(form)
+    form.requestSubmit()
+    form.remove()
+  })
+}
+
+test('an inserted row keeps its place when another form on the page is submitted', async ({ page }) => {
+  const names = await savedService(page, 'Coaching', ['Advice', 'Guidance'])
+
+  await insertAbove(names, 1)
+  await expectValues(names, ['Advice', '', 'Guidance', ''])
+
+  await submitAnotherForm(page)
+  await changeIdentityName(page, 'Patched after a note')
+  await expectValues(names, ['Advice', '', 'Guidance', ''])
+})
+
+// The identity's name changed without moving focus, so the patch arrives
+// while the focus is where the editor left it
+const changeIdentityNameInPlace = async (page, value) => {
+  await page.evaluate(value => {
+    const input = document.querySelector('input[name$="[name]"]:not([name*="[services]"])')
+    input.value = value
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  }, value)
+  await page.waitForTimeout(STRING_LIST_DEBOUNCE_MS + 50)
+  await syncLV(page)
+}
+
+test("a patch leaves the focus on an inserted row's Remove button", async ({ page }) => {
+  const names = await savedService(page, 'Advising', ['Advice', 'Guidance'])
+
+  await insertAbove(names, 1)
+  await expect(values(names).nth(1)).toBeFocused()
+  await page.keyboard.press('Tab')
+  const remove = names.locator('.string-list-row').nth(1).getByRole('button', { name: 'Remove row' })
+  await expect(remove).toBeFocused()
+
+  await changeIdentityNameInPlace(page, 'Patched in place')
+  await expect(remove).toBeFocused()
+
+  await page.keyboard.press('Space')
+  await expectValues(names, ['Advice', 'Guidance', ''])
+})

@@ -17,10 +17,10 @@ import { prefersReducedMotion } from '../../motion'
 // rows are numbered without it, so their ids are the ones the server draws.
 // The pending rows are taken out before the patch, which then lands on the
 // rows it draws, and put back after it between the same server rows. A row
-// stops being pending when it is typed in or removed, when the form is saved,
-// when the server draws it itself (it holds the blank row in its params), or
-// when the patch changes the server's rows (another value, a restored
-// revision).
+// stops being pending when it is typed in or removed, when its own form is
+// saved (not another form on the page), when the server draws it itself (it
+// holds the blank row in its params), or when the patch changes the server's
+// rows (another value, a restored revision).
 //
 // Ids are renumbered after each change: when the server's render arrives,
 // every row is patched in place and the focused one keeps its focus.
@@ -48,7 +48,9 @@ export default () => ({
     this.onInput = (event) => {
       if (this.pending.delete(event.target.closest('.string-list-row'))) this.renumber()
     }
-    this.onSave = () => this.settle()
+    this.onSave = (event) => {
+      if (event.target === this.el.closest('form')) this.settle()
+    }
 
     this.el.addEventListener('click', this.onClick)
     this.el.addEventListener('input', this.onInput)
@@ -78,7 +80,8 @@ export default () => ({
     this.restore = []
     rows.forEach((row) => {
       if (this.pending.has(row)) {
-        this.restore.push({ row, before, focused: row.contains(document.activeElement) })
+        const focused = row.contains(document.activeElement) ? document.activeElement : null
+        this.restore.push({ row, before, focused })
         row.remove()
       } else {
         before++
@@ -98,7 +101,7 @@ export default () => ({
       rows[Math.min(before + index, rows.length - 1)].before(row)
     })
     this.renumber()
-    restore.find(({ focused }) => focused)?.row.querySelector('input').focus()
+    restore.find(({ focused }) => focused)?.focused.focus()
   },
 
   rows() {
