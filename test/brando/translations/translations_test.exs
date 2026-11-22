@@ -1252,8 +1252,9 @@ defmodule Brando.TranslationsTest do
 
       version = pending(en)
       assert Enum.any?(version.work_items, &(&1.kind == :awaiting_translation and &1.path == "parent/#{c.parent.id}"))
-      # The copy kept the source's parent; the pending version doesn't point it elsewhere yet
-      assert Translations.decode_payload(version).parent_id == c.parent.id
+      # Not under the source-language parent: under none until the parent's translation exists
+      assert is_nil(en.parent_id)
+      assert is_nil(Translations.decode_payload(version).parent_id)
 
       {:ok, parent_en} = Translations.create_target(Article, c.parent.id, :en, c.user)
 
@@ -1277,6 +1278,7 @@ defmodule Brando.TranslationsTest do
       {:ok, parent_en} = Translations.create_target(Article, c.parent.id, :en, c.user)
       {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
 
+      assert en.parent_id == parent_en.id
       assert Translations.decode_payload(pending(en)).parent_id == parent_en.id
       assert Translations.entry_map(c.source, Article, "en") == %{c.parent.id => parent_en.id}
     end

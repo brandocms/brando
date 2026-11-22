@@ -124,8 +124,10 @@ defmodule Brando.Pages do
   refused leaves the page where it was.
 
   Returns `{:error, {:fragments, :target_not_found}}` for a target page that
-  can't take them, and `{:error, {:fragments, :invalid_choice}}` for another
-  value of `:fragments`.
+  can't take them, `{:error, {:fragments, :group_has_synchronized_members}}`
+  when deleting would trash a fragment that is the source of synchronized
+  translations (as `delete_fragment/2` refuses it), and
+  `{:error, {:fragments, :invalid_choice}}` for another value of `:fragments`.
   """
   @spec delete_page(id, user, keyword) :: {:ok, page} | {:error, term}
   def delete_page(id, user \\ :system, opts \\ []) do
@@ -250,6 +252,7 @@ defmodule Brando.Pages do
     |> each_fragment(fn fragment ->
       with :ok <- Brando.Authorization.Boundary.authorize(user, :delete, fragment),
            :ok <- authorize_fragment_publish(user, fragment),
+           :ok <- guard_fragment_delete(fragment),
            do: {:ok, fragment}
     end)
     |> case do
@@ -328,6 +331,14 @@ defmodule Brando.Pages do
         {:ok, trashed}
       end
     end)
+  end
+
+  # A direct delete's guard: the source of synchronized translations stays
+  defp guard_fragment_delete(fragment) do
+    case Brando.Translations.guard_delete(Fragment, fragment) do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:fragments, reason}}
+    end
   end
 
   defp authorize_fragment_publish(user, %Fragment{status: :published} = fragment),

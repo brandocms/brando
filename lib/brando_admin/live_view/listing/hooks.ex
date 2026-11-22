@@ -147,6 +147,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:error, :group_has_synchronized_members} ->
         send(self(), {:toast, synchronized_members_message(schema, entry_id)})
 
+      {:error, {:fragments, :group_has_synchronized_members}} ->
+        send(self(), {:toast, synchronized_fragment_message()})
+
       {:error, {:fragments, :target_not_found}} ->
         send(
           self(),
@@ -392,6 +395,12 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   defp log_duplicate_error(singular, error) do
     Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
   end
+
+  defp synchronized_fragment_message,
+    do:
+      gettext(
+        "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
+      )
 
   defp synchronized_members_message(schema, entry_id) do
     if Brando.Translations.trashed_synchronized_targets?(schema, entry_id) do

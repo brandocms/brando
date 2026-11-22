@@ -10841,6 +10841,7 @@ msgstr "Linje %{from}–%{to} · %{where}"
 msgid "Lines written to robots.txt"
 msgstr "Linjer som skrives til robots.txt"
 
+#: lib/brando_admin/components/form/alternates_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
@@ -13173,6 +13174,7 @@ msgstr "Ikke tilkoblet"
 msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
 msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde."
 
+#: lib/brando_admin/live/pages/page_list_live.ex
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
@@ -13237,6 +13239,11 @@ msgstr "Ikke i bruk noe sted ennå."
 #, elixir-autogen, elixir-format
 msgid "Not included: %{rows}."
 msgstr "Ikke med: %{rows}."
+
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Not linked, with the same keys"
+msgstr "Ikke koblet, med de samme nøklene"
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
@@ -13600,6 +13607,11 @@ msgstr "Ingenting ble koblet til."
 #, elixir-autogen, elixir-format
 msgid "Nothing was connected. Start again from the app."
 msgstr "Ingenting ble koblet til. Start på nytt fra appen."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
+msgstr "Ingenting ble slettet: et fragment på denne siden er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -20894,6 +20906,11 @@ msgstr "Disse kontoene er ikke knyttet til noe nettsted og får ingen nettstedst
 #, elixir-autogen, elixir-format
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
 msgstr "Beskjæringene styres av bildeoppsettet. Plassering og zoom gjelder alle forhåndsvisningene."
+
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "These entries have this entry's keys in another language, but are not linked to it. Link one to make it this entry's version in its language."
+msgstr "Disse innleggene har dette innleggets nøkler på et annet språk, men er ikke koblet til det. Koble ett av dem for å gjøre det til dette innleggets versjon på sitt språk."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
