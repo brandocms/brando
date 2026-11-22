@@ -176,23 +176,20 @@ defmodule BrandoAdmin.Components.Form.Block do
   # insert_pasted_block — BlockField sends pasted block changeset to be inserted as child
   def update(%{event: "insert_pasted_block", block_cs: block_cs, sequence: sequence}, socket) do
     uid = Changeset.get_field(block_cs, :uid)
-    block_list = socket.assigns.block_list
-    new_block_list = List.insert_at(block_list, sequence, uid)
-
-    block_form = to_form(block_cs, as: "child_block", id: "child_block_form-#{uid}")
-    changesets = socket.assigns.changesets
-    updated_changesets = insert_child_changeset(changesets, uid, sequence)
     selector = "[data-block-uid=\"#{uid}\"]"
 
     socket
-    |> put_child_seed_form(uid, block_form)
-    |> assign(:has_children?, true)
-    |> assign(:block_list, new_block_list)
-    |> assign(:changesets, updated_changesets)
+    |> put_child(block_cs, sequence)
     |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(block_cs)})
     |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
+  end
+
+  # A child moved here from another parent (`BlockField`, "move_child"),
+  # which the store already holds.
+  def update(%{event: "insert_moved_child", block_cs: block_cs, sequence: sequence}, socket) do
+    {:ok, put_child(socket, block_cs, sequence)}
   end
 
   # Outline: reorder a child within this parent
@@ -217,47 +214,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
-    |> refresh_live_preview()
-    |> then(&{:ok, &1})
-  end
-
-  # Outline: extract a child for cross-parent move
-  def update(
-        %{event: "extract_child", child_uid: uid, target_parent_uid: target_uid, target_sequence: seq},
-        socket
-      ) do
-    block_list = socket.assigns.block_list
-    changesets = socket.assigns.changesets
-    children_forms = socket.assigns.children_forms
-
-    # Remove from lists
-    new_block_list = List.delete(block_list, uid)
-
-    new_changesets =
-      Enum.reject(changesets, fn
-        {^uid, _} -> true
-        _ -> false
-      end)
-
-    has_children? = new_block_list !== []
-
-    # Only the uid travels, not `children_forms[uid].source`: that map is a
-    # mount-time seed by design, so a child the user had edited would move as
-    # its ORIGINAL content and the target would re-register that stale diff,
-    # discarding every edit. BlockField rebuilds the child from the op store,
-    # which is the one place holding its current state.
-    send_to_ref(socket.assigns.parent_ref, %{
-      event: "insert_extracted_child",
-      target_parent_uid: target_uid,
-      child_uid: uid,
-      sequence: seq
-    })
-
-    socket
-    |> assign(:block_list, new_block_list)
-    |> assign(:changesets, new_changesets)
-    |> assign(:children_forms, Map.delete(children_forms, uid))
-    |> assign(:has_children?, has_children?)
     |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
@@ -2070,6 +2026,17 @@ defmodule BrandoAdmin.Components.Form.Block do
   # Child seed forms mirror BlockField's seed_forms: put on insert, drop on
   # delete, read once at a child's first mount — never reordered (block_list
   # is the one order truth) and never reconciled with mounted children.
+  defp put_child(socket, block_cs, sequence) do
+    uid = Changeset.get_field(block_cs, :uid)
+    block_form = to_form(block_cs, as: "child_block", id: "child_block_form-#{uid}")
+
+    socket
+    |> put_child_seed_form(uid, block_form)
+    |> assign(:has_children?, true)
+    |> assign(:block_list, List.insert_at(socket.assigns.block_list, sequence, uid))
+    |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
+  end
+
   defp put_child_seed_form(socket, uid, form) do
     update(socket, :children_forms, &Map.put(&1, uid, form))
   end
@@ -2449,6 +2416,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_put_empty_children(changeset, true) do
     changeset
   end
+
+  @doc """
+  The drag group of a multi module block's children. A child moves between
+  the multi blocks of one module, which take the same entry modules. The
+  canvas and the Outline (`"outline-" <> group`) both drag by it.
+  """
+  def multi_children_group(module_id, module_origin), do: "multi-#{module_origin || :local}-#{module_id}"
 
   @doc """
   Where `uid` goes when moved `by` places (-1 up, 1 down) among `order`, its

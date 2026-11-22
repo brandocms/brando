@@ -1,0 +1,1 @@
+- Block editor: an entry moved to another block that the editor can no longer take it into (another editor removed it) stays where it was instead of disappearing, and the block outline moves entries between multi blocks inside containers.

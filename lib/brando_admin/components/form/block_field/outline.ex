@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Block
 
   attr :id, :string, required: true
   attr :outline_items, :list, required: true
@@ -126,7 +127,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
   end
 
   defp children_group_name(%{type: :container}), do: "outline-container-children"
-  defp children_group_name(%{type: :module, multi: true, module_id: mid}), do: "outline-multi-#{mid}"
+
+  defp children_group_name(%{type: :module, multi: true, module_id: mid, module_origin: origin}),
+    do: "outline-" <> Block.multi_children_group(mid, origin)
+
   defp children_group_name(_), do: nil
 
   defp type_label(:module, true), do: gettext("Multi")
@@ -165,6 +169,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
       uid: block.uid,
       type: block.type,
       module_id: block.module_id,
+      module_origin: Map.get(block, :module_origin, :local),
       module_name: module_name,
       module_color: module_color,
       description: block.description,

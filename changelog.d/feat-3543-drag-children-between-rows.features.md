@@ -1,0 +1,1 @@
+- Block editor: an entry of a multi block can be dragged on the canvas into another block of the same multi module, which is highlighted while the entry is in hand.

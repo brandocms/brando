@@ -145,7 +145,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # structural events are refused before they touch the store, the bin or the
   # other editors. Content edits (`{:update, …}` ops) pass.
   @locked_events ~w(create_footnote duplicate_block paste_block paste_child_block delete_block
-                    insert_extracted_child insert_block insert_container insert_fragment remap_region)
+                    move_child insert_block insert_container insert_fragment remap_region)
 
   def update(%{event: event}, %{assigns: %{source_locked: true}} = socket) when event in @locked_events,
     do: {:ok, refuse_structure(socket, event)}
@@ -571,45 +571,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, socket}
   end
 
-  # Outline: relay extracted child to target parent.
-  #
-  # The child's changeset is rebuilt HERE, from the op store, rather than
-  # accepted from the source parent — that parent only holds a mount-time seed
-  # form, so a child taken from it would arrive with its original content and
-  # wipe the user's edits when the target re-registered its diff.
-  def update(
-        %{event: "insert_extracted_child", target_parent_uid: target_uid, child_uid: uid, sequence: seq},
-        socket
-      ) do
-    # `outline_reposition` already proved this materializes before it told the
-    # source parent to let go, so a failure here means the store changed
-    # underneath us. The source has by now dropped the child from its own
-    # `block_list`, and `rebuild_outline_items/1` only reflects the canonical
-    # store — so simply returning would leave the block invisible on the canvas
-    # while still alive server-side. Reload instead: the store is authoritative
-    # and re-mounting the roots from it restores a consistent view.
-    case build_child_changeset(socket, uid) do
-      {:ok, cs} ->
-        send_update(Block,
-          id: "block-#{target_uid}",
-          event: "insert_pasted_block",
-          block_cs: moved_child_changeset(cs, socket.assigns.current_user.id),
-          sequence: seq
-        )
-
-        {:ok, rebuild_outline_items(socket)}
-
-      {:error, reason} ->
-        require Logger
-
-        Logger.error("""
-        [BlockField] cross-parent move of #{inspect(uid)} failed AFTER the source parent \
-        released it: #{inspect(reason)}. Reloading blocks from the op store to avoid \
-        stranding it off-canvas.
-        """)
-
-        {:ok, socket |> reload_all_blocks() |> rebuild_outline_items()}
-    end
+  # A child dropped into another multi block on the canvas (`Block.Events`).
+  def update(%{event: "move_child", uid: uid, parent_uid: parent_uid, at: at}, socket) do
+    {:ok, move_child(socket, uid, parent_uid, at)}
   end
 
   # INSERT ROOT BLOCK
@@ -2107,6 +2071,47 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # block so cast_assoc has something to cast against.
   # Rebuild a child's changeset from the op store — the only holder of its
   # current content once its own component has been destroyed by a move.
+  # A child moved to another parent, dragged on the canvas or in the
+  # Outline. The store takes the move first, and only a move it took is
+  # shown: the parent the child leaves lets go of it and the one it joins
+  # takes it, so a move the store refuses (the parent is gone, or the
+  # translation follows its source) leaves the child where it was. The
+  # child goes as the store holds it, not as its old parent's seed form.
+  defp move_child(socket, uid, parent_uid, at) do
+    shown = socket.assigns.block_ops
+    from_uid = shown.parents[uid]
+
+    case build_child_changeset(socket, uid) do
+      {:ok, cs} when from_uid not in [nil, parent_uid] ->
+        moved = moved_child_changeset(cs, socket.assigns.current_user.id)
+        moved_socket = apply_block_op(socket, {:insert_child, parent_uid, uid, at, Ops.block_diff_params(moved)})
+
+        if moved_socket.assigns.block_ops.parents[uid] == parent_uid do
+          send_update(Block, id: component_id(shown, from_uid), event: "release_children", uids: [uid])
+
+          send_update(Block,
+            id: component_id(shown, parent_uid),
+            event: "insert_moved_child",
+            block_cs: moved,
+            sequence: at
+          )
+
+          moved_socket
+          |> refresh_live_preview()
+          |> rebuild_outline_items()
+        else
+          moved_socket
+        end
+
+      {:ok, _cs} ->
+        socket
+
+      {:error, reason} ->
+        Logger.error("BlockField (#{socket.assigns.block_field}) did not move #{inspect(uid)}: #{inspect(reason)}")
+        socket
+    end
+  end
+
   defp build_child_changeset(socket, uid) do
     with {:ok, params} <- Ops.materialize_child(socket.assigns.block_ops, uid) do
       {:ok,
@@ -2606,7 +2611,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # rows already. Re-seeding one re-sends its whole form (~8 KB, one frame
   # per root) even when nothing in it changed — 1.1 MB for a save at 115
   # roots. See `holds_persisted?/2` for what "provably" means.
-  defp reload_all_blocks(socket, scope \\ :all) do
+  defp reload_all_blocks(socket, scope) do
     socket = assign(socket, :restored_blocks, %{})
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
@@ -3177,43 +3182,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_idx = params["new"]
 
     if from_parent_uid == to_parent_uid do
-      # Same parent: reorder children
       send_update(Block,
-        id: "block-#{from_parent_uid}",
+        id: component_id(socket.assigns.block_ops, from_parent_uid),
         event: "outline_reorder_child",
         child_uid: uid,
         old: old_idx,
         new: new_idx
       )
+
+      {:noreply, rebuild_outline_items(socket)}
     else
-      # Cross-parent: extract from source, insert into target.
-      #
-      # Pre-flight the rebuild BEFORE telling the source to release the child.
-      # `extract_child` drops it from the source's `block_list`/`changesets`
-      # unconditionally, so discovering a problem afterwards leaves the block
-      # off-canvas with no rollback path. Failing here instead is a clean no-op:
-      # nothing has moved yet.
-      case build_child_changeset(socket, uid) do
-        {:ok, _cs} ->
-          send_update(Block,
-            id: "block-#{from_parent_uid}",
-            event: "extract_child",
-            child_uid: uid,
-            target_parent_uid: to_parent_uid,
-            target_sequence: new_idx
-          )
-
-        {:error, reason} ->
-          require Logger
-
-          Logger.error("""
-          [BlockField] refusing cross-parent move of #{inspect(uid)}: #{inspect(reason)}. \
-          The block stays under its original parent.
-          """)
-      end
+      {:noreply, move_child(socket, uid, to_parent_uid, new_idx)}
     end
-
-    {:noreply, rebuild_outline_items(socket)}
   end
 
   def handle_event("show_block_picker", _, socket) do

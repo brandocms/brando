@@ -106,6 +106,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           data-sortable-id={"sortable-blocks-multi-#{@uid}"}
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".block"
+          data-blocks-wrapper-type={Block.multi_children_group(@module_id, @module_origin)}
+          data-parent-uid={@uid}
         >
           <div
             :for={

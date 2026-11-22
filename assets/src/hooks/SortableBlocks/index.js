@@ -32,13 +32,27 @@ export default app => ({
       // A few pixels of travel during an ordinary click is not a drag.
       fallbackTolerance: 4,
 
-      onStart: e => (isDragging = true), // prevent phx-blur from firing while dragging
+      onStart: e => {
+        isDragging = true // prevent phx-blur from firing while dragging
+        this.dropTargets(group).forEach(list => list.classList.add('is-drop-target'))
+      },
       onEnd: e => {
         isDragging = false
+        this.dropTargets(group).forEach(list => list.classList.remove('is-drop-target'))
+        // A drop into another list is the server's to show: the block goes
+        // back, and the render moves it, or leaves it there when the server
+        // refuses the move.
+        if (e.from !== e.to) e.from.insertBefore(e.item, e.from.children[e.oldIndex] || null)
         let params = { old: e.oldIndex, new: e.newIndex, to: {...e.to.dataset}, from: {...e.from.dataset}, ...e.item.dataset }
         this.pushEventTo(this.el, this.el.dataset['drop'] || 'reposition', params)
         renumberFootnotes(this.el)
       }
     })
+  },
+
+  // The other lists of this list's group, which take what is dragged from it.
+  dropTargets(group) {
+    if (!group) return []
+    return [...document.querySelectorAll(`[data-blocks-wrapper-type="${group}"]`)].filter(list => list !== this.el)
   }
 })
