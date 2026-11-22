@@ -650,7 +650,13 @@ defmodule BrandoAdmin.Sites.MCPLive do
   def handle_event("replace_figma_token", _params, socket), do: {:noreply, assign(socket, :figma_form?, true)}
   def handle_event("cancel_figma_token", _params, socket), do: {:noreply, assign(socket, :figma_form?, false)}
 
-  def handle_event("test_figma_token", _params, socket), do: {:noreply, check_figma_token(socket)}
+  # Another administrator may have replaced or removed the token since the
+  # page was loaded, and the day may have turned: Test shows the token
+  # stored now, on today's date
+  def handle_event("test_figma_token", _params, socket) do
+    figma = MCP.figma_token_status(socket.assigns.tenant)
+    {:noreply, socket |> assign(figma: figma, today: Figma.today()) |> check_figma_token()}
+  end
 
   def handle_event("save_figma_token", %{"token" => token} = params, socket) do
     %{current_user: user, tenant: tenant} = socket.assigns

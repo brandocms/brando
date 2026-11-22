@@ -170,6 +170,42 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       refute has_element?(view, "[data-testid=mcp-figma-check] .badge--error")
     end
 
+    test "Test shows the token stored now, on today's date, as another administrator left it",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      today = Brando.Figma.today()
+      :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user, expires_on: Date.add(today, 30))
+      stub_me(200, %{"handle" => "Ada"})
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert check_state(view) == "valid"
+
+      # Replaced elsewhere while the page is open
+      :ok = MCP.put_figma_token(tenant, "figd_second-token-2222", user, expires_on: Date.add(today, 3))
+      stub_me(401, %{"status" => 401, "err" => "Invalid token"})
+      view |> element("[data-testid=mcp-figma-test]") |> render_click()
+      assert check_state(view) == "invalid"
+      assert has_element?(view, "[data-testid=mcp-figma-hint]", "2222")
+      assert has_element?(view, ~s([data-testid=mcp-figma-expiry][data-expiry="soon"]))
+      refute render(view) =~ "1111"
+
+      # A page opened yesterday warns from today: 7 days left, not 8
+      Repo.update_all(Setting, set: [figma_token_expires_on: Date.add(today, 7)])
+
+      :sys.replace_state(view.pid, fn state ->
+        put_in(state.socket.assigns[:today], Date.add(today, -1))
+      end)
+
+      view |> element("[data-testid=mcp-figma-test]") |> render_click()
+      assert has_element?(view, ~s([data-testid=mcp-figma-expiry][data-expiry="soon"].is-warning))
+
+      # Removed elsewhere: the page says there is none, and Test goes with it
+      :ok = MCP.delete_figma_token(tenant, user)
+      view |> element("[data-testid=mcp-figma-test]") |> render_click()
+      render_async(view)
+      refute has_element?(view, "[data-testid=mcp-figma-hint]")
+      refute has_element?(view, "[data-testid=mcp-figma-test]")
+      assert has_element?(view, "[data-testid=mcp-figma-form]")
+    end
+
     test "a token that cannot be decrypted is not sent to Figma", %{conn: conn, tenant: tenant, current_user: user} do
       :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user)
       Repo.update_all(Setting, set: [figma_token: Brando.Crypto.encrypt("figd_first-token-1111", "another context")])
