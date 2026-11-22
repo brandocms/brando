@@ -7926,9 +7926,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The image editor's point with the mode the editor shows it in. A mode sent
-  # with the point is stored as sent, moved or not (`Images.Focal.cast/2`).
-  defp editor_focal(params),
-    do: %{x: params["focal_x"], y: params["focal_y"], mode: Images.Focal.mode(%{mode: params["focal_mode"]})}
+  # with the point is stored as sent, moved or not (`Images.Focal.cast/2`). A
+  # page loaded before the editor sent its mode sends none, and the cast decides.
+  defp editor_focal(%{"focal_mode" => mode} = params),
+    do: %{x: params["focal_x"], y: params["focal_y"], mode: Images.Focal.mode(%{mode: mode})}
+
+  defp editor_focal(params), do: %{x: params["focal_x"], y: params["focal_y"]}
 
   # A form field's input name at a path as the form names it:
   # `article[items][1][cover_id]`.
