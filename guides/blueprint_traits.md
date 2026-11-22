@@ -137,6 +137,9 @@ that links an entry to its translations.
 * `alternates:`: whether translations are linked. Default `true`; synchronized
   mode needs it.
 * `runtime_config:`: read the options from application config at runtime.
+* `matched_by:`: the attributes an entry's language versions share, such as
+  a fragment's keys. An entry with them in another language is one of its
+  versions, linked or not.
 
 The options are checked after the Blueprint compiles. Listings show the
 editor's content language and offer duplicate-to-language actions; the form

@@ -1,0 +1,3 @@
+- A new synchronized translation is placed under its parent's (or a fragment's page's) version in its language, and under none until that version exists, instead of under the source-language parent.
+- A synchronized `belongs_to` relation to another schema with language links follows the source onto the related entry's version in the translation's language, as a page's parent does.
+- `trait :translatable, matched_by: [...]` names the attributes an entry's language versions share; an unlinked entry with them in a language counts as its version there.

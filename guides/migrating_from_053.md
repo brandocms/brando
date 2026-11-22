@@ -685,6 +685,13 @@ sender first, before the first compile.
   pasted Figma token keeps using it, with its expiry date, until an
   administrator connects Figma. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. See [Connect Figma](mcp.md#connect-figma).
+- **Language links for fragments.** `brando_244` adds
+  `pages_fragments_alternates` in every site environment, where an
+  installation that ran `brando_93` before does not have it already.
+  Fragments are not linked by it: run `mix brando.fragments.pair` to see
+  which fragments with the same keys it would link, then with `--apply`. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
+  [Synchronized fragments](i18n.md#synchronized-fragments).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
