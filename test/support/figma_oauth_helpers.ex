@@ -9,6 +9,7 @@ defmodule Brando.FigmaOAuthHelpers do
 
   alias Brando.MCP
   alias Brando.MCP.Setting
+  alias Plug.Conn
 
   @client_id "figma-client-id-AB12"
   @client_secret "figma-client-secret-CD34"
@@ -24,18 +25,18 @@ defmodule Brando.FigmaOAuthHelpers do
   """
   def stub_figma(answer, test \\ self()) do
     Req.Test.stub(Brando.Figma, fn conn ->
-      {:ok, body, conn} = Plug.Conn.read_body(conn)
-      conn = Plug.Conn.fetch_query_params(conn)
+      {:ok, body, conn} = Conn.read_body(conn)
+      conn = Conn.fetch_query_params(conn)
       params = Map.merge(conn.query_params, URI.decode_query(body))
 
       headers =
         Map.new(~w(authorization x-figma-token), fn name ->
-          {name, conn |> Plug.Conn.get_req_header(name) |> List.first()}
+          {name, conn |> Conn.get_req_header(name) |> List.first()}
         end)
 
       send(test, {:figma, conn.method, conn.request_path, params, headers})
       {status, json} = answer.(conn.method, conn.request_path, params)
-      conn |> Plug.Conn.put_status(status) |> Req.Test.json(json)
+      conn |> Conn.put_status(status) |> Req.Test.json(json)
     end)
   end
 

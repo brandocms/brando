@@ -209,10 +209,13 @@ defmodule Brando.Figma do
   def check_token(tenant) do
     case OAuth.connection_state(tenant) do
       :connected -> check({:oauth, tenant})
-      :none -> with({:ok, token} <- token(tenant), do: check(token), else: (_ -> :no_token))
+      :none -> check_pasted(token(tenant))
       state -> state
     end
   end
+
+  defp check_pasted({:ok, token}), do: check(token)
+  defp check_pasted({:error, _message}), do: :no_token
 
   @doc """
   Asks Figma about `token` with `GET /v1/me`, which needs the token's
@@ -300,7 +303,8 @@ defmodule Brando.Figma do
     end
   end
 
-  @doc false
+  @doc "How the tools say when a pasted token expires, `days` from today, on `date`."
+  @spec expiry_text(Date.t(), non_neg_integer()) :: String.t()
   def expiry_text(date, 0), do: "The site's Figma token expires today (#{Date.to_iso8601(date)})."
   def expiry_text(date, 1), do: "The site's Figma token expires tomorrow (#{Date.to_iso8601(date)})."
   def expiry_text(date, days), do: "The site's Figma token expires on #{Date.to_iso8601(date)}, in #{days} days."
@@ -326,19 +330,20 @@ defmodule Brando.Figma do
 
   defp authorized({:oauth, tenant}, path, params) do
     with {:ok, access} <- oauth_access(tenant, nil) do
-      case request(bearer(access), path, params) do
-        {:refused, %Req.Response{status: status} = response} = refused when status in [401, 403] ->
-          if expired?(figma_error(response)) do
-            with {:ok, renewed} <- oauth_access(tenant, access), do: request(bearer(renewed), path, params)
-          else
-            refused
-          end
-
-        answer ->
-          answer
-      end
+      bearer(access) |> request(path, params) |> renew_if_expired(tenant, access, path, params)
     end
   end
+
+  # Once more with a renewed token, when Figma answered that `access` expired
+  defp renew_if_expired({:refused, %Req.Response{status: status} = response} = refused, tenant, access, path, params)
+       when status in [401, 403] do
+    with true <- expired?(figma_error(response)) || refused,
+         {:ok, renewed} <- oauth_access(tenant, access) do
+      request(bearer(renewed), path, params)
+    end
+  end
+
+  defp renew_if_expired(answer, _tenant, _access, _path, _params), do: answer
 
   defp oauth_access(tenant, rejected) do
     case OAuth.access_token(tenant, rejected) do
@@ -349,8 +354,12 @@ defmodule Brando.Figma do
 
   defp bearer(token), do: [{"authorization", "Bearer " <> token}]
 
-  @doc false
-  # What a tool says when the OAuth connection cannot be used
+  @doc """
+  What a tool says when the site's OAuth connection cannot be used, for
+  `reason` (`Brando.Figma.OAuth.access_token/2`'s errors and the states
+  `:needs_reconnect` and `:needs_repair`).
+  """
+  @spec oauth_message(atom()) :: String.t()
   def oauth_message(:needs_reconnect),
     do:
       "The site's connection to Figma no longer works: Figma refused to renew it, as after it was revoked in Figma. " <>
@@ -393,23 +402,13 @@ defmodule Brando.Figma do
 
     cond do
       expired?(err) ->
-        if kind == :oauth,
-          do: "The site's access to Figma has expired, and could not be renewed. " <> @reconnect,
-          else: "The site's Figma token has expired. " <> @replace_token
-
-      scope?(err) and kind == :oauth ->
-        "The site's connection to Figma lacks the permission to read files (file_content:read)." <>
-          said(err) <> " " <> @reconnect
+        expired_refusal(kind)
 
       scope?(err) ->
-        "The site's Figma token lacks the permission to read files (file_content:read)." <>
-          said(err) <> " " <> @replace_token
-
-      (status == 401 or token?(err)) and kind == :oauth ->
-        "Figma does not accept the site's connection." <> said(err) <> " " <> @reconnect
+        "#{whose(kind)} lacks the permission to read files (file_content:read)." <> said(err) <> fix(kind)
 
       status == 401 or token?(err) ->
-        "Figma does not accept the site's token." <> said(err) <> " " <> @replace_token
+        "Figma does not accept #{what(kind)}." <> said(err) <> fix(kind)
 
       true ->
         "Figma refused: #{owner(kind)} cannot open this file. Check that the file is shared with #{them(kind)}." <>
@@ -430,6 +429,18 @@ defmodule Brando.Figma do
   end
 
   defp refusal(%Req.Response{status: status}, _kind), do: "Figma answered #{status}. Try again in a moment."
+
+  defp expired_refusal(:oauth), do: "The site's access to Figma has expired, and could not be renewed. " <> @reconnect
+  defp expired_refusal(:token), do: "The site's Figma token has expired. " <> @replace_token
+
+  defp whose(:oauth), do: "The site's connection to Figma"
+  defp whose(:token), do: "The site's Figma token"
+
+  defp what(:oauth), do: "the site's connection"
+  defp what(:token), do: "the site's token"
+
+  defp fix(:oauth), do: " " <> @reconnect
+  defp fix(:token), do: " " <> @replace_token
 
   defp owner(:token), do: "the token's owner"
   defp owner(:oauth), do: "the connected Figma account"

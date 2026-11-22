@@ -175,27 +175,7 @@ defmodule Brando.Figma.OAuth do
         {:error, :invalid_app}
 
       true ->
-        now = DateTime.utc_now()
-
-        locked(tenant, fn setting ->
-          same_app? = setting != nil and match?({:ok, ^client_id, _}, app_credentials(setting, tenant))
-          replaced? = setting != nil and not is_nil(setting.figma_client_id)
-          disconnected? = setting != nil and not same_app? and not is_nil(setting.figma_oauth_connected_at)
-
-          fields =
-            [
-              figma_client_id: Brando.Crypto.encrypt(client_id, context(tenant, :client_id)),
-              figma_client_id_hint: String.slice(client_id, -4, 4),
-              figma_client_secret: Brando.Crypto.encrypt(client_secret, context(tenant, :client_secret)),
-              figma_app_set_at: now,
-              figma_app_set_by_id: actor.id
-            ] ++ if(same_app?, do: [], else: connection_fields())
-
-          setting = upsert(tenant, setting, fields)
-          details = %{"figma_app" => if(replaced?, do: "replaced", else: "added")}
-          record(tenant, setting, actor, if(disconnected?, do: Map.put(details, "figma_oauth", "removed"), else: details))
-          :ok
-        end)
+        locked(tenant, &save_app(&1, tenant, client_id, client_secret, actor))
     end
   end
 
@@ -245,6 +225,27 @@ defmodule Brando.Figma.OAuth do
     else
       {:error, :forbidden}
     end
+  end
+
+  defp save_app(setting, tenant, client_id, client_secret, actor) do
+    same_app? = setting != nil and match?({:ok, ^client_id, _}, app_credentials(setting, tenant))
+    replaced? = setting != nil and not is_nil(setting.figma_client_id)
+    disconnected? = setting != nil and not same_app? and not is_nil(setting.figma_oauth_connected_at)
+
+    fields =
+      [
+        figma_client_id: Brando.Crypto.encrypt(client_id, context(tenant, :client_id)),
+        figma_client_id_hint: String.slice(client_id, -4, 4),
+        figma_client_secret: Brando.Crypto.encrypt(client_secret, context(tenant, :client_secret)),
+        figma_app_set_at: DateTime.utc_now(),
+        figma_app_set_by_id: actor.id
+      ] ++ if(same_app?, do: [], else: connection_fields())
+
+    setting = upsert(tenant, setting, fields)
+    details = %{"figma_app" => if(replaced?, do: "replaced", else: "added")}
+    details = if disconnected?, do: Map.put(details, "figma_oauth", "removed"), else: details
+    record(tenant, setting, actor, details)
+    :ok
   end
 
   # Client ids and secrets are printable ASCII without spaces
@@ -334,7 +335,7 @@ defmodule Brando.Figma.OAuth do
       {:ok, setting, pending} ->
         tenant = tenant_of(setting)
 
-        with :ok <- if(MCP.can_manage?(user, tenant), do: :ok, else: :forbidden),
+        with :ok <- permitted(user, tenant),
              :ok <- code_given(params),
              :ok <- unchanged(setting, pending),
              {:ok, client_id, secret} <- app_or_changed(setting, tenant),
@@ -354,6 +355,8 @@ defmodule Brando.Figma.OAuth do
   end
 
   def finish(_params, _user, _session_id), do: {:error, :unknown, nil}
+
+  defp permitted(user, tenant), do: if(MCP.can_manage?(user, tenant), do: :ok, else: :forbidden)
 
   # The pending connection `state` names, taken off the row when it is this
   # person's and session's and not past its time (then gone too)
@@ -493,20 +496,13 @@ defmodule Brando.Figma.OAuth do
   @spec access_token(tenant(), String.t() | nil) ::
           {:ok, String.t()} | {:error, :disconnected | :needs_reconnect | :needs_repair | :busy | :unreachable}
   def access_token(tenant, rejected \\ nil) do
-    case tenant |> MCP.setting_query() |> Repo.one() do
-      %Setting{} = setting ->
-        case usable(setting, tenant) do
-          {:ok, %{access: access}} ->
-            if is_nil(rejected) and fresh?(setting.figma_oauth_expires_at),
-              do: {:ok, access},
-              else: refresh(tenant, rejected)
+    setting = tenant |> MCP.setting_query() |> Repo.one()
 
-          error ->
-            error
-        end
-
-      nil ->
-        {:error, :disconnected}
+    with %Setting{} <- setting || {:error, :disconnected},
+         {:ok, %{access: access}} <- usable(setting, tenant) do
+      if is_nil(rejected) and fresh?(setting.figma_oauth_expires_at),
+        do: {:ok, access},
+        else: refresh(tenant, rejected)
     end
   end
 
@@ -525,29 +521,28 @@ defmodule Brando.Figma.OAuth do
 
   defp refresh(tenant, rejected) do
     locked(tenant, fn setting ->
-      with %Setting{} <- setting,
+      with %Setting{} <- setting || {:error, :disconnected},
            {:ok, secrets} <- usable(setting, tenant) do
-        cond do
-          # Another call refreshed while this one waited
-          rejected && secrets.access != rejected -> {:ok, secrets.access}
-          is_nil(rejected) and fresh?(setting.figma_oauth_expires_at) -> {:ok, secrets.access}
-          true -> refresh_locked(setting, tenant, secrets)
-        end
-      else
-        nil -> {:error, :disconnected}
-        error -> error
+        refresh_unless_done(setting, tenant, secrets, rejected)
       end
     end)
+  end
+
+  # Another call may have renewed the token while this one waited
+  defp refresh_unless_done(_setting, _tenant, %{access: access}, rejected)
+       when is_binary(rejected) and access != rejected,
+       do: {:ok, access}
+
+  defp refresh_unless_done(setting, tenant, secrets, rejected) do
+    if is_nil(rejected) and fresh?(setting.figma_oauth_expires_at),
+      do: {:ok, secrets.access},
+      else: refresh_locked(setting, tenant, secrets)
   end
 
   defp refresh_locked(setting, tenant, secrets) do
     case post("/v1/oauth/refresh", [refresh_token: secrets.refresh], secrets.client_id, secrets.client_secret) do
       {:ok, %{"access_token" => access} = answer} when is_binary(access) and access != "" ->
-        refresh_token =
-          case answer["refresh_token"] do
-            token when is_binary(token) and token != "" -> token
-            _kept -> secrets.refresh
-          end
+        refresh_token = kept_refresh_token(answer["refresh_token"], secrets.refresh)
 
         upsert(tenant, setting,
           figma_oauth_access_token: Brando.Crypto.encrypt(access, context(tenant, :access_token)),
@@ -567,6 +562,10 @@ defmodule Brando.Figma.OAuth do
         {:error, :unreachable}
     end
   end
+
+  # Figma's documented answer to a refresh has no refresh token: keep ours
+  defp kept_refresh_token(token, _kept) when is_binary(token) and token != "", do: token
+  defp kept_refresh_token(_none, kept), do: kept
 
   defp expires_at(seconds, now) when is_integer(seconds) and seconds > 0, do: DateTime.add(now, seconds, :second)
   defp expires_at(_seconds, _now), do: nil

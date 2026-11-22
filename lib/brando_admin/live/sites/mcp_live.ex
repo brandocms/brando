@@ -953,17 +953,17 @@ defmodule BrandoAdmin.Sites.MCPLive do
         assign(socket, figma_check: nil, figma_check_for: nil)
 
       true ->
-        case {socket.assigns.figma, Figma.token(tenant)} do
-          {%{readable: true}, {:ok, token}} ->
-            socket
-            |> assign(figma_check: :checking, figma_check_for: :token)
-            |> start_async(:figma_check, fn -> Figma.check(token) end)
-
-          _no_token ->
-            assign(socket, figma_check: nil, figma_check_for: nil)
-        end
+        check_pasted_token(socket, socket.assigns.figma, Figma.token(tenant))
     end
   end
+
+  defp check_pasted_token(socket, %{readable: true}, {:ok, token}) do
+    socket
+    |> assign(figma_check: :checking, figma_check_for: :token)
+    |> start_async(:figma_check, fn -> Figma.check(token) end)
+  end
+
+  defp check_pasted_token(socket, _stored, _no_token), do: assign(socket, figma_check: nil, figma_check_for: nil)
 
   # A check that turns up a connection needing a reconnect shows it at once
   def handle_async(:figma_check, {:ok, check}, socket) when check in [:needs_reconnect, :needs_repair],

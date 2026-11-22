@@ -19,15 +19,17 @@ defmodule Brando.MCP.FigmaOAuthTest do
     %{tenant: MCP.tenant(nil, nil), user: user}
   end
 
+  # Newest first
   defp activity do
     Repo.all(
       from e in Brando.Activity.Event,
         where: e.schema == "Elixir.Brando.MCP.Setting",
-        order_by: [asc: e.id],
+        order_by: [desc: e.id],
         select: e.details
     )
-    |> Enum.map(&Map.drop(&1, ["origin", "client"]))
   end
+
+  defp last_activity, do: hd(activity())
 
   defp refreshes, do: for({:figma, "POST", "/v1/oauth/refresh", params, headers} <- messages(), do: {params, headers})
 
@@ -88,7 +90,7 @@ defmodule Brando.MCP.FigmaOAuthTest do
       assert %{state: :none, client_hint: "t-id"} = OAuth.status(tenant)
       assert no_connection?(tenant)
 
-      assert [_, %{"figma_app" => "replaced"}, %{"figma_app" => "replaced", "figma_oauth" => "removed"}] = activity()
+      assert [%{"figma_app" => "replaced", "figma_oauth" => "removed"}, %{"figma_app" => "replaced"}, _] = activity()
     end
 
     test "removing it removes the connection too, and calls use the pasted token again", %{tenant: tenant, user: user} do
@@ -100,7 +102,7 @@ defmodule Brando.MCP.FigmaOAuthTest do
       assert OAuth.status(tenant) == nil
       assert no_connection?(tenant)
       assert Figma.credential(tenant) == {:ok, @token}
-      assert %{"figma_app" => "removed"} = List.last(activity())
+      assert %{"figma_app" => "removed"} = last_activity()
     end
 
     test "disconnecting keeps the app, and calls use the pasted token again", %{tenant: tenant, user: user} do
@@ -111,7 +113,7 @@ defmodule Brando.MCP.FigmaOAuthTest do
       assert %{state: :none, client_hint: "AB12"} = OAuth.status(tenant)
       assert no_connection?(tenant)
       assert Figma.credential(tenant) == {:ok, @token}
-      assert %{"figma_oauth" => "disconnected"} = List.last(activity())
+      assert %{"figma_oauth" => "disconnected"} = last_activity()
 
       editor = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
       assert OAuth.disconnect(tenant, editor) == {:error, :forbidden}
@@ -366,7 +368,7 @@ defmodule Brando.MCP.FigmaOAuthTest do
       assert message =~ "Figma refused to renew it"
       assert message =~ "An administrator reconnects Figma"
       assert %{state: :needs_reconnect} = OAuth.status(tenant)
-      assert %{"figma_oauth" => "needs_reconnect"} = List.last(activity())
+      assert %{"figma_oauth" => "needs_reconnect"} = last_activity()
 
       # Not the pasted token, silently
       assert {:error, ^message} = Figma.credential(tenant)
