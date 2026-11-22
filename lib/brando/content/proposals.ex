@@ -107,7 +107,6 @@ defmodule Brando.Content.Proposals do
 
   @protected_fields ~w(id status publish_at unpublish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
   @text_vars [:string, :text, :rich_text]
-  @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
   # A uid chosen for a new block leaves room within what `Content.Block.valid_uid?/1`
   # admits for the suffix of a copy made of it: the edit session rescues a block
   # removed under an editor as `<uid>-kept`.
@@ -2400,17 +2399,7 @@ defmodule Brando.Content.Proposals do
   whichever of picture, video, gallery and file it makes available.
   """
   @spec accepts(Brando.Content.Ref.t()) :: [:image | :video | :file | :gallery]
-  def accepts(%{data: %{type: "picture"}}), do: [:image]
-  def accepts(%{data: %{type: "video"}}), do: [:video]
-  def accepts(%{data: %{type: "file"}}), do: [:file]
-  def accepts(%{data: %{type: "gallery"}}), do: [:gallery]
-
-  def accepts(%{data: %{type: "media", data: data}}) do
-    available = Map.get(data, :available_blocks) || ["picture", "video"]
-    for {kind, type} <- @media_kinds, type in available, do: kind
-  end
-
-  def accepts(_), do: []
+  defdelegate accepts(ref), to: BlockContent
 
   defp check_changesets(proposal, entries, user) do
     proposal

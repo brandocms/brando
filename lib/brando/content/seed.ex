@@ -27,6 +27,7 @@ defmodule Brando.Content.Seed do
   alias Brando.Content.BlockContent
   alias Brando.Content.Blocks
   alias Brando.Content.Module
+  alias Brando.Content.RefGuard
   alias Brando.Images.Intake
   alias Brando.Uploads
   alias Brando.Uploads.ContentType
@@ -83,13 +84,22 @@ defmodule Brando.Content.Seed do
     {cfg, config_target} = Uploads.resolve_video_config(nil)
 
     with {:ok, head} <- head(path),
-         [type | _] <- ContentType.video(head) do
+         [_ | _] = types <- ContentType.video(head) do
+      type = video_type(types, path, cfg.allowed_mimetypes)
       entry = %{client_name: Path.basename(path), client_type: type, client_size: File.stat!(path).size}
       Uploads.store_upload(%{path: path, config_target: config_target}, entry, cfg, user)
     else
       {:error, message} -> {:error, message}
       [] -> {:error, "#{path} is not a video file."}
     end
+  end
+
+  # A container can be several types (an MP4 or a QuickTime file): the one
+  # its extension names comes first, then the first the configuration allows
+  defp video_type(types, path, allowed) do
+    by_name = MIME.from_path(path)
+    types = if by_name in types, do: [by_name | List.delete(types, by_name)], else: types
+    Enum.find(types, hd(types), &(allowed == ["*"] or &1 in allowed))
   end
 
   defp head(path) do
@@ -115,12 +125,16 @@ defmodule Brando.Content.Seed do
       * a `Brando.Images.Image`, `Brando.Videos.Video` or `Brando.Files.File`
       * a list of images, videos or paths for a gallery ref: the block gets
         a new gallery of them. A saved `Brando.Galleries.Gallery` is used as is.
-      * a map of the ref's data fields, such as `%{text: "<p>Hi</p>", level: 2}`
+      * a map of the ref's data fields, such as `%{text: "<p>Hi</p>", level: 2}`.
+        An HTML or SVG ref takes its markup this way, from a superuser only,
+        as in the editor (`Brando.Content.RefGuard`).
       * `false`, to switch the ref off
 
-      A media ref, which an editor can fill with a picture, a video or a
-      gallery, takes the type of what it is given, with the module's
-      template for that type, as in the editor.
+      A ref takes the media its module gives it: a picture ref an image, a
+      gallery ref a gallery. A media ref, which an editor can fill with a
+      picture, a video or a gallery, takes the type of what it is given, if
+      the module makes that type available, with the module's template for
+      that type, as in the editor.
 
     * `vars:` — a map of var keys to values: a string, a boolean, an image,
       video or file (or a path to one, for an image or video var), a list of
@@ -128,7 +142,10 @@ defmodule Brando.Content.Seed do
       entry to link to.
 
   An unknown ref or var name raises `ArgumentError`, naming the ones the
-  module has, as does a file that cannot be uploaded.
+  module has, as do media a ref does not take (naming what it takes), a
+  string for a ref that holds no text, markup from a user who is not a
+  superuser, and a file that cannot be uploaded. A file path or a list for
+  a gallery needs `user`.
 
       block =
         Seed.block("image-row", user,
@@ -146,14 +163,18 @@ defmodule Brando.Content.Seed do
     end
   end
 
-  def block(%Module{id: id}, user, opts) when not is_nil(id), do: block(id, user, opts)
+  # A shared library's module keeps its origin: its id may name a local module too
+  def block(%Module{id: id} = module, user, opts) when not is_nil(id),
+    do: build({Map.get(module, :library_origin) || :local, id}, user, opts)
+
   def block(%Module{}, _user, _opts), do: raise(ArgumentError, "block/3 needs a saved module")
+  def block(module_id, user, opts) when is_integer(module_id), do: build({:local, module_id}, user, opts)
 
-  def block(module_id, user, opts) when is_integer(module_id) do
+  defp build({origin, module_id}, user, opts) do
     opts = Keyword.validate!(opts, refs: %{}, vars: %{})
-    module = Brando.Content.fetch_module(module_id, :local)
+    module = Brando.Content.fetch_module(module_id, origin)
 
-    module_id
+    {origin, module_id}
     |> Blocks.build_module_block(user && user.id, nil, nil, :module)
     |> put_refs(module, Map.new(opts[:refs]), user)
     |> put_vars(Map.new(opts[:vars]), user)
@@ -177,30 +198,74 @@ defmodule Brando.Content.Seed do
   defp put_ref(ref, false, _module, _user), do: Changeset.put_change(ref, :active, false)
 
   defp put_ref(ref, %Brando.Galleries.Gallery{id: id}, module, user) when not is_nil(id),
-    do: BlockContent.put_media(ref, {:gallery, id}, module, user)
+    do: put_media(ref, {:gallery, id}, module, user)
 
-  defp put_ref(ref, items, module, user) when is_list(items),
-    do: BlockContent.put_media(ref, {:gallery, Enum.map(items, &media!(&1, user))}, module, user)
+  defp put_ref(ref, items, module, user) when is_list(items) do
+    accepts!(ref, :gallery, module)
+    user!(user, "a new gallery")
+    put_media(ref, {:gallery, Enum.map(items, &media!(&1, user))}, module, user)
+  end
 
   defp put_ref(ref, value, module, user) when is_binary(value) do
     case Changeset.get_field(ref, :data) do
-      %{type: "picture"} -> BlockContent.put_media(ref, upload!(:image, value, user), module, user)
-      %{type: "video"} -> BlockContent.put_media(ref, upload!(:video, value, user), module, user)
-      %{type: "media"} -> BlockContent.put_media(ref, media!(value, user), module, user)
-      %{type: type} when type in ~w(gallery file) -> raise ArgumentError, "a #{type} ref takes #{@asset_hint[type]}"
-      _ -> BlockContent.put_text(ref, value)
+      %{type: type} when type in ~w(picture video media) ->
+        kind = path_kind(value)
+        accepts!(ref, kind, module)
+        put_media(ref, upload!(kind, value, user), module, user)
+
+      %{type: type} when type in ~w(gallery file) ->
+        raise ArgumentError, "a #{type} ref takes #{@asset_hint[type]}"
+
+      _ ->
+        BlockContent.put_text(ref, value)
     end
   end
 
   defp put_ref(ref, %struct{} = asset, module, user)
        when struct in [Brando.Images.Image, Brando.Videos.Video, Brando.Files.File],
-       do: BlockContent.put_media(ref, media!(asset, user), module, user)
+       do: put_media(ref, media!(asset, user), module, user)
 
-  defp put_ref(ref, fields, _module, _user) when is_map(fields) do
-    %{data: data} = block = Changeset.get_field(ref, :data)
+  defp put_ref(ref, fields, _module, user) when is_map(fields) do
+    %{type: type, data: data} = block = Changeset.get_field(ref, :data)
     fields = Map.new(fields, fn {key, value} -> {to_existing_atom(key), value} end)
+
+    markup = Enum.filter(RefGuard.markup_fields(type), &Map.has_key?(fields, &1))
+
+    if markup != [] and not RefGuard.may_change_markup?(user) do
+      raise ArgumentError,
+            "the ref #{inspect(Changeset.get_field(ref, :name))} holds markup only a superuser changes " <>
+              "(#{Enum.map_join(markup, ", ", &inspect/1)})"
+    end
+
     Changeset.put_change(ref, :data, %{block | data: struct!(data, fields)})
   end
+
+  defp put_media(ref, {kind, _} = media, module, user) do
+    accepts!(ref, kind, module)
+    BlockContent.put_media(ref, media, module, user)
+  end
+
+  @kind_names %{
+    image: "an image",
+    video: "a video",
+    file: "a file",
+    gallery: "a gallery (a list of images, videos or paths)"
+  }
+
+  # As the editor and proposals check: a ref takes the media kinds its
+  # module's definition makes available
+  defp accepts!(ref, kind, module) do
+    name = Changeset.get_field(ref, :name)
+    accepted = module.refs |> Enum.find(&(&1.name == name)) |> BlockContent.accepts()
+
+    unless kind in accepted do
+      takes = if accepted == [], do: "no media", else: Enum.map_join(accepted, " or ", &@kind_names[&1])
+      raise ArgumentError, "the ref #{inspect(name)} takes #{takes}, not #{@kind_names[kind]}"
+    end
+  end
+
+  defp user!(nil, what), do: raise(ArgumentError, "#{what} needs a user (`user:` in Brando.Test's helpers)")
+  defp user!(_user, _what), do: :ok
 
   defp put_vars(block, given, _user) when given == %{}, do: block
 
@@ -213,7 +278,12 @@ defmodule Brando.Content.Seed do
   end
 
   defp var_value(_type, value, _user) when is_boolean(value), do: value
-  defp var_value(:gallery, items, user) when is_list(items), do: {:gallery, Enum.map(items, &media!(&1, user))}
+
+  defp var_value(:gallery, items, user) when is_list(items) do
+    user!(user, "a new gallery")
+    {:gallery, Enum.map(items, &media!(&1, user))}
+  end
+
   defp var_value(type, path, user) when type in [:image, :video] and is_binary(path), do: upload!(type, path, user)
   defp var_value(:link, %{__struct__: schema, id: id}, _user) when is_integer(id), do: {:entry, schema, id}
 
@@ -227,19 +297,19 @@ defmodule Brando.Content.Seed do
   defp media!(%Brando.Videos.Video{id: id}, _user), do: {:video, id}
   defp media!(%Brando.Files.File{id: id}, _user), do: {:file, id}
 
-  # A path to a video file is uploaded as a video, any other as an image
-  defp media!(path, user) when is_binary(path) do
-    kind =
-      case head(path) do
-        {:ok, head} -> if ContentType.video(head) == [], do: :image, else: :video
-        # The upload says what is wrong
-        {:error, _} -> :image
-      end
+  defp media!(path, user) when is_binary(path), do: upload!(path_kind(path), path, user)
 
-    upload!(kind, path, user)
+  # A path to a video file is uploaded as a video, any other as an image
+  defp path_kind(path) do
+    case head(path) do
+      {:ok, head} -> if ContentType.video(head) == [], do: :image, else: :video
+      # The upload says what is wrong
+      {:error, _} -> :image
+    end
   end
 
   defp upload!(kind, path, user) do
+    user!(user, "uploading #{path}")
     result = if kind == :video, do: upload_video(path, user), else: upload_image(path, user)
 
     case result do
@@ -305,21 +375,40 @@ defmodule Brando.Content.Seed do
     * `at:` — the position of the first new block, from 0. Default: after
       the last.
 
+  An entry in the trash raises `ArgumentError`. Calls for one entry must not
+  run at the same time: each saves the blocks it read, and the entry's HTML
+  can end up without the other's.
+
   ## Example
 
       {:ok, page} = Seed.add_blocks(page, [Seed.block("text", user, refs: %{"body" => "<p>More</p>"})], user)
   """
   @spec add_blocks(struct(), [Changeset.t()], Brando.Users.User.t(), keyword()) :: {:ok, struct()} | {:error, term()}
-  def add_blocks(%schema{id: id}, blocks, user, opts \\ []) do
+  def add_blocks(%schema{id: id} = entry, blocks, user, opts \\ []) do
+    Brando.Tenant.ensure_current!(entry)
     opts = Keyword.validate!(opts, [:field, :at])
     field = opts[:field] || first_field!(schema)
-    {:ok, entry} = Brando.Blueprint.EntryQuery.get(schema, id)
+    entry = live_entry!(schema, id)
     saved = entry |> Map.fetch!(:"entry_#{field}") |> Enum.map(&Changeset.change/1)
 
     entry
     |> schema.changeset(%{}, user, nil, [])
     |> put_blocks(%{field => {saved, blocks, opts[:at] || length(saved)}})
     |> save(:update, user)
+  end
+
+  # `EntryQuery.get/2` finds an entry in the trash as well
+  defp live_entry!(schema, id) do
+    case Brando.Blueprint.EntryQuery.get(schema, id) do
+      {:ok, %{deleted_at: deleted_at}} when not is_nil(deleted_at) ->
+        raise ArgumentError, "#{inspect(schema)} #{id} is in the trash: restore it before adding blocks"
+
+      {:ok, entry} ->
+        entry
+
+      {:error, _} ->
+        raise ArgumentError, "there is no #{inspect(schema)} #{id}"
+    end
   end
 
   defp by_field(schema, [{field, _blocks} | _] = fields) when is_atom(field) do
@@ -377,7 +466,9 @@ defmodule Brando.Content.Seed do
   `Brando.Navigation.create_menu/2`. `text` is the link's text; for an entry
   it may be `nil`, to show the entry's title.
 
-    * `:key` — the item's key, a slug of `text` by default
+    * `:key` — the item's key. Without one it follows the link, as an
+      editor's item does (`Brando.Navigation.Item.DeriveKey`): `text` in
+      `snake_case`, or the linked entry's title
     * `:new_tab` — open the link in a new tab
 
   ## Example
@@ -397,8 +488,7 @@ defmodule Brando.Content.Seed do
   def menu_item(text, target, opts \\ []) do
     opts = Keyword.validate!(opts, [:key, :new_tab])
 
-    %{
-      key: opts[:key] || Brando.Utils.slugify(text || "link"),
+    item = %{
       status: :published,
       link:
         Map.merge(
@@ -406,6 +496,8 @@ defmodule Brando.Content.Seed do
           link(target)
         )
     }
+
+    if key = opts[:key], do: Map.put(item, :key, key), else: item
   end
 
   defp link(url) when is_binary(url), do: %{link_type: :url, value: url}

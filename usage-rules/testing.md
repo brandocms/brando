@@ -141,6 +141,10 @@ end
   [Creating content from code](../guides/seeding.md#blocks)).
 - `entry:` is the entry the template sees as `entry`.
 - `conn:` is for templates that read `request`.
+- `user:` is the block's creator. A path to upload or a list for a gallery
+  needs it, and an HTML or SVG ref's markup needs a superuser
+  (`insert_user/1` gives one); without it they raise. `insert_block/3`
+  always needs it.
 
 A var or ref the module does not have raises, listing the ones it has.
 

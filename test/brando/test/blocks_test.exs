@@ -54,6 +54,24 @@ defmodule Brando.Test.BlocksTest do
     assert_raise ArgumentError, ~r/no ref "image"/, fn -> render_block(module, refs: %{"image" => %{}}) end
   end
 
+  test "says user: is required for uploads, galleries and inserting", %{module: module, user: user} do
+    jpg = Path.expand("../../fixtures/sample.jpg", __DIR__)
+
+    assert_raise ArgumentError, ~r/user:/, fn -> render_block(module, refs: %{"cover" => jpg}) end
+    assert_raise ArgumentError, ~r/user:/, fn -> build_block(module, refs: %{"cover" => jpg}) end
+
+    gallery_module =
+      Brando.ProposalFixtures.module!(user, "Slides", ~s({% ref refs.slides %}),
+        refs: [Brando.ProposalFixtures.ref("slides", %{type: "gallery", data: %{}})]
+      )
+
+    {:ok, image} = Brando.Content.Seed.upload_image(jpg, user)
+    assert_raise ArgumentError, ~r/user:/, fn -> render_block(gallery_module, refs: %{"slides" => [image]}) end
+
+    page = insert_entry(Page, %{title: "Identity"}, user: user)
+    assert_raise ArgumentError, ~r/user:/, fn -> insert_block(page, module) end
+  end
+
   test "adds a block to an entry and renders the entry", %{module: module, user: user} do
     page = insert_entry(Page, %{title: "Identity"}, user: user)
     block = insert_block(page, module, vars: %{"heading" => "Added"}, user: user)

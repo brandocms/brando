@@ -14,9 +14,23 @@ defmodule Brando.Content.BlockContent do
   #     `{:entry, schema, id}` or `{:link, target, opts}`) or a plain value
 
   alias Brando.Content
+  alias Brando.Content.RefGuard
   alias Ecto.Changeset
 
   @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
+
+  # The media kinds a module ref takes (`Brando.Content.Proposals.accepts/1`)
+  def accepts(%{data: %{type: "picture"}}), do: [:image]
+  def accepts(%{data: %{type: "video"}}), do: [:video]
+  def accepts(%{data: %{type: "file"}}), do: [:file]
+  def accepts(%{data: %{type: "gallery"}}), do: [:gallery]
+
+  def accepts(%{data: %{type: "media", data: data}}) do
+    available = Map.get(data, :available_blocks) || ["picture", "video"]
+    for {kind, type} <- @media_kinds, type in available, do: kind
+  end
+
+  def accepts(_), do: []
 
   # A media slot is retyped from its module definition's template, as the
   # editor's media block does when an editor picks a picture, a video, a
@@ -63,17 +77,26 @@ defmodule Brando.Content.BlockContent do
     end
   end
 
-  # The field a ref's content lives in, by ref type.
-  # Never an HTML or SVG ref's markup (`text/3` refuses it before this).
+  # The field a ref's content lives in, by ref type. A ref without one, or
+  # whose text is markup (`RefGuard.markup_types/0`), raises: proposals
+  # refuse those before this.
   def put_text(ref, text) do
-    case Changeset.get_field(ref, :data) do
-      %{type: type} when type in ["html", "svg"] ->
-        ref
+    %{type: type, data: inner} = block = Changeset.get_field(ref, :data)
 
-      %{type: type, data: inner} = block ->
-        key = if type == "map", do: :embed_url, else: :text
-        Changeset.put_change(ref, :data, %{block | data: Map.put(inner, key, text)})
+    key =
+      cond do
+        type in RefGuard.markup_types() -> nil
+        type == "map" -> :embed_url
+        is_map_key(inner, :text) -> :text
+        true -> nil
+      end
+
+    if is_nil(key) do
+      raise ArgumentError,
+            "the ref #{inspect(Changeset.get_field(ref, :name))} holds no text: give its data fields as a map"
     end
+
+    Changeset.put_change(ref, :data, %{block | data: Map.put(inner, key, text)})
   end
 
   defp template(%{data: %{type: "media", data: data}}, "picture"),

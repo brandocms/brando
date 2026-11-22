@@ -75,19 +75,24 @@ Seed.block("teaser", user,
 A ref takes:
 
 - a string: the text of a text or header ref, or, for a picture, video or
-  media ref, the path of a file to upload;
+  media ref, the path of a file to upload. A ref that holds no text, such
+  as an HTML or SVG ref, raises: give it a map;
 - an image, video or file struct;
 - a list of images, videos or paths for a gallery ref, which makes the
   block a new gallery of them; a saved `Brando.Galleries.Gallery` is used
   as it is;
 - a map of the ref's data fields, such as `%{text: "Lobby", level: 2}` for
-  a header;
+  a header. An HTML or SVG ref's markup is set this way by a superuser
+  only, as in the editor;
 - `false`, to switch the ref off.
 
 Never give a picture ref its data (`PictureBlock` fields): the image goes in
-as a struct or a path, and the block renders it. A media ref, which an
-editor fills with a picture, a video or a gallery, takes the type of what it
-is given, with the module's template for that type.
+as a struct or a path, and the block renders it. A ref takes the media its
+module gives it, as in the editor: a picture ref an image, a gallery ref a
+gallery. A media ref, which an editor fills with a picture, a video or a
+gallery, takes the type of what it is given when the module makes that type
+available, with the module's template for that type. Anything else raises,
+and the message says what the ref takes.
 
 A var takes a string, a boolean, an image, video or file (or a path, for an
 image or video var), a list of images or videos for a gallery var, and for a
@@ -119,8 +124,11 @@ block field, or by field name:
 ```
 
 `Seed.add_blocks/4` adds blocks to an entry that exists, after its blocks or
-at `at:`, and saves it through `update_*`. Both return `{:ok, entry}`, or
-`{:error, changeset}` or `{:error, :forbidden}`, as the context does.
+at `at:`, and saves it through `update_*`; an entry in the trash raises.
+Both return `{:ok, entry}`, or `{:error, changeset}` or
+`{:error, :forbidden}`, as the context does. Do not run two `add_blocks/4`
+calls for one entry at the same time: each saves the blocks it read, and the
+entry's HTML can end up without the other's.
 
 ## Menus, identity and globals
 
@@ -143,9 +151,12 @@ entry:
 ```
 
 An entry's item links through the entry's identifier, and shows the entry's
-title when its text is `nil`. Delete an item with
+title when its text is `nil`. Without `key:`, an item's key follows its link
+as an editor's does: `"home"` for the first item here, and the entry's
+title in `snake_case` for the second. Delete an item with
 `Brando.Navigation.delete_item/2`, which takes the item or its id, as every
-generated `delete_*` function does.
+generated `delete_*` function does. An entry loaded in another environment
+raises: its id names another entry here.
 
 The site's identity is changed through `Brando.Sites`, and a global set's
 values by var key with `Seed.put_globals/4`:

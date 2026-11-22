@@ -30,6 +30,10 @@ defmodule Brando.Test.Blocks do
     * `entry:` — the entry the block belongs to, available to the template
       as `entry`. Default `nil`.
     * `conn:` — a conn, for templates that read `request`.
+    * `user:` — the block's creator. Required for a file path or a list
+      for a gallery, which are uploaded or made as the user, and a
+      superuser for an HTML or SVG ref's markup; `insert_user/1` gives one.
+      Without it, those raise `ArgumentError`.
 
   Rendering reads modules, containers and fragments from the database, so the
   module must be saved.
@@ -56,7 +60,8 @@ defmodule Brando.Test.Blocks do
   @doc """
   An unsaved `Brando.Content.Block` for `module` (a saved module or its id),
   as the block editor inserts it, with `vars:` and `refs:` applied as
-  `Brando.Content.Seed.block/3` describes.
+  `Brando.Content.Seed.block/3` describes, and `user:` as for
+  `render_block/2`.
   """
   @spec build_block(Module.t() | integer(), keyword()) :: Block.t()
   def build_block(module, opts \\ []) do
@@ -73,10 +78,12 @@ defmodule Brando.Test.Blocks do
 
   Options: `vars:` and `refs:` as for `render_block/2`, `field:` (the
   first block field by default), `sequence:` (after the existing blocks by
-  default) and `user:`, who saves the entry.
+  default) and `user:`, who saves the entry and needs the right to update
+  it. `user:` is required.
   """
   @spec insert_block(struct(), Module.t() | integer(), keyword()) :: Block.t()
   def insert_block(%schema{} = entry, module, opts \\ []) do
+    unless opts[:user], do: raise(ArgumentError, "insert_block/3 needs `user:`, who saves the entry")
     block = Seed.block(module, opts[:user], Keyword.take(opts, [:vars, :refs]))
     seed_opts = [field: opts[:field], at: opts[:sequence]] |> Enum.reject(&is_nil(elem(&1, 1)))
     {:ok, saved} = Seed.add_blocks(entry, [block], opts[:user], seed_opts)
