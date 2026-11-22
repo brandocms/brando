@@ -8844,16 +8844,7 @@ defmodule BrandoAdmin.Components.Form do
               action: :refresh_revisions
             )
 
-            # A refused revision left its errors in the form; a value
-            # corrected without a cast (another editor's) would show them on
-            # until its next cast
-            case socket.assigns.form.source do
-              %{valid?: true} ->
-                socket
-
-              source ->
-                put_form(socket, to_form(check_rich_text(source, socket, &Brando.RichText.recheck_form/2), []))
-            end
+            clear_refused_values(socket)
 
           {:error, reason} ->
             revision_error(socket, reason)
@@ -8871,6 +8862,15 @@ defmodule BrandoAdmin.Components.Form do
           socket.assigns.schema
         )
     end
+  end
+
+  # A refused revision left its errors in the form; a value corrected
+  # without a cast (another editor's) would show them until its next cast
+  defp clear_refused_values(%{assigns: %{form: %{source: %{valid?: true}}}} = socket), do: socket
+
+  defp clear_refused_values(socket) do
+    source = check_rich_text(socket.assigns.form.source, socket, &Brando.RichText.recheck_form/2)
+    put_form(socket, to_form(source, []))
   end
 
   defp revision_error(socket, reason) do
