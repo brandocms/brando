@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.AI.FieldAction
   alias Brando.Blueprint.Callback
+  alias Brando.Blueprint.ErrorTranslator
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Content.Blocks
   alias Brando.EditSession
@@ -8843,7 +8844,16 @@ defmodule BrandoAdmin.Components.Form do
               action: :refresh_revisions
             )
 
-            socket
+            # A refused revision left its errors in the form; a value
+            # corrected without a cast (another editor's) would show them on
+            # until its next cast
+            case socket.assigns.form.source do
+              %{valid?: true} ->
+                socket
+
+              source ->
+                put_form(socket, to_form(check_rich_text(source, socket, &Brando.RichText.recheck_form/2), []))
+            end
 
           {:error, reason} ->
             revision_error(socket, reason)
@@ -8959,15 +8969,19 @@ defmodule BrandoAdmin.Components.Form do
 
     error_keys = Map.keys(traversed_errors)
 
+    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
+
+    # A field this form does not draw (a named form that leaves it out) can
+    # still be refused: no input marks it, so the alert gives its messages
+    {drawn_keys, undrawn_keys} = Enum.split_with(error_keys -- grouped_keys, &ErrorTranslator.drawn?(&1, form))
+
     tab_with_first_error =
-      error_keys
+      (drawn_keys ++ error_keys)
       |> List.first()
       |> Brando.Blueprint.Forms.get_tab_for_field(form)
 
-    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
-
     translated_error_keys =
-      (error_keys -- grouped_keys)
+      drawn_keys
       |> Brando.Blueprint.Utils.translate_error_keys(form, schema)
       |> Kernel.++(group_items)
 
@@ -8982,14 +8996,31 @@ defmodule BrandoAdmin.Components.Form do
           "<li class=\"text-mono\">#{Alert.escape(path)}: #{Alert.escape(Enum.join(messages, ", "))}</li>"
         end
 
+    undrawn_items =
+      for key <- undrawn_keys do
+        messages = for {^key, error} <- changeset.errors, do: Primitives.translate_error(error)
+
+        "<li class=\"text-mono\">#{Alert.escape(ErrorTranslator.undrawn_label(key, schema))}: " <>
+          "#{Alert.escape(Enum.join(messages, ", "))}</li>"
+      end
+
+    undrawn_notice =
+      if undrawn_items != [] do
+        """
+        <br>#{gettext("This form does not show these fields:")}<br><br>
+        <ul class="error-keys">#{undrawn_items}</ul>
+        """
+      end
+
     error_msg = """
     #{error_notice}<br><br>
     <ul class="error-keys">#{all_error_items}</ul>
+    #{undrawn_notice}
     """
 
     require Logger
 
-    Logger.error("""
+    Logger.debug("""
 
 
     Changeset errors:

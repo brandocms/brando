@@ -12,6 +12,18 @@ defmodule Brando.Blueprint.ErrorTranslator do
   alias Brando.Content.Transfer.Labels
   alias Ecto.Changeset
 
+  # The meta drawer (`Brando.Trait.Meta`) edits these outside the Blueprint
+  # form, under these labels in Brando's own catalog.
+  @meta_drawer_labels %{
+    "meta_title" => "Meta title",
+    "meta_description" => "Meta description",
+    "meta_canonical_url" => "Canonical URL",
+    "meta_nosnippet" => "No snippet",
+    "meta_max_snippet" => "Snippet length",
+    "meta_image" => "Meta image",
+    "meta_image_id" => "Meta image"
+  }
+
   @doc """
   Returns translated labels for `error_keys` in the Blueprint `form`.
 
@@ -24,6 +36,22 @@ defmodule Brando.Blueprint.ErrorTranslator do
   def translate_keys(error_keys, form, schema) do
     Enum.map(error_keys, &translate_key(&1, form, schema, fn key -> log_missing_field(key, form) end))
   end
+
+  @doc """
+  Whether `form` has an input for `error_key`. The meta drawer's fields
+  count: the editor corrects them there.
+  """
+  @spec drawn?(atom() | String.t(), struct()) :: boolean()
+  def drawn?(error_key, form) do
+    Forms.get_field(error_key, form) != nil or Map.has_key?(@meta_drawer_labels, to_string(error_key))
+  end
+
+  @doc """
+  The label of a field the form does not draw: the one the schema's default
+  form gives it, else its humanized name.
+  """
+  @spec undrawn_label(atom() | String.t(), module()) :: String.t()
+  def undrawn_label(error_key, schema), do: Labels.field(schema, error_key)
 
   @doc """
   The fields of `changeset` that carry errors, at any depth: an error in a
@@ -118,18 +146,6 @@ defmodule Brando.Blueprint.ErrorTranslator do
     Code.ensure_loaded?(schema) and function_exported?(schema, :__naming__, 0) and
       function_exported?(schema, :__modules__, 0)
   end
-
-  # The meta drawer (`Brando.Trait.Meta`) edits these outside the Blueprint
-  # form, under these labels in Brando's own catalog.
-  @meta_drawer_labels %{
-    "meta_title" => "Meta title",
-    "meta_description" => "Meta description",
-    "meta_canonical_url" => "Canonical URL",
-    "meta_nosnippet" => "No snippet",
-    "meta_max_snippet" => "Snippet length",
-    "meta_image" => "Meta image",
-    "meta_image_id" => "Meta image"
-  }
 
   defp translate_key(error_key, form, schema, on_missing) do
     case {Forms.get_field(error_key, form), Map.get(@meta_drawer_labels, to_string(error_key))} do
