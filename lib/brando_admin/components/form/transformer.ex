@@ -122,22 +122,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # removed some: the items take them, on the written rows as their base,
   # as after any other editor's save (`entry_saved_elsewhere`).
   def update(%{event: "entry_saved", rows: rows} = assigns, socket) do
-    sent = socket.assigns.sent_dom_ids
-    written = (assigns[:written] || rows) |> Enum.sort_by(&Map.get(&1, :sequence))
-    saved = if length(written) == length(sent), do: Map.new(Enum.zip(sent, written)), else: %{}
-
-    lined_up? =
-      Enum.all?(socket.assigns.items, fn item ->
-        case Map.fetch(saved, item.dom_id) do
-          {:ok, row} -> item.is_new or row.id == item.source.id
-          :error -> true
-        end
-      end)
-
-    items =
-      if lined_up?,
-        do: Enum.map(socket.assigns.items, &saved_item(&1, Map.get(saved, &1.dom_id), socket.assigns.asset_fields)),
-        else: socket.assigns.items
+    written = Enum.sort_by(assigns[:written] || rows, &Map.get(&1, :sequence))
+    {items, taken?} = written_items(socket.assigns, written)
 
     # A listing draws the row it gets (its id, say): a row that was new and is
     # now saved is drawn again, under the DOM id it has. Rows that were saved
@@ -147,8 +133,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       for {item, before} <- Enum.zip(items, socket.assigns.items), before.is_new and not item.is_new, reduce: socket do
         acc -> stream_insert(acc, :transformer_items, stream_entry(item))
       end
-
-    taken? = lined_up? and map_size(saved) == length(written)
 
     socket =
       socket
@@ -1422,6 +1406,24 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     for field <- asset_fields, Map.has_key?(item.changes, :"#{field}_id"), into: %{} do
       {field, Map.get(item.assets, field)}
     end
+  end
+
+  # The items as the rows written for them, and whether every row written
+  # is one: none change when a row doesn't line up with what was sent.
+  defp written_items(%{items: items, sent_dom_ids: sent, asset_fields: asset_fields}, written) do
+    saved = if length(written) == length(sent), do: Map.new(Enum.zip(sent, written)), else: %{}
+
+    lined_up? =
+      Enum.all?(items, fn item ->
+        case Map.fetch(saved, item.dom_id) do
+          {:ok, row} -> item.is_new or row.id == item.source.id
+          :error -> true
+        end
+      end)
+
+    if lined_up?,
+      do: {Enum.map(items, &saved_item(&1, Map.get(saved, &1.dom_id), asset_fields)), map_size(saved) == length(written)},
+      else: {items, false}
   end
 
   # The items on the saved rows of another editor's save
