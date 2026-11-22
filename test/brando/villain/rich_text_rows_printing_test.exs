@@ -9,6 +9,7 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
   # form) does not say so.
   use Brando.ConnCase, async: true
 
+  alias Brando.RichTextRows.CheckedItem
   alias Brando.RichTextRows.Disagreeing
   alias Brando.RichTextRows.DisagreeingItem
   alias Brando.RichTextRows.Entry
@@ -201,5 +202,80 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
     changeset = %Disagreeing{} |> Changeset.change() |> Changeset.put_embed(:feature, %{text: unsafe})
     refute Brando.RichText.validate_subform_rows(changeset, Disagreeing, [:feature]).valid?
     assert Brando.RichText.validate_subform_rows(changeset, Disagreeing.__form__(:plain), [:feature]).valid?
+  end
+
+  describe "a has_many row whose own form draws the field as rich text" do
+    # The owner's default form draws a checked item's text as plain text;
+    # CheckedItem's own default form draws it as rich text.
+    defmodule PlainOwner do
+      @moduledoc false
+      use Brando.Blueprint,
+        application: "Brando",
+        domain: "RichTextRows",
+        schema: "PlainOwner",
+        singular: "plain_owner",
+        plural: "plain_owners",
+        gettext_module: Brando.Gettext
+
+      identifier "{{ entry.title }}"
+      persist_identifier false
+
+      attributes do
+        attribute :title, :string
+      end
+
+      relations do
+        relation :checked_items, :has_many,
+          module: Brando.RichTextRows.CheckedItem,
+          foreign_key: :entry_id,
+          on_replace: :delete,
+          cast: true,
+          sort_param: :sort_checked_items_ids,
+          drop_param: :drop_checked_items_ids
+      end
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset do
+              input :title, :text
+            end
+
+            fieldset do
+              inputs_for :checked_items do
+                cardinality :many
+                style :inline
+                default %{}
+
+                input :text, :textarea
+              end
+            end
+          end
+        end
+      end
+    end
+
+    test "is checked by the row's own changeset when saved through the owner" do
+      changeset = PlainOwner.changeset(%PlainOwner{}, %{checked_items: [%{text: ~s{<p onclick="x()">A</p>}}]}, :system)
+      refute changeset.valid?
+      assert [%{errors: [text: _]}] = Changeset.get_change(changeset, :checked_items)
+    end
+
+    # A link typed in the owner's textarea passes the row's check and prints
+    # live, and a typed quote ends the attribute it is printed in. Not fixed
+    # here: the owner's rule would print it as text, which changes what such
+    # sites print today (#3807).
+    @tag skip: "prints by the row's own form, not the owner's: Brando.Villain.TemplateView.read_text/3 (#3807)"
+    test "prints typed markup as text, as the owner's form draws it" do
+      entry = %PlainOwner{title: "T", checked_items: [%CheckedItem{text: ~s(<a href="/help">Help</a>)}]}
+
+      assert render("{% for r in entry.checked_items %}{{ r.text }}{% endfor %}", entry) ==
+               "&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;"
+
+      typed = ~s[x" onmouseover="alert(1)]
+      entry = %PlainOwner{title: "T", checked_items: [%CheckedItem{text: typed}]}
+      html = render(~s(<div title="{{ entry.checked_items[0].text }}"></div>), entry)
+      assert [{"div", [{"title", ^typed}], []}] = Floki.parse_fragment!(html)
+    end
   end
 end
