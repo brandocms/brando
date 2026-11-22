@@ -545,6 +545,38 @@ defmodule Brando.MCP.EndpointTest do
       assert instructions =~ "brando_content_preview_proposal"
     end
 
+    test "a proposal with a summary longer than the result limit is listed with it cut short, and cancels without it",
+         %{tenant: tenant, token: token} = c do
+      op = %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "fields" => %{"title" => "Identity, from MCP"}
+      }
+
+      summary = String.duplicate("Retitle the identity page. ", 1_000)
+      assert byte_size(summary) > MCP.Tools.result_limit()
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => summary, "operations" => [op]})
+
+      assert %{"result" => %{"structuredContent" => %{"proposals" => [listed]}} = result} =
+               call_tool(tenant, token, "list_proposals", %{"proposal_id" => id, "limit" => 1})
+
+      refute result["isError"]
+      assert %{"proposal_id" => ^id, "summary_cut" => true} = listed
+      assert String.length(listed["summary"]) <= 500
+      assert String.starts_with?(summary, String.trim_trailing(listed["summary"], "…"))
+
+      assert %{"result" => %{"structuredContent" => %{"status" => "cancelled"} = cancelled} = result} =
+               call_tool(tenant, token, "cancel_proposal", %{"proposal_id" => id})
+
+      refute result["isError"]
+      refute Map.has_key?(cancelled, "summary")
+
+      assert [_prepare, %{details: %{"ok" => true}}, %{details: %{"tool" => "cancel_proposal", "ok" => true}}] =
+               Repo.all(from e in Event, where: e.action == :tool_called, order_by: e.id)
+    end
+
     test "tools the endpoint does not offer are unknown", %{tenant: tenant, token: token} do
       for name <- ["attach_folder", "list_attachments", "apply_proposal"] do
         assert %{"error" => %{"code" => -32_602}} = call_tool(tenant, token, name, %{})

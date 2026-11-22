@@ -3803,7 +3803,12 @@ defmodule Brando.Content.Proposals do
           from(r in Record,
             where: r.id == ^record.id and r.version == ^record.version and r.status == ^record.status
           ),
-          set: [problems: Enum.map(problems, &encode_problem/1), status: "pending", approved_at: nil]
+          set: [
+            problems: Enum.map(problems, &encode_problem/1),
+            status: "pending",
+            approved_at: nil,
+            updated_at: DateTime.utc_now()
+          ]
         )
 
         Error.fail!(recheck_failed(problems))
@@ -4216,6 +4221,11 @@ defmodule Brando.Content.Proposals do
       record.version != version or record.status == "superseded" ->
         Error.fail!(dgettext("content_proposals", "A newer version of this proposal exists. Review it instead."))
 
+      # Cancelled, applied or undone, perhaps by a connected tool or in
+      # another tab behind an open review
+      record.status not in ~w(pending approved) ->
+        Error.fail!(not_under_review(record.status))
+
       record.status != status and status == "approved" ->
         Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
 
@@ -4229,6 +4239,17 @@ defmodule Brando.Content.Proposals do
         :ok
     end
   end
+
+  defp not_under_review("cancelled"),
+    do: dgettext("content_proposals", "This proposal was cancelled, so it is no longer under review.")
+
+  defp not_under_review("applied"),
+    do: dgettext("content_proposals", "This proposal is already applied, so it is no longer under review.")
+
+  defp not_under_review("undone"),
+    do: dgettext("content_proposals", "This proposal was applied and then undone, so it is no longer under review.")
+
+  defp not_under_review(_status), do: dgettext("content_proposals", "This proposal is no longer under review.")
 
   defp record!(id, actor, opts \\ []) do
     query =
