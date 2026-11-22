@@ -624,8 +624,10 @@ With `tenancy_mode: :multi` and HMR on:
   hosts and on the admin's, for the live preview, where neither the
   release nor a pinned set holds the path: the page names it
   host-relative, while the Vite dev server serves it only on its own
-  origin. On the admin's host it is left unanswered when another site's
-  set holds other content under the same path. When the `vite_site`
+  origin. On the admin's host the folder answers only where no site's set
+  holds the path, so another site's live preview keeps its set's file; a
+  host that resolves to no site but is not the admin's never reads the
+  folder. When the `vite_site`
   watcher could not start Vite, the dev site renders the release's build
   with a notice saying why.
 - A request for any other site renders as in production: from its active

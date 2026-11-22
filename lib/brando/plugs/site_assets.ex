@@ -30,7 +30,8 @@ defmodule Brando.Plug.SiteAssets do
   environment is shown on this host and names that set's files. In
   development, the dev site's hosts, and the admin's for its live preview,
   then answer from the `public/` folder of its Vite project
-  (`Brando.Assets.SiteAssets.dev_site_public_file/2`), also with `no-cache`.
+  (`Brando.Assets.SiteAssets.dev_site_public_file/3`,
+  `Brando.Assets.SiteAssets.unscoped_public_file/1`), also with `no-cache`.
 
   Its files, and those of the plugs after it that answer before the router
   (the release's `Plug.Static`, `Brando.Plug.Media`), are sent with
@@ -150,7 +151,7 @@ defmodule Brando.Plug.SiteAssets do
       :multi ->
         case Frontend.resolve(conn.host) do
           {site, environment} -> environment_path(site, environment, relative_path)
-          nil -> {SiteAssets.unscoped_path(relative_path), @ask_again}
+          nil -> {unscoped_path(conn.host, relative_path), @ask_again}
         end
 
       _standalone ->
@@ -164,11 +165,18 @@ defmodule Brando.Plug.SiteAssets do
     case SiteAssets.serve_path(site, environment, relative_path) do
       nil ->
         {SiteAssets.other_environment_path(site, environment, relative_path) ||
-           SiteAssets.dev_site_public_file(site, relative_path), @ask_again}
+           SiteAssets.dev_site_public_file(site, environment, relative_path), @ask_again}
 
       file ->
         {file, @immutable}
     end
+  end
+
+  # The development site's project `public/` folder answers on the admin's
+  # host alone, for its live preview
+  defp unscoped_path(host, relative_path) do
+    SiteAssets.unscoped_path(relative_path) ||
+      if BrandoAdmin.AdminHost.admin_host?(host), do: SiteAssets.unscoped_public_file(relative_path)
   end
 
   # `:single` resolves the host to an environment of its one site; `:none` has none

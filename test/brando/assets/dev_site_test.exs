@@ -20,6 +20,10 @@ defmodule Brando.Assets.DevSiteTest do
 
   @host_app :brando_dev_site_test
 
+  # The endpoint's host, where the admin answers (`BrandoAdmin.AdminHost`);
+  # `admin.test` resolves to no site but is not the admin's
+  @admin_host "localhost"
+
   defmodule Layouts do
     @moduledoc false
     use Phoenix.Component
@@ -192,7 +196,7 @@ defmodule Brando.Assets.DevSiteTest do
       write_public("fonts/a.woff2", "project font")
       write_public("images/b.svg", "project logo")
 
-      for host <- ["acme.test", "admin.test"] do
+      for host <- ["acme.test", @admin_host] do
         conn = Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", host), [])
         assert conn.resp_body == "project font", host
         assert Plug.Conn.get_resp_header(conn, "cache-control") == ["no-cache"], host
@@ -206,7 +210,7 @@ defmodule Brando.Assets.DevSiteTest do
       # Nor once another site is the dev site
       Application.put_env(@host_app, :dev_site, "beta")
       refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", "acme.test"), []).halted
-      refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", "admin.test"), []).halted
+      refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", @admin_host), []).halted
     end
 
     test "gets the release's file and a pinned set's before its project's public file", %{
@@ -217,29 +221,77 @@ defmodule Brando.Assets.DevSiteTest do
       write_public("favicon.ico", "project icon")
       File.write!(Path.join(tmp_dir, "priv/static/favicon.ico"), "release icon")
 
-      for host <- ["acme.test", "admin.test"] do
+      for host <- ["acme.test", @admin_host] do
         assert served_body("fonts/moderat/moderat-regular.woff2", host) == "project font", host
         refute Brando.Plug.SiteAssets.call(conn_for("favicon.ico", host), []).halted, host
       end
 
       acme |> activate_public_set() |> pin()
 
-      for host <- ["acme.test", "admin.test"] do
+      for host <- ["acme.test", @admin_host] do
         assert served_body("fonts/moderat/moderat-regular.woff2", host) == "set font", host
         refute Brando.Plug.SiteAssets.call(conn_for("favicon.ico", host), []).halted, host
       end
     end
 
-    # On the admin's host, the project's file is the dev site's candidate,
-    # compared with other sites' as theirs are
+    # Another site's live preview on the admin's host names its set's file,
+    # as before the dev site's folder answered there
     test "gets no public file on the admin's host where another site holds other content", %{beta: beta} do
       write_public("images/logo.svg", "project logo")
       activate_public_set(beta)
-      refute Brando.Plug.SiteAssets.call(conn_for("images/logo.svg", "admin.test"), []).halted
+      assert served_body("images/logo.svg", @admin_host) == "set logo"
       assert served_body("images/logo.svg", "acme.test") == "project logo"
+    end
 
-      write_public("images/logo.svg", "set logo")
-      assert served_body("images/logo.svg", "admin.test") == "set logo"
+    # A suspended site's host resolves to no site, as the admin's does
+    test "gets no public file on a host that resolves to no site but the admin's", %{beta: beta} do
+      write_public("fonts/a.woff2", "project font")
+      {:ok, _beta} = Brando.Tenant.Registry.update_site(beta, %{status: :suspended})
+
+      for host <- ["beta.test", "admin.test"] do
+        refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", host), []).halted, host
+      end
+
+      assert served_body("fonts/a.woff2", @admin_host) == "project font"
+    end
+
+    # A set may hold the path: the lookup that failed cannot tell
+    test "gets no public file on the admin's host while the sets' paths cannot be read" do
+      write_public("fonts/a.woff2", "project font")
+      assert served_body("fonts/a.woff2", @admin_host) == "project font"
+
+      reset_caches()
+
+      Ecto.Adapters.SQL.query!(
+        BrandoIntegration.Repo,
+        "ALTER TABLE public.site_asset_sets RENAME TO site_asset_sets_away"
+      )
+
+      refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", @admin_host), []).halted
+    end
+
+    # Nothing tells which environment's preview asked, as before the folder answered
+    test "gets no public file where two pinned environment sets hold other content", %{acme: acme} do
+      write_public("images/logo.svg", "project logo")
+
+      for {key, content} <- [{"staging", "staging logo"}, {"qa", "qa logo"}] do
+        path = create_public_set(acme, "acme-#{key}")
+        File.write!(Path.join(path, "images/logo.svg"), content)
+        {:ok, own} = SiteAssets.register_set(acme, path, %{})
+
+        {:ok, environment} =
+          Brando.Tenant.Registry.create_environment(
+            acme,
+            %{name: key, key: key, live: false, domain: "#{key}.acme.test"},
+            actor: :system
+          )
+
+        assert {:ok, _environment} = SiteAssets.activate_environment_set(own.id, environment)
+        pin(own)
+      end
+
+      refute Brando.Plug.SiteAssets.call(conn_for("images/logo.svg", "acme.test"), []).halted
+      assert served_body("images/logo.svg", "qa.acme.test") == "qa logo"
     end
 
     test "gets nothing outside its project's public folder", %{tmp_dir: tmp_dir} do
@@ -263,7 +315,7 @@ defmodule Brando.Assets.DevSiteTest do
             "",
             "images"
           ] do
-        assert SiteAssets.dev_site_public_file("acme", path) == nil, path
+        assert SiteAssets.dev_site_public_file("acme", nil, path) == nil, path
       end
 
       for url_path <- [
@@ -274,7 +326,7 @@ defmodule Brando.Assets.DevSiteTest do
             "linked/secret.txt",
             "secret.txt"
           ],
-          host <- ["acme.test", "admin.test"] do
+          host <- ["acme.test", @admin_host] do
         refute Brando.Plug.SiteAssets.call(conn_for(url_path, host), []).halted, "#{url_path} on #{host}"
       end
 
@@ -654,7 +706,7 @@ defmodule Brando.Assets.DevSiteTest do
 
         write_public("fonts/a.woff2", "project font")
 
-        for host <- ["acme.test", "admin.test"] do
+        for host <- ["acme.test", @admin_host] do
           refute Brando.Plug.SiteAssets.call(conn_for("fonts/a.woff2", host), []).halted, host
         end
       end

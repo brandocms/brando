@@ -374,11 +374,8 @@ defmodule Brando.Assets.SiteAssets do
   them, as in `serve_path/3`. The path answers when one holder has it, or
   when every holder that has it holds the same content; when their contents
   differ it stays unanswered, as nothing tells which site's or environment's
-  preview asked. The development site's project `public/` folder holds its
-  candidate while no set of it holds the path
-  (`Brando.Assets.DevSite.public_file/2`), as its live preview loads from
-  the Vite dev server and names those files host-relative. A path the
-  release's `priv/static` holds is left to it.
+  preview asked. A path the release's `priv/static` holds
+  is left to it.
 
   Sites that are suspended or archived neither answer nor count towards
   that comparison, as the admin lets no one preview such a site. Their
@@ -391,7 +388,8 @@ defmodule Brando.Assets.SiteAssets do
   """
   @spec unscoped_path(String.t()) :: String.t() | nil
   def unscoped_path(relative_path) when is_binary(relative_path) do
-    with [_ | _] = candidates <- unscoped_index() |> Map.get(relative_path, []) |> with_dev_site_public(relative_path),
+    with {:ok, index} <- unscoped_index(),
+         [_ | _] = candidates <- Map.get(index, relative_path, []),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
       candidates
       |> Enum.filter(&previewable?/1)
@@ -401,31 +399,35 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  # The development site's project `public/` file is its candidate while no
-  # set of the site holds the path, compared with the others as theirs are
-  defp with_dev_site_public(candidates, relative_path) do
-    with site_key when is_binary(site_key) <- DevSite.key(),
-         false <- Enum.any?(candidates, &match?({{^site_key, _environment_id}, _file, _content}, &1)),
-         file when is_binary(file) <- DevSite.public_file(site_key, relative_path) do
-      candidates
-      |> Enum.map(fn {holder, file, _content} -> {holder, file} end)
-      |> Kernel.++([{{site_key, nil}, file}])
-      |> with_content()
-    else
-      _no_public_file -> candidates
-    end
+  @doc """
+  Resolves a request path that `unscoped_path/1` left unanswered on the
+  admin's host, from the `public/` folder of the development site's Vite
+  project (`Brando.Assets.DevSite.public_file/2`), for its live preview: only
+  while no set of any site holds the path, so another site's preview keeps
+  its set's file. Nil when the sets' paths could not be read, and for a
+  path the release's `priv/static` holds.
+  """
+  @spec unscoped_public_file(String.t()) :: String.t() | nil
+  def unscoped_public_file(relative_path) when is_binary(relative_path) do
+    with {:ok, index} <- unscoped_index(),
+         false <- Map.has_key?(index, relative_path),
+         do: dev_site_public_file(DevSite.key(), nil, relative_path),
+         else: (_set_holds_it_or_unread -> nil)
   end
 
   @doc """
   Resolves a request path that `serve_path/3` and `other_environment_path/3`
   left unanswered on a host of the development site
-  (`Brando.Assets.DevSite`), from the `public/` folder of its Vite project
-  (`Brando.Assets.DevSite.public_file/2`). A path the release's
+  (`Brando.Assets.DevSite`) that resolves to `environment`, from the
+  `public/` folder of its Vite project (`Brando.Assets.DevSite.public_file/2`):
+  only while no other environment's set answers the path, so a path whose
+  sets hold other contents stays unanswered. A path the release's
   `priv/static` holds is left to it. Nil for every other site.
   """
-  @spec dev_site_public_file(scope(), String.t()) :: String.t() | nil
-  def dev_site_public_file(site, relative_path) when is_binary(relative_path) do
+  @spec dev_site_public_file(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
+  def dev_site_public_file(site, environment, relative_path) when is_binary(relative_path) do
     with file when is_binary(file) <- DevSite.public_file(site, relative_path),
+         [] <- other_environment_candidates(site, environment, relative_path),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
       file
     else
@@ -455,17 +457,21 @@ defmodule Brando.Assets.SiteAssets do
   the active, environment, pinned and set caches, on every node.
   """
   @spec other_environment_path(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
-  def other_environment_path(_site, nil, _relative_path), do: nil
-
-  def other_environment_path(site, %Environment{id: environment_id, site_id: site_id}, relative_path)
-      when is_binary(relative_path) do
-    with [_ | _] = candidates <- environment_index() |> Map.get(site_id, %{}) |> Map.get(relative_path, []),
-         [_ | _] = others <- Enum.reject(candidates, &match?({^environment_id, _file, _content}, &1)),
-         [_ | _] = others <- answering_environments(site, others),
+  def other_environment_path(site, environment, relative_path) when is_binary(relative_path) do
+    with [_ | _] = others <- other_environment_candidates(site, environment, relative_path),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
       agreed_file(others)
     else
       _miss -> nil
+    end
+  end
+
+  defp other_environment_candidates(_site, nil, _relative_path), do: []
+
+  defp other_environment_candidates(site, %Environment{id: environment_id, site_id: site_id}, relative_path) do
+    with [_ | _] = candidates <- environment_index() |> Map.get(site_id, %{}) |> Map.get(relative_path, []),
+         [_ | _] = others <- Enum.reject(candidates, &match?({^environment_id, _file, _content}, &1)) do
+      answering_environments(site, others)
     end
   end
 
@@ -828,7 +834,7 @@ defmodule Brando.Assets.SiteAssets do
   defp unscoped_index do
     case :persistent_term.get(@unscoped_key, :not_cached) do
       :not_cached -> warm_unscoped()
-      index -> index
+      index -> {:ok, index}
     end
   end
 
@@ -838,8 +844,8 @@ defmodule Brando.Assets.SiteAssets do
     fence = change_fence()
 
     case load_unscoped(fence) do
-      {:ok, index} -> fill(@unscoped_key, index, fence)
-      :error -> %{}
+      {:ok, index} -> {:ok, fill(@unscoped_key, index, fence)}
+      :error -> :error
     end
   end
 
