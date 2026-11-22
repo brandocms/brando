@@ -801,8 +801,11 @@ module.
 Delete the `ref` or `var` from the file and import. The import is an
 `update`, as the same edit saved in the admin is: the module no longer
 defines the key, and nothing an editor typed is deleted. Each block that
-holds a value for it keeps it as a leftover, stays on the older version and
-renders without it (see [Blocks left on an older version](#blocks-left-on-an-older-version)).
+holds a value for it keeps it as a leftover and stays on the older version
+(see [Blocks left on an older version](#blocks-left-on-an-older-version)).
+The block renders from the rows it holds, so a template that still names a
+removed var (`{{ tagline }}`) keeps printing the editor's value until the
+leftover is resolved: take it out of the template in the same change.
 The plan counts the blocks that hold the key, not every block of the module,
 and prints the command that drops it from them:
 
@@ -812,8 +815,10 @@ update module kulturslider: removes var link (5 of 13 blocks hold it, 3 entries)
 ```
 
 Run it as printed once the import has run; a tenant application's line has
-`--site` and `--environment`. When no block holds the key, there is no
-resolve line. Until it runs, a revert of the import (or the same var added
+`--site` and `--environment`, and each value a shell would read is quoted.
+It drops only the keys some block holds. When no block holds any of them,
+there is no resolve line. The watcher logs the same two lines, and the
+admin's ZIP import shows the count with a link to **Resolve blocks**. Until it runs, a revert of the import (or the same var added
 back with the same type) gives the blocks their values back.
 
 ### Renaming a ref or var
@@ -842,8 +847,13 @@ key.
 Values that move from a parent's blocks to its children's (row-level layout
 settings that become per-item ones) are a data migration in the project.
 Definitions are parsed, never evaluated, so a definition cannot carry one.
-Add the children's vars and import, then move the values through the block
-contexts, so entries get revisions and renders:
+Add the children's vars and import, then move the values. No Brando function
+moves a value from one block to another, so the migration does by hand what
+`mix brando.modules resolve` does within a block: a revision of each entry
+before and after, the rows written in one transaction, the entries rendered,
+and the editors that have one open moved onto the new rows
+(`Brando.EditSession.sync_saved/1`), so a later save from them keeps the
+moved values:
 
 ```elixir
 defmodule MyApp.Release.MoveRowLayout do
@@ -852,10 +862,15 @@ defmodule MyApp.Release.MoveRowLayout do
   alias Brando.Content.{Block, Blocks, Module}
   alias Brando.Repo
 
-  # Copies each media row's `layout` onto its items' new `width` var
+  # Where a var keeps its value, for every type; the rest is its definition
+  @value_fields ~w(value value_boolean image_id file_id video_id gallery_id form_id identifier_id
+                   palette_id link_text link_type link_target_blank)a
+
+  # Copies each media row's `layout` onto its items' new `width` var, which
+  # has the same type
   def run(user) do
     row = Repo.get_by!(Module, uid: "media-row")
-    block_ids = Blocks.list_block_ids_using_module(row.id)
+    block_ids = Blocks.list_block_ids_using_module(row.id, :local)
 
     entries =
       block_ids
@@ -865,35 +880,56 @@ defmodule MyApp.Release.MoveRowLayout do
     {:ok, _} =
       Repo.transaction(fn ->
         # A revision of each entry first, for History to restore
-        for {schema, ids} <- entries, schema.has_trait(Brando.Trait.Revisioned), id <- ids do
-          {:ok, _} = Brando.Revisions.create_revision(Repo.get!(schema, id), user, false)
-        end
+        each_entry(entries, &revision!(&1, user, false))
 
         blocks = Repo.all(from(b in Block, where: b.id in ^block_ids, preload: [:vars, children: :vars]))
 
         for block <- blocks,
-            layout = Enum.find(block.vars, &(&1.key == "layout")),
+            layout <- Enum.filter(block.vars, &(&1.key == "layout")),
             child <- block.children,
-            width = Enum.find(child.vars, &(&1.key == "width")) do
-          width |> Ecto.Changeset.change(value: layout.value) |> Repo.update!()
+            width <- Enum.filter(child.vars, &(&1.key == "width" and &1.type == layout.type)) do
+          width |> Ecto.Changeset.change(Map.take(layout, @value_fields)) |> Repo.update!()
         end
+
+        Blocks.enqueue_entry_map_for_render(entries)
+
+        each_entry(entries, fn entry ->
+          revision!(entry, user, true)
+          Brando.EditSession.sync_saved(entry)
+        end)
       end)
 
-    for {schema, ids} <- entries, id <- ids, do: Blocks.render_entry(schema, id)
+    :ok
+  end
+
+  defp each_entry(entries, fun) do
+    for {schema, ids} <- entries, id <- ids, do: fun.(Repo.get!(schema, id))
+  end
+
+  defp revision!(%schema{} = entry, user, active?) do
+    if schema.has_trait(Brando.Trait.Revisioned) do
+      {:ok, _} = Brando.Revisions.create_revision(entry, user, active?)
+    end
   end
 end
 ```
 
-Then remove `layout` from the parent's file, import, and run the resolve line
-the plan prints to drop the old values.
+It records nothing in Activity, and it does not check that `user` may edit
+each entry: run it as a superuser. Then remove `layout` from the parent's
+file, import, and run the resolve line the plan prints to drop the old
+values.
 
 ### In a release
 
 A release that removes a ref or var is ready to apply like any update:
-`Release.status/1` prints the same counts and resolve line, and the Release
-changes screen lists it under Ready to apply, saying the blocks keep the
-values until they are resolved. After the apply, the module's row links to
-**Resolve blocks**, where a server without Mix resolves them
+`Release.status/1` prints the same counts, and given `user:` the same
+resolve line. The status at boot or in a deploy has no user, so its line
+says to resolve the blocks after the apply, under **Resolve blocks** in the
+admin or with `mix brando.modules resolve`. The Release changes screen lists
+the removal under Ready to apply, saying the blocks keep the values until
+they are resolved. After the apply, the module's row says how many blocks
+hold values the module no longer defines and links to **Resolve blocks**,
+where a server without Mix resolves them
 (`Brando.Content.StaleBlocks.apply/4` is the API it uses). Only what still
 needs a migration is shown locked.
 
