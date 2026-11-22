@@ -10752,6 +10752,7 @@ defmodule BrandoAdmin.Components.Form do
       image_height: image.height,
       focal_x: (image.focal && image.focal.x) || 50,
       focal_y: (image.focal && image.focal.y) || 50,
+      focal_mode: Images.Focal.mode(image.focal),
       crop_groups: crop_groups,
       config_target: image.config_target
     }

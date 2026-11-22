@@ -1,0 +1,1 @@
+- The image editor's crop frames show the band the site cuts for an image whose focal point the Figma import placed, and dragging such a frame no longer makes it jump.
