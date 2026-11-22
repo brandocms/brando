@@ -83,18 +83,68 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
     end
   end
 
+  defp article(%{user: user}) do
+    {:ok, article} =
+      Brando.SyncTest.create_article(
+        %{title: "Rows", slug: "rows", language: "en", status: "published", items: [%{label: "A", sequence: 0}]},
+        user
+      )
+
+    %{article: Brando.Repo.preload(article, :items, force: true)}
+  end
+
+  # The alert the form pushed last
+  defp alert_html(socket) do
+    Enum.find_value(socket.private.live_temp[:push_events] || [], fn
+      ["b:alert", %{html: html}] -> html
+      _ -> nil
+    end)
+  end
+
+  describe "a revision refused for a block" do
+    alias Brando.SyncTest.Article
+
+    setup :article
+
+    # The block editor draws the blocks: their errors are the form's own,
+    # listed once, with no list of fields the form does not show
+    test "lists the block's error with the form's own", ctx do
+      entry_block_schema = Article.__schema__(:association, :entry_blocks).related
+
+      block =
+        %Brando.Content.Block{children: []}
+        |> change(%{})
+        |> Ecto.Changeset.add_error(:module_id, "can't be blank", validation: :required)
+
+      entry_block =
+        entry_block_schema
+        |> struct(sequence: 0, block: %Brando.Content.Block{children: []})
+        |> change(%{})
+        |> Ecto.Changeset.put_assoc(:block, block)
+
+      article = Brando.Repo.preload(ctx.article, :entry_blocks)
+
+      socket =
+        ctx
+        |> article_socket()
+        |> Component.assign(:form_blueprint, Article.__form__(:default))
+        |> Component.assign(:form, Phoenix.Component.to_form(change(article, %{})))
+        |> Component.assign(:block_changesets, %{blocks: [entry_block]})
+        |> Component.assign(:transformer_changesets, %{})
+
+      {socket, log} = with_log(fn -> Form.event_tag_received(socket, :store_revision) end)
+
+      html = alert_html(socket)
+      assert length(String.split(html, ~s{class="error-keys"})) == 2
+      assert html =~ "module_id"
+      refute log =~ "Could not get field"
+    end
+  end
+
   describe "a revision refused for a transformer row" do
     alias Brando.SyncTest.Article
 
-    setup %{user: user} do
-      {:ok, article} =
-        Brando.SyncTest.create_article(
-          %{title: "Rows", slug: "rows", language: "en", status: "published", items: [%{label: "A", sequence: 0}]},
-          user
-        )
-
-      %{article: Brando.Repo.preload(article, :items, force: true)}
-    end
+    setup :article
 
     defp article_socket(ctx) do
       %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}
@@ -143,20 +193,31 @@ defmodule BrandoAdmin.Components.Form.RefusedAndRepeatedSavesTest do
 
       assert revisions(ctx.article) == before + 1
     end
+
+    # The revision was built from the rows the transformer sent: the form's
+    # refused rows go with their error
+    test "clears the row's error once the corrected revision is stored", ctx do
+      unsafe =
+        article_socket(ctx)
+        |> Component.assign(:transformer_changesets, %{items: rows(ctx, ~s{<p onclick="x()">Row</p>})})
+
+      {socket, _log} = with_log(fn -> Form.event_tag_received(unsafe, :store_revision) end)
+      refute socket.assigns.form.source.valid?
+
+      socket =
+        socket
+        |> Component.assign(:transformer_changesets, %{items: rows(ctx, "<p>Row</p>")})
+        |> Form.event_tag_received(:store_revision)
+
+      assert socket.assigns.form.source.valid?
+      assert Ecto.Changeset.get_change(socket.assigns.form.source, :items) in [nil, []]
+    end
   end
 
   describe "a save without blocks that stays on the form" do
     alias Brando.SyncTest.Article
 
-    setup %{user: user} do
-      {:ok, article} =
-        Brando.SyncTest.create_article(
-          %{title: "Rows", slug: "rows", language: "en", status: "published", items: [%{label: "A", sequence: 0}]},
-          user
-        )
-
-      %{article: Brando.Repo.preload(article, :items, force: true)}
-    end
+    setup :article
 
     defp blockless_socket(ctx) do
       %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}, live_temp: %{}}}

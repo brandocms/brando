@@ -1,7 +1,8 @@
 # The default form's rich text, checked by the admin form whatever form an
 # editor saves from (RichTextDefaultFormTest), on the `synctest_articles`
 # table: the default form draws the subtitle as rich text, `:omitted` leaves
-# it out and `:plain` draws it as plain text.
+# it out and `:plain` draws it as plain text. Only the default form labels
+# the subtitle, "Lede".
 defmodule Brando.RichTextDefaultFormTest.Note do
   @moduledoc false
   use Brando.Blueprint,
@@ -31,7 +32,7 @@ defmodule Brando.RichTextDefaultFormTest.Note do
       tab "Content" do
         fieldset do
           input :title, :text
-          input :subtitle, :rich_text
+          input :subtitle, :rich_text, label: "Lede"
         end
       end
     end

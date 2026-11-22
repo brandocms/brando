@@ -21235,6 +21235,11 @@ msgstr "Denne fotnoten ble ikke funnet i dette feltet."
 msgid "This footnote could not be found. Its marker may have been pasted without its content."
 msgstr "Denne fotnoten ble ikke funnet. Markøren kan ha blitt limt inn uten innholdet."
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "This form does not show these fields:"
+msgstr "Dette skjemaet viser ikke disse feltene:"
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
