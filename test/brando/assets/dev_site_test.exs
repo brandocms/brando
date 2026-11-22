@@ -243,6 +243,15 @@ defmodule Brando.Assets.DevSiteTest do
       assert served_body("images/logo.svg", "acme.test") == "project logo"
     end
 
+    # A suspended site has no preview to keep its set's file for
+    test "gets its public file on the admin's host where only a suspended site's set holds the path", %{beta: beta} do
+      write_public("images/logo.svg", "project logo")
+      activate_public_set(beta)
+      {:ok, _beta} = Brando.Tenant.Registry.update_site(beta, %{status: :suspended})
+
+      assert served_body("images/logo.svg", @admin_host) == "project logo"
+    end
+
     # A suspended site's host resolves to no site, as the admin's does
     test "gets no public file on a host that resolves to no site but the admin's", %{beta: beta} do
       write_public("fonts/a.woff2", "project font")

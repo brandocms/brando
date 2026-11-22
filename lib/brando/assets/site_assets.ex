@@ -403,16 +403,20 @@ defmodule Brando.Assets.SiteAssets do
   Resolves a request path that `unscoped_path/1` left unanswered on the
   admin's host, from the `public/` folder of the development site's Vite
   project (`Brando.Assets.DevSite.public_file/2`), for its live preview: only
-  while no set of any site holds the path, so another site's preview keeps
-  its set's file. Nil when the sets' paths could not be read, and for a
-  path the release's `priv/static` holds.
+  while no set of a site that can be previewed holds the path, so another
+  site's preview keeps its set's file. Nil without a development site, when
+  the sets' paths could not be read, and for a path the release's
+  `priv/static` holds.
   """
   @spec unscoped_public_file(String.t()) :: String.t() | nil
   def unscoped_public_file(relative_path) when is_binary(relative_path) do
-    with {:ok, index} <- unscoped_index(),
-         false <- Map.has_key?(index, relative_path),
-         do: dev_site_public_file(DevSite.key(), nil, relative_path),
-         else: (_set_holds_it_or_unread -> nil)
+    with site_key when is_binary(site_key) <- DevSite.key(),
+         {:ok, index} <- unscoped_index(),
+         false <- index |> Map.get(relative_path, []) |> Enum.any?(&previewable?/1) do
+      dev_site_public_file(site_key, nil, relative_path)
+    else
+      _no_dev_site_or_a_set_holds_it_or_unread -> nil
+    end
   end
 
   @doc """
