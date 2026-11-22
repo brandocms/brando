@@ -82,6 +82,14 @@ defmodule Brando.CaptionsTest do
     refute html =~ "javascript"
   end
 
+  test "safe_preview/2 leaves out a jump anchor's id, which the public site keeps" do
+    # The admin may show the same caption twice; an id on its page would repeat
+    caption = ~s{<p><span data-type="jump-anchor" id="north">North</span> wall</p>}
+
+    assert Captions.rich_html(caption) =~ ~s{id="north"}
+    assert Captions.safe_preview(caption, nil) == {:safe, ~s{<p><span data-type="jump-anchor">North</span> wall</p>}}
+  end
+
   test "plain/1 strips markup to one line" do
     assert Captions.plain("<p><strong>North</strong> wall</p>") == "North wall"
     assert Captions.plain("<p></p>") == nil
