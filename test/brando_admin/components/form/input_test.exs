@@ -170,6 +170,17 @@ defmodule BrandoAdmin.Components.Form.InputTest do
                "data-sync-insert"
     end
 
+    test "each row is named by the field's label and its row number" do
+      form = markets_form(%{"area_served" => ["Norway"]})
+      html = render_component(&Input.string_list/1, field: form[:area_served], label: {:safe, "Markets"})
+
+      assert [_, _] = Regex.scan(~r/aria-label="Markets\b[^"]*\b[12]"/, html)
+      refute html =~ ~s(aria-label="area_served)
+
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+      assert html =~ ~r/aria-label="Area served\b[^"]*\b1"/
+    end
+
     test "an empty list renders only the empty row" do
       form = markets_form(%{})
       html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
