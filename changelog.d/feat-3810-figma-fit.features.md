@@ -1,0 +1,1 @@
+- `brando_figma_import_images` names the limit and the image's size when it refuses an image over the site's upload limit, and with `fit: true` imports a copy scaled down on the server to fit it, never smaller than twice the image's largest use in the frame.
