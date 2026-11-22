@@ -28,11 +28,9 @@ defmodule Brando.Repo.Migrations.Brando244AddFragmentAlternates do
     end
   end
 
-  def down do
-    for prefix <- prefixes() do
-      drop_if_exists table(:pages_fragments_alternates, prefix: prefix)
-    end
-  end
+  # The table may be `brando_93`'s, and holds links editors made: a rollback
+  # leaves it as it is.
+  def down, do: :ok
 
   defp table?(prefix, table) do
     %{rows: [[name]]} = repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}".#{table})])

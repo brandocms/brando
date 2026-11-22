@@ -265,6 +265,9 @@ defmodule Brando.MigrationTemplates do
     }
   end
 
+  @doc "The tables of `environment_tables/0` that rolling the 2xx migrations back keeps: they hold links editors made"
+  def kept_environment_tables, do: ~w(pages_fragments_alternates)
+
   @doc "What the 2xx migrations add in `public` only: tables"
   def public_tables do
     ~w(users_security users_recovery_codes users_security_events users_security_policy users_passkeys

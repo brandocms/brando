@@ -69,21 +69,21 @@ defmodule Brando.Migrations.Brando244AddFragmentAlternatesTest do
     assert table?(@replayed, @table)
     refute table?(@earlier, @table)
 
-    no = fragment!(@replayed, "no")
-    en = fragment!(@replayed, "en")
+    no_replayed = fragment!(@replayed, "no")
+    en_replayed = fragment!(@replayed, "en")
 
     query!(
       ~s{INSERT INTO "#{@replayed}".#{@table} (entry_id, linked_entry_id, inserted_at, updated_at) VALUES ($1, $2, now(), now())},
-      [no, en]
+      [no_replayed, en_replayed]
     )
 
-    up(@template)
+    version = up(@template)
 
     for prefix <- [@replayed, @earlier] do
       assert table_set(prefix, [@table])[@table] == expected(prefix)
     end
 
-    assert rows(~s{SELECT entry_id, linked_entry_id FROM "#{@replayed}".#{@table}}, []) == [[no, en]]
+    assert rows(~s{SELECT entry_id, linked_entry_id FROM "#{@replayed}".#{@table}}, []) == [[no_replayed, en_replayed]]
 
     # Reciprocal uniqueness, and the links go with their fragment
     no = fragment!(@earlier, "no")
@@ -101,6 +101,12 @@ defmodule Brando.Migrations.Brando244AddFragmentAlternatesTest do
 
     query!(~s{DELETE FROM "#{@earlier}".pages_fragments WHERE id = $1}, [en])
     assert rows(~s{SELECT count(*) FROM "#{@earlier}".#{@table}}, []) == [[0]]
+
+    # A rollback keeps the tables and their links, brando_93's included
+    down(@template, version)
+
+    for prefix <- [@replayed, @earlier], do: assert(table?(prefix, @table))
+    assert rows(~s{SELECT entry_id, linked_entry_id FROM "#{@replayed}".#{@table}}, []) == [[no_replayed, en_replayed]]
   end
 
   test "leaves an environment without fragments alone" do

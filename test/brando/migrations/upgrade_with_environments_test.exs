@@ -112,7 +112,8 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
     assert length(migrate(directory, :down)) == length(files)
 
     for prefix <- ["public" | @environments] do
-      for table <- environment_tables(), do: refute(table?(prefix, table))
+      for table <- environment_tables() -- kept_environment_tables(), do: refute(table?(prefix, table))
+      for table <- kept_environment_tables(), do: assert(table?(prefix, table))
       assert Enum.filter(environment_indexes(), &(&1 in indexes_in(prefix))) == []
       assert column_set(prefix, environment_columns()) == Map.new(environment_columns(), fn {table, _} -> {table, []} end)
     end
