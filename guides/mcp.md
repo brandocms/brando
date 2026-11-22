@@ -5,8 +5,8 @@ Brando can let people connect Claude, ChatGPT, Claude Code, VS Code and other
 reads content and prepares proposals, as the person who connected it; the
 person reviews and applies the proposals in the Assistant, under **From
 connected tools**. Nothing a tool does saves, publishes or deletes content.
-With a Figma token, a tool can also read a Figma frame and import its images
-into the media library, to build an entry from a design (see
+With Figma connected, a tool can also read a Figma frame and import its
+images into the media library, to build an entry from a design (see
 [Build from Figma](#build-from-figma)).
 
 The endpoint is off until an administrator turns it on, per site and
@@ -195,10 +195,10 @@ or to use `translate` ([Language versions](content_assistant.md#language-version
 
 With them, three tools that add images to the media library (below):
 `brando_media_prepare_upload`, `brando_media_finish_upload` and
-`brando_media_import_url`. With a Figma token, two more:
+`brando_media_import_url`. With Figma connected, two more:
 `brando_figma_read_frame` and `brando_figma_import_images`; and
-`brando_figma_status`, which checks the site's Figma token
-([Add the token](#add-the-token)).
+`brando_figma_status`, which checks how the site reaches Figma
+([Connect Figma](#connect-figma)).
 
 ### Follow up on proposals
 
@@ -623,7 +623,7 @@ and what to leave out. For example:
 - "Videos uploaded by hand are in the folder Projects/Videos."
 
 Write it under **Configuration → Integrations → Connected AI tools →
-Figma**, below the token. Every save is a version, as with the Assistant's
+Figma**, below the connection and the token. Every save is a version, as with the Assistant's
 guidance, and an earlier one can be loaded into the editor. Editing it takes
 the same right as the Assistant's guidance (**Content assistant →
 configure**, superusers by default); others who manage connected tools see
@@ -644,11 +644,99 @@ its last sections to the next one; guidance never shortens a section. When
 the first section alone leaves too little room, the guidance is cut, the
 developers' part first. The Assistant's prompt never includes it.
 
+### Connect Figma
+
+The tools reach Figma in one of two ways per site environment, both under
+**Configuration → Integrations → Connected AI tools → Figma**, which takes
+the same **Connected AI tools → Manage** permission as the switch:
+
+- through the environment's own **Figma app**, connected with OAuth: its
+  access renews itself, so nobody pastes tokens again;
+- with a pasted **personal access token** ([Add the token](#add-the-token)),
+  which expires after at most 90 days.
+
+An environment with a connected app uses it; one without uses the token, if
+there is one. The screen says which one calls use. An app saved but not yet
+connected changes nothing: calls keep using the token until Figma is
+connected.
+
+Each site environment registers an app of its own in Figma: production,
+staging and development each have their own client ID, secret and redirect
+URL. Figma keeps one access token per app and Figma account, and renewing it
+ends the one before, so two environments sharing an app and an account would
+cut each other's access off whenever one renews it. Brando does not enforce
+this.
+
+To connect an environment:
+
+1. In Figma, create an app under
+   [figma.com/developers/apps](https://www.figma.com/developers/apps), and
+   give it the **redirect URL** the screen shows: the admin's callback,
+   `<the site's URL><admin path>/config/mcp/figma/callback`, on the
+   endpoint's configured URL (the admin host with multi-site tenancy) and
+   under the path the admin is mounted at. Give it two scopes:
+   **File content: read** (`file_content:read`), which the tools read frames
+   and images with, and **Current user: read** (`current_user:read`), which
+   connecting and checking need, to read the account's handle. A private app
+   (tied to your Figma team or organization) needs no review by Figma; an
+   app still in draft cannot be used by anyone but its owner.
+2. Paste the app's client ID and secret under **Connect Figma** and save
+   them.
+3. Press **Connect**. Brando asks for the password, a code or a passkey
+   when the session has not given one lately, before leaving for Figma,
+   where the person signs in and allows access. Figma sends the browser back
+   to the redirect URL, and the screen says whether Figma is connected.
+
+The calls see the Figma files the account that connected can open, and
+Figma's limits on API calls follow that account's seat, as with a token.
+
+Brando asks Figma with PKCE (`S256`) and a random `state`, which lasts ten
+minutes, is used once, and belongs to the person and the session that pressed
+**Connect** and to the environment they connected. The callback saves
+nothing, and says so, when the attempt is unknown or used already, took
+longer than ten minutes, came back to another session, when the person may no
+longer manage the settings, or when the app or the connection changed while
+they were at Figma. When Figma's code cannot be exchanged, or the account it
+gives cannot be read, nothing is saved either, and a new attempt starts from
+scratch. Figma sends nothing back when consent is refused; a later attempt
+replaces the abandoned one.
+
+The app's client ID and secret, the access token and the refresh token are
+stored encrypted with `Brando.Crypto`, each bound to its environment, never
+shown again and never logged; the screen shows the client ID's last four
+characters, the Figma account's handle, and who connected it and when.
+
+Each request to Figma reads the access token, so an import that makes several
+requests uses a token renewed between them. Within five minutes of its expiry
+the token is renewed first, under a lock on the environment's settings row,
+so that calls at the same time renew it once and use the new one; a call
+waits a few seconds at most for that lock, then answers that it should try
+again in a moment. When Figma answers that a token has expired, it is renewed
+once and the request made again. When Figma does not answer a renewal (a
+timeout, its call limit, an error at Figma), nothing changes and a later call
+tries again. When Figma refuses the renewal, as after the access was revoked
+in Figma, the connection is marked **Needs reconnecting**, recorded in
+Activity, and the tools answer that an administrator reconnects Figma; they do
+not move over to a pasted token meanwhile. A connection that no longer
+decrypts (after a change of the encryption secret) is **Needs repair**, with
+the same effect; save the app again if it says so, then reconnect.
+
+**Disconnect** removes the connection and keeps the app, so Figma can be
+connected again; calls then use the pasted token again, if there is one, as
+the confirmation says. **Change app** opens the app's form: another client ID
+removes the connection, and Figma is connected again; the same client ID with
+a new secret keeps it. **Remove app** removes the connection too. Saving or
+removing the app, connecting and disconnecting are recorded in Activity, and
+ask for the password or a code as the token does.
+
+The expiry date and its warnings belong to a pasted token only: a connected
+app renews itself.
+
 ### Add the token
 
-The tools call Figma with one access token per site environment, under
-**Configuration → Integrations → Connected AI tools → Figma**, which takes
-the same **Connected AI tools → Manage** permission as the switch. Create it
+Without a connected app, the tools call Figma with one personal access token
+per site environment, under **Connected AI tools → Figma → Figma access
+token**. Create it
 in Figma under **Settings → Security → Personal access tokens**, on the
 account of someone who can open the files to import, with two scopes:
 
@@ -685,22 +773,25 @@ The token is stored encrypted with `Brando.Crypto`, bound to its site
 environment, and never shown again: the screen shows its last four
 characters, when it was added and by whom. Adding, replacing and removing it
 asks for the password or a code when the session has not given one lately,
-and is recorded in Activity (without the token). Without a token, the Figma
-tools answer that an administrator adds one. Removing it keeps the images
-already imported.
+and is recorded in Activity (without the token). Without a token or a connected
+app, the Figma tools answer that an administrator connects Figma or adds a
+token. Removing it keeps the images already imported.
 
 When Figma refuses a call, the tool says why: the token has expired, the
-token is not valid, the token lacks the permission to read files
-(`file_content:read`), or the token's owner cannot open the file, with
-Figma's own words (at most 200 characters). In the token's last week by its recorded
+token (or the connection) is not valid, it lacks the permission to read files
+(`file_content:read`), or the account cannot open the file, with Figma's own
+words (at most 200 characters). In a pasted token's last week by its recorded
 date, `brando_figma_read_frame` and `brando_figma_import_images` carry a
 `token_note` for the tool to pass on. `brando_figma_status` lets a tool check
-before it starts: whether a token is set, its state as Figma answers now
-(`valid`, `expired`, `invalid`, `no_account_scope`, `unreachable`, or
-`unreadable` when it no longer decrypts), the account's handle, the recorded
-expiry date, and a `message` in words. It never returns the token, its last
-four characters or an email address. Without a token it answers so, rather
-than failing.
+before it starts: what the tools call Figma with (`credential`: `oauth`,
+`token` or `none`), where the connection stands (`oauth`: `not_set_up`,
+`app_saved`, `connected`, `needs_reconnect` or `needs_repair`), whether a
+token is stored, the credential's state as Figma answers now (`valid`,
+`expired`, `invalid`, `no_account_scope`, `unreachable`, `unreadable` when a
+token no longer decrypts, `needs_reconnect` or `needs_repair`), the account's
+handle, a token's recorded expiry date, and a `message` in words. It never
+returns a token, its last four characters, the app's credentials or an email
+address. Without any credential it answers so, rather than failing.
 
 ## Revoke
 
@@ -979,12 +1070,23 @@ And the attacks the review asked about:
   redirects), with a time limit and the image config's size limit (with
   `fit`, the import's own `fit_download_limit`), written to
   a temporary file and checked as an upload before anything is stored.
-- **The Figma token.** Encrypted at rest and bound to its site environment, so
-  a copy of the column, or a ciphertext moved to another row, does not give
-  the token. It reaches only Figma's API, in a header, and is never shown,
-  logged or returned to a tool; `brando_figma_status` returns the handle of
-  its account, not its email address. It gives a tool what its owner can open in
-  Figma; a token for a narrow account limits that.
+- **The Figma token and the Figma app.** A pasted token, the app's client ID
+  and secret, and the connection's access and refresh tokens are encrypted at
+  rest and bound to their site environment and column, so a copy of a
+  column, or a ciphertext moved to another row, gives nothing. They reach
+  only Figma's API, in a header (a pasted token in `X-Figma-Token`, an access
+  token as `Authorization: Bearer`, the app's credentials as HTTP Basic
+  authentication when the code is exchanged or the token renewed), and are
+  never shown, logged or returned to a tool; `brando_figma_status` returns
+  the handle of the account, not its email address. They give a tool what
+  their account can open in Figma; a narrow account limits that.
+- **Connecting Figma.** The `state` is random, kept only as a hash, used
+  once, expires in ten minutes and belongs to the person, the session and the
+  site environment that started; PKCE keeps an intercepted code from being
+  exchanged elsewhere. The callback checks again that the person may manage
+  the environment's settings, and saves nothing when the app or the
+  connection changed meanwhile. Its route is not logged, so Figma's code
+  stays out of the request log.
 - **Prompt injection.** A tool following instructions from content can only
   read what the person can read and prepare proposals; a person reviews
   every change before it is applied.

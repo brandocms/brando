@@ -17,21 +17,36 @@ defmodule BrandoAdmin.Sites.MCPLive do
   not given one lately (`BrandoAdmin.Reauth`). The token is never shown
   again once saved: only its last four characters.
 
-  Once the page is up it asks Figma about the token (`Brando.Figma.check/1`,
-  without holding the page up), and Test asks again. The expiry date given
-  with the token shows under it, as a warning in its last week and after it.
+  Figma is reached through the site environment's own Figma app with OAuth
+  (`Brando.Figma.OAuth`), or else with a pasted personal access token; the
+  page says which one calls use. Saving or removing the app's client id and
+  secret, connecting (or reconnecting) and disconnecting ask for the
+  password, a code or a passkey as the token does, before leaving for Figma.
+  Figma's callback (`BrandoAdmin.FigmaCallbackController`) comes back here
+  with its outcome as `?figma=…`.
+
+  Once the page is up it asks Figma about the credential calls use
+  (`Brando.Figma.check/1`, without holding the page up), and Test asks
+  again. The expiry date given with a pasted token shows under it, as a
+  warning in its last week and after it.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
   alias Brando.AI.Agent.Guidance
   alias Brando.Figma
+  alias Brando.Figma.OAuth
   alias Brando.MCP
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Toast
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
-  on_mount({BrandoAdmin.Reauth, events: ~w(enable disable revoke save_figma_token remove_figma_token)})
+
+  on_mount(
+    {BrandoAdmin.Reauth,
+     events:
+       ~w(enable disable revoke save_figma_token remove_figma_token save_figma_app remove_figma_app connect_figma disconnect_figma)}
+  )
 
   def __authorization__, do: {:manage, :mcp}
 
@@ -148,6 +163,177 @@ defmodule BrandoAdmin.Sites.MCPLive do
 
         <section aria-labelledby="mcp-figma-heading">
           <h2 id="mcp-figma-heading" class="integrations-group">{gettext("Figma")}</h2>
+          <article
+            class="integrations-row plain"
+            data-testid="mcp-figma-credential"
+            data-credential={credential(@figma_app, @figma)}
+          >
+            <div class="integrations-text">
+              <h3>{gettext("What connected tools read Figma with")}</h3>
+              <p>{credential_text(credential(@figma_app, @figma), @figma_app)}</p>
+            </div>
+          </article>
+          <article
+            class="integrations-row"
+            id="mcp-figma-app"
+            data-testid="mcp-figma-app"
+            data-state={app_state(@figma_app)}
+          >
+            <span class="integrations-icon" aria-hidden="true"><.icon name="link" /></span>
+            <div class="integrations-text">
+              <h3>
+                {gettext("Connect Figma")}
+                <.app_badge app={@figma_app} />
+              </h3>
+              <p>
+                {gettext(
+                  "Connected tools reach Figma through this site's own Figma app, as the Figma account that connects it, and their access renews itself. Each environment registers its own app."
+                )}
+              </p>
+              <p
+                :if={@figma_outcome}
+                class={["mcp-figma-outcome", @figma_outcome != :connected && "is-warning"]}
+                data-testid="mcp-figma-outcome"
+                data-outcome={@figma_outcome}
+                role="status"
+              >
+                {outcome_text(@figma_outcome)}
+              </p>
+              <p :if={@figma_app && !@figma_app_form?} data-testid="mcp-figma-app-hint">
+                {app_added(@figma_app)}
+              </p>
+              <p :if={connected_by(@figma_app)} data-testid="mcp-figma-connected">
+                {connected_by(@figma_app)}
+              </p>
+              <.figma_check
+                :if={@figma_check && @figma_check_for == :oauth}
+                check={@figma_check}
+                kind={:oauth}
+              />
+              <p :if={@figma_app && @figma_app.state == :needs_reconnect} data-testid="mcp-figma-needs-reconnect">
+                {gettext(
+                  "Figma refused to renew the connection, as after it was revoked in Figma. Connected tools cannot reach Figma until it is reconnected, and do not use the access token meanwhile."
+                )}
+              </p>
+              <p :if={@figma_app && @figma_app.state == :needs_repair} data-testid="mcp-figma-needs-repair">
+                {gettext(
+                  "The connection can no longer be decrypted, as after a change of the encryption secret. Connected tools cannot reach Figma until it is connected again, and do not use the access token meanwhile."
+                )}
+              </p>
+              <p :if={@figma_app && !@figma_app.readable} data-testid="mcp-figma-app-unreadable">
+                {gettext("The app's client ID and secret can no longer be decrypted. Save them again.")}
+              </p>
+              <div :if={!@figma_app or @figma_app_form?} class="mcp-figma-redirect">
+                <label for="mcp-figma-redirect-url">{gettext("Redirect URL")}</label>
+                <input
+                  type="text"
+                  id="mcp-figma-redirect-url"
+                  value={@figma_redirect_url}
+                  readonly
+                  data-testid="mcp-figma-redirect-url"
+                />
+              </div>
+              <form
+                :if={!@figma_app or @figma_app_form?}
+                class="mcp-figma-form"
+                phx-submit="save_figma_app"
+                data-testid="mcp-figma-app-form"
+              >
+                <input
+                  type="text"
+                  name="client_id"
+                  autocomplete="off"
+                  spellcheck="false"
+                  required
+                  placeholder={gettext("Client ID")}
+                  aria-label={gettext("Client ID")}
+                  aria-describedby="mcp-figma-app-help"
+                  data-testid="mcp-figma-client-id"
+                />
+                <input
+                  type="password"
+                  name="client_secret"
+                  autocomplete="off"
+                  spellcheck="false"
+                  required
+                  placeholder={gettext("Client secret")}
+                  aria-label={gettext("Client secret")}
+                  aria-describedby="mcp-figma-app-help"
+                  data-testid="mcp-figma-client-secret"
+                />
+                <button type="submit" class="btn btn--primary" data-testid="mcp-figma-app-save">
+                  {gettext("Save app")}
+                </button>
+                <button
+                  :if={@figma_app}
+                  type="button"
+                  class="btn"
+                  phx-click="cancel_figma_app"
+                  data-testid="mcp-figma-app-cancel"
+                >
+                  {gettext("Cancel")}
+                </button>
+                <button
+                  :if={@figma_app}
+                  type="button"
+                  class="btn btn--danger"
+                  phx-click="remove_figma_app"
+                  data-testid="mcp-figma-app-remove"
+                  data-confirm-title={gettext("Remove the Figma app?")}
+                  data-confirm={remove_app_confirm(@figma)}
+                  data-confirm-ok={gettext("Remove")}
+                  data-confirm-destructive
+                >
+                  {gettext("Remove app")}
+                </button>
+                <small id="mcp-figma-app-help">
+                  {gettext(
+                    "In Figma, create an app for this environment under figma.com/developers/apps, with the redirect URL above and the scopes File content: read (file_content:read) and Current user: read (current_user:read), and paste its client ID and secret here."
+                  )}
+                  {gettext(
+                    "Another client ID than the one saved removes the connection, and Figma has to be connected again. The same client ID with a new secret keeps it."
+                  )}
+                </small>
+              </form>
+            </div>
+            <div :if={@figma_app && !@figma_app_form?} class="integrations-actions">
+              <button
+                :if={@figma_app.state == :connected}
+                type="button"
+                class="btn btn--quiet"
+                phx-click="test_figma_token"
+                disabled={@figma_check == :checking}
+                data-testid="mcp-figma-app-test"
+              >
+                {gettext("Test")}
+              </button>
+              <button
+                :if={@figma_app.readable}
+                type="button"
+                class={["btn", @figma_app.state != :connected && "btn--primary"]}
+                phx-click="connect_figma"
+                data-testid="mcp-figma-connect"
+              >
+                {if @figma_app.state == :none, do: gettext("Connect"), else: gettext("Reconnect")}
+              </button>
+              <button
+                :if={@figma_app.state != :none}
+                type="button"
+                class="btn btn--danger"
+                phx-click="disconnect_figma"
+                data-testid="mcp-figma-disconnect"
+                data-confirm-title={gettext("Disconnect Figma?")}
+                data-confirm={disconnect_confirm(@figma)}
+                data-confirm-ok={gettext("Disconnect")}
+                data-confirm-destructive
+              >
+                {gettext("Disconnect")}
+              </button>
+              <button type="button" class="btn" phx-click="edit_figma_app" data-testid="mcp-figma-app-edit">
+                {gettext("Change app")}
+              </button>
+            </div>
+          </article>
           <article class="integrations-row" id="mcp-figma" data-testid="mcp-figma">
             <span class="integrations-icon" aria-hidden="true"><.icon name="frame" /></span>
             <div class="integrations-text">
@@ -166,13 +352,17 @@ defmodule BrandoAdmin.Sites.MCPLive do
               </h3>
               <p>
                 {gettext(
-                  "Connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame. They see the Figma files the token's owner can open."
+                  "Without a connected Figma app, connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame, with a personal access token. They see the Figma files the token's owner can open."
                 )}
               </p>
               <p :if={@figma} data-testid="mcp-figma-hint">
                 {figma_added(@figma)}
               </p>
-              <.figma_check :if={@figma && @figma.readable && @figma_check} check={@figma_check} />
+              <.figma_check
+                :if={@figma && @figma.readable && @figma_check && @figma_check_for == :token}
+                check={@figma_check}
+                kind={:token}
+              />
               <.figma_expiry :if={@figma} expiry={Figma.expiry(@figma.expires_on, @today)} />
               <p :if={@figma && !@figma.readable}>
                 {gettext(
@@ -335,17 +525,160 @@ defmodule BrandoAdmin.Sites.MCPLive do
     """
   end
 
-  # What Figma said of the token when the page asked (`Brando.Figma.check/1`)
+  # What Figma said of the credential when the page asked (`Brando.Figma.check/1`)
   attr :check, :any, required: true
+  attr :kind, :atom, required: true
 
   defp figma_check(assigns) do
     ~H"""
-    <p class="mcp-figma-check" data-testid="mcp-figma-check" data-state={check_state(@check)}>
+    <p class="mcp-figma-check" data-testid="mcp-figma-check" data-state={check_state(@check)} data-kind={@kind}>
       <span class={["badge", check_tone(@check)]}>{check_label(@check)}</span>
-      <span :if={check_text(@check)}>{check_text(@check)}</span>
+      <span :if={check_text(@check, @kind)}>{check_text(@check, @kind)}</span>
     </p>
     """
   end
+
+  attr :app, :map, required: true
+
+  defp app_badge(%{app: nil} = assigns), do: ~H""
+
+  defp app_badge(assigns) do
+    ~H"""
+    <span class={["badge", app_tone(@app.state)]} data-testid="mcp-figma-app-status">{app_label(@app.state)}</span>
+    """
+  end
+
+  defp app_tone(:connected), do: "badge--success"
+  defp app_tone(:none), do: nil
+  defp app_tone(_state), do: "badge--attention"
+
+  defp app_label(:connected), do: gettext("Connected")
+  defp app_label(:none), do: gettext("Not connected")
+  defp app_label(:needs_reconnect), do: gettext("Needs reconnecting")
+  defp app_label(:needs_repair), do: gettext("Needs repair")
+
+  defp app_state(nil), do: "no_app"
+  defp app_state(%{state: state}), do: to_string(state)
+
+  # What calls use: the OAuth connection when there is one, else the pasted token
+  defp credential(%{state: :connected}, _token), do: "oauth"
+  defp credential(%{state: state}, _token) when state in [:needs_reconnect, :needs_repair], do: "blocked"
+  defp credential(_app, %{readable: true}), do: "token"
+  defp credential(_app, _token), do: "none"
+
+  defp credential_text("oauth", _app), do: gettext("The Figma connection below. The access token is not used meanwhile.")
+
+  defp credential_text("blocked", _app),
+    do: gettext("Nothing, until Figma is reconnected below. The access token is not used meanwhile.")
+
+  defp credential_text("token", nil), do: gettext("The access token below.")
+
+  defp credential_text("token", _app),
+    do: gettext("The access token below, until Figma is connected through the app.")
+
+  defp credential_text("none", _app),
+    do: gettext("Nothing yet: connect Figma through an app, or add an access token, below.")
+
+  defp outcome_text(:connected), do: gettext("Figma is connected.")
+
+  defp outcome_text(:unknown),
+    do: gettext("That connection attempt is unknown, or was used already, so nothing was saved. Connect again.")
+
+  defp outcome_text(:expired),
+    do: gettext("The connection attempt took longer than ten minutes, so nothing was saved. Connect again.")
+
+  defp outcome_text(:forbidden), do: gettext("You may no longer manage these settings, so Figma was not connected.")
+
+  defp outcome_text(:changed),
+    do:
+      gettext(
+        "The Figma app or its connection changed while you were at Figma, so nothing was saved. Connect again if it is still needed."
+      )
+
+  defp outcome_text(:denied), do: gettext("Figma was not connected: consent was not given.")
+
+  defp outcome_text(:exchange_failed),
+    do:
+      gettext(
+        "Figma did not accept the connection, so nothing was saved. Check the app's client secret and redirect URL, and try again."
+      )
+
+  defp outcome_text(:account_failed),
+    do:
+      gettext(
+        "Figma gave access, but the account it belongs to could not be read, so nothing was saved. Check that the app has the current_user:read scope, and try again."
+      )
+
+  defp outcome_text(:save_failed),
+    do: gettext("Figma gave access, but the connection could not be saved, so nothing was saved. Try again.")
+
+  @outcomes ~w(connected unknown expired forbidden changed denied exchange_failed account_failed save_failed)a
+  @outcome_names Map.new(@outcomes, &{to_string(&1), &1})
+
+  defp app_added(%{client_hint: hint, set_at: set_at, set_by: set_by}) do
+    cond do
+      set_by && set_at ->
+        gettext("App client ID ends in %{hint}. Saved %{date} by %{name}.",
+          hint: hint,
+          date: date(set_at),
+          name: set_by.name
+        )
+
+      set_at ->
+        gettext("App client ID ends in %{hint}. Saved %{date}.", hint: hint, date: date(set_at))
+
+      true ->
+        gettext("App client ID ends in %{hint}.", hint: hint)
+    end
+  end
+
+  defp connected_by(%{state: state, connected_at: %DateTime{} = at} = app) when state != :none do
+    case {app.handle, app.connected_by} do
+      {nil, nil} ->
+        gettext("Connected %{date}.", date: date(at))
+
+      {nil, user} ->
+        gettext("Connected %{date} by %{name}.", date: date(at), name: user.name)
+
+      {handle, nil} ->
+        gettext("As the Figma account %{handle}. Connected %{date}.", handle: handle, date: date(at))
+
+      {handle, user} ->
+        gettext("As the Figma account %{handle}. Connected %{date} by %{name}.",
+          handle: handle,
+          date: date(at),
+          name: user.name
+        )
+    end
+  end
+
+  defp connected_by(_app), do: nil
+
+  defp disconnect_confirm(%{readable: true, hint: hint}),
+    do:
+      gettext(
+        "Connected tools then read Figma with the access token ending in %{hint} again. The app stays, to connect again.",
+        hint: hint
+      )
+
+  defp disconnect_confirm(_token),
+    do:
+      gettext(
+        "Connected tools then can no longer read Figma, until it is connected again or an access token is added. The app stays, to connect again."
+      )
+
+  defp remove_app_confirm(%{readable: true, hint: hint}),
+    do:
+      gettext(
+        "This removes the Figma connection too. Connected tools then read Figma with the access token ending in %{hint}.",
+        hint: hint
+      )
+
+  defp remove_app_confirm(_token),
+    do:
+      gettext(
+        "This removes the Figma connection too. Connected tools then can no longer read Figma, until an app is connected or an access token is added."
+      )
 
   defp check_state({state, _detail}), do: to_string(state)
   defp check_state(state), do: to_string(state)
@@ -359,24 +692,40 @@ defmodule BrandoAdmin.Sites.MCPLive do
   defp check_label({:invalid, _err}), do: gettext("Not valid")
   defp check_label({:no_account_scope, _err}), do: gettext("Not checked")
   defp check_label(:unreachable), do: gettext("Not checked")
+  defp check_label(:needs_reconnect), do: gettext("Needs reconnecting")
+  defp check_label(:needs_repair), do: gettext("Needs repair")
   defp check_label(_checking), do: gettext("Checking with Figma…")
 
-  defp check_text({:valid, nil}), do: gettext("Figma accepts it.")
-  defp check_text({:valid, handle}), do: gettext("Figma accepts it, for the account %{handle}.", handle: handle)
-  defp check_text({:expired, _err}), do: gettext("Figma says it has expired. Replace it.")
-  defp check_text({:invalid, nil}), do: gettext("Figma does not accept it. Replace it.")
+  defp check_text({:valid, nil}, _kind), do: gettext("Figma accepts it.")
+  defp check_text({:valid, handle}, _kind), do: gettext("Figma accepts it, for the account %{handle}.", handle: handle)
+  defp check_text({:expired, _err}, :token), do: gettext("Figma says it has expired. Replace it.")
 
-  defp check_text({:invalid, err}),
+  defp check_text({:expired, _err}, :oauth),
+    do: gettext("Figma says it has expired, and it could not be renewed. Reconnect.")
+
+  defp check_text({:invalid, nil}, :token), do: gettext("Figma does not accept it. Replace it.")
+  defp check_text({:invalid, nil}, :oauth), do: gettext("Figma does not accept it. Reconnect.")
+
+  defp check_text({:invalid, err}, :token),
     do: gettext("Figma does not accept it. Replace it. Figma said: “%{error}”", error: err)
 
-  defp check_text({:no_account_scope, _err}),
+  defp check_text({:invalid, err}, :oauth),
+    do: gettext("Figma does not accept it. Reconnect. Figma said: “%{error}”", error: err)
+
+  defp check_text({:no_account_scope, _err}, :token),
     do:
       gettext(
         "It may not read its own Figma account (the current_user:read scope), so it could not be checked. It may still read files. For the check, replace it with a token that also has current_user:read."
       )
 
-  defp check_text(:unreachable), do: gettext("Figma could not be reached to check it. Try again in a moment.")
-  defp check_text(_checking), do: nil
+  defp check_text({:no_account_scope, _err}, :oauth),
+    do:
+      gettext(
+        "It may not read its own Figma account (the current_user:read scope), so it could not be checked. It may still read files. For the check, give the app current_user:read in Figma and reconnect."
+      )
+
+  defp check_text(:unreachable, _kind), do: gettext("Figma could not be reached to check it. Try again in a moment.")
+  defp check_text(_checking, _kind), do: nil
 
   # The expiry date recorded with the token (`Brando.Figma.expiry/2`)
   attr :expiry, :any, required: true
@@ -537,7 +886,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
     """
   end
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     tenant = MCP.tenant(socket.assigns[:current_site], socket.assigns[:current_environment])
 
     if MCP.can_manage?(socket.assigns.current_user, tenant) do
@@ -550,7 +899,14 @@ defmodule BrandoAdmin.Sites.MCPLive do
          mounted?: MCP.mounted?(),
          secure?: MCP.secure_base?(),
          figma_form?: false,
+         figma_app_form?: false,
+         figma_outcome: nil,
+         figma_redirect_url: OAuth.redirect_url(),
+         # The session's token row, which a connection to Figma is bound to;
+         # never the token itself
+         session_id: Brando.Users.token_id(session["user_token"]),
          figma_check: nil,
+         figma_check_for: nil,
          figma_default_days: @figma_default_days,
          today: Figma.today()
        )
@@ -568,22 +924,50 @@ defmodule BrandoAdmin.Sites.MCPLive do
     assign(socket,
       enabled?: MCP.enabled?(tenant),
       grants: MCP.list_grants(tenant),
-      figma: MCP.figma_token_status(tenant)
+      figma: MCP.figma_token_status(tenant),
+      figma_app: OAuth.status(tenant)
     )
   end
 
-  # Asks Figma about the stored token once the page is up: the page does not
-  # wait for Figma. The token is read here, in the page's process, and only
-  # the call to Figma runs apart.
+  def handle_params(params, _uri, socket) do
+    {:noreply, assign(socket, :figma_outcome, Map.get(@outcome_names, params["figma"]))}
+  end
+
+  # Asks Figma about the credential calls use once the page is up: the page
+  # does not wait for Figma. A pasted token is read here, in the page's
+  # process, and only the call to Figma runs apart; an OAuth connection's
+  # access token is read, and renewed if it must be, in the call.
   defp check_figma_token(socket) do
-    with true <- connected?(socket),
-         %{readable: true} <- socket.assigns.figma,
-         {:ok, token} <- Figma.token(socket.assigns.tenant) do
-      socket |> assign(:figma_check, :checking) |> start_async(:figma_check, fn -> Figma.check(token) end)
-    else
-      _no_token -> assign(socket, :figma_check, nil)
+    tenant = socket.assigns.tenant
+
+    cond do
+      not connected?(socket) ->
+        assign(socket, figma_check: nil, figma_check_for: nil)
+
+      match?(%{state: :connected}, socket.assigns.figma_app) ->
+        socket
+        |> assign(figma_check: :checking, figma_check_for: :oauth)
+        |> start_async(:figma_check, fn -> Figma.check({:oauth, tenant}) end)
+
+      match?(%{state: state} when state != :none, socket.assigns.figma_app) ->
+        assign(socket, figma_check: nil, figma_check_for: nil)
+
+      true ->
+        case {socket.assigns.figma, Figma.token(tenant)} do
+          {%{readable: true}, {:ok, token}} ->
+            socket
+            |> assign(figma_check: :checking, figma_check_for: :token)
+            |> start_async(:figma_check, fn -> Figma.check(token) end)
+
+          _no_token ->
+            assign(socket, figma_check: nil, figma_check_for: nil)
+        end
     end
   end
+
+  # A check that turns up a connection needing a reconnect shows it at once
+  def handle_async(:figma_check, {:ok, check}, socket) when check in [:needs_reconnect, :needs_repair],
+    do: {:noreply, socket |> load() |> assign(figma_check: nil, figma_check_for: nil)}
 
   def handle_async(:figma_check, {:ok, check}, socket), do: {:noreply, assign(socket, :figma_check, check)}
   def handle_async(:figma_check, {:exit, _reason}, socket), do: {:noreply, assign(socket, :figma_check, :unreachable)}
@@ -654,8 +1038,65 @@ defmodule BrandoAdmin.Sites.MCPLive do
   # page was loaded, and the day may have turned: Test shows the token
   # stored now, on today's date
   def handle_event("test_figma_token", _params, socket) do
-    figma = MCP.figma_token_status(socket.assigns.tenant)
-    {:noreply, socket |> assign(figma: figma, today: Figma.today()) |> check_figma_token()}
+    {:noreply, socket |> load() |> assign(today: Figma.today()) |> check_figma_token()}
+  end
+
+  def handle_event("edit_figma_app", _params, socket), do: {:noreply, assign(socket, :figma_app_form?, true)}
+  def handle_event("cancel_figma_app", _params, socket), do: {:noreply, assign(socket, :figma_app_form?, false)}
+
+  def handle_event("save_figma_app", %{"client_id" => client_id, "client_secret" => secret}, socket) do
+    %{current_user: user, tenant: tenant} = socket.assigns
+
+    case OAuth.put_app(tenant, client_id, secret, user) do
+      :ok ->
+        Toast.send_to(user, gettext("The Figma app was saved."))
+        {:noreply, socket |> assign(figma_app_form?: false, figma_outcome: nil) |> load() |> check_figma_token()}
+
+      {:error, :invalid_app} ->
+        Toast.send_to(user, gettext("That does not look like a Figma app's client ID and secret."), %{level: :error})
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        Toast.send_to(user, gettext("The Figma app could not be saved."), %{level: :error})
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("remove_figma_app", _params, socket) do
+    %{current_user: user, tenant: tenant} = socket.assigns
+
+    case OAuth.delete_app(tenant, user) do
+      :ok -> Toast.send_to(user, gettext("The Figma app was removed."))
+      {:error, _reason} -> Toast.send_to(user, gettext("The Figma app could not be removed."), %{level: :error})
+    end
+
+    {:noreply, socket |> assign(figma_app_form?: false, figma_outcome: nil) |> load() |> check_figma_token()}
+  end
+
+  # Confirmed already (`BrandoAdmin.Reauth`): Figma's code lasts 30 seconds,
+  # so nothing is asked once the browser is back
+  def handle_event("connect_figma", _params, socket) do
+    %{current_user: user, tenant: tenant, session_id: session_id} = socket.assigns
+
+    case OAuth.start(tenant, user, session_id) do
+      {:ok, url} ->
+        {:noreply, redirect(socket, external: url)}
+
+      {:error, _reason} ->
+        Toast.send_to(user, gettext("Figma could not be connected. Save the app again, then connect."), %{level: :error})
+        {:noreply, load(socket)}
+    end
+  end
+
+  def handle_event("disconnect_figma", _params, socket) do
+    %{current_user: user, tenant: tenant} = socket.assigns
+
+    case OAuth.disconnect(tenant, user) do
+      :ok -> Toast.send_to(user, gettext("Figma was disconnected."))
+      {:error, _reason} -> Toast.send_to(user, gettext("Figma could not be disconnected."), %{level: :error})
+    end
+
+    {:noreply, socket |> assign(:figma_outcome, nil) |> load() |> check_figma_token()}
   end
 
   def handle_event("save_figma_token", %{"token" => token} = params, socket) do

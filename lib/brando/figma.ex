@@ -6,9 +6,14 @@ defmodule Brando.Figma do
   (`Brando.Figma.Import`). The MCP endpoint offers both as tools
   (`Brando.Figma.Tools`); see the guide, `guides/mcp.md`.
 
-  Figma is called with the site environment's access token, which an
-  administrator adds under Configuration → Integrations → Connected AI tools
-  (`Brando.MCP.put_figma_token/3`). Without one the tools say so.
+  Figma is called with the site environment's credential (`credential/1`):
+  its OAuth connection when an administrator has connected Figma under
+  Configuration → Integrations → Connected AI tools (`Brando.Figma.OAuth`),
+  otherwise the personal access token pasted there
+  (`Brando.MCP.put_figma_token/3`). Without either the tools say so. The
+  credential is resolved for each request, not once per tool call: an
+  OAuth access token is renewed when it is about to expire, and once more
+  when Figma answers that it has.
 
   ## Configuration
 
@@ -16,7 +21,9 @@ defmodule Brando.Figma do
         api_url: "https://api.figma.com",
         req_options: [],
         guidance: MyApp.FigmaGuidance,
-        fit_download_limit: 50_000_000
+        fit_download_limit: 50_000_000,
+        oauth_url: "https://www.figma.com/oauth",
+        lock_timeout: 5_000
 
   `req_options` are merged into every API request (tests pass
   `plug: {Req.Test, Brando.Figma}`). `guidance` is the developers' baseline
@@ -25,14 +32,28 @@ defmodule Brando.Figma do
   or a module implementing `Brando.AI.Agent.Guidance`. `fit_download_limit`
   is the most bytes `brando_figma_import_images` with `fit: true` downloads of
   an image to scale it down (`Brando.Figma.Import.fit_download_limit/0`).
+  `oauth_url` is Figma's authorization page and `lock_timeout` the most
+  milliseconds a call waits for the lock under which an OAuth access token is
+  renewed (`Brando.Figma.OAuth`).
   """
 
+  alias Brando.Figma.OAuth
   alias Brando.MCP
 
   @api_url "https://api.figma.com"
   @timeout 20_000
   @err_length 200
   @replace_token "An administrator replaces it under Configuration → Integrations → Connected AI tools."
+  @reconnect "An administrator reconnects Figma under Configuration → Integrations → Connected AI tools."
+
+  @typedoc """
+  What a request to Figma is made with: a pasted personal access token (in
+  `X-Figma-Token`), an OAuth access token (`{:bearer, token}`, in
+  `Authorization: Bearer`), or a site environment's OAuth connection
+  (`{:oauth, tenant}`), whose access token is read, and renewed when it
+  needs to be, for each request.
+  """
+  @type credential :: String.t() | {:bearer, String.t()} | {:oauth, MCP.tenant()}
 
   @type link :: %{file_key: String.t(), node_id: String.t()}
 
@@ -92,7 +113,22 @@ defmodule Brando.Figma do
     do: {:error, "The link names no frame. In Figma, select the frame and copy its link (it has ?node-id=…)."}
 
   @doc """
-  The token of `tenant`, or the error a tool shows when there is none.
+  What the tools call Figma with for `tenant`: its OAuth connection when it
+  has one (`Brando.Figma.OAuth`), otherwise its pasted token. A connection
+  that needs reconnecting or repairing is an error that says so: calls do
+  not move over to a pasted token, which may be someone else's.
+  """
+  @spec credential(MCP.tenant()) :: {:ok, credential()} | {:error, String.t()}
+  def credential(tenant) do
+    case OAuth.connection_state(tenant) do
+      :none -> token(tenant)
+      :connected -> {:ok, {:oauth, tenant}}
+      state -> {:error, oauth_message(state)}
+    end
+  end
+
+  @doc """
+  The pasted token of `tenant`, or the error a tool shows when there is none.
   """
   @spec token(MCP.tenant()) :: {:ok, String.t()} | {:error, String.t()}
   def token(tenant) do
@@ -102,7 +138,7 @@ defmodule Brando.Figma do
 
       :error ->
         {:error,
-         "Figma is not connected to this site. An administrator adds a Figma access token under " <>
+         "Figma is not connected to this site. An administrator connects Figma, or adds a Figma access token, under " <>
            "Configuration → Integrations → Connected AI tools."}
     end
   end
@@ -112,9 +148,9 @@ defmodule Brando.Figma do
   component sets its instances use: `%{file_name, document, components,
   component_sets}`.
   """
-  @spec node(String.t(), link()) :: {:ok, map()} | {:error, String.t()}
-  def node(token, %{file_key: file_key, node_id: node_id}) do
-    case get(token, "/v1/files/#{file_key}/nodes", ids: node_id) do
+  @spec node(credential(), link()) :: {:ok, map()} | {:error, String.t()}
+  def node(credential, %{file_key: file_key, node_id: node_id}) do
+    case get(credential, "/v1/files/#{file_key}/nodes", ids: node_id) do
       {:ok, %{"nodes" => %{^node_id => %{"document" => document} = node}} = body} ->
         {:ok,
          %{
@@ -136,9 +172,9 @@ defmodule Brando.Figma do
   Download URLs of the file's image fills, by image ref: the originals as
   placed, not renders. Figma's URLs expire after a while; use them at once.
   """
-  @spec image_urls(String.t(), String.t()) :: {:ok, %{String.t() => String.t()}} | {:error, String.t()}
-  def image_urls(token, file_key) do
-    case get(token, "/v1/files/#{file_key}/images", []) do
+  @spec image_urls(credential(), String.t()) :: {:ok, %{String.t() => String.t()}} | {:error, String.t()}
+  def image_urls(credential, file_key) do
+    case get(credential, "/v1/files/#{file_key}/images", []) do
       {:ok, %{"meta" => %{"images" => images}}} when is_map(images) -> {:ok, images}
       {:ok, _body} -> {:error, "Figma did not list the file's images."}
       {:error, _message} = error -> error
@@ -152,7 +188,8 @@ defmodule Brando.Figma do
   `current_user:read`), so it could not be checked though it may still read
   files; or `:unreachable` when Figma could not be asked (a timeout, a
   network error, 429, a 5xx, or a 401 or 403 without Figma's error text).
-  The last two say nothing of the token.
+  The last two say nothing of the token. An OAuth connection may also be
+  `:needs_reconnect` or `:needs_repair` (`Brando.Figma.OAuth.connection_state/1`).
   """
   @type check ::
           {:valid, String.t() | nil}
@@ -160,17 +197,20 @@ defmodule Brando.Figma do
           | {:invalid, String.t() | nil}
           | {:no_account_scope, String.t() | nil}
           | :unreachable
+          | :needs_reconnect
+          | :needs_repair
 
   @doc """
-  Asks Figma about `tenant`'s token (`token/1`, the one the tools call
-  with): `check/1`'s answer, or `:no_token` when there is no token the tools
-  can use.
+  Asks Figma about `tenant`'s credential (`credential/1`, the one the tools
+  call with): `check/1`'s answer, the state of an OAuth connection that
+  cannot be used, or `:no_token` when there is no credential.
   """
   @spec check_token(MCP.tenant()) :: :no_token | check()
   def check_token(tenant) do
-    case token(tenant) do
-      {:ok, token} -> check(token)
-      {:error, _message} -> :no_token
+    case OAuth.connection_state(tenant) do
+      :connected -> check({:oauth, tenant})
+      :none -> with({:ok, token} <- token(tenant), do: check(token), else: (_ -> :no_token))
+      state -> state
     end
   end
 
@@ -183,14 +223,17 @@ defmodule Brando.Figma do
   Anything else, a 401 or 403 without that text (a proxy or block page in
   front of Figma), a 429 and a 5xx included, is `:unreachable`.
   """
-  @spec check(String.t()) :: check()
-  def check(token) do
-    case request(token, "/v1/me", []) do
+  @spec check(credential()) :: check()
+  def check(credential) do
+    case authorized(credential, "/v1/me", []) do
       {:ok, body} ->
         {:valid, if(is_binary(body["handle"]), do: body["handle"])}
 
       {:refused, %Req.Response{status: status} = response} when status in [401, 403] ->
         verdict(figma_error(response))
+
+      {:oauth, state} when state in [:needs_reconnect, :needs_repair] ->
+        state
 
       _other ->
         :unreachable
@@ -262,22 +305,74 @@ defmodule Brando.Figma do
   def expiry_text(date, 1), do: "The site's Figma token expires tomorrow (#{Date.to_iso8601(date)})."
   def expiry_text(date, days), do: "The site's Figma token expires on #{Date.to_iso8601(date)}, in #{days} days."
 
-  defp get(token, path, params) do
-    case request(token, path, params) do
+  defp get(credential, path, params) do
+    case authorized(credential, path, params) do
       {:ok, body} -> {:ok, body}
-      {:refused, response} -> {:error, refusal(response)}
+      {:refused, response} -> {:error, refusal(response, kind(credential))}
       :unreachable -> {:error, "Figma could not be reached. Try again in a moment."}
+      {:oauth, reason} -> {:error, oauth_message(reason)}
     end
   end
 
-  defp request(token, path, params) do
+  defp kind(token) when is_binary(token), do: :token
+  defp kind(_oauth), do: :oauth
+
+  # A request with the credential's token. An OAuth connection's access
+  # token is read for this request, renewed first when it is about to
+  # expire, and renewed once more, for this request again, when Figma
+  # answers that it has expired.
+  defp authorized(token, path, params) when is_binary(token), do: request([{"x-figma-token", token}], path, params)
+  defp authorized({:bearer, token}, path, params), do: request(bearer(token), path, params)
+
+  defp authorized({:oauth, tenant}, path, params) do
+    with {:ok, access} <- oauth_access(tenant, nil) do
+      case request(bearer(access), path, params) do
+        {:refused, %Req.Response{status: status} = response} = refused when status in [401, 403] ->
+          if expired?(figma_error(response)) do
+            with {:ok, renewed} <- oauth_access(tenant, access), do: request(bearer(renewed), path, params)
+          else
+            refused
+          end
+
+        answer ->
+          answer
+      end
+    end
+  end
+
+  defp oauth_access(tenant, rejected) do
+    case OAuth.access_token(tenant, rejected) do
+      {:ok, access} -> {:ok, access}
+      {:error, reason} -> {:oauth, reason}
+    end
+  end
+
+  defp bearer(token), do: [{"authorization", "Bearer " <> token}]
+
+  @doc false
+  # What a tool says when the OAuth connection cannot be used
+  def oauth_message(:needs_reconnect),
+    do:
+      "The site's connection to Figma no longer works: Figma refused to renew it, as after it was revoked in Figma. " <>
+        @reconnect
+
+  def oauth_message(:needs_repair),
+    do:
+      "The site's connection to Figma can no longer be decrypted, as after a change of the site's encryption secret. " <>
+        @reconnect
+
+  def oauth_message(:busy), do: "Another call is renewing the site's access to Figma. Try again in a moment."
+  def oauth_message(:unreachable), do: "Figma could not be reached to renew the site's access. Try again in a moment."
+  def oauth_message(:disconnected), do: "The site's connection to Figma was removed during the call. Try again."
+
+  defp request(headers, path, params) do
     options =
       Keyword.merge(
         [
           base_url: Keyword.get(config(), :api_url, @api_url),
           url: path,
           params: params,
-          headers: [{"x-figma-token", token}],
+          headers: headers,
           receive_timeout: @timeout,
           connect_options: [timeout: @timeout],
           retry: false,
@@ -293,39 +388,54 @@ defmodule Brando.Figma do
     end
   end
 
-  defp refusal(%Req.Response{status: status} = response) when status in [401, 403] do
+  defp refusal(%Req.Response{status: status} = response, kind) when status in [401, 403] do
     err = figma_error(response)
 
     cond do
       expired?(err) ->
-        "The site's Figma token has expired. " <> @replace_token
+        if kind == :oauth,
+          do: "The site's access to Figma has expired, and could not be renewed. " <> @reconnect,
+          else: "The site's Figma token has expired. " <> @replace_token
+
+      scope?(err) and kind == :oauth ->
+        "The site's connection to Figma lacks the permission to read files (file_content:read)." <>
+          said(err) <> " " <> @reconnect
 
       scope?(err) ->
         "The site's Figma token lacks the permission to read files (file_content:read)." <>
           said(err) <> " " <> @replace_token
 
+      (status == 401 or token?(err)) and kind == :oauth ->
+        "Figma does not accept the site's connection." <> said(err) <> " " <> @reconnect
+
       status == 401 or token?(err) ->
         "Figma does not accept the site's token." <> said(err) <> " " <> @replace_token
 
       true ->
-        "Figma refused: the token's owner cannot open this file. Check that the file is shared with them." <>
+        "Figma refused: #{owner(kind)} cannot open this file. Check that the file is shared with #{them(kind)}." <>
           said(err)
     end
   end
 
-  defp refusal(%Req.Response{status: 404}), do: "Figma has no such file, or the token's owner cannot open it."
+  defp refusal(%Req.Response{status: 404}, kind), do: "Figma has no such file, or #{owner(kind)} cannot open it."
 
-  defp refusal(%Req.Response{status: 429} = response) do
+  defp refusal(%Req.Response{status: 429} = response, kind) do
     wait =
       case Req.Response.get_header(response, "retry-after") do
         [seconds | _] -> " in #{seconds} seconds"
         _ -> " later"
       end
 
-    "Figma's limit on API calls for the token's owner is reached. Try again#{wait}."
+    "Figma's limit on API calls for #{owner(kind)} is reached. Try again#{wait}."
   end
 
-  defp refusal(%Req.Response{status: status}), do: "Figma answered #{status}. Try again in a moment."
+  defp refusal(%Req.Response{status: status}, _kind), do: "Figma answered #{status}. Try again in a moment."
+
+  defp owner(:token), do: "the token's owner"
+  defp owner(:oauth), do: "the connected Figma account"
+
+  defp them(:token), do: "them"
+  defp them(:oauth), do: "it"
 
   defp said(nil), do: ""
   defp said(err), do: " Figma said: “#{err}”."

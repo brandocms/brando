@@ -5,22 +5,25 @@ defmodule Brando.Figma.Tools do
   media library for a proposal to use, and check the site's Figma token
   (`status`).
 
-  They call Figma with the site environment's token (`Brando.Figma.token/1`)
-  and run as the connection's person, in its site environment and
+  They call Figma with the site environment's credential
+  (`Brando.Figma.credential/1`: its OAuth connection, or a pasted token) and
+  run as the connection's person, in its site environment and
   authorization scope. `import_images` is the one tool over MCP that adds
   something before a person applies a proposal: images in the library
   folder `figma/<frame name as a slug>`, which a person needs the right to upload
   images for (`Brando.Figma.Import`).
 
-  In the token's last `Brando.Figma.warning_days/0` days by the expiry date
-  recorded with it, `read_frame` and `import_images` carry a `token_note` for
-  the tool to pass on. A passed date stops nothing: Figma decides.
+  In a pasted token's last `Brando.Figma.warning_days/0` days by the expiry
+  date recorded with it, `read_frame` and `import_images` carry a
+  `token_note` for the tool to pass on. A passed date stops nothing: Figma
+  decides. An OAuth connection renews itself and has no such note.
   """
 
   alias Brando.AI.Agent.Guidance
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Figma.Import
+  alias Brando.Figma.OAuth
   alias Brando.MCP
   alias Brando.MCP.Tools, as: MCPTools
 
@@ -96,13 +99,17 @@ defmodule Brando.Figma.Tools do
     %{
       name: "status",
       description:
-        "Check the site's Figma token before starting from a Figma frame: whether one is set (token_set), " <>
-          "and its state as Figma answers now: valid (with the handle of the Figma account it belongs to), expired, invalid " <>
+        "Check how the site reaches Figma before starting from a Figma frame. credential says what the Figma tools call Figma with: " <>
+          "oauth (the site is connected to Figma, and its access renews itself), token (a pasted personal access token) or none. " <>
+          "oauth says where the site's connection stands: not_set_up, app_saved (not connected yet), connected, " <>
+          "needs_reconnect (Figma refused to renew it) or needs_repair (it no longer decrypts); the last two stop the tools. " <>
+          "token_set says whether a pasted token is stored. " <>
+          "state is the credential's state as Figma answers now: valid (with the handle of the Figma account it belongs to), expired, invalid " <>
           "(with Figma's own words under figma_error), no_account_scope (the token may not read its own account, so it " <>
           "could not be checked; it may still read files), unreachable (Figma could not be asked; try again later), " <>
-          "or unreadable (stored but no longer decryptable). expires_on is the expiry date an administrator recorded " <>
-          "when saving the token, or null when none was. message says it all in words to pass on to the person: " <>
-          "when the token needs replacing, tell them an administrator replaces it in the Brando admin.",
+          "unreadable (stored but no longer decryptable), needs_reconnect or needs_repair. expires_on is the expiry date an administrator recorded " <>
+          "when saving a pasted token, or null when none was. message says it all in words to pass on to the person: " <>
+          "when the token needs replacing or Figma reconnecting, tell them an administrator does it in the Brando admin.",
       parameters: %{type: "object", properties: %{}},
       read_only: true
     }
@@ -132,8 +139,8 @@ defmodule Brando.Figma.Tools do
   def call(name, args, actor, tenant) when name in @names do
     with {:ok, link} <- Figma.parse_url(args["url"]),
          {:ok, offset} <- offset(args["offset"]),
-         {:ok, token} <- Figma.token(tenant) do
-      run(name, link, token, Map.put(args, "offset", offset), actor, tenant)
+         {:ok, credential} <- Figma.credential(tenant) do
+      run(name, link, credential, Map.put(args, "offset", offset), actor, tenant)
     end
   end
 
@@ -141,8 +148,8 @@ defmodule Brando.Figma.Tools do
   defp offset(offset) when is_integer(offset) and offset >= 0, do: {:ok, offset}
   defp offset(_offset), do: {:error, "offset is a whole number, 0 or more."}
 
-  defp run("read_frame", link, token, %{"offset" => offset}, _actor, tenant) do
-    with {:ok, node} <- Figma.node(token, link) do
+  defp run("read_frame", link, credential, %{"offset" => offset}, _actor, tenant) do
+    with {:ok, node} <- Figma.node(credential, link) do
       outline = Frame.outline(node)
       {page, next} = page(outline.sections, offset, @page_bytes)
 
@@ -156,6 +163,7 @@ defmodule Brando.Figma.Tools do
             sections: page,
             next_offset: next
           },
+          credential,
           tenant
         )
 
@@ -163,11 +171,11 @@ defmodule Brando.Figma.Tools do
     end
   end
 
-  defp run("import_images", link, token, args, actor, tenant) do
+  defp run("import_images", link, credential, args, actor, tenant) do
     with {:ok, fit} <- fit(args["fit"]),
          {:ok, result} <-
-           Import.run(link, token, actor, node_ids: args["node_ids"], offset: args["offset"], fit: fit) do
-      {:ok, with_expiry_note(result, tenant)}
+           Import.run(link, credential, actor, node_ids: args["node_ids"], offset: args["offset"], fit: fit) do
+      {:ok, with_expiry_note(result, credential, tenant)}
     end
   end
 
@@ -175,38 +183,99 @@ defmodule Brando.Figma.Tools do
   defp fit(nil), do: {:ok, false}
   defp fit(_fit), do: {:error, "fit is true or false."}
 
-  # In the token's last days, a note for the tool to pass on. Before the
-  # guidance, which is cut to the room left.
-  defp with_expiry_note(result, tenant) do
+  # In a pasted token's last days, a note for the tool to pass on. Before
+  # the guidance, which is cut to the room left.
+  defp with_expiry_note(result, token, tenant) when is_binary(token) do
     case Figma.expiry_note(tenant) do
       nil -> result
       note -> Map.put(result, :token_note, note)
     end
   end
 
-  @connect_token "An administrator adds a Figma access token under Configuration → Integrations → Connected AI tools."
+  defp with_expiry_note(result, _oauth, _tenant), do: result
+
+  @connect_token "An administrator connects Figma, or adds a Figma access token, under Configuration → Integrations → Connected AI tools."
   @replace_token "An administrator replaces it under Configuration → Integrations → Connected AI tools."
+  @reconnect "An administrator reconnects Figma under Configuration → Integrations → Connected AI tools."
 
-  # What `brando_figma_status` answers: never the token, its hint or an email
+  # What `brando_figma_status` answers: never a token, its hint, the app's
+  # credentials or an email
   defp status(tenant) do
-    case MCP.figma_token_status(tenant) do
-      nil ->
-        %{
-          token_set: false,
-          message: "No Figma token is set for this site, so the Figma tools cannot read Figma. " <> @connect_token
-        }
+    app = OAuth.status(tenant)
+    stored = MCP.figma_token_status(tenant)
+    oauth = %{oauth: oauth_label(app), token_set: not is_nil(stored)}
 
-      stored ->
-        expires_on = stored.expires_on
-        {state, fields, said} = state(Figma.check_token(tenant))
-        message = Enum.join([said, expiry_sentence(Figma.expiry(expires_on), state)], " ")
-
-        Map.merge(
-          %{token_set: true, state: state, expires_on: expires_on && Date.to_iso8601(expires_on), message: message},
-          fields
-        )
+    case app do
+      %{state: state} when state != :none -> Map.merge(oauth_status(tenant, app), oauth)
+      _no_connection -> Map.merge(token_status(tenant, stored, app), oauth)
     end
   end
+
+  defp oauth_label(nil), do: "not_set_up"
+  defp oauth_label(%{state: :none}), do: "app_saved"
+  defp oauth_label(%{state: state}), do: to_string(state)
+
+  defp oauth_status(tenant, app) do
+    {state, fields, said} = oauth_state(Figma.check_token(tenant), app)
+    Map.merge(%{credential: "oauth", state: state, expires_on: nil, message: said}, fields)
+  end
+
+  defp oauth_state({:valid, handle}, app) do
+    handle = handle || app.handle
+    as = if handle, do: ", as the Figma account “#{handle}”", else: ""
+    {"valid", %{handle: handle}, "The site is connected to Figma#{as}. Its access renews itself."}
+  end
+
+  defp oauth_state({state, err}, _app) when state in [:expired, :invalid] do
+    said = if err, do: " Figma said: “#{err}”.", else: ""
+    {to_string(state), %{figma_error: err}, "Figma does not accept the site's connection." <> said <> " " <> @reconnect}
+  end
+
+  defp oauth_state({:no_account_scope, err}, _app) do
+    {"no_account_scope", %{figma_error: err},
+     "The site's connection to Figma could not be checked: it may not read its own Figma account " <>
+       "(the current_user:read scope). It may still read files, so try the Figma tools; for the check to work, " <>
+       "an administrator gives the site's Figma app the current_user:read scope in Figma and reconnects Figma in the Brando admin."}
+  end
+
+  defp oauth_state(:unreachable, _app),
+    do: {"unreachable", %{}, "Figma could not be reached to check the site's connection. Try again in a moment."}
+
+  defp oauth_state(state, _app) when state in [:needs_reconnect, :needs_repair],
+    do: {to_string(state), %{}, Figma.oauth_message(state)}
+
+  # A connection removed while it was checked: the pasted token's turn
+  defp oauth_state(_state, _app),
+    do: {"unreachable", %{}, "The site's connection to Figma changed while it was checked. Try again."}
+
+  defp token_status(_tenant, nil, app) do
+    %{
+      credential: "none",
+      message: "No Figma token is set for this site, so the Figma tools cannot read Figma. " <> connect_hint(app)
+    }
+  end
+
+  defp token_status(tenant, stored, app) do
+    expires_on = stored.expires_on
+    {state, fields, said} = state(Figma.check_token(tenant))
+    message = Enum.join([said, expiry_sentence(Figma.expiry(expires_on), state)] ++ app_sentence(app), " ")
+
+    Map.merge(
+      %{credential: "token", state: state, expires_on: expires_on && Date.to_iso8601(expires_on), message: message},
+      fields
+    )
+  end
+
+  defp connect_hint(nil), do: @connect_token
+
+  defp connect_hint(_app),
+    do:
+      "The site's Figma app is saved but not connected: an administrator connects Figma under Configuration → Integrations → Connected AI tools."
+
+  defp app_sentence(nil), do: []
+
+  defp app_sentence(_app),
+    do: ["The site's Figma app is saved but not connected yet; the tools use the pasted token until it is."]
 
   defp state({:valid, nil}), do: {"valid", %{handle: nil}, "The site's Figma token works."}
 

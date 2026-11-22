@@ -319,6 +319,182 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
     end
   end
 
+  describe "Configuration → Connected AI tools: Figma through the site's app" do
+    alias Brando.Figma.OAuth
+    alias Brando.FigmaOAuthHelpers, as: Helpers
+
+    defp credential(view) do
+      view
+      |> element("[data-testid=mcp-figma-credential]")
+      |> render()
+      |> then(&Regex.run(~r/data-credential="([^"]+)"/, &1))
+      |> List.last()
+    end
+
+    defp app_state(view) do
+      view
+      |> element("[data-testid=mcp-figma-app]")
+      |> render()
+      |> then(&Regex.run(~r/data-state="([^"]+)"/, &1))
+      |> List.last()
+    end
+
+    test "without an app: the redirect URL to register it with, and saving it keeps the pasted token in use until connected",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user)
+      stub_me(200, %{"handle" => "Ada"})
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert app_state(view) == "no_app"
+      assert credential(view) == "token"
+
+      assert view |> element("[data-testid=mcp-figma-redirect-url]") |> render() =~
+               ~s(value="#{OAuth.redirect_url()}")
+
+      view
+      |> form("[data-testid=mcp-figma-app-form]", %{client_id: "short", client_secret: "x"})
+      |> render_submit()
+
+      assert OAuth.status(tenant) == nil
+
+      view
+      |> form("[data-testid=mcp-figma-app-form]", %{
+        client_id: Helpers.client_id(),
+        client_secret: Helpers.client_secret()
+      })
+      |> render_submit()
+
+      assert %{state: :none} = OAuth.status(tenant)
+      assert app_state(view) == "none"
+      assert credential(view) == "token"
+      html = render(view)
+      assert html =~ "AB12"
+      refute html =~ Helpers.client_secret()
+      refute html =~ Helpers.client_id()
+      assert has_element?(view, "[data-testid=mcp-figma-connect]", "Connect")
+      refute has_element?(view, "[data-testid=mcp-figma-disconnect]")
+    end
+
+    test "Connect asks to confirm first when the session has not lately, then leaves for Figma",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      Helpers.app!(tenant, user)
+      token = get_session(conn, :user_token)
+      hour_ago = NaiveDateTime.add(NaiveDateTime.utc_now(), -3600, :second)
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token), set: [confirmed_at: hour_ago])
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert view |> element("[data-testid=mcp-figma-connect]") |> render_click() =~ "reauth-modal"
+      assert Helpers.setting(tenant).figma_oauth_state_hash == nil
+
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token),
+        set: [confirmed_at: NaiveDateTime.utc_now()]
+      )
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+
+      assert {:error, {:redirect, %{to: "https://www.figma.com/oauth?" <> query}}} =
+               view |> element("[data-testid=mcp-figma-connect]") |> render_click()
+
+      assert %{"client_id" => "figma-client-id-AB12", "state" => state} = URI.decode_query(query)
+      assert Helpers.setting(tenant).figma_oauth_state_hash == :crypto.hash(:sha256, state)
+    end
+
+    test "connected: which account, checked through the connection, and Disconnect says the pasted token comes back",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user)
+      tenant |> Helpers.app!(user) |> Helpers.connect!(access: "oauth-access", handle: "Ada Designer")
+      Helpers.stub_figma(fn "GET", "/v1/me", _ -> {200, %{"handle" => "Ada Designer", "email" => "ada@example.com"}} end)
+
+      {:ok, view, html} = live(conn, "/admin/config/mcp")
+      assert app_state(view) == "connected"
+      assert credential(view) == "oauth"
+      assert html =~ "As the Figma account Ada Designer."
+      assert check_state(view) == "valid"
+      assert has_element?(view, "[data-testid=mcp-figma-check][data-kind=oauth]")
+      # Only one check: the credential calls use
+      refute has_element?(view, "[data-testid=mcp-figma-check][data-kind=token]")
+      assert_received {:figma, "GET", "/v1/me", _, %{"authorization" => "Bearer oauth-access"}}
+
+      html = render(view)
+      for secret <- ["oauth-access", "refresh-1", Helpers.client_secret(), "ada@example.com"], do: refute(html =~ secret)
+
+      assert view |> element("[data-testid=mcp-figma-disconnect]") |> render() =~
+               "read Figma with the access token ending in 1111 again"
+
+      view |> element("[data-testid=mcp-figma-disconnect]") |> render_click()
+      assert %{state: :none} = OAuth.status(tenant)
+      assert credential(view) == "token"
+      assert has_element?(view, "[data-testid=mcp-figma-connect]", "Connect")
+    end
+
+    test "needs reconnecting: said, nothing is used meanwhile, and Reconnect is the main action",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      :ok = MCP.put_figma_token(tenant, "figd_first-token-1111", user)
+      tenant |> Helpers.app!(user) |> Helpers.connect!()
+      Repo.update_all(MCP.Setting, set: [figma_oauth_needs_reconnect: true])
+      Helpers.stub_figma(fn _, _, _ -> {200, %{}} end)
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert app_state(view) == "needs_reconnect"
+      assert credential(view) == "blocked"
+      assert has_element?(view, "[data-testid=mcp-figma-needs-reconnect]")
+      assert has_element?(view, "[data-testid=mcp-figma-connect].btn--primary", "Reconnect")
+      refute has_element?(view, "[data-testid=mcp-figma-check]")
+      refute_received {:figma, _, _, _, _}
+    end
+
+    test "needs repair when the connection no longer decrypts", %{conn: conn, tenant: tenant, current_user: user} do
+      tenant |> Helpers.app!(user) |> Helpers.connect!()
+      Repo.update_all(MCP.Setting, set: [figma_oauth_access_token: Brando.Crypto.encrypt("x", "another context")])
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert app_state(view) == "needs_repair"
+      assert credential(view) == "blocked"
+      assert has_element?(view, "[data-testid=mcp-figma-needs-repair]")
+    end
+
+    test "says how Figma's callback went", %{conn: conn, tenant: tenant, current_user: user} do
+      Helpers.app!(tenant, user)
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp?figma=changed")
+      assert has_element?(view, "[data-testid=mcp-figma-outcome][data-outcome=changed]", "nothing was saved")
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp?figma=something-else")
+      refute has_element?(view, "[data-testid=mcp-figma-outcome]")
+    end
+
+    test "Change app, then Remove app, which takes the connection with it",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      tenant |> Helpers.app!(user) |> Helpers.connect!()
+      Helpers.stub_figma(fn "GET", "/v1/me", _ -> {200, %{"handle" => "Ada"}} end)
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      view |> element("[data-testid=mcp-figma-app-edit]") |> render_click()
+      assert has_element?(view, "[data-testid=mcp-figma-app-form]")
+      assert has_element?(view, "[data-testid=mcp-figma-redirect-url]")
+
+      view |> element("[data-testid=mcp-figma-app-remove]") |> render_click()
+      assert OAuth.status(tenant) == nil
+      assert Helpers.no_connection?(tenant)
+      assert credential(view) == "none"
+
+      details =
+        Repo.all(from e in Brando.Activity.Event, where: e.schema == "Elixir.Brando.MCP.Setting", select: e.details)
+
+      assert Enum.any?(details, &(&1["figma_app"] == "removed"))
+
+      :ok = OAuth.put_app(tenant, Helpers.client_id(), Helpers.client_secret(), user)
+      tenant |> Helpers.connect!()
+      :ok = OAuth.disconnect(tenant, user)
+
+      {:ok, _view, html} = live(conn, "/admin/config/activity")
+      assert html =~ "Saved the Figma app"
+      assert html =~ "Removed the Figma app"
+      assert html =~ "Disconnected Figma"
+      refute html =~ Helpers.client_secret()
+    end
+  end
+
   describe "Security → Connected apps" do
     test "lists the person's connections and disconnects one", %{conn: conn, tenant: tenant, current_user: user} do
       switch!(tenant)
