@@ -46,6 +46,7 @@ defmodule Brando.Tenant.SharedTables do
     site_enabled_palettes
     sites
     sites_previews
+    sites_usage_days
     uploads_pending_intents
     user_sites
     user_tokens
