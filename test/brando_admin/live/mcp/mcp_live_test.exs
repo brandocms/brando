@@ -413,6 +413,7 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       assert has_element?(view, "[data-testid=mcp-figma-check][data-kind=oauth]")
       # Only one check: the credential calls use
       refute has_element?(view, "[data-testid=mcp-figma-check][data-kind=token]")
+      refute has_element?(view, "[data-testid=mcp-figma-test]")
       assert_received {:figma, "GET", "/v1/me", _, %{"authorization" => "Bearer oauth-access"}}
 
       html = render(view)

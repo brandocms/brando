@@ -421,7 +421,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
             </div>
             <div :if={@figma && !@figma_form?} class="integrations-actions">
               <button
-                :if={@figma.readable}
+                :if={@figma.readable and credential(@figma_app, @figma) == "token"}
                 type="button"
                 class="btn btn--quiet"
                 phx-click="test_figma_token"
