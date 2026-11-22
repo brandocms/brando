@@ -399,4 +399,76 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
       assert entry.id in rendered(jobs, Article)
     end
   end
+
+  describe "open forms" do
+    # A process that forwards what the entry's open forms hear
+    defp listen(schema, id) do
+      test = self()
+      topic = Brando.Tenant.Topic.entry("field_sync", schema, id)
+
+      spawn_link(fn ->
+        Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+        send(test, {:listening, topic})
+        forward(test, {schema, id})
+      end)
+
+      assert_receive {:listening, ^topic}
+    end
+
+    defp forward(test, entry) do
+      receive do
+        message -> send(test, {:heard, entry, message})
+      end
+
+      forward(test, entry)
+    end
+
+    test "on each entry whose rows are rewritten hear of it as of a save by no editor" do
+      {target, identifier} = insert_case()
+      entry = article(%{subtitle: linked_html(identifier)})
+      quoted = article(%{slug: "quoted", quotes: [%ArticleQuote{text: linked_html(identifier)}]})
+      other = article(%{slug: "other", subtitle: "<p>No link</p>"})
+      parent = holder(%{slug: "parent"})
+      Brando.Repo.insert!(%Chapter{case_id: parent.id, title: "Linked", body: linked_html(identifier)})
+
+      for {schema, id} <- [{Article, entry.id}, {Article, quoted.id}, {Article, other.id}, {Case, parent.id}],
+          do: listen(schema, id)
+
+      move(target)
+
+      for heard <- [{Article, entry.id}, {Article, quoted.id}, {Case, parent.id}],
+          do: assert_receive({:heard, ^heard, {:entry_saved, %{tab: nil, user_id: nil}}})
+
+      refute_receive {:heard, {Article, _id}, _message}
+    end
+
+    test "hear of it once the transaction around the rewrite has committed" do
+      {_target, identifier} = insert_case()
+      entry = article(%{subtitle: linked_html(identifier)})
+      listen(Article, entry.id)
+
+      {:ok, _jobs} =
+        Brando.Repo.transaction(fn ->
+          jobs = rewrite(identifier)
+          refute_receive {:heard, _entry, _message}
+          jobs
+        end)
+
+      assert_receive {:heard, {Article, _id}, {:entry_saved, %{tab: nil}}}
+    end
+
+    test "hear nothing of a rewrite rolled back" do
+      {_target, identifier} = insert_case()
+      entry = article(%{subtitle: linked_html(identifier)})
+      listen(Article, entry.id)
+
+      {:error, :rolled_back} =
+        Brando.Repo.transaction(fn ->
+          rewrite(identifier)
+          Brando.Repo.rollback(:rolled_back)
+        end)
+
+      refute_receive {:heard, _entry, _message}
+    end
+  end
 end

@@ -1,0 +1,1 @@
+- An entry form left open while a linked entry's address changes shows the new address in its rich text without a reload, and its recovery copy no longer holds the old one.
