@@ -1389,7 +1389,16 @@ With `tenancy_mode: :multi` and HMR on:
   included, on the site's hosts and the admin's, as the preview renders
   from it; another pinned set answers the files its Vite manifest lists.
   At a path the release's `priv/static` also holds, the release's file
-  wins. When the `vite_site`
+  wins. A file of the project's `public/` folder
+  (`assets/sites/<key>/public/`), such as the favicon the layout links or
+  a font the site's CSS names, is served from that folder on the site's
+  hosts and on the admin's, for the live preview, where neither the
+  release nor a pinned set holds the path: the page names it
+  host-relative, while the Vite dev server serves it only on its own
+  origin. On the admin's host the folder answers only where no site's set
+  holds the path, so another site's live preview keeps its set's file; a
+  host that resolves to no site but is not the admin's never reads the
+  folder. When the `vite_site`
   watcher could not start Vite, the dev site renders the release's build
   with a notice saying why.
 - A request for any other site renders as in production: from its active

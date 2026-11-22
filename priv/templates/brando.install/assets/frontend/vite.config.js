@@ -58,11 +58,13 @@ export default defineConfig(({ command }) => ({
   // EuropaCSS compiles the site's stylesheets with the `europa` executable,
   // using europa.json5, under one browser policy for Europa's transforms and
   // Vite's CSS minifier. It watches europa.json5 and hot-updates the CSS when
-  // it changes.
+  // it changes. `debugTokens` labels the font and spacing tokens behind each
+  // generated value in the browser's dev tools; builds leave the labels out.
   plugins: [
     europa({
       config: './europa.json5',
       targets: ['defaults'],
+      debugTokens: true,
     }),
     eslint({
       failOnError: command === 'build',

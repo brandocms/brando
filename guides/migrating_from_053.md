@@ -1757,7 +1757,7 @@ To move a frontend that a 0.55 install wrote (`@brandocms/europacss`
 
    ```shell
    pnpm remove @brandocms/europacss postcss postcss-reporter css-mqgroup
-   pnpm add -D --save-exact @brandocms/vite-plugin-europacss@0.1.0-beta.0 @brandocms/europacss-cli@0.1.0-beta.0
+   pnpm add -D --save-exact @brandocms/vite-plugin-europacss@0.1.0-beta.2 @brandocms/europacss-cli@0.1.0-beta.2
    pnpm exec europa migrate-config europa.config.cjs -o europa.json5
    ```
 

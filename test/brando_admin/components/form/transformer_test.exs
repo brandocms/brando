@@ -407,6 +407,52 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     assert Floki.text(upload) =~ "Upload"
   end
 
+  # A row's field is named by its label, as any form's is: a text input by its
+  # `<label for>`, each language of a translated field by the field's label
+  # and the language, whether the Blueprint gives a label or not.
+  test "names each field of an entry by its label" do
+    field =
+      %Collection{items: [%MediaItem{id: 1, title: "Caption", cover: nil}]}
+      |> Ecto.Changeset.change()
+      |> Component.to_form()
+      |> Access.get(:items)
+
+    subform = %Subform{
+      name: :items,
+      cardinality: :many,
+      style: {:transformer, :cover},
+      sub_fields: [
+        %Brando.Blueprint.Forms.Input{name: :title, type: :text, opts: [label: "Caption"]},
+        %Brando.Blueprint.Forms.Input{name: :label, type: :i18n_text, opts: [label: "Credit"]},
+        %Brando.Blueprint.Forms.Input{name: :description, type: :i18n_textarea, opts: []}
+      ]
+    }
+
+    document =
+      Transformer
+      |> Phoenix.LiveViewTest.render_component(
+        id: "collection-items",
+        field: field,
+        subform: subform,
+        form_id: "collection_form",
+        current_user: %Brando.Users.User{language: "en"},
+        label: "Items",
+        instructions: nil
+      )
+      |> Floki.parse_fragment!()
+
+    row = Floki.find(document, "#transformer-item-1-fields")
+    assert [input_id] = row |> Floki.find("input[name='transformer_item[title]']") |> Floki.attribute("id")
+    assert row |> Floki.find("label[for='#{input_id}']") |> Floki.text() |> String.trim() == "Caption"
+
+    assert row |> Floki.find("input[name='transformer_item[label][en]']") |> Floki.attribute("aria-label") == [
+             "Credit (English)"
+           ]
+
+    assert row |> Floki.find("textarea[name='transformer_item[description][en]']") |> Floki.attribute("aria-label") ==
+             ["Description (English)"]
+  end
+
   test "builds a clean related record when no default is configured" do
     assert Transformer.build_default(%Subform{}, Item, %{title: "Parent"}, nil) == %{title: nil}
   end

@@ -46,7 +46,8 @@ A new module's styles go in `modules.css`; a new partial gets its own file in
 - `main { @space gap blocks }` spaces the sections, so a module carries no
   outer vertical margin. For a tighter pair, pull the second one up on that
   adjacency: `[b-tpl="a"] + [b-tpl="b"] { @space negate(blocks, blocksInner); }`
-  leaves a `blocksInner` gap.
+  leaves a `blocksInner` gap. Add that step to `spacing` in `europa.json5`
+  first (`europa.example.json5` has one): a missing token is an error.
 - Text refs arrive wrapped: a paragraph-type text renders as
   `<div class="paragraph"><p>…</p></div>`, a lede as `<div class="lede">`.
   Put the ref in an element of your own and style its text as descendants

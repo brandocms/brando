@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.AI.FieldAction
   alias Brando.Blueprint.Callback
+  alias Brando.Blueprint.ErrorTranslator
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Content.Blocks
   alias Brando.EditSession
@@ -4745,7 +4746,7 @@ defmodule BrandoAdmin.Components.Form do
         |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
 
       socket
-      |> store_revision(changeset)
+      |> store_revision(changeset, put_again)
       |> clear_blocks_root_changesets()
       |> reset_transformer_changesets()
     else
@@ -8902,7 +8903,7 @@ defmodule BrandoAdmin.Components.Form do
     }
   end
 
-  defp store_revision(socket, changeset) do
+  defp store_revision(socket, changeset, put_again) do
     result =
       with :ok <- Brando.Authorization.Boundary.change(socket.assigns.current_user, :update, changeset),
            do: Changeset.apply_action(changeset, :update)
@@ -8918,7 +8919,7 @@ defmodule BrandoAdmin.Components.Form do
               action: :refresh_revisions
             )
 
-            socket
+            clear_refused_values(socket, put_again)
 
           {:error, reason} ->
             revision_error(socket, reason)
@@ -8936,6 +8937,21 @@ defmodule BrandoAdmin.Components.Form do
           socket.assigns.schema
         )
     end
+  end
+
+  # A refused revision left its errors in the form; a value corrected
+  # without a cast (another editor's) would show them until its next cast.
+  # The stored revision put the rows of `put_again` from what the block
+  # fields and transformers sent, so the refused ones go.
+  defp clear_refused_values(%{assigns: %{form: %{source: %{valid?: true}}}} = socket, _put_again), do: socket
+
+  defp clear_refused_values(socket, put_again) do
+    source =
+      socket.assigns.form.source
+      |> without_rows(put_again)
+      |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
+
+    put_form(socket, to_form(source, []))
   end
 
   defp revision_error(socket, reason) do
@@ -9034,20 +9050,24 @@ defmodule BrandoAdmin.Components.Form do
 
     error_keys = Map.keys(traversed_errors)
 
+    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
+
+    # A field this form does not draw (a named form that leaves it out) can
+    # still be refused: no input marks it, so the alert gives its messages
+    {drawn_keys, undrawn_keys} = Enum.split_with(error_keys -- grouped_keys, &ErrorTranslator.drawn?(&1, form, schema))
+
     tab_with_first_error =
-      error_keys
+      (drawn_keys ++ error_keys)
       |> List.first()
       |> Brando.Blueprint.Forms.get_tab_for_field(form)
 
-    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
-
     translated_error_keys =
-      (error_keys -- grouped_keys)
+      drawn_keys
       |> Brando.Blueprint.Utils.translate_error_keys(form, schema)
       |> Kernel.++(group_items)
 
     # Include nested association errors as "parent → child → field" paths
-    nested_error_paths = flatten_nested_errors(traversed_errors)
+    nested_error_paths = traversed_errors |> Map.drop(undrawn_keys) |> flatten_nested_errors()
 
     all_error_items =
       for key <- translated_error_keys do
@@ -9057,9 +9077,24 @@ defmodule BrandoAdmin.Components.Form do
           "<li class=\"text-mono\">#{Alert.escape(path)}: #{Alert.escape(Enum.join(messages, ", "))}</li>"
         end
 
+    undrawn_items =
+      for key <- undrawn_keys do
+        {label, message} = ErrorTranslator.undrawn_entry(changeset, key, schema, &Primitives.translate_error/1)
+        "<li class=\"text-mono\">#{Alert.escape(label)}: #{Alert.escape(message)}</li>"
+      end
+
+    undrawn_notice =
+      if undrawn_items != [] do
+        """
+        <br>#{gettext("This form does not show these fields:")}<br><br>
+        <ul class="error-keys">#{undrawn_items}</ul>
+        """
+      end
+
     error_msg = """
     #{error_notice}<br><br>
     <ul class="error-keys">#{all_error_items}</ul>
+    #{undrawn_notice}
     """
 
     require Logger
@@ -9097,7 +9132,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
     |> Enum.uniq()
     |> Enum.reduce({[], []}, fn fields, {items, keys} ->
-      labels = Brando.Blueprint.Utils.translate_error_keys(fields, form, schema)
+      labels = Enum.map(fields, &ErrorTranslator.label_in(&1, form, schema))
       item = Enum.join(labels, " #{gettext("or")} ")
 
       {items ++ [item], keys ++ Enum.map(fields, &group_error_key(changeset, &1))}

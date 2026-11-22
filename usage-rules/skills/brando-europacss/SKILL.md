@@ -29,11 +29,21 @@ compiler: the `europa` executable from `@brandocms/europacss-cli`, run by
   `extends`. Read its `breakpoints` and `breakpointCollections` before writing
   a query: they are not the admin's (`desktop_md` is 1280px here and 1200px
   in the admin preset).
-- Its tokens are flat px up to `desktop_md` and the same number as `dpx` from
-  `desktop_lg`, so the design scales with the viewport on large screens only.
-  A new token follows the same pattern.
+- **`assets/frontend/europa.example.json5`**, when the site still has it, is
+  a fuller worked theme that nothing loads. Copy a token the design needs
+  from it into `europa.json5` (more type sizes, the `sans` and `serif`
+  families, more spacing steps), rather than writing one from scratch.
+- Its tokens are px below `desktop_lg` and scale with the viewport from it,
+  written `scale-from(n, desktop_lg)`. A new token follows the same pattern.
 - `dpx` is relative to `dpxViewportSize`: `20dpx` is 20px at that viewport
   width. Set it to the width of the design's Figma frame.
+- **Three ways to write a length:** `16px` stays fixed, `16dpx` scales at
+  every breakpoint it covers, and `scale-from(16, desktop_lg)` is 16px below
+  `desktop_lg` and 16dpx from it. `scale-from()` takes a unitless number and
+  one breakpoint name, and works in tokens, in at-rules
+  (`@space row-gap scale-from(149, desktop_lg) $lg`), inside `calc()`, and
+  for font sizes (`'font-size': 'scale-from(16, desktop_lg)'`,
+  `@fontsize scale-from(18, desktop_lg)`).
 - `setMaxForVw: true` freezes `vw` and `dpx` values at the largest breakpoint
   into lengths, from `container.maxWidth` there. That `maxWidth` must be a
   length (`1920px`); a percentage fails the compile.
@@ -76,10 +86,23 @@ custom key (read with `theme()`).
 - Breakpoints are `'0'` or `'Npx'`, one of them `'0'`. A named breakpoint
   covers its own width up to the next one.
 - Collections: `$sm: '<=ipad_portrait'`, `$tablet: 'ipad_portrait/ipad_landscape'`.
-- A responsive value is a map per breakpoint: `{ iphone: '16px', desktop_lg: '16dpx' }`.
-  `'*'` fills breakpoints without an entry. A size's breakpoint value may be a
-  property object (`{ 'font-size': '32px', 'line-height': '120%' }`), and
+- A token map (spacing, typography sizes and line height, container, columns)
+  takes breakpoint names, collection keys and `'*'`:
+  `projectRows: { $sm: '96px', $lg: 'scale-from(149, desktop_lg)' }` is 96px
+  on mobile, 149px from `$lg` and 149dpx from `desktop_lg`. A named breakpoint
+  beats a collection, two collections that share a breakpoint are an error,
+  and `'*'` fills the breakpoints left over. Write a token with the fewest
+  keys that say it, `{ '*': 'scale-from(24, desktop_lg)' }` for one that only
+  scales, rather than an entry per breakpoint.
+- A size's breakpoint value may be a property object
+  (`{ 'font-size': '32px', 'letter-spacing': '-0.02em' }`), and
   `__base__: { … }` emits shared properties outside the media queries.
+- **Line heights:** write Figma's ratio, `'line-height': '22/16'` in a size or
+  `@fontsize base/22/16`; both emit `1.375em`. A px line height on a scaling
+  size stays px and warns `EU_LINE_HEIGHT` with the ratio to use. The ratio
+  rounds to five decimals and can land a fraction short (`20/14` emits
+  `1.42857em`); the site's own tokens write the `em` rounded up
+  (`1.42858em`) so a line never comes up short.
 - `'{colors.bone.full}'` refers to another token (the path starts inside
   `theme`). A whole-string reference keeps the type; an embedded one
   interpolates (`'1px solid {colors.line}'`). References resolve after merging,
@@ -107,11 +130,17 @@ What `@space`, `@column` and the other sizing at-rules accept:
 | --- | --- |
 | `md`, `radius.regular` or `radius/regular` | A `spacing` token. An unknown key is an error. |
 | `2`, `0.5` | Gutter multiples (`columns.gutters`), not pixels; `0` is 0. |
-| `6/12`, `6:1/12` | A column fraction, gutter-adjusted; `:1` adds a gutter. |
+| `6/12`, `0.5/11`, `0.5:0.5/11` | Columns plus the gutters between them: `0.5/11` is half a column, `1.5/11` one and a half columns and one gutter. `:n` adds n gutters: `0.5:0.5/11` is half a column plus half a gutter. |
+| `scale-from(24, desktop_lg)` | 24px below the breakpoint, 24dpx from it. |
 | `xs/2`, `xs*2`, `-md` | Divided, multiplied, negative. Anything more needs `calc()`. |
 | `12px`, `2rem`, `40dpx` | Literals; `dpx` becomes `vw` against `dpxViewportSize`. |
 | `between(20px-50px)` | Fluid within each breakpoint (matching px or rem). |
 | `calc(100vw - var[container])` | `var[token]`, `var[1]` (one gutter) inside a calc. |
+
+A trailing `cq` measures a size against the nearest inline-size container
+instead of the element, for transforms, whose percentages read the element's
+own width: `@space translate 0.5:0.5/11 cq` under a parent with
+`container-type: inline-size`. A breakpoint query follows `cq`.
 
 `dpx` works only inside Europa at-rules: a plain `padding: 40dpx` passes
 through and the browser drops it. Write `@space padding 40dpx`.
@@ -120,7 +149,9 @@ through and the browser drops it. Write `@space padding 40dpx`.
 
 A trailing query limits an at-rule: `iphone` (that range only), `>=desktop_md`,
 `<ipad_landscape`, `<=mobile`, `>mobile`, `mobile/ipad_portrait`, `$sm`.
-A bare name is that one range, not upwards. Inside `@responsive`, an at-rule
+A bare name is that one range, not upwards. `/` lists breakpoints and is not
+a range: `ipad_landscape/desktop_lg` leaves out `desktop_md`. For a span,
+write `>=`, `<=` or a collection. Inside `@responsive`, an at-rule
 inherits the scope; giving it a query of its own is an error.
 
 ## At-rules
@@ -137,12 +168,13 @@ inherits the scope; giving it a query of its own is an error.
 @space margin-y xl;            /* any property, plus margin-x|y, padding-x|y */
 @space padding-x container;    /* the container's padding only */
 @space translateY md;          /* also translateX|Z, scale */
-@space negate(blocks, blocksInner);  /* margin-top: calc(-blocks + blocksInner) */
+@space negate(blocks, md);     /* margin-top: calc(-blocks + md) */
 @space margin-left negate(1/4);      /* negates the gutter-adjusted width */
 @space! padding-top 0 $lg;
 
 @fontsize heading/5xl;         /* a size token; `/` or `.` for groups */
 @fontsize text/lg/1.5;         /* with a line height */
+@fontsize base/22/16;          /* Figma's 22px on 16px: 1.375em */
 @fontsize xl(0.8);             /* multiplied */
 @fontsize between(18px-22px);
 @fontsize text/sm $sm;
@@ -156,7 +188,8 @@ inherits the scope; giving it a query of its own is an error.
 @display flex/row/wrap $sm;    /* display, flex-direction, flex-wrap */
 @column 4/12 $lg;              /* flex-basis and max-width */
 @column-offset 1:1/12;         /* margin-left, sized as @column */
-@grid;                         /* 12-column grid with gutter gaps; no arguments */
+@grid;                         /* columns.count tracks of minmax(0, 1fr), gutter gaps, per breakpoint */
+@grid subgrid;                 /* shares the parent grid's tracks */
 @order -1 $sm;
 @embed-responsive 16/9;        /* ratio box; iframe/video children fill it */
 @abs100;                       /* absolute, top/left 0, 100% × 100% */
@@ -168,7 +201,7 @@ inherits the scope; giving it a query of its own is an error.
 Config-driven blocks (paths start with `theme.` here, unlike `theme()`):
 
 ```css
-@if theme.colors.dbg { … }     /* a truthy value; a missing key is an error */
+@if theme.colors.grid { … }    /* a truthy value; a missing key is an error */
 
 .stack {
   @iterate theme.spacing {
@@ -224,8 +257,11 @@ pnpm exec europa studio --config europa.json5                           # local 
 ```
 
 Without `--config`, the CLI uses the built-in defaults, not the site's theme.
-`--debug-tokens` (or `debugTokens: true` in the Vite plugin) labels generated
-font sizes in the browser's dev tools.
+`--debug-tokens`, or `debugTokens: true` in the Vite plugin (the site's
+`vite.config.js` sets it; builds leave the labels out), labels generated font
+and spacing values with their token in the browser's dev tools:
+`padding-top: 24px; /* --ec-space-token: "spacing.md"; */`. beta.2 leaves
+`@space gap <token>` unlabelled at breakpoints where it scales.
 
 An unknown at-rule (a typo such as `@spcae`, or a removed one) is only a
 warning: it passes through, and the compile succeeds. Read the warnings, in
@@ -234,7 +270,7 @@ the terminal and Vite's overlay, as errors.
 The Vite plugin, as `vite.config.js` sets it up:
 
 ```js
-plugins: [europa({ config: './europa.json5', targets: ['defaults'] })],
+plugins: [europa({ config: './europa.json5', targets: ['defaults'], debugTokens: true })],
 css: { devSourcemap: true, postcss: { plugins: [] } },  // keeps an old postcss.config out
 build: { cssMinify: 'lightningcss' },
 ```
@@ -243,3 +279,41 @@ build: { cssMinify: 'lightningcss' },
 `css.lightningcss.targets` unset. The executable is a platform-specific
 optional dependency: install with optional dependencies on, inside the
 Docker image for a release, and never copy `node_modules` between machines.
+
+## Checking against Figma
+
+Export the frame as a PNG, then, with the site running and a Chromium
+started with `--remote-debugging-port=9222` and a throwaway
+`--user-data-dir`:
+
+```sh
+pnpm exec europa compare http://localhost:4000/ --frame frame.png --width 1440 \
+  --frame-json frame.json --output-dir comparison
+```
+
+It writes `overlay.png` (page and design at 50%) and `diff.png`. With
+`--frame-json` (a Figma frame node, or a list of named boxes) it reports each
+text and image box's offset from the design in CSS pixels; the spacing labels
+from `debugTokens` name the tokens to look at for a gap that is off. Exit status 1 means
+differences, 2 design elements it could not match. `europa studio`'s
+**Design frame** panel overlays the PNG on the page interactively.
+
+## Upgrading from 0.1.0-beta.0
+
+`europa migrate` has no profile for native versions yet
+(brandocms/europacss#133), so compare the compiled CSS instead. Before
+bumping the packages, run
+`pnpm exec europa css/app.css --config europa.json5 -o /tmp/before.css`, and
+the same for every other entry (`css/critical.css` in the frontend); after
+the bump, compile them again and diff. Two layout changes are expected:
+
+- `@grid` takes `columns.count` per breakpoint with `minmax(0, 1fr)` tracks
+  and `column-gap`. In the admin, whose preset has 6 and 16 columns, a
+  `@grid` that was 12 columns no longer is.
+- A fractional span (`@column 2.5/12`, `@space width 0.5/11`) counts only
+  the gutters between its tracks, so it comes out wider; integer fractions
+  are unchanged. Subtract the half gutter to keep the old width:
+  `0.5:-0.5/11` is beta.0's `0.5/11`.
+
+Then shorten the tokens and check that the output stays the same. A theme that used beta.1's `dpxScaleFrom` replaces it with
+`scale-from()`; beta.2 fails the compile on the old setting and says so.
