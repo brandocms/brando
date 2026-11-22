@@ -432,17 +432,13 @@ defmodule Brando.Content.Seed do
       set ->
         unknown!(values, Enum.map(set.vars, & &1.key), "var", "the global set")
 
-        rows =
-          for var <- set.vars, Map.has_key?(values, var.key) do
-            case Map.fetch!(values, var.key) do
-              value when is_boolean(value) -> %{"id" => var.id, "value_boolean" => value}
-              value -> %{"id" => var.id, "value" => to_string(value)}
-            end
-          end
-
+        rows = for var <- set.vars, Map.has_key?(values, var.key), do: global_row(var, Map.fetch!(values, var.key))
         Brando.Sites.update_global_values(set, %{"vars" => rows}, user)
     end
   end
+
+  defp global_row(var, value) when is_boolean(value), do: %{"id" => var.id, "value_boolean" => value}
+  defp global_row(var, value), do: %{"id" => var.id, "value" => to_string(value)}
 
   @doc """
   Renders `entry`'s blocks again and stores the HTML, evicting the cached
