@@ -614,13 +614,63 @@ defmodule Brando.LivePreview do
   """
   @decorate span("brando.preview.share", schema: :schema_module, preview_target: :target)
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}, target \\ nil) do
+    expiry_days = Brando.config(:preview_expiry_days) || 2
+    expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
+
     with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset),
-         {:ok, scope} <- preview_asset_scope(),
+         {:ok, url} <- store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, %{}) do
+      {:ok, url, expiry_days}
+    end
+  end
+
+  @proposal_snapshot_ttl_minutes 15
+
+  @doc """
+  A short-lived public link to a proposal's page, for a connected AI tool:
+  stored and served as `share/5`'s snapshots are, pinned to the same asset
+  set, and kept with `proposal_id`, the proposal version it shows, so it
+  opens only while that version is under review
+  (`Brando.Sites.get_shared_preview/1`). It lives 15 minutes.
+
+  It takes the permission to edit the entry as `changeset` leaves it (to
+  create it, for a new entry), as a private live preview does, but not the
+  export permission `share/5` takes: the link lives minutes and dies with
+  the proposal. Returns `{:ok, url, expires_at}`.
+  """
+  @spec share_proposal(module(), Ecto.Changeset.t(), Brando.Users.User.t(), Ecto.UUID.t(), atom() | String.t() | nil) ::
+          {:ok, String.t(), DateTime.t()} | {:error, term()}
+  @decorate span("brando.preview.share_proposal", schema: :schema_module, preview_target: :target)
+  def share_proposal(schema_module, changeset, user, proposal_id, target \\ nil) when is_binary(proposal_id) do
+    # Stored to the second
+    expires_at = DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.add(@proposal_snapshot_ttl_minutes, :minute)
+
+    with :ok <- Brando.Authorization.Preview.authorize_snapshot(user, changeset),
+         {:ok, shared_from} <- proposal_shared_from(),
+         attrs = Map.put(shared_from, :proposal_id, proposal_id),
+         {:ok, url} <- store_pinned(schema_module, changeset, user, %{}, target, expires_at, attrs) do
+      {:ok, url, expires_at}
+    end
+  end
+
+  # In multi-site mode a proposal's snapshot opens only under the site and
+  # environment it was shared from, so it is not stored without both
+  defp proposal_shared_from do
+    case {Brando.Tenant.mode(), shared_from()} do
+      {:multi, %{site_id: site_id, environment_id: environment_id}} when is_nil(site_id) or is_nil(environment_id) ->
+        {:error, :missing_site_context}
+
+      {_mode, shared_from} ->
+        {:ok, shared_from}
+    end
+  end
+
+  defp store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, attrs) do
+    with {:ok, scope} <- preview_asset_scope(),
          {:ok, result} <-
            SiteAssets.with_preview_set(
              scope,
              SiteAssets.current_environment(),
-             &store_preview(schema_module, changeset, user, updated_entry_assocs, target, &1)
+             &store_preview(schema_module, changeset, user, updated_entry_assocs, target, &1, expires_at, attrs)
            ) do
       result
     end
@@ -633,17 +683,15 @@ defmodule Brando.LivePreview do
     end
   end
 
-  defp store_preview(schema_module, changeset, user, updated_entry_assocs, target, asset_set) do
+  defp store_preview(schema_module, changeset, user, updated_entry_assocs, target, asset_set, expires_at, attrs) do
     cache_key = build_cache_key(:erlang.system_time())
     entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
-    expiry_days = Brando.config(:preview_expiry_days) || 2
 
     html =
       schema_module
       |> render(entry_struct, cache_key, include_meta: true, target: target)
       |> Utils.term_to_binary()
 
-    expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
     key = Utils.random_string(12)
 
     preview = %{
@@ -654,7 +702,7 @@ defmodule Brando.LivePreview do
       asset_set_id: asset_set.id
     }
 
-    preview = Map.merge(preview, shared_from())
+    preview = preview |> Map.merge(shared_from()) |> Map.merge(attrs)
 
     with {:ok, preview} <- Brando.Sites.create_preview(preview, :system) do
       SiteAssets.invalidate_pinned(asset_set)
@@ -664,7 +712,7 @@ defmodule Brando.LivePreview do
       |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
       |> Oban.insert()
 
-      {:ok, Brando.Sites.Preview.__absolute_url__(%{preview | preview_key: key}), expiry_days}
+      {:ok, Brando.Sites.Preview.__absolute_url__(%{preview | preview_key: key})}
     end
   end
 

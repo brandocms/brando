@@ -13892,6 +13892,16 @@ msgstr "Åpne papirkurven"
 msgid "Open your authenticator app and enter the 6-digit code it shows for %{email}."
 msgstr "Åpne autentiseringsappen og skriv inn den sekssifrede koden den viser for %{email}."
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Opened a preview of a page before its proposal"
+msgstr "Åpnet en forhåndsvisning av en side før forslaget"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Opened a preview of a proposed page"
+msgstr "Åpnet en forhåndsvisning av en foreslått side"
+
 #: lib/brando/blueprint/listings/components/core.ex
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/entry_skeleton.ex

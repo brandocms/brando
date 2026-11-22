@@ -124,6 +124,33 @@ defmodule Brando.MCP.WatchTest do
                [{:text, "Cancelled version "}, {:strong, "1"}, {:text, " of a proposal"}]
     end
 
+    test "a preview of a proposal is told with the proposal and the version it shows, not its link",
+         %{tenant: tenant, token: token, grant: grant} = c do
+      c = Map.merge(c, page_context(c))
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", proposal_args(c))
+
+      Watch.subscribe(grant.id)
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      for {version, label} <- [
+            {"proposed", "Opened a preview of a proposed page"},
+            {"before", "Opened a preview of a page before its proposal"}
+          ] do
+        args = %{"proposal_id" => id, "target" => target, "version" => version, "preview_target" => "blocks"}
+
+        %{"result" => %{"structuredContent" => %{"url" => url}}} =
+          call_tool(tenant, token, "preview_proposal", args)
+
+        assert_receive {Watch, %{state: :ok, tool: "preview_proposal", details: details}}
+        assert details["proposal"] == id
+        assert details["output"] == %{"shows" => version}
+        refute inspect(details) =~ Path.basename(url)
+        assert BrandoAdmin.Components.ToolSteps.label("preview_proposal", %{}, details["output"]) == [{:text, label}]
+      end
+    end
+
     test "a proposal replacing an image's file is told with how many it replaces",
          %{tenant: tenant, token: token, grant: grant} do
       old = Brando.ImageFileFixtures.file_image("old", {800, 600})

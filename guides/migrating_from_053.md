@@ -668,6 +668,11 @@ sender first, before the first compile.
   synchronization, and review items raised before that have no previous
   text. Run `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
   [Synchronized translations](i18n.md#synchronized-translations).
+- **Proposal previews for connected AI tools.** `brando_241` adds
+  `sites_previews.proposal_id`, the proposal a connected tool's short-lived
+  preview link shows; it is empty for every existing shared preview. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
+  [Proposal preview links](mcp.md#proposal-preview-links).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

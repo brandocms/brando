@@ -215,6 +215,11 @@ defmodule BrandoAdmin.Components.ToolSteps do
 
   defp step_text("cancel_proposal", _, _), do: gettext("Cancelled a proposal")
 
+  defp step_text("preview_proposal", _, %{"shows" => "before"}),
+    do: gettext("Opened a preview of a page before its proposal")
+
+  defp step_text("preview_proposal", _, _), do: gettext("Opened a preview of a proposed page")
+
   # The Figma tools of a connected tool (`Brando.Figma.Tools`)
   defp step_text("read_frame", args, %{"frame" => frame}) when is_binary(frame) do
     if is_integer(args["offset"]) and args["offset"] > 0,

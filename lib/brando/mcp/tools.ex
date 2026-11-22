@@ -10,10 +10,13 @@ defmodule Brando.MCP.Tools do
   added below. None of them approves, applies or deletes anything:
   `prepare_proposal` stores a proposal for the person to review in the admin,
   marked as coming from the connected client. `list_proposals` lists the
-  client's own proposals with their status, and `cancel_proposal` cancels
-  one still under review (`Brando.Content.Proposals.connection_proposal/4`
-  says whose they are); these two are offered only here, not in the
-  Assistant.
+  client's own proposals with their status, `cancel_proposal` cancels one
+  still under review, and `preview_proposal` returns a short-lived public
+  link to a proposal's page before it is approved
+  (`Brando.Content.Proposals.connection_proposal/4` says whose they are);
+  these three are offered only here, not in the Assistant.
+  `preview_proposal` is marked read-only: it stores a snapshot that expires
+  and changes no content.
 
   With them, the Figma tools (`Brando.Figma.Tools`, `brando_figma_…`): read
   a Figma frame, and import its images into the media library; and the
@@ -56,7 +59,7 @@ defmodule Brando.MCP.Tools do
   # pictures, which a connected client does not have.
   @offered ~w(list_content_types describe_content_type search_entries entry_outline translation_work list_modules
               describe_module list_entry_media list_selection_options search_assets find_media_folders prepare_proposal
-              list_proposals cancel_proposal)
+              list_proposals cancel_proposal preview_proposal)
 
   @reads @offered -- ["prepare_proposal", "cancel_proposal"]
 

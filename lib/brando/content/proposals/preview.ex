@@ -126,6 +126,74 @@ defmodule Brando.Content.Proposals.Preview do
     end
   end
 
+  @doc """
+  A public link to one target's page of `proposal`, for the connected AI
+  tool that prepared it (`preview_proposal`): a static snapshot stored as
+  `share/4`'s is, with the proposal version it shows, which lives 15 minutes
+  and opens only while that version is under review
+  (`Brando.LivePreview.share_proposal/5`). Nothing is saved but the
+  snapshot.
+
+  It checks what the admin's own review preview checks for `actor`, for
+  both versions: that the actor prepared it here, may edit its existing
+  entries as they are, and may edit the entry as the proposal leaves it (or
+  create it, for a new entry). The export permission `share/4` takes is
+  not.
+
+  Options: `:version` (`:proposed`, the default, or `:before`) and
+  `:preview_target`, as `render/4` takes them. Returns
+  `{:ok, url, expires_at}`, or the errors `render/4` returns, or
+  `{:error, message}` for a preview target the content type does not have.
+  """
+  @spec snapshot(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
+          {:ok, String.t(), DateTime.t()} | {:error, atom() | String.t()}
+  def snapshot(proposal, target, actor, opts \\ []) do
+    version = Keyword.get(opts, :version, :proposed)
+
+    with :ok <- renderable(proposal, target, version),
+         {:ok, preview_target} <- preview_target(proposal, target, opts[:preview_target]),
+         {:ok, proposed} <- changeset(proposal, target, actor, :proposed, nil),
+         :ok <- authorize_snapshot(actor, proposed),
+         {:ok, changeset} <-
+           if(version == :before, do: changeset(proposal, target, actor, :before, nil), else: {:ok, proposed}) do
+      scope = Boundary.actor_scope(actor)
+      user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
+
+      Boundary.with_scope(scope, fn ->
+        LivePreview.share_proposal(changeset.data.__struct__, changeset, user, proposal.id, preview_target)
+      end)
+    end
+  end
+
+  # A name the content type's live preview declares, or nil for its default
+  defp preview_target(_proposal, _target, nil), do: {:ok, nil}
+
+  defp preview_target(proposal, target, name) do
+    names = proposal |> target_schema(target) |> LivePreview.get_targets() |> Enum.map(&to_string(&1.name))
+
+    if to_string(name) in names,
+      do: {:ok, String.to_existing_atom(to_string(name))},
+      else:
+        {:error,
+         dgettext("content_proposals", "Unknown preview target %{name}. This content type has: %{names}.",
+           name: inspect(name),
+           names: Enum.join(names, ", ")
+         )}
+  end
+
+  defp target_schema(proposal, {:new, _} = target), do: Map.fetch!(proposal.targets, target)
+  defp target_schema(_proposal, {schema, _id}), do: schema
+
+  defp authorize_snapshot(actor, changeset) do
+    case Brando.Authorization.Preview.authorize_snapshot(actor, changeset) do
+      :ok ->
+        :ok
+
+      {:error, :forbidden} ->
+        {:error, dgettext("content_proposals", "You may not edit this entry as the proposal leaves it.")}
+    end
+  end
+
   # The proposal on screen may have been discarded in another tab since it
   # was read: its stored status decides, as for `Proposals.get_shared/3`.
   defp shown(%{id: id}) do

@@ -7,8 +7,9 @@ defmodule Brando.Content.Proposals.Tools do
   sends can choose the user, site or environment. The tools read, except
   `prepare_proposal`, which stores a proposal version for the user to review,
   and `cancel_proposal`, which cancels a connected tool's own proposal under
-  review. No tool approves or applies — that takes the user's click in the
-  admin.
+  review. `preview_proposal` stores only a short-lived snapshot of a
+  proposal's page, which changes no content. No tool approves or applies —
+  that takes the user's click in the admin.
 
   The same registry serves the admin's embedded agent and BrandoMCP's
   in-process content tools. Results are compact maps, bounded in size, so a
@@ -297,6 +298,7 @@ defmodule Brando.Content.Proposals.Tools do
       create_translation creates the version of a synchronized entry in another language, as the editor's Create translation does: when the proposal is applied, an unpublished copy of the source joins its translation group, linked as an alternate, with every text it copied marked to translate. One operation per language; name the group's source (entry_outline lists an entry's language versions). The copy is made from its source as the proposal is applied, and its structure follows the source, so only translate can name it as {"new":R}. For a content type that is not synchronized, create the other language's entry with create_entry.
       translate answers one batch of a synchronized translation's work as translation_work read it: source_digest is the batch's token, texts gives each unit's translation by its key, and reviewed lists the keys of units that are right as they are (a name the same in both languages). Answer every answerable unit of the batch once, in texts or reviewed; a long entry is several translate operations, one per batch, in one proposal. Keep each unit's format: html keeps the source's tags and attributes in order, markdown stays Markdown, and template placeholders ({{ }}, {% %}, <% %>) stay exactly as the source has them; any other { is refused. Problems name the unit's key: correct those units and call again, or read translation_work again when the source changed. Applied, the translation is saved as its form saves it: its structure and media still follow its source, a published translation stays published, and each answered unit's work is resolved. translate is the only operation a proposal may have on the translation it translates. On any synchronized translation (entry_outline's language note says which entries are), every operation other than translate is refused, except set_fields on the fields that are its own, such as its status or slug: change its structure, media, source-controlled fields and anything copied into it in the source, and its text with translate. To create a translation and fill it in, put create_translation and translate on {"new":R} in one proposal, with the source_digest translation_work gave for that language on the source.
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Uids are unique across the site, not only in the entry: prefix yours, for example with the entry's ref or slug. Returns problems to fix; call again with the corrected operations. Outside an Assistant conversation it also returns review_url, where the user reviews the proposal, and preview_url when an entry has a page preview: the review opened on that page. Give the user preview_url when there is one.
+      Outside an Assistant conversation, preview_proposal gives a link to the proposed page that your browser can open without a login, to compare it with its design before the person approves it.
       Outside an Assistant conversation, list_proposals tells whether the person has approved, applied or cancelled your proposals, and cancel_proposal withdraws one still under review: check there instead of asking the person.
       """,
       parameters: %{
@@ -350,6 +352,32 @@ defmodule Brando.Content.Proposals.Tools do
           proposal_id: %{type: "string", description: "The proposal_id from prepare_proposal or list_proposals."}
         },
         required: ["proposal_id"]
+      }
+    },
+    %{
+      name: "preview_proposal",
+      origins: [:mcp],
+      description:
+        "A link to one entry's page as one of your own proposals would make it, before the person approves it, " <>
+          "rendered by the site's own templates, CSS and layout; no content is saved. " <>
+          "Open url in a browser: it needs no login, so you can compare the page with its design (a Figma frame) and refine the proposal. " <>
+          "It works for 15 minutes (expires_at) and only while the proposal is pending or approved: " <>
+          "once the proposal is applied, replaced, cancelled or expired the link stops working. Every call gives a new link; earlier ones keep working until they expire. " <>
+          "target is an entry the proposal changes ({content_type, id}) or creates ({new: ref}). " <>
+          "version \"before\" shows the entry as it is saved now, to compare; a new entry has none. " <>
+          "preview_target names one of the content type's preview views; left out, its default view.",
+      parameters: %{
+        type: "object",
+        properties: %{
+          proposal_id: %{type: "string", description: "The proposal_id from prepare_proposal or list_proposals."},
+          target: %{
+            type: "object",
+            description: "{\"content_type\":T,\"id\":N} or {\"new\":R}, as in the proposal's operations."
+          },
+          version: %{type: "string", enum: ["proposed", "before"], default: "proposed"},
+          preview_target: %{type: "string", description: "A preview view of the content type, such as \"default\"."}
+        },
+        required: ["proposal_id", "target"]
       }
     }
   ]
@@ -794,6 +822,48 @@ defmodule Brando.Content.Proposals.Tools do
     end
   end
 
+  # A connected tool's own proposal: whose is decided from the stored record
+  # before the proposal is rebuilt, so another's id answers as unknown
+  defp run("preview_proposal", args, context) do
+    record =
+      case Proposals.connection_proposal(args["proposal_id"], context.actor, context.client) do
+        {:ok, record} -> record
+        {:error, message} -> Error.fail!(message)
+      end
+
+    under_review!(record)
+    version = preview_version!(args["version"])
+    target = preview_entry!(args["target"])
+
+    unless is_nil(args["preview_target"]) or is_binary(args["preview_target"]),
+      do: Error.fail!("preview_target is the name of a preview view, such as \"default\".")
+
+    proposal =
+      case Proposals.get(record.id, context.actor) do
+        {:ok, proposal} -> proposal
+        {:error, message} -> Error.fail!(message)
+      end
+
+    case Proposals.Preview.snapshot(proposal, target, context.actor,
+           version: version,
+           preview_target: args["preview_target"]
+         ) do
+      {:ok, url, expires_at} ->
+        %{
+          url: url,
+          expires_at: expires_at,
+          proposal_id: record.id,
+          shows: to_string(version),
+          note:
+            "Opens without a login until expires_at, while the proposal is pending or approved. Nothing is saved. " <>
+              "Do not share it beyond the person: anyone with the link can see the page."
+        }
+
+      {:error, reason} ->
+        Error.fail!(preview_error(reason, proposal, target))
+    end
+  end
+
   defp origin(%{origin: origin}) when not is_nil(origin), do: origin
   defp origin(%{conversation_id: nil}), do: :mcp
   defp origin(_context), do: :assistant
@@ -822,6 +892,66 @@ defmodule Brando.Content.Proposals.Tools do
   end
 
   defp replaces(_context, _args), do: nil
+
+  defp under_review!(record) do
+    cond do
+      record.status not in ~w(pending approved) ->
+        Error.fail!(
+          "Proposal #{record.id} is #{record.status}, so it has no preview. Only a pending or approved proposal has one."
+        )
+
+      DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt ->
+        Error.fail!("Proposal #{record.id} has expired and can no longer be approved. Prepare it again to preview it.")
+
+      true ->
+        :ok
+    end
+  end
+
+  defp preview_version!(nil), do: :proposed
+  defp preview_version!("proposed"), do: :proposed
+  defp preview_version!("before"), do: :before
+  defp preview_version!(version), do: Error.fail!(~s(version is "proposed" or "before", not #{inspect(version)}.))
+
+  defp preview_entry!(%{"new" => ref}) when is_binary(ref), do: {:new, ref}
+
+  defp preview_entry!(%{"content_type" => name, "id" => id}) do
+    schema =
+      case Codec.schema(name) do
+        {:ok, schema} -> schema
+        :error -> Error.fail!("This entry is not part of the proposal.")
+      end
+
+    case integer(id) do
+      id when is_integer(id) and id > 0 -> {schema, id}
+      _ -> Error.fail!("target needs a numeric id.")
+    end
+  end
+
+  defp preview_entry!(_target),
+    do: Error.fail!(~s(target is an entry of the proposal: {"content_type":T,"id":N} or {"new":R}.))
+
+  defp preview_error(:not_created, _proposal, _target),
+    do: "The proposal creates this entry, so it has no version before it. Leave out version, or use \"proposed\"."
+
+  defp preview_error(:no_preview_target, proposal, target) do
+    if Proposals.translation(proposal.operations, target),
+      do:
+        "This translation is copied from its source when the proposal is applied, so it has no preview of its own. Preview the source entry.",
+      else: "This content type has no page preview."
+  end
+
+  defp preview_error(:problems, _proposal, _target),
+    do:
+      "The proposal has problems, so its page is not rendered. Fix them and call prepare_proposal again with replaces; version \"before\" still shows the saved page."
+
+  defp preview_error(:forbidden, _proposal, _target), do: "You may not edit this entry, so it has no preview."
+
+  defp preview_error(:missing_site_context, _proposal, _target),
+    do: "This connection's site or environment could not be found, so the page has no link. Nothing was stored."
+
+  defp preview_error(message, _proposal, _target) when is_binary(message), do: message
+  defp preview_error(reason, _proposal, _target), do: "The page could not be stored: #{inspect(reason)}."
 
   defp proposal_limit(limit) when is_integer(limit), do: limit |> max(1) |> min(@max_proposal_limit)
   defp proposal_limit(_limit), do: @proposal_limit

@@ -628,6 +628,11 @@ msgstr ""
 msgid "The module has no variable %{key}."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "The proposal has problems, so it cannot be previewed: it copies a block that is not there."
+msgstr ""
+
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "The sizes of image %{id} are still being made. Approve the proposal again in a moment."
@@ -954,6 +959,11 @@ msgstr ""
 msgid "Unknown placement."
 msgstr ""
 
+#: lib/brando/content/proposals/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown preview target %{name}. This content type has: %{names}."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown proposal origin."
@@ -990,6 +1000,11 @@ msgid "You may not change image %{ids}."
 msgid_plural "You may not change images %{ids}."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando/content/proposals/preview.ex
+#, elixir-autogen, elixir-format
+msgid "You may not edit this entry as the proposal leaves it."
+msgstr ""
 
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format

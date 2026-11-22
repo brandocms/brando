@@ -13890,6 +13890,16 @@ msgstr ""
 msgid "Open your authenticator app and enter the 6-digit code it shows for %{email}."
 msgstr ""
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Opened a preview of a page before its proposal"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Opened a preview of a proposed page"
+msgstr ""
+
 #: lib/brando/blueprint/listings/components/core.ex
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/entry_skeleton.ex

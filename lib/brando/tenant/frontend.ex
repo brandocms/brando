@@ -15,16 +15,18 @@ defmodule Brando.Tenant.Frontend do
   @doc """
   The site and environment a shared preview opens under on a host with no
   site: the ones it was shared from, or its site's live environment for a
-  preview stored before previews recorded their environment. Nil for a
-  preview with no site, or one whose site is not active.
+  preview stored before previews recorded their environment, or whose
+  environment was deleted. Nil for a preview with no site, or one whose site
+  is not active. A proposal's preview opens only under its own environment:
+  nil once that is gone, so a staging draft never opens as the live site.
   """
   @spec shared_preview_tenant(Brando.Sites.Preview.t()) ::
           {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
-  def shared_preview_tenant(%Brando.Sites.Preview{site_id: site_id, environment_id: environment_id})
+  def shared_preview_tenant(%Brando.Sites.Preview{site_id: site_id, environment_id: environment_id} = preview)
       when is_integer(site_id) do
     with %{status: :active} = site <- Enum.find(Cache.list_sites(), &(&1.id == site_id)),
          %{} = environment <-
-           Enum.find(site.environments, &(&1.id == environment_id)) || Cache.get_live_env(site.key) do
+           Enum.find(site.environments, &(&1.id == environment_id)) || live_fallback(site, preview) do
       {site, environment}
     else
       _ -> nil
@@ -32,6 +34,9 @@ defmodule Brando.Tenant.Frontend do
   end
 
   def shared_preview_tenant(_preview), do: nil
+
+  defp live_fallback(_site, %Brando.Sites.Preview{proposal_id: proposal_id}) when is_binary(proposal_id), do: nil
+  defp live_fallback(site, _preview), do: Cache.get_live_env(site.key)
 
   @doc """
   Whether `host` is an environment's domain or redirect host of a site that
