@@ -52,10 +52,13 @@ defmodule Brando.Plug.Media do
         conn
 
       path ->
+        opts = media_opts(conn, opts)
+
         conn =
           conn
           |> put_media_headers(path)
-          |> Plug.Static.call(media_opts(conn, opts))
+          |> Brando.Plug.Usage.put_file(Path.join([opts.from | path]))
+          |> Plug.Static.call(opts)
 
         if conn.state in [:sent, :file] do
           conn

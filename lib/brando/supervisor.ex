@@ -80,6 +80,10 @@ defmodule Brando.Supervisor do
     # before the cache does.
     children = children ++ Brando.Sites.FourOhFour.Flusher.children()
 
+    # Each site's request counters on this node, with `tenancy_mode: :multi`,
+    # written on an interval and once more as the node stops
+    children = children ++ Brando.Sites.Usage.Traffic.children()
+
     # One process per entry being edited (see its moduledoc)
     children = children ++ Brando.EditSession.children()
 
