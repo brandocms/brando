@@ -206,12 +206,16 @@ person:
 
 - `brando_content_list_proposals` lists the tool's own proposals, newest
   first, in every status: pending, approved, applied, undone, superseded
-  and cancelled. Each has its `proposal_id`, `version`, `summary`,
-  `status`, `changed_at` (when its status last changed), `expires_at`,
+  and cancelled. Each has its `proposal_id`, `version`, `summary` (cut to
+  300 characters, with `summary_cut: true`, when longer), `status`,
+  `changed_at` (when its status last changed), `expires_at`,
   `expired: true` when a pending or approved one can no longer be
   approved, and the entries it changes (`content_type` and `id`) and
   creates (`content_type` and the proposal's `ref`, with the saved entry's
-  `id` once it is applied). A superseded one names the version that
+  `id` once it is applied). A proposal that replaces an image's file names
+  that image in `replaced_images` (`kind`, `id`, and the image whose file
+  it takes, `with`), not in the entries, and does not list the entries
+  that use the image. A superseded one names the version that
   replaced it as `superseded_by`. `changed_by` is `"person"` for an
   approved, applied or undone proposal, since only the person can do those;
   who stored a version or cancelled a proposal is not kept. It filters by

@@ -109,6 +109,45 @@ defmodule Brando.Content.Proposals.ConnectionTest do
              ] = list!(mcp(c))
     end
 
+    test "an approval withdrawn as the apply finds new problems changes changed_at", c do
+      id = prepare!(mcp(c), [insert_op(c, c.identity, ~s(Lobby<img src=x onerror="x">))])
+      assert [%{problems: [_ | _]}] = Repo.all(from(r in Record, where: r.id == ^id))
+
+      # As a version stored before the check was added, approved an hour ago.
+      approved_at = DateTime.add(DateTime.utc_now(), -3_600, :second)
+      set!(id, problems: [], status: "approved", approved_at: approved_at, updated_at: approved_at)
+      assert [%{status: "approved", changed_at: ^approved_at}] = list!(mcp(c))
+
+      assert {:error, _} = Proposals.apply(id, 1, c.user)
+
+      assert [%{status: "pending", changed_at: changed_at}] = list!(mcp(c))
+      assert DateTime.compare(changed_at, DateTime.add(DateTime.utc_now(), -60, :second)) == :gt
+    end
+
+    test "a proposal replacing an image's file names the image and its replacement next to entries", c do
+      old = Brando.ImageFileFixtures.file_image("old", {800, 600})
+      new = Brando.ImageFileFixtures.file_image("new", {1600, 1200})
+
+      op = %{
+        "op" => "replace_image_file",
+        "asset" => %{"kind" => "image", "id" => old.id},
+        "with" => %{"kind" => "image", "id" => new.id}
+      }
+
+      id = prepare!(mcp(c), [op], "Better photo")
+
+      assert [%{proposal_id: ^id, entries: [], replaced_images: replaced}] = list!(mcp(c))
+      assert replaced == [%{kind: "image", id: old.id, with: %{kind: "image", id: new.id}}]
+
+      # Said only of a proposal that replaces an image's file
+      prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
+      assert [plain, _] = list!(mcp(c))
+      refute Map.has_key?(plain, :replaced_images)
+
+      [definition] = Enum.filter(Tools.definitions(:mcp), &(&1.name == "list_proposals"))
+      assert definition.description =~ "replaced_images"
+    end
+
     test "says when a pending or approved proposal has expired", c do
       id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
       set!(id, expires_at: DateTime.add(DateTime.utc_now(), -60, :second))
@@ -197,6 +236,29 @@ defmodule Brando.Content.Proposals.ConnectionTest do
       set!(expired, expires_at: DateTime.add(DateTime.utc_now(), -60, :second))
       assert {:ok, %{status: "cancelled"}} = Tools.call("cancel_proposal", %{"proposal_id" => expired}, mcp(c))
       assert status(expired) == "cancelled"
+    end
+
+    test "the person's apply of an approved proposal the tool cancelled says it is no longer under review", c do
+      id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
+      assert {:error, message} = Proposals.apply(id, 1, c.user)
+      assert message =~ "Approve"
+
+      assert {:ok, _} = Proposals.approve(id, 1, c.user)
+      assert {:ok, _} = Tools.call("cancel_proposal", %{"proposal_id" => id}, mcp(c))
+
+      assert {:error, message} = Proposals.apply(id, 1, c.user)
+      refute message =~ "Approve"
+      assert message =~ "cancelled" and message =~ "no longer under review"
+      assert blocks(c) == 3
+
+      set!(id, status: "undone")
+      assert {:error, message} = Proposals.apply(id, 1, c.user)
+      assert message =~ "undone" and message =~ "no longer under review"
+
+      # Applying an applied proposal gives its receipt again; approving it says so.
+      set!(id, status: "applied")
+      assert {:error, message} = Proposals.approve(id, 1, c.user)
+      assert message =~ "applied" and message =~ "no longer under review"
     end
 
     test "refuses a proposal that is not under review, naming its status", c do

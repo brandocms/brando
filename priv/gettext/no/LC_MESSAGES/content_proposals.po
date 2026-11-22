@@ -880,6 +880,11 @@ msgstr "Dette forslaget har utløpt. Lag det på nytt."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This proposal is already applied, so it is no longer under review."
+msgstr "Dette forslaget er allerede utført, så det er ikke lenger til gjennomgang."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "This proposal is no longer available."
 msgstr "Dette forslaget finnes ikke lenger."
 
@@ -893,6 +898,16 @@ msgstr "Dette forslaget er ikke lenger til gjennomgang."
 #, elixir-autogen, elixir-format
 msgid "This proposal replaced an image's file, and a replaced file cannot be undone."
 msgstr "Dette forslaget erstattet filen til et bilde, og en erstattet fil kan ikke angres."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was applied and then undone, so it is no longer under review."
+msgstr "Dette forslaget ble utført og så angret, så det er ikke lenger til gjennomgang."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was cancelled, so it is no longer under review."
+msgstr "Dette forslaget ble forkastet, så det er ikke lenger til gjennomgang."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format

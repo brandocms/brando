@@ -72,6 +72,9 @@ defmodule Brando.Content.Proposals.Tools do
 
   @proposal_limit 20
   @max_proposal_limit 50
+  # The most characters of a summary list_proposals gives, so one long
+  # summary cannot push a list over the result limit
+  @listed_summary 300
 
   @definitions [
     %{
@@ -319,10 +322,12 @@ defmodule Brando.Content.Proposals.Tools do
           "superseded (replaced by a newer version, superseded_by) or cancelled. " <>
           "Check here whether the person has approved or applied a proposal before a next step depends on it, instead of asking, " <>
           "and whether a proposal is still under review before you pass it as replaces. " <>
-          "Each proposal has proposal_id, version, summary, status, changed_at (when its status last changed), " <>
+          "Each proposal has proposal_id, version, summary (cut to #{@listed_summary} characters, with summary_cut: true, when longer), status, changed_at (when its status last changed), " <>
           "changed_by where it is known (\"person\": the person approved, applied or undid it in the admin), " <>
           "expires_at, expired: true when a pending or approved proposal can no longer be approved (prepare it again), " <>
-          "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id).",
+          "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id). " <>
+          "A proposal that replaces an image's file lists it in replaced_images ({kind, id, with: {kind, id}}: the library image that takes the file of the one in with), " <>
+          "not in entries; the entries using that image are not listed.",
       parameters: %{
         type: "object",
         properties: %{
@@ -780,7 +785,6 @@ defmodule Brando.Content.Proposals.Tools do
         %{
           proposal_id: record.id,
           version: record.version,
-          summary: record.summary,
           status: record.status,
           note: "Cancelled. Content is untouched."
         }
@@ -829,18 +833,40 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       proposal_id: record.id,
       version: record.version,
-      summary: record.summary,
       status: record.status,
       changed_at: record.updated_at,
       expires_at: record.expires_at,
       entries: proposal_entries(record.operations, created)
     }
+    |> Map.merge(listed_summary(record.summary))
+    |> Map.merge(replaced_images(record.operations))
     |> Map.merge(if(expired?, do: %{expired: true}, else: %{}))
     |> Map.merge(if(superseded_by, do: %{superseded_by: superseded_by}, else: %{}))
     # Only the person can approve, apply or undo their proposal. Who stored
     # a version or cancelled one is not kept.
     |> Map.merge(if(record.status in ~w(approved applied undone), do: %{changed_by: "person"}, else: %{}))
   end
+
+  defp listed_summary(summary) when is_binary(summary) do
+    if String.length(summary) > @listed_summary,
+      do: %{summary: String.slice(summary, 0, @listed_summary - 1) <> "…", summary_cut: true},
+      else: %{summary: summary}
+  end
+
+  defp listed_summary(summary), do: %{summary: summary}
+
+  # The library images a stored proposal gives another image's file. The
+  # entries using them are not looked up.
+  defp replaced_images(operations) do
+    replaced =
+      for %{"op" => "replace_image_file", "asset" => asset, "with" => with} <- List.wrap(operations),
+          do: Map.put(stored_asset(asset), :with, stored_asset(with))
+
+    if replaced == [], do: %{}, else: %{replaced_images: Enum.uniq(replaced)}
+  end
+
+  defp stored_asset(%{"kind" => kind, "id" => id}), do: %{kind: kind, id: id}
+  defp stored_asset(_asset), do: %{}
 
   # The entries a stored proposal changes and creates, read from its frozen
   # operations without decoding them, so a proposal naming a content type
