@@ -170,6 +170,61 @@ defmodule BrandoAdmin.Components.Form.InputTest do
                "data-sync-insert"
     end
 
+    test "each row is named by the field's label and its row number" do
+      form = markets_form(%{"area_served" => ["Norway"]})
+      html = render_component(&Input.string_list/1, field: form[:area_served], label: {:safe, "Markets"})
+
+      assert [_, _] = Regex.scan(~r/aria-label="Markets\b[^"]*\b[12]"/, html)
+      refute html =~ ~s(aria-label="area_served)
+
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+      assert html =~ ~r/aria-label="Area served\b[^"]*\b1"/
+    end
+
+    # The row's name is the label's text, read out as shown
+    test "a label with markup or an entity names each row by its text" do
+      form = markets_form(%{"area_served" => ["Norway"]})
+
+      html =
+        render_component(&Input.string_list/1,
+          field: form[:area_served],
+          label: {:safe, "<em>Research</em> &amp; policy"}
+        )
+
+      assert html =~ ~s(aria-label="Research &amp; policy, row 1")
+      refute html =~ "&amp;amp;"
+      refute html =~ ~s(aria-label="&lt;em&gt;)
+    end
+
+    test "a hidden label names each row by the humanized field" do
+      form = markets_form(%{"area_served" => ["Norway"]})
+      html = render_component(&Input.string_list/1, field: form[:area_served], label: :hidden)
+
+      assert html =~ ~s(aria-label="Area served, row 1")
+      refute html =~ ~s(aria-label="hidden)
+    end
+
+    test "the Identity type config names each row by its translated label" do
+      Gettext.put_locale(Brando.Gettext, "no")
+      on_exit(fn -> Gettext.put_locale(Brando.Gettext, "en") end)
+
+      form =
+        %Brando.Sites.Identity{type: "organization", type_config: %Brando.Sites.Identity.TypeConfig{}}
+        |> Ecto.Changeset.change()
+        |> to_form(as: :identity)
+
+      html =
+        render_component(BrandoAdmin.Components.Form.Input.IdentityTypeConfig,
+          id: "type-config",
+          field: form[:type_config],
+          label: "Type",
+          instructions: nil
+        )
+
+      label = Gettext.with_locale(Brando.Gettext, "no", fn -> Gettext.gettext(Brando.Gettext, "Area served") end)
+      assert html =~ ~s(aria-label="#{label}, rad 1")
+    end
+
     test "an empty list renders only the empty row" do
       form = markets_form(%{})
       html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])

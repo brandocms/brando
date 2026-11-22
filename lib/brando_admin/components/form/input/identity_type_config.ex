@@ -125,6 +125,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
         <Input.input
           type={@type}
           field={@config[@name]}
+          label={@label}
           class={["text"]}
           phx-debounce={300}
         />

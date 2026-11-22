@@ -833,6 +833,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:name, assigns.name || assigns.field.name)
       |> assign(:values, values ++ [""])
       |> assign(:last, length(values))
+      |> assign(:row_label, string_list_label(assigns))
       |> process_input_id()
       |> assign_a11y()
 
@@ -869,7 +870,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           placeholder={index == @last && gettext("Add another…")}
           phx-debounce="300"
           aria-invalid={@aria_invalid}
-          aria-label={"#{@field.field} #{index + 1}"}
+          aria-label={gettext("%{label}, row %{row}", label: @row_label, row: index + 1)}
         />
         <button
           :if={index < @last}
@@ -1204,6 +1205,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
+  # Each row's aria-label ends with its number, which the `Brando.StringList`
+  # hook rewrites when rows are inserted or removed.
+  defp string_list_label(%{label: label}) when label not in [nil, :hidden], do: Options.label_text(label)
+  defp string_list_label(%{field: field}), do: field.field |> to_string() |> Brando.Utils.humanize()
+
   defp drop_trailing_blanks(rows),
     do: rows |> Enum.reverse() |> Enum.drop_while(&(String.trim(&1) == "")) |> Enum.reverse()
 
@@ -1236,7 +1242,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       locked={@locked}
     >
       <:value>{@field.value |> Brando.Type.StringList.cast() |> elem(1) |> value_text()}</:value>
-      <.input type={:string_list} field={@field} sync_insert={@sync_insert} />
+      <.input type={:string_list} field={@field} label={@label} sync_insert={@sync_insert} />
     </Primitives.field_base>
     """
   end
