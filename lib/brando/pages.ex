@@ -107,6 +107,9 @@ defmodule Brando.Pages do
   the site while the admin, which lists fragments under their page, no longer
   shows it.
 
+  A page loaded in another environment raises `ArgumentError`
+  (`Brando.Tenant.ensure_current!/1`): its id names another page here.
+
   `:fragments` takes:
 
     * `:move`, the default: to `fragment_target/1`, the nearest ancestor not
@@ -129,7 +132,11 @@ defmodule Brando.Pages do
   """
   @spec delete_page(page | id, user, keyword) :: {:ok, page} | {:error, term}
   def delete_page(page_or_id, user \\ :system, opts \\ [])
-  def delete_page(%Page{id: id}, user, opts), do: delete_page(id, user, opts)
+
+  def delete_page(%Page{id: id} = page, user, opts) do
+    Brando.Tenant.ensure_current!(page)
+    delete_page(id, user, opts)
+  end
 
   def delete_page(id, user, opts) do
     choice = Keyword.get(opts, :fragments, :move)

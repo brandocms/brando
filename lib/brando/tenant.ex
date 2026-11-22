@@ -87,6 +87,28 @@ defmodule Brando.Tenant do
     if is_binary(prefix), do: {:tenant, prefix, key}, else: key
   end
 
+  @doc """
+  Raises `ArgumentError` when `entry` was loaded in another environment
+  than the current one, where its id names another row. A struct that
+  names no schema of its own (built, not loaded) passes.
+  """
+  @spec ensure_current!(struct()) :: :ok
+  def ensure_current!(%schema{} = entry) do
+    loaded = Ecto.get_meta(entry, :prefix)
+    current = schema_name(current_prefix())
+
+    if is_nil(loaded) or schema_name(loaded) == current do
+      :ok
+    else
+      raise ArgumentError,
+            "#{inspect(schema)} #{entry.id} was loaded in #{loaded}, not in the current environment (#{current}): " <>
+              "load it in this environment first"
+    end
+  end
+
+  defp schema_name(prefix) when prefix in [nil, "public"], do: "public"
+  defp schema_name(prefix), do: prefix
+
   @spec put_prefix(String.t() | nil) :: String.t() | nil
   def put_prefix(nil) do
     Process.delete(@process_prefix_key)
