@@ -10,6 +10,9 @@ defmodule Brando.Villain.Tags.Video do
   alias Brando.Villain.LiquexParser.TagGrammar
   alias Brando.Villain.TemplateView
 
+  # Options a string in prints as markup, as it is
+  @markup_options ~w(caption title play_button)
+
   @impl true
   def parse, do: TagGrammar.parse(:video)
 
@@ -36,7 +39,7 @@ defmodule Brando.Villain.Tags.Video do
     evaled_args =
       args
       |> Enum.map(fn arg ->
-        {key, val} = TemplateView.eval(arg, context)
+        {key, val} = TemplateView.eval_option(arg, context, @markup_options)
         {String.to_existing_atom(key), val}
       end)
 

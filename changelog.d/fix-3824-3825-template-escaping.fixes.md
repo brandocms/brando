@@ -1,0 +1,1 @@
+- A value passed through `assign` to a tag is escaped once, as the field passed directly is: `{% assign q = entry.title %}{% picture entry.cover { alt: q } %}` no longer prints `&amp;lt;` in the alt text, and `{% route %}` and `{% route_i18n %}` build the address from the text as typed (`it's` gave another path). `{{ q }}` prints as before.

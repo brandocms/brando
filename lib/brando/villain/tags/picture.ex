@@ -16,6 +16,9 @@ defmodule Brando.Villain.Tags.Picture do
   alias Brando.Villain.LiquexParser.TagGrammar
   alias Brando.Villain.TemplateView
 
+  # Options a string in prints as markup, as it is
+  @markup_options ~w(caption)
+
   @impl true
   def parse, do: TagGrammar.parse(:picture)
 
@@ -25,7 +28,7 @@ defmodule Brando.Villain.Tags.Picture do
 
     evaled_args =
       Enum.map(args, fn arg ->
-        {key, val} = TemplateView.eval(arg, context)
+        {key, val} = TemplateView.eval_option(arg, context, @markup_options)
         {String.to_existing_atom(key), val}
       end)
 

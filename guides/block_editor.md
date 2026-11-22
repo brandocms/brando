@@ -313,6 +313,14 @@ data, also inside a list, and a filter given that record gets its credential
 fields empty. A tag of your own reads its argument with
 `Brando.Villain.TemplateView.eval/2`, and escapes what it prints.
 
+A value passed through `assign` reaches a tag as the value itself does, so
+`{% assign alt = entry.title %}{% picture entry.cover { alt: alt } %}` escapes
+the title once, and `{% route %}` builds its address from the text as typed.
+An option a tag prints as markup (`caption` on `{% picture %}` and
+`{% video %}`, `title` and `play_button` on `{% video %}`) gets assigned text
+as `{{ alt }}` prints it, escaped. A variable set with `capture` holds the
+HTML it printed, which a tag escapes again.
+
 A plain map a filter of your own builds reads like what the filter was given.
 Built from `entry` or a datasource's `entries`, it reads like entry data. Built
 from what the parser has already escaped, such as `block`, `globals` or the

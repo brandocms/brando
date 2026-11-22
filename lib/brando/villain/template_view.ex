@@ -57,6 +57,8 @@ defmodule Brando.Villain.TemplateView do
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
+  # Text `{% assign %}` gave a variable, with what a tag reads of it (`assign/3`)
+  @assigned_texts :brando_template_view_assigned_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
   # a field of rendered blocks it was read from (`read_as_rendered_blocks/2`)
@@ -165,12 +167,72 @@ defmodule Brando.Villain.TemplateView do
 
   @doc """
   Evaluates a tag's `argument` to the value itself, its text unescaped. A tag
-  escapes what it prints, or passes it to something that does.
+  escapes what it prints, or passes it to something that does. A variable
+  `{% assign %}` gave text is read as the tag reads what it was assigned
+  (`assign/3`).
   """
   @spec eval(term(), Context.t()) :: term()
-  def eval(argument, %Context{private: private} = context) do
-    {value, _context} = Liquex.Argument.eval(argument, %{context | private: Map.put(private, @raw_flag, true)})
+  def eval(argument, %Context{} = context), do: eval(argument, context, true)
+
+  @doc """
+  A tag's option, `{key, value}`, as `eval/2` gives it, except an option
+  among `markup`, which the tag prints as it is: an assigned variable gives
+  it the text as `{{ }}` prints it, escaped.
+  """
+  @spec eval_option(term(), Context.t(), [String.t()]) :: {String.t(), term()}
+  def eval_option({:keyword, [key, _value]} = argument, %Context{} = context, markup),
+    do: eval(argument, context, key not in markup)
+
+  defp eval(argument, context, assigned?) do
+    {value, _context} = Liquex.Argument.eval(argument, tag_context(context, assigned?))
     unwrap(value)
+  end
+
+  @doc """
+  `context` with `name` set to the value `evaluate` gives in it, for
+  `{% assign %}`. Assigned text is the text the template read, escaped as
+  `{{ name }}` prints it. A tag reading `name` while it holds that value gets
+  the text it would get from what was assigned (`eval/2`), so a field passed
+  through `assign` reaches a tag as the field does, and is escaped once: for
+  that, `evaluate` runs a second time, as a tag reads.
+  """
+  @spec assign(Context.t(), String.t(), (Context.t() -> {term(), Context.t()})) :: Context.t()
+  def assign(%Context{} = context, name, evaluate) do
+    {value, assigned} = evaluate.(context)
+    texts = Map.get(assigned.private, @assigned_texts, %{})
+
+    texts =
+      if text?(value) and read_mode(:escape, context) == :escape do
+        {text, _context} = evaluate.(tag_context(context))
+        Map.put(texts, name, {value, text})
+      else
+        Map.delete(texts, name)
+      end
+
+    assigned = Context.assign_global(assigned, name, value)
+    %{assigned | private: Map.put(assigned.private, @assigned_texts, texts)}
+  end
+
+  defp text?(value) when is_binary(value), do: true
+  defp text?(value) when is_list(value), do: Enum.any?(value, &text?/1)
+  defp text?(_value), do: false
+
+  # A tag reads text unescaped, and an assigned variable as what it was
+  # assigned while it holds the same value: a loop or `capture` may have set
+  # the name since
+  defp tag_context(%Context{private: private} = context, assigned? \\ true) do
+    context = %{context | private: Map.put(private, @raw_flag, true)}
+
+    case Map.get(private, @assigned_texts, %{}) do
+      texts when map_size(texts) == 0 or not assigned? ->
+        context
+
+      texts ->
+        Context.push_scope(
+          context,
+          for({name, {value, text}} <- texts, Access.get(context, name) === value, into: %{}, do: {name, text})
+        )
+    end
   end
 
   @doc """
