@@ -249,7 +249,7 @@ defmodule Brando.MigrationTemplates do
   def environment_tables,
     do: ~w(sites_not_found_hits entry_notes note_mentions webhooks webhook_deliveries sites_indexnow search_documents
          listing_views listing_view_defaults notification_routes notification_deliveries content_definition_applies
-         content_definition_batches)
+         content_definition_batches pages_fragments_alternates)
 
   @doc "What the 2xx migrations add in every environment: columns by table"
   def environment_columns do

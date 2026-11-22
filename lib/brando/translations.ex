@@ -169,6 +169,78 @@ defmodule Brando.Translations do
   end
 
   @doc """
+  The other language versions of `entry` that `actor` may read, for its form:
+  `linked`, the entries linked to it as alternates, and `unlinked`, those that
+  hold its `matched_by` values (`trait :translatable, matched_by: [...]`) in
+  another language without being linked to it. Entries in the trash are left
+  out. `unlinked` is empty for a schema without `matched_by`.
+  """
+  def language_versions(schema, %{id: id} = entry, actor) do
+    linked_ids = if schema.has_alternates?(), do: alternate_ids(schema, id), else: []
+
+    linked =
+      from(e in schema, where: e.id in ^linked_ids, order_by: [asc: e.language, asc: e.id])
+      |> exclude_trashed(schema)
+      |> readable(schema, actor)
+      |> Repo.all()
+
+    unlinked =
+      case same_values_query(schema, entry) do
+        nil ->
+          []
+
+        query ->
+          from(e in query, where: e.id not in ^linked_ids, order_by: [asc: e.language, asc: e.id])
+          |> readable(schema, actor)
+          |> Repo.all()
+      end
+
+    %{linked: linked, unlinked: unlinked}
+  end
+
+  @doc "The entries of `schema` in other languages than `entry`'s, not in the trash, that `actor` may read."
+  def other_language_entries(schema, entry, actor) do
+    from(e in schema, where: e.language != ^entry.language, order_by: [asc: e.language, asc: e.id])
+    |> exclude_trashed(schema)
+    |> readable(schema, actor)
+    |> Repo.all()
+  end
+
+  defp alternate_ids(schema, id),
+    do: Repo.all(from a in Module.concat(schema, Alternate), where: a.entry_id == ^id, select: a.linked_entry_id)
+
+  # The entries of `schema` in other languages, not in the trash, with
+  # `entry`'s `matched_by` values; nil without `matched_by`
+  defp same_values_query(schema, entry) do
+    case matched_by(schema) do
+      [] ->
+        nil
+
+      fields ->
+        query = from(e in schema, where: e.id != ^entry.id and e.language != ^entry.language)
+
+        fields
+        |> Enum.reduce(query, fn field, query ->
+          value = Map.get(entry, field)
+          from(e in query, where: field(e, ^field) == ^value)
+        end)
+        |> exclude_trashed(schema)
+    end
+  end
+
+  @doc "The attributes `schema` matches its language versions by (`trait :translatable, matched_by: [...]`)."
+  def matched_by(schema) do
+    if function_exported?(schema, :__translatable_matched_by__, 0), do: schema.__translatable_matched_by__(), else: []
+  end
+
+  defp exclude_trashed(query, schema) do
+    if :deleted_at in schema.__schema__(:fields), do: where(query, [e], is_nil(e.deleted_at)), else: query
+  end
+
+  defp readable(query, _schema, nil), do: query
+  defp readable(query, schema, actor), do: Brando.Content.Transfer.Catalog.scoped_query(query, schema, actor, :read)
+
+  @doc """
   The site's languages (`Brando.Languages`) of `schema` that `entry` has no
   version in yet: neither a member of its group nor an alternate linked to
   its source (an existing, independent version is not joined to a group).

@@ -30,7 +30,10 @@ defmodule Brando.Pages.Fragment do
   trait :soft_delete
   trait :status
   trait :timestamped
-  trait :translatable, alternates: false
+  # Language versions keep the same keys. Independent unless the application
+  # configures it, as for pages: `config :brando, Brando.Pages.Fragment,
+  # translatable: [mode: :synchronized, ...]` (see the i18n guide).
+  trait :translatable, runtime_config: true, matched_by: [:parent_key, :key]
   trait :blocks
   trait :blocks_prevent_circular_references
   trait Brando.Pages.Fragment.KeyFormat

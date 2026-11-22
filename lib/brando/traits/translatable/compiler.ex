@@ -8,16 +8,22 @@ defmodule Brando.Trait.Translatable.Compiler do
 
       @translatable_config Brando.Trait.Translatable.config(unquote(config))
       @translatable_runtime Keyword.get(unquote(config), :runtime_config, false)
+      @translatable_matched_by Keyword.get(unquote(config), :matched_by, [])
 
       def has_alternates?, do: @translatable_alternates
+      def __translatable_matched_by__, do: @translatable_matched_by
       def __translatable_runtime__?, do: @translatable_runtime
 
       if @translatable_runtime do
         # Read from the application's config at runtime, per site: see
         # `Brando.Trait.Translatable.RuntimeConfig`.
-        def __translatable_config__,
-          do: Brando.Trait.Translatable.RuntimeConfig.get(__MODULE__, @translatable_config)
+        def __translatable_config__ do
+          __MODULE__
+          |> Brando.Trait.Translatable.RuntimeConfig.get(@translatable_config)
+          |> Brando.Trait.Translatable.with_matched_by(@translatable_matched_by)
+        end
       else
+        @translatable_config Brando.Trait.Translatable.with_matched_by(@translatable_config, @translatable_matched_by)
         def __translatable_config__, do: @translatable_config
       end
 

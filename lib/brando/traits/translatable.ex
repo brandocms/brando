@@ -52,6 +52,17 @@ defmodule Brando.Trait.Translatable do
 
   `:synchronized` requires alternates, which is the default. The mode defaults
   to `:independent`, the behaviour of a plain `trait :translatable`.
+
+  ## Versions matched by key
+
+      trait :translatable, matched_by: [:parent_key, :key]
+
+  `matched_by` names the attributes that hold the same values in every
+  language version of an entry, such as a fragment's keys. An entry with
+  those values in another language that is not linked to it is then still
+  one of its versions: a translation is not created beside it, and the form
+  lists it next to the linked versions. In synchronized mode they are
+  source-controlled.
   """
   use Brando.Trait
 
@@ -93,6 +104,15 @@ defmodule Brando.Trait.Translatable do
   end
 
   @doc """
+  `config` with the `matched_by` fields source-controlled in synchronized
+  mode: they hold the same values in every language version.
+  """
+  def with_matched_by(%{mode: :synchronized} = config, [_ | _] = fields),
+    do: %{config | source_controlled_fields: Enum.uniq(config.source_controlled_fields ++ fields)}
+
+  def with_matched_by(config, _fields), do: config
+
+  @doc """
   Validates every runtime translation config in the application's
   environment, as a Blueprint's own options are validated when it compiles.
   Raises `Brando.Exception.BlueprintError` for an invalid one.
@@ -127,7 +147,17 @@ defmodule Brando.Trait.Translatable do
     validate_mode!(module, mode, opts)
     validate_fields!(module, mode, Keyword.get(opts, :source_controlled_fields, []))
     validate_language_controlled!(module, mode, opts)
+    validate_matched_by!(module, Keyword.get(opts, :matched_by, []))
     true
+  end
+
+  defp validate_matched_by!(module, fields) do
+    attributes = Enum.map(Attributes.__attributes__(module), & &1.name)
+
+    unless is_list(fields) and Enum.all?(fields, &(&1 in attributes)) do
+      raise BlueprintError,
+        message: "#{inspect(module)}: trait :translatable matched_by must list attributes, got #{inspect(fields)}"
+    end
   end
 
   defp validate_language_controlled!(module, mode, opts) do

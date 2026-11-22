@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Blueprint.Identifier
+  alias Brando.Translations
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input.Entries
 
@@ -11,19 +13,32 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
       socket
       |> assign(assigns)
       |> assign_new(:new_identifiers, fn -> [] end)
-      |> assign_new(:identifiers, fn ->
-        {:ok, identifiers} = Brando.Content.list_identifiers_for(assigns.entry.alternate_entries)
-        identifiers
-      end)
+      |> assign_new(:entries_identifiers, fn -> [] end)
+      |> assign_versions()
 
     {:ok, socket}
   end
+
+  # The entry's language versions the editor may read: those linked to it,
+  # and those with its keys in another language that are not
+  # (`Brando.Translations.language_versions/3`). Identifiers are made from
+  # the entries, as the listing makes them: not every schema keeps them.
+  defp assign_versions(socket) do
+    entry = socket.assigns.entry
+    %{linked: linked, unlinked: unlinked} = Translations.language_versions(entry.__struct__, entry, actor(socket))
+
+    socket
+    |> assign(:identifiers, identifiers(linked))
+    |> assign(:unlinked_identifiers, identifiers(unlinked))
+  end
+
+  # A schema without an identifier template makes none
+  defp identifiers(entries), do: entries |> Identifier.identifiers_for!() |> Enum.reject(&is_nil/1)
 
   attr :id, :string
   attr :entry, :map
   attr :on_close, :any
   attr :on_remove_link, :any, default: nil
-  attr :entries_identifiers, :list, default: []
 
   def render(assigns) do
     ~H"""
@@ -44,14 +59,14 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
             )}
           </p>
         </:info>
-        <section class="alternates-section">
+        <section class="alternates-section alternates-linked">
           <h3>{gettext("Currently linked entries")}</h3>
           <div :if={@identifiers != []} class="identifier-list">
-            <Entries.identifier
+            <Entries.dumb_identifier
               :for={identifier <- @identifiers}
-              :key={identifier.id}
-              identifier_id={identifier.id}
-              available_identifiers={@identifiers}
+              :key={identifier.entry_id}
+              identifier={identifier}
+              select={open(identifier)}
             >
               <:delete>
                 <button
@@ -67,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
                   <.icon name="x" />
                 </button>
               </:delete>
-            </Entries.identifier>
+            </Entries.dumb_identifier>
           </div>
           <p :if={@identifiers == []} class="alternates-empty">{gettext("No linked entries yet.")}</p>
           <button
@@ -77,6 +92,33 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           >
             <.icon name="link" />{gettext("Select entries to link")}
           </button>
+        </section>
+
+        <section :if={@unlinked_identifiers != []} class="alternates-section alternates-unlinked">
+          <h3>{gettext("Not linked, with the same keys")}</h3>
+          <p>
+            {gettext(
+              "These entries have this entry's keys in another language, but are not linked to it. Link one to make it this entry's version in its language."
+            )}
+          </p>
+          <div class="identifier-list">
+            <Entries.dumb_identifier
+              :for={identifier <- @unlinked_identifiers}
+              :key={identifier.entry_id}
+              identifier={identifier}
+              select={open(identifier)}
+            >
+              <:delete>
+                <button
+                  type="button"
+                  aria-label={gettext("Link")}
+                  phx-click={JS.push("select_entry", target: @myself, value: %{id: identifier.entry_id})}
+                >
+                  <.icon name="link" />
+                </button>
+              </:delete>
+            </Entries.dumb_identifier>
+          </div>
         </section>
 
         <section :if={Enum.count(@new_identifiers) > 1} class="alternates-section">
@@ -93,12 +135,10 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
         <section :if={@entries_identifiers != []} class="alternates-section entries-identifiers">
           <h3>{gettext("Available entries")}</h3>
           <div class="identifier-list">
-            <Entries.identifier
+            <Entries.dumb_identifier
               :for={identifier <- @entries_identifiers}
-              :key={identifier.id}
-              identifier_id={identifier.id}
-              selected_identifiers={@identifiers}
-              available_identifiers={@entries_identifiers}
+              :key={identifier.entry_id}
+              identifier={identifier}
               select={
                 JS.push("select_entry",
                   target: @myself,
@@ -114,32 +154,18 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   end
 
   def handle_event("get_entries_identifiers", _, socket) do
-    entry = socket.assigns.entry
-
-    {:ok, entries_identifiers} =
-      Brando.Blueprint.Identifier.list_entries_for(entry.__struct__, %{
-        exclude_language: entry.language
-      })
-
-    socket =
-      assign(
-        socket,
-        :entries_identifiers,
-        Enum.reject(entries_identifiers, &(&1.entry_id == entry.id))
-      )
-
-    {:noreply, socket}
+    {:noreply, assign(socket, :entries_identifiers, candidates(socket))}
   end
 
   # Links are made to the entries this drawer offered, of the entry's own
   # schema, and take `:update` on both entries.
   def handle_event("select_entry", %{"id" => id}, socket) do
     entry = socket.assigns.entry
-    offered = socket.assigns[:entries_identifiers] || []
+    offered = (socket.assigns[:entries_identifiers] || []) ++ socket.assigns.unlinked_identifiers
 
     with %{} = identifier <- Enum.find(offered, &(to_string(&1.entry_id) == to_string(id))),
          :ok <- alternate(entry).add(identifier.entry_id, entry.id, actor(socket)) do
-      {:noreply, add_identifier(socket, identifier)}
+      {:noreply, linked(socket, identifier.entry_id)}
     else
       error -> {:noreply, refused(socket, error)}
     end
@@ -150,7 +176,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
 
     case alternate(entry).delete(id, entry.id, actor(socket)) do
       {:error, _} = error -> {:noreply, refused(socket, error)}
-      _ -> {:noreply, delete_identifier(socket, id)}
+      _ -> {:noreply, unlinked(socket, id)}
     end
   end
 
@@ -175,21 +201,46 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
 
   defp refused(socket, _), do: socket
 
-  def add_identifier(socket, identifier) do
-    socket
-    |> assign(:identifiers, socket.assigns.identifiers ++ [identifier])
-    |> update(:new_identifiers, fn new_identifiers -> new_identifiers ++ [identifier.entry_id] end)
+  # Entries of the schema in other languages to link: from its stored
+  # identifiers, which the editor's read access scopes, or made from the
+  # entries for a schema that keeps none
+  defp candidates(socket) do
+    %schema{} = entry = socket.assigns.entry
+    linked = MapSet.new(socket.assigns.identifiers, & &1.entry_id)
+
+    identifiers =
+      if schema.__persist_identifier__() do
+        {:ok, identifiers} = Identifier.list_entries_for(schema, %{exclude_language: entry.language})
+        identifiers
+      else
+        schema
+        |> Translations.other_language_entries(entry, actor(socket))
+        |> identifiers()
+      end
+
+    Enum.reject(identifiers, &(&1.entry_id == entry.id or MapSet.member?(linked, &1.entry_id)))
   end
 
-  def delete_identifier(socket, identifier_id) do
+  defp linked(socket, entry_id) do
     socket
-    |> assign(
-      :identifiers,
-      Enum.reject(socket.assigns.identifiers, &(&1.entry_id == identifier_id))
-    )
-    |> update(:new_identifiers, fn new_identifiers ->
-      Enum.reject(new_identifiers, &(&1 == identifier_id))
-    end)
+    |> assign_versions()
+    |> update(:entries_identifiers, fn identifiers -> Enum.reject(identifiers || [], &(&1.entry_id == entry_id)) end)
+    |> update(:new_identifiers, &(&1 ++ [entry_id]))
+  end
+
+  defp unlinked(socket, entry_id) do
+    socket
+    |> assign_versions()
+    |> update(:new_identifiers, fn ids -> Enum.reject(ids, &(to_string(&1) == to_string(entry_id))) end)
+  end
+
+  defp open(identifier) do
+    case identifier.schema.__admin_route__(:update, [identifier.entry_id]) do
+      url when is_binary(url) -> JS.navigate(url)
+      _ -> false
+    end
+  rescue
+    _ -> false
   end
 
   defp link_entries([], _f), do: []
