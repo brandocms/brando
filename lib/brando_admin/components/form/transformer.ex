@@ -1565,7 +1565,14 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp item_struct(data, _relation_module) when is_struct(data), do: data
-  defp item_struct(data, relation_module), do: struct(relation_module, data)
+  # A Blueprint `default` may have string keys, which `struct/2` would drop;
+  # an edit (`changes`) is atom-keyed and wins over the default's value.
+  defp item_struct(data, relation_module) do
+    fields = relation_module |> struct() |> Map.keys() |> Map.new(&{to_string(&1), &1})
+    {strings, atoms} = Map.split_with(data, fn {key, _} -> is_binary(key) end)
+    from_strings = for {key, value} <- strings, field = fields[key], into: %{}, do: {field, value}
+    struct(relation_module, Map.merge(from_strings, atoms))
+  end
 
   # An item's asset can come from three places: a preloaded association on an
   # existing row, an upload delivery, or a picker selection. The last two land in
