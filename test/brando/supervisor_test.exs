@@ -54,7 +54,11 @@ defmodule Brando.SupervisorTest do
       assert {Oban.Pruner, max_age: 300} = List.keyfind(config.plugins, Oban.Pruner, 0)
       assert {Oban.Lifeline, _} = List.keyfind(config.plugins, Oban.Lifeline, 0)
 
-      workers = Enum.map(cron_opts[:crontab], fn {_schedule, worker} -> worker end)
+      workers =
+        Enum.map(cron_opts[:crontab], fn
+          {_schedule, worker} -> worker
+          {_schedule, worker, _opts} -> worker
+        end)
 
       assert Brando.Worker.SitemapGenerator in workers
       assert Brando.Worker.SoftDeletePurger in workers
@@ -66,8 +70,10 @@ defmodule Brando.SupervisorTest do
       assert Brando.Worker.FormSubmissionPurger in workers
       assert Brando.Worker.NotFoundPurger in workers
       assert Brando.Worker.WebhookDeliveryPurger in workers
+      assert Brando.Worker.SiteUsage in workers
       assert {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep} in cron_opts[:crontab]
       assert Brando.Doctor.Checks.Oban.sweep_scheduled?(Brando.Supervisor.oban_config())
+      assert Brando.Doctor.Checks.Oban.site_usage_scheduled?(Brando.Supervisor.oban_config())
     end
 
     test "gives every queue Brando serializes a limit" do

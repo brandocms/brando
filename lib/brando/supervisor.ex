@@ -141,7 +141,10 @@ defmodule Brando.Supervisor do
           # The admin search index: one job per changed entry, and rebuilds
           # from Utilities (`Brando.Search`). Two, so a rebuild does not hold
           # up the entries saved meanwhile.
-          search_index: [limit: 2]
+          search_index: [limit: 2],
+          # Measures what each site stores, walking its folders: apart, so
+          # a long walk holds nothing else up (`Brando.Worker.SiteUsage`)
+          site_usage: [limit: 1]
         ],
         cron: [
           crontab:
@@ -167,6 +170,8 @@ defmodule Brando.Supervisor do
               {"25 5 * * *", Brando.Worker.NotFoundPurger},
               # Delete webhook deliveries past their retention period
               {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger},
+              # Measure each site's storage and prune old usage rows (`tenancy_mode: :multi` only)
+              {"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}},
               # Publish and expire entries whose dates passed with no job (clones, restores)
               {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}
             ] ++ extra_oban_cron_jobs(),

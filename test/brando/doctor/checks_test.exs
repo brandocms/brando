@@ -179,6 +179,25 @@ defmodule Brando.Doctor.ChecksTest do
                Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], sweep: true})
     end
 
+    test "warns when each site's usage is not measured, with several sites" do
+      result = Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: false})
+      assert result.status == :warning
+      assert result.fix =~ "Brando.Worker.SiteUsage"
+      assert result.fix =~ "site_usage"
+
+      assert %Result{status: :ok} =
+               Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: true})
+    end
+
+    test "site usage is measured with its cron entry and its queue" do
+      crontab = [crontab: [{"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}}]]
+
+      assert Checks.Oban.site_usage_scheduled?(queues: [site_usage: [limit: 1]], cron: crontab)
+      refute Checks.Oban.site_usage_scheduled?(queues: [default: 1], cron: crontab)
+      refute Checks.Oban.site_usage_scheduled?(queues: [site_usage: 1], cron: [crontab: []])
+      refute Checks.Oban.site_usage_scheduled?(queues: false, cron: false)
+    end
+
     test "its job queries are not logged" do
       level = Logger.level()
       Logger.configure(level: :debug)
