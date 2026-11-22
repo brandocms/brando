@@ -261,7 +261,9 @@ defmodule Brando.MigrationTemplates do
       "activity_events" => ~w(proposal_id approver_id),
       "content_identifiers" => ~w(external_url),
       "translation_group_members" => ~w(baseline_texts),
-      "translation_work_items" => ~w(source_previous)
+      "translation_work_items" => ~w(source_previous),
+      "content_palettes" => ~w(uid),
+      "content_containers" => ~w(uid)
     }
   end
 

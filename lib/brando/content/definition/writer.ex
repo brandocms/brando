@@ -37,7 +37,7 @@ defmodule Brando.Content.Definition.Writer do
   end
 
   def files(bundle) do
-    definitions = bundle["modules"] ++ bundle["table_templates"]
+    definitions = Model.definitions(bundle)
     names = names(definitions)
     files = Enum.flat_map(definitions, &definition_files(&1, names[identity(&1)]))
     Value.unique!(Enum.map(files, &elem(&1, 0)), "output filenames")
@@ -73,7 +73,8 @@ defmodule Brando.Content.Definition.Writer do
   end
 
   # Files are named for people: `<namespace>/<name>` in the admin language, and
-  # table templates under `tables/`. A child module lives in a folder beside its
+  # table templates, palettes and containers under `tables/`, `palettes/` and
+  # `containers/`. A child module lives in a folder beside its
   # parent, `<parent>/<child>`, like `foo.ex` and `foo/` in Elixir. Identity is
   # the `uid` inside each file, so these names only have to be unique within one
   # export. Definitions that would share a path, or a module name, get a short
@@ -135,6 +136,9 @@ defmodule Brando.Content.Definition.Writer do
   defp readable_path(%{"kind" => "table_template"} = definition, _parent_path),
     do: Path.join("tables", slug(definition["name"]) || "table-" <> key(definition))
 
+  defp readable_path(%{"kind" => kind} = definition, _parent_path) when kind in ~w(palette container),
+    do: Path.join(kind <> "s", slug(definition["name"]) || kind <> "-" <> key(definition))
+
   defp readable_path(definition, parent_path) do
     name = slug(definition["name"]) || "module-" <> key(definition)
 
@@ -180,34 +184,49 @@ defmodule Brando.Content.Definition.Writer do
 
   defp definition_files(definition, %{path: name, module: module_name}) do
     template_name = name <> if(definition["type"] == "heex", do: ".heex", else: ".liquid")
-
-    fields =
-      if definition["kind"] == "module",
-        do: Model.module_fields() -- [:type, :code],
-        else: [:uid, :name]
-
+    templated? = definition["kind"] in ~w(module container)
     header = ["defmodule ", module_name, " do\n  use Brando.Content.Definition\n\n"]
-    kind = if definition["kind"] == "table_template", do: "  kind :table_template\n", else: ""
+    kind = if definition["kind"] == "module", do: "", else: ["  kind :", definition["kind"], "\n"]
 
     attributes =
-      Enum.map(fields, fn field -> ["  ", to_string(field), " ", literal(definition[to_string(field)]), "\n"] end)
+      Enum.map(fields(definition["kind"]), fn field ->
+        ["  ", to_string(field), " ", literal(definition[to_string(field)]), "\n"]
+      end)
 
     table =
       if definition["table_template"], do: ["  table_template ", literal(definition["table_template"]), "\n"], else: ""
 
     refs = section("refs", Enum.map(definition["refs"] || [], &ref/1))
-    vars = section("vars", Enum.map(definition["vars"], &var/1))
+    vars = section("vars", Enum.map(definition["vars"] || [], &var/1))
     children = section("children", Enum.map(definition["children"] || [], &["    child ", literal(&1), "\n"]))
+    colors = section("colors", Enum.map(definition["colors"] || [], &color/1))
 
     template =
-      if definition["kind"] == "module",
+      if templated?,
         do: ["\n  template_file :", definition["type"], ", ", literal(Path.basename(template_name)), "\n"],
         else: ""
 
-    source = IO.iodata_to_binary([header, kind, attributes, table, refs, vars, children, template, "end\n"])
+    source = IO.iodata_to_binary([header, kind, attributes, table, refs, vars, children, colors, template, "end\n"])
     source = source |> Code.format_string!(locals_without_parens: locals(), line_length: 100) |> IO.iodata_to_binary()
     files = [{name <> ".exs", source <> "\n"}]
-    if definition["kind"] == "module", do: files ++ [{template_name, definition["code"]}], else: files
+    if templated?, do: files ++ [{template_name, definition["code"]}], else: files
+  end
+
+  defp fields("module"), do: Model.module_fields() -- [:type, :code]
+  defp fields("table_template"), do: [:uid, :name]
+  defp fields("palette"), do: ~w(uid name namespace key global instructions)a
+  defp fields("container"), do: (Model.container_fields() -- [:type, :code]) ++ [:palette]
+
+  defp color(color) do
+    [
+      "    color ",
+      literal(color["key"]),
+      ", ",
+      literal(color["hex_value"]),
+      " do\n",
+      Enum.map(~w(name instructions), &["      ", &1, " ", literal(color[&1]), "\n"]),
+      "    end\n"
+    ]
   end
 
   defp ref(ref) do
@@ -273,9 +292,9 @@ defmodule Brando.Content.Definition.Writer do
 
   defp locals do
     Enum.map(
-      ~w(kind uid name namespace help_text class svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query table_template description active collapsed config default assets label placeholder instructions width placement new_row options settings)a,
+      ~w(kind uid name namespace help_text class svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query table_template description active collapsed config default assets label placeholder instructions width placement new_row options settings key global palette allow_custom_palette palette_namespace)a,
       &{&1, 1}
     ) ++
-      [ref: 2, var: 2, child: 1, template_file: 2]
+      [ref: 2, var: 2, child: 1, color: 2, template_file: 2]
   end
 end

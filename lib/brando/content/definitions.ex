@@ -68,14 +68,17 @@ defmodule Brando.Content.Definitions do
     end)
   end
 
-  @doc "Exports local definitions to a new directory. `:uids` selects complete module trees."
+  @doc """
+  Exports local definitions to a new directory. `:uids` selects complete
+  module trees, palettes and containers, with the palettes they point at.
+  """
   def export(directory, actor, opts \\ []) do
     with :ok <- Boundary.authorize(actor, :export, Brando.Content.Module) do
       protect(fn ->
         validate_actor!(actor)
         {bundle, records} = Snapshot.take!(opts)
 
-        Enum.each(bundle["modules"] ++ bundle["table_templates"], &authorize_export!(&1, records, actor))
+        Enum.each(Model.definitions(bundle), &authorize_export!(&1, records, actor))
         Brando.Content.Definition.References.bind!(bundle, %{}, actor)
         files = Writer.write!(bundle, Path.expand(directory))
         %{bundle: bundle, files: files, directory: Path.expand(directory)}
@@ -84,14 +87,9 @@ defmodule Brando.Content.Definitions do
   end
 
   defp authorize_export!(definition, records, actor) do
-    schema = if definition["kind"] == "module", do: Brando.Content.Module, else: Brando.Content.TableTemplate
+    record = Snapshot.record(records, definition["kind"], definition["uid"])
 
-    record =
-      if definition["kind"] == "module",
-        do: records.modules[definition["uid"]],
-        else: records.tables[definition["uid"]]
-
-    if Boundary.authorize_record(actor, :export, schema, record.id) != :ok,
+    if Boundary.authorize_record(actor, :export, Model.schema(definition["kind"]), record.id) != :ok,
       do: Error.raise!("authorization", "forbidden")
   end
 
@@ -150,7 +148,11 @@ defmodule Brando.Content.Definitions do
     protect(fn -> Writer.write_lock!(bundle, Path.expand(directory)) end)
   end
 
-  @doc "Retries block synchronization, render enqueueing and notifications for local module UIDs."
+  @doc """
+  Retries what follows an apply for local definition UIDs: block
+  synchronization, render enqueueing and notifications for a module, the
+  palette CSS and renders for a palette, renders for a container.
+  """
   def refresh(uids, actor), do: Brando.Content.Definition.Importer.retry_refresh(uids, actor)
 
   @doc """

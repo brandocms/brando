@@ -1,0 +1,20 @@
+defmodule MySite.Definitions.Palettes.Paper do
+  use Brando.Content.Definition
+
+  kind :palette
+  uid "acme-palette-paper"
+  name "Paper"
+  namespace "site"
+  key "paper"
+
+  colors do
+    color :background, "#fff9f4" do
+      name "Background"
+      instructions "Behind the text"
+    end
+
+    color :foreground, "#000000" do
+      name "Text"
+    end
+  end
+end

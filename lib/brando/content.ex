@@ -209,6 +209,10 @@ defmodule Brando.Content do
 
   def duplicate_module_uid(_entry, _uid), do: Brando.Utils.generate_uid()
 
+  @doc false
+  # A copy is a definition of its own (`Brando.Content.Definition`)
+  def duplicate_uid(_entry, _uid), do: Brando.Utils.generate_uid()
+
   @doc """
   The class of a duplicated module: `<class>-copy`, numbered when another
   module has it. A class is used in the module's template, so it stays one
@@ -473,7 +477,8 @@ defmodule Brando.Content do
     fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
   end
 
-  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]} do
+  mutation :duplicate,
+           {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2, uid: &__MODULE__.duplicate_uid/2]} do
     fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
   end
 
@@ -658,7 +663,7 @@ defmodule Brando.Content do
   mutation :create, Container
   mutation :update, Container
   mutation :delete, Container
-  mutation :duplicate, {Container, change_fields: [:name]}
+  mutation :duplicate, {Container, change_fields: [:name, uid: &__MODULE__.duplicate_uid/2]}
 
   filters Identifier do
     fn

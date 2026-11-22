@@ -1,6 +1,7 @@
 defmodule Brando.Content.Definition do
   @moduledoc """
-  Declarative, portable module and table-template definitions.
+  Declarative, portable definitions of modules, table templates, palettes
+  and containers.
 
   Definitions can be authored as Spark modules or loaded from literal `.exs`
   declarations with `Brando.Content.Definitions.read/1`. See the
@@ -51,7 +52,8 @@ defmodule Brando.Content.Definition do
       refs: entities(module, :refs),
       vars: entities(module, :vars),
       templates: entities(module, :definition),
-      children: entities(module, :children)
+      children: entities(module, :children),
+      colors: entities(module, :colors)
     }
   end
 

@@ -46,8 +46,13 @@ defmodule Brando.Content.Definition.Dsl do
     defstruct [:definition, :__spark_metadata__]
   end
 
+  defmodule Color do
+    @moduledoc false
+    defstruct [:key, :hex_value, :name, :instructions, :__spark_metadata__]
+  end
+
   @options [
-    kind: [type: {:in, [:module, :table_template]}, default: :module],
+    kind: [type: {:in, [:module, :table_template, :palette, :container]}, default: :module],
     uid: [type: :string, required: true],
     name: [type: :any, required: true],
     namespace: [type: :any],
@@ -62,7 +67,13 @@ defmodule Brando.Content.Definition.Dsl do
     datasource_module: [type: :any],
     datasource_type: [type: :any],
     datasource_query: [type: :any],
-    table_template: [type: :any]
+    table_template: [type: :any],
+    key: [type: :any],
+    global: [type: :any],
+    instructions: [type: :any],
+    palette: [type: :any],
+    allow_custom_palette: [type: :any],
+    palette_namespace: [type: :any]
   ]
 
   @ref_schema [
@@ -90,6 +101,13 @@ defmodule Brando.Content.Definition.Dsl do
     default: [type: :any, default: :__unset__],
     settings: [type: :any, default: []],
     assets: [type: :any, default: []]
+  ]
+
+  @color_schema [
+    key: [type: {:or, [:atom, :string]}, required: true],
+    hex_value: [type: :string, required: true],
+    name: [type: :any],
+    instructions: [type: :any]
   ]
 
   @template_schema [
@@ -135,9 +153,15 @@ defmodule Brando.Content.Definition.Dsl do
     ]
   }
 
-  use Spark.Dsl.Extension, sections: [@root, @refs, @vars, @children]
+  @colors %Spark.Dsl.Section{
+    name: :colors,
+    entities: [%Spark.Dsl.Entity{name: :color, args: [:key, :hex_value], target: Color, schema: @color_schema}]
+  }
+
+  use Spark.Dsl.Extension, sections: [@root, @refs, @vars, @children, @colors]
 
   def options, do: @options
   def ref_schema, do: @ref_schema
   def var_schema, do: @var_schema
+  def color_schema, do: @color_schema
 end

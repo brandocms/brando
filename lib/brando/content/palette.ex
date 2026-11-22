@@ -23,6 +23,7 @@ defmodule Brando.Content.Palette do
   identifier "[{{ entry.namespace }}] {{ entry.name }}"
 
   trait :creator
+  trait :ensure_uid
   trait :sequenced
   trait :soft_delete
   trait :status
@@ -33,6 +34,8 @@ defmodule Brando.Content.Palette do
   @css_name ~r/\A[\p{L}\p{N}_-]+\z/u
 
   attributes do
+    # Its identity in definition files (`Brando.Content.Definition`)
+    attribute :uid, :string, required: true
     attribute :name, :string, required: true
     attribute :key, :string, required: true, constraints: [format: @css_name]
     attribute :global, :boolean
