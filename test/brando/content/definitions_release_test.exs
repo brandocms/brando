@@ -381,8 +381,7 @@ defmodule Brando.Content.DefinitionsReleaseTest do
       end
 
       text = agent |> Agent.get(& &1) |> Enum.reverse() |> Enum.join("\n")
-      assert text =~ "Applied 1 definition changes"
-      assert text =~ "failed"
+      assert text =~ ~r/Applied 1 definition changes.*\n.* failed: /s
     end
 
     test "renders that outlast the timeout make apply! raise", c do
