@@ -49,6 +49,8 @@ defmodule Brando.Content.Seed do
     * `:alt`, `:title` — the image's texts
     * `:focal` — its focal point, `%{x: 50, y: 50}` by default
 
+  ## Example
+
       {:ok, image} = Seed.upload_image("priv/seeds/lobby.jpg", user, folder: "seeds", alt: "The lobby")
   """
   @spec upload_image(Path.t(), Brando.Users.User.t(), keyword()) :: {:ok, Brando.Images.Image.t()} | {:error, String.t()}
@@ -273,6 +275,8 @@ defmodule Brando.Content.Seed do
     * `blocks:` — the blocks of the first block field, or a keyword list of
       block fields and their blocks: `[blocks: [...], footer: [...]]`
 
+  ## Example
+
       {:ok, page} =
         Seed.create_entry(Brando.Pages.Page, %{title: "Lobby", uri: "lobby", language: "en"}, user,
           blocks: [Seed.block("image-row", user, refs: %{"picture" => image})]
@@ -300,6 +304,8 @@ defmodule Brando.Content.Seed do
     * `field:` — another block field, by name
     * `at:` — the position of the first new block, from 0. Default: after
       the last.
+
+  ## Example
 
       {:ok, page} = Seed.add_blocks(page, [Seed.block("text", user, refs: %{"body" => "<p>More</p>"})], user)
   """
@@ -373,6 +379,8 @@ defmodule Brando.Content.Seed do
 
     * `:key` — the item's key, a slug of `text` by default
     * `:new_tab` — open the link in a new tab
+
+  ## Example
 
       Brando.Navigation.create_menu(
         %{
