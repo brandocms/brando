@@ -532,6 +532,11 @@ msgstr ""
 msgid "Placement is \"append\", {before: uid}, {after: uid} or {into: uid}."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Proposal %{id} is %{status}, so it cannot be cancelled. Only a pending or approved proposal can be cancelled."
+msgstr ""
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Published"
@@ -725,6 +730,11 @@ msgstr ""
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "There is no image %{id} you may read in the media library."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "There is no proposal %{id} from this tool."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

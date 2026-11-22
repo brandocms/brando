@@ -533,6 +533,11 @@ msgstr "Plassering er «append», {before: uid} eller {after: uid}."
 msgid "Placement is \"append\", {before: uid}, {after: uid} or {into: uid}."
 msgstr "Plassering er \"append\", {before: uid}, {after: uid} eller {into: uid}."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Proposal %{id} is %{status}, so it cannot be cancelled. Only a pending or approved proposal can be cancelled."
+msgstr "Forslag %{id} er %{status}, så det kan ikke avbrytes. Bare et forslag som venter eller er godkjent kan avbrytes."
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "Published"
@@ -727,6 +732,11 @@ msgstr "Uid-en `%{uid}` brukes allerede av en annen blokk i dette forslaget."
 #, elixir-autogen, elixir-format
 msgid "There is no image %{id} you may read in the media library."
 msgstr "Det finnes ikke noe bilde %{id} du kan lese i mediebiblioteket."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "There is no proposal %{id} from this tool."
+msgstr "Det finnes ikke noe forslag %{id} fra dette verktøyet."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format

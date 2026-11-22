@@ -262,6 +262,12 @@ defmodule Brando.MCP.EndpointTest do
 
       assert %{"readOnlyHint" => false, "destructiveHint" => false} =
                Enum.find(tools, &(&1["name"] =~ "prepare")) |> Map.get("annotations")
+
+      assert %{"readOnlyHint" => true} =
+               Enum.find(tools, &(&1["name"] == "brando_content_list_proposals")) |> Map.get("annotations")
+
+      assert %{"readOnlyHint" => false, "destructiveHint" => true} =
+               Enum.find(tools, &(&1["name"] == "brando_content_cancel_proposal")) |> Map.get("annotations")
     end
 
     test "each one answers over JSON-RPC", %{tenant: tenant, token: token} = c do
@@ -453,6 +459,48 @@ defmodule Brando.MCP.EndpointTest do
       assert %{source: :mcp, details: %{"client" => "Test Client"}, proposal_id: ^id} = event
       assert event.approver_id == c.current_user.id
       assert Brando.Activity.actor_kind(event) == :mcp
+    end
+
+    test "list_proposals and cancel_proposal follow the client's own proposals, and the server's instructions name them",
+         %{tenant: tenant, token: token} = c do
+      op = %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "fields" => %{"title" => "Identity, from MCP"}
+      }
+
+      %{"result" => %{"structuredContent" => %{"proposal_id" => id}}} =
+        call_tool(tenant, token, "prepare_proposal", %{"summary" => "Retitle", "operations" => [op]})
+
+      assert %{"result" => %{"structuredContent" => %{"proposals" => [%{"proposal_id" => ^id, "status" => "pending"}]}}} =
+               call_tool(tenant, token, "list_proposals")
+
+      assert %{"result" => %{"structuredContent" => %{"status" => "cancelled"}} = result} =
+               call_tool(tenant, token, "cancel_proposal", %{"proposal_id" => id})
+
+      refute result["isError"]
+
+      assert %{"result" => %{"isError" => true, "structuredContent" => %{"error" => error}}} =
+               call_tool(tenant, token, "cancel_proposal", %{"proposal_id" => id})
+
+      assert error =~ "is cancelled"
+
+      MCP.in_tenant(tenant, fn ->
+        assert {:ok, %{status: "cancelled"}} = Proposals.get(id, c.current_user)
+      end)
+
+      assert [_prepare, %{details: %{"tool" => "list_proposals", "ok" => true}}, cancelled, failed] =
+               Repo.all(from e in Event, where: e.action == :tool_called, order_by: e.id)
+
+      assert %{details: %{"tool" => "cancel_proposal", "ok" => true, "proposal" => ^id}} = cancelled
+      assert %{details: %{"tool" => "cancel_proposal", "ok" => false}} = failed
+
+      %{"result" => %{"instructions" => instructions}} =
+        rpc(tenant, token, "initialize", %{"protocolVersion" => "2025-06-18", "capabilities" => %{}})
+        |> json_response(200)
+
+      assert instructions =~ "brando_content_list_proposals"
+      assert instructions =~ "brando_content_cancel_proposal"
     end
 
     test "tools the endpoint does not offer are unknown", %{tenant: tenant, token: token} do

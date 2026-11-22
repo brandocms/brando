@@ -239,7 +239,7 @@ defmodule Brando.AI.Agent.Loop do
   @doc "The tool definitions, as ReqLLM tools. Brando executes them itself, with the conversation's user."
   @spec tools() :: [ReqLLM.Tool.t()]
   def tools do
-    Enum.map(Tools.definitions(), fn definition ->
+    Enum.map(Tools.definitions(:assistant), fn definition ->
       ReqLLM.Tool.new!(
         name: definition.name,
         description: definition.description,

@@ -3625,6 +3625,143 @@ defmodule Brando.Content.Proposals do
     )
   end
 
+  ## A connected tool's own proposals
+
+  @doc """
+  Proposal `id` when it belongs to the connected tool calling as `actor`
+  with the client name `client`: `{:ok, record}`, or `{:error, message}`
+  saying there is no such proposal from this tool.
+
+  This decides which proposals a connection may see and act on. A proposal
+  stores the person and the client's name, not the connection, so it is the
+  connection's when it was made over MCP (outside an Assistant conversation)
+  by the same person, from a client with the same name, in this
+  site/environment. Two connections of one client for one person share their
+  proposals, and a proposal stays the connection's after the tool is
+  reconnected. A proposal without a client name belongs to a connection only
+  when the connection has none either. Another person's proposal, an
+  Assistant conversation's and one from another site or environment are
+  answered as unknown ids.
+
+  Options: `:lock` locks the row for update, inside a transaction.
+  """
+  @spec connection_proposal(term(), term(), String.t() | nil, keyword()) :: {:ok, Record.t()} | {:error, String.t()}
+  def connection_proposal(id, actor, client, opts \\ []) do
+    Error.protect(fn -> connection_record!(id, actor, client, opts) end)
+  end
+
+  @doc """
+  The connected tool's proposals (`connection_proposal/4` says whose),
+  newest first, in every status, each as `%{record: record, created:
+  created, superseded_by: id}`: `created` maps the ref of each entry an
+  applied proposal created to the saved entry's id, and `superseded_by` is
+  the id of the version that superseded a superseded one, when there is one.
+
+  Options: `:status` (pending, approved, applied, undone, superseded or
+  cancelled), `:id` (a proposal id), `:limit` (default 20).
+  """
+  @spec list_connection(term(), String.t() | nil, keyword()) :: [map()]
+  def list_connection(actor, client, opts \\ []) do
+    user = user!(actor)
+
+    records =
+      from(r in connection(actor, client),
+        order_by: [desc: r.inserted_at, desc: r.version],
+        limit: ^Keyword.get(opts, :limit, 20)
+      )
+      |> where_status(opts[:status])
+      |> where_id(opts[:id])
+      |> Repo.all()
+
+    applied = for %Record{status: "applied", id: id} <- records, do: id
+    superseded = for %Record{status: "superseded", id: id} <- records, do: id
+
+    created =
+      from(r in Receipt, where: r.id in ^applied and r.scope == ^Transfer.scope(), select: {r.id, r.mappings})
+      |> Repo.all()
+      |> Map.new(fn {id, mappings} -> {id, (mappings || %{})["created"] || %{}} end)
+
+    newer =
+      from(r in Record,
+        where: r.supersedes_id in ^superseded and r.scope == ^Transfer.scope() and r.actor_id == ^user.id,
+        select: {r.supersedes_id, r.id}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.map(records, &%{record: &1, created: Map.get(created, &1.id, %{}), superseded_by: newer[&1.id]})
+  end
+
+  @doc """
+  Cancel the connected tool's proposal `id` (`connection_proposal/4` says
+  whose) with `cancel/2`, while it is pending or approved, expired or not.
+  Content is untouched. Returns the cancelled record, or an error naming the
+  proposal's status when it is not under review.
+  """
+  @spec cancel_connection(term(), term(), String.t() | nil) :: {:ok, Record.t()} | {:error, String.t()}
+  def cancel_connection(id, actor, client) do
+    Error.protect(fn ->
+      # Locked, so the person cannot approve or apply it between the check and the cancel
+      {:ok, record} = Repo.transaction(fn -> cancel_connection!(id, actor, client) end)
+      record
+    end)
+  end
+
+  defp cancel_connection!(id, actor, client) do
+    record = connection_record!(id, actor, client, lock: true)
+
+    if record.status not in ~w(pending approved) do
+      Error.fail!(
+        dgettext(
+          "content_proposals",
+          "Proposal %{id} is %{status}, so it cannot be cancelled. Only a pending or approved proposal can be cancelled.",
+          id: record.id,
+          status: record.status
+        )
+      )
+    end
+
+    case cancel(record.id, actor) do
+      :ok -> %{record | status: "cancelled"}
+      {:error, message} -> Error.fail!(message)
+    end
+  end
+
+  defp connection(actor, client) do
+    from(r in external(actor), where: r.origin == "mcp")
+    |> where_client(client(client))
+  end
+
+  defp connection_record!(id, actor, client, opts) do
+    record =
+      case Ecto.UUID.cast(id) do
+        {:ok, uuid} ->
+          query = from(r in connection(actor, client), where: r.id == ^uuid)
+          query = if opts[:lock], do: from(r in query, lock: "FOR UPDATE"), else: query
+          Repo.one(query)
+
+        :error ->
+          nil
+      end
+
+    record ||
+      Error.fail!(
+        dgettext("content_proposals", "There is no proposal %{id} from this tool.", id: inspect(id, printable_limit: 80))
+      )
+  end
+
+  defp where_status(query, nil), do: query
+  defp where_status(query, status), do: from(r in query, where: r.status == ^status)
+
+  defp where_id(query, nil), do: query
+
+  defp where_id(query, id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} -> from(r in query, where: r.id == ^uuid)
+      :error -> from(r in query, where: false)
+    end
+  end
+
   @doc """
   Record the actor's approval of exactly `version` of proposal `id`.
 

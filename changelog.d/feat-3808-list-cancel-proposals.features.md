@@ -1,0 +1,1 @@
+- A connected AI tool can list its own proposals with their status, and the ids of the entries an applied one created, with `brando_content_list_proposals`, and cancel one still under review with `brando_content_cancel_proposal`.
