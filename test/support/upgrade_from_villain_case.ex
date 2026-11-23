@@ -52,7 +52,7 @@ defmodule Brando.UpgradeFromVillainCase do
   # `DROP DATABASE` are what time out on a loaded machine, not the tests.
   # Each test empties its schemas instead.
   setup_all do
-    database = "#{Repo.config()[:database]}_villain_#{Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)}"
+    database = Brando.Test.Database.upgrade_database(Repo.config()[:database])
     storage = Repo.config() |> Keyword.put(:database, database) |> Keyword.merge(@ddl)
 
     :ok = Ecto.Adapters.Postgres.storage_up(storage)

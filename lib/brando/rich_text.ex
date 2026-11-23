@@ -421,9 +421,8 @@ defmodule Brando.RichText do
       |> canonical(@html_tags -- @unsafe_tags, @unsafe_tags ++ @hidden_tags)
       |> without_refused_attributes()
 
-    # Some markup reads differently when parsed again (a `pre`'s leading line
-    # break, a heading inside a heading): its sanitized form, once that is
-    # stable, is rendered instead.
+    # Some markup reads differently when parsed again (a heading inside a
+    # heading): its sanitized form, once that is stable, is rendered instead.
     case sanitize_html(safe) do
       {:ok, ^safe} -> safe
       {:ok, clean} -> if sanitize_html(clean) == {:ok, clean}, do: clean, else: text_only(html)
@@ -572,6 +571,24 @@ defmodule Brando.RichText do
       ],
       escape: [content: false, curly_braces_in_code: false]
     )
+    |> keep_pre_line_break()
+  end
+
+  # A parser drops the line break right after `<pre>`, so a `pre` whose text
+  # starts with one is written with another, as browsers serialize it;
+  # ammonia leaves it out, and each save lost a blank line.
+  defp keep_pre_line_break(html) do
+    with true <- String.contains?(html, "<pre"),
+         {:ok, pieces} <- pieces(html) do
+      pieces
+      |> Enum.chunk_every(2, 1)
+      |> Enum.map_join(fn
+        [{{:start, "pre", _}, tag}, {{:text, "\n" <> _}, _}] -> tag <> "\n"
+        [{_token, whole} | _] -> whole
+      end)
+    else
+      _ -> html
+    end
   end
 
   defp safe_tokens?(html, refused) do
