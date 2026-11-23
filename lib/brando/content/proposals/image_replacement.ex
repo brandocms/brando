@@ -34,7 +34,9 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   again (`ready!/1`). It
   keeps its id, focal point, title, alt text, credits, folder, config and
   every reference. NEW's record is deleted, with its jobs that have not
-  started, and OLD's sizes are queued to be made again, as for an upload. A
+  started, and OLD's sizes are queued to be made again, as for an upload.
+  Where the file came from goes with it (`Brando.Images.Source.hand_over/2`):
+  OLD's sources are dropped and NEW's become OLD's. A
   run of Image sizes that was waiting to recreate NEW counts OLD's job in
   its place.
   Only rows change: no file is moved or written, so an approval that fails
@@ -678,6 +680,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
       |> Repo.update!()
 
     discarded = discard_jobs(new_id)
+    Images.Source.hand_over(new, replaced)
     Repo.delete!(new)
 
     # The entries that show OLD link its previous files until they are

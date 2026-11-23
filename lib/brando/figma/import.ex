@@ -54,11 +54,15 @@ defmodule Brando.Figma.Import do
   alias Brando.Figma
   alias Brando.Figma.Frame
   alias Brando.Images
+  alias Brando.Images.Image
   alias Brando.Images.Intake
+  alias Brando.Images.Source
+  alias Brando.Uploads
   alias Brando.Uploads.ContentType
   alias Elixir.Image, as: Vimage
 
   @max_per_call 8
+  @source "figma"
   # Layers listed per image: a placeholder used all over a frame stays one entry
   @max_layers 10
   @concurrency 3
@@ -122,6 +126,37 @@ defmodule Brando.Figma.Import do
          }}
       end
     end
+  end
+
+  @doc """
+  Gives each image of `sections` (`Brando.Figma.Frame.outline/1`) the
+  `asset` of the library image an import of it stored or reused, for its
+  picture and turn, that `actor` may read and is not in the trash: the
+  lowest id when several are. One query for the frame; an image no import
+  gave one has none.
+  """
+  @spec put_assets([map()], term()) :: [map()]
+  def put_assets(sections, actor) do
+    keys = for section <- sections, image <- section.images, uniq: true, do: source_key(image)
+    {_cfg, config_target} = Uploads.resolve_image_config(nil)
+    ids = Source.images(@source, keys, config_target, actor)
+
+    Enum.map(sections, fn section ->
+      images =
+        Enum.map(section.images, fn image ->
+          case ids[source_key(image)] do
+            nil -> image
+            id -> Map.put(image, :asset, %{kind: "image", id: id})
+          end
+        end)
+
+      %{section | images: images}
+    end)
+  end
+
+  defp source_key(image) do
+    {ref, turn} = key(image)
+    {ref, variant(turn)}
   end
 
   # One asset per image and quarter turn: a picture shown turned is a copy of
@@ -197,10 +232,17 @@ defmodule Brando.Figma.Import do
       |> Map.new(fn {downloaded, {key, index}} ->
         result =
           case downloaded do
-            {:ok, {^key, {:ok, path}}} -> store(path, key, {uses[key], frame_uses[key]}, ctx, limits)
-            {:ok, {^key, {:error, {:too_large, size}}}} -> {:error, too_large(key, uses[key], size, limits)}
-            {:ok, {^key, {:error, message}}} -> {:error, message}
-            {:exit, _reason} -> {:error, "The download took too long."}
+            {:ok, {^key, {:ok, path}}} ->
+              path |> store(key, {uses[key], frame_uses[key]}, ctx, limits) |> recorded(key, ctx)
+
+            {:ok, {^key, {:error, {:too_large, size}}}} ->
+              {:error, too_large(key, uses[key], size, limits)}
+
+            {:ok, {^key, {:error, message}}} ->
+              {:error, message}
+
+            {:exit, _reason} ->
+              {:error, "The download took too long."}
           end
 
         discard(Path.join(dir, "#{index}"))
@@ -210,6 +252,29 @@ defmodule Brando.Figma.Import do
       File.rm_rf(dir)
     end
   end
+
+  # The picture each stored or reused image holds, for read_frame to name it
+  # (`put_assets/2`)
+  defp recorded(result, {ref, turn}, ctx) do
+    with %Image{} = image <- image(result) do
+      Source.record(image, @source, ref, variant(turn), ctx.config_target)
+    end
+
+    result
+  end
+
+  defp image({:fitted, _fitted, result}), do: image(result)
+  defp image({:upright, result}), do: image(result)
+  defp image({:stored, image}), do: image
+  defp image({:stored, image, _tag}), do: image
+  defp image({:reused, image}), do: image
+  defp image({:error, _message}), do: nil
+
+  # The turn of the layers an image was imported for, whether or not it was
+  # applied: an animated image is stored upright, and it is still what an
+  # import gives those layers
+  defp variant(0), do: nil
+  defp variant(turn), do: Integer.to_string(turn)
 
   # A download and the copies made of it, once its image is stored or refused
   defp discard(path), do: Enum.each([path | Path.wildcard(path <> "-*")], &File.rm/1)

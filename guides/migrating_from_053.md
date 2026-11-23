@@ -712,6 +712,13 @@ sender first, before the first compile.
   module takes dropped media until it is set. Run `mix brando.gen.migrations`
   for it, then `mix brando.migrate`. See
   [Dropping media on a multi module](block_editor.md#dropping-media-on-a-multi-module).
+- **Where an image came from.** `brando_247` adds `images_sources` in every
+  environment: the Figma picture of each image `brando_figma_import_images`
+  stores or reuses, from which `brando_figma_read_frame` names the library
+  image each layer shows. It starts empty, so a frame imported before has
+  its images named after its next import. Run `mix brando.gen.migrations`
+  for it, then `mix brando.migrate`. See
+  [Build from Figma](mcp.md#build-from-figma).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
