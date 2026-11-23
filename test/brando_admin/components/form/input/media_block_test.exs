@@ -11,12 +11,10 @@ defmodule BrandoAdmin.Components.Form.Input.MediaBlockTest do
       assigns: %{
         __changed__: %{},
         available_blocks: available,
-        block_templates: %{
-          picture: %Blocks.PictureBlock.Data{},
-          video: %Blocks.VideoBlock.Data{},
-          gallery: nil,
-          svg: %Blocks.SvgBlock.Data{code: "<svg/>"},
-          file: nil
+        media_data: %Blocks.MediaBlock.Data{
+          template_picture: %Blocks.PictureBlock.Data{},
+          template_video: %Blocks.VideoBlock.Data{},
+          template_svg: %Blocks.SvgBlock.Data{code: "<svg/>"}
         },
         target_ref: {BrandoAdmin.Components.Form.Block, "block-x"},
         ref_name: "visual",
