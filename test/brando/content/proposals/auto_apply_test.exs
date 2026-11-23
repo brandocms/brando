@@ -518,8 +518,11 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       applied = Repo.all(from(e in Event, where: e.proposal_id == ^id, preload: [:approver, :user]))
       assert applied != []
       assert Enum.all?(applied, &(&1.details["auto_applied"] == true))
-      assert Enum.all?(applied, &(Events.approver_label(&1) =~ "Applied automatically as"))
+      assert Enum.all?(applied, &(Events.approver_label(&1) =~ "Applied automatically as #{c.user.name}"))
       refute Enum.any?(applied, &(Events.approver_label(&1) =~ "Approved by"))
+      # Made as the connection's person, approved by no one
+      assert Enum.all?(applied, &(&1.user_id == c.user.id and is_nil(&1.approver_id)))
+      assert Enum.all?(applied, &(Events.proposal_path(&1, Events.viewer(c.user)) == "/admin/assistant/connected/#{id}"))
 
       grant = Repo.get!(Grant, result |> then(fn _ -> record(id).auto_applied_grant_id end))
       assert [%{changed_by: "connection", applied_automatically: true, status: "applied"}] = listed(c, grant)
@@ -532,7 +535,8 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
         )
 
       assert undone != []
-      assert Enum.all?(undone, &(Events.approver_label(&1) =~ "Undone by"))
+      assert Enum.all?(undone, &(Events.approver_label(&1) =~ "Undone by #{c.user.name}"))
+      assert Enum.all?(undone, &(&1.approver_id == c.user.id))
       assert [%{changed_by: "person", applied_automatically: true, status: "undone"}] = listed(c, grant)
     end
 

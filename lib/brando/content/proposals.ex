@@ -4083,8 +4083,9 @@ defmodule Brando.Content.Proposals do
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
   def apply(id, version, actor, opts \\ []) do
     {source, details} = activity_source(id, actor)
-    details = if opts[:auto], do: Map.put(details, "auto_applied", true), else: details
-    Brando.Activity.with_proposal(source, details, id, actor, fn -> do_apply(id, version, actor, opts) end)
+    # Applied without review: made as the connection's person, approved by no one
+    {details, approver} = if opts[:auto], do: {Map.put(details, "auto_applied", true), nil}, else: {details, actor}
+    Brando.Activity.with_proposal(source, details, id, approver, fn -> do_apply(id, version, actor, opts) end)
   end
 
   # The activity log says who prepared the change: the Assistant, or a tool

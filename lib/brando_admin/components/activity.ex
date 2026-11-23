@@ -229,6 +229,14 @@ defmodule BrandoAdmin.Components.Activity do
       when is_binary(id) and is_integer(approver_id),
       do: "/admin/assistant/connected/#{id}"
 
+  # Applied without review: approved by no one, made as the connection's person
+  def proposal_path(
+        %{proposal_id: id, approver_id: nil, user_id: user_id, details: %{"auto_applied" => true}},
+        %{user_id: user_id, assistant?: true}
+      )
+      when is_binary(id) and is_integer(user_id),
+      do: "/admin/assistant/connected/#{id}"
+
   def proposal_path(_event, _viewer), do: nil
 
   defp tone(:published), do: "is-published"
@@ -529,7 +537,7 @@ defmodule BrandoAdmin.Components.Activity do
   def approver_label(%{approver: %{name: name}, details: %{"undo_proposal" => true}}),
     do: gettext("Undone by %{name}", name: name)
 
-  def approver_label(%{approver: %{name: name}, details: %{"auto_applied" => true}}),
+  def approver_label(%{approver_id: nil, user: %{name: name}, details: %{"auto_applied" => true}}),
     do: gettext("Applied automatically as %{name}", name: name)
 
   def approver_label(%{approver: %{name: name}}), do: gettext("Approved by %{name}", name: name)
