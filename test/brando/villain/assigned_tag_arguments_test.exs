@@ -4,7 +4,8 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
   # an assigned text as typed (picture's `alt`, `route`, `route_i18n`,
   # `editable_field`, `inspect`) print it as the field holding that text,
   # escaped once (#3825). Every other tag and option gets what it got before:
-  # the text as `{{ }}` prints it.
+  # the text as `{{ }}` prints it. A string a `for` loop reads of a list of
+  # strings, the list assigned or not, prints as that string does (#3849).
   use Brando.ConnCase, async: true
 
   alias Brando.Factory
@@ -48,6 +49,13 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
     form: {"{% form V %}", :as_printed}
   ]
 
+  # Each way a loop reads a string of a list, with `q` for the string: the
+  # loop opens and closes around the template
+  @loops [
+    loop: {"{% for q in entry.tags %}", "{% endfor %}"},
+    loop_over_assigned_list: {"{% assign list = entry.tags %}{% for q in list %}", "{% endfor %}"}
+  ]
+
   setup do
     user = Factory.insert(:random_user)
     image = Factory.insert(:image, creator: user)
@@ -60,7 +68,12 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
         meta: %{"bunny" => %{"video_guid" => "guid-for-a-test"}}
       )
 
-    entry = %Entry{title: @typed, intro: @rich} |> Map.put(:cover, image) |> Map.put(:video, video)
+    entry =
+      %Entry{title: @typed, intro: @rich}
+      |> Map.put(:tags, [@typed])
+      |> Map.put(:cover, image)
+      |> Map.put(:video, video)
+
     {:ok, entry: entry}
   end
 
@@ -92,6 +105,72 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
 
       assert render("{% assign q = #{value} %}" <> with_value(template, "q"), entry) == expected
     end
+  end
+
+  # A string a loop reads of a list of strings (#3849): as the string printed
+  # directly, `entry.tags[0]`
+  for {kind, {open, close}} <- @loops, {way, {template, reference}} <- @printed do
+    test "#{kind}, #{way}", %{entry: entry} do
+      template = unquote(template)
+
+      expected =
+        case unquote(reference) do
+          :expression ->
+            render(with_value(template, "entry.tags[0]"), entry)
+
+          :field ->
+            render(with_value(template, "entry.title"), entry)
+
+          :escaped ->
+            Parser.escape_var_value(@typed)
+
+          :as_printed ->
+            printed = render("{{ entry.tags[0] }}", entry)
+            refute printed =~ ~s(")
+            render(with_value(template, ~s("#{printed}")), entry)
+        end
+
+      assert render(unquote(open) <> with_value(template, "q") <> unquote(close), entry) == expected
+    end
+  end
+
+  # Nothing a loop reads of a list of strings prints as markup, however it is printed
+  for {kind, {open, close}} <- @loops, {way, {template, _reference}} <- @printed do
+    test "#{kind}, #{way}, prints no markup of the string", %{entry: entry} do
+      entry = %{entry | tags: ["<script>x</script>", ~s(<b title="&amp;">)]}
+      html = render(unquote(open) <> with_value(unquote(template), "q") <> unquote(close), entry)
+      refute html =~ "<script"
+      refute html =~ "<b "
+    end
+  end
+
+  test "an assigned list of strings reaches inspect as the list itself", %{entry: entry} do
+    entry = %{entry | tags: [@typed, "R&D"]}
+    assert render("{% assign list = entry.tags %}{% inspect list %}", entry) == render("{% inspect entry.tags %}", entry)
+  end
+
+  # A list that starts from a literal was never escaped: its strings reach a
+  # tag as before, through a loop or a name set from it
+  test "a loop over a literal list, or a name set from a literal, reads it as it prints", %{entry: entry} do
+    expected = render(~s({% inspect "A&amp;B" %}), entry)
+
+    for template <- [
+          ~s({% assign list = "A&amp;B" | split: "," %}{% for q in list %}{% inspect q %}{% endfor %}),
+          ~s({% assign list = "A&amp;B" | split: "," %}{% assign l = list %}{% for q in l %}{% inspect q %}{% endfor %}),
+          ~s({% assign label = "A&amp;B" %}{% assign q = label %}{% inspect q %})
+        ] do
+      assert render(template, entry) == expected, template
+    end
+  end
+
+  test "a name a loop shadowed reads as it did after the loop", %{entry: entry} do
+    html =
+      render(
+        "{% assign q = entry.title %}{% for q in (1..2) %}{% endfor %}{% route page_path show { q } %}",
+        entry
+      )
+
+    assert html == render("{% route page_path show { entry.title } %}", entry)
   end
 
   test "a loop variable of the same name is read as the loop's", %{entry: entry} do

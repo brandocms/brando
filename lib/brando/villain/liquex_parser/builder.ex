@@ -41,7 +41,7 @@ defmodule Brando.Villain.LiquexParser.Builder do
         {Liquex.Tag.ContinueTag, built_in_parser.("Simple"), :continue, :continue_liquid},
         {Liquex.Tag.CycleTag, built_in_parser.("Iteration"), :cycle, :cycle_liquid},
         {Liquex.Tag.EchoTag, built_in_parser.("Simple"), :echo, :echo_liquid},
-        {Liquex.Tag.ForTag, built_in_parser.("Iteration"), :for_tag, :for_liquid},
+        {tag_module.("For"), built_in_parser.("Iteration"), :for_tag, :for_liquid},
         {Liquex.Tag.IfTag, built_in_parser.("Conditionals"), :if_tag, :if_liquid},
         {Liquex.Tag.IncrementTag, built_in_parser.("Simple"), :increment, :increment_liquid},
         {Liquex.Tag.InlineCommentTag, built_in_parser.("Simple"), :inline_comment, :inline_comment_liquid},
