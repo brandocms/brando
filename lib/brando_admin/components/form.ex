@@ -6771,7 +6771,7 @@ defmodule BrandoAdmin.Components.Form do
     case stored do
       {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
       {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
-      {:error, :forbidden} -> forbidden_save_with_blocks(socket)
+      {:error, reason} when reason in [:forbidden, :try_again] -> refused_save_with_blocks(socket, reason)
       {:error, %Changeset{} = changeset} -> failed_save_with_blocks(socket, changeset, save)
     end
   end
@@ -6878,13 +6878,14 @@ defmodule BrandoAdmin.Components.Form do
          |> source_controlled_error(paths)}
 
       # The context refused the account: a role or grant that may not write
-      # this entry. The form stays open with what was typed.
-      {:error, :forbidden} ->
+      # this entry, or Postgres cancelled the save. The form stays open with
+      # what was typed.
+      {:error, reason} when reason in [:forbidden, :try_again] ->
         {:noreply,
          socket
          |> assign(:processing, false)
          |> reset_transformer_changesets()
-         |> forbidden_save_error()}
+         |> refused_save_error(reason)}
     end
   end
 
@@ -8153,8 +8154,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # The save collected the blocks first, so it reaches the context outside the
   # event that started it; a refusal there must not crash the form.
-  defp forbidden_save_with_blocks(socket) do
-    if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :forbidden)
+  defp refused_save_with_blocks(socket, reason) do
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, reason)
     if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
 
     {:noreply,
@@ -8163,14 +8164,19 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:all_blocks_received?, false)
      |> clear_blocks_root_changesets()
      |> reset_transformer_changesets()
-     |> forbidden_save_error()}
+     |> refused_save_error(reason)}
   end
 
-  defp forbidden_save_error(socket) do
+  defp refused_save_error(socket, reason) do
     send(self(), {:progress_popup, "Saving entry failed..."})
-    send(self(), {:toast, gettext("You do not have permission for this action.")})
+    send(self(), {:toast, refused_save_text(reason)})
     assign(socket, :minor_save?, false)
   end
+
+  defp refused_save_text(:forbidden), do: gettext("You do not have permission for this action.")
+
+  defp refused_save_text(:try_again),
+    do: gettext("Another change to the same content was saved at the same moment, and nothing was saved. Save again.")
 
   # The errors only: the changes hold what was typed, passwords and email addresses too.
   defp log_rejected_save(changeset) do
@@ -9131,6 +9137,13 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user | mutation_opts(socket)])
       error -> error
     end
+  rescue
+    # Postgres cancelled the save to break a wait on the same rows (another
+    # save, a release apply moving values in its blocks): nothing was written
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:deadlock_detected, :serialization_failure],
+        do: {:error, :try_again},
+        else: reraise(error, __STACKTRACE__)
   end
 
   # Options for the translation sync the mutation queues. A minor save (Save

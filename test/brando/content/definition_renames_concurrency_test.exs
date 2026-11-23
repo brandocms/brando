@@ -91,6 +91,95 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
     end)
   end
 
+  test "an editor's save that Postgres cancels to break a deadlock with the apply raises, and the apply lands", %{
+    path: path
+  } do
+    {user, page, block, plan} = unboxed(fn -> rename_fixture!(path) end)
+
+    test = self()
+    handler = "renames-deadlock-#{System.unique_integer([:positive])}"
+
+    apply =
+      Task.async(fn ->
+        receive do
+          :start -> unboxed(fn -> Definitions.apply(plan, user) end)
+        end
+      end)
+
+    # The apply stops once it holds the definition tables, before it locks
+    # the blocks
+    :telemetry.attach(
+      handler,
+      @repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, apply_pid ->
+        if self() == apply_pid and metadata.query =~ "LOCK TABLE" do
+          send(test, :locked)
+
+          receive do
+            :go -> :ok
+          end
+        end
+      end,
+      apply.pid
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    send(apply.pid, :start)
+    assert_receive :locked, 10_000
+
+    # The editor's save writes the block's row, then waits for the apply's
+    # table lock to write its vars; the apply then waits for the block
+    editor =
+      Task.async(fn ->
+        unboxed(fn ->
+          try do
+            page |> editor_save(block, "Typed by the editor") |> Brando.Pages.update_page(user)
+          rescue
+            error -> error
+          end
+        end)
+      end)
+
+    refute Task.yield(editor, 500)
+    send(apply.pid, :go)
+
+    assert {:ok, _} = Task.await(apply, 30_000)
+    assert %Postgrex.Error{postgres: %{code: :deadlock_detected}} = Task.await(editor, 30_000)
+
+    unboxed(fn ->
+      assert [%Var{key: "heading", value: "Kept words"}] =
+               @repo.all(from(v in Var, where: v.block_id == ^block.id and v.key in ["heading", "tagline"]))
+    end)
+  end
+
+  # The entry `page` as the editor saves it: `block` rendered again, with
+  # `value` typed into its tagline
+  defp editor_save(page, block, value) do
+    page = @repo.preload(page, entry_blocks: [block: [:vars, :refs]])
+
+    entry_blocks =
+      Enum.map(page.entry_blocks, fn
+        %{block_id: id} = entry_block when id == block.id ->
+          vars =
+            Enum.map(entry_block.block.vars, fn
+              %{key: "tagline"} = var -> Ecto.Changeset.change(var, value: value)
+              var -> Ecto.Changeset.change(var)
+            end)
+
+          block =
+            entry_block.block
+            |> Ecto.Changeset.change(rendered_html: "<p>#{value}</p>")
+            |> Ecto.Changeset.put_assoc(:vars, vars)
+
+          entry_block |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:block, block)
+
+        entry_block ->
+          Ecto.Changeset.change(entry_block)
+      end)
+
+    page |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:entry_blocks, entry_blocks)
+  end
+
   # A module whose file renames var tagline to heading; one page's first
   # block holds a value of tagline and an empty heading of its own
   defp rename_fixture!(path) do
