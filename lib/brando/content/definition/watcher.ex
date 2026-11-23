@@ -200,7 +200,11 @@ defmodule Brando.Content.Definition.Watcher do
     with {:ok, bundle} <- Definitions.read(path),
          {:ok, plan} <- Definitions.plan(bundle, user, catch_up: true) do
       names = names(bundle)
-      changes = plan.items |> Enum.reject(&(&1.action == :noop)) |> Enum.map(&Map.put(&1, :name, names[&1.uid]))
+
+      changes =
+        plan.items
+        |> Enum.reject(&(&1.action == :noop))
+        |> Enum.map(&Map.merge(&1, %{name: names[&1.uid], removal: removal_lines(plan, &1)}))
 
       cond do
         changes == [] ->
@@ -219,6 +223,15 @@ defmodule Brando.Content.Definition.Watcher do
     with {:ok, result} <- Definitions.apply(plan, user),
          {:ok, :ok} <- Definitions.write_baseline(path, result) do
       {:ok, changes}
+    end
+  end
+
+  # What `mix brando.modules import` prints for an update that removes keys
+  # blocks hold
+  defp removal_lines(plan, item) do
+    case Plan.resolve_line(plan, item) do
+      nil -> []
+      line -> ["#{item.action} #{item.kind} #{item.uid}: #{Plan.removal_text(item)}", "  " <> line]
     end
   end
 
@@ -268,7 +281,8 @@ defmodule Brando.Content.Definition.Watcher do
 
   defp log({:ok, changes}) do
     summary = Enum.map_join(changes, ", ", &"#{&1.action} #{&1.name}")
-    Logger.info("==> Brando >> Imported module definitions: #{summary}")
+    removals = Enum.flat_map(changes, & &1.removal)
+    Logger.info(Enum.join(["==> Brando >> Imported module definitions: #{summary}" | removals], "\n"))
   end
 
   defp log({:blocked, items}) do

@@ -3066,8 +3066,8 @@ msgstr "Når forslaget tas i bruk, lagres også blokkene og mediene kilden har l
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
-msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then the site doesn’t show them."
-msgstr "Å ta i bruk endringen sletter ingenting en redaktør har skrevet. Blokkene beholder verdiene til du løser dem etterpå: fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå. Til da vises de ikke på nettstedet."
+msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+msgstr "Å ta i bruk endringen sletter ingenting en redaktør har skrevet. Blokkene beholder verdiene til du løser dem etterpå: fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå. Til da vises de der malen fortsatt nevner dem."
 
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
@@ -7313,11 +7313,6 @@ msgstr "Slipp medier her for å legge til"
 #, elixir-autogen, elixir-format
 msgid "Drop media here to build your gallery"
 msgstr "Slipp medier her for å bygge galleriet ditt"
-
-#: lib/brando_admin/live/content/release_changes_live.ex
-#, elixir-autogen, elixir-format
-msgid "Drop them, or move them onto a ref or var the module defines now."
-msgstr "Fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå."
 
 #: lib/brando_admin/components/form/input/gallery_objects.ex
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -16561,6 +16556,7 @@ msgid_plural "Resolve %{count} blocks?"
 msgstr[0] "Løse %{count} blokk?"
 msgstr[1] "Løse %{count} blokker?"
 
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/stale_blocks.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -20967,6 +20963,11 @@ msgstr "De flyttes til papirkurven, og kommer tilbake hvis siden gjenopprettes."
 #, elixir-autogen, elixir-format
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
 msgstr "De kan lastes inn når revisjonen du har åpen er lukket, eller lagringen som pågår er ferdig."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+msgstr "De vises fortsatt der malen nevner dem. Fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå."
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format

@@ -223,7 +223,7 @@ defmodule Mix.Tasks.Brando.Modules do
           "#{item.reason || Enum.join(item.fields, ", ")} (#{item.block_count} blocks, #{item.entry_count} entries)"
 
       Mix.shell().info("#{item.action} #{item.kind} #{item.uid}: #{detail}")
-      if command = Plan.resolve_command(plan, item), do: Mix.shell().info("  resolve: #{command}")
+      if line = Plan.resolve_line(plan, item), do: Mix.shell().info("  " <> line)
     end)
 
     unless Plan.applicable?(plan), do: Mix.raise("Resolve the conflicts or required migrations before importing")

@@ -567,7 +567,7 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp block_ids(_kind, nil), do: []
-  defp block_ids("module", record), do: Blocks.list_block_ids_using_module(record.id)
+  defp block_ids("module", record), do: Blocks.list_block_ids_using_module(record.id, :local)
   defp block_ids("palette", record), do: Blocks.list_block_ids_using_palette(record.id, :local)
   defp block_ids("container", record), do: Blocks.list_block_ids_using_container(record.id, :local)
   defp block_ids(_kind, _record), do: []
@@ -671,7 +671,7 @@ defmodule Brando.Content.Definition.Importer do
     from(v in Var,
       join: b in Block,
       on: b.id == v.block_id,
-      where: b.module_id == ^record.id and v.key in ^diff.added_vars,
+      where: b.module_id == ^record.id and b.module_origin == :local and v.key in ^diff.added_vars,
       order_by: [v.key, b.id],
       select: {v.key, v.type, b.id}
     )
@@ -688,10 +688,10 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
-  # What an update removes, and the blocks that hold it and keep it as a
-  # leftover (`Brando.Content.StaleBlocks`). A palette's colours: the CSS
-  # that reads a removed one is the author's, and the blocks that use the
-  # palette are counted.
+  # What an update removes, the keys of it blocks hold (`held`), and the
+  # blocks that hold one and keep it as a leftover (`Brando.Content.StaleBlocks`).
+  # A palette's colours: the CSS that reads a removed one is the author's, and
+  # the blocks that use the palette are counted.
   defp removes(:update, "palette", _record, {_cs, old, new}, block_ids) do
     keys = Enum.map(old["colors"], & &1["key"]) -- Enum.map(new["colors"], & &1["key"])
 
@@ -704,30 +704,42 @@ defmodule Brando.Content.Definition.Importer do
     keys = Enum.map(diff.removed_refs, &{:ref, &1}) ++ Enum.map(diff.removed_vars, &{:var, &1})
 
     if keys != [] do
-      holders = holder_block_ids(record, diff)
-      %{keys: keys, blocks: length(holders), entries: entry_count(holders)}
+      holders = holders(record, diff)
+      held = holders |> Enum.map(&elem(&1, 0)) |> MapSet.new()
+      blocks = holders |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+
+      %{
+        keys: keys,
+        held: Enum.filter(keys, &MapSet.member?(held, &1)),
+        blocks: length(blocks),
+        entries: entry_count(blocks)
+      }
     end
   end
 
   defp removes(_action, _kind, _record, _changes, _block_ids), do: nil
 
-  defp holder_block_ids(record, diff) do
+  # `{{kind, key}, block_id}` for each removed key a block of the module
+  # holds. The module is in this database: a block of a shared library
+  # module with the same id is not one of its blocks.
+  defp holders(record, diff) do
     refs =
       from(r in Ref,
         join: b in Block,
         on: b.id == r.block_id,
-        where: b.module_id == ^record.id and r.name in ^diff.removed_refs,
-        select: b.id
+        where: b.module_id == ^record.id and b.module_origin == :local and r.name in ^diff.removed_refs,
+        select: {"ref", r.name, b.id}
       )
 
     from(v in Var,
       join: b in Block,
       on: b.id == v.block_id,
-      where: b.module_id == ^record.id and v.key in ^diff.removed_vars,
-      select: b.id,
+      where: b.module_id == ^record.id and b.module_origin == :local and v.key in ^diff.removed_vars,
+      select: {"var", v.key, b.id},
       union: ^refs
     )
     |> Repo.all()
+    |> Enum.map(fn {kind, key, block_id} -> {{if(kind == "ref", do: :ref, else: :var), key}, block_id} end)
   end
 
   defp changed_ref_identity?(old, new) do

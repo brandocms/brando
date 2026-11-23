@@ -90,6 +90,24 @@ defmodule Brando.Content.StaleBlocks do
   @spec count(Module.t() | integer()) :: non_neg_integer()
   def count(module), do: Blocks.count_stale_blocks(module)
 
+  @doc """
+  Of the blocks behind `module`'s version, how many hold a ref or var it no
+  longer defines: what an editor would lose or move in Resolve blocks. A
+  block can be behind with nothing left over, after a sync that failed
+  validation, and `count/1` counts those too.
+  """
+  @spec count_with_leftovers(Module.t()) :: non_neg_integer()
+  def count_with_leftovers(%Module{} = module) do
+    module = Repo.preload(module, [:refs, :vars])
+    ids = Blocks.list_stale_block_ids(module)
+    names = Enum.map(module.refs, & &1.name)
+    keys = Enum.map(module.vars, & &1.key)
+    refs = from(r in Ref, where: r.block_id in ^ids and r.name not in ^names, select: %{block_id: r.block_id})
+    vars = from(v in Var, where: v.block_id in ^ids and v.key not in ^keys, select: %{block_id: v.block_id}, union: ^refs)
+
+    Repo.one(from(h in subquery(vars), select: count(h.block_id, :distinct)))
+  end
+
   ## Planning
 
   @doc """

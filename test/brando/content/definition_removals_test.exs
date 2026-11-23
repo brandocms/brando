@@ -156,6 +156,93 @@ defmodule Brando.Content.DefinitionRemovalsTest do
     end
   end
 
+  describe "the holders" do
+    test "of a removed key are the blocks of this module, not those of a shared module with the same id", c do
+      holder = hold!(c.identity, "Shared words")
+      Repo.update_all(from(b in Block, where: b.id == ^holder.id), set: [module_origin: :shared])
+      source = File.read!(c.exs)
+      edit_vars!(c)
+
+      assert [%{action: :update, removes: %{blocks: 0}}] = plan!(c).items
+      import!(c)
+
+      # A leftover of another type in the shared module's block does not
+      # hold back the var coming back here
+      Repo.update_all(from(v in Var, where: v.block_id == ^holder.id), set: [type: :text])
+      File.write!(c.exs, source)
+      assert [%{action: :update}] = plan!(c).items
+    end
+
+    test "are known per key: the resolve line drops only the keys blocks hold, and runs as printed", c do
+      edit_vars!(c)
+      source = File.read!(c.exs)
+      without_body = Regex.replace(~r/\n  refs do\n.*?\n  end\n/s, source, "")
+      assert without_body != source
+      File.write!(c.exs, without_body)
+      edit_template!(c, "{% ref refs.body %}", "")
+      Repo.delete_all(from(v in Var, where: v.key == "tagline" and not is_nil(v.block_id)))
+
+      output = import!(c)
+      uid = c.module.uid
+      assert "update module #{uid}: removes ref body, var tagline (6 of 6 blocks hold them, 2 entries)" in output
+      resolve = Enum.find_value(output, &(String.starts_with?(&1, "  resolve: ") && String.trim_leading(&1)))
+      assert resolve == "resolve: mix brando.modules resolve --uid #{uid} --user #{c.user.id} --drop ref:body --apply"
+
+      output = resolve |> String.split() |> Enum.drop(3) |> run_task()
+      assert Enum.any?(output, &(&1 =~ "Resolved 6 blocks; 6 are now on version"))
+    end
+  end
+
+  describe "after the apply" do
+    test "the blocks holding leftovers are counted apart from those behind the version for another reason", c do
+      holder = hold!(c.identity, "Kept words")
+      edit_vars!(c)
+      import!(c)
+
+      # Behind with nothing left over, as after a sync that failed validation
+      behind = c.naming |> blocks() |> hd()
+      Repo.update_all(from(b in Block, where: b.id == ^behind.id), set: [module_version: nil])
+
+      assert Enum.sort(Blocks.list_stale_block_ids(module(c))) == Enum.sort([holder.id, behind.id])
+      assert StaleBlocks.count_with_leftovers(module(c)) == 1
+    end
+  end
+
+  describe "the resolve line" do
+    test "quotes each value so a POSIX shell reads it as printed" do
+      plan = %Brando.Content.Definition.Plan{creator_id: 3}
+      keys = [var: "sale price", ref: "it's $HOME"]
+      item = %{kind: "module", uid: "a;b", removes: %{keys: keys, held: keys, blocks: 1, entries: 1}}
+
+      command = Brando.Content.Definition.Plan.resolve_command(plan, item)
+      {printed, 0} = System.cmd("sh", ["-c", "printf '%s\\n' " <> command])
+
+      assert String.split(printed, "\n", trim: true) ==
+               ~w(mix brando.modules resolve --uid a;b --user 3) ++
+                 ["--drop", "var:sale price", "--drop", "ref:it's $HOME", "--apply"]
+    end
+
+    test "is not printed as a command without a user" do
+      plan = %Brando.Content.Definition.Plan{creator_id: nil}
+      item = %{kind: "module", uid: "teaser", removes: %{keys: [var: "tagline"], held: [var: "tagline"], blocks: 1, entries: 1}}
+
+      assert Brando.Content.Definition.Plan.resolve_command(plan, item) == nil
+      refute Brando.Content.Definition.Plan.resolve_line(plan, item) =~ "--user"
+    end
+  end
+
+  describe "the page after a removal" do
+    test "keeps printing the value where the template still names the var", c do
+      holder = hold!(c.identity, "Kept words")
+      edit_vars!(c)
+      import!(c)
+
+      assert var(holder, "tagline").value == "Kept words"
+      Blocks.render_entry(Page, c.identity.id)
+      assert Repo.get!(Page, c.identity.id).rendered_blocks =~ "<p>Kept words</p>"
+    end
+  end
+
   describe "still needs a migration" do
     test "a retyped var", c do
       hold!(c.identity, "Kept words")
@@ -220,6 +307,15 @@ defmodule Brando.Content.DefinitionRemovalsTest do
       assert [%{key: "tagline"}] = Repo.preload(module(c), :vars).vars
       assert var(holder, "tagline").value == "Kept words"
       assert StaleBlocks.count(module(c)) == 0
+    end
+
+    test "without a user, the status says where to resolve instead of printing a command it cannot run", c do
+      hold!(c.identity, "Kept words")
+      edit_vars!(c)
+
+      text = lines(&Release.status(path: c.path, version: "2.0.0", info: &1))
+      assert [line] = Enum.filter(text, &String.starts_with?(&1, "    resolve: "))
+      refute line =~ "--user"
     end
   end
 end

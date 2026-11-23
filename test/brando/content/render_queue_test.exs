@@ -412,6 +412,37 @@ defmodule Brando.Content.RenderQueueTest do
       end)
     end
 
+    test "a bulk request without a site merges into the waiting render without one only" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        RenderQueue.enqueue_map(%{Fragment => [1]})
+
+        put_test_env(:tenancy_mode, :multi)
+        Brando.Tenant.with_prefix("tenant_one_live", fn -> RenderQueue.enqueue_map(%{Fragment => [1]}) end)
+
+        put_test_env(:tenancy_mode, :none)
+        RenderQueue.enqueue_map(%{Fragment => [1]})
+
+        prefixes = Enum.map(all_enqueued(worker: EntryRenderer), & &1.args["tenant_prefix"])
+        assert Enum.sort(prefixes) == [nil, "tenant_one_live"]
+      end)
+    end
+
+    # A named statement switches to a generic plan after five runs on a
+    # connection, which joins thousands of keys in a nested loop
+    test "looks up the waiting renders with an unnamed statement, planned for its keys" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for n <- 1..6, do: RenderQueue.enqueue_many(Fragment, [n])
+
+        %{rows: [[named]]} =
+          Ecto.Adapters.SQL.query!(
+            Repo.repo(),
+            "SELECT count(*) FROM pg_prepared_statements WHERE statement LIKE '%unnest($1::text[], $2::text[], $3::text[])%'"
+          )
+
+        assert named == 0
+      end)
+    end
+
     @tag :capture_log
     test "held renders run by themselves after the maximum hold" do
       Oban.Testing.with_testing_mode(:manual, fn ->

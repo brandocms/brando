@@ -255,6 +255,29 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
                view,
                ~s([data-testid=release-resolve-blocks][href="/admin/config/content/modules/update/#{c.case_module.id}/stale-blocks"])
              )
+
+      # The open row's module and count were loaded with it: a render for
+      # another reason does not query them again
+      test_pid = self()
+      handler = "release-detail-queries-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler,
+        [:brando_integration, :repo, :query],
+        fn _event, _measurements, meta, _config ->
+          if self() == view.pid and meta.source in ["content_modules", "content_blocks"],
+            do: send(test_pid, {:detail_query, meta.source})
+        end,
+        nil
+      )
+
+      try do
+        view |> element("[data-testid=release-tab-entries]") |> render_click()
+        view |> element("[data-testid=release-tab-template]") |> render_click()
+        refute_received {:detail_query, _}
+      after
+        :telemetry.detach(handler)
+      end
     end)
   end
 

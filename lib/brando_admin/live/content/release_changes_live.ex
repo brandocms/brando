@@ -167,7 +167,14 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   # last apply's, per item
   defp load_detail(%{assigns: %{current: "applied:" <> uid}} = socket) do
     rows = Brando.Repo.all(from(a in DefinitionApply, where: a.uid == ^uid, order_by: [desc: a.id], limit: 1))
-    assign(socket, :detail, %{applied_row: List.first(rows), definitions: Review.definitions(socket.assigns.report, uid)})
+    module = Brando.Repo.get_by(Brando.Content.Module, uid: uid)
+
+    assign(socket, :detail, %{
+      applied_row: List.first(rows),
+      definitions: Review.definitions(socket.assigns.report, uid),
+      module: module,
+      leftovers: if(module, do: StaleBlocks.count_with_leftovers(module), else: 0)
+    })
   end
 
   defp load_detail(%{assigns: %{current: nil}} = socket), do: assign(socket, :detail, nil)
@@ -836,13 +843,12 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     entries = assigns.applied_entries |> Enum.filter(&(uid in &1.modules))
     title = item["name"] || uid
     {ns, name} = split_name(title)
-    module = Brando.Repo.get_by(Brando.Content.Module, uid: uid)
 
     assigns =
       assign(assigns,
         item: item,
-        module: module,
-        stale: if(module, do: StaleBlocks.count(module), else: 0),
+        module: assigns.detail.module,
+        leftovers: assigns.detail.leftovers,
         changed: changed,
         applied_row: applied_row,
         here: here,
@@ -865,17 +871,19 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     <RC.tabs tab={@tab} entries={length(@applied_entries)} tabs={~w(template entries)} />
     <div class="release-tab-body">
       <RC.notice
-        :if={@stale > 0}
+        :if={@leftovers > 0}
         icon="info"
         headline={
           ngettext(
             "1 block holds values the module no longer defines",
             "%{count} blocks hold values the module no longer defines",
-            @stale
+            @leftovers
           )
         }
       >
-        {gettext("Drop them, or move them onto a ref or var the module defines now.")}
+        {gettext(
+          "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+        )}
         <:actions>
           <.link
             navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
@@ -1158,7 +1166,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       headline={gettext("Blocks keep what they hold in the removed refs and vars")}
     >
       {gettext(
-        "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then the site doesn’t show them."
+        "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
       )}
       <ul data-testid="release-removals">
         <li :for={item <- @removing} data-uid={item.uid}>

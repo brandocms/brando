@@ -194,6 +194,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                   )}
                 </p>
                 <p :if={item.reason && item.state != :never_applied}>{item.reason}</p>
+                <p :if={item[:removes]} data-testid="module-files-removal" data-uid={item.uid}>
+                  {Plan.removal_text(item)}
+                </p>
                 <label :if={item.state == :never_applied or item.uid in @replace} class="module-files-replace">
                   <input
                     type="checkbox"
@@ -239,6 +242,20 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 href={@updated_download}
                 download="brando-modules-updated.zip"
               >{gettext("Download updated ZIP")}</a>
+            </div>
+            <div
+              :for={removal <- @result.removals}
+              class="module-files-feedback"
+              data-testid="module-files-removal"
+              data-uid={removal.uid}
+            >
+              <strong>{removal.name}</strong>
+              <span>{removal.text}</span>
+              <.link
+                navigate={"/admin/config/content/modules/update/#{removal.module_id}/stale-blocks"}
+                class="btn btn--sm"
+                data-testid="module-files-resolve"
+              >{gettext("Resolve blocks")}</.link>
             </div>
             <div
               :for={refresh <- @result.refresh}
@@ -343,9 +360,12 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   def handle_event("apply", _, %{assigns: %{plan: nil}} = socket), do: {:noreply, socket}
 
   def handle_event("apply", _, socket) do
-    case Definitions.apply(socket.assigns.plan, socket.assigns.current_user) do
+    plan = socket.assigns.plan
+
+    case Definitions.apply(plan, socket.assigns.current_user) do
       {:ok, result} ->
         BrandoAdmin.LiveView.Listing.update_list_entries(Module)
+        result = Map.put(result, :removals, removals(plan))
         socket = assign(socket, plan: nil, result: result, error: nil, download: nil)
 
         case Archive.update(socket.assigns.source, result.bundle) do
@@ -475,6 +495,15 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   defp display_value(nil), do: ""
   defp display_value(value) when is_binary(value), do: value
   defp display_value(value), do: Jason.encode!(value, pretty: true)
+
+  # The applied updates whose removed refs or vars blocks still hold, as the
+  # plan words them, with the module whose Resolve blocks clears them
+  defp removals(plan) do
+    for %{removes: %{blocks: blocks}} = item <- plan.items, blocks > 0, Plan.selected?(plan, item) do
+      module = Repo.get_by!(Module, uid: item.uid)
+      %{uid: item.uid, name: definition_name(plan, item), text: Plan.removal_text(item), module_id: module.id}
+    end
+  end
 
   defp definition_name(plan, item) do
     definition = Enum.find(Model.definitions(plan.bundle), &(&1["uid"] == item.uid))
