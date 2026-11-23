@@ -1083,6 +1083,11 @@ msgstr "%{renames} i %{module}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
+msgid "%{renames} would move no values, but the other renames this apply selects move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once."
+msgstr "%{renames} ville ikke flytte noen verdier, men de andre navnebyttene i denne endringen flytter verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen."
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
 msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
 msgstr "%{renames} ville sammen med de andre navnebyttene i denne endringen flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen, eller ta renamed_from ut av filen og flytt verdiene etter endringen med %{command}, som en bruker som kan redigere disse oppføringene. Uten renamed_from sletter planens resolve-linje dem i stedet: ikke kjør den."
 

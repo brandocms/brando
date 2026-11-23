@@ -784,6 +784,17 @@ defmodule Brando.Content.DefinitionRenamesTest do
     end
   end
 
+  describe "an over-limit refusal of several modules" do
+    test "a module no block holds a value of is told to apply fewer, with no empty command" do
+      totals = %{blocks: 1_600, entries: 40, modules: 2}
+      empty = [%{kind: :var, from: "caption", to: "text", blocks: 0}]
+      held = [%{kind: :var, from: "tagline", to: "heading", blocks: 1_600}]
+
+      refute Renames.over_limit_text([{"empty-module", empty}], totals, nil) =~ "resolve"
+      assert Renames.over_limit_text([{"held-module", held}], totals, nil) =~ "mix brando.modules resolve"
+    end
+  end
+
   describe "BlockMoves.content?/2" do
     test "judges by the stored fields: a link's target setting and a form are choices; a copied default ref is not" do
       default = %Var{type: :link, key: "cta", value: "https://a", link_text: "Read", link_target_blank: false}

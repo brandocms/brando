@@ -176,17 +176,27 @@ defmodule Brando.Content.Definition.Renames do
       command: resolve_command(modules, viewer)
     ]
 
-    if count == 1,
-      do:
+    cond do
+      # A module no block holds a value of has no command; the others' moves
+      # are what stop the apply
+      bindings[:command] == "" ->
+        gettext(
+          "%{renames} would move no values, but the other renames this apply selects move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once.",
+          bindings
+        )
+
+      count == 1 ->
         gettext(
           "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
           bindings
-        ),
-      else:
+        )
+
+      true ->
         gettext(
           "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
           bindings
         )
+    end
   end
 
   # The resolve command of each module, as one shell line, that moves the
