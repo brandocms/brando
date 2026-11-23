@@ -35,7 +35,54 @@ defmodule Brando.Drafts.Restore do
     blocks
     |> Map.keys()
     |> Enum.reduce(changeset, &put_block_field(&2, &1, blocks[&1], entry, schema, user))
+    |> load_moved_relations()
   end
+
+  # Each row is cast onto the saved row it restores, which keeps that row's
+  # loaded relations: a var whose `identifier_id` the copy points at another
+  # entry still holds the identifier it was saved with, and a render reads
+  # that. A relation whose key the changeset changes is loaded again, at the
+  # new key, as deep as the saved one was loaded.
+  defp load_moved_relations(%Changeset{data: %schema{} = data, changes: changes} = changeset) do
+    data =
+      for name <- schema.__schema__(:associations),
+          %Ecto.Association.BelongsTo{owner_key: key, related_key: related_key} <-
+            [schema.__schema__(:association, name)],
+          Map.has_key?(changes, key),
+          loaded = Map.get(data, name),
+          not match?(%Ecto.Association.NotLoaded{}, loaded),
+          (loaded && Map.get(loaded, related_key)) != changes[key],
+          reduce: data do
+        data -> Map.put(data, name, load_relation(data, name, key, changes[key], loaded))
+      end
+
+    %{changeset | data: data, changes: Map.new(changes, fn {field, value} -> {field, load_moved_relations(value)} end)}
+  end
+
+  defp load_moved_relations(changesets) when is_list(changesets), do: Enum.map(changesets, &load_moved_relations/1)
+  defp load_moved_relations(value), do: value
+
+  defp load_relation(_data, _name, _key, nil, _loaded), do: nil
+
+  defp load_relation(%schema{} = data, name, key, id, loaded) do
+    data
+    |> Map.put(key, id)
+    |> Map.put(name, Map.get(struct(schema), name))
+    |> Brando.Repo.preload([{name, loaded_shape(loaded)}])
+    |> Map.get(name)
+  end
+
+  # The relations `struct` has loaded, as a preload list
+  defp loaded_shape(%{__meta__: _} = struct) do
+    %schema{} = struct
+
+    for name <- schema.__schema__(:associations),
+        value = Map.get(struct, name),
+        not match?(%Ecto.Association.NotLoaded{}, value),
+        do: {name, value |> List.wrap() |> Enum.find(&is_struct/1) |> loaded_shape()}
+  end
+
+  defp loaded_shape(_value), do: []
 
   defp put_block_field(changeset, field, block_rows, entry, schema, user) do
     assoc =
