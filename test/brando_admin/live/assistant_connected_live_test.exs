@@ -49,6 +49,16 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     {:ok, _} = Proposals.apply(id, 1, user)
   end
 
+  # The proposal's deadline, `ms` from now, set before the page opens
+  defp expires_in(id, ms) do
+    at = DateTime.add(DateTime.utc_now(), ms, :millisecond)
+    Repo.update_all(from(r in Record, where: r.id == ^id), set: [expires_at: at])
+    at
+  end
+
+  # Waits, without reading the page, until `at` has passed
+  defp pass(at), do: Process.sleep(max(DateTime.diff(at, DateTime.utc_now(), :millisecond), 0) + 100)
+
   test "a stored proposal appears in the open list, with the count and its live page", %{conn: conn} = c do
     {:ok, chat, _} = live(conn, "/admin/assistant")
     refute has_element?(chat, ".assistant-connected-link")
@@ -166,6 +176,18 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     send(view.pid, {BrandoAdmin.AI.AssistantLive, :expiry})
     assert has_element?(view, "#assistant-stale[data-reason=expired]")
     refute has_element?(view, ".assistant-apply")
+  end
+
+  test "a row stops waiting for review when its deadline passes", %{conn: conn} = c do
+    id = prepare(c, "Expires while open")
+    at = expires_in(id, 800)
+    {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+    assert has_element?(view, row(id) <> " [data-testid=assistant-state-waiting]")
+
+    pass(at)
+
+    assert has_element?(view, "#assistant-stale[data-reason=expired]")
+    assert has_element?(view, row(id) <> " [data-testid=assistant-state-expired]")
   end
 
   test "an approve of a version superseded since is refused", %{conn: conn} = c do

@@ -81,6 +81,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        connected: [],
        connected_count: 0,
        connections: %{},
+       connected_states: %{},
        expiry_timer: nil,
        stale: nil
      )}
@@ -306,6 +307,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <.connected
           :if={@live_action == :connected}
           proposals={@connected}
+          states={@connected_states}
           connections={@connections}
           proposal_id={@proposal_id}
         />
@@ -478,6 +480,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :proposals, :list, required: true
   attr :proposal_id, :string, default: nil
   attr :connections, :map, default: %{}
+  attr :states, :map, default: %{}, doc: "each proposal's state by id, as `connected_state/1` read it"
 
   # Where the conversation is otherwise: the proposals connected tools made.
   defp connected(assigns) do
@@ -509,10 +512,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <BrandoAdmin.Dates.time at={record.inserted_at} />
             </span>
             <span
-              class={["badge", connected_state_tone(connected_state(record))]}
-              data-testid={"assistant-state-#{connected_state(record)}"}
+              class={["badge", connected_state_tone(@states[record.id])]}
+              data-testid={"assistant-state-#{@states[record.id]}"}
             >
-              {connected_state_label(connected_state(record))}
+              {connected_state_label(@states[record.id])}
             </span>
           </.link>
           <.link
@@ -2765,9 +2768,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp assign_connected(socket) do
     user = socket.assigns.current_user
+    connected = Proposals.list_external(user)
 
     socket
-    |> assign(connected: Proposals.list_external(user), connected_count: Proposals.count_external(user))
+    |> assign(
+      connected: connected,
+      # Assigned, so a row re-renders when its deadline passes and nothing else changed
+      connected_states: Map.new(connected, &{&1.id, connected_state(&1)}),
+      connected_count: Proposals.count_external(user)
+    )
     |> assign_connections()
     |> schedule_expiry()
   end
