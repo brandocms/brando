@@ -149,7 +149,8 @@ defmodule Brando.Content do
 
   mutation :update, Module do
     fn entry ->
-      ContentBlocks.render_entries_with_module_id(entry.id)
+      {id, origin} = rendered_reference(entry.id, entry.source_module_id)
+      ContentBlocks.render_entries_with_module_id(id, origin)
 
       Brando.Repo.after_commit(fn ->
         Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {entry, [:module, :updated]})
@@ -495,7 +496,8 @@ defmodule Brando.Content do
 
   mutation :update, Palette do
     fn palette ->
-      ContentBlocks.render_entries_with_palette_id(palette.id)
+      {id, origin} = rendered_reference(palette.id, palette.source_palette_id)
+      ContentBlocks.render_entries_with_palette_id(id, origin)
       Brando.Content.Definitions.changed()
       Brando.Cache.Palettes.update({:ok, palette})
     end
@@ -702,7 +704,8 @@ defmodule Brando.Content do
 
   mutation :update, Container do
     fn entry ->
-      ContentBlocks.render_entries_with_container_id(entry.id)
+      {id, origin} = rendered_reference(entry.id, entry.source_container_id)
+      ContentBlocks.render_entries_with_container_id(id, origin)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
@@ -1315,4 +1318,10 @@ defmodule Brando.Content do
 
     %{name: tt.name, vars: vars}
   end
+
+  # The id and origin the site's blocks hold for a saved module, container or
+  # palette. A site's override of a library entry stands in under the library
+  # entry's id (`Brando.Content.SharedLibrary`).
+  defp rendered_reference(id, nil), do: {id, :local}
+  defp rendered_reference(_id, source_id), do: {source_id, :shared}
 end

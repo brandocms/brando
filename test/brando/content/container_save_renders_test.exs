@@ -6,6 +6,7 @@ defmodule Brando.Content.ContainerSaveRendersTest do
   alias Brando.Content.Container
   alias Brando.Factory
   alias Brando.Pages.Page
+  alias Brando.SyncTest.Article
 
   setup do
     user = Factory.insert(:random_user)
@@ -35,6 +36,22 @@ defmodule Brando.Content.ContainerSaveRendersTest do
 
     assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
     assert rendered(c.page) =~ ~s(<section class="v1"><p>inside</p></section>)
+  end
+
+  # One article uses the container in its `blocks` field, the other in its
+  # `notes` field: two join schemas, one entry schema
+  test "a save queues the renders of entries using the container in different block fields of one Blueprint", c do
+    in_blocks = article_in_container!(:entry_blocks, Article.Blocks, c.container)
+    in_notes = article_in_container!(:entry_notes, Article.Notes, c.container)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      changeset = Container.changeset(c.container, %{"code" => ~s(<div>{{ content }}</div>)}, c.user)
+      assert {:ok, _} = Brando.Content.update_container(changeset, c.user)
+
+      for article <- [in_blocks, in_notes] do
+        assert [_job] = all_enqueued(worker: Brando.Worker.EntryRenderer, args: %{entry_id: article.id})
+      end
+    end)
   end
 
   # Saved as the admin's form saves it (`BrandoAdmin.Components.Form`)
@@ -108,6 +125,17 @@ defmodule Brando.Content.ContainerSaveRendersTest do
     {:ok, page} = Brando.Pages.create_page(changeset, user)
     {:ok, page} = Brando.Content.Blocks.render_entry(Page, page.id)
     page
+  end
+
+  defp article_in_container!(assoc, join_schema, container) do
+    block = %Brando.Content.Block{
+      type: :container,
+      uid: "section-#{System.unique_integer([:positive])}",
+      source: to_string(join_schema),
+      container_id: container.id
+    }
+
+    Brando.Repo.insert!(struct(Article, [{:title, "Article"}, {assoc, [struct(join_schema, block: block)]}]))
   end
 
   defp rendered(page), do: Brando.Pages.get_page!(page.id).rendered_blocks
