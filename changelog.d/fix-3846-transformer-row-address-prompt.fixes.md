@@ -1,0 +1,1 @@
+- A transformer row an editor saves together with a new address no longer shows twice when another editor saves the entry while the "redirect the old address?" prompt is open, and is no longer stored twice by the next save.
