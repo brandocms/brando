@@ -3105,6 +3105,11 @@ msgstr "Tatt i bruk automatisk som %{name}"
 msgid "Applied by %{name}"
 msgstr "Tatt i bruk av %{name}"
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Applied version %{version} without review"
+msgstr "Tok i bruk versjon %{version} uten gjennomgang"
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Applied · rendering"

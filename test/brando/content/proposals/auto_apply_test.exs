@@ -540,6 +540,32 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert [%{changed_by: "person", applied_automatically: true, status: "undone"}] = listed(c, grant)
     end
 
+    test "an applied result says which proposal it replaced, as a waiting one does", c do
+      grant = allowed!(c)
+      earlier = prepare(c, grant, [create(c.source)], %{"summary" => "First try"})
+      refute earlier["applied"]
+
+      result = prepare(c, grant, [create(c.source)])
+      assert %{"applied" => true, "applicable" => true} = result
+      assert result["replaced"] == earlier["proposal_id"]
+      assert result["replaced_summary"] == "First try"
+      assert result["replaced_version"] == earlier["version"]
+    end
+
+    test "the live page says an applied proposal was applied, not that it has problems", c do
+      result = prepare(c, allowed!(c), [create(c.source)])
+      summary = MCP.Watch.summary("brando_content_prepare_proposal", %{}, true, result)
+
+      assert summary["output"] == %{"version" => 1, "applicable" => true, "applied" => true}
+
+      assert BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, summary["output"]) ==
+               [{:text, "Applied version "}, {:strong, "1"}, {:text, " without review"}]
+
+      # The whole result, as the Assistant keeps it, reads the same
+      assert BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, result) ==
+               BrandoAdmin.Components.ToolSteps.label("prepare_proposal", %{}, summary["output"])
+    end
+
     test "the review list keeps every waiting proposal, however many were applied since", c do
       waiting = prepare(c, grant!(c.user, c.tenant), [create(c.source)])
       now = DateTime.utc_now()

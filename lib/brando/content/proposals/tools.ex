@@ -895,15 +895,19 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp auto_apply(proposal, context) do
     case AutoApply.run(proposal.id, proposal.version, context.actor, context.grant_id, context.tenant) do
+      # What it replaced and what changes nothing, as a review says them
       {:applied, receipt} ->
         %{
           proposal_id: proposal.id,
           version: proposal.version,
           status: "applied",
           applied: true,
+          applicable: true,
           created: receipt.mappings["created"] || %{},
           note: "Applied without review, as this connection allows: the translations are saved as unpublished drafts."
         }
+        |> Map.merge(replaced(proposal))
+        |> Map.merge(unchanged(proposal))
 
       {:waiting, reason} ->
         proposal |> review() |> Map.merge(%{applied: false, not_applied: reason})
@@ -1118,19 +1122,21 @@ defmodule Brando.Content.Proposals.Tools do
       note: "The user reviews and approves this in the admin. Nothing is saved yet."
     }
     |> Map.merge(review_place(proposal))
-    |> then(fn review ->
-      case Proposals.notes(proposal) do
-        [] ->
-          review
-
-        notes ->
-          Map.put(review, :unchanged, %{
-            operations: notes,
-            advice: "These change nothing. Drop them, or tell the editor why."
-          })
-      end
-    end)
+    |> Map.merge(unchanged(proposal))
   end
+
+  defp unchanged(proposal) do
+    case Proposals.notes(proposal) do
+      [] -> %{}
+      notes -> %{unchanged: %{operations: notes, advice: "These change nothing. Drop them, or tell the editor why."}}
+    end
+  end
+
+  # The connected tool's earlier proposal this one replaced
+  defp replaced(%{supersedes_id: id} = proposal) when not is_nil(id),
+    do: %{replaced: id, replaced_summary: proposal.supersedes_summary, replaced_version: proposal.version - 1}
+
+  defp replaced(_proposal), do: %{}
 
   # A proposal from outside the admin is reviewed under "From connected tools".
   # With an entry whose page can be previewed, and no problems (the preview
@@ -1145,15 +1151,7 @@ defmodule Brando.Content.Proposals.Tools do
       review_url: review_url(path)
     }
 
-    place =
-      if proposal.supersedes_id,
-        do:
-          Map.merge(place, %{
-            replaced: proposal.supersedes_id,
-            replaced_summary: proposal.supersedes_summary,
-            replaced_version: proposal.version - 1
-          }),
-        else: place
+    place = Map.merge(place, replaced(proposal))
 
     case proposal.problems in [nil, []] && Review.preview_key(proposal) do
       key when is_binary(key) -> Map.put(place, :preview_url, review_url(Review.preview_path(path, key)))

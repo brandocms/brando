@@ -3103,6 +3103,11 @@ msgstr ""
 msgid "Applied by %{name}"
 msgstr ""
 
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Applied version %{version} without review"
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Applied · rendering"
