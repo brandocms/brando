@@ -808,7 +808,9 @@ that use the palette or the container are rendered again, as after a save in
 the admin; `refresh` retries that for a palette or container UID too. A
 container's HEEx is code, as a module's: only a superuser (or `:system`)
 plans or applies one. A shared-library override is neither exported nor
-imported over, and keeps its source.
+imported over, and keeps its source. A palette or container made local from
+the shared library gets a uid of its own, kept when it takes a library update;
+its source relates it to the library entry.
 
 Palettes and containers saved in the admin get a uid of their own. The
 `brando_245` upgrade migration gives existing ones a uid derived from what
