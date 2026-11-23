@@ -317,13 +317,16 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # row, with what the editor typed in it since as its changes.
   defp written(held, added, shipped) do
     Enum.map_reduce(held, added, fn entry, added ->
-      sent = if new?(applied(entry)), do: [entry | Enum.filter(shipped, &same_new_row?(&1, entry))], else: []
-
-      case Enum.find(added, fn row -> Enum.any?(sent, &same_inputs?(&1, row)) end) do
+      case Enum.find(added, &sent_as?(entry, &1, shipped)) do
         nil -> {entry, added}
         row -> {as_written(entry, row), List.delete(added, row)}
       end
     end)
+  end
+
+  defp sent_as?(entry, saved, shipped) do
+    new?(applied(entry)) and
+      Enum.any?([entry | Enum.filter(shipped, &same_new_row?(&1, entry))], &same_inputs?(&1, saved))
   end
 
   defp same_new_row?(%Changeset{params: %{"_key" => key}}, %Changeset{params: %{"_key" => key}}) when is_binary(key),

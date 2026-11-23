@@ -603,7 +603,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       quotes = Changeset.get_field(kept, :quotes)
 
       assert Enum.map(quotes, &{&1.id, &1.text}) == [{"1", "One"}, {"2", "Two"}, {"3", "Three"}, {"4", "Four on"}]
-      assert List.last(quotes).uid == "stored"
+      assert [%{uid: "stored"}] = Enum.filter(quotes, &(&1.id == "4"))
 
       # Not typed on: the row is the one sent
       kept = saved |> Changeset.change() |> RelationRows.keep(shipped, base, :quotes, shipped.changes.quotes)
