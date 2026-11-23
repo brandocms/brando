@@ -131,6 +131,22 @@ defmodule Brando.Content.Definition.Snapshot do
     end
   end
 
+  @doc """
+  The rows of every kind that have one of `uids` here, the trash included,
+  as `%{uid => [{kind, record}]}` with active rows first: a uid is one
+  definition's while it is in the trash too, since a restore brings it back.
+  """
+  def stored(uids) do
+    found =
+      for kind <- Model.kinds(),
+          record <- Repo.all(from(r in Model.schema(kind), where: r.uid in ^uids, order_by: r.id)),
+          do: {kind, record}
+
+    found
+    |> Enum.sort_by(fn {_kind, record} -> not is_nil(Map.get(record, :deleted_at)) end)
+    |> Enum.group_by(fn {_kind, record} -> record.uid end)
+  end
+
   @doc "The record of `kind` with `uid` among `records` (what `take!/1` returns), or nil."
   def record(records, kind, uid), do: Map.fetch!(records, records_key(kind))[uid]
 

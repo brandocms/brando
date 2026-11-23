@@ -21,12 +21,12 @@ defmodule Brando.Content.Definition.Importer do
     end)
   end
 
-  # A module, a palette or a container: whichever has the uid here
+  # A module, a palette or a container: whichever has the uid here, an
+  # active one before one in the trash
   defp refresh_change!(uid, actor) do
     {kind, record} =
-      Enum.find_value(~w(module container palette), fn kind ->
-        if record = Repo.get_by(Model.schema(kind), uid: uid), do: {kind, record}
-      end) || Error.raise!(uid, "unknown definition")
+      Enum.find(Map.get(Snapshot.stored([uid]), uid, []), fn {kind, _record} -> kind != "table_template" end) ||
+        Error.raise!(uid, "unknown definition")
 
     authorize!(actor, :update, Model.schema(kind), record)
     if record.deleted_at || source_id(record), do: Error.raise!(uid, "expected a local active definition")
@@ -228,6 +228,7 @@ defmodule Brando.Content.Definition.Importer do
       current_parents: parents(snapshot["modules"]),
       table_ids: Map.new(records.tables, fn {uid, table} -> {uid, table.id} end),
       palettes: MapSet.new(bundle["palettes"], & &1["uid"]),
+      stored: bundle |> Model.definitions() |> Enum.map(& &1["uid"]) |> Snapshot.stored(),
       snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
@@ -265,7 +266,7 @@ defmodule Brando.Content.Definition.Importer do
     record = Snapshot.record(ctx.records, kind, uid)
     old = ctx.snapshots[{kind, uid}]
     action = if record, do: :update, else: :create
-    validate_kind_here!(definition, ctx.records)
+    validate_kind_here!(definition, ctx.stored)
     authorize!(ctx.actor, action, schema, record)
 
     if validate_plan_target!(uid, kind, schema, record, old, ctx.mode),
@@ -456,11 +457,15 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   # UIDs are not shared between kinds: one a definition of another kind has
-  # here is refused, so the two never meet in a selection, an apply or a revert
-  defp validate_kind_here!(%{"kind" => kind, "uid" => uid}, records) do
-    case Enum.find(Model.kinds() -- [kind], &Snapshot.record(records, &1, uid)) do
-      nil -> :ok
-      other -> Error.raise!(Model.subject(kind, uid), "the uid belongs to a #{String.replace(other, "_", " ")} here")
+  # here, in the trash too, is refused, so the two never meet in a
+  # selection, an apply, a revert or a restore
+  defp validate_kind_here!(%{"kind" => kind, "uid" => uid}, stored) do
+    case Enum.find(Map.get(stored, uid, []), fn {other, _record} -> other != kind end) do
+      nil ->
+        :ok
+
+      {other, _record} ->
+        Error.raise!(Model.subject(kind, uid), "the uid belongs to a #{String.replace(other, "_", " ")} here")
     end
   end
 

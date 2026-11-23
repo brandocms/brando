@@ -424,6 +424,24 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert message =~ ~s(palette "acme-palette-paper": the uid belongs to a module here)
     end
 
+    test "a uid a definition in the trash has is not another kind's: the restore would make two", c do
+      fixtures!(c.path, ~w(paper))
+      module = Factory.insert(:module, uid: "acme-palette-paper")
+      module |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:error, message} = Definitions.plan(read!(c.path), c.user)
+      assert message =~ ~s(palette "acme-palette-paper": the uid belongs to a module here)
+    end
+
+    test "refresh of a uid that a trashed definition of another kind also has is the active one's", c do
+      import!(read!(fixtures!(c.path, ~w(paper))), c.user)
+      # From before uids were checked against the trash
+      module = Factory.insert(:module, uid: "acme-palette-paper")
+      module |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:ok, [%{status: :requested}]} = Definitions.refresh(["acme-palette-paper"], c.user)
+    end
+
     test "a dry run compiles no container HEEx for a non-superuser, whatever grant a group holds", c do
       palette!(c.user) |> Ecto.Changeset.change(uid: "acme-palette-paper") |> Repo.update!()
       fixtures!(c.path, ~w(tinted))
