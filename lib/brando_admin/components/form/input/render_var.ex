@@ -2061,7 +2061,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], socket.assigns.video_id, socket.assigns.key)
 
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
-      {:ok, video} when still_shown? -> show_video(socket, video.id)
+      {:ok, video} when still_shown? -> show_uploaded_video(socket, video.id)
       {:ok, _video} -> {:noreply, socket}
       failed -> {:reply, %{error: ProviderVideoUpload.complete_error_message(failed)}, socket}
     end
@@ -2103,8 +2103,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("select_video", %{"id" => video_id}, %{assigns: %{type: :video}} = socket),
-    do: show_video(socket, video_id)
+  def handle_event("select_video", %{"id" => video_id}, %{assigns: %{type: :video}} = socket) do
+    {:ok, video} = get_video(video_id)
+    show_video(socket, video)
+  end
 
   def handle_event("select_image", %{"id" => image_id}, %{assigns: %{type: :gallery}} = socket) do
     {:noreply, toggle_gallery_media(socket, :image, image_id)}
@@ -2122,10 +2124,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:noreply, update(socket, :visible, &(!&1))}
   end
 
-  defp show_video(socket, video_id) do
-    {:ok, video} =
-      Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
+  # Trashed since the upload completed, it cannot be shown
+  defp show_uploaded_video(socket, video_id) do
+    case get_video(video_id) do
+      {:ok, video} -> show_video(socket, video)
+      _missing -> {:reply, %{error: ProviderVideoUpload.complete_error_message(:error)}, socket}
+    end
+  end
 
+  defp get_video(video_id), do: Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
+
+  defp show_video(socket, video) do
     socket
     |> assign(:video_id, video.id)
     |> assign(:video, video)
