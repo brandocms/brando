@@ -11,6 +11,7 @@ defmodule BrandoAdmin.BlockMoveBetweenRowsTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.Block
+  alias BrandoAdmin.Components.Form.Block, as: BlockComponent
   alias Brando.Pages.Page
 
   setup do
@@ -178,6 +179,22 @@ defmodule BrandoAdmin.BlockMoveBetweenRowsTest do
     assert saved_children(c.intro_uid) == []
     assert saved_children(container.uid) == []
     assert saved_children(other_row.uid) == []
+  end
+
+  # A row of another block field is no drop target, even for the same module
+  test "a row's drag group names its block field", %{conn: conn} = c do
+    view = open(conn, c.work)
+    module_group = BlockComponent.multi_children_group(c.projects_module.id, :local)
+
+    [group] =
+      view
+      |> element(children(c.multi_uid))
+      |> render()
+      |> then(&Regex.run(~r/data-blocks-wrapper-type="([^"]+)"/, &1, capture: :all_but_first))
+
+    assert group != module_group
+    assert group =~ "blocks"
+    assert group =~ module_group
   end
 
   defp assert_eventually(fun, tries \\ 50) do
