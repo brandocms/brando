@@ -192,6 +192,26 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(field(entries(row).first())).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
   })
 
+  // The drop zone the file was dropped on can be gone by the time the
+  // entry's field is there to take the file: the entry still goes when the
+  // upload does.
+  test('an entry whose drop zone left the page before the handover goes when its upload is cancelled', async ({ page }) => {
+    await createPage(page, 'Media drop zone gone', group, 'Image Row')
+    const row = rows(page).first()
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
+    // after the drop zone has taken the drop, before its reply comes back
+    await rowBlock(row).evaluate(block => block.addEventListener('drop', () => {
+      block.querySelector('[phx-hook="Brando.MediaDrop"]').remove()
+    }))
+    await drop(page, rowBlock(row), [['image.jpg', 'image/jpeg']])
+    await expect(entries(row)).toHaveCount(1)
+
+    const queued = page.locator('.upload-item.status-queued').filter({ hasText: 'image.jpg' })
+    await queued.getByRole('button', { name: 'Cancel' }).click()
+    await expect(entries(row)).toHaveCount(0)
+  })
+
   // Moved to another row, the entry mounts again, and its field's element
   // with it: what the field was told by the drop goes with the upload, not
   // with the element.
@@ -333,15 +353,15 @@ test.describe('Multi blocks: dropping media', () => {
   // says so; a later upload into the field is the field's own.
   test('a video whose provider upload a move ends removes its entry, and says why', async ({ page }) => {
     await videoRow(page)
-    await page.setViewportSize({ width: 1440, height: 2200 })
-    await createPage(page, 'Media drop provider moved', group, 'Video Row')
-    await addRow(page, 'Video Row')
-    const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
     const settled = []
     page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
       const frame = JSON.parse(String(payload))
       if (frame[4]?.event === 'media_drop_settled') settled.push(frame[4].value)
     }))
+    await page.setViewportSize({ width: 1440, height: 2200 })
+    await createPage(page, 'Media drop provider moved', group, 'Video Row')
+    await addRow(page, 'Video Row')
+    const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
 
     // The provider never answers, so the transfer is still running at the move
     await page.route('**/e2e/bunny/tus**', () => {})

@@ -26,9 +26,10 @@ export function settleUpload(ref, { status, error, aborted }) {
   settle(handover, { failed, error: status === 'cancelled' ? null : error || null, aborted: !!aborted })
 }
 
-// Also for a handed-over file the field refuses before an upload starts
-export function settle({ uid, token, blockField }, { failed, error = null, aborted = false }) {
+// Also for a handed-over file the field refuses before an upload starts, and
+// for one whose field is not on the page (`unavailable`)
+export function settle({ uid, token, blockField }, { failed, error = null, aborted = false, unavailable = false }) {
   document.getElementById(blockField)?.dispatchEvent(new CustomEvent('brando:handed-upload-settled', {
-    detail: { uid, token, failed, error, aborted },
+    detail: { uid, token, failed, error, aborted, unavailable },
   }))
 }
