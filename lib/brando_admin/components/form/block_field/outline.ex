@@ -126,12 +126,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
     """
   end
 
-  defp children_group_name(%{type: :container}), do: "outline-container-children"
-
-  defp children_group_name(%{type: :module, multi: true, module_id: mid, module_origin: origin}),
-    do: "outline-" <> Block.multi_children_group(mid, origin)
-
-  defp children_group_name(_), do: nil
+  defp children_group_name(item) do
+    if group = Block.children_group(item), do: "outline-" <> group
+  end
 
   defp type_label(:module, true), do: gettext("Multi")
   defp type_label(:module, _), do: gettext("Module")

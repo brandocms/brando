@@ -150,6 +150,36 @@ defmodule BrandoAdmin.BlockMoveBetweenRowsTest do
     assert shown(view, nested.uid) == [alpha]
   end
 
+  # The rows that take an entry are the ones the canvas and the Outline drag
+  # it to (`Block.multi_children_group/2`). An event written by hand, naming
+  # any other block of the field, used to move the entry there: it was saved
+  # under a plain module or a container, and shown nowhere.
+  test "a block that does not take the entry is refused, on the canvas and in the Outline", %{conn: conn} = c do
+    container = Brando.ProposalFixtures.root_block!(c, :container, nil, 3)
+
+    other_multi =
+      Brando.ProposalFixtures.module!(c.user, "Other projects", ~s(<section>{{ content }}</section>), multi: true)
+
+    other_row = Brando.ProposalFixtures.root_block!(c, :module, other_multi, 4)
+    [alpha, beta, gamma] = c.child_uids
+    view = open(conn, c.work)
+
+    for to_uid <- [c.intro_uid, container.uid, other_row.uid] do
+      drop_on_canvas(view, beta, c.multi_uid, 1, to_uid, 0)
+      drop_in_outline(view, alpha, c.multi_uid, 0, to_uid, 0)
+    end
+
+    assert shown(view, c.multi_uid) == [alpha, beta, gamma]
+
+    save(view)
+
+    assert_eventually(fn -> saved_children(c.row_uid) == [c.delta_uid] end)
+    assert saved_children(c.multi_uid) == [alpha, beta, gamma]
+    assert saved_children(c.intro_uid) == []
+    assert saved_children(container.uid) == []
+    assert saved_children(other_row.uid) == []
+  end
+
   defp assert_eventually(fun, tries \\ 50) do
     cond do
       fun.() ->
