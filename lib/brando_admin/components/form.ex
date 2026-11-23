@@ -482,9 +482,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :open_image_editor_from_picker, image: image},
         %{assigns: %{edit_image: edit_image}} = socket
       ) do
-    if edit_asset_locked?(socket, edit_image),
-      do: {:ok, socket},
-      else: {:ok, open_image_editor_from_picker(socket, edit_image, image)}
+    {:ok, open_image_editor_from_picker(socket, edit_image, image)}
   end
 
   # Set edit_image for the save handler when image editor is opened from a block.
@@ -2145,22 +2143,37 @@ defmodule BrandoAdmin.Components.Form do
      |> push_event("b:validate", %{})}
   end
 
-  # The picker's "edit image": the drawer, and its save, take the image.
-  # A locked field's drawer keeps its asset. A block or gallery that opened
-  # the editor before left its keys in `edit_image`: this editor is not
-  # theirs, and its copy goes back to none of them.
-  defp open_image_editor_from_picker(socket, edit_image, image) do
-    edit_image =
-      edit_image
-      |> Map.drop([:block_target, :old_image_id, :gallery_object])
-      |> Map.merge(%{image: image, id: image.id})
+  # The picker's "edit image" from an image field's open drawer: the drawer,
+  # and its save, take the image. A locked field's drawer keeps its asset.
+  # The drawer is modal and every way of closing it saves it
+  # (`editing_image?: false`), so a picker opened while it is shut is another
+  # opener's: a block's, a var's, a gallery's. That editor belongs to no
+  # field, and its copy stays in the library. A block or gallery that opened
+  # the editor before left its keys in `edit_image`: its copy goes back to
+  # none of them either.
+  defp open_image_editor_from_picker(%{assigns: %{editing_image?: true}} = socket, %{field: field} = edit_image, image)
+       when not is_nil(field) do
+    if edit_asset_locked?(socket, edit_image) do
+      socket
+    else
+      edit_image =
+        edit_image
+        |> Map.drop([:block_target, :old_image_id, :gallery_object])
+        |> Map.merge(%{image: image, id: image.id})
 
+      socket
+      |> assign(:edit_image, edit_image)
+      |> assign(:image_changeset, change(image))
+      |> assign_drawer_recovery_state()
+      |> push_event("b:image_editor:init", field_image_editor_payload(socket, edit_image, image))
+    end
+  end
+
+  defp open_image_editor_from_picker(socket, _edit_image, image) do
     socket
-    |> assign(:edit_image, edit_image)
-    |> assign(:editing_image?, true)
+    |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id})
     |> assign(:image_changeset, change(image))
-    |> assign_drawer_recovery_state()
-    |> push_event("b:image_editor:init", field_image_editor_payload(socket, edit_image, image))
+    |> push_event("b:image_editor:init", image_editor_payload(image))
   end
 
   # A picker's selection (or a duplicate) in the image, file or video drawer.
@@ -9328,7 +9341,10 @@ defmodule BrandoAdmin.Components.Form do
 
     if edit_asset_locked?(socket, copy_of) or not same_rows?(copy_of.rows, rows) or
          not Brando.Uploads.AssetIntent.current_selection?(copy_of.shown, shown) do
-      copy_left_in_library(socket)
+      copy_left_in_library(
+        socket,
+        gettext("The copy is in the library. The form could not add it to the field it was made for.")
+      )
     else
       {:noreply,
        socket
@@ -9338,11 +9354,11 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp own_or_field_copy(socket, _edit_image, _image), do: copy_left_in_library(socket)
+  defp own_or_field_copy(socket, _edit_image, _image), do: copy_left_in_library(socket, gettext("New image created."))
 
-  defp copy_left_in_library(socket) do
+  defp copy_left_in_library(socket, message) do
     send_update(ImagePicker, id: "image-picker", refresh_images: true)
-    send(self(), {:toast, gettext("New image created.")})
+    send(self(), {:toast, message})
     {:noreply, socket}
   end
 
@@ -10914,12 +10930,19 @@ defmodule BrandoAdmin.Components.Form do
 
   # An image field's editor: its copy is made for the field, so it takes the
   # field's sizes, and the editor shows the field's cuts, whichever field the
-  # image was uploaded for.
+  # image was uploaded for. A field with no image config of its own (not a
+  # Blueprint image asset) keeps the image's.
   defp field_image_editor_payload(socket, %{field: field} = edit_image, image) when not is_nil(field) do
     schema = Map.get(edit_image, :schema) || socket.assigns.schema
-    config_target = Brando.Assets.ConfigTarget.serialize({"image", schema, field})
 
-    %{image_editor_payload(image) | config_target: config_target, crop_groups: build_crop_groups_for(config_target)}
+    case Brando.Assets.ConfigTarget.blueprint_asset(inspect(schema), to_string(field)) do
+      {:ok, %{type: :image}} ->
+        config_target = Brando.Assets.ConfigTarget.serialize({"image", schema, field})
+        %{image_editor_payload(image) | config_target: config_target, crop_groups: build_crop_groups_for(config_target)}
+
+      _ ->
+        image_editor_payload(image)
+    end
   end
 
   defp field_image_editor_payload(_socket, _edit_image, image), do: image_editor_payload(image)

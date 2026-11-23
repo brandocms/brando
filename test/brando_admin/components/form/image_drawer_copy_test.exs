@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
   # to the field the editor was opened for, as that field was when the copy
   # started.
   use Brando.LiveCase
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Images.Focal
   alias Brando.SyncTest
@@ -51,6 +52,9 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
       edit_image: %{id: image.id, path: [], field: :cover, relation_field: nil, schema: SyncTest.Article, image: image}
     )
   end
+
+  # Done, ×, the backdrop and Escape all submit the drawer's form
+  defp close_drawer(view), do: form_hook(view, "save_image", %{"image" => %{}})
 
   defp form_hook(view, event, params),
     do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook(event, params)
@@ -126,6 +130,27 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
     assert Brando.Images.get_image!(copy.id).focal == %Focal{x: 20, y: 30, mode: :center}
   end
 
+  # The cover's drawer was closed, and the picker opened since is a block's,
+  # a var's or a gallery's: the editor is not the field's. Its copy stays in
+  # the library, and the form's save is not held for a drawer that is shut.
+  test "a copy from the picker's editor after the field's drawer closed", %{view: view, stored: stored, current_user: user} do
+    picked = image(user)
+    open_cover_drawer(view, stored)
+    close_drawer(view)
+
+    send_form(view, action: :open_image_editor_from_picker, image: picked)
+
+    assert_push_event(view, "b:image_editor:init", payload)
+    assert payload.config_target == picked.config_target
+    refute form_assigns(view).editing_image?
+
+    start_copy(view, %{"config_target" => picked.config_target, "focal_x" => 40, "focal_y" => 60, "focal_mode" => "center"})
+    copy = upload_copy(view)
+
+    assert copy.id not in [stored.id, picked.id]
+    assert cover_id(view) == stored.id
+  end
+
   # A gallery opened the editor before: its copy went back to the gallery.
   # The picker's editor opened since is not the gallery's, and its copy
   # replaces nothing there.
@@ -159,6 +184,39 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
     assert copy.id != picked.id
     assert cover_id(view) == picked.id
     assert form_assigns(view).edit_image.image.id == picked.id
+  end
+
+  # A field whose own target is not a Blueprint image asset: the editor
+  # opens with the image's own target and cuts.
+  test "the drawer's editor for a field without an image config", %{view: view, stored: stored} do
+    send_form(view,
+      action: :update_edit_image,
+      edit_image: %{id: stored.id, path: [], field: :title, relation_field: nil, schema: SyncTest.Article, image: stored}
+    )
+
+    form_hook(view, "open_image_editor", %{"image_id" => stored.id})
+
+    assert_push_event(view, "b:image_editor:init", payload)
+    assert payload.config_target == stored.config_target
+  end
+
+  # The field refuses the copy: the editor is told it is in the library,
+  # not that it was made as asked.
+  test "a copy refused by its field is reported as left in the library", %{
+    view: view,
+    stored: stored,
+    current_user: user
+  } do
+    picked = image(user)
+    open_cover_drawer(view, stored)
+    start_copy(view)
+    send_form(view, action: :update_edit_image, image: picked)
+    Brando.endpoint().subscribe("user:#{user.id}")
+
+    upload_copy(view)
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message}}
+    refute message == gettext("New image created.")
   end
 
   # Another field's drawer opened while the copy uploads: the copy goes to
