@@ -30,7 +30,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   save doesn't insert them again; and the rows read back after the save,
   which also hold another editor's save that landed while this one ran
   (the Form takes none then): each item stores the row read back with its
-  id, and other ids are taken in as below.
+  id (and shows the asset it names when that differs from the written
+  one), and other ids are taken in as below. A card is drawn again only
+  when its row was new or the row read back differs from the written one.
   After another editor's save (`take_saved_entry`), it hands it that save's
   rows (`entry_saved_elsewhere`): the transformer takes them under its own
   unsaved changes, told from the rows it was built on (`base_ids`).

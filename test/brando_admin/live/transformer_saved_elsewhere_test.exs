@@ -139,6 +139,27 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
   defp streams_in(list) when is_list(list), do: Enum.flat_map(list, &streams_in/1)
   defp streams_in(_term), do: []
 
+  # The cards a LiveView draws again while `fun` runs: their DOM ids, and
+  # `:reset` for a listing drawn whole
+  defp redrawn(form, fun) do
+    for [_ref, inserts, deletes | reset] <- watch_streams(form, fun),
+        drawn <- Enum.map(inserts ++ deletes, &hd/1) ++ if(reset == [true], do: [:reset], else: []),
+        do: drawn
+  end
+
+  defp pick_image(form, label, image) do
+    form |> transformer_target() |> render_hook("pick_asset", %{"dom_id" => dom_id_of(form, label), "kind" => "image"})
+    form |> transformer_target() |> render_hook("select_image", %{"id" => image.id})
+  end
+
+  defp shown_cover(form, label) do
+    item = Enum.find(transformer(form).items, &(shown_label(&1) == label))
+    item.assets.cover && item.assets.cover.id
+  end
+
+  defp saved_cover(article, label),
+    do: Repo.one(from i in ArticleItem, where: i.article_id == ^article.id and i.label == ^label, select: i.cover_id)
+
   defp remove_row(form, label),
     do: form |> transformer_target() |> render_hook("remove_entry", %{"dom_id" => dom_id_of(form, label)})
 
@@ -566,6 +587,48 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         assert Enum.sort(shown(b)) == saved
       end
 
+      # A's image in a row B didn't change is the row's: B's card and its
+      # next save show it, not the image B collected.
+      test "shows the image A put on a row B didn't change", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        image = Factory.insert(:image)
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+
+        token = collect(b)
+        pick_image(a, "B", image)
+        save(a)
+        write(b, token)
+
+        assert saved_cover(article, "B") == image.id
+        assert shown_cover(b, "B") == image.id
+
+        save_title(b, article, "Saved by B")
+        assert saved_cover(article, "B") == image.id
+        assert shown_cover(b, "B") == image.id
+      end
+
+      # B picks an image after its form collected the rows: it stays B's,
+      # unsaved, and B's next save writes it.
+      test "keeps the image B picked after collecting", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        [image, own] = Factory.insert_list(2, :image)
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+
+        token = collect(b)
+        pick_image(a, "B", image)
+        save(a)
+        pick_image(b, "B", own)
+        write(b, token)
+
+        assert saved_cover(article, "B") == image.id
+        assert shown_cover(b, "B") == own.id
+
+        save_title(b, article, "Saved by B")
+        assert saved_cover(article, "B") == own.id
+        assert shown_cover(b, "B") == own.id
+      end
+
       test "drops a row A removed that B held and didn't change",
            %{a_conn: a_conn, b_conn: b_conn, article: article} do
         a = open(a_conn, article, unquote(kind), "a")
@@ -584,6 +647,24 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         save_title(b, article, "Saved by B")
         assert Enum.sort(rows(article)) == saved
         assert Enum.sort(shown(b)) == saved
+      end
+    end
+  end
+
+  for kind <- ["with blocks", "without blocks"] do
+    describe "#{kind}, one editor saving" do
+      # A redraw drops what the browser put on a card (a drag in progress, a
+      # drop highlight): a row's card is drawn again only when it was new.
+      test "draws again only the card of the row it added", %{a_conn: a_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        set_field(a, dom_id_of(a, "A"), "label", "A, by A")
+        new = add_row(a, "D")
+        assert redrawn(a, fn -> save(a) end) == [new]
+
+        reorder(a, ["C", "A, by A", "B", "D"])
+        remove_row(a, "B")
+        assert redrawn(a, fn -> save(a) end) == []
+        assert Enum.map(rows(article), &elem(&1, 0)) == ["C", "A, by A", "D"]
       end
     end
   end

@@ -125,17 +125,19 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # (`entry_saved_elsewhere`).
   def update(%{event: "entry_saved", rows: rows} = assigns, socket) do
     written = Enum.sort_by(assigns[:written] || rows, &Map.get(&1, :sequence))
-    {items, taken?} = written_items(socket.assigns, written, Map.new(rows, &{&1.id, &1}))
+    {written_items, taken?} = written_items(socket.assigns, written)
+    read = Map.new(rows, &{&1.id, &1})
+    items = Enum.map(written_items, &read_back(&1, read, socket.assigns.asset_fields))
     fields = socket.assigns.relation_module.__schema__(:fields)
 
     # A listing draws the row it gets (its id, say): a row that was new and is
     # now saved is drawn again, under the DOM id it has, and so is a row
-    # another editor's save changed. Rows that were saved before keep their
-    # cards, and with them what the browser put on a card (a drop
-    # highlight, a drag in progress).
+    # another editor's save changed after this save wrote it. Rows that were
+    # saved before keep their cards, and with them what the browser put on a
+    # card (a drop highlight, a drag in progress).
     socket =
-      for {item, before} <- Enum.zip(items, socket.assigns.items),
-          (before.is_new and not item.is_new) or drawn(item, fields) != drawn(before, fields),
+      for {item, {as_written, _written}, before} <- Enum.zip([items, written_items, socket.assigns.items]),
+          (before.is_new and not item.is_new) or drawn(item, fields) != drawn(as_written, fields),
           reduce: socket do
         acc -> stream_insert(acc, :transformer_items, stream_entry(item))
       end
@@ -1353,20 +1355,22 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     # Restored FKs may differ from the saved row's preloaded assets. Resolve
     # those for display without putting asset structs into the save params.
-    assets =
-      Map.new(asset_fields, fn field ->
-        assoc = entry.__struct__.__schema__(:association, field)
-        id = Map.get(entry, assoc.owner_key)
-        asset = Map.get(entry, field)
-        resolved = if id && match?(%{id: ^id}, asset), do: asset, else: id && Brando.Repo.get(assoc.related, id)
-        {field, resolved}
-      end)
+    assets = Map.new(asset_fields, &{&1, row_asset(entry, &1)})
 
     invalid = Map.new(cs.errors, fn {key, _} -> {key, cs.params && cs.params[to_string(key)]} end)
 
     new_item("transformer-item-#{entry.id || Ecto.UUID.generate()}", source, is_new: is_nil(entry.id))
     |> Map.put(:changes, Map.merge(recovered, invalid))
     |> Map.put(:assets, assets)
+  end
+
+  # The asset a row names in `field`: its preload when that is the one named,
+  # otherwise read
+  defp row_asset(row, field) do
+    assoc = row.__struct__.__schema__(:association, field)
+    id = Map.get(row, assoc.owner_key)
+    asset = Map.get(row, field)
+    if id && match?(%{id: ^id}, asset), do: asset, else: id && Brando.Repo.get(assoc.related, id)
   end
 
   defp new_item_dom_id, do: "transformer-item-new-#{System.unique_integer([:positive])}"
@@ -1413,10 +1417,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     end
   end
 
-  # The items as the rows written for them, each stored as the row read
-  # back with its id (`read`), and whether every row written is one: none
+  # The items as the rows written for them, each with its written row (nil
+  # for an item not sent), and whether every row written is one: none
   # change when a row doesn't line up with what was sent.
-  defp written_items(%{items: items, sent_dom_ids: sent, asset_fields: asset_fields}, written, read) do
+  defp written_items(%{items: items, sent_dom_ids: sent, asset_fields: asset_fields}, written) do
     saved = if length(written) == length(sent), do: Map.new(Enum.zip(sent, written)), else: %{}
 
     lined_up? =
@@ -1429,21 +1433,25 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     if lined_up?,
       do:
-        {Enum.map(items, &saved_item(&1, Map.get(saved, &1.dom_id), asset_fields, read)),
-         map_size(saved) == length(written)},
-      else: {items, false}
+        {Enum.map(items, fn item ->
+           case Map.fetch(saved, item.dom_id) do
+             {:ok, row} -> {saved_item(item, row, asset_fields), row}
+             :error -> {item, nil}
+           end
+         end), map_size(saved) == length(written)},
+      else: {Enum.map(items, &{&1, nil}), false}
   end
 
-  # The item as its written row, stored as the row read back with its id:
-  # another editor's save can have changed it after this save sent its
-  # rows. A change it holds that is the written value, where the row read
-  # back has another, was saved before and left alone by this save: the
-  # other editor's value is newer.
-  defp saved_item(item, nil, _asset_fields, _read), do: item
+  # The item as its written row, stored as the row read back with its id
+  # (`read`): another editor's save can have changed it after this save sent
+  # its rows. A change it holds that is the written value, where the row
+  # read back has another, was saved before and left alone by this save:
+  # the other editor's value is newer. So is an asset the row read back
+  # names in place of the written one, unless the item holds one picked
+  # since.
+  defp read_back({item, nil}, _read, _asset_fields), do: item
 
-  defp saved_item(item, written, asset_fields, read) do
-    item = saved_item(item, written, asset_fields)
-
+  defp read_back({item, written}, read, asset_fields) do
     case Map.fetch(read, written.id) do
       {:ok, row} ->
         changes =
@@ -1451,7 +1459,14 @@ defmodule BrandoAdmin.Components.Form.Transformer do
             Map.get(written, key) == value and Map.get(row, key) != value
           end)
 
-        %{item | source: row, changes: changes}
+        assets =
+          for field <- asset_fields,
+              key = row.__struct__.__schema__(:association, field).owner_key,
+              Map.get(row, key) != Map.get(written, key) and not Map.has_key?(changes, key),
+              into: item.assets,
+              do: {field, row_asset(row, field)}
+
+        %{item | source: row, changes: changes, assets: assets}
 
       :error ->
         item
