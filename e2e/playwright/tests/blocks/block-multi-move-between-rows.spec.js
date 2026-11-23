@@ -150,6 +150,71 @@ test.describe('Multi blocks: dragging an entry to another row', () => {
     await expect(entries(other)).toHaveCount(1)
   })
 
+  // The release is read where the editor let go: putting the entry back in
+  // its own row for the server's render grows that row and pushes the
+  // target down, and an entry taller than the target's header left the
+  // pointer above the target, so the move was never sent.
+  test('an entry dropped into the first slot of a row further down moves there', async ({ page }) => {
+    await createPage(page, 'Multi Row First Slot', 'multi-row-first-slot')
+    const [first, second] = [rows(page).nth(0), rows(page).nth(2)]
+
+    await pickUpAndHold(page, entries(first).nth(1), entries(second).nth(0))
+    // up to the top edge of Carol: before her
+    await expect.poll(() => placeholderIndex(second)).toBe(1)
+    const carol = await entries(second).nth(0).boundingBox()
+    await page.mouse.move(carol.x + carol.width / 2, carol.y + 6, { steps: 10 })
+    await expect.poll(() => placeholderIndex(second)).toBe(0)
+    await page.mouse.up()
+    await syncLV(page)
+
+    await expect.poll(() => names(first)).toEqual(['Alice'])
+    await expect.poll(() => names(second)).toEqual(['Bob', 'Carol'])
+  })
+
+  // Rows that take the entry say so when the drag starts, and an empty one
+  // opens only when the entry is over it: picking up an entry moves nothing,
+  // so the drop lands where the editor aims.
+  test('picking up an entry moves no block, and it reorders in its row with an empty row above', async ({ page }) => {
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await page.getByLabel('Title', { exact: true }).fill('Multi Row Steady')
+    await page.getByLabel('URI').fill('multi-row-steady')
+    await addRow(page, 'COPY PASTE TEST', 'Team Section')
+    await addRow(page, 'COPY PASTE TEST', 'Team Section')
+    const [empty, filled] = [rows(page).nth(0), rows(page).nth(1)]
+    await addEntry(page, filled, 'COPY PASTE TEST', /^Team Member\b/, 'Alice')
+    await addEntry(page, filled, 'COPY PASTE TEST', /^Team Member\b/, 'Bob')
+    await addEntry(page, filled, 'COPY PASTE TEST', /^Team Member\b/, 'Carol')
+    await expect(entries(empty)).toHaveCount(0)
+
+    const positions = () =>
+      page.locator('.blocks-content [data-uid]').evaluateAll(blocks =>
+        Object.fromEntries(blocks.map(block => {
+          const { x, y, width, height } = block.getBoundingClientRect()
+          return [block.dataset.uid, [x, y, width, height].map(Math.round)]
+        }))
+      )
+
+    await awaitBlockShip(page)
+    const before = await positions()
+    const handleBox = await entries(filled).nth(1).locator('.sort-handle').first().boundingBox()
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
+    await page.mouse.down()
+    await page.waitForTimeout(100)
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2 + 10, { steps: 2 })
+    await expect(empty.locator('.block-children')).toHaveClass(/is-drop-target/)
+    expect(await positions()).toEqual(before)
+
+    // Bob below Carol
+    await holdOver(page, entries(filled).nth(2))
+    await expect.poll(() => placeholderIndex(filled)).toBe(2)
+    await page.mouse.up()
+    await syncLV(page)
+
+    await expect.poll(() => names(filled)).toEqual(['Alice', 'Carol', 'Bob'])
+    await expect(entries(empty)).toHaveCount(0)
+  })
+
   // A row with no entries takes one while it is dragged: a new row, and a
   // row whose last entry went and is wanted back.
   test('an empty row takes an entry, and takes it back after it left', async ({ page }) => {

@@ -92,6 +92,13 @@ test.describe('Block outline: moving a block between containers', () => {
     await page.waitForTimeout(100)
     await page.mouse.move(targetBox.x + targetBox.width / 2, targetY, { steps: 20 })
     await expect(targetList.locator(`#outline-${movedUid}`)).toHaveCount(1)
+    if (position === 'end') {
+      // on to the moved row itself, below the Heading, where the target
+      // list ends now that it has taken the row
+      const movedBox = await targetList.locator(`#outline-${movedUid} > .outline-item-row`).boundingBox()
+      await page.mouse.move(movedBox.x + movedBox.width / 2, movedBox.y + movedBox.height / 2, { steps: 5 })
+      await expect(targetList.locator(`#outline-${movedUid}`)).toHaveCount(1)
+    }
     await page.mouse.up()
     await syncLV(page)
     await page.locator('[id^="block-field-"][id$="-outline"]').getByRole('button', { name: 'Close' }).click()
@@ -122,5 +129,12 @@ test.describe('Block outline: moving a block between containers', () => {
   // old one is deleted, under a uid that is unique.
   test('a saved block moved into an earlier container saves', async ({ page }) => {
     await moveTest(page, 'Outline Move Up', 'outline-move-up', 'below', 1)
+  })
+
+  // Released over the row it fills at the end of the upper container: the
+  // row going back to its own list for the server's render shrinks that
+  // container, and the release used to read as outside it.
+  test('a block dropped at the end of an earlier container moves there', async ({ page }) => {
+    await moveTest(page, 'Outline Move Up End', 'outline-move-up-end', 'end', 1)
   })
 })
