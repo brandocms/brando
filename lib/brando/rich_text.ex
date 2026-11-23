@@ -399,7 +399,7 @@ defmodule Brando.RichText do
   """
   @spec sanitize_html(term()) :: {:ok, String.t()} | :error
   def sanitize_html(html) when is_binary(html) do
-    clean = canonical(html, @html_tags, true)
+    clean = canonical(html, @html_tags, @hidden_tags)
     if safe_tokens?(clean, @unsafe_tags), do: {:ok, clean}, else: :error
   end
 
@@ -416,15 +416,12 @@ defmodule Brando.RichText do
   """
   @spec render_html(term()) :: String.t() | nil
   def render_html(html) when is_binary(html) do
-    clean = canonical(html, @html_tags, true)
+    safe =
+      html
+      |> canonical(@html_tags -- @unsafe_tags, @unsafe_tags ++ @hidden_tags)
+      |> without_refused_attributes()
 
-    with {:ok, pieces} <- pieces(clean),
-         safe = pieces |> without_refused() |> IO.iodata_to_binary(),
-         true <- safe_tokens?(safe, @unsafe_tags) do
-      safe
-    else
-      _ -> text_only(html)
-    end
+    if sanitize_html(safe) == {:ok, safe}, do: safe, else: text_only(html)
   end
 
   def render_html(nil), do: nil
@@ -521,7 +518,7 @@ defmodule Brando.RichText do
     names = for [name] <- Regex.scan(@tag_name, html, capture: :all_but_first), do: tag_key(name)
 
     with true <- Enum.all?(names, &(&1 in known or &1 == "img")),
-         {:ok, tokens} <- html |> canonical(tags, false) |> String.trim() |> tokens(),
+         {:ok, tokens} <- html |> canonical(tags, nil) |> String.trim() |> tokens(),
          true <- kept_all?(names, tokens) do
       {:ok, tokens}
     else
@@ -548,13 +545,13 @@ defmodule Brando.RichText do
   defp subsequence?([name | wanted], [name | kept]), do: subsequence?(wanted, kept)
   defp subsequence?(wanted, [_ | kept]), do: subsequence?(wanted, kept)
 
-  defp canonical(html, tags, strip?) do
-    hidden = if strip?, do: @hidden_tags, else: []
-
+  # `tags` kept, `removed` left out with what they hold, and comments with
+  # them; `nil` removes neither.
+  defp canonical(html, tags, removed) do
     MDEx.safe_html(html,
       sanitize: [
         tags: tags,
-        clean_content_tags: hidden,
+        clean_content_tags: removed || [],
         generic_attribute_prefixes: [""],
         generic_attributes: [],
         tag_attributes: %{},
@@ -563,7 +560,7 @@ defmodule Brando.RichText do
         url_relative: :passthrough,
         link_rel: nil,
         allowed_classes: %{},
-        strip_comments: strip?,
+        strip_comments: removed != nil,
         id_prefix: nil
       ],
       escape: [content: false, curly_braces_in_code: false]
@@ -629,29 +626,19 @@ defmodule Brando.RichText do
     end
   end
 
-  # Sanitized text's pieces (`pieces/3`) without what `safe_token?/2` refuses:
-  # a refused element with what it holds, a comment, a refused attribute.
-  defp without_refused([]), do: []
-
-  defp without_refused([{{:start, tag, attrs} = token, whole} | rest] = pieces) do
-    cond do
-      String.downcase(tag, :ascii) in @unsafe_tags -> pieces |> after_element() |> without_refused()
-      safe_token?(token, @unsafe_tags) -> [whole | without_refused(rest)]
-      true -> [start_tag(tag, whole, attrs) | without_refused(rest)]
+  # Sanitized text without the attributes `safe_attribute?/1` refuses. The
+  # text holds no element whose content is raw text (they are removed with
+  # it), so each start tag is one token. `nil` when it cannot be tokenized.
+  defp without_refused_attributes(html) do
+    case pieces(html) do
+      {:ok, pieces} -> pieces |> Enum.map(&safe_piece/1) |> IO.iodata_to_binary()
+      :error -> nil
     end
   end
 
-  defp without_refused([{{:comment, _}, _whole} | rest]), do: without_refused(rest)
-  defp without_refused([{_token, whole} | rest]), do: [whole | without_refused(rest)]
+  defp safe_piece({{:start, tag, attrs}, whole}), do: start_tag(tag, whole, attrs)
 
-  defp after_element([{{:start, tag, _}, _whole} | rest]) when tag in @void, do: rest
-
-  defp after_element(pieces) do
-    case pieces |> Enum.map(&elem(&1, 0)) |> close(0) do
-      {:ok, rest} -> Enum.take(pieces, -length(rest))
-      :error -> []
-    end
-  end
+  defp safe_piece({_token, whole}), do: whole
 
   # The start tag with its safe attributes, each as it was written
   defp start_tag(tag, whole, attrs) do

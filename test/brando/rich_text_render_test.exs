@@ -54,6 +54,31 @@ defmodule Brando.RichTextRenderTest do
     end
   end
 
+  # Raw text in a script or a style, which no tag in it ends, and an
+  # element no end tag closes
+  @raw_text [
+    {~s{<p>Hi</p><script></b><a href="&#106;avascript:alert(1)">Click</a></script>}, "<p>Hi</p>"},
+    {"<p>Hi</p><style></b><plaintext></style><p>Rest</p>", "<p>Hi</p><p>Rest</p>"},
+    {"<style>/* </p>MARKER */</style><p>Keep</p>", "<p>Keep</p>"},
+    {~s|<p>Intro</p><script>document.write("<p>")</script><p>Rest</p>|, "<p>Intro</p><p>Rest</p>"},
+    {"<p>Intro</p><svg><source></source>Label</svg><p>Rest</p>", "<p>Intro</p><p>Rest</p>"},
+    {"<p>Intro</p><object><p>Rest</p>", "<p>Intro</p>"}
+  ]
+
+  test "a refused element is removed with what it holds, as browsers parse it" do
+    for {html, rendered} <- @raw_text do
+      assert RichText.render_html(html) == rendered, html
+    end
+  end
+
+  test "many refused elements in a row are removed" do
+    html = "<p>Intro</p>" <> String.duplicate("<object></object><p>Rest</p>", 20_000)
+    {microseconds, rendered} = :timer.tc(fn -> RichText.render_html(html) end)
+
+    assert rendered == "<p>Intro</p>" <> String.duplicate("<p>Rest</p>", 20_000)
+    assert microseconds < 5_000_000
+  end
+
   test "a refused attribute or element is removed, and the markup around it kept" do
     for {html, rendered} <- [
           {~s|<p>One <a href="/x" onclick="steal()">link</a></p><h2>Two</h2>|,
@@ -79,5 +104,16 @@ defmodule Brando.RichTextRenderTest do
 
     assert render.(~s|<p>One <a href="/x" onclick="steal()">link</a></p><script>x</script><h2>Two</h2>|) ==
              render.(~s(<p>One <a href="/x">link</a></p><h2>Two</h2>))
+  end
+
+  test "a refused element in a field reaches the page by no filter" do
+    for {html, rendered} <- @raw_text, filters <- ["", "| url_decode", "| url_decode | raw"] do
+      render = fn intro ->
+        template = "{{ entry.intro #{filters} }}"
+        Brando.Villain.parse_and_render(template, Brando.Villain.get_base_context(%Entry{intro: intro}))
+      end
+
+      assert render.(html) == render.(rendered), "#{filters}: #{html}"
+    end
   end
 end
