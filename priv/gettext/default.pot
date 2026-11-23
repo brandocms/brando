@@ -61,6 +61,11 @@ msgstr ""
 msgid "%{client} via MCP"
 msgstr ""
 
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "%{container}: its default palette %{palette} is in the trash. The files leave it out, and an import keeps the link."
+msgstr ""
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} also used elsewhere"

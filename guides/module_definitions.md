@@ -815,6 +815,9 @@ imported over, and keeps its source. A palette or container made local from
 the shared library gets a uid of its own, kept when it takes a library update;
 its source relates it to the library entry.
 
+An import does not update a palette's or container's admin form that is open:
+reload it to see the imported version before you save it.
+
 Palettes and containers saved in the admin get a uid of their own. The
 `brando_245` upgrade migration gives existing ones a uid derived from what
 two environments seeded alike share, `palette-<namespace>-<key>` and
