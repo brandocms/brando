@@ -306,7 +306,10 @@ defmodule Brando.Villain.TemplateView do
     end
   end
 
-  defp rich_rows(%__MODULE__{rich: rich} = view, acc) when is_list(rich), do: Map.put(acc, unwrap(view), rich)
+  # A row reached through two rules prints by the stricter: a field is rich
+  # text only if both say so
+  defp rich_rows(%__MODULE__{rich: rich} = view, acc) when is_list(rich),
+    do: Map.update(acc, unwrap(view), rich, &Enum.filter(&1, fn field -> field in rich end))
 
   defp rich_rows(list, acc) when is_list(list), do: Enum.reduce(list, acc, &rich_rows/2)
   defp rich_rows({_key, value}, acc), do: rich_rows(value, acc)

@@ -295,6 +295,78 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
       end
     end
 
+    # A component draws the subform: the owner draws no field itself, so it
+    # has no rule, and the rows print by their own forms
+    defmodule ComponentOwner do
+      @moduledoc false
+      use Brando.Blueprint,
+        application: "Brando",
+        domain: "RichTextRows",
+        schema: "ComponentOwner",
+        singular: "component_owner",
+        plural: "component_owners",
+        gettext_module: Brando.Gettext
+
+      identifier "{{ entry.title }}"
+      persist_identifier false
+
+      attributes do
+        attribute :title, :string
+      end
+
+      relations do
+        relation :checked_items, :has_many,
+          module: Brando.RichTextRows.CheckedItem,
+          foreign_key: :entry_id,
+          on_replace: :delete,
+          cast: true
+      end
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset do
+              input :title, :text
+            end
+
+            fieldset do
+              inputs_for :checked_items do
+                component MyApp.CheckedItemsComponent
+              end
+            end
+          end
+        end
+      end
+    end
+
+    test "prints by its own forms when a component draws the owner's subform" do
+      assert Brando.RichText.row_fields_for_printing(ComponentOwner, :checked_items) == nil
+      entry = %ComponentOwner{title: "T", checked_items: [%CheckedItem{text: @safe}]}
+      assert render("{% for r in entry.checked_items %}{{ r.text }}{% endfor %}", entry) == @safe
+    end
+
+    # One record reached through an owner that draws it as plain text and
+    # one that draws it as rich text: a field is rich only if both say so
+    test "a row reached through two rules prints by the stricter, whatever the order" do
+      item = %CheckedItem{id: 1, text: ~s(<a href="/help">Help</a>)}
+      plain = %PlainOwner{title: "P", checked_items: [item]}
+      rich = %Entry{title: "R", checked_items: [item]}
+
+      context =
+        plain
+        |> Brando.Villain.get_base_context()
+        |> Liquex.Context.assign("rich", Brando.Villain.TemplateView.wrap(rich))
+
+      for template <- [
+            "{% assign rs = entry.checked_items | concat: rich.checked_items %}{% for r in rs %}{{ r.text }}{% endfor %}",
+            "{% assign rs = rich.checked_items | concat: entry.checked_items %}{% for r in rs %}{{ r.text }}{% endfor %}"
+          ] do
+        assert Brando.Villain.parse_and_render(template, context) ==
+                 String.duplicate("&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;", 2),
+               template
+      end
+    end
+
     test "prints as markup through an owner whose form draws the field as rich text" do
       entry = %Entry{title: "T", checked_items: [%CheckedItem{text: @safe}]}
       assert render("{% for r in entry.checked_items %}{{ r.text }}{% endfor %}", entry) == @safe

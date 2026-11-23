@@ -228,8 +228,9 @@ defmodule Brando.RichText do
   `:rich_text` input. When forms disagree on a field, the default form
   decides, and a field it does not draw is not rich text.
 
-  Nil when no form of `module` has a subform on `relation`: its rows are
-  no subform rows, and print by their own schema's forms.
+  Nil when no form of `module` has a subform on `relation` that draws the
+  rows' fields (one a component draws, with no fields of its own, does
+  not): its rows print by their own schema's forms.
 
   A save checks rows by other rules: the default form
   (`validate_blueprint/2`), and the form it comes from (`validate_form/2`).
@@ -248,12 +249,14 @@ defmodule Brando.RichText do
     end
   end
 
-  # A form's subforms on `relation`
+  # A form's subforms on `relation` that draw their rows' fields: one a
+  # component draws, with no fields of its own, gives no rule
   defp subforms(%{tabs: tabs}, relation) do
     for tab <- tabs,
         fieldset <- tab.fields,
         %Brando.Blueprint.Forms.Subform{name: name} = subform <- Map.get(fieldset, :fields, []),
         Atom.to_string(name) == relation,
+        not match?(%{component: component, sub_fields: []} when not is_nil(component), subform),
         do: subform
   end
 
