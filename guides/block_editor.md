@@ -215,7 +215,10 @@ dropped on an entry's own ref still fills only that ref.
 An entry whose upload fails or is cancelled is removed again, wherever it has
 been moved since, as long as it is still exactly as the drop made it. An entry
 someone has changed in the meantime (typed in, or put a file in its ref) stays,
-and the editor is told the upload failed.
+and the editor is told the upload failed. Only the upload of the dropped file
+counts: another file dropped on the entry's ref meanwhile is that ref's own. A
+video uploading straight to its provider (Mux, Bunny, Cloudflare, Vimeo) stops
+when its entry is moved to another block, and that upload has failed.
 
 The zone is not shown in a synchronized translation, whose blocks follow the
 source, nor in the frontend editor while the block is an ancestor of the block

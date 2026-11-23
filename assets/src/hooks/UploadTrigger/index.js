@@ -1,13 +1,8 @@
 import { subscribeToUpload, uploadTargetKey } from '../shared/uploadProgress'
+import { handOver, settle } from '../shared/mediaDropHandover'
 
 // Confirmation belongs to a form target, including its inline and modal views.
 const confirmedFolders = new Map()
-
-// Uploads handed over by another drop target (`brando:upload-files`), by
-// target: what the field reports back when its upload settles. Kept with the
-// target, not the hook, so a field whose element a patch replaces (its block
-// moved to another row) still reports it.
-const handovers = new Map()
 
 /**
  * UploadTrigger — drop zone / click-to-upload element for any upload source.
@@ -121,14 +116,10 @@ export default (app) => ({
 
     // Files handed over by another drop target: a multi block's media drop
     // (`MediaDrop`), which made this field's block for them. They upload as
-    // a file dropped here does; `brando:handed-upload-settled` says, with
-    // the handover's uid and token, whether that upload got the field its
-    // file or failed or was cancelled first.
+    // a file dropped here does, and the upload started for them says when
+    // it settles (`shared/mediaDropHandover`).
     this.el.addEventListener('brando:upload-files', (e) => {
-      const key = uploadTargetKey(this.uploadTarget())
-      if (e.detail.handover) handovers.set(key, e.detail.handover)
-      else handovers.delete(key)
-      this.intake(Array.from(e.detail.files))
+      this.intake(Array.from(e.detail.files), e.detail.handover)
     })
 
     if (this.el.dataset.folderBrowser === 'true') {
@@ -200,14 +191,15 @@ export default (app) => ({
   // Folder behavior belongs to the target context, not the input gesture.
   // A click-selected file and a dropped file must therefore follow the same
   // configured-folder/current-folder/default-folder precedence.
-  intake(files) {
+  intake(files, handover = null) {
+    this._providerState = null
     if (this.el.dataset.uploadEnabled === 'false') {
-      this.showProgress({ status: 'error', error: this.el.dataset.uploadUnavailable })
+      this.refuse(this.el.dataset.uploadUnavailable, handover)
       return
     }
     const configTarget = this.el.dataset.configTarget || 'default'
     if (this.el.dataset.maxFiles === '1' && files.length > 1) {
-      this.showProgress({ status: 'error', error: this.el.dataset.singleFileError || 'Choose one file for this field.' })
+      this.refuse(this.el.dataset.singleFileError || 'Choose one file for this field.', handover)
       return
     }
     this.showProgress(null)
@@ -216,7 +208,7 @@ export default (app) => ({
     // Cloudflare, Vimeo) hands the file to the provider's hook, as the video
     // picker does, instead of the upload manager.
     if (this.el.dataset.videoHookId) {
-      this.enqueueToProvider(files)
+      this.enqueueToProvider(files, handover)
       return
     }
 
@@ -225,10 +217,17 @@ export default (app) => ({
     // for this field, or the last one used, or the config's own; "Change"
     // beside the destination picks another. Uploading does not stop to ask.
     if (this.el.dataset.folderBrowser === 'true' && configTarget === 'default' && files.some(file => file.type.startsWith('image/'))) {
-      this.enqueue(files, this.destinationFolder() || {})
+      this.enqueue(files, this.destinationFolder() || {}, handover)
     } else {
-      this.enqueue(files)
+      this.enqueue(files, {}, handover)
     }
+  },
+
+  // A file this field cannot take: said in the field, and to the drop that
+  // handed it over
+  refuse(error, handover) {
+    this.showProgress({ status: 'error', error })
+    if (handover) settle(handover, { failed: true, error })
   },
 
   destinationFolder() {
@@ -288,42 +287,46 @@ export default (app) => ({
     }
   },
 
-  enqueue(files, extra = {}) {
+  enqueue(files, extra = {}, handover = null) {
     if (this.el.dataset.allowedTypes) {
       const allowed = this.el.dataset.allowedTypes.split(',')
       const mediaType = file => file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null
       if (files.some(file => !allowed.includes(mediaType(file)))) {
-        this.showProgress({ status: 'error', error: 'This gallery does not accept one or more of these files.' })
+        this.refuse('This gallery does not accept one or more of these files.', handover)
         return
       }
       for (const file of files) {
         const type = mediaType(file)
         this.enqueueTarget([file], type === 'video' ? {
           asset_type: 'video', config_target: this.el.dataset.videoConfigTarget || 'default',
-        } : extra)
+        } : extra, handover)
       }
       return
     }
-    this.enqueueTarget(files, extra)
+    this.enqueueTarget(files, extra, handover)
   },
 
-  enqueueToProvider(files) {
+  enqueueToProvider(files, handover) {
     const hook = document.getElementById(this.el.dataset.videoHookId)
     if (!hook) {
-      this.showProgress({ status: 'error', error: 'The upload destination is unavailable. Reopen this editor.' })
+      this.refuse('The upload destination is unavailable. Reopen this editor.', handover)
       return
     }
 
     const ref = `field-${window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 14)}`
     this._providerRef = ref
+    if (handover) handOver(ref, handover)
 
     if (this._providerHook !== hook) {
       this._providerHook?.removeEventListener('brando:video-upload', this._onProviderUpload)
       this._onProviderUpload = ({ detail }) => {
         if (detail.ref !== this._providerRef) return
-        if (detail.status === 'uploading') this.showProgress({ status: 'uploading', progress: detail.progress })
-        else if (detail.error) this.showProgress({ status: 'error', error: detail.error })
-        else this.showProgress({ status: 'done' })
+        const state = detail.status === 'uploading' ? { status: 'uploading', progress: detail.progress } :
+          detail.error ? { status: 'error', error: detail.error } : { status: 'done' }
+        // Only a failure outlives a patch: a progress the socket never got to
+        // finish would otherwise stay on the field
+        this._providerState = state.status === 'error' ? { state, assetId: this.el.dataset.assetId } : null
+        this.showProgress(state)
       }
       hook.addEventListener('brando:video-upload', this._onProviderUpload)
       this._providerHook = hook
@@ -333,25 +336,32 @@ export default (app) => ({
     hook.dispatchEvent(new CustomEvent('brando:enqueue-videos', { detail: { files, refs: [ref] } }))
   },
 
-  enqueueTarget(files, extra = {}) {
+  enqueueTarget(files, extra = {}, handover = null) {
     const target = this.uploadTarget(extra)
     if (extra.asset_type) target.asset_type = extra.asset_type
     if (extra.config_target) target.config_target = extra.config_target
     if (!target.deliver_topic) {
-      this.showProgress({ status: 'error', error: 'The upload destination is unavailable. Reopen this editor.' })
+      this.refuse('The upload destination is unavailable. Reopen this editor.', handover)
       return
     }
-    window.BrandoUploads.enqueue(files, target)
+    window.BrandoUploads.enqueue(files, target, handover)
   },
 
   subscribeProgress() {
     if (!this.el.querySelector(':scope > .media-field-progress')) return
     this._unsubscribeProgress?.()
-    this._unsubscribeProgress = subscribeToUpload(this.uploadTarget(), state => this.showProgress(state))
+    this._unsubscribeProgress = subscribeToUpload(this.uploadTarget(), state => this.showProgress(state || this.providerState()))
+  },
+
+  // What the provider last said of this field's upload, which the upload
+  // manager does not hold: shown again after a patch, until the editor
+  // uploads again or the field shows another selection
+  providerState() {
+    if (this._providerState?.assetId !== this.el.dataset.assetId) this._providerState = null
+    return this._providerState?.state || null
   },
 
   showProgress(state) {
-    this.reportHandedOver(state)
     const container = this.el.querySelector(':scope > .media-field-progress')
     if (!container) return
     container.replaceChildren()
@@ -370,21 +380,6 @@ export default (app) => ({
       progress.value = state.progress || 0
       container.append(progress)
     }
-  },
-
-  reportHandedOver(state) {
-    const key = uploadTargetKey(this.uploadTarget())
-    const handover = handovers.get(key)
-    if (!handover || !state) return
-    const done = state.status === 'done' || state.status === 'processing' || !!this.el.dataset.assetId
-    const failed = state.status === 'error' || state.status === 'cancelled'
-    if (!done && !failed) return
-
-    handovers.delete(key)
-    this.el.dispatchEvent(new CustomEvent('brando:handed-upload-settled', {
-      bubbles: true,
-      detail: { ...handover, failed: !done, error: state.status === 'error' ? state.error : null },
-    }))
   },
 
   recentFolders() {
