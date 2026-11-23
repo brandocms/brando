@@ -4312,11 +4312,15 @@ defmodule BrandoAdmin.Components.Form do
   defp announce_save(_socket, _entry, _mutation_type), do: :ok
 
   # Not while this form saves: its own save rebuilds it, and if the save
-  # fails the form takes the other save then (`take_after_save/1`). Not
-  # while it loads, or shows a revision's working copy, which is not the
-  # entry. An entry gone since the save (deleted, or out of what this
-  # editor may read) is left as the form has it.
+  # fails the form takes the other save then (`take_after_save/1`). Nor
+  # while it asks whether to redirect the entry's old address: its save is
+  # written, and the refresh after the answer reads the entry back, with
+  # the other save in it (a transformer takes that save's rows on the rows
+  # its own save wrote). Not while it loads, or shows a revision's working
+  # copy, which is not the entry. An entry gone since the save (deleted, or
+  # out of what this editor may read) is left as the form has it.
   defp take_saved_entry(%{assigns: %{processing: true}} = socket), do: assign(socket, :take_after_save?, true)
+  defp take_saved_entry(%{assigns: %{pending_permalink_redirect: %{}}} = socket), do: socket
   defp take_saved_entry(%{assigns: %{entry_loading?: true}} = socket), do: socket
   defp take_saved_entry(%{assigns: %{working_copy: revision}} = socket) when not is_nil(revision), do: socket
 
