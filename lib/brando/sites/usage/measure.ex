@@ -150,17 +150,14 @@ defmodule Brando.Sites.Usage.Measure do
   end
 
   defp cut_archive(schema, cut, logged) do
-    case Regex.run(@cut, schema, capture: :all_but_first) do
-      [base, hash] ->
-        case Map.fetch(cut, {base, hash}) do
-          {:ok, environment} -> {environment, true}
-          :error -> if MapSet.member?(logged, schema), do: {nil, true}
-        end
-
-      nil ->
-        nil
+    with [base, hash] <- Regex.run(@cut, schema, capture: :all_but_first) do
+      cut_owner(Map.fetch(cut, {base, hash}), MapSet.member?(logged, schema))
     end
   end
+
+  defp cut_owner({:ok, environment}, _logged?), do: {environment, true}
+  defp cut_owner(:error, true), do: {nil, true}
+  defp cut_owner(:error, false), do: nil
 
   defp cut_names(site) do
     for environment <- Registry.list_environments(site),

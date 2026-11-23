@@ -1082,8 +1082,13 @@ defmodule Brando.Environments do
       else: candidate
   end
 
-  @doc false
-  # The archive's name; one too long is cut short (`Brando.Sites.Usage.Measure` reads it)
+  @doc """
+  The name of an archive of the schema `base_prefix` taken at `timestamp`
+  (`YYYYMMDDhhmmss`): `<base_prefix>_archive_<timestamp>`, or, when that is
+  longer than PostgreSQL's 63 bytes, the first 31 bytes of `base_prefix`,
+  the timestamp and 8 hex characters of a hash of `base_prefix`.
+  """
+  @spec archive_prefix(String.t(), String.t()) :: String.t()
   def archive_prefix(base_prefix, timestamp) do
     full = "#{base_prefix}_archive_#{timestamp}"
 
