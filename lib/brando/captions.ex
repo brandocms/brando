@@ -76,7 +76,7 @@ defmodule Brando.Captions do
         nil
 
       markup?(text) ->
-        if present?(text), do: text |> editor_markup() |> Brando.Villain.InertLiquid.encode()
+        if present?(text), do: text |> editor_markup(&editor_attribute?/2) |> Brando.Villain.InertLiquid.encode()
 
       # Escaped once: a legacy caption's `&amp;` is the `&` it stands for
       true ->
@@ -109,7 +109,10 @@ defmodule Brando.Captions do
   with only the elements and attributes the caption editor makes, and its
   braces as entities, so the entry's Liquid pass leaves it as text.
   """
-  def rich_html(text), do: text |> normalize() |> editor_markup() |> Brando.Villain.InertLiquid.encode_all()
+  def rich_html(text), do: rich_html(text, &editor_attribute?/2)
+
+  defp rich_html(text, keep?),
+    do: text |> normalize() |> editor_markup(keep?) |> Brando.Villain.InertLiquid.encode_all()
 
   # Only the elements the rich-text editor makes in a caption, and on them only
   # the attributes it gives them: a link's address when rich text allows it,
@@ -118,21 +121,21 @@ defmodule Brando.Captions do
   # the number an ordered list starts at.
   # Any other element is left out and its text kept as text, the content of a
   # `script` or `style` too.
-  defp editor_markup(nil), do: nil
+  defp editor_markup(nil, _keep?), do: nil
 
-  defp editor_markup(html) when is_binary(html) do
+  defp editor_markup(html, keep?) when is_binary(html) do
     html
     |> Tree.parse_fragment()
-    |> Tree.map(&editor_node/1)
+    |> Tree.map(&editor_node(&1, keep?))
     |> Tree.to_html()
   end
 
-  defp editor_node({tag, attrs, children}) when tag in @markup_tags,
-    do: {tag, Enum.filter(attrs, &editor_attribute?(tag, &1)), children}
+  defp editor_node({tag, attrs, children}, keep?) when tag in @markup_tags,
+    do: {tag, Enum.filter(attrs, &keep?.(tag, &1)), children}
 
-  defp editor_node({_tag, _attrs, children}), do: children
-  defp editor_node(text) when is_binary(text), do: text
-  defp editor_node(_comment), do: []
+  defp editor_node({_tag, _attrs, children}, _keep?), do: children
+  defp editor_node(text, _keep?) when is_binary(text), do: text
+  defp editor_node(_comment, _keep?), do: []
 
   @aligned ~w(p h1 h2 h3 h4 h5 h6)
   @alignment ~r/\Atext-align: ?(left|center|right|justify);?\z/
@@ -151,19 +154,19 @@ defmodule Brando.Captions do
   defp editor_attribute?(tag, {"class", _class}), do: tag in ["span" | @aligned]
   defp editor_attribute?(_tag, _attr), do: false
 
-  @doc "A rich-text caption reduced to basic markup, for previews in the admin."
-  def preview_html(text) do
-    if present?(text), do: HtmlSanitizeEx.basic_html(text)
-  end
-
   @doc """
   The caption to preview as `Phoenix.HTML.safe()` markup: the placement's
-  rich text reduced to basic markup, else the escaped library text, else `nil`.
+  rich text as the public site prints it (`rich_html/1`), else the escaped
+  library text, else `nil`. A jump anchor's `id` is left out: the admin can
+  show the same caption more than once on a page.
   """
   def safe_preview(override, library_text) do
-    html = if present?(override), do: preview_html(override), else: library_html(library_text)
+    html = if present?(override), do: rich_html(override, &preview_attribute?/2), else: library_html(library_text)
     if html, do: {:safe, html}
   end
+
+  defp preview_attribute?(_tag, {"id", _id}), do: false
+  defp preview_attribute?(tag, attr), do: editor_attribute?(tag, attr)
 
   @doc "A caption as one line of plain text, or `nil` when there is none."
   def plain(text) when is_binary(text) do

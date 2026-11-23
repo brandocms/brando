@@ -44,7 +44,8 @@ configuration are blocking issues.
   comparison normalizes trailing whitespace, as Rewrite's writer does.
   Different content blocks the plan, even with `--yes`.
 - Consumer asset `package.json` manifests gain missing defaults; existing
-  dependency sources and scripts stay.
+  dependency sources and scripts stay. An existing `pnpm-workspace.yaml` and
+  frontend `europa.json5` (the site's theme) are kept as they are.
 - Historical migration names match independently of timestamps; newly added
   versions sort after existing ones.
 - Binary files (the templates' `.ico` favicons, the only binaries they ship)

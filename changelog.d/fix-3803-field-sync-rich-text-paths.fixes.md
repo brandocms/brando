@@ -1,0 +1,1 @@
+- A rich-text value the form refuses no longer reaches the other editors when Translate with AI writes it, goes along when the editor's other tab takes over, and is no longer replaced by another editor's older text after a reconnect.

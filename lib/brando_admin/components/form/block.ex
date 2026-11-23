@@ -3289,6 +3289,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       image_id: image.id,
       focal_x: (image.focal && image.focal.x) || 50,
       focal_y: (image.focal && image.focal.y) || 50,
+      focal_mode: Brando.Images.Focal.mode(image.focal),
       crop_groups: BrandoAdmin.Components.Form.build_crop_groups_for(image),
       from_block: true,
       config_target: image.config_target

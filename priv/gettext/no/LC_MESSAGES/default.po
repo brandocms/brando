@@ -847,6 +847,11 @@ msgstr[1] "%{label} +%{count} til"
 msgid "%{label} needs %{needed} units — only %{free} free in that row. Narrow another variable, or start a new row."
 msgstr "%{label} trenger %{needed} enheter – bare %{free} er ledige i den raden. Gjør en annen variabel smalere, eller start en ny rad."
 
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgid "%{label}, row %{row}"
+msgstr "%{label}, rad %{row}"
+
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
 msgid "%{languages} is not one of the installation's languages (config :brando, :languages)"
@@ -1173,6 +1178,13 @@ msgstr[1] "%{count} blokker er ulike"
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "1 block holds values the module no longer defines"
+msgid_plural "%{count} blocks hold values the module no longer defines"
+msgstr[0] "1 blokk har verdier modulen ikke lenger definerer"
+msgstr[1] "%{count} blokker har verdier modulen ikke lenger definerer"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
 msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
 msgstr[0] "1 blokk beholder det endringene la til; løs det under Blokkmoduler → Blokker på eldre versjoner."
@@ -1314,6 +1326,13 @@ msgid "1 object"
 msgid_plural "%{count} objects"
 msgstr[0] "1 objekt"
 msgstr[1] "%{count} objekter"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 of %{total} blocks holds a value"
+msgid_plural "%{count} of %{total} blocks hold a value"
+msgstr[0] "1 av %{total} blokker har en verdi"
+msgstr[1] "%{count} av %{total} blokker har en verdi"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -3060,6 +3079,11 @@ msgstr "Når forslaget tas i bruk, lagres også blokkene og mediene kilden har l
 msgid "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated."
 msgstr "Når forslaget tas i bruk, lagres også blokkene og mediene kilden har lagt til eller endret siden forrige lagring, med tekstene på kildens språk til de er oversatt."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+msgstr "Å ta i bruk endringen sletter ingenting en redaktør har skrevet. Blokkene beholder verdiene til du løser dem etterpå: fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå. Til da vises de der malen fortsatt nevner dem."
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Applying translations..."
@@ -3616,6 +3640,16 @@ msgstr "Blokkene får refen, tom eller med standardinnholdet"
 #, elixir-autogen, elixir-format
 msgid "Blocks in this translation follow the source. Add, remove or move them in the source."
 msgstr "Blokkene i denne oversettelsen følger kilden. Legg til, fjern eller flytt dem i kilden."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks keep what they hold in the removed refs and vars"
+msgstr "Blokkene beholder det de har i refsene og variablene som fjernes"
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks keep what they hold until it is resolved"
+msgstr "Blokkene beholder det de har til det er løst"
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -10893,6 +10927,7 @@ msgstr "Linje %{from}–%{to} · %{where}"
 msgid "Lines written to robots.txt"
 msgstr "Linjer som skrives til robots.txt"
 
+#: lib/brando_admin/components/form/alternates_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
@@ -12206,11 +12241,6 @@ msgstr "Navigasjon"
 msgid "Needs a choice"
 msgstr "Trenger et valg"
 
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Needs a migration"
-msgstr "Trenger en migrering"
-
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "Needs at least %{count} impressions on Google's first page."
@@ -13240,6 +13270,7 @@ msgstr "Ikke tilkoblet"
 msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
 msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde."
 
+#: lib/brando_admin/live/pages/page_list_live.ex
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
@@ -13304,6 +13335,11 @@ msgstr "Ikke i bruk noe sted ennå."
 #, elixir-autogen, elixir-format
 msgid "Not included: %{rows}."
 msgstr "Ikke med: %{rows}."
+
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Not linked, with the same keys"
+msgstr "Ikke koblet, med de samme nøklene"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -13677,6 +13713,11 @@ msgstr "Ingenting ble koblet til."
 #, elixir-autogen, elixir-format
 msgid "Nothing was connected. Start again from the app."
 msgstr "Ingenting ble koblet til. Start på nytt fra appen."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
+msgstr "Ingenting ble slettet: et fragment på denne siden er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -16180,8 +16221,8 @@ msgstr "Fjernet Figma-tilkoblingen som ble laget med den forrige appen"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
-msgid "Removes a var that blocks hold values for. Those values are dropped when the blocks re-render."
-msgstr "Fjerner en variabel som blokker har verdier i. Verdiene forsvinner når blokkene gjengis på nytt."
+msgid "Removes refs or vars. Blocks keep what they hold in them until you resolve the blocks after the apply."
+msgstr "Fjerner refs eller variabler. Blokkene beholder det de har i dem til du løser blokkene etter at endringen er tatt i bruk."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -16617,7 +16658,9 @@ msgid_plural "Resolve %{count} blocks?"
 msgstr[0] "Løse %{count} blokk?"
 msgstr[1] "Løse %{count} blokker?"
 
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/stale_blocks.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -21007,6 +21050,11 @@ msgstr "Disse kontoene er ikke knyttet til noe nettsted og får ingen nettstedst
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
 msgstr "Beskjæringene styres av bildeoppsettet. Plassering og zoom gjelder alle forhåndsvisningene."
 
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "These entries have this entry's keys in another language, but are not linked to it. Link one to make it this entry's version in its language."
+msgstr "Disse innleggene har dette innleggets nøkler på et annet språk, men er ikke koblet til det. Koble ett av dem for å gjøre det til dette innleggets versjon på sitt språk."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "These hosts were changed elsewhere, so what you typed here was not saved."
@@ -21041,6 +21089,11 @@ msgstr "De flyttes til papirkurven, og kommer tilbake hvis siden gjenopprettes."
 #, elixir-autogen, elixir-format
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
 msgstr "De kan lastes inn når revisjonen du har åpen er lukket, eller lagringen som pågår er ferdig."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+msgstr "De vises fortsatt der malen nevner dem. Fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå."
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
@@ -21346,6 +21399,11 @@ msgstr "Denne fotnoten ble ikke funnet i dette feltet."
 #, elixir-autogen, elixir-format
 msgid "This footnote could not be found. Its marker may have been pasted without its content."
 msgstr "Denne fotnoten ble ikke funnet. Markøren kan ha blitt limt inn uten innholdet."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "This form does not show these fields:"
+msgstr "Dette skjemaet viser ikke disse feltene:"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -22944,11 +23002,6 @@ msgstr "Gyldig"
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr "Verdi"
-
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Values are dropped when blocks re-render"
-msgstr "Verdiene forsvinner når blokkene gjengis på nytt"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

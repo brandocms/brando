@@ -1,18 +1,18 @@
-// EuropaCSS configuration for the site, compiled by the native `europa`
-// executable through @brandocms/vite-plugin-europacss (see vite.config.js).
-// It is data, not JavaScript: JSON5 with comments and trailing commas, and
-// `'{colors.bone.full}'` to refer to another token. CSS reads a value with
-// `theme(colors.accent)`; breakpoint maps go through `@space`, `@fontsize`
-// and the other at-rules. Vite reloads the CSS when this file changes.
+// The site's EuropaCSS theme, compiled by the native `europa` executable
+// through @brandocms/vite-plugin-europacss (see vite.config.js). It holds the
+// tokens the installed CSS reads; europa.example.json5 beside it is a fuller
+// worked set to copy from. JSON5: comments, trailing commas, and
+// `'{colors.bone.full}'` to refer to another token. Vite reloads the CSS when
+// this file changes.
 {
+  // Freezes `vw` and `dpx` values at the largest breakpoint; keep it unless the site should grow past `container.maxWidth`.
   setMaxForVw: true,
 
-  /* The width of the design's desktop artboard. Every `dpx` value is relative
-     to it: `20dpx` is 20 pixels when the viewport matches this width, and
-     scales with the viewport below it. Set it to your Figma frame width. */
+  // The design's desktop artboard width, which `dpx` is relative to: set it to your Figma frame width first.
   dpxViewportSize: 1440,
 
   theme: {
+    // Viewport ranges, each from its width to the next; js/config/BREAKPOINTS.js lists the same names, so rename both together.
     breakpoints: {
       iphone: '0',
       mobile: '480px',
@@ -23,76 +23,35 @@
       desktop_xl: '1920px',
     },
 
+    // Named groups of breakpoints for token maps and queries (`$sm`); adjust them after changing `breakpoints`.
     breakpointCollections: {
       $mobile: '<=mobile',
       $tablet: 'ipad_portrait/ipad_landscape',
       $desktop: '>=desktop_md',
       $lg: '>=ipad_landscape',
-      $sm: '<=ipad_portrait'
+      $sm: '<=ipad_portrait',
     },
 
+    // Page width and side padding for `@space container`; set the padding to the design's page margin first.
     container: {
-      /* With `setMaxForVw` the largest breakpoint's maxWidth cannot be a
-         percentage — EuropaCSS needs a length to freeze `vw` values against. */
-      maxWidth: {
-        iphone: '100%',
-        mobile: '100%',
-        ipad_portrait: '100%',
-        ipad_landscape: '100%',
-        desktop_md: '100%',
-        desktop_lg: '100%',
-        desktop_xl: '1920px',
-      },
-
-      padding: {
-        iphone: '16px',
-        mobile: '16px',
-        ipad_portrait: '20px',
-        ipad_landscape: '20px',
-        desktop_md: '20px',
-        desktop_lg: '20dpx',
-        desktop_xl: '20dpx',
-      },
+      maxWidth: { '*': '100%', desktop_xl: '1920px' },
+      padding: { $mobile: '16px', '*': 'scale-from(20, desktop_lg)' },
     },
 
+    // The column grid for `@column`, `@grid` and gutter multiples; match the design's column count and gutter first.
     columns: {
-      count: {
-        iphone: '12',
-        mobile: '12',
-        ipad_portrait: '12',
-        ipad_landscape: '12',
-        desktop_md: '12',
-        desktop_lg: '12',
-        desktop_xl: '12',
-      },
-
-      gutters: {
-        iphone: '16px',
-        mobile: '16px',
-        ipad_portrait: '20px',
-        ipad_landscape: '20px',
-        desktop_md: '20px',
-        desktop_lg: '20dpx',
-        desktop_xl: '20dpx',
-      },
+      count: { '*': 12 },
+      gutters: { $mobile: '16px', '*': 'scale-from(20, desktop_lg)' },
     },
 
+    // The palette the default modules use (dark green page, bone text, one accent); replace `green`, `bone` and `accent` with the brand's first.
     colors: {
       transparent: 'transparent',
       white: '#ffffff',
       black: '#000000',
-
-      /* The page is one flat, very dark green — roughly 4% lightness at hue
-         160. Everything on top of it is bone at a handful of opacities, plus
-         a single champagne accent for anything interactive or indexed. */
       green: '#030e0a',
-
-      /* One step up from the page, for insets like the terminal block. */
       shell: '#06150f',
-
       accent: '#d9b87a',
-
-      /* Reserved for "this is running / this is safe" signals. */
       live: '#6fcf97',
 
       bone: {
@@ -102,184 +61,81 @@
         faint: 'rgb(236 229 216 / 34%)',
         hairStrong: 'rgb(236 229 216 / 26%)',
         hair: 'rgb(236 229 216 / 14%)',
-        wash: 'rgb(236 229 216 / 5%)'
+        wash: 'rgb(236 229 216 / 5%)',
       },
 
-      /* Debug helpers: `dbg` for ad-hoc highlighting, `grid` for the column
-         overlay EuropaCSS draws. */
-      dbg: 'pink',
+      // The column overlay `@europa base` draws for `.dbg-grid`.
       grid: 'rgb(111 207 151 / 20%)',
 
       body: {
-        foreground: '#ece5d8',
-        background: '#030e0a'
+        foreground: '{colors.bone.full}',
+        background: '{colors.green}',
       },
 
       link: {
         regular: {
-          text: '#ece5d8',
-          border: 'rgb(236 229 216 / 26%)'
+          text: '{colors.bone.full}',
+          border: '{colors.bone.hairStrong}',
         },
         hover: {
-          text: '#d9b87a',
-          border: '#d9b87a'
-        }
-      }
+          text: '{colors.accent}',
+        },
+      },
     },
 
     typography: {
-      /* `base` is the px value of 1rem set as font-size on the html element. */
+      // The px value of 1rem on the html element.
       base: '16px',
 
-      /* Fallback line height for inline sizes such as `@fontsize 15px`. Named
-         sizes carry their own through `__base__`. */
-      lineHeight: {
-        iphone: 1.5,
-        mobile: 1.5,
-        ipad_portrait: 1.5,
-        ipad_landscape: 1.5,
-        desktop_md: 1.5,
-        desktop_lg: 1.5,
-        desktop_xl: 1.5,
-      },
+      // Line height for inline sizes such as `@fontsize 15px`; named sizes carry their own.
+      lineHeight: { '*': 1.5 },
 
-      /* Sizes are flat pixels up to `desktop_md` and the same number as `dpx`
-         above it, so type scales with the artboard on large screens only.
-
-         Line heights are written as `em`, not `%`: browsers floor a percentage
-         line height to a whole percent, so `116.667%` lays out as `116%` and
-         every fractional pair comes up short. */
+      // The type scale the default modules use, px below `desktop_lg` and scaling from it; set the sizes to the design's text styles first.
       sizes: {
-        base: {
+        'base': {
           __base__: { 'line-height': '150%' },
-          iphone: { 'font-size': '16px' },
-          mobile: { 'font-size': '16px' },
-          ipad_portrait: { 'font-size': '16px' },
-          ipad_landscape: { 'font-size': '16px' },
-          desktop_md: { 'font-size': '16px' },
-          desktop_lg: { 'font-size': '16dpx' },
-          desktop_xl: { 'font-size': '16dpx' },
+          '*': { 'font-size': 'scale-from(16, desktop_lg)' },
         },
 
         'text/xs': {
           __base__: { 'line-height': '150%' },
-          iphone: { 'font-size': '12px' },
-          mobile: { 'font-size': '12px' },
-          ipad_portrait: { 'font-size': '12px' },
-          ipad_landscape: { 'font-size': '12px' },
-          desktop_md: { 'font-size': '12px' },
-          desktop_lg: { 'font-size': '12dpx' },
-          desktop_xl: { 'font-size': '12dpx' },
+          '*': { 'font-size': 'scale-from(12, desktop_lg)' },
         },
 
         'text/sm': {
           __base__: { 'line-height': '1.42858em' },
-          iphone: { 'font-size': '14px' },
-          mobile: { 'font-size': '14px' },
-          ipad_portrait: { 'font-size': '14px' },
-          ipad_landscape: { 'font-size': '14px' },
-          desktop_md: { 'font-size': '14px' },
-          desktop_lg: { 'font-size': '14dpx' },
-          desktop_xl: { 'font-size': '14dpx' },
-        },
-
-        'text/base': {
-          __base__: { 'line-height': '150%' },
-          iphone: { 'font-size': '16px' },
-          mobile: { 'font-size': '16px' },
-          ipad_portrait: { 'font-size': '16px' },
-          ipad_landscape: { 'font-size': '16px' },
-          desktop_md: { 'font-size': '16px' },
-          desktop_lg: { 'font-size': '16dpx' },
-          desktop_xl: { 'font-size': '16dpx' },
+          '*': { 'font-size': 'scale-from(14, desktop_lg)' },
         },
 
         'text/lg': {
           __base__: { 'line-height': '1.44445em' },
-          iphone: { 'font-size': '18px' },
-          mobile: { 'font-size': '18px' },
-          ipad_portrait: { 'font-size': '18px' },
-          ipad_landscape: { 'font-size': '18px' },
-          desktop_md: { 'font-size': '18px' },
-          desktop_lg: { 'font-size': '18dpx' },
-          desktop_xl: { 'font-size': '18dpx' },
+          '*': { 'font-size': 'scale-from(18, desktop_lg)' },
         },
 
         'code/sm': {
           __base__: { 'line-height': '1.95em' },
-          iphone: { 'font-size': '12px' },
-          mobile: { 'font-size': '12px' },
-          ipad_portrait: { 'font-size': '13px' },
-          ipad_landscape: { 'font-size': '13px' },
-          desktop_md: { 'font-size': '13px' },
-          desktop_lg: { 'font-size': '13dpx' },
-          desktop_xl: { 'font-size': '13dpx' },
+          $mobile: { 'font-size': '12px' },
+          '*': { 'font-size': 'scale-from(13, desktop_lg)' },
         },
 
         'heading/xl': {
           __base__: { 'line-height': '140%' },
-          iphone: { 'font-size': '20px' },
-          mobile: { 'font-size': '20px' },
-          ipad_portrait: { 'font-size': '20px' },
-          ipad_landscape: { 'font-size': '20px' },
-          desktop_md: { 'font-size': '20px' },
-          desktop_lg: { 'font-size': '20dpx' },
-          desktop_xl: { 'font-size': '20dpx' },
+          '*': { 'font-size': 'scale-from(20, desktop_lg)' },
         },
 
         'heading/2xl': {
           __base__: { 'line-height': '1.33334em' },
-          iphone: { 'font-size': '24px' },
-          mobile: { 'font-size': '24px' },
-          ipad_portrait: { 'font-size': '24px' },
-          ipad_landscape: { 'font-size': '24px' },
-          desktop_md: { 'font-size': '24px' },
-          desktop_lg: { 'font-size': '24dpx' },
-          desktop_xl: { 'font-size': '24dpx' },
+          '*': { 'font-size': 'scale-from(24, desktop_lg)' },
         },
 
         'heading/3xl': {
           __base__: { 'line-height': '1.26667em' },
-          iphone: { 'font-size': '30px' },
-          mobile: { 'font-size': '30px' },
-          ipad_portrait: { 'font-size': '30px' },
-          ipad_landscape: { 'font-size': '30px' },
-          desktop_md: { 'font-size': '30px' },
-          desktop_lg: { 'font-size': '30dpx' },
-          desktop_xl: { 'font-size': '30dpx' },
-        },
-
-        'heading/4xl': {
-          __base__: { 'line-height': '1.33334em' },
-          iphone: { 'font-size': '36px' },
-          mobile: { 'font-size': '36px' },
-          ipad_portrait: { 'font-size': '36px' },
-          ipad_landscape: { 'font-size': '36px' },
-          desktop_md: { 'font-size': '36px' },
-          desktop_lg: { 'font-size': '36dpx' },
-          desktop_xl: { 'font-size': '36dpx' },
+          '*': { 'font-size': 'scale-from(30, desktop_lg)' },
         },
 
         'heading/5xl': {
           __base__: { 'line-height': '1.16667em' },
-          iphone: { 'font-size': '48px' },
-          mobile: { 'font-size': '48px' },
-          ipad_portrait: { 'font-size': '48px' },
-          ipad_landscape: { 'font-size': '48px' },
-          desktop_md: { 'font-size': '48px' },
-          desktop_lg: { 'font-size': '48dpx' },
-          desktop_xl: { 'font-size': '48dpx' },
-        },
-
-        'heading/6xl': {
-          __base__: { 'line-height': '1.13334em' },
-          iphone: { 'font-size': '60px' },
-          mobile: { 'font-size': '60px' },
-          ipad_portrait: { 'font-size': '60px' },
-          ipad_landscape: { 'font-size': '60px' },
-          desktop_md: { 'font-size': '60px' },
-          desktop_lg: { 'font-size': '60dpx' },
-          desktop_xl: { 'font-size': '60dpx' },
+          '*': { 'font-size': 'scale-from(48, desktop_lg)' },
         },
 
         'heading/7xl': {
@@ -289,13 +145,12 @@
           ipad_portrait: { 'font-size': '56px' },
           ipad_landscape: { 'font-size': '72px' },
           desktop_md: { 'font-size': '80px' },
-          desktop_lg: { 'font-size': '92dpx' },
-          desktop_xl: { 'font-size': '92dpx' },
+          '*': { 'font-size': '92dpx' },
         },
       },
 
+      // Font stacks for `@font`; `@europa base` needs `main` (the body) and `mono`, so put the site's typeface in `main` first.
       families: {
-        /* `main` is what `@europa base` sets on the body. */
         main: [
           '-apple-system',
           'BlinkMacSystemFont',
@@ -303,162 +158,28 @@
           'Roboto',
           '"Helvetica Neue"',
           'Arial',
-          'sans-serif'
+          'sans-serif',
         ],
 
-        sans: [
-          '-apple-system',
-          'BlinkMacSystemFont',
-          '"Segoe UI"',
-          'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
-          'sans-serif'
-        ],
-
-        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
-
-        mono: ['Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace']
-      }
+        mono: ['Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+      },
     },
 
-    /* Spacing steps are flat across breakpoints: a component picks a smaller
-       step on mobile rather than the step shrinking. Only the block rhythm,
-       the container and the gutters change size. A step is used by name
-       (`@space padding-top lg`); a group such as `radius` by its path
-       (`@space border-radius radius.regular`). */
+    // Spacing steps for `@space` (`blocks` is the gap between blocks, `indent` the text column's inset); set `blocks` and the steps to the design's rhythm first.
     spacing: {
-      xxxs: {
-        iphone: '4px',
-        mobile: '4px',
-        ipad_portrait: '4px',
-        ipad_landscape: '4px',
-        desktop_md: '4px',
-        desktop_lg: '4dpx',
-        desktop_xl: '4dpx',
-      },
-
-      xxs: {
-        iphone: '8px',
-        mobile: '8px',
-        ipad_portrait: '8px',
-        ipad_landscape: '8px',
-        desktop_md: '8px',
-        desktop_lg: '8dpx',
-        desktop_xl: '8dpx',
-      },
-
-      xs: {
-        iphone: '10px',
-        mobile: '10px',
-        ipad_portrait: '10px',
-        ipad_landscape: '10px',
-        desktop_md: '10px',
-        desktop_lg: '10dpx',
-        desktop_xl: '10dpx',
-      },
-
-      sm: {
-        iphone: '16px',
-        mobile: '16px',
-        ipad_portrait: '16px',
-        ipad_landscape: '16px',
-        desktop_md: '16px',
-        desktop_lg: '16dpx',
-        desktop_xl: '16dpx',
-      },
-
-      md: {
-        iphone: '24px',
-        mobile: '24px',
-        ipad_portrait: '24px',
-        ipad_landscape: '24px',
-        desktop_md: '24px',
-        desktop_lg: '24dpx',
-        desktop_xl: '24dpx',
-      },
-
-      lg: {
-        iphone: '40px',
-        mobile: '40px',
-        ipad_portrait: '40px',
-        ipad_landscape: '40px',
-        desktop_md: '40px',
-        desktop_lg: '40dpx',
-        desktop_xl: '40dpx',
-      },
-
-      xl: {
-        iphone: '48px',
-        mobile: '48px',
-        ipad_portrait: '64px',
-        ipad_landscape: '80px',
-        desktop_md: '80px',
-        desktop_lg: '80dpx',
-        desktop_xl: '80dpx',
-      },
-
-      xxl: {
-        iphone: '128px',
-        mobile: '128px',
-        ipad_portrait: '128px',
-        ipad_landscape: '128px',
-        desktop_md: '128px',
-        desktop_lg: '128dpx',
-        desktop_xl: '128dpx',
-      },
-
-      blocks: {
-        iphone: '128px',
-        mobile: '128px',
-        ipad_portrait: '128px',
-        ipad_landscape: '160px',
-        desktop_md: '160px',
-        desktop_lg: '160dpx',
-        desktop_xl: '160dpx',
-      },
-
-      blocksInner: {
-        iphone: '64px',
-        mobile: '64px',
-        ipad_portrait: '64px',
-        ipad_landscape: '80px',
-        desktop_md: '80px',
-        desktop_lg: '80dpx',
-        desktop_xl: '80dpx',
-      },
-
-      indent: {
-        iphone: '0px',
-        mobile: '0px',
-        ipad_portrait: '0px',
-        ipad_landscape: '48px',
-        desktop_md: '48px',
-        desktop_lg: '48dpx',
-        desktop_xl: '48dpx',
-      },
+      xxs: { '*': 'scale-from(8, desktop_lg)' },
+      xs: { '*': 'scale-from(10, desktop_lg)' },
+      sm: { '*': 'scale-from(16, desktop_lg)' },
+      md: { '*': 'scale-from(24, desktop_lg)' },
+      lg: { '*': 'scale-from(40, desktop_lg)' },
+      xl: { $mobile: '48px', ipad_portrait: '64px', '*': 'scale-from(80, desktop_lg)' },
+      xxl: { '*': 'scale-from(128, desktop_lg)' },
+      blocks: { $sm: '128px', '*': 'scale-from(160, desktop_lg)' },
+      indent: { $sm: '0px', '*': 'scale-from(48, desktop_lg)' },
 
       radius: {
-        regular: {
-          iphone: '4px',
-          mobile: '4px',
-          ipad_portrait: '4px',
-          ipad_landscape: '4px',
-          desktop_md: '4px',
-          desktop_lg: '4dpx',
-          desktop_xl: '4dpx',
-        },
-
-        image: {
-          iphone: '8px',
-          mobile: '8px',
-          ipad_portrait: '8px',
-          ipad_landscape: '8px',
-          desktop_md: '8px',
-          desktop_lg: '8dpx',
-          desktop_xl: '8dpx',
-        },
+        regular: { '*': 'scale-from(4, desktop_lg)' },
       },
-    }
-  }
+    },
+  },
 }

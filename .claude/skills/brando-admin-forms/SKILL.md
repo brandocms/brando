@@ -25,8 +25,14 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `lib/brando_admin/components/form/transformer.ex`. Preserve already collected
   state: `assign_transformer_statuses` deliberately initializes only once.
   A transformer also loads its rows once; after a save that stays on the
-  form, the Form hands it the saved rows (`entry_saved`), which make the
-  rows it sent saved rows, so the next save doesn't insert them again.
+  form, the Form hands it the rows its save wrote, as the save returned
+  them (`written`), which make the rows it sent saved rows, so the next
+  save doesn't insert them again; and the rows read back after the save,
+  which also hold another editor's save that landed while this one ran
+  (the Form takes none then): each item stores the row read back with its
+  id (and shows the asset it names when that differs from the written
+  one), and other ids are taken in as below. A card is drawn again only
+  when its row was new or the row read back differs from the written one.
   After another editor's save (`take_saved_entry`), it hands it that save's
   rows (`entry_saved_elsewhere`): the transformer takes them under its own
   unsaved changes, told from the rows it was built on (`base_ids`).
@@ -60,7 +66,12 @@ area in [the section map](form-map.md) and grep for the names it lists.
   from `pending_changes` or from a recovery's `share_recovered/3`, and stays
   in `unshipped_fields` until corrected (a recovered one too), so another
   editor's save keeps it; the others still see it marked
-  (`broadcast_dirty_fields`). Received values go through
+  (`broadcast_dirty_fields`). Every path that puts values in the form
+  without a `validate` runs the check first (`put_written_form/2`,
+  `take_handed_over/3`), or `refused?` can't see them; a refused value goes
+  to the editor's other tab with the uncast ones (`tab_release`), and a
+  recovered one typed offline gets a clock of its own (`unsent_clocks`),
+  never sent, so an older value in a late join reply doesn't replace it. Received values go through
   `apply_field_change/3`, which drops the browser's param for the field (the
   form shows a param before a saved value), and only when their clock is
   newer. Form recovery (`recover_form`) marks only the fields the Form hook

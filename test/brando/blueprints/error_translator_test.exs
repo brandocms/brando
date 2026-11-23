@@ -13,6 +13,37 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
     def __naming__, do: %{domain: "ErrorTest", schema: "Entry"}
   end
 
+  # A schema whose default form labels what a named form may leave out, with
+  # scheduled publishing's drawer
+  defmodule DrawerSchema do
+    @moduledoc false
+
+    alias Brando.Blueprint.Forms
+
+    def __modules__, do: %{gettext: Brando.Gettext}
+    def __naming__, do: %{domain: "ErrorTest", schema: "Entry"}
+    def has_trait(trait), do: trait == Brando.Trait.ScheduledPublishing
+
+    def __form__ do
+      %Forms.Form{
+        tabs: [
+          %Forms.Tab{
+            name: "Content",
+            fields: [
+              %Forms.Fieldset{
+                fields: [
+                  %Forms.Input{name: :phone, type: :text, opts: [label: "Mobile"]},
+                  %Forms.Input{name: :summary, type: :text, opts: [label: "  "]},
+                  %Forms.Subform{name: :vars, label: "Line items"}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    end
+  end
+
   test "uses configured labels and humanizes hidden or missing labels" do
     form =
       form_with_fields([
@@ -65,6 +96,47 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
       end)
 
     refute log =~ "Could not get field"
+  end
+
+  describe "a field outside the form's tabs" do
+    # The block editor and the drawers draw these: an error on one is marked
+    # where the editor corrects it, and its label is the one shown there
+    test "counts as drawn when the form's blocks or a drawer draw it" do
+      form = %{form_with_fields([]) | blocks: [%Forms.Input{name: :blocks, type: :blocks, opts: []}]}
+
+      log =
+        OwnLog.capture(fn ->
+          for key <- [:entry_blocks, :publish_at, :unpublish_at, :meta_title] do
+            assert ErrorTranslator.drawn?(key, form, DrawerSchema), inspect(key)
+          end
+
+          refute ErrorTranslator.drawn?(:entry_notes, form, DrawerSchema)
+          refute ErrorTranslator.drawn?(:publish_at, form, Schema)
+
+          assert ErrorTranslator.translate_keys([:entry_blocks, :publish_at], form, DrawerSchema) ==
+                   ["Blocks", Gettext.dgettext(Brando.Gettext, "default", "Publish at")]
+        end)
+
+      refute log =~ "Could not get field"
+    end
+  end
+
+  describe "a field the form does not draw" do
+    test "goes by the default form's label: a subform's, a blank one's humanized name" do
+      assert ErrorTranslator.undrawn_label(:phone, DrawerSchema) == "Mobile"
+      assert ErrorTranslator.undrawn_label(:vars, DrawerSchema) == "Line items"
+      assert ErrorTranslator.undrawn_label(:summary, DrawerSchema) == "Summary"
+      assert ErrorTranslator.undrawn_label(:title, DrawerSchema) == "Title"
+    end
+
+    # Its rows' errors are nested: one entry, under the relation's label
+    test "a relation is one entry with its rows' messages" do
+      assert ErrorTranslator.undrawn_entry(page_with_invalid_vars(2), :vars, DrawerSchema, &message/1) ==
+               {"Line items", "can't be blank"}
+
+      changeset = Changeset.add_error(Changeset.change(%Brando.Pages.Page{}), :title, "is invalid")
+      assert ErrorTranslator.undrawn_entry(changeset, :title, DrawerSchema, &message/1) == {"Title", "is invalid"}
+    end
   end
 
   describe "describe/3" do

@@ -226,6 +226,11 @@ defmodule E2EFixtureController do
         "release-review" ->
           create_release_review()
 
+        # A release that removes the Single Image with Caption module's
+        # `show_border` var, which one of its blocks holds a value for
+        "release-removal" ->
+          create_release_removal()
+
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor
         "write-with-ai-module" ->
@@ -359,6 +364,48 @@ defmodule E2EFixtureController do
     never |> Ecto.Changeset.change(class: "made-here") |> Brando.Repo.update!()
     Brando.Repo.delete_all(from(a in Brando.Content.DefinitionApply, where: a.uid == ^never.uid))
     user
+  end
+
+  defp create_release_removal do
+    user = get_admin_user()
+    dir = Brando.Content.Definitions.Release.path()
+    File.rm_rf!(dir)
+    {:ok, _} = Brando.Content.Definitions.export(dir, user)
+    File.rm(Path.join(dir, "modules.lock.json"))
+    {:ok, _} = Brando.Content.Definitions.Release.plan(version: "2026.11.22-1")
+
+    module = Brando.Repo.get_by!(Brando.Content.Module, class: "single-image-caption")
+
+    block =
+      Brando.Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        module_id: module.id,
+        creator_id: user.id
+      })
+
+    Brando.Repo.insert!(%Brando.Content.Var{
+      block_id: block.id,
+      key: "show_border",
+      type: :boolean,
+      label: %{"en" => "Show border"},
+      value_boolean: true
+    })
+
+    file = release_file!(dir, module)
+    source = File.read!(file)
+    File.write!(file, Regex.replace(~r/\n    var "show_border", "boolean" do\n.*?\n    end\n/s, source, "\n"))
+    user
+  end
+
+  defp release_file!(dir, module) do
+    [file] =
+      dir
+      |> Path.join("**/*.exs")
+      |> Path.wildcard()
+      |> Enum.filter(&(File.read!(&1) =~ ~s(uid "#{module.uid}")))
+
+    file
   end
 
   defp edit_release_template!(dir, module, from, to) do

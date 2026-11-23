@@ -185,6 +185,26 @@ defmodule Mix.Brando.Igniter.InstallTest do
     refute Enum.any?(again.notices, &(&1 =~ "which was not added"))
   end
 
+  test "a rerun keeps the site's europa.json5, an earlier template's or edited, and adds the example beside it" do
+    example = File.read!("priv/templates/brando.install/assets/frontend/europa.example.json5")
+    edited = String.replace(example, "{", "{\n  // the site's own palette", global: false)
+    applied = project() |> install() |> Igniter.Test.apply_igniter!()
+
+    for theme <- [example, edited] do
+      earlier =
+        applied
+        |> Igniter.update_file("assets/frontend/europa.json5", &Rewrite.Source.update(&1, :content, theme))
+        |> Igniter.rm("assets/frontend/europa.example.json5")
+        |> Igniter.Test.apply_igniter!()
+
+      reloaded = Enum.reduce(Map.keys(earlier.assigns.test_files), earlier, &Igniter.include_existing_file(&2, &1))
+      rerun = install(reloaded, ["--ai"])
+      assert rerun.issues == []
+      Igniter.Test.assert_unchanged(rerun, "assets/frontend/europa.json5")
+      assert IgniterCase.source(rerun, "assets/frontend/europa.example.json5") == example
+    end
+  end
+
   test "an applied install can be rerun with no changes or duplicate initialization" do
     igniter = project() |> install(["--tenancy-mode", "single", "--site-key", "studio"]) |> Igniter.Test.apply_igniter!()
     reloaded = Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, &Igniter.include_existing_file(&2, &1))

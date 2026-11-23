@@ -27,7 +27,11 @@ defmodule Brando.Plug.SiteAssets do
   set the same way. A path those miss answers from the own set of another
   environment of the same site (`Brando.Assets.SiteAssets.other_environment_path/3`),
   sent with `Cache-Control: no-cache`: a live or shared preview of that
-  environment is shown on this host and names that set's files.
+  environment is shown on this host and names that set's files. In
+  development, the dev site's hosts, and the admin's for its live preview,
+  then answer from the `public/` folder of its Vite project
+  (`Brando.Assets.SiteAssets.dev_site_public_file/3`,
+  `Brando.Assets.SiteAssets.unscoped_public_file/1`), also with `no-cache`.
 
   Its files, and those of the plugs after it that answer before the router
   (the release's `Plug.Static`, `Brando.Plug.Media`), are sent with
@@ -148,7 +152,7 @@ defmodule Brando.Plug.SiteAssets do
       :multi ->
         case Frontend.resolve(conn.host) do
           {site, environment} -> environment_path(site, environment, relative_path)
-          nil -> {SiteAssets.unscoped_path(relative_path), @ask_again}
+          nil -> {unscoped_path(conn.host, relative_path), @ask_again}
         end
 
       _standalone ->
@@ -156,12 +160,24 @@ defmodule Brando.Plug.SiteAssets do
     end
   end
 
-  # The host's own sets first; another environment's own set only after a miss
+  # The host's own sets first; another environment's own set only after a
+  # miss, and the development site's project `public/` folder last
   defp environment_path(site, environment, relative_path) do
     case SiteAssets.serve_path(site, environment, relative_path) do
-      nil -> {SiteAssets.other_environment_path(site, environment, relative_path), @ask_again}
-      file -> {file, @immutable}
+      nil ->
+        {SiteAssets.other_environment_path(site, environment, relative_path) ||
+           SiteAssets.dev_site_public_file(site, environment, relative_path), @ask_again}
+
+      file ->
+        {file, @immutable}
     end
+  end
+
+  # The development site's project `public/` folder answers on the admin's
+  # host alone, for its live preview
+  defp unscoped_path(host, relative_path) do
+    SiteAssets.unscoped_path(relative_path) ||
+      if BrandoAdmin.AdminHost.admin_host?(host), do: SiteAssets.unscoped_public_file(relative_path)
   end
 
   # `:single` resolves the host to an environment of its one site; `:none` has none

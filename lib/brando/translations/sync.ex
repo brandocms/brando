@@ -105,6 +105,10 @@ defmodule Brando.Translations.Sync do
   `:awaiting_translation` item until the translation exists. Without the
   option, links are copied as they are.
 
+  `:fragments` maps the fragments the source's blocks embed (`fragment_ids/2`)
+  to their versions in the target's language: a fragment block follows the
+  source, embedding that version, or the source's fragment when it has none.
+
   Returns `payload` (the merged target), `work_items`
   (`%{path, kind, source_digest, source_previous, minor}`), `notes`, the
   `baseline` and `baseline_texts` to store, the payload's `paths`,
@@ -121,6 +125,7 @@ defmodule Brando.Translations.Sync do
     {payload, notes} = merge(source, target, spec)
     {payload, awaiting} = resolve_identifiers(payload, spec, Keyword.get(opts, :identifiers))
     {payload, awaiting} = resolve_tree(payload, target, spec, Keyword.get(opts, :entries), awaiting)
+    payload = resolve_fragments(payload, spec, Keyword.get(opts, :fragments))
     payload = reseed(payload, source, spec, Keyword.get(opts, :untranslated, MapSet.new()))
 
     source_rows = flatten(source, spec)
@@ -1135,26 +1140,43 @@ defmodule Brando.Translations.Sync do
   # --- Tree relations ---------------------------------------------------------
 
   @doc """
-  The `belongs_to` relations of `schema` that point at `schema` itself, like a
-  page's parent. They follow the source, mapped onto the same entry's version
-  in the target's language. Only schemas with alternates have such versions;
-  one listed in `language_controlled_fields` stays each language's own.
+  The `belongs_to` relations of a schema with alternates that follow the
+  source mapped onto the related entry's version in the target's language:
+  one that points at the schema itself, like a page's parent, unless it is
+  listed in `language_controlled_fields`; and one the trait declares
+  `always_source_controlled` that points at another schema with alternates,
+  like a fragment's page. Any other `belongs_to` is each language's own, or
+  copied as it is when the application lists it in `source_controlled_fields`.
   """
-  def tree_relations(schema, config \\ nil) do
+  def tree_relations(schema, config \\ nil), do: schema |> tree_targets(config) |> Enum.map(&elem(&1, 0))
+
+  @doc "`tree_relations/2` with the schema each relation points at: `[{name, module}]`."
+  def tree_targets(schema, config \\ nil) do
     config = config || schema.__translatable_config__()
 
-    if function_exported?(schema, :has_alternates?, 0) and schema.has_alternates?() do
+    if alternates?(schema) do
       for %{type: :belongs_to, name: name, opts: opts} <- Relations.__relations__(schema),
-          opts[:module] == schema,
-          name not in Map.get(config, :language_controlled_fields, []),
-          do: name
+          tree_relation?(schema, name, opts[:module], config),
+          do: {name, opts[:module]}
     else
       []
     end
   end
 
-  # `:entries` maps each source id to its version in the target's language, or
-  # nil when there is none yet. Then the target keeps its own value and an
+  defp tree_relation?(schema, name, schema, config), do: name not in Map.get(config, :language_controlled_fields, [])
+
+  defp tree_relation?(schema, name, module, config) do
+    name in schema.__translatable_always_source_controlled__() and name in config.source_controlled_fields and
+      alternates?(module)
+  end
+
+  defp alternates?(module) do
+    is_atom(module) and Code.ensure_loaded?(module) and function_exported?(module, :has_alternates?, 0) and
+      module.has_alternates?()
+  end
+
+  # `:entries` maps each relation's source id (`{name, id}`) to the entry's
+  # version in the target's language, or nil when there is none yet. Then the target keeps its own value and an
   # `:awaiting_translation` item records the field and the awaited id
   # (`parent/12`); a re-sync after that version is created fills it in.
   defp resolve_tree(payload, _target, _spec, nil, awaiting), do: {payload, awaiting}
@@ -1173,11 +1195,43 @@ defmodule Brando.Translations.Sync do
         {acc, awaiting}
 
       source_id ->
-        case Map.get(map, source_id) do
+        case Map.get(map, {name, source_id}) do
           # The path names the awaited entry, so only its translation re-syncs this
           nil -> {Map.put(acc, field, Map.get(target, field)), [awaiting_item("#{name}/#{source_id}") | awaiting]}
           id -> {Map.put(acc, field, id), awaiting}
         end
+    end
+  end
+
+  # --- Fragments --------------------------------------------------------------
+
+  @doc "The ids of the fragments the blocks of `entry` embed."
+  def fragment_ids(entry, schema, config \\ nil) do
+    spec = spec(schema, config || schema.__translatable_config__(), %{})
+
+    spec.blocks_fields
+    |> Enum.flat_map(fn field -> entry |> Map.get(field) |> loaded() |> Enum.flat_map(&block_fragment_ids(&1.block)) end)
+    |> Enum.uniq()
+  end
+
+  defp block_fragment_ids(block),
+    do: List.wrap(block.fragment_id) ++ Enum.flat_map(loaded(block.children), &block_fragment_ids/1)
+
+  defp resolve_fragments(payload, _spec, nil), do: payload
+
+  defp resolve_fragments(payload, spec, map) do
+    Enum.reduce(spec.blocks_fields, payload, fn field, acc ->
+      joins = Enum.map(loaded(Map.get(acc, field)), &%{&1 | block: resolve_fragment(&1.block, map)})
+      Map.put(acc, field, joins)
+    end)
+  end
+
+  defp resolve_fragment(block, map) do
+    block = %{block | children: Enum.map(loaded(block.children), &resolve_fragment(&1, map))}
+
+    case map[block.fragment_id] do
+      nil -> block
+      id -> %{unload(block, :fragment) | fragment_id: id}
     end
   end
 

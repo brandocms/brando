@@ -1,0 +1,1 @@
+- A transformer row another editor saved while your own save was running is no longer deleted by your next save, the row you added in that save shows once, and a value or image that editor changed in a row you didn't touch shows as saved.

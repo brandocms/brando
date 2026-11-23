@@ -99,6 +99,37 @@ defmodule Brando.Content.DefinitionWatcherTest do
     assert state.() == :in_sync
   end
 
+  test "a save that removes a var blocks hold logs the plan's count and resolve line", c do
+    assert {:ok, _} = Watcher.sync(c.path, c.user.id)
+
+    block =
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        module_id: hero().id,
+        creator_id: c.user.id
+      })
+
+    Repo.insert!(%Brando.Content.Var{block_id: block.id, key: "theme", type: :select, label: %{"en" => "Theme"}})
+    without = Regex.replace(~r/\n  vars do\n.*?\n  end\n/s, c.source, "")
+    write!(c, String.replace(without, " class={@theme}", ""))
+
+    level = Logger.level()
+    Logger.configure(level: :info)
+
+    log =
+      try do
+        ExUnit.CaptureLog.capture_log(fn ->
+          Watcher.handle_info(:sync, %{path: c.path, user_id: c.user.id, config: [], timer: nil, status: nil})
+        end)
+      after
+        Logger.configure(level: level)
+      end
+
+    assert log =~ "update module hero-test: removes var theme (1 of 1 blocks hold it, 0 entries)"
+    assert log =~ "  resolve: mix brando.modules resolve --uid hero-test --user #{c.user.id} --drop var:theme --apply"
+  end
+
   test "file/1 shows nothing when the watcher is not running" do
     assert Watcher.file("hero-test") == nil
   end

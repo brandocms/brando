@@ -1,0 +1,1 @@
+- A new site's `europa.json5` writes each token once with collection keys and `scale-from()` instead of an entry per breakpoint, and its frontend labels font and spacing values with their tokens in the browser's dev tools during development.

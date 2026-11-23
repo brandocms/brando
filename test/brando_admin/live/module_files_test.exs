@@ -77,6 +77,44 @@ defmodule BrandoAdmin.ModuleFilesTest do
     assert Repo.aggregate(Module, :count) == 1
   end
 
+  test "an import that removes a var blocks hold says so, and links to Resolve blocks", c do
+    block =
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        module_id: c.module.id,
+        creator_id: c.current_user.id
+      })
+
+    Repo.insert!(%Brando.Content.Var{block_id: block.id, key: "theme", type: :select, label: %{"en" => "Theme"}})
+
+    {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
+    {:ok, archive} = view |> export() |> Archive.read()
+
+    files =
+      Map.new(archive.files, fn {name, body} ->
+        if String.ends_with?(name, ".exs") do
+          without = Regex.replace(~r/\n  vars do\n.*?\n  end\n/s, body, "")
+          assert without != body
+          {name, String.replace(without, "class={@theme}", ~s(class="hero"))}
+        else
+          {name, body}
+        end
+      end)
+
+    {:ok, binary} = Archive.pack(files)
+    upload(view, binary)
+    assert has_element?(view, "[data-testid=module-files-removal][data-uid=hero-test]")
+    view |> element("#module-files-apply") |> render_click()
+
+    assert has_element?(view, "#module-files-result [data-testid=module-files-removal][data-uid=hero-test]")
+
+    assert has_element?(
+             view,
+             ~s(#module-files-result a[data-testid=module-files-resolve][href="/admin/config/content/modules/update/#{c.module.id}/stale-blocks"])
+           )
+  end
+
   test "conflicts disable apply and stale previews cannot overwrite admin edits", c do
     {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
     binary = edited(export(view), "desired")
