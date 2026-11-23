@@ -101,17 +101,42 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   defp media_drop_children(%{children: children}) when is_list(children), do: Enum.reject(children, & &1.deleted_at)
   defp media_drop_children(_module), do: []
 
+  # Shown for a multi module with children, and for a stored setting that no
+  # longer fits, so it can be cleared
+  defp media_drop_settings?(form, multi, children),
+    do: (multi && children != []) || media_drop_value(form[:media_drop_child]) || media_drop_value(form[:media_drop_ref])
+
+  defp media_drop_value(%{value: value}) when value in [nil, ""], do: nil
+  defp media_drop_value(%{value: value}), do: value
+
   attr :form, :any, required: true
+  attr :multi, :boolean, required: true
   attr :children, :list, required: true
 
   # Images and videos dropped on this module's blocks: each makes one block of
   # the chosen child module, with the file in the chosen ref
-  # (`Brando.Content.Module.validate_media_drop/1`).
+  # (`Brando.Content.Module.validate_media_drop/1`). A stored setting that no
+  # longer fits says what is wrong on its select without blocking the save
+  # of another field.
   defp media_drop_settings(assigns) do
-    child = Enum.find(assigns.children, &(&1.uid == assigns.form[:media_drop_child].value))
+    child_field = assigns.form[:media_drop_child]
+    ref_field = assigns.form[:media_drop_ref]
+    child = Enum.find(assigns.children, &(&1.uid == child_field.value))
+
+    issue =
+      Brando.Content.Module.media_drop_issue(
+        %{
+          multi: assigns.multi,
+          media_drop_child: media_drop_value(child_field),
+          media_drop_ref: media_drop_value(ref_field)
+        },
+        assigns.children
+      )
 
     assigns =
       assign(assigns,
+        child_field: with_issue(child_field, ref_field, issue, :media_drop_child),
+        ref_field: with_issue(ref_field, child_field, issue, :media_drop_ref),
         child_options: Enum.map(assigns.children, &%{label: Brando.HTML.I18n.translate(&1.name), value: &1.uid}),
         ref_options:
           for(
@@ -125,7 +150,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     <.live_component
       module={Input.Select}
       id={"#{@form.id}-media_drop_child"}
-      field={@form[:media_drop_child]}
+      field={@child_field}
       label={gettext("Dropped media creates")}
       instructions={
         gettext("Images and videos dropped on this module's blocks each become a new entry of this child module.")
@@ -135,13 +160,22 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     <.live_component
       module={Input.Select}
       id={"#{@form.id}-media_drop_ref"}
-      field={@form[:media_drop_ref]}
+      field={@ref_field}
       label={gettext("Dropped media goes in")}
       instructions={gettext("A media, picture or video reference of the child module.")}
       opts={[options: @ref_options, resetable: true]}
     />
     """
   end
+
+  # The issue on its select, shown from the first render: errors show only
+  # for a field its form's params hold (`used_input?/1`)
+  defp with_issue(%{errors: []} = field, %{errors: []}, {key, message, keys}, key) do
+    form = %{field.form | params: Map.put(field.form.params, to_string(key), field.value)}
+    %{field | errors: [{message, keys}], form: form}
+  end
+
+  defp with_issue(field, _other_field, _issue, _key), do: field
 
   def assign_available_parents(socket) do
     {:ok, available_parents} = Brando.Content.list_modules(%{filter: %{parent_id: nil}})
@@ -195,7 +229,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 ]}
               />
               <Input.toggle field={@form[:multi]} label={gettext("Allow multiple entries")} />
-              <.media_drop_settings :if={@multi && @media_drop_children != []} form={@form} children={@media_drop_children} />
+              <.media_drop_settings
+                :if={media_drop_settings?(@form, @multi, @media_drop_children)}
+                form={@form}
+                multi={@multi}
+                children={@media_drop_children}
+              />
               <Input.toggle
                 field={@form[:write_with_ai]}
                 label={gettext("Write with AI")}
