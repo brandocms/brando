@@ -320,14 +320,22 @@ defmodule Brando.MCP.FigmaTest do
                    "index" => 0,
                    "component" => "Case/Hero",
                    "texts" => [%{"text" => "Tipping"}],
-                   "images" => [%{"node_id" => "1:11", "x" => 240, "y" => 160, "width" => 480, "height" => 640}]
+                   "images" => [
+                     %{
+                       "node_id" => "1:11",
+                       "image_ref" => "ref-a",
+                       "x" => 240,
+                       "y" => 160,
+                       "width" => 480,
+                       "height" => 640
+                     }
+                   ]
                  },
-                 %{"index" => 1, "kind" => "image", "images" => [%{"node_id" => "1:20"}]},
+                 # The same picture as the hero's
+                 %{"index" => 1, "kind" => "image", "images" => [%{"node_id" => "1:20", "image_ref" => "ref-a"}]},
                  %{"index" => 2, "kind" => "image"}
                ]
              } = result
-
-      refute Jason.encode!(result) =~ "ref-a"
     end
 
     test "import_images stores each picture once, in the frame's folder, and reuses it after",
@@ -651,7 +659,9 @@ defmodule Brando.MCP.FigmaTest do
                %{"images" => [%{"node_id" => "5:3"} = plain]}
              ] = sections
 
-      refute Map.has_key?(top, "image_ref")
+      # A layer's picture is its shown fill's ref: 5:2 and 5:3 show the same one
+      assert top["image_ref"] == "new"
+      assert [%{"images" => [%{"image_ref" => "c"}]}, %{"images" => [%{"image_ref" => "c"}]}] = tl(sections)
       refute Map.has_key?(plain, "hidden_fills")
 
       result = import!(tenant, token)

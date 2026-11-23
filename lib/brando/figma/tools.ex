@@ -43,11 +43,13 @@ defmodule Brando.Figma.Tools do
       description:
         "Read a Figma frame from its link (copied from a selected frame, with ?node-id=…): the file and frame names, then its sections in reading order. " <>
           "A section is a component instance — its component and variant name, to match with a module (brando_content_list_modules, brando_content_describe_module) — with its texts, images and videos in reading order; " <>
-          "or a text, image or video outside any instance. Images are listed by layer (node_id, name): import them with brando_figma_import_images to use them in a proposal. " <>
+          "or a text, image or video outside any instance. Images are listed by layer (node_id, name), each with the image_ref of the picture it shows: " <>
+          "a layer's picture is identified by its image_ref, not by hidden_fills, and layers with the same image_ref show the same picture. " <>
+          "read_frame does not say which library image that is: import the images with brando_figma_import_images, which names each one's asset (reusing one the library already has), to use them in a proposal or to compare them with an entry's. " <>
           "Each image has its scale_mode (fill, fit, crop or tile), its crop when cropped ({x, y, width, height} as fractions of the image, from its top left) its rotation when turned (clockwise, in degrees), and mirrored: true when a crop flips it (it then has no rotation). " <>
           "A layer whose top image fill covers it (opaque, unblended, and filled, or cropped to reach every corner of the layer) is one image. " <>
           "A layer whose top fill is translucent, blended, fit, tiled or cropped short of an edge lists every image that shows, in fill order, and its section says so under note. " <>
-          "The image fills that do not show (under one that covers, or at no opacity) are listed under the bottom image's hidden_fills (their image_ref); they are not imported, so mention them only if the person asks about a layer's other pictures. " <>
+          "The image fills that do not show (under one that covers, or at no opacity) are listed under the bottom image's hidden_fills (their image_ref); they are often leftovers of an earlier design and are not imported, so mention them only if the person asks about a layer's other pictures. " <>
           "Each section, text, image and video has its layer box in the frame (x, y, width, height in Figma pixels from the frame's top left, before clipping and masks, so a cropped image can reach past its cell), and the frame its width, height and layout_grids (null without any): use them to tell rows, columns and offsets on the site's grid. " <>
           ~s[A section named like a page header, footer or menu has chrome: why ("name" for its layer name, "component" for its component's); it is a hint, so check its texts before leaving it out. ] <>
           "Figma's API cannot download videos: ask the person to upload them to the media library, then find them with brando_content_find_media_folders or brando_content_search_assets. " <>

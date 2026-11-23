@@ -1,0 +1,1 @@
+- `brando_figma_read_frame` gives each image the `image_ref` of the picture its layer shows, so a tool can tell which layers show the same picture without importing them.
