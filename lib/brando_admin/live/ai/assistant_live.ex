@@ -965,7 +965,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         media={@media}
         aliases={@aliases}
         share_url={@share_url}
-        shareable?={page_shareable?(@proposal)}
+        shareable?={page_shareable?(@proposal) and is_nil(@stale)}
       />
 
       <div :if={!@preview and @replacements != []} class="assistant-section-head">
@@ -2058,7 +2058,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       when not is_nil(proposal) do
     %{preview: preview, current_user: user} = socket.assigns
 
-    with true <- page_shareable?(proposal),
+    with true <- page_shareable?(proposal) and is_nil(socket.assigns.stale),
          {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
          {:ok, url, days} <-
            Proposals.Preview.share(proposal, target, user,

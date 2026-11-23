@@ -246,6 +246,19 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert has_element?(view, ".assistant-preview")
   end
 
+  @tag :capture_log
+  test "an open preview withdraws Share a link once the proposal is stale", %{conn: conn} = c do
+    id = prepare(c, "Previewed")
+    {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}?preview")
+    view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+    assert has_element?(view, ~s(button[phx-click="share_page"]))
+
+    call_tool(c.tenant, c.token, "cancel_proposal", %{"proposal_id" => id})
+
+    assert has_element?(view, "#assistant-stale[data-reason=cancelled]")
+    refute has_element?(view, ~s(button[phx-click="share_page"]))
+  end
+
   test "another person's or another site's proposal never appears", %{conn: conn, current_user: user} = c do
     {:ok, view, _} = live(conn, "/admin/assistant/connected")
 

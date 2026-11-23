@@ -604,6 +604,16 @@ defmodule Brando.Content.ProposalsTest do
       assert is_binary(message)
     end
 
+    test "an expired proposal makes no page link", c do
+      assert {:ok, proposal} = Proposals.propose(workflow(c), c.user)
+      past = DateTime.add(DateTime.utc_now(), -1)
+      Repo.update_all(from(r in Proposals.Record, where: r.id == ^proposal.id), set: [expires_at: past])
+
+      # The proposal as it was read before it expired
+      assert {:error, message} = Preview.share(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+      assert message =~ "expired"
+    end
+
     test "only a language field that takes the site's default gets it" do
       article = Brando.MetaDrawerTest.ActionsArticle
       default = to_string(Brando.Languages.default_language())
