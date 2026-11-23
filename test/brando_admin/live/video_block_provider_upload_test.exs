@@ -79,6 +79,19 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert Repo.get(Brando.Videos.Video, video_id)
     end
 
+    # The ref's field settles a dropped file's entry (`Brando.MediaDrop`) by
+    # the answer: an upload the ref cannot take failed.
+    test "an upload it cannot complete is answered with why", ctx do
+      view = open(ctx)
+      hook = "##{ref_hook_id(ctx)}"
+      request_upload(view, hook, "ref-forged")
+
+      complete_upload(view, hook, "ref-forged", "forged")
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert ref_video_id(view) in [nil, ""]
+    end
+
     # The ref took the video while Bunny still had it: it showed a bare film
     # icon until the entry was reloaded, as nothing told it the video was ready.
     test "an upload shows as processing until the provider reports it ready", ctx do

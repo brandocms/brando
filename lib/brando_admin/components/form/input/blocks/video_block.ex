@@ -585,14 +585,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   # The file is with the provider; the ref shows the video from now on,
-  # unless another one was chosen meanwhile.
+  # unless another one was chosen meanwhile. An upload it cannot complete is
+  # answered with why: the ref's field shows it, and settles a dropped file's
+  # entry (`Brando.MediaDrop`) as failed.
   def handle_event("video_upload_complete", params, socket) do
     {still_shown?, socket} =
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], current_video_id(socket), nil)
 
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
       {:ok, video} when still_shown? -> {:noreply, select_video(socket, video.id)}
-      _ -> {:noreply, socket}
+      {:ok, _video} -> {:noreply, socket}
+      failed -> {:reply, %{error: ProviderVideoUpload.complete_error_message(failed)}, socket}
     end
   end
 

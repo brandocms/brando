@@ -226,17 +226,64 @@ test.describe('Multi blocks: dropping media', () => {
 
     await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 3; window.BrandoUploads._hook.pumpTransfers() })
     await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
-    const uploaded = await field(entry).getAttribute('data-asset-id')
 
-    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
-    await drop(page, field(entry), [['image2.jpg', 'image/jpeg']])
-    const queued = page.locator('.upload-item.status-queued').filter({ hasText: 'image2.jpg' })
-    await queued.getByRole('button', { name: 'Cancel' }).click()
-    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'cancelled')
+    // Emptied, the field would settle nothing pending as a success: the
+    // upload refused next is the field's own, not the drop's
+    await field(entry).getByRole('button', { name: 'Remove', exact: true }).click()
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    await drop(page, field(entry), [['photo.bin', 'image/jpeg', 'image.jpg']])
+    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'error')
+    await expect(page.locator('.upload-item.status-error')).toHaveCount(1)
     await syncLV(page)
 
     await expect(entries(row)).toHaveCount(1)
-    await expect(field(entry)).toHaveAttribute('data-asset-id', uploaded)
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    // no alert that the dropped file's upload failed
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+  })
+
+  // A video ref that uploads to its provider (the E2E app's fake Bunny)
+  // settles the drop when the provider has the file and the ref shows it.
+  // Emptied after that, the field's next failed upload is its own.
+  test('a video dropped on a provider ref settles its entry when the ref takes it', async ({ page }) => {
+    await page.route('https://bunny-cdn.e2e.test/**', route => route.fulfill({ path: './fixtures/image.jpg', contentType: 'image/jpeg' }))
+    const videoRow = await factory(page, {
+      name: { en: 'Video Row', no: 'Video Row' }, namespace: { en: group, no: group }, help_text: { en: 'Video Row' },
+      class: 'video-row', type: 'liquid', vars: [], datasource: false,
+      uid: 'e2e-video-row', code: '<section>{{ content }}</section>', refs: [], multi: true,
+      media_drop_child: 'e2e-video-card', media_drop_ref: 'visual',
+    })
+    await factory(page, {
+      name: { en: 'Video Card', no: 'Video Card' }, namespace: { en: group, no: group }, help_text: { en: 'Video Card' },
+      class: 'video-card', type: 'liquid', vars: [], datasource: false,
+      uid: 'e2e-video-card', parent_id: videoRow, multi: false,
+      code: '<figure>{% ref refs.visual %}</figure>',
+      refs: [{
+        name: 'visual', description: 'Video', uid: 'e2e-video-card-visual',
+        data: {
+          type: 'media',
+          data: { available_blocks: ['video'], template_video: { config_target: 'video:E2eProject.Projects.Project:bunny_video' } },
+        },
+      }],
+    })
+
+    await createPage(page, 'Media drop provider', group, 'Video Row')
+    const row = rows(page).first()
+    await drop(page, rowBlock(row), [['video.mp4', 'video/mp4']])
+    await expect(entries(row)).toHaveCount(1)
+    const entry = entries(row).first()
+    await expect(field(entry)).toHaveAttribute('data-video-hook-id', /uploader$/)
+    await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+
+    await field(entry).getByRole('button', { name: 'Remove', exact: true }).click()
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    await page.route('**/e2e/bunny/tus**', route => route.fulfill({ status: 403 }))
+    await drop(page, field(entry), [['video.mp4', 'video/mp4']])
+    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'error', { timeout: 30000 })
+    await syncLV(page)
+
+    await expect(entries(row)).toHaveCount(1)
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
     // no alert that the dropped file's upload failed
     await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
   })

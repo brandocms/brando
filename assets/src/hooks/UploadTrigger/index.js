@@ -322,8 +322,8 @@ export default (app) => ({
       this._onProviderUpload = ({ detail }) => {
         if (detail.ref !== this._providerRef) return
         if (detail.status === 'uploading') this.showProgress({ status: 'uploading', progress: detail.progress })
-        else if (detail.status === 'error') this.showProgress({ status: 'error', error: detail.error })
-        else this.showProgress(null)
+        else if (detail.error) this.showProgress({ status: 'error', error: detail.error })
+        else this.showProgress({ status: 'done' })
       }
       hook.addEventListener('brando:video-upload', this._onProviderUpload)
       this._providerHook = hook
