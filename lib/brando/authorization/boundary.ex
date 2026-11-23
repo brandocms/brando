@@ -281,6 +281,13 @@ defmodule Brando.Authorization.Boundary do
     {:ok, palette}
   end
 
+  # A module's blocks rendered without it while it was in the trash
+  defp after_restore(%{__struct__: Brando.Content.Module} = module, _trashed, _user) do
+    Brando.Content.render_entries_using_module(module)
+    Brando.Content.Definitions.changed()
+    {:ok, module}
+  end
+
   defp after_restore(entry, _trashed, _user), do: {:ok, entry}
 
   def change(:system, _, _), do: :ok

@@ -910,6 +910,20 @@ msgstr "%{model} står ikke i modellkatalogen Brando leser, så prisen og om den
 msgid "%{module} block"
 msgstr "%{module}-blokk"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} is used by blocks in one entry, so it can't be deleted."
+msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted."
+msgstr[0] "%{module} brukes av blokker i én oppføring, så den kan ikke slettes."
+msgstr[1] "%{module} brukes av blokker i %{count} oppføringer, så den kan ikke slettes."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} is used by blocks in one entry, so it can't be deleted: %{places}."
+msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted: %{places}."
+msgstr[0] "%{module} brukes av blokker i én oppføring, så den kan ikke slettes: %{places}."
+msgstr[1] "%{module} brukes av blokker i %{count} oppføringer, så den kan ikke slettes: %{places}."
+
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{ms} ms"
@@ -1654,6 +1668,11 @@ msgstr "Andre innlegg som er koblet sammen med dette innlegget. Vanligvis er dis
 #, elixir-autogen, elixir-format
 msgid "A media, picture or video reference of the child module."
 msgstr "En media-, bilde- eller videoreferanse i undermodulen."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "A module that blocks use was not deleted. Delete on its row lists the entries using it."
+msgstr "En modul som blokker bruker, ble ikke slettet. Slett i raden dens viser oppføringene som bruker den."
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
@@ -12031,6 +12050,11 @@ msgstr "Seksjoner i moduleditoren"
 msgid "Module groups"
 msgstr "Modulgrupper"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Module in use"
+msgstr "Modulen er i bruk"
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Module set"
@@ -19674,6 +19698,11 @@ msgstr "Tabelldata"
 msgid "Take editing back"
 msgstr "Ta tilbake redigeringen"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Take its blocks out of these entries, or move them to the trash, first."
+msgstr "Ta først blokkene dens ut av disse oppføringene, eller flytt oppføringene til papirkurven."
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
@@ -21684,6 +21713,11 @@ msgstr "Denne kartadressen kan ikke bygges inn."
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"
 msgstr "Dette kan skje under en serveroppdatering eller omstart"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This module"
+msgstr "Denne modulen"
 
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format

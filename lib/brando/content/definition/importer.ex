@@ -1016,7 +1016,7 @@ defmodule Brando.Content.Definition.Importer do
     palette = Repo.get!(Palette, change.id)
     Brando.Cache.Query.evict({:ok, palette})
     Brando.Cache.Palettes.update({:ok, palette})
-    if change.action == :update, do: Blocks.render_entries_with_palette_id(palette.id)
+    if change.action == :update, do: Brando.Content.render_entries_using_palette(palette)
     %{uid: change.uid, status: :requested, stale_block_ids: []}
   end
 

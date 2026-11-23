@@ -191,6 +191,19 @@ HEEx).
 Modules are managed in the admin under Configuration → Modules; entries
 reference them by id, so template edits apply everywhere on next render.
 
+A module that blocks use can't be moved to the trash while an entry outside
+the trash holds one of them: `Brando.Content.delete_module/2` returns
+`{:error, :module_in_use}`, and the admin's Delete names those entries
+(`Brando.Content.list_entries_using_module/1`). Take the blocks out of them,
+or move the entries to the trash, first. The check covers saved blocks at
+the moment of the delete: a block added in an editor that is still open, or
+an entry restored from the trash later, can still hold the module. A site's
+customization of a library module goes to the trash all the same, since its
+blocks then render as the library module. That is not a **Reset to shared**:
+the customization stays in the trash, and to customize the module again,
+restore it from there. Restoring a module from the trash renders again the
+entries that use it.
+
 ### Dropping media on a multi module
 
 A multi module can take images and videos dropped on its blocks. In the module
