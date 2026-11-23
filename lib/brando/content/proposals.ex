@@ -2627,10 +2627,14 @@ defmodule Brando.Content.Proposals do
   (`Brando.Repo.after_commit/1`: broadcasts, cache evictions) never runs, no
   query result read in it is cached, and jobs are rows the rollback removes.
 
-  The copy's rows, and the locks on its source, are held while `fun` runs,
-  for no longer than the transaction's timeout (`:timeout`, the repo's
-  default otherwise): a `fun` that outlasts it gets the connection dropped,
-  and `{:error, message}` is returned.
+  The copy's rows, and the locks on its source, are held while `fun` runs.
+  Called on its own, as the review page's frame calls it, that is for no
+  longer than the transaction's timeout (`:timeout`, the repo's default
+  otherwise): a `fun` that outlasts it gets the connection dropped, and
+  `{:error, message}` is returned. Called on a connection already checked
+  out, as a snapshot is under the site's asset lock
+  (`Brando.Tenant.Lock.with/2`), the transaction has no deadline of its own,
+  and they are held until `fun` returns.
 
   It checks what `materialize/3` checks, with `shared: true` as it takes it,
   and the texts the proposal translates against their sources, under the
@@ -2644,6 +2648,8 @@ defmodule Brando.Content.Proposals do
   def with_translation(%Proposal{} = proposal, target, actor, opts, fun) when is_function(fun, 1) do
     %CreateTranslation{} = op = translation(proposal.operations, target)
     ref = make_ref()
+    timeout = opts[:timeout] || Repo.repo().config()[:timeout] || 15_000
+    started = System.monotonic_time(:millisecond)
 
     rolled_back =
       try do
@@ -2652,11 +2658,15 @@ defmodule Brando.Content.Proposals do
             Brando.Cache.Query.skip_in_transaction()
             Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
           end,
-          Keyword.take(opts, [:timeout])
+          timeout: timeout
         )
       rescue
-        # The connection is dropped once the transaction outlasts its timeout
-        DBConnection.ConnectionError -> {:error, {ref, :timeout}}
+        # The connection is dropped once the transaction outlasts its
+        # timeout. Any other connection error is not the render's doing.
+        error in DBConnection.ConnectionError ->
+          if System.monotonic_time(:millisecond) - started >= timeout,
+            do: {:error, {ref, :timeout}},
+            else: reraise(error, __STACKTRACE__)
       end
 
     case rolled_back do
@@ -2678,7 +2688,10 @@ defmodule Brando.Content.Proposals do
       Error.protect(fn ->
         if opts[:shared], do: Transfer.ensure_scope!(actor), else: authorize_proposal!(proposal, actor)
         current!(proposal, actor, if(opts[:shared], do: :read, else: :update))
-        # Under the sources' locks, as applying checks them
+        # Under the sources' locks, as applying checks them, taken in the
+        # order applying takes them (`apply_lock_order/1`): a preview and an
+        # apply that took two sources in opposite order would deadlock
+        lock_translated_sources!(proposal)
         check_translated_sources!(proposal)
         user = user!(actor)
         entry = create_translations!(proposal, target, user)
@@ -4649,6 +4662,14 @@ defmodule Brando.Content.Proposals do
     |> Enum.concat(translated_sources(proposal))
     |> Enum.uniq()
     |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+  end
+
+  defp lock_translated_sources!(proposal) do
+    proposal
+    |> translated_sources()
+    |> Enum.uniq()
+    |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+    |> Enum.each(fn {schema, id} -> lock_source!(schema, id) end)
   end
 
   defp translated_sources(proposal) do
