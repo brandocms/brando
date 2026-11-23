@@ -3498,6 +3498,22 @@ defmodule Brando.Content.Proposals do
     )
   end
 
+  @doc """
+  When the next of the proposals `count_external/1` counts expires: the
+  earliest deadline among them, or nil when none waits for review.
+  """
+  @spec next_external_expiry(term()) :: DateTime.t() | nil
+  def next_external_expiry(actor) do
+    now = DateTime.utc_now()
+
+    Repo.one(
+      from(r in external(actor),
+        where: r.status in ~w(pending approved) and r.expires_at > ^now,
+        select: min(r.expires_at)
+      )
+    )
+  end
+
   defp external(actor) do
     from(r in Record,
       where: is_nil(r.conversation_id) and r.scope == ^Transfer.scope() and r.actor_id == ^user!(actor).id

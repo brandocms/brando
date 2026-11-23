@@ -2331,8 +2331,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         share_url: nil,
         proposal_id: id
       )
-      |> assign_connected()
+      # The proposal first: its deadline is timed with the list's
       |> assign_proposal()
+      |> assign_connected()
 
     case socket.assigns.proposal do
       # A conversation's proposal is reviewed in its conversation.
@@ -2798,17 +2799,22 @@ defmodule BrandoAdmin.AI.AssistantLive do
     assign(socket, :connections, connections)
   end
 
-  # A proposal expires with time, not with a write: the list and the open
-  # proposal are read again when the next one waiting for review expires.
-  # A timer holds 49 days at most; proposals expire within a day.
+  # A proposal expires with time, not with a write: the list, the count and
+  # the open proposal are read again when the next one waiting for review
+  # expires, listed or not. A timer holds 49 days at most; proposals expire
+  # within a day.
   defp schedule_expiry(socket) do
     if socket.assigns.expiry_timer, do: Process.cancel_timer(socket.assigns.expiry_timer)
     now = DateTime.utc_now()
 
+    open =
+      case socket.assigns.proposal do
+        %{status: status, expires_at: expires_at} when status in ~w(pending approved) -> [expires_at]
+        _ -> []
+      end
+
     next =
-      [socket.assigns.proposal | socket.assigns.connected]
-      |> Enum.filter(&match?(%{status: status} when status in ~w(pending approved), &1))
-      |> Enum.map(& &1.expires_at)
+      [Proposals.next_external_expiry(socket.assigns.current_user) | open]
       |> Enum.filter(&(&1 && DateTime.compare(&1, now) == :gt))
       |> Enum.min(DateTime, fn -> nil end)
 

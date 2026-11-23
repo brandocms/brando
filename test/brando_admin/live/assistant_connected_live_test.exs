@@ -190,6 +190,37 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert has_element?(view, row(id) <> " [data-testid=assistant-state-expired]")
   end
 
+  test "a proposal under review expires on time when it is not among the listed rows",
+       %{conn: conn, current_user: user} = c do
+    id = prepare(c, "Older than the list")
+    at = expires_in(id, 800)
+    pending = Repo.get!(Record, id)
+
+    # Newer, finished ones fill the list
+    for n <- 1..30 do
+      Repo.insert!(%{
+        pending
+        | id: Ecto.UUID.generate(),
+          status: "applied",
+          summary: "Applied #{n}",
+          inserted_at: DateTime.add(pending.inserted_at, n, :second)
+      })
+    end
+
+    {:ok, chat, _} = live(conn, "/admin/assistant")
+    {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+    refute has_element?(view, row(id))
+    assert has_element?(chat, ".assistant-connected-link .assistant-count", "1")
+    assert has_element?(view, ".assistant-apply")
+    assert Proposals.count_external(user) == 1
+
+    pass(at)
+
+    refute has_element?(chat, ".assistant-connected-link .assistant-count")
+    assert has_element?(view, "#assistant-stale[data-reason=expired]")
+    refute has_element?(view, ".assistant-apply")
+  end
+
   test "an approve of a version superseded since is refused", %{conn: conn} = c do
     first = prepare(c, "First version")
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{first}")
