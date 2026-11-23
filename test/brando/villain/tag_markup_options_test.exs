@@ -2,8 +2,9 @@ defmodule Brando.Villain.TagMarkupOptionsTest do
   # What a tag prints of a field passed to it straight. A plain field's text
   # is text in an option the tag prints as markup (picture's `caption`,
   # video's `caption`, `title` and `play_button`); rich text and a literal
-  # the template writes print as markup. A video's `opacity`, `width` and
-  # `height` are numbers. A form key prints in a comment as text.
+  # the template writes print as markup. A video's svg cover takes `opacity`,
+  # `width` and `height` as numbers; its `<video>` takes the sizes as written.
+  # A form key prints in a comment as text.
   use Brando.ConnCase, async: true
 
   alias Brando.Factory
@@ -66,8 +67,21 @@ defmodule Brando.Villain.TagMarkupOptionsTest do
         html =
           render("{% video entry.video { cover: 'svg', #{unquote(option)}: entry.title } %}", %{entry | title: @breakout})
 
-        refute html =~ "onerror"
-        assert html =~ "data-cover"
+        cover = html |> Floki.parse_fragment!() |> Floki.find("[data-cover]") |> Floki.raw_html()
+        refute cover =~ "onerror"
+        refute html =~ "<img src=x"
+        assert cover =~ "<img"
+      end
+    end
+
+    # The `<video>` takes the template's value as it is (HEEx escapes it); the
+    # cover takes the size from the ratio
+    test "a size that is no number reaches the video element as written", %{entry: entry} do
+      for value <- ["100%", "auto"] do
+        html = render(~s({% video entry.video { aspect_ratio: "16/9", cover: 'svg', width: "#{value}" } %}), entry)
+        assert [^value, ^value] = html |> Floki.parse_fragment!() |> Floki.attribute("video", "width")
+        assert [cover] = html |> Floki.parse_fragment!() |> Floki.find("[data-cover] img")
+        assert Floki.attribute(cover, "width") == ["16"]
       end
     end
 
