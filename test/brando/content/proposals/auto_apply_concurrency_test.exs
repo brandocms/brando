@@ -78,7 +78,8 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
 
     Repo.delete_all(
       from(e in Brando.Activity.Event,
-        where: e.user_id == ^user.id or e.approver_id == ^user.id or e.entry_id in ^articles
+        where:
+          e.user_id == ^user.id or e.approver_id == ^user.id or (e.schema == ^schema and e.entry_id in ^articles)
       )
     )
 
