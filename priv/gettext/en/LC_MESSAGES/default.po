@@ -1168,6 +1168,13 @@ msgstr[1] ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "1 block holds values the module no longer defines"
+msgid_plural "%{count} blocks hold values the module no longer defines"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
 msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
 msgstr[0] ""
@@ -1307,6 +1314,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 object"
 msgid_plural "%{count} objects"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 of %{total} blocks holds a value"
+msgid_plural "%{count} of %{total} blocks hold a value"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -3050,6 +3064,11 @@ msgstr ""
 msgid "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Applying translations..."
@@ -3599,6 +3618,16 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Blocks in this translation follow the source. Add, remove or move them in the source."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks keep what they hold in the removed refs and vars"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks keep what they hold until it is resolved"
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
@@ -12144,11 +12173,6 @@ msgstr ""
 msgid "Needs a choice"
 msgstr ""
 
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Needs a migration"
-msgstr ""
-
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "Needs at least %{count} impressions on Google's first page."
@@ -16103,7 +16127,7 @@ msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
-msgid "Removes a var that blocks hold values for. Those values are dropped when the blocks re-render."
+msgid "Removes refs or vars. Blocks keep what they hold in them until you resolve the blocks after the apply."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
@@ -16530,7 +16554,9 @@ msgid_plural "Resolve %{count} blocks?"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/stale_blocks.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -20933,6 +20959,11 @@ msgstr ""
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "They keep the HTML they have now until the template or their content is fixed."
@@ -22826,11 +22857,6 @@ msgstr ""
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Value"
-msgstr ""
-
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Values are dropped when blocks re-render"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex

@@ -167,6 +167,64 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     assert render(view) =~ "Release changes"
   end
 
+  test "a removed var is ready to apply, and the applied module links to Resolve blocks", %{conn: conn} = c do
+    block =
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        module_id: c.case_module.id,
+        creator_id: c.user.id
+      })
+
+    Repo.insert!(%Brando.Content.Var{block_id: block.id, key: "wide", type: :boolean, label: %{"en" => "Wide"}})
+    exs = Path.join(c.path, "content/case.exs")
+    source = File.read!(exs)
+    without = Regex.replace(~r/\n    var "wide", "boolean" do\n.*?\n    end\n/s, source, "\n")
+    assert without != source
+    File.write!(exs, without)
+
+    manual(fn ->
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+      assert has_element?(view, "[data-testid=release-removals] li[data-uid=#{c.case_module.uid}]")
+      refute has_element?(view, "[data-testid=release-resolve-blocks]")
+
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert Repo.get_by(Brando.Content.Var, block_id: block.id, key: "wide")
+
+      view |> element("[data-testid=release-applied-row][data-uid=#{c.case_module.uid}]") |> render_click()
+
+      assert has_element?(
+               view,
+               ~s([data-testid=release-resolve-blocks][href="/admin/config/content/modules/update/#{c.case_module.id}/stale-blocks"])
+             )
+
+      # The open row's module and count were loaded with it: a render for
+      # another reason does not query them again
+      test_pid = self()
+      handler = "release-detail-queries-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler,
+        [:brando_integration, :repo, :query],
+        fn _event, _measurements, meta, _config ->
+          if self() == view.pid and meta.source in ["content_modules", "content_blocks"],
+            do: send(test_pid, {:detail_query, meta.source})
+        end,
+        nil
+      )
+
+      try do
+        view |> element("[data-testid=release-tab-entries]") |> render_click()
+        view |> element("[data-testid=release-tab-template]") |> render_click()
+        refute_received {:detail_query, _}
+      after
+        :telemetry.detach(handler)
+      end
+    end)
+  end
+
   describe "a conflict" do
     setup c do
       release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")

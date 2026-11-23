@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   alias Brando.Content.{DefinitionApply, Definitions}
   alias Brando.Content.Definitions.Release
   alias Brando.Content.Definitions.Release.{Batches, Entries, Preview, Proposed, Review, Verify}
+  alias Brando.Content.StaleBlocks
   alias BrandoAdmin.Components.ReleaseChanges, as: RC
   alias BrandoAdmin.Components.Workspace
 
@@ -166,7 +167,14 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   # last apply's, per item
   defp load_detail(%{assigns: %{current: "applied:" <> uid}} = socket) do
     rows = Brando.Repo.all(from(a in DefinitionApply, where: a.uid == ^uid, order_by: [desc: a.id], limit: 1))
-    assign(socket, :detail, %{applied_row: List.first(rows), definitions: Review.definitions(socket.assigns.report, uid)})
+    module = Brando.Repo.get_by(Brando.Content.Module, uid: uid)
+
+    assign(socket, :detail, %{
+      applied_row: List.first(rows),
+      definitions: Review.definitions(socket.assigns.report, uid),
+      module: module,
+      leftovers: if(module, do: StaleBlocks.count_with_leftovers(module), else: 0)
+    })
   end
 
   defp load_detail(%{assigns: %{current: nil}} = socket), do: assign(socket, :detail, nil)
@@ -836,6 +844,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     assigns =
       assign(assigns,
         item: item,
+        module: assigns.detail.module,
+        leftovers: assigns.detail.leftovers,
         changed: changed,
         applied_row: applied_row,
         here: here,
@@ -857,6 +867,30 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     </RC.detail_head>
     <RC.tabs tab={@tab} entries={length(@applied_entries)} tabs={~w(template entries)} />
     <div class="release-tab-body">
+      <RC.notice
+        :if={@leftovers > 0}
+        icon="info"
+        headline={
+          ngettext(
+            "1 block holds values the module no longer defines",
+            "%{count} blocks hold values the module no longer defines",
+            @leftovers
+          )
+        }
+      >
+        {gettext(
+          "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+        )}
+        <:actions>
+          <.link
+            navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
+            class="btn btn--sm"
+            data-testid="release-resolve-blocks"
+          >
+            {gettext("Resolve blocks")}
+          </.link>
+        </:actions>
+      </RC.notice>
       <%= if @tab == "entries" do %>
         <RC.entries
           entries={@applied_entries}
@@ -1111,7 +1145,35 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     """
   end
 
+  defp choice_body(%{row: %{group: :ready, items: items}} = assigns) do
+    assigns = assign(assigns, :removing, Enum.filter(items, &(&1[:removes] && &1.removes.blocks > 0)))
+
+    ~H"""
+    <RC.notice
+      :if={@removing != []}
+      icon="info"
+      headline={gettext("Blocks keep what they hold in the removed refs and vars")}
+    >
+      {gettext(
+        "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+      )}
+      <ul data-testid="release-removals">
+        <li :for={item <- @removing} data-uid={item.uid}>
+          {item.name}: {removed_keys(item.removes.keys)} · {ngettext(
+            "1 of %{total} blocks holds a value",
+            "%{count} of %{total} blocks hold a value",
+            item.removes.blocks,
+            total: item.block_count
+          )}
+        </li>
+      </ul>
+    </RC.notice>
+    """
+  end
+
   defp choice_body(assigns), do: ~H""
+
+  defp removed_keys(keys), do: Enum.map_join(keys, ", ", fn {kind, key} -> "#{key} (#{kind})" end)
 
   defp template_description(item, defs, version) do
     case {item.action, defs.applied} do

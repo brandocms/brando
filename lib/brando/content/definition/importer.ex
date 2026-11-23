@@ -1,8 +1,10 @@
 defmodule Brando.Content.Definition.Importer do
   @moduledoc false
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Authorization.Boundary
-  alias Brando.Content.{Blocks, Module, ModuleDiff, TableTemplate}
+  alias Brando.Content.{Block, Blocks, Module, ModuleDiff, Ref, TableTemplate, Var}
   alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Snapshot, Value}
   alias Brando.Content.Definitions
   alias Brando.Query.Mutations
@@ -65,8 +67,7 @@ defmodule Brando.Content.Definition.Importer do
       mode: mode,
       replace: MapSet.new(replace),
       discard: MapSet.new(discard),
-      selection: selection,
-      revert: Keyword.get(opts, :revert, false)
+      selection: selection
     }
   end
 
@@ -122,8 +123,7 @@ defmodule Brando.Content.Definition.Importer do
       mode: plan.mode,
       replace: plan.replace,
       discard: plan.discard,
-      selection: plan.selection,
-      revert: plan.revert
+      selection: plan.selection
     }
 
     opts = Keyword.put_new_lazy(opts, :batch_id, &Ecto.UUID.generate/0)
@@ -187,7 +187,6 @@ defmodule Brando.Content.Definition.Importer do
       mode: settings.mode,
       replace: settings.replace,
       discard: settings.discard,
-      revert: settings.revert,
       latest: latest,
       snapshot_references: snapshot["references"],
       parents: parents(bundle["modules"]),
@@ -216,7 +215,6 @@ defmodule Brando.Content.Definition.Importer do
        mode: settings.mode,
        replace: settings.replace,
        discard: settings.discard,
-       revert: settings.revert,
        selection: settings.selection,
        # How the target's records were written as tokens, generated ones too
        snapshot_bindings: snapshot["references"]
@@ -254,6 +252,7 @@ defmodule Brando.Content.Definition.Importer do
       after: Baselines.digest(definition, ctx.bindings),
       fields: [],
       diff: [],
+      removes: nil,
       block_count: 0,
       entry_count: 0
     }
@@ -286,7 +285,6 @@ defmodule Brando.Content.Definition.Importer do
           {ctx.parents[uid], ctx.current_parents[uid]}
         )
       end)
-      |> reverting(ctx, record, changeset, definition, old)
 
     %{
       kind: kind,
@@ -302,6 +300,7 @@ defmodule Brando.Content.Definition.Importer do
       after: digest,
       fields: changed_fields(old, definition),
       diff: field_diff(old, definition),
+      removes: removes(action, kind, record, changeset),
       block_count: length(block_ids),
       entry_count: entry_count(block_ids)
     }
@@ -365,7 +364,6 @@ defmodule Brando.Content.Definition.Importer do
   # Who changed the module in the admin last, after the last apply: the
   # activity log knows, and without an event there, when the row changed
   defp last_edit("module", %{id: id} = record, row) do
-    import Ecto.Query, only: [from: 2]
     since = row && row.applied_at
 
     query =
@@ -494,7 +492,7 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp module_block_ids(kind, record) do
-    if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id), else: []
+    if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id, :local), else: []
   end
 
   defp field_diff(old, definition) do
@@ -553,6 +551,8 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp classify_module_update(new, old, record, cs) do
+    diff = ModuleDiff.diff(record, cs)
+
     cond do
       old["children"] -- new["children"] != [] ->
         {:migration_required, "removing child definitions requires a migration"}
@@ -566,33 +566,94 @@ defmodule Brando.Content.Definition.Importer do
       new["table_template"] != old["table_template"] ->
         {:migration_required, "changing the table template requires a migration"}
 
-      ModuleDiff.destructive?(ModuleDiff.diff(record, cs)) ->
-        {:migration_required, Enum.join(ModuleDiff.summary(ModuleDiff.diff(record, cs)), "; ")}
+      reinterprets?(diff) ->
+        {:migration_required, Enum.join(ModuleDiff.summary(%{diff | removed_refs: [], removed_vars: []}), "; ")}
+
+      reason = returning_over_leftovers(record, cs, diff) ->
+        {:migration_required, reason}
 
       true ->
         {:update, nil}
     end
   end
 
-  # A revert takes off the refs and vars the apply added: undoing it is the
-  # point. Only plain removals; anything else still needs a migration.
-  defp reverting({:migration_required, _} = result, %{revert: true} = ctx, record, cs, new, old)
-       when not is_nil(record) and not is_nil(old) do
+  # A removed ref or var is an update: the blocks keep what they hold in it
+  # as a leftover until it is resolved, as after the same save in the admin.
+  # A retype or a contract change makes a sync reinterpret what blocks hold.
+  defp reinterprets?(diff),
+    do: diff.retyped_refs != [] or diff.retyped_vars != [] or diff.contract_changes != []
+
+  # A var defined again under a key its blocks still hold a leftover of
+  # another type for: a sync would copy the new type onto the stored value
+  # (`Blocks.reapply_vars/3`)
+  defp returning_over_leftovers(_record, _cs, %{added_vars: []}), do: nil
+
+  defp returning_over_leftovers(record, cs, diff) do
+    types = cs |> Changeset.apply_changes() |> Map.get(:vars) |> Map.new(&{&1.key, &1.type})
+
+    from(v in Var,
+      join: b in Block,
+      on: b.id == v.block_id,
+      where: b.module_id == ^record.id and b.module_origin == :local and v.key in ^diff.added_vars,
+      order_by: [v.key, b.id],
+      select: {v.key, v.type, b.id}
+    )
+    |> Repo.all()
+    |> Enum.reject(fn {key, type, _block_id} -> type == types[key] end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 2))
+    |> Enum.map(fn {key, block_ids} ->
+      ~s(var "#{key}" returns as #{types[key]} while blocks #{Enum.map_join(block_ids, ", ", &"##{&1}")} ) <>
+        "hold a leftover of another type; resolve it first"
+    end)
+    |> case do
+      [] -> nil
+      reasons -> Enum.join(reasons, "; ")
+    end
+  end
+
+  # What an update removes, the keys of it blocks hold (`held`), and the
+  # blocks that hold one and keep it as a leftover (`Brando.Content.StaleBlocks`)
+  defp removes(:update, "module", record, cs) do
     diff = ModuleDiff.diff(record, cs)
-    if plain_removal?(diff, ctx, new, old), do: {:update, nil}, else: result
+    keys = Enum.map(diff.removed_refs, &{:ref, &1}) ++ Enum.map(diff.removed_vars, &{:var, &1})
+
+    if keys != [] do
+      holders = holders(record, diff)
+      held = holders |> Enum.map(&elem(&1, 0)) |> MapSet.new()
+      blocks = holders |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+
+      %{
+        keys: keys,
+        held: Enum.filter(keys, &MapSet.member?(held, &1)),
+        blocks: length(blocks),
+        entries: entry_count(blocks)
+      }
+    end
   end
 
-  defp reverting(result, _ctx, _record, _cs, _new, _old), do: result
+  defp removes(_action, _kind, _record, _cs), do: nil
 
-  defp plain_removal?(diff, ctx, new, old) do
-    new["kind"] == "module" and ModuleDiff.destructive?(diff) and same_place?(ctx, new, old) and
-      diff.retyped_refs == [] and diff.retyped_vars == [] and diff.contract_changes == []
-  end
+  # `{{kind, key}, block_id}` for each removed key a block of the module
+  # holds. The module is in this database: a block of a shared library
+  # module with the same id is not one of its blocks.
+  defp holders(record, diff) do
+    refs =
+      from(r in Ref,
+        join: b in Block,
+        on: b.id == r.block_id,
+        where: b.module_id == ^record.id and b.module_origin == :local and r.name in ^diff.removed_refs,
+        select: {"ref", r.name, b.id}
+      )
 
-  defp same_place?(ctx, new, old) do
-    ctx.parents[new["uid"]] == ctx.current_parents[new["uid"]] and old["children"] -- new["children"] == [] and
-      not changed_ref_identity?(old, new) and not changed_ref_type?(old, new) and
-      new["table_template"] == old["table_template"]
+    from(v in Var,
+      join: b in Block,
+      on: b.id == v.block_id,
+      where: b.module_id == ^record.id and b.module_origin == :local and v.key in ^diff.removed_vars,
+      select: {"var", v.key, b.id},
+      union: ^refs
+    )
+    |> Repo.all()
+    |> Enum.map(fn {kind, key, block_id} -> {{if(kind == "ref", do: :ref, else: :var), key}, block_id} end)
   end
 
   defp changed_ref_identity?(old, new) do
