@@ -998,6 +998,36 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
   end
 
+  describe "name_moved_rows/3" do
+    # A block moved to another parent holds its table rows, and their vars,
+    # as new rows; an edit from its component before the move names both by
+    # their saved ids
+    test "names a table row's var by the row and the var the store holds" do
+      state = %Ops{
+        parents: %{"b" => "p"},
+        diffs: %{"b" => %{"table_rows" => [%{"sync_uid" => "s", "vars" => [%{"key" => "k", "value" => "Old"}]}]}}
+      }
+
+      saved = fn -> %{table_rows: [%{id: 5, sync_uid: "s", vars: [%{id: 9, key: "k"}]}]} end
+      path = [{:at, "table_rows", {"id", 5}, []}, {:at, "vars", {"id", 9}, []}, "value"]
+
+      assert Ops.name_moved_rows(state, {:set_field, "b", path, "New", nil}, saved) ==
+               {:set_field, "b", [{:at, "table_rows", {"sync_uid", "s"}, []}, {:at, "vars", {"key", "k"}, []}, "value"],
+                "New", nil}
+    end
+
+    test "leaves an id the store holds" do
+      state = %Ops{
+        parents: %{"b" => "p"},
+        diffs: %{"b" => %{"table_rows" => [%{"id" => 5, "sync_uid" => "s", "vars" => [%{"id" => 9, "key" => "k"}]}]}}
+      }
+
+      path = [{:at, "table_rows", {"id", 5}, []}, {:at, "vars", {"id", 9}, []}, "value"]
+      op = {:set_field, "b", path, "New", nil}
+      assert Ops.name_moved_rows(state, op, fn -> flunk("the saved block is not read") end) == op
+    end
+  end
+
   describe "changes_to_params/1" do
     test "flat changes become string-keyed params" do
       cs = Changeset.change(%Block{}, %{uid: "abc", active: false})

@@ -1732,24 +1732,48 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   def name_moved_rows(_state, op, _saved), do: op
 
-  defp name_moved_path(diff, [{:at, key, {"id", id}, skeleton} | rest] = path, saved) do
+  # Each row along the path (a table row, then its var), with `saved`
+  # giving the saved row its rows are in.
+  defp name_moved_path(diff, [{:at, key, identity, skeleton} | rest] = path, saved) do
     with {^key, field} <- List.keyfind(@rel_identities, key, 0),
-         rows when is_list(rows) <- Map.get(as_map(diff), key),
-         false <- Enum.any?(rows, &same_item?(&1, {"id", id})),
-         true <- Enum.any?(rows, &(Map.get(&1, "id") in [nil, ""])),
-         %{} = block <- saved.(),
-         saved_rows when is_list(saved_rows) <- Map.get(block, String.to_existing_atom(key)),
-         %{} = row <- Enum.find(saved_rows, &(to_string(&1.id) == to_string(id))),
-         name when name not in [nil, ""] <- Map.get(row, field),
-         identity = {to_string(field), name},
-         true <- Enum.any?(rows, &(same_item?(&1, identity) and Map.get(&1, "id") in [nil, ""])) do
-      [{:at, key, identity, skeleton} | rest]
+         rows when is_list(rows) <- Map.get(as_map(diff), key) do
+      saved_row = fn -> saved_row(saved.(), key, identity) end
+      identity = moved_identity(rows, field, identity, saved_row)
+      row = Enum.find(rows, &same_item?(&1, identity))
+      [{:at, key, identity, skeleton} | name_moved_path(row, rest, saved_row)]
     else
       _ -> path
     end
   end
 
   defp name_moved_path(_diff, path, _saved), do: path
+
+  defp moved_identity(rows, field, {"id", _} = identity, saved_row) do
+    with false <- Enum.any?(rows, &same_item?(&1, identity)),
+         true <- Enum.any?(rows, &(Map.get(&1, "id") in [nil, ""])),
+         %{} = row <- saved_row.(),
+         name when name not in [nil, ""] <- Map.get(row, field),
+         named = {to_string(field), name},
+         true <- Enum.any?(rows, &(same_item?(&1, named) and Map.get(&1, "id") in [nil, ""])) do
+      named
+    else
+      _ -> identity
+    end
+  end
+
+  defp moved_identity(_rows, _field, identity, _saved_row), do: identity
+
+  defp saved_row(%{} = parent, key, {name, value}) do
+    case Map.get(parent, String.to_existing_atom(key)) do
+      rows when is_list(rows) ->
+        Enum.find(rows, &(to_string(Map.get(&1, String.to_existing_atom(name))) == to_string(value)))
+
+      _ ->
+        nil
+    end
+  end
+
+  defp saved_row(_parent, _key, _identity), do: nil
 
   defp set_fields(state, uid, changes) do
     if known?(state, uid) do
