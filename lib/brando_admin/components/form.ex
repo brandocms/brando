@@ -73,9 +73,9 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RelationRows
-  alias BrandoAdmin.Components.Form.RowEdits
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.RichTextAI
+  alias BrandoAdmin.Components.Form.RowEdits
   alias BrandoAdmin.Components.Form.SavedElsewhere
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.TabNotice
@@ -3617,7 +3617,7 @@ defmodule BrandoAdmin.Components.Form do
   # form (`echoed`, `drop_echoes/4`) are not. A replaced field stays
   # replaced while the browser sends what it showed before; it has caught
   # up once it sends anything else.
-  defp take_local_edit(socket, previous, changeset, echoed, {target, target_path}, entry_params) do
+  defp take_local_edit(socket, previous, changeset, echoed, target, entry_params) do
     {fields, _belongs_to} = sync_fields(socket)
     sent = if is_map(entry_params), do: entry_params, else: %{}
     sent? = &Map.has_key?(sent, Atom.to_string(&1))
@@ -3651,23 +3651,9 @@ defmodule BrandoAdmin.Components.Form do
           into: MapSet.new(),
           do: field
 
-    # The row of an embedded list the input is in, and the rows a drop or
-    # sort param took out or moved (`RowEdits.typed/6`). An input in a list
-    # the browser showed before another editor's save names no row.
-    rows =
-      RowEdits.typed(
-        row_edits(socket),
-        embed_fields(socket),
-        previous,
-        changeset,
-        if(target, do: target_path),
-        entry_params
-      )
-
     socket
     |> assign(:replaced_values, replaced)
     |> assign(:uncast_fields, uncast)
-    |> assign(:row_edits, rows)
     |> mark_local(edited)
     |> mark_relations(relations)
   end
@@ -3676,7 +3662,13 @@ defmodule BrandoAdmin.Components.Form do
   # one, except in the fields typed into while the tab was offline.
   defp settle_edit(false = _recovery?, socket, changeset, edit) do
     %{previous: previous, echoed: echoed, target: target, params: params, entry_params: entry_params} = edit
-    {changeset, take_local_edit(socket, previous, changeset, echoed, {target, params["_target"]}, entry_params), []}
+
+    socket =
+      socket
+      |> take_local_edit(previous, changeset, echoed, target, entry_params)
+      |> type_rows(previous, changeset, if(target, do: params["_target"]), entry_params)
+
+    {changeset, socket, []}
   end
 
   # A relation the recovered form holds otherwise than the entry is the
@@ -3715,6 +3707,14 @@ defmodule BrandoAdmin.Components.Form do
     # The recovered rows are the tab's own, as before the reconnect
     changeset = keep_received(socket, previous, changeset, offline)
     {changeset, change_rows(socket, previous, changeset), offline -- relations}
+  end
+
+  # The row of an embedded list the input `target` is in, and the rows a
+  # drop or sort param took out or moved (`RowEdits.typed/6`). An input in
+  # a list the browser showed before another editor's save names no row.
+  defp type_rows(socket, previous, changeset, target, entry_params) do
+    edits = RowEdits.typed(row_edits(socket), embed_fields(socket), previous, changeset, target, entry_params)
+    assign(socket, :row_edits, edits)
   end
 
   # A recovered form keeps what the other editors sent this tab since it
@@ -4591,22 +4591,16 @@ defmodule BrandoAdmin.Components.Form do
   # edits, as the form takes them: the rows they typed in and didn't send
   # stay theirs alone.
   defp merge_synced(synced, saved, previous, opened, ones, lists, edits, keys) do
-    Enum.reduce(ones ++ lists, synced, fn field, synced ->
-      case Map.fetch(synced, field) do
-        {:ok, value} ->
-          sent = %{previous | changes: Map.put(previous.changes, field, value)}
+    for field <- ones ++ lists, Map.has_key?(synced, field), into: synced do
+      sent = %{previous | changes: Map.put(previous.changes, field, synced[field])}
 
-          {merged, _renamed} =
-            if field in lists,
-              do: keep_lists(saved, sent, [field], edits, keys),
-              else: {RelationRows.keep(saved, sent, opened, field), %{}}
+      merged =
+        if field in lists,
+          do: saved |> keep_lists(sent, [field], edits, keys) |> elem(0),
+          else: RelationRows.keep(saved, sent, opened, field)
 
-          Map.put(synced, field, field_change(merged, field, []).value)
-
-        :error ->
-          synced
-      end
-    end)
+      {field, field_change(merged, field, []).value}
+    end
   end
 
   # This editor's own unsaved changes to the entry's fields: what a save by
