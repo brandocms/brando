@@ -169,6 +169,74 @@ defmodule Brando.Translations do
   end
 
   @doc """
+  The other language versions of `entry` that `actor` may read, for its form:
+  `linked`, the entries linked to it as alternates, those in the trash
+  included, and `unlinked`, those not in the trash that hold its `matched_by`
+  values (`trait :translatable, matched_by: [...]`) in another language
+  without being linked to it. `unlinked` is empty for a schema without
+  `matched_by`, or for an entry with a nil `matched_by` value.
+  """
+  def language_versions(schema, %{id: id} = entry, actor) do
+    linked_ids = if schema.has_alternates?(), do: alternate_ids(schema, id), else: []
+
+    linked =
+      from(e in schema, where: e.id in ^linked_ids, order_by: [asc: e.language, asc: e.id])
+      |> readable(schema, actor)
+      |> Repo.all()
+
+    unlinked =
+      case same_values_query(schema, entry) do
+        nil ->
+          []
+
+        query ->
+          from(e in query, where: e.id not in ^linked_ids, order_by: [asc: e.language, asc: e.id])
+          |> readable(schema, actor)
+          |> Repo.all()
+      end
+
+    %{linked: linked, unlinked: unlinked}
+  end
+
+  @doc "The entries of `schema` in other languages than `entry`'s, not in the trash, that `actor` may read."
+  def other_language_entries(schema, entry, actor) do
+    from(e in schema, where: e.language != ^entry.language, order_by: [asc: e.language, asc: e.id])
+    |> exclude_trashed(schema)
+    |> readable(schema, actor)
+    |> Repo.all()
+  end
+
+  defp alternate_ids(schema, id),
+    do: Repo.all(from a in Module.concat(schema, Alternate), where: a.entry_id == ^id, select: a.linked_entry_id)
+
+  # The entries of `schema` in other languages, not in the trash, with
+  # `entry`'s `matched_by` values; nil without `matched_by`, or when one of
+  # `entry`'s values is nil: no other entry shares a value it lacks
+  defp same_values_query(schema, entry) do
+    values = Enum.map(matched_by(schema), &{&1, Map.get(entry, &1)})
+
+    if values != [] and Enum.all?(values, fn {_field, value} -> not is_nil(value) end) do
+      query = from(e in schema, where: e.id != ^entry.id and e.language != ^entry.language)
+
+      values
+      |> Enum.reduce(query, fn {field, value}, query -> from(e in query, where: field(e, ^field) == ^value) end)
+      |> exclude_trashed(schema)
+    end
+  end
+
+  @doc "The attributes `schema` matches its language versions by (`trait :translatable, matched_by: [...]`)."
+  def matched_by(schema) do
+    if function_exported?(schema, :__translatable_matched_by__, 0), do: schema.__translatable_matched_by__(), else: []
+  end
+
+  defp exclude_trashed(query, schema) do
+    if :deleted_at in schema.__schema__(:fields), do: where(query, [e], is_nil(e.deleted_at)), else: query
+  end
+
+  defp readable(query, _schema, nil), do: query
+  defp readable(query, schema, actor), do: Brando.Content.Transfer.Catalog.scoped_query(query, schema, actor, :read)
+
+  @doc """
   The site's languages (`Brando.Languages`) of `schema` that `entry` has no
   version in yet: neither a member of its group nor an alternate linked to
   its source (an existing, independent version is not joined to a group).
@@ -187,6 +255,8 @@ defmodule Brando.Translations do
           [to_string(entry.language) | alternate_languages(schema, id)]
       end
 
+    taken = taken ++ unlinked_languages(schema, entry)
+
     site = Brando.Languages.codes()
 
     for value <- Ecto.Enum.values(schema, :language),
@@ -194,6 +264,14 @@ defmodule Brando.Translations do
         code in site,
         code not in taken,
         do: code
+  end
+
+  # The languages of the entries with `entry`'s `matched_by` values
+  defp unlinked_languages(schema, entry) do
+    case same_values_query(schema, entry) do
+      nil -> []
+      query -> query |> select([e], e.language) |> Repo.all() |> Enum.map(&to_string/1)
+    end
   end
 
   @doc "Returns the group membership of an entry, or nil."
@@ -259,7 +337,8 @@ defmodule Brando.Translations do
 
     with :ok <- ensure_duplicable(schema),
          :ok <- ensure_language_known(schema, language),
-         :ok <- ensure_no_linked_version(schema, source_id, language) do
+         :ok <- ensure_no_linked_version(schema, source_id, language),
+         :ok <- ensure_no_unlinked_version(schema, source_id, language) do
       # One transaction, enrolment included: a failed copy leaves no group
       # with a source and no translation behind.
       Repo.transaction(fn -> enrol_target(schema, source_id, language, actor, mark_translate?) end)
@@ -289,7 +368,8 @@ defmodule Brando.Translations do
 
     with :ok <- ensure_duplicable(schema),
          :ok <- ensure_language_known(schema, language),
-         :ok <- ensure_no_linked_version(schema, source_id, language) do
+         :ok <- ensure_no_linked_version(schema, source_id, language),
+         :ok <- ensure_no_unlinked_version(schema, source_id, language) do
       Repo.transaction(fn -> replace_target(schema, source_id, language, actor, mark_translate?) end)
     end
   end
@@ -1101,7 +1181,8 @@ defmodule Brando.Translations do
             translate_all: Keyword.get(opts, :translate_all, false),
             untranslated: untranslated(member, schema, target, previous, uids),
             identifiers: identifier_map(source, schema, member.language),
-            entries: entry_map(source, schema, member.language)
+            entries: entry_map(source, schema, member.language),
+            fragments: fragment_map(source, schema, member.language)
           )
 
         record_pending(member, result, previous, generation, schema)
@@ -1149,14 +1230,37 @@ defmodule Brando.Translations do
   end
 
   @doc """
-  Maps the ids `source`'s tree relations (`Brando.Translations.Sync.tree_relations/2`,
-  such as a page's parent) point at onto the same entries' versions in
-  `language`, or nil when there is no such version yet.
+  Maps each of `source`'s tree relations (`Brando.Translations.Sync.tree_relations/2`,
+  such as a page's parent or a fragment's page) and the id it points at,
+  `{name, id}`, onto the same entry's version in `language`, or nil when
+  there is no such version yet.
   """
   def entry_map(source, schema, language) do
-    for name <- Sync.tree_relations(schema), id = Map.get(source, :"#{name}_id"), not is_nil(id), into: %{} do
-      {id, alternate_entry_id(schema, id, language)}
+    for {name, module} <- Sync.tree_targets(schema), id = Map.get(source, :"#{name}_id"), not is_nil(id), into: %{} do
+      {{name, id}, tree_version_id(schema, module, id, language)}
     end
+  end
+
+  # A page's parent is mapped onto its linked version. An entry of another
+  # schema (a fragment's page) that is in `language` already is its own version.
+  defp tree_version_id(schema, schema, id, language), do: alternate_entry_id(schema, id, language)
+  defp tree_version_id(_schema, module, id, language), do: version_in_language(module, id, language)
+
+  defp version_in_language(module, id, language) do
+    if exists?(from e in module, where: e.id == ^id and e.language == ^language),
+      do: id,
+      else: alternate_entry_id(module, id, language)
+  end
+
+  @doc """
+  Maps the fragments `source`'s blocks embed onto their versions in
+  `language`, leaving out those with none.
+  """
+  def fragment_map(source, schema, language) do
+    for id <- Sync.fragment_ids(source, schema),
+        version = version_in_language(Brando.Pages.Fragment, id, language),
+        into: %{},
+        do: {id, version}
   end
 
   # An `:entries` relation's join rows, pointed at the same entries' versions
@@ -1284,6 +1388,7 @@ defmodule Brando.Translations do
     patterns = Enum.flat_map(identifier_ids, &["%/identifiers/#{&1}", "%/identifier/#{&1}"])
 
     resync_waiting_tree(module, [entry_id, linked_entry_id])
+    if module == Brando.Pages.Fragment, do: resync_embedding([entry_id, linked_entry_id])
 
     if patterns != [] do
       matches = Enum.reduce(patterns, dynamic(false), &dynamic([w], ^&2 or like(w.path, ^&1)))
@@ -1303,23 +1408,72 @@ defmodule Brando.Translations do
     :ok
   end
 
-  # A new version of an entry may be the one a translation's parent waited for.
-  # The awaiting item names that entry (`parent/12`), so only its waiters re-sync.
-  defp resync_waiting_tree(module, entry_ids) do
-    paths = for name <- Sync.tree_relations(module), id <- entry_ids, do: "#{name}/#{id}"
+  @doc """
+  Called when two entries are unlinked. The synchronized translations that
+  embed a fragment that was one of them re-sync, so a fragment block that
+  took the unlinked version goes back to the source's fragment.
+  """
+  def alternate_removed(Brando.Pages.Fragment, entry_id, linked_entry_id),
+    do: resync_embedding([entry_id, linked_entry_id])
 
-    if paths != [] and synchronized?(module) do
+  def alternate_removed(_module, _entry_id, _linked_entry_id), do: :ok
+
+  # A new version of an entry may be the one a translation's parent (or a
+  # fragment's page) waited for. The awaiting item names that entry
+  # (`parent/12`), so only its waiters re-sync: of every synchronized schema
+  # with a tree relation to `module`.
+  defp resync_waiting_tree(module, entry_ids) do
+    waiting =
+      for type <- Repo.all(from(m in Member, distinct: true, select: m.entry_type)),
+          schema = known_schema(type),
+          schema && synchronized?(schema),
+          {name, ^module} <- Sync.tree_targets(schema),
+          id <- entry_ids,
+          do: {type, "#{name}/#{id}"}
+
+    for {type, paths} <- Enum.group_by(waiting, &elem(&1, 0), &elem(&1, 1)) do
       from(w in WorkItem,
         join: v in assoc(w, :pending_version),
         join: m in assoc(v, :member),
         where: w.kind == :awaiting_translation and v.status == :pending and is_nil(w.resolved_at),
-        where: w.path in ^paths and m.entry_type == ^entry_type(module),
+        where: w.path in ^paths and m.entry_type == ^type,
         distinct: true,
         select: m.group_id
       )
       |> Repo.all()
       |> Enum.each(&enqueue_sync(&1, false))
     end
+
+    :ok
+  end
+
+  # A fragment's new version is the one the translations of the entries
+  # embedding it take in their blocks: their groups re-sync.
+  defp resync_embedding(fragment_ids) do
+    blocks = Repo.all(from b in Brando.Content.Block, where: b.fragment_id in ^fragment_ids, select: b.id)
+
+    for {schema, ids} <-
+          blocks
+          |> Brando.Content.BlockReferences.list_root_block_ids_by_source()
+          |> Brando.Content.BlockReferences.list_entry_ids_for_root_blocks_by_source(),
+        synchronized?(schema),
+        group_id <-
+          Repo.all(
+            from m in Member,
+              where: m.entry_type == ^entry_type(schema) and m.entry_id in ^ids and m.role == :source,
+              select: m.group_id
+          ) do
+      enqueue_sync(group_id, false)
+    end
+
+    :ok
+  end
+
+  defp known_schema(type) do
+    module = String.to_existing_atom(type)
+    if Code.ensure_loaded?(module), do: module
+  rescue
+    ArgumentError -> nil
   end
 
   @doc """
@@ -1712,6 +1866,19 @@ defmodule Brando.Translations do
     end
   end
 
+  # An entry with the source's `matched_by` values in `language`, linked to it
+  # or not, is its version there: a translation beside it would give the
+  # language two entries with the same keys.
+  defp ensure_no_unlinked_version(schema, source_id, language) do
+    with %{} = source <- Repo.get(schema, source_id),
+         %Ecto.Query{} = query <- same_values_query(schema, source),
+         true <- exists?(from e in query, where: e.language == ^language) do
+      {:error, :language_exists}
+    else
+      _ -> :ok
+    end
+  end
+
   defp exclude_deleted(query, schema) do
     if :deleted_at in schema.__schema__(:fields),
       do: where(query, [_alternate, entry], is_nil(entry.deleted_at)),
@@ -1756,10 +1923,25 @@ defmodule Brando.Translations do
           name not in slug_names,
           do: {name, fn _entry, value -> value end}
 
+    # An `always_source_controlled` relation to another schema's entry (a
+    # fragment's page): its version in the copy's language, or, until there is one, none
+    # (the first sync marks it awaited), or the source's when it is required.
+    # A page's parent is copied as it is; the first sync maps it.
+    required = required_relations(schema)
+
+    tree =
+      for {name, module} <- Sync.tree_targets(schema),
+          module != schema,
+          field <- [
+            {name, nil},
+            {:"#{name}_id", fn _entry, id -> copy_tree_id(id, module, language, name in required) end}
+          ],
+          do: field
+
     override_opts = [
       change_fields:
         [{:language, String.to_existing_atom(language)} | slug_fields] ++
-          kept_text ++ separate ++ free_unique_values(schema),
+          kept_text ++ separate ++ tree ++ free_unique_values(schema),
       merge_change_fields: true,
       keep_sync_uid: true
     ]
@@ -1775,6 +1957,22 @@ defmodule Brando.Translations do
       {:ok, copy}
     end
   end
+
+  defp copy_tree_id(nil, _module, _language, _required), do: nil
+
+  defp copy_tree_id(id, module, language, required) do
+    case version_in_language(module, id, language) do
+      nil when required -> id
+      version -> version
+    end
+  end
+
+  defp required_relations(schema),
+    do:
+      for(
+        %{type: :belongs_to, name: name, opts: %{required: true}} <- Brando.Blueprint.Relations.__relations__(schema),
+        do: name
+      )
 
   @doc """
   Duplicate options for copying an entry into `language`, besides its

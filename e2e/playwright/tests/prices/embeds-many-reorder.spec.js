@@ -152,4 +152,54 @@ test.describe('Embeds many reordering and deletion', () => {
     await expect(finalEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price C')
     await expect(finalEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price B')
   })
+
+  // A drag sends the new order at the drop (#3805): a second editor sees it
+  // while the first touches no field
+  test('a dragged price reaches a second editor at the drop', async ({ page, secondUserPage }) => {
+    const title = `Reorder sync ${Date.now()}`
+    const titles = p => p.locator('.subform-entry input[name$="[title]"]')
+    const expectTitles = (p, expected, message) =>
+      expect
+        .poll(() => titles(p).evaluateAll(inputs => inputs.map(input => input.value)), { message })
+        .toEqual(expected)
+
+    await page.goto('/admin')
+    await page.locator('#nav-sections').getByRole('link', { name: 'Price categories' }).click()
+    await page.getByRole('link', { name: 'Create new' }).click()
+    await syncLV(page)
+    await setEntryStatus(page, 'published')
+    await page.locator('#price_category_title').fill(title)
+    await page.locator('.add-entry-button').click()
+    await expect(page.locator('.subform-entry')).toHaveCount(2)
+    await syncLV(page)
+    await page.locator('.add-entry-button').click()
+    await expect(page.locator('.subform-entry')).toHaveCount(3)
+    await syncLV(page)
+    for (const [index, name] of ['Price A', 'Price B', 'Price C'].entries()) {
+      const entry = page.locator('.subform-entry').nth(index)
+      await entry.getByRole('textbox', { name: 'Title', includeHidden: true }).fill(name)
+      await entry.getByRole('textbox', { name: 'Price' }).fill('kr 100,-')
+    }
+    await syncLV(page)
+    await page.getByTestId('submit').click()
+    await syncLV(page)
+    await page.getByRole('link', { name: title }).click()
+    await syncLV(page)
+    await expectTitles(page, ['Price A', 'Price B', 'Price C'])
+
+    await secondUserPage.goto(new URL(page.url()).pathname)
+    await syncLV(secondUserPage)
+    await expectTitles(secondUserPage, ['Price A', 'Price B', 'Price C'])
+
+    const entries = page.locator('.subform-entry')
+    const source = await entries.nth(2).locator('.subform-handle').boundingBox()
+    const target = await entries.nth(0).locator('.subform-handle').boundingBox()
+    await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 20 })
+    await page.mouse.up()
+
+    await expectTitles(page, ['Price C', 'Price A', 'Price B'], 'the order where it was dragged')
+    await expectTitles(secondUserPage, ['Price C', 'Price A', 'Price B'], 'the order the second editor sees')
+  })
 })

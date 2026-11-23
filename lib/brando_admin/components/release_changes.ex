@@ -191,6 +191,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             phx-click="select_row"
             phx-value-uid={"applied:" <> item["uid"]}
             data-testid="release-applied-row"
+            data-uid={item["uid"]}
           >
             <span></span>
             <div>
@@ -260,7 +261,10 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         <span class="release-def-name">
           <span :if={@row.namespace}>{@row.namespace} ›</span> {@row.title}
         </span>
-        <span :if={@row.children != []} class="release-def-child">
+        <span :if={@row.children != [] && @row.kind == "container"} class="release-def-child">
+          {gettext("with palette %{name}", name: Enum.join(@row.children, ", "))}
+        </span>
+        <span :if={@row.children != [] && @row.kind != "container"} class="release-def-child">
           {ngettext("with child %{names}", "with children %{names}", length(@row.children),
             names: Enum.join(@row.children, ", ")
           )}
@@ -364,7 +368,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     do: gettext("Adds refs or vars. Existing blocks get the defaults and keep their content, then re-render.")
 
   def class_help(:destructive),
-    do: gettext("Removes a var that blocks hold values for. Those values are dropped when the blocks re-render.")
+    do: gettext("Removes refs or vars. Blocks keep what they hold in them until you resolve the blocks after the apply.")
 
   def class_help(:migration_required),
     do: gettext("Changes what blocks hold content in. It can’t be applied until a migration has moved that content.")
@@ -552,8 +556,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp effect(%{kind: :field}), do: gettext("None")
   defp effect(%{kind: :var, change: :added}), do: gettext("Blocks get the default")
   defp effect(%{kind: :ref, change: :added}), do: gettext("Blocks get the ref, empty or with its default")
-  defp effect(%{kind: :var, change: :removed}), do: gettext("Values are dropped when blocks re-render")
-  defp effect(%{kind: :ref, change: :removed}), do: gettext("Needs a migration")
+  defp effect(%{change: :removed}), do: gettext("Blocks keep what they hold until it is resolved")
   defp effect(_), do: gettext("Blocks re-render")
 
   defp field_label("name"), do: gettext("Name")

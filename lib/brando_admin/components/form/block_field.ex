@@ -130,6 +130,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        open_slot_uid: nil,
        slot_title: nil,
        note_observers: %{},
+       # Children made for dropped files whose upload has not settled, by uid
+       # (`Block.insert_media_drop_children/2`, "media_drop_settled")
+       media_drop_pending: %{},
        live_preview_active?: false,
        live_preview_cache_key: nil,
        # `data-site` on the wrapper, which the application's admin stylesheet
@@ -145,7 +148,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # structural events are refused before they touch the store, the bin or the
   # other editors. Content edits (`{:update, …}` ops) pass.
   @locked_events ~w(create_footnote duplicate_block paste_block paste_child_block delete_block
-                    insert_extracted_child insert_block insert_container insert_fragment remap_region)
+                    move_child insert_block insert_container insert_fragment remap_region)
 
   def update(%{event: event}, %{assigns: %{source_locked: true}} = socket) when event in @locked_events,
     do: {:ok, refuse_structure(socket, event)}
@@ -500,6 +503,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, recorded_delete(socket, uid, &remove_block_from_state(&1, uid))}
   end
 
+  # Children a multi block made for dropped files (after their inserts): the
+  # token each upload reports back with, and the child as the drop built it
+  def update(%{event: "media_drop_pending", children: children}, socket) do
+    shown = socket.assigns.block_ops
+    pending = Map.new(children, &{&1.uid, %{token: &1.token, built: media_drop_state(shown, &1.uid)}})
+    {:ok, update(socket, :media_drop_pending, &Map.merge(&1, pending))}
+  end
+
   # blocks (any level) emit their content/structural ops directly — see
   # Block.emit_block_op/2. Forms never travel up; seed forms are only read
   # at first mount.
@@ -571,45 +582,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, socket}
   end
 
-  # Outline: relay extracted child to target parent.
-  #
-  # The child's changeset is rebuilt HERE, from the op store, rather than
-  # accepted from the source parent — that parent only holds a mount-time seed
-  # form, so a child taken from it would arrive with its original content and
-  # wipe the user's edits when the target re-registered its diff.
-  def update(
-        %{event: "insert_extracted_child", target_parent_uid: target_uid, child_uid: uid, sequence: seq},
-        socket
-      ) do
-    # `outline_reposition` already proved this materializes before it told the
-    # source parent to let go, so a failure here means the store changed
-    # underneath us. The source has by now dropped the child from its own
-    # `block_list`, and `rebuild_outline_items/1` only reflects the canonical
-    # store — so simply returning would leave the block invisible on the canvas
-    # while still alive server-side. Reload instead: the store is authoritative
-    # and re-mounting the roots from it restores a consistent view.
-    case build_child_changeset(socket, uid) do
-      {:ok, cs} ->
-        send_update(Block,
-          id: "block-#{target_uid}",
-          event: "insert_pasted_block",
-          block_cs: moved_child_changeset(cs, socket.assigns.current_user.id),
-          sequence: seq
-        )
-
-        {:ok, rebuild_outline_items(socket)}
-
-      {:error, reason} ->
-        require Logger
-
-        Logger.error("""
-        [BlockField] cross-parent move of #{inspect(uid)} failed AFTER the source parent \
-        released it: #{inspect(reason)}. Reloading blocks from the op store to avoid \
-        stranding it off-canvas.
-        """)
-
-        {:ok, socket |> reload_all_blocks() |> rebuild_outline_items()}
-    end
+  # A child dropped into another multi block on the canvas (`Block.Events`).
+  def update(%{event: "move_child", uid: uid, parent_uid: parent_uid, at: at} = message, socket) do
+    {:ok, move_child(socket, uid, parent_uid, at, message[:from_uid])}
   end
 
   # INSERT ROOT BLOCK
@@ -1114,7 +1089,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:remote, replica, displayed} ->
         socket
         |> assign(:edit_session, replica)
-        |> show_state(displayed, hint_uids(message.op))
+        |> show_state(displayed, hint_uids(message.op, socket.assigns.block_ops))
         |> forget_undo(message.op, :remote)
 
       :stale ->
@@ -1683,11 +1658,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # The uids an op names, to narrow `Ops.changed_roots/3`. Ops that move or
-  # remove blocks compare every root.
+  # remove blocks compare every root. A child inserted under another parent
+  # (`move_child`) changes the root it left too, which `shown` still has it
+  # under.
+  defp hint_uids({:insert_child, parent_uid, uid, _at, _params}, %Ops{} = shown),
+    do: Enum.uniq([parent_uid | List.wrap(shown.parents[uid])])
+
+  defp hint_uids(op, _shown), do: hint_uids(op)
+
   defp hint_uids({:update, uid, _params}), do: [uid]
   defp hint_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
   defp hint_uids({:set_fields, uid, _changes, _rev}), do: [uid]
-  defp hint_uids({:insert_child, parent_uid, _uid, _at, _params}), do: [parent_uid]
   defp hint_uids({:reorder_children, parent_uid, _uids}), do: [parent_uid]
   defp hint_uids({:move, _uid, _at}), do: []
   defp hint_uids({:move, _uid, _to, _from}), do: []
@@ -2105,6 +2086,76 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The changeset base for materializing a root block: its persisted entry
   # block when it exists, otherwise a fresh struct with an empty (loaded)
   # block so cast_assoc has something to cast against.
+  # A child moved to another parent, dragged on the canvas or in the
+  # Outline. The store takes the move first, and only a move it took is
+  # shown: the parent the child leaves lets go of it and the one it joins
+  # takes it, so a move the store refuses (the parent is gone, it does not
+  # take the child, or the translation follows its source) leaves the child
+  # where it was. The child goes as the store holds it, not as its old
+  # parent's seed form. `dragged_from` is the parent the editor dragged it
+  # out of, which lets go of it too: a view of another editor's move that
+  # is not shown yet still has the child there.
+  defp move_child(socket, uid, parent_uid, at, dragged_from) do
+    shown = socket.assigns.block_ops
+    from_uid = shown.parents[uid]
+
+    case build_child_changeset(socket, uid) do
+      {:ok, cs} when from_uid not in [nil, parent_uid] ->
+        if takes_child?(socket, from_uid, parent_uid),
+          do: put_moved_child(socket, cs, uid, {from_uid, dragged_from}, parent_uid, at),
+          else: refuse_move(socket, uid, parent_uid)
+
+      {:ok, _cs} ->
+        socket
+
+      {:error, reason} ->
+        Logger.error("BlockField (#{socket.assigns.block_field}) did not move #{inspect(uid)}: #{inspect(reason)}")
+        socket
+    end
+  end
+
+  defp put_moved_child(socket, cs, uid, {from_uid, dragged_from}, parent_uid, at) do
+    shown = socket.assigns.block_ops
+    moved = moved_child_changeset(cs, socket.assigns.current_user.id)
+    moved_socket = apply_block_op(socket, {:insert_child, parent_uid, uid, at, Ops.block_diff_params(moved)})
+
+    if moved_socket.assigns.block_ops.parents[uid] == parent_uid do
+      for parent <- Enum.uniq([from_uid, dragged_from]), parent && parent != parent_uid && Ops.known?(shown, parent) do
+        send_update(Block, id: component_id(shown, parent), event: "release_children", uids: [uid])
+      end
+
+      send_update(Block,
+        id: component_id(shown, parent_uid),
+        event: "insert_moved_child",
+        block_cs: moved,
+        sequence: at
+      )
+
+      moved_socket
+      |> refresh_live_preview()
+      |> rebuild_outline_items()
+    else
+      moved_socket
+    end
+  end
+
+  # A child moves only to a block that takes the children of the one it
+  # leaves: the rule the canvas and the Outline drag by.
+  defp takes_child?(socket, from_uid, parent_uid) do
+    [from, parent] = stored_blocks(socket, [from_uid, parent_uid])
+    group = Block.children_group(from)
+    group != nil and group == Block.children_group(parent)
+  end
+
+  defp refuse_move(socket, uid, parent_uid) do
+    Logger.error(
+      "BlockField (#{socket.assigns.block_field}) did not move #{inspect(uid)}: " <>
+        "#{inspect(parent_uid)} does not take it"
+    )
+
+    socket
+  end
+
   # Rebuild a child's changeset from the op store — the only holder of its
   # current content once its own component has been destroyed by a move.
   defp build_child_changeset(socket, uid) do
@@ -2374,23 +2425,86 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp collection_owner(socket, uid) do
-    if Ops.known?(socket.assigns.block_ops, uid) do
-      root_uid = Ops.root_of(socket.assigns.block_ops, uid)
-      {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
-
-      root =
-        socket
-        |> materialize_base_struct(root_uid)
-        |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
-        |> Changeset.get_assoc(:block, :struct)
-
-      case find_block_by_uid([root], uid) do
-        %{type: :module, multi: false} = owner -> {:ok, owner}
-        _ -> {:error, :invalid_owner}
-      end
-    else
-      {:error, :unknown_owner}
+    case stored_block(socket, uid) do
+      %{type: :module, multi: false} = owner -> {:ok, owner}
+      nil -> {:error, :unknown_owner}
+      _ -> {:error, :invalid_owner}
     end
+  end
+
+  # A block as the store holds it, or nil for a uid it does not know.
+  defp stored_block(socket, uid), do: socket |> stored_blocks([uid]) |> hd()
+
+  # `stored_block/2` for each of `uids`, materializing each root once.
+  defp media_drop_failed(socket, uid, built, params) do
+    shown = socket.assigns.block_ops
+
+    cond do
+      not Ops.known?(shown, uid) ->
+        socket
+
+      media_drop_state(shown, uid) == built ->
+        send_update(Block, id: component_id(shown, shown.parents[uid]), event: "delete_block", uid: uid, dom_id: nil)
+        alert_media_drop_failed(socket, params, nil)
+
+      true ->
+        alert_media_drop_failed(
+          socket,
+          params,
+          gettext("The block made for the file was kept, as it has been changed since.")
+        )
+    end
+  end
+
+  # A child as the store holds it, apart from where it sits and what the
+  # server keeps of it: a move to another block leaves it as it was built
+  defp media_drop_state(shown, uid) do
+    case Ops.materialize_child(shown, uid) do
+      {:ok, params} -> Map.drop(params, ~w(sequence parent_id module_version sync_uid))
+      {:error, _} -> nil
+    end
+  end
+
+  defp alert_media_drop_failed(socket, %{"unavailable" => true}, kept) do
+    alert_media_drop(
+      socket,
+      gettext("Upload failed"),
+      gettext("The block made for this file shows no field for it, so it was not added."),
+      kept
+    )
+  end
+
+  defp alert_media_drop_failed(socket, %{"error" => error}, kept) when is_binary(error) and error != "",
+    do: alert_media_drop(socket, gettext("Upload failed"), error, kept)
+
+  # Cancelled by the editor, who knows: said only when the block stays
+  defp alert_media_drop_failed(socket, _cancelled, nil), do: socket
+
+  defp alert_media_drop_failed(socket, _cancelled, kept),
+    do: alert_media_drop(socket, gettext("Upload cancelled"), nil, kept)
+
+  defp alert_media_drop(socket, title, message, kept) do
+    message = [message, kept] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+    push_event(socket, "b:alert", %{title: title, message: message, type: "error"})
+  end
+
+  defp stored_blocks(socket, uids) do
+    ops = socket.assigns.block_ops
+    roots = for uid <- uids, Ops.known?(ops, uid), uniq: true, do: Ops.root_of(ops, uid)
+    root_blocks = Map.new(roots, &{&1, stored_root(socket, &1)})
+
+    Enum.map(uids, fn uid ->
+      if Ops.known?(ops, uid), do: find_block_by_uid([root_blocks[Ops.root_of(ops, uid)]], uid)
+    end)
+  end
+
+  defp stored_root(socket, root_uid) do
+    {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
+
+    socket
+    |> materialize_base_struct(root_uid)
+    |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+    |> Changeset.get_assoc(:block, :struct)
   end
 
   # The mounted root takes its new form through `replace_form`. Its seed
@@ -2606,7 +2720,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # rows already. Re-seeding one re-sends its whole form (~8 KB, one frame
   # per root) even when nothing in it changed — 1.1 MB for a save at 115
   # roots. See `holds_persisted?/2` for what "provably" means.
-  defp reload_all_blocks(socket, scope \\ :all) do
+  defp reload_all_blocks(socket, scope) do
     socket = assign(socket, :restored_blocks, %{})
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
@@ -3169,6 +3283,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, socket}
   end
 
+  # The upload handed to a child made for a dropped file has settled
+  # (`Brando.MediaDrop`). After a failure or a cancel the child goes again,
+  # wherever it has moved, while it is exactly as the drop built it; a child
+  # changed since stays, and the editor is told. Either way, and after a
+  # success, the child is no longer pending. Only the upload handed to the
+  # child, by its token, settles it.
+  def handle_event("media_drop_settled", %{"uid" => uid, "token" => token} = params, socket)
+      when is_binary(uid) and is_binary(token) do
+    case socket.assigns.media_drop_pending do
+      %{^uid => %{token: ^token, built: built}} ->
+        socket = update(socket, :media_drop_pending, &Map.delete(&1, uid))
+        {:noreply, if(params["failed"] == true, do: media_drop_failed(socket, uid, built, params), else: socket)}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("outline_reposition", params, socket) do
     from_parent_uid = get_in(params, ["from", "parentUid"])
     to_parent_uid = get_in(params, ["to", "parentUid"])
@@ -3177,43 +3309,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_idx = params["new"]
 
     if from_parent_uid == to_parent_uid do
-      # Same parent: reorder children
       send_update(Block,
-        id: "block-#{from_parent_uid}",
+        id: component_id(socket.assigns.block_ops, from_parent_uid),
         event: "outline_reorder_child",
         child_uid: uid,
         old: old_idx,
         new: new_idx
       )
+
+      {:noreply, rebuild_outline_items(socket)}
     else
-      # Cross-parent: extract from source, insert into target.
-      #
-      # Pre-flight the rebuild BEFORE telling the source to release the child.
-      # `extract_child` drops it from the source's `block_list`/`changesets`
-      # unconditionally, so discovering a problem afterwards leaves the block
-      # off-canvas with no rollback path. Failing here instead is a clean no-op:
-      # nothing has moved yet.
-      case build_child_changeset(socket, uid) do
-        {:ok, _cs} ->
-          send_update(Block,
-            id: "block-#{from_parent_uid}",
-            event: "extract_child",
-            child_uid: uid,
-            target_parent_uid: to_parent_uid,
-            target_sequence: new_idx
-          )
-
-        {:error, reason} ->
-          require Logger
-
-          Logger.error("""
-          [BlockField] refusing cross-parent move of #{inspect(uid)}: #{inspect(reason)}. \
-          The block stays under its original parent.
-          """)
-      end
+      {:noreply, move_child(socket, uid, to_parent_uid, new_idx, from_parent_uid)}
     end
-
-    {:noreply, rebuild_outline_items(socket)}
   end
 
   def handle_event("show_block_picker", _, socket) do

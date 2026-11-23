@@ -2,18 +2,66 @@ defmodule Brando.Content.Definition.Model do
   @moduledoc false
 
   alias Brando.Content.Definition.{Error, Reader, Value}
-  alias Brando.Content.{Module, Ref, Var}
+  alias Brando.Content.{Container, Module, Palette, Ref, TableTemplate, Var}
   alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Villain.Blocks
   alias Ecto.Changeset
 
-  @module_fields ~w(uid name namespace help_text class code type svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query)a
+  @module_fields ~w(uid name namespace help_text class code type svg color write_with_ai multi media_drop_child media_drop_ref sequence datasource datasource_module datasource_type datasource_query)a
   @ref_fields ~w(uid name description active collapsed sequence data)a
   @var_owners ~w(page_id block_id module_id table_template_id table_row_id global_set_id menu_item_id)a
   @var_assets ~w(image file video gallery palette identifier)
   @ref_assets ~w(image file video gallery)
+  @palette_fields ~w(uid name namespace key global instructions)a
+  @color_fields ~w(name key hex_value instructions)a
+  @container_fields ~w(uid name namespace help_text type code allow_custom_palette palette_namespace)a
+
+  # Each kind's list in a bundle, in the order an import writes them: a
+  # container names its palette, a module its table template and children
+  @kinds [
+    {"palette", "palettes", Palette},
+    {"container", "containers", Container},
+    {"table_template", "table_templates", TableTemplate},
+    {"module", "modules", Module}
+  ]
+
+  # What each kind declares besides `kind`, `uid` and `name`: options, and
+  # sections (`templates` for `template`/`template_file`)
+  @declarations %{
+    module:
+      {(@module_fields -- [:uid, :name, :code, :type, :media_drop_child, :media_drop_ref]) ++
+         [:table_template, :media_drop], [:refs, :vars, :children, :templates]},
+    table_template: {[], [:vars]},
+    palette: {@palette_fields -- [:uid, :name], [:colors]},
+    container: {(@container_fields -- [:uid, :name, :code, :type]) ++ [:palette], [:templates]}
+  }
 
   def module_fields, do: @module_fields
+  def container_fields, do: @container_fields
+
+  @doc "The kinds of definition, in the order an import writes them."
+  def kinds, do: Enum.map(@kinds, &elem(&1, 0))
+
+  @doc ~S(The key of `kind`'s list in a bundle: "modules" for "module".)
+  def bundle_key(kind), do: @kinds |> List.keyfind!(kind, 0) |> elem(1)
+
+  @doc "The schema of `kind`."
+  def schema(kind), do: @kinds |> List.keyfind!(kind, 0) |> elem(2)
+
+  @doc """
+  Every definition in `bundle`, in the order an import writes them:
+  palettes, containers, table templates, modules.
+  """
+  def definitions(bundle), do: Enum.flat_map(@kinds, fn {_kind, key, _schema} -> bundle[key] || [] end)
+
+  @doc """
+  `bundle` with a list for every kind: a bundle, lockfile or stored batch
+  written before palettes and containers were definitions has none.
+  """
+  def with_kinds(bundle), do: Enum.reduce(@kinds, bundle, fn {_kind, key, _schema}, acc -> Map.put_new(acc, key, []) end)
+
+  @doc "How errors and plans name a definition: `module \"hero\"`."
+  def subject(kind, uid), do: ~s(#{String.replace(kind, "_", " ")} "#{uid}")
   def ref_assets, do: @ref_assets
   def var_assets, do: @var_assets
 
@@ -33,8 +81,9 @@ defmodule Brando.Content.Definition.Model do
         Error.in_file(Error.file_label(spec.source, root), fn -> definition!(spec, root, names) end)
       end)
 
-    {tables, modules} = Enum.split_with(definitions, &(&1["kind"] == "table_template"))
-    bundle = canonicalize(%{"format_version" => 1, "modules" => modules, "table_templates" => tables})
+    grouped = Enum.group_by(definitions, & &1["kind"])
+    bundle = Map.new(@kinds, fn {kind, key, _schema} -> {key, Map.get(grouped, kind, [])} end)
+    bundle = canonicalize(Map.put(bundle, "format_version", 1))
     validate_graph!(bundle)
     bundle
   end
@@ -43,42 +92,90 @@ defmodule Brando.Content.Definition.Model do
     opts = spec.options
     uid = Value.nonempty!(opts.uid, "uid")
     kind = Map.get(opts, :kind, :module) || :module
-    vars = spec.vars |> Enum.with_index() |> Enum.map(fn {var, index} -> var!(var, index, uid) end)
+    declares!(kind, spec)
+    definition!(kind, spec, uid, root, names)
+  end
 
-    if kind == :table_template do
-      if spec.refs != [] or spec.templates != [] or spec.children != [],
-        do: Error.raise!("table templates only declare uid, name and vars")
+  defp declares!(kind, spec) do
+    {options, sections} = Map.fetch!(@declarations, kind)
+    label = String.replace(to_string(kind), "_", " ")
+    extra = Map.keys(Map.reject(spec.options, fn {_k, v} -> v == nil end)) -- [:kind, :uid, :name | options]
+    if extra != [], do: Error.raise!("unsupported #{label} options #{inspect(Enum.sort(extra))}")
 
-      extra = Map.keys(Map.reject(opts, fn {_k, v} -> v == nil end)) -- [:kind, :uid, :name]
-      if extra != [], do: Error.raise!("unsupported table-template options #{inspect(extra)}")
-      %{"kind" => "table_template", "uid" => uid, "name" => Value.nonempty!(opts.name, "name"), "vars" => vars}
-    else
-      fields =
-        struct(Module)
-        |> Map.take(@module_fields)
-        |> Map.merge(Map.take(opts, @module_fields))
-        |> Map.update!(:name, &Value.object/1)
-        |> Map.update!(:namespace, &Value.object/1)
-        |> Map.update!(:help_text, &Value.object/1)
-        |> Value.plain()
-
-      {engine, code} = template!(spec.templates, spec.source, root)
-      refs = spec.refs |> Enum.with_index() |> Enum.map(fn {ref, index} -> ref!(ref, index, uid) end)
-      children = Enum.map(spec.children, &resolve!(&1.definition, names))
-
-      fields
-      |> Map.merge(%{
-        "type" => to_string(engine),
-        "code" => code,
-        "refs" => refs,
-        "vars" => vars,
-        "children" => children,
-        "table_template" => resolve!(opts[:table_template], names),
-        "kind" => "module"
-      })
-      |> normalize_module!(nil)
+    case Enum.filter(~w(refs vars children templates colors)a -- sections, &(Map.get(spec, &1, []) != [])) do
+      [] -> :ok
+      declared -> Error.raise!("#{label} definitions don't declare #{Enum.map_join(declared, ", ", &section_name/1)}")
     end
   end
+
+  defp section_name(:templates), do: "a template"
+  defp section_name(section), do: to_string(section)
+
+  defp definition!(:table_template, spec, uid, _root, _names) do
+    vars = spec.vars |> Enum.with_index() |> Enum.map(fn {var, index} -> var!(var, index, uid) end)
+    %{"kind" => "table_template", "uid" => uid, "name" => Value.nonempty!(spec.options.name, "name"), "vars" => vars}
+  end
+
+  defp definition!(:palette, spec, uid, _root, _names) do
+    colors =
+      Enum.map(spec.colors, fn color ->
+        color |> Map.take(@color_fields) |> Map.update!(:key, &to_string/1) |> Value.plain()
+      end)
+
+    spec.options
+    |> Map.take(@palette_fields)
+    |> Map.merge(%{uid: uid, colors: colors})
+    |> Value.plain()
+    |> normalize_palette!(nil)
+  end
+
+  defp definition!(:container, spec, uid, root, names) do
+    opts = spec.options
+    {engine, code} = template!(spec.templates, spec.source, root)
+
+    opts
+    |> Map.take(@container_fields)
+    |> Map.merge(%{uid: uid, type: engine, code: code})
+    |> Value.plain()
+    |> Map.put("palette", resolve!(opts[:palette], names))
+    |> normalize_container!(nil)
+  end
+
+  defp definition!(:module, spec, uid, root, names) do
+    opts = spec.options
+    vars = spec.vars |> Enum.with_index() |> Enum.map(fn {var, index} -> var!(var, index, uid) end)
+
+    fields =
+      struct(Module)
+      |> Map.take(@module_fields)
+      |> Map.merge(Map.take(opts, @module_fields))
+      |> Map.update!(:name, &Value.object/1)
+      |> Map.update!(:namespace, &Value.object/1)
+      |> Map.update!(:help_text, &Value.object/1)
+      |> Value.plain()
+
+    {engine, code} = template!(spec.templates, spec.source, root)
+    refs = spec.refs |> Enum.with_index() |> Enum.map(fn {ref, index} -> ref!(ref, index, uid) end)
+    children = Enum.map(spec.children, &resolve!(&1.definition, names))
+
+    fields
+    |> Map.merge(media_drop(opts[:media_drop], names))
+    |> Map.merge(%{
+      "type" => to_string(engine),
+      "code" => code,
+      "refs" => refs,
+      "vars" => vars,
+      "children" => children,
+      "table_template" => resolve!(opts[:table_template], names),
+      "kind" => "module"
+    })
+    |> normalize_module!(nil)
+  end
+
+  defp media_drop(nil, _names), do: %{}
+
+  defp media_drop(media_drop, names),
+    do: %{"media_drop_child" => resolve!(media_drop[:child], names), "media_drop_ref" => to_string(media_drop[:ref])}
 
   defp template!([%{engine: engine, source: source, file: true}], file, root),
     do: {engine, Reader.template_file!(source, file, root)}
@@ -230,6 +327,62 @@ defmodule Brando.Content.Definition.Model do
       "vars" => ordered(record.vars, &var_record/1)
     }
 
+  @doc """
+  A palette as a definition. Its colours are the whole set, in order. Blank
+  text reads as nil, as the changeset casts it, so a palette saved with an
+  empty instructions field equals its file.
+  """
+  def palette_record(record) do
+    record
+    |> Map.take(@palette_fields)
+    |> Value.plain()
+    |> Map.merge(%{
+      "kind" => "palette",
+      "global" => Map.get(record, :global) || false,
+      "colors" => Enum.map(record.colors || [], &(&1 |> Map.take(@color_fields) |> Value.plain() |> blank_nil()))
+    })
+    |> blank_nil()
+  end
+
+  @doc "A container as a definition; `palette` is its default palette's uid, or nil."
+  def container_record(record, palette) do
+    record
+    |> Map.take(@container_fields)
+    |> Value.plain()
+    |> Map.merge(%{
+      "kind" => "container",
+      "allow_custom_palette" => Map.get(record, :allow_custom_palette) || false,
+      "palette" => palette
+    })
+    |> blank_nil()
+  end
+
+  defp blank_nil(map), do: Map.new(map, fn {key, value} -> {key, if(value == "", do: nil, else: value)} end)
+
+  # Read through the schema's changeset, as a save in the admin is: errors
+  # name the definition, or nothing more than its file (`nil`) as it is read
+  def normalize_palette!(definition, subject \\ :uid) do
+    # Status is the environment's, as it is for nothing in a module
+    attrs =
+      definition
+      |> Map.take(Enum.map(@palette_fields, &to_string/1) ++ ["colors"])
+      |> Map.put("status", "published")
+
+    struct(Palette)
+    |> Palette.changeset(attrs, %{id: 0})
+    |> apply_valid!(if(subject == :uid, do: subject("palette", definition["uid"]), else: subject))
+    |> palette_record()
+  end
+
+  def normalize_container!(definition, subject \\ :uid) do
+    attrs = Map.take(definition, Enum.map(@container_fields, &to_string/1))
+
+    struct(Container)
+    |> Container.changeset(attrs, :system)
+    |> apply_valid!(if(subject == :uid, do: subject("container", definition["uid"]), else: subject))
+    |> container_record(definition["palette"])
+  end
+
   def ref_record(record),
     do: record |> Map.take(@ref_fields) |> Value.plain() |> Map.put("assets", Map.new(@ref_assets, &{&1, nil}))
 
@@ -303,15 +456,21 @@ defmodule Brando.Content.Definition.Model do
     Map.merge(definition, normalized)
   end
 
-  def validate_graph!(%{"format_version" => 1, "modules" => modules, "table_templates" => tables}) do
-    unless is_list(modules) and is_list(tables), do: Error.raise!("bundle", "definitions must be lists")
-    Enum.each(modules, &validate_kind!(&1, "module"))
-    Enum.each(tables, &validate_kind!(&1, "table_template"))
-    uids = Enum.map(modules, & &1["uid"])
-    table_uids = Enum.map(tables, & &1["uid"])
-    Value.unique!(uids ++ table_uids, "bundle UIDs")
+  def validate_graph!(%{"format_version" => 1, "modules" => _, "table_templates" => _} = bundle) do
+    bundle = with_kinds(bundle)
 
-    Enum.each(modules ++ tables, &validate_definition!(&1, uids, table_uids))
+    Enum.each(@kinds, fn {kind, key, _schema} ->
+      unless is_list(bundle[key]), do: Error.raise!("bundle", "definitions must be lists")
+      Enum.each(bundle[key], &validate_kind!(&1, kind))
+    end)
+
+    modules = bundle["modules"]
+    uids = Enum.map(modules, & &1["uid"])
+    table_uids = Enum.map(bundle["table_templates"], & &1["uid"])
+    Value.unique!(Enum.map(definitions(bundle), & &1["uid"]), "bundle UIDs")
+
+    Enum.each(definitions(bundle), &validate_definition!(&1, uids, table_uids))
+    Enum.each(modules, &validate_media_drop!(&1, modules))
 
     children = Enum.flat_map(modules, & &1["children"])
     Value.unique!(Enum.flat_map(modules, fn module -> Enum.map(module["refs"], & &1["uid"]) end), "bundle ref UIDs")
@@ -322,6 +481,16 @@ defmodule Brando.Content.Definition.Model do
   end
 
   def validate_graph!(_), do: Error.raise!("bundle", "unsupported format_version or invalid envelope")
+
+  defp validate_definition!(%{"kind" => "palette"} = definition, _uids, _table_uids) do
+    uid = Value.nonempty!(definition["uid"], "uid")
+    Value.unique!(Enum.map(definition["colors"], & &1["key"]), uid <> ".color keys")
+  end
+
+  defp validate_definition!(%{"kind" => "container"} = definition, _uids, _table_uids) do
+    uid = Value.nonempty!(definition["uid"], "uid")
+    if definition["palette"] != nil, do: Value.nonempty!(definition["palette"], uid <> ".palette")
+  end
 
   defp validate_definition!(definition, uids, table_uids) do
     uid = Value.nonempty!(definition["uid"], "uid")
@@ -346,6 +515,34 @@ defmodule Brando.Content.Definition.Model do
       do: Error.raise!(uid, "unresolved table template")
   end
 
+  # The child a `media_drop` names is one of the module's own, and holds the
+  # ref as a media, picture or video ref (`Module.media_drop_problem/3`)
+  defp validate_media_drop!(%{"media_drop_child" => child, "media_drop_ref" => ref} = definition, modules)
+       when is_binary(child) do
+    children =
+      for module <- modules, module["uid"] in definition["children"] do
+        %{
+          uid: module["uid"],
+          refs: Enum.map(module["refs"], &%{name: &1["name"], type: &1["data"]["type"]})
+        }
+      end
+
+    case Module.media_drop_problem(children, child, ref) do
+      nil -> :ok
+      issue -> Error.raise!(definition["uid"], "media_drop: " <> Module.describe_media_drop_issue(issue))
+    end
+  end
+
+  defp validate_media_drop!(_definition, _modules), do: :ok
+
+  defp validate_kind!(%{"kind" => "palette"} = definition, "palette") do
+    unless is_list(definition["colors"]), do: Error.raise!("palette", "colors must be a list")
+  end
+
+  defp validate_kind!(%{"kind" => "container"} = definition, "container") do
+    unless is_binary(definition["code"]), do: Error.raise!("container", "invalid definition")
+  end
+
   defp validate_kind!(definition, kind) when is_map(definition) do
     unless definition["kind"] == kind and is_list(definition["vars"]), do: Error.raise!(kind, "invalid definition")
 
@@ -365,10 +562,14 @@ defmodule Brando.Content.Definition.Model do
         if Map.has_key?(positions, module["uid"]), do: Map.put(module, "sequence", positions[module["uid"]]), else: module
       end)
 
-    bundle
-    |> Map.put("modules", Enum.sort_by(modules, & &1["uid"]))
-    |> Map.update!("table_templates", &Enum.sort_by(&1, fn table -> table["uid"] end))
+    bundle = Map.put(bundle, "modules", modules)
+
+    Enum.reduce(@kinds, bundle, fn {_kind, key, _schema}, bundle ->
+      if Map.has_key?(bundle, key), do: Map.update!(bundle, key, &sort_by_uid/1), else: bundle
+    end)
   end
+
+  defp sort_by_uid(definitions), do: Enum.sort_by(definitions, & &1["uid"])
 
   defp visit!(uid, graph, seen) do
     if MapSet.member?(seen, uid), do: Error.raise!(uid, "cyclic child relationship")

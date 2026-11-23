@@ -9,6 +9,8 @@ defmodule Brando.Content.SharedLibraryTest do
   alias Brando.Tenant
   alias Brando.Tenant.Registry
 
+  import Ecto.Query, only: [from: 2]
+
   @prefix "tenant_library-test_preview"
 
   setup do
@@ -159,6 +161,33 @@ defmodule Brando.Content.SharedLibraryTest do
     assert container_override.source_container_id == container.id
   end
 
+  # brando_245 derives a uid from the namespace and key or name, in the
+  # library and in each environment alike
+  test "a palette or container made local gets a uid of its own, kept when it takes the library's update", %{
+    site: site,
+    user: user
+  } do
+    palette = create_public_palette("Shared dark", user)
+    container = create_public_container("Shared section", user)
+
+    for {entry, schema} <- [{palette, Brando.Content.Palette}, {container, Brando.Content.Container}] do
+      Repo.update_all(from(r in schema, where: r.id == ^entry.id), [set: [uid: "derived"]], prefix: "public")
+      Repo.insert!(struct(schema, Map.merge(Map.from_struct(entry), %{id: nil, uid: "derived"})), prefix: @prefix)
+    end
+
+    assert :ok = SharedLibrary.set_enabled(site, :palette, [palette.id])
+    assert :ok = SharedLibrary.set_enabled(site, :container, [container.id])
+
+    for {kind, entry} <- [palette: palette, container: container] do
+      assert {:ok, override} = SharedLibrary.customize(kind, entry.id, site, @prefix, user)
+      assert is_binary(override.uid) and override.uid != "derived"
+
+      SharedLibrary.update_shared(kind, entry.id, %{name: "Updated"}, user)
+      assert {:ok, replacement} = SharedLibrary.accept_update(kind, entry.id, site, @prefix, user)
+      assert replacement.uid == override.uid
+    end
+  end
+
   test "module customization copies editable variables, references and settings", %{site: site, user: user} do
     attrs =
       "Shared rich module"
@@ -192,6 +221,56 @@ defmodule Brando.Content.SharedLibraryTest do
     assert [%{name: "body", description: "Body copy", module_id: ref_override_id}] = override.refs
     assert ref_override_id == override.id
     assert override.write_with_ai
+  end
+
+  test "module customization keeps a media drop setting it has no children to check against",
+       %{site: site, user: user} do
+    attrs =
+      "Shared image row"
+      |> module_attrs()
+      |> Map.merge(%{multi: true, media_drop_child: "image-card", media_drop_ref: "photo"})
+
+    assert {:ok, shared} = SharedLibrary.create_shared(:module, attrs, user)
+    assert :ok = SharedLibrary.enable(site, :module, shared.id)
+    assert {:ok, override} = SharedLibrary.customize(:module, shared.id, site, @prefix, user)
+    assert {override.media_drop_child, override.media_drop_ref} == {"image-card", "photo"}
+  end
+
+  test "a module customized from the library, with children only in the library, offers the media drop it reports as fitting",
+       %{site: site, user: user} do
+    row_attrs =
+      "Shared image row"
+      |> module_attrs()
+      |> Map.merge(%{uid: "image-row", multi: true, media_drop_child: "image-card", media_drop_ref: "photo"})
+
+    assert {:ok, row} = SharedLibrary.create_shared(:module, row_attrs, user)
+
+    card_attrs =
+      "Shared image card"
+      |> module_attrs()
+      |> Map.merge(%{
+        uid: "image-card",
+        parent_id: row.id,
+        refs: [
+          %{
+            name: "photo",
+            uid: Brando.Utils.generate_uid(),
+            sequence: 0,
+            data: %{type: "picture", data: %{}}
+          }
+        ]
+      })
+
+    assert {:ok, card} = SharedLibrary.create_shared(:module, card_attrs, user)
+    assert :ok = SharedLibrary.set_enabled(site, :module, [row.id, card.id])
+    assert {:ok, _override} = SharedLibrary.customize(:module, row.id, site, @prefix, user)
+
+    Tenant.with_prefix(@prefix, fn ->
+      effective = SharedLibrary.get(:module, row.id, :shared, site, @prefix)
+      assert effective.override_id
+      assert %{ref_name: "photo"} = BrandoAdmin.Components.Form.Block.media_drop(effective)
+      assert Brando.Doctor.Checks.ModuleMediaDrop.stale() == []
+    end)
   end
 
   test "origin-qualified block fields round-trip independently from integer IDs" do

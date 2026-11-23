@@ -9,12 +9,12 @@ defmodule Brando.Content.Definitions.Release.Review do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.Baselines
+  alias Brando.Content.Definition.{Baselines, Model}
   alias Brando.Content.DefinitionApply
   alias Brando.Repo
 
   @class_order [:metadata, :render, :compatible, :destructive]
-  @metadata ~w(name namespace help_text class type color svg multi datasource datasource_module datasource_type datasource_query write_with_ai table_template)
+  @metadata ~w(name namespace help_text class type color svg multi datasource datasource_module datasource_type datasource_query write_with_ai media_drop_child media_drop_ref table_template key global instructions allow_custom_palette palette_namespace palette)
 
   @type row :: %{
           uid: String.t(),
@@ -31,38 +31,47 @@ defmodule Brando.Content.Definitions.Release.Review do
         }
 
   @doc """
-  The plan's changes as rows, one per module tree, in the order the screen
-  lists them: those that need a choice, those ready to apply, those that
-  can't be applied yet. A table template goes with the first tree that uses
-  it, or has a row of its own.
+  The plan's changes as rows, one per module tree, container or palette,
+  in the order the screen lists them: those that need a choice, those ready
+  to apply, those that can't be applied yet. A table template goes with the
+  first tree that uses it, and a palette with the first container, or each
+  has a row of its own.
   """
   @spec rows(map()) :: [row()]
   def rows(%{plan: plan, items: items}) do
-    bundle = plan.bundle
-    modules = Map.new(bundle["modules"], &{&1["uid"], &1})
-    tables = Map.new(bundle["table_templates"], &{&1["uid"], &1})
+    bundle = Model.with_kinds(plan.bundle)
+    definitions = Map.new(Model.definitions(bundle), &{&1["uid"], &1})
     parents = for module <- bundle["modules"], child <- module["children"], into: %{}, do: {child, module["uid"]}
     pending = Enum.reject(items, &(&1.action == :noop))
 
     pending
-    |> Enum.group_by(&tree(&1, parents, modules))
-    |> Enum.map(fn {root, tree_items} -> row(root, tree_items, modules, tables) end)
+    |> Enum.group_by(&tree(&1, parents, bundle))
+    |> Enum.map(fn {root, tree_items} -> row(root, tree_items, definitions) end)
     |> Enum.sort_by(&{group_rank(&1.group), &1.namespace || "", &1.title})
   end
 
-  defp tree(%{kind: "module", uid: uid}, parents, _modules), do: root(uid, parents)
+  defp tree(%{kind: "module", uid: uid}, parents, _bundle), do: root(uid, parents)
 
-  defp tree(%{kind: "table_template", uid: uid}, parents, modules) do
-    case Enum.find(Map.values(modules), &(&1["table_template"] == uid)) do
+  defp tree(%{kind: "table_template", uid: uid}, parents, bundle) do
+    case Enum.find(bundle["modules"], &(&1["table_template"] == uid)) do
       nil -> uid
       module -> root(module["uid"], parents)
     end
   end
 
+  defp tree(%{kind: "palette", uid: uid}, _parents, bundle) do
+    case Enum.find(bundle["containers"], &(&1["palette"] == uid)) do
+      nil -> uid
+      container -> container["uid"]
+    end
+  end
+
+  defp tree(%{uid: uid}, _parents, _bundle), do: uid
+
   defp root(uid, parents), do: if(parent = parents[uid], do: root(parent, parents), else: uid)
 
-  defp row(root, items, modules, tables) do
-    definition = modules[root] || tables[root]
+  defp row(root, items, definitions) do
+    definition = definitions[root]
     language = language()
     root_item = Enum.find(items, &(&1.uid == root))
     others = Enum.reject(items, &(&1.uid == root))
@@ -76,7 +85,7 @@ defmodule Brando.Content.Definitions.Release.Review do
       title: text(definition["name"], language) || root,
       items: Enum.sort_by(items, &(&1.uid != root)),
       root_item: root_item,
-      children: Enum.map(others, &text((modules[&1.uid] || tables[&1.uid])["name"], language)),
+      children: Enum.map(others, &text(definitions[&1.uid]["name"], language)),
       group: group,
       status: status,
       class: worst_class(items),
@@ -137,9 +146,10 @@ defmodule Brando.Content.Definitions.Release.Review do
   canonical maps (`nil` when it isn't there).
   """
   def definitions(%{plan: plan}, uid) do
-    release = Enum.find(plan.bundle["modules"] ++ plan.bundle["table_templates"], &(&1["uid"] == uid))
+    release = Enum.find(Model.definitions(plan.bundle), &(&1["uid"] == uid))
     {here, _records} = Brando.Content.Definition.Snapshot.take!(all_tables: true)
-    current = Enum.find(here["modules"] ++ here["table_templates"], &(&1["uid"] == uid))
+    kind = release && release["kind"]
+    current = Enum.find(Model.definitions(here), &(&1["uid"] == uid and (is_nil(kind) or &1["kind"] == kind)))
     %{release: release, here: current, applied: applied(uid)}
   end
 
@@ -177,8 +187,12 @@ defmodule Brando.Content.Definitions.Release.Review do
       for var <- definition["vars"] || [],
           do: "var #{var["key"]} (#{var["type"]})#{described(text(var["label"], language))}#{default(var["value"])}"
 
+    colors =
+      for color <- definition["colors"] || [],
+          do: "color #{color["key"]} #{color["hex_value"]}#{described(color["name"])}#{described(color["instructions"])}"
+
     code = if definition["code"], do: ["", "template:" | String.split(definition["code"], ~r/\r\n|\n|\r/)], else: []
-    Enum.join(fields ++ refs ++ vars ++ code, "\n")
+    Enum.join(fields ++ refs ++ vars ++ colors ++ code, "\n")
   end
 
   defp inline(%{} = map, language), do: text(map, language) |> inline(language)
@@ -195,14 +209,16 @@ defmodule Brando.Content.Definitions.Release.Review do
 
   @doc """
   The structured differences of a definition, here → release: its fields
-  (`metadata`), refs and vars, each `%{key, label, change, before, after}`
-  with `change` `:added`, `:removed`, `:changed` or `:same`.
+  (`metadata`), refs, vars and a palette's colours, each `%{key, label,
+  change, before, after}` with `change` `:added`, `:removed`, `:changed` or
+  `:same`.
   """
   def structure(here, release) do
     %{
       metadata: metadata(here || %{}, release || %{}),
       refs: by_key(here["refs"] || [], (release || %{})["refs"] || [], "name"),
-      vars: by_key(here["vars"] || [], (release || %{})["vars"] || [], "key")
+      vars: by_key(here["vars"] || [], (release || %{})["vars"] || [], "key"),
+      colors: by_key(here["colors"] || [], (release || %{})["colors"] || [], "key")
     }
   end
 

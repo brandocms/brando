@@ -123,3 +123,29 @@ test('a module changed here and in the release is applied once its version is ch
   await expect(page.getByTestId('release-applied-row')).toHaveCount(1)
   await expect(page.getByTestId('release-row').filter({ hasText: 'Example module' })).toHaveCount(1)
 })
+
+// brandocms/brando#3540: a release that removes a var a block holds a value
+// for is ready to apply; the applied module then links to Resolve blocks.
+test('a release that removes a var is applied, and the module links to Resolve blocks', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/release-removal')).ok()).toBe(true)
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+
+  await page.goto('/admin/config/content/modules/release')
+  await syncLV(page)
+
+  const row = page.getByTestId('release-row').filter({ hasText: 'Enkelt bilde med bildetekst' })
+  await expect(row.getByTestId('release-row-check')).toBeChecked()
+  await row.click()
+  await syncLV(page)
+  await expect(page.getByTestId('release-removals').locator('li')).toHaveCount(1)
+
+  await page.getByTestId('release-apply').click()
+  await page.getByTestId('release-confirm-apply').click()
+  await syncLV(page)
+
+  const applied = page.getByTestId('release-applied-row').filter({ hasText: 'Enkelt bilde med bildetekst' })
+  await applied.click()
+  await syncLV(page)
+  await page.getByTestId('release-resolve-blocks').click()
+  await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/update\/\d+\/stale-blocks$/)
+})

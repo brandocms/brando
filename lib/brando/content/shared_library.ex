@@ -611,7 +611,7 @@ defmodule Brando.Content.SharedLibrary do
   defp replace_override(kind, override, shared, prefix, user) do
     Repo.transaction(fn ->
       with {:ok, _deleted} <- Repo.delete(override, prefix: prefix),
-           {:ok, replacement} <- create_override(kind, shared, prefix, user) do
+           {:ok, replacement} <- create_override(kind, shared, prefix, user, override.uid) do
         replacement
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -626,13 +626,19 @@ defmodule Brando.Content.SharedLibrary do
 
   defp after_shared_update(result, _kind), do: result
 
-  defp create_override(kind, shared, prefix, user) do
+  # A module override keeps the library module's uid. A palette's or
+  # container's has its own (the one it replaces, when it takes an update):
+  # brando_245 derives the library's uid from its namespace and key or name,
+  # as it does a local row's, so the library's may be a local row's here.
+  # The source field relates it to the library entry.
+  defp create_override(kind, shared, prefix, user, uid \\ nil) do
     definition = definition(kind)
     schema = definition.schema
 
     attrs =
       shared
       |> copy_fields(definition)
+      |> own_uid(kind, uid)
       |> Map.put(definition.source_field, shared.id)
       |> Map.put(:source_version, shared.version || 1)
       |> Map.put(:acknowledged_version, shared.version || 1)
@@ -664,6 +670,9 @@ defmodule Brando.Content.SharedLibrary do
     |> Map.take(definition.schema.__schema__(:fields))
     |> Map.drop(excluded)
   end
+
+  defp own_uid(attrs, :module, _uid), do: attrs
+  defp own_uid(attrs, _kind, uid), do: Map.put(attrs, :uid, uid)
 
   defp put_copy_associations(attrs, :module, shared) do
     attrs

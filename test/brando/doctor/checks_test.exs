@@ -179,6 +179,30 @@ defmodule Brando.Doctor.ChecksTest do
                Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], sweep: true})
     end
 
+    test "warns when each site's usage is not measured, with several sites" do
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          result = Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: false})
+          assert result.status == :warning
+          assert result.fix =~ ~s({"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}})
+          assert result.fix =~ "site_usage: [limit: 1]"
+        end)
+
+      refute log =~ "missing Gettext bindings"
+
+      assert %Result{status: :ok} =
+               Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: true})
+    end
+
+    test "site usage is measured with its cron entry and its queue" do
+      crontab = [crontab: [{"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}}]]
+
+      assert Checks.Oban.site_usage_scheduled?(queues: [site_usage: [limit: 1]], cron: crontab)
+      refute Checks.Oban.site_usage_scheduled?(queues: [default: 1], cron: crontab)
+      refute Checks.Oban.site_usage_scheduled?(queues: [site_usage: 1], cron: [crontab: []])
+      refute Checks.Oban.site_usage_scheduled?(queues: false, cron: false)
+    end
+
     test "its job queries are not logged" do
       level = Logger.level()
       Logger.configure(level: :debug)
@@ -1031,6 +1055,24 @@ defmodule Brando.Doctor.ChecksTest do
       assert {"/admin/config/content/modules/stale-blocks", _} = result.link
       assert result.fix =~ "mix brando.modules resolve --uid UID"
       refute result.fix =~ "refresh"
+    end
+  end
+
+  describe "ModuleMediaDrop" do
+    test "names a multi module whose media drop setting no longer fits its children" do
+      assert %Result{status: :ok} = Checks.ModuleMediaDrop.run(context())
+
+      row = Factory.insert(:module, name: %{"en" => "Image row"}, uid: "image-row-doctor", multi: true)
+      card = Factory.insert(:module, name: %{"en" => "Image card"}, uid: "image-card-doctor", parent_id: row.id)
+
+      Brando.Repo.update_all(from(m in Brando.Content.Module, where: m.id == ^row.id),
+        set: [media_drop_child: card.uid, media_drop_ref: "photo"]
+      )
+
+      result = Checks.ModuleMediaDrop.run(context())
+      assert result.status == :warning
+      assert result.summary == "1 module with a media drop setting that no longer fits"
+      assert result.items == ["Image row (image-row-doctor): image-card-doctor has no ref photo"]
     end
   end
 

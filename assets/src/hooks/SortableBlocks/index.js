@@ -32,13 +32,44 @@ export default app => ({
       // A few pixels of travel during an ordinary click is not a drag.
       fallbackTolerance: 4,
 
-      onStart: e => (isDragging = true), // prevent phx-blur from firing while dragging
+      onStart: e => {
+        isDragging = true // prevent phx-blur from firing while dragging
+        this.dropTargets(group).forEach(list => list.classList.add('is-drop-target'))
+      },
       onEnd: e => {
+        // Sortable leaves the block in the last list that took it, though
+        // the pointer went on to one that does not: the row under the
+        // pointer at release decides. The row is the list's block, as the
+        // pointer can rest on its edge, outside the list. It is read before
+        // anything moves the rows under a pointer that holds still.
+        let releasedInTarget = e.to.parentElement.contains(elementAtRelease(e.originalEvent))
         isDragging = false
+        this.dropTargets(group).forEach(list => list.classList.remove('is-drop-target'))
+        // A drop into another list is the server's to show: the block goes
+        // back, and the render moves it, or leaves it there when the server
+        // refuses the move.
+        if (e.from !== e.to) {
+          e.from.insertBefore(e.item, e.from.children[e.oldIndex] || null)
+          if (!releasedInTarget) return
+        }
         let params = { old: e.oldIndex, new: e.newIndex, to: {...e.to.dataset}, from: {...e.from.dataset}, ...e.item.dataset }
         this.pushEventTo(this.el, this.el.dataset['drop'] || 'reposition', params)
         renumberFootnotes(this.el)
       }
     })
+  },
+
+  // The other lists of this list's group, which take what is dragged from it.
+  dropTargets(group) {
+    if (!group) return []
+    return [...document.querySelectorAll(`[data-blocks-wrapper-type="${group}"]`)].filter(list => list !== this.el)
   }
 })
+
+// The element under the pointer where a drag ended. Sortable's clone that
+// follows the pointer takes no pointer events, so it is not this.
+function elementAtRelease(event) {
+  let point = event?.changedTouches?.[0] || event
+  if (point?.clientX === undefined) return null
+  return document.elementFromPoint(point.clientX, point.clientY)
+}

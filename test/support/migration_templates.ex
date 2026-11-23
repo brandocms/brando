@@ -249,7 +249,7 @@ defmodule Brando.MigrationTemplates do
   def environment_tables,
     do: ~w(sites_not_found_hits entry_notes note_mentions webhooks webhook_deliveries sites_indexnow search_documents
          listing_views listing_view_defaults notification_routes notification_deliveries content_definition_applies
-         content_definition_batches)
+         content_definition_batches pages_fragments_alternates)
 
   @doc "What the 2xx migrations add in every environment: columns by table"
   def environment_columns do
@@ -257,18 +257,23 @@ defmodule Brando.MigrationTemplates do
       "pages" => ~w(meta_canonical_url content_modified_at meta_nosnippet meta_max_snippet unpublish_at),
       "pages_fragments" => ~w(unpublish_at),
       "sites_seos" => ~w(crawler_policy),
-      "content_modules" => ~w(markdown_code write_with_ai),
+      "content_modules" => ~w(markdown_code write_with_ai media_drop_child media_drop_ref),
       "activity_events" => ~w(proposal_id approver_id),
       "content_identifiers" => ~w(external_url),
       "translation_group_members" => ~w(baseline_texts),
-      "translation_work_items" => ~w(source_previous)
+      "translation_work_items" => ~w(source_previous),
+      "content_palettes" => ~w(uid),
+      "content_containers" => ~w(uid)
     }
   end
+
+  @doc "The tables of `environment_tables/0` that rolling the 2xx migrations back keeps: they hold links editors made"
+  def kept_environment_tables, do: ~w(pages_fragments_alternates)
 
   @doc "What the 2xx migrations add in `public` only: tables"
   def public_tables do
     ~w(users_security users_recovery_codes users_security_events users_security_policy users_passkeys
-       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes)
+       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes sites_usage_days)
   end
 
   @doc "What the 2xx migrations add in `public` only: columns by table"

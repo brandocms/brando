@@ -42,6 +42,7 @@ defmodule Brando.Doctor do
     Checks.ImageConfigs,
     Checks.ImageSrcsets,
     Checks.Modules,
+    Checks.ModuleMediaDrop,
     Checks.ModuleEntryPaths,
     Checks.HeexLinkGlobals,
     Checks.EditorLiquid,

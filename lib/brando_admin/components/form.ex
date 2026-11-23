@@ -1129,13 +1129,15 @@ defmodule BrandoAdmin.Components.Form do
   #
   # Whatever a change in the form does besides, this does too, without asking
   # the browser for its fields (which could be a row behind): the other
-  # editors learn the field is changed, the blocks that read it get its rows,
-  # and the live preview and the website editor follow it.
+  # editors get the rows at the click (a button sends no blur), the blocks
+  # that read it get its rows, and the live preview and the website editor
+  # follow it.
   def update(%{action: :update_entries, field: field, op: op} = message, socket) do
     changeset = socket.assigns.form.source
     # A multi-select in a row applying another editor's picks
     # (`multi_select_changed`) changes the list for them, not for this editor.
-    put = if message[:remote] == true, do: &put_received_form/2, else: &put_local_form/2
+    remote? = message[:remote] == true
+    put = if remote?, do: &put_received_form/2, else: &put_local_form/2
 
     case SubformHelpers.apply_relation_op(changeset, field, op) do
       :stale ->
@@ -1170,7 +1172,7 @@ defmodule BrandoAdmin.Components.Form do
           |> maybe_rerender_live_preview_for([to_string(field)])
           |> maybe_fetch_root_blocks(:live_preview_update, 0)
 
-        {:ok, socket}
+        {:ok, if(remote?, do: socket, else: ship_all_field_changes(socket))}
     end
   end
 
@@ -3273,7 +3275,8 @@ defmodule BrandoAdmin.Components.Form do
   #     and it is never sent: it protects this form alone.
 
   # Ships the fields this editor changed since its last shipment. Used on
-  # field blur and focus, save, and after an asset or a multi-select change.
+  # field blur and focus, save, and after an asset, a multi-select or a
+  # subform row change.
   # A field whose value the rich-text check refused doesn't ship
   # (`pending_changes/1`) and stays unshipped: it is still this editor's
   # edit, which another editor's save keeps (`unsaved_edits/6`), and ships
@@ -3797,13 +3800,28 @@ defmodule BrandoAdmin.Components.Form do
   defp refused_recovered(_socket, _entry_params), do: []
 
   # The entry field `_target` names (`["page", "title"]` or a path into a
-  # subform, `["page", "items", "0", "name"]`, which names the relation).
+  # subform, `["page", "items", "0", "name"]`, which names the relation). A
+  # relation's drop or sort param names the relation: a row removed or moved
+  # is this editor's edit, never the browser's old form (`drop_echoes/4`).
   defp target_field(socket, singular, [singular, key | _]) do
     {fields, _belongs_to} = sync_fields(socket)
-    Enum.find(fields ++ relation_fields(socket), &(Atom.to_string(&1) == key))
+    fields = fields ++ relation_fields(socket)
+    Enum.find(fields, &(Atom.to_string(&1) == key)) || control_target(socket, fields, key)
   end
 
   defp target_field(_socket, _singular, _target), do: nil
+
+  # A `_target` naming a synced relation's drop or sort param: a row removed
+  # or moved by the browser rather than typed into
+  defp row_control?(%{assigns: %{singular: singular}} = socket, [singular, key | _]) do
+    {fields, _belongs_to} = sync_fields(socket)
+    control_target(socket, fields, key) != nil
+  end
+
+  defp row_control?(_socket, _target), do: false
+
+  defp control_target(socket, fields, key),
+    do: Enum.find(fields, &(key in PendingRows.control_params(socket.assigns.schema, &1)))
 
   # A replaced field that arrives with a value the browser showed before the
   # change replaced it, in an event that does not name it, is the browser's
@@ -4370,7 +4388,7 @@ defmodule BrandoAdmin.Components.Form do
 
         socket
         |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry), &(&1 not in received))
-        |> hand_saved_rows_to_transformers("entry_saved_elsewhere")
+        |> hand_saved_rows_to_transformers(:elsewhere)
 
       :not_found ->
         socket
@@ -6796,7 +6814,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event(
         "image_editor_save",
-        %{"mode" => "new_copy", "focal_x" => x, "focal_y" => y} = params,
+        %{"mode" => "new_copy", "focal_x" => _x, "focal_y" => _y} = params,
         socket
       ) do
     # Store focal and config_target so they can be applied once the upload completes.
@@ -6808,7 +6826,7 @@ defmodule BrandoAdmin.Components.Form do
     # editor opened elsewhere before the upload finishes replaces `edit_image`.
     {:noreply,
      socket
-     |> assign(:image_editor_focal, %{x: x, y: y})
+     |> assign(:image_editor_focal, editor_focal(params))
      |> assign(:image_editor_config_target, config_target)
      |> assign(:image_editor_copy_of, socket.assigns.edit_image)}
   end
@@ -7880,7 +7898,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:entry_id, entry.id)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
-    |> hand_saved_rows_to_transformers()
+    |> hand_saved_rows_to_transformers(entry)
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
@@ -7904,7 +7922,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:entry_id, entry.id)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
-    |> hand_saved_rows_to_transformers()
+    |> hand_saved_rows_to_transformers(entry)
     |> clear_blocks_root_changesets()
     |> assign_block_map()
     |> assign_entry_for_blocks()
@@ -8059,7 +8077,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
-    |> hand_saved_rows_to_transformers()
+    |> hand_saved_rows_to_transformers(entry)
     |> refresh_translation(stale?)
   end
 
@@ -8082,13 +8100,10 @@ defmodule BrandoAdmin.Components.Form do
           img
       end
 
-    x = params["focal_x"]
-    y = params["focal_y"]
-
     changeset =
       image
       |> Images.Image.changeset(
-        %{focal: %{x: x, y: y}, status: :unprocessed},
+        %{focal: editor_focal(params), status: :unprocessed},
         current_user
       )
       |> Map.put(:action, :update)
@@ -8100,6 +8115,14 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, updated_image}
     end
   end
+
+  # The image editor's point with the mode the editor shows it in. A mode sent
+  # with the point is stored as sent, moved or not (`Images.Focal.cast/2`). A
+  # page loaded before the editor sent its mode sends none, and the cast decides.
+  defp editor_focal(%{"focal_mode" => mode} = params),
+    do: %{x: params["focal_x"], y: params["focal_y"], mode: Images.Focal.mode(%{mode: mode})}
+
+  defp editor_focal(params), do: %{x: params["focal_x"], y: params["focal_y"]}
 
   # A form field's input name at a path as the form names it:
   # `article[items][1][cover_id]`.
@@ -9099,25 +9122,33 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A save that stays on the form gives each transformer the rows it wrote,
-  # as the entry holds them now: the rows a transformer added are saved rows
-  # from then on, and the next save does not insert them again. Another
-  # editor's save gives each the rows that save wrote
-  # (`entry_saved_elsewhere`), which it takes in under its own unsaved
-  # changes, so its next save keeps them.
-  defp hand_saved_rows_to_transformers(socket, event \\ "entry_saved") do
+  # as the save returned them (`saved`), and as the entry holds them now:
+  # the rows a transformer added are saved rows from then on, and the next
+  # save does not insert them again. Another editor's save gives each the
+  # rows that save wrote (`entry_saved_elsewhere`), which it takes in under
+  # its own unsaved changes, so its next save keeps them.
+  defp hand_saved_rows_to_transformers(socket, saved) do
     %{entry: entry, form: form, form_blueprint: form_blueprint} = socket.assigns
 
     for {relation_key, _field, _default} <- extract_transformers(form_blueprint),
         rows = Map.get(entry, relation_key),
         is_list(rows) do
-      send_update(BrandoAdmin.Components.Form.Transformer,
-        id: "#{form.id}-transformer-#{relation_key}",
-        event: event,
-        rows: rows
+      send_update(
+        BrandoAdmin.Components.Form.Transformer,
+        [id: "#{form.id}-transformer-#{relation_key}", rows: rows] ++ saved_rows_event(saved, relation_key)
       )
     end
 
     socket
+  end
+
+  defp saved_rows_event(:elsewhere, _relation_key), do: [event: "entry_saved_elsewhere"]
+
+  defp saved_rows_event(saved, relation_key) do
+    case Map.get(saved, relation_key) do
+      written when is_list(written) -> [event: "entry_saved", written: written]
+      _not_loaded -> [event: "entry_saved"]
+    end
   end
 
   defp reset_transformer_changesets(socket) do
@@ -9346,7 +9377,7 @@ defmodule BrandoAdmin.Components.Form do
     changeset =
       new_image
       |> Images.Image.changeset(
-        %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
+        %{focal: focal, status: :unprocessed},
         current_user
       )
       |> Map.put(:action, :update)
@@ -10979,6 +11010,7 @@ defmodule BrandoAdmin.Components.Form do
       image_height: image.height,
       focal_x: (image.focal && image.focal.x) || 50,
       focal_y: (image.focal && image.focal.y) || 50,
+      focal_mode: Images.Focal.mode(image.focal),
       crop_groups: crop_groups,
       config_target: image.config_target
     }
@@ -11187,6 +11219,8 @@ defmodule BrandoAdmin.Components.Form do
     # then dropped, so a reconnect silently restored nothing.
     socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
     socket = if recovery?, do: share_recovered(socket, offline, entry_params), else: socket
+    # A row removed (its button sends no blur) ships at the click, as an add does
+    socket = if row_control?(socket, params["_target"]), do: ship_all_field_changes(socket), else: socket
 
     case Map.get(params, "_target") do
       [^singular | rest] ->

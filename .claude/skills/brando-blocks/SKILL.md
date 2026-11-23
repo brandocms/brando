@@ -290,8 +290,7 @@ After the save completes, `reload_all_blocks/2` hands mounted roots a fresh form
 the `replace_form` cascade, so blocks stop diffing against pre-save nil-id data. It skips
 a root only when `holds_persisted?/2` proves its mounted form already equals the saved row
 (no store diff in its subtree, seeded row and materialized state both snapshot-equal to the
-reload); everything else is re-seeded. Other reloads (hard reset, failed cross-parent move)
-re-seed every root.
+reload); everything else is re-seeded. Other reloads (hard reset) re-seed every root.
 
 ### Duplication Flow
 ```
@@ -336,7 +335,8 @@ All are **ops applied to the store** (`Ops.apply_op/2`), not list surgery:
 `{:insert, uid, at, diff}`, `{:insert_child, parent, uid, at, diff}`, `{:move, uid, to}`,
 `{:reorder, uids}`, `{:reorder_children, parent, uids}`, `{:move_to_parent, uid, parent, at}`,
 `{:remap_slot, uid, destination, params}`, `{:delete, uid}`. Root-level
-structure is applied by BlockField directly; everything else arrives from blocks through
+structure, and a child moved to another parent (`move_child`: canvas drag or Outline,
+store first, then the two parents' views), are applied by BlockField directly; everything else arrives from blocks through
 `Block.emit_block_op/2`. Blocks read their position from the `list_index` prop supplied by
 the keyed `:for` — never from a form's `sequence` field, which is stale by design.
 
@@ -357,7 +357,7 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
   class.
 - Structural and UI messages: `set_collapsed`, `set_children_collapsed`, `insert_block`,
   `insert_pasted_block`, `paste_block`, `paste_child_block`, `outline_reorder_child`,
-  `extract_child`, `update_ref`, `update_ref_data`, `update_block_var`,
+  `release_children`, `insert_moved_child`, `update_ref`, `update_ref_data`, `update_block_var`,
   `update_entry_field`, `replace_entry`, `module_updated`.
 
 > Blocks never hand forms upward and never confirm positions: position comes from the

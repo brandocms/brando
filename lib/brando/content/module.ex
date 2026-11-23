@@ -36,6 +36,8 @@ defmodule Brando.Content.Module do
   import Brando.Blueprint.Listings.Components.Children, only: [children_button: 1]
   import Brando.Blueprint.Listings.Components.Core
 
+  import Ecto.Query, only: [from: 2]
+
   alias Ecto.Changeset
   alias Phoenix.LiveView.JS
 
@@ -55,6 +57,7 @@ defmodule Brando.Content.Module do
 
   @derived_fields ~w(
     id uid type name sequence namespace help_text multi color write_with_ai class code markdown_code refs vars svg deleted_at
+    media_drop_child media_drop_ref
     version version_note source_module_id source_version acknowledged_version library_origin
     override_id
   )a
@@ -66,6 +69,7 @@ defmodule Brando.Content.Module do
   trait :cast_polymorphic_embeds
   trait :ensure_uid
   trait :validate_var_keys
+  trait :validate_media_drop
   trait :module_versioned
 
   attributes do
@@ -87,6 +91,11 @@ defmodule Brando.Content.Module do
     # Write with AI in the module's text blocks. Off unless turned on here:
     # every request is a paid call (see `BrandoAdmin.Components.Form.RichTextAI`).
     attribute :write_with_ai, :boolean, default: false
+    # A multi module's blocks take dropped images and videos: each file makes
+    # one block of the child module with this UID, with the file in its ref
+    # `media_drop_ref` (`validate_media_drop/1`).
+    attribute :media_drop_child, :string
+    attribute :media_drop_ref, :string
 
     attribute :datasource, :boolean, default: false
     attribute :datasource_module, :string
@@ -295,6 +304,120 @@ defmodule Brando.Content.Module do
   """
   @spec any_ref_type?(term(), String.t() | nil) :: boolean()
   def any_ref_type?(module, name), do: name == @legacy_wrapper_ref and legacy_wrapper?(module)
+
+  @media_drop_ref_types ~w(media picture video)
+
+  @doc """
+  The ref types a `media_drop` ref may have: the ones that hold one image or
+  one video.
+  """
+  def media_drop_ref_types, do: @media_drop_ref_types
+
+  @doc """
+  Validates `media_drop_child` and `media_drop_ref` when this change sets
+  them (`media_drop_issue/2`), against the module's children, loaded here
+  when the caller did not. A module not yet stored has none to check the
+  child against, and is checked as far as it can be: a shared-library
+  override copies the setting without the children. A definitions import
+  passes `media_drop_checked: true`: its files were checked against each
+  other when they were read, and may add the child or rename its ref in the
+  same import. Turning `multi` off clears the setting. A stored setting gone stale is left for the module editor to
+  show, and never blocks a save of another field.
+  """
+  def validate_media_drop(changeset, opts \\ []) do
+    cond do
+      Changeset.changed?(changeset, :media_drop_child) or Changeset.changed?(changeset, :media_drop_ref) ->
+        module = Changeset.apply_changes(changeset)
+        children = if opts[:media_drop_checked], do: nil, else: fn -> media_drop_children(changeset.data) end
+
+        case media_drop_issue(module, children) do
+          nil ->
+            changeset
+
+          {field, _message, keys} = issue ->
+            Changeset.add_error(changeset, field, translate_media_drop_issue(issue), keys)
+        end
+
+      Changeset.changed?(changeset, :multi) and Changeset.get_field(changeset, :multi) != true ->
+        Changeset.change(changeset, media_drop_child: nil, media_drop_ref: nil)
+
+      true ->
+        changeset
+    end
+  end
+
+  # The module's children with their refs, nil for a module not yet stored.
+  # Plain map patterns: the struct is defined after this function is compiled.
+  defp media_drop_children(%{id: nil}), do: nil
+
+  defp media_drop_children(module) do
+    children = from(c in __MODULE__, where: is_nil(c.deleted_at), order_by: [asc: c.sequence, asc: c.id])
+
+    module
+    |> Brando.Repo.preload(children: {children, [:refs]})
+    |> Map.fetch!(:children)
+    |> Enum.reject(& &1.deleted_at)
+    |> Brando.Repo.preload(:refs)
+  end
+
+  @doc """
+  What is wrong with `module`'s `media_drop` (`media_drop_child`,
+  `media_drop_ref` and `multi`) among its `children`, as `media_drop_problem/3`
+  takes them; `children` may be a function returning them, called only when
+  needed, and nil leaves the child unchecked. Returns `{field, message, keys}`,
+  or nil when nothing is wrong or nothing is set.
+  """
+  def media_drop_issue(%{media_drop_child: nil, media_drop_ref: nil}, _children), do: nil
+
+  def media_drop_issue(%{media_drop_child: child, media_drop_ref: ref} = module, children) do
+    cond do
+      is_nil(child) -> {:media_drop_child, gettext_noop("name the child module the dropped files create"), []}
+      is_nil(ref) -> {:media_drop_ref, gettext_noop("name the ref of %{child} the dropped files go in"), [child: child]}
+      module.multi != true -> {:media_drop_child, gettext_noop("needs a multi module"), []}
+      true -> media_drop_target_issue(if(is_function(children, 0), do: children.(), else: children), child, ref)
+    end
+  end
+
+  defp media_drop_target_issue(nil, _child, _ref), do: nil
+  defp media_drop_target_issue(children, child, ref), do: media_drop_problem(children, child, ref)
+
+  @doc """
+  A `media_drop_issue/2` as English text, its keys filled in, for a
+  definition file's error, worded in English as the other definition errors
+  are.
+  """
+  def describe_media_drop_issue({_field, message, keys}),
+    do: Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
+
+  @doc "A `media_drop_issue/2` as text in the current locale, its keys filled in, for the admin."
+  def translate_media_drop_issue({_field, message, keys}), do: Gettext.gettext(Brando.Gettext, message, keys)
+
+  @doc """
+  What is wrong with a `media_drop` naming `child_uid` and `ref_name` among
+  `children` (maps with `uid` and `refs`, each ref with `name` and `type`, or
+  `data` holding the type): `{field, message, keys}`, or nil when nothing is.
+  """
+  def media_drop_problem(children, child_uid, ref_name) do
+    with {:child, %{} = child} <- {:child, Enum.find(children, &(&1.uid == child_uid))},
+         {:ref, %{} = ref} <- {:ref, Enum.find(child.refs, &(&1.name == ref_name))},
+         false <- ref_type(ref) in @media_drop_ref_types do
+      {:media_drop_ref, gettext_noop("ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref"),
+       [child: child_uid, ref: ref_name, type: ref_type(ref)]}
+    else
+      {:child, nil} ->
+        {:media_drop_child, gettext_noop("%{child} is not a child module of this module"), [child: child_uid]}
+
+      {:ref, nil} ->
+        {:media_drop_ref, gettext_noop("%{child} has no ref %{ref}"), [child: child_uid, ref: ref_name]}
+
+      true ->
+        nil
+    end
+  end
+
+  defp ref_type(%{data: %{type: type}}), do: to_string(type)
+  defp ref_type(%{type: type}), do: to_string(type)
+  defp ref_type(_ref), do: nil
 
   @doc """
   Returns the list of reserved HEEx assign names that cannot be used as var keys.

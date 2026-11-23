@@ -29,7 +29,7 @@ defmodule Brando.Content.Definition.Watcher do
 
   require Logger
 
-  alias Brando.Content.Definition.{Plan, Reader, References, Snapshot}
+  alias Brando.Content.Definition.{Model, Plan, Reader, References, Snapshot}
   alias Brando.Content.Definitions
   alias Brando.Tenant
   alias Brando.Tenant.Registry
@@ -195,10 +195,16 @@ defmodule Brando.Content.Definition.Watcher do
   end
 
   defp sync_in_tenant(path, user) do
+    # A lockfile whose write failed after an apply is behind it: the
+    # apply's record is the baseline, unless the admin changed it since
     with {:ok, bundle} <- Definitions.read(path),
-         {:ok, plan} <- Definitions.plan(bundle, user) do
+         {:ok, plan} <- Definitions.plan(bundle, user, catch_up: true) do
       names = names(bundle)
-      changes = plan.items |> Enum.reject(&(&1.action == :noop)) |> Enum.map(&Map.put(&1, :name, names[&1.uid]))
+
+      changes =
+        plan.items
+        |> Enum.reject(&(&1.action == :noop))
+        |> Enum.map(&Map.merge(&1, %{name: names[&1.uid], removal: removal_lines(plan, &1)}))
 
       cond do
         changes == [] ->
@@ -220,11 +226,20 @@ defmodule Brando.Content.Definition.Watcher do
     end
   end
 
+  # What `mix brando.modules import` prints for an update that removes keys
+  # blocks hold
+  defp removal_lines(plan, item) do
+    case Plan.resolve_line(plan, item) do
+      nil -> []
+      line -> ["#{item.action} #{item.kind} #{item.uid}: #{Plan.removal_text(item)}", "  " <> line]
+    end
+  end
+
   # UIDs are opaque; the log names definitions the way the admin does
   defp names(bundle) do
     language = to_string(Brando.config(:default_admin_language) || "en")
 
-    Map.new(bundle["modules"] ++ bundle["table_templates"], fn definition ->
+    Map.new(Model.definitions(bundle), fn definition ->
       name =
         case definition["name"] do
           %{^language => name} when name not in [nil, ""] -> name
@@ -266,7 +281,8 @@ defmodule Brando.Content.Definition.Watcher do
 
   defp log({:ok, changes}) do
     summary = Enum.map_join(changes, ", ", &"#{&1.action} #{&1.name}")
-    Logger.info("==> Brando >> Imported module definitions: #{summary}")
+    removals = Enum.flat_map(changes, & &1.removal)
+    Logger.info(Enum.join(["==> Brando >> Imported module definitions: #{summary}" | removals], "\n"))
   end
 
   defp log({:blocked, items}) do

@@ -1,3 +1,5 @@
+import { partition, validate, humanSize } from '../shared/mediaBatch'
+
 /**
  * TransformerUploader — single intake for a transformer subform.
  *
@@ -158,30 +160,22 @@ export default (app) => ({
     return id ? document.getElementById(id) : null
   },
 
-  extension(file) {
-    const parts = file.name.split('.')
-    return parts.length > 1 ? `.${parts.pop().toLowerCase()}` : ''
+  // What the configs advertised on the element take (`shared/mediaBatch`)
+  kinds() {
+    const kind = (extensions, limitKey) =>
+      extensions.length ? { extensions, limit: this.maxSize(limitKey) } : null
+
+    return {
+      image: kind(this.imageAccept(), 'imageMaxSize'),
+      video: kind(this.videoAccept(), 'videoMaxSize'),
+    }
   },
 
-  classify(file) {
-    const extension = this.extension(file)
-    const images = this.imageAccept()
-    const videos = this.videoAccept()
-
-    // Extension first: a .mov can arrive with an empty or lying MIME type, and
-    // the accept lists are what the server actually validates against.
-    if (images.includes(extension)) return 'image'
-    if (videos.includes(extension)) return 'video'
-    if (file.type.startsWith('image/') && images.length) return 'image'
-    if (file.type.startsWith('video/') && videos.length) return 'video'
-    return null
-  },
-
-  humanSize(bytes) {
-    if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`
-    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${bytes} bytes`
+  rejection({ filename, reason, limit }) {
+    return {
+      filename,
+      reason: reason === 'size' ? `Too large (max ${humanSize(limit)})` : 'Unsupported file type',
+    }
   },
 
   ref() {
@@ -226,35 +220,20 @@ export default (app) => ({
   },
 
   validate(file) {
-    const kind = this.classify(file)
-    if (!kind) return { rejected: { filename: file.name, reason: 'Unsupported file type' } }
-
-    const limit = this.maxSize(kind === 'video' ? 'videoMaxSize' : 'imageMaxSize')
-    if (limit && file.size > limit) {
-      return { rejected: { filename: file.name, reason: `Too large (max ${this.humanSize(limit)})` } }
-    }
-
-    return { file, kind, ref: this.ref() }
+    const entry = validate(file, this.kinds())
+    return entry.rejected ? { rejected: this.rejection(entry.rejected) } : { ...entry, ref: this.ref() }
   },
 
   intake(files) {
-    const accepted = []
-    const rejected = []
+    const sorted = files.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    const { accepted, rejected } = partition(sorted, this.kinds())
 
-    files
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-      .forEach((file) => {
-        const entry = this.validate(file)
-        if (entry.rejected) {
-          rejected.push(entry.rejected)
-        } else {
-          accepted.push(entry)
-        }
-      })
-
-    if (rejected.length) this.pushTo('reject_files', { files: rejected })
+    if (rejected.length) this.pushTo('reject_files', { files: rejected.map((entry) => this.rejection(entry)) })
     if (!accepted.length) return
+
+    accepted.forEach((entry) => {
+      entry.ref = this.ref()
+    })
 
     this.pushTo('register_batch', {
       files: accepted.map(({ file, kind, ref }) => ({

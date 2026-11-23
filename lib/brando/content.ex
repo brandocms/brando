@@ -184,6 +184,7 @@ defmodule Brando.Content do
                duplicate_opts: module_duplicate_opts(),
                override_opts: override_opts
              ),
+           {:ok, copy} <- point_media_drop_at_copied_child(copy, id),
            :ok <- copy_module_set_memberships(id, copy.id) do
         copy
       else
@@ -208,6 +209,10 @@ defmodule Brando.Content do
   end
 
   def duplicate_module_uid(_entry, _uid), do: Brando.Utils.generate_uid()
+
+  @doc false
+  # A copy is a definition of its own (`Brando.Content.Definition`)
+  def duplicate_uid(_entry, _uid), do: Brando.Utils.generate_uid()
 
   @doc """
   The class of a duplicated module: `<class>-copy`, numbered when another
@@ -254,6 +259,29 @@ defmodule Brando.Content do
       })
       |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     end)
+  end
+
+  # The copy's children are copies with new UIDs (`duplicate_children/2`,
+  # in the original's order): its `media_drop` names the copy of the child
+  # the original's names.
+  defp point_media_drop_at_copied_child(%{media_drop_child: nil} = copy, _original_id), do: {:ok, copy}
+
+  defp point_media_drop_at_copied_child(copy, original_id) do
+    children_query = from(c in Module, where: is_nil(c.deleted_at), order_by: [asc: c.sequence, asc: c.id])
+    original = Repo.one!(from(m in Module, where: m.id == ^original_id, preload: [children: ^children_query]))
+    copy = Repo.preload(copy, [children: children_query], force: true)
+
+    copy
+    |> Ecto.Changeset.change(media_drop_child: copied_child_uid(copy.media_drop_child, original.children, copy.children))
+    |> Repo.update()
+  end
+
+  defp copied_child_uid(uid, originals, copies) do
+    originals
+    |> Enum.map(& &1.uid)
+    |> Enum.zip(Enum.map(copies, & &1.uid))
+    |> Map.new()
+    |> Map.get(uid)
   end
 
   # The copy joins every module set the original is in, last in each
@@ -456,13 +484,19 @@ defmodule Brando.Content do
     end
   end
 
+  # Palettes and containers are definitions too: what a release would change
+  # is worked out again (`Brando.Content.Definitions.ReleaseStatus`)
   mutation :create, Palette do
-    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      Brando.Cache.Palettes.update({:ok, entry})
+    end
   end
 
   mutation :update, Palette do
     fn palette ->
       ContentBlocks.render_entries_with_palette_id(palette.id)
+      Brando.Content.Definitions.changed()
       Brando.Cache.Palettes.update({:ok, palette})
     end
   end
@@ -470,10 +504,14 @@ defmodule Brando.Content do
   # Palettes are soft-deleted: `Brando.Cache.entry_changed/1` puts one
   # restored from the trash back
   mutation :delete, Palette do
-    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      Brando.Cache.Palettes.update({:ok, entry})
+    end
   end
 
-  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]} do
+  mutation :duplicate,
+           {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2, uid: &__MODULE__.duplicate_uid/2]} do
     fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
   end
 
@@ -655,10 +693,28 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, Container
-  mutation :update, Container
-  mutation :delete, Container
-  mutation :duplicate, {Container, change_fields: [:name]}
+  mutation :create, Container do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :update, Container do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :delete, Container do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :duplicate, {Container, change_fields: [:name, uid: &__MODULE__.duplicate_uid/2]}
 
   filters Identifier do
     fn
@@ -1144,7 +1200,9 @@ defmodule Brando.Content do
           |> Map.put(:parent_id, nil)
         end)
 
-      Map.put(prepared_module, :children, prepared_children)
+      prepared_module
+      |> Map.put(:children, prepared_children)
+      |> Map.update!(:media_drop_child, &(&1 && copied_child_uid(&1, prepared_module.children, prepared_children)))
     else
       prepared_module
     end

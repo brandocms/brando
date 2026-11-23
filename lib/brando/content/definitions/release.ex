@@ -47,7 +47,7 @@ defmodule Brando.Content.Definitions.Release do
   import Kernel, except: [apply: 2]
 
   alias Brando.Authorization.{Boundary, Engine}
-  alias Brando.Content.Definition.{Baselines, Error, Plan}
+  alias Brando.Content.Definition.{Baselines, Error, Model, Plan}
   alias Brando.Content.{DefinitionApply, Definitions}
   alias Brando.Content.Definitions.Release.Batches
   alias Brando.Tenant
@@ -339,13 +339,12 @@ defmodule Brando.Content.Definitions.Release do
          :ok <- authorize(user),
          {:ok, %{} = report} <- plan(Keyword.put(opts, :adopt, false)) |> on(:off),
          {:ok, item} <- conflict_item(report, uid) do
-      definitions = report.plan.bundle["modules"] ++ report.plan.bundle["table_templates"]
-      definition = Enum.find(definitions, &(&1["uid"] == uid))
+      definition = Enum.find(Model.definitions(report.plan.bundle), &(&1["uid"] == uid))
 
       references =
         Map.take(
           report.plan.references,
-          Map.keys(Brando.Content.Definition.References.declared(%{"modules" => [definition], "table_templates" => []}))
+          Map.keys(Brando.Content.Definition.References.declared(%{Model.bundle_key(item.kind) => [definition]}))
         )
 
       row =
@@ -477,7 +476,8 @@ defmodule Brando.Content.Definitions.Release do
   defp print_applied(%{report: report, result: result}, info) do
     report.items
     |> Enum.filter(&(Plan.selected?(report.plan, &1) and &1.action != :noop))
-    |> Enum.each(&info.(item_line(&1)))
+    |> Enum.flat_map(&item_lines(report.plan, &1))
+    |> Enum.each(info)
 
     info.("Applied #{length(result.changes)} definition changes from release #{report.version}")
     Enum.each(result.refresh, &(&1.status == :failed && info.("  Refresh failed for #{&1.uid}: #{&1.error}")))
@@ -610,7 +610,7 @@ defmodule Brando.Content.Definitions.Release do
     else
       [heading, "  " <> summary(report)] ++
         classes(report) ++
-        (report.items |> Enum.reject(&(&1.action == :noop)) |> Enum.map(&item_line/1)) ++
+        (report.items |> Enum.reject(&(&1.action == :noop)) |> Enum.flat_map(&item_lines(report.plan, &1))) ++
         ["Review: #{admin_url()}", "Apply: " <> apply_hint(report)]
     end
   end
@@ -650,9 +650,19 @@ defmodule Brando.Content.Definitions.Release do
     ["  Updates by kind: " <> text]
   end
 
+  # An update that leaves values in blocks is followed by the command that
+  # resolves them
+  defp item_lines(plan, item) do
+    case Plan.resolve_line(plan, item) do
+      nil -> [item_line(item)]
+      line -> [item_line(item), "    " <> line]
+    end
+  end
+
   defp item_line(item) do
     detail =
       case item do
+        %{action: :update, removes: %{}} -> Plan.removal_text(item)
         %{action: :update, class: class} -> "#{class || "update"}; #{item.entry_count} entries"
         %{action: :create} -> "new"
         %{state: :never_applied} -> item.reason <> " (replace: [#{inspect(item.uid)}])"
@@ -715,7 +725,7 @@ defmodule Brando.Content.Definitions.Release do
   defp display_names(bundle) do
     language = to_string(Brando.config(:default_admin_language) || "en")
 
-    Map.new(bundle["modules"] ++ bundle["table_templates"], fn definition ->
+    Map.new(Model.definitions(bundle), fn definition ->
       namespace = definition["namespace"] && name(%{"name" => definition["namespace"], "uid" => nil}, language)
       title = name(definition, language)
       {definition["uid"], if(namespace in [nil, ""], do: title, else: "#{namespace} › #{title}")}
@@ -726,7 +736,7 @@ defmodule Brando.Content.Definitions.Release do
   # its parent
   defp names(bundle) do
     language = to_string(Brando.config(:default_admin_language) || "en")
-    definitions = bundle["modules"] ++ bundle["table_templates"]
+    definitions = Model.definitions(bundle)
     own = Map.new(definitions, &{&1["uid"], name(&1, language)})
     parents = for module <- bundle["modules"], child <- module["children"], into: %{}, do: {child, module["uid"]}
 

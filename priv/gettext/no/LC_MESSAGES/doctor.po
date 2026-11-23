@@ -254,6 +254,13 @@ msgid_plural "%{count} modules read their entries through .data.vars or .data.re
 msgstr[0] "%{count} modul leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
 msgstr[1] "%{count} moduler leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
 
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} module with a media drop setting that no longer fits"
+msgid_plural "%{count} modules with media drop settings that no longer fit"
+msgstr[0] "%{count} modul med en innstilling for slipp av media som ikke lenger passer"
+msgstr[1] "%{count} moduler med innstillinger for slipp av media som ikke lenger passer"
+
 #: lib/brando/doctor/checks/fragment_pages.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} more"
@@ -894,6 +901,11 @@ msgstr "Modul %{module} (%{uid}): standardverdi for variabel %{key}: %{value}"
 msgid "Module entry paths"
 msgstr "Modulers oppføringsstier"
 
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "Module media drop"
+msgstr "Slipp av media i moduler"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
@@ -1125,6 +1137,11 @@ msgstr "legg til %{dependency} i deps i mix.exs og kjør mix deps.get, eller fje
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add %{queue} to the queues and %{cron} to the crontab in config :brando, Oban"
+msgstr "legg %{queue} til køene og %{cron} til crontab i config :brando, Oban"
 
 #: lib/brando/doctor/checks/image_srcsets.ex
 #, elixir-autogen, elixir-format
@@ -1376,6 +1393,11 @@ msgstr "alle bilder og filer ligger i mediemappen"
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
 msgstr "alle bilder har alt-tekst"
+
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "every media drop setting fits its module's children"
+msgstr "alle innstillinger for slipp av media passer modulens barn"
 
 #: lib/brando/doctor/checks/page_templates.ex
 #, elixir-autogen, elixir-format
@@ -1929,6 +1951,11 @@ msgstr "sett `config :brando, Brando.Mailer, from: …` til en adresse e-postlev
 msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
 msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: …`"
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "site usage is not measured"
+msgstr "nettstedenes forbruk måles ikke"
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "skipped in a release: needs the project's source files"
@@ -1998,6 +2025,11 @@ msgstr "nettstedet viser dem fortsatt, men ingen side lister dem i admin. Åpne 
 #, elixir-autogen, elixir-format
 msgid "the web module has no static_paths/0"
 msgstr "webmodulen har ingen static_paths/0"
+
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "their blocks show no drop zone: choose the child module and ref again under Block modules, or clear them"
+msgstr "blokkene deres viser ingen slippsone: velg barnemodulen og referansen på nytt under Blokkmoduler, eller fjern dem"
 
 #: lib/brando/doctor/checks/page_templates.ex
 #, elixir-autogen, elixir-format

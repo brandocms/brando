@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   alias Brando.Content.{DefinitionApply, Definitions}
   alias Brando.Content.Definitions.Release
   alias Brando.Content.Definitions.Release.{Batches, Entries, Preview, Proposed, Review, Verify}
+  alias Brando.Content.StaleBlocks
   alias BrandoAdmin.Components.ReleaseChanges, as: RC
   alias BrandoAdmin.Components.Workspace
 
@@ -105,8 +106,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   defp derive(socket, report) do
     rows = Review.rows(report)
-    module_ids = rows |> Enum.flat_map(& &1.uids) |> Entries.module_ids()
-    entries = readable(Entries.list(module_ids))
+    sources = rows |> Enum.flat_map(& &1.uids) |> Entries.sources()
+    entries = readable(Entries.list(sources))
 
     by_row =
       Map.new(rows, fn row -> {row.uid, Enum.filter(entries, &Enum.any?(&1.modules, fn uid -> uid in row.uids end))} end)
@@ -166,7 +167,14 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   # last apply's, per item
   defp load_detail(%{assigns: %{current: "applied:" <> uid}} = socket) do
     rows = Brando.Repo.all(from(a in DefinitionApply, where: a.uid == ^uid, order_by: [desc: a.id], limit: 1))
-    assign(socket, :detail, %{applied_row: List.first(rows), definitions: Review.definitions(socket.assigns.report, uid)})
+    module = Brando.Repo.get_by(Brando.Content.Module, uid: uid)
+
+    assign(socket, :detail, %{
+      applied_row: List.first(rows),
+      definitions: Review.definitions(socket.assigns.report, uid),
+      module: module,
+      leftovers: if(module, do: StaleBlocks.count_with_leftovers(module), else: 0)
+    })
   end
 
   defp load_detail(%{assigns: %{current: nil}} = socket), do: assign(socket, :detail, nil)
@@ -194,7 +202,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         irreversible = Enum.map(status.irreversible, &Map.put(&1, :name, names[&1.uid]))
 
         uids = Enum.map(batch.definitions["items"] || [], & &1["uid"])
-        applied_entries = uids |> Entries.module_ids() |> Entries.list() |> readable()
+        applied_entries = uids |> Entries.sources() |> Entries.list() |> readable()
 
         socket
         |> assign(
@@ -265,10 +273,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   def handle_event("select_row", %{"uid" => uid}, socket) do
     socket = socket |> assign(current: uid, filters: @filters) |> discard_preview() |> load_detail()
 
+    row = Enum.find(socket.assigns.rows, &(&1.uid == uid))
+
     tab =
-      if String.starts_with?(uid, "applied:") and socket.assigns.tab in ["refs", "preview"],
-        do: "template",
-        else: socket.assigns.tab
+      if (String.starts_with?(uid, "applied:") or (row && row.kind in ~w(palette container))) and
+           socket.assigns.tab in ["refs", "preview"],
+         do: "template",
+         else: socket.assigns.tab
 
     {:noreply, assign(socket, :tab, tab)}
   end
@@ -836,6 +847,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     assigns =
       assign(assigns,
         item: item,
+        module: assigns.detail.module,
+        leftovers: assigns.detail.leftovers,
         changed: changed,
         applied_row: applied_row,
         here: here,
@@ -857,6 +870,30 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     </RC.detail_head>
     <RC.tabs tab={@tab} entries={length(@applied_entries)} tabs={~w(template entries)} />
     <div class="release-tab-body">
+      <RC.notice
+        :if={@leftovers > 0}
+        icon="info"
+        headline={
+          ngettext(
+            "1 block holds values the module no longer defines",
+            "%{count} blocks hold values the module no longer defines",
+            @leftovers
+          )
+        }
+      >
+        {gettext(
+          "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+        )}
+        <:actions>
+          <.link
+            navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
+            class="btn btn--sm"
+            data-testid="release-resolve-blocks"
+          >
+            {gettext("Resolve blocks")}
+          </.link>
+        </:actions>
+      </RC.notice>
       <%= if @tab == "entries" do %>
         <RC.entries
           entries={@applied_entries}
@@ -895,7 +932,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp detail(assigns) do
     row = current_row(assigns)
     entries = assigns.entries_by_row[row.uid] || []
-    root_record = Brando.Repo.get_by(Brando.Content.Module, uid: row.uid)
+    root_record = if row.kind == "module", do: Brando.Repo.get_by(Brando.Content.Module, uid: row.uid)
 
     assigns =
       assign(assigns,
@@ -909,7 +946,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     <RC.detail_head
       row={@row}
       meta={meta(@row, @row_entries)}
-      verify?={@row_entries != [] and @row.group != :blocked}
+      verify?={@row_entries != [] and @row.group != :blocked and @row.kind not in ~w(palette container)}
       module_id={@module_id}
     >
       <:class_line>
@@ -918,14 +955,17 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         {RC.class_help(@row.class)}
       </:class_line>
     </RC.detail_head>
-    <RC.tabs tab={@tab} entries={length(@row_entries)} />
+    <RC.tabs tab={@tab} entries={length(@row_entries)} tabs={row_tabs(@row)} />
     <div class="release-tab-body">
       <%= case @tab do %>
         <% "template" -> %>
           <.choice_body row={@row} detail={@detail} report={@report} choices={@choices} replace={@replace} />
           <%= for item <- @row.items, defs = @detail.definitions[item.uid], defs.release, @row.status not in [:conflict] do %>
             <RC.template_diff
-              :if={defs.release["kind"] == "module" and (is_nil(defs.here) or defs.here["code"] != defs.release["code"])}
+              :if={
+                defs.release["kind"] in ~w(module container) and
+                  (is_nil(defs.here) or defs.here["code"] != defs.release["code"])
+              }
               id={"tpl-#{item.uid}"}
               label={gettext("%{name} · template", name: item.name)}
               description={template_description(item, defs, @report.version)}
@@ -934,12 +974,25 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
               type={defs.release["type"]}
             />
             <RC.template_diff
-              :if={defs.release["kind"] != "module" or (defs.here && defs.here["code"] == defs.release["code"])}
+              :if={
+                defs.release["kind"] not in ~w(module container) or (defs.here && defs.here["code"] == defs.release["code"])
+              }
               id={"def-#{item.uid}"}
               label={gettext("%{name} · definition", name: item.name)}
-              description={template_description(item, defs, @report.version) <> " · " <> gettext("the template is unchanged")}
+              description={
+                template_description(item, defs, @report.version) <>
+                  if(defs.release["code"], do: " · " <> gettext("the template is unchanged"), else: "")
+              }
               old={Review.definition_text(defs.here)}
               new={Review.definition_text(defs.release)}
+            />
+            <RC.template_diff
+              :if={container_fields_changed?(defs)}
+              id={"def-#{item.uid}"}
+              label={gettext("%{name} · definition", name: item.name)}
+              description={template_description(item, defs, @report.version)}
+              old={Review.definition_text(Map.delete(defs.here, "code"))}
+              new={Review.definition_text(Map.delete(defs.release, "code"))}
             />
           <% end %>
         <% "refs" -> %>
@@ -1111,7 +1164,35 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     """
   end
 
+  defp choice_body(%{row: %{group: :ready, items: items}} = assigns) do
+    assigns = assign(assigns, :removing, Enum.filter(items, &(&1[:removes] && &1.removes.blocks > 0)))
+
+    ~H"""
+    <RC.notice
+      :if={@removing != []}
+      icon="info"
+      headline={gettext("Blocks keep what they hold in the removed refs and vars")}
+    >
+      {gettext(
+        "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+      )}
+      <ul data-testid="release-removals">
+        <li :for={item <- @removing} data-uid={item.uid}>
+          {item.name}: {removed_keys(item.removes.keys)} · {ngettext(
+            "1 of %{total} blocks holds a value",
+            "%{count} of %{total} blocks hold a value",
+            item.removes.blocks,
+            total: item.block_count
+          )}
+        </li>
+      </ul>
+    </RC.notice>
+    """
+  end
+
   defp choice_body(assigns), do: ~H""
+
+  defp removed_keys(keys), do: Enum.map_join(keys, ", ", fn {kind, key} -> "#{key} (#{kind})" end)
 
   defp template_description(item, defs, version) do
     case {item.action, defs.applied} do
@@ -1126,13 +1207,29 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     end
   end
 
+  # A container has no refs tab for its fields: when its template changed
+  # too, they get a diff of their own
+  defp container_fields_changed?(%{release: %{"kind" => "container"} = release, here: %{} = here}),
+    do: here["code"] != release["code"] and Map.delete(here, "code") != Map.delete(release, "code")
+
+  defp container_fields_changed?(_defs), do: false
+
+  # A module's tree has refs and vars, and renders with the release's
+  # modules in Verify and Preview; a container or a palette shows its
+  # definition and the entries that use it
+  defp row_tabs(%{kind: kind}) when kind in ~w(palette container), do: ~w(template entries)
+  defp row_tabs(_row), do: ~w(template refs entries preview)
+
   defp meta(row, entries) do
     counts = Entries.counts(entries)
 
+    # A container's row holds the palette it brings
     children =
-      if row.children == [],
-        do: "",
-        else: " · " <> ngettext("1 child module", "%{count} child modules", length(row.children))
+      cond do
+        row.children == [] -> ""
+        row.kind == "container" -> " · " <> gettext("palette %{name}", name: Enum.join(row.children, ", "))
+        true -> " · " <> ngettext("1 child module", "%{count} child modules", length(row.children))
+      end
 
     entries =
       if counts.entries == 0,

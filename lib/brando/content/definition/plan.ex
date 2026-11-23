@@ -8,25 +8,37 @@ defmodule Brando.Content.Definition.Plan do
   `selection` is nil for every definition, or the UIDs an apply writes (whole
   module trees); `replace` the never-applied definitions it may replace;
   `discard` the definitions edited here since they were applied, whose edit
-  it may replace with the files' version.
+  it may replace with the files' version. `catch_up` compares a definition
+  whose lockfile baseline is behind the last apply recorded here with that
+  apply (`Brando.Content.Definition.Watcher`, whose lockfile write can fail).
 
   Each item has the definition's `action`, `reason`, `state` (`:new`,
   `:in_sync`, `:changed_in_release`, `:changed_in_admin`, `:changed_in_both`,
   `:never_applied` or `:deleted`), the `baseline` it was compared with
   (`:applied`, `:lockfile`, `:replaced`, `:discarded` or nil), its `ModuleDiff` `class`,
   the last apply (`applied`) and admin edit (`edited`) when known, changed
-  `fields` and their `diff`, and the affected `block_count` and `entry_count`.
+  `fields` and their `diff`, the affected `block_count` and `entry_count`,
+  and for an update that removes refs or vars, `removes`: their `keys`
+  (`{:ref | :var, key}`) and how many `blocks` hold one of them, in how
+  many `entries`. Those blocks keep what they hold as a leftover until it is
+  resolved (`Brando.Content.StaleBlocks`). For a palette's update that
+  removes colours, `keys` are `{:color, key}` and `blocks` those that use
+  the palette: CSS that reads a removed colour is the author's to change.
+
+  `kind` is `"module"`, `"table_template"`, `"palette"` or `"container"`.
   """
+  alias Brando.Tenant
+
   defstruct [
     :bundle,
     :scope,
     :fingerprint,
     :creator_id,
     mode: :lockfile,
+    catch_up: false,
     selection: nil,
     replace: MapSet.new(),
     discard: MapSet.new(),
-    revert: false,
     snapshot_bindings: %{},
     items: [],
     references: %{}
@@ -41,4 +53,77 @@ defmodule Brando.Content.Definition.Plan do
   @doc "Whether an apply of `plan` writes `item` (when it changes)."
   def selected?(%__MODULE__{selection: nil}, _item), do: true
   def selected?(%__MODULE__{selection: selection}, item), do: MapSet.member?(selection, item.uid)
+
+  @doc """
+  What an update removes and how many of the module's blocks hold it, as
+  the plan prints it, or nil when it removes nothing.
+  """
+  def removal_text(%{kind: "palette", removes: %{keys: keys, blocks: blocks, entries: entries}}) do
+    what = Enum.map_join(keys, ", ", fn {:color, key} -> "color #{key}" end)
+    "removes #{what} (#{blocks} blocks use the palette, #{entries} entries)"
+  end
+
+  def removal_text(%{removes: %{keys: keys, blocks: blocks, entries: entries}, block_count: total}) do
+    what = Enum.map_join(keys, ", ", fn {kind, key} -> "#{kind} #{key}" end)
+    it = if length(keys) == 1, do: "it", else: "them"
+
+    held =
+      case {blocks, entries} do
+        {0, _} -> "none of #{total} blocks hold #{it}"
+        {_, 1} -> "#{blocks} of #{total} blocks hold #{it}, 1 entry"
+        _ -> "#{blocks} of #{total} blocks hold #{it}, #{entries} entries"
+      end
+
+    "removes #{what} (#{held})"
+  end
+
+  def removal_text(_item), do: nil
+
+  @doc """
+  The `mix brando.modules resolve` command that drops what an update of
+  `plan` leaves in blocks, as it runs in the current environment, or nil
+  when no block holds it or the plan has no user to name. Each value is
+  quoted for a POSIX shell.
+  """
+  def resolve_command(%__MODULE__{creator_id: user_id}, %{
+        kind: "module",
+        uid: uid,
+        removes: %{held: held, blocks: blocks}
+      })
+      when blocks > 0 and not is_nil(user_id) do
+    environment =
+      if Tenant.enabled?(),
+        do: ["--site", Tenant.current_site_key(), "--environment", Tenant.current_environment_key()],
+        else: []
+
+    drops = Enum.flat_map(held, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end)
+
+    (~w(mix brando.modules resolve --uid) ++ [uid, "--user", to_string(user_id)] ++ environment ++ drops ++ ["--apply"])
+    |> Enum.map_join(" ", &shell_quote/1)
+  end
+
+  def resolve_command(_plan, _item), do: nil
+
+  @doc """
+  The line that follows an update whose removed keys blocks hold: the
+  `resolve_command/2`, or without a user, where to resolve them. Nil when
+  no block holds them.
+  """
+  def resolve_line(plan, %{removes: %{blocks: blocks}} = item) when blocks > 0 do
+    case resolve_command(plan, item) do
+      nil ->
+        "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
+
+      command ->
+        "resolve: " <> command
+    end
+  end
+
+  def resolve_line(_plan, _item), do: nil
+
+  defp shell_quote(value) do
+    if value =~ ~r/\A[A-Za-z0-9_@%+=:,.\/-]+\z/,
+      do: value,
+      else: "'" <> String.replace(value, "'", ~S('\'')) <> "'"
+  end
 end

@@ -1,0 +1,1 @@
+- Queueing renders for thousands of entries at once (a module or global change on a large site) no longer slows down to seconds, or times out, after a few smaller bulk renders on the same database connection.

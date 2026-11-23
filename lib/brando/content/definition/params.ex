@@ -2,11 +2,37 @@ defmodule Brando.Content.Definition.Params do
   @moduledoc false
 
   alias Brando.Content.Definition.{Model, References}
-  alias Brando.Content.{Module, RefGuard, TableTemplate}
+  alias Brando.Content.{Container, Module, Palette, RefGuard, TableTemplate}
   alias Brando.Content.Var.ValidateValue
   alias Ecto.Changeset
 
-  def changeset(definition, record, references, creator, tables, parent_id \\ nil) do
+  # A palette's colours are replaced as a set: the definition is the whole
+  # palette. A new palette is published; its status is the environment's
+  # from then on.
+  def changeset(%{"kind" => "palette"} = definition, record, _references, creator, _tables, _parent_id) do
+    attrs = Map.take(definition, ~w(uid name namespace key global instructions colors))
+    attrs = if record, do: attrs, else: Map.put(attrs, "status", "published")
+    Palette.changeset(record || struct(Palette), attrs, creator)
+  end
+
+  # The container's default palette is the one here with its uid: one the
+  # same import creates is written first. A link the files could not name
+  # (`References.unavailable_palette/1`) is kept.
+  def changeset(%{"kind" => "container"} = definition, record, _references, creator, _tables, _parent_id) do
+    attrs = Map.take(definition, Enum.map(Model.container_fields(), &to_string/1))
+    record = record || struct(Container)
+
+    palette_id =
+      if is_nil(definition["palette"]) and References.unavailable_palette(record.palette_id),
+        do: record.palette_id,
+        else: References.palette_id(definition["palette"])
+
+    record
+    |> Container.changeset(attrs, creator)
+    |> Changeset.put_change(:palette_id, palette_id)
+  end
+
+  def changeset(definition, record, references, creator, tables, parent_id) do
     vars = association(definition["vars"], loaded(record, :vars), "key", references)
 
     case definition["kind"] do
@@ -27,7 +53,8 @@ defmodule Brando.Content.Definition.Params do
 
         table_id = if uid = definition["table_template"], do: Map.get(tables, uid), else: nil
 
-        Module.changeset(record || struct(Module), attrs, creator)
+        # The files were checked against each other for the media drop setting
+        Module.changeset(record || struct(Module), attrs, creator, nil, media_drop_checked: true)
         |> read_stored_defaults()
         |> Changeset.put_change(:table_template_id, table_id)
         |> Changeset.put_change(:parent_id, parent_id)

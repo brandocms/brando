@@ -971,6 +971,23 @@ defmodule Brando.SSGBuildsTest do
     assert response(preview(build, host, "missing"), 404) == ~s(<a href="#{prefix}/">Back</a>)
   end
 
+  test "a preview's file is counted by the bytes of the build's file", context do
+    build = ready_build(context.site, context.environment)
+    File.write!(Path.join(build.build_path, "photo.png"), String.duplicate("p", 300))
+    start_supervised!({Brando.Sites.Usage.Traffic, :timer.hours(1)})
+
+    conn =
+      Phoenix.ConnTest.build_conn(:get, "/__ssg_preview__/#{build.preview_token}/photo.png")
+      |> Map.put(:host, "#{context.site.key}.test")
+      |> Brando.Plug.Usage.call([])
+      |> TenantRouter.call(TenantRouter.init([]))
+
+    assert response(conn, 200)
+    :ok = Brando.Sites.Usage.Traffic.flush()
+
+    assert [%{requests: 1, bytes_sent: 300}] = Brando.Sites.Usage.days(context.site, Date.utc_today(), 1)
+  end
+
   test "retains environment history after the source environment is deleted", context do
     build = request_build(context.site, context.environment)
     assert {:ok, _environment} = Registry.delete_environment(context.environment)

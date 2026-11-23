@@ -520,6 +520,28 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
       assert [^removed, entry_shown] = form.assigns.entry.vars
       assert entry_shown.image.focal == %Brando.Images.Focal{x: 40, y: 60}
     end
+
+    # A page loaded before the editor sent its mode sends none
+    test "a save without a mode keeps the stored mode of a point that did not move", ctx do
+      original = Path.join(Brando.Tenant.Storage.current_media_root(), ctx.saved_image.path)
+      File.mkdir_p!(Path.dirname(original))
+      on_exit(fn -> File.rm_rf!(Path.dirname(original)) end)
+      File.cp!(Path.expand("../../../fixtures/sample.jpg", __DIR__), original)
+
+      placed =
+        ctx.saved_image
+        |> Ecto.Changeset.change(focal: %{x: 40, y: 60, mode: :position})
+        |> BrandoIntegration.Repo.update!()
+
+      {socket, _removed, _shown} =
+        with_removed_row(ctx.page, placed, &drawer_socket(&1, ctx.user, :image, [:vars, 0], :image, placed))
+
+      params = %{"mode" => "replace", "focal_x" => 40, "focal_y" => 60}
+      {:noreply, form} = Form.handle_event("image_editor_save", params, socket)
+
+      assert [_removed, entry_shown] = form.assigns.entry.vars
+      assert entry_shown.image.focal == %Brando.Images.Focal{x: 40, y: 60, mode: :position}
+    end
   end
 
   # The next `validate` casts onto the entry, so a remote image has to be on

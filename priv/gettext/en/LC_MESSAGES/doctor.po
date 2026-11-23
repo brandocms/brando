@@ -254,6 +254,13 @@ msgid_plural "%{count} modules read their entries through .data.vars or .data.re
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} module with a media drop setting that no longer fits"
+msgid_plural "%{count} modules with media drop settings that no longer fit"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/fragment_pages.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} more"
@@ -894,6 +901,11 @@ msgstr ""
 msgid "Module entry paths"
 msgstr ""
 
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "Module media drop"
+msgstr ""
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
@@ -1124,6 +1136,11 @@ msgstr ""
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
+msgstr ""
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add %{queue} to the queues and %{cron} to the crontab in config :brando, Oban"
 msgstr ""
 
 #: lib/brando/doctor/checks/image_srcsets.ex
@@ -1375,6 +1392,11 @@ msgstr ""
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
+msgstr ""
+
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "every media drop setting fits its module's children"
 msgstr ""
 
 #: lib/brando/doctor/checks/page_templates.ex
@@ -1929,6 +1951,11 @@ msgstr ""
 msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
 msgstr ""
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "site usage is not measured"
+msgstr ""
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "skipped in a release: needs the project's source files"
@@ -1997,6 +2024,11 @@ msgstr ""
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "the web module has no static_paths/0"
+msgstr ""
+
+#: lib/brando/doctor/checks/module_media_drop.ex
+#, elixir-autogen, elixir-format
+msgid "their blocks show no drop zone: choose the child module and ref again under Block modules, or clear them"
 msgstr ""
 
 #: lib/brando/doctor/checks/page_templates.ex

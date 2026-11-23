@@ -93,4 +93,26 @@ defmodule Brando.Environments.SchemaCloner.PostgresIntegrationTest do
                []
              )
   end
+
+  test "a dump file left behind by an earlier run does not stop a clone", context do
+    # The temporary dump was named with a counter that restarts in every VM,
+    # so a file a killed run left behind, or another VM's dump, made the next
+    # clone fail with `{:temporary_dump_failed, :eexist}`.
+    tmp = Path.join(System.tmp_dir!(), "brando-cloner-test-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(tmp)
+    previous = System.get_env("TMPDIR")
+    System.put_env("TMPDIR", tmp)
+
+    on_exit(fn ->
+      if previous, do: System.put_env("TMPDIR", previous), else: System.delete_env("TMPDIR")
+      File.rm_rf!(tmp)
+    end)
+
+    next = System.unique_integer([:positive, :monotonic])
+    leftovers = for n <- (next + 1)..(next + 100), do: Path.join(tmp, "brando-tenant-#{n}.sql")
+    Enum.each(leftovers, &File.write!(&1, ""))
+
+    assert :ok = Postgres.clone_schema(context.source, context.target)
+    assert Enum.sort(File.ls!(tmp)) == leftovers |> Enum.map(&Path.basename/1) |> Enum.sort()
+  end
 end

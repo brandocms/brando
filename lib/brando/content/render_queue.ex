@@ -185,7 +185,10 @@ defmodule Brando.Content.RenderQueue do
 
   # The first waiting render of each entry. A join on the key's fields as
   # text, as `@> ANY(keys)` compares every waiting job with every key; the
-  # exact keys are compared after.
+  # exact keys are compared after. Unnamed, so Postgres plans each call with
+  # its keys: a named statement switches to a generic plan after a few calls,
+  # which cannot tell how many keys `unnest` returns, and joins thousands of
+  # them in a nested loop.
   defp waiting(keys) do
     [schemas, entry_ids, prefixes] =
       for field <- @entry_keys_joined do
@@ -211,7 +214,7 @@ defmodule Brando.Content.RenderQueue do
     keys = MapSet.new(keys)
 
     query
-    |> Brando.Repo.all()
+    |> Brando.Repo.all(prepare: :unnamed)
     |> Enum.filter(&MapSet.member?(keys, entry_key(&1.args)))
     |> Enum.uniq_by(&entry_key(&1.args))
   end

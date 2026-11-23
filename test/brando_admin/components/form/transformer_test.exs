@@ -711,6 +711,30 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
       end
     end
 
+    # A saved while B's save was processing, with a row X added: the rows
+    # read back hold X, the rows B's save wrote don't. Each item B sent is
+    # its written row, and X joins as a row another editor's save added.
+    test "written by this save make the items, with a row another editor's save added" do
+      stored = Transformer.new_item("item-1", %MediaItem{id: 1, title: "Stored", sequence: 0}, is_new: false)
+      added = Transformer.new_item("item-2", %{title: "New"})
+
+      socket =
+        [stored, added]
+        |> sent_socket()
+        |> Component.assign(initialized?: true, base_ids: [1], open_entries: MapSet.new())
+        |> Component.assign(editing_dom_id: nil, picking_dom_id: nil)
+
+      written = [%MediaItem{id: 1, title: "Stored", sequence: 0}, %MediaItem{id: 2, title: "New", sequence: 1}]
+      rows = written ++ [%MediaItem{id: 4, title: "From A", sequence: 1}]
+
+      {:ok, socket} = Transformer.update(%{event: "entry_saved", rows: rows, written: written}, socket)
+
+      assert socket.assigns.items |> Enum.map(&{&1.is_new, &1.source.id}) |> Enum.sort() ==
+               [{false, 1}, {false, 2}, {false, 4}]
+
+      assert Enum.sort(socket.assigns.base_ids) == [1, 2, 4]
+    end
+
     # A saved while B's save was processing, with a row X added; the Form
     # read B's rows back after A's save, so they hold X too and don't line
     # up with what B sent. A's save reaches B next with the same rows. X is

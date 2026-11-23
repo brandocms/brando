@@ -3,7 +3,7 @@ defmodule Brando.Content.DefinitionWatcherTest do
   use Brando.ConnCase
 
   alias Brando.Content.Definition.Watcher
-  alias Brando.Content.Module
+  alias Brando.Content.{Container, Module, Palette}
   alias Brando.{Factory, Repo}
   alias Ecto.Changeset
 
@@ -17,6 +17,7 @@ defmodule Brando.Content.DefinitionWatcherTest do
   end
 
   defp hero, do: Repo.get_by!(Module, uid: "hero-test")
+  defp palette, do: Repo.get_by!(Palette, uid: "acme-palette-paper")
 
   defp write!(c, source), do: File.write!(Path.join(c.path, "hero.exs"), source)
 
@@ -97,6 +98,89 @@ defmodule Brando.Content.DefinitionWatcherTest do
     # Editing the file to match the admin settles it
     write!(c, String.replace(c.source, ~s(class "hero"), ~s(class "admin-class")))
     assert state.() == :in_sync
+  end
+
+  test "a saved palette or container file is imported", c do
+    File.cp!("test/fixtures/definitions/styles/paper.exs.txt", Path.join(c.path, "paper.exs"))
+    File.cp!("test/fixtures/definitions/styles/tinted.exs.txt", Path.join(c.path, "tinted.exs"))
+    assert {:ok, changes} = Watcher.sync(c.path, c.user.id)
+
+    assert Enum.map(changes, &{&1.kind, &1.action}) -- [{"module", :create}] == [
+             {"palette", :create},
+             {"container", :create}
+           ]
+
+    assert Repo.get_by!(Container, uid: "acme-container-tinted").palette_id == palette().id
+  end
+
+  # The import ran, and the lockfile kept the baseline from before it
+  test "after a failed lockfile write, the last apply is the baseline, and an admin edit since is still a conflict", c do
+    paper = Path.join(c.path, "paper.exs")
+    source = File.read!("test/fixtures/definitions/styles/paper.exs.txt")
+    File.write!(paper, source)
+    assert {:ok, _} = Watcher.sync(c.path, c.user.id)
+
+    File.write!(paper, String.replace(source, "#fff9f4", "#eeeeee"))
+    File.chmod!(c.path, 0o555)
+
+    try do
+      assert {:error, _} = Watcher.sync(c.path, c.user.id)
+    after
+      File.chmod!(c.path, 0o755)
+    end
+
+    assert hd(palette().colors).hex_value == "#eeeeee"
+
+    File.write!(paper, String.replace(source, "#fff9f4", "#dddddd"))
+    assert {:ok, [%{action: :update, kind: "palette"}]} = Watcher.sync(c.path, c.user.id)
+    assert hd(palette().colors).hex_value == "#dddddd"
+
+    # Again, then an admin edit before the next save
+    File.write!(paper, String.replace(source, "#fff9f4", "#cccccc"))
+    File.chmod!(c.path, 0o555)
+
+    try do
+      assert {:error, _} = Watcher.sync(c.path, c.user.id)
+    after
+      File.chmod!(c.path, 0o755)
+    end
+
+    palette() |> Changeset.change(name: "Edited in the admin") |> Repo.update!()
+    File.write!(paper, String.replace(source, "#fff9f4", "#bbbbbb"))
+    assert {:blocked, [%{action: :conflict, kind: "palette"}]} = Watcher.sync(c.path, c.user.id)
+    assert palette().name == "Edited in the admin"
+    assert hd(palette().colors).hex_value == "#cccccc"
+  end
+
+  test "a save that removes a var blocks hold logs the plan's count and resolve line", c do
+    assert {:ok, _} = Watcher.sync(c.path, c.user.id)
+
+    block =
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        module_id: hero().id,
+        creator_id: c.user.id
+      })
+
+    Repo.insert!(%Brando.Content.Var{block_id: block.id, key: "theme", type: :select, label: %{"en" => "Theme"}})
+    without = Regex.replace(~r/\n  vars do\n.*?\n  end\n/s, c.source, "")
+    write!(c, String.replace(without, " class={@theme}", ""))
+
+    level = Logger.level()
+    Logger.configure(level: :info)
+
+    log =
+      try do
+        ExUnit.CaptureLog.capture_log(fn ->
+          Watcher.handle_info(:sync, %{path: c.path, user_id: c.user.id, config: [], timer: nil, status: nil})
+        end)
+      after
+        Logger.configure(level: level)
+      end
+
+    assert log =~ "update module hero-test: removes var theme (1 of 1 blocks hold it, 0 entries)"
+    assert log =~ "  resolve: mix brando.modules resolve --uid hero-test --user #{c.user.id} --drop var:theme --apply"
   end
 
   test "file/1 shows nothing when the watcher is not running" do

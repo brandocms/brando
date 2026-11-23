@@ -19,10 +19,17 @@ export default (app) => ({
       swapThreshold: 0.5,
       forceFallback: true,
       onEnd: (e) => {
-        this.el
-          .closest('form')
-          .querySelector('input')
-          .dispatchEvent(new Event('input', { bubbles: true }))
+        // A row dropped where it stood changed nothing. Sending it would put
+        // this browser's list over one another editor has changed meanwhile.
+        if (e.from === e.to && e.oldIndex === e.newIndex) return
+
+        // On the moved row's sort input, so the change names the list's
+        // sort param and the form sends the new order to other editors.
+        // A row without one changes the form as a whole.
+        const changed =
+          e.item.querySelector(':scope > [data-sort-input]') ||
+          this.el.closest('form')?.querySelector('input')
+        changed?.dispatchEvent(new Event('input', { bubbles: true }))
 
         let params = {
           old: e.oldIndex,

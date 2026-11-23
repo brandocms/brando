@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
 
   import Ecto.Query, only: [from: 2]
   alias Brando.Authorization.Boundary
-  alias Brando.Content.Definition.{Archive, Plan}
+  alias Brando.Content.Definition.{Archive, Model, Plan}
   alias Brando.Content.{Definitions, Module}
   alias Brando.Repo
   alias BrandoAdmin.Authorization
@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
      |> assign(
        selected_ids: nil,
        download: nil,
+       unavailable: [],
        source: nil,
        filename: nil,
        mappings: "",
@@ -67,7 +68,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 {if @selected_ids,
                   do: ngettext("%{count} selected module", "%{count} selected modules", length(@selected_ids)),
                   else: gettext("All local modules in this workspace")}
-                <span>{gettext("Includes child modules and table templates.")}</span>
+                <span>{gettext("Includes child modules, table templates, palettes and containers.")}</span>
               </p>
               <div class="module-files-actions">
                 <button
@@ -86,6 +87,13 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                   download="brando-modules.zip"
                 >{gettext("Download ZIP")}</a>
               </div>
+              <p :for={item <- (@download && @unavailable) || []}>
+                {gettext(
+                  "%{container}: its default palette %{palette} is in the trash. The files leave it out, and an import keeps the link.",
+                  container: item.container,
+                  palette: item.palette
+                )}
+              </p>
               <p :if={!@can_export}>{gettext("You do not have permission to export modules.")}</p>
             </section>
             <form
@@ -180,7 +188,10 @@ defmodule BrandoAdmin.Components.ModuleFiles do
               open={item.action in [:conflict, :migration_required]}
             >
               <summary>
-                <span><strong>{definition_name(@plan, item)}</strong><code>{item.uid}</code></span>
+                <span>
+                  <span :if={item.kind != "module"} class="module-files-kind">{kind_label(item.kind)}</span>
+                  <strong>{definition_name(@plan, item)}</strong><code>{item.uid}</code>
+                </span>
                 <span class={["badge", action_tone(item.action)]}>{action_label(item.action)}</span>
               </summary>
               <div class="module-files-change-body">
@@ -191,6 +202,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                   )}
                 </p>
                 <p :if={item.reason && item.state != :never_applied}>{item.reason}</p>
+                <p :if={item[:removes]} data-testid="module-files-removal" data-uid={item.uid}>
+                  {Plan.removal_text(item)}
+                </p>
                 <label :if={item.state == :never_applied or item.uid in @replace} class="module-files-replace">
                   <input
                     type="checkbox"
@@ -236,6 +250,20 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 href={@updated_download}
                 download="brando-modules-updated.zip"
               >{gettext("Download updated ZIP")}</a>
+            </div>
+            <div
+              :for={removal <- @result.removals}
+              class="module-files-feedback"
+              data-testid="module-files-removal"
+              data-uid={removal.uid}
+            >
+              <strong>{removal.name}</strong>
+              <span>{removal.text}</span>
+              <.link
+                navigate={"/admin/config/content/modules/update/#{removal.module_id}/stale-blocks"}
+                class="btn btn--sm"
+                data-testid="module-files-resolve"
+              >{gettext("Resolve blocks")}</.link>
             </div>
             <div
               :for={refresh <- @result.refresh}
@@ -289,7 +317,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   def handle_event("export", _, socket) do
     with {:ok, opts} <- export_options(socket.assigns.selected_ids),
          {:ok, exported} <- Archive.export(socket.assigns.current_user, opts) do
-      {:noreply, assign(socket, download: data_url(exported.binary), error: nil)}
+      {:noreply, assign(socket, download: data_url(exported.binary), unavailable: exported.unavailable, error: nil)}
     else
       {:error, reason} -> error(socket, reason)
     end
@@ -340,9 +368,12 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   def handle_event("apply", _, %{assigns: %{plan: nil}} = socket), do: {:noreply, socket}
 
   def handle_event("apply", _, socket) do
-    case Definitions.apply(socket.assigns.plan, socket.assigns.current_user) do
+    plan = socket.assigns.plan
+
+    case Definitions.apply(plan, socket.assigns.current_user) do
       {:ok, result} ->
         BrandoAdmin.LiveView.Listing.update_list_entries(Module)
+        result = Map.put(result, :removals, removals(plan))
         socket = assign(socket, plan: nil, result: result, error: nil, download: nil)
 
         case Archive.update(socket.assigns.source, result.bundle) do
@@ -414,7 +445,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
 
   # Named for an earlier file: only those this one has
   defp replaceable(replace, bundle) do
-    uids = Enum.map(bundle["modules"] ++ bundle["table_templates"], & &1["uid"])
+    uids = Enum.map(Model.definitions(bundle), & &1["uid"])
     Enum.filter(replace, &(&1 in uids))
   end
 
@@ -473,14 +504,27 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   defp display_value(value) when is_binary(value), do: value
   defp display_value(value), do: Jason.encode!(value, pretty: true)
 
+  # The applied updates whose removed refs or vars blocks still hold, as the
+  # plan words them, with the module whose Resolve blocks clears them
+  defp removals(plan) do
+    for %{removes: %{blocks: blocks}} = item <- plan.items, blocks > 0, Plan.selected?(plan, item) do
+      module = Repo.get_by!(Module, uid: item.uid)
+      %{uid: item.uid, name: definition_name(plan, item), text: Plan.removal_text(item), module_id: module.id}
+    end
+  end
+
   defp definition_name(plan, item) do
-    definition = Enum.find(plan.bundle["modules"] ++ plan.bundle["table_templates"], &(&1["uid"] == item.uid))
+    definition = Enum.find(Model.definitions(plan.bundle), &(&1["uid"] == item.uid))
 
     case definition["name"] do
       name when is_map(name) -> name[Gettext.get_locale(Brando.Gettext)] || name["en"] || item.uid
       name -> name
     end
   end
+
+  defp kind_label("table_template"), do: gettext("Table template")
+  defp kind_label("palette"), do: gettext("Palette")
+  defp kind_label("container"), do: gettext("Container")
 
   defp upload_error(:too_large), do: gettext("The ZIP must be no larger than 5 MB.")
   defp upload_error(:too_many_files), do: gettext("Choose one ZIP file.")

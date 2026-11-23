@@ -25,8 +25,14 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `lib/brando_admin/components/form/transformer.ex`. Preserve already collected
   state: `assign_transformer_statuses` deliberately initializes only once.
   A transformer also loads its rows once; after a save that stays on the
-  form, the Form hands it the saved rows (`entry_saved`), which make the
-  rows it sent saved rows, so the next save doesn't insert them again.
+  form, the Form hands it the rows its save wrote, as the save returned
+  them (`written`), which make the rows it sent saved rows, so the next
+  save doesn't insert them again; and the rows read back after the save,
+  which also hold another editor's save that landed while this one ran
+  (the Form takes none then): each item stores the row read back with its
+  id (and shows the asset it names when that differs from the written
+  one), and other ids are taken in as below. A card is drawn again only
+  when its row was new or the row read back differs from the written one.
   After another editor's save (`take_saved_entry`), it hands it that save's
   rows (`entry_saved_elsewhere`): the transformer takes them under its own
   unsaved changes, told from the rows it was built on (`base_ids`).
@@ -55,7 +61,18 @@ area in [the section map](form-map.md) and grep for the names it lists.
   ("Entry field sync" in Form): `validate` marks the field `_target` names
   and other inputs whose value it changed; a change Form makes itself must
   go through `put_local_form/2` (or `put_written_form/2` when no browser
-  event follows), or it never ships. A value the form's rich-text check
+  event follows), or it never ships. Fields ship on focus, blur and save;
+  a button or a drag sends neither, so every local subform op
+  (`update_entries`: add, insert, a row's multi-select, the form builder's
+  edits) ships at once, and so does a `validate` whose `_target` is a
+  relation's drop or sort param (`row_control?/2`): a remove button, or a
+  drag (`Brando.SortableEmbeds` dispatches on the moved row's
+  `data-sort-input`). That param names the relation as the target, so a
+  removal is never read as the browser's old form (`drop_echoes/4`). A
+  `has_many` row never ships, and an
+  `embeds_many` goes as one value: an editor in one of its rows holds the
+  incoming list (`held_remote`) until they leave it, and if they changed a
+  row, their list wins. A value the form's rich-text check
   refused (`Brando.RichText.refused?/2`, the field or a row) never ships,
   from `pending_changes` or from a recovery's `share_recovered/3`, and stays
   in `unshipped_fields` until corrected (a recovered one too), so another

@@ -3,7 +3,8 @@
 Brando can export modules created in the admin to an Elixir DSL, then import
 edits into the same database records. A definition includes its template, refs,
 vars, editor settings, defaults, children and table template. You can also author
-a new module entirely in files.
+a new module entirely in files. Palettes and containers are definitions too
+([Palettes and containers](#palettes-and-containers)).
 
 The guarantee is a **semantic round trip**: export → read → import without edits
 does not duplicate modules, replace their identities, bump versions, synchronize
@@ -22,8 +23,9 @@ the same definitions, authorization checks and importer as the CLI.
 
 1. Choose **Prepare export**, then **Download ZIP** for all local modules in the
    current workspace. To export particular modules, select their listing rows and
-   choose **Export DSL files**. Child modules and required table templates travel
-   with the selected module trees.
+   choose **Export DSL files**. Child modules, required table templates and the
+   palettes the vars of either name travel with the selected module trees. The full
+   export has every local palette and container.
 2. Unzip the bundle, edit its `.exs`, `.heex` or `.liquid` files, and zip them
    together with `modules.lock.json`. Files may be at the archive root or inside
    one enclosing folder. Keep the baseline with your edits.
@@ -76,7 +78,10 @@ mix brando.modules import --from priv/modules --user 1
 
 `--user` is an active account ID. Commands use that account's normal permissions;
 being able to run Mix does not implicitly select a system actor. An export needs
-export access to the selected modules and table templates. Imports need create or
+export access to the selected modules, table templates, palettes and containers.
+A full export leaves out the palettes and containers the account may not export,
+unless an exported module, table template or container names one: that export is
+refused, naming both. Imports need create or
 update access to each definition, and read access to referenced media/content.
 
 Tenant applications must supply both selectors on every command:
@@ -105,12 +110,13 @@ and `resolve --apply` take the same options.
 Export requires a **new directory**. It writes:
 
 - One `.exs` file per module or table template, named `<namespace>/<name>.exs`
-  in the admin language (`default_admin_language`), and `tables/<name>.exs` for
-  table templates. A child module goes in a folder beside its parent,
+  in the admin language (`default_admin_language`), `tables/<name>.exs` for
+  table templates, and `palettes/<name>.exs` and `containers/<name>.exs`. A child module goes in a folder beside its parent,
   `<namespace>/<parent>/<child>.exs`, whatever its own namespace. Definitions
   that would share a name get a short UID digest appended. The Elixir module
   name follows the path, e.g. `BrandoDefinitions.Sections.Hero`.
-- One adjacent `.heex` or `.liquid` file per module, preserving its source bytes.
+- One adjacent `.heex` or `.liquid` file per module and container, preserving its
+  source bytes.
 - `modules.lock.json`, containing the format version, source scope, definition
   digests and external reference bindings. No database credentials are included.
 
@@ -245,7 +251,8 @@ applied, both, or never applied from the release.
 
 **Block modules → Release changes** lists the release's definitions that
 differ from this environment's, one row per module tree (a module with its
-children and the table templates it uses), and a summary: the release, the
+children and the table templates it uses), container (with its palette) or
+palette, and a summary: the release, the
 changes by action and by kind (`ModuleDiff` class) and the entries they
 re-render. Each row has four tabs:
 
@@ -255,11 +262,16 @@ re-render. Each row has four tabs:
   does to the blocks that use them.
 - **Entries**: the entries that use the tree, with their type, language,
   status and links, searchable and sortable.
-- **Preview**: an entry's page as it is and with the release's definitions,
+- **Preview**: an entry's page as it is and with the release's modules,
   side by side in the browser, at mobile, tablet or desktop width. The
   blocks that differ are outlined in both (**Mark changes** turns that off),
   **Full screen** gives the pair the whole window, and **Share preview**
   copies a shared preview link of the proposed page.
+
+A container's or palette's row has **Template** (the container's template,
+or the definition with a palette's colours) and **Entries**: Verify and
+Preview render the release's modules, and leave containers and palettes as
+they are here.
 
 **Verify** (per tree, or **Verify all**) is a dry run: every affected entry
 is rendered with the release's definitions, in the background on the node
@@ -280,6 +292,11 @@ Some need something first:
   release's version** replaces the edit, which the apply's record keeps.
 - **Never applied** from files: **Replace with the release's version**.
 - **Needs a migration**: shown, locked, with what blocks it.
+
+A row that removes a ref or var is ready, and says how many blocks hold a
+value for it: they keep the values after the apply, and the applied module's
+row links to **Resolve blocks**
+([Removing a ref or var](#removing-a-ref-or-var)).
 
 The confirmation repeats what the apply covers, the entries it re-renders,
 what it leaves out, and the entries that failed in Verify. After the apply, a
@@ -442,7 +459,8 @@ definitions and templates from trusted authors.
 filename, translated display name or namespace. Keep it when updating an
 existing module. `name`, `namespace` and `help_text` use locale maps or keyword
 lists. Other declarations are `class`, `svg`, `color`, `write_with_ai`,
-`multi`, `sequence`, `datasource`, `datasource_module`, `datasource_type` and
+`multi`, `media_drop` (see [Children and table templates](#children-and-table-templates)),
+`sequence`, `datasource`, `datasource_module`, `datasource_type` and
 `datasource_query`. Datasource configuration uses the same values as the
 admin. `write_with_ai true` offers Write with AI in the module's text blocks;
 left out, it is off.
@@ -682,6 +700,27 @@ Every child must exist in the bundle, may have only one parent, and cannot form
 a cycle. Child declaration order controls child order. All definitions in the
 bundle are planned and persisted in dependency order in one transaction.
 
+`media_drop` makes each image or video dropped on the module's blocks a new
+entry of one of its children, with the file in one of that child's refs
+([Dropping media on a multi module](block_editor.md#dropping-media-on-a-multi-module)):
+
+```elixir
+multi true
+media_drop child: "acme-image-card", ref: :picture
+
+children do
+  child "acme-image-card"
+  child "acme-quote"
+end
+```
+
+`child` is the UID or the Elixir module name of one of the module's children,
+and `ref` names a `:media`, `:picture` or `:video` ref of that child. Anything
+else is refused, naming the module and what is wrong. Left out, files dropped
+on the module's blocks make no entries. A stored setting that no longer fits
+the module's children is left out of an export, so importing the export
+changes nothing.
+
 A table template uses the same var declarations for columns:
 
 ```elixir
@@ -706,6 +745,115 @@ end
 The consuming module declares `table_template MySite.Definitions.Prices`.
 Table templates match by UID, so two different templates may share a display
 name. Table row values belong to entries and are never definition data.
+
+## Palettes and containers
+
+A palette and a container are definitions with `kind :palette` and
+`kind :container`. They have a `uid`, are exported, planned and imported with
+the modules, and take part in the lockfile, the admin's ZIP, the watcher and
+a release's Release changes as modules do:
+
+```elixir
+defmodule MySite.Definitions.Palettes.Paper do
+  use Brando.Content.Definition
+
+  kind :palette
+  uid "acme-palette-paper"
+  name "Paper"
+  namespace "site"
+  key "paper"
+
+  colors do
+    color :background, "#fff9f4" do
+      name "Background"
+      instructions "Behind the text"
+    end
+
+    color :foreground, "#000000" do
+      name "Text"
+    end
+  end
+end
+```
+
+```elixir
+defmodule MySite.Definitions.Containers.Tinted do
+  use Brando.Content.Definition
+
+  kind :container
+  uid "acme-container-tinted"
+  name "Tinted section"
+  namespace "Sections"
+  palette "acme-palette-paper"
+
+  template :liquid, ~S(<section b-section="site-paper">{{ content }}</section>)
+end
+```
+
+A palette declares `name`, `namespace`, `key`, `global` and `instructions`,
+and its colours: each a key and a value, with a `name` (required) and
+`instructions`. A palette's colours apply under
+`[b-section="<namespace>-<key>"]` in the palette CSS, or with `global true`
+as `--palette-<namespace>-<key>-<colour>` on `:root`. A container declares
+`name`, `namespace`, `help_text`, one template (`template_file` or
+`template`, `{{ content }}` in Liquid and `@content` in HEEx), and the
+palette settings of its form: `palette` (its default palette, by uid or
+module name), `allow_custom_palette` and `palette_namespace`. Names are plain
+strings, as the admin stores them. A Liquid container template is given
+`{{ content }}` and nothing else: write the palette's section attribute into
+it, as above, for the palette CSS to apply. Status and order are each
+environment's own: a palette an import creates is published.
+
+A var that points at a palette names it by uid, `assets palette:
+"acme-palette-paper"`, which export writes for every palette here.
+A file written before names it by a token mapped to an ID (`--references`),
+which still imports.
+
+An import writes palettes first, then containers, then table templates and
+modules, so a container or a var can point at a palette the same import
+creates. A container whose palette is neither in the files nor here is
+refused when planning, by name; a palette in the trash doesn't count: against
+the lockfile that refuses the plan, and against the database (a release, a
+revert, files without a lockfile for this database) the container is a
+conflict until the palette is restored, so a revert lists it with the others. A
+container whose default palette is in the trash here is exported without
+one, and the export (the admin's and `mix brando.modules export`) and the
+plan name that palette: an import of the file keeps the link, so restoring
+the palette restores the container's default.
+Selecting a container brings its palette, and selecting a module brings the
+palettes its vars and its table template's vars name (`--uid`, `select:`, a
+release apply), so a selection
+whose palette is a conflict is refused.
+
+An update replaces a palette's colours as a set, the definition being the
+whole palette, and the plan names each colour it removes; CSS that reads one
+is yours to change. Blocks keep pointing at their container and palette, and
+keep their own palette choice. The palette CSS is rebuilt and the entries
+that use the palette or the container are rendered again, as after a save in
+the admin; `refresh` retries that for a palette or container UID too. A
+container's HEEx is code, as a module's: only a superuser (or `:system`)
+plans or applies one. A shared-library override is neither exported nor
+imported over, and keeps its source. A palette or container made local from
+the shared library gets a uid of its own, kept when it takes a library update;
+its source relates it to the library entry.
+
+An import does not update a palette's or container's admin form that is open:
+reload it to see the imported version before you save it.
+
+Palettes and containers saved in the admin get a uid of their own. The
+`brando_245` upgrade migration gives existing ones a uid derived from what
+two environments seeded alike share, `palette-<namespace>-<key>` and
+`container-<namespace>-<name>`, so the first import of one environment's
+files into the other adopts its rows instead of creating copies; a derived
+uid another definition of any kind has gets `-2`, `-3`, …. That suffix is
+each environment's own: when only one environment has a module or table
+template with the derived uid, its palette or container gets `-2` and the
+other's does not, so the first import of one's files creates a copy in the
+other instead of adopting it. Give it the same uid in both environments
+before that first export. Within one
+bundle, and here, a uid belongs to one kind, the trash included: a palette
+is refused the uid of a module in the trash, which a restore would bring
+back.
 
 ## Media and content references
 
@@ -771,24 +919,162 @@ and affected entry count:
 | `noop` | The target already has this complete definition. |
 | `update` | The baseline matches and the change can use existing synchronization. |
 | `conflict` | The target changed since export, or an update has no baseline. |
+| `migration_required` | The change would reinterpret content blocks hold; nothing applies it. |
 
 The baseline is the lockfile's when it was written for the target's
 database, and otherwise what was last applied to the target (see
 [Each database's own baseline](#each-database-s-own-baseline)).
-| `migration_required` | The proposed change needs an explicit content migration. |
 
 Changes to template source, metadata, ref configuration/defaults, var settings,
-options/layout and additive refs/vars can be applied. Existing block values
-continue to follow Brando's protected-content rules. Planning parses Liquid or
-compiles HEEx, but does not render every affected entry or prove that all
-datasource/runtime expressions will succeed.
+options/layout, added refs/vars and removed refs/vars can be applied. Existing
+block values continue to follow Brando's protected-content rules. Planning
+parses Liquid or compiles HEEx, but does not render every affected entry or
+prove that all datasource/runtime expressions will succeed.
 
-The importer blocks removed/retyped refs and vars, ref identity changes,
-moving existing children, removing child definitions, changing table columns,
-and changes to the module contract (engine, multi, datasource or table binding).
-There is no force switch that silently deletes editor content. Removing a
-top-level definition file does not delete its database module. Use an explicit
-migration for structural changes, then export a fresh baseline.
+These need a migration: a retyped ref or var, a changed ref identity, moving
+an existing child, removing a child definition, changing table columns, a
+change to the module contract (engine, multi, datasource or table binding),
+and a var added under a key that blocks still hold a leftover of another type
+for. There is no force switch that silently deletes or reinterprets editor
+content. Removing a top-level definition file does not delete its database
+module.
+
+### Removing a ref or var
+
+Delete the `ref` or `var` from the file and import. The import is an
+`update`, as the same edit saved in the admin is: the module no longer
+defines the key, and nothing an editor typed is deleted. Each block that
+holds a value for it keeps it as a leftover and stays on the older version
+(see [Blocks left on an older version](#blocks-left-on-an-older-version)).
+The block renders from the rows it holds, so a template that still names a
+removed var (`{{ tagline }}`) keeps printing the editor's value until the
+leftover is resolved: take it out of the template in the same change.
+The plan counts the blocks that hold the key, not every block of the module,
+and prints the command that drops it from them:
+
+```
+update module kulturslider: removes var link (5 of 13 blocks hold it, 3 entries)
+  resolve: mix brando.modules resolve --uid kulturslider --user 1 --drop var:link --apply
+```
+
+Run it as printed once the import has run; a tenant application's line has
+`--site` and `--environment`, and each value a shell would read is quoted.
+It drops only the keys some block holds. When no block holds any of them,
+there is no resolve line. The watcher logs the same two lines, and the
+admin's ZIP import shows the count with a link to **Resolve blocks**. Until it runs, a revert of the import (or the same var added
+back with the same type) gives the blocks their values back.
+
+### Renaming a ref or var
+
+A rename is a removal and an addition: rename the key in the file and in the
+template, import, then move the values with `--map OLD=NEW`:
+
+```sh
+mix brando.modules import --from priv/modules --user 1
+mix brando.modules resolve --uid kulturslider --user 1 --map title=heading
+mix brando.modules resolve --uid kulturslider --user 1 --map title=heading --apply
+```
+
+The first `resolve` is a dry run that lists what it moves and what it
+would replace; a mapping that loses content is refused, and **Resolve
+blocks** in the admin makes exceptions per block. Between the import and the
+resolve the blocks render the new key's default, so run the two together.
+
+A key added back with another type while blocks still hold its leftover is
+`migration_required`, and names the blocks: the next sync would read the
+stored value as the new type. Resolve the leftover first, or choose another
+key.
+
+### Moving values to child modules
+
+Values that move from a parent's blocks to its children's (row-level layout
+settings that become per-item ones) are a data migration in the project.
+Definitions are parsed, never evaluated, so a definition cannot carry one.
+Add the children's vars and import, then move the values. No Brando function
+moves a value from one block to another, so the migration does by hand what
+`mix brando.modules resolve` does within a block: a revision of each entry
+before and after, the rows written in one transaction, the entries rendered,
+and the editors that have one open moved onto the new rows
+(`Brando.EditSession.sync_saved/1`), so a later save from them keeps the
+moved values:
+
+```elixir
+defmodule MyApp.Release.MoveRowLayout do
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.Content.{Block, Blocks, Module}
+  alias Brando.Repo
+
+  # Where a var keeps its value, for every type; the rest is its definition
+  @value_fields ~w(value value_boolean image_id file_id video_id gallery_id form_id identifier_id
+                   palette_id link_text link_type link_target_blank)a
+
+  # Copies each media row's `layout` onto its items' new `width` var, which
+  # has the same type
+  def run(user) do
+    row = Repo.get_by!(Module, uid: "media-row")
+    block_ids = Blocks.list_block_ids_using_module(row.id, :local)
+
+    entries =
+      block_ids
+      |> Blocks.list_root_block_ids_by_source()
+      |> Blocks.list_entry_ids_for_root_blocks_by_source()
+
+    {:ok, _} =
+      Repo.transaction(fn ->
+        # A revision of each entry first, for History to restore
+        each_entry(entries, &revision!(&1, user, false))
+
+        blocks = Repo.all(from(b in Block, where: b.id in ^block_ids, preload: [:vars, children: :vars]))
+
+        for block <- blocks,
+            layout <- Enum.filter(block.vars, &(&1.key == "layout")),
+            child <- block.children,
+            width <- Enum.filter(child.vars, &(&1.key == "width" and &1.type == layout.type)) do
+          width |> Ecto.Changeset.change(Map.take(layout, @value_fields)) |> Repo.update!()
+        end
+
+        Blocks.enqueue_entry_map_for_render(entries)
+
+        each_entry(entries, fn entry ->
+          revision!(entry, user, true)
+          Brando.EditSession.sync_saved(entry)
+        end)
+      end)
+
+    :ok
+  end
+
+  defp each_entry(entries, fun) do
+    for {schema, ids} <- entries, id <- ids, do: fun.(Repo.get!(schema, id))
+  end
+
+  defp revision!(%schema{} = entry, user, active?) do
+    if schema.has_trait(Brando.Trait.Revisioned) do
+      {:ok, _} = Brando.Revisions.create_revision(entry, user, active?)
+    end
+  end
+end
+```
+
+It records nothing in Activity, and it does not check that `user` may edit
+each entry: run it as a superuser. Then remove `layout` from the parent's
+file, import, and run the resolve line the plan prints to drop the old
+values.
+
+### In a release
+
+A release that removes a ref or var is ready to apply like any update:
+`Release.status/1` prints the same counts, and given `user:` the same
+resolve line. The status at boot or in a deploy has no user, so its line
+says to resolve the blocks after the apply, under **Resolve blocks** in the
+admin or with `mix brando.modules resolve`. The Release changes screen lists
+the removal under Ready to apply, saying the blocks keep the values until
+they are resolved. After the apply, the module's row says how many blocks
+hold values the module no longer defines and links to **Resolve blocks**,
+where a server without Mix resolves them
+(`Brando.Content.StaleBlocks.apply/4` is the API it uses). Only what still
+needs a migration is shown locked.
 
 For a conflict, export the target into a new directory, review the admin changes
 against your edits, and apply your intended changes onto that fresh export.
