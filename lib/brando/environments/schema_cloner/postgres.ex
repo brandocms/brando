@@ -155,12 +155,13 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
   end
 
   # Created empty and locked down before pg_dump writes into it, so the dump is
-  # never briefly world-readable.
+  # never briefly world-readable. The random name cannot meet another VM's dump
+  # or a file a killed run left behind, as a per-VM counter did.
   defp temporary_path do
     path =
       Path.join(
         System.tmp_dir!(),
-        "brando-tenant-#{System.unique_integer([:positive, :monotonic])}.sql"
+        "brando-tenant-#{Base.url_encode64(:crypto.strong_rand_bytes(18))}.sql"
       )
 
     case File.write(path, "", [:exclusive]) do
