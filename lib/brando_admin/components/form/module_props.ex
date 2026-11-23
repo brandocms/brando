@@ -170,9 +170,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
   # The issue on its select, shown from the first render: errors show only
   # for a field its form's params hold (`used_input?/1`)
-  defp with_issue(%{errors: []} = field, %{errors: []}, {key, message, keys}, key) do
+  defp with_issue(%{errors: []} = field, %{errors: []}, {key, _message, keys} = issue, key) do
     form = %{field.form | params: Map.put(field.form.params, to_string(key), field.value)}
-    %{field | errors: [{message, keys}], form: form}
+    %{field | errors: [{Brando.Content.Module.translate_media_drop_issue(issue), keys}], form: form}
   end
 
   defp with_issue(field, _other_field, _issue, _key), do: field

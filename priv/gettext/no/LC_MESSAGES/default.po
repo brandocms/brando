@@ -58,6 +58,16 @@ msgstr "%{browser} på %{system}"
 msgid "%{built}/%{total} built"
 msgstr "%{built}/%{total} bygget"
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "%{child} has no ref %{ref}"
+msgstr "%{child} har ingen referanse %{ref}"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "%{child} is not a child module of this module"
+msgstr "%{child} er ikke en undermodul av denne modulen"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "%{client} via MCP"
@@ -24794,10 +24804,25 @@ msgstr "kan ikke inneholde duplikater"
 msgid "must use s3://bucket/optional-prefix"
 msgstr "må bruke s3://bøtte/valgfritt-prefiks"
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "name the child module the dropped files create"
+msgstr "velg undermodulen som sluppede filer lager"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "name the ref of %{child} the dropped files go in"
+msgstr "velg referansen i %{child} som sluppede filer legges i"
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "needs a migration"
 msgstr "trenger en migrering"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "needs a multi module"
+msgstr "krever en multimodul"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -25037,6 +25062,11 @@ msgstr "i kø"
 #, elixir-autogen, elixir-format
 msgid "re-rendering entries"
 msgstr "gjengir oppføringer på nytt"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref"
+msgstr "referansen %{ref} i %{child} er en %{type}-referanse, ikke en media-, bilde- eller videoreferanse"
 
 #: lib/brando_admin/live/content/module_list_live.ex
 #, elixir-autogen, elixir-format

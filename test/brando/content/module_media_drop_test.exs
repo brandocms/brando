@@ -94,10 +94,10 @@ defmodule Brando.Content.ModuleMediaDropTest do
       {row, _card} = image_row(user)
       module = editor_module(row)
 
-      assert [{:media_drop_child, "%{child} is not a child module of this module", [child: "quote-card"]}] =
+      assert [{:media_drop_child, "quote-card is not a child module of this module", [child: "quote-card"]}] =
                errors(Module.changeset(module, %{media_drop_child: "quote-card", media_drop_ref: "photo"}, user))
 
-      assert [{:media_drop_ref, "%{child} has no ref %{ref}", [child: "image-card", ref: "cover"]}] =
+      assert [{:media_drop_ref, "image-card has no ref cover", [child: "image-card", ref: "cover"]}] =
                errors(Module.changeset(module, %{media_drop_child: "image-card", media_drop_ref: "cover"}, user))
 
       assert [{:media_drop_ref, _message, [child: "image-card", ref: "body", type: "text"]}] =
@@ -165,6 +165,26 @@ defmodule Brando.Content.ModuleMediaDropTest do
 
       assert Module.describe_media_drop_issue(Module.media_drop_issue(module, module.children)) ==
                "image-card is not a child module of this module"
+    end
+
+    test "each reason a setting is refused or stale reads in the admin's language", %{user: user} do
+      {row, card} = image_row(user)
+      module = %{editor_module(row) | media_drop_child: "image-card", media_drop_ref: nil}
+
+      issues = [
+        Module.media_drop_issue(%{module | media_drop_child: nil, media_drop_ref: "photo"}, []),
+        Module.media_drop_issue(module, []),
+        Module.media_drop_issue(%{module | multi: false, media_drop_ref: "photo"}, []),
+        Module.media_drop_problem([], "image-card", "photo"),
+        Module.media_drop_problem([Repo.preload(card, :refs)], "image-card", "cover"),
+        Module.media_drop_problem([Repo.preload(card, :refs)], "image-card", "body")
+      ]
+
+      for issue <- issues do
+        english = Module.describe_media_drop_issue(issue)
+        assert Module.translate_media_drop_issue(issue) == english
+        refute Gettext.with_locale(Brando.Gettext, "no", fn -> Module.translate_media_drop_issue(issue) end) == english
+      end
     end
 
     test "cleared, both go", %{user: user} do

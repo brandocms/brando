@@ -335,8 +335,8 @@ defmodule Brando.Content.Module do
           nil ->
             changeset
 
-          {field, message, keys} ->
-            Changeset.add_error(changeset, field, message, keys)
+          {field, _message, keys} = issue ->
+            Changeset.add_error(changeset, field, translate_media_drop_issue(issue), keys)
         end
 
       Changeset.changed?(changeset, :multi) and Changeset.get_field(changeset, :multi) != true ->
@@ -371,9 +371,9 @@ defmodule Brando.Content.Module do
 
   def media_drop_issue(%{media_drop_child: child, media_drop_ref: ref} = module, children) do
     cond do
-      is_nil(child) -> {:media_drop_child, "name the child module the dropped files create", []}
-      is_nil(ref) -> {:media_drop_ref, "name the ref of %{child} the dropped files go in", [child: child]}
-      module.multi != true -> {:media_drop_child, "needs a multi module", []}
+      is_nil(child) -> {:media_drop_child, gettext_noop("name the child module the dropped files create"), []}
+      is_nil(ref) -> {:media_drop_ref, gettext_noop("name the ref of %{child} the dropped files go in"), [child: child]}
+      module.multi != true -> {:media_drop_child, gettext_noop("needs a multi module"), []}
       true -> media_drop_target_issue(if(is_function(children, 0), do: children.(), else: children), child, ref)
     end
   end
@@ -381,9 +381,16 @@ defmodule Brando.Content.Module do
   defp media_drop_target_issue(nil, _child, _ref), do: nil
   defp media_drop_target_issue(children, child, ref), do: media_drop_problem(children, child, ref)
 
-  @doc "A `media_drop_issue/2` as text, its keys filled in."
+  @doc """
+  A `media_drop_issue/2` as English text, its keys filled in, for a
+  definition file's error, worded in English as the other definition errors
+  are.
+  """
   def describe_media_drop_issue({_field, message, keys}),
     do: Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
+
+  @doc "A `media_drop_issue/2` as text in the current locale, its keys filled in, for the admin."
+  def translate_media_drop_issue({_field, message, keys}), do: Gettext.gettext(Brando.Gettext, message, keys)
 
   @doc """
   What is wrong with a `media_drop` naming `child_uid` and `ref_name` among
@@ -394,12 +401,17 @@ defmodule Brando.Content.Module do
     with {:child, %{} = child} <- {:child, Enum.find(children, &(&1.uid == child_uid))},
          {:ref, %{} = ref} <- {:ref, Enum.find(child.refs, &(&1.name == ref_name))},
          false <- ref_type(ref) in @media_drop_ref_types do
-      {:media_drop_ref, "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref",
+      {:media_drop_ref, gettext_noop("ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref"),
        [child: child_uid, ref: ref_name, type: ref_type(ref)]}
     else
-      {:child, nil} -> {:media_drop_child, "%{child} is not a child module of this module", [child: child_uid]}
-      {:ref, nil} -> {:media_drop_ref, "%{child} has no ref %{ref}", [child: child_uid, ref: ref_name]}
-      true -> nil
+      {:child, nil} ->
+        {:media_drop_child, gettext_noop("%{child} is not a child module of this module"), [child: child_uid]}
+
+      {:ref, nil} ->
+        {:media_drop_ref, gettext_noop("%{child} has no ref %{ref}"), [child: child_uid, ref: ref_name]}
+
+      true ->
+        nil
     end
   end
 

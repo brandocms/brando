@@ -41,7 +41,7 @@ defmodule Brando.Doctor.Checks.ModuleMediaDrop do
     |> Enum.flat_map(fn module ->
       case Module.media_drop_issue(module, module.children) do
         nil -> []
-        issue -> [{module_name(module), module.uid, Module.describe_media_drop_issue(issue)}]
+        issue -> [{module_name(module), module.uid, Module.translate_media_drop_issue(issue)}]
       end
     end)
   end

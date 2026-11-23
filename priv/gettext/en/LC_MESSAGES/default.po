@@ -58,6 +58,16 @@ msgstr ""
 msgid "%{built}/%{total} built"
 msgstr ""
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "%{child} has no ref %{ref}"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "%{child} is not a child module of this module"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "%{client} via MCP"
@@ -24792,9 +24802,24 @@ msgstr ""
 msgid "must use s3://bucket/optional-prefix"
 msgstr ""
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "name the child module the dropped files create"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "name the ref of %{child} the dropped files go in"
+msgstr ""
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "needs a migration"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "needs a multi module"
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
@@ -25034,6 +25059,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "re-rendering entries"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_list_live.ex
