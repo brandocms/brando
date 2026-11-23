@@ -1704,6 +1704,52 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp repeated?(identities), do: length(Enum.uniq(identities)) != length(identities)
 
+  @doc """
+  Name a moved block's rows in `op` as the store holds them.
+
+  A child moved to another parent is held as new rows (`moved_params/2`),
+  named by uid, key or sync uid. An edit made in the component it had
+  before the move, which can arrive after it, names them by their saved
+  ids, which the store no longer has: such an edit would be a row of its
+  own, saved without the rest of the row. `saved` gives the block as it is
+  saved, read only when an op names a row the store does not have.
+
+      iex> alias BrandoAdmin.Components.Form.BlockField.Ops
+      iex> state = %Ops{parents: %{"b" => "p"}, diffs: %{"b" => %{"refs" => [%{"uid" => "r", "name" => "body"}]}}}
+      iex> saved = fn -> %{refs: [%{id: 7, uid: "r"}]} end
+      iex> Ops.name_moved_rows(state, {:set_field, "b", [{:at, "refs", {"id", 7}, []}, "video_id"], 1, nil}, saved)
+      {:set_field, "b", [{:at, "refs", {"uid", "r"}, []}, "video_id"], 1, nil}
+
+  """
+  @spec name_moved_rows(t(), op(), (-> map() | nil)) :: op()
+  def name_moved_rows(%__MODULE__{} = state, {:set_field, uid, path, value, rev}, saved),
+    do: {:set_field, uid, name_moved_path(Map.get(state.diffs, uid, %{}), path, saved), value, rev}
+
+  def name_moved_rows(%__MODULE__{} = state, {:set_fields, uid, changes, rev}, saved) do
+    diff = Map.get(state.diffs, uid, %{})
+    {:set_fields, uid, Enum.map(changes, fn {path, value} -> {name_moved_path(diff, path, saved), value} end), rev}
+  end
+
+  def name_moved_rows(_state, op, _saved), do: op
+
+  defp name_moved_path(diff, [{:at, key, {"id", id}, skeleton} | rest] = path, saved) do
+    with {^key, field} <- List.keyfind(@rel_identities, key, 0),
+         rows when is_list(rows) <- Map.get(as_map(diff), key),
+         false <- Enum.any?(rows, &same_item?(&1, {"id", id})),
+         %{} = block <- saved.(),
+         saved_rows when is_list(saved_rows) <- Map.get(block, String.to_existing_atom(key)),
+         %{} = row <- Enum.find(saved_rows, &(to_string(&1.id) == to_string(id))),
+         name when name not in [nil, ""] <- Map.get(row, field),
+         identity = {to_string(field), name},
+         true <- Enum.any?(rows, &(same_item?(&1, identity) and Map.get(&1, "id") in [nil, ""])) do
+      [{:at, key, identity, skeleton} | rest]
+    else
+      _ -> path
+    end
+  end
+
+  defp name_moved_path(_diff, path, _saved), do: path
+
   defp set_fields(state, uid, changes) do
     if known?(state, uid) do
       ids = Map.get(state.rel_ids, uid, %{})

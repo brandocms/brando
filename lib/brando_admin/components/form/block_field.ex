@@ -2548,6 +2548,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        do: refuse_structure(socket, elem(op, 0))
 
   defp apply_block_op(socket, op, mode) do
+    {op, socket} = name_moved_rows(socket, op, mode)
     op = keyed(socket, op)
 
     case Ops.apply_op(socket.assigns.block_ops, op) do
@@ -2572,6 +2573,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
     end
   end
+
+  # An edit from a block's component as it was before the block moved to
+  # another parent, which can arrive after the move: an upload delivered to
+  # it, for one (`Ops.name_moved_rows/3`). The moved block, mounted from the
+  # store before the edit landed there, is shown from the store again.
+  defp name_moved_rows(socket, op, mode) when mode in [:local, :recorded] do
+    ops = socket.assigns.block_ops
+    named = Ops.name_moved_rows(ops, op, fn -> child_base_struct(socket, elem(op, 1)) end)
+
+    if named == op,
+      do: {op, socket},
+      else: {named, queue_refresh(socket, [Ops.root_of(ops, elem(op, 1))])}
+  end
+
+  defp name_moved_rows(socket, op, _mode), do: {op, socket}
 
   defp refuse_structure(socket, what) do
     Logger.warning("BlockField (#{socket.assigns.block_field}) refused #{inspect(what)} in a synchronized translation")
