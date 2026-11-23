@@ -75,7 +75,9 @@ defmodule Brando.Content.BlockReferences do
   end
 
   @doc """
-  Resolves root block ids, grouped by join schema, to owning entry ids.
+  Resolves root block ids, grouped by join schema, to owning entry ids,
+  grouped by entry schema: one with several block fields gets the entries of
+  all of them.
   """
   @spec list_entry_ids_for_root_blocks_by_source(%{optional(module()) => [integer()]}) :: %{
           optional(module()) => [integer()]
@@ -87,8 +89,12 @@ defmodule Brando.Content.BlockReferences do
 
       {join_source, ids}, entries_by_schema ->
         case join_schema(join_source) do
-          {join_source, schema} -> Map.put(entries_by_schema, schema, list_entry_ids(join_source, schema, ids))
-          nil -> entries_by_schema
+          {join_source, schema} ->
+            entry_ids = list_entry_ids(join_source, schema, ids)
+            Map.update(entries_by_schema, schema, entry_ids, &Enum.uniq(&1 ++ entry_ids))
+
+          nil ->
+            entries_by_schema
         end
     end)
   end
