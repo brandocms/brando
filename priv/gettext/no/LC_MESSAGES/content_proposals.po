@@ -929,6 +929,7 @@ msgid "This proposal has already been undone."
 msgstr "Dette forslaget er allerede angret."
 
 #: lib/brando/content/proposals.ex
+#: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal has expired. Prepare it again."
 msgstr "Dette forslaget har utløpt. Lag det på nytt."

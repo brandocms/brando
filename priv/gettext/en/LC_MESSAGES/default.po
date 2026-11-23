@@ -1655,6 +1655,11 @@ msgstr ""
 msgid "A new secret replaces this one at once; update the receiver straight after."
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A newer version of this proposal arrived. This one can no longer be applied."
+msgstr ""
+
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
 msgid "A notification route was paused"
@@ -9061,6 +9066,7 @@ msgstr ""
 msgid "Follow %{name}"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -18865,6 +18871,11 @@ msgstr ""
 msgid "Show instructions"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Show it"
+msgstr ""
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Show keyboard shortcuts"
@@ -21822,6 +21833,26 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal cannot be applied yet. Ask the assistant to adjust it."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal expired, so it can no longer be applied. Ask the tool to prepare it again."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was applied elsewhere, so it is no longer under review."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was discarded, so it can no longer be applied."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was undone elsewhere."
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex

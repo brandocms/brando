@@ -3240,6 +3240,7 @@ defmodule Brando.Content.Proposals do
         {Repo.insert!(new_record(proposal, previous, opts)), previous}
       end)
 
+    changed(record.id, actor)
     %{with_record(proposal, record) | supersedes_summary: previous && previous.summary}
   end
 
@@ -3376,6 +3377,23 @@ defmodule Brando.Content.Proposals do
 
   defp supersede!(nil, _actor), do: nil
 
+  # A change left out (`leave_out/4`): the version read must still be under
+  # review, deadline included, under the lock that supersedes it.
+  defp supersede!({id, version}, actor) do
+    previous = record!(id, actor, lock: true)
+
+    cond do
+      previous.version != version or previous.status not in ~w(pending approved) ->
+        Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
+
+      DateTime.compare(previous.expires_at, DateTime.utc_now()) != :gt ->
+        Error.fail!(dgettext("content_proposals", "This proposal has expired. Prepare it again."))
+
+      true ->
+        previous |> Changeset.change(status: "superseded") |> Repo.update!()
+    end
+  end
+
   defp supersede!(id, actor) do
     previous = record!(id, actor, lock: true)
 
@@ -3429,6 +3447,14 @@ defmodule Brando.Content.Proposals do
       do: origin,
       else: Error.fail!(dgettext("content_proposals", "Unknown proposal origin."))
   end
+
+  @doc """
+  A connected tool's name as a proposal stores it: one line, trimmed and
+  cut to 80 characters, or nil when blank. Compare a connection's name with
+  a proposal's `client` through it.
+  """
+  @spec client_name(term()) :: String.t() | nil
+  def client_name(name), do: client(name)
 
   # A connected tool names itself; keep a short, single line of it.
   @client_length 80
@@ -3527,10 +3553,78 @@ defmodule Brando.Content.Proposals do
     )
   end
 
+  @doc """
+  When the next of the proposals `count_external/1` counts expires: the
+  earliest deadline among them, or nil when none waits for review.
+  """
+  @spec next_external_expiry(term()) :: DateTime.t() | nil
+  def next_external_expiry(actor) do
+    now = DateTime.utc_now()
+
+    Repo.one(
+      from(r in external(actor),
+        where: r.status in ~w(pending approved) and r.expires_at > ^now,
+        select: min(r.expires_at)
+      )
+    )
+  end
+
   defp external(actor) do
     from(r in Record,
       where: is_nil(r.conversation_id) and r.scope == ^Transfer.scope() and r.actor_id == ^user!(actor).id
     )
+  end
+
+  @doc """
+  Where the actor's proposal `id` stands now in this site/environment:
+  `{:ok, %{status: status, expires_at: expires_at, newest: id}}`, where
+  `newest` is the latest version that superseded it, if it was superseded,
+  or `:error` when it is not the actor's. Its operations are not read.
+  """
+  @spec standing(Ecto.UUID.t(), term()) :: {:ok, map()} | :error
+  def standing(id, actor) do
+    case Error.protect(fn -> record!(id, actor) end) do
+      {:ok, %Record{} = record} ->
+        newest = if record.status == "superseded", do: newest(record.id, user!(actor).id, nil)
+        {:ok, %{status: record.status, expires_at: record.expires_at, newest: newest}}
+
+      {:error, _} ->
+        :error
+    end
+  end
+
+  # Each version names the one it supersedes; the chain ends at the version
+  # nothing supersedes.
+  defp newest(id, user_id, found) do
+    next =
+      Repo.one(
+        from(r in Record,
+          where: r.supersedes_id == ^id and r.scope == ^Transfer.scope() and r.actor_id == ^user_id,
+          order_by: [desc: r.version],
+          limit: 1,
+          select: r.id
+        )
+      )
+
+    if next && next != found, do: newest(next, user_id, next), else: found
+  end
+
+  @doc """
+  Subscribes the caller to the changes to the actor's proposals in this
+  site/environment, whoever makes them: a proposal stored, by a connected
+  tool or the Assistant, which may supersede an earlier version; an apply,
+  an undo, a discard or a cancel; and a change left out, which stores a new
+  version. Each comes as `{Brando.Content.Proposals, :changed, id}`.
+  """
+  @spec subscribe(term()) :: :ok | {:error, term()}
+  def subscribe(actor), do: Phoenix.PubSub.subscribe(Brando.pubsub(), topic(actor))
+
+  defp topic(actor), do: Brando.Tenant.Topic.scoped("brando:proposals:#{user!(actor).id}")
+
+  # Told once committed: a subscriber reads the proposal again at once.
+  defp changed(id, actor) do
+    topic = topic(actor)
+    Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {__MODULE__, :changed, id}) end)
   end
 
   ## A connected tool's own proposals
@@ -3762,11 +3856,11 @@ defmodule Brando.Content.Proposals do
   """
   @spec leave_out(Ecto.UUID.t(), integer(), [non_neg_integer()], term()) :: {:ok, Proposal.t()} | {:error, String.t()}
   def leave_out(id, version, indices, actor) do
+    # Storing the next version tells the person's pages, which read the list
+    # and this proposal's standing again
     with {:ok, record} <- Error.protect(fn -> under_review!(id, version, actor) end),
          {:ok, operations} <- Codec.decode_all(record.operations) do
-      operations
-      |> remaining_operations(indices)
-      |> propose_remaining(record, id, actor)
+      operations |> remaining_operations(indices) |> propose_remaining(record, id, actor)
     end
   end
 
@@ -3777,7 +3871,8 @@ defmodule Brando.Content.Proposals do
   defp propose_remaining([], _record, _id, _actor),
     do: {:error, dgettext("content_proposals", "Nothing would be left. Discard the proposal instead.")}
 
-  defp propose_remaining(rest, record, id, actor), do: propose(rest, actor, supersedes: id, summary: record.summary)
+  defp propose_remaining(rest, record, id, actor),
+    do: propose(rest, actor, supersedes: {id, record.version}, summary: record.summary)
 
   defp under_review!(id, version, actor) do
     record = record!(id, actor)
@@ -3800,7 +3895,13 @@ defmodule Brando.Content.Proposals do
   def undo(id, actor) do
     {source, details} = activity_source(id, actor)
 
-    Brando.Activity.with_proposal(source, Map.put(details, "undo_proposal", true), id, actor, fn -> do_undo(id, actor) end)
+    result =
+      Brando.Activity.with_proposal(source, Map.put(details, "undo_proposal", true), id, actor, fn ->
+        do_undo(id, actor)
+      end)
+
+    with {:ok, _receipt} <- result, do: changed(id, actor)
+    result
   end
 
   defp do_undo(id, actor) do
@@ -4038,7 +4139,10 @@ defmodule Brando.Content.Proposals do
   @doc "Cancel a proposal under review. Content is untouched."
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(id, actor) do
-    with {:ok, _} <- Error.protect(fn -> cancel!(record!(id, actor)) end), do: :ok
+    with {:ok, _} <- Error.protect(fn -> cancel!(record!(id, actor)) end) do
+      changed(id, actor)
+      :ok
+    end
   end
 
   # Written only over the status read: an apply that committed in between,
@@ -4091,7 +4195,9 @@ defmodule Brando.Content.Proposals do
     {source, details} = activity_source(id, actor)
     # Applied without review: made as the connection's person, approved by no one
     {details, approver} = if opts[:auto], do: {Map.put(details, "auto_applied", true), nil}, else: {details, actor}
-    Brando.Activity.with_proposal(source, details, id, approver, fn -> do_apply(id, version, actor, opts) end)
+    result = Brando.Activity.with_proposal(source, details, id, approver, fn -> do_apply(id, version, actor, opts) end)
+    with {:ok, _receipt} <- result, do: changed(id, actor)
+    result
   end
 
   # The activity log says who prepared the change: the Assistant, or a tool

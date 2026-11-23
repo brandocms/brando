@@ -381,8 +381,10 @@ it, behind the admin sign-in; anyone else gets the access-denied page,
 whatever the link. A page already open is checked again whenever
 permissions change, and one that may no longer be seen leaves for the
 access-denied page. **Follow live** opens it from
-**Security → Connected apps** and from the connections under
-**Configuration → Integrations → Connected AI tools**. A revoked or expired
+**Security → Connected apps**, from the connections under
+**Configuration → Integrations → Connected AI tools**, and, for the
+person, from each proposal under **Assistant → From connected tools**,
+which links the newest connection of the tool that prepared it. A revoked or expired
 connection's page says it has ended and shows what it did, and an open page
 says so the moment it expires.
 

@@ -23,6 +23,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.ImageReplacement
   alias Brando.Content.Proposals.Review
+  alias Brando.MCP
+  alias Brando.MCP.Watch
   alias Brando.Repo
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.ToolSteps
@@ -37,6 +39,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     Gettext.put_locale(Brando.Gettext, to_string(socket.assigns.current_user.language))
     deliver_topic = "form:" <> Ecto.UUID.generate()
     if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), deliver_topic)
+    if connected?(socket), do: Proposals.subscribe(socket.assigns.current_user)
 
     {:ok,
      socket
@@ -76,7 +79,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
        preview_keys: [],
        proposal_id: nil,
        connected: [],
-       connected_count: 0
+       connected_count: 0,
+       connections: %{},
+       connected_states: %{},
+       expiry_timer: nil,
+       stale: nil
      )}
   end
 
@@ -300,6 +307,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <.connected
           :if={@live_action == :connected}
           proposals={@connected}
+          states={@connected_states}
+          connections={@connections}
           proposal_id={@proposal_id}
         />
         <section :if={@live_action != :connected} class="assistant-chat" aria-label={gettext("Conversation")}>
@@ -457,6 +466,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             connected={@live_action == :connected}
             connected_empty?={@connected == []}
             unloadable_id={@unloadable_id}
+            stale={@stale}
           />
         </section>
       </div>
@@ -469,6 +479,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   attr :proposals, :list, required: true
   attr :proposal_id, :string, default: nil
+  attr :connections, :map, default: %{}
+  attr :states, :map, default: %{}, doc: "each proposal's state by id, as `connected_state/1` read it"
 
   # Where the conversation is otherwise: the proposals connected tools made.
   defp connected(assigns) do
@@ -500,11 +512,19 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <BrandoAdmin.Dates.time at={record.inserted_at} />
             </span>
             <span
-              class={["badge", connected_state_tone(connected_state(record))]}
-              data-testid={"assistant-state-#{connected_state(record)}"}
+              class={["badge", connected_state_tone(@states[record.id])]}
+              data-testid={"assistant-state-#{@states[record.id]}"}
             >
-              {connected_state_label(connected_state(record))}
+              {connected_state_label(@states[record.id])}
             </span>
+          </.link>
+          <.link
+            :if={@connections[record.client]}
+            navigate={@connections[record.client]}
+            class="assistant-connected-live"
+            data-testid="assistant-connected-live"
+          >
+            {gettext("Follow live")}
           </.link>
         </li>
       </ul>
@@ -766,6 +786,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :connected, :boolean, default: false
   attr :connected_empty?, :boolean, default: false
   attr :unloadable_id, :string, default: nil
+  attr :stale, :map, default: nil
 
   # A proposal of the user's under review that can no longer be loaded, so
   # neither reviewed nor applied: the reason, and Discard.
@@ -791,6 +812,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <span class="assistant-empty-mark" aria-hidden="true"><.icon name="plug" /></span>
       <h2 :if={@connected_empty?}>{gettext("Nothing to review")}</h2>
       <h2 :if={!@connected_empty?}>{gettext("Choose a proposal")}</h2>
+      <.stale_notice :if={@stale} stale={@stale} />
       <p :if={@connected_empty?}>
         {gettext(
           "When a tool connected over MCP, such as Claude Code, prepares content changes as you, they appear here for review. Nothing is saved until you apply them."
@@ -837,9 +859,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <div class="assistant-proposal-head">
         <span class="assistant-eyebrow">
           {gettext("Proposal · version %{version}", version: @proposal.version)}
-          <span :if={is_nil(@receipt) and @proposal.status in ~w(pending approved)}> · {gettext("not applied")}</span>
+          <span :if={is_nil(@receipt) and @proposal.status in ~w(pending approved) and !match?(%{reason: :applied}, @stale)}>
+            · {gettext("not applied")}
+          </span>
         </span>
-        <h2 :if={!@preview}>{proposal_title(@proposal, @receipt)}</h2>
+        <h2 :if={!@preview}>{if @stale, do: stale_title(@stale.reason), else: proposal_title(@proposal, @receipt)}</h2>
         <p :if={@proposal.summary && !@preview} class="assistant-summary">{@proposal.summary}</p>
         <div :if={@origin && !@preview} class="ai-proposal assistant-origin" id="assistant-origin">
           <p class="ai-proposal-label"><.icon name="sparkles" />{@origin}</p>
@@ -884,6 +908,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       <div :if={@error} class="assistant-feedback is-error" role="alert">{@error}</div>
 
+      <.stale_notice :if={@stale} stale={@stale} />
+
       <div :if={@problems? and !@receipt} class="assistant-feedback is-warning" role="status">
         <p>{gettext("This proposal cannot be applied yet. Ask the assistant to adjust it.")}</p>
         <ul class="assistant-feedback-problems">
@@ -916,7 +942,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           {gettext("A replaced image file cannot be undone, so this proposal has no undo.")}
         </p>
         <button
-          :if={@proposal.status == "applied" and @replaced == 0}
+          :if={@proposal.status == "applied" and @replaced == 0 and is_nil(@stale)}
           type="button"
           class="btn assistant-undo"
           phx-click="undo"
@@ -934,7 +960,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         media={@media}
         aliases={@aliases}
         share_url={@share_url}
-        shareable?={page_shareable?(@proposal)}
+        shareable?={page_shareable?(@proposal) and is_nil(@stale) and !expired?(@proposal)}
       />
 
       <div :if={!@preview and @replacements != []} class="assistant-section-head">
@@ -2027,7 +2053,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       when not is_nil(proposal) do
     %{preview: preview, current_user: user} = socket.assigns
 
-    with true <- page_shareable?(proposal),
+    with true <- page_shareable?(proposal) and is_nil(socket.assigns.stale),
          {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
          {:ok, url, days} <-
            Proposals.Preview.share(proposal, target, user,
@@ -2231,6 +2257,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  # A connected tool stored or cancelled a proposal, or the person applied,
+  # undid, discarded or narrowed one, here or in another tab. The event says
+  # only that something changed: what the page shows is read again as it is
+  # read when the page opens.
+  def handle_info({Proposals, :changed, _id}, socket), do: {:noreply, refresh_connected(socket)}
+
+  def handle_info({__MODULE__, :expiry}, socket),
+    do: {:noreply, socket |> assign(:expiry_timer, nil) |> refresh_connected()}
+
   def handle_info(_message, socket), do: {:noreply, socket}
 
   # A stopping run's last steps do not take "Stopping…" away.
@@ -2291,8 +2326,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         share_url: nil,
         proposal_id: id
       )
-      |> assign_connected()
+      # The proposal first: its deadline is timed with the list's
       |> assign_proposal()
+      |> assign_connected()
 
     case socket.assigns.proposal do
       # A conversation's proposal is reviewed in its conversation.
@@ -2392,7 +2428,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp close_preview(socket), do: socket |> discard_previews() |> assign(:preview, nil)
 
-  defp under_review?(assigns), do: is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved)
+  defp under_review?(assigns),
+    do: is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved) and is_nil(assigns[:stale])
 
   # Renders the chosen entry of the proposal on screen through the site's own
   # preview target. Only the latest frame's cache key is kept.
@@ -2487,9 +2524,36 @@ defmodule BrandoAdmin.AI.AssistantLive do
         )
   end
 
+  attr :stale, :map, required: true
+
+  # Why the proposal that was on screen can no longer be acted on, with the
+  # way to its newer version when it was replaced
+  defp stale_notice(assigns) do
+    ~H"""
+    <div
+      class="assistant-feedback is-warning assistant-stale"
+      role="status"
+      id="assistant-stale"
+      data-reason={@stale.reason}
+    >
+      <p>{stale_label(@stale.reason)}</p>
+      <.link :if={@stale[:newest]} patch={"/admin/assistant/connected/#{@stale.newest}"} class="btn">
+        {gettext("Show it")}
+      </.link>
+    </div>
+    """
+  end
+
   # A page link is made for a proposal a review link could still show.
   defp page_shareable?(nil), do: false
   defp page_shareable?(proposal), do: proposal.status in ~w(pending approved applied)
+
+  # Past its deadline a proposal under review can no longer be acted on, and
+  # the server refuses what is sent for it.
+  defp expired?(%{status: status, expires_at: %DateTime{} = at}) when status in ~w(pending approved),
+    do: DateTime.compare(at, DateTime.utc_now()) != :gt
+
+  defp expired?(_proposal), do: false
 
   def terminate(_reason, socket) do
     Proposals.Preview.discard(socket.assigns[:preview_keys] || [])
@@ -2660,7 +2724,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
           assign_proposal(socket, id)
       end
 
-    if page_shareable?(socket.assigns.proposal), do: socket, else: assign(socket, :share_url, nil)
+    socket = if page_shareable?(socket.assigns.proposal), do: socket, else: assign(socket, :share_url, nil)
+
+    # Read now, so it is current until something changes it
+    if socket.assigns.live_action == :connected,
+      do: socket |> assign(:stale, nil) |> check_stale(),
+      else: assign(socket, :stale, nil)
   end
 
   defp assign_proposal(socket, id) do
@@ -2722,8 +2791,131 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp assign_connected(socket) do
     user = socket.assigns.current_user
-    assign(socket, connected: Proposals.list_external(user), connected_count: Proposals.count_external(user))
+    connected = Proposals.list_external(user)
+
+    socket
+    |> assign(
+      connected: connected,
+      # Assigned, so a row re-renders when its deadline passes and nothing else changed
+      connected_states: Map.new(connected, &{&1.id, connected_state(&1)}),
+      connected_count: Proposals.count_external(user)
+    )
+    |> assign_connections()
+    |> schedule_expiry()
   end
+
+  # The person's connections to this site environment: each proposal links
+  # to the live page (`Brando.MCP.Watch`) of the newest connection of its
+  # client. Read with the list, so a connection made since is linked too.
+  defp assign_connections(socket) do
+    site_id = socket.assigns[:current_site] && socket.assigns.current_site.id
+    environment_id = socket.assigns[:current_environment] && socket.assigns.current_environment.id
+
+    grants =
+      for grant <- MCP.list_user_grants(socket.assigns.current_user),
+          grant.site_id == site_id and grant.environment_id == environment_id,
+          do: grant
+
+    # Newest first: the first of a client is its newest connection, keyed
+    # by the name its proposals store
+    connections = grants |> Enum.reverse() |> Map.new(&{Proposals.client_name(&1.client_name), Watch.path(&1)})
+    assign(socket, :connections, connections)
+  end
+
+  # A proposal expires with time, not with a write: the list, the count and
+  # the open proposal are read again when the next one waiting for review
+  # expires, listed or not. A timer holds 49 days at most; proposals expire
+  # within a day.
+  defp schedule_expiry(socket) do
+    if socket.assigns.expiry_timer, do: Process.cancel_timer(socket.assigns.expiry_timer)
+    now = DateTime.utc_now()
+
+    open =
+      case socket.assigns.proposal do
+        %{status: status, expires_at: expires_at} when status in ~w(pending approved) -> [expires_at]
+        _ -> []
+      end
+
+    next =
+      [Proposals.next_external_expiry(socket.assigns.current_user) | open]
+      |> Enum.filter(&(&1 && DateTime.compare(&1, now) == :gt))
+      |> Enum.min(DateTime, fn -> nil end)
+
+    timer =
+      if next && connected?(socket),
+        do:
+          Process.send_after(
+            self(),
+            {__MODULE__, :expiry},
+            min(DateTime.diff(next, now, :millisecond) + 1, :timer.hours(24))
+          )
+
+    assign(socket, :expiry_timer, timer)
+  end
+
+  # Something changed the person's proposals: the list and the count are
+  # read again. The proposal under review is not: what changed it is told
+  # beside it, and it stays on screen until the person moves on.
+  defp refresh_connected(socket) do
+    socket = assign_connected(socket)
+    if socket.assigns.live_action == :connected, do: check_stale(socket), else: socket
+  end
+
+  # Why the proposal on screen can no longer be acted on, when it changed
+  # since it was read: a newer version, applied, discarded, undone or
+  # expired. Approve and everything else that acts on it is withdrawn; the
+  # server refuses a stale approve anyway.
+  defp check_stale(%{assigns: %{proposal: %{id: id, status: shown}}} = socket) do
+    stale =
+      case Proposals.standing(id, socket.assigns.current_user) do
+        {:ok, standing} -> stale(shown, standing)
+        :error -> nil
+      end
+
+    assign(socket, :stale, stale)
+  end
+
+  # One that could not be loaded offers only Discard, until it is discarded
+  # or applied elsewhere. A newer version that replaced it is named in its
+  # place, as for one that could be read.
+  defp check_stale(%{assigns: %{proposal: nil, unloadable_id: id}} = socket) when is_binary(id) do
+    user = socket.assigns.current_user
+
+    if Proposals.discardable?(id, user) do
+      socket
+    else
+      stale =
+        case Proposals.standing(id, user) do
+          {:ok, %{status: "superseded"} = standing} -> stale("pending", standing)
+          _ -> nil
+        end
+
+      assign(socket, unloadable_id: nil, error: nil, stale: stale)
+    end
+  end
+
+  defp check_stale(socket), do: socket
+
+  defp stale(_shown, %{status: "superseded", newest: newest}), do: %{reason: :superseded, newest: newest}
+
+  defp stale(shown, %{status: status} = standing) when shown in ~w(pending approved) do
+    case status do
+      status when status in ~w(pending approved) ->
+        if DateTime.compare(standing.expires_at, DateTime.utc_now()) == :gt, do: nil, else: %{reason: :expired}
+
+      "applied" ->
+        %{reason: :applied}
+
+      "undone" ->
+        %{reason: :undone}
+
+      "cancelled" ->
+        %{reason: :cancelled}
+    end
+  end
+
+  defp stale("applied", %{status: "undone"}), do: %{reason: :undone}
+  defp stale(_shown, _standing), do: nil
 
   # After apply, link each card to the entry it produced, including new ones.
   defp with_saved_urls(review, nil), do: review
@@ -3020,6 +3212,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
     if DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt, do: "expired", else: "waiting"
   end
 
+  defp stale_label(:superseded),
+    do: gettext("A newer version of this proposal arrived. This one can no longer be applied.")
+
+  defp stale_label(:applied), do: gettext("This proposal was applied elsewhere, so it is no longer under review.")
+  defp stale_label(:cancelled), do: gettext("This proposal was discarded, so it can no longer be applied.")
+  defp stale_label(:undone), do: gettext("This proposal was undone elsewhere.")
+
+  defp stale_label(:expired),
+    do: gettext("This proposal expired, so it can no longer be applied. Ask the tool to prepare it again.")
+
   defp connected_state_tone("waiting"), do: "badge--ai"
   defp connected_state_tone(state) when state in ~w(applied auto_applied), do: "badge--success"
   defp connected_state_tone(_state), do: nil
@@ -3068,6 +3270,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
       else: socket
   end
 
+  # What the proposal on screen became since it was read
+  defp stale_title(:superseded), do: gettext("Replaced by a newer version")
+  defp stale_title(:applied), do: gettext("Applied")
+  defp stale_title(:cancelled), do: gettext("Discarded")
+  defp stale_title(:undone), do: gettext("Undone")
+  defp stale_title(:expired), do: gettext("Expired")
+
   defp proposal_title(%{status: "undone"}, _receipt), do: gettext("Undone")
   defp proposal_title(_proposal, receipt) when not is_nil(receipt), do: gettext("Applied")
 
@@ -3113,7 +3322,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # while something else would remain.
   defp can_leave_out?(assigns) do
     !assigns.shared and is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved) and
-      length(assigns.proposal.operations) > 1 and !running?(assigns.run)
+      is_nil(assigns[:stale]) and !expired?(assigns.proposal) and length(assigns.proposal.operations) > 1 and
+      !running?(assigns.run)
   end
 
   defp entry_summary(effects) do
