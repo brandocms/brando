@@ -97,6 +97,21 @@ defmodule Brando.RichTextRenderTest do
     end
   end
 
+  # Each parse drops one leading line break from a `pre`, and a heading met
+  # inside a heading closes it: such markup reads differently a second time.
+  test "markup that a second parse changes keeps its markup" do
+    for html <- [
+          "<p>Intro</p><pre><!-- sample -->\ncode()</pre><p>Outro</p>",
+          "<pre><script>x</script>\ncode()</pre>",
+          "<p>Intro</p><pre>\n\n<code>code()</code></pre>",
+          "<h2>Title <my-badge><h3>Sub</h3></my-badge></h2><p>Body</p>"
+        ] do
+      rendered = RichText.render_html(html)
+      assert rendered =~ ~r{<(pre|h3)>}, html
+      assert RichText.sanitize_html(rendered) == {:ok, rendered}, html
+    end
+  end
+
   test "a field read as rich text in a template keeps its markup without the refused part" do
     render = fn intro ->
       Brando.Villain.parse_and_render("{{ entry.intro }}", Brando.Villain.get_base_context(%Entry{intro: intro}))

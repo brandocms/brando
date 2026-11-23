@@ -421,7 +421,14 @@ defmodule Brando.RichText do
       |> canonical(@html_tags -- @unsafe_tags, @unsafe_tags ++ @hidden_tags)
       |> without_refused_attributes()
 
-    if sanitize_html(safe) == {:ok, safe}, do: safe, else: text_only(html)
+    # Some markup reads differently when parsed again (a `pre`'s leading line
+    # break, a heading inside a heading): its sanitized form, once that is
+    # stable, is rendered instead.
+    case sanitize_html(safe) do
+      {:ok, ^safe} -> safe
+      {:ok, clean} -> if sanitize_html(clean) == {:ok, clean}, do: clean, else: text_only(html)
+      :error -> text_only(html)
+    end
   end
 
   def render_html(nil), do: nil
