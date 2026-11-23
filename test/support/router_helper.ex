@@ -188,6 +188,64 @@ defmodule BrandoAdmin.SyncTest.ArticleFormLive do
   end
 end
 
+defmodule BrandoAdmin.SlugScopeTest.IndependentLanguageArticleListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.SlugScopeTest.IndependentLanguageArticle
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Content.List}
+      id={"content_listing_#{@schema}_default"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:default}
+    />
+    """
+  end
+end
+
+# The route a new translation redirects to; not rendered in tests
+defmodule BrandoAdmin.SlugScopeTest.IndependentLanguageArticleFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.SlugScopeTest.IndependentLanguageArticle
+
+  def render(assigns), do: ~H"<div></div>"
+end
+
+defmodule BrandoAdmin.SlugScopeTest.IndependentTableArticleListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.SlugScopeTest.IndependentTableArticle
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Content.List}
+      id={"content_listing_#{@schema}_default"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:default}
+    />
+    """
+  end
+end
+
+# The route a new translation redirects to; not rendered in tests
+defmodule BrandoAdmin.SlugScopeTest.IndependentTableArticleFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.SlugScopeTest.IndependentTableArticle
+
+  def render(assigns), do: ~H"<div></div>"
+end
+
 defmodule BrandoAdmin.SyncTest.ArticleLockedFormLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
@@ -478,6 +536,14 @@ defmodule BrandoIntegrationWeb.Router do
   admin_routes do
     live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
     live "/articles", BrandoAdmin.SyncTest.ArticleListLive
+    live "/slug-scope/language-articles", BrandoAdmin.SlugScopeTest.IndependentLanguageArticleListLive
+
+    live "/slug-scope/language-articles/update/:entry_id",
+         BrandoAdmin.SlugScopeTest.IndependentLanguageArticleFormLive,
+         :update
+
+    live "/slug-scope/table-articles", BrandoAdmin.SlugScopeTest.IndependentTableArticleListLive
+    live "/slug-scope/table-articles/update/:entry_id", BrandoAdmin.SlugScopeTest.IndependentTableArticleFormLive, :update
     live "/articles/user-context", BrandoAdmin.SyncTest.ArticleUserContextListLive
     live "/articles/filters", BrandoAdmin.SyncTest.ArticleFiltersListLive
     live "/articles/create", BrandoAdmin.SyncTest.ArticleFormLive, :create

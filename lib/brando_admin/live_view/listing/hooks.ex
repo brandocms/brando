@@ -331,7 +331,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     )
 
     override_opts =
-      [change_fields: language_copy_fields(schema, language, translation_slug_changes(schema, language))] ++
+      [change_fields: language_copy_fields(schema, language, Brando.Translations.slug_changes(schema, language))] ++
         Brando.Translations.language_copy_opts(language)
 
     with :ok <- ensure_no_version_in(schema, entry_id, language),
@@ -438,16 +438,6 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   # uses gets a number instead of failing the insert.
   defp language_copy_fields(schema, language, changes \\ []) do
     [{:language, String.to_existing_atom(language)} | changes] ++ Brando.Translations.free_unique_values(schema)
-  end
-
-  # Duplicate entry — change language and suffix slug fields to avoid unique constraint
-  defp translation_slug_changes(schema, language) do
-    Enum.map(schema.__slug_fields__(), fn slug_field ->
-      {slug_field.name,
-       fn _entry, current_value ->
-         Utils.slugify("#{current_value}-#{language}")
-       end}
-    end)
   end
 
   defp start_entry_translation(schema, entry_id, duped_entry, language, user) do

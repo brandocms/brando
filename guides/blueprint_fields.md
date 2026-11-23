@@ -277,6 +277,20 @@ end
 Collision handling skips the entry itself, soft-deleted entries (with
 `trait :soft_delete`), invalid changesets, and drafts.
 
+A new translation (**Create translation**, **Translate to [language]**,
+`Brando.Translations.create_target/4`) copies a `:slug` field unique per
+language as it is: `banzha` in Norwegian is `banzha` in English. A slug is
+unique per language with `prevent_collision: :language`, a field list that
+includes `:language`, or a `with:` that includes it. Any other slug gets the
+language appended (`banzha-en`). When the language already has the value, the
+copy gets the next free number (`banzha-2`).
+
+That is the slug the copy is created with, and a synchronized translation
+keeps it. The listing's **Translate to [language]**, which independent schemas
+offer, then translates the copy, and a slug whose form input derives it from
+another field (`source: :title`) is derived again from the translated text:
+`huset`, copied as `huset`, ends as `the-house`.
+
 ## Constraints
 
 `constraints:` adds validations. Attributes take:
