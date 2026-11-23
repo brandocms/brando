@@ -42,7 +42,8 @@ defmodule Brando.Drafts.Restore do
   # loaded relations: a var whose `identifier_id` the copy points at another
   # entry still holds the identifier it was saved with, and a render reads
   # that. A relation whose key the changeset changes is loaded again, at the
-  # new key, as deep as the saved one was loaded.
+  # new key, with the preloads its schema declares (`Var.preloads/0`,
+  # `Ref.preloads/0`), or as deep as the saved one was loaded.
   defp load_moved_relations(%Changeset{data: %schema{} = data, changes: changes} = changeset) do
     data =
       for name <- schema.__schema__(:associations),
@@ -68,8 +69,18 @@ defmodule Brando.Drafts.Restore do
     data
     |> Map.put(key, id)
     |> Map.put(name, Map.get(struct(schema), name))
-    |> Brando.Repo.preload([{name, loaded_shape(loaded)}])
+    |> Brando.Repo.preload([{name, relation_preloads(schema, name, loaded)}])
     |> Map.get(name)
+  end
+
+  defp relation_preloads(schema, name, loaded) do
+    declared = if function_exported?(schema, :preloads, 0), do: schema.preloads(), else: []
+
+    Enum.find_value(declared, fn
+      ^name -> []
+      {^name, preloads} -> preloads
+      _ -> nil
+    end) || loaded_shape(loaded)
   end
 
   # The relations `struct` has loaded, as a preload list

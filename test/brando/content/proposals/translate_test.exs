@@ -1163,10 +1163,31 @@ defmodule Brando.Content.Proposals.TranslateTest do
       %{target: target}
     end
 
-    test "is rendered with the link and cover its source has now", c do
+    test "is rendered with the link, cover and video its source has now", c do
       rendered = apply_translate(c)
       assert rendered =~ ~s(<a class="card">Project</a>)
       assert rendered =~ "cover.jpg"
+      assert rendered =~ ~s(<img class="poster" src="images/poster.jpg">)
+    end
+  end
+
+  describe "a translation whose video the source replaced" do
+    # The translation was saved with a video that has no thumbnail; the
+    # source's has one now.
+    setup c do
+      vars = add_cards(c, video_id: Factory.insert(:video).id)
+      target = create_translation(c)
+
+      thumbnail = Factory.insert(:image, path: "images/poster.jpg")
+      Repo.update!(Ecto.Changeset.change(vars["clip"], video_id: Factory.insert(:video, thumbnail_id: thumbnail.id).id))
+      Translations.source_saved(load(c.source.id))
+      assert Enum.any?(open_items(target.id), &match?({:shared_update, _}, &1))
+
+      %{target: target}
+    end
+
+    test "is rendered with the new video's thumbnail", c do
+      assert apply_translate(c) =~ ~s(<img class="poster" src="images/poster.jpg">)
     end
   end
 
