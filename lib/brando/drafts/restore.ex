@@ -35,7 +35,7 @@ defmodule Brando.Drafts.Restore do
     blocks
     |> Map.keys()
     |> Enum.reduce(changeset, &put_block_field(&2, &1, blocks[&1], entry, schema, user))
-    |> load_moved_relations()
+    |> load_moved_relations_below()
   end
 
   # Each row is cast onto the saved row it restores, which keeps that row's
@@ -57,11 +57,17 @@ defmodule Brando.Drafts.Restore do
         data -> Map.put(data, name, load_relation(data, name, key, changes[key], loaded))
       end
 
-    %{changeset | data: data, changes: Map.new(changes, fn {field, value} -> {field, load_moved_relations(value)} end)}
+    load_moved_relations_below(%{changeset | data: data})
   end
 
   defp load_moved_relations(changesets) when is_list(changesets), do: Enum.map(changesets, &load_moved_relations/1)
   defp load_moved_relations(value), do: value
+
+  # The entry's own relations are left as they are: the form merges the ones
+  # its changeset moves over the entry it casts each edit onto
+  # (`rebuild_preview_relations/1` in the form), which needs them unmoved.
+  defp load_moved_relations_below(%Changeset{changes: changes} = changeset),
+    do: %{changeset | changes: Map.new(changes, fn {field, value} -> {field, load_moved_relations(value)} end)}
 
   defp load_relation(_data, _name, _key, nil, _loaded), do: nil
 
