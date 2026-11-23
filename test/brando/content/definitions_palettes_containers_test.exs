@@ -391,6 +391,25 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert MapSet.equal?(selection, MapSet.new(["priced", "acme-prices", palette.uid]))
     end
 
+    test "a container whose default palette is in the trash keeps the link through export and import", c do
+      palette = palette!(c.user)
+      container = container!(c.user, palette)
+      assert {:ok, _} = Brando.Content.delete_palette(palette.id, c.user)
+
+      assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+      assert [%{"palette" => nil}] = exported.bundle["containers"]
+      assert exported.unavailable == [%{uid: container.uid, container: "Tinted section", palette: "Paper"}]
+
+      edited = Map.update!(read!(exported.directory), "containers", fn [t] -> [Map.put(t, "help_text", "Edited")] end)
+      assert {:ok, plan} = Definitions.plan(edited, c.user)
+      assert [%{action: :update, reason: reason}] = plan.items
+      assert reason =~ ~s("Paper")
+      assert {:ok, _} = Definitions.apply(plan, c.user)
+
+      assert %{help_text: "Edited", palette_id: palette_id} = Repo.get!(Container, container.id)
+      assert palette_id == palette.id
+    end
+
     test "the apply locks and rechecks palettes and containers: an edit or a trashed palette since planning is no overwrite",
          c do
       import!(read!(fixtures!(c.path, ~w(paper tinted))), c.user)

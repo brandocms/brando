@@ -16,13 +16,20 @@ defmodule Brando.Content.Definition.Params do
   end
 
   # The container's default palette is the one here with its uid: one the
-  # same import creates is written first
+  # same import creates is written first. A link the files could not name
+  # (`References.unavailable_palette/1`) is kept.
   def changeset(%{"kind" => "container"} = definition, record, _references, creator, _tables, _parent_id) do
     attrs = Map.take(definition, Enum.map(Model.container_fields(), &to_string/1))
+    record = record || struct(Container)
 
-    (record || struct(Container))
+    palette_id =
+      if is_nil(definition["palette"]) and References.unavailable_palette(record.palette_id),
+        do: record.palette_id,
+        else: References.palette_id(definition["palette"])
+
+    record
     |> Container.changeset(attrs, creator)
-    |> Changeset.put_change(:palette_id, References.palette_id(definition["palette"]))
+    |> Changeset.put_change(:palette_id, palette_id)
   end
 
   def changeset(definition, record, references, creator, tables, parent_id) do

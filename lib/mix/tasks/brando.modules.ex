@@ -208,6 +208,10 @@ defmodule Mix.Tasks.Brando.Modules do
 
     counts = Enum.map_join(~w(module palette container), ", ", &count(length(result.bundle[&1 <> "s"]), &1))
     Mix.shell().info("Exported #{counts} to #{result.directory}")
+
+    for %{uid: uid, palette: palette} <- result.unavailable,
+        do:
+          Mix.shell().info(~s(  container #{uid}: default palette "#{palette}" is in the trash; an import keeps the link))
   end
 
   defp execute("import", opts, user) do

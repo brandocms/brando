@@ -95,6 +95,18 @@ defmodule Brando.Content.Definition.References do
 
   def palette_id(_uid), do: nil
 
+  @doc """
+  The palette with `id` when a definition cannot name it, in the trash or
+  without a uid, or nil. A container's link to it is written as no palette,
+  and an import keeps the link instead of clearing it.
+  """
+  def unavailable_palette(nil), do: nil
+
+  def unavailable_palette(id) do
+    import Ecto.Query, only: [from: 2]
+    Repo.one(from(p in Brando.Content.Palette, where: p.id == ^id and (not is_nil(p.deleted_at) or is_nil(p.uid))))
+  end
+
   defp bind_destination!({token, binding}, supplied, same_scope?, actor) do
     schema = Map.get(@schemas, binding["kind"]) || Error.raise!(token, "unknown reference kind")
     id = destination_id!(token, binding, supplied, same_scope?)

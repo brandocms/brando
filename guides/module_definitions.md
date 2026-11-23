@@ -787,7 +787,11 @@ which still imports.
 An import writes palettes first, then containers, then table templates and
 modules, so a container or a var can point at a palette the same import
 creates. A container whose palette is neither in the files nor here is
-refused when planning, by name; a palette in the trash doesn't count.
+refused when planning, by name; a palette in the trash doesn't count. A
+container whose default palette is in the trash here is exported without
+one, and the export (the admin's and `mix brando.modules export`) and the
+plan name that palette: an import of the file keeps the link, so restoring
+the palette restores the container's default.
 Selecting a container brings its palette, and selecting a module brings the
 palettes its vars and its table template's vars name (`--uid`, `select:`, a
 release apply), so a selection

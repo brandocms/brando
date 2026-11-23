@@ -330,7 +330,7 @@ defmodule Brando.Content.Definition.Importer do
       kind: kind,
       uid: uid,
       action: action,
-      reason: reason,
+      reason: reason || unavailable_palette_reason(definition, record),
       state: state,
       baseline: source,
       class: diff_class(kind, record, old, changeset),
@@ -487,6 +487,13 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp validate_palette_reference!(_definition, _ctx), do: :ok
+
+  defp unavailable_palette_reason(%{"kind" => "container", "palette" => nil}, %Container{palette_id: id}) do
+    if palette = References.unavailable_palette(id),
+      do: ~s(default palette "#{palette.name}" is unavailable here; the import keeps the link)
+  end
+
+  defp unavailable_palette_reason(_definition, _record), do: nil
 
   # The baseline a definition is compared with, where it came from, and
   # whether it equals the target and the file. Each baseline is recorded in

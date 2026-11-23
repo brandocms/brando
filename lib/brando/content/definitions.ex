@@ -13,7 +13,7 @@ defmodule Brando.Content.Definitions do
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.Definition
-  alias Brando.Content.Definition.{Error, Model, Reader, Snapshot, Writer}
+  alias Brando.Content.Definition.{Error, Model, Reader, References, Snapshot, Writer}
 
   @typedoc "A render or cascade job of a run, in `t:refresh_result/0`."
   @type refresh_job :: %{
@@ -71,6 +71,8 @@ defmodule Brando.Content.Definitions do
   @doc """
   Exports local definitions to a new directory. `:uids` selects complete
   module trees, palettes and containers, with the palettes they point at.
+  `:unavailable` in the result lists the containers whose default palette
+  the files leave out, as it is in the trash: an import keeps that link.
   """
   def export(directory, actor, opts \\ []) do
     with :ok <- Boundary.authorize(actor, :export, Brando.Content.Module) do
@@ -79,11 +81,19 @@ defmodule Brando.Content.Definitions do
         {bundle, records} = Snapshot.take!(opts)
 
         Enum.each(Model.definitions(bundle), &authorize_export!(&1, records, actor))
-        Brando.Content.Definition.References.bind!(bundle, %{}, actor)
+        References.bind!(bundle, %{}, actor)
         files = Writer.write!(bundle, Path.expand(directory))
-        %{bundle: bundle, files: files, directory: Path.expand(directory)}
+        %{bundle: bundle, files: files, directory: Path.expand(directory), unavailable: unavailable(bundle, records)}
       end)
     end
+  end
+
+  # Each container whose default palette the files leave out, as no
+  # definition can name it here
+  defp unavailable(bundle, records) do
+    for %{"palette" => nil, "uid" => uid, "name" => name} <- bundle["containers"],
+        palette = References.unavailable_palette(records.containers[uid].palette_id),
+        do: %{uid: uid, container: name, palette: palette.name}
   end
 
   defp authorize_export!(definition, records, actor) do
