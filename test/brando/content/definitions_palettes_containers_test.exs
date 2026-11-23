@@ -196,6 +196,39 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert exported.bundle["modules"] == []
     end
 
+    test "in groups mode, a module exporter's export leaves out the palettes and containers they may not export",
+         c do
+      palette = palette!(c.user)
+      container!(c.user, palette)
+      put_test_env(:authorization_mode, :groups)
+      alias Brando.Authorization.{Catalog, Grant, Groups, Migration, Scope}
+      owner = Factory.insert(:random_user, role: :superuser)
+      assert {:ok, _} = Migration.run()
+      member = Factory.insert(:random_user, role: :user)
+      scope = Scope.standalone(owner)
+      assert {:ok, group} = Groups.create(scope, %{name: "Module exporters"}, ["brando.admin.access"])
+      Repo.insert!(%Grant{group_id: group.id, permission_key: Catalog.get(:export, Module).key})
+      assert {:ok, :ok} = Groups.add_member(scope, group.id, member.id)
+
+      module = Factory.insert(:module, uid: "plain")
+      assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), member)
+      assert Enum.map(exported.bundle["modules"], & &1["uid"]) == ["plain"]
+      assert exported.bundle["palettes"] == [] and exported.bundle["containers"] == []
+      assert Map.keys(exported.bundle["baseline"]["modules"]) == ["plain"]
+      assert exported.bundle["baseline"]["palettes"] == %{}
+
+      assert {:error, "authorization: forbidden"} =
+               Definitions.export(Path.join(c.path, "container"), member, uids: [tinted_uid()])
+
+      # A module whose var names the palette is refused by name
+      Repo.delete!(module)
+      write_module!(c.path, palette.uid)
+      import!(read!(c.path), c.user)
+      assert {:error, message} = Definitions.export(Path.join(c.path, "swatch"), member)
+      assert message =~ ~s(module "swatch")
+      assert message =~ ~s(palette "#{palette.uid}")
+    end
+
     test "a palette or container saved in the admin gets a uid of its own, and so does its copy", c do
       palette = palette!(c.user)
       container = container!(c.user, palette)

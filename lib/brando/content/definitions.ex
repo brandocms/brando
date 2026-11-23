@@ -79,8 +79,7 @@ defmodule Brando.Content.Definitions do
       protect(fn ->
         validate_actor!(actor)
         {bundle, records} = Snapshot.take!(opts)
-
-        Enum.each(Model.definitions(bundle), &authorize_export!(&1, records, actor))
+        bundle = exportable!(bundle, records, actor, opts[:uids])
         References.bind!(bundle, %{}, actor)
         files = Writer.write!(bundle, Path.expand(directory))
         %{bundle: bundle, files: files, directory: Path.expand(directory), unavailable: unavailable(bundle, records)}
@@ -96,11 +95,54 @@ defmodule Brando.Content.Definitions do
         do: %{uid: uid, container: name, palette: palette.name}
   end
 
-  defp authorize_export!(definition, records, actor) do
-    record = Snapshot.record(records, definition["kind"], definition["uid"])
+  # What the actor may export. Every module and table template, and every
+  # selected palette and container, needs the actor's export grant; a full
+  # export leaves out the palettes and containers the actor may not export,
+  # unless what it writes names one: that is refused by name.
+  defp exportable!(bundle, records, actor, uids) do
+    allowed? = fn %{"kind" => kind, "uid" => uid} ->
+      Boundary.authorize_record(actor, :export, Model.schema(kind), Snapshot.record(records, kind, uid).id) == :ok
+    end
 
-    if Boundary.authorize_record(actor, :export, Model.schema(definition["kind"]), record.id) != :ok,
-      do: Error.raise!("authorization", "forbidden")
+    if Enum.any?(bundle["modules"] ++ bundle["table_templates"], &(not allowed?.(&1))), do: forbidden!()
+    {containers, left_out} = Enum.split_with(bundle["containers"], allowed?)
+    if uids && left_out != [], do: forbidden!()
+    named = named_palettes(bundle, containers)
+
+    palettes =
+      Enum.filter(bundle["palettes"], fn palette ->
+        cond do
+          allowed?.(palette) -> true
+          subject = named[palette["uid"]] -> Error.raise!(subject, ~s(palette "#{palette["uid"]}": export forbidden))
+          uids -> forbidden!()
+          true -> false
+        end
+      end)
+
+    if containers == bundle["containers"] and palettes == bundle["palettes"] do
+      bundle
+    else
+      bundle = %{bundle | "containers" => containers, "palettes" => palettes}
+      Map.put(bundle, "baseline", Snapshot.baselines(bundle))
+    end
+  end
+
+  defp forbidden!, do: Error.raise!("authorization", "forbidden")
+
+  # The definition that names each palette: a var of a module or a table
+  # template, or one of `containers`
+  defp named_palettes(bundle, containers) do
+    vars =
+      for definition <- bundle["modules"] ++ bundle["table_templates"],
+          var <- definition["vars"],
+          token = var["assets"]["palette"],
+          do:
+            {get_in(bundle, ["references", token, "uid"]) || token, Model.subject(definition["kind"], definition["uid"])}
+
+    defaults =
+      for %{"palette" => uid} = container <- containers, uid, do: {uid, Model.subject("container", container["uid"])}
+
+    Map.new(Enum.reverse(vars ++ defaults))
   end
 
   @doc """
