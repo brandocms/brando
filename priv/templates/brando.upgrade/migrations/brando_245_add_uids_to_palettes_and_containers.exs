@@ -10,9 +10,11 @@ defmodule Brando.Repo.Migrations.Brando245AddUidsToPalettesAndContainers do
   environments seeded alike: `palette-<namespace>-<key>` and
   `container-<namespace>-<name>`, lower-cased, with anything but letters and
   digits as `-`. A first export from either environment then adopts the
-  other's rows instead of creating copies. A row whose uid is taken gets
-  `-2`, `-3`, … in id order, rows in the trash after the others. Rows that
-  have a uid keep it, so the migration can run again.
+  other's rows instead of creating copies. A row whose uid is taken, by a
+  module, table template, palette or container (one bundle holds all four
+  kinds, and refuses a uid twice), gets `-2`, `-3`, … in id order, rows in
+  the trash after the others. Rows that have a uid keep it, so the
+  migration can run again.
   """
 
   def up do
@@ -44,7 +46,7 @@ defmodule Brando.Repo.Migrations.Brando245AddUidsToPalettesAndContainers do
   end
 
   # Each row without a uid gets its derived one, numbered from the second row
-  # that derives it, and past any uid already taken
+  # that derives it, and past any uid a definition of any kind has
   defp backfill(prefix, table, derived) do
     execute("""
     DO $$
@@ -64,7 +66,12 @@ defmodule Brando.Repo.Migrations.Brando245AddUidsToPalettesAndContainers do
         candidate := base;
         n := 1;
 
-        WHILE EXISTS (SELECT 1 FROM "#{prefix}".#{table} WHERE uid = candidate) LOOP
+        WHILE EXISTS (
+          SELECT 1 FROM "#{prefix}".content_modules WHERE uid = candidate
+          UNION ALL SELECT 1 FROM "#{prefix}".content_table_templates WHERE uid = candidate
+          UNION ALL SELECT 1 FROM "#{prefix}".content_palettes WHERE uid = candidate
+          UNION ALL SELECT 1 FROM "#{prefix}".content_containers WHERE uid = candidate
+        ) LOOP
           n := n + 1;
           candidate := base || '-' || n;
         END LOOP;

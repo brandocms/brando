@@ -36,7 +36,7 @@ defmodule Brando.Migrations.Brando245AddUidsToPalettesAndContainersTest do
 
   test "derives each palette's and container's uid from what two environments seeded alike share" do
     for table <- ~w(content_palettes content_containers), do: query!("ALTER TABLE public.#{table} DROP COLUMN uid")
-    create_environment(@tenant, ["content_palettes", "content_containers"])
+    create_environment(@tenant, ~w(content_modules content_table_templates content_palettes content_containers))
 
     for schema <- ["public", @tenant] do
       paper = palette!(schema, "site", "paper")
@@ -73,5 +73,31 @@ defmodule Brando.Migrations.Brando245AddUidsToPalettesAndContainersTest do
         for prefix <- ["public", @tenant], do: refute("uid" in columns(prefix, "content_palettes"))
       end
     end
+  end
+
+  # A full snapshot refuses two definitions with one uid, whatever their kinds
+  test "passes over a uid a module or a table template already has" do
+    for table <- ~w(content_palettes content_containers), do: query!("ALTER TABLE public.#{table} DROP COLUMN uid")
+
+    query!(
+      "INSERT INTO public.content_modules (name, namespace, help_text, code, uid, inserted_at, updated_at) " <>
+        ~s|VALUES ('{"en": "M"}', '{"en": "site"}', '{}', '', 'palette-site-paper', now(), now())|
+    )
+
+    query!(
+      "INSERT INTO public.content_table_templates (name, uid, inserted_at, updated_at) " <>
+        "VALUES ('T', 'container-sections-tinted', now(), now())"
+    )
+
+    paper = palette!("public", "site", "paper")
+    # Derives the uid the container below derives
+    tinted_palette = palette!("public", "container-sections", "tinted")
+    tinted = container!("public", "Sections", "Tinted")
+
+    up(@template)
+
+    assert uid("public", "content_palettes", paper) == "palette-site-paper-2"
+    assert uid("public", "content_palettes", tinted_palette) == "palette-container-sections-tinted"
+    assert uid("public", "content_containers", tinted) == "container-sections-tinted-2"
   end
 end
