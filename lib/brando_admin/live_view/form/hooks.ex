@@ -1483,7 +1483,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   # Another tab saved the entry: the form takes the saved values in the
   # fields this tab has not edited ("Saves by other editors" in Form), and
-  # tells the new embedded rows by the saver's keys for them.
+  # tells the new embedded rows by the saver's keys for them, and the
+  # changes it holds from the saver by its tab.
   defp handle_hooks_block_sync_info({:entry_saved, %{tab: from} = saved}, socket) do
     schema = socket.assigns[:schema]
 
@@ -1491,7 +1492,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       send_update(BrandoAdmin.Components.Form,
         id: "#{schema.__naming__().singular}_form",
         event: "take_saved_entry",
-        keys: saved[:keys]
+        keys: saved[:keys],
+        tab: from
       )
     end
 

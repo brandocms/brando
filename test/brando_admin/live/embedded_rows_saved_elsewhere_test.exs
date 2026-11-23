@@ -282,6 +282,109 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
     end
   end
 
+  # B is in the list through two saves of A's: the second replaces the
+  # first, though its rows are the ones B's form was built on.
+  describe "a save held while B is in the list" do
+    test "a later save that set a row back replaces it", c do
+      focus(c.b, 1)
+      type(c.b, 1, "Two by B")
+
+      focus(c.a, 0)
+      type(c.a, 0, "X")
+      leave(c.a)
+      save(c.a)
+      await(fn -> stored(c.article) == ["X", "Two", "Three"] end)
+
+      focus(c.a, 0)
+      type(c.a, 0, "One")
+      leave(c.a)
+      a_saves_then_b(c, ["One", "Two by B", "Three"])
+    end
+
+    test "a later save that removed the row the first added replaces it", c do
+      focus(c.b, 1)
+      type(c.b, 1, "Two by B")
+
+      focus(c.a, 0)
+      add(c.a)
+      type(c.a, 3, "Four by A")
+      leave(c.a)
+      save(c.a)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by A"] end)
+
+      focus(c.a, 0)
+      remove(c.a, c.article, "Four by A")
+      leave(c.a)
+      a_saves_then_b(c, ["One", "Two by B", "Three"])
+    end
+
+    # C's change reached A and B while both were in the list: A's save is
+    # without it, and C's change applies over the save when B leaves, as one
+    # that came after the save does.
+    test "keeps a change a third editor sent before it", c do
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {third, _} = live_form(log_in_user(Phoenix.ConnTest.build_conn(), other), c.path, "article_form")
+
+      focus(c.b, 1)
+      focus(c.a, 0)
+      type(c.a, 0, "One by A")
+      leave(c.a)
+      await(fn -> quotes(third) == ["One by A", "Two", "Three"] end)
+
+      focus(c.a, 0)
+      focus(third, 2)
+      type(third, 2, "Three by C")
+      leave(third)
+      settle(c.a)
+      settle(c.b)
+
+      a_saves_then_b(c, ["One by A", "Two", "Three by C"])
+    end
+  end
+
+  # What B typed and sent is B's until another editor sends something else
+  # for it, as a field B typed in and sent is (`received_fields/1`).
+  describe "a quote B changed and sent" do
+    # B is in the third quote, and typed nothing since it sent the first
+    test "that A then changed and saved takes A's saved text", c do
+      focus(c.b, 0)
+      type(c.b, 0, "One by B")
+      focus(c.b, 2)
+      await(fn -> quotes(c.a) == ["One by B", "Two", "Three"] end)
+
+      focus(c.a, 0)
+      type(c.a, 0, "One by A")
+      leave(c.a)
+      a_saves_then_b(c, ["One by A", "Two", "Three"])
+    end
+
+    # B's tab went and came back: its browser's recovered form reaches the
+    # new tab before the others' reply to it, so the quote B only received
+    # is in what B recovered. B types in another quote while A changes it.
+    test "only received before a reconnect takes A's saved text", c do
+      focus(c.a, 0)
+      type(c.a, 0, "One by A")
+      leave(c.a)
+      await(fn -> quotes(c.b) == ["One by A", "Two", "Three"] end)
+
+      recovered = c.b |> render() |> form_params("#article_form_form") |> Map.put("_target", ["image_editor_upload"])
+      kill_live(c.b)
+      :sys.suspend(c.a.pid)
+      {b, _} = live_form(c.b_conn, c.path, "article_form")
+      b |> form_of() |> render_hook("recover_form", recovered)
+      :sys.resume(c.a.pid)
+      settle(c.a)
+      settle(b)
+
+      focus(b, 1)
+      type(b, 1, "Two by B")
+      focus(c.a, 0)
+      type(c.a, 0, "One by A, on")
+      leave(c.a)
+      a_saves_then_b(%{c | b: b}, ["One by A, on", "Two by B", "Three"])
+    end
+  end
+
   # A row another editor added reaches B through field sync without a key:
   # keys are made when the repo writes. Rows only the form received are the
   # saved ones once saved, and a new row the save wrote is that row, once.

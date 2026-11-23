@@ -14,7 +14,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # is kept here too, row by row (`keep_list/5`), when its rows carry keys
   # (`embedded_rows?/4`): this editor's own edits (`Form.RowEdits`) on top
   # of the saved rows. It has no conflict to settle: the rows the save added
-  # come in. An `embeds_one` is kept as a has_one is (`keep/4`).
+  # come in. An `embeds_one` is kept as a has_one is (`keep/5`), with only
+  # the fields this editor changed over the saved row.
 
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias Ecto.Association
@@ -134,19 +135,23 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   the entry the form was built on. A row it holds that the save removed is a new row, if the
   editor changed it, and gone otherwise. The rows the save added are not
   kept, unless the relation can't replace a row (`on_replace: :raise`).
+
+  An embedded one that is the saved row keeps only the fields `edits`
+  records (`Form.RowEdits`): one the editor only received is the save's.
   """
-  def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field) do
+  def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field, edits \\ nil) do
     assoc = schema.__schema__(:association, field) || schema.__schema__(:embed, field)
     current = Map.get(data, field)
     base = if is_map(base), do: Map.get(base, field)
     base = if Ecto.assoc_loaded?(base), do: base, else: nil
+    edits = if match?(%Ecto.Embedded{}, assoc), do: edits
 
     cond do
       not Ecto.assoc_loaded?(current) ->
         keep_unloaded(saved, previous, field)
 
       assoc.cardinality == :one ->
-        put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base), base))
+        put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base), base, edits))
 
       true ->
         put_kept(
@@ -184,7 +189,7 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       previous
       |> held(field)
       |> List.wrap()
-      |> Enum.reduce({[], %{}}, fn entry, {rows, renamed} ->
+      |> Enum.reduce({[], removed_renamed(edits.removed, keys)}, fn entry, {rows, renamed} ->
         key = SubformHelpers.row_key(entry)
         typed = Map.get(edits.typed, key, MapSet.new())
 
@@ -238,6 +243,13 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       true ->
         nil
     end
+  end
+
+  # The new rows the editor removed that the save wrote: their removal goes
+  # by the saved key from then on, so a later save that still holds the
+  # row doesn't bring it back.
+  defp removed_renamed(removed, keys) do
+    for key <- removed, id = Map.get(keys || %{}, key), into: %{}, do: {key, id}
   end
 
   defp rename(renamed, key, id, row) do
@@ -442,19 +454,32 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   end
 
   # A has_one: the row the editor holds, the saved one if it is that row.
-  # `base` is the row the form was built on.
-  defp keep_one(assoc, saved, held, base \\ nil)
-  defp keep_one(assoc, saved, nil, base), do: remove_one(assoc, saved, base)
+  # `base` is the row the form was built on. An embedded one with `edits`
+  # (`Form.RowEdits`) keeps only the fields they record over the saved row.
+  defp keep_one(assoc, saved, held, base \\ nil, edits \\ nil)
+  defp keep_one(assoc, saved, nil, base, _edits), do: remove_one(assoc, saved, base)
 
-  defp keep_one(assoc, saved, held, _base) do
+  defp keep_one(assoc, saved, held, _base, edits) do
     row = applied(held)
 
     cond do
-      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) -> onto(held, saved)
-      saved && assoc.on_replace in [:raise, :update] -> held |> edited() |> onto_saved(saved) |> typed(held)
-      new?(row) -> held
-      changed?(held) -> as_new(held)
-      true -> :keep
+      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) && edits ->
+        with_typed(held, saved, Map.get(edits.typed, SubformHelpers.row_key(held), MapSet.new()))
+
+      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) ->
+        onto(held, saved)
+
+      saved && assoc.on_replace in [:raise, :update] ->
+        held |> edited() |> onto_saved(saved) |> typed(held)
+
+      new?(row) ->
+        held
+
+      changed?(held) ->
+        as_new(held)
+
+      true ->
+        :keep
     end
   end
 

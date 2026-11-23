@@ -1,16 +1,19 @@
 defmodule BrandoAdmin.Components.Form.RowEdits do
   @moduledoc false
   # The edits this editor made to the rows of each embedded list
-  # (`embeds_many`), recorded as they make them: the fields they typed in a
-  # row, and the rows they added, removed or moved. Rows are named by key
-  # (`SubformHelpers.row_key/1`: `id-…` for a saved row, the `_key` of a new
-  # one), which field sync carries to the other editors with the row.
+  # (`embeds_many`) and embedded one, recorded as they make them: the fields
+  # they typed in a row, and the rows they added, removed or moved. Rows are
+  # named by key (`SubformHelpers.row_key/1`: `id-…` for a saved row, the
+  # `_key` of a new one), which field sync carries to the other editors with
+  # the row.
   #
   # Another editor's save (`Form.take_saved_entry/1`) keeps exactly these on
-  # top of the saved rows (`RelationRows.keep_list/5`): a value the form holds
-  # because another editor sent it is never one of them. The record lasts
-  # from when the form loaded or this editor last saved until this editor
-  # saves or discards; shipping a list does not clear it.
+  # top of the saved rows (`RelationRows.keep_list/5`, `RelationRows.keep/5`):
+  # a value the form holds because another editor sent it is never one of
+  # them, and a field another editor sent a value of their own for is theirs
+  # from then on (`received/4`). The record lasts from when the form loaded
+  # or this editor last saved until this editor saves or discards; shipping
+  # a list does not clear it.
 
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.PendingRows
@@ -34,20 +37,37 @@ defmodule BrandoAdmin.Components.Form.RowEdits do
 
   @doc """
   A `validate`: the field of the row its `_target` names (`["page",
-  "quotes", "1", "text"]`, the row by its key in `entry_params`), and the
-  rows the event added, removed or moved (a drop or sort param).
+  "quotes", "1", "text"]`, the row by its key in `entry_params`; `["page",
+  "feature", "text"]`, the embedded one the form holds), and the rows the
+  event added, removed or moved (a drop or sort param).
   """
   def typed(edits, fields, previous, changeset, target, entry_params) do
     edits = Enum.reduce(fields, edits, &record_rows(&2, &1, previous, changeset))
 
-    with [_singular, name, index, row_field | _] <- List.wrap(target),
+    with [_singular, name | path] <- List.wrap(target),
          field when not is_nil(field) <- Enum.find(fields, &(Atom.to_string(&1) == name)),
-         %{} = row <- get_in(entry_params || %{}, [name, index]),
-         key when is_binary(key) <- PendingRows.param_key(row),
-         row_field when not is_nil(row_field) <- row_field(changeset, field, row_field) do
+         {key, input} when is_binary(key) <- row_input(changeset, field, path, Map.get(entry_params || %{}, name)),
+         row_field when not is_nil(row_field) <- row_field(changeset, field, input) do
       put_typed(edits, field, key, [row_field])
     else
       _ -> edits
+    end
+  end
+
+  # The row an input is in, and the input: a list's row by its key in the
+  # params, an embedded one as the form holds it.
+  defp row_input(%Changeset{data: %schema{}} = changeset, field, path, params) do
+    case {schema.__schema__(:embed, field), path, params} do
+      {%{cardinality: :many}, [index, input | _], %{} = rows} -> {PendingRows.param_key(rows[index]), input}
+      {%{cardinality: :one}, [input | _], _row} -> {one_key(changeset, field), input}
+      _ -> nil
+    end
+  end
+
+  defp one_key(changeset, field) do
+    case SubformHelpers.current_entries(changeset, field) do
+      [] -> nil
+      row -> SubformHelpers.row_key(row)
     end
   end
 
@@ -72,6 +92,38 @@ defmodule BrandoAdmin.Components.Form.RowEdits do
       |> then(&Enum.reduce(typed, &1, fn {key, changed}, edits -> put_typed(edits, field, key, changed) end))
     end)
   end
+
+  @doc """
+  Another editor's `value` for `field`, the rows they hold: a field this
+  editor typed in a row that they hold otherwise is theirs from then on, as
+  a field another editor sends is (`Form.received_fields/1`). Their rows
+  hold what this editor sent too, so a field they hold as `changeset`, the
+  form, does stays this editor's; with `recovered?` (the form holds the
+  list as a reconnect recovered it) it is theirs too.
+  """
+  def received(edits, field, changeset, value, recovered?) do
+    list = get(edits, field)
+    mine = rows_by_key(changeset, field)
+
+    theirs =
+      for row <- List.wrap(value), key = SubformHelpers.row_key(row), is_binary(key), into: %{}, do: {key, applied(row)}
+
+    typed =
+      for {key, fields} <- list.typed,
+          fields =
+            MapSet.reject(fields, &((recovered? and Map.has_key?(theirs, key)) or differs?(mine[key], theirs[key], &1))),
+          MapSet.size(fields) > 0,
+          into: %{},
+          do: {key, fields}
+
+    edits |> Map.put(field, %{list | typed: typed}) |> drop_empty(field)
+  end
+
+  defp differs?(%{} = mine, %{} = theirs, field), do: Map.get(mine, field) != Map.get(theirs, field)
+  defp differs?(_mine, _theirs, _field), do: false
+
+  defp applied(%Changeset{} = row), do: Changeset.apply_changes(row)
+  defp applied(row), do: row
 
   @doc """
   Renames rows after a merge (`RelationRows.keep_list/5`): a new row the
