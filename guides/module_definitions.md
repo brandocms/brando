@@ -3,7 +3,8 @@
 Brando can export modules created in the admin to an Elixir DSL, then import
 edits into the same database records. A definition includes its template, refs,
 vars, editor settings, defaults, children and table template. You can also author
-a new module entirely in files.
+a new module entirely in files. Palettes and containers are definitions too
+([Palettes and containers](#palettes-and-containers)).
 
 The guarantee is a **semantic round trip**: export → read → import without edits
 does not duplicate modules, replace their identities, bump versions, synchronize
@@ -22,8 +23,9 @@ the same definitions, authorization checks and importer as the CLI.
 
 1. Choose **Prepare export**, then **Download ZIP** for all local modules in the
    current workspace. To export particular modules, select their listing rows and
-   choose **Export DSL files**. Child modules and required table templates travel
-   with the selected module trees.
+   choose **Export DSL files**. Child modules, required table templates and the
+   palettes the vars of either name travel with the selected module trees. The full
+   export has every local palette and container.
 2. Unzip the bundle, edit its `.exs`, `.heex` or `.liquid` files, and zip them
    together with `modules.lock.json`. Files may be at the archive root or inside
    one enclosing folder. Keep the baseline with your edits.
@@ -76,7 +78,10 @@ mix brando.modules import --from priv/modules --user 1
 
 `--user` is an active account ID. Commands use that account's normal permissions;
 being able to run Mix does not implicitly select a system actor. An export needs
-export access to the selected modules and table templates. Imports need create or
+export access to the selected modules, table templates, palettes and containers.
+A full export leaves out the palettes and containers the account may not export,
+unless an exported module, table template or container names one: that export is
+refused, naming both. Imports need create or
 update access to each definition, and read access to referenced media/content.
 
 Tenant applications must supply both selectors on every command:
@@ -105,12 +110,13 @@ and `resolve --apply` take the same options.
 Export requires a **new directory**. It writes:
 
 - One `.exs` file per module or table template, named `<namespace>/<name>.exs`
-  in the admin language (`default_admin_language`), and `tables/<name>.exs` for
-  table templates. A child module goes in a folder beside its parent,
+  in the admin language (`default_admin_language`), `tables/<name>.exs` for
+  table templates, and `palettes/<name>.exs` and `containers/<name>.exs`. A child module goes in a folder beside its parent,
   `<namespace>/<parent>/<child>.exs`, whatever its own namespace. Definitions
   that would share a name get a short UID digest appended. The Elixir module
   name follows the path, e.g. `BrandoDefinitions.Sections.Hero`.
-- One adjacent `.heex` or `.liquid` file per module, preserving its source bytes.
+- One adjacent `.heex` or `.liquid` file per module and container, preserving its
+  source bytes.
 - `modules.lock.json`, containing the format version, source scope, definition
   digests and external reference bindings. No database credentials are included.
 
@@ -245,7 +251,8 @@ applied, both, or never applied from the release.
 
 **Block modules → Release changes** lists the release's definitions that
 differ from this environment's, one row per module tree (a module with its
-children and the table templates it uses), and a summary: the release, the
+children and the table templates it uses), container (with its palette) or
+palette, and a summary: the release, the
 changes by action and by kind (`ModuleDiff` class) and the entries they
 re-render. Each row has four tabs:
 
@@ -255,11 +262,16 @@ re-render. Each row has four tabs:
   does to the blocks that use them.
 - **Entries**: the entries that use the tree, with their type, language,
   status and links, searchable and sortable.
-- **Preview**: an entry's page as it is and with the release's definitions,
+- **Preview**: an entry's page as it is and with the release's modules,
   side by side in the browser, at mobile, tablet or desktop width. The
   blocks that differ are outlined in both (**Mark changes** turns that off),
   **Full screen** gives the pair the whole window, and **Share preview**
   copies a shared preview link of the proposed page.
+
+A container's or palette's row has **Template** (the container's template,
+or the definition with a palette's colours) and **Entries**: Verify and
+Preview render the release's modules, and leave containers and palettes as
+they are here.
 
 **Verify** (per tree, or **Verify all**) is a dry run: every affected entry
 is rendered with the release's definitions, in the background on the node
@@ -733,6 +745,115 @@ end
 The consuming module declares `table_template MySite.Definitions.Prices`.
 Table templates match by UID, so two different templates may share a display
 name. Table row values belong to entries and are never definition data.
+
+## Palettes and containers
+
+A palette and a container are definitions with `kind :palette` and
+`kind :container`. They have a `uid`, are exported, planned and imported with
+the modules, and take part in the lockfile, the admin's ZIP, the watcher and
+a release's Release changes as modules do:
+
+```elixir
+defmodule MySite.Definitions.Palettes.Paper do
+  use Brando.Content.Definition
+
+  kind :palette
+  uid "acme-palette-paper"
+  name "Paper"
+  namespace "site"
+  key "paper"
+
+  colors do
+    color :background, "#fff9f4" do
+      name "Background"
+      instructions "Behind the text"
+    end
+
+    color :foreground, "#000000" do
+      name "Text"
+    end
+  end
+end
+```
+
+```elixir
+defmodule MySite.Definitions.Containers.Tinted do
+  use Brando.Content.Definition
+
+  kind :container
+  uid "acme-container-tinted"
+  name "Tinted section"
+  namespace "Sections"
+  palette "acme-palette-paper"
+
+  template :liquid, ~S(<section b-section="site-paper">{{ content }}</section>)
+end
+```
+
+A palette declares `name`, `namespace`, `key`, `global` and `instructions`,
+and its colours: each a key and a value, with a `name` (required) and
+`instructions`. A palette's colours apply under
+`[b-section="<namespace>-<key>"]` in the palette CSS, or with `global true`
+as `--palette-<namespace>-<key>-<colour>` on `:root`. A container declares
+`name`, `namespace`, `help_text`, one template (`template_file` or
+`template`, `{{ content }}` in Liquid and `@content` in HEEx), and the
+palette settings of its form: `palette` (its default palette, by uid or
+module name), `allow_custom_palette` and `palette_namespace`. Names are plain
+strings, as the admin stores them. A Liquid container template is given
+`{{ content }}` and nothing else: write the palette's section attribute into
+it, as above, for the palette CSS to apply. Status and order are each
+environment's own: a palette an import creates is published.
+
+A var that points at a palette names it by uid, `assets palette:
+"acme-palette-paper"`, which export writes for every palette here.
+A file written before names it by a token mapped to an ID (`--references`),
+which still imports.
+
+An import writes palettes first, then containers, then table templates and
+modules, so a container or a var can point at a palette the same import
+creates. A container whose palette is neither in the files nor here is
+refused when planning, by name; a palette in the trash doesn't count: against
+the lockfile that refuses the plan, and against the database (a release, a
+revert, files without a lockfile for this database) the container is a
+conflict until the palette is restored, so a revert lists it with the others. A
+container whose default palette is in the trash here is exported without
+one, and the export (the admin's and `mix brando.modules export`) and the
+plan name that palette: an import of the file keeps the link, so restoring
+the palette restores the container's default.
+Selecting a container brings its palette, and selecting a module brings the
+palettes its vars and its table template's vars name (`--uid`, `select:`, a
+release apply), so a selection
+whose palette is a conflict is refused.
+
+An update replaces a palette's colours as a set, the definition being the
+whole palette, and the plan names each colour it removes; CSS that reads one
+is yours to change. Blocks keep pointing at their container and palette, and
+keep their own palette choice. The palette CSS is rebuilt and the entries
+that use the palette or the container are rendered again, as after a save in
+the admin; `refresh` retries that for a palette or container UID too. A
+container's HEEx is code, as a module's: only a superuser (or `:system`)
+plans or applies one. A shared-library override is neither exported nor
+imported over, and keeps its source. A palette or container made local from
+the shared library gets a uid of its own, kept when it takes a library update;
+its source relates it to the library entry.
+
+An import does not update a palette's or container's admin form that is open:
+reload it to see the imported version before you save it.
+
+Palettes and containers saved in the admin get a uid of their own. The
+`brando_245` upgrade migration gives existing ones a uid derived from what
+two environments seeded alike share, `palette-<namespace>-<key>` and
+`container-<namespace>-<name>`, so the first import of one environment's
+files into the other adopts its rows instead of creating copies; a derived
+uid another definition of any kind has gets `-2`, `-3`, …. That suffix is
+each environment's own: when only one environment has a module or table
+template with the derived uid, its palette or container gets `-2` and the
+other's does not, so the first import of one's files creates a copy in the
+other instead of adopting it. Give it the same uid in both environments
+before that first export. Within one
+bundle, and here, a uid belongs to one kind, the trash included: a palette
+is refused the uid of a module in the trash, which a restore would bring
+back.
 
 ## Media and content references
 

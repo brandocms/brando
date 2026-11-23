@@ -88,6 +88,7 @@ defmodule Brando.Factory do
 
   def palette_factory do
     %Palette{
+      uid: sequence(:palette_uid, &"palette_uid_#{&1}"),
       name: "base",
       key: "base",
       namespace: "site",

@@ -9,6 +9,8 @@ defmodule Brando.Content.SharedLibraryTest do
   alias Brando.Tenant
   alias Brando.Tenant.Registry
 
+  import Ecto.Query, only: [from: 2]
+
   @prefix "tenant_library-test_preview"
 
   setup do
@@ -157,6 +159,33 @@ defmodule Brando.Content.SharedLibraryTest do
 
     assert palette_override.source_palette_id == palette.id
     assert container_override.source_container_id == container.id
+  end
+
+  # brando_245 derives a uid from the namespace and key or name, in the
+  # library and in each environment alike
+  test "a palette or container made local gets a uid of its own, kept when it takes the library's update", %{
+    site: site,
+    user: user
+  } do
+    palette = create_public_palette("Shared dark", user)
+    container = create_public_container("Shared section", user)
+
+    for {entry, schema} <- [{palette, Brando.Content.Palette}, {container, Brando.Content.Container}] do
+      Repo.update_all(from(r in schema, where: r.id == ^entry.id), [set: [uid: "derived"]], prefix: "public")
+      Repo.insert!(struct(schema, Map.merge(Map.from_struct(entry), %{id: nil, uid: "derived"})), prefix: @prefix)
+    end
+
+    assert :ok = SharedLibrary.set_enabled(site, :palette, [palette.id])
+    assert :ok = SharedLibrary.set_enabled(site, :container, [container.id])
+
+    for {kind, entry} <- [palette: palette, container: container] do
+      assert {:ok, override} = SharedLibrary.customize(kind, entry.id, site, @prefix, user)
+      assert is_binary(override.uid) and override.uid != "derived"
+
+      SharedLibrary.update_shared(kind, entry.id, %{name: "Updated"}, user)
+      assert {:ok, replacement} = SharedLibrary.accept_update(kind, entry.id, site, @prefix, user)
+      assert replacement.uid == override.uid
+    end
   end
 
   test "module customization copies editable variables, references and settings", %{site: site, user: user} do

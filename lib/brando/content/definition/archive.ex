@@ -20,7 +20,7 @@ defmodule Brando.Content.Definition.Archive do
     with_directory(fn root ->
       with {:ok, exported} <- Definitions.export(Path.join(root, "modules"), actor, opts),
            {:ok, binary} <- pack(Writer.files(exported.bundle)) do
-        {:ok, %{binary: binary, count: length(exported.bundle["modules"])}}
+        {:ok, %{binary: binary, count: length(exported.bundle["modules"]), unavailable: exported.unavailable}}
       end
     end)
   end

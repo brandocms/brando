@@ -110,6 +110,106 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     end)
   end
 
+  test "a container and the palette it names are one row, with the template diff and entries, applied together",
+       %{conn: conn} = c do
+    {:ok, palette} =
+      Brando.Content.create_palette(
+        %{
+          "name" => "Paper",
+          "namespace" => "site",
+          "key" => "paper",
+          "status" => "published",
+          "colors" => [%{"name" => "Background", "key" => "background", "hex_value" => "#ffffff"}]
+        },
+        c.user
+      )
+
+    {:ok, container} =
+      Brando.Content.create_container(
+        %{
+          "name" => "Tinted",
+          "namespace" => "Sections",
+          "code" => "<section>{{ content }}</section>",
+          "type" => "liquid",
+          "palette_id" => palette.id
+        },
+        c.user
+      )
+
+    # The release ships both, as this database has them; then changes them
+    styles = c.path <> "-styles"
+    {:ok, _} = Definitions.export(styles, c.user, uids: [container.uid])
+    on_exit(fn -> File.rm_rf!(styles) end)
+    for dir <- ~w(palettes containers), do: File.cp_r!(Path.join(styles, dir), Path.join(c.path, dir))
+    {:ok, %{adopted: 2}} = Release.plan(user: c.user.id, version: "1.0.0")
+    File.write!(Path.join(c.path, "containers/tinted.liquid"), "<aside class=\"from-release\">{{ content }}</aside>")
+    palette_file = Path.join(c.path, "palettes/paper.exs")
+    File.write!(palette_file, String.replace(File.read!(palette_file), "#ffffff", "#fafafa"))
+
+    manual(fn ->
+      {:ok, view, _html} = live(conn, @path)
+      row = "[data-testid=release-row][data-uid='#{container.uid}']"
+      assert has_element?(view, row)
+      refute has_element?(view, "[data-testid=release-row][data-uid='#{palette.uid}']")
+
+      view |> element(row) |> render_click()
+      assert render(view) =~ "from-release"
+      # The template changed: the container's other fields have no diff yet
+      refute has_element?(view, "#def-#{container.uid}")
+      assert has_element?(view, "[data-testid=release-tab-entries]")
+      refute has_element?(view, "[data-testid=release-tab-preview]")
+
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+
+      assert Repo.get!(Brando.Content.Container, container.id).code =~ "from-release"
+      assert [%{hex_value: "#fafafa"}] = Repo.get!(Brando.Content.Palette, palette.id).colors
+      assert Batches.pending().definitions["items"] |> Enum.map(& &1["kind"]) |> Enum.sort() == ["container", "palette"]
+    end)
+  end
+
+  test "a container whose template and palette both change shows both diffs", %{conn: conn} = c do
+    palette = fn key ->
+      {:ok, palette} =
+        Brando.Content.create_palette(
+          %{"name" => key, "namespace" => "site", "key" => key, "status" => "published", "colors" => []},
+          c.user
+        )
+
+      palette
+    end
+
+    {paper, night} = {palette.("paper"), palette.("night")}
+
+    {:ok, container} =
+      Brando.Content.create_container(
+        %{
+          "name" => "Tinted",
+          "namespace" => "Sections",
+          "code" => "<section>{{ content }}</section>",
+          "type" => "liquid",
+          "palette_id" => paper.id
+        },
+        c.user
+      )
+
+    styles = c.path <> "-styles"
+    {:ok, _} = Definitions.export(styles, c.user)
+    on_exit(fn -> File.rm_rf!(styles) end)
+    for dir <- ~w(palettes containers), do: File.cp_r!(Path.join(styles, dir), Path.join(c.path, dir))
+    {:ok, _} = Release.plan(user: c.user.id, version: "1.0.0")
+    File.write!(Path.join(c.path, "containers/tinted.liquid"), "<aside>{{ content }}</aside>")
+    file = Path.join(c.path, "containers/tinted.exs")
+    File.write!(file, String.replace(File.read!(file), ~s(palette "#{paper.uid}"), ~s(palette "#{night.uid}")))
+
+    manual(fn ->
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-row][data-uid='#{container.uid}']") |> render_click()
+      assert has_element?(view, "#tpl-#{container.uid}")
+      assert view |> element("#def-#{container.uid}") |> render() =~ night.uid
+    end)
+  end
+
   test "Keep and Revert wait until every render is done", %{conn: conn} = c do
     release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
 

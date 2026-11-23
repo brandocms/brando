@@ -13,7 +13,7 @@ defmodule Brando.Content.Definitions do
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.Definition
-  alias Brando.Content.Definition.{Error, Model, Reader, Snapshot, Writer}
+  alias Brando.Content.Definition.{Error, Model, Reader, References, Snapshot, Writer}
 
   @typedoc "A render or cascade job of a run, in `t:refresh_result/0`."
   @type refresh_job :: %{
@@ -68,31 +68,82 @@ defmodule Brando.Content.Definitions do
     end)
   end
 
-  @doc "Exports local definitions to a new directory. `:uids` selects complete module trees."
+  @doc """
+  Exports local definitions to a new directory. `:uids` selects complete
+  module trees, palettes and containers, with the palettes they point at.
+  `:unavailable` in the result lists the containers whose default palette
+  the files leave out, as it is in the trash: an import keeps that link.
+  """
   def export(directory, actor, opts \\ []) do
     with :ok <- Boundary.authorize(actor, :export, Brando.Content.Module) do
       protect(fn ->
         validate_actor!(actor)
         {bundle, records} = Snapshot.take!(opts)
-
-        Enum.each(bundle["modules"] ++ bundle["table_templates"], &authorize_export!(&1, records, actor))
-        Brando.Content.Definition.References.bind!(bundle, %{}, actor)
+        bundle = exportable!(bundle, records, actor, opts[:uids])
+        References.bind!(bundle, %{}, actor)
         files = Writer.write!(bundle, Path.expand(directory))
-        %{bundle: bundle, files: files, directory: Path.expand(directory)}
+        %{bundle: bundle, files: files, directory: Path.expand(directory), unavailable: unavailable(bundle, records)}
       end)
     end
   end
 
-  defp authorize_export!(definition, records, actor) do
-    schema = if definition["kind"] == "module", do: Brando.Content.Module, else: Brando.Content.TableTemplate
+  # Each container whose default palette the files leave out, as no
+  # definition can name it here
+  defp unavailable(bundle, records) do
+    for %{"palette" => nil, "uid" => uid, "name" => name} <- bundle["containers"],
+        palette = References.unavailable_palette(records.containers[uid].palette_id),
+        do: %{uid: uid, container: name, palette: palette.name}
+  end
 
-    record =
-      if definition["kind"] == "module",
-        do: records.modules[definition["uid"]],
-        else: records.tables[definition["uid"]]
+  # What the actor may export. Every module and table template, and every
+  # selected palette and container, needs the actor's export grant; a full
+  # export leaves out the palettes and containers the actor may not export,
+  # unless what it writes names one: that is refused by name.
+  defp exportable!(bundle, records, actor, uids) do
+    allowed? = fn %{"kind" => kind, "uid" => uid} ->
+      Boundary.authorize_record(actor, :export, Model.schema(kind), Snapshot.record(records, kind, uid).id) == :ok
+    end
 
-    if Boundary.authorize_record(actor, :export, schema, record.id) != :ok,
-      do: Error.raise!("authorization", "forbidden")
+    if Enum.any?(bundle["modules"] ++ bundle["table_templates"], &(not allowed?.(&1))), do: forbidden!()
+    {containers, left_out} = Enum.split_with(bundle["containers"], allowed?)
+    if uids && left_out != [], do: forbidden!()
+    named = named_palettes(bundle, containers)
+
+    palettes = Enum.filter(bundle["palettes"], &exportable_palette?(&1, allowed?, named, uids))
+
+    if containers == bundle["containers"] and palettes == bundle["palettes"] do
+      bundle
+    else
+      bundle = %{bundle | "containers" => containers, "palettes" => palettes}
+      Map.put(bundle, "baseline", Snapshot.baselines(bundle))
+    end
+  end
+
+  defp exportable_palette?(palette, allowed?, named, uids) do
+    cond do
+      allowed?.(palette) -> true
+      subject = named[palette["uid"]] -> Error.raise!(subject, ~s(palette "#{palette["uid"]}": export forbidden))
+      uids -> forbidden!()
+      true -> false
+    end
+  end
+
+  defp forbidden!, do: Error.raise!("authorization", "forbidden")
+
+  # The definition that names each palette: a var of a module or a table
+  # template, or one of `containers`
+  defp named_palettes(bundle, containers) do
+    vars =
+      for definition <- bundle["modules"] ++ bundle["table_templates"],
+          var <- definition["vars"],
+          token = var["assets"]["palette"],
+          do:
+            {get_in(bundle, ["references", token, "uid"]) || token, Model.subject(definition["kind"], definition["uid"])}
+
+    defaults =
+      for %{"palette" => uid} = container <- containers, uid, do: {uid, Model.subject("container", container["uid"])}
+
+    Map.new(Enum.reverse(vars ++ defaults))
   end
 
   @doc """
@@ -110,6 +161,9 @@ defmodule Brando.Content.Definitions do
       them, to replace with the bundle's version anyway
     * `:creator` - a user or user ID for new records when the actor is
       `:system`; `:none` makes a plan that can't be applied
+    * `:catch_up` - against the lockfile, a definition that no longer
+      equals the lockfile's baseline but equals what was last applied here
+      is compared with that apply: the lockfile's write failed after it
 
   See `Brando.Content.Definition.Plan` for what each item says.
   """
@@ -150,7 +204,11 @@ defmodule Brando.Content.Definitions do
     protect(fn -> Writer.write_lock!(bundle, Path.expand(directory)) end)
   end
 
-  @doc "Retries block synchronization, render enqueueing and notifications for local module UIDs."
+  @doc """
+  Retries what follows an apply for local definition UIDs: block
+  synchronization, render enqueueing and notifications for a module, the
+  palette CSS and renders for a palette, renders for a container.
+  """
   def refresh(uids, actor), do: Brando.Content.Definition.Importer.retry_refresh(uids, actor)
 
   @doc """

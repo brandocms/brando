@@ -350,6 +350,11 @@ sender first, before the first compile.
       ```
 
     See [Live preview](live_preview.md#what-the-preview-page-can-reach).
+    With `tenancy_mode: :multi`, add `plug Brando.Plug.Usage` first in the
+    endpoint, before `Brando.Plug.SiteAssets`, so each site's requests are
+    counted whatever answers them
+    ([Usage per site](tenancy_and_environments.md#usage-per-site)). The task
+    does not add it.
 18. **Module aliases in braces** the new name cannot share. Write the new name
     (the table is in `UPGRADE.md`); the old names warn until 0.57.
 19. **An edited `scripts/sync_gettext.sh`.** Compare it with Brando's and merge
@@ -685,6 +690,21 @@ sender first, before the first compile.
   pasted Figma token keeps using it, with its expiry date, until an
   administrator connects Figma. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. See [Connect Figma](mcp.md#connect-figma).
+- **Language links for fragments.** `brando_244` adds
+  `pages_fragments_alternates` in every site environment, where an
+  installation that ran `brando_93` before does not have it already.
+  Fragments are not linked by it: run `mix brando.fragments.pair` to see
+  which fragments with the same keys it would link, then with `--apply`. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
+  [Synchronized fragments](i18n.md#synchronized-fragments).
+- **Palettes and containers as definition files.** `brando_245` adds
+  `uid` to `content_palettes` and `content_containers` in every environment,
+  and gives each existing row one derived from its namespace and key
+  (palette) or namespace and name (container), so two environments seeded
+  alike agree on them. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`. The next `mix brando.modules export` writes them as
+  files beside the modules. See
+  [Palettes and containers](module_definitions.md#palettes-and-containers).
 - **Media dropped on a multi module.** `brando_246` adds
   `content_modules.media_drop_child` and `media_drop_ref` in every
   environment: the child module each image or video dropped on a multi
@@ -1089,7 +1109,8 @@ server's database, or against a copy you then restore to the server
        content_events: [limit: 1],
        webhooks: [limit: 5],
        notifications: [limit: 2],
-       search_index: [limit: 2]
+       search_index: [limit: 2],
+       site_usage: [limit: 1]
      ],
      cron: [
        crontab: [
@@ -1105,11 +1126,18 @@ server's database, or against a copy you then restore to the server
          {"15 5 * * *", Brando.Worker.FormSubmissionPurger},
          {"25 5 * * *", Brando.Worker.NotFoundPurger},
          {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger},
+         {"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}},
          {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}
        ],
        timezone: "Etc/UTC"
      ]
    ```
+
+   `Brando.Worker.SiteUsage` and its `site_usage` queue measure each site's
+   storage with `tenancy_mode: :multi`; Brando's default configuration has
+   them in `:multi` only, and an application adds them only there. The System
+   check names them when they are missing in `:multi`
+   ([Usage per site](tenancy_and_environments.md#usage-per-site)).
 
 7. **With group authorization, grant the Notifications permission**
    (`brando.notifications.manage`) to the groups that should manage

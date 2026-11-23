@@ -47,7 +47,7 @@ defmodule Brando.Content.Definitions.Release do
   import Kernel, except: [apply: 2]
 
   alias Brando.Authorization.{Boundary, Engine}
-  alias Brando.Content.Definition.{Baselines, Error, Plan}
+  alias Brando.Content.Definition.{Baselines, Error, Model, Plan}
   alias Brando.Content.{DefinitionApply, Definitions}
   alias Brando.Content.Definitions.Release.Batches
   alias Brando.Tenant
@@ -339,13 +339,12 @@ defmodule Brando.Content.Definitions.Release do
          :ok <- authorize(user),
          {:ok, %{} = report} <- plan(Keyword.put(opts, :adopt, false)) |> on(:off),
          {:ok, item} <- conflict_item(report, uid) do
-      definitions = report.plan.bundle["modules"] ++ report.plan.bundle["table_templates"]
-      definition = Enum.find(definitions, &(&1["uid"] == uid))
+      definition = Enum.find(Model.definitions(report.plan.bundle), &(&1["uid"] == uid))
 
       references =
         Map.take(
           report.plan.references,
-          Map.keys(Brando.Content.Definition.References.declared(%{"modules" => [definition], "table_templates" => []}))
+          Map.keys(Brando.Content.Definition.References.declared(%{Model.bundle_key(item.kind) => [definition]}))
         )
 
       row =
@@ -726,7 +725,7 @@ defmodule Brando.Content.Definitions.Release do
   defp display_names(bundle) do
     language = to_string(Brando.config(:default_admin_language) || "en")
 
-    Map.new(bundle["modules"] ++ bundle["table_templates"], fn definition ->
+    Map.new(Model.definitions(bundle), fn definition ->
       namespace = definition["namespace"] && name(%{"name" => definition["namespace"], "uid" => nil}, language)
       title = name(definition, language)
       {definition["uid"], if(namespace in [nil, ""], do: title, else: "#{namespace} › #{title}")}
@@ -737,7 +736,7 @@ defmodule Brando.Content.Definitions.Release do
   # its parent
   defp names(bundle) do
     language = to_string(Brando.config(:default_admin_language) || "en")
-    definitions = bundle["modules"] ++ bundle["table_templates"]
+    definitions = Model.definitions(bundle)
     own = Map.new(definitions, &{&1["uid"], name(&1, language)})
     parents = for module <- bundle["modules"], child <- module["children"], into: %{}, do: {child, module["uid"]}
 

@@ -139,6 +139,27 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
   defp streams_in(list) when is_list(list), do: Enum.flat_map(list, &streams_in/1)
   defp streams_in(_term), do: []
 
+  # The cards a LiveView draws again while `fun` runs: their DOM ids, and
+  # `:reset` for a listing drawn whole
+  defp redrawn(form, fun) do
+    for [_ref, inserts, deletes | reset] <- watch_streams(form, fun),
+        drawn <- Enum.map(inserts ++ deletes, &hd/1) ++ if(reset == [true], do: [:reset], else: []),
+        do: drawn
+  end
+
+  defp pick_image(form, label, image) do
+    form |> transformer_target() |> render_hook("pick_asset", %{"dom_id" => dom_id_of(form, label), "kind" => "image"})
+    form |> transformer_target() |> render_hook("select_image", %{"id" => image.id})
+  end
+
+  defp shown_cover(form, label) do
+    item = Enum.find(transformer(form).items, &(shown_label(&1) == label))
+    item.assets.cover && item.assets.cover.id
+  end
+
+  defp saved_cover(article, label),
+    do: Repo.one(from i in ArticleItem, where: i.article_id == ^article.id and i.label == ^label, select: i.cover_id)
+
   defp remove_row(form, label),
     do: form |> transformer_target() |> render_hook("remove_entry", %{"dom_id" => dom_id_of(form, label)})
 
@@ -163,11 +184,29 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
     |> Plug.Conn.Query.encode()
   end
 
-  defp save(form, changes \\ []) do
+  defp save(form, changes \\ []), do: form |> collect(changes) |> then(&write(form, &1, changes))
+
+  # The first `save_form` collects the rows; the write waits for the second
+  defp collect(form, changes \\ []) do
     form |> form_target() |> render_hook("save_form", %{"form" => browser_form(form, changes), "stay" => true})
     assert_push_event(form.view, "b:submit", %{token: token}, 5_000)
+    token
+  end
+
+  defp write(form, token, changes \\ []) do
     form |> form_target() |> render_hook("save_form", %{"form" => browser_form(form, changes), "token" => token})
     settle(form.view)
+  end
+
+  defp flush_draft_dirty(%{view: view} = form) do
+    %{proxy: {ref, _topic, _}} = view
+    settle(view)
+
+    receive do
+      {^ref, {:push_event, "b:draft-dirty", _}} -> flush_draft_dirty(form)
+    after
+      0 -> :ok
+    end
   end
 
   # B saves a field outside the transformer
@@ -461,6 +500,188 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         assert Enum.filter(streams, &drawn?/1) == []
         assert Enum.map(shown(b), &elem(&1, 0)) == ["A, by B", "B", "C"]
         assert Enum.map(transformer(b).items, &(&1.assets.cover && &1.assets.cover.id)) == [nil, image.id, nil]
+      end
+    end
+  end
+
+  for kind <- ["with blocks", "without blocks"] do
+    describe "#{kind}, A saving inside B's save" do
+      # A's save lands after B's form collected its rows and before it
+      # writes them: B's rows read back after its save hold A's row too.
+      # B's own new row is B's saved row once, and A's row is B's to keep,
+      # not a row B removed.
+      test "keeps A's new row through B's saves, and B's new row once",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = Enum.sort(rows(article))
+        assert [{"A", _}, {"B", _}, {"C", _}, {"From A", _}, {"From B", _}] = saved
+
+        save_title(b, article, "Saved by B")
+        assert Enum.sort(rows(article)) == saved
+        assert Enum.sort(shown(b)) == saved
+      end
+
+      # Every row B shows is saved after its write: B's form has nothing
+      # left to recover.
+      test "leaves B's form without unsaved changes", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        flush_draft_dirty(b)
+        write(b, token)
+
+        assert Enum.sort(shown(b)) == Enum.sort(rows(article))
+        refute_push_event(b.view, "b:draft-dirty", %{}, 200)
+      end
+
+      # B's new row comes after its collect: it stays B's unsaved row
+      test "leaves B's form with a row added after collecting unsaved",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        add_row(b, "From B")
+        flush_draft_dirty(b)
+        write(b, token)
+
+        assert {"From B", nil} in shown(b)
+        assert_push_event(b.view, "b:draft-dirty", %{}, 1_000)
+      end
+
+      # A changes a row B holds and doesn't change: B's write leaves A's
+      # value, and B's form shows it, not the value B collected.
+      test "shows A's value in a row B didn't change", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        set_field(a, dom_id_of(a, "A"), "label", "A, by A")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = rows(article)
+        assert [{"A, by A", _}, {"B", _}, {"C", _}, {"From B", _}] = saved
+        assert shown(b) == saved
+
+        save_title(b, article, "Saved by B")
+        assert rows(article) == saved
+        assert shown(b) == saved
+      end
+
+      test "leaves a row B removed gone, and A's new row in B's form once",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        remove_row(b, "C")
+        add_row(a, "From A")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = Enum.sort(rows(article))
+        assert [{"A", _}, {"B", _}, {"From A", _}] = saved
+        assert Enum.sort(shown(b)) == saved
+
+        save_title(b, article, "Saved by B")
+        assert Enum.sort(rows(article)) == saved
+        assert Enum.sort(shown(b)) == saved
+      end
+
+      # A's image in a row B didn't change is the row's: B's card and its
+      # next save show it, not the image B collected.
+      test "shows the image A put on a row B didn't change", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        image = Factory.insert(:image)
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+
+        token = collect(b)
+        pick_image(a, "B", image)
+        save(a)
+        write(b, token)
+
+        assert saved_cover(article, "B") == image.id
+        assert shown_cover(b, "B") == image.id
+
+        save_title(b, article, "Saved by B")
+        assert saved_cover(article, "B") == image.id
+        assert shown_cover(b, "B") == image.id
+      end
+
+      # B picks an image after its form collected the rows: it stays B's,
+      # unsaved, and B's next save writes it.
+      test "keeps the image B picked after collecting", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        [image, own] = Factory.insert_list(2, :image)
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+
+        token = collect(b)
+        pick_image(a, "B", image)
+        save(a)
+        pick_image(b, "B", own)
+        write(b, token)
+
+        assert saved_cover(article, "B") == image.id
+        assert shown_cover(b, "B") == own.id
+
+        save_title(b, article, "Saved by B")
+        assert saved_cover(article, "B") == own.id
+        assert shown_cover(b, "B") == own.id
+      end
+
+      test "drops a row A removed that B held and didn't change",
+           %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+        add_row(b, "From B")
+        remove_row(a, "B")
+
+        token = collect(b)
+        save(a)
+        write(b, token)
+
+        saved = Enum.sort(rows(article))
+        assert [{"A", _}, {"C", _}, {"From B", _}] = saved
+        assert Enum.sort(shown(b)) == saved
+
+        save_title(b, article, "Saved by B")
+        assert Enum.sort(rows(article)) == saved
+        assert Enum.sort(shown(b)) == saved
+      end
+    end
+  end
+
+  for kind <- ["with blocks", "without blocks"] do
+    describe "#{kind}, one editor saving" do
+      # A redraw drops what the browser put on a card (a drag in progress, a
+      # drop highlight): a row's card is drawn again only when it was new.
+      test "draws again only the card of the row it added", %{a_conn: a_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        set_field(a, dom_id_of(a, "A"), "label", "A, by A")
+        new = add_row(a, "D")
+        assert redrawn(a, fn -> save(a) end) == [new]
+
+        reorder(a, ["C", "A, by A", "B", "D"])
+        remove_row(a, "B")
+        assert redrawn(a, fn -> save(a) end) == []
+        assert Enum.map(rows(article), &elem(&1, 0)) == ["C", "A, by A", "D"]
       end
     end
   end

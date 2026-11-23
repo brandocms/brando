@@ -8,7 +8,9 @@ defmodule Brando.Content.Definition.Plan do
   `selection` is nil for every definition, or the UIDs an apply writes (whole
   module trees); `replace` the never-applied definitions it may replace;
   `discard` the definitions edited here since they were applied, whose edit
-  it may replace with the files' version.
+  it may replace with the files' version. `catch_up` compares a definition
+  whose lockfile baseline is behind the last apply recorded here with that
+  apply (`Brando.Content.Definition.Watcher`, whose lockfile write can fail).
 
   Each item has the definition's `action`, `reason`, `state` (`:new`,
   `:in_sync`, `:changed_in_release`, `:changed_in_admin`, `:changed_in_both`,
@@ -19,7 +21,11 @@ defmodule Brando.Content.Definition.Plan do
   and for an update that removes refs or vars, `removes`: their `keys`
   (`{:ref | :var, key}`) and how many `blocks` hold one of them, in how
   many `entries`. Those blocks keep what they hold as a leftover until it is
-  resolved (`Brando.Content.StaleBlocks`).
+  resolved (`Brando.Content.StaleBlocks`). For a palette's update that
+  removes colours, `keys` are `{:color, key}` and `blocks` those that use
+  the palette: CSS that reads a removed colour is the author's to change.
+
+  `kind` is `"module"`, `"table_template"`, `"palette"` or `"container"`.
   """
   alias Brando.Tenant
 
@@ -29,6 +35,7 @@ defmodule Brando.Content.Definition.Plan do
     :fingerprint,
     :creator_id,
     mode: :lockfile,
+    catch_up: false,
     selection: nil,
     replace: MapSet.new(),
     discard: MapSet.new(),
@@ -51,6 +58,11 @@ defmodule Brando.Content.Definition.Plan do
   What an update removes and how many of the module's blocks hold it, as
   the plan prints it, or nil when it removes nothing.
   """
+  def removal_text(%{kind: "palette", removes: %{keys: keys, blocks: blocks, entries: entries}}) do
+    what = Enum.map_join(keys, ", ", fn {:color, key} -> "color #{key}" end)
+    "removes #{what} (#{blocks} blocks use the palette, #{entries} entries)"
+  end
+
   def removal_text(%{removes: %{keys: keys, blocks: blocks, entries: entries}, block_count: total}) do
     what = Enum.map_join(keys, ", ", fn {kind, key} -> "#{kind} #{key}" end)
     it = if length(keys) == 1, do: "it", else: "them"
@@ -73,7 +85,11 @@ defmodule Brando.Content.Definition.Plan do
   when no block holds it or the plan has no user to name. Each value is
   quoted for a POSIX shell.
   """
-  def resolve_command(%__MODULE__{creator_id: user_id}, %{uid: uid, removes: %{held: held, blocks: blocks}})
+  def resolve_command(%__MODULE__{creator_id: user_id}, %{
+        kind: "module",
+        uid: uid,
+        removes: %{held: held, blocks: blocks}
+      })
       when blocks > 0 and not is_nil(user_id) do
     environment =
       if Tenant.enabled?(),

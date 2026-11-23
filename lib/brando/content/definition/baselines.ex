@@ -6,7 +6,7 @@ defmodule Brando.Content.Definition.Baselines do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.{References, Snapshot, Value}
+  alias Brando.Content.Definition.{Model, References, Snapshot, Value}
   alias Brando.Content.DefinitionApply
   alias Brando.Repo
 
@@ -33,7 +33,10 @@ defmodule Brando.Content.Definition.Baselines do
     |> Map.values()
     |> Enum.sort_by(& &1.id)
     |> Enum.flat_map(&Map.to_list(&1.references || %{}))
-    |> Enum.filter(fn {token, binding} -> declared[token] && declared[token] == binding["kind"] end)
+    # A palette bound by uid is found by it again
+    |> Enum.filter(fn {token, binding} ->
+      declared[token] == binding["kind"] and Map.has_key?(binding, "id")
+    end)
     |> Map.new(fn {token, binding} -> {token, binding["id"]} end)
   end
 
@@ -51,14 +54,15 @@ defmodule Brando.Content.Definition.Baselines do
   yet (an adoption).
 
   `changes` are the importer's persisted changes; `items` the plan's items;
-  `snapshots` the definitions as they were before the apply, by UID. Options:
+  `snapshots` the definitions as they were before the apply, by kind and
+  UID. Options:
   `:source`, `:release`, `:batch_id`, `:action` (for every row it writes, in
   place of what the plan says) and `adopt: false` (no adoptions). Returns how
   many rows it wrote.
   """
   def record!(plan, changes, snapshots, actor, opts) do
     latest = latest()
-    definitions = Map.new(plan.bundle["modules"] ++ plan.bundle["table_templates"], &{&1["uid"], &1})
+    definitions = Map.new(Model.definitions(plan.bundle), &{&1["uid"], &1})
     written = MapSet.new(changes, & &1.uid)
     now = DateTime.utc_now()
 
@@ -79,7 +83,7 @@ defmodule Brando.Content.Definition.Baselines do
         cond do
           MapSet.member?(written, item.uid) ->
             action = Keyword.get(opts, :action) || action(item)
-            [row(base, item, definition, digest, snapshots[item.uid], action, plan)]
+            [row(base, item, definition, digest, snapshots[{item.kind, item.uid}], action, plan)]
 
           Keyword.get(opts, :adopt, true) and item.state == :in_sync and
               stale?(row, digest, references(definition, plan)) ->
@@ -124,14 +128,13 @@ defmodule Brando.Content.Definition.Baselines do
   defp stale?(row, digest, references), do: row.digest != digest or (row.references || %{}) != references
 
   defp references(definition, plan) do
-    key = if definition["kind"] == "module", do: "modules", else: "table_templates"
-    Map.take(plan.references, Map.keys(References.declared(%{key => [definition]})))
+    Map.take(plan.references, Map.keys(References.declared(%{Model.bundle_key(definition["kind"]) => [definition]})))
   end
 
   defp still_equal(plan, items) do
     {snapshot, _records} = Snapshot.take!(bindings: plan.snapshot_bindings, all_tables: true)
-    current = Map.new(snapshot["modules"] ++ snapshot["table_templates"], &{&1["uid"], &1})
-    Enum.filter(items, &(current[&1.uid] && current_digest(plan, current[&1.uid]) == &1.after))
+    current = Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
+    Enum.filter(items, &(current[{&1.kind, &1.uid}] && current_digest(plan, current[{&1.kind, &1.uid}]) == &1.after))
   end
 
   defp current_digest(%{mode: :database} = plan, definition), do: digest(definition, plan.snapshot_bindings)

@@ -597,6 +597,27 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       refute_received {:phoenix, :send_update, {{Gallery, "second"}, _}}
     end
 
+    # A copy of an untouched image placed in position mode is cut as the
+    # editor showed it: with the point's mode, not the default.
+    test "the copy keeps the mode of the point the editor saved", ctx do
+      copy = Factory.insert(:image, creator: ctx.user)
+      made_in = %{path: [], field: nil, image: ctx.image, block_target: {Gallery, "first"}, old_image_id: ctx.image.id}
+
+      socket =
+        %Phoenix.LiveView.Socket{}
+        |> Component.assign(:current_user, ctx.user)
+        |> Component.assign(:edit_image, made_in)
+
+      params = %{"mode" => "new_copy", "focal_x" => 75, "focal_y" => 0, "focal_mode" => "position"}
+      assert {:noreply, socket} = Form.handle_event("image_editor_save", params, socket)
+
+      assert {:noreply, _socket} =
+               Oban.Testing.with_testing_mode(:manual, fn -> Form.refocus_image_editor_copy(socket, copy) end)
+
+      assert_receive {:phoenix, :send_update, {{Gallery, "first"}, %{event: "image_editor_new_copy"} = assigns}}
+      assert assigns.new_image.focal == %Brando.Images.Focal{x: 75, y: 0, mode: :position}
+    end
+
     test "a copy for an object removed meanwhile leaves the gallery alone", ctx do
       copy = Factory.insert(:image, creator: ctx.user)
       form = to_form(Changeset.change(%ProjectUpdate1{}))

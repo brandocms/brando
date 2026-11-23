@@ -29,7 +29,9 @@ defmodule E2E.MultiSiteHosts do
   with two allowed S3 targets, for the sites screen's lists. `:many_sites` adds
   eleven more sites with a live environment each, the first with a long name,
   and a schema for Acme's staging environment and the long-named site, which
-  the navigation's switcher can switch to.
+  the navigation's switcher can switch to. `:usage` gives Acme 30 days of
+  usage, measured and with traffic, and adds Gamma, with traffic and no
+  measurement, for the sites screen's usage; Beta has none.
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -167,6 +169,8 @@ defmodule E2E.MultiSiteHosts do
 
     if opts[:many_sites], do: many_sites(acme_staging, admin)
 
+    if opts[:usage], do: usage(acme, acme_live, admin)
+
     if opts[:site_admin] do
       admin = admin |> Ecto.Changeset.change(role: :admin) |> Repo.update!()
       {:ok, _} = Access.grant(admin, acme, :admin)
@@ -255,6 +259,39 @@ defmodule E2E.MultiSiteHosts do
       live = environment(site, admin, "production", "Production", true, nil, [])
       if index == 0, do: create_schema(live)
     end
+
+    Cache.warm()
+  end
+
+  defp usage(acme, acme_live, admin) do
+    today = Date.utc_today()
+    schema = Tenant.prefix(Registry.get_site(acme.id), acme_live)
+
+    for offset <- 0..29 do
+      day = Date.add(today, -offset)
+      requests = 1_200 + rem(offset * 7_919, 900) - offset * 12
+      :ok = Brando.Sites.Usage.add_traffic([{acme.id, day, requests, requests * 48_000}])
+
+      :ok =
+        Brando.Sites.Usage.put_measurement(acme.id, day, %{
+          media_bytes: 2_400_000_000 - offset * 9_000_000,
+          builds_bytes: 0,
+          databases: [
+            %{"schema" => schema, "environment" => "production", "archive" => false, "bytes" => 48_000_000},
+            %{"schema" => "tenant_acme_staging", "environment" => "staging", "archive" => false, "bytes" => 46_500_000},
+            %{
+              "schema" => "#{schema}_archive_20261102140312",
+              "environment" => "production",
+              "archive" => true,
+              "bytes" => 47_200_000
+            }
+          ]
+        })
+    end
+
+    gamma = site("Gamma", "gamma")
+    environment(gamma, admin, "production", "Production", true, "gamma.example.com", [])
+    :ok = Brando.Sites.Usage.add_traffic([{gamma.id, today, 312, 9_400_000}])
 
     Cache.warm()
   end

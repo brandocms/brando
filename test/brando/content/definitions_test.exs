@@ -768,7 +768,7 @@ defmodule Brando.Content.DefinitionsTest do
       Ecto.Adapters.SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
 
       for table <-
-            ~w(content_modules content_table_templates content_refs content_vars content_blocks content_definition_applies) do
+            ~w(content_modules content_table_templates content_refs content_vars content_blocks content_definition_applies content_palettes content_containers) do
         Ecto.Adapters.SQL.query!(
           Repo.repo(),
           ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|

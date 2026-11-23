@@ -110,7 +110,8 @@ defmodule Brando.Content.Transfer do
   end
 
   defp export_definitions!(uids, state, actor) do
-    {definitions, records} = Snapshot.take!(uids: uids)
+    # Palettes travel as the transfer's own dependencies, by id
+    {definitions, records} = Snapshot.take!(uids: uids, styles: false)
     Enum.each(definitions["modules"], &Catalog.authorize!(actor, :export, records.modules[&1["uid"]]))
     Enum.each(definitions["table_templates"], &Catalog.authorize!(actor, :export, records.tables[&1["uid"]]))
 

@@ -1,0 +1,11 @@
+defmodule MySite.Definitions.Containers.Tinted do
+  use Brando.Content.Definition
+
+  kind :container
+  uid "acme-container-tinted"
+  name "Tinted section"
+  namespace "Sections"
+  palette "acme-palette-paper"
+
+  template :liquid, ~S(<section b-section="site-paper">{{ content }}</section>)
+end

@@ -21,7 +21,10 @@ mix brando.modules import --from priv/modules --user 1
 
 `--user` is an active account ID. Commands use that account's normal permissions;
 being able to run Mix does not implicitly select a system actor. An export needs
-export access to the selected modules and table templates. Imports need create or
+export access to the selected modules, table templates, palettes and containers.
+A full export leaves out the palettes and containers the account may not export,
+unless an exported module, table template or container names one: that export is
+refused, naming both. Imports need create or
 update access to each definition, and read access to referenced media/content.
 
 Tenant applications must supply both selectors on every command:

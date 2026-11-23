@@ -59,6 +59,7 @@
 // and the script waits for LiveView to settle after each one:
 //   { "click": sel } { "hover": sel } { "fill": sel, "value": "text" }
 //   { "select": sel, "value": "option" } { "press": "Escape", "on": sel? }
+//   { "upload": sel, "file": "path/to/file" } (a file input, hidden or not)
 //   { "waitFor": sel, "state": "visible"|"hidden"|"attached" } { "wait": ms }
 //   { "scroll": sel } { "scroll": { "y": 800 } } { "scroll": "bottom" }
 //   { "goto": path } { "evaluate": "js expression" }
@@ -235,6 +236,7 @@ async function runAction(page, action, ctx) {
   if ('click' in action) await visible(page, v('click')).click()
   else if ('hover' in action) await visible(page, v('hover')).hover()
   else if ('fill' in action) await visible(page, v('fill')).fill(String(v('value') ?? ''))
+  else if ('upload' in action) await page.locator(v('upload')).setInputFiles(path.resolve(v('file')))
   else if ('select' in action) await visible(page, v('select')).selectOption(String(v('value')))
   else if ('press' in action) {
     if (action.on) await visible(page, v('on')).press(v('press'))

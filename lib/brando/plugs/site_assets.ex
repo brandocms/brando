@@ -114,6 +114,7 @@ defmodule Brando.Plug.SiteAssets do
       conn
       |> put_resp_header("content-type", MIME.from_path(relative_path))
       |> put_resp_header("cache-control", cache_control)
+      |> Brando.Plug.Usage.put_file(file)
       |> send_file(200, file)
       |> halt()
     else
