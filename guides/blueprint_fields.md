@@ -285,10 +285,11 @@ includes `:language`, or a `with:` that includes it. Any other slug gets the
 language appended (`banzha-en`). When the language already has the value, the
 copy gets the next free number (`banzha-2`).
 
-That is the slug the copy is created with. **Translate to [language]** then
-translates the copy, and a slug whose form input derives it from another field
-(`source: :title`) is derived again from the translated text: `huset`, copied
-as `huset`, ends as `the-house`.
+That is the slug the copy is created with, and a synchronized translation
+keeps it. The listing's **Translate to [language]**, which independent schemas
+offer, then translates the copy, and a slug whose form input derives it from
+another field (`source: :title`) is derived again from the translated text:
+`huset`, copied as `huset`, ends as `the-house`.
 
 ## Constraints
 

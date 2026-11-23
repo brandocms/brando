@@ -1,2 +1,2 @@
 - A new translation keeps the source's slug when the slug is unique per language (`prevent_collision: :language`, or a `with:` that includes `:language`), instead of appending the language code; existing translations keep their slugs.
-- A copy (a duplicate or a new translation) whose slug is unique per status, such as `prevent_collision: [:language, :status]`, gets a value free among drafts, instead of failing on the unique index when a draft already has the source's slug.
+- A copy into another language (a new translation, or a duplicate to a language) whose slug is unique per status, such as `prevent_collision: [:language, :status]`, gets a value free among drafts, instead of failing on the unique index when a draft already has the source's slug.
