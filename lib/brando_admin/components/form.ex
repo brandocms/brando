@@ -2149,17 +2149,17 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The picker's "edit image" from an image field's open drawer: the drawer,
-  # and its save, take the image. A locked field's drawer keeps its asset.
-  # The drawer is modal and every way of closing it saves it
-  # (`editing_image?: false`), so a picker opened while it is shut is another
-  # opener's: a block's, a var's, a gallery's. That editor belongs to no
-  # field, and its copy stays in the library. A block or gallery that opened
-  # the editor before left its keys in `edit_image`: its copy goes back to
-  # none of them either.
+  # and its save, take the image. The drawer is modal and every way of
+  # closing it saves it (`editing_image?: false`), so a picker opened while it
+  # is shut is another opener's: a block's, a var's, a gallery's. That editor
+  # belongs to no field, and its copy stays in the library. A block or gallery
+  # that opened the editor before left its keys in `edit_image`: its copy goes
+  # back to none of them either. A locked field's drawer takes no image, so
+  # its editor belongs to no field too; the browser has opened it already.
   defp open_image_editor_from_picker(%{assigns: %{editing_image?: true}} = socket, %{field: field} = edit_image, image)
        when not is_nil(field) do
     if edit_asset_locked?(socket, edit_image) do
-      socket
+      open_image_editor_for_no_field(socket, image)
     else
       edit_image =
         edit_image
@@ -2174,7 +2174,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp open_image_editor_from_picker(socket, _edit_image, image) do
+  defp open_image_editor_from_picker(socket, _edit_image, image), do: open_image_editor_for_no_field(socket, image)
+
+  defp open_image_editor_for_no_field(socket, image) do
     socket
     |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id})
     |> assign(:image_changeset, change(image))
@@ -2233,25 +2235,12 @@ defmodule BrandoAdmin.Components.Form do
       else: deliver_unlocked_entry_field_asset(socket, asset_type, field, path, asset)
   end
 
+  # The drawer shows the asset only if it is on the field: an upload that
+  # lands after its drawer closed leaves another field's open drawer alone.
   defp deliver_unlocked_entry_field_asset(socket, asset_type, field, path, asset) do
-    edit_key = :"edit_#{asset_type}"
-    changeset_key = :"#{asset_type}_changeset"
-
-    edit_asset =
-      Map.merge(socket.assigns[edit_key], %{
-        :id => asset.id,
-        :field => field,
-        :path => path,
-        asset_type => asset
-      })
-
     socket
     |> commit_entry_field_asset(field, path, asset)
-    |> assign(edit_key, edit_asset)
-    |> assign(changeset_key, change(asset))
-    # NOT `editing_*? = false`: an upload started inside a drawer leaves it
-    # open, and this is what the drawer's recovery snapshot is built from.
-    |> assign_drawer_recovery_state()
+    |> show_delivered_asset(asset_type, %{field: field, path: path}, asset)
   end
 
   defp commit_entry_field_asset(socket, field, path, asset) do
@@ -6924,7 +6913,6 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id, own: true})
-     |> assign(:editing_image?, true)
      |> assign(:image_changeset, change(image))
      |> push_event("b:image_editor:init", image_editor_payload(image))}
   end
@@ -10825,11 +10813,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # The drawer shows the asset if it is open on the field it was delivered to
+  # The drawer shows the asset if it is open on the field it was delivered to.
+  # Its path and name tell the field: an upload's delivery names no schema.
   defp show_delivered_asset(socket, asset_type, edit_asset, asset) do
     open = socket.assigns[:"edit_#{asset_type}"]
 
-    if Map.take(open, [:path, :field, :schema]) == Map.take(edit_asset, [:path, :field, :schema]) do
+    if Map.take(open, [:path, :field]) == Map.take(edit_asset, [:path, :field]) do
       socket
       |> assign(:"edit_#{asset_type}", Map.merge(open, %{:id => asset.id, asset_type => asset}))
       |> assign(:"#{asset_type}_changeset", change(asset))

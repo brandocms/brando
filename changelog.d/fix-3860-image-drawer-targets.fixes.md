@@ -1,0 +1,3 @@
+- An image, file or video upload that finishes after its drawer was closed goes to its own field and leaves another field's open drawer alone; before, that drawer showed the upload, and its Done wrote it into the first field again.
+- "Edit image" in the image picker, opened from a locked field's drawer, opens the editor on the picked image instead of showing the image it last had.
+- Opening the image editor in an image's own form no longer blocks that form's Save with "You must close the image drawer…".
