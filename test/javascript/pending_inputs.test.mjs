@@ -451,3 +451,55 @@ function blockRichText(value) {
   Object.defineProperty(el, 'defaultValue', { get() { return this.value } })
   return el
 }
+
+// What the server rendered while this editor was elsewhere is what the new
+// block is compared with, not a render from an earlier visit
+test('text typed after coming back to a field is carried over renders from while it was elsewhere', () => {
+  const { clock, inputs } = setup()
+  const name = textInput('child_block[vars][0][value]', 'B')
+  clock.active = name
+  inputs.focused(name)
+  name.value = 'Bob'
+  inputs.typed(name)
+  patch(inputs, name, 'Bob')
+
+  // left, and the server's value moves on meanwhile
+  clock.active = null
+  inputs.left(name)
+  patch(inputs, name, 'Bobb')
+  name.value = name.defaultValue = 'Bobb'
+
+  // back, typing, and the block mounts again before the debounce
+  clock.now = 1500
+  clock.active = name
+  inputs.focused(name)
+  name.value = 'Bobby'
+  inputs.typed(name)
+  clock.now = 1600
+  inputs.went(blockElement([name]), 'uid')
+  clock.active = null
+
+  const newName = textInput('child_block[vars][0][value]', 'Bobb')
+  inputs.came(blockElement([newName]), 'uid')
+  assert.equal(newName.value, 'Bobby')
+})
+
+test("rich text left before its echo is not put back over another editor's newer text", () => {
+  const { clock, inputs } = setup()
+  const richText = blockRichText('<p>A</p>')
+  richText.value = '<p>A1</p>'
+  inputs.typed(richText)
+
+  // its editor left; another editor's text arrives through ordinary patches
+  inputs.left(richText)
+  clock.now = 1200
+  patch(inputs, richText, '<p>B1</p>')
+  richText.value = '<p>B1</p>'
+
+  clock.now = 1400
+  inputs.went(blockElement([richText]), 'uid')
+  const newRichText = blockRichText('<p>B2</p>')
+  inputs.came(blockElement([newRichText]), 'uid')
+  assert.equal(newRichText.value, '<p>B2</p>')
+  assert.deepEqual(newRichText.sent, [])
+})

@@ -61,7 +61,7 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
   const lastInput = new WeakMap()
   const typedValues = new WeakMap()
   const serverValue = new WeakMap()
-  // What the server last rendered into an input while this editor was in it
+  // What the server last rendered into a block's input
   const rendered = new WeakMap()
   // block uid → { at, inputs: [{ name, value, server, typed, focus }] }, from a block that went
   const carried = new Map()
@@ -106,10 +106,10 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
     }
 
     if (!blockInput(from)) return
+    rendered.set(from, to.value)
     const focused = from === active
     const richText = !focused && editorInUse(from, active)
     if (!focused && !richText) return
-    rendered.set(from, to.value)
 
     if (from.value === to.value) {
       serverValue.delete(from)
