@@ -1363,7 +1363,8 @@ defmodule Brando.Villain.Parser do
         """
         |> maybe_annotate(block.uid, opts)
 
-      {:error, {:palette, :not_found, nil}} ->
+      # None, or one in the trash
+      {:error, {:palette, :not_found, _id}} ->
         """
         <section b-section#{target_id}>
           #{children_html}
@@ -1383,23 +1384,25 @@ defmodule Brando.Villain.Parser do
           block,
         opts
       ) do
-    containers = opts.containers
-    skip_children? = Map.get(opts, :skip_children, false)
+    case Content.find_container(opts.containers, container_id, Map.get(block, :container_origin, :local)) do
+      {:ok, container} ->
+        children_html =
+          if Map.get(opts, :skip_children, false) === true do
+            annotate_children("[$ content $]", block.uid)
+          else
+            render_children(children, block, opts)
+          end
 
-    {:ok, container} =
-      Content.find_container(containers, container_id, Map.get(block, :container_origin, :local))
+        adapter = adapter_for(container.type)
 
-    children_html =
-      if skip_children? === true do
-        annotate_children("[$ content $]", block.uid)
-      else
-        render_children(children, block, opts)
-      end
+        adapter.render_container(container, IO.iodata_to_binary(children_html), block, opts)
+        |> maybe_annotate(block.uid, opts)
 
-    adapter = adapter_for(container.type)
-
-    adapter.render_container(container, IO.iodata_to_binary(children_html), block, opts)
-    |> maybe_annotate(block.uid, opts)
+      # A deleted container's blocks keep their content, in a section of
+      # their own with their palette
+      {:error, {:container, :not_found, _id}} ->
+        container(%{block | container_id: nil}, opts)
+    end
   end
 
   # Inactive and deleted children are left out of the container's output.
