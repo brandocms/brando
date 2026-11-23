@@ -242,12 +242,11 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
   })
 
-  // A video ref that uploads to its provider (the E2E app's fake Bunny)
-  // settles the drop when the provider has the file and the ref shows it.
-  // Emptied after that, the field's next failed upload is its own.
-  test('a video dropped on a provider ref settles its entry when the ref takes it', async ({ page }) => {
+  // A Video Row whose Video Card's ref uploads to its provider, the E2E
+  // app's fake Bunny, which answers on its CDN hostname here
+  const videoRow = async page => {
     await page.route('https://bunny-cdn.e2e.test/**', route => route.fulfill({ path: './fixtures/image.jpg', contentType: 'image/jpeg' }))
-    const videoRow = await factory(page, {
+    const row = await factory(page, {
       name: { en: 'Video Row', no: 'Video Row' }, namespace: { en: group, no: group }, help_text: { en: 'Video Row' },
       class: 'video-row', type: 'liquid', vars: [], datasource: false,
       uid: 'e2e-video-row', code: '<section>{{ content }}</section>', refs: [], multi: true,
@@ -256,7 +255,7 @@ test.describe('Multi blocks: dropping media', () => {
     await factory(page, {
       name: { en: 'Video Card', no: 'Video Card' }, namespace: { en: group, no: group }, help_text: { en: 'Video Card' },
       class: 'video-card', type: 'liquid', vars: [], datasource: false,
-      uid: 'e2e-video-card', parent_id: videoRow, multi: false,
+      uid: 'e2e-video-card', parent_id: row, multi: false,
       code: '<figure>{% ref refs.visual %}</figure>',
       refs: [{
         name: 'visual', description: 'Video', uid: 'e2e-video-card-visual',
@@ -266,7 +265,12 @@ test.describe('Multi blocks: dropping media', () => {
         },
       }],
     })
+  }
 
+  // The provider's `done` settles the drop once the ref shows the video.
+  // Emptied after that, the field's next failed upload is its own.
+  test('a video dropped on a provider ref settles its entry when the ref takes it', async ({ page }) => {
+    await videoRow(page)
     await createPage(page, 'Media drop provider', group, 'Video Row')
     const row = rows(page).first()
     await drop(page, rowBlock(row), [['video.mp4', 'video/mp4']])
@@ -286,6 +290,22 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
     // no alert that the dropped file's upload failed
     await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+  })
+
+  // The provider has the file, but the server cannot complete the upload:
+  // the drop failed, and its entry goes as any failed drop's does
+  test('a video the server cannot complete after its provider upload removes its entry', async ({ page }) => {
+    await videoRow(page)
+    await createPage(page, 'Media drop provider refused', group, 'Video Row')
+    // A token the server never signed, as the provider hook gets it
+    await page.evaluate(() => {
+      window.addEventListener('phx:video_upload_url_ready', event => { event.detail.upload_token = 'forged' }, { capture: true })
+    })
+
+    const row = rows(page).first()
+    await drop(page, rowBlock(row), [['video.mp4', 'video/mp4']])
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(1, { timeout: 30000 })
+    await expect(entries(row)).toHaveCount(0)
   })
 
   test('a multi block without media_drop shows no drop zone', async ({ page }) => {
