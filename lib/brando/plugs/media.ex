@@ -57,7 +57,7 @@ defmodule Brando.Plug.Media do
         conn =
           conn
           |> put_media_headers(path)
-          |> Brando.Plug.Usage.put_file(Path.join([opts.from | path]))
+          |> Brando.Plug.Usage.put_file(Path.join([opts.from | Enum.map(path, &decode/1)]))
           |> Plug.Static.call(opts)
 
         if conn.state in [:sent, :file] do
@@ -68,6 +68,13 @@ defmodule Brando.Plug.Media do
           |> halt()
         end
     end
+  end
+
+  # As `Plug.Static` reads the segments; it answers a malformed one itself
+  defp decode(segment) do
+    URI.decode(segment)
+  rescue
+    ArgumentError -> segment
   end
 
   defp media_opts(conn, opts) do

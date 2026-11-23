@@ -72,7 +72,7 @@ defmodule Brando.SSG.PreviewController do
     case content_type do
       "text/html" -> send_resp(conn, status, PreviewRewrite.html(File.read!(file_path), prefix, site_bases(build)))
       "text/css" -> send_resp(conn, status, PreviewRewrite.css(File.read!(file_path), prefix, site_bases(build)))
-      _other -> send_file(conn, status, file_path)
+      _other -> conn |> Brando.Plug.Usage.put_file(file_path) |> send_file(status, file_path)
     end
   end
 

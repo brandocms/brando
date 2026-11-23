@@ -12,20 +12,34 @@ defmodule Brando.Plug.Usage do
 
   The site and the UTC day are fixed when the request arrives: a host that is
   an active site's environment domain or redirect host counts for that site.
-  The admin's host, the installation's other hosts, an inactive site's and a
-  host no site has count for nobody. Nothing about the request is kept but
-  the site, the day, one request and the bytes of the response body as the
-  application sends it:
+  The admin's host and the installation's other hosts
+  (`Brando.Tenant.InstallationHosts`), also one a site was bound to before
+  that was refused, an inactive site's host and a host no site has count for
+  nobody. Nothing about the request is kept but the site, the day, one
+  request and the bytes of the response body as the application sends it:
 
     * a body's length; 0 for HEAD, 304 and 204;
-    * for a file, its length, or a range response's range. Brando's own file
-      plugs name the file (`put_file/2`); any other file is taken to be the
-      release's `Plug.Static`'s;
+    * for a file, a range response's range, or the length of the file the
+      serving code names with `put_file/2`, as Brando's own do. The release's
+      `Plug.Static` names nothing: its file is the one under
+      `Brando.Assets.SiteAssets.Capture.release_root/0` the URL decodes to. A
+      file response nobody named counts 0 bytes;
     * 0 for a chunked response, whose chunks are sent after it is counted.
 
-  WebSocket and long-poll connections are dispatched before the endpoint's
-  plugs, so they are not counted. The plug does one counter update and
-  nothing else (`Brando.Sites.Usage.Traffic.count/3`).
+  Not counted:
+
+    * WebSocket and long-poll connections, dispatched before the endpoint's
+      plugs;
+    * an error raised by a plug before the router (`Plug.Parsers` answering
+      400 or 413): Phoenix renders it from the request as the endpoint
+      received it, without this plug's hook. A path no route matches and an
+      error in a controller are counted;
+    * requests answered before the counters start or after their last flush
+      at shutdown: the endpoint starts before Brando's processes and stops
+      after them.
+
+  The plug does one counter update and nothing else
+  (`Brando.Sites.Usage.Traffic.count/3`).
   """
   @behaviour Plug
 
@@ -34,6 +48,7 @@ defmodule Brando.Plug.Usage do
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.Sites.Usage.Traffic
   alias Brando.Tenant.Cache
+  alias Brando.Tenant.InstallationHosts
 
   @file_key :brando_usage_file
 
@@ -52,14 +67,22 @@ defmodule Brando.Plug.Usage do
     end
   end
 
-  @doc "Names the file a plug is about to send with `Plug.Conn.send_file/3`, so its bytes are counted."
+  @doc """
+  Names the file a plug is about to send with `Plug.Conn.send_file/3` (or
+  `Phoenix.Controller.send_download/3`), so its bytes are counted: the path on
+  disk, as sent.
+  """
   @spec put_file(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
   def put_file(conn, path), do: put_private(conn, @file_key, path)
 
+  # A site bound to one of the installation's hosts before that was refused
+  # still resolves there, but what the installation answers on it is nobody's
   defp site_id(host) do
-    case Cache.get_env_by_domain(host) || Cache.get_redirect(host) do
-      {%{id: site_id}, _environment} -> site_id
-      nil -> nil
+    with {%{id: site_id}, _environment} <- Cache.get_env_by_domain(host) || Cache.get_redirect(host),
+         false <- InstallationHosts.member?(host) do
+      site_id
+    else
+      _ -> nil
     end
   end
 
@@ -91,16 +114,24 @@ defmodule Brando.Plug.Usage do
     end
   end
 
-  # `Plug.Static` sends a precompressed copy beside the file when it says so
-  defp file_path(conn) do
-    path = conn.private[@file_key] || Path.join([Capture.release_root() | conn.path_info])
+  defp file_path(%Plug.Conn{private: %{@file_key => path}}), do: path
 
-    case get_resp_header(conn, "content-encoding") do
-      ["gzip"] when not is_map_key(conn.private, @file_key) -> path <> ".gz"
-      ["br"] when not is_map_key(conn.private, @file_key) -> path <> ".br"
-      _ -> path
+  # The release's `Plug.Static` names nothing. Its file responses, and no
+  # one else's here, say they take ranges; it decodes the URL's segments and
+  # sends a precompressed copy beside the file when it says so.
+  defp file_path(conn) do
+    if get_resp_header(conn, "accept-ranges") == ["bytes"] do
+      path = Path.join([Capture.release_root() | Enum.map(conn.path_info, &URI.decode/1)])
+
+      case get_resp_header(conn, "content-encoding") do
+        ["gzip"] -> path <> ".gz"
+        ["br"] -> path <> ".br"
+        _ -> path
+      end
     end
   end
+
+  defp file_size(nil), do: 0
 
   defp file_size(path) do
     case File.stat(path) do

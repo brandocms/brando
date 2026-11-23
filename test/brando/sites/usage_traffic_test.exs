@@ -1,3 +1,32 @@
+defmodule Brando.Sites.UsageTrafficTest.ErrorHTML do
+  @moduledoc false
+  def render(template, _assigns), do: "error " <> template
+end
+
+defmodule Brando.Sites.UsageTrafficTest.Router do
+  @moduledoc false
+  use Phoenix.Router
+
+  get "/raise", Brando.Sites.UsageTrafficTest.RaisingController, :show
+end
+
+defmodule Brando.Sites.UsageTrafficTest.RaisingController do
+  @moduledoc false
+  use Phoenix.Controller, formats: [:html]
+
+  def show(_conn, _params), do: raise(ArgumentError, "boom")
+end
+
+# The errors Phoenix renders itself
+defmodule Brando.Sites.UsageTrafficTest.Endpoint do
+  @moduledoc false
+  use Phoenix.Endpoint, otp_app: :brando
+
+  plug Brando.Plug.Usage
+  plug Plug.Parsers, parsers: [:json], pass: ["*/*"], json_decoder: Jason
+  plug Brando.Sites.UsageTrafficTest.Router
+end
+
 defmodule Brando.Sites.UsageTrafficTest do
   # The counters are one named table per node, so these run alone
   use ExUnit.Case, async: false
@@ -82,6 +111,27 @@ defmodule Brando.Sites.UsageTrafficTest do
       assert Brando.Repo.all(Day, prefix: "public") == []
     end
 
+    test "a site bound to the installation's own host counts nothing there", %{acme: acme} do
+      # Validation refuses this binding; an installation can still hold one
+      # written before it did
+      [environment] = acme.environments
+      admin_host = BrandoAdmin.AdminHost.endpoint_host()
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(e in Brando.Environments.Environment, where: e.id == ^environment.id),
+        set: [domain: admin_host]
+      )
+
+      Tenant.Cache.warm()
+      assert {%{id: site_id}, _environment} = Tenant.Cache.get_env_by_domain(admin_host)
+      assert site_id == acme.id
+
+      request(admin_host, "/admin", &send_resp(&1, 200, "admin"))
+      :ok = Traffic.flush()
+
+      assert Brando.Repo.all(Day, prefix: "public") == []
+    end
+
     test "counts a body, a full file, a range, HEAD, 304, a redirect and an error by the bytes sent", %{
       acme: acme,
       files: files
@@ -118,6 +168,91 @@ defmodule Brando.Sites.UsageTrafficTest do
 
       redirect_bytes = byte_size(Phoenix.Controller.redirect(Plug.Test.conn(:get, "/"), to: "/elsewhere").resp_body)
       assert traffic_after_flush(acme) == {7, 1_150 + redirect_bytes + 5}
+    end
+
+    test "a media file is sized by the file served, whose name the URL encodes", %{acme: acme, files: files} do
+      put_test_env(:media_path, Path.join(files, "media"))
+      media_root = Brando.Tenant.Storage.media_root(acme)
+      File.mkdir_p!(media_root)
+      File.write!(Path.join(media_root, "my photo.jpg"), String.duplicate("p", 321))
+      media = Brando.Plug.Media.init(at: "/media")
+
+      conn = request("acme.traffic.test", "/media/my%20photo.jpg", &Brando.Plug.Media.call(&1, media))
+
+      assert conn.status == 200
+      assert traffic_after_flush(acme) == {1, 321}
+    end
+
+    test "the sitemap is sized by the file the controller sends", %{acme: acme, files: files} do
+      put_test_env(:media_path, Path.join(files, "media"))
+      [environment] = acme.environments
+      sitemaps = Path.join(Brando.Tenant.Storage.media_root(acme), "sitemaps")
+      File.mkdir_p!(sitemaps)
+      File.write!(Path.join(sitemaps, "sitemap.xml"), String.duplicate("s", 77))
+      # A file of another size where the URL would point under the release
+      File.mkdir_p!(Path.join(files, "sitemaps"))
+      File.write!(Path.join([files, "sitemaps", "sitemap.xml"]), String.duplicate("x", 5))
+
+      Tenant.with_prefix(Tenant.prefix(acme, environment), fn ->
+        request(
+          "acme.traffic.test",
+          "/sitemaps/sitemap.xml",
+          &BrandoWeb.SitemapController.show(&1, %{"file" => "sitemap.xml"})
+        )
+      end)
+
+      assert traffic_after_flush(acme) == {1, 77}
+    end
+
+    test "a file response nobody named counts its request and no bytes, never another file's", %{
+      acme: acme,
+      files: files
+    } do
+      File.mkdir_p!(Path.join(files, "assets"))
+      File.write!(Path.join([files, "assets", "app.js"]), String.duplicate("a", 1_000))
+      elsewhere = Path.join(files, "elsewhere.js")
+      File.write!(elsewhere, "e")
+
+      request("acme.traffic.test", "/assets/app.js", &send_file(&1, 200, elsewhere))
+
+      assert traffic_after_flush(acme) == {1, 0}
+    end
+
+    @tag :capture_log
+    test "an error Phoenix renders is counted when it comes from the router, not from a plug before it", %{
+      acme: acme
+    } do
+      endpoint = Brando.Sites.UsageTrafficTest.Endpoint
+
+      Application.put_env(:brando, endpoint,
+        render_errors: [formats: [html: Brando.Sites.UsageTrafficTest.ErrorHTML], layout: false],
+        secret_key_base: String.duplicate("k", 64),
+        server: false
+      )
+
+      start_supervised!(endpoint)
+      conn = fn -> Map.put(Phoenix.ConnTest.build_conn(), :host, "acme.traffic.test") end
+
+      # A path that matches no route
+      assert Phoenix.ConnTest.dispatch(conn.(), endpoint, :get, "/nowhere").status == 404
+      assert traffic_after_flush(acme) == {1, byte_size("error 404.html")}
+
+      # An exception in a controller
+      assert {500, _headers, _body} =
+               Phoenix.ConnTest.assert_error_sent(500, fn ->
+                 Phoenix.ConnTest.dispatch(conn.(), endpoint, :get, "/raise")
+               end)
+
+      assert traffic_after_flush(acme) == {2, 2 * byte_size("error 404.html")}
+
+      # An exception in a plug before the router
+      Phoenix.ConnTest.assert_error_sent(400, fn ->
+        conn.()
+        |> Plug.Conn.put_req_header("content-type", "application/json")
+        |> Phoenix.ConnTest.dispatch(endpoint, :post, "/nowhere", "{not json")
+      end)
+
+      assert traffic_after_flush(acme) == {2, 2 * byte_size("error 404.html")}
     end
 
     test "the day is the request's, fixed when it arrives", %{acme: acme} do
