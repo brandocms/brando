@@ -36,6 +36,15 @@ defmodule Brando.Sites.Usage do
   @spec enabled?() :: boolean()
   def enabled?, do: Brando.Tenant.mode() == :multi
 
+  @doc "Whether the usage table exists: an installation upgraded before its migration ran has none."
+  @spec table?() :: boolean()
+  def table? do
+    %{rows: [[exists?]]} =
+      Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT to_regclass('public.sites_usage_days') IS NOT NULL", [])
+
+    exists?
+  end
+
   @doc "How many months of rows are kept (13 by default)."
   @spec retention_months() :: pos_integer()
   def retention_months, do: config(:retention_months, 13)

@@ -67,7 +67,9 @@ environments screen (`/admin/config/environments`) or the sites screen
    E2E server would otherwise run at once; `multi-site-many` adds eleven
    more sites, the first with a long name, for the navigation's site switcher;
    `multi-site-usage` gives Acme 30 days of usage and adds Gamma, with
-   traffic and no measurement, for the sites screen's usage.
+   traffic and no measurement, for the sites screen's usage;
+   `multi-site-usage-no-table` drops the usage table, as on an installation
+   whose migration has not run.
 3. Shoot as usual (`--locales en,no` works for all three). Lookups come from
    `E2E.MultiSiteHosts`, so nothing queries DNS.
 4. Stop it with `scripts/server.sh stop`, which then removes the served

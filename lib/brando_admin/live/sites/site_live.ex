@@ -36,6 +36,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Workspace
+  alias Phoenix.LiveView.AsyncResult
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -56,7 +57,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
          |> assign(:demo_option?, Brando.Tenant.Seeder.demo_option?(seeder))
          |> assign(:selected, nil)
          |> assign_create_form(default_create_params(), [])
-         |> refresh()}
+         |> refresh()
+         |> assign_usage()}
 
       true ->
         {:ok, assign(socket, :socket_connected, false)}
@@ -68,7 +70,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   # else the first.
   @impl Phoenix.LiveView
   def handle_params(params, _uri, %{assigns: %{socket_connected: true}} = socket) do
-    {:noreply, socket |> assign(:selected, selection(params, socket.assigns)) |> assign_usage()}
+    {:noreply, socket |> assign(:selected, selection(params, socket.assigns)) |> usage_days()}
   end
 
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
@@ -120,7 +122,11 @@ defmodule BrandoAdmin.Sites.SiteLive do
             <span class="site-list-name">
               <strong>{site.name}</strong>
               <small>{site.key}</small>
-              <.usage_summary :if={@usage} id={"site-list-usage-#{site.id}"} summary={@usage.overview[site.id]} />
+              <.usage_summary
+                :if={@usage && @usage.table?}
+                id={"site-list-usage-#{site.id}"}
+                summary={@usage.overview[site.id]}
+              />
             </span>
             <.status_badge status={site.status} />
           </.link>
@@ -148,6 +154,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
             drafts={@drafts}
             superuser?={@superuser?}
             usage={@usage}
+            usage_free={@usage_free}
           />
         </div>
       </div>
@@ -454,7 +461,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
         </div>
       </div>
 
-      <.usage_section :if={@usage} site={@site} usage={@usage} />
+      <.usage_section :if={@usage} site={@site} usage={@usage} free={@usage_free} />
 
       <.delivery_section
         site={@site}
@@ -585,9 +592,23 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   attr :site, Site, required: true
   attr :usage, :map, required: true
+  attr :free, AsyncResult, default: nil
 
   # What the site stores and the requests the installation answered on its
   # hosts, for a superuser only (`Brando.Sites.Usage`)
+  defp usage_section(%{usage: %{table?: false}} = assigns) do
+    ~H"""
+    <section class="site-section site-usage" id={"usage-site-#{@site.id}"}>
+      <header class="site-section-heading">
+        <h3>{gettext("Usage")}</h3>
+      </header>
+      <p class="site-hint" id={"usage-missing-#{@site.id}"}>
+        {gettext("The usage table’s migration has not run on this installation yet, so there are no figures.")}
+      </p>
+    </section>
+    """
+  end
+
   defp usage_section(assigns) do
     usage = assigns.usage
     measured = Enum.filter(usage.days, &Day.measured?/1)
@@ -718,7 +739,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           </div>
           <div>
             <dt>{gettext("Free on the media volume")}</dt>
-            <dd>{if @usage.free, do: format_size(@usage.free), else: gettext("Unknown")}</dd>
+            <dd id={"usage-free-#{@site.id}"}>{free_space(@free)}</dd>
           </div>
         </dl>
         <p class="site-hint">
@@ -737,6 +758,11 @@ defmodule BrandoAdmin.Sites.SiteLive do
     </section>
     """
   end
+
+  # Read after the first render: `df` may take seconds on a slow volume
+  defp free_space(%AsyncResult{ok?: true, result: bytes}) when is_integer(bytes), do: format_size(bytes)
+  defp free_space(%AsyncResult{loading: loading}) when not is_nil(loading), do: "…"
+  defp free_space(_unknown), do: gettext("Unknown")
 
   # From the first to the last measurement of the 30 days: none without two
   defp storage_change([first, _ | _] = measured) do
@@ -1243,7 +1269,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
     with :ok <- usage_access(socket),
          {:ok, site} <- site_from_socket(socket, id),
          {:ok, _job} <- SiteUsage.measure_now(site) do
-      {:noreply, socket |> notify(gettext("Measuring %{name} is queued.", name: site.name)) |> assign_usage()}
+      {:noreply, notify(socket, gettext("Measuring %{name} is queued.", name: site.name))}
     else
       {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
@@ -1321,7 +1347,12 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_info({:site_usage_measured, _site_id}, socket), do: {:noreply, assign_usage(socket)}
+  def handle_info({:site_usage_measured, site_id}, socket) do
+    socket = put_overview(socket)
+    {:noreply, if(site_id == socket.assigns.selected, do: usage_days(socket, :reload), else: socket)}
+  end
+
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   defp refresh(socket) do
     sites = Registry.list_sites() |> Enum.sort_by(&{&1.name, &1.id})
@@ -1337,34 +1368,57 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:superuser?, Boundary.superuser?(socket.assigns.current_user))
     |> assign_new(:drafts, fn -> %{} end)
     |> keep_selection()
-    |> assign_usage()
+    |> usage_days()
   end
 
-  # For a superuser only, the sites' figures and the selected site's days;
-  # nil for anyone else, so nothing of it renders
+  # For a superuser only, read once per mount: the sites' figures, and the
+  # free space after the first render. Nil for anyone else, so nothing of it
+  # renders; without the table (its migration not run yet) only a sentence.
   defp assign_usage(%{assigns: %{superuser?: true}} = socket) do
+    if Usage.table?() do
+      media_path = Brando.config(:media_path) |> Path.expand()
+
+      socket
+      |> assign(:usage, %{table?: true, media_path: media_path, days: [], days_of: nil})
+      |> put_overview()
+      |> usage_days()
+      |> assign_async(:usage_free, fn -> {:ok, %{usage_free: Measure.free_bytes(media_path)}} end)
+    else
+      socket |> assign(:usage, %{table?: false}) |> assign(:usage_free, nil)
+    end
+  end
+
+  defp assign_usage(socket), do: socket |> assign(:usage, nil) |> assign(:usage_free, nil)
+
+  # Again when a measurement lands
+  defp put_overview(%{assigns: %{usage: %{table?: true} = usage}} = socket) do
     today = Date.utc_today()
     overview = Usage.overview(today)
-    media_path = Brando.config(:media_path) |> Path.expand()
 
-    site = Enum.find(socket.assigns.sites, &(&1.id == socket.assigns[:selected]))
+    total =
+      overview
+      |> Map.values()
+      |> Enum.map(&(&1.measured && Day.storage_bytes(&1.measured)))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.sum()
 
-    assign(socket, :usage, %{
-      today: today,
-      overview: overview,
-      days: if(site, do: Usage.days(site, today), else: []),
-      total:
-        overview
-        |> Map.values()
-        |> Enum.map(&(&1.measured && Day.storage_bytes(&1.measured)))
-        |> Enum.reject(&is_nil/1)
-        |> Enum.sum(),
-      free: Measure.free_bytes(media_path),
-      media_path: media_path
-    })
+    assign(socket, :usage, Map.merge(usage, %{today: today, overview: overview, total: total}))
   end
 
-  defp assign_usage(socket), do: assign(socket, :usage, nil)
+  defp put_overview(socket), do: socket
+
+  # The selected site's days: read when another site is selected, or when a
+  # measurement of it lands (`:reload`)
+  defp usage_days(socket, reload \\ nil)
+
+  defp usage_days(%{assigns: %{usage: %{table?: true, days_of: days_of} = usage, selected: selected}} = socket, reload)
+       when days_of != selected or reload == :reload do
+    site = Enum.find(socket.assigns.sites, &(&1.id == selected))
+    days = if site, do: Usage.days(site, usage.today), else: []
+    assign(socket, :usage, %{usage | days: days, days_of: selected})
+  end
+
+  defp usage_days(socket, _reload), do: socket
 
   defp usage_access(%{assigns: %{superuser?: true}}), do: :ok
   defp usage_access(_socket), do: {:error, :forbidden}

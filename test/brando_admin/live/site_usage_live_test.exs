@@ -127,6 +127,81 @@ defmodule BrandoAdmin.Sites.SiteUsageLiveTest do
     assert has_element?(view, "#site-list-usage-#{beta.id}", "2.0 KB")
   end
 
+  test "the free space fills in after the first render, and usage rows load only when the selection or a measurement changes them",
+       %{conn: conn, acme: acme, beta: beta} do
+    test_pid = self()
+    handler = "usage-queries-#{System.unique_integer([:positive])}"
+
+    :telemetry.attach(
+      handler,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, %{source: source}, _config ->
+        if source == "sites_usage_days", do: send(test_pid, :usage_query)
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    {:ok, view, _html} = live(conn, "/admin/sites?site=acme")
+    render_async(view)
+    assert has_element?(view, "#usage-free-#{acme.id}")
+    refute has_element?(view, "#usage-free-#{acme.id}", "…")
+    flush_usage_queries()
+
+    # Selecting another site reads that site's days, and nothing else
+    view |> element("#site-list-#{beta.id}") |> render_click()
+    assert usage_queries() == 1
+
+    view |> render_hook("refresh", %{})
+    assert usage_queries() == 0
+
+    # A measurement of a site not selected: the list's figures only
+    send(view.pid, {:site_usage_measured, acme.id})
+    render(view)
+    assert usage_queries() == 2
+
+    send(view.pid, {:site_usage_measured, beta.id})
+    render(view)
+    assert usage_queries() == 3
+  end
+
+  defp flush_usage_queries do
+    receive do
+      :usage_query -> flush_usage_queries()
+    after
+      0 -> :ok
+    end
+  end
+
+  defp usage_queries(count \\ 0) do
+    receive do
+      :usage_query -> usage_queries(count + 1)
+    after
+      0 -> count
+    end
+  end
+
+  test "before the usage table's migration has run, the screen opens and says so", %{conn: conn, acme: acme} do
+    Brando.Repo.repo().query!("DROP TABLE public.sites_usage_days")
+
+    {:ok, view, _html} = live(conn, "/admin/sites?site=acme")
+
+    assert has_element?(view, "#site-#{acme.id}")
+    assert has_element?(view, "#usage-missing-#{acme.id}")
+    refute has_element?(view, "#usage-storage-#{acme.id}")
+    refute has_element?(view, ".site-list-usage")
+
+    view |> element("#site-list-#{acme.id}") |> render_click()
+    assert has_element?(view, "#usage-missing-#{acme.id}")
+  end
+
+  test "a message the screen does not handle is ignored", %{conn: conn, acme: acme} do
+    {:ok, view, _html} = live(conn, "/admin/sites?site=acme")
+    send(view.pid, {:something_else, 1})
+    assert has_element?(view, "#site-#{acme.id}")
+  end
+
   test "a static site published to another host says what the figures are", %{conn: conn, acme: acme} do
     Brando.Repo.update_all(
       from(site in Brando.Sites.Site, where: site.id == ^acme.id),
