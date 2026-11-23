@@ -151,7 +151,8 @@ test('a release that removes a var is applied, and the module links to Resolve b
 })
 
 // brandocms/brando#3844: a release that renames a var a block holds a value
-// for lists the move, and the apply moves the value: nothing is left to resolve.
+// for lists the move, and the apply moves the value: nothing is left to
+// resolve, and the page renders the value under the new name.
 test('a release that renames a var moves the value in the apply', async ({ page }) => {
   expect((await page.request.post('/e2e/setup_fixtures/release-rename')).ok()).toBe(true)
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
@@ -174,4 +175,8 @@ test('a release that renames a var moves the value in the apply', async ({ page 
   await applied.click()
   await syncLV(page)
   await expect(page.getByTestId('release-resolve-blocks')).toHaveCount(0)
+
+  // The page renders the value under its new name
+  await page.goto('/release-rename')
+  await expect(page.locator('figure[b-tpl="single-image"]')).toHaveAttribute('data-framed', 'true')
 })
