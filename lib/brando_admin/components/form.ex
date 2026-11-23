@@ -7386,11 +7386,6 @@ defmodule BrandoAdmin.Components.Form do
         # status/sizes since the drawer was opened.
         {:ok, updated_image} = Images.get_image(image.id)
 
-        # Processing sees the focal point already saved: the entries that
-        # show the image render again from here
-        if Map.has_key?(validated_changeset.changes, :focal),
-          do: Images.Rerender.after_refocus(image, updated_image)
-
         Brando.Blueprint.AfterSave.run(
           Images.Image,
           updated_image,
@@ -8305,12 +8300,7 @@ defmodule BrandoAdmin.Components.Form do
       )
       |> Map.put(:action, :update)
 
-    with {:ok, updated_image} <- Images.update_image(changeset, current_user) do
-      # Processing sees the focal point already saved: the entries that show
-      # the image render again from here
-      Images.Rerender.after_refocus(image, updated_image)
-      {:ok, updated_image}
-    end
+    Images.update_image(changeset, current_user)
   end
 
   # The image editor's point with the mode the editor shows it in. A mode sent
@@ -8449,16 +8439,23 @@ defmodule BrandoAdmin.Components.Form do
 
   # Non-block path: update entry with the image so the Image input
   # detects the change when the form re-validates (same pattern as new_copy).
+  # A locked field keeps what it holds, checked at the save: the field may
+  # have locked since the editor opened. The drawer shows the saved image.
   defp show_saved_editor_image(socket, edit_image, updated_image) do
-    field_atom = String.to_existing_atom("#{edit_image.field}")
-    image_changeset = change(updated_image)
-    updated_edit_image = Map.merge(edit_image, %{image: updated_image})
+    socket =
+      socket
+      |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
+      |> assign(:image_changeset, change(updated_image))
 
-    socket
-    |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
-    |> assign(:edit_image, updated_edit_image)
-    |> assign(:image_changeset, image_changeset)
-    |> push_event("b:validate", %{})
+    if edit_asset_locked?(socket, edit_image) do
+      socket
+    else
+      field_atom = String.to_existing_atom("#{edit_image.field}")
+
+      socket
+      |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
+      |> push_event("b:validate", %{})
+    end
   end
 
   defp external_video_params?(%{"type" => type}) when type in ["external_file", "vimeo", "youtube"], do: true
@@ -11225,6 +11222,12 @@ defmodule BrandoAdmin.Components.Form do
         changeset
     end
   end
+
+  # A one-to-one subform with no row yet: the form shows an empty one, and
+  # the key starts it
+  defp put_key_at(%Changeset{changes: changes, data: data} = changeset, [field], key, value)
+       when is_atom(field) and not is_map_key(changes, field) and is_nil(:erlang.map_get(field, data)),
+       do: Changeset.put_change(changeset, field, %{key => value})
 
   defp put_key_at(changeset, path, key, value) do
     case nested_path(changeset, path) do
