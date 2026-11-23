@@ -113,6 +113,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
+     |> assign(:image_editor_target, nil)
      |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
      |> assign(:edit_video, %{path: [], field: nil, relation_field: nil})
      |> assign(:updated_entry_assocs, %{})
@@ -494,7 +495,9 @@ defmodule BrandoAdmin.Components.Form do
   # The block's handle_event pushes b:image_editor:init directly (same render cycle).
   def update(%{action: :set_edit_image_from_block, image: image} = params, socket) do
     {:ok,
-     assign(socket, :edit_image, %{
+     socket
+     |> assign(:image_editor_target, nil)
+     |> assign(:edit_image, %{
        path: [],
        field: nil,
        relation_field: nil,
@@ -2154,12 +2157,15 @@ defmodule BrandoAdmin.Components.Form do
   # is shut is another opener's: a block's, a var's, a gallery's. That editor
   # belongs to no field, and its copy stays in the library. A block or gallery
   # that opened the editor before left its keys in `edit_image`: its copy goes
-  # back to none of them either. A locked field's drawer takes no image, so
-  # its editor belongs to no field too; the browser has opened it already.
+  # back to none of them either. A locked field's drawer takes no image and
+  # keeps showing and saving the field's own: its editor works on the picked
+  # image for no field (`image_editor_target`), as the browser has opened it.
   defp open_image_editor_from_picker(%{assigns: %{editing_image?: true}} = socket, %{field: field} = edit_image, image)
        when not is_nil(field) do
     if edit_asset_locked?(socket, edit_image) do
-      open_image_editor_for_no_field(socket, image)
+      socket
+      |> assign(:image_editor_target, %{path: [], field: nil, relation_field: nil, image: image, id: image.id})
+      |> push_event("b:image_editor:init", image_editor_payload(image))
     else
       edit_image =
         edit_image
@@ -2167,6 +2173,7 @@ defmodule BrandoAdmin.Components.Form do
         |> Map.merge(%{image: image, id: image.id})
 
       socket
+      |> assign(:image_editor_target, nil)
       |> assign(:edit_image, edit_image)
       |> assign(:image_changeset, change(image))
       |> assign_drawer_recovery_state()
@@ -2174,10 +2181,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp open_image_editor_from_picker(socket, _edit_image, image), do: open_image_editor_for_no_field(socket, image)
-
-  defp open_image_editor_for_no_field(socket, image) do
+  defp open_image_editor_from_picker(socket, _edit_image, image) do
     socket
+    |> assign(:image_editor_target, nil)
     |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id})
     |> assign(:image_changeset, change(image))
     |> push_event("b:image_editor:init", image_editor_payload(image))
@@ -6912,6 +6918,7 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("open_own_image_editor", _, %{assigns: %{entry: %Images.Image{} = image}} = socket) do
     {:noreply,
      socket
+     |> assign(:image_editor_target, nil)
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id, own: true})
      |> assign(:image_changeset, change(image))
      |> push_event("b:image_editor:init", image_editor_payload(image))}
@@ -6923,7 +6930,9 @@ defmodule BrandoAdmin.Components.Form do
     %{edit_image: edit_image} = socket.assigns
 
     {:noreply,
-     push_event(socket, "b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
+     socket
+     |> assign(:image_editor_target, nil)
+     |> push_event("b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
   end
 
   def handle_event(
@@ -6931,7 +6940,7 @@ defmodule BrandoAdmin.Components.Form do
         %{"mode" => "replace", "focal_x" => _x, "focal_y" => _y} = params,
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    edit_image = socket.assigns.edit_image
+    edit_image = image_editor_target(socket)
     block_target = Map.get(edit_image, :block_target)
 
     saved =
@@ -7009,7 +7018,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:image_editor_focal, editor_focal(params))
      |> assign(:image_editor_config_target, config_target)
-     |> assign(:image_editor_copy_of, copy_destination(socket, socket.assigns.edit_image))}
+     |> assign(:image_editor_copy_of, copy_destination(socket, image_editor_target(socket)))}
   end
 
   # A locked field keeps its video; the drawer closes.
@@ -7433,10 +7442,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # without image in params
-  def handle_event("save_image", params, socket) do
-    require Logger
-    Logger.warning(">>> save_image called WITHOUT image params. params=#{inspect(params)}")
-
+  def handle_event("save_image", _params, socket) do
     {:noreply,
      socket
      |> assign(:editing_image?, false)
@@ -8409,6 +8415,11 @@ defmodule BrandoAdmin.Components.Form do
        value: ""
      })}
   end
+
+  # The picker's editor in a locked field's drawer: the drawer keeps the
+  # field's image
+  defp show_saved_editor_image(%{assigns: %{image_editor_target: %{}}} = socket, target, updated_image),
+    do: assign(socket, :image_editor_target, Map.put(target, :image, updated_image))
 
   # The image's own form: the entry is the image; show it as saved.
   defp show_saved_editor_image(socket, %{own: own} = edit_image, updated_image) when own not in [nil, false] do
@@ -9521,7 +9532,7 @@ defmodule BrandoAdmin.Components.Form do
   # an editor opened since left in `edit_image`.
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
     cond do
-      edit_asset_locked?(socket, socket.assigns[:image_editor_copy_of] || socket.assigns[:edit_image]) ->
+      edit_asset_locked?(socket, socket.assigns[:image_editor_copy_of] || image_editor_target(socket)) ->
         send(self(), {:toast, gettext("This field is locked")})
         {:noreply, cancel_upload(socket, :image_editor_upload, entry.ref)}
 
@@ -9591,7 +9602,7 @@ defmodule BrandoAdmin.Components.Form do
     current_user = socket.assigns.current_user
     # `edit_image` as it was when "Save as new copy" was pressed, not as an
     # editor opened since left it
-    edit_image = socket.assigns[:image_editor_copy_of] || copy_destination(socket, socket.assigns.edit_image)
+    edit_image = socket.assigns[:image_editor_copy_of] || copy_destination(socket, image_editor_target(socket))
 
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
@@ -9674,6 +9685,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp copy_destination(_socket, edit_image), do: edit_image
+
+  # What the open image editor works on: the drawer's image, a block's or a
+  # gallery's (`edit_image`), or the picker's image in a locked field's
+  # drawer, which keeps its own
+  defp image_editor_target(socket), do: socket.assigns[:image_editor_target] || socket.assigns.edit_image
 
   defp resolve_block_image_config(config_target) do
     resolved_target = normalize_upload_config_target(config_target) || "default"

@@ -186,6 +186,61 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerTargetsTest do
       assert field(view, :cover_id) == stored.id
       refute form_assigns(view).editing_image?
     end
+
+    # The editor's Cancel tells the server nothing: the drawer still shows,
+    # takes uploads for and saves the field's own image
+    test "in a locked field's drawer leaves the drawer on the field's image",
+         %{conn: conn, article: article, stored: stored} = ctx do
+      picked = image(ctx.current_user)
+      {view, _html} = open(conn, article, :locked_media)
+      open_cover_drawer(view, stored)
+
+      send_form(view, action: :open_image_editor_from_picker, image: picked)
+
+      assert %{field: :cover, id: shown_id} = form_assigns(view).edit_image
+      assert shown_id == stored.id
+      assert form_assigns(view).image_changeset.data.id == stored.id
+      assert has_element?(view, ~s(#image-drawer-form-preview[data-field="cover"][data-asset-id="#{stored.id}"]))
+
+      form_hook(view, "save_image", %{"image" => %{"credits" => %{"en" => "Typed before"}}})
+
+      assert Repo.get!(Brando.Images.Image, stored.id).credits["en"] == "Typed before"
+      assert field(view, :cover_id) == stored.id
+      refute form_assigns(view).editing_image?
+    end
+
+    test "in a locked field's drawer leaves its Remove to the locked field",
+         %{conn: conn, article: article, stored: stored} = ctx do
+      picked = image(ctx.current_user)
+      {view, _html} = open(conn, article, :locked_media)
+      open_cover_drawer(view, stored)
+      send_form(view, action: :open_image_editor_from_picker, image: picked)
+
+      form_hook(view, "reset_image_field", %{})
+
+      assert field(view, :cover_id) == stored.id
+      refute form_assigns(view).editing_image?
+    end
+
+    # The picked image is the editor's only while the picker opened it: the
+    # next field drawer's "Edit image" saves for that field
+    test "in a locked field's drawer is not the next drawer's editor",
+         %{conn: conn, article: article, stored: stored} = ctx do
+      [picked, portrait] = [image(ctx.current_user), image_on_disk(ctx.current_user)]
+      Repo.insert!(%SyncTest.ArticleAuthor{article_id: article.id, name: "Author", portrait_id: portrait.id})
+      {view, _html} = open(conn, article, :locked_media)
+      open_cover_drawer(view, stored)
+      send_form(view, action: :open_image_editor_from_picker, image: picked)
+      close_drawer(view)
+
+      open_portrait_drawer(view, portrait)
+      form_hook(view, "open_image_editor", %{"image_id" => to_string(portrait.id)})
+      form_hook(view, "image_editor_save", %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70})
+
+      assert Repo.get!(Brando.Images.Image, portrait.id).focal.x == 30
+      assert Repo.get!(Brando.Images.Image, picked.id).focal.x == 50
+      assert form_assigns(view).edit_image.image.focal.x == 30
+    end
   end
 
   # The image's own form opens the editor on itself (`Input.ImageFocal`).
