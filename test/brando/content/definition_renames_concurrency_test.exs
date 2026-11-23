@@ -66,6 +66,8 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
     editor =
       Task.async(fn ->
         unboxed(fn ->
+          send(test, {:editor, backend_pid()})
+
           @repo.update_all(from(v in Var, where: v.block_id == ^block.id and v.key == "heading"),
             set: [value: "Typed meanwhile"]
           )
@@ -73,7 +75,7 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
       end)
 
     # The editor's write waits for the apply's lock on the values
-    refute Task.yield(editor, 500)
+    await_blocked!()
     send(apply.pid, :go)
 
     assert {:ok, _} = Task.await(apply, 30_000)
@@ -133,6 +135,8 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
     editor =
       Task.async(fn ->
         unboxed(fn ->
+          send(test, {:editor, backend_pid()})
+
           try do
             page |> editor_save(block, "Typed by the editor") |> Brando.Pages.update_page(user)
           rescue
@@ -141,7 +145,7 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
         end)
       end)
 
-    refute Task.yield(editor, 500)
+    await_blocked!()
     send(apply.pid, :go)
 
     assert {:ok, _} = Task.await(apply, 30_000)
@@ -229,6 +233,24 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
   end
 
   defp unboxed(fun), do: Sandbox.unboxed_run(@repo, fun)
+
+  defp backend_pid, do: hd(hd(@repo.query!("SELECT pg_backend_pid()").rows))
+
+  # Until Postgres reports the editor's connection waiting for another's lock
+  defp await_blocked! do
+    assert_receive {:editor, pid}, 10_000
+    await_blocked!(pid, 500)
+  end
+
+  defp await_blocked!(pid, tries) do
+    blocked? = unboxed(fn -> hd(hd(@repo.query!("SELECT pg_blocking_pids($1) <> '{}'", [pid]).rows)) end)
+
+    cond do
+      blocked? -> :ok
+      tries == 0 -> flunk("the editor's connection never waited for the apply")
+      true -> Process.sleep(20) && await_blocked!(pid, tries - 1)
+    end
+  end
 
   # The last id of each table, and of the revisions (keyed by entry)
   defp last_ids do
