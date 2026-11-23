@@ -49,7 +49,7 @@ defmodule Brando.Drafts.Restore do
           %Ecto.Association.BelongsTo{owner_key: key, related_key: related_key} <-
             [schema.__schema__(:association, name)],
           Map.has_key?(changes, key),
-          loaded = Map.get(data, name),
+          loaded <- [Map.get(data, name)],
           not match?(%Ecto.Association.NotLoaded{}, loaded),
           (loaded && Map.get(loaded, related_key)) != changes[key],
           reduce: data do
