@@ -2598,8 +2598,9 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
-  # A translation has no changeset: it is the source's copy, made as the
-  # proposal is applied (`create_translation!/2`).
+  # A translation the proposal creates has no changeset here: it is the
+  # source's copy, made as the proposal is applied (`create_translation!/2`;
+  # `with_translation/5` makes one for a preview).
   # A translation a `Translate` fills in is its pending version with the
   # texts written in (`Translations.work_changeset/4`).
   defp materialize!(proposal, entries, user) do
@@ -2608,6 +2609,60 @@ defmodule Brando.Content.Proposals do
         do: {target, translated_changeset!(target, proposal, user)},
         else: {target, target |> base_changeset(proposal, entries, user) |> put_blocks(target, proposal, entries, user)}
     end
+  end
+
+  @doc """
+  Run `fun` with the changeset of `target`, a translation the proposal
+  creates (`translation/2`), as applying the proposal makes it: the source's
+  copy in its language (`Brando.Translations.create_target/5`) as its pending
+  version, with the texts of the proposal's `Translate` operations on it
+  written in (`Translations.work_changeset/4`), so its links point at their
+  versions in its language.
+
+  The copy is made in a transaction that is rolled back once `fun` returns,
+  so `fun` renders it there and keeps only what it holds outside the
+  database. Nothing else is kept: work held for after the commit
+  (`Brando.Repo.after_commit/1`: broadcasts, cache evictions) never runs, no
+  query result read in it is cached, and jobs are rows the rollback removes.
+
+  It checks what `materialize/3` checks, with `shared: true` as it takes it,
+  and makes the copy as `actor`, who must be allowed to create it. Returns
+  `fun`'s result, or `{:error, message}`.
+  """
+  @spec with_translation(Proposal.t(), Proposal.target(), term(), keyword(), (Changeset.t() -> result)) ::
+          result | {:error, String.t()}
+        when result: var
+  def with_translation(%Proposal{} = proposal, target, actor, opts, fun) when is_function(fun, 1) do
+    %CreateTranslation{} = op = translation(proposal.operations, target)
+    ref = make_ref()
+
+    rolled_back =
+      Repo.transaction(fn ->
+        Brando.Cache.Query.skip_in_transaction()
+        Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
+      end)
+
+    case rolled_back do
+      {:error, {^ref, result}} -> result
+      {:error, reason} -> {:error, translation_failed(reason)}
+    end
+  end
+
+  defp with_copy(proposal, target, %CreateTranslation{source: {schema, _}} = op, actor, opts, fun) do
+    copy =
+      Error.protect(fn ->
+        if opts[:shared], do: Transfer.ensure_scope!(actor), else: authorize_proposal!(proposal, actor)
+        current!(proposal, actor, if(opts[:shared], do: :read, else: :update))
+        user = user!(actor)
+        {entry, _group} = create_translation!(op, user)
+
+        case Translations.work_changeset(schema, entry.id, translated_answer(proposal, target).texts, user) do
+          {:ok, changeset, _version_id} -> changeset
+          {:error, reason} -> Error.fail!(translate_failed(reason))
+        end
+      end)
+
+    with {:ok, changeset} <- copy, do: fun.(changeset)
   end
 
   defp translated_changeset!({schema, id} = target, proposal, user) do

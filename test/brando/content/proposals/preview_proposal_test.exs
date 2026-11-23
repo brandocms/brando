@@ -341,7 +341,7 @@ defmodule Brando.Content.Proposals.PreviewProposalTest do
       assert Repo.aggregate(Preview, :count) == 0
     end
 
-    test "for a content type without a page preview, and for a translation", c do
+    test "for a content type without a page preview, a new translation of one included", c do
       id =
         prepare!(mcp(c), [
           %{
@@ -367,8 +367,7 @@ defmodule Brando.Content.Proposals.PreviewProposalTest do
           }
         ])
 
-      assert {:error, message} = preview(mcp(c), translation, %{"new" => "english"})
-      assert message =~ "copied from its source"
+      assert {:error, "This content type has no page preview."} = preview(mcp(c), translation, %{"new" => "english"})
     end
   end
 

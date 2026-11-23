@@ -254,8 +254,14 @@ The tool gets a link only when the person could see the same page in the
 admin's own review: it is the person's proposal from this tool, and the
 person may edit the entry, both as it is and as the proposal leaves it (for
 a new entry, may create it). The export permission the editor's shareable
-link takes is not needed. A translation the proposal creates has no page of
-its own until it is applied: preview its source.
+link takes is not needed. A translation the proposal creates (`{"new": R}`
+of a `create_translation`) shows the page applying the proposal makes: the
+source's copy in that language, with the texts of the proposal's `translate`
+operations on it written in, its links pointing at their versions in that
+language, rendered with that language's templates and navigation. The copy is
+made for the preview in a transaction that is rolled back once the page is
+rendered, so nothing of it is kept; making it takes the permission to create
+the translation, and is refused once the language has a version.
 
 In multi-site mode the link opens only under the site environment the
 proposal belongs to: on the admin's host and on that environment's own
