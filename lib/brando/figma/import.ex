@@ -147,17 +147,14 @@ defmodule Brando.Figma.Import do
     {_cfg, config_target} = Uploads.resolve_image_config(nil)
     ids = Source.images(@source, keys, config_target, actor)
 
-    Enum.map(sections, fn section ->
-      images =
-        Enum.map(section.images, fn image ->
-          case ids[source_key(image)] do
-            nil -> image
-            id -> Map.put(image, :asset, %{kind: "image", id: id})
-          end
-        end)
+    Enum.map(sections, fn section -> %{section | images: Enum.map(section.images, &put_asset(&1, ids))} end)
+  end
 
-      %{section | images: images}
-    end)
+  defp put_asset(image, ids) do
+    case ids[source_key(image)] do
+      nil -> image
+      id -> Map.put(image, :asset, %{kind: "image", id: id})
+    end
   end
 
   defp source_key(image) do
