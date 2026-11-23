@@ -191,6 +191,17 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
+  A tag's option that it prints as markup (a caption), evaluated as `{{ }}`
+  reads it: a plain field's text escaped, rich text sanitized, and a literal
+  the template writes, or a value it gave `raw`, as it is.
+  """
+  @spec eval_markup(term(), Context.t()) :: term()
+  def eval_markup(argument, %Context{} = context) do
+    {value, _context} = Liquex.Argument.eval(argument, context)
+    unwrap(value)
+  end
+
+  @doc """
   `context` with `name` set to `value`, for `{% assign %}`. Text read from an
   entry is escaped, as `{{ name }}` prints it. For escaped plain text (no
   rich text, no record, no number) the text it stands for is kept beside it,

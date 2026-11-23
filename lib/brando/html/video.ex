@@ -281,7 +281,7 @@ defmodule Brando.HTML.Video do
     {width, height} = dimensions(opts, video, aspect_ratio)
 
     orientation = (width && height && width > height && "landscape") || "portrait"
-    opacity = setting(opts, video, :opacity, 0)
+    opacity = number_setting(opts, video, :opacity, 0)
     cover = setting(opts, video, :cover, false)
     progress = setting(opts, video, :progress, false)
     play_button = setting(opts, video, :play_button, false)
@@ -381,6 +381,24 @@ defmodule Brando.HTML.Video do
     |> from_opts_or_record(video, key, default)
   end
 
+  # A size or opacity goes into markup the cover builds by hand: a number, or
+  # text holding one, and the default for anything else
+  defp number_setting(opts, video, key, default) do
+    case setting(opts, video, key, default) do
+      number when is_number(number) -> number
+      text when is_binary(text) -> parse_number(String.trim(text), default)
+      _ -> default
+    end
+  end
+
+  defp parse_number(text, default) do
+    case {Integer.parse(text), Float.parse(text)} do
+      {{integer, ""}, _} -> integer
+      {_, {float, ""}} -> float
+      _ -> default
+    end
+  end
+
   defp from_opts_or_record({:ok, value}, _video, _key, _default), do: value
   defp from_opts_or_record(:error, nil, _key, default), do: default
   defp from_opts_or_record(:error, video, key, default), do: video |> Map.get(key) |> or_default(default)
@@ -469,7 +487,7 @@ defmodule Brando.HTML.Video do
         {round(height * ratio_width / ratio_height), height}
 
       _ ->
-        {setting(opts, video, :width, ratio_width), setting(opts, video, :height, ratio_height)}
+        {number_setting(opts, video, :width, ratio_width), number_setting(opts, video, :height, ratio_height)}
     end
   end
 

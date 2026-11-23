@@ -18,6 +18,8 @@ defmodule Brando.Villain.Tags.Picture do
 
   # Read as typed and escaped where printed (`TemplateView.eval_typed/2`)
   @typed_options ~w(alt)
+  # Printed as markup, so read as `{{ }}` reads them (`TemplateView.eval_markup/2`)
+  @markup_options ~w(caption)
 
   @impl true
   def parse, do: TagGrammar.parse(:picture)
@@ -49,6 +51,9 @@ defmodule Brando.Villain.Tags.Picture do
 
   defp eval_option({:keyword, [key, _]} = arg, context) when key in @typed_options,
     do: TemplateView.eval_typed(arg, context)
+
+  defp eval_option({:keyword, [key, _]} = arg, context) when key in @markup_options,
+    do: TemplateView.eval_markup(arg, context)
 
   defp eval_option(arg, context), do: TemplateView.eval(arg, context)
 end
