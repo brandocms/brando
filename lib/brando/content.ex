@@ -182,6 +182,28 @@ defmodule Brando.Content do
   end
 
   @doc """
+  The entries whose blocks use `module`, as `{schema, id}`: those
+  `render_entries_using_module/1` renders. Entries in the trash are left out.
+  """
+  def list_entries_using_module(module) do
+    {id, origin} = rendered_reference(module.id, module.source_module_id)
+
+    for {schema, ids} <- ContentBlocks.list_entry_ids_using_module(id, origin), id <- ids, do: {schema, id}
+  end
+
+  @doc """
+  Refuses to put a module in the trash while entries outside the trash have
+  blocks using it, which would render as not found:
+  `{:error, :module_in_use}`. A site's override goes: its blocks render as
+  the library module, as after a Reset.
+  """
+  def guard_delete(Module, %Module{source_module_id: nil} = module) do
+    if list_entries_using_module(module) == [], do: :ok, else: {:error, :module_in_use}
+  end
+
+  def guard_delete(_schema, _entry), do: :ok
+
+  @doc """
   Duplicates the module `id` as a new module: a new lineage at v1, as an
   exported module is (`prepare_modules_for_export/2`), with its own `uid`
   and without the original's version history or shared-library link. Its

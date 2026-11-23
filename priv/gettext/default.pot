@@ -908,6 +908,20 @@ msgstr ""
 msgid "%{module} block"
 msgstr ""
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} is used by blocks in one entry, so it can't be deleted."
+msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} is used by blocks in one entry, so it can't be deleted: %{places}."
+msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted: %{places}."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{ms} ms"
@@ -1641,6 +1655,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A media, picture or video reference of the child module."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "A module that blocks use was not deleted. Delete on its row lists the entries using it."
 msgstr ""
 
 #: lib/brando_admin/live/users/user_form_live.ex
@@ -12008,6 +12027,11 @@ msgstr ""
 msgid "Module groups"
 msgstr ""
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Module in use"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Module set"
@@ -19646,6 +19670,11 @@ msgstr ""
 msgid "Take editing back"
 msgstr ""
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Take its blocks out of these entries, or move them to the trash, first."
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
@@ -21643,6 +21672,11 @@ msgstr ""
 #: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This module"
 msgstr ""
 
 #: lib/brando_admin/components/definition_file.ex

@@ -1,4 +1,6 @@
-- Putting a module in the trash, or restoring it, renders again the entries whose blocks use it.
+- A module that blocks in entries outside the trash use can no longer be moved to the trash: `Brando.Content.delete_module/2` returns `{:error, :module_in_use}`, and the module list's Delete names the entries using it, linked, instead of offering to delete.
+
+- Restoring a module from the trash renders again the entries whose blocks use it, and so does trashing a site's customization of a library module.
 
 - **Reset to shared** and accepting a library update on the shared library screen render again the environment's entries that use the entry.
 

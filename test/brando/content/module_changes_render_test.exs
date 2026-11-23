@@ -1,7 +1,7 @@
 defmodule Brando.Content.ModuleChangesRenderTest do
-  # Putting a module in the trash or restoring it renders again the entries
-  # whose blocks use it, and a restore tells the Release changes screen, as
-  # a delete does (#3882). With Villain's production query caching on, so a
+  # A module that pages use can't go to the trash; restoring one renders
+  # again the entries whose blocks use it, and tells the Release changes
+  # screen, as a delete does (#3882). With Villain's production query caching on, so a
   # render reads the cached modules.
   use Brando.ConnCase, async: false
 
@@ -24,19 +24,37 @@ defmodule Brando.Content.ModuleChangesRenderTest do
   end
 
   describe "putting a module in the trash" do
-    test "queues the render of a page using it, which prints it no longer", c do
+    test "is refused while a page uses it, and queues nothing", c do
       page = page!(c.user, c.module)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:error, :module_in_use} = Brando.Content.delete_module(c.module.id, c.user)
+        assert all_enqueued(worker: Brando.Worker.EntryRenderer) == []
+      end)
+
+      assert %{deleted_at: nil} = Brando.Repo.get!(Brando.Content.Module, c.module.id)
       assert rendered(page) =~ "<p>teaser</p>"
-
-      job = queues_render(page, fn -> Brando.Content.delete_module(c.module.id, c.user) end)
-
-      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
-      refute rendered(page) =~ "<p>teaser</p>"
     end
 
-    test "and restoring it queues the render that prints it again", c do
+    test "goes when only a page in the trash uses it", c do
       page = page!(c.user, c.module)
+      {:ok, _} = Brando.Pages.delete_page(page.id, c.user)
+
+      assert {:ok, %{deleted_at: %DateTime{}}} = Brando.Content.delete_module(c.module.id, c.user)
+    end
+
+    test "goes when nothing uses it, and queues no render", c do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Content.delete_module(c.module.id, c.user)
+        assert all_enqueued(worker: Brando.Worker.EntryRenderer) == []
+      end)
+    end
+
+    test "and restoring it queues the render of a page using it, which prints it again", c do
+      page = page!(c.user, c.module)
+      {:ok, trashed_page} = Brando.Pages.delete_page(page.id, c.user)
       {:ok, deleted} = Brando.Content.delete_module(c.module.id, c.user)
+      {:ok, _} = Boundary.restore(c.user, trashed_page)
       {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
       refute rendered(page) =~ "<p>teaser</p>"
 

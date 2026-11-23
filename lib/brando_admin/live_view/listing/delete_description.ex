@@ -12,6 +12,9 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   what the delete takes from. So does a form, in any of its languages: a
   page shows the form in its own language. Deleting is still allowed. A form
   that is the last language of its key says how many submissions go with it.
+
+  A module that blocks use can't be deleted: its dialog says so instead,
+  naming the entries to change first, and offers no Delete.
   """
   use Gettext, backend: Brando.Gettext
 
@@ -29,11 +32,20 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   message as markup (it links the places media is used), with the entry's
   name and every place escaped; the rest is text.
 
+  A module in use gives `%{title, html, refused: true}` instead.
+
   A page with fragments adds `choice`: a radio group the dialog shows under
   the message, with a page select in its move option, whose values go with
   the delete event.
   """
   def describe(schema, entry) do
+    case Brando.Content.guard_delete(schema, entry) do
+      {:error, :module_in_use} -> module_in_use(schema, entry)
+      :ok -> deletable(schema, entry)
+    end
+  end
+
+  defp deletable(schema, entry) do
     singular = schema |> Blueprint.get_singular() |> String.downcase()
     name = entry_name(schema, entry)
     owned = owned_counts(schema, entry)
@@ -78,6 +90,46 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   end
 
   defp with_fragments(description, _schema, _entry), do: description
+
+  # A module blocks use can't go to the trash (`Brando.Content.guard_delete/2`):
+  # `refused` makes the dialog a warning with no Delete, naming the entries
+  # to change first.
+  defp module_in_use(schema, module) do
+    subject =
+      case entry_name(schema, module) do
+        nil -> gettext("This module")
+        name -> "<strong>#{escape(name)}</strong>"
+      end
+
+    {usages, hidden} = module |> Brando.Content.list_entries_using_module() |> Usage.describe() |> Usage.split()
+    count = length(usages) + hidden
+
+    in_use =
+      case usages do
+        [] ->
+          ngettext(
+            "%{module} is used by blocks in one entry, so it can't be deleted.",
+            "%{module} is used by blocks in %{count} entries, so it can't be deleted.",
+            count,
+            module: subject
+          )
+
+        usages ->
+          ngettext(
+            "%{module} is used by blocks in one entry, so it can't be deleted: %{places}.",
+            "%{module} is used by blocks in %{count} entries, so it can't be deleted: %{places}.",
+            count,
+            module: subject,
+            places: to_sentence(place_links(usages, hidden))
+          )
+      end
+
+    %{
+      title: gettext("Module in use"),
+      html: in_use <> " " <> gettext("Take its blocks out of these entries, or move them to the trash, first."),
+      refused: true
+    }
+  end
 
   defp fragment_options(page) do
     [
@@ -221,28 +273,32 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         " " <> ngettext("It is used in one place.", "It is used in %{count} places.", hidden)
 
       {usages, hidden} ->
-        shown = Enum.take(usages, @usage_shown)
-        rest = length(usages) - length(shown) + hidden
-
-        links =
-          Enum.map(shown, fn
-            %{url: url, label: label} when is_binary(url) ->
-              ~s(<a href="#{escape(url)}" target="_blank">#{escape(label)}</a>)
-
-            %{label: label} ->
-              escape(label)
-          end)
-
-        links = if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
-
         " " <>
           ngettext(
             "It is used in one place: %{places}.",
             "It is used in %{count} places: %{places}.",
             length(usages) + hidden,
-            places: to_sentence(links)
+            places: to_sentence(place_links(usages, hidden))
           )
     end
+  end
+
+  # The first few places, linked where they have an admin page, and a count
+  # of the rest
+  defp place_links(usages, hidden) do
+    shown = Enum.take(usages, @usage_shown)
+    rest = length(usages) - length(shown) + hidden
+
+    links =
+      Enum.map(shown, fn
+        %{url: url, label: label} when is_binary(url) ->
+          ~s(<a href="#{escape(url)}" target="_blank">#{escape(label)}</a>)
+
+        %{label: label} ->
+          escape(label)
+      end)
+
+    if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
   end
 
   defp usages(Brando.Forms.Form, %{key: key}), do: Brando.Forms.list_usage(key)

@@ -777,6 +777,7 @@ defmodule Brando.Query.Mutations do
          :ok <- Boundary.authorize(user, :delete, entry),
          :ok <- authorize_deletion(user, entry),
          :ok <- Brando.Translations.guard_delete(module, entry),
+         :ok <- Content.guard_delete(module, entry),
          soft_deletable? = module.__trait__(Trait.SoftDelete),
          {:ok, entry} <-
            if(soft_deletable?,
