@@ -115,17 +115,22 @@ defmodule Brando.Content.Proposals.AutoApply do
     {:waiting, reason}
   end
 
-  @doc false
-  # Inside `Proposals.apply/4`, before anything is locked: the stored
-  # operations, read fresh.
+  @doc """
+  Inside `Brando.Content.Proposals.apply/4`, before anything is locked:
+  raises unless the stored `record`'s operations qualify (`qualifies?/1`).
+  """
+  @spec qualify!(Record.t()) :: :ok
   def qualify!(%Record{operations: operations}) do
     unless qualifies?(operations), do: Error.fail!(not_qualified())
     :ok
   end
 
-  @doc false
-  # Inside the apply's transaction, holding the lock on the connection until
-  # it commits.
+  @doc """
+  Inside the apply's transaction: locks the connection until the commit and
+  raises unless it may apply this kind now (`Brando.MCP.lock_auto_apply/3`)
+  and `actor` may still review proposals (Assistant → Use).
+  """
+  @spec authorize!(%{grant_id: integer(), tenant: MCP.tenant()}, term()) :: :ok
   def authorize!(%{grant_id: grant_id, tenant: tenant}, actor) do
     case MCP.lock_auto_apply(grant_id, @kind, tenant) do
       {:ok, _grant} -> :ok
@@ -137,9 +142,12 @@ defmodule Brando.Content.Proposals.AutoApply do
     :ok
   end
 
-  @doc false
-  # After every operation ran, before the commit: each entry the proposal
-  # created is a draft, with no publishing date ahead.
+  @doc """
+  After every operation ran, before the commit: raises unless each entry
+  the proposal created (`{:new, ref}` in `saved`) is a draft with no
+  publishing date ahead. A content type without a status never is.
+  """
+  @spec unpublished!([{term(), struct(), term()}]) :: :ok
   def unpublished!(saved) do
     now = DateTime.utc_now()
 

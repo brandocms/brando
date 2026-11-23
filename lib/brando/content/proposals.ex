@@ -4103,18 +4103,9 @@ defmodule Brando.Content.Proposals do
       Error.protect(fn ->
         record = record!(id, actor)
 
-        if record.status == "applied" and !opts[:auto] do
-          {receipt(id, actor), []}
-        else
-          # Applied without review: the stored, pending version, when its
-          # frozen operations qualify
-          if opts[:auto], do: AutoApply.qualify!(record)
-          reviewable!(record, version, if(opts[:auto], do: "pending", else: "approved"))
-          proposal = rebuild!(record, actor)
-          current!(proposal, actor)
-          recheck!(proposal, record, actor)
-          apply!(proposal, actor, opts)
-        end
+        if record.status == "applied" and !opts[:auto],
+          do: {receipt(id, actor), []},
+          else: apply_record!(record, version, actor, opts)
       end)
 
     with {:ok, {receipt, saved}} <- result do
@@ -4122,6 +4113,17 @@ defmodule Brando.Content.Proposals do
       Enum.each(saved, &after_apply(&1, actor))
       {:ok, receipt}
     end
+  end
+
+  # Applied without review: the stored, pending version, when its frozen
+  # operations qualify
+  defp apply_record!(record, version, actor, opts) do
+    if opts[:auto], do: AutoApply.qualify!(record)
+    reviewable!(record, version, if(opts[:auto], do: "pending", else: "approved"))
+    proposal = rebuild!(record, actor)
+    current!(proposal, actor)
+    recheck!(proposal, record, actor)
+    apply!(proposal, actor, opts)
   end
 
   # What follows an editor's save, once the proposal is committed: the

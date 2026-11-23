@@ -615,37 +615,33 @@ defmodule Brando.MCP do
           :ok | {:error, :not_found | :forbidden | :invalid}
   def set_auto_apply(grant_id, kind, %User{} = actor) do
     with true <- kind in Grant.auto_apply_kinds() || {:error, :invalid},
-         {id, ""} <- Integer.parse(to_string(grant_id)) do
-      fn ->
-        with %Grant{} = grant <-
-               Repo.one(from(g in Grant, where: g.id == ^id and is_nil(g.revoked_at), lock: "FOR UPDATE")),
-             true <- can_manage?(actor, grant_tenant(grant)) || {:error, :forbidden} do
-          now = DateTime.utc_now()
-
-          grant
-          |> Ecto.Changeset.change(auto_apply: kind, auto_apply_set_by_id: actor.id, auto_apply_set_at: now)
-          |> Repo.update!()
-
-          details = %{"client" => grant.client_name, "mcp" => "auto_apply", "auto_apply" => kind}
-
-          in_tenant(grant_tenant(grant), fn ->
-            Brando.Activity.setting_changed(:updated, grant, grant.client_name, actor, details: details)
-          end)
-
-          :ok
-        else
-          {:error, reason} -> Repo.rollback(reason)
-          nil -> Repo.rollback(:not_found)
-        end
-      end
-      |> Repo.transaction()
-      |> case do
-        {:ok, :ok} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
+         {id, ""} <- Integer.parse(to_string(grant_id)),
+         {:ok, :ok} <- Repo.transaction(fn -> set_auto_apply!(id, kind, actor) end) do
+      :ok
     else
       {:error, reason} -> {:error, reason}
       _ -> {:error, :not_found}
+    end
+  end
+
+  defp set_auto_apply!(id, kind, actor) do
+    with %Grant{} = grant <-
+           Repo.one(from(g in Grant, where: g.id == ^id and is_nil(g.revoked_at), lock: "FOR UPDATE")),
+         true <- can_manage?(actor, grant_tenant(grant)) || {:error, :forbidden} do
+      grant
+      |> Ecto.Changeset.change(auto_apply: kind, auto_apply_set_by_id: actor.id, auto_apply_set_at: DateTime.utc_now())
+      |> Repo.update!()
+
+      details = %{"client" => grant.client_name, "mcp" => "auto_apply", "auto_apply" => kind}
+
+      in_tenant(grant_tenant(grant), fn ->
+        Brando.Activity.setting_changed(:updated, grant, grant.client_name, actor, details: details)
+      end)
+
+      :ok
+    else
+      {:error, reason} -> Repo.rollback(reason)
+      nil -> Repo.rollback(:not_found)
     end
   end
 
