@@ -3466,17 +3466,19 @@ defmodule Brando.Content.Proposals do
   admin's conversations — from a tool connected over MCP — newest first.
 
   Proposals under review and applied or undone ones are listed; superseded
-  and discarded versions are not. Every proposal under review is listed,
-  and of the applied and undone ones the newest `:limit` (default 30), so
-  proposals applied without review never push one that waits off the list.
-  The records carry what a list shows, not their operations: load one with
-  `get/2` to review it.
+  and discarded versions are not. Every proposal still under review is
+  listed, and of the applied, undone and expired ones the newest `:limit`
+  (default 30), so proposals applied without review never push one that
+  waits off the list. Both are read in one statement, so a proposal applied
+  meanwhile is listed once. The records carry what a list shows, not their
+  operations: load one with `get/2` to review it.
   """
   @spec list_external(term(), keyword()) :: [Record.t()]
   def list_external(actor, opts \\ []) do
+    now = DateTime.utc_now()
+
     listed = fn query ->
       from(r in query,
-        order_by: [desc: r.inserted_at],
         select:
           struct(r, [
             :id,
@@ -3494,16 +3496,20 @@ defmodule Brando.Content.Proposals do
       )
     end
 
-    waiting = Repo.all(listed.(from(r in external(actor), where: r.status in ~w(pending approved))))
-
     finished =
-      Repo.all(
-        from(r in listed.(from(r in external(actor), where: r.status in ~w(applied undone))),
+      listed.(
+        from(r in external(actor),
+          where: r.status in ~w(applied undone) or (r.status in ~w(pending approved) and r.expires_at <= ^now),
+          order_by: [desc: r.inserted_at],
           limit: ^Keyword.get(opts, :limit, 30)
         )
       )
 
-    Enum.sort_by(waiting ++ finished, & &1.inserted_at, {:desc, DateTime})
+    waiting = from(r in external(actor), where: r.status in ~w(pending approved) and r.expires_at > ^now)
+
+    from(r in listed.(waiting), union_all: ^finished)
+    |> Repo.all()
+    |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
   end
 
   @doc """

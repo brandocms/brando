@@ -599,6 +599,57 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert length(listed) == 31
       assert Proposals.count_external(c.user) == 1
     end
+
+    test "expired proposals fall under the review list's limit, read in one statement", c do
+      waiting = prepare(c, grant!(c.user, c.tenant), [create(c.source)])
+      now = DateTime.utc_now()
+      scope = record(waiting["proposal_id"]).scope
+
+      expired =
+        for n <- 1..31 do
+          %{
+            id: Ecto.UUID.generate(),
+            version: 1,
+            scope: scope,
+            actor_id: c.user.id,
+            origin: "mcp",
+            client: "Test Client",
+            operations: [],
+            fingerprints: %{},
+            module_versions: [],
+            problems: [],
+            effects: %{},
+            status: "pending",
+            expires_at: DateTime.add(now, -60, :second),
+            inserted_at: DateTime.add(now, -n, :second),
+            updated_at: now
+          }
+        end
+
+      Repo.insert_all(Record, expired)
+
+      # One statement, so an apply committing meanwhile cannot list a proposal twice
+      handler = "list-external-#{System.unique_integer([:positive])}"
+      test_pid = self()
+
+      :telemetry.attach(handler, Repo.config()[:telemetry_prefix] ++ [:query], fn _, _, meta, _ ->
+        if meta[:source] == "content_proposals", do: send(test_pid, :proposals_query)
+      end, nil)
+
+      listed =
+        try do
+          Proposals.list_external(c.user, limit: 5)
+        after
+          :telemetry.detach(handler)
+        end
+
+      assert_received :proposals_query
+      refute_received :proposals_query
+
+      assert hd(listed).id == waiting["proposal_id"]
+      assert length(listed) == 6
+      assert listed |> Enum.map(& &1.id) |> Enum.uniq() |> length() == 6
+    end
   end
 
   defp listed(c, grant) do
