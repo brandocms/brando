@@ -958,7 +958,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       <:class_line>
         <span class={["badge", status_badge(@row.status)]}>{RC.status_label(@row.status)}</span>
         <span :if={@row.class} class="badge badge--outline">{RC.class_label(@row.class)}</span>
-        {RC.class_help(@row.class)}
+        {class_help(@row)}
       </:class_line>
     </RC.detail_head>
     <RC.tabs tab={@tab} entries={length(@row_entries)} tabs={row_tabs(@row)} />
@@ -1191,7 +1191,9 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             "1 block",
             "%{count} blocks",
             item.moves.blocks
-          )}, {ngettext("1 entry", "%{count} entries", length(item.moves.entries))}<span :if={item.moves.unrevisioned > 0}> · {ngettext(
+          )}, {pngettext("release", "1 entry", "%{count} entries", length(item.moves.entries))}<span :if={
+            item.moves.unrevisioned > 0
+          }> · {ngettext(
             "1 entry keeps no history",
             "%{count} entries keep no history",
             item.moves.unrevisioned
@@ -1222,6 +1224,15 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   end
 
   defp choice_body(assigns), do: ~H""
+
+  # A row that only renames keeps nothing behind: its values move
+  defp class_help(%{class: :destructive, items: items} = row) do
+    if Enum.any?(items, & &1[:moves]) and not Enum.any?(items, & &1[:removes]),
+      do: gettext("Renames refs or vars. Blocks’ values move to the new names in the apply."),
+      else: RC.class_help(row.class)
+  end
+
+  defp class_help(row), do: RC.class_help(row.class)
 
   defp removed_keys(keys), do: Enum.map_join(keys, ", ", fn {kind, key} -> "#{key} (#{kind})" end)
 

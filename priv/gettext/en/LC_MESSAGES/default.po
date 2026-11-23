@@ -1242,7 +1242,6 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/components/form/subform.ex
-#: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 entry"
 msgid_plural "%{count} entries"
@@ -16328,6 +16327,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Rename, update and delete the listing views other people share. Everyone manages their own without it."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Renames refs or vars. Blocks’ values move to the new names in the apply."
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
