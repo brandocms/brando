@@ -301,7 +301,7 @@ defmodule Brando.Content.Definition.Importer do
     uid = definition["uid"]
     kind = definition["kind"]
     parent_id = parent_record_id(ctx.parents[uid], ctx.records)
-    validate_palette_reference!(definition, ctx)
+    palette = validate_palette_reference!(definition, ctx)
     changeset = Params.changeset(definition, record, ctx.bindings, ctx.creator, ctx.table_ids, parent_id)
     Model.apply_valid!(changeset, Model.subject(kind, uid))
     validate_ref_placements!(kind, changeset, uid, ctx.actor)
@@ -315,16 +315,22 @@ defmodule Brando.Content.Definition.Importer do
     block_ids = block_ids(kind, record)
 
     {action, reason} =
-      action(ctx, {state, source}, fn ->
-        classify(
-          definition,
-          old,
-          record,
-          changeset,
-          {baseline, digest, old_digest},
-          {ctx.parents[uid], ctx.current_parents[uid]}
-        )
-      end)
+      case palette do
+        {:in_trash, palette} ->
+          {:conflict, ~s(palette "#{palette}" is in the trash here; restore it to apply the files' version)}
+
+        :ok ->
+          action(ctx, {state, source}, fn ->
+            classify(
+              definition,
+              old,
+              record,
+              changeset,
+              {baseline, digest, old_digest},
+              {ctx.parents[uid], ctx.current_parents[uid]}
+            )
+          end)
+      end
 
     %{
       kind: kind,
@@ -470,7 +476,9 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   # A container's palette is in the files, or here and readable by the
-  # actor; one in the trash is neither
+  # actor; one in the trash is neither. Against the database's baseline (a
+  # release, a revert), one in the trash makes the container a conflict, as
+  # a definition in the trash is one, and the rest of the plan goes on.
   defp validate_palette_reference!(%{"kind" => "container", "palette" => palette, "uid" => uid}, ctx)
        when is_binary(palette) do
     cond do
@@ -480,6 +488,11 @@ defmodule Brando.Content.Definition.Importer do
       id = References.palette_id(palette) ->
         if Boundary.authorize_record(ctx.actor, :read, Palette, id) != :ok,
           do: Error.raise!(Model.subject("container", uid), ~s(palette "#{palette}": forbidden))
+
+        :ok
+
+      ctx.mode == :database and Repo.get_by(Palette, uid: palette) ->
+        {:in_trash, palette}
 
       true ->
         Error.raise!(Model.subject("container", uid), ~s(palette "#{palette}" is neither in the files nor here))

@@ -790,7 +790,10 @@ which still imports.
 An import writes palettes first, then containers, then table templates and
 modules, so a container or a var can point at a palette the same import
 creates. A container whose palette is neither in the files nor here is
-refused when planning, by name; a palette in the trash doesn't count. A
+refused when planning, by name; a palette in the trash doesn't count: against
+the lockfile that refuses the plan, and against the database (a release, a
+revert, files without a lockfile for this database) the container is a
+conflict until the palette is restored, so a revert lists it with the others. A
 container whose default palette is in the trash here is exported without
 one, and the export (the admin's and `mix brando.modules export`) and the
 plan name that palette: an import of the file keeps the link, so restoring

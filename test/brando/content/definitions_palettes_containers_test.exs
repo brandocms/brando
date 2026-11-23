@@ -307,7 +307,8 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert Enum.all?(plan.items, &(&1.reason == "target changed since export"))
     end
 
-    test "a container whose palette is neither in the files nor here is refused, by name; one in the trash too", c do
+    test "a container whose palette is neither in the files nor here is refused, by name; one in the trash is a conflict",
+         c do
       assert {:ok, bundle} = Definitions.read(fixtures!(c.path, ~w(tinted)))
       assert {:error, message} = Definitions.plan(bundle, c.user)
       assert message =~ ~s(container "acme-container-tinted")
@@ -319,7 +320,11 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert actions(plan) == %{"acme-container-tinted" => :create}
 
       assert {:ok, _} = Brando.Content.delete_palette(palette.id, c.user)
-      assert {:error, message} = Definitions.plan(bundle, c.user)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      assert [%{action: :conflict, reason: reason}] = plan.items
+      assert reason =~ ~s(palette "acme-palette-paper" is in the trash here)
+      refute Plan.applicable?(plan)
+      assert {:error, message} = Definitions.plan(bundle, c.user, baseline: :lockfile)
       assert message =~ "is neither in the files nor here"
     end
 
@@ -771,6 +776,20 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
         assert hd(Repo.get!(Palette, c.palette.id).colors).hex_value == "#f0f0f0"
         assert {:ok, %{reverted: [_]}} = Batches.revert(Batches.get(batch_id), c.user)
         assert swatches(Repo.get!(Palette, c.palette.id)) == swatches(c.palette)
+      end)
+    end
+
+    test "a revert lists a container whose previous palette is now in the trash as a conflict", c do
+      night_release!(c)
+
+      manual(fn ->
+        assert {:ok, %{batch_id: batch_id}} = Release.apply([c.container.uid], release_opts(c, wait: false))
+        assert {:ok, _} = Brando.Content.delete_palette(c.palette.id, c.user)
+
+        assert {:ok, %{revert: [], conflicts: [conflict]}} = Batches.preview(Batches.get(batch_id), c.user)
+        assert %{uid: uid, action: :conflict, reason: reason} = conflict
+        assert uid == c.container.uid
+        assert reason =~ ~s(palette "#{c.palette.uid}" is in the trash here)
       end)
     end
 
