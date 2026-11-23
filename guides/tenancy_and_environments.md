@@ -1548,9 +1548,13 @@ measuring fails keeps its last snapshot, and the screen says which day a
 figure is from; a day with traffic and no measurement shows storage as
 unknown, never as zero, and no change is shown without two measurements in
 the 30 days. Folders are walked without following links inside them, and kept
-builds are measured whatever the site's delivery is today. An application
-with its own `config :brando, Oban` adds the queue and the cron entry itself;
-the System check names them when they are missing:
+builds are measured whatever the site's delivery is today; the builds are
+reached from the site's folder only through folders that are no links. A
+sizing query that fails fails the site's measurement, so it keeps its last
+snapshot rather than a smaller total. Brando's default Oban configuration has
+the queue and the cron entry with `tenancy_mode: :multi` only. An application
+with its own `config :brando, Oban` adds both itself on a `:multi`
+installation; the System check names them when they are missing there:
 
 ```elixir
 queues: [site_usage: [limit: 1], ...],
@@ -1567,12 +1571,21 @@ plug Plug.Static, ...
 
 A request counts for a site when its host is one of an active site's
 environment domains or redirect hosts, whatever answers it: a page, a static
-file, a media file, a redirect or a 404. The admin's host, a shared preview on
-it, an inactive site's host and a host no site has count for nobody. Nothing
+file, a media file, a redirect or a 404. The admin's host and the
+installation's other hosts (its static, media and CDN hosts), a shared preview
+on them, an inactive site's host and a host no site has count for nobody, also
+when a site was bound to one of the installation's hosts before that was
+refused. Nothing
 is stored but the site, the UTC day the request arrived, one request and the
 bytes of the response body as the application sent it: a file's length, or a
-range response's range, and 0 for HEAD and 304. Counts are kept in memory on
-each node and added to the day's row every minute and when the node stops.
+range response's range, and 0 for HEAD and 304. A file is sized by the file
+the serving code names (`Brando.Plug.Usage.put_file/2`, as Brando's media,
+site assets, static delivery, preview and sitemap do) or, for the release's
+`Plug.Static`, by the file it serves; a file response nobody named counts as a
+request with 0 bytes. Counts are kept in memory on each node and added to the
+day's row every minute and when the node stops. The endpoint starts before
+the counters and stops after them, so the requests a node answers in its
+first moments and after that last write are not counted.
 
 Limits:
 
@@ -1582,6 +1595,14 @@ Limits:
 - A chunked response counts as a request with 0 bytes, and WebSocket and
   long-poll connections (LiveView on a site's pages) are not counted: Phoenix
   dispatches them before the endpoint's plugs.
+- An error raised by a plug before the router, such as `Plug.Parsers`
+  answering 400 or 413 to a body it cannot read, is not counted: Phoenix
+  renders it from the request as the endpoint received it, before the plug saw
+  it. A path no route matches and an error in a controller are counted.
+- Archives of a site whose key is very long are cut short when named. Those of
+  its current environments, and those the environment log records, are
+  counted; one of an environment deleted before the log recorded archives may
+  be missing from the figure.
 - A site published to another host (`rsync`, `s3`) shows what still reaches
   this installation; the screen says where it is published to.
 - The installation's total is the sum of the measured sites. Databases on

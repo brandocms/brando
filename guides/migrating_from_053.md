@@ -1112,8 +1112,9 @@ server's database, or against a copy you then restore to the server
    ```
 
    `Brando.Worker.SiteUsage` and its `site_usage` queue measure each site's
-   storage with `tenancy_mode: :multi`, and do nothing in the other modes; the
-   System check names them when they are missing in `:multi`
+   storage with `tenancy_mode: :multi`; Brando's default configuration has
+   them in `:multi` only, and an application adds them only there. The System
+   check names them when they are missing in `:multi`
    ([Usage per site](tenancy_and_environments.md#usage-per-site)).
 
 7. **With group authorization, grant the Notifications permission**
