@@ -48,6 +48,27 @@ defmodule Brando.Content.Proposals.Translate do
         }
 end
 
+defmodule Brando.Content.Proposals.SyncTranslation do
+  @moduledoc """
+  Save the synchronized translation `target` (`{schema, id}`) with its
+  pending version as it is, as saving its form without editing it does:
+  links, media and source-controlled values follow the source, and the work
+  items that save resolves (`relinked`, `shared_update`) are resolved. Text
+  units stay open, for `Translate`; `awaiting_translation` items stay open
+  until the linked content's version in this language exists.
+
+  `takes` is what the save takes, counted from the translation's open work
+  when the proposal is prepared (string keys: `"links"`, `"media"`,
+  `"values"`), and checked again at approve and apply.
+  `Brando.Content.Proposals.prepare/2` always counts it, never taking it
+  from the operation it is given.
+  """
+  @enforce_keys [:target]
+  defstruct [:target, :takes]
+
+  @type t :: %__MODULE__{target: {module(), integer()} | {:new, String.t()}, takes: map() | nil}
+end
+
 defmodule Brando.Content.Proposals.SetFields do
   @moduledoc """
   Change attributes of an existing entry. `target` is `{schema, id}`.

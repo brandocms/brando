@@ -432,12 +432,26 @@ msgid_plural "%{count} jobs"
 msgstr[0] "%{count} jobb"
 msgstr[1] "%{count} jobber"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} link now pointing at this language's version"
+msgid_plural "%{count} links now pointing at this language's versions"
+msgstr[0] "%{count} lenke som nå peker til versjonen på dette språket"
+msgstr[1] "%{count} lenker som nå peker til versjonene på dette språket"
+
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} link waiting"
 msgid_plural "%{count} links waiting"
 msgstr[0] "%{count} lenke venter"
 msgstr[1] "%{count} lenker venter"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} media selection from the source"
+msgid_plural "%{count} media selections from the source"
+msgstr[0] "%{count} medievalg fra kilden"
+msgstr[1] "%{count} medievalg fra kilden"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -606,6 +620,13 @@ msgid "%{count} size"
 msgid_plural "%{count} sizes"
 msgstr[0] "%{count} størrelse"
 msgstr[1] "%{count} størrelser"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} source-controlled value"
+msgid_plural "%{count} source-controlled values"
+msgstr[0] "%{count} kildestyrt verdi"
+msgstr[1] "%{count} kildestyrte verdier"
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -10550,6 +10571,18 @@ msgid_plural "Its %{count} submissions are deleted with it."
 msgstr[0] "Innsendingen slettes sammen med det."
 msgstr[1] "De %{count} innsendingene slettes sammen med det."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its texts are not changed."
+msgstr "Tekstene endres ikke."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its texts are not changed: %{count} is left to translate."
+msgid_plural "Its texts are not changed: %{count} are left to translate."
+msgstr[0] "Tekstene endres ikke: %{count} gjenstår å oversette."
+msgstr[1] "Tekstene endres ikke: %{count} gjenstår å oversette."
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
@@ -19563,6 +19596,16 @@ msgstr "Tabelldata"
 msgid "Take editing back"
 msgstr "Ta tilbake redigeringen"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Takes %{changes}."
+msgstr "Henter %{changes}."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Takes the blocks its source added, moved or removed since the last save."
+msgstr "Henter blokkene kilden har lagt til, flyttet eller fjernet siden forrige lagring."
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
@@ -20725,6 +20768,11 @@ msgstr "Det foreslåtte innholdet i nettstedets egne maler. Ingenting lagres."
 #, elixir-autogen, elixir-format
 msgid "The proposed side is rendered by the server with the release’s definitions; nothing is saved."
 msgstr "Siden til høyre gjengis av serveren med releasens definisjoner; ingenting lagres."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The published page changes when this is applied."
+msgstr "Den publiserte siden endres når dette tas i bruk."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -22612,10 +22660,20 @@ msgstr "Oppdatering"
 msgid "Update policy"
 msgstr "Oppdateringsregel"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Update the %{language} version from its source"
+msgstr "Oppdater versjonen på %{language} fra kilden"
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Update the identifiers used to reference content."
 msgstr "Oppdater identifikatorene som brukes til å referere til innhold."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Update the translation from its source"
+msgstr "Oppdater oversettelsen fra kilden"
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format

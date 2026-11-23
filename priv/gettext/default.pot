@@ -430,10 +430,24 @@ msgid_plural "%{count} jobs"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} link now pointing at this language's version"
+msgid_plural "%{count} links now pointing at this language's versions"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} link waiting"
 msgid_plural "%{count} links waiting"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} media selection from the source"
+msgid_plural "%{count} media selections from the source"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -602,6 +616,13 @@ msgstr[1] ""
 #, elixir-format, elixir-autogen
 msgid "%{count} size"
 msgid_plural "%{count} sizes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} source-controlled value"
+msgid_plural "%{count} source-controlled values"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -10548,6 +10569,18 @@ msgid_plural "Its %{count} submissions are deleted with it."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its texts are not changed."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its texts are not changed: %{count} is left to translate."
+msgid_plural "Its texts are not changed: %{count} are left to translate."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
@@ -19561,6 +19594,16 @@ msgstr ""
 msgid "Take editing back"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Takes %{changes}."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Takes the blocks its source added, moved or removed since the last save."
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
@@ -20720,6 +20763,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "The proposed side is rendered by the server with the release’s definitions; nothing is saved."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The published page changes when this is applied."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -22608,9 +22656,19 @@ msgstr ""
 msgid "Update policy"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Update the %{language} version from its source"
+msgstr ""
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Update the identifiers used to reference content."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Update the translation from its source"
 msgstr ""
 
 #: lib/brando_admin/live/users/user_form_live.ex

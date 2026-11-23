@@ -152,8 +152,9 @@ defmodule Brando.Content.Proposals.TranslationWork do
       other: listed,
       other_total: length(other),
       other_note:
-        "Not answerable with text: a link waiting for its target's translation, or a value updated from the " <>
-          "source. They are listed as the editor sees them, the first of other_total; they resolve in the admin."
+        "Not answerable with text; the first of other_total. relinked and shared_update items (links, media and " <>
+          "values the source set) resolve with one sync_translation operation in prepare_proposal, beside any " <>
+          "translate. awaiting_translation resolves once the linked content exists in this language."
     })
   end
 

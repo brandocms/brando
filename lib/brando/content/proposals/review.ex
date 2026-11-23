@@ -32,6 +32,7 @@ defmodule Brando.Content.Proposals.Review do
     SetBlockValues,
     SetFields,
     SetRefConfig,
+    SyncTranslation,
     Translate
   }
 
@@ -123,7 +124,7 @@ defmodule Brando.Content.Proposals.Review do
   defp entry({schema, id} = target, entry, proposal) do
     changes =
       field_changes(target, entry, proposal) ++
-        block_changes(target, entry, proposal) ++ translate_changes(target, proposal)
+        block_changes(target, entry, proposal) ++ translate_changes(target, proposal) ++ sync_changes(target, proposal)
 
     described = Catalog.describe(entry)
 
@@ -229,6 +230,26 @@ defmodule Brando.Content.Proposals.Review do
 
       _ ->
         []
+    end
+  end
+
+  # What a sync_translation takes from the source, as counted when the
+  # proposal was prepared, and, while it can be applied, how many texts its
+  # save leaves to translate.
+  defp sync_changes(target, proposal) do
+    ops = for {%SyncTranslation{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
+    context = ops != [] && translate_context(target, proposal)
+    open? = proposal.status in ~w(pending approved)
+
+    for {op, index} <- ops do
+      %{
+        type: :sync_translation,
+        language: context && to_string(context.language),
+        takes: Map.new(~w(links media values)a, &{&1, Map.get(op.takes || %{}, to_string(&1), 0)}),
+        open: if(context && open?, do: length(context.pending.open)),
+        live?: target in (proposal.effects[:live] || []),
+        operations: [index]
+      }
     end
   end
 

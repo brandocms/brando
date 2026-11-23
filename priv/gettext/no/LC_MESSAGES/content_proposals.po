@@ -270,8 +270,8 @@ msgstr "Et mål trenger en numerisk id."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "A translate operation in this proposal fills in this translation, and it can be the only kind of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
-msgstr "En translate-operasjon i dette forslaget fyller ut denne oversettelsen, og den kan være den eneste typen operasjon på den: strukturen følger kilden, og teksten lagres slik oversettelsesskjemaet lagrer den. Legg denne endringen i et annet forslag, eller teksten i translate-operasjonen."
+msgid "A translate or sync_translation operation in this proposal saves this translation, and those can be the only kinds of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
+msgstr "En translate- eller sync_translation-operasjon i dette forslaget lagrer denne oversettelsen, og de kan være de eneste typene operasjon på den: strukturen følger kilden, og teksten lagres slik oversettelsesskjemaet lagrer den. Legg denne endringen i et annet forslag, eller teksten i translate-operasjonen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -655,6 +655,11 @@ msgstr "Kilden til en oversettelse ble endret etter at dette forslaget ble laget
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source of a translation changed its links, media or source-controlled values after this proposal was prepared. Prepare the sync_translation again."
+msgstr "Kilden til en oversettelse endret lenker, media eller kildestyrte verdier etter at dette forslaget ble laget. Lag sync_translation på nytt."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The source of this translation is not available to you."
 msgstr "Kilden til denne oversettelsen er ikke tilgjengelig for deg."
 
@@ -926,6 +931,11 @@ msgstr "Denne oversettelsen er uavhengig: den følger ikke lenger kilden og har 
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This translation is up to date with its source: its links, media and source-controlled values are the source's, and there is nothing for sync_translation to take. Leave it out; its texts are answered with translate."
+msgstr "Denne oversettelsen er oppdatert mot kilden: lenkene, mediene og de kildestyrte verdiene er kildens, og sync_translation har ingenting å hente. Utelat den; tekstene besvares med translate."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Two new entries use the same reference."
 msgstr "To nye oppføringer bruker samme referanse."
 
@@ -1075,6 +1085,11 @@ msgstr "rows er en liste med objekter."
 #, elixir-autogen, elixir-format
 msgid "source is a saved entry: {content_type, id}."
 msgstr "source er en lagret oppføring: {content_type, id}."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "sync_translation names the translation an operation in this proposal creates: a new copy is its source's, with nothing to take from it. Leave sync_translation out."
+msgstr "sync_translation viser til oversettelsen en operasjon i dette forslaget oppretter: en ny kopi er kildens, uten noe å hente fra den. Utelat sync_translation."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format

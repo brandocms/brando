@@ -148,6 +148,30 @@ defmodule Brando.Content.Proposals.ConnectionTest do
       assert definition.description =~ "replaced_images"
     end
 
+    test "a proposal syncing a translation says what its save takes from the source", c do
+      alias Brando.SyncTest.Article
+
+      {:ok, source} =
+        Brando.SyncTest.create_article(
+          %{title: "Fjordhuset", slug: "fjordhuset-sync", language: "no", status: "published"},
+          c.user
+        )
+
+      {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, c.user)
+      {:ok, _} = Brando.SyncTest.update_article(source.id, %{year: 2001}, c.user)
+      {:ok, source} = Brando.Translations.load_entry(Article, source.id)
+      Brando.Translations.source_saved(source)
+
+      op = %{"op" => "sync_translation", "target" => %{"content_type" => "Brando.SyncTest.Article", "id" => target.id}}
+      id = prepare!(mcp(c), [op], "Take the year")
+
+      assert [%{proposal_id: ^id, synced_translations: synced}] = list!(mcp(c))
+      assert synced == [%{content_type: "Brando.SyncTest.Article", id: target.id, links: 0, media: 0, values: 1}]
+
+      [definition] = Enum.filter(Tools.definitions(:mcp), &(&1.name == "list_proposals"))
+      assert definition.description =~ "synced_translations"
+    end
+
     test "says when a pending or approved proposal has expired", c do
       id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
       set!(id, expires_at: DateTime.add(DateTime.utc_now(), -60, :second))

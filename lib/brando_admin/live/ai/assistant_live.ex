@@ -1593,6 +1593,20 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  # Saving a translation's pending version as it is: what it takes from its
+  # source, counted when the proposal was prepared, and the texts it leaves.
+  defp change(%{change: %{type: :sync_translation}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title" data-testid="assistant-sync-translation">
+      {if @change.language,
+        do: gettext("Update the %{language} version from its source", language: language_label(@change.language)),
+        else: gettext("Update the translation from its source")}
+    </span>
+    <p class="assistant-placement">{sync_takes(@change.takes)}</p>
+    <p class="assistant-placement">{sync_note(@change)}</p>
+    """
+  end
+
   defp change(%{change: %{type: :fields}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Change fields")}</span>
@@ -1875,6 +1889,43 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp pending_note(_pending), do: nil
+
+  defp sync_takes(%{links: 0, media: 0, values: 0}),
+    do: gettext("Takes the blocks its source added, moved or removed since the last save.")
+
+  defp sync_takes(%{links: links, media: media, values: values}) do
+    taken =
+      Enum.reject(
+        [
+          links > 0 &&
+            ngettext(
+              "%{count} link now pointing at this language's version",
+              "%{count} links now pointing at this language's versions",
+              links
+            ),
+          media > 0 &&
+            ngettext("%{count} media selection from the source", "%{count} media selections from the source", media),
+          values > 0 && ngettext("%{count} source-controlled value", "%{count} source-controlled values", values)
+        ],
+        &(&1 == false)
+      )
+
+    gettext("Takes %{changes}.", changes: Enum.join(taken, ", "))
+  end
+
+  defp sync_note(change) do
+    texts =
+      if change.open in [nil, 0],
+        do: gettext("Its texts are not changed."),
+        else:
+          ngettext(
+            "Its texts are not changed: %{count} is left to translate.",
+            "Its texts are not changed: %{count} are left to translate.",
+            change.open
+          )
+
+    if change.live?, do: texts <> " " <> gettext("The published page changes when this is applied."), else: texts
+  end
 
   ## Events
 
