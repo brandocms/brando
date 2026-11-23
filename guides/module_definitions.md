@@ -1015,6 +1015,15 @@ older version of the module. A value that is empty or equal to the
 definition's default gives way. The apply plans the moves again with the
 blocks locked, and rolls back everything, definitions included, with
 "content changed since you reviewed it" when a block changed since the plan.
+An editor who saves one of those blocks at the same moment can make the
+database stop the apply; nothing is applied, and you try again.
+
+Every editor's save in the environment waits while values move, so one
+apply moves values in at most 500 entries or 1,500 blocks, counted across
+all the modules it selects (a 500-entry move takes under two seconds). The
+plan refuses renames over that: apply fewer of those modules at a time, or
+take `renamed_from` out and move the values with `resolve --map` after the
+apply.
 
 `renamed_from` is read from the file and never stored: the database keeps no
 rename, and an export doesn't write it. Keep it in the file until every
@@ -1022,8 +1031,9 @@ environment has applied that release. After its apply it does nothing. In an
 environment that already defines the new key, or no longer the old one, the
 apply keeps the old key in the blocks as a leftover, as for a removal, and
 the plan prints the resolve command that moves it (`--map var:title=heading`)
-when a dry run of it moves something and refuses nothing; otherwise it
-points to **Resolve blocks**. Without `renamed_from`, a rename is a removal
+when a dry run of it moves something, refuses nothing and replaces no
+block's value, and the old ref has no blocks in its region or footnotes
+(`--map` doesn't move those); otherwise it points to **Resolve blocks**. Without `renamed_from`, a rename is a removal
 and an addition, and `--map OLD=NEW` moves the values afterwards:
 
 ```sh
