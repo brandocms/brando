@@ -346,10 +346,11 @@ defmodule Brando.Content.Module do
     end
   end
 
-  # The module's children with their refs, nil for a module not yet stored
-  defp media_drop_children(%__MODULE__{id: nil}), do: nil
+  # The module's children with their refs, nil for a module not yet stored.
+  # Plain map patterns: the struct is defined after this function is compiled.
+  defp media_drop_children(%{id: nil}), do: nil
 
-  defp media_drop_children(%__MODULE__{} = module) do
+  defp media_drop_children(module) do
     children = from(c in __MODULE__, where: is_nil(c.deleted_at), order_by: [asc: c.sequence, asc: c.id])
 
     module
