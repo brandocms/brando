@@ -26,32 +26,28 @@ defmodule Brando.Content.Definition.Baselines do
   # (`"palette:12"`): its definition is spelled, and its digest taken again,
   # with the uid of that palette here, as a plan spells it today
   defp respelled(rows) do
-    ids = for row <- rows, id <- palette_ids(row.definition), uniq: true, do: id
+    uids = rows |> Enum.flat_map(&palette_ids(&1.definition)) |> Enum.uniq() |> palette_uids()
+    Enum.map(rows, &respelled(&1, uids))
+  end
 
-    uids =
-      if ids == [],
-        do: %{},
-        else:
-          Repo.all(
-            from(p in Brando.Content.Palette,
-              where: p.id in ^ids and is_nil(p.deleted_at) and not is_nil(p.uid),
-              select: {p.id, p.uid}
-            )
-          )
-          |> Map.new()
-
-    if uids == %{} do
-      rows
+  defp respelled(row, uids) do
+    if Enum.any?(palette_ids(row.definition), &is_map_key(uids, &1)) do
+      definition = Map.update!(row.definition, "vars", fn vars -> Enum.map(vars, &respell_var(&1, uids)) end)
+      %{row | definition: definition, digest: digest(definition, %{})}
     else
-      Enum.map(rows, fn row ->
-        if Enum.any?(palette_ids(row.definition), &is_map_key(uids, &1)) do
-          definition = respell(row.definition, uids)
-          %{row | definition: definition, digest: digest(definition, %{})}
-        else
-          row
-        end
-      end)
+      row
     end
+  end
+
+  defp palette_uids([]), do: %{}
+
+  defp palette_uids(ids) do
+    from(p in Brando.Content.Palette,
+      where: p.id in ^ids and is_nil(p.deleted_at) and not is_nil(p.uid),
+      select: {p.id, p.uid}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   defp palette_ids(definition) do
@@ -60,17 +56,11 @@ defmodule Brando.Content.Definition.Baselines do
         do: id
   end
 
-  defp respell(definition, uids) do
-    Map.update!(definition, "vars", fn vars ->
-      Enum.map(vars, fn var ->
-        update_in(var, ["assets", "palette"], fn token ->
-          case References.canonical_binding(token, "palette") do
-            %{"id" => id} when is_map_key(uids, id) -> "palette@" <> uids[id]
-            _ -> token
-          end
-        end)
-      end)
-    end)
+  defp respell_var(var, uids) do
+    case References.canonical_binding(get_in(var, ["assets", "palette"]), "palette") do
+      %{"id" => id} when is_map_key(uids, id) -> put_in(var, ["assets", "palette"], "palette@" <> uids[id])
+      _ -> var
+    end
   end
 
   @doc """

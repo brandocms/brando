@@ -109,21 +109,22 @@ defmodule Brando.Content.Definitions do
     if uids && left_out != [], do: forbidden!()
     named = named_palettes(bundle, containers)
 
-    palettes =
-      Enum.filter(bundle["palettes"], fn palette ->
-        cond do
-          allowed?.(palette) -> true
-          subject = named[palette["uid"]] -> Error.raise!(subject, ~s(palette "#{palette["uid"]}": export forbidden))
-          uids -> forbidden!()
-          true -> false
-        end
-      end)
+    palettes = Enum.filter(bundle["palettes"], &exportable_palette?(&1, allowed?, named, uids))
 
     if containers == bundle["containers"] and palettes == bundle["palettes"] do
       bundle
     else
       bundle = %{bundle | "containers" => containers, "palettes" => palettes}
       Map.put(bundle, "baseline", Snapshot.baselines(bundle))
+    end
+  end
+
+  defp exportable_palette?(palette, allowed?, named, uids) do
+    cond do
+      allowed?.(palette) -> true
+      subject = named[palette["uid"]] -> Error.raise!(subject, ~s(palette "#{palette["uid"]}": export forbidden))
+      uids -> forbidden!()
+      true -> false
     end
   end
 
