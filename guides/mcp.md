@@ -280,7 +280,9 @@ Applied, the result has `applied: true`, `status: "applied"` and `created`
 attempt is kept: the proposal waits for review, unapproved, and the result
 has `applied: false` and `not_applied`, a sentence saying why. When the
 person cancelled or applied the proposal in the admin while it was being
-tried, the result says so, with its `status` and no `review_url`. A waiting
+tried, the result says so, with its `status` and no `review_url`. Why a
+proposal waits is kept with it: `list_proposals` returns it as
+`not_applied`, and its review page shows it. A waiting
 proposal does not count as one with problems, so the tool's next proposal
 does not replace it. The Assistant and the local development server never
 apply a proposal so.

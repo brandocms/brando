@@ -432,6 +432,26 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert AutoApply.unpublished!(saved.(page)) == :ok
     end
 
+    test "why it waits is kept, and list_proposals returns it", c do
+      grant = grant!(c.user, c.tenant)
+      result = prepare(c, grant, [create(c.source)])
+      stored = assert_waiting(c, result, "not set to apply")
+
+      assert [%{status: "pending", not_applied: reason}] = listed(c, grant)
+      assert reason == stored.auto_apply_reason
+    end
+
+    test "a proposal with problems is not tried, and why is kept as for any other reason", c do
+      grant = allowed!(c)
+      bad = c |> translate(c.source) |> Map.put("source_digest", "stale")
+      result = prepare(c, grant, [create(c.source), bad])
+
+      assert %{"applied" => false, "applicable" => false, "not_applied" => reason} = result
+      assert reason =~ "fix its problems first"
+      assert record(result["proposal_id"]).auto_apply_reason == reason
+      assert [%{not_applied: ^reason}] = listed(c, grant)
+    end
+
     test "a waiting proposal is not one with problems: the tool's next proposal leaves it alone", c do
       waiting = prepare(c, grant!(c.user, c.tenant), [create(c.source)])
       other = article!(c.user, c.module)

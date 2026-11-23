@@ -341,6 +341,7 @@ defmodule Brando.Content.Proposals.Tools do
           "changed_by where it is known (\"person\": the person approved, applied or undid it in the admin; " <>
           "\"connection\": it was applied without review, as the connection allows), " <>
           "applied_automatically: true when it was applied without review (and perhaps undone by the person since), " <>
+          "not_applied: why one you asked to apply without review waits for review instead, " <>
           "expires_at, expired: true when a pending or approved proposal can no longer be approved (prepare it again), " <>
           "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id). " <>
           "A proposal that replaces an image's file lists it in replaced_images ({kind, id, with: {kind, id}}: the library image that takes the file of the one in with), " <>
@@ -887,14 +888,13 @@ defmodule Brando.Content.Proposals.Tools do
   # Stored and committed already; applied now when the connection and the
   # operations allow it, else it waits for review as any proposal does.
   # A proposal with problems is not tried.
-  defp auto_apply(%{problems: [_ | _]} = proposal, _context) do
-    proposal
-    |> review()
-    |> Map.merge(%{applied: false, not_applied: "It was not applied: fix its problems first. It waits for review."})
-  end
-
   defp auto_apply(proposal, context) do
-    case AutoApply.run(proposal.id, proposal.version, context.actor, context.grant_id, context.tenant) do
+    outcome =
+      if proposal.problems == [],
+        do: AutoApply.run(proposal.id, proposal.version, context.actor, context.grant_id, context.tenant),
+        else: AutoApply.with_problems(proposal.id, proposal.version)
+
+    case outcome do
       # What it replaced and what changes nothing, as a review says them
       {:applied, receipt} ->
         %{
@@ -1023,6 +1023,13 @@ defmodule Brando.Content.Proposals.Tools do
       entries: proposal_entries(record.operations, created)
     }
     |> Map.merge(listed_summary(record.summary))
+    # Why it was not applied without review, while it waits
+    |> Map.merge(
+      if(record.auto_apply_reason && record.status in ~w(pending approved),
+        do: %{not_applied: record.auto_apply_reason},
+        else: %{}
+      )
+    )
     |> Map.merge(replaced_images(record.operations))
     |> Map.merge(if(expired?, do: %{expired: true}, else: %{}))
     |> Map.merge(if(superseded_by, do: %{superseded_by: superseded_by}, else: %{}))

@@ -848,6 +848,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
               "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
             )}
           </p>
+          <p :if={!@shared and @under_review? and @proposal.auto_apply_reason} id="assistant-auto-apply-reason">
+            {@proposal.auto_apply_reason}
+          </p>
         </div>
         <p :if={!@preview} class="assistant-counts">
           <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>

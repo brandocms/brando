@@ -108,6 +108,18 @@ defmodule Brando.Content.Proposals.AutoApply do
     outcome(id, version, grant_id, reason)
   end
 
+  @doc """
+  For a proposal stored with problems, which is not tried: what is stored,
+  as `run/5` says it, with why it was not applied kept on the version.
+  """
+  @spec with_problems(Ecto.UUID.t(), pos_integer()) :: {:waiting, String.t()} | {:settled, String.t(), String.t()}
+  def with_problems(id, version) do
+    reason =
+      dgettext("content_proposals", "It was not applied automatically: fix its problems first. It waits for review.")
+
+    outcome(id, version, nil, reason)
+  end
+
   # The apply's own refusal (content changed, a validation) is said as why
   # it was not applied
   defp reason(message) do

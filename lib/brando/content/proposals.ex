@@ -4268,7 +4268,8 @@ defmodule Brando.Content.Proposals do
         origin: record.origin,
         client: record.client,
         supersedes_id: record.supersedes_id,
-        expires_at: record.expires_at
+        expires_at: record.expires_at,
+        auto_apply_reason: record.auto_apply_reason
     }
   end
 
