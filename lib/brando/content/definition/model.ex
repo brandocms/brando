@@ -370,7 +370,9 @@ defmodule Brando.Content.Definition.Model do
         :ok
 
       {_field, message, keys} ->
-        text = Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
+        text =
+          Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
+
         Error.raise!(definition["uid"], "media_drop: " <> text)
     end
   end

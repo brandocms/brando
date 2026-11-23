@@ -162,8 +162,9 @@ section.alert.danger {
   flex-direction: column;
   align-items: center;
   row-gap: 4px;
-  width: 100%;
-  margin-top: 12px;
+  /* In line with the entries above it (`.block-children`) */
+  width: calc(100% - 20px);
+  margin: 12px 10px 0;
   padding: 16px;
   border: 1px dashed var(--brando-line);
   border-radius: 10px;

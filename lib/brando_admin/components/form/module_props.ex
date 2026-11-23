@@ -127,7 +127,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
       id={"#{@form.id}-media_drop_child"}
       field={@form[:media_drop_child]}
       label={gettext("Dropped media creates")}
-      instructions={gettext("Images and videos dropped on this module's blocks each become a new entry of this child module.")}
+      instructions={
+        gettext("Images and videos dropped on this module's blocks each become a new entry of this child module.")
+      }
       opts={[options: @child_options, resetable: true]}
     />
     <.live_component

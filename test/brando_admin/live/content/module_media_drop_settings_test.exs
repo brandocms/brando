@@ -12,7 +12,8 @@ defmodule BrandoAdmin.Live.Content.ModuleMediaDropSettingsTest do
   defp create_module(user, attrs) do
     {:ok, module} =
       Brando.Content.create_module(
-        Factory.params_for(:module,
+        Factory.params_for(
+          :module,
           Map.merge(
             %{
               name: %{"en" => "Row"},

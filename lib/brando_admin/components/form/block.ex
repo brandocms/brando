@@ -1060,7 +1060,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp insert_child_module(%{sequence: sequence, module_id: module_id, type: type}, socket) do
     module_reference = Brando.Content.SharedLibrary.reference(module_id)
     sequence = (is_binary(sequence) && String.to_integer(sequence)) || sequence
-    empty_block_cs = BlockField.build_block(module_reference, socket.assigns.current_user_id, nil, socket.assigns.block_module, type)
+
+    empty_block_cs =
+      BlockField.build_block(module_reference, socket.assigns.current_user_id, nil, socket.assigns.block_module, type)
+
     uid = Changeset.get_field(empty_block_cs, :uid)
 
     socket
