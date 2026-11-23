@@ -1899,10 +1899,7 @@ defmodule Brando.Translations do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    slug_fields =
-      Enum.map(schema.__slug_fields__(), fn %{name: name} ->
-        {name, fn _entry, value -> Utils.slugify("#{value}-#{language}") end}
-      end)
+    slug_fields = slug_changes(schema, language)
 
     # Related entries a schema's own duplicate copies along (a page's child
     # pages and fragments) are separate entries, each translated on its own:
@@ -1973,6 +1970,22 @@ defmodule Brando.Translations do
         %{type: :belongs_to, name: name, opts: %{required: true}} <- Brando.Blueprint.Relations.__relations__(schema),
         do: name
       )
+
+  @doc """
+  The `change_fields` that give a copy into `language` its slugs. A slug
+  unique per language (`unique: [prevent_collision: :language]`, or a `with:`
+  scope that includes `:language`) keeps the source's value; any other slug
+  gets the language appended (`banzha` becomes `banzha-en`). A value the
+  language already uses is numbered by `free_unique_values/1`.
+  """
+  @spec slug_changes(module(), String.t() | atom()) :: keyword()
+  def slug_changes(schema, language) do
+    for %{name: name, opts: opts} <- schema.__slug_fields__() do
+      if Brando.Blueprint.UniqueFields.language_scoped?(opts[:unique]),
+        do: {name, fn _entry, value -> value end},
+        else: {name, fn _entry, value -> Utils.slugify("#{value}-#{language}") end}
+    end
+  end
 
   @doc """
   Duplicate options for copying an entry into `language`, besides its

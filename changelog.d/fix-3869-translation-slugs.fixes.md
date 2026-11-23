@@ -1,0 +1,1 @@
+- A new translation keeps the source's slug when the slug is unique per language (`prevent_collision: :language`, or a `with:` that includes `:language`), instead of appending the language code; existing translations keep their slugs.
