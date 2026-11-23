@@ -20856,6 +20856,11 @@ msgstr "Releasen har ingen priv/modules, eller release_path er ikke satt opp."
 msgid "The release’s definitions can’t be planned"
 msgstr "Releasens definisjoner kan ikke planlegges"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The release’s version can’t be applied until its values can move to the renamed refs and vars. %{name}’s edit stays until then."
+msgstr "Releasens versjon kan ikke tas i bruk før verdiene kan flyttes til refsene og variablene som får nytt navn. Endringen til %{name} blir stående til da."
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "The reset link could not be sent."

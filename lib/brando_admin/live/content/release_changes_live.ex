@@ -1042,8 +1042,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     defs = assigns.detail.definitions[item.uid]
     base = defs.applied && Review.definition_text(defs.applied.definition)
     hunks = if base, do: Review.three_way(base, Review.definition_text(defs.here), Review.definition_text(defs.release))
-    moving = Enum.filter(assigns.row.items, &moves?/1)
-    assigns = assign(assigns, item: item, defs: defs, hunks: hunks, who: RC.person(item.edited), moving: moving)
+    # A refused move makes the apply plan the release's version as needing a
+    # migration: nothing moves then
+    refused = Enum.filter(assigns.row.items, &match?(%{moves: %{refused: [_ | _]}}, &1))
+    moving = if refused == [], do: Enum.filter(assigns.row.items, &moves?/1), else: []
+
+    assigns =
+      assign(assigns, item: item, defs: defs, hunks: hunks, who: RC.person(item.edited), moving: moving, refused: refused)
 
     ~H"""
     <RC.notice headline={gettext("Changed here and in this release")}>
@@ -1107,7 +1112,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           data-testid="release-choice-release"
         />
         <strong>{gettext("Use the release’s version")}</strong>
-        <p :if={@moving == []}>
+        <p :if={@moving == [] and @refused == []}>
           {gettext("%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back.", name: @who)}
         </p>
         <p :if={@moving != []}>
@@ -1116,9 +1121,25 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             name: @who
           )}
         </p>
+        <p :if={@refused != []}>
+          {gettext(
+            "The release’s version can’t be applied until its values can move to the renamed refs and vars. %{name}’s edit stays until then.",
+            name: @who
+          )}
+        </p>
       </label>
     </div>
     <.moves_notice :if={@choices[@row.uid] == "release"} items={@moving} />
+    <RC.notice
+      :if={@choices[@row.uid] == "release" and @refused != []}
+      tone="error"
+      icon="ban"
+      headline={gettext("Can’t be applied until the content is migrated")}
+    >
+      <ul data-testid="release-move-refusals">
+        <li :for={item <- @refused} data-uid={item.uid}>{item.name}: {Enum.join(item.moves.refused, "; ")}</li>
+      </ul>
+    </RC.notice>
     """
   end
 

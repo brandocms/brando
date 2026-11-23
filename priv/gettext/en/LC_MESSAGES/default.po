@@ -20854,6 +20854,11 @@ msgstr ""
 msgid "The release’s definitions can’t be planned"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The release’s version can’t be applied until its values can move to the renamed refs and vars. %{name}’s edit stays until then."
+msgstr ""
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "The reset link could not be sent."
