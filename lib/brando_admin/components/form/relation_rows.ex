@@ -315,19 +315,19 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     other
     |> Enum.with_index()
     |> Enum.reduce(lead, fn {key, index}, list ->
-      if key in list do
-        list
-      else
-        before = other |> Enum.take(index) |> Enum.reverse() |> Enum.find(&(&1 in list))
-        next = other |> Enum.drop(index + 1) |> Enum.find(&(&1 in list))
-
-        cond do
-          is_nil(next) -> list ++ [key]
-          before -> List.insert_at(list, Enum.find_index(list, &(&1 == before)) + 1, key)
-          true -> List.insert_at(list, Enum.find_index(list, &(&1 == next)), key)
-        end
-      end
+      if key in list, do: list, else: place(list, key, Enum.take(other, index), Enum.drop(other, index + 1))
     end)
+  end
+
+  defp place(list, key, before_rows, after_rows) do
+    before = before_rows |> Enum.reverse() |> Enum.find(&(&1 in list))
+    next = Enum.find(after_rows, &(&1 in list))
+
+    cond do
+      is_nil(next) -> list ++ [key]
+      before -> List.insert_at(list, Enum.find_index(list, &(&1 == before)) + 1, key)
+      true -> List.insert_at(list, Enum.find_index(list, &(&1 == next)), key)
+    end
   end
 
   # A has_one: the row the editor holds, the saved one if it is that row.
