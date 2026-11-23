@@ -129,21 +129,31 @@ defmodule Brando.Content.Definition.Plan do
     held = for held <- held(item), not MapSet.member?(mapped, held), do: held
 
     if (held != [] or remaps != []) and Enum.all?(remaps, & &1.ok?) do
-      environment =
-        if Tenant.enabled?(),
-          do: ["--site", Tenant.current_site_key(), "--environment", Tenant.current_environment_key()],
-          else: []
-
       drops = Enum.flat_map(held, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end)
-      maps = Enum.flat_map(remaps, &["--map", "#{&1.kind}:#{&1.from}=#{&1.to}"])
-      args = drops ++ maps
-
-      (~w(mix brando.modules resolve --uid) ++ [uid, "--user", to_string(user_id)] ++ environment ++ args ++ ["--apply"])
-      |> Enum.map_join(" ", &shell_quote/1)
+      resolve_command(uid, user_id, drops, remaps)
     end
   end
 
   def resolve_command(_plan, _item), do: nil
+
+  @doc """
+  The `mix brando.modules resolve --apply` command that runs `drops`
+  (`--drop` arguments) and moves the values of `renames` (`--map`) in the
+  blocks of the module `uid`, as the user `user_id` (`ID` when nil) in the
+  current environment. Each value is quoted for a POSIX shell.
+  """
+  def resolve_command(uid, user_id, drops, renames) do
+    environment =
+      if Tenant.enabled?(),
+        do: ["--site", Tenant.current_site_key(), "--environment", Tenant.current_environment_key()],
+        else: []
+
+    maps = Enum.flat_map(renames, &["--map", "#{&1.kind}:#{&1.from}=#{&1.to}"])
+
+    (~w(mix brando.modules resolve --uid) ++
+       [uid, "--user", to_string(user_id || "ID")] ++ environment ++ drops ++ maps ++ ["--apply"])
+    |> Enum.map_join(" ", &shell_quote/1)
+  end
 
   defp held(%{removes: %{held: held, blocks: blocks}}) when blocks > 0, do: held
   defp held(_item), do: []

@@ -623,7 +623,26 @@ defmodule Brando.Content.DefinitionRenamesTest do
 
       assert [%{action: :migration_required, moves: %{entries: []}, reason: reason}] = plan!(c).items
       assert reason =~ "would move values in 1506 blocks,"
-      assert reason =~ "mix brando.modules resolve --map var:tagline=heading"
+    end
+
+    test "with a refusal whose resolve command runs as printed once renamed_from is out of the file", c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+
+      [%{action: :migration_required, reason: reason}] = plan!(c).items
+      [command] = Regex.run(~r/mix brando\.modules resolve .*--apply/, reason)
+
+      assert command ==
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      edit!(c, ~s(\n      renamed_from "tagline"), "")
+      import!(c)
+      assert var(held, "tagline").value == "Kept words"
+
+      command |> String.split() |> Enum.drop(2) |> run_task()
+      assert var(held, "heading").value == "Kept words"
+      assert var(held, "tagline") == nil
     end
 
     test "to as many blocks across the modules an apply selects", c do
@@ -658,10 +677,18 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert [%{action: :update}, %{action: :update}] = plan.items
       assert {:error, reason} = Definitions.apply(plan, c.user)
       assert reason =~ "would move values in 1506 blocks of 2 entries"
+      # One command per module, as resolve takes one module
+      assert reason =~
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      assert reason =~ "mix brando.modules resolve --uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
 
       {:ok, bundle} = Definitions.read(path)
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
       assert [%{action: :migration_required}, %{action: :migration_required}] = plan.items
+      card_item = Enum.find(plan.items, &(&1.uid == card.uid))
+      assert card_item.reason =~ "--uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
+      refute card_item.reason =~ "--uid #{c.module.uid}"
 
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid])
       assert %{action: :update} = Enum.find(plan.items, &(&1.uid == c.module.uid))
