@@ -206,6 +206,41 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(entries(second)).toHaveCount(0)
   })
 
+  // The folder question ("Change") holds no files: a dropped file uploads
+  // whatever the editor answers, and settles its entry once. A later upload
+  // into the same field that fails is that upload's own.
+  test('a folder choice cancelled while a dropped file waits leaves the entry to its upload', async ({ page }) => {
+    await createPage(page, 'Media drop folder cancelled', group, 'Image Row')
+    const row = rows(page).first()
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
+    await drop(page, rowBlock(row), [['image.jpg', 'image/jpeg']])
+    await expect(entries(row)).toHaveCount(1)
+    const entry = entries(row).first()
+    await expect(page.locator('.upload-item.status-queued').filter({ hasText: 'image.jpg' })).toBeVisible()
+
+    await field(entry).getByRole('button', { name: 'Change upload folder', exact: true }).click()
+    const picker = page.locator('#image-picker')
+    await picker.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(picker).not.toBeVisible()
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 3; window.BrandoUploads._hook.pumpTransfers() })
+    await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+    const uploaded = await field(entry).getAttribute('data-asset-id')
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
+    await drop(page, field(entry), [['image2.jpg', 'image/jpeg']])
+    const queued = page.locator('.upload-item.status-queued').filter({ hasText: 'image2.jpg' })
+    await queued.getByRole('button', { name: 'Cancel' }).click()
+    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'cancelled')
+    await syncLV(page)
+
+    await expect(entries(row)).toHaveCount(1)
+    await expect(field(entry)).toHaveAttribute('data-asset-id', uploaded)
+    // no alert that the dropped file's upload failed
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+  })
+
   test('a multi block without media_drop shows no drop zone', async ({ page }) => {
     await createPage(page, 'Media drop none', '06 COPY PASTE TEST', 'Team Section')
     await expect(rows(page)).toHaveCount(1)

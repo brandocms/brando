@@ -212,13 +212,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("cancel_pending_upload", _, socket) do
-    {:noreply,
-     socket
-     |> close_list()
-     |> push_event("b:block_upload_folder_cancelled", %{
-       upload_name: socket.assigns[:pending_upload_name],
-       request_id: socket.assigns[:pending_request_id]
-     })}
+    {:noreply, close_list(socket)}
   end
 
   def handle_event("picker_closed", _, socket) do
