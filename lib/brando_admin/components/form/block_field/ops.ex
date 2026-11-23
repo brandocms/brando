@@ -1736,6 +1736,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     with {^key, field} <- List.keyfind(@rel_identities, key, 0),
          rows when is_list(rows) <- Map.get(as_map(diff), key),
          false <- Enum.any?(rows, &same_item?(&1, {"id", id})),
+         true <- Enum.any?(rows, &(Map.get(&1, "id") in [nil, ""])),
          %{} = block <- saved.(),
          saved_rows when is_list(saved_rows) <- Map.get(block, String.to_existing_atom(key)),
          %{} = row <- Enum.find(saved_rows, &(to_string(&1.id) == to_string(id))),
