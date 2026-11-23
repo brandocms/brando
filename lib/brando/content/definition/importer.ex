@@ -4,7 +4,7 @@ defmodule Brando.Content.Definition.Importer do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
-  alias Brando.Content.{Block, Blocks, Module, ModuleDiff, Ref, TableTemplate, Var}
+  alias Brando.Content.{Block, Blocks, Container, Module, ModuleDiff, Palette, Ref, Var}
   alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Snapshot, Value}
   alias Brando.Content.Definitions
   alias Brando.Query.Mutations
@@ -21,12 +21,21 @@ defmodule Brando.Content.Definition.Importer do
     end)
   end
 
+  # A module, a palette or a container: whichever has the uid here, an
+  # active one before one in the trash
   defp refresh_change!(uid, actor) do
-    record = Repo.get_by(Module, uid: uid) || Error.raise!(uid, "unknown module")
-    authorize!(actor, :update, Module, record)
-    if record.deleted_at || record.source_module_id, do: Error.raise!(uid, "expected a local active definition")
-    %{uid: uid, id: record.id, kind: "module", action: :update}
+    {kind, record} =
+      Enum.find(Map.get(Snapshot.stored([uid]), uid, []), fn {kind, _record} -> kind != "table_template" end) ||
+        Error.raise!(uid, "unknown definition")
+
+    authorize!(actor, :update, Model.schema(kind), record)
+    if record.deleted_at || source_id(record), do: Error.raise!(uid, "expected a local active definition")
+    %{uid: uid, id: record.id, kind: kind, action: :update}
   end
+
+  # The shared-library entry a local override is of, or nil
+  defp source_id(record),
+    do: Map.get(record, :source_module_id) || Map.get(record, :source_palette_id) || Map.get(record, :source_container_id)
 
   def plan(bundle, actor, opts) do
     Definitions.protect(fn ->
@@ -51,7 +60,8 @@ defmodule Brando.Content.Definition.Importer do
         mode when mode in [:lockfile, :database] -> mode
       end
 
-    uids = Enum.map(bundle["modules"] ++ bundle["table_templates"], & &1["uid"])
+    bundle = Model.with_kinds(bundle)
+    uids = Enum.map(Model.definitions(bundle), & &1["uid"])
     replace = Keyword.get(opts, :replace, [])
     discard = Keyword.get(opts, :discard, [])
     Enum.each(replace ++ discard, &(&1 in uids || Error.raise!(&1, "is not among the definitions")))
@@ -67,32 +77,54 @@ defmodule Brando.Content.Definition.Importer do
       mode: mode,
       replace: MapSet.new(replace),
       discard: MapSet.new(discard),
-      selection: selection
+      selection: selection,
+      catch_up: Keyword.get(opts, :catch_up, false)
     }
   end
 
-  # A selected module brings its whole tree (root, siblings and descendants)
-  # and the table templates the tree uses: what the export selects too.
+  # A selected module brings its whole tree (root, siblings and descendants),
+  # the table templates the tree uses and the palettes their vars name; a
+  # container brings its palette: what the export selects too. Each is in
+  # the bundle, or here.
   defp select_trees!(bundle, uids) do
     modules = Map.new(bundle["modules"], &{&1["uid"], &1})
-    tables = MapSet.new(bundle["table_templates"], & &1["uid"])
+    containers = Map.new(bundle["containers"], &{&1["uid"], &1})
+    others = MapSet.new(bundle["table_templates"] ++ bundle["palettes"], & &1["uid"])
+    palettes = MapSet.new(bundle["palettes"], & &1["uid"])
     parents = parents(bundle["modules"])
+    lookup = %{modules: modules, containers: containers, others: others, palettes: palettes, parents: parents}
 
-    uids |> Enum.flat_map(&select_tree!(&1, modules, tables, parents)) |> MapSet.new()
+    uids |> Enum.flat_map(&select_tree!(&1, bundle, lookup)) |> MapSet.new()
   end
 
-  defp select_tree!(uid, modules, tables, parents) do
+  defp select_tree!(uid, bundle, lookup) do
     cond do
-      Map.has_key?(modules, uid) ->
-        tree = uid |> root(parents) |> descendants(modules)
-        tree ++ for(tree_uid <- tree, table = modules[tree_uid]["table_template"], do: table)
+      Map.has_key?(lookup.modules, uid) ->
+        tree = uid |> root(lookup.parents) |> descendants(lookup.modules)
+        tables = for tree_uid <- tree, table = lookup.modules[tree_uid]["table_template"], do: table
+        tree ++ tables ++ Enum.filter(palette_tokens(bundle, tree ++ tables), &MapSet.member?(lookup.palettes, &1))
 
-      MapSet.member?(tables, uid) ->
+      Map.has_key?(lookup.containers, uid) ->
+        palette = lookup.containers[uid]["palette"]
+        [uid | if(MapSet.member?(lookup.palettes, palette), do: [palette], else: [])]
+
+      MapSet.member?(lookup.others, uid) ->
         [uid]
 
       true ->
         Error.raise!(uid, "is not among the definitions")
     end
+  end
+
+  # The palettes the vars of the modules and table templates `uids` name by uid
+  defp palette_tokens(bundle, uids) do
+    for definition <- bundle["modules"] ++ bundle["table_templates"],
+        definition["uid"] in uids,
+        var <- definition["vars"],
+        token = var["assets"]["palette"],
+        binding = get_in(bundle, ["references", token]) || %{},
+        not Map.has_key?(binding, "id"),
+        do: binding["uid"] || token
   end
 
   defp root(uid, parents), do: if(parent = parents[uid], do: root(parent, parents), else: uid)
@@ -123,7 +155,8 @@ defmodule Brando.Content.Definition.Importer do
       mode: plan.mode,
       replace: plan.replace,
       discard: plan.discard,
-      selection: plan.selection
+      selection: plan.selection,
+      catch_up: plan.catch_up
     }
 
     opts = Keyword.put_new_lazy(opts, :batch_id, &Ecto.UUID.generate/0)
@@ -166,6 +199,7 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp plan!(bundle, actor, creator, bindings, settings) do
+    bundle = Model.with_kinds(bundle)
     Model.validate_graph!(bundle)
     ensure_actor_scope!(actor)
 
@@ -187,15 +221,18 @@ defmodule Brando.Content.Definition.Importer do
       mode: settings.mode,
       replace: settings.replace,
       discard: settings.discard,
+      catch_up: settings.catch_up,
       latest: latest,
       snapshot_references: snapshot["references"],
       parents: parents(bundle["modules"]),
       current_parents: parents(snapshot["modules"]),
       table_ids: Map.new(records.tables, fn {uid, table} -> {uid, table.id} end),
-      snapshots: Map.new(snapshot["modules"] ++ snapshot["table_templates"], &{&1["uid"], &1})
+      palettes: MapSet.new(bundle["palettes"], & &1["uid"]),
+      stored: bundle |> Model.definitions() |> Enum.map(& &1["uid"]) |> Snapshot.stored(),
+      snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
-    items = Enum.map(bundle["table_templates"] ++ bundle["modules"], &plan_item!(&1, ctx))
+    items = Enum.map(Model.definitions(bundle), &plan_item!(&1, ctx))
     scope = References.scope()
 
     fingerprint =
@@ -216,6 +253,7 @@ defmodule Brando.Content.Definition.Importer do
        replace: settings.replace,
        discard: settings.discard,
        selection: settings.selection,
+       catch_up: settings.catch_up,
        # How the target's records were written as tokens, generated ones too
        snapshot_bindings: snapshot["references"]
      }, Map.put(records, :snapshots, ctx.snapshots)}
@@ -224,10 +262,11 @@ defmodule Brando.Content.Definition.Importer do
   defp plan_item!(definition, ctx) do
     uid = definition["uid"]
     kind = definition["kind"]
-    schema = if kind == "module", do: Module, else: TableTemplate
-    record = if kind == "module", do: ctx.records.modules[uid], else: ctx.records.tables[uid]
-    old = ctx.snapshots[uid]
+    schema = Model.schema(kind)
+    record = Snapshot.record(ctx.records, kind, uid)
+    old = ctx.snapshots[{kind, uid}]
     action = if record, do: :update, else: :create
+    validate_kind_here!(definition, ctx.stored)
     authorize!(ctx.actor, action, schema, record)
 
     if validate_plan_target!(uid, kind, schema, record, old, ctx.mode),
@@ -262,8 +301,9 @@ defmodule Brando.Content.Definition.Importer do
     uid = definition["uid"]
     kind = definition["kind"]
     parent_id = parent_record_id(ctx.parents[uid], ctx.records)
+    palette = validate_palette_reference!(definition, ctx)
     changeset = Params.changeset(definition, record, ctx.bindings, ctx.creator, ctx.table_ids, parent_id)
-    Model.apply_valid!(changeset, definition_subject(kind, uid))
+    Model.apply_valid!(changeset, Model.subject(kind, uid))
     validate_ref_placements!(kind, changeset, uid, ctx.actor)
     validate_ref_uids!(definition, record)
     validate_template!(definition, ctx.actor)
@@ -272,25 +312,31 @@ defmodule Brando.Content.Definition.Importer do
     {base, source, matches} = plan_baseline(ctx, definition, record, old, row)
     state = state(record, digest, old_digest, base, matches)
     baseline = if matches.target, do: old_digest, else: base
-    block_ids = module_block_ids(kind, record)
+    block_ids = block_ids(kind, record)
 
     {action, reason} =
-      action(ctx, {state, source}, fn ->
-        classify(
-          definition,
-          old,
-          record,
-          changeset,
-          {baseline, digest, old_digest},
-          {ctx.parents[uid], ctx.current_parents[uid]}
-        )
-      end)
+      case palette do
+        {:in_trash, palette} ->
+          {:conflict, ~s(palette "#{palette}" is in the trash here; restore it to apply the files' version)}
+
+        :ok ->
+          action(ctx, {state, source}, fn ->
+            classify(
+              definition,
+              old,
+              record,
+              changeset,
+              {baseline, digest, old_digest},
+              {ctx.parents[uid], ctx.current_parents[uid]}
+            )
+          end)
+      end
 
     %{
       kind: kind,
       uid: uid,
       action: action,
-      reason: reason,
+      reason: reason || unavailable_palette_reason(definition, record),
       state: state,
       baseline: source,
       class: diff_class(kind, record, old, changeset),
@@ -300,7 +346,7 @@ defmodule Brando.Content.Definition.Importer do
       after: digest,
       fields: changed_fields(old, definition),
       diff: field_diff(old, definition),
-      removes: removes(action, kind, record, changeset),
+      removes: removes(action, kind, record, {changeset, old, definition}, block_ids),
       block_count: length(block_ids),
       entry_count: entry_count(block_ids)
     }
@@ -361,14 +407,14 @@ defmodule Brando.Content.Definition.Importer do
       release: row.release
     }
 
-  # Who changed the module in the admin last, after the last apply: the
+  # Who changed the definition in the admin last, after the last apply: the
   # activity log knows, and without an event there, when the row changed
-  defp last_edit("module", %{id: id} = record, row) do
+  defp last_edit(kind, %{id: id} = record, row) when kind in ~w(module palette container) do
     since = row && row.applied_at
 
     query =
       from(e in Brando.Activity.Event,
-        where: e.schema == ^to_string(Module) and e.entry_id == ^id,
+        where: e.schema == ^to_string(Model.schema(kind)) and e.entry_id == ^id,
         order_by: [desc: e.inserted_at, desc: e.id],
         limit: 1,
         preload: [:user]
@@ -398,7 +444,7 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp validate_local!(uid, kind, record, old) do
-    if record && Map.get(record, :source_module_id), do: Error.raise!(uid, "shared-library overrides are unsupported")
+    if record && source_id(record), do: Error.raise!(uid, "shared-library overrides are unsupported")
     if record && kind == "module" && is_nil(old), do: Error.raise!(uid, "shared-library descendants are unsupported")
   end
 
@@ -411,13 +457,56 @@ defmodule Brando.Content.Definition.Importer do
   defp validate_ref_placements!(kind, changeset, uid, actor) do
     if kind == "module" do
       Enum.each(Changeset.get_assoc(changeset, :refs), fn ref ->
-        ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(definition_subject(kind, uid))
+        ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(Model.subject(kind, uid))
       end)
     end
   end
 
-  defp definition_subject("table_template", uid), do: ~s(table template "#{uid}")
-  defp definition_subject(_kind, uid), do: ~s(module "#{uid}")
+  # UIDs are not shared between kinds: one a definition of another kind has
+  # here, in the trash too, is refused, so the two never meet in a
+  # selection, an apply, a revert or a restore
+  defp validate_kind_here!(%{"kind" => kind, "uid" => uid}, stored) do
+    case Enum.find(Map.get(stored, uid, []), fn {other, _record} -> other != kind end) do
+      nil ->
+        :ok
+
+      {other, _record} ->
+        Error.raise!(Model.subject(kind, uid), "the uid belongs to a #{String.replace(other, "_", " ")} here")
+    end
+  end
+
+  # A container's palette is in the files, or here and readable by the
+  # actor; one in the trash is neither. Against the database's baseline (a
+  # release, a revert), one in the trash makes the container a conflict, as
+  # a definition in the trash is one, and the rest of the plan goes on.
+  defp validate_palette_reference!(%{"kind" => "container", "palette" => palette, "uid" => uid}, ctx)
+       when is_binary(palette) do
+    cond do
+      MapSet.member?(ctx.palettes, palette) ->
+        :ok
+
+      id = References.palette_id(palette) ->
+        if Boundary.authorize_record(ctx.actor, :read, Palette, id) != :ok,
+          do: Error.raise!(Model.subject("container", uid), ~s(palette "#{palette}": forbidden))
+
+        :ok
+
+      ctx.mode == :database and Repo.get_by(Palette, uid: palette) ->
+        {:in_trash, palette}
+
+      true ->
+        Error.raise!(Model.subject("container", uid), ~s(palette "#{palette}" is neither in the files nor here))
+    end
+  end
+
+  defp validate_palette_reference!(_definition, _ctx), do: :ok
+
+  defp unavailable_palette_reason(%{"kind" => "container", "palette" => nil}, %Container{palette_id: id}) do
+    if palette = References.unavailable_palette(id),
+      do: ~s(default palette "#{palette.name}" is unavailable here; the import keeps the link)
+  end
+
+  defp unavailable_palette_reason(_definition, _record), do: nil
 
   # The baseline a definition is compared with, where it came from, and
   # whether it equals the target and the file. Each baseline is recorded in
@@ -427,7 +516,11 @@ defmodule Brando.Content.Definition.Importer do
   #   * named in `replace:` — the target as it is: the files replace it
   #   * against the database (`:database`) — the latest apply recorded here;
   #     without one, the lockfile's, but only when the target equals it
-  #   * against the lockfile — the lockfile's, as recorded in development
+  #   * against the lockfile — the lockfile's, as recorded in development;
+  #     with `catch_up`, when the target no longer equals it but equals the
+  #     latest apply recorded here, that apply's (the lockfile didn't advance
+  #     after it: its write failed). An admin edit since that apply matches
+  #     neither.
   # The target and the files are each digested with their own bindings: a
   # recorded apply is compared by the records its tokens name
   defp plan_baseline(ctx, definition, record, old, row) do
@@ -460,9 +553,17 @@ defmodule Brando.Content.Definition.Importer do
       true ->
         base = lockfile_baseline(ctx, definition, record)
         lockfile = &Snapshot.baseline_digest(ctx.bundle, &1)
-        {base, base && :lockfile, {lockfile, lockfile}}
+
+        if ctx.catch_up and behind_last_apply?(base, lockfile, old, row, elem(resolved, 0)),
+          do: {row.digest, :applied, resolved},
+          else: {base, base && :lockfile, {lockfile, lockfile}}
     end
   end
+
+  defp behind_last_apply?(base, lockfile, old, row, target_digest),
+    do:
+      not is_nil(old) and not is_nil(row) and (is_nil(base) or base != lockfile.(old)) and
+        row.digest == target_digest.(old)
 
   # Named to replace, and never applied here or deleted here since: a
   # conflict on a definition applied here stays one
@@ -486,14 +587,15 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   defp lockfile_baseline(ctx, definition, record) do
-    baseline_kind = if definition["kind"] == "module", do: "modules", else: "table_templates"
-    baseline = get_in(ctx.bundle, ["baseline", baseline_kind, definition["uid"]])
+    baseline = get_in(ctx.bundle, ["baseline", Model.bundle_key(definition["kind"]), definition["uid"]])
     if is_nil(record) and ctx.bundle["source"] != References.scope(), do: nil, else: baseline
   end
 
-  defp module_block_ids(kind, record) do
-    if record && kind == "module", do: Blocks.list_block_ids_using_module(record.id, :local), else: []
-  end
+  defp block_ids(_kind, nil), do: []
+  defp block_ids("module", record), do: Blocks.list_block_ids_using_module(record.id, :local)
+  defp block_ids("palette", record), do: Blocks.list_block_ids_using_palette(record.id, :local)
+  defp block_ids("container", record), do: Blocks.list_block_ids_using_container(record.id, :local)
+  defp block_ids(_kind, _record), do: []
 
   defp field_diff(old, definition) do
     Enum.map(changed_fields(old, definition), fn field ->
@@ -501,11 +603,11 @@ defmodule Brando.Content.Definition.Importer do
     end)
   end
 
-  defp validate_ref_uids!(%{"kind" => "table_template"}, _record), do: :ok
-
-  defp validate_ref_uids!(definition, record) do
+  defp validate_ref_uids!(%{"kind" => "module"} = definition, record) do
     Enum.each(definition["refs"], &validate_ref_uid!(&1, record))
   end
+
+  defp validate_ref_uids!(_definition, _record), do: :ok
 
   defp validate_ref_uid!(ref, record) do
     case Repo.get_by(Brando.Content.Ref, uid: ref["uid"]) do
@@ -612,8 +714,17 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   # What an update removes, the keys of it blocks hold (`held`), and the
-  # blocks that hold one and keep it as a leftover (`Brando.Content.StaleBlocks`)
-  defp removes(:update, "module", record, cs) do
+  # blocks that hold one and keep it as a leftover (`Brando.Content.StaleBlocks`).
+  # A palette's colours: the CSS that reads a removed one is the author's, and
+  # the blocks that use the palette are counted.
+  defp removes(:update, "palette", _record, {_cs, old, new}, block_ids) do
+    keys = Enum.map(old["colors"], & &1["key"]) -- Enum.map(new["colors"], & &1["key"])
+
+    if keys != [],
+      do: %{keys: Enum.map(keys, &{:color, &1}), blocks: length(block_ids), entries: entry_count(block_ids)}
+  end
+
+  defp removes(:update, "module", record, {cs, _old, _new}, _block_ids) do
     diff = ModuleDiff.diff(record, cs)
     keys = Enum.map(diff.removed_refs, &{:ref, &1}) ++ Enum.map(diff.removed_vars, &{:var, &1})
 
@@ -631,7 +742,7 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
-  defp removes(_action, _kind, _record, _cs), do: nil
+  defp removes(_action, _kind, _record, _changes, _block_ids), do: nil
 
   # `{{kind, key}, block_id}` for each removed key a block of the module
   # holds. The module is in this database: a block of a shared library
@@ -666,16 +777,18 @@ defmodule Brando.Content.Definition.Importer do
     Enum.any?(new["refs"], fn ref -> types[ref["uid"]] && types[ref["uid"]] != ref["data"]["type"] end)
   end
 
+  # Palettes, containers, table templates, then modules, parents first
   defp persist!(plan, records, actor, creator) do
-    definitions = Map.new(plan.bundle["modules"] ++ plan.bundle["table_templates"], &{&1["uid"], &1})
+    definitions = Map.new(Model.definitions(plan.bundle), &{&1["uid"], &1})
     parents = parents(plan.bundle["modules"])
+    order = Model.kinds()
 
     ordered =
       Enum.sort_by(plan.items, fn item ->
-        {if(item.kind == "table_template", do: 0, else: 1), depth(item.uid, parents)}
+        {Enum.find_index(order, &(&1 == item.kind)), depth(item.uid, parents)}
       end)
 
-    initial = %{modules: records.modules, tables: records.tables, changes: []}
+    initial = records |> Map.take(~w(modules tables palettes containers)a) |> Map.put(:changes, [])
     ctx = %{definitions: definitions, parents: parents, references: plan.references, actor: actor, creator: creator}
 
     Enum.reduce(ordered, initial, fn item, state ->
@@ -685,8 +798,8 @@ defmodule Brando.Content.Definition.Importer do
 
   defp persist_item!(item, state, ctx) do
     definition = ctx.definitions[item.uid]
-    kind = if item.kind == "module", do: :modules, else: :tables
-    schema = if kind == :modules, do: Module, else: TableTemplate
+    kind = Snapshot.records_key(item.kind)
+    schema = Model.schema(item.kind)
     record = state[kind][item.uid]
     parent_id = if parent = ctx.parents[item.uid], do: state.modules[parent].id
     tables = Map.new(state.tables, fn {uid, table} -> {uid, table.id} end)
@@ -695,7 +808,7 @@ defmodule Brando.Content.Definition.Importer do
 
     case save_definition(item.action, schema, cs, ctx.actor) do
       {:ok, saved} ->
-        saved = Repo.preload(saved, if(kind == :modules, do: [:refs, :vars], else: [:vars]))
+        saved = Repo.preload(saved, preloads(kind))
         change = %{kind: item.kind, uid: item.uid, id: saved.id, action: item.action}
         state |> put_in([kind, item.uid], saved) |> Map.update!(:changes, &(&1 ++ [change]))
 
@@ -712,30 +825,56 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
+  defp preloads(:modules), do: [:refs, :vars]
+  defp preloads(:tables), do: [:vars]
+  defp preloads(_kind), do: []
+
   defp ensure_revision(cs, :modules, record) when not is_nil(record) do
     if Changeset.changed?(cs, :version), do: cs, else: Changeset.optimistic_lock(cs, :version, &((&1 || 1) + 1))
   end
 
   defp ensure_revision(cs, _, _), do: cs
 
+  # After the commit: caches, the entries that render the definition, and
+  # open forms. Palettes and containers re-render the entries that use them
+  # as an admin save does; their blocks keep pointing at them by id.
   defp refresh(changes) do
     changes
-    |> Enum.filter(&(&1.kind == "module"))
+    |> Enum.filter(&(&1.kind in ~w(module palette container)))
     |> Enum.map(fn change ->
       try do
-        module = Repo.get!(Module, change.id)
-        Brando.Cache.Query.evict({:ok, module})
-        if change.action == :update, do: Blocks.render_entries_with_module_id(module.id)
-        event = if change.action == :create, do: :created, else: :updated
-        Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {module, [:module, event]})
-        %{uid: change.uid, status: :requested, stale_block_ids: Blocks.list_stale_block_ids(module)}
+        refresh_change(change)
       rescue
         error -> %{uid: change.uid, status: :failed, error: Exception.message(error)}
       end
     end)
   end
 
-  defp validate_template!(%{"kind" => "table_template"}, _actor), do: :ok
+  defp refresh_change(%{kind: "module"} = change) do
+    module = Repo.get!(Module, change.id)
+    Brando.Cache.Query.evict({:ok, module})
+    if change.action == :update, do: Blocks.render_entries_with_module_id(module.id)
+    event = if change.action == :create, do: :created, else: :updated
+    Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {module, [:module, event]})
+    %{uid: change.uid, status: :requested, stale_block_ids: Blocks.list_stale_block_ids(module)}
+  end
+
+  defp refresh_change(%{kind: "palette"} = change) do
+    palette = Repo.get!(Palette, change.id)
+    Brando.Cache.Query.evict({:ok, palette})
+    Brando.Cache.Palettes.update({:ok, palette})
+    if change.action == :update, do: Blocks.render_entries_with_palette_id(palette.id)
+    %{uid: change.uid, status: :requested, stale_block_ids: []}
+  end
+
+  defp refresh_change(%{kind: "container"} = change) do
+    container = Repo.get!(Container, change.id)
+    Brando.Cache.Query.evict({:ok, container})
+    if change.action == :update, do: Blocks.render_entries_with_container_id(container.id)
+    %{uid: change.uid, status: :requested, stale_block_ids: []}
+  end
+
+  defp validate_template!(%{"kind" => kind}, _actor) when kind in ~w(table_template palette), do: :ok
 
   # Compiling runs the template's code, unquote fragments at once: only a
   # superuser's, read now, in both authorization modes, even for a plan that
@@ -807,7 +946,11 @@ defmodule Brando.Content.Definition.Importer do
     prefix = Brando.Tenant.current_prefix() || "public"
 
     tables =
-      Enum.map_join(~w(content_modules content_table_templates content_refs content_vars), ", ", &~s("#{prefix}"."#{&1}"))
+      Enum.map_join(
+        ~w(content_modules content_table_templates content_refs content_vars content_palettes content_containers),
+        ", ",
+        &~s("#{prefix}"."#{&1}")
+      )
 
     Ecto.Adapters.SQL.query!(Repo.repo(), "LOCK TABLE " <> tables <> " IN SHARE ROW EXCLUSIVE MODE", [])
   end

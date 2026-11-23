@@ -212,7 +212,7 @@ defmodule Brando.Content.DefinitionRemovalsTest do
     test "quotes each value so a POSIX shell reads it as printed" do
       plan = %Brando.Content.Definition.Plan{creator_id: 3}
       keys = [var: "sale price", ref: "it's $HOME"]
-      item = %{uid: "a;b", removes: %{keys: keys, held: keys, blocks: 1, entries: 1}}
+      item = %{kind: "module", uid: "a;b", removes: %{keys: keys, held: keys, blocks: 1, entries: 1}}
 
       command = Brando.Content.Definition.Plan.resolve_command(plan, item)
       {printed, 0} = System.cmd("sh", ["-c", "printf '%s\\n' " <> command])
@@ -224,7 +224,12 @@ defmodule Brando.Content.DefinitionRemovalsTest do
 
     test "is not printed as a command without a user" do
       plan = %Brando.Content.Definition.Plan{creator_id: nil}
-      item = %{uid: "teaser", removes: %{keys: [var: "tagline"], held: [var: "tagline"], blocks: 1, entries: 1}}
+
+      item = %{
+        kind: "module",
+        uid: "teaser",
+        removes: %{keys: [var: "tagline"], held: [var: "tagline"], blocks: 1, entries: 1}
+      }
 
       assert Brando.Content.Definition.Plan.resolve_command(plan, item) == nil
       refute Brando.Content.Definition.Plan.resolve_line(plan, item) =~ "--user"

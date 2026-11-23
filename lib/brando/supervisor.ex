@@ -80,6 +80,10 @@ defmodule Brando.Supervisor do
     # before the cache does.
     children = children ++ Brando.Sites.FourOhFour.Flusher.children()
 
+    # Each site's request counters on this node, with `tenancy_mode: :multi`,
+    # written on an interval and once more as the node stops
+    children = children ++ Brando.Sites.Usage.Traffic.children()
+
     # One process per entry being edited (see its moduledoc)
     children = children ++ Brando.EditSession.children()
 
@@ -109,36 +113,37 @@ defmodule Brando.Supervisor do
     Application.get_env(:brando, Oban) ||
       [
         repo: Brando.Repo.repo(),
-        queues: [
-          default: [limit: 1],
-          # Copy and live-switch jobs take an advisory lock per site, while a
-          # dedicated queue also prevents multiple expensive pg_dump restores
-          # from saturating the database host.
-          environment_operations: [limit: 1],
-          # Static builds are CPU, disk, and network heavy. Serializing them
-          # also keeps their versioned output and deploy transitions simple.
-          ssg_builds: [limit: 1],
-          image_processing: [limit: 1],
-          # Its own queue on purpose. :default has limit: 1 and also carries the
-          # interactive FileUploader/ImageUploader, so a reaper sweep doing one
-          # network round trip per abandoned object would block user-facing
-          # uploads for as long as it ran.
-          upload_reaping: [limit: 1],
-          # Content events go out one at a time, in order; each only queues
-          # work for its subscribers (`Brando.ContentEvents`).
-          content_events: [limit: 1],
-          # Webhook deliveries wait on other servers for up to 10 seconds.
-          # Each webhook is limited to `Brando.Webhooks.concurrency/0` of
-          # these at a time, so one slow receiver cannot hold them all.
-          webhooks: [limit: 5],
-          # Slack, Teams and email notifications (`Brando.Notifications.Routing`),
-          # apart from webhooks so a burst of them does not hold deliveries up.
-          notifications: [limit: 2],
-          # The admin search index: one job per changed entry, and rebuilds
-          # from Utilities (`Brando.Search`). Two, so a rebuild does not hold
-          # up the entries saved meanwhile.
-          search_index: [limit: 2]
-        ],
+        queues:
+          [
+            default: [limit: 1],
+            # Copy and live-switch jobs take an advisory lock per site, while a
+            # dedicated queue also prevents multiple expensive pg_dump restores
+            # from saturating the database host.
+            environment_operations: [limit: 1],
+            # Static builds are CPU, disk, and network heavy. Serializing them
+            # also keeps their versioned output and deploy transitions simple.
+            ssg_builds: [limit: 1],
+            image_processing: [limit: 1],
+            # Its own queue on purpose. :default has limit: 1 and also carries the
+            # interactive FileUploader/ImageUploader, so a reaper sweep doing one
+            # network round trip per abandoned object would block user-facing
+            # uploads for as long as it ran.
+            upload_reaping: [limit: 1],
+            # Content events go out one at a time, in order; each only queues
+            # work for its subscribers (`Brando.ContentEvents`).
+            content_events: [limit: 1],
+            # Webhook deliveries wait on other servers for up to 10 seconds.
+            # Each webhook is limited to `Brando.Webhooks.concurrency/0` of
+            # these at a time, so one slow receiver cannot hold them all.
+            webhooks: [limit: 5],
+            # Slack, Teams and email notifications (`Brando.Notifications.Routing`),
+            # apart from webhooks so a burst of them does not hold deliveries up.
+            notifications: [limit: 2],
+            # The admin search index: one job per changed entry, and rebuilds
+            # from Utilities (`Brando.Search`). Two, so a rebuild does not hold
+            # up the entries saved meanwhile.
+            search_index: [limit: 2]
+          ] ++ site_usage_queue(),
         cron: [
           crontab:
             [
@@ -165,13 +170,21 @@ defmodule Brando.Supervisor do
               {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger},
               # Publish and expire entries whose dates passed with no job (clones, restores)
               {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}
-            ] ++ extra_oban_cron_jobs(),
+            ] ++ site_usage_cron() ++ extra_oban_cron_jobs(),
           timezone: "Etc/UTC"
         ],
         pruner: [max_age: 300],
         lifeline: [rescue_after: :timer.minutes(60)]
       ]
   end
+
+  # Measures what each site stores and prunes old usage rows
+  # (`Brando.Worker.SiteUsage`), with `tenancy_mode: :multi` only: in a queue
+  # of its own, so a long walk of the folders holds nothing else up
+  defp site_usage_queue, do: if(Brando.Sites.Usage.enabled?(), do: [site_usage: [limit: 1]], else: [])
+
+  defp site_usage_cron,
+    do: if(Brando.Sites.Usage.enabled?(), do: [{"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}}], else: [])
 
   defp extra_oban_cron_jobs do
     otp_app = Application.get_env(:brando, :otp_app)

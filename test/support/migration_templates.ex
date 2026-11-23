@@ -261,7 +261,9 @@ defmodule Brando.MigrationTemplates do
       "activity_events" => ~w(proposal_id approver_id),
       "content_identifiers" => ~w(external_url),
       "translation_group_members" => ~w(baseline_texts),
-      "translation_work_items" => ~w(source_previous)
+      "translation_work_items" => ~w(source_previous),
+      "content_palettes" => ~w(uid),
+      "content_containers" => ~w(uid)
     }
   end
 
@@ -271,7 +273,7 @@ defmodule Brando.MigrationTemplates do
   @doc "What the 2xx migrations add in `public` only: tables"
   def public_tables do
     ~w(users_security users_recovery_codes users_security_events users_security_policy users_passkeys
-       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes)
+       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes sites_usage_days)
   end
 
   @doc "What the 2xx migrations add in `public` only: columns by table"

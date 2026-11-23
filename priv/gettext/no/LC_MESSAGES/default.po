@@ -63,6 +63,11 @@ msgstr "%{built}/%{total} bygget"
 msgid "%{client} via MCP"
 msgstr "%{client} via MCP"
 
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "%{container}: its default palette %{palette} is in the trash. The files leave it out, and an import keeps the link."
+msgstr "%{container}: standardpaletten %{palette} ligger i papirkurven. Filene utelater den, og en import beholder koblingen."
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} also used elsewhere"
@@ -740,6 +745,11 @@ msgstr[1] "%{count} webhooks"
 msgid "%{count} words"
 msgstr "%{count} ord"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{day}: %{requests} requests"
+msgstr "%{day}: %{requests} forespørsler"
+
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} gets an email with a link to choose a new password. The current password works until then."
@@ -1080,6 +1090,11 @@ msgstr "Klarte ikke lese %{source}: %{error}"
 #, elixir-autogen, elixir-format
 msgid "%{step} (did not work)"
 msgstr "%{step} (virket ikke)"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{storage} · %{requests} requests"
+msgstr "%{storage} · %{requests} forespørsler"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -2512,6 +2527,11 @@ msgstr "Alle språk"
 msgid "All local modules in this workspace"
 msgstr "Alle lokale moduler i dette arbeidsområdet"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "All measured sites"
+msgstr "Alle målte nettsteder"
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "All members"
@@ -3102,6 +3122,12 @@ msgstr "Godkjent av %{name}"
 #, elixir-autogen, elixir-format
 msgid "Archive"
 msgstr "Arkivér"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "database"
+msgid "Archive"
+msgstr "Arkiv"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -3879,6 +3905,11 @@ msgstr "Knapp"
 msgid "By"
 msgstr "Av"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bytes served"
+msgstr "Data levert"
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "CSS class"
@@ -4116,6 +4147,11 @@ msgstr "Endre passord"
 #, elixir-autogen, elixir-format
 msgid "Change settings of %{block}"
 msgstr "Endre innstillinger for %{block}"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Change since %{day}"
+msgstr "Endring siden %{day}"
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
@@ -5300,6 +5336,7 @@ msgstr "Samtykketekst"
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #: lib/brando_admin/components/form/block_field/outline.ex
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Container"
@@ -6238,6 +6275,16 @@ msgstr "DSL-import oppdaterer den samme modullinjen. De eksisterende kopi- og im
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr "Dashbord"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Database"
+msgstr "Database"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Databases"
+msgstr "Databaser"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -9007,6 +9054,11 @@ msgstr "Fragmenter uten side"
 msgid "Free"
 msgstr "Fri"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Free on the media volume"
+msgstr "Ledig på medievolumet"
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "From"
@@ -10060,8 +10112,8 @@ msgstr "Inneholder alle lagrede verdier og tekniske detaljer."
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
-msgid "Includes child modules and table templates."
-msgstr "Inkluderer undermoduler og tabellmaler."
+msgid "Includes child modules, table templates, palettes and containers."
+msgstr "Inkluderer undermoduler, tabellmaler, paletter og containere."
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -10160,6 +10212,7 @@ msgstr "Se gjennom kontoer, nettstedstilknytninger og tidligere applikasjonsregl
 msgid "Inspecting…"
 msgstr "Undersøker…"
 
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Installation"
@@ -10560,6 +10613,11 @@ msgid "Kept for %{count} day"
 msgid_plural "Kept for %{count} days"
 msgstr[0] "Lagres i %{count} dag"
 msgstr[1] "Lagres i %{count} dager"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept static builds"
+msgstr "Lagrede statiske bygg"
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
@@ -11545,6 +11603,21 @@ msgstr "Grupper med samsvarende nøkler oppdateres. Andre grupper beholdes. Kont
 #, elixir-autogen, elixir-format
 msgid "Maybe it was outdated and has been deleted?"
 msgstr "Kanskje den var utdatert og har blitt slettet?"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Measure now"
+msgstr "Mål nå"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Measured on %{day}."
+msgstr "Målt %{day}"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Measuring %{name} is queued."
+msgstr "Måling av %{name} er satt i kø."
 
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/live/sites/site_live.ex
@@ -13274,6 +13347,16 @@ msgstr "Ikke med: %{rows}."
 msgid "Not linked, with the same keys"
 msgstr "Ikke koblet, med de samme nøklene"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not measured yet. The daily measuring, or Measure now, fills it in."
+msgstr "Ikke målt ennå. Den daglige målingen, eller Mål nå, fyller det inn."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not measured · %{requests} requests"
+msgstr "Ikke målt · %{requests} forespørsler"
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not moved"
@@ -14441,6 +14524,7 @@ msgid "Pages a Perplexity user asks for. Usually ignores robots.txt"
 msgstr "Sider en Perplexity-bruker ber om. Ser som regel bort fra robots.txt"
 
 #: lib/brando_admin/components/form/block/render.ex
+#: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Palette"
 msgstr "Palett"
@@ -15268,6 +15352,11 @@ msgstr "Publiserte oppføringer med egen side, sjekket for metatittel og -beskri
 #, elixir-autogen, elixir-format
 msgid "Published on schedule"
 msgstr "Publisert som planlagt"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Published to %{target}. These are the requests this installation answered on the site’s hosts."
+msgstr "Publisert til %{target}. Dette er forespørslene denne installasjonen besvarte på nettstedets verter."
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
@@ -16435,10 +16524,20 @@ msgstr "Etterspurt"
 msgid "Requested URLs that no longer exist but match an entry's slug. Creating a redirect adds it to the settings."
 msgstr "Etterspurte URL-er som ikke lenger finnes, men som passer med en oppførings slug. En ny omdirigering legges til i innstillingene."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requests"
+msgstr "Forespørsler"
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Requests for URLs that do not exist, over the last %{days} days. Add a redirect above when a page has moved."
 msgstr "Forespørsler til URL-er som ikke finnes, de siste %{days} dagene. Legg til en omdirigering ovenfor når en side har flyttet."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Requests per day, the last 30 days"
+msgstr "Forespørsler per dag, de siste 30 dagene"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -18786,6 +18885,11 @@ msgstr "Nettsteder"
 msgid "Sites with the same group key share the provider videos offered under “Add from …”."
 msgstr "Nettsteder med samme gruppenøkkel deler leverandørvideoene som tilbys under «Legg til fra …»."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Size"
+msgstr "Størrelse"
+
 #: lib/brando_admin/live/content/module_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sketches with AI"
@@ -19129,6 +19233,11 @@ msgstr "Stopper alle leveringer og fjerner leveringsloggen."
 msgid "Stops all notifications on it and removes its delivery log."
 msgstr "Stopper alle varsler på den og fjerner leveringsloggen."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Storage"
+msgstr "Lagring"
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Store current editor state"
@@ -19378,6 +19487,7 @@ msgid "Table Templates"
 msgstr "Tabellmaler"
 
 #: lib/brando_admin/components/form/module_props.ex
+#: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Table template"
 msgstr "Tabellmal"
@@ -20183,6 +20293,11 @@ msgstr "Skjemaets standardoppmerking, oppdatert fra feltene ved siden av."
 msgid "The fragments of the pages deleted move to the nearest page above them that is not deleted, or to the homepage in their language. With neither, they stay on the site with no page."
 msgstr "Fragmentene til sidene som slettes, flyttes til nærmeste side over dem som ikke er slettet, eller til forsiden på samme språk. Finnes ingen av delene, blir de på nettstedet uten side."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The free space is that of the volume holding %{path}. Databases on another volume count in the total, not in the free space."
+msgstr "Ledig plass gjelder volumet som har %{path}. Databaser på et annet volum telles med i totalen, ikke i den ledige plassen."
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -20826,6 +20941,11 @@ msgstr "Opplastingen mislyktes. Velg filen på nytt."
 #, elixir-autogen, elixir-format
 msgid "The upload finished in a tab that is no longer editing. It is in the library, not in the entry."
 msgstr "Opplastingen ble ferdig i en fane som ikke redigerer lenger. Den ligger i biblioteket, ikke i elementet."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The usage table’s migration has not run on this installation yet, so there are no figures."
+msgstr "Migreringen for forbrukstabellen har ikke kjørt på denne installasjonen ennå, så det finnes ingen tall."
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
@@ -21767,6 +21887,7 @@ msgstr "Verktøy folk har koblet til dette nettstedet. Trekker du tilbake ett, s
 msgid "Top searches"
 msgstr "Vanligste søk"
 
+#: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Total"
@@ -21776,6 +21897,11 @@ msgstr "Totalt"
 #, elixir-autogen, elixir-format
 msgid "Traffic from %{sources}, last %{days} days."
 msgstr "Trafikk fra %{sources}, siste %{days} dager."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Traffic, last 30 days"
+msgstr "Trafikk, siste 30 dager"
 
 #: lib/brando/seo/crawlers.ex
 #, elixir-autogen, elixir-format
@@ -22208,6 +22334,7 @@ msgid "Unique title"
 msgstr "Unik tittel"
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr "Ukjent"
@@ -22228,6 +22355,7 @@ msgid "Unknown build"
 msgstr "Ukjent bygg"
 
 #: lib/brando_admin/live/sites/environment_live.ex
+#: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown environment"
 msgstr "Ukjent miljø"
@@ -22644,6 +22772,11 @@ msgstr "Opplastinger pågår fortsatt"
 #, elixir-autogen, elixir-format
 msgid "Uploads to this field go to this folder"
 msgstr "Opplastinger i dette feltet havner i denne mappen"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Usage"
+msgstr "Forbruk"
 
 #: lib/brando_admin/components/assets/media_field.ex
 #, elixir-autogen, elixir-format
@@ -23340,6 +23473,11 @@ msgstr "Det redaktøren ser over feltet"
 #, elixir-autogen, elixir-format
 msgid "What the icons mean"
 msgstr "Hva ikonene betyr"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "What the site stores, measured once a day, and the requests this installation answered on the site’s hosts, per UTC day."
+msgstr "Hva nettstedet lagrer, målt én gang om dagen, og forespørslene denne installasjonen besvarte på nettstedets verter, per UTC-døgn."
 
 #: lib/brando_admin/live/forms/inbox_live.ex
 #, elixir-autogen, elixir-format
@@ -24935,6 +25073,11 @@ msgstr "uendret resultat"
 msgid "page URL"
 msgstr "sidens URL"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "palette %{name}"
+msgstr "palett %{name}"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "palettes"
@@ -25249,6 +25392,11 @@ msgstr[1] "med undermoduler %{names}"
 #, elixir-autogen
 msgid "with its %{children}"
 msgstr "med sine %{children}"
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "with palette %{name}"
+msgstr "med paletten %{name}"
 
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format

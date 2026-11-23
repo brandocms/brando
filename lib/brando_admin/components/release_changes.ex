@@ -261,7 +261,10 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         <span class="release-def-name">
           <span :if={@row.namespace}>{@row.namespace} ›</span> {@row.title}
         </span>
-        <span :if={@row.children != []} class="release-def-child">
+        <span :if={@row.children != [] && @row.kind == "container"} class="release-def-child">
+          {gettext("with palette %{name}", name: Enum.join(@row.children, ", "))}
+        </span>
+        <span :if={@row.children != [] && @row.kind != "container"} class="release-def-child">
           {ngettext("with child %{names}", "with children %{names}", length(@row.children),
             names: Enum.join(@row.children, ", ")
           )}

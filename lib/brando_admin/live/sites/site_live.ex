@@ -23,16 +23,20 @@ defmodule BrandoAdmin.Sites.SiteLive do
   alias Brando.Repo
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
+  alias Brando.Sites.Usage
+  alias Brando.Sites.Usage.Day
+  alias Brando.Sites.Usage.Measure
   alias Brando.SSG.LocalDelivery
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Setup
-  alias Brando.Tenant.Storage
   alias Brando.Users.User
   alias Brando.Worker.SiteLanguageSeed
+  alias Brando.Worker.SiteUsage
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Workspace
+  alias Phoenix.LiveView.AsyncResult
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -42,6 +46,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
       connected?(socket) ->
         seeder = Brando.Tenant.Seeder.configured()
+        # Measurements as they land, for a superuser, who alone sees them
+        if Boundary.superuser?(socket.assigns.current_user), do: Usage.subscribe()
 
         {:ok,
          socket
@@ -51,7 +57,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
          |> assign(:demo_option?, Brando.Tenant.Seeder.demo_option?(seeder))
          |> assign(:selected, nil)
          |> assign_create_form(default_create_params(), [])
-         |> refresh()}
+         |> refresh()
+         |> assign_usage()}
 
       true ->
         {:ok, assign(socket, :socket_connected, false)}
@@ -63,7 +70,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   # else the first.
   @impl Phoenix.LiveView
   def handle_params(params, _uri, %{assigns: %{socket_connected: true}} = socket) do
-    {:noreply, assign(socket, :selected, selection(params, socket.assigns))}
+    {:noreply, socket |> assign(:selected, selection(params, socket.assigns)) |> usage_days()}
   end
 
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
@@ -115,6 +122,11 @@ defmodule BrandoAdmin.Sites.SiteLive do
             <span class="site-list-name">
               <strong>{site.name}</strong>
               <small>{site.key}</small>
+              <.usage_summary
+                :if={@usage && @usage.table?}
+                id={"site-list-usage-#{site.id}"}
+                summary={@usage.overview[site.id]}
+              />
             </span>
             <.status_badge status={site.status} />
           </.link>
@@ -141,6 +153,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
             users={@users}
             drafts={@drafts}
             superuser?={@superuser?}
+            usage={@usage}
+            usage_free={@usage_free}
           />
         </div>
       </div>
@@ -314,6 +328,31 @@ defmodule BrandoAdmin.Sites.SiteLive do
     """
   end
 
+  attr :id, :string, required: true
+  attr :summary, :map, default: nil
+
+  # The site's total storage, as last measured, and its requests in the last
+  # 30 days, under its name in the list
+  defp usage_summary(assigns) do
+    ~H"""
+    <span id={@id} class="site-list-usage">
+      {usage_summary_text(@summary)}
+    </span>
+    """
+  end
+
+  defp usage_summary_text(%{measured: %Day{} = measured, requests: requests}),
+    do:
+      gettext("%{storage} · %{requests} requests",
+        storage: format_size(Day.storage_bytes(measured)),
+        requests: format_count(requests)
+      )
+
+  defp usage_summary_text(%{requests: requests}),
+    do: gettext("Not measured · %{requests} requests", requests: format_count(requests))
+
+  defp usage_summary_text(nil), do: usage_summary_text(%{requests: 0})
+
   defp site_form(assigns) do
     site = assigns.site
 
@@ -348,9 +387,6 @@ defmodule BrandoAdmin.Sites.SiteLive do
         </div>
         <div>
           <dt>{gettext("Pages")}</dt><dd>{stat(@stats, @site.id, :page_count)}</dd>
-        </div>
-        <div>
-          <dt>{gettext("Media")}</dt><dd>{format_size(stat(@stats, @site.id, :media_size))}</dd>
         </div>
         <div>
           <dt>{gettext("Last page edit")}</dt><dd>{format_last_edit(stat(@stats, @site.id, :last_edit))}</dd>
@@ -424,6 +460,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
           </div>
         </div>
       </div>
+
+      <.usage_section :if={@usage} site={@site} usage={@usage} free={@usage_free} />
 
       <.delivery_section
         site={@site}
@@ -551,6 +589,241 @@ defmodule BrandoAdmin.Sites.SiteLive do
     </section>
     """
   end
+
+  attr :site, Site, required: true
+  attr :usage, :map, required: true
+  attr :free, AsyncResult, default: nil
+
+  # What the site stores and the requests the installation answered on its
+  # hosts, for a superuser only (`Brando.Sites.Usage`)
+  defp usage_section(%{usage: %{table?: false}} = assigns) do
+    ~H"""
+    <section class="site-section site-usage" id={"usage-site-#{@site.id}"}>
+      <header class="site-section-heading">
+        <h3>{gettext("Usage")}</h3>
+      </header>
+      <p class="site-hint" id={"usage-missing-#{@site.id}"}>
+        {gettext("The usage table’s migration has not run on this installation yet, so there are no figures.")}
+      </p>
+    </section>
+    """
+  end
+
+  defp usage_section(assigns) do
+    usage = assigns.usage
+    measured = Enum.filter(usage.days, &Day.measured?/1)
+    latest = if measured == [], do: get_in(usage.overview, [assigns.site.id, :measured]), else: latest_day(measured)
+
+    assigns =
+      assigns
+      |> assign(:latest, latest)
+      |> assign(:change, storage_change(measured))
+      |> assign(:requests, Enum.sum_by(usage.days, & &1.requests))
+      |> assign(:bytes_sent, Enum.sum_by(usage.days, & &1.bytes_sent))
+      |> assign(:bars, traffic_bars(usage.days, usage.today))
+      |> assign(:databases, database_rows(latest, assigns.site))
+      |> assign(:elsewhere, published_elsewhere(assigns.site))
+
+    ~H"""
+    <section class="site-section site-usage" id={"usage-site-#{@site.id}"}>
+      <header class="site-section-heading">
+        <h3>{gettext("Usage")}</h3>
+        <p>
+          {gettext(
+            "What the site stores, measured once a day, and the requests this installation answered on the site’s hosts, per UTC day."
+          )}
+        </p>
+      </header>
+
+      <div class="site-usage-group" id={"usage-storage-#{@site.id}"}>
+        <h4>{gettext("Storage")}</h4>
+        <p :if={is_nil(@latest)} class="site-hint">
+          {gettext("Not measured yet. The daily measuring, or Measure now, fills it in.")}
+        </p>
+        <dl :if={@latest} class="site-facts" id={"usage-storage-facts-#{@site.id}"}>
+          <div>
+            <dt>{gettext("Total")}</dt>
+            <dd>{format_size(Day.storage_bytes(@latest))}</dd>
+          </div>
+          <div>
+            <dt>{gettext("Media")}</dt>
+            <dd>{format_size(@latest.media_bytes)}</dd>
+          </div>
+          <div>
+            <dt>{gettext("Kept static builds")}</dt>
+            <dd>{format_size(@latest.builds_bytes)}</dd>
+          </div>
+          <div>
+            <dt>{gettext("Databases")}</dt>
+            <dd>{format_size(Day.database_bytes(@latest))}</dd>
+          </div>
+          <div :if={@change} id={"usage-change-#{@site.id}"}>
+            <dt>{gettext("Change since %{day}", day: format_day(@change.since))}</dt>
+            <dd>{format_change(@change.bytes)}</dd>
+          </div>
+        </dl>
+        <p :if={@latest} class="site-hint">
+          {gettext("Measured on %{day}.", day: format_day(@latest.day))}
+        </p>
+        <div :if={@databases != []} class="workspace-panel site-usage-databases">
+          <div class="workspace-table-scroll">
+            <table class="workspace-table">
+              <thead>
+                <tr>
+                  <th>{gettext("Database")}</th>
+                  <th class="numeric">{gettext("Size")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr :for={row <- @databases} id={"usage-db-#{@site.id}-#{row["schema"]}"}>
+                  <td class={row["archive"] && "site-usage-archive"}>
+                    {database_label(row)}<small class="workspace-mono">{row["schema"]}</small>
+                  </td>
+                  <td class="numeric">{format_size(row["bytes"])}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="site-usage-group" id={"usage-traffic-#{@site.id}"}>
+        <h4>{gettext("Traffic, last 30 days")}</h4>
+        <p :if={@elsewhere} class="site-hint" id={"usage-elsewhere-#{@site.id}"}>
+          {gettext(
+            "Published to %{target}. These are the requests this installation answered on the site’s hosts.",
+            target: @elsewhere
+          )}
+        </p>
+        <dl class="site-facts">
+          <div>
+            <dt>{gettext("Requests")}</dt>
+            <dd>{format_count(@requests)}</dd>
+          </div>
+          <div>
+            <dt>{gettext("Bytes served")}</dt>
+            <dd>{format_size(@bytes_sent)}</dd>
+          </div>
+        </dl>
+        <figure class="site-usage-trend">
+          <svg
+            viewBox="0 0 300 48"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={gettext("Requests per day, the last 30 days")}
+          >
+            <rect
+              :for={bar <- @bars}
+              x={bar.x}
+              y={48 - bar.height}
+              width="8"
+              height={bar.height}
+              rx="1"
+            >
+              <title>{bar.title}</title>
+            </rect>
+          </svg>
+          <figcaption>
+            <span>{format_day(Date.add(@usage.today, -29))}</span>
+            <span>{format_day(@usage.today)}</span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="site-usage-group" id={"usage-installation-#{@site.id}"}>
+        <h4>{gettext("Installation")}</h4>
+        <dl class="site-facts">
+          <div>
+            <dt>{gettext("All measured sites")}</dt>
+            <dd>{format_size(@usage.total)}</dd>
+          </div>
+          <div>
+            <dt>{gettext("Free on the media volume")}</dt>
+            <dd id={"usage-free-#{@site.id}"}>{free_space(@free)}</dd>
+          </div>
+        </dl>
+        <p class="site-hint">
+          {gettext(
+            "The free space is that of the volume holding %{path}. Databases on another volume count in the total, not in the free space.",
+            path: @usage.media_path
+          )}
+        </p>
+      </div>
+
+      <div class="site-actions">
+        <button type="button" id={"measure-usage-#{@site.id}"} class="btn" phx-click="measure_usage" phx-value-id={@site.id}>
+          {gettext("Measure now")}
+        </button>
+      </div>
+    </section>
+    """
+  end
+
+  # Read after the first render: `df` may take seconds on a slow volume
+  defp free_space(%AsyncResult{ok?: true, result: bytes}) when is_integer(bytes), do: format_size(bytes)
+  defp free_space(%AsyncResult{loading: loading}) when not is_nil(loading), do: "…"
+  defp free_space(_unknown), do: gettext("Unknown")
+
+  # From the first to the last measurement of the 30 days: none without two
+  defp storage_change([first, _ | _] = measured) do
+    last = latest_day(measured)
+    %{since: first.day, bytes: Day.storage_bytes(last) - Day.storage_bytes(first)}
+  end
+
+  defp storage_change(_measured), do: nil
+
+  defp latest_day(days), do: Enum.max_by(days, & &1.day, Date)
+
+  # 30 bars of requests per day, the busiest at full height
+  defp traffic_bars(days, today) do
+    by_day = Map.new(days, &{&1.day, &1.requests})
+    dates = Enum.map(29..0//-1, &Date.add(today, -&1))
+    peak = dates |> Enum.map(&Map.get(by_day, &1, 0)) |> Enum.max()
+
+    dates
+    |> Enum.with_index()
+    |> Enum.map(fn {date, index} ->
+      requests = Map.get(by_day, date, 0)
+
+      %{
+        x: index * 10 + 1,
+        height: bar_height(requests, peak),
+        title: gettext("%{day}: %{requests} requests", day: format_day(date), requests: format_count(requests))
+      }
+    end)
+  end
+
+  # A day with requests is at least a pixel high
+  defp bar_height(0, _peak), do: 0
+  defp bar_height(requests, peak), do: max(round(requests / peak * 48), 1)
+
+  # Each environment's database, its archives under it, newest first; an
+  # archive of an environment the site no longer has after those that it has
+  defp database_rows(nil, _site), do: []
+
+  defp database_rows(%Day{databases: databases}, site) do
+    order = site.environments |> Enum.with_index() |> Map.new(fn {environment, index} -> {environment.key, index} end)
+
+    databases
+    |> List.wrap()
+    |> Enum.sort_by(fn row ->
+      {Map.get(order, row["environment"], map_size(order)), row["environment"] || "", row["archive"],
+       if(row["archive"], do: invert(row["schema"]), else: "")}
+    end)
+  end
+
+  defp invert(schema), do: schema |> String.to_charlist() |> Enum.map(&(0x10FFFF - &1))
+
+  defp database_label(%{"archive" => true}), do: pgettext("database", "Archive")
+  defp database_label(%{"environment" => nil}), do: gettext("Unknown environment")
+  defp database_label(%{"environment" => environment}), do: environment
+
+  # A static site deployed to another host: its public traffic goes there
+  defp published_elsewhere(%Site{delivery_mode: :static, deploy_config: %DeployConfig{strategy: strategy}} = site)
+       when strategy in [:rsync, :s3, :cloudflare_pages],
+       do: strategy_label(site.deploy_config)
+
+  defp published_elsewhere(_site), do: nil
 
   attr :site, Site, required: true
   attr :superuser?, :boolean, required: true
@@ -990,6 +1263,18 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  # Only a superuser sees usage or measures it: in groups mode, reading this
+  # screen takes only the Sites read permission
+  def handle_event("measure_usage", %{"id" => id}, socket) do
+    with :ok <- usage_access(socket),
+         {:ok, site} <- site_from_socket(socket, id),
+         {:ok, _job} <- SiteUsage.measure_now(site) do
+      {:noreply, notify(socket, gettext("Measuring %{name} is queued.", name: site.name))}
+    else
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+    end
+  end
+
   def handle_event("seed_language", params, socket) do
     with {:ok, site} <- site_from_socket(socket, params["site-id"]),
          {:ok, environment} <- environment_of(site, params["environment-id"]),
@@ -1061,6 +1346,14 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  @impl Phoenix.LiveView
+  def handle_info({:site_usage_measured, site_id}, socket) do
+    socket = put_overview(socket)
+    {:noreply, if(site_id == socket.assigns.selected, do: usage_days(socket, :reload), else: socket)}
+  end
+
+  def handle_info(_message, socket), do: {:noreply, socket}
+
   defp refresh(socket) do
     sites = Registry.list_sites() |> Enum.sort_by(&{&1.name, &1.id})
     {:ok, users} = Brando.Users.list_users(%{order: "asc name"})
@@ -1075,7 +1368,60 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:superuser?, Boundary.superuser?(socket.assigns.current_user))
     |> assign_new(:drafts, fn -> %{} end)
     |> keep_selection()
+    |> usage_days()
   end
+
+  # For a superuser only, read once per mount: the sites' figures, and the
+  # free space after the first render. Nil for anyone else, so nothing of it
+  # renders; without the table (its migration not run yet) only a sentence.
+  defp assign_usage(%{assigns: %{superuser?: true}} = socket) do
+    if Usage.table?() do
+      media_path = Brando.config(:media_path) |> Path.expand()
+
+      socket
+      |> assign(:usage, %{table?: true, media_path: media_path, days: [], days_of: nil})
+      |> put_overview()
+      |> usage_days()
+      |> assign_async(:usage_free, fn -> {:ok, %{usage_free: Measure.free_bytes(media_path)}} end)
+    else
+      socket |> assign(:usage, %{table?: false}) |> assign(:usage_free, nil)
+    end
+  end
+
+  defp assign_usage(socket), do: socket |> assign(:usage, nil) |> assign(:usage_free, nil)
+
+  # Again when a measurement lands
+  defp put_overview(%{assigns: %{usage: %{table?: true} = usage}} = socket) do
+    today = Date.utc_today()
+    overview = Usage.overview(today)
+
+    total =
+      overview
+      |> Map.values()
+      |> Enum.map(&(&1.measured && Day.storage_bytes(&1.measured)))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.sum()
+
+    assign(socket, :usage, Map.merge(usage, %{today: today, overview: overview, total: total}))
+  end
+
+  defp put_overview(socket), do: socket
+
+  # The selected site's days: read when another site is selected, or when a
+  # measurement of it lands (`:reload`)
+  defp usage_days(socket, reload \\ nil)
+
+  defp usage_days(%{assigns: %{usage: %{table?: true, days_of: days_of} = usage, selected: selected}} = socket, reload)
+       when days_of != selected or reload == :reload do
+    site = Enum.find(socket.assigns.sites, &(&1.id == selected))
+    days = if site, do: Usage.days(site, usage.today), else: []
+    assign(socket, :usage, %{usage | days: days, days_of: selected})
+  end
+
+  defp usage_days(socket, _reload), do: socket
+
+  defp usage_access(%{assigns: %{superuser?: true}}), do: :ok
+  defp usage_access(_socket), do: {:error, :forbidden}
 
   # A site removed meanwhile, here or elsewhere, gives way to the default
   defp keep_selection(%{assigns: %{selected: id, sites: sites}} = socket) when is_integer(id) do
@@ -1183,8 +1529,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
     %{
       page_count: page_stat(site, live_environment, :count),
-      last_edit: page_stat(site, live_environment, :last_edit),
-      media_size: directory_size(Storage.media_root(site))
+      last_edit: page_stat(site, live_environment, :last_edit)
     }
   end
 
@@ -1203,26 +1548,6 @@ defmodule BrandoAdmin.Sites.SiteLive do
     case Ecto.Adapters.SQL.query(Brando.Repo.repo(), sql, []) do
       {:ok, %{rows: [[value]]}} -> value || "—"
       {:error, _reason} -> "—"
-    end
-  end
-
-  defp directory_size(path) do
-    case File.ls(path) do
-      {:ok, entries} ->
-        Enum.reduce(entries, 0, fn entry, total -> total + entry_size(path, entry) end)
-
-      {:error, _reason} ->
-        0
-    end
-  end
-
-  defp entry_size(path, entry) do
-    child = Path.join(path, entry)
-
-    case File.lstat(child) do
-      {:ok, %{type: :regular, size: size}} -> size
-      {:ok, %{type: :directory}} -> directory_size(child)
-      _symlink_or_error -> 0
     end
   end
 
@@ -1592,10 +1917,24 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp assignments(assignments, site_id), do: Map.get(assignments, site_id, [])
   defp stat(stats, site_id, key), do: stats |> Map.get(site_id, %{}) |> Map.get(key, "—")
 
-  defp format_size("—"), do: "—"
-  defp format_size(bytes) when bytes < 1_024, do: "#{bytes} B"
-  defp format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1_024, 1)} KB"
-  defp format_size(bytes), do: "#{Float.round(bytes / 1_048_576, 1)} MB"
+  @kb 1_024
+  @mb 1_024 * @kb
+  @gb 1_024 * @mb
+  @tb 1_024 * @gb
+
+  defp format_size(bytes) when bytes < @kb, do: "#{bytes} B"
+  defp format_size(bytes) when bytes < @mb, do: "#{Float.round(bytes / @kb, 1)} KB"
+  defp format_size(bytes) when bytes < @gb, do: "#{Float.round(bytes / @mb, 1)} MB"
+  defp format_size(bytes) when bytes < @tb, do: "#{Float.round(bytes / @gb, 1)} GB"
+  defp format_size(bytes), do: "#{Float.round(bytes / @tb, 1)} TB"
+
+  defp format_change(bytes) when bytes >= 0, do: "+" <> format_size(bytes)
+  defp format_change(bytes), do: "−" <> format_size(-bytes)
+
+  defp format_count(count), do: Brando.Utils.human_spaced_number(count)
+
+  # A UTC day, as the admin writes a date: `12 Oct`, `12. okt.`
+  defp format_day(%Date{} = date), do: date |> DateTime.new!(~T[12:00:00]) |> BrandoAdmin.Dates.day()
 
   defp format_last_edit(%NaiveDateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)
   defp format_last_edit(%DateTime{} = datetime), do: BrandoAdmin.Dates.short(datetime)

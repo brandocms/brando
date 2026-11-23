@@ -3,6 +3,9 @@ defmodule Brando.Content.Definition.Reader do
 
   alias Brando.Content.Definition.{Dsl, Error}
 
+  # Each section's entity, and the fields its two arguments set
+  @entities %{refs: {:ref, :name, :type}, vars: {:var, :key, :type}, colors: {:color, :key, :hex_value}}
+
   def files!(directory) do
     directory
     |> File.ls!()
@@ -36,7 +39,8 @@ defmodule Brando.Content.Definition.Reader do
           refs: [],
           vars: [],
           templates: [],
-          children: []
+          children: [],
+          colors: []
         }
 
         {spec, used?} = Enum.reduce(statements(body), {spec, false}, &declaration!(&1, &2, path))
@@ -86,7 +90,7 @@ defmodule Brando.Content.Definition.Reader do
     {spec, true}
   end
 
-  defp declaration!({section, _, [[do: body]]}, {spec, used?}, path) when section in [:refs, :vars, :children] do
+  defp declaration!({section, _, [[do: body]]}, {spec, used?}, path) when section in [:refs, :vars, :children, :colors] do
     if Map.get(spec, {:seen, section}), do: Error.raise!(path, "duplicate #{section} section")
     entries = Enum.map(statements(body), &entity!(&1, section, path))
     {spec |> Map.put(section, entries) |> Map.put({:seen, section}, true), used?}
@@ -113,12 +117,11 @@ defmodule Brando.Content.Definition.Reader do
 
   defp entity!({:child, _, [definition]}, :children, path), do: %{definition: literal!(definition, path)}
 
-  defp entity!({name, _, args}, section, path) when name in [:ref, :var] and section in [:refs, :vars] do
-    expected = if section == :refs, do: :ref, else: :var
+  defp entity!({name, _, args}, section, path) when name in [:ref, :var, :color] and is_map_key(@entities, section) do
+    {expected, key_field, value_field} = @entities[section]
     unless name == expected and length(args) in [2, 3], do: Error.raise!(path, "invalid #{section} declaration")
-    [key, type | rest] = args
-    key_field = if name == :ref, do: :name, else: :key
-    fields = %{key_field => literal!(key, path), type: literal!(type, path)}
+    [key, value | rest] = args
+    fields = %{key_field => literal!(key, path), value_field => literal!(value, path)}
 
     rest
     |> entity_settings!(fields, name, path)
@@ -137,6 +140,7 @@ defmodule Brando.Content.Definition.Reader do
 
   defp entity_schema(:ref), do: Dsl.ref_schema()
   defp entity_schema(:var), do: Dsl.var_schema()
+  defp entity_schema(:color), do: Dsl.color_schema()
 
   defp field!({name, _, [value]}, fields, path) do
     if Map.has_key?(fields, name), do: Error.raise!(path, "duplicate #{name} setting")

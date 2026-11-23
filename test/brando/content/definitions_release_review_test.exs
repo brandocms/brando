@@ -414,7 +414,8 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
 
         for table <-
               ~w(content_modules content_table_templates content_refs content_vars content_blocks
-                 content_definition_applies content_definition_batches activity_events) do
+                 content_definition_applies content_definition_batches activity_events content_palettes
+                 content_containers) do
           Ecto.Adapters.SQL.query!(
             Repo.repo(),
             ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|

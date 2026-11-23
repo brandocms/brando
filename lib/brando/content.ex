@@ -209,6 +209,10 @@ defmodule Brando.Content do
 
   def duplicate_module_uid(_entry, _uid), do: Brando.Utils.generate_uid()
 
+  @doc false
+  # A copy is a definition of its own (`Brando.Content.Definition`)
+  def duplicate_uid(_entry, _uid), do: Brando.Utils.generate_uid()
+
   @doc """
   The class of a duplicated module: `<class>-copy`, numbered when another
   module has it. A class is used in the module's template, so it stays one
@@ -456,13 +460,19 @@ defmodule Brando.Content do
     end
   end
 
+  # Palettes and containers are definitions too: what a release would change
+  # is worked out again (`Brando.Content.Definitions.ReleaseStatus`)
   mutation :create, Palette do
-    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      Brando.Cache.Palettes.update({:ok, entry})
+    end
   end
 
   mutation :update, Palette do
     fn palette ->
       ContentBlocks.render_entries_with_palette_id(palette.id)
+      Brando.Content.Definitions.changed()
       Brando.Cache.Palettes.update({:ok, palette})
     end
   end
@@ -470,10 +480,14 @@ defmodule Brando.Content do
   # Palettes are soft-deleted: `Brando.Cache.entry_changed/1` puts one
   # restored from the trash back
   mutation :delete, Palette do
-    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      Brando.Cache.Palettes.update({:ok, entry})
+    end
   end
 
-  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]} do
+  mutation :duplicate,
+           {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2, uid: &__MODULE__.duplicate_uid/2]} do
     fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
   end
 
@@ -655,10 +669,28 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, Container
-  mutation :update, Container
-  mutation :delete, Container
-  mutation :duplicate, {Container, change_fields: [:name]}
+  mutation :create, Container do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :update, Container do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :delete, Container do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :duplicate, {Container, change_fields: [:name, uid: &__MODULE__.duplicate_uid/2]}
 
   filters Identifier do
     fn

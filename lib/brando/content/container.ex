@@ -30,11 +30,14 @@ defmodule Brando.Content.Container do
   )a
   @derive {Jason.Encoder, only: @derived_fields}
 
+  trait :ensure_uid
   trait :sequenced
   trait :soft_delete
   trait :timestamped
 
   attributes do
+    # Its identity in definition files (`Brando.Content.Definition`)
+    attribute :uid, :string, required: true
     attribute :type, :enum, values: [:liquid, :heex], default: :liquid
     attribute :name, :string, required: true
     attribute :namespace, :string, required: true

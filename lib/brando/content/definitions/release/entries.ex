@@ -1,13 +1,13 @@
 defmodule Brando.Content.Definitions.Release.Entries do
   @moduledoc """
-  The entries that use a release's changed modules, in this environment: the
-  entries a release apply re-renders, which Verify renders as a dry run and
-  the review screen lists.
+  The entries that use a release's changed modules, containers and palettes,
+  in this environment: the entries a release apply re-renders, which Verify
+  renders as a dry run and the review screen lists.
   """
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.{Blocks, Identifier, Module}
+  alias Brando.Content.{Blocks, Container, Identifier, Module, Palette}
   alias Brando.Repo
 
   @type entry :: %{
@@ -22,6 +22,9 @@ defmodule Brando.Content.Definitions.Release.Entries do
           admin_url: String.t() | nil,
           modules: [String.t()]
         }
+
+  @typedoc "What the blocks point at: a module, a container or a palette, by id."
+  @type source :: {:module | :container | :palette, integer()}
 
   @doc """
   The module IDs of the trees the definition UIDs name (each module with
@@ -48,19 +51,37 @@ defmodule Brando.Content.Definitions.Release.Entries do
   end
 
   @doc """
-  What the admin shows of each entry that holds a block of the modules
-  `module_ids` names (`%{id => uid}`): title, type, language, status and
-  links, sorted by type and title. `:modules` on each entry lists the UIDs of
-  the modules it uses, so a screen can tell which tree it re-renders for.
+  The definitions the UIDs name here, as `list/1` takes them: each module
+  with its children (`module_ids/1`), and each container and palette.
   """
-  @spec list(%{integer() => String.t()}) :: [entry()]
-  def list(module_ids) when map_size(module_ids) == 0, do: []
+  @spec sources([String.t()]) :: %{source() => String.t()}
+  def sources(uids) do
+    modules = Map.new(module_ids(uids), fn {id, uid} -> {{:module, id}, uid} end)
 
-  def list(module_ids) do
+    styles =
+      for {kind, schema} <- [container: Container, palette: Palette],
+          {id, uid} <- Repo.all(from(s in schema, where: s.uid in ^uids and is_nil(s.deleted_at), select: {s.id, s.uid})),
+          into: %{},
+          do: {{kind, id}, uid}
+
+    Map.merge(modules, styles)
+  end
+
+  @doc """
+  What the admin shows of each entry that holds a block of what `sources`
+  names (`%{source => uid}`, or `%{module_id => uid}` from `module_ids/1`):
+  title, type, language, status and links, sorted by type and title.
+  `:modules` on each entry lists the UIDs of the definitions it uses, so a
+  screen can tell which row it re-renders for.
+  """
+  @spec list(%{(source() | integer()) => String.t()}) :: [entry()]
+  def list(sources) when map_size(sources) == 0, do: []
+
+  def list(sources) do
     by_entry =
-      Enum.reduce(module_ids, %{}, fn {module_id, uid}, acc ->
-        module_id
-        |> Blocks.list_block_ids_using_module(:local)
+      Enum.reduce(sources, %{}, fn {source, uid}, acc ->
+        source
+        |> block_ids()
         |> Blocks.list_root_block_ids_by_source()
         |> Blocks.list_entry_ids_for_root_blocks_by_source()
         |> Enum.reduce(acc, fn {schema, ids}, acc ->
@@ -74,6 +95,11 @@ defmodule Brando.Content.Definitions.Release.Entries do
     |> Enum.map(fn {{schema, id} = key, uids} -> describe(key, identifiers[key], schema, id, uids) end)
     |> Enum.sort_by(&{&1.type, String.downcase(&1.title), &1.id})
   end
+
+  defp block_ids({:container, id}), do: Blocks.list_block_ids_using_container(id, :local)
+  defp block_ids({:palette, id}), do: Blocks.list_block_ids_using_palette(id, :local)
+  defp block_ids({:module, id}), do: Blocks.list_block_ids_using_module(id, :local)
+  defp block_ids(module_id), do: Blocks.list_block_ids_using_module(module_id, :local)
 
   defp identifiers([]), do: %{}
 
