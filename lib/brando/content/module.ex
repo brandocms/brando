@@ -354,22 +354,15 @@ defmodule Brando.Content.Module do
   `data` holding the type): `{field, message, keys}`, or nil when nothing is.
   """
   def media_drop_problem(children, child_uid, ref_name) do
-    case Enum.find(children, &(&1.uid == child_uid)) do
-      nil ->
-        {:media_drop_child, "%{child} is not a child module of this module", [child: child_uid]}
-
-      child ->
-        case Enum.find(child.refs, &(&1.name == ref_name)) do
-          nil ->
-            {:media_drop_ref, "%{child} has no ref %{ref}", [child: child_uid, ref: ref_name]}
-
-          ref ->
-            if ref_type(ref) in @media_drop_ref_types,
-              do: nil,
-              else:
-                {:media_drop_ref, "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref",
-                 [child: child_uid, ref: ref_name, type: ref_type(ref)]}
-        end
+    with {:child, %{} = child} <- {:child, Enum.find(children, &(&1.uid == child_uid))},
+         {:ref, %{} = ref} <- {:ref, Enum.find(child.refs, &(&1.name == ref_name))},
+         false <- ref_type(ref) in @media_drop_ref_types do
+      {:media_drop_ref, "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref",
+       [child: child_uid, ref: ref_name, type: ref_type(ref)]}
+    else
+      {:child, nil} -> {:media_drop_child, "%{child} is not a child module of this module", [child: child_uid]}
+      {:ref, nil} -> {:media_drop_ref, "%{child} has no ref %{ref}", [child: child_uid, ref: ref_name]}
+      true -> nil
     end
   end
 

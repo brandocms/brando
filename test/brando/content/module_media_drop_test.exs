@@ -10,8 +10,8 @@ defmodule Brando.Content.ModuleMediaDropTest do
 
   alias Brando.Content
   alias Brando.Content.{Blocks, Definitions, Module, ModuleDiff}
-  alias Brando.Villain.Blocks.{MediaBlock, PictureBlock, VideoBlock}
   alias Brando.{Factory, Repo}
+  alias Brando.Villain.Blocks.{MediaBlock, PictureBlock, VideoBlock}
 
   import Ecto.Query, only: [from: 2]
 
