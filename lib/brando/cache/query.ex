@@ -87,9 +87,11 @@ defmodule Brando.Cache.Query do
 
   @spec get(any) :: any
   def get(key) do
-    case get_from_cache(key) do
-      {:ok, val} -> val
-      {:error, _} -> nil
+    with false <- uncached?(),
+         {:ok, val} <- get_from_cache(key) do
+      val
+    else
+      _ -> nil
     end
   end
 
@@ -103,9 +105,10 @@ defmodule Brando.Cache.Query do
     do: unless(uncached?(), do: @cache_module.put(:query, {:tenant, prefix, {:single, src, hash, id}}, val, expire: ttl))
 
   @doc """
-  Caches no query result for the rest of the transaction around the caller
-  (one begun with `Brando.Repo.transaction/2`): for one that will be rolled
-  back, whose rows a cached result would keep after they are gone. Returns
+  Caches no query result, and reads none from the cache, for the rest of the
+  transaction around the caller (one begun with `Brando.Repo.transaction/2`):
+  for one that will be rolled back, whose rows a cached result would keep
+  after they are gone, and which a result cached before it would not show. Returns
   `:error` outside such a transaction.
   """
   @spec skip_in_transaction() :: :ok | :error

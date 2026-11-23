@@ -198,7 +198,9 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
 
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(Page)}"))
       before = kept()
-      cached = Cachex.size!(:query)
+      # The render reads the card's module through the query cache, which
+      # would keep it
+      Cachex.clear(:query)
 
       body = open(preview!(mcp(c), id, %{"new" => "english"})).resp_body
       assert body =~ ~s(<h2 class="kicker">Our projects</h2>)
@@ -207,7 +209,8 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
       refute body =~ "Prosjekt"
 
       assert kept() == before
-      assert Cachex.size!(:query) == cached
+      assert Cachex.size!(:query) == 0
+      # Broadcasts are held for a commit, which the rollback never makes
       refute_received {:mutation, _, _, _}
       assert Brando.Translations.get_member(Page, c.source.id) == nil
     end
