@@ -371,9 +371,9 @@ arguments of `{% route %}` and `{% route_i18n %}`, `{% editable_field %}` and
 `{% inspect %}`. An assigned list of strings reaches them as its strings. They
 do so for the variable itself (`alt: q`), not for an expression on it
 (`q.size` counts the stored text), and only when the assign or the loop's list
-starts from a field or variable: a value that starts from a literal
-(`{% assign q = "A&amp;B" %}`), or a name set from one, was never escaped, and
-reaches them as it is. `{% assign alt = entry.title %}{% picture entry.cover { alt: alt } %}`
+reads a field or variable, also in a filter (`{% assign alt = "Photo: " | append: entry.title %}`):
+a value set from literals alone (`{% assign q = "A&amp;B" %}`), or from a
+name holding one, was never escaped, and reaches them as it is. `{% assign alt = entry.title %}{% picture entry.cover { alt: alt } %}`
 and `{% for tag in entry.tags %}{% picture entry.cover { alt: tag } %}{% endfor %}`
 print the text escaped once, and `{% route %}` builds its address from the
 text as typed. Every other tag and option gets the assigned text escaped. A
