@@ -1408,6 +1408,14 @@ defmodule Brando.TranslationsTest do
       end
     end
 
+    test "a synchronized fragment's page cannot be language-controlled" do
+      put_test_env(Brando.Pages.Fragment, translatable: [mode: :synchronized, language_controlled_fields: [:page]])
+
+      assert_raise BlueprintError, ~r/page always follows the source in synchronized mode/, fn ->
+        Translatable.check_runtime_config!()
+      end
+    end
+
     test "language_controlled_fields takes assets, only in synchronized mode and not both ways" do
       assert Translatable.validate(Article, mode: :synchronized, language_controlled_fields: [:cover]) == true
       assert %{language_controlled_fields: [:cover]} = Translatable.config(language_controlled_fields: [:cover])

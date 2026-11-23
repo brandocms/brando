@@ -1143,10 +1143,10 @@ defmodule Brando.Translations.Sync do
   The `belongs_to` relations of a schema with alternates that follow the
   source mapped onto the related entry's version in the target's language:
   one that points at the schema itself, like a page's parent, unless it is
-  listed in `language_controlled_fields`; and a source-controlled one that
-  points at another schema with alternates, like a fragment's page
-  (`always_source_controlled`). Any other `belongs_to` is each language's own,
-  or copied as it is when source-controlled.
+  listed in `language_controlled_fields`; and one the trait declares
+  `always_source_controlled` that points at another schema with alternates,
+  like a fragment's page. Any other `belongs_to` is each language's own, or
+  copied as it is when the application lists it in `source_controlled_fields`.
   """
   def tree_relations(schema, config \\ nil), do: schema |> tree_targets(config) |> Enum.map(&elem(&1, 0))
 
@@ -1164,7 +1164,11 @@ defmodule Brando.Translations.Sync do
   end
 
   defp tree_relation?(schema, name, schema, config), do: name not in Map.get(config, :language_controlled_fields, [])
-  defp tree_relation?(_schema, name, module, config), do: name in config.source_controlled_fields and alternates?(module)
+
+  defp tree_relation?(schema, name, module, config) do
+    name in schema.__translatable_always_source_controlled__() and name in config.source_controlled_fields and
+      alternates?(module)
+  end
 
   defp alternates?(module) do
     is_atom(module) and Code.ensure_loaded?(module) and function_exported?(module, :has_alternates?, 0) and

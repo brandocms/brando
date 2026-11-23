@@ -1923,8 +1923,8 @@ defmodule Brando.Translations do
           name not in slug_names,
           do: {name, fn _entry, value -> value end}
 
-    # A source-controlled relation to another schema's entry (a fragment's
-    # page): its version in the copy's language, or, until there is one, none
+    # An `always_source_controlled` relation to another schema's entry (a
+    # fragment's page): its version in the copy's language, or, until there is one, none
     # (the first sync marks it awaited), or the source's when it is required.
     # A page's parent is copied as it is; the first sync maps it.
     required = required_relations(schema)

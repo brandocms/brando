@@ -70,10 +70,12 @@ defmodule Brando.Trait.Translatable do
 
   `always_source_controlled` lists fields that are source-controlled in
   synchronized mode whatever `source_controlled_fields` the application
-  configures, as `Brando.Pages.Fragment` does for its page. A `belongs_to`
-  relation that is source-controlled and points at a schema with alternates
-  is pointed at the related entry's version in the translation's language
-  (see `Brando.Translations.Sync.tree_relations/2`).
+  configures, as `Brando.Pages.Fragment` does for its page. Such a
+  `belongs_to` relation to a schema with alternates is pointed at the related
+  entry's version in the translation's language (see
+  `Brando.Translations.Sync.tree_relations/2`); one an application lists in
+  `source_controlled_fields` is copied as it is. `language_controlled_fields`
+  cannot list these fields.
   """
   use Brando.Trait
 
@@ -141,7 +143,13 @@ defmodule Brando.Trait.Translatable do
               "declare trait :translatable, runtime_config: true"
       end
 
-      validate(module, Keyword.put(opts, :alternates, module.has_alternates?()))
+      validate(
+        module,
+        Keyword.merge(opts,
+          alternates: module.has_alternates?(),
+          always_source_controlled: module.__translatable_always_source_controlled__()
+        )
+      )
     end
 
     :ok
@@ -196,8 +204,22 @@ defmodule Brando.Trait.Translatable do
         message: "#{inspect(module)}: trait :translatable language_controlled_fields requires mode: :synchronized"
     end
 
+    validate_not_always_controlled!(module, fields, Keyword.get(opts, :always_source_controlled, []))
     validate_language_controlled_targets!(module, fields)
     validate_single_control!(module, fields, Keyword.get(opts, :source_controlled_fields, []))
+  end
+
+  defp validate_not_always_controlled!(module, fields, always) do
+    case fields -- (fields -- List.wrap(always)) do
+      [] ->
+        :ok
+
+      both ->
+        raise BlueprintError,
+          message:
+            "#{inspect(module)}: trait :translatable language_controlled_fields cannot list #{inspect(both)}: " <>
+              "the #{Enum.map_join(both, ", ", &to_string/1)} always follows the source in synchronized mode"
+    end
   end
 
   defp validate_language_controlled_targets!(module, fields) do

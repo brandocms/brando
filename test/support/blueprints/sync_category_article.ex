@@ -1,7 +1,7 @@
 # Synchronized articles with a required category, on their own table
-# (`synctest_categorized_articles`), for which `belongs_to` relations a
-# translation maps onto the related entry's version in its language
-# (TreeRelationsTest). Categories have language links.
+# (`synctest_categorized_articles`): an application's relations to schemas with
+# language links, which a translation does not map onto the related entry's
+# version in its language (TreeRelationsTest). Categories have language links.
 defmodule Brando.SyncCategoryTest.Category do
   @moduledoc false
   use Brando.Blueprint,

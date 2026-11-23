@@ -1,7 +1,7 @@
 defmodule Brando.Translations.TreeRelationsTest do
   # Which `belongs_to` relations a synchronized translation points at the
-  # related entry's version in its language: a source-controlled one to a
-  # schema with language links. Any other stays as it is without the mapping.
+  # related entry's version in its language: none of an application's own
+  # relations to another schema, source-controlled or not.
   use Brando.ConnCase, async: false
 
   alias Brando.Factory
@@ -61,53 +61,45 @@ defmodule Brando.Translations.TreeRelationsTest do
     end
   end
 
-  describe "a source-controlled relation to a schema with language links" do
-    test "points at the entry's version in the translation's language", c do
+  # As on main: an application's `source_controlled_fields` copy a relation to
+  # another schema as it is. Only a relation to the schema itself and one the
+  # trait declares `always_source_controlled` (`Fragment.page`, see
+  # SynchronizedFragmentsTest) are mapped.
+  describe "a relation an application lists in source_controlled_fields" do
+    test "is copied from the source as it is, even when the entry has a version in the language", c do
       category_en = category!(:en)
       :ok = Category.Alternate.add(c.category.id, category_en.id)
-      source = article!(ControlledArticle, c, category_id: c.category.id)
+      page = Factory.insert(:page, uri: "om", title: "Om oss", language: :no, creator: c.user)
+      page_en = Factory.insert(:page, uri: "about", title: "About", language: :en, creator: c.user)
+      :ok = Page.Alternate.add(page.id, page_en.id)
+      source = article!(ControlledArticle, c, category_id: c.category.id, page_id: page.id)
+
+      assert Brando.Translations.Sync.tree_relations(ControlledArticle) == []
 
       {:ok, en} = Translations.create_target(ControlledArticle, source.id, :en, c.user)
 
-      assert en.category_id == category_en.id
-      assert payload(ControlledArticle, en).category_id == category_en.id
+      assert {en.category_id, en.page_id} == {c.category.id, page.id}
+
+      assert {payload(ControlledArticle, en).category_id, payload(ControlledArticle, en).page_id} ==
+               {c.category.id, page.id}
+
       assert awaiting(ControlledArticle, en) == []
     end
 
-    test "a required one keeps the source's entry until a version exists, then follows it", c do
+    test "is copied as it is when its entry has no version in the language, with nothing awaited", c do
       source = article!(ControlledArticle, c, category_id: c.category.id)
 
       assert {:ok, en} = Translations.create_target(ControlledArticle, source.id, :en, c.user)
       assert en.category_id == c.category.id
-      assert awaiting(ControlledArticle, en) == ["category/#{c.category.id}"]
-
-      category_en = category!(:en)
-      :ok = Category.Alternate.add(c.category.id, category_en.id)
-
-      assert payload(ControlledArticle, en).category_id == category_en.id
       assert awaiting(ControlledArticle, en) == []
-    end
 
-    test "each relation is mapped on its own when two point at the same id in different schemas", c do
-      page = Factory.insert(:page, uri: "om", title: "Om oss", language: :no, creator: c.user)
-      page_en = Factory.insert(:page, uri: "about", title: "About", language: :en, creator: c.user)
-      :ok = Page.Alternate.add(page.id, page_en.id)
+      # The source's change reaches the translation as it is
+      other = category!(:no, title: "Annen")
+      Repo.update!(Ecto.Changeset.change(Repo.get!(ControlledArticle, source.id), category_id: other.id))
+      Translations.source_saved(Repo.get!(ControlledArticle, source.id))
 
-      # A category with the page's id, and its English version
-      category = category!(:no, id: page.id)
-      category_en = category!(:en, id: page_en.id + 1000)
-      :ok = Category.Alternate.add(category.id, category_en.id)
-
-      source = article!(ControlledArticle, c, category_id: category.id, page_id: page.id)
-
-      assert Translations.entry_map(source, ControlledArticle, "en") ==
-               %{{:category, category.id} => category_en.id, {:page, page.id} => page_en.id}
-
-      {:ok, en} = Translations.create_target(ControlledArticle, source.id, :en, c.user)
-      assert {en.category_id, en.page_id} == {category_en.id, page_en.id}
-
-      assert {payload(ControlledArticle, en).category_id, payload(ControlledArticle, en).page_id} ==
-               {category_en.id, page_en.id}
+      assert payload(ControlledArticle, en).category_id == other.id
+      assert awaiting(ControlledArticle, en) == []
     end
   end
 end
