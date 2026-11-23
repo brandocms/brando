@@ -823,7 +823,12 @@ Palettes and containers saved in the admin get a uid of their own. The
 two environments seeded alike share, `palette-<namespace>-<key>` and
 `container-<namespace>-<name>`, so the first import of one environment's
 files into the other adopts its rows instead of creating copies; a derived
-uid another definition of any kind has gets `-2`, `-3`, …. Within one
+uid another definition of any kind has gets `-2`, `-3`, …. That suffix is
+each environment's own: when only one environment has a module or table
+template with the derived uid, its palette or container gets `-2` and the
+other's does not, so the first import of one's files creates a copy in the
+other instead of adopting it. Give it the same uid in both environments
+before that first export. Within one
 bundle, and here, a uid belongs to one kind, the trash included: a palette
 is refused the uid of a module in the trash, which a restore would bring
 back.
