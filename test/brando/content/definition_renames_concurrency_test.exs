@@ -153,13 +153,11 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
 
   # Every row added since `before`; foreign keys aside, as rows reference
   # each other in every direction
-  defp delete_since!(before) do
-    unboxed(fn ->
-      @repo.transaction(fn ->
-        @repo.query!("SET LOCAL session_replication_role = replica")
-        @repo.query!("DELETE FROM revisions WHERE entry_type = $1 AND entry_id > $2", [to_string(Page), before["pages"]])
-        for {table, id} <- before, do: @repo.query!(~s(DELETE FROM "#{table}" WHERE id > $1), [id])
-      end)
-    end)
+  defp delete_since!(before), do: unboxed(fn -> @repo.transaction(fn -> delete_rows!(before) end) end)
+
+  defp delete_rows!(before) do
+    @repo.query!("SET LOCAL session_replication_role = replica")
+    @repo.query!("DELETE FROM revisions WHERE entry_type = $1 AND entry_id > $2", [to_string(Page), before["pages"]])
+    for {table, id} <- before, do: @repo.query!(~s(DELETE FROM "#{table}" WHERE id > $1), [id])
   end
 end
