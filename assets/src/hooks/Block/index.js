@@ -1,5 +1,6 @@
 import autosize from 'autosize'
 import { fieldOf } from '../../Presence/fieldPresence'
+import pending from '../../Presence/pending'
 
 const PRESENCE_THROTTLE_MS = 500
 // Focus-settle delay before telling the server focus left the block — long
@@ -8,6 +9,10 @@ const SETTLE_MS = 400
 
 export default app => ({
   mounted() {
+    // A block mounted again (moved to another row) takes what was being
+    // typed into the element it replaces.
+    this._uid = this.el.getAttribute('data-block-uid')
+    pending.came(this.el, this._uid)
     this.autosizeElements()
     // A block that mounts after the entry's notes arrived shows its count.
     app.notes?.decorateBlock(this.el)
@@ -81,6 +86,8 @@ export default app => ({
   },
 
   destroyed() {
+    pending.went(this.el, this._uid)
+
     if (this._handleBlockPresence) {
       this.el.removeEventListener('focusin', this._handleBlockPresence)
       this.el.removeEventListener('pointerdown', this._handleBlockPresence)

@@ -1,0 +1,3 @@
+- In the block editor, an upload that finishes as its block is moved to another row ends up in the block; the entry could not be saved after it.
+- Text typed into a block field a moment before another editor moves that block to another row stays in the field, and the field keeps the focus; another editor's move of the block you are in no longer shows its fields as empty boxes.
+- A block made by dropping a file on a multi block is removed when its upload fails or is cancelled, also after it was moved to another row.

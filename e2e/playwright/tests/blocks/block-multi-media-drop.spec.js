@@ -166,6 +166,46 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(field(entries(row).first())).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
   })
 
+  // Moved to another row, the entry mounts again, and its field's element
+  // with it: what the field was told by the drop goes with the upload, not
+  // with the element.
+  test('an entry moved to another row while its upload waits goes when the upload is cancelled', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 2200 })
+    await createPage(page, 'Media drop moved', group, 'Image Row')
+    await page.getByRole('button', { name: 'Add block' }).last().click()
+    await page.getByRole('button', { name: group }).click()
+    await page.getByRole('button', { name: 'Image Row', exact: true }).click()
+    await syncLV(page)
+    const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
+    await drop(page, rowBlock(first), [['image.jpg', 'image/jpeg']])
+    await expect(entries(first)).toHaveCount(1)
+    const queued = page.locator('.upload-item.status-queued').filter({ hasText: 'image.jpg' })
+    await expect(queued).toBeVisible()
+
+    const fieldBefore = await field(entries(first).first()).elementHandle()
+    const handle = await entries(first).first().locator('.sort-handle').first().boundingBox()
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+    await page.mouse.down()
+    // the hold Sortable takes before a drag starts (block-multi-move-between-rows.spec.js)
+    await page.waitForTimeout(100)
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 10, { steps: 2 })
+    await expect(second.locator('.block-children')).toHaveClass(/is-drop-target/)
+    const target = await second.locator('.block-children').boundingBox()
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 20 })
+    await expect(second.locator('.block-children > .is-sorting')).toHaveCount(1)
+    await page.mouse.up()
+    await syncLV(page)
+    await expect(entries(second)).toHaveCount(1)
+    await expect(entries(first)).toHaveCount(0)
+    // the field is another element now
+    expect(await fieldBefore.evaluate(el => el.isConnected)).toBe(false)
+
+    await queued.getByRole('button', { name: 'Cancel' }).click()
+    await expect(entries(second)).toHaveCount(0)
+  })
+
   test('a multi block without media_drop shows no drop zone', async ({ page }) => {
     await createPage(page, 'Media drop none', '06 COPY PASTE TEST', 'Team Section')
     await expect(rows(page)).toHaveCount(1)

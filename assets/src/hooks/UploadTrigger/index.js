@@ -3,6 +3,12 @@ import { subscribeToUpload, uploadTargetKey } from '../shared/uploadProgress'
 // Confirmation belongs to a form target, including its inline and modal views.
 const confirmedFolders = new Map()
 
+// Uploads handed over by another drop target (`brando:upload-files`), by
+// target: what the field reports back when its upload settles. Kept with the
+// target, not the hook, so a field whose element a patch replaces (its block
+// moved to another row) still reports it.
+const handovers = new Map()
+
 /**
  * UploadTrigger — drop zone / click-to-upload element for any upload source.
  *
@@ -118,7 +124,9 @@ export default (app) => ({
     // the handover's uid and token, whether that upload got the field its
     // file or failed or was cancelled first.
     this.el.addEventListener('brando:upload-files', (e) => {
-      this._handover = e.detail.handover || null
+      const key = uploadTargetKey(this.uploadTarget())
+      if (e.detail.handover) handovers.set(key, e.detail.handover)
+      else handovers.delete(key)
       this.intake(Array.from(e.detail.files))
     })
 
@@ -372,13 +380,14 @@ export default (app) => ({
   },
 
   reportHandedOver(state) {
-    if (!this._handover || !state) return
+    const key = uploadTargetKey(this.uploadTarget())
+    const handover = handovers.get(key)
+    if (!handover || !state) return
     const done = state.status === 'done' || state.status === 'processing' || !!this.el.dataset.assetId
     const failed = state.status === 'error' || state.status === 'cancelled'
     if (!done && !failed) return
 
-    const handover = this._handover
-    this._handover = null
+    handovers.delete(key)
     this.el.dispatchEvent(new CustomEvent('brando:handed-upload-settled', {
       bubbles: true,
       detail: { ...handover, failed: !done, error: state.status === 'error' ? state.error : null },

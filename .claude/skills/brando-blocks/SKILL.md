@@ -340,6 +340,16 @@ store first, then the two parents' views), are applied by BlockField directly; e
 `Block.emit_block_op/2`. Blocks read their position from the `list_index` prop supplied by
 the keyed `:for` — never from a form's `sequence` field, which is stale by design.
 
+A moved child mounts again under its new parent, from the store, as new rows
+(`Ops.moved_params/2`). Its old component can still send an edit after the move
+(an upload delivered to it); that edit names the rows by their saved ids, and
+`Ops.name_moved_rows/3` renames them before the store takes it. Another editor's
+move is shown the same way round: the coalesced refresh has the parent it was
+shown under let go first (`release_moved_away/1`), since a child shown in two
+places in one render arrives in the new one as LiveView skip markers (empty boxes). Text typed into the old element and not yet
+sent is carried to the new one by `Presence/pendingInputs.js` (`went`/`came`): only the
+block's own inputs, since its children's inputs inside its element have the same names.
+
 ---
 
 ## 8. Parent-Child Communication
