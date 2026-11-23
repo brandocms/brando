@@ -1003,7 +1003,8 @@ record on each entry and module naming the release and the renames. Entries
 in the trash move too. An entry whose schema keeps no revisions (a template)
 moves without a restore point; the review screen counts them. A release
 apply that moved values can't be reverted: keep it, or restore the entries'
-revisions.
+revisions. The review screen says so for a module ready to apply, and for a
+conflict once you choose the release's version.
 
 The first version moves values that keep their type. The plan refuses
 (`migration_required`, naming the blocks and the entries you may open) a
@@ -1016,7 +1017,9 @@ definition's default gives way. The apply plans the moves again with the
 blocks locked, and rolls back everything, definitions included, with
 "content changed since you reviewed it" when a block changed since the plan.
 An editor who saves one of those blocks at the same moment can make the
-database stop the apply; nothing is applied, and you try again.
+database stop the apply; nothing is applied, and you try again. Or the
+database stops the editor's save instead: their form stays open with what
+they typed, and they save again.
 
 Every editor's save in the environment waits while values move, so one
 apply moves values in at most 500 entries or 1,500 blocks, counted across
@@ -1025,7 +1028,8 @@ module over that on its own is refused in the plan. Modules each within it
 but over it together are refused when applied together: select fewer of them
 on the Release changes screen, or apply them one by one with
 `mix brando.modules apply --release --uid`. Or take `renamed_from` out and
-move the values with `resolve --map` after the apply.
+move the values after the apply with the `resolve --map` command the
+refusal prints for each module.
 
 `renamed_from` is read from the file and never stored: the database keeps no
 rename, and an export doesn't write it. Keep it in the file until every

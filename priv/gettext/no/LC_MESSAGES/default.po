@@ -1043,6 +1043,11 @@ msgstr "Publiseringsmålene for %{name} ble endret et annet sted, så ingenting 
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "%{name}’s edit is replaced when you apply, and values move to the renamed refs and vars, so the apply can’t be reverted."
+msgstr "Endringen til %{name} erstattes når du tar releasen i bruk, og verdiene flyttes til refsene og variablene som får nytt navn, så endringen kan ikke tilbakestilles."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back."
 msgstr "Endringen til %{name} erstattes når du tar releasen i bruk. Den tas vare på, og Tilbakestill henter den tilbake."
 
@@ -1078,18 +1083,18 @@ msgstr "%{renames} i %{module}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and move the values after the apply with mix brando.modules resolve %{maps}"
-msgstr "%{renames} ville sammen med de andre navnebyttene i denne endringen flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen, eller ta renamed_from ut av filen og flytt verdiene etter endringen med mix brando.modules resolve %{maps}"
+msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and move the values after the apply with %{command}"
+msgstr "%{renames} ville sammen med de andre navnebyttene i denne endringen flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen, eller ta renamed_from ut av filen og flytt verdiene etter endringen med %{command}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with mix brando.modules resolve %{maps}"
-msgstr "%{renames} ville flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med mix brando.modules resolve %{maps}"
+msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with %{command}"
+msgstr "%{renames} ville flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med %{command}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with mix brando.modules resolve %{maps}"
-msgstr "%{renames} ville flytte verdier i %{blocks} blokker, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med mix brando.modules resolve %{maps}"
+msgid "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with %{command}"
+msgstr "%{renames} ville flytte verdier i %{blocks} blokker, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med %{command}"
 
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
@@ -2915,6 +2920,11 @@ msgstr "Anker på denne siden"
 #, elixir-autogen, elixir-format
 msgid "And %{count} more"
 msgstr "Og %{count} til"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Another change to the same content was saved at the same moment, and nothing was saved. Save again."
+msgstr "En annen endring av det samme innholdet ble lagret i samme øyeblikk, og ingenting ble lagret. Lagre igjen."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
