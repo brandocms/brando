@@ -65,6 +65,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.BlockContent
   alias Brando.Content.Blocks
   alias Brando.Content.BlockSlots
+  alias Brando.Content.Proposals.AutoApply
   alias Brando.Content.Proposals.Baseline
   alias Brando.Content.Proposals.BlockTree
   alias Brando.Content.Proposals.Codec
@@ -3465,21 +3466,44 @@ defmodule Brando.Content.Proposals do
   admin's conversations — from a tool connected over MCP — newest first.
 
   Proposals under review and applied or undone ones are listed; superseded
-  and discarded versions are not. The records carry what a list shows, not
-  their operations: load one with `get/2` to review it. Options: `:limit`
-  (default 30).
+  and discarded versions are not. Every proposal under review is listed,
+  and of the applied and undone ones the newest `:limit` (default 30), so
+  proposals applied without review never push one that waits off the list.
+  The records carry what a list shows, not their operations: load one with
+  `get/2` to review it.
   """
   @spec list_external(term(), keyword()) :: [Record.t()]
   def list_external(actor, opts \\ []) do
-    Repo.all(
-      from(r in external(actor),
-        where: r.status not in ~w(superseded cancelled),
+    listed = fn query ->
+      from(r in query,
         order_by: [desc: r.inserted_at],
-        limit: ^Keyword.get(opts, :limit, 30),
         select:
-          struct(r, [:id, :version, :scope, :actor_id, :summary, :origin, :client, :status, :expires_at, :inserted_at])
+          struct(r, [
+            :id,
+            :version,
+            :scope,
+            :actor_id,
+            :summary,
+            :origin,
+            :client,
+            :status,
+            :expires_at,
+            :inserted_at,
+            :auto_applied_grant_id
+          ])
       )
-    )
+    end
+
+    waiting = Repo.all(listed.(from(r in external(actor), where: r.status in ~w(pending approved))))
+
+    finished =
+      Repo.all(
+        from(r in listed.(from(r in external(actor), where: r.status in ~w(applied undone))),
+          limit: ^Keyword.get(opts, :limit, 30)
+        )
+      )
+
+    Enum.sort_by(waiting ++ finished, & &1.inserted_at, {:desc, DateTime})
   end
 
   @doc """
@@ -4011,8 +4035,22 @@ defmodule Brando.Content.Proposals do
     with {:ok, _} <- Error.protect(fn -> cancel!(record!(id, actor)) end), do: :ok
   end
 
-  defp cancel!(%Record{status: status} = record) when status in ~w(pending approved),
-    do: record |> Changeset.change(status: "cancelled") |> Repo.update!()
+  # Written only over the status read: an apply that committed in between,
+  # such as an automatic one, wins, and the cancel says so.
+  defp cancel!(%Record{status: status} = record) when status in ~w(pending approved) do
+    {count, _} =
+      Repo.update_all(
+        from(r in Record, where: r.id == ^record.id and r.version == ^record.version and r.status == ^status),
+        set: [status: "cancelled", updated_at: DateTime.utc_now()]
+      )
+
+    if count == 0 do
+      current = Repo.one(from(r in Record, where: r.id == ^record.id, select: r.status))
+      Error.fail!(not_under_review(current))
+    end
+
+    %{record | status: "cancelled"}
+  end
 
   defp cancel!(record), do: record
 
@@ -4036,10 +4074,16 @@ defmodule Brando.Content.Proposals do
   Entries are locked and compared with the proposal's fingerprints; a changed
   entry or module aborts without writing. Applying an applied proposal again
   returns its receipt.
+
+  Options: `:publish`, the keys of entries to publish as it is applied; and
+  `:auto`, `%{grant_id: id, tenant: tenant}`, to apply a pending version
+  without an approval under that connection (`Brando.Content.Proposals.AutoApply`,
+  which checks the rest).
   """
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
   def apply(id, version, actor, opts \\ []) do
     {source, details} = activity_source(id, actor)
+    details = if opts[:auto], do: Map.put(details, "auto_applied", true), else: details
     Brando.Activity.with_proposal(source, details, id, actor, fn -> do_apply(id, version, actor, opts) end)
   end
 
@@ -4059,10 +4103,13 @@ defmodule Brando.Content.Proposals do
       Error.protect(fn ->
         record = record!(id, actor)
 
-        if record.status == "applied" do
+        if record.status == "applied" and !opts[:auto] do
           {receipt(id, actor), []}
         else
-          reviewable!(record, version, "approved")
+          # Applied without review: the stored, pending version, when its
+          # frozen operations qualify
+          if opts[:auto], do: AutoApply.qualify!(record)
+          reviewable!(record, version, if(opts[:auto], do: "pending", else: "approved"))
           proposal = rebuild!(record, actor)
           current!(proposal, actor)
           recheck!(proposal, record, actor)
@@ -4291,9 +4338,13 @@ defmodule Brando.Content.Proposals do
   defp apply_locked!(proposal, actor, user, opts) do
     record = record!(proposal.id, actor, lock: true)
     publish = publish_targets!(proposal, actor, opts[:publish] || [])
+    status = if opts[:auto], do: "pending", else: "approved"
 
-    unless record.status == "approved" and record.version == proposal.version,
+    unless record.status == status and record.version == proposal.version,
       do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
+
+    # The connection, locked until the commit, and the person, checked now
+    if opts[:auto], do: AutoApply.authorize!(opts[:auto], actor)
 
     locked =
       for target <- apply_lock_order(proposal),
@@ -4338,6 +4389,8 @@ defmodule Brando.Content.Proposals do
       |> Enum.sort_by(fn {target, _} -> {!match?({:new, _}, target), first_mention(proposal, target)} end)
       |> Enum.map_reduce({%{}, %{}}, &save_target!(&1, &2, proposal, user))
 
+    if opts[:auto], do: AutoApply.unpublished!(saved)
+
     receipt =
       Repo.insert!(%Receipt{
         id: proposal.id,
@@ -4357,7 +4410,10 @@ defmodule Brando.Content.Proposals do
         }
       })
 
-    record |> Changeset.change(status: "applied") |> Repo.update!()
+    record
+    |> Changeset.change(status: "applied", auto_applied_grant_id: opts[:auto] && opts[:auto].grant_id)
+    |> Repo.update!()
+
     {receipt, saved}
   end
 
