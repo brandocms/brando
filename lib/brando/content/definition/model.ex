@@ -40,7 +40,7 @@ defmodule Brando.Content.Definition.Model do
   @doc "The kinds of definition, in the order an import writes them."
   def kinds, do: Enum.map(@kinds, &elem(&1, 0))
 
-  @doc "The key of `kind`'s list in a bundle (`\"modules\"` for `\"module\"`)."
+  @doc ~S(The key of `kind`'s list in a bundle: "modules" for "module".)
   def bundle_key(kind), do: @kinds |> List.keyfind!(kind, 0) |> elem(1)
 
   @doc "The schema of `kind`."
@@ -536,9 +536,11 @@ defmodule Brando.Content.Definition.Model do
     bundle = Map.put(bundle, "modules", modules)
 
     Enum.reduce(@kinds, bundle, fn {_kind, key, _schema}, bundle ->
-      if Map.has_key?(bundle, key), do: Map.update!(bundle, key, &Enum.sort_by(&1, fn d -> d["uid"] end)), else: bundle
+      if Map.has_key?(bundle, key), do: Map.update!(bundle, key, &sort_by_uid/1), else: bundle
     end)
   end
+
+  defp sort_by_uid(definitions), do: Enum.sort_by(definitions, & &1["uid"])
 
   defp visit!(uid, graph, seen) do
     if MapSet.member?(seen, uid), do: Error.raise!(uid, "cyclic child relationship")

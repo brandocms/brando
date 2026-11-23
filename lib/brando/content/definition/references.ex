@@ -66,11 +66,13 @@ defmodule Brando.Content.Definition.References do
     cond do
       binding["kind"] != "palette" or Map.has_key?(supplied, token) -> nil
       binding["uid"] -> binding["uid"]
-      Map.has_key?(binding, "id") and (same_scope? or not MapSet.member?(palettes, token)) -> nil
-      MapSet.member?(palettes, token) or not is_nil(palette_id(token)) -> token
-      true -> nil
+      Map.has_key?(binding, "id") -> if not same_scope? and MapSet.member?(palettes, token), do: token
+      true -> known_palette(token, palettes)
     end
   end
+
+  defp known_palette(token, palettes),
+    do: if(MapSet.member?(palettes, token) or not is_nil(palette_id(token)), do: token)
 
   # In the bundle, or here: one here must be readable by the actor
   defp bind_palette!(uid, palettes, actor) do
