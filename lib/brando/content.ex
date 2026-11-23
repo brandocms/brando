@@ -702,6 +702,7 @@ defmodule Brando.Content do
 
   mutation :update, Container do
     fn entry ->
+      ContentBlocks.render_entries_with_container_id(entry.id)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end

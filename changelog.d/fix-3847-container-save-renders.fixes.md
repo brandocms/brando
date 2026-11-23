@@ -1,0 +1,1 @@
+- Saving a container in the admin renders again the entries whose blocks use it, as a module save does.
