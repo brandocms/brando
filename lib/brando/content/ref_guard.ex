@@ -64,6 +64,14 @@ defmodule Brando.Content.RefGuard do
   @doc "The ref types whose data holds markup only a superuser changes."
   def markup_types, do: @markup_types
 
+  @doc "The data fields of a ref of `type` that are markup."
+  @spec markup_fields(String.t()) :: [atom()]
+  def markup_fields(type), do: Map.get(@markup, type, [])
+
+  @doc "Whether `user` (a user, an id or `nil`) may change a ref's markup."
+  @spec may_change_markup?(term()) :: boolean()
+  def may_change_markup?(user), do: Boundary.superuser?(actor(user))
+
   @doc """
   The block changeset `changeset` with a saved block's module put back,
   unless `user` is a superuser.
@@ -400,7 +408,7 @@ defmodule Brando.Content.RefGuard do
   defp definition(state, _name), do: {nil, state}
 
   defp superuser?(%{superuser: :unknown, user: user} = state) do
-    superuser? = Boundary.superuser?(actor(user))
+    superuser? = may_change_markup?(user)
     {%{state | superuser: superuser?}, superuser?}
   end
 

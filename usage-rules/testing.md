@@ -113,7 +113,8 @@ project =
 project.rendered_blocks
 ```
 
-`insert_block/3` adds a block to a saved entry and renders the entry again.
+`insert_block/3` adds a block to a saved entry and saves the entry through
+its context, as the admin form does (`Brando.Content.Seed.add_blocks/4`).
 
 ### Rendering blocks
 
@@ -133,12 +134,17 @@ test "the quote module credits its author" do
 end
 ```
 
-- `vars:` maps var keys to values. A boolean var takes a boolean; an image,
-  file or video var takes the asset.
-- `refs:` maps ref names to the ref block's data fields, a media struct for a
-  media ref, or `false` to switch the ref off.
+- `vars:` and `refs:` take what `Brando.Content.Seed.block/3` takes: for a
+  ref, its text, a map of its data fields, an image, video or file (or a
+  path to upload), a list for a gallery, or `false` to switch it off; for a
+  var, a string, a boolean or an asset (see
+  [Creating content from code](../guides/seeding.md#blocks)).
 - `entry:` is the entry the template sees as `entry`.
 - `conn:` is for templates that read `request`.
+- `user:` is the block's creator. A path to upload or a list for a gallery
+  needs it, and an HTML or SVG ref's markup needs a superuser
+  (`insert_user/1` gives one); without it they raise. `insert_block/3`
+  always needs it.
 
 A var or ref the module does not have raises, listing the ones it has.
 

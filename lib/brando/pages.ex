@@ -101,11 +101,14 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Moves a page to the trash, deciding what becomes of its fragments in the
-  same transaction. A fragment is found by its parent key, key and language,
-  not through its page, so one left on a trashed page would keep showing on
+  Moves a page (the struct or its id) to the trash, deciding what becomes
+  of its fragments in the same transaction. A fragment is found by its
+  parent key, key and language, not through its page, so one left on a trashed page would keep showing on
   the site while the admin, which lists fragments under their page, no longer
   shows it.
+
+  A page loaded in another environment raises `ArgumentError`
+  (`Brando.Tenant.ensure_current!/1`): its id names another page here.
 
   `:fragments` takes:
 
@@ -127,8 +130,15 @@ defmodule Brando.Pages do
   can't take them, and `{:error, {:fragments, :invalid_choice}}` for another
   value of `:fragments`.
   """
-  @spec delete_page(id, user, keyword) :: {:ok, page} | {:error, term}
-  def delete_page(id, user \\ :system, opts \\ []) do
+  @spec delete_page(page | id, user, keyword) :: {:ok, page} | {:error, term}
+  def delete_page(page_or_id, user \\ :system, opts \\ [])
+
+  def delete_page(%Page{id: id} = page, user, opts) do
+    Brando.Tenant.ensure_current!(page)
+    delete_page(id, user, opts)
+  end
+
+  def delete_page(id, user, opts) do
     choice = Keyword.get(opts, :fragments, :move)
 
     with :ok <- valid_fragments_choice(choice),
