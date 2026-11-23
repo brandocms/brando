@@ -487,8 +487,8 @@ sender first, before the first compile.
   database. In code, match `:rich_text` where you matched `type: :html` on a
   var; module definition files that say `:html` still read, and their next
   export writes `:rich_text`. A rich-text var's value is sanitized when it is
-  saved and when it renders: one saved before with unsafe markup renders as
-  its text alone, and the editor is asked for safe markup when they save it.
+  saved and when it renders: one saved before with unsafe markup renders
+  without it, and the editor is asked for safe markup when they save it.
 - **Media served by the web server.** If nginx, Caddy or a CDN serves
   `/media` without `Brando.Plug.Media`, add the plug's
   `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`

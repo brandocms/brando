@@ -4,8 +4,9 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
   # an assigned text as typed (picture's `alt`, `route`, `route_i18n`,
   # `editable_field`, `inspect`) print it as the field holding that text,
   # escaped once (#3825). Every other tag and option gets what it got before:
-  # the text as `{{ }}` prints it. A string a `for` loop reads of a list of
-  # strings, the list assigned or not, prints as that string does (#3849).
+  # the text as `{{ }}` prints it. A string a `for` or `tablerow` loop reads
+  # of a list of strings, the list assigned or not, prints as that string
+  # does (#3849, #3858).
   use Brando.ConnCase, async: true
 
   alias Brando.Factory
@@ -53,7 +54,9 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
   # loop opens and closes around the template
   @loops [
     loop: {"{% for q in entry.tags %}", "{% endfor %}"},
-    loop_over_assigned_list: {"{% assign list = entry.tags %}{% for q in list %}", "{% endfor %}"}
+    loop_over_assigned_list: {"{% assign list = entry.tags %}{% for q in list %}", "{% endfor %}"},
+    tablerow: {"{% tablerow q in entry.tags %}", "{% endtablerow %}"},
+    tablerow_over_assigned_list: {"{% assign list = entry.tags %}{% tablerow q in list %}", "{% endtablerow %}"}
   ]
 
   setup do
@@ -108,7 +111,7 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
   end
 
   # A string a loop reads of a list of strings (#3849): as the string printed
-  # directly, `entry.tags[0]`
+  # directly, `entry.tags[0]`, in the same loop
   for {kind, {open, close}} <- @loops, {way, {template, reference}} <- @printed do
     test "#{kind}, #{way}", %{entry: entry} do
       template = unquote(template)
@@ -116,10 +119,10 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
       expected =
         case unquote(reference) do
           :expression ->
-            render(with_value(template, "entry.tags[0]"), entry)
+            with_value(template, "entry.tags[0]")
 
           :field ->
-            render(with_value(template, "entry.title"), entry)
+            with_value(template, "entry.title")
 
           :escaped ->
             Parser.escape_var_value(@typed)
@@ -127,10 +130,11 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
           :as_printed ->
             printed = render("{{ entry.tags[0] }}", entry)
             refute printed =~ ~s(")
-            render(with_value(template, ~s("#{printed}")), entry)
+            with_value(template, ~s("#{printed}"))
         end
 
-      assert render(unquote(open) <> with_value(template, "q") <> unquote(close), entry) == expected
+      in_loop = &(unquote(open) <> &1 <> unquote(close))
+      assert render(in_loop.(with_value(template, "q")), entry) == render(in_loop.(expected), entry)
     end
   end
 
@@ -142,6 +146,12 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
       refute html =~ "<script"
       refute html =~ "<b "
     end
+  end
+
+  # `render … for` would bind each string as `for` does, but Brando's
+  # templates load no partials: it renders nothing, and binds no string
+  test "render for a list loads no partial", %{entry: entry} do
+    assert_raise Liquex.Error, fn -> render(~s({% render "card" for entry.tags as q %}{{ q }}), entry) end
   end
 
   test "an assigned list of strings reaches inspect as the list itself", %{entry: entry} do

@@ -153,7 +153,7 @@ defmodule Brando.EditorSinksTest do
       assert html =~ ~s(title="Tom &amp; &quot;Jerry&quot; &lt;img)
       assert html =~ "<p>&lt;script&gt;"
       assert html =~ "<div><p>Body <em>text</em></p></div>"
-      assert html =~ "<div>Old body</div>"
+      assert html =~ ~s(<div><p>Old body</p><img src="x" alt="MARKER"></div>)
     end
 
     test "escape, url_encode and markdown read an escaped var as typed", %{user: user} do

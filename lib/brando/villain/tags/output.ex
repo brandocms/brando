@@ -54,7 +54,7 @@ defmodule Brando.Villain.Tags.Output do
 
   # Each cell of a tablerow is printed after its `<td>`, with the context the
   # cell before returned: its first tag follows markup, as one after text does
-  defp start_cells(Liquex.Tag.TablerowTag, contents) do
+  defp start_cells(Brando.Villain.Tags.Tablerow, contents) do
     case Keyword.get(contents, :contents) do
       [{{:tag, __MODULE__}, first} | body] ->
         first = List.keyreplace(first, :after_text, 0, {:after_text, true})
