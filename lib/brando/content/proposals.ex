@@ -2632,9 +2632,8 @@ defmodule Brando.Content.Proposals do
   longer than the transaction's timeout (`:timeout`, the repo's default
   otherwise): a `fun` that outlasts it gets the connection dropped, and
   `{:error, message}` is returned. Called on a connection already checked
-  out, as a snapshot is under the site's asset lock
-  (`Brando.Tenant.Lock.with/2`), the transaction has no deadline of its own,
-  and they are held until `fun` returns.
+  out, as a snapshot is under the site's asset lock, the transaction has no
+  deadline of its own, and they are held until `fun` returns.
 
   It checks what `materialize/3` checks, with `shared: true` as it takes it,
   and the texts the proposal translates against their sources, under the
