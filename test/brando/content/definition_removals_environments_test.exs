@@ -121,4 +121,23 @@ defmodule Brando.Content.DefinitionRemovalsEnvironmentsTest do
     assert theme(@production, c.holders[@production]) == nil
     assert theme(@staging, c.holders[@staging]).value == "dark"
   end
+
+  # brandocms/brando#3844
+  test "a rename moves the values of the environment it applies to, and no other's", c do
+    File.write!(
+      Path.join(Release.path(), "hero.exs"),
+      "test/fixtures/definitions/hero.exs.txt"
+      |> File.read!()
+      |> String.replace("var :theme, :select do", ~s(var :tone, :select do\n      renamed_from "theme"))
+      |> String.replace("@theme", "@tone")
+    )
+
+    Tenant.with_prefix(@production, fn -> {:ok, _} = Release.apply(:all, user: c.user.id, wait: false) end)
+
+    tone = Tenant.with_prefix(@production, fn -> Repo.get_by(Var, block_id: c.holders[@production].id, key: "tone") end)
+    assert tone.value == "dark"
+    assert theme(@production, c.holders[@production]) == nil
+    assert theme(@staging, c.holders[@staging]).value == "dark"
+    assert [%{key: "theme"}] = module_vars(@staging)
+  end
 end

@@ -31,6 +31,7 @@ defmodule Brando.Content.Proposals.Proposal do
     :supersedes_id,
     :supersedes_summary,
     :expires_at,
+    :auto_apply_reason,
     version: 1,
     operations: [],
     targets: %{},

@@ -3,7 +3,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
   # at a time (`BrandoAdmin.LiveView.Form.Tabs`).
   use Brando.LiveCase, async: true
 
-  import Brando.EditSessionEditors, only: [await: 1]
+  import Brando.EditSessionEditors, only: [await: 1, await: 2]
 
   alias Brando.Pages.Page
 
@@ -68,7 +68,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
   # `to` presses Edit here; `from`'s browser answers the last capture.
   defp take_over(to, from) do
     claim(to)
-    assert_push_event(from, "b:draft-release", %{})
+    assert_released(from)
     capture(from)
     await_mode(to, :editing)
     settle(to)
@@ -76,7 +76,18 @@ defmodule BrandoAdmin.OneTabPerUserTest do
 
   defp notice(view, mode), do: has_element?(view, ~s([data-testid="tab-notice"][data-mode="#{mode}"]))
 
-  defp await_mode(view, mode), do: await(fn -> mode(view) == mode end)
+  # A claim, an opened tab or a closed one reaches the user's other tabs
+  # through the presence process, which takes the whole run's presence
+  # changes one at a time, each admin URL's with a user lookup (it fails, and
+  # logs, for a view of an async test). On CI a release came after more than
+  # a second, behind hundreds of those.
+  @presence_wait 5_000
+
+  # The tab that edited was told another claimed, and asks its browser for
+  # the last capture
+  defp assert_released(view), do: assert_push_event(view, "b:draft-release", %{}, @presence_wait)
+
+  defp await_mode(view, mode), do: await(fn -> mode(view) == mode end, div(@presence_wait, 20))
 
   test "a tab opened alone edits", c do
     assert mode(c.a) == :editing
@@ -110,7 +121,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     claim(b)
 
     # A's last capture comes from its browser, which the test plays
-    assert_push_event(c.a, "b:draft-release", %{})
+    assert_released(c.a)
     capture(c.a)
 
     await_mode(b, :editing)
@@ -171,13 +182,13 @@ defmodule BrandoAdmin.OneTabPerUserTest do
   test "Take editing back goes the other way", c do
     b = open(c.conn, c.path, "tab-b")
     claim(b)
-    assert_push_event(c.a, "b:draft-release", %{})
+    assert_released(c.a)
     capture(c.a)
     await_mode(b, :editing)
     await_mode(c.a, :released)
 
     claim(c.a)
-    assert_push_event(b, "b:draft-release", %{})
+    assert_released(b)
     capture(b)
     await_mode(c.a, :editing)
     await_mode(b, :released)
@@ -192,7 +203,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     assert mode(b) == :waiting
 
     kill_live(c.a)
-    await(fn -> b |> render() |> String.contains?("The other tab was closed") end)
+    await(fn -> b |> render() |> String.contains?("The other tab was closed") end, div(@presence_wait, 20))
 
     assert mode(b) == :waiting
     assert has_element?(b, "#page_form_form[inert]")
@@ -227,7 +238,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
   test "a reconnect with offline edits, after another tab took over, makes a recovery copy, not a save", c do
     b = open(c.conn, c.path, "tab-b")
     claim(b)
-    assert_push_event(c.a, "b:draft-release", %{})
+    assert_released(c.a)
     capture(c.a)
     await_mode(b, :editing)
 
@@ -282,7 +293,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     a |> element("button.multiselect-option[value='#{hero.id}']") |> render_click()
 
     b |> element(~s([data-testid="tab-notice"] button[phx-click="brando_tab_claim"])) |> render_click()
-    assert_push_event(a, "b:draft-release", %{})
+    assert_released(a)
     main = a |> render() |> form_params("#module_set_form_form") |> Plug.Conn.Query.encode()
 
     a
@@ -331,7 +342,7 @@ defmodule BrandoAdmin.OneTabPerUserTest do
   test "an upload finishing in a tab that edits no more stays in the library", c do
     b = open(c.conn, c.path, "tab-b")
     claim(b)
-    assert_push_event(c.a, "b:draft-release", %{})
+    assert_released(c.a)
     capture(c.a)
     await_mode(c.a, :released)
 

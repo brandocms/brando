@@ -2492,6 +2492,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     )
   end
 
+  # Its provider upload ends when the field's hook leaves the page: the block
+  # moved to another block, or the field stopped uploading to the provider
+  defp alert_media_drop_failed(socket, %{"aborted" => true}, kept) do
+    alert_media_drop(
+      socket,
+      gettext("Upload failed"),
+      gettext("The upload stopped before it finished. Drop the file again."),
+      kept
+    )
+  end
+
   defp alert_media_drop_failed(socket, %{"error" => error}, kept) when is_binary(error) and error != "",
     do: alert_media_drop(socket, gettext("Upload failed"), error, kept)
 

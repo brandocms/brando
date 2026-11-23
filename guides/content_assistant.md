@@ -136,12 +136,21 @@ lists them apart:
   number of proposals waiting for review. It opens a list of them in place of
   the conversation, newest first, each with its summary, where it came from
   ("From Claude Code via MCP") and its state: waiting for review, applied,
-  undone or expired. Discarded and superseded versions are left out.
+  undone or expired. Discarded and superseded versions are left out. Each
+  links to its connection's live page (**Follow live**, see
+  [Follow a tool as it works](mcp.md#follow-a-tool-as-it-works)). The list
+  and the count follow the proposals as they change, without a reload: a
+  tool storing, replacing or cancelling one, an apply, undo or discard in
+  another tab, and a proposal expiring.
 - **The review is the Assistant's own.** Choose a proposal to review it entry
   by entry, preview its pages, leave changes out, share it, apply it with the
   usual version check, or discard it to reject it. It is marked with its
   origin in the AI suggestion look. There is no Adjust: to change it, ask the
   tool again, and its next proposal replaces this one as a new version.
+  The proposal on screen stays as it was read while others change: when a
+  newer version arrives, or it is applied, undone, discarded or expires
+  elsewhere, a line beside it says so and its actions are withdrawn; a
+  newer version opens with **Show it**.
 - **The tool is told where to look.** `prepare_proposal`'s result gives the
   address of the proposal under "From connected tools", and, when an entry
   in it has a page preview, the address that opens the review on that page.

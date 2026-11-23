@@ -20,12 +20,17 @@
  * Each request's progress is also announced on the hook element as a
  * `brando:video-upload` event, `detail: { ref, status, progress, error }` with
  * status `uploading`, `done` or `error`, for a caller that shows it in place:
- * `Brando.UploadTrigger` on a video field.
+ * `Brando.UploadTrigger` on a video field. A `done` carrying an `error` is a
+ * file the provider has but the server could not complete. Taken off the
+ * page, the hook ends every upload it still has with an `error`, `aborted`.
+ * A media drop's handover (`shared/mediaDropHandover`) settles by the same.
  *
  * Transfers run one at a time. Video files are large and each one costs a
  * server round-trip to provision, so a dropped batch of ten uploads in filename
  * order rather than saturating the connection.
  */
+
+import { settleUpload } from './mediaDropHandover'
 
 const MIME_BY_EXTENSION = {
   mp4: 'video/mp4',
@@ -73,27 +78,31 @@ export default function providerVideoUploader({ label, startTransfer }) {
     destroyed() {
       this.el.removeEventListener('brando:enqueue-videos', this._onEnqueueVideos)
       this.el.removeEventListener('brando:abort-video', this._onAbortVideo)
+      const aborted = { status: 'error', error: 'Upload aborted', aborted: true }
+      this.queue.forEach(({ requestRef }) => this.announce(requestRef, aborted))
       this.queue = []
 
       this.pendingRequests.forEach(({ reject }, requestRef) => {
         reject(new Error('Upload aborted'))
         window.BrandoUploads?.externalError?.(requestRef, 'Upload aborted')
+        this.announce(requestRef, aborted)
       })
       this.pendingRequests.clear()
 
       this.activeUploads.forEach((upload, requestRef) => {
         upload.abort()
         window.BrandoUploads?.externalError?.(requestRef, 'Upload aborted')
+        this.announce(requestRef, aborted)
       })
       this.activeUploads.clear()
     },
 
-    pushVideoEvent(event, payload) {
+    pushVideoEvent(event, payload, onReply) {
       const target = this.el.dataset.target
       if (target) {
-        this.pushEventTo(target, event, payload)
+        this.pushEventTo(target, event, payload, onReply)
       } else {
-        this.pushEvent(event, payload)
+        this.pushEvent(event, payload, onReply)
       }
     },
 
@@ -185,15 +194,23 @@ export default function providerVideoUploader({ label, startTransfer }) {
 
     announce(requestRef, detail) {
       this.el.dispatchEvent(new CustomEvent('brando:video-upload', { detail: { ref: requestRef, ...detail } }))
+      settleUpload(requestRef, detail)
     },
 
     // The server signed `uploadToken` for this request when it created the
-    // video; it, not a video id, says which upload finished.
+    // video; it, not a video id, says which upload finished. `done` is
+    // announced once the server has answered, and its patch shows what the
+    // owning component took, with the answer's `error` if it took nothing.
     reportSuccess(requestRef, uploadToken) {
       this.activeUploads.delete(requestRef)
-      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken })
-      window.BrandoUploads?.externalComplete?.(requestRef)
-      this.announce(requestRef, { status: 'done' })
+      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken }, (reply) => {
+        if (reply?.error) {
+          window.BrandoUploads?.externalError?.(requestRef, reply.error)
+        } else {
+          window.BrandoUploads?.externalComplete?.(requestRef)
+        }
+        this.announce(requestRef, { status: 'done', error: reply?.error })
+      })
     },
 
     reportError(requestRef, file, error) {

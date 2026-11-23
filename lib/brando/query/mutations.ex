@@ -74,7 +74,12 @@ defmodule Brando.Query.Mutations do
   @decorate span("brando.query.create", schema: :module)
   def create_with_changeset(module, changeset, user, callback_block, opts) do
     if changeset.data.__struct__ == module do
-      Boundary.run(user, :create, module, &do_create_with_changeset(module, changeset, &1, callback_block, opts))
+      Boundary.run(
+        user,
+        :create,
+        module,
+        atomically(&do_create_with_changeset(module, changeset, &1, callback_block, opts))
+      )
     else
       {:error, :forbidden}
     end
@@ -191,7 +196,7 @@ defmodule Brando.Query.Mutations do
         user,
         Keyword.get(opts, :action, :update),
         module,
-        &do_update_with_changeset(module, changeset, &1, preloads, callback_block, opts)
+        atomically(&do_update_with_changeset(module, changeset, &1, preloads, callback_block, opts))
       )
     else
       {:error, :forbidden}
@@ -248,6 +253,22 @@ defmodule Brando.Query.Mutations do
     end
   end
 
+  # One transaction, as group authorization runs a save already: the entry,
+  # its identifier, revision and Activity are written together, so a save
+  # Postgres cancels at any step has written nothing and can be saved again.
+  # `mutation` takes the user `Boundary.run/4` hands it.
+  defp atomically(mutation), do: &in_transaction(mutation, &1)
+
+  defp in_transaction(mutation, user) do
+    case Repo.transaction(fn -> commit_or_rollback(mutation.(user)) end) do
+      {:ok, value} -> value
+      error -> error
+    end
+  end
+
+  defp commit_or_rollback({:error, reason}), do: Repo.rollback(reason)
+  defp commit_or_rollback(value), do: value
+
   # An update's callback may take the changeset as well, which holds the
   # record as it was before the save (`changeset.data`).
   defp run_update_callback(callback, entry, _changeset) when is_function(callback, 1), do: callback.(entry)
@@ -278,8 +299,12 @@ defmodule Brando.Query.Mutations do
 
       has_blocks? = module.has_trait(Trait.Blocks)
 
+      # The copy is a draft before its change fields run, so one that looks
+      # for a free value (a slug unique per status) looks among drafts, and
+      # again after them, so none can leave it published.
       cloned_entry =
         entry
+        |> maybe_set_status()
         |> maybe_change_fields(merged_opts)
         |> maybe_delete_fields(merged_opts)
         |> maybe_set_status()
@@ -777,6 +802,7 @@ defmodule Brando.Query.Mutations do
          :ok <- Boundary.authorize(user, :delete, entry),
          :ok <- authorize_deletion(user, entry),
          :ok <- Brando.Translations.guard_delete(module, entry),
+         :ok <- Content.guard_delete(module, entry),
          soft_deletable? = module.__trait__(Trait.SoftDelete),
          {:ok, entry} <-
            if(soft_deletable?,

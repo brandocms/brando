@@ -34,6 +34,18 @@ defmodule Brando.Blueprint.UniqueFields do
     end
   end
 
+  @doc """
+  Whether a unique declaration is scoped to the language: its scope
+  (`prevent_collision: :language`, a field list, or `with:`) includes
+  `:language`. A callback's own query can't be read, so a callback without
+  `with:` is not.
+  """
+  @spec language_scoped?(term()) :: boolean()
+  def language_scoped?(unique_opts) when is_list(unique_opts),
+    do: :language in scope(unique_opts, Keyword.get(unique_opts, :prevent_collision))
+
+  def language_scoped?(_unique), do: false
+
   defp collision_scope_fields(field) when is_atom(field) and field not in [nil, false, true], do: [field]
   defp collision_scope_fields(fields) when is_list(fields), do: fields
   defp collision_scope_fields(_scope), do: []

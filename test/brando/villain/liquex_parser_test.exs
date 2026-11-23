@@ -32,9 +32,10 @@ defmodule Brando.Villain.LiquexParserTest do
     end
   end
 
-  # Brando renders `assign` and `for` with its own tags, on Liquex's grammar
+  # Brando renders `assign`, `for` and `tablerow` with its own tags, on Liquex's grammar
   defp with_brando_renderers({:tag, Liquex.Tag.AssignTag}), do: {:tag, Brando.Villain.Tags.Assign}
   defp with_brando_renderers({:tag, Liquex.Tag.ForTag}), do: {:tag, Brando.Villain.Tags.For}
+  defp with_brando_renderers({:tag, Liquex.Tag.TablerowTag}), do: {:tag, Brando.Villain.Tags.Tablerow}
   defp with_brando_renderers(list) when is_list(list), do: Enum.map(list, &with_brando_renderers/1)
   defp with_brando_renderers({key, value}), do: {with_brando_renderers(key), with_brando_renderers(value)}
   defp with_brando_renderers(other), do: other

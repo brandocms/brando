@@ -121,3 +121,28 @@ test('a field with uploads off refuses a dropped video', async ({ page }) => {
   await expect(field.locator('.media-field-progress')).toContainText("Video upload isn't set up.")
   await expect(field).not.toHaveAttribute('data-asset-id', /./)
 })
+
+// The field says why the server could not take the upload until the editor
+// uploads again or picks another video: a patch of the field for an edit
+// elsewhere in the form took the reason away.
+test('a provider upload the server cannot complete says why until the editor acts', async ({ page }) => {
+  await openProject(page, 'Bunny refused')
+  const field = bunnyField(page)
+  // A token the server never signed, as the provider hook gets it
+  await page.evaluate(() => {
+    window.addEventListener('phx:video_upload_url_ready', event => { event.detail.upload_token = 'forged' }, { capture: true })
+  })
+
+  await drop(page, field, 'video.mp4', 'video/mp4')
+  const progress = field.locator('.media-field-progress')
+  await expect(progress).toHaveAttribute('data-state', 'error', { timeout: 20000 })
+  const reason = await progress.textContent()
+
+  // the patch the edit brings to the field
+  const patched = progress.evaluate(el => new Promise(resolve => new MutationObserver(resolve).observe(el, { childList: true })))
+  await page.locator('#project_title').fill('Bunny refused again')
+  await patched
+  await expect(progress).toHaveAttribute('data-state', 'error')
+  await expect(progress).toHaveText(reason)
+  await expect(field).not.toHaveAttribute('data-asset-id', /./)
+})

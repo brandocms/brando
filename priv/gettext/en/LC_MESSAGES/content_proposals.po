@@ -253,6 +253,11 @@ msgstr ""
 msgid "A proposal requires an authenticated user."
 msgstr ""
 
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A ref is at most %{max} characters."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "A slot cannot be moved or deleted."
@@ -446,6 +451,51 @@ msgstr ""
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "Image %{old}'s field takes %{types}; the file of image %{new} is %{type}."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: %{reason} It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: a translation it creates would not be an unpublished draft. It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: applying it failed. It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: fix its problems first. It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: meanwhile it became %{status}. Call list_proposals to see where it stands."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: only a connected tool, on a connection that is still allowed to, can apply without review. It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: only a proposal whose every operation is create_translation, or translate of a translation it creates ({\"new\": ref}), is. It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: the person may not review proposals (Assistant → Use). It waits for review."
+msgstr ""
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: this connection is not set to apply unpublished translations without review. It waits for review; a site manager can change that under Configuration → Integrations → Connected AI tools."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -884,6 +934,7 @@ msgid "This proposal has already been undone."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
+#: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal has expired. Prepare it again."
 msgstr ""

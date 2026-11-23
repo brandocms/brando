@@ -234,7 +234,10 @@ defmodule Brando.Content.SharedLibrary do
         {:ok, override}
 
       shared = get_public(kind, id) ->
-        create_override(kind, shared, prefix, user)
+        with {:ok, _override} = result <- create_override(kind, shared, prefix, user) do
+          Brando.Content.Definitions.changed(prefix)
+          result
+        end
 
       true ->
         {:error, :not_found}
@@ -247,10 +250,20 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp do_reset(kind, id, prefix) do
-    case get_override(kind, normalize_id!(id), prefix) do
-      nil -> :ok
-      override -> override |> Repo.delete(prefix: prefix) |> result_to_ok()
-    end
+    id = normalize_id!(id)
+
+    result =
+      Repo.transaction(fn ->
+        with %{} = override <- get_override(kind, id, prefix, lock: true),
+             {:ok, _deleted} <- Repo.delete(override, prefix: prefix) do
+          override_changed(prefix, kind, id)
+        else
+          nil -> :ok
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+    result_to_ok(result)
   end
 
   @doc "Destructively replaces an override with the current shared version."
@@ -261,12 +274,18 @@ defmodule Brando.Content.SharedLibrary do
   defp do_accept_update(kind, id, prefix, user) do
     id = normalize_id!(id)
 
-    with override when not is_nil(override) <- get_override(kind, id, prefix),
-         shared when not is_nil(shared) <- get_public(kind, id) do
-      replace_override(kind, override, shared, prefix, user)
-    else
-      nil -> {:error, :not_found}
-    end
+    Repo.transaction(fn ->
+      with override when not is_nil(override) <- get_override(kind, id, prefix, lock: true),
+           shared when not is_nil(shared) <- get_public(kind, id),
+           {:ok, _deleted} <- Repo.delete(override, prefix: prefix),
+           {:ok, replacement} <- create_override(kind, shared, prefix, user, override.uid) do
+        override_changed(prefix, kind, id)
+        replacement
+      else
+        nil -> Repo.rollback(:not_found)
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc "Acknowledges the current shared version without replacing local changes."
@@ -519,16 +538,23 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  defp get_override(kind, source_id, prefix) do
+  # `lock: true` holds the row until the transaction ends: a second Reset or
+  # Accept of it waits, and then finds the override gone.
+  defp get_override(kind, source_id, prefix, opts \\ []) do
     definition = definition(kind)
-    opts = [prefix: prefix]
+    query_opts = [prefix: prefix]
 
-    from(entry in definition.schema,
-      where: field(entry, ^definition.source_field) == ^source_id and is_nil(entry.deleted_at),
-      limit: 1
-    )
-    |> Repo.one(opts)
-    |> preload_one(definition.preloads, opts)
+    query =
+      from(entry in definition.schema,
+        where: field(entry, ^definition.source_field) == ^source_id and is_nil(entry.deleted_at),
+        limit: 1
+      )
+
+    query = if opts[:lock], do: from(entry in query, lock: "FOR UPDATE"), else: query
+
+    query
+    |> Repo.one(query_opts)
+    |> preload_one(definition.preloads, query_opts)
   end
 
   defp get_public(kind, id) do
@@ -576,8 +602,20 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp rerender_environment(site, environment, kind, id) do
-    prefix = Tenant.prefix(site, environment)
-    Tenant.with_prefix(prefix, fn -> rerender_kind(kind, id) end)
+    site |> Tenant.prefix(environment) |> rerender_prefix(kind, id)
+  end
+
+  defp rerender_prefix(prefix, kind, id), do: Tenant.with_prefix(prefix, fn -> rerender_kind(kind, id) end)
+
+  # An override replaced or removed in the environment `prefix`, inside the
+  # transaction that does it: the blocks using it sync with the entry they
+  # use now and their entries render in the same transaction, so a change
+  # that commits has its renders queued. The palette CSS and an open Release
+  # changes screen follow once it commits.
+  defp override_changed(prefix, kind, id) do
+    rerender_prefix(prefix, kind, id)
+    if kind == :palette, do: Tenant.with_prefix(prefix, fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
+    Brando.Content.Definitions.changed(prefix)
   end
 
   defp rerender_kind(:module, id), do: Blocks.render_entries_with_module_id(id, :shared)
@@ -607,17 +645,6 @@ defmodule Brando.Content.SharedLibrary do
 
   defp prepend_if(values, value, present) when present not in [false, nil], do: [value | values]
   defp prepend_if(values, _value, _missing), do: values
-
-  defp replace_override(kind, override, shared, prefix, user) do
-    Repo.transaction(fn ->
-      with {:ok, _deleted} <- Repo.delete(override, prefix: prefix),
-           {:ok, replacement} <- create_override(kind, shared, prefix, user, override.uid) do
-        replacement
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
-  end
 
   defp after_shared_update({:ok, updated} = result, kind) do
     rerender_shared(kind, updated.id)
@@ -679,6 +706,9 @@ defmodule Brando.Content.SharedLibrary do
     |> Map.put(:vars, Enum.map(loaded_list(shared.vars), &copy_assoc(&1, [:module_id])))
     |> Map.put(:refs, Enum.map(loaded_list(shared.refs), &copy_assoc(&1, [:module_id])))
   end
+
+  defp put_copy_associations(attrs, :palette, shared),
+    do: Map.put(attrs, :colors, Enum.map(shared.colors || [], &Brando.Utils.map_from_struct/1))
 
   defp put_copy_associations(attrs, _kind, _shared), do: attrs
 

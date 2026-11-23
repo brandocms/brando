@@ -1,7 +1,7 @@
 defmodule Brando.Villain.RichTextRowsPrintingTest do
   # A subform row's rich text prints as a top-level rich-text field does:
-  # through Brando.RichText.render_html/1, its markup sanitized, or its
-  # text alone when it holds unsafe markup stored before rows were checked.
+  # through Brando.RichText.render_html/1, its markup sanitized, with the
+  # unsafe markup stored before rows were checked removed.
   # A row field is rich text for printing when the owning schema's forms
   # draw it as a `:rich_text` input in a subform on that relation: at least
   # one does and none draws it as another input, or, when they disagree,
@@ -20,6 +20,7 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
 
   @safe ~s(<p>A <strong>quote</strong> with <a href="https://example.com/">a link</a></p>)
   @stored_unsafe ~s{<p onclick="alert(1)">Old <em>text</em></p>}
+  @stored_unsafe_rendered "<p>Old <em>text</em></p>"
 
   defp render(template, entry), do: Brando.Villain.parse_and_render(template, Brando.Villain.get_base_context(entry))
 
@@ -32,12 +33,9 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
         assert render(template, entry(@safe)) == @safe
       end
 
-      test "prints old unsafe markup as its text only" do
+      test "prints old unsafe markup without it" do
         template = "{% for row in entry.#{unquote(relation)} %}{{ row.text }}{% endfor %}"
-        html = render(template, entry(@stored_unsafe))
-        refute html =~ "onclick"
-        refute html =~ "<"
-        assert html =~ "Old text"
+        assert render(template, entry(@stored_unsafe)) == @stored_unsafe_rendered
       end
 
       test "prints safe markup through raw as before" do
@@ -45,7 +43,7 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
         assert render(template, entry(@safe)) == @safe
       end
 
-      test "through raw, old unsafe markup prints as its text only" do
+      test "through raw, old unsafe markup prints without it" do
         template = "{% for row in entry.#{unquote(relation)} %}{{ row.text | raw }}{% endfor %}"
         html = render(template, entry(@stored_unsafe))
         refute html =~ "onclick"
@@ -65,7 +63,7 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
           assert render(template, entry(@safe)) == @safe
         end
 
-        test "a row taken through #{filter} prints old unsafe markup through raw as its text only" do
+        test "a row taken through #{filter} prints old unsafe markup through raw without it" do
           template =
             unquote(template) |> String.replace("RELATION", unquote(relation)) |> String.replace("FIELD", "text | raw")
 
@@ -144,7 +142,7 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
       assert render("{{ entry.feature.text }}", entry) == @safe
 
       entry = %Disagreeing{title: "T", feature: %Feature{text: @stored_unsafe}}
-      refute render("{{ entry.feature.text }}", entry) =~ "<"
+      assert render("{{ entry.feature.text }}", entry) == @stored_unsafe_rendered
     end
 
     test "prints as text when the default form does not draw it" do

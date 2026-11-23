@@ -1464,7 +1464,8 @@ Choosing **Customize** copies the shared entry into the selected environment
 and records its source ID and source version. Blocks keep their shared identity,
 so they immediately resolve to that environment's customization without a
 content rewrite. Other environments and sites are unaffected. **Reset to
-shared** removes only the customization. Customizing, resetting and accepting
+shared** removes only the customization, and Brando queues the environment's
+entries that use it for rendering with the shared version. Customizing, resetting and accepting
 updates of modules and containers takes a superuser, as any change to their
 code does; a site manager does these for palettes.
 
@@ -1473,7 +1474,8 @@ Sites without a customization use the new version immediately, and Brando
 queues affected entries for rendering in each environment. A customization
 continues using its local version and receives an **Update available** badge.
 The administrator can inspect a field-level diff, replace the customization
-with the current shared version, or dismiss that version's notification.
+with the current shared version, which queues the environment's entries that
+use it for rendering, or dismiss that version's notification.
 
 The allowlist is cached per site. Mutations update the cache immediately; no
 application restart is required. When upgrading an existing application, run

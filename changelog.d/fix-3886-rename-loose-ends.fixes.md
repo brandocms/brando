@@ -1,0 +1,5 @@
+- Renames refused for moving values in too many blocks print the whole `mix brando.modules resolve` command to run after the apply, with `--uid`, `--user` and `--apply`, one per module, for the renames blocks hold a value of. The user is `USER_ID` when the plan ran without one, and the refusal says to run it as a user who may edit those entries, not the plan's `--drop` line.
+
+- On Release changes, a conflict that takes the release's version says when the apply moves values to renamed refs and vars, and that it then can't be reverted; when those moves are refused, it shows the refusal instead.
+
+- An editor's save that Postgres cancels because it waited on the same blocks as another write (a release apply moving values) keeps the form open with what was typed and asks to save again, instead of crashing the form. Without group authorization, a context's changeset create and update (`create_with_changeset`, `update_with_changeset`) now run in one transaction with their identifier, revision and Activity writes, as they already did with groups, so a save that fails part-way writes nothing.

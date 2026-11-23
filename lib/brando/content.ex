@@ -162,12 +162,46 @@ defmodule Brando.Content do
     end
   end
 
+  # Its blocks render as not found (`Brando.Villain.Parser`), or, for a
+  # site's override, as the library module
   mutation :delete, Module do
     fn entry ->
+      render_entries_using_module(entry)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
   end
+
+  @doc """
+  Queues the renders of the entries whose blocks use `module`, leaving the
+  blocks as they are: for a module put in the trash or restored from it.
+  """
+  def render_entries_using_module(module) do
+    {id, origin} = rendered_reference(module.id, module.source_module_id)
+    ContentBlocks.render_entries_with_module_id_as_is(id, origin)
+  end
+
+  @doc """
+  The entries whose blocks use `module`, as `{schema, id}`: those
+  `render_entries_using_module/1` renders. Entries in the trash are left out.
+  """
+  def list_entries_using_module(module) do
+    {id, origin} = rendered_reference(module.id, module.source_module_id)
+
+    for {schema, ids} <- ContentBlocks.list_entry_ids_using_module(id, origin), id <- ids, do: {schema, id}
+  end
+
+  @doc """
+  Refuses to put a module in the trash while entries outside the trash have
+  blocks using it, which would render as not found:
+  `{:error, :module_in_use}`. A site's override goes: its blocks render as
+  the library module, as after a Reset.
+  """
+  def guard_delete(Module, %Module{source_module_id: nil} = module) do
+    if list_entries_using_module(module) == [], do: :ok, else: {:error, :module_in_use}
+  end
+
+  def guard_delete(_schema, _entry), do: :ok
 
   @doc """
   Duplicates the module `id` as a new module: a new lineage at v1, as an
@@ -496,8 +530,7 @@ defmodule Brando.Content do
 
   mutation :update, Palette do
     fn palette ->
-      {id, origin} = rendered_reference(palette.id, palette.source_palette_id)
-      ContentBlocks.render_entries_with_palette_id(id, origin)
+      render_entries_using_palette(palette)
       Brando.Content.Definitions.changed()
       Brando.Cache.Palettes.update({:ok, palette})
     end
@@ -704,18 +737,32 @@ defmodule Brando.Content do
 
   mutation :update, Container do
     fn entry ->
-      {id, origin} = rendered_reference(entry.id, entry.source_container_id)
-      ContentBlocks.render_entries_with_container_id(id, origin)
+      render_entries_using_container(entry)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
   end
 
+  # Its blocks render as sections of their own (`Brando.Villain.Parser`)
   mutation :delete, Container do
     fn entry ->
+      render_entries_using_container(entry)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
+  end
+
+  @doc "Queues the renders of the entries whose blocks use `container`."
+  def render_entries_using_container(container) do
+    {id, origin} = rendered_reference(container.id, container.source_container_id)
+    ContentBlocks.render_entries_with_container_id(id, origin)
+  end
+
+  @doc "Queues the renders of the entries whose blocks use `palette`, after clearing the cached containers holding it."
+  def render_entries_using_palette(palette) do
+    Brando.Cache.Query.evict_schema(Container)
+    {id, origin} = rendered_reference(palette.id, palette.source_palette_id)
+    ContentBlocks.render_entries_with_palette_id(id, origin)
   end
 
   mutation :duplicate, {Container, change_fields: [:name, uid: &__MODULE__.duplicate_uid/2]}

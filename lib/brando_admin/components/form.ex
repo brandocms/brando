@@ -113,6 +113,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
+     |> assign(:image_editor_target, nil)
      |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
      |> assign(:edit_video, %{path: [], field: nil, relation_field: nil})
      |> assign(:updated_entry_assocs, %{})
@@ -494,7 +495,9 @@ defmodule BrandoAdmin.Components.Form do
   # The block's handle_event pushes b:image_editor:init directly (same render cycle).
   def update(%{action: :set_edit_image_from_block, image: image} = params, socket) do
     {:ok,
-     assign(socket, :edit_image, %{
+     socket
+     |> assign(:image_editor_target, nil)
+     |> assign(:edit_image, %{
        path: [],
        field: nil,
        relation_field: nil,
@@ -2149,17 +2152,20 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The picker's "edit image" from an image field's open drawer: the drawer,
-  # and its save, take the image. A locked field's drawer keeps its asset.
-  # The drawer is modal and every way of closing it saves it
-  # (`editing_image?: false`), so a picker opened while it is shut is another
-  # opener's: a block's, a var's, a gallery's. That editor belongs to no
-  # field, and its copy stays in the library. A block or gallery that opened
-  # the editor before left its keys in `edit_image`: its copy goes back to
-  # none of them either.
+  # and its save, take the image. The drawer is modal and every way of
+  # closing it saves it (`editing_image?: false`), so a picker opened while it
+  # is shut is another opener's: a block's, a var's, a gallery's. That editor
+  # belongs to no field, and its copy stays in the library. A block or gallery
+  # that opened the editor before left its keys in `edit_image`: its copy goes
+  # back to none of them either. A locked field's drawer takes no image and
+  # keeps showing and saving the field's own: its editor works on the picked
+  # image for no field (`image_editor_target`), as the browser has opened it.
   defp open_image_editor_from_picker(%{assigns: %{editing_image?: true}} = socket, %{field: field} = edit_image, image)
        when not is_nil(field) do
     if edit_asset_locked?(socket, edit_image) do
       socket
+      |> assign(:image_editor_target, %{path: [], field: nil, relation_field: nil, image: image, id: image.id})
+      |> push_event("b:image_editor:init", image_editor_payload(image))
     else
       edit_image =
         edit_image
@@ -2167,6 +2173,7 @@ defmodule BrandoAdmin.Components.Form do
         |> Map.merge(%{image: image, id: image.id})
 
       socket
+      |> assign(:image_editor_target, nil)
       |> assign(:edit_image, edit_image)
       |> assign(:image_changeset, change(image))
       |> assign_drawer_recovery_state()
@@ -2176,6 +2183,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp open_image_editor_from_picker(socket, _edit_image, image) do
     socket
+    |> assign(:image_editor_target, nil)
     |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id})
     |> assign(:image_changeset, change(image))
     |> push_event("b:image_editor:init", image_editor_payload(image))
@@ -2233,25 +2241,12 @@ defmodule BrandoAdmin.Components.Form do
       else: deliver_unlocked_entry_field_asset(socket, asset_type, field, path, asset)
   end
 
+  # The drawer shows the asset only if it is on the field: an upload that
+  # lands after its drawer closed leaves another field's open drawer alone.
   defp deliver_unlocked_entry_field_asset(socket, asset_type, field, path, asset) do
-    edit_key = :"edit_#{asset_type}"
-    changeset_key = :"#{asset_type}_changeset"
-
-    edit_asset =
-      Map.merge(socket.assigns[edit_key], %{
-        :id => asset.id,
-        :field => field,
-        :path => path,
-        asset_type => asset
-      })
-
     socket
     |> commit_entry_field_asset(field, path, asset)
-    |> assign(edit_key, edit_asset)
-    |> assign(changeset_key, change(asset))
-    # NOT `editing_*? = false`: an upload started inside a drawer leaves it
-    # open, and this is what the drawer's recovery snapshot is built from.
-    |> assign_drawer_recovery_state()
+    |> show_delivered_asset(asset_type, %{field: field, path: path}, asset)
   end
 
   defp commit_entry_field_asset(socket, field, path, asset) do
@@ -6776,7 +6771,7 @@ defmodule BrandoAdmin.Components.Form do
     case stored do
       {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
       {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
-      {:error, :forbidden} -> forbidden_save_with_blocks(socket)
+      {:error, reason} when reason in [:forbidden, :try_again] -> refused_save_with_blocks(socket, reason)
       {:error, %Changeset{} = changeset} -> failed_save_with_blocks(socket, changeset, save)
     end
   end
@@ -6883,13 +6878,14 @@ defmodule BrandoAdmin.Components.Form do
          |> source_controlled_error(paths)}
 
       # The context refused the account: a role or grant that may not write
-      # this entry. The form stays open with what was typed.
-      {:error, :forbidden} ->
+      # this entry, or Postgres cancelled the save. The form stays open with
+      # what was typed.
+      {:error, reason} when reason in [:forbidden, :try_again] ->
         {:noreply,
          socket
          |> assign(:processing, false)
          |> reset_transformer_changesets()
-         |> forbidden_save_error()}
+         |> refused_save_error(reason)}
     end
   end
 
@@ -6923,8 +6919,8 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("open_own_image_editor", _, %{assigns: %{entry: %Images.Image{} = image}} = socket) do
     {:noreply,
      socket
+     |> assign(:image_editor_target, nil)
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id, own: true})
-     |> assign(:editing_image?, true)
      |> assign(:image_changeset, change(image))
      |> push_event("b:image_editor:init", image_editor_payload(image))}
   end
@@ -6935,7 +6931,9 @@ defmodule BrandoAdmin.Components.Form do
     %{edit_image: edit_image} = socket.assigns
 
     {:noreply,
-     push_event(socket, "b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
+     socket
+     |> assign(:image_editor_target, nil)
+     |> push_event("b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
   end
 
   def handle_event(
@@ -6943,7 +6941,7 @@ defmodule BrandoAdmin.Components.Form do
         %{"mode" => "replace", "focal_x" => _x, "focal_y" => _y} = params,
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    edit_image = socket.assigns.edit_image
+    edit_image = image_editor_target(socket)
     block_target = Map.get(edit_image, :block_target)
 
     saved =
@@ -7021,7 +7019,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:image_editor_focal, editor_focal(params))
      |> assign(:image_editor_config_target, config_target)
-     |> assign(:image_editor_copy_of, copy_destination(socket, socket.assigns.edit_image))}
+     |> assign(:image_editor_copy_of, copy_destination(socket, image_editor_target(socket)))}
   end
 
   # A locked field keeps its video; the drawer closes.
@@ -7359,21 +7357,8 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event(
         "save_image",
         %{"image" => image_params},
-        %{
-          assigns: %{
-            form: form,
-            entry: entry,
-            schema: schema,
-            singular: singular,
-            edit_image:
-              %{image: image, path: path, field: field, relation_field: relation_field} =
-                edit_image,
-            current_user: current_user
-          }
-        } = socket
+        %{assigns: %{edit_image: %{image: image} = edit_image, current_user: current_user}} = socket
       ) do
-    entry_or_default = entry || struct(schema)
-
     validated_changeset =
       image
       |> Images.Image.changeset(drawer_params(image_params, "image"), current_user)
@@ -7389,11 +7374,6 @@ defmodule BrandoAdmin.Components.Form do
         # status/sizes since the drawer was opened.
         {:ok, updated_image} = Images.get_image(image.id)
 
-        # Processing sees the focal point already saved: the entries that
-        # show the image render again from here
-        if Map.has_key?(validated_changeset.changes, :focal),
-          do: Images.Rerender.after_refocus(image, updated_image)
-
         Brando.Blueprint.AfterSave.run(
           Images.Image,
           updated_image,
@@ -7402,53 +7382,32 @@ defmodule BrandoAdmin.Components.Form do
         )
 
         edit_image = Map.put(edit_image, :image, updated_image)
-        relation_key = relation_field_key(relation_field, field)
-        relation_full_path = path ++ [relation_key]
-        field_full_path = path ++ [field]
-
-        updated_changeset =
-          form.source
-          |> put_key_at(path, relation_key, image.id)
-          |> put_asset_in_data(path, field, updated_image)
-
-        updated_entry =
-          entry_with_relation(entry_or_default, updated_changeset, field_full_path, &drawer_image(&1, updated_image))
-
-        # Subscribe parent live view to changes to this image
-        Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
-
-        if requeue_processing?(validated_changeset, updated_image) do
-          Images.Processing.queue_processing(updated_image, current_user, field_full_path, silent: true)
-        end
-
-        target_field_name =
-          Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
         {:noreply,
          socket
          |> ship_all_field_changes()
-         |> assign(:entry, updated_entry)
-         |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
-         |> put_form(to_form(updated_changeset, []))
+         |> put_drawer_image(edit_image, validated_changeset)
          |> assign(:image_changeset, validated_changeset)
          |> assign(:edit_image, edit_image)
          |> assign(:editing_image?, false)
-         |> assign_drawer_recovery_state()
-         |> push_event("b:validate", %{
-           target: target_field_name,
-           value: image.id
-         })}
+         |> assign_drawer_recovery_state()}
 
       {:error, :forbidden} ->
         refused_drawer_save(socket, "image", validated_changeset)
+
+      # The browser has hidden the drawer already: it closes, and says why
+      {:error, %Changeset{}} ->
+        BrandoAdmin.Toast.send_to(socket.assigns.current_user, gettext("The image details could not be saved"), %{
+          level: :error,
+          type: :notification
+        })
+
+        {:noreply, close_refused_drawer(socket, :editing_image?)}
     end
   end
 
   # without image in params
-  def handle_event("save_image", params, socket) do
-    require Logger
-    Logger.warning(">>> save_image called WITHOUT image params. params=#{inspect(params)}")
-
+  def handle_event("save_image", _params, socket) do
     {:noreply,
      socket
      |> assign(:editing_image?, false)
@@ -8150,8 +8109,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # The save collected the blocks first, so it reaches the context outside the
   # event that started it; a refusal there must not crash the form.
-  defp forbidden_save_with_blocks(socket) do
-    if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :forbidden)
+  defp refused_save_with_blocks(socket, reason) do
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, reason)
     if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
 
     {:noreply,
@@ -8160,14 +8119,24 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:all_blocks_received?, false)
      |> clear_blocks_root_changesets()
      |> reset_transformer_changesets()
-     |> forbidden_save_error()}
+     |> refused_save_error(reason)}
   end
 
-  defp forbidden_save_error(socket) do
+  defp refused_save_error(socket, reason) do
     send(self(), {:progress_popup, "Saving entry failed..."})
-    send(self(), {:toast, gettext("You do not have permission for this action.")})
+
+    BrandoAdmin.Toast.send_to(socket.assigns.current_user, refused_save_text(reason), %{
+      level: :error,
+      type: :notification
+    })
+
     assign(socket, :minor_save?, false)
   end
+
+  defp refused_save_text(:forbidden), do: gettext("You do not have permission for this action.")
+
+  defp refused_save_text(:try_again),
+    do: gettext("Another change to the same content was saved at the same moment, and nothing was saved. Save again.")
 
   # The errors only: the changes hold what was typed, passwords and email addresses too.
   defp log_rejected_save(changeset) do
@@ -8302,12 +8271,7 @@ defmodule BrandoAdmin.Components.Form do
       )
       |> Map.put(:action, :update)
 
-    with {:ok, updated_image} <- Images.update_image(changeset, current_user) do
-      # Processing sees the focal point already saved: the entries that show
-      # the image render again from here
-      Images.Rerender.after_refocus(image, updated_image)
-      {:ok, updated_image}
-    end
+    Images.update_image(changeset, current_user)
   end
 
   # The image editor's point with the mode the editor shows it in. A mode sent
@@ -8422,6 +8386,11 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
+  # The picker's editor in a locked field's drawer: the drawer keeps the
+  # field's image
+  defp show_saved_editor_image(%{assigns: %{image_editor_target: %{}}} = socket, target, updated_image),
+    do: assign(socket, :image_editor_target, Map.put(target, :image, updated_image))
+
   # The image's own form: the entry is the image; show it as saved.
   defp show_saved_editor_image(socket, %{own: own} = edit_image, updated_image) when own not in [nil, false] do
     socket
@@ -8441,16 +8410,23 @@ defmodule BrandoAdmin.Components.Form do
 
   # Non-block path: update entry with the image so the Image input
   # detects the change when the form re-validates (same pattern as new_copy).
+  # A locked field keeps what it holds, checked at the save: the field may
+  # have locked since the editor opened. The drawer shows the saved image.
   defp show_saved_editor_image(socket, edit_image, updated_image) do
-    field_atom = String.to_existing_atom("#{edit_image.field}")
-    image_changeset = change(updated_image)
-    updated_edit_image = Map.merge(edit_image, %{image: updated_image})
+    socket =
+      socket
+      |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
+      |> assign(:image_changeset, change(updated_image))
 
-    socket
-    |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
-    |> assign(:edit_image, updated_edit_image)
-    |> assign(:image_changeset, image_changeset)
-    |> push_event("b:validate", %{})
+    if edit_asset_locked?(socket, edit_image) do
+      socket
+    else
+      field_atom = String.to_existing_atom("#{edit_image.field}")
+
+      socket
+      |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
+      |> push_event("b:validate", %{})
+    end
   end
 
   defp external_video_params?(%{"type" => type}) when type in ["external_file", "vimeo", "youtube"], do: true
@@ -9123,6 +9099,14 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, changeset} -> apply(context, :"#{mutation_type}_#{singular}", [changeset, user | mutation_opts(socket)])
       error -> error
     end
+  rescue
+    # Postgres cancelled the save to break a wait on the same rows (another
+    # save, a release apply moving values in its blocks). A context's save is
+    # one transaction (`Brando.Query.Mutations`): nothing was written
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:deadlock_detected, :serialization_failure],
+        do: {:error, :try_again},
+        else: reraise(error, __STACKTRACE__)
   end
 
   # Options for the translation sync the mutation queues. A minor save (Save
@@ -9533,7 +9517,7 @@ defmodule BrandoAdmin.Components.Form do
   # an editor opened since left in `edit_image`.
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
     cond do
-      edit_asset_locked?(socket, socket.assigns[:image_editor_copy_of] || socket.assigns[:edit_image]) ->
+      edit_asset_locked?(socket, socket.assigns[:image_editor_copy_of] || image_editor_target(socket)) ->
         send(self(), {:toast, gettext("This field is locked")})
         {:noreply, cancel_upload(socket, :image_editor_upload, entry.ref)}
 
@@ -9603,7 +9587,7 @@ defmodule BrandoAdmin.Components.Form do
     current_user = socket.assigns.current_user
     # `edit_image` as it was when "Save as new copy" was pressed, not as an
     # editor opened since left it
-    edit_image = socket.assigns[:image_editor_copy_of] || copy_destination(socket, socket.assigns.edit_image)
+    edit_image = socket.assigns[:image_editor_copy_of] || copy_destination(socket, image_editor_target(socket))
 
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
@@ -9686,6 +9670,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp copy_destination(_socket, edit_image), do: edit_image
+
+  # What the open image editor works on: the drawer's image, a block's or a
+  # gallery's (`edit_image`), or the picker's image in a locked field's
+  # drawer, which keeps its own
+  defp image_editor_target(socket), do: socket.assigns[:image_editor_target] || socket.assigns.edit_image
 
   defp resolve_block_image_config(config_target) do
     resolved_target = normalize_upload_config_target(config_target) || "default"
@@ -10636,6 +10625,51 @@ defmodule BrandoAdmin.Components.Form do
   defp topic_ref("form:" <> uuid), do: "form:" <> String.slice(uuid, 0, 8) <> "…"
   defp topic_ref(other), do: inspect(other)
 
+  # The drawer's image goes into its field, which the form validates. A
+  # locked field keeps another image (it may have locked since the drawer
+  # opened): only the image is saved, and processed for no field.
+  defp put_drawer_image(socket, %{image: image, path: path, field: field} = edit_image, validated_changeset) do
+    leave_field? =
+      edit_asset_locked?(socket, edit_image) and not holds_relation?(socket.assigns.form.source, field, image)
+
+    field_full_path = if leave_field?, do: [], else: path ++ [field]
+
+    if requeue_processing?(validated_changeset, image) do
+      Images.Processing.queue_processing(image, socket.assigns.current_user, field_full_path, silent: true)
+    end
+
+    if leave_field?, do: socket, else: put_drawer_image_in_field(socket, edit_image)
+  end
+
+  defp put_drawer_image_in_field(
+         %{assigns: %{form: form, entry: entry, schema: schema, singular: singular}} = socket,
+         %{image: image, path: path, field: field, relation_field: relation_field}
+       ) do
+    relation_key = relation_field_key(relation_field, field)
+    relation_full_path = path ++ [relation_key]
+    field_full_path = path ++ [field]
+
+    updated_changeset =
+      form.source
+      |> put_key_at(path, relation_key, image.id)
+      |> put_asset_in_data(path, field, image)
+
+    updated_entry =
+      entry_with_relation(entry || struct(schema), updated_changeset, field_full_path, &drawer_image(&1, image))
+
+    # Subscribe parent live view to changes to this image
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+
+    target_field_name =
+      Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
+
+    socket
+    |> assign(:entry, updated_entry)
+    |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
+    |> put_form(to_form(updated_changeset, []))
+    |> push_event("b:validate", %{target: target_field_name, value: image.id})
+  end
+
   # Inputs the image pipeline actually derives its output from. The drawer's
   # other fields (title / credits / alt) are metadata — the sizes on disk do
   # not depend on them.
@@ -10825,11 +10859,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # The drawer shows the asset if it is open on the field it was delivered to
+  # The drawer shows the asset if it is open on the field it was delivered to.
+  # Its path and name tell the field: an upload's delivery names no schema.
   defp show_delivered_asset(socket, asset_type, edit_asset, asset) do
     open = socket.assigns[:"edit_#{asset_type}"]
 
-    if Map.take(open, [:path, :field, :schema]) == Map.take(edit_asset, [:path, :field, :schema]) do
+    if Map.take(open, [:path, :field]) == Map.take(edit_asset, [:path, :field]) do
       socket
       |> assign(:"edit_#{asset_type}", Map.merge(open, %{:id => asset.id, asset_type => asset}))
       |> assign(:"#{asset_type}_changeset", change(asset))
@@ -11210,6 +11245,13 @@ defmodule BrandoAdmin.Components.Form do
       :error ->
         changeset
     end
+  end
+
+  # A one-to-one subform with no row yet: the form shows an empty one, and
+  # a value starts it. Clearing the key leaves it unstarted.
+  defp put_key_at(%Changeset{changes: changes, data: data} = changeset, [field], key, value)
+       when is_atom(field) and not is_map_key(changes, field) and is_nil(:erlang.map_get(field, data)) do
+    if is_nil(value), do: changeset, else: Changeset.put_change(changeset, field, %{key => value})
   end
 
   defp put_key_at(changeset, path, key, value) do

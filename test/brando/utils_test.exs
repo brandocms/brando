@@ -338,6 +338,16 @@ defmodule Brando.UtilsTest do
         }
       }
     end
+
+    # Only the sizes :smallest leaves out
+    def thumb_only_cfg do
+      %{
+        sizes: %{
+          "micro" => %{"size" => "25", "quality" => 20},
+          "thumb" => %{"size" => "400x400", "quality" => 65, "crop" => true}
+        }
+      }
+    end
   end
 
   test "img_url with :largest prefers the better quality when widths tie" do
@@ -423,6 +433,20 @@ defmodule Brando.UtilsTest do
     }
 
     assert img_url(img, :smallest) == "images/meta/xlarge/file.jpg"
+  end
+
+  test "img_url with :smallest falls back to :largest when only thumb and micro are configured" do
+    img = %{
+      path: "images/file.jpg",
+      cdn: false,
+      config_target: "image:#{inspect(BlurBlueprint)}:function:thumb_only_cfg",
+      sizes: %{
+        "micro" => "images/micro/file.jpg",
+        "thumb" => "images/thumb/file.jpg"
+      }
+    }
+
+    assert img_url(img, :smallest) == "images/thumb/file.jpg"
   end
 
   test "asset config with custom sizes does not inherit default sizes" do

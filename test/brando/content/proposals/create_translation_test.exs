@@ -402,10 +402,10 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert codes([op(c)], editor) == [{0, :forbidden}]
   end
 
-  test "the review shows it as its own card", c do
+  test "the review shows it as its own card, with its page", c do
     {:ok, proposal} = Proposals.propose([op(c)], c.user)
 
-    assert [%{action: :create, title: "Tittel", preview?: false, changes: [change]}] = Review.entries(proposal)
+    assert [%{action: :create, title: "Tittel", preview?: true, changes: [change]}] = Review.entries(proposal)
     assert %{type: :create_translation, language: "en", source: %{title: "Tittel", id: id}} = change
     assert id == c.source.id
   end

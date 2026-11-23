@@ -21,6 +21,7 @@ defmodule Brando.Content.Proposals.Preview do
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.Error
   alias Brando.LivePreview
+  alias Brando.Repo
 
   @doc """
   Render `target` of `proposal`.
@@ -47,7 +48,7 @@ defmodule Brando.Content.Proposals.Preview do
     initialize = &initialize(&1, actor, opts[:preview_target], copy?)
 
     with :ok <- renderable(proposal, target, version),
-         {:ok, key} <- with_changeset(proposal, target, actor, version, opts[:shared], initialize) do
+         {:ok, key} <- with_changeset(proposal, target, actor, version, opts[:shared], opts[:preview_target], initialize) do
       {:ok, html} = LivePreview.get_cache(key)
       {:ok, %{key: key, html: html}}
     end
@@ -93,27 +94,84 @@ defmodule Brando.Content.Proposals.Preview do
   # `fun` with the target's changeset. A translation the proposal creates
   # exists only inside the transaction `Proposals.with_translation/5` rolls
   # back, so `fun` renders it there.
-  defp with_changeset(proposal, target, actor, version, shared, fun) do
+  defp with_changeset(proposal, target, actor, version, shared, preview_target, fun) do
     if version == :proposed and Proposals.translation(proposal.operations, target),
-      do: Proposals.with_translation(proposal, target, actor, [shared: !!shared], fun),
-      else: with({:ok, changeset} <- changeset(proposal, target, actor, version, shared), do: fun.(changeset))
+      do: with_copy(proposal, target, actor, shared, preview_target, fun),
+      else:
+        with(
+          {:ok, changeset} <- changeset(proposal, target, actor, version, shared, preview_target),
+          do: fun.(changeset)
+        )
   end
 
-  defp changeset(proposal, target, actor, :proposed, shared) do
-    with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared),
-         do: {:ok, Map.fetch!(changesets, target)}
+  # The copy as the page reads an entry (`page_entry/2`), in the transaction
+  defp with_copy(proposal, target, actor, shared, preview_target, fun) do
+    Proposals.with_translation(proposal, target, actor, [shared: !!shared], fn changeset ->
+      changeset |> Brando.Utils.apply_changes_recursively() |> page_entry(preview_target) |> fun.()
+    end)
   end
 
-  defp changeset(proposal, target, actor, :before, shared) do
+  defp changeset(proposal, target, actor, :proposed, shared, preview_target) do
+    with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared) do
+      entry = changesets |> Map.fetch!(target) |> Brando.Utils.apply_changes_recursively()
+      {:ok, page_entry(entry, preview_target)}
+    end
+  end
+
+  defp changeset(proposal, target, actor, :before, shared, preview_target) do
     Error.protect(fn ->
       unless shared, do: Proposals.authorize_proposal!(proposal, actor)
 
       proposal
       |> Proposals.current!(actor, if(shared, do: :read, else: :update))
       |> Map.fetch!(target)
-      |> Ecto.Changeset.change()
+      |> page_entry(preview_target)
     end)
   end
+
+  # The entry is loaded with its blocks only, and the page reads it as a
+  # saved one is read: its media (the head's meta image), relations and
+  # alternates. They load after the proposal's changes apply, so a media
+  # field it changes shows its new picture; a list it sets keeps its rows,
+  # which get what they read (an entries list's identifiers). What the
+  # preview target's own `schema_preloads` names is loaded by its query
+  # first, which may pick fewer rows (published children only); those rows
+  # then get what the Blueprint loads beneath them (a gallery's objects).
+  defp page_entry(entry, preview_target) do
+    entry =
+      entry.__struct__
+      |> target_preloads(preview_target)
+      |> Enum.reject(&Ecto.assoc_loaded?(Map.get(entry, preload_name(&1))))
+      |> then(&Repo.preload(entry, &1))
+
+    {loaded, unloaded} =
+      entry.__struct__
+      |> Brando.Blueprint.preloads_for(skip_blocks: true)
+      |> Enum.split_with(&Ecto.assoc_loaded?(Map.get(entry, preload_name(&1))))
+
+    # On the loaded rows, not through the entry: Ecto refuses a loaded list
+    # on an entry without an id, as a new one is
+    loaded
+    |> Enum.reduce(entry, fn preload, entry ->
+      Map.update!(entry, preload_name(preload), &Repo.preload(&1, nested(preload)))
+    end)
+    |> Repo.preload(unloaded)
+    |> Ecto.Changeset.change()
+  end
+
+  defp target_preloads(schema, preview_target) do
+    schema |> LivePreview.get_target_config(preview_target) |> Map.fetch!(:schema_preloads)
+  rescue
+    # An unknown target fails where the preview renders
+    Brando.Exception.LivePreviewError -> []
+  end
+
+  defp preload_name({name, _nested}), do: name
+  defp preload_name(name), do: name
+
+  defp nested({_name, %Ecto.Query{preloads: preloads}}), do: preloads
+  defp nested({_name, preloads}), do: preloads
+  defp nested(_name), do: []
 
   @doc """
   A public link to the proposed page, for any browser: a static snapshot
@@ -127,9 +185,9 @@ defmodule Brando.Content.Proposals.Preview do
   def share(proposal, target, actor, opts \\ []) do
     with :ok <- renderable(proposal, target, :proposed),
          :ok <- shown(proposal),
-         {:ok, changeset} <- to_share(proposal, target, actor, opts[:shared]) do
+         {:ok, changeset} <- to_share(proposal, target, actor, opts[:shared], opts[:preview_target]) do
       scope = Boundary.actor_scope(actor)
-      user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
+      user = Repo.get!(Brando.Users.User, scope.user_id)
 
       Boundary.with_scope(scope, fn ->
         LivePreview.share(target_schema(proposal, target), changeset, user, %{}, opts[:preview_target])
@@ -163,9 +221,9 @@ defmodule Brando.Content.Proposals.Preview do
 
     with :ok <- renderable(proposal, target, version),
          {:ok, preview_target} <- preview_target(proposal, target, opts[:preview_target]),
-         {:ok, changeset} <- to_snapshot(proposal, target, actor, version) do
+         {:ok, changeset} <- to_snapshot(proposal, target, actor, version, preview_target) do
       scope = Boundary.actor_scope(actor)
-      user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
+      user = Repo.get!(Brando.Users.User, scope.user_id)
 
       Boundary.with_scope(scope, fn ->
         LivePreview.share_proposal(target_schema(proposal, target), changeset, user, proposal.id, preview_target)
@@ -177,22 +235,25 @@ defmodule Brando.Content.Proposals.Preview do
   # for a translation the proposal creates a builder that makes it and
   # renders it in the transaction it rolls back. Creating the copy takes the
   # permission to create it.
-  defp to_share(proposal, target, actor, shared) do
+  defp to_share(proposal, target, actor, shared, preview_target) do
     if Proposals.translation(proposal.operations, target),
-      do: {:ok, &Proposals.with_translation(proposal, target, actor, [shared: !!shared], &1)},
-      else: changeset(proposal, target, actor, :proposed, shared)
+      do: {:ok, &with_copy(proposal, target, actor, shared, preview_target, &1)},
+      else: changeset(proposal, target, actor, :proposed, shared, preview_target)
   end
 
-  defp to_snapshot(proposal, target, actor, version) do
+  defp to_snapshot(proposal, target, actor, version, preview_target) do
     if Proposals.translation(proposal.operations, target),
-      do: to_share(proposal, target, actor, nil),
-      else: existing_snapshot(proposal, target, actor, version)
+      do: to_share(proposal, target, actor, nil, preview_target),
+      else: existing_snapshot(proposal, target, actor, version, preview_target)
   end
 
-  defp existing_snapshot(proposal, target, actor, version) do
-    with {:ok, proposed} <- changeset(proposal, target, actor, :proposed, nil),
-         :ok <- authorize_snapshot(actor, proposed),
-         do: if(version == :before, do: changeset(proposal, target, actor, :before, nil), else: {:ok, proposed})
+  defp existing_snapshot(proposal, target, actor, version, preview_target) do
+    with {:ok, proposed} <- changeset(proposal, target, actor, :proposed, nil, preview_target),
+         :ok <- authorize_snapshot(actor, proposed) do
+      if version == :before,
+        do: changeset(proposal, target, actor, :before, nil, preview_target),
+        else: {:ok, proposed}
+    end
   end
 
   # A name the content type's live preview declares, or nil for its default
@@ -224,18 +285,31 @@ defmodule Brando.Content.Proposals.Preview do
     end
   end
 
-  # The proposal on screen may have been discarded in another tab since it
-  # was read: its stored status decides, as for `Proposals.get_shared/3`.
+  # The proposal on screen may have been discarded in another tab, or have
+  # expired, since it was read: its stored status and deadline decide, as
+  # for `Proposals.get_shared/3`.
   defp shown(%{id: id}) do
-    status =
+    stored =
       id &&
-        Brando.Repo.one(
-          from(r in Proposals.Record, where: r.id == ^id and r.scope == ^Transfer.scope(), select: r.status)
+        Repo.one(
+          from(r in Proposals.Record,
+            where: r.id == ^id and r.scope == ^Transfer.scope(),
+            select: {r.status, r.expires_at}
+          )
         )
 
-    if status in ~w(pending approved applied),
-      do: :ok,
-      else: {:error, dgettext("content_proposals", "This proposal is no longer under review.")}
+    case stored do
+      {"applied", _} ->
+        :ok
+
+      {status, expires_at} when status in ~w(pending approved) ->
+        if DateTime.compare(expires_at, DateTime.utc_now()) == :gt,
+          do: :ok,
+          else: {:error, dgettext("content_proposals", "This proposal has expired. Prepare it again.")}
+
+      _ ->
+        {:error, dgettext("content_proposals", "This proposal is no longer under review.")}
+    end
   end
 
   # A copy's key is registered again as a new entry's: the copy is gone once

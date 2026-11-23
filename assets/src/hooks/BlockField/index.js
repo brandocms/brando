@@ -59,8 +59,8 @@ export default app => ({
     // (`MediaDrop`): the field keeps the pending drops, so this reaches it
     // wherever the block has moved since
     this.onHandedUploadSettled = (event) => {
-      const { uid, token, failed, error, unavailable } = event.detail
-      this.pushEventTo(this.el, 'media_drop_settled', { uid, token, failed, error, unavailable: !!unavailable })
+      const { uid, token, failed, error, unavailable, aborted } = event.detail
+      this.pushEventTo(this.el, 'media_drop_settled', { uid, token, failed, error, unavailable: !!unavailable, aborted: !!aborted })
     }
     this.el.addEventListener('brando:handed-upload-settled', this.onHandedUploadSettled)
   },

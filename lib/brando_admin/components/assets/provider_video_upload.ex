@@ -12,7 +12,8 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   #   * `video_upload_complete`: `complete/2`, then the component takes the
   #     video the way it takes a picked one, if it still shows what it showed
   #     when the upload started (`remember/4`, `still_shown?/4`). Otherwise
-  #     the video stays in the library only.
+  #     the video stays in the library only. A ref answers an upload it
+  #     cannot complete with `complete_error_message/1`, for its field.
   #
   # The browser never names the video it completes. `ready_payload/4` signs,
   # into the destination it pushes, a token naming the video, the user, the
@@ -174,6 +175,13 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   end
 
   def complete(_user, _params, _preload), do: :error
+
+  @doc """
+  What to tell the editor about a `complete/3` that failed.
+  """
+  def complete_error_message({:error, %Ecto.Changeset{}}), do: complete_error_message(:error)
+  def complete_error_message({:error, reason}), do: Brando.Uploads.video_upload_error_message(reason)
+  def complete_error_message(:error), do: gettext("The video was uploaded, but could not be added here.")
 
   @doc """
   Whom `complete/3` checks the token against. A component is not always

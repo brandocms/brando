@@ -44,7 +44,8 @@ defmodule Brando.SyncTest do
 
   # What a site's hand-written duplicate may do, for the entry a test names
   # (`Process.put({:synctest_duplicate, id}, how)`, TranslationsTest): return
-  # the copy reloaded without its relations, fail, raise or throw.
+  # the copy reloaded without its relations, fail, raise or throw; or
+  # publish the copy it made (AutoApplyTest).
   def duplicate_article(id, user, override_opts \\ []) do
     case Process.get({:synctest_duplicate, id}) do
       :error ->
@@ -58,6 +59,11 @@ defmodule Brando.SyncTest do
 
       :bare ->
         with {:ok, copy} <- super(id, user, override_opts), do: {:ok, Brando.Repo.get!(Article, copy.id)}
+
+      :publish ->
+        with {:ok, copy} <- super(id, user, override_opts) do
+          {:ok, copy |> Ecto.Changeset.change(status: :published) |> Brando.Repo.update!()}
+        end
 
       nil ->
         super(id, user, override_opts)

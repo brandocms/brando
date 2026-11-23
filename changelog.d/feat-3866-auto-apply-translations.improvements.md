@@ -1,0 +1,1 @@
+- `prepare_proposal` refuses a created entry's `ref` longer than 128 characters, as it does a block uid.

@@ -668,6 +668,21 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert message =~ "unknown definition"
     end
 
+    test "a palette's update clears the cached containers holding it, as a palette save does", c do
+      import!(read!(fixtures!(c.path, ~w(paper tinted))), c.user)
+      list_containers = fn -> Brando.Villain.RenderSourceQuery.list_containers(%{preload: [:palette], cache: true}) end
+      on_exit(fn -> Cachex.clear(:query) end)
+
+      assert {:ok, [%{palette: %{colors: [%{hex_value: "#fff9f4"} | _]}}]} = list_containers.()
+
+      edited =
+        Map.update!(export!(c), "palettes", fn [p] -> [put_in(p, ["colors", Access.at(0), "hex_value"], "#123456")] end)
+
+      import!(edited, c.user)
+
+      assert {:ok, [%{palette: %{colors: [%{hex_value: "#123456"} | _]}}]} = list_containers.()
+    end
+
     test "a rolled-back import queues no render and leaves the palette CSS as it was", c do
       import!(read!(fixtures!(c.path, ~w(paper tinted))), c.user)
       page_with_tinted_section!(c.user)

@@ -229,6 +229,14 @@ defmodule BrandoAdmin.Components.Activity do
       when is_binary(id) and is_integer(approver_id),
       do: "/admin/assistant/connected/#{id}"
 
+  # Applied without review: approved by no one, made as the connection's person
+  def proposal_path(
+        %{proposal_id: id, approver_id: nil, user_id: user_id, details: %{"auto_applied" => true}},
+        %{user_id: user_id, assistant?: true}
+      )
+      when is_binary(id) and is_integer(user_id),
+      do: "/admin/assistant/connected/#{id}"
+
   def proposal_path(_event, _viewer), do: nil
 
   defp tone(:published), do: "is-published"
@@ -518,11 +526,19 @@ defmodule BrandoAdmin.Components.Activity do
   defp source(_), do: nil
 
   # Without an approver (a user since removed), the person it was made as
+  defp approved_by(%{details: %{"auto_applied" => true}} = event), do: approver_label(event) || by(event, :mcp)
   defp approved_by(event), do: approver_label(event) || by(event, :assistant)
 
-  @doc "Who approved and applied an agent's change, or undid it: `Approved by Ola Hansen`. `nil` for no one."
+  @doc """
+  Who approved and applied an agent's change, or undid it: `Approved by Ola
+  Hansen`. A change applied without review, as its connection allows, was
+  approved by no one: `Applied automatically as Ola Hansen`. `nil` for no one.
+  """
   def approver_label(%{approver: %{name: name}, details: %{"undo_proposal" => true}}),
     do: gettext("Undone by %{name}", name: name)
+
+  def approver_label(%{approver_id: nil, user: %{name: name}, details: %{"auto_applied" => true}}),
+    do: gettext("Applied automatically as %{name}", name: name)
 
   def approver_label(%{approver: %{name: name}}), do: gettext("Approved by %{name}", name: name)
   def approver_label(_event), do: nil
@@ -646,6 +662,12 @@ defmodule BrandoAdmin.Components.Activity do
 
   defp lines(%{schema: @mcp_grant, details: %{"mcp" => "connected"}}, _fields, _states),
     do: [gettext("Connected over MCP")]
+
+  defp lines(%{schema: @mcp_grant, details: %{"mcp" => "auto_apply", "auto_apply" => "unpublished_translations"}}, _, _),
+    do: [gettext("Set to apply unpublished translations without review")]
+
+  defp lines(%{schema: @mcp_grant, details: %{"mcp" => "auto_apply"}}, _fields, _states),
+    do: [gettext("Set to leave every proposal for review")]
 
   defp lines(%{schema: @mcp_grant, details: %{"mcp" => "revoked", "reason" => reason}}, _fields, _states)
        when reason in ["refresh_token_reuse", "code_reuse"],

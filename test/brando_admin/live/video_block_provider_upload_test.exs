@@ -79,6 +79,28 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert Repo.get(Brando.Videos.Video, video_id)
     end
 
+    # The ref's field settles a dropped file's entry (`Brando.MediaDrop`) by
+    # the answer: an upload the ref cannot take failed.
+    test "an upload it cannot complete is answered with why", ctx do
+      view = open(ctx)
+      hook = "##{ref_hook_id(ctx)}"
+      request_upload(view, hook, "ref-forged")
+
+      complete_upload(view, hook, "ref-forged", "forged")
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert ref_video_id(view) in [nil, ""]
+    end
+
+    # The provider took the file; saving the video failed, so blaming the
+    # provider's settings would send the editor the wrong way.
+    test "an upload saved with an error is not blamed on the provider" do
+      alias BrandoAdmin.Components.Assets.ProviderVideoUpload
+
+      assert ProviderVideoUpload.complete_error_message({:error, %Ecto.Changeset{}}) ==
+               ProviderVideoUpload.complete_error_message(:error)
+    end
+
     # The ref took the video while Bunny still had it: it showed a bare film
     # icon until the entry was reloaded, as nothing told it the video was ready.
     test "an upload shows as processing until the provider reports it ready", ctx do
@@ -176,6 +198,33 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert Repo.get(Brando.Videos.Video, video_id)
     end
 
+    # Before, the var took nothing and said nothing: the editor saw the
+    # upload finish and no video.
+    test "an upload it cannot complete is answered with why", ctx do
+      view = open(ctx)
+      hook = "#" <> var_hook(view)
+      request_upload(view, hook, "var-forged")
+
+      complete_upload(view, hook, "var-forged", "forged")
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert var_video_id(view) in [nil, ""]
+    end
+
+    # Before, the var read the video again after completing it, and a video
+    # trashed in between took the form down.
+    test "an upload whose video is trashed while it completes is answered with why", ctx do
+      view = open(ctx)
+      hook = "#" <> var_hook(view)
+      {video_id, token} = request_upload(view, hook, "var-trashed")
+      Brando.TrashOnRead.trash_video_after_first_read(view.pid, video_id)
+
+      complete_upload(view, hook, "var-trashed", token)
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert var_video_id(view) in [nil, ""]
+    end
+
     test "an upload shows as processing until the provider reports it ready", ctx do
       view = open(ctx)
       hook_id = var_hook(view)
@@ -240,6 +289,17 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
 
       assert_push_event(view, "b:validate", %{target: "page[vars][0][video_id]", value: ^video_id})
       assert entry_var_video_id(view, 0) == to_string(video_id)
+    end
+
+    test "an upload it cannot complete is answered with why", ctx do
+      view = open_entry(ctx)
+      hook = "#page_vars_0-video-uploader"
+      request_upload(view, hook, "entry-forged")
+
+      complete_upload(view, hook, "entry-forged", "forged")
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert entry_var_video_id(view, 0) in [nil, ""]
     end
 
     test "changed to another type and back, it offers Upload again", ctx do

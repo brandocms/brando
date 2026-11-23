@@ -167,7 +167,8 @@ jobs:
           path: cover/unit.coverdata
           retention-days: 7
 
-      # The script creates, migrates and seeds each partition's database
+      # The script creates and migrates each partition's database; its run
+      # empties and seeds it (test/support/test_database.ex)
       - name: Run Tests
         if: ${{ !inputs.coverage }}
         run: >-

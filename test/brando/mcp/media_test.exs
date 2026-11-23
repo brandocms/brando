@@ -131,6 +131,12 @@ defmodule Brando.MCP.MediaTest do
 
   defp secret(url), do: Path.basename(URI.parse(url).path)
 
+  # An upload past the time it is kept, as `upload_keep_minutes` long ago would make it
+  defp expire!(id) do
+    meta = Path.join([Uploads.root(), id, "meta.json"])
+    File.write!(meta, meta |> File.read!() |> Jason.decode!() |> Map.put("keep_until", 0) |> Jason.encode!())
+  end
+
   defp pending, do: if(File.exists?(Uploads.root()), do: File.ls!(Uploads.root()), else: [])
 
   test "the three tools are offered: the URL import reaches out, the upload does not",
@@ -256,10 +262,11 @@ defmodule Brando.MCP.MediaTest do
 
     test "a directory the server cannot make its own is refused, by every step, and said once in the log",
          %{tenant: tenant, token: token, dir: dir} do
-      mcp_env(upload_dir: dir, upload_keep_minutes: 0)
       {sent, url} = prepare!(tenant, token)
       {_unsent, unsent_url} = prepare!(tenant, token)
       assert put_bytes(url, @jpg).status == 200
+      # Past its time only once sent: the second prepare sweeps
+      expire!(sent)
 
       # The uploads directory is now a link to another's directory, which
       # holds what looks like an hour-old upload

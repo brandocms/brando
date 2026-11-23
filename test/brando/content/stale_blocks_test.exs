@@ -417,6 +417,21 @@ defmodule Brando.Content.StaleBlocksTest do
       assert [%Var{value: "https://by.no/kultur"}] = Enum.filter(vars(block), &(&1.key == "cta"))
     end
 
+    test "says a mapping replaces a target that differs from the definition only where no preview shows it", c do
+      # A link that opens in a new tab, with nothing else set: it previews
+      # as empty, and is the editor's choice all the same
+      page_with_block(
+        c,
+        [link_var(), %{"type" => "link", "key" => "cta", "label" => "CTA", "link_target_blank" => true}],
+        []
+      )
+
+      plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => {:map, "cta"}})
+      assert [%{replaces: replaces}] = plan.changes
+      assert is_binary(replaces)
+      assert [_] = plan.lost
+    end
+
     test "converts a string var into a text or rich text one, and refuses what would lose content", c do
       {_page, block} =
         page_with_block(c, [%{"type" => "string", "key" => "subtitle", "label" => "S", "value" => "A & B"}], [])
@@ -891,7 +906,7 @@ defmodule Brando.Content.StaleBlocksTest do
       output = run_task(["refresh", "--uid", c.module.uid, "--user", to_string(c.user.id)])
       assert output =~ "1 stale blocks remain"
       assert output =~ "They hold refs or vars the module no longer defines: var link (1 blocks)."
-      assert output =~ "mix brando.modules resolve --uid #{c.module.uid} --user ID"
+      assert output =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID"
       assert output =~ "/admin/config/content/modules/update/#{c.module.id}/stale-blocks"
     end
   end
