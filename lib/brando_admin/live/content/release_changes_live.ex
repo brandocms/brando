@@ -1042,7 +1042,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     defs = assigns.detail.definitions[item.uid]
     base = defs.applied && Review.definition_text(defs.applied.definition)
     hunks = if base, do: Review.three_way(base, Review.definition_text(defs.here), Review.definition_text(defs.release))
-    assigns = assign(assigns, item: item, defs: defs, hunks: hunks, who: RC.person(item.edited))
+    moving = Enum.filter(assigns.row.items, &moves?/1)
+    assigns = assign(assigns, item: item, defs: defs, hunks: hunks, who: RC.person(item.edited), moving: moving)
 
     ~H"""
     <RC.notice headline={gettext("Changed here and in this release")}>
@@ -1106,11 +1107,18 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           data-testid="release-choice-release"
         />
         <strong>{gettext("Use the release’s version")}</strong>
-        <p>
+        <p :if={@moving == []}>
           {gettext("%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back.", name: @who)}
+        </p>
+        <p :if={@moving != []}>
+          {gettext(
+            "%{name}’s edit is replaced when you apply, and values move to the renamed refs and vars, so the apply can’t be reverted.",
+            name: @who
+          )}
         </p>
       </label>
     </div>
+    <.moves_notice :if={@choices[@row.uid] == "release"} items={@moving} />
     """
   end
 
@@ -1174,33 +1182,10 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     assigns =
       assigns
       |> assign(:removing, Enum.filter(items, &(&1[:removes] && &1.removes.blocks > 0)))
-      |> assign(:moving, Enum.filter(items, &(&1[:moves] && &1.moves.blocks > 0)))
+      |> assign(:moving, Enum.filter(items, &moves?/1))
 
     ~H"""
-    <RC.notice
-      :if={@moving != []}
-      icon="info"
-      headline={gettext("Values move to the renamed refs and vars")}
-    >
-      {gettext(
-        "Applying moves each block’s value from the old name to the new one in the same step. A revision of each entry is stored before and after, and the apply can’t be reverted: keep it, or restore the entries’ revisions."
-      )}
-      <ul data-testid="release-moves">
-        <li :for={item <- @moving} data-uid={item.uid}>
-          {item.name}: {moved_keys(item.moves.renames)} · {ngettext(
-            "1 block",
-            "%{count} blocks",
-            item.moves.blocks
-          )}, {pngettext("release", "1 entry", "%{count} entries", length(item.moves.entries))}<span :if={
-            item.moves.unrevisioned > 0
-          }> · {ngettext(
-            "1 entry keeps no history",
-            "%{count} entries keep no history",
-            item.moves.unrevisioned
-          )}</span>
-        </li>
-      </ul>
-    </RC.notice>
+    <.moves_notice items={@moving} />
     <RC.notice
       :if={@removing != []}
       icon="info"
@@ -1224,6 +1209,40 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   end
 
   defp choice_body(assigns), do: ~H""
+
+  defp moves?(item), do: match?(%{moves: %{blocks: blocks}} when blocks > 0, item)
+
+  attr :items, :list, required: true
+
+  # The values an apply of `items` moves, which makes it irreversible
+  defp moves_notice(assigns) do
+    ~H"""
+    <RC.notice
+      :if={@items != []}
+      icon="info"
+      headline={gettext("Values move to the renamed refs and vars")}
+    >
+      {gettext(
+        "Applying moves each block’s value from the old name to the new one in the same step. A revision of each entry is stored before and after, and the apply can’t be reverted: keep it, or restore the entries’ revisions."
+      )}
+      <ul data-testid="release-moves">
+        <li :for={item <- @items} data-uid={item.uid}>
+          {item.name}: {moved_keys(item.moves.renames)} · {ngettext(
+            "1 block",
+            "%{count} blocks",
+            item.moves.blocks
+          )}, {pngettext("release", "1 entry", "%{count} entries", length(item.moves.entries))}<span :if={
+            item.moves.unrevisioned > 0
+          }> · {ngettext(
+            "1 entry keeps no history",
+            "%{count} entries keep no history",
+            item.moves.unrevisioned
+          )}</span>
+        </li>
+      </ul>
+    </RC.notice>
+    """
+  end
 
   # A row that only renames keeps nothing behind: its values move
   defp class_help(%{class: :destructive, items: items} = row) do

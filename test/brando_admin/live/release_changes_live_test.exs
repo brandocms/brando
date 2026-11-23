@@ -368,6 +368,25 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
       end)
     end
 
+    test "in a conflict, says the values move and the apply can't be reverted once the release's version is chosen",
+         %{conn: conn} = c do
+      case_module(c) |> Changeset.change(code: case_module(c).code <> "<!-- here -->") |> Repo.update!()
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+        assert has_element?(view, "[data-testid=release-choices]")
+        refute has_element?(view, "[data-testid=release-moves]")
+
+        view |> element("[data-testid=release-choice-release]") |> render_click()
+        assert has_element?(view, "[data-testid=release-moves] li[data-uid=#{c.case_module.uid}]", "wide → full")
+
+        view |> element("[data-testid=release-apply]") |> render_click()
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+        assert %{value_boolean: true} = Repo.get_by(Brando.Content.Var, block_id: c.block.id, key: "full")
+      end)
+    end
+
     test "is refused at apply when the files' renames changed after the review", %{conn: conn} = c do
       manual(fn ->
         {:ok, view, _html} = live(conn, @path)
