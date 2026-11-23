@@ -295,6 +295,24 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
       end
     end
 
+    # `editable_field` prints the row's field by the owner's rule too, and its
+    # markers name the row
+    test "prints typed markup as text through editable_field, its markers naming the row" do
+      entry = %PlainOwner{title: "T", checked_items: [%CheckedItem{id: 7, text: ~s(<a href="/help">Help</a>)}]}
+      template = "{% editable_field entry.checked_items[0].text %}"
+
+      assert render(template, entry) == "&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;"
+
+      key = Brando.FrontendEdit.Fields.key(CheckedItem, 7, :text)
+      html = Brando.FrontendEdit.annotation_scope(true, fn -> render(template, entry) end)
+      assert html =~ "<!-- [+:E<#{key}>] -->&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;<!-- [-:E<#{key}>] -->"
+    end
+
+    test "editable_field prints a row field as markup when the owner draws it as rich text" do
+      entry = %Entry{title: "T", checked_items: [%CheckedItem{id: 7, text: @safe}]}
+      assert render("{% editable_field entry.checked_items[0].text %}", entry) == @safe
+    end
+
     # A component draws the subform: the owner draws no field itself, so it
     # has no rule, and the rows print by their own forms
     defmodule ComponentOwner do

@@ -170,9 +170,25 @@ defmodule Brando.Villain.TemplateView do
   escapes what it prints, or passes it to something that does.
   """
   @spec eval(term(), Context.t()) :: term()
-  def eval(argument, %Context{private: private} = context) do
+  def eval(argument, %Context{} = context), do: argument |> eval_view(context) |> unwrap()
+
+  @doc """
+  `eval/2` for a record a tag prints a field of, with the fields that print
+  as rich text by its owner's forms when it is a subform row read through
+  its owner (`Brando.RichText.row_fields_for_printing/2`), else nil: the
+  record's own forms decide.
+  """
+  @spec eval_record(term(), Context.t()) :: {term(), [atom()] | nil}
+  def eval_record(argument, %Context{} = context) do
+    case eval_view(argument, context) do
+      %__MODULE__{rich: rich} = view -> {unwrap(view), rich}
+      value -> {unwrap(value), nil}
+    end
+  end
+
+  defp eval_view(argument, %Context{private: private} = context) do
     {value, _context} = Liquex.Argument.eval(argument, %{context | private: Map.put(private, @raw_flag, true)})
-    unwrap(value)
+    value
   end
 
   @doc """
