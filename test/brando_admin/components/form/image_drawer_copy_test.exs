@@ -133,7 +133,11 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
   # The cover's drawer was closed, and the picker opened since is a block's,
   # a var's or a gallery's: the editor is not the field's. Its copy stays in
   # the library, and the form's save is not held for a drawer that is shut.
-  test "a copy from the picker's editor after the field's drawer closed", %{view: view, stored: stored, current_user: user} do
+  test "a copy from the picker's editor after the field's drawer closed", %{
+    view: view,
+    stored: stored,
+    current_user: user
+  } do
     picked = image(user)
     open_cover_drawer(view, stored)
     close_drawer(view)
@@ -144,7 +148,13 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
     assert payload.config_target == picked.config_target
     refute form_assigns(view).editing_image?
 
-    start_copy(view, %{"config_target" => picked.config_target, "focal_x" => 40, "focal_y" => 60, "focal_mode" => "center"})
+    start_copy(view, %{
+      "config_target" => picked.config_target,
+      "focal_x" => 40,
+      "focal_y" => 60,
+      "focal_mode" => "center"
+    })
+
     copy = upload_copy(view)
 
     assert copy.id not in [stored.id, picked.id]
