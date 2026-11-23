@@ -1534,6 +1534,11 @@ msgstr ""
 msgid "A list of entries connected to this entry. Usually this is used to link translations together for search engines."
 msgstr ""
 
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "A media, picture or video reference of the child module."
+msgstr ""
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "A new password was set for %{email}. They choose their own the next time they log in."
@@ -7241,9 +7246,19 @@ msgstr ""
 msgid "Drop here to start a new row"
 msgstr ""
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Drop images and videos here, or click to choose"
+msgstr ""
+
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Drop images and videos here, or click to pick"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Drop images here, or click to choose"
 msgstr ""
 
 #: lib/brando_admin/components/form/transformer.ex
@@ -7288,6 +7303,11 @@ msgstr ""
 msgid "Drop to replace"
 msgstr ""
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Drop videos here, or click to choose"
+msgstr ""
+
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Drop videos here, or click to pick"
@@ -7308,6 +7328,16 @@ msgstr[1] ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Dropped %{keys}"
+msgstr ""
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped media creates"
+msgstr ""
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped media goes in"
 msgstr ""
 
 #: lib/brando_admin/components/content/list/row.ex
@@ -7384,6 +7414,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Each file becomes a new %{module}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -9818,6 +9853,11 @@ msgstr ""
 #: lib/brando_admin/components/form/draft_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Images and videos"
+msgstr ""
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Images and videos dropped on this module's blocks each become a new entry of this child module."
 msgstr ""
 
 #: lib/brando_admin/command_palette.ex
@@ -18793,6 +18833,11 @@ msgstr ""
 msgid "Some entries could not be copied."
 msgstr ""
 
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "Some files were not added"
+msgstr ""
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some images could not be described"
@@ -19858,6 +19903,11 @@ msgstr ""
 #: lib/brando/users/user_notifier.ex
 #, elixir-autogen, elixir-format
 msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
+msgstr ""
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "The block made for this file shows no field for it, so it was not added."
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
@@ -22454,6 +22504,7 @@ msgstr ""
 msgid "Upload anyway"
 msgstr ""
 
+#: lib/brando_admin/components/form/block/events.ex
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
@@ -24527,6 +24578,11 @@ msgstr ""
 msgid "language"
 msgstr ""
 
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "larger than %{size}"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "last active %{date}"
@@ -24766,6 +24822,11 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "not an ISO 8601 duration"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "not an image or video this block takes"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
