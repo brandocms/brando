@@ -14,7 +14,8 @@ defmodule Brando.Test.Database do
   share its database. Each run holds an advisory lock on the database,
   shared, until it ends; the reset takes it exclusive first, and needs no
   other session connected, so it never empties a database that another run,
-  a console or an older checkout without the lock is using. A run that finds
+  a console or an older checkout without the lock is using. One of those
+  that connects between the check and the reset is not seen. A run that finds
   another there starts on the database as it is, and says so.
   """
 
