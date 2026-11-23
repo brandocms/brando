@@ -52,6 +52,23 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     assert File.exists?(Brando.Images.Utils.media_path(old.path))
   end
 
+  test "between two imported images: OLD's sources go, and NEW's are OLD's", c do
+    old = image!("imported", {800, 600})
+    new = image!("imported-better", {1600, 1200})
+    Brando.Images.Source.record(old, "figma", "a", nil, "default")
+    Brando.Images.Source.record(new, "figma", "b", nil, "default")
+    Brando.Images.Source.record(new, "figma", "b", "90", "default")
+
+    {:ok, proposal} = Proposals.propose([replace(old, new)], c.user)
+    assert proposal.problems == []
+    assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
+
+    assert Brando.Images.Source.images("figma", [{"a", nil}, {"b", nil}, {"b", "90"}], "default", c.user) ==
+             %{{"b", nil} => old.id, {"b", "90"} => old.id}
+
+    assert Repo.all(from(s in Brando.Images.Source, select: s.image_id)) == [old.id, old.id]
+  end
+
   test "OLD takes NEW's file and keeps its id, texts, focal point, folder and references; NEW goes", c do
     folder = Repo.insert!(%Brando.Media.Folder{scope: "images", name: "people", path: "people"})
 

@@ -1686,6 +1686,157 @@ defmodule Brando.MCP.FigmaTest do
 
       assert %Image{focal: %{x: 50, y: 54, mode: :position}} = Brando.Repo.get!(Image, id)
     end
+
+    test "a person who may not read the library's copy of a picture imports their own; read_frame names a copy only to whoever may read it",
+         %{tenant: tenant} = c do
+      keys = ["brando.admin.access", "brando.mcp.connect", "brando.images.create"]
+      {:ok, group} = Brando.Authorization.Groups.create(c.scope, %{name: "Figma uploaders"}, keys)
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(c.scope, group.id, c.member.id)
+      member = connect_directly(c.member, tenant)["access_token"]
+      owner = connect_directly(enable_two_factor(c.owner), tenant)["access_token"]
+      stub_layers(pictures(), [layer("9:1", [fill("p")])])
+
+      [owners] = asset_ids(import!(tenant, owner))
+      assert %{"images" => [%{"reused" => false}]} = result = import!(tenant, member)
+      [members] = asset_ids(result)
+      assert members != owners
+
+      assert assets(read!(tenant, member)) == %{"9:1" => nil}
+      assert assets(read!(tenant, owner)) == %{"9:1" => owners}
+
+      Brando.Repo.soft_delete!(Brando.Repo.get!(Image, owners))
+      assert assets(read!(tenant, owner)) == %{"9:1" => members}
+      assert assets(read!(tenant, member)) == %{"9:1" => nil}
+    end
+  end
+
+  describe "read_frame's library image for each layer" do
+    setup %{tenant: tenant, user: user} do
+      :ok = MCP.put_figma_token(tenant, @token, user)
+      :ok
+    end
+
+    defp read!(tenant, token, args \\ %{}) do
+      assert %{"structuredContent" => result} = call(tenant, token, "read_frame", Map.put(args, "url", @link))
+      result
+    end
+
+    # Each layer's asset id, or nil
+    defp assets(result) do
+      for section <- result["sections"], image <- Map.get(section, "images", []), into: %{} do
+        {image["node_id"], get_in(image, ["asset", "id"])}
+      end
+    end
+
+    defp asset_ids(result), do: Enum.map(result["images"], & &1["asset"]["id"])
+
+    test "an upright and a turned layer of one picture each name their own image, imported together or apart",
+         %{tenant: tenant, token: token} do
+      stub_layers(pictures(), [
+        layer("7:1", [fill("p")]),
+        layer("7:2", [fill("p", %{"rotation" => 90})]),
+        layer("7:3", [fill("q", %{"rotation" => 90})]),
+        layer("7:4", [fill("q")])
+      ])
+
+      assert assets(read!(tenant, token)) == %{"7:1" => nil, "7:2" => nil, "7:3" => nil, "7:4" => nil}
+
+      # Together; and apart, the turned one first
+      [upright, turned] = asset_ids(import!(tenant, token, %{"node_ids" => ["7:1", "7:2"]}))
+      [q_turned] = asset_ids(import!(tenant, token, %{"node_ids" => ["7:3"]}))
+      assert %{"7:3" => ^q_turned, "7:4" => nil} = assets(read!(tenant, token))
+      [q_upright] = asset_ids(import!(tenant, token, %{"node_ids" => ["7:4"]}))
+
+      assert length(Enum.uniq([upright, turned, q_turned, q_upright])) == 4
+
+      assert assets(read!(tenant, token)) == %{"7:1" => upright, "7:2" => turned, "7:3" => q_turned, "7:4" => q_upright}
+      assert asset_ids(import!(tenant, token)) == [upright, turned, q_turned, q_upright]
+    end
+
+    test "an animated image is stored upright, and a layer showing it turned names that image",
+         %{tenant: tenant, token: token} do
+      stub_layers(serve(%{"g" => animated_gif()}), [
+        layer("7:1", [fill("g")]),
+        layer("7:2", [fill("g", %{"rotation" => 90})])
+      ])
+
+      assert [id, id] = asset_ids(import!(tenant, token))
+      assert assets(read!(tenant, token)) == %{"7:1" => id, "7:2" => id}
+    end
+
+    test "an image in the trash is not named; imported again, the copy is, until the first is restored",
+         %{tenant: tenant, token: token} do
+      stub_layers(pictures(), [layer("7:1", [fill("p")])])
+      [first] = asset_ids(import!(tenant, token))
+      assert assets(read!(tenant, token)) == %{"7:1" => first}
+
+      Brando.Repo.soft_delete!(Brando.Repo.get!(Image, first))
+      assert assets(read!(tenant, token)) == %{"7:1" => nil}
+
+      [copy] = asset_ids(import!(tenant, token))
+      assert copy != first
+      assert assets(read!(tenant, token)) == %{"7:1" => copy}
+
+      # The oldest again, as the import reuses it
+      Brando.Repo.restore!(Brando.Repo.get!(Image, first))
+      assert assets(read!(tenant, token)) == %{"7:1" => first}
+      assert %{"images" => [%{"reused" => true}]} = result = import!(tenant, token)
+      assert asset_ids(result) == [first]
+    end
+
+    test "a source that cannot be recorded leaves the import's result whole, for that image and the others",
+         %{tenant: tenant, token: token} do
+      table = ~s("#{Brando.Tenant.current_prefix() || "public"}".images_sources)
+
+      Brando.Repo.repo().query!("""
+      CREATE FUNCTION pg_temp.refuse_b() RETURNS trigger AS $$
+      BEGIN IF NEW.ref = 'b' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql
+      """)
+
+      Brando.Repo.repo().query!(
+        "CREATE TRIGGER refuse_b BEFORE INSERT ON #{table} FOR EACH ROW EXECUTE FUNCTION pg_temp.refuse_b()"
+      )
+
+      stub_layers(pictures(), [layer("7:1", [fill("a")]), layer("7:2", [fill("b")]), layer("7:3", [fill("c")])])
+
+      result = import!(tenant, token)
+      assert [_, _, _] = ids = asset_ids(result)
+      assert Enum.all?(ids, &is_integer/1)
+      refute Enum.any?(result["images"], &Map.has_key?(&1, "error"))
+
+      # Only b's source is missing
+      assert %{"7:1" => a, "7:2" => nil, "7:3" => c} = assets(read!(tenant, token))
+      assert is_integer(a) and is_integer(c)
+    end
+
+    test "every image named on a full frame: pages are measured with the assets, within the limit, none skipped",
+         %{tenant: tenant, token: token} do
+      layers = for i <- 1..250, do: layer("3:#{i}", [fill("p")])
+      stub_layers(pictures(), layers)
+
+      pages = fn ->
+        Stream.unfold(0, fn
+          nil -> nil
+          offset -> (result = read!(tenant, token, %{"offset" => offset})) && {result, result["next_offset"]}
+        end)
+        |> Enum.to_list()
+      end
+
+      before = pages.()
+      [id] = asset_ids(import!(tenant, token))
+      named = pages.()
+
+      # The assets take room: a page holds fewer sections
+      assert length(hd(named)["sections"]) < length(hd(before)["sections"])
+
+      for page <- named do
+        assert byte_size(Jason.encode!(page)) <= Brando.MCP.Tools.result_limit()
+      end
+
+      indexes = for page <- named, section <- page["sections"], do: section["index"]
+      assert indexes == Enum.to_list(0..249)
+      assert named |> Enum.map(&assets/1) |> Enum.reduce(&Map.merge/2) |> Map.values() |> Enum.uniq() == [id]
+    end
   end
 
   describe "the token" do

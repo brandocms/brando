@@ -12,6 +12,12 @@ defmodule Brando.Figma.Import do
   file, by content hash, for the same config, that the person may read) is
   reused, not stored again, so importing a frame twice adds nothing.
 
+  Each image stored or reused is recorded as the Figma picture's, by its
+  `imageRef` and the turn of the layers it was imported for
+  (`Brando.Images.Source`), so that `read_frame` names it without importing
+  again (`put_assets/2`). A record that cannot be written leaves the image
+  and the result as they are.
+
   Only the images that show are imported (`Brando.Figma.Frame.images/1`):
   image fills hidden under a layer's top fill are not. An image Figma shows
   turned a quarter, half or three quarters is stored as a turned copy, a
