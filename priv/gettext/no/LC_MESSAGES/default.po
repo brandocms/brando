@@ -1595,6 +1595,11 @@ msgstr "Et nytt passord ble satt for %{email}. Brukeren velger sitt eget neste g
 msgid "A new secret replaces this one at once; update the receiver straight after."
 msgstr "En ny hemmelighet erstatter denne med én gang; oppdater mottakeren rett etterpå."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A newer version of this proposal arrived. This one can no longer be applied."
+msgstr "En nyere versjon av dette forslaget har kommet. Denne kan ikke lenger utføres."
+
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
 msgid "A notification route was paused"
@@ -8949,6 +8954,7 @@ msgstr "Mapper"
 msgid "Follow %{name}"
 msgstr "Følg %{name}"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -18688,6 +18694,11 @@ msgstr "Vis i editoren"
 msgid "Show instructions"
 msgstr "Vis instruksjoner"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Show it"
+msgstr "Vis den"
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Show keyboard shortcuts"
@@ -21628,6 +21639,26 @@ msgstr "Dette forslaget kan ikke utføres"
 #, elixir-autogen, elixir-format
 msgid "This proposal cannot be applied yet. Ask the assistant to adjust it."
 msgstr "Dette forslaget kan ikke utføres ennå. Be assistenten justere det."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal expired, so it can no longer be applied. Ask the tool to prepare it again."
+msgstr "Dette forslaget har utløpt, så det kan ikke lenger utføres. Be verktøyet lage det på nytt."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was applied elsewhere, so it is no longer under review."
+msgstr "Dette forslaget ble utført et annet sted, så det venter ikke lenger på gjennomgang."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was discarded, so it can no longer be applied."
+msgstr "Dette forslaget ble forkastet, så det kan ikke lenger utføres."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal was undone elsewhere."
+msgstr "Dette forslaget ble angret et annet sted."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format

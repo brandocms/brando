@@ -3503,6 +3503,57 @@ defmodule Brando.Content.Proposals do
     )
   end
 
+  @doc """
+  Where the actor's proposal `id` stands now in this site/environment:
+  `{:ok, %{status: status, expires_at: expires_at, newest: id}}`, where
+  `newest` is the latest version that superseded it, if it was superseded,
+  or `:error` when it is not the actor's. Its operations are not read.
+  """
+  @spec standing(Ecto.UUID.t(), term()) :: {:ok, map()} | :error
+  def standing(id, actor) do
+    case Error.protect(fn -> record!(id, actor) end) do
+      {:ok, %Record{} = record} ->
+        newest = if record.status == "superseded", do: newest(record.id, user!(actor).id, nil)
+        {:ok, %{status: record.status, expires_at: record.expires_at, newest: newest}}
+
+      {:error, _} ->
+        :error
+    end
+  end
+
+  # Each version names the one it supersedes; the chain ends at the version
+  # nothing supersedes.
+  defp newest(id, user_id, found) do
+    next =
+      Repo.one(
+        from(r in Record,
+          where: r.supersedes_id == ^id and r.scope == ^Transfer.scope() and r.actor_id == ^user_id,
+          order_by: [desc: r.version],
+          limit: 1,
+          select: r.id
+        )
+      )
+
+    if next && next != found, do: newest(next, user_id, next), else: found
+  end
+
+  @doc """
+  Subscribes the caller to the changes the actor makes to their proposals
+  in this site/environment outside a connected tool's calls: an apply, an
+  undo, a discard, and a change left out, which stores a new version. Each
+  comes as `{Brando.Content.Proposals, :changed, id}`. A connected tool's
+  calls are told on its connection's live topic (`Brando.MCP.Watch`).
+  """
+  @spec subscribe(term()) :: :ok | {:error, term()}
+  def subscribe(actor), do: Phoenix.PubSub.subscribe(Brando.pubsub(), topic(actor))
+
+  defp topic(actor), do: Brando.Tenant.Topic.scoped("brando:proposals:#{user!(actor).id}")
+
+  defp changed(id, actor) do
+    Phoenix.PubSub.broadcast(Brando.pubsub(), topic(actor), {__MODULE__, :changed, id})
+    :ok
+  end
+
   ## A connected tool's own proposals
 
   @doc """
@@ -3733,10 +3784,10 @@ defmodule Brando.Content.Proposals do
   @spec leave_out(Ecto.UUID.t(), integer(), [non_neg_integer()], term()) :: {:ok, Proposal.t()} | {:error, String.t()}
   def leave_out(id, version, indices, actor) do
     with {:ok, record} <- Error.protect(fn -> under_review!(id, version, actor) end),
-         {:ok, operations} <- Codec.decode_all(record.operations) do
-      operations
-      |> remaining_operations(indices)
-      |> propose_remaining(record, id, actor)
+         {:ok, operations} <- Codec.decode_all(record.operations),
+         {:ok, proposal} <- operations |> remaining_operations(indices) |> propose_remaining(record, id, actor) do
+      changed(id, actor)
+      {:ok, proposal}
     end
   end
 
@@ -3770,7 +3821,13 @@ defmodule Brando.Content.Proposals do
   def undo(id, actor) do
     {source, details} = activity_source(id, actor)
 
-    Brando.Activity.with_proposal(source, Map.put(details, "undo_proposal", true), id, actor, fn -> do_undo(id, actor) end)
+    result =
+      Brando.Activity.with_proposal(source, Map.put(details, "undo_proposal", true), id, actor, fn ->
+        do_undo(id, actor)
+      end)
+
+    with {:ok, _receipt} <- result, do: changed(id, actor)
+    result
   end
 
   defp do_undo(id, actor) do
@@ -4008,7 +4065,10 @@ defmodule Brando.Content.Proposals do
   @doc "Cancel a proposal under review. Content is untouched."
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(id, actor) do
-    with {:ok, _} <- Error.protect(fn -> cancel!(record!(id, actor)) end), do: :ok
+    with {:ok, _} <- Error.protect(fn -> cancel!(record!(id, actor)) end) do
+      changed(id, actor)
+      :ok
+    end
   end
 
   defp cancel!(%Record{status: status} = record) when status in ~w(pending approved),
@@ -4040,7 +4100,9 @@ defmodule Brando.Content.Proposals do
   @spec apply(Ecto.UUID.t(), integer(), term()) :: {:ok, Receipt.t()} | {:error, String.t()}
   def apply(id, version, actor, opts \\ []) do
     {source, details} = activity_source(id, actor)
-    Brando.Activity.with_proposal(source, details, id, actor, fn -> do_apply(id, version, actor, opts) end)
+    result = Brando.Activity.with_proposal(source, details, id, actor, fn -> do_apply(id, version, actor, opts) end)
+    with {:ok, _receipt} <- result, do: changed(id, actor)
+    result
   end
 
   # The activity log says who prepared the change: the Assistant, or a tool

@@ -191,6 +191,16 @@ defmodule E2EFixtureController do
         "mcp-watch-empty" ->
           create_mcp_watch(false)
 
+        # Assistant → From connected tools, open while a tool works: the
+        # connection with one proposal stored through the endpoint's tools,
+        # then ("-next") the tool's newer version of it and a proposal about
+        # another page
+        "mcp-live-review" ->
+          create_mcp_live_review()
+
+        "mcp-live-review-next" ->
+          continue_mcp_live_review()
+
         # A proposal from a connected tool, waiting for review, that replaces
         # the file of the Index page's share image (also two projects'
         # listing image) with a better copy of the same proportions; the
@@ -1240,6 +1250,50 @@ defmodule E2EFixtureController do
         }
       ]
     })
+  end
+
+  defp create_mcp_live_review do
+    user = create_mcp_watch(false)
+    page = Brando.Repo.get_by!(Brando.Pages.Page, uri: "index", language: "en")
+    mcp_live_retitle(user, page, "Retitle the Index page", "Spring at the studio")
+    user
+  end
+
+  defp continue_mcp_live_review do
+    user = get_admin_user()
+    index = Brando.Repo.get_by!(Brando.Pages.Page, uri: "index", language: "en")
+
+    {:ok, other} =
+      Brando.Pages.create_page(
+        %{title: "Visit", uri: "visit", language: "en", template: "default.html", status: :draft},
+        user
+      )
+
+    mcp_live_retitle(user, index, "Retitle the Index page, shorter", "Spring")
+    mcp_live_retitle(user, other, "Retitle the Visit page", "Visit the studio")
+    user
+  end
+
+  defp mcp_live_retitle(user, page, summary, title) do
+    tenant = Brando.MCP.tenant(nil, nil)
+    grant = Brando.Repo.get_by!(Brando.MCP.Grant, user_id: user.id, client_name: "Claude")
+    auth = %{grant: grant, user: user, token: %{id: nil}}
+
+    Brando.MCP.Tools.call(
+      "brando_content_prepare_proposal",
+      %{
+        "summary" => summary,
+        "operations" => [
+          %{
+            "op" => "set_fields",
+            "target" => %{"content_type" => "Brando.Pages.Page", "id" => page.id},
+            "fields" => %{"title" => title}
+          }
+        ]
+      },
+      auth,
+      tenant
+    )
   end
 
   defp create_cover_proposal do
