@@ -4471,7 +4471,7 @@ defmodule BrandoAdmin.Components.Form do
 
         socket
         |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry), opts)
-        |> hand_saved_rows_to_transformers(:elsewhere)
+        |> hand_rows_saved_elsewhere()
 
       :not_found ->
         socket
@@ -4723,6 +4723,13 @@ defmodule BrandoAdmin.Components.Form do
         into: %{},
         do: {field, held}
   end
+
+  # While the form asks whether to redirect the entry's old address, its
+  # transformers still hold the rows its save wrote as new: the refresh
+  # after the answer gives them the rows that save wrote, and the entry's
+  # rows with the other save's in them (`hand_saved_rows_to_transformers/2`).
+  defp hand_rows_saved_elsewhere(%{assigns: %{pending_permalink_redirect: %{}}} = socket), do: socket
+  defp hand_rows_saved_elsewhere(socket), do: hand_saved_rows_to_transformers(socket, :elsewhere)
 
   # Another editor saved while this form's save ran, and the save didn't
   # write: the form takes the other save in now.
@@ -8752,6 +8759,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:pending_permalink_redirect, nil)
     |> assign(:permalink_redirect_error, nil)
     |> continue.()
+    |> Drafts.dirty()
   end
 
   defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil
