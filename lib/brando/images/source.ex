@@ -40,24 +40,33 @@ defmodule Brando.Images.Source do
 
   @doc """
   Records that `image` holds `ref`'s picture from `source`, as `variant`,
-  stored for `config_target`. Once per image, source, ref and variant. A
-  row that cannot be written is logged and left out: it never fails what
-  stored the image.
+  stored for `config_target`. Once per image, source, ref and variant, and
+  only while the image still holds the file `image` was read with: one a
+  replacement gave another picture in the meantime gets no row. A row that
+  cannot be written is logged and left out: it never fails what stored the
+  image.
   """
   @spec record(Image.t(), String.t(), String.t(), String.t() | nil, String.t()) :: :ok | :error
-  def record(%Image{id: image_id}, source, ref, variant, config_target) do
-    row = %{
-      image_id: image_id,
-      source: source,
-      ref: ref,
-      variant: variant,
-      config_target: config_target,
-      inserted_at: NaiveDateTime.utc_now(:second)
-    }
+  def record(%Image{id: image_id, content_hash: hash}, source, ref, variant, config_target) do
+    now = NaiveDateTime.utc_now(:second)
+
+    row =
+      from(i in Image,
+        where: i.id == ^image_id,
+        select: %{
+          image_id: i.id,
+          source: ^source,
+          ref: ^ref,
+          variant: type(^variant, :string),
+          config_target: ^config_target,
+          inserted_at: type(^now, :naive_datetime)
+        }
+      )
+      |> same_file(hash)
 
     # Inside a caller's transaction, a failure would otherwise abort it
     savepoint = if Repo.repo().in_transaction?(), do: [mode: :savepoint], else: []
-    Repo.insert_all(__MODULE__, [row], [on_conflict: :nothing] ++ savepoint)
+    Repo.insert_all(__MODULE__, row, [on_conflict: :nothing] ++ savepoint)
     :ok
   rescue
     error ->
@@ -67,6 +76,9 @@ defmodule Brando.Images.Source do
 
       :error
   end
+
+  defp same_file(query, nil), do: from(i in query, where: is_nil(i.content_hash))
+  defp same_file(query, hash), do: from(i in query, where: i.content_hash == ^hash)
 
   @doc """
   For each `{ref, variant}` of `source` among `keys`, the image `actor` may

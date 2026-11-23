@@ -58,6 +58,19 @@ defmodule Brando.Images.SourceTest do
     assert lookup([]) == %{}
   end
 
+  test "a row is not written once another file took the image the import stored or reused" do
+    reused = image!(content_hash: "a-hash")
+    # A replacement commits another picture's file onto the image between
+    # the import's reuse and its record
+    Repo.update_all(from(i in Image, where: i.id == ^reused.id), set: [content_hash: "another-hash"])
+
+    assert :ok = Source.record(reused, "figma", "p", nil, "default")
+    assert rows(reused) == []
+
+    assert :ok = Source.record(%{reused | content_hash: "another-hash"}, "figma", "p", nil, "default")
+    assert rows(reused) == [{"p", nil, "default"}]
+  end
+
   test "a row that cannot be written inside a transaction leaves the transaction to go on" do
     image = image!()
     table = ~s("#{Brando.Tenant.current_prefix() || "public"}".images_sources)

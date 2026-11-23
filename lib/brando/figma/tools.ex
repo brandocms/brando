@@ -47,7 +47,7 @@ defmodule Brando.Figma.Tools do
           "a layer's picture is identified by its image_ref, not by hidden_fills, and layers with the same image_ref show the same picture. " <>
           ~s[An image whose picture brando_figma_import_images has imported or reused before has its asset ({"kind": "image", "id": N}): the library image that import gave it, at the image's rotation, that the person may read and is not in the trash. ] <>
           "Use it in a proposal, or compare it with an entry's image, as it is. " <>
-          "An image without an asset was never imported this way, which does not mean the library lacks the picture: import it with brando_figma_import_images, which names its asset and reuses one the library already has. " <>
+          "An image without an asset has no library image recorded for its picture and rotation that the person may read and is not in the trash, which does not mean the library lacks the picture: import it with brando_figma_import_images, which names its asset and reuses one the library already has. " <>
           "Each image has its scale_mode (fill, fit, crop or tile), its crop when cropped ({x, y, width, height} as fractions of the image, from its top left) its rotation when turned (clockwise, in degrees), and mirrored: true when a crop flips it (it then has no rotation). " <>
           "A layer whose top image fill covers it (opaque, unblended, and filled, or cropped to reach every corner of the layer) is one image. " <>
           "A layer whose top fill is translucent, blended, fit, tiled or cropped short of an edge lists every image that shows, in fill order, and its section says so under note. " <>

@@ -540,9 +540,10 @@ proposal with the modules that match.
   rotation (a picture shown turned a quarter is a turned copy of its own).
   It is one the person may read and that is not in the trash, the oldest
   when there are several, as the import reuses the oldest. Reading it costs
-  no download and no call to Figma. An image without an `asset` was not
-  imported that way; the library may still have the picture, uploaded some
-  other way, and the import finds it by its contents.
+  no download and no call to Figma. An image without an `asset` has no
+  library image recorded for its picture and rotation that the person may
+  read and is not in the trash; the library may still have the picture,
+  uploaded some other way, and the import finds it by its contents.
 
   Each image has its `scale_mode` (`fill`, `fit`, `crop` or `tile`), its
   `crop` when cropped (`x`, `y`, `width`, `height` as fractions of the
