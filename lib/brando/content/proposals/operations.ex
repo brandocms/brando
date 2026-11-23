@@ -59,14 +59,19 @@ defmodule Brando.Content.Proposals.SyncTranslation do
 
   `takes` is what the save takes, counted from the translation's open work
   when the proposal is prepared (string keys: `"links"`, `"media"`,
-  `"values"`), and checked again at approve and apply.
-  `Brando.Content.Proposals.prepare/2` always counts it, never taking it
-  from the operation it is given.
+  `"values"`), and `digest` the digest of it
+  (`Brando.Translations.pending_takes/2`), checked again at approve and
+  apply. `Brando.Content.Proposals.prepare/2` always counts both, never
+  taking them from the operation it is given.
   """
   @enforce_keys [:target]
-  defstruct [:target, :takes]
+  defstruct [:target, :takes, :digest]
 
-  @type t :: %__MODULE__{target: {module(), integer()} | {:new, String.t()}, takes: map() | nil}
+  @type t :: %__MODULE__{
+          target: {module(), integer()} | {:new, String.t()},
+          takes: map() | nil,
+          digest: String.t() | nil
+        }
 end
 
 defmodule Brando.Content.Proposals.SetFields do

@@ -119,9 +119,14 @@ defmodule Brando.Content.Proposals.Codec do
       reviewed: if(is_nil(map["reviewed"]), do: [], else: map["reviewed"])
     }
 
-  # `takes` is stored with a prepared proposal; prepare counts it again.
+  # `takes` and `digest` are stored with a prepared proposal; prepare counts
+  # them again.
   defp decode!("sync_translation", map, _),
-    do: %SyncTranslation{target: target!(map["target"]), takes: snapshot(map["takes"])}
+    do: %SyncTranslation{
+      target: target!(map["target"]),
+      takes: snapshot(map["takes"]),
+      digest: if(is_binary(map["digest"]), do: map["digest"])
+    }
 
   defp decode!("set_fields", map, attachments),
     do: %SetFields{target: target!(map["target"]), fields: values(map!(map["fields"]), attachments)}
@@ -296,9 +301,10 @@ defmodule Brando.Content.Proposals.Codec do
       "reviewed" => op.reviewed
     }
 
-  def encode(%SyncTranslation{target: target, takes: takes}) do
-    map = %{"op" => "sync_translation", "target" => target(target)}
-    if takes, do: Map.put(map, "takes", takes), else: map
+  def encode(%SyncTranslation{target: target, takes: takes, digest: digest}) do
+    %{"op" => "sync_translation", "target" => target(target)}
+    |> then(&if(takes, do: Map.put(&1, "takes", takes), else: &1))
+    |> then(&if(digest, do: Map.put(&1, "digest", digest), else: &1))
   end
 
   def encode(%SetFields{} = op),

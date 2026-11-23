@@ -1211,7 +1211,7 @@ defmodule Brando.Content.Proposals.TranslateTest do
       cover |> Ecto.Changeset.change(image_id: Factory.insert(:image, path: "images/second.jpg").id) |> Repo.update!()
       Translations.source_saved(load(c.source.id))
 
-      %{target: target, waiting_vars: waiting_vars}
+      %{target: target, waiting_vars: waiting_vars, cover: cover}
     end
 
     defp sync(target), do: %SyncTranslation{target: {Article, target.id}}
@@ -1305,6 +1305,20 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
       assert message =~ "changed"
       assert %{relinked: 1} = kinds(c.target.id)
+    end
+
+    test "is refused at apply when the source replaced a value it takes with another", c do
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      # Still one media item, now another image than the one approved
+      third = Factory.insert(:image, path: "images/third.jpg")
+      Repo.update!(Ecto.Changeset.change(Repo.reload!(c.cover), image_id: third.id))
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "changed"
+      refute to_string(Repo.get!(Article, c.target.id).rendered_blocks) =~ "third.jpg"
     end
 
     test "the codec decodes and encodes it" do

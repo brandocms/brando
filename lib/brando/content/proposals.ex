@@ -168,8 +168,8 @@ defmodule Brando.Content.Proposals do
   # is loaded for the actor: never as the operation given says.
   defp count_takes(%SyncTranslation{} = op) do
     case sync_takes(op.target) do
-      {:ok, takes, _work} -> %{op | takes: takes}
-      {:error, _reason} -> %{op | takes: nil}
+      {:ok, takes, work} -> %{op | takes: takes, digest: work.digest}
+      {:error, _reason} -> %{op | takes: nil, digest: nil}
     end
   end
 
@@ -975,7 +975,7 @@ defmodule Brando.Content.Proposals do
     case sync_takes(target) do
       {:ok, takes, work} ->
         case readable_source(elem(target, 0), work.source_id, actor) do
-          :ok -> sync_take_problems(op, takes, work.changed?)
+          :ok -> sync_take_problems(op, takes, work)
           {:error, problem} -> [problem]
         end
 
@@ -984,19 +984,21 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # At apply, under the source's lock: the actor's access was checked as
-  # the proposal was approved.
+  # At apply, under the source's and the group's locks: the actor's access
+  # was checked as the proposal was approved.
   defp sync_recheck(%SyncTranslation{target: target} = op) do
     case sync_takes(target) do
-      {:ok, takes, work} -> sync_take_problems(op, takes, work.changed?)
+      {:ok, takes, work} -> sync_take_problems(op, takes, work)
       {:error, reason} -> [not_a_translation(reason)]
     end
   end
 
-  defp sync_take_problems(op, takes, changed?) do
+  # What the save takes is compared first, whole: the same counts may hold
+  # other values, and a change the source took back is a change too.
+  defp sync_take_problems(op, takes, work) do
     cond do
-      not changed? and Enum.all?(takes, &(elem(&1, 1) == 0)) -> [up_to_date()]
-      op.takes != takes -> [sync_changed()]
+      op.digest != work.digest -> [sync_changed()]
+      not work.changed? and Enum.all?(takes, &(elem(&1, 1) == 0)) -> [up_to_date()]
       true -> []
     end
   end
@@ -1023,22 +1025,20 @@ defmodule Brando.Content.Proposals do
 
   # What saving the translation's pending version takes from its source: its
   # open links, media and source-controlled values (`Work`'s other items),
-  # counted, with the translation's work and whether the pending version
-  # changes anything the source controls (a block removed raises no item).
+  # counted, with the translation's work, the digest of what the save takes
+  # and whether it changes anything the source controls (a block removed
+  # raises no item) (`Translations.pending_takes/2`).
   defp sync_takes({schema, id}) when is_atom(schema) and schema != :new and is_integer(id) do
-    case Work.translation_units(schema, id) do
-      {:ok, work} ->
-        assets =
-          for %{type: type, name: name} <- Brando.Blueprint.Assets.__assets__(schema),
-              type in [:image, :file, :video, :gallery],
-              do: to_string(name)
+    with {:ok, work} <- Work.translation_units(schema, id),
+         {:ok, pending} <- Translations.pending_takes(schema, id) do
+      assets =
+        for %{type: type, name: name} <- Brando.Blueprint.Assets.__assets__(schema),
+            type in [:image, :file, :video, :gallery],
+            do: to_string(name)
 
-        counts = work.units |> Enum.map(&take_kind(&1, assets)) |> Enum.frequencies()
-        takes = Map.new(~w(links media values), &{&1, Map.get(counts, &1, 0)})
-        {:ok, takes, Map.put(work, :changed?, source_changes?(schema, id))}
-
-      {:error, reason} ->
-        {:error, reason}
+      counts = work.units |> Enum.map(&take_kind(&1, assets)) |> Enum.frequencies()
+      takes = Map.new(~w(links media values), &{&1, Map.get(counts, &1, 0)})
+      {:ok, takes, Map.merge(work, Map.take(pending, [:digest, :changed?]))}
     end
   end
 
@@ -1050,15 +1050,6 @@ defmodule Brando.Content.Proposals do
     do: if(key in assets or String.ends_with?(key, ["/media", "/gallery"]), do: "media", else: "values")
 
   defp take_kind(_unit, _assets), do: nil
-
-  defp source_changes?(schema, id) do
-    with %{} = version <- Translations.get_pending_version(schema, id),
-         {:ok, saved} <- Translations.load_entry(schema, id, with_deleted: true) do
-      Translations.structure_changed?(schema, saved, Translations.pending_content(version, saved))
-    else
-      _ -> false
-    end
-  end
 
   defp readable_source(schema, source_id, actor) do
     case Error.protect(fn -> load!({schema, source_id}, actor, action: :read) end) do
@@ -4792,9 +4783,12 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # The source locked, as for a translate batch, before the work is read
-  defp synced_source_problems(%SyncTranslation{target: target} = op, proposal) do
+  # The source locked, as for a translate batch, and the translation's group,
+  # until the apply commits: the sync that recomputes the pending version
+  # takes it, so the version checked here is the one the save takes.
+  defp synced_source_problems(%SyncTranslation{target: {schema, id} = target} = op, proposal) do
     with {schema, source_id} <- translated_source(target, proposal), do: lock_source!(schema, source_id)
+    with %{group_id: group_id} <- Translations.get_member(schema, id), do: Translations.lock_group!(group_id)
     sync_recheck(op)
   end
 

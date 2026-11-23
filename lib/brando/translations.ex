@@ -858,6 +858,57 @@ defmodule Brando.Translations do
     owned_by_field(saved, schema, uids) != owned_by_field(payload, schema, uids)
   end
 
+  @doc """
+  Locks the translation group `group_id` until the transaction ends, as a
+  sync of its translations does (`sync_group/2`): no pending version of its
+  members is recomputed meanwhile. Run it after locking the group's entries,
+  in that order.
+  """
+  def lock_group!(group_id) do
+    Repo.one(from g in Group, where: g.id == ^group_id, select: g.id, lock: "FOR UPDATE")
+    :ok
+  end
+
+  @doc """
+  What saving the synchronized translation `entry_id`'s pending version as
+  it is (`save_work/5` with no answer) takes from its source: its structure,
+  media, links and source-controlled values, in the fields its default form
+  restores. A block field only another form shows keeps its saved content.
+
+  Returns `{:ok, %{digest: digest, changed?: boolean, left_out: fields,
+  shared: values}}`: `digest` changes whenever what the save takes does,
+  `changed?` says whether that differs from the saved translation,
+  `left_out` holds the block fields the save keeps as saved (as the first
+  segment of a path, `"entry_notes"`), and `shared` the pending version's
+  shared values by path. `{:error, :not_found}` for a missing entry.
+  """
+  def pending_takes(schema, entry_id) do
+    case load_entry(schema, entry_id, with_deleted: true) do
+      {:ok, saved} ->
+        version = get_pending_version(schema, entry_id)
+        payload = if version, do: pending_content(version, saved), else: saved
+        uids = module_uids([saved, payload], schema)
+        left_out = left_out_block_fields(schema)
+        [kept, taken] = Enum.map([saved, payload], &Map.drop(owned_by_field(&1, schema, uids), left_out))
+
+        shared =
+          for {path, :shared, value} <- Sync.owned_rows(payload, schema, nil, uids), into: %{}, do: {path, value}
+
+        digest = :sha256 |> :crypto.hash(:erlang.term_to_binary(Enum.sort(taken), [:deterministic])) |> Base.encode16()
+        {:ok, %{digest: digest, changed?: taken != kept, left_out: left_out, shared: shared}}
+
+      _ ->
+        {:error, :not_found}
+    end
+  end
+
+  # The block fields the default form does not show: `payload_changeset/4`
+  # restores the others only
+  defp left_out_block_fields(schema) do
+    shown = Enum.map(schema.__form__(:default).blocks, &"entry_#{&1.name}")
+    Enum.map(blocks_fields(schema), &to_string/1) -- shown
+  end
+
   # Owned rows by the entry field their path starts with: a field is kept or
   # taken whole, never a mix of the saved and the pending version's rows.
   defp owned_by_field(entry, schema, module_uids) do
