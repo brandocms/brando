@@ -320,9 +320,8 @@ defmodule Brando.Content.Module do
   child against, and is checked as far as it can be: a shared-library
   override copies the setting without the children. A definitions import
   passes `media_drop_checked: true`: its files were checked against each
-  other (`Brando.Content.Definition.Model.validate_graph!/1`), and may add
-  the child or rename its ref in the same import. Turning `multi` off clears
-  the setting. A stored setting gone stale is left for the module editor to
+  other when they were read, and may add the child or rename its ref in the
+  same import. Turning `multi` off clears the setting. A stored setting gone stale is left for the module editor to
   show, and never blocks a save of another field.
   """
   def validate_media_drop(changeset, opts \\ []) do
