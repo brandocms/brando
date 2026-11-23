@@ -67,6 +67,7 @@ defmodule Mix.Brando.Install.Templates do
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/images"},
     {:copy, "assets/frontend/eslint.config.js", "assets/frontend/eslint.config.js"},
     {:copy, "assets/frontend/europa.json5", "assets/frontend/europa.json5"},
+    {:copy, "assets/frontend/europa.example.json5", "assets/frontend/europa.example.json5"},
     {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
     {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
     {:copy, "assets/frontend/pnpm-workspace.yaml", "assets/frontend/pnpm-workspace.yaml"},

@@ -1,18 +1,18 @@
-// EuropaCSS configuration for the site, compiled by the native `europa`
-// executable through @brandocms/vite-plugin-europacss (see vite.config.js).
-// It is data, not JavaScript: JSON5 with comments and trailing commas, and
-// `'{colors.bone.full}'` to refer to another token. CSS reads a value with
-// `theme(colors.accent)`; breakpoint maps go through `@space`, `@fontsize`
-// and the other at-rules. Vite reloads the CSS when this file changes.
+// The site's EuropaCSS theme, compiled by the native `europa` executable
+// through @brandocms/vite-plugin-europacss (see vite.config.js). It holds the
+// tokens the installed CSS reads; europa.example.json5 beside it is a fuller
+// worked set to copy from. JSON5: comments, trailing commas, and
+// `'{colors.bone.full}'` to refer to another token. Vite reloads the CSS when
+// this file changes.
 {
+  // Freezes `vw` and `dpx` values at the largest breakpoint; keep it unless the site should grow past `container.maxWidth`.
   setMaxForVw: true,
 
-  /* The width of the design's desktop artboard. Every `dpx` value is relative
-     to it: `20dpx` is 20 pixels when the viewport matches this width, and
-     scales with the viewport below it. Set it to your Figma frame width. */
+  // The design's desktop artboard width, which `dpx` is relative to: set it to your Figma frame width first.
   dpxViewportSize: 1440,
 
   theme: {
+    // Viewport ranges, each from its width to the next; js/config/BREAKPOINTS.js lists the same names, so rename both together.
     breakpoints: {
       iphone: '0',
       mobile: '480px',
@@ -23,51 +23,35 @@
       desktop_xl: '1920px',
     },
 
+    // Named groups of breakpoints for token maps and queries (`$sm`); adjust them after changing `breakpoints`.
     breakpointCollections: {
       $mobile: '<=mobile',
       $tablet: 'ipad_portrait/ipad_landscape',
       $desktop: '>=desktop_md',
       $lg: '>=ipad_landscape',
-      $sm: '<=ipad_portrait'
+      $sm: '<=ipad_portrait',
     },
 
-    /* A token map takes breakpoint names, collection keys from
-       `breakpointCollections`, and `'*'` for the breakpoints left over. A
-       named breakpoint beats a collection, and two collections that share a
-       breakpoint are an error.
-
-       `scale-from(20, desktop_lg)` is 20px below `desktop_lg` and 20dpx from
-       it, so the design scales with the viewport on large screens only. A
-       plain `px` value stays fixed and a plain `dpx` value scales at every
-       breakpoint it covers. */
+    // Page width and side padding for `@space container`; set the padding to the design's page margin first.
     container: {
-      /* With `setMaxForVw` the largest breakpoint's maxWidth cannot be a
-         percentage — EuropaCSS needs a length to freeze `vw` values against. */
       maxWidth: { '*': '100%', desktop_xl: '1920px' },
       padding: { $mobile: '16px', '*': 'scale-from(20, desktop_lg)' },
     },
 
+    // The column grid for `@column`, `@grid` and gutter multiples; match the design's column count and gutter first.
     columns: {
       count: { '*': 12 },
       gutters: { $mobile: '16px', '*': 'scale-from(20, desktop_lg)' },
     },
 
+    // The palette the default modules use (dark green page, bone text, one accent); replace `green`, `bone` and `accent` with the brand's first.
     colors: {
       transparent: 'transparent',
       white: '#ffffff',
       black: '#000000',
-
-      /* The page is one flat, very dark green — roughly 4% lightness at hue
-         160. Everything on top of it is bone at a handful of opacities, plus
-         a single champagne accent for anything interactive or indexed. */
       green: '#030e0a',
-
-      /* One step up from the page, for insets like the terminal block. */
       shell: '#06150f',
-
       accent: '#d9b87a',
-
-      /* Reserved for "this is running / this is safe" signals. */
       live: '#6fcf97',
 
       bone: {
@@ -77,45 +61,36 @@
         faint: 'rgb(236 229 216 / 34%)',
         hairStrong: 'rgb(236 229 216 / 26%)',
         hair: 'rgb(236 229 216 / 14%)',
-        wash: 'rgb(236 229 216 / 5%)'
+        wash: 'rgb(236 229 216 / 5%)',
       },
 
-      /* Debug helpers: `dbg` for ad-hoc highlighting, `grid` for the column
-         overlay EuropaCSS draws. */
-      dbg: 'pink',
+      // The column overlay `@europa base` draws for `.dbg-grid`.
       grid: 'rgb(111 207 151 / 20%)',
 
       body: {
-        foreground: '#ece5d8',
-        background: '#030e0a'
+        foreground: '{colors.bone.full}',
+        background: '{colors.green}',
       },
 
       link: {
         regular: {
-          text: '#ece5d8',
-          border: 'rgb(236 229 216 / 26%)'
+          text: '{colors.bone.full}',
+          border: '{colors.bone.hairStrong}',
         },
         hover: {
-          text: '#d9b87a',
-          border: '#d9b87a'
-        }
-      }
+          text: '{colors.accent}',
+        },
+      },
     },
 
     typography: {
-      /* `base` is the px value of 1rem set as font-size on the html element. */
+      // The px value of 1rem on the html element.
       base: '16px',
 
-      /* Fallback line height for inline sizes such as `@fontsize 15px`. Named
-         sizes carry their own through `__base__`. */
+      // Line height for inline sizes such as `@fontsize 15px`; named sizes carry their own.
       lineHeight: { '*': 1.5 },
 
-      /* Sizes are flat pixels below `desktop_lg` and scale from it (see
-         `scale-from()` above `container`).
-
-         Line heights are written as `em`, not `%`: browsers floor a percentage
-         line height to a whole percent, so `116.667%` lays out as `116%` and
-         every fractional pair comes up short. */
+      // The type scale the default modules use, px below `desktop_lg` and scaling from it; set the sizes to the design's text styles first.
       sizes: {
         'base': {
           __base__: { 'line-height': '150%' },
@@ -130,11 +105,6 @@
         'text/sm': {
           __base__: { 'line-height': '1.42858em' },
           '*': { 'font-size': 'scale-from(14, desktop_lg)' },
-        },
-
-        'text/base': {
-          __base__: { 'line-height': '150%' },
-          '*': { 'font-size': 'scale-from(16, desktop_lg)' },
         },
 
         'text/lg': {
@@ -163,19 +133,9 @@
           '*': { 'font-size': 'scale-from(30, desktop_lg)' },
         },
 
-        'heading/4xl': {
-          __base__: { 'line-height': '1.33334em' },
-          '*': { 'font-size': 'scale-from(36, desktop_lg)' },
-        },
-
         'heading/5xl': {
           __base__: { 'line-height': '1.16667em' },
           '*': { 'font-size': 'scale-from(48, desktop_lg)' },
-        },
-
-        'heading/6xl': {
-          __base__: { 'line-height': '1.13334em' },
-          '*': { 'font-size': 'scale-from(60, desktop_lg)' },
         },
 
         'heading/7xl': {
@@ -189,8 +149,8 @@
         },
       },
 
+      // Font stacks for `@font`; `@europa base` needs `main` (the body) and `mono`, so put the site's typeface in `main` first.
       families: {
-        /* `main` is what `@europa base` sets on the body. */
         main: [
           '-apple-system',
           'BlinkMacSystemFont',
@@ -198,32 +158,15 @@
           'Roboto',
           '"Helvetica Neue"',
           'Arial',
-          'sans-serif'
+          'sans-serif',
         ],
 
-        sans: [
-          '-apple-system',
-          'BlinkMacSystemFont',
-          '"Segoe UI"',
-          'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
-          'sans-serif'
-        ],
-
-        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
-
-        mono: ['Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace']
-      }
+        mono: ['Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+      },
     },
 
-    /* Spacing steps are flat across breakpoints: a component picks a smaller
-       step on mobile rather than the step shrinking. Only the block rhythm,
-       the container and the gutters change size. A step is used by name
-       (`@space padding-top lg`); a group such as `radius` by its path
-       (`@space border-radius radius.regular`). */
+    // Spacing steps for `@space` (`blocks` is the gap between blocks, `indent` the text column's inset); set `blocks` and the steps to the design's rhythm first.
     spacing: {
-      xxxs: { '*': 'scale-from(4, desktop_lg)' },
       xxs: { '*': 'scale-from(8, desktop_lg)' },
       xs: { '*': 'scale-from(10, desktop_lg)' },
       sm: { '*': 'scale-from(16, desktop_lg)' },
@@ -232,13 +175,11 @@
       xl: { $mobile: '48px', ipad_portrait: '64px', '*': 'scale-from(80, desktop_lg)' },
       xxl: { '*': 'scale-from(128, desktop_lg)' },
       blocks: { $sm: '128px', '*': 'scale-from(160, desktop_lg)' },
-      blocksInner: { $sm: '64px', '*': 'scale-from(80, desktop_lg)' },
       indent: { $sm: '0px', '*': 'scale-from(48, desktop_lg)' },
 
       radius: {
         regular: { '*': 'scale-from(4, desktop_lg)' },
-        image: { '*': 'scale-from(8, desktop_lg)' },
       },
     },
-  }
+  },
 }
