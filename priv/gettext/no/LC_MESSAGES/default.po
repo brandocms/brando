@@ -21102,6 +21102,11 @@ msgstr "Opplastingen mislyktes. Velg filen på nytt."
 msgid "The upload finished in a tab that is no longer editing. It is in the library, not in the entry."
 msgstr "Opplastingen ble ferdig i en fane som ikke redigerer lenger. Den ligger i biblioteket, ikke i elementet."
 
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The upload stopped when the block made for the file was moved. Drop the file again."
+msgstr "Opplastingen stoppet da blokken som ble laget for filen, ble flyttet. Slipp filen på nytt."
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "The usage table’s migration has not run on this installation yet, so there are no figures."
