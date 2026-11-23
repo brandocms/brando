@@ -1650,6 +1650,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:blocks_changed?, not Ops.pristine?(new, base))
 
       if Keyword.get(opts, :mounted?, true) do
+        # The roots are refreshed one update at a time, so a child `new`
+        # puts under another parent would show in both in between: its
+        # parent lets go of it first. Shown twice in one render, its
+        # components reach the new place as markers for elements the
+        # browser has only in the old one.
+        release_leaving(old, for({uid, _} <- old.parents, Ops.known?(new, uid), into: %{}, do: {uid, new.parents[uid]}))
         socket |> assign(:remote_preview_dirty?, true) |> queue_refresh(changed)
       else
         Enum.reduce(changed, socket, &put_seed_form(&2, &1, materialized_form(&2, new, &1)))
@@ -2032,14 +2038,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     op = {:carry, ops, base}
     shown = socket.assigns.block_ops
     {:ok, restored} = Ops.apply_op(shown, op)
-
-    # The roots are refreshed one update at a time, so a child the restore
-    # puts under another parent would show in both in between: its parent
-    # lets go of it first.
-    release_leaving(
-      shown,
-      for({uid, _} <- shown.parents, Ops.known?(restored, uid), into: %{}, do: {uid, restored.parents[uid]})
-    )
 
     socket
     |> show_state(restored, :all)

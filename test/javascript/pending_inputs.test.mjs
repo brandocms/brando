@@ -212,3 +212,85 @@ test("an entry's rich text takes the server's value once its editor is left", ()
   clock.active = null
   assert.equal(patch(inputs, el, '<p>Saved</p>').value, '<p>Saved</p>')
 })
+
+// A block element mounted again: a new element, whose inputs LiveView
+// rendered from the server (#3850)
+function blockElement(inputs) {
+  return { querySelectorAll: () => inputs }
+}
+
+function textInput(name, value) {
+  const el = input(value)
+  return Object.assign(el, {
+    name,
+    type: 'text',
+    sent: [],
+    dispatchEvent(event) { this.sent.push([event.type, this.value]) },
+    focus() { this.focused = true },
+    setSelectionRange(start) { this.caret = start },
+  })
+}
+
+test('text still on its way when its block mounts again is put back and sent from the new block', () => {
+  const { clock, inputs } = setup()
+  const name = textInput('child_block[vars][0][value]', 'Bob')
+  const role = textInput('child_block[vars][1][value]', 'Developer')
+  inputs.focused(name)
+  name.value = 'Bobby'
+  inputs.typed(name)
+
+  // the element goes with the focus in it, before the debounce sends it
+  clock.now = 1100
+  inputs.went(blockElement([name, role]), 'uid')
+
+  clock.now = 1300
+  const newName = textInput('child_block[vars][0][value]', 'Bob')
+  const newRole = textInput('child_block[vars][1][value]', 'Developer')
+  inputs.came(blockElement([newName, newRole]), 'uid')
+
+  assert.equal(newName.value, 'Bobby')
+  assert.deepEqual(newName.sent, [['input', 'Bobby']])
+  assert.equal(newName.focused, true)
+  assert.equal(newName.caret, 5)
+  // untouched, and nothing sent for it
+  assert.deepEqual(newRole.sent, [])
+
+  // once
+  const again = textInput('child_block[vars][0][value]', 'Bob')
+  inputs.came(blockElement([again]), 'uid')
+  assert.equal(again.value, 'Bob')
+})
+
+test('a block mounted again with what was typed sends nothing, and the focus stays where it went', () => {
+  const { clock, inputs } = setup()
+  const name = textInput('child_block[vars][0][value]', 'Bob')
+  name.value = 'Bobby'
+  inputs.typed(name)
+  // the editor left the field (a drag handle took the focus): its change was sent
+  inputs.focused(null)
+  clock.now = 1500
+  inputs.went(blockElement([name]), 'uid')
+
+  const newName = textInput('child_block[vars][0][value]', 'Bobby')
+  inputs.came(blockElement([newName]), 'uid')
+  assert.deepEqual(newName.sent, [])
+  assert.equal(newName.focused, undefined)
+})
+
+test('nothing is carried from typing long before, or to another block', () => {
+  const { clock, inputs } = setup()
+  const name = textInput('child_block[vars][0][value]', 'Bob')
+  name.value = 'Bobby'
+  inputs.typed(name)
+  clock.now = 5000
+  inputs.went(blockElement([name]), 'uid')
+  const later = textInput('child_block[vars][0][value]', 'Bob')
+  inputs.came(blockElement([later]), 'uid')
+  assert.equal(later.value, 'Bob')
+
+  inputs.typed(name)
+  inputs.went(blockElement([name]), 'uid')
+  const other = textInput('child_block[vars][0][value]', 'Bob')
+  inputs.came(blockElement([other]), 'other')
+  assert.equal(other.value, 'Bob')
+})
