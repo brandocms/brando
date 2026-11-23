@@ -51,7 +51,7 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
   # A source page with a card drawn only when its link var's identifier is
   # there, linked to a page that has an English version, and a kicker to
   # translate: the pending version points the card at the English page.
-  defp card_pages(c) do
+  defp card_pages(c, opts \\ []) do
     Brando.Test.Support.put_test_env(Page, translatable: [mode: :synchronized])
 
     card =
@@ -105,10 +105,12 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
 
     struct(Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
 
-    {:ok, other_en} = Brando.Translations.create_target(Page, other.id, :en, c.user)
-    {:ok, _} = Brando.Pages.update_page(other_en.id, %{title: "Project"}, c.user)
+    if Keyword.get(opts, :other_en, true) do
+      {:ok, other_en} = Brando.Translations.create_target(Page, other.id, :en, c.user)
+      {:ok, _} = Brando.Pages.update_page(other_en.id, %{title: "Project"}, c.user)
+    end
 
-    %{source: source, kicker: "entry_blocks/#{block.uid}/vars/kicker/value"}
+    %{source: source, other: other, kicker: "entry_blocks/#{block.uid}/vars/kicker/value"}
   end
 
   # The batch translating the kicker, as translation_work gives its token
@@ -264,6 +266,42 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
                )
 
       assert message =~ "has problems"
+    end
+  end
+
+  describe "a translation the proposal creates beside the one its link points at" do
+    setup c do
+      card_pages(c, other_en: false)
+    end
+
+    # The page's card links the project, which the same proposal translates
+    # too: the preview has the project's English version, as applying makes it
+    test "links the proposal's other translation", c do
+      {:ok, %{units: units}} = Brando.Translations.Work.new_translation_units(Page, c.other.id)
+      units = Enum.filter(units, &(&1.answerable and &1.key == "title"))
+      scope = %{type: to_string(Page), id: {:new, c.other.id}, language: "en"}
+
+      title = %{
+        "op" => "translate",
+        "target" => %{"new" => "project"},
+        "source_digest" => Brando.Translations.Work.token(scope, units),
+        "texts" => %{"title" => "Project"}
+      }
+
+      operations = [
+        %{"op" => "create_translation", "source" => page(c.other), "language" => "en", "ref" => "project"},
+        title,
+        create_op(c.source)
+      ]
+
+      id = prepare!(mcp(c), operations, "Translate the pages")
+      before = kept()
+
+      body = open(preview!(mcp(c), id, %{"new" => "english"})).resp_body
+      assert body =~ ~s(<a class="card">Project</a>)
+      refute body =~ "Prosjekt"
+      assert kept() == before
+      assert Brando.Translations.get_member(Page, c.other.id) == nil
     end
   end
 

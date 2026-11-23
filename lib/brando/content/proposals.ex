@@ -2617,7 +2617,8 @@ defmodule Brando.Content.Proposals do
   copy in its language (`Brando.Translations.create_target/5`) as its pending
   version, with the texts of the proposal's `Translate` operations on it
   written in (`Translations.work_changeset/4`), so its links point at their
-  versions in its language.
+  versions in its language. The proposal's other translations are made
+  too, each in its turn, as applying makes them, so links to them do too.
 
   The copy is made in a transaction that is rolled back once `fun` returns,
   so `fun` renders it there and keeps only what it holds outside the
@@ -2648,13 +2649,13 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  defp with_copy(proposal, target, %CreateTranslation{source: {schema, _}} = op, actor, opts, fun) do
+  defp with_copy(proposal, target, %CreateTranslation{source: {schema, _}}, actor, opts, fun) do
     copy =
       Error.protect(fn ->
         if opts[:shared], do: Transfer.ensure_scope!(actor), else: authorize_proposal!(proposal, actor)
         current!(proposal, actor, if(opts[:shared], do: :read, else: :update))
         user = user!(actor)
-        {entry, _group} = create_translation!(op, user)
+        entry = create_translations!(proposal, target, user)
 
         case Translations.work_changeset(schema, entry.id, translated_answer(proposal, target).texts, user) do
           {:ok, changeset, _version_id} -> changeset
@@ -2663,6 +2664,28 @@ defmodule Brando.Content.Proposals do
       end)
 
     with {:ok, changeset} <- copy, do: fun.(changeset)
+  end
+
+  # Every translation the proposal creates, in the order applying makes
+  # them, the others filled in as applying fills them, so the copy's links
+  # point at them. Returns `target`'s copy, not yet filled in.
+  defp create_translations!(proposal, target, user) do
+    for %CreateTranslation{source: {schema, _}} = op <- proposal.operations, reduce: nil do
+      copy ->
+        {entry, _group} = create_translation!(op, user)
+        made = {:new, op.ref}
+
+        cond do
+          made == target ->
+            entry
+
+          translated?(proposal.operations, made) ->
+            tap(copy, fn _ -> save_translation!(schema, entry.id, proposal, made, user) end)
+
+          true ->
+            copy
+        end
+    end
   end
 
   defp translated_changeset!({schema, id} = target, proposal, user) do
