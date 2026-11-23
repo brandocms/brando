@@ -845,6 +845,11 @@ msgstr ""
 msgid "%{key} moved to %{surface}."
 msgstr ""
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{kind} \"%{to}\" renamed from \"%{from}\""
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "%{kind} %{key} → %{target}: %{reason}."
@@ -1064,6 +1069,11 @@ msgstr ""
 #: lib/brando_admin/components/assets/provider_library_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} no longer has this video."
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} in %{module}"
 msgstr ""
 
 #: lib/brando/content/definition/renames.ex

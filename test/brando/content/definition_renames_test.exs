@@ -651,12 +651,18 @@ defmodule Brando.Content.DefinitionRenamesTest do
         )
       )
 
-      # Each module alone is within the limit; the two together are not
-      items = plan!(c).items
-      assert [%{action: :migration_required, reason: reason}, %{action: :migration_required}] = items
+      # Each module alone is within the limit, so a review of the whole
+      # release offers both; an apply of the two together is refused, and
+      # one of them selected applies
+      plan = plan!(c)
+      assert [%{action: :update}, %{action: :update}] = plan.items
+      assert {:error, reason} = Definitions.apply(plan, c.user)
       assert reason =~ "would move values in 1506 blocks of 2 entries"
 
       {:ok, bundle} = Definitions.read(path)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
+      assert [%{action: :migration_required}, %{action: :migration_required}] = plan.items
+
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid])
       assert %{action: :update} = Enum.find(plan.items, &(&1.uid == c.module.uid))
     end

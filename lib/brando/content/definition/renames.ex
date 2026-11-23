@@ -307,7 +307,7 @@ defmodule Brando.Content.Definition.Renames do
         bindings
       )
 
-  defp subject(kind, from, to), do: ~s(#{kind} "#{to}" renamed from "#{from}")
+  defp subject(kind, from, to), do: gettext(~s(%{kind} "%{to}" renamed from "%{from}"), kind: kind, to: to, from: from)
 
   # The entries the person may open, named; the others counted
   defp entry_text([], _viewer), do: ""
@@ -455,7 +455,12 @@ defmodule Brando.Content.Definition.Renames do
   end
 
   defp description(planned, release) do
-    renames = Enum.map_join(planned, "; ", &"#{text(&1.renames)} in #{StaleBlocks.module_name(&1.module)}")
+    renames =
+      Enum.map_join(
+        planned,
+        "; ",
+        &gettext("%{renames} in %{module}", renames: text(&1.renames), module: StaleBlocks.module_name(&1.module))
+      )
 
     if release,
       do: gettext("Before release %{release}: %{renames}", release: release, renames: renames),

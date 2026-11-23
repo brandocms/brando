@@ -431,11 +431,16 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   # The selected updates' moves together, refused when they are more than
-  # one apply moves (`Renames.over_limit/1`)
+  # one apply moves (`Renames.over_limit/1`). With nothing selected (a
+  # review of a whole release, an import) each module stays within its own
+  # limit and can be chosen; `Renames.move!/3` refuses what one apply then
+  # moves together.
+  defp limit_moves(items, nil), do: items
+
   defp limit_moves(items, selection) do
     moving =
       for %{action: :update, moves: %{} = moves} = item <- items,
-          is_nil(selection) or MapSet.member?(selection, item.uid),
+          MapSet.member?(selection, item.uid),
           do: {item.uid, moves}
 
     case Renames.over_limit(Enum.map(moving, &elem(&1, 1))) do

@@ -362,8 +362,11 @@ defmodule Brando.Activity do
     Enum.each(records, fn {entry, opts} -> Brando.ContentEvents.activity_recorded(action, entry, source, opts) end)
   end
 
+  # As `insert/1`: inside a transaction a failed insert rolls back only its
+  # savepoint, so the save it records goes on
   defp insert_all(rows) do
-    Repo.transaction(fn -> Repo.insert_all(Event, rows) end)
+    opts = if Repo.repo().in_transaction?(), do: [mode: :savepoint], else: []
+    Repo.insert_all(Event, rows, opts)
   rescue
     error -> Logger.warning("[Brando.Activity] Could not record activity: " <> Exception.message(error))
   end

@@ -1020,10 +1020,12 @@ database stop the apply; nothing is applied, and you try again.
 
 Every editor's save in the environment waits while values move, so one
 apply moves values in at most 500 entries or 1,500 blocks, counted across
-all the modules it selects (a 500-entry move takes under two seconds). The
-plan refuses renames over that: apply fewer of those modules at a time, or
-take `renamed_from` out and move the values with `resolve --map` after the
-apply.
+all the modules it applies (a 500-entry move takes under two seconds). A
+module over that on its own is refused in the plan. Modules each within it
+but over it together are refused when applied together: select fewer of them
+on the Release changes screen, or apply them one by one with
+`mix brando.modules apply --release --uid`. Or take `renamed_from` out and
+move the values with `resolve --map` after the apply.
 
 `renamed_from` is read from the file and never stored: the database keeps no
 rename, and an export doesn't write it. Keep it in the file until every

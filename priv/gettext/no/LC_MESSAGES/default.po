@@ -845,6 +845,11 @@ msgstr "%{key} er nå kun tilgjengelig i malen."
 msgid "%{key} moved to %{surface}."
 msgstr "%{key} ble flyttet til %{surface}."
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{kind} \"%{to}\" renamed from \"%{from}\""
+msgstr "%{kind} «%{to}» omdøpt fra «%{from}»"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "%{kind} %{key} → %{target}: %{reason}."
@@ -1065,6 +1070,11 @@ msgstr "%{provider}-bibliotek"
 #, elixir-autogen, elixir-format
 msgid "%{provider} no longer has this video."
 msgstr "%{provider} har ikke lenger denne videoen."
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} in %{module}"
+msgstr "%{renames} i %{module}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
