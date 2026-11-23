@@ -119,8 +119,8 @@ defmodule Brando.Content.Definitions.Release.Batches do
   added are taken off); `conflicts` those changed here since the apply, by an
   edit or a later import (each with `edited`, who and when), which it leaves
   as they are; `irreversible` those it can't undo without a migration (a child
-  the apply moved or removed, a ref it retyped); `created` the definitions the
-  apply created, which stay.
+  the apply moved or removed, a ref it retyped, values it moved under renamed
+  keys); `created` the definitions the apply created, which stay.
   """
   def preview(%DefinitionBatch{} = batch, user) do
     with :ok <- Release.authorize(user),
@@ -137,7 +137,8 @@ defmodule Brando.Content.Definitions.Release.Batches do
         irreversible: [],
         created: created,
         actor: actor,
-        plan_opts: plan_opts
+        plan_opts: plan_opts,
+        moved: moved(batch)
       }
 
       plan_revert(restorable, base)
@@ -152,23 +153,38 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
     with {:ok, plan} <-
            Definitions.plan(bundle, base.actor, base.plan_opts ++ [baseline: :database, select: uids]) do
-      {revert, conflicts, irreversible} = split(plan, uids, superseded(restorable))
+      {revert, conflicts, irreversible} = split(plan, uids, superseded(restorable), base.moved)
       {:ok, %{base | plan: plan, bundle: bundle, revert: revert, conflicts: conflicts, irreversible: irreversible}}
+    end
+  end
+
+  # The modules whose apply moved values under renamed keys, with why a
+  # revert can't undo that: it would apply the old keys again over values
+  # that no longer hold them. Keep, and the entries' revisions, are the way back.
+  defp moved(batch) do
+    for %{"uid" => uid, "moves" => [_ | _] = moves} <- (batch.definitions || %{})["items"] || [], into: %{} do
+      text = Enum.map_join(moves, ", ", &"#{&1["from"]} to #{&1["to"]}")
+      {uid, "the apply moved values from #{text}"}
     end
   end
 
   # The items to restore; those changed here since the apply (conflicts), by
   # an edit or a later import; and those a revert can't undo without a
-  # migration. A tree with either in it is left out whole: an apply writes
-  # whole trees, and a container with its palette.
-  defp split(plan, uids, superseded) do
+  # migration, or that moved values. A tree with either in it is left out
+  # whole: an apply writes whole trees, and a container with its palette.
+  defp split(plan, uids, superseded, moved) do
     items = Enum.filter(plan.items, &(&1.uid in uids))
 
     {conflicts, rest} =
       Enum.split_with(items, &(&1.action == :conflict or Map.has_key?(superseded, &1.uid)))
 
     conflicts = Enum.map(conflicts, &Map.update!(&1, :edited, fn edited -> edited || superseded[&1.uid] end))
-    irreversible = Enum.filter(rest, &(&1.action not in [:update, :noop]))
+
+    irreversible =
+      for item <- rest, item.action not in [:update, :noop] or Map.has_key?(moved, item.uid) do
+        if reason = moved[item.uid], do: %{item | reason: reason}, else: item
+      end
+
     blocked = MapSet.new(conflicts ++ irreversible, &tree_root(&1.uid, plan.bundle))
     palettes = Map.new(plan.bundle["containers"] || [], &{&1["uid"], &1["palette"]})
 

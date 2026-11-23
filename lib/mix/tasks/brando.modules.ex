@@ -223,7 +223,7 @@ defmodule Mix.Tasks.Brando.Modules do
 
     Enum.each(plan.items, fn item ->
       detail =
-        Plan.removal_text(item) ||
+        Plan.changes_text(item) ||
           "#{item.reason || Enum.join(item.fields, ", ")} (#{item.block_count} blocks, #{item.entry_count} entries)"
 
       Mix.shell().info("#{item.action} #{item.kind} #{item.uid}: #{detail}")

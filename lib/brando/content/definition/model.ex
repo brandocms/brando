@@ -76,16 +76,67 @@ defmodule Brando.Content.Definition.Model do
     Value.unique!(Enum.map(specs, & &1.module), "source module names")
     Value.unique!(Enum.map(specs, & &1.options.uid), "definition UIDs")
 
-    definitions =
+    read =
       Enum.map(specs, fn spec ->
-        Error.in_file(Error.file_label(spec.source, root), fn -> definition!(spec, root, names) end)
+        Error.in_file(Error.file_label(spec.source, root), fn -> {definition!(spec, root, names), renames!(spec)} end)
       end)
 
+    definitions = Enum.map(read, &elem(&1, 0))
+    renames = for {definition, [_ | _] = renames} <- read, into: %{}, do: {definition["uid"], renames}
     grouped = Enum.group_by(definitions, & &1["kind"])
     bundle = Map.new(@kinds, fn {kind, key, _schema} -> {key, Map.get(grouped, kind, [])} end)
+    bundle = if renames == %{}, do: bundle, else: Map.put(bundle, "renames", renames)
     bundle = canonicalize(Map.put(bundle, "format_version", 1))
     validate_graph!(bundle)
     bundle
+  end
+
+  @doc """
+  The renames a module's file declares with `renamed_from:`, as
+  `[%{"kind" => "ref" | "var", "from" => old, "to" => new}]`. They are no
+  part of the definition: the database keeps no rename, so a stored copy
+  could never digest like its file. A bundle carries them in `"renames"`,
+  by module uid, next to its definitions.
+
+  Refused here: a rename of a table template's var, one onto its own key,
+  from a key the file still defines (a chain is one), and two keys of one
+  kind renamed from the same key.
+  """
+  def renames!(spec) do
+    declared =
+      for {kind, entities, key} <- [{"ref", Map.get(spec, :refs, []), :name}, {"var", Map.get(spec, :vars, []), :key}],
+          entity <- entities,
+          from = Map.get(entity, :renamed_from),
+          do: %{"kind" => kind, "from" => to_string(from), "to" => to_string(Map.fetch!(entity, key))}
+
+    kind = Map.get(spec.options, :kind, :module) || :module
+    if declared != [] and kind != :module, do: Error.raise!("renamed_from is only for a module's refs and vars")
+    Enum.each(declared, &validate_rename!(&1, declared, spec))
+    Enum.sort_by(declared, &{&1["kind"], &1["to"]})
+  end
+
+  defp validate_rename!(%{"kind" => kind, "from" => from, "to" => to}, declared, spec) do
+    subject = ~s(#{kind} "#{to}")
+    entities = if kind == "ref", do: Map.get(spec, :refs, []), else: Map.get(spec, :vars, [])
+    defined = Enum.map(entities, &to_string(Map.get(&1, :name) || &1.key))
+
+    cond do
+      from == to ->
+        Error.raise!(subject, "renamed_from names the #{kind} itself")
+
+      Enum.any?(declared, &(&1["kind"] == kind and &1["to"] == from)) ->
+        Error.raise!(subject, ~s(renamed_from "#{from}", which is itself renamed: rename each key in its own release))
+
+      from in defined ->
+        Error.raise!(subject, ~s(renamed_from "#{from}", which the file still defines))
+
+      Enum.count(declared, &(&1["kind"] == kind and &1["from"] == from)) > 1 ->
+        names = for r <- declared, r["kind"] == kind, r["from"] == from, do: r["to"]
+        Error.raise!(subject, ~s(#{Enum.join(names, " and ")} are both renamed_from "#{from}"))
+
+      true ->
+        :ok
+    end
   end
 
   defp definition!(spec, root, names) do
