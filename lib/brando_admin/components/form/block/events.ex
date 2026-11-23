@@ -786,6 +786,51 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     {:halt, socket}
   end
 
+  # Files dropped on a multi block whose module takes them (`media_drop`),
+  # each already checked in the browser against what its ref takes: one
+  # child per file, in order. The reply names each child's ref field, which
+  # the browser hands the file to.
+  def handle_block_event("media_drop", %{"files" => [_ | _] = files}, socket) do
+    with %{kinds: kinds} <- socket.assigns.media_drop,
+         false <- socket.assigns.source_locked,
+         kinds_dropped = Enum.map(files, &media_drop_kind(&1, kinds)),
+         false <- Enum.member?(kinds_dropped, nil) do
+      {socket, children} = Block.insert_media_drop_children(socket, kinds_dropped)
+      {:halt, %{children: children}, socket}
+    else
+      _ -> {:halt, %{children: []}, socket}
+    end
+  end
+
+  # The upload of a file dropped on this block failed or was cancelled before
+  # its child got the file: the child goes again, and a failure is said.
+  def handle_block_event("media_drop_failed", %{"uid" => uid} = params, socket) when is_binary(uid) do
+    if MapSet.member?(socket.assigns.media_drop_uids, uid) and uid in socket.assigns.block_list do
+      socket
+      |> Block.delete_child(uid)
+      |> update(:media_drop_uids, &MapSet.delete(&1, uid))
+      |> alert_media_drop_failure(params)
+      |> then(&{:halt, &1})
+    else
+      {:halt, socket}
+    end
+  end
+
+  # Files the browser found the ref does not take, which made no child
+  def handle_block_event("media_drop_rejected", %{"files" => [_ | _] = files}, socket) do
+    items =
+      Enum.map_join(files, fn file ->
+        "<li>#{BrandoAdmin.Alert.escape(file["filename"])}: #{BrandoAdmin.Alert.escape(media_drop_rejection(file))}</li>"
+      end)
+
+    {:halt,
+     push_event(socket, "b:alert", %{
+       title: gettext("Some files were not added"),
+       html: "<ul>#{items}</ul>",
+       type: "error"
+     })}
+  end
+
   def handle_block_event("delete_block", _params, socket) do
     uid = socket.assigns.uid
     parent_ref = socket.assigns.parent_ref
@@ -1204,4 +1249,27 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       assoc -> assoc
     end
   end
+
+  defp media_drop_kind(%{"kind" => "image"}, %{image: _}), do: :image
+  defp media_drop_kind(%{"kind" => "video"}, %{video: _}), do: :video
+  defp media_drop_kind(_file, _kinds), do: nil
+
+  defp media_drop_rejection(%{"reason" => "size", "limit" => limit}) when is_integer(limit),
+    do: gettext("larger than %{size}", size: Brando.Utils.human_size(limit))
+
+  defp media_drop_rejection(_file), do: gettext("not an image or video this block takes")
+
+  defp alert_media_drop_failure(socket, %{"error" => error}) when is_binary(error) and error != "",
+    do: push_event(socket, "b:alert", %{title: gettext("Upload failed"), message: error, type: "error"})
+
+  # The child's ref field was not on the page to take the file
+  defp alert_media_drop_failure(socket, %{"unavailable" => true}) do
+    push_event(socket, "b:alert", %{
+      title: gettext("Upload failed"),
+      message: gettext("The block made for this file shows no field for it, so it was not added."),
+      type: "error"
+    })
+  end
+
+  defp alert_media_drop_failure(socket, _cancelled), do: socket
 end

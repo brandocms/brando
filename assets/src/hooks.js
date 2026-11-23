@@ -65,6 +65,7 @@ import TipTapHook from './hooks/TipTap'
 import TransformerFieldsHook from './hooks/TransformerFields'
 import TransformerSortableHook from './hooks/TransformerSortable'
 import TransformerUploaderHook from './hooks/TransformerUploader'
+import MediaDropHook from './hooks/MediaDrop'
 import UploadManagerHook from './hooks/UploadManager'
 import UploadTriggerHook from './hooks/UploadTrigger'
 import VarLayoutHook from './hooks/VarLayout'
@@ -146,6 +147,7 @@ export default (app) => {
     'Brando.TransformerFields': TransformerFieldsHook(app),
     'Brando.TransformerSortable': TransformerSortableHook(app),
     'Brando.TransformerUploader': TransformerUploaderHook(app),
+    'Brando.MediaDrop': MediaDropHook(app),
     'Brando.UploadManager': UploadManagerHook(app),
     'Brando.UploadTrigger': UploadTriggerHook(app),
     'Brando.VarLayout': VarLayoutHook(app),

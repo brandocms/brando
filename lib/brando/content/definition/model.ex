@@ -7,7 +7,7 @@ defmodule Brando.Content.Definition.Model do
   alias Brando.Villain.Blocks
   alias Ecto.Changeset
 
-  @module_fields ~w(uid name namespace help_text class code type svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query)a
+  @module_fields ~w(uid name namespace help_text class code type svg color write_with_ai multi media_drop_child media_drop_ref sequence datasource datasource_module datasource_type datasource_query)a
   @ref_fields ~w(uid name description active collapsed sequence data)a
   @var_owners ~w(page_id block_id module_id table_template_id table_row_id global_set_id menu_item_id)a
   @var_assets ~w(image file video gallery palette identifier)
@@ -67,6 +67,7 @@ defmodule Brando.Content.Definition.Model do
       children = Enum.map(spec.children, &resolve!(&1.definition, names))
 
       fields
+      |> Map.merge(media_drop(opts[:media_drop], names))
       |> Map.merge(%{
         "type" => to_string(engine),
         "code" => code,
@@ -79,6 +80,11 @@ defmodule Brando.Content.Definition.Model do
       |> normalize_module!(nil)
     end
   end
+
+  defp media_drop(nil, _names), do: %{}
+
+  defp media_drop(media_drop, names),
+    do: %{"media_drop_child" => resolve!(media_drop[:child], names), "media_drop_ref" => to_string(media_drop[:ref])}
 
   defp template!([%{engine: engine, source: source, file: true}], file, root),
     do: {engine, Reader.template_file!(source, file, root)}
@@ -312,6 +318,7 @@ defmodule Brando.Content.Definition.Model do
     Value.unique!(uids ++ table_uids, "bundle UIDs")
 
     Enum.each(modules ++ tables, &validate_definition!(&1, uids, table_uids))
+    Enum.each(modules, &validate_media_drop!(&1, modules))
 
     children = Enum.flat_map(modules, & &1["children"])
     Value.unique!(Enum.flat_map(modules, fn module -> Enum.map(module["refs"], & &1["uid"]) end), "bundle ref UIDs")
@@ -345,6 +352,30 @@ defmodule Brando.Content.Definition.Model do
     if definition["table_template"] && definition["table_template"] not in table_uids,
       do: Error.raise!(uid, "unresolved table template")
   end
+
+  # The child a `media_drop` names is one of the module's own, and holds the
+  # ref as a media, picture or video ref (`Module.media_drop_problem/3`)
+  defp validate_media_drop!(%{"media_drop_child" => child, "media_drop_ref" => ref} = definition, modules)
+       when is_binary(child) do
+    children =
+      for module <- modules, module["uid"] in definition["children"] do
+        %{
+          uid: module["uid"],
+          refs: Enum.map(module["refs"], &%{name: &1["name"], type: &1["data"]["type"]})
+        }
+      end
+
+    case Module.media_drop_problem(children, child, ref) do
+      nil ->
+        :ok
+
+      {_field, message, keys} ->
+        text = Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
+        Error.raise!(definition["uid"], "media_drop: " <> text)
+    end
+  end
+
+  defp validate_media_drop!(_definition, _modules), do: :ok
 
   defp validate_kind!(definition, kind) when is_map(definition) do
     unless definition["kind"] == kind and is_list(definition["vars"]), do: Error.raise!(kind, "invalid definition")

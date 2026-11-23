@@ -153,6 +153,53 @@ section.alert.danger {
   @space margin-y 25px;
 }
 
+/* A multi block's media drop (`media_drop` on its module): a permanent,
+   clickable target under its entries, dashed as every "drop here" in the
+   block editor. A file dragged anywhere over the block lights it up
+   (`data-media-drop` on the block, set by the MediaDrop hook). */
+.block-media-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 4px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px dashed var(--brando-line);
+  border-radius: 10px;
+  background-color: var(--brando-surface);
+  color: var(--brando-ink);
+  font-size: var(--brando-text-md);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  [data-icon] {
+    width: 18px;
+    height: 18px;
+  }
+
+  small {
+    color: var(--brando-muted);
+    font-size: var(--brando-text-sm);
+  }
+
+  &:hover {
+    border-color: var(--brando-line-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 2px;
+  }
+}
+
+.block[data-media-drop="dragging"] > .block-media-drop {
+  border-style: solid;
+  border-color: var(--brando-accent);
+  background-color: var(--brando-surface-selected);
+}
+
 /* The one empty state of a block field (approved option A, #2997): its
    templates, when it has any, then the modules it usually starts with, then
    the other ways to begin (all modules, paste, Build with AI). One quiet,

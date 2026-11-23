@@ -55,6 +55,7 @@ defmodule Brando.Content.Module do
 
   @derived_fields ~w(
     id uid type name sequence namespace help_text multi color write_with_ai class code markdown_code refs vars svg deleted_at
+    media_drop_child media_drop_ref
     version version_note source_module_id source_version acknowledged_version library_origin
     override_id
   )a
@@ -66,6 +67,7 @@ defmodule Brando.Content.Module do
   trait :cast_polymorphic_embeds
   trait :ensure_uid
   trait :validate_var_keys
+  trait :validate_media_drop
   trait :module_versioned
 
   attributes do
@@ -87,6 +89,11 @@ defmodule Brando.Content.Module do
     # Write with AI in the module's text blocks. Off unless turned on here:
     # every request is a paid call (see `BrandoAdmin.Components.Form.RichTextAI`).
     attribute :write_with_ai, :boolean, default: false
+    # A multi module's blocks take dropped images and videos: each file makes
+    # one block of the child module with this UID, with the file in its ref
+    # `media_drop_ref` (`validate_media_drop/1`).
+    attribute :media_drop_child, :string
+    attribute :media_drop_ref, :string
 
     attribute :datasource, :boolean, default: false
     attribute :datasource_module, :string
@@ -295,6 +302,80 @@ defmodule Brando.Content.Module do
   """
   @spec any_ref_type?(term(), String.t() | nil) :: boolean()
   def any_ref_type?(module, name), do: name == @legacy_wrapper_ref and legacy_wrapper?(module)
+
+  @media_drop_ref_types ~w(media picture video)
+
+  @doc """
+  The ref types a `media_drop` ref may have: the ones that hold one image or
+  one video.
+  """
+  def media_drop_ref_types, do: @media_drop_ref_types
+
+  @doc """
+  Validates `media_drop_child` and `media_drop_ref`: both or neither, on a
+  multi module. When the changeset's module has its children loaded, with
+  their refs, the child must be one of them and the ref one of that child's
+  `:media`, `:picture` or `:video` refs.
+  """
+  def validate_media_drop(changeset) do
+    child = Changeset.get_field(changeset, :media_drop_child)
+    ref = Changeset.get_field(changeset, :media_drop_ref)
+
+    cond do
+      is_nil(child) and is_nil(ref) ->
+        changeset
+
+      is_nil(child) ->
+        Changeset.add_error(changeset, :media_drop_child, "name the child module the dropped files create")
+
+      is_nil(ref) ->
+        Changeset.add_error(changeset, :media_drop_ref, "name the ref of %{child} the dropped files go in", child: child)
+
+      Changeset.get_field(changeset, :multi) != true ->
+        Changeset.add_error(changeset, :media_drop_child, "needs a multi module")
+
+      true ->
+        validate_media_drop_target(changeset, changeset.data.children, child, ref)
+    end
+  end
+
+  defp validate_media_drop_target(changeset, children, child_uid, ref_name) when is_list(children) do
+    case media_drop_problem(Enum.reject(children, & &1.deleted_at), child_uid, ref_name) do
+      nil -> changeset
+      {field, message, keys} -> Changeset.add_error(changeset, field, message, keys)
+    end
+  end
+
+  defp validate_media_drop_target(changeset, _not_loaded, _child, _ref), do: changeset
+
+  @doc """
+  What is wrong with a `media_drop` naming `child_uid` and `ref_name` among
+  `children` (maps with `uid` and `refs`, each ref with `name` and `type`, or
+  `data` holding the type): `{field, message, keys}`, or nil when nothing is.
+  """
+  def media_drop_problem(children, child_uid, ref_name) do
+    case Enum.find(children, &(&1.uid == child_uid)) do
+      nil ->
+        {:media_drop_child, "%{child} is not a child module of this module", [child: child_uid]}
+
+      child ->
+        case Enum.find(child.refs, &(&1.name == ref_name)) do
+          nil ->
+            {:media_drop_ref, "%{child} has no ref %{ref}", [child: child_uid, ref: ref_name]}
+
+          ref ->
+            if ref_type(ref) in @media_drop_ref_types,
+              do: nil,
+              else:
+                {:media_drop_ref, "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref",
+                 [child: child_uid, ref: ref_name, type: ref_type(ref)]}
+        end
+    end
+  end
+
+  defp ref_type(%{data: %{type: type}}), do: to_string(type)
+  defp ref_type(%{type: type}), do: to_string(type)
+  defp ref_type(_ref), do: nil
 
   @doc """
   Returns the list of reserved HEEx assign names that cannot be used as var keys.

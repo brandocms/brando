@@ -111,7 +111,7 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Components.Form.Block.Events" => [
       read:
-        ~w(add_table_row assign_available_identifiers cancel_region_remap choose_region_remap close_block_config close_block_slot collapse_block commit_tiptap create_footnote delete_block delete_unused_collection delete_var duplicate_block fetch_missing_refs fetch_missing_vars focus insert_block insert_block_entry insert_slot_block move_block open_block_config open_block_slot open_footnote open_unused_collection paste_block paste_child_block remap_region reposition reset_ref reset_refs reset_var reset_vars restore_note_reference select_identifier show_dirty show_table_instructions show_vars_instructions tiptap_ai_cancel tiptap_link_dialog tiptap_link_result validate_block),
+        ~w(add_table_row assign_available_identifiers cancel_region_remap choose_region_remap close_block_config close_block_slot collapse_block commit_tiptap create_footnote delete_block delete_unused_collection delete_var duplicate_block fetch_missing_refs fetch_missing_vars focus insert_block insert_block_entry insert_slot_block media_drop media_drop_failed media_drop_rejected move_block open_block_config open_block_slot open_footnote open_unused_collection paste_block paste_child_block remap_region reposition reset_ref reset_refs reset_var reset_vars restore_note_reference select_identifier show_dirty show_table_instructions show_vars_instructions tiptap_ai_cancel tiptap_link_dialog tiptap_link_result validate_block),
       own: ~w(copy_block),
       write: ~w(tiptap_ai_generate)
     ],

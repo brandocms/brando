@@ -257,7 +257,7 @@ defmodule Brando.MigrationTemplates do
       "pages" => ~w(meta_canonical_url content_modified_at meta_nosnippet meta_max_snippet unpublish_at),
       "pages_fragments" => ~w(unpublish_at),
       "sites_seos" => ~w(crawler_policy),
-      "content_modules" => ~w(markdown_code write_with_ai),
+      "content_modules" => ~w(markdown_code write_with_ai media_drop_child media_drop_ref),
       "activity_events" => ~w(proposal_id approver_id),
       "content_identifiers" => ~w(external_url),
       "translation_group_members" => ~w(baseline_texts),

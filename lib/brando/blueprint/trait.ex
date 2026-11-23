@@ -68,6 +68,7 @@ defmodule Brando.Blueprint.Trait do
   defp expand_trait(:status, _caller), do: built_in_trait("Status")
   defp expand_trait(:timestamped, _caller), do: built_in_trait("Timestamped")
   defp expand_trait(:translatable, _caller), do: built_in_trait("Translatable")
+  defp expand_trait(:validate_media_drop, _caller), do: built_in_trait("ValidateMediaDrop")
   defp expand_trait(:validate_var_keys, _caller), do: built_in_trait("ValidateVarKeys")
   defp expand_trait(:villain, _caller), do: built_in_trait("Villain")
   defp expand_trait(:watch_language, _caller), do: built_in_trait("WatchLanguage")
@@ -130,6 +131,7 @@ defmodule Brando.Blueprint.Trait do
     do: [
       built_in_trait("EnsureUID"),
       built_in_trait("Permalink"),
+      built_in_trait("ValidateMediaDrop"),
       built_in_trait("ValidateVarKeys")
     ]
 

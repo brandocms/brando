@@ -92,7 +92,53 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      socket
      |> assign(assigns)
      |> assign(:datasource, datasource)
+     |> assign(:multi, Phoenix.HTML.Form.normalize_value("checkbox", assigns.form[:multi].value))
+     |> assign(:media_drop_children, media_drop_children(assigns.form.data))
      |> assign_available_queries()}
+  end
+
+  # The module's child modules, with their refs, as the module editor loads them
+  defp media_drop_children(%{children: children}) when is_list(children), do: Enum.reject(children, & &1.deleted_at)
+  defp media_drop_children(_module), do: []
+
+  attr :form, :any, required: true
+  attr :children, :list, required: true
+
+  # Images and videos dropped on this module's blocks: each makes one block of
+  # the chosen child module, with the file in the chosen ref
+  # (`Brando.Content.Module.validate_media_drop/1`).
+  defp media_drop_settings(assigns) do
+    child = Enum.find(assigns.children, &(&1.uid == assigns.form[:media_drop_child].value))
+
+    assigns =
+      assign(assigns,
+        child_options: Enum.map(assigns.children, &%{label: Brando.HTML.I18n.translate(&1.name), value: &1.uid}),
+        ref_options:
+          for(
+            ref <- (child && child.refs) || [],
+            to_string(ref.data.type) in Brando.Content.Module.media_drop_ref_types(),
+            do: %{label: "#{ref.name} (#{ref.data.type})", value: ref.name}
+          )
+      )
+
+    ~H"""
+    <.live_component
+      module={Input.Select}
+      id={"#{@form.id}-media_drop_child"}
+      field={@form[:media_drop_child]}
+      label={gettext("Dropped media creates")}
+      instructions={gettext("Images and videos dropped on this module's blocks each become a new entry of this child module.")}
+      opts={[options: @child_options, resetable: true]}
+    />
+    <.live_component
+      module={Input.Select}
+      id={"#{@form.id}-media_drop_ref"}
+      field={@form[:media_drop_ref]}
+      label={gettext("Dropped media goes in")}
+      instructions={gettext("A media, picture or video reference of the child module.")}
+      opts={[options: @ref_options, resetable: true]}
+    />
+    """
   end
 
   def assign_available_parents(socket) do
@@ -147,6 +193,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 ]}
               />
               <Input.toggle field={@form[:multi]} label={gettext("Allow multiple entries")} />
+              <.media_drop_settings :if={@multi && @media_drop_children != []} form={@form} children={@media_drop_children} />
               <Input.toggle
                 field={@form[:write_with_ai]}
                 label={gettext("Write with AI")}

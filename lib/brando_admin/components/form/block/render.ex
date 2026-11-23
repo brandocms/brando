@@ -97,6 +97,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         has_children?={@has_children?}
         paste_multi_module_id={@paste_multi_module_id}
         hidden_block_fields={@hidden_block_fields}
+        media_drop={@media_drop}
       >
         <div
           :if={@has_children?}
@@ -866,6 +867,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :module_write_with_ai, :boolean, default: false
   # Whether HTML and SVG refs show their markup for editing
   attr :superuser, :boolean, default: false
+  # Where files dropped on a multi block go (`Block.media_drop/1`)
+  attr :media_drop, :map, default: nil
   slot :inner_block
 
   def module(assigns) do
@@ -1045,6 +1048,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </form>
         <%= if @has_children? do %>
           {render_slot(@inner_block)}
+          <.media_drop_zone :if={@multi && @media_drop && !@source_locked} uid={@uid} media_drop={@media_drop} />
           <.plus
             click={@insert_multi_block}
             modal={@module_picker_id}
@@ -1057,6 +1061,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <div class="blocks-empty-instructions">
               {gettext("Click the plus to start adding content blocks")}
             </div>
+            <.media_drop_zone :if={@media_drop && !@source_locked} uid={@uid} media_drop={@media_drop} />
             <.plus
               click={@insert_multi_block}
               modal={@module_picker_id}
@@ -1070,6 +1075,38 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     </div>
     """
   end
+
+  attr :uid, :string, required: true
+  attr :media_drop, :map, required: true
+
+  # Takes images and videos dropped anywhere on the multi block, except on a
+  # field that takes the file itself (`Brando.MediaDrop`), and opens the file
+  # dialog when clicked. The block's `data-media-drop` state styles it.
+  defp media_drop_zone(assigns) do
+    assigns =
+      assign(assigns,
+        label: media_drop_label(Map.keys(assigns.media_drop.kinds)),
+        module_name: Brando.HTML.I18n.translate(assigns.media_drop.module_name)
+      )
+
+    ~H"""
+    <button
+      type="button"
+      id={"block-#{@uid}-media-drop"}
+      class="block-media-drop"
+      phx-hook="Brando.MediaDrop"
+      data-kinds={Jason.encode!(@media_drop.kinds)}
+    >
+      <.icon name="upload" />
+      <span class="block-media-drop-label">{@label}</span>
+      <small>{gettext("Each file becomes a new %{module}", module: @module_name)}</small>
+    </button>
+    """
+  end
+
+  defp media_drop_label([:image]), do: gettext("Drop images here, or click to choose")
+  defp media_drop_label([:video]), do: gettext("Drop videos here, or click to choose")
+  defp media_drop_label(_kinds), do: gettext("Drop images and videos here, or click to choose")
 
   def module_content(%{module_type: :heex} = assigns) do
     heex_assigns = build_heex_admin_assigns(assigns)

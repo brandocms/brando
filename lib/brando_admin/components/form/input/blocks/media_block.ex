@@ -37,30 +37,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   def assign_available_blocks_and_templates(socket) do
-    block_cs = socket.assigns.block.source
-    block_data = Changeset.get_field(block_cs, :data)
+    block_data = Changeset.get_field(socket.assigns.block.source, :data)
 
     socket
-    |> assign_new(:available_blocks, fn ->
-      if block_data && block_data.available_blocks do
-        block_data.available_blocks
-      else
-        ["picture", "video"]
-      end
-    end)
-    |> assign_new(:block_templates, fn ->
-      if block_data do
-        %{
-          picture: block_data.template_picture,
-          svg: block_data.template_svg,
-          video: block_data.template_video,
-          gallery: block_data.template_gallery,
-          file: block_data.template_file
-        }
-      else
-        %{picture: nil, svg: nil, video: nil, gallery: nil, file: nil}
-      end
-    end)
+    |> assign_new(:available_blocks, fn -> Brando.Villain.Blocks.MediaBlock.available_blocks(block_data) end)
+    |> assign_new(:media_data, fn -> block_data end)
   end
 
   def render(%{block: %{data: %{type: type}}} = assigns) when type in ["media", :media] do
@@ -242,51 +223,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   defp select_block(selected_block_type, socket) do
-    block_templates = socket.assigns.block_templates
-
     {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-    ref_description = socket.assigns.ref_description
-    uid = socket.assigns.uid
-
-    ref_data =
-      case selected_block_type do
-        "picture" ->
-          %Brando.Villain.Blocks.PictureBlock{
-            type: "picture",
-            data: block_templates.picture
-          }
-
-        "video" ->
-          %Brando.Villain.Blocks.VideoBlock{
-            type: "video",
-            data: block_templates.video
-          }
-
-        "gallery" ->
-          %Brando.Villain.Blocks.GalleryBlock{
-            type: "gallery",
-            data: block_templates.gallery
-          }
-
-        "svg" ->
-          %Brando.Villain.Blocks.SvgBlock{
-            type: "svg",
-            data: block_templates.svg
-          }
-
-        "file" ->
-          %Brando.Villain.Blocks.FileBlock{
-            type: "file",
-            data: block_templates.file || %Brando.Villain.Blocks.FileBlock.Data{}
-          }
-      end
 
     ref = %Brando.Content.Ref{
-      name: ref_name,
-      description: ref_description,
-      uid: uid,
-      data: ref_data
+      name: socket.assigns.ref_name,
+      description: socket.assigns.ref_description,
+      uid: socket.assigns.uid,
+      data: Brando.Villain.Blocks.MediaBlock.typed(socket.assigns.media_data, selected_block_type)
     }
 
     send_update(module,

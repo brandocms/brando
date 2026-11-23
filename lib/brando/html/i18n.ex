@@ -18,22 +18,20 @@ defmodule Brando.HTML.I18n do
   end
 
   def i18n(assigns) do
-    current_locale = Gettext.get_locale()
-    fallback_locale = Brando.Languages.default_language()
-
-    translated_string = assigns.map[current_locale] || assigns.map[fallback_locale] || ""
-
-    translated_string =
-      if translated_string == "" do
-        assigns.map["en"] || ""
-      else
-        translated_string
-      end
-
-    assigns = assign(assigns, :translated_string, translated_string)
+    assigns = assign(assigns, :translated_string, translate(assigns.map))
 
     ~H"""
     {@translated_string}
     """
+  end
+
+  @doc "The best available translation from `map`, as `i18n/1` renders it."
+  def translate(nil), do: ""
+
+  def translate(map) do
+    case map[Gettext.get_locale()] || map[Brando.Languages.default_language()] || "" do
+      "" -> map["en"] || ""
+      translated -> translated
+    end
   end
 end

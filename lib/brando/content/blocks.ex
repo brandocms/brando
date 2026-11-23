@@ -24,6 +24,7 @@ defmodule Brando.Content.Blocks do
   alias Brando.Utils
   alias Brando.Villain
   alias Brando.Villain.Blocks, as: VillainBlocks
+  alias Brando.Villain.Blocks.MediaBlock
   alias Ecto.Changeset
 
   @type changeset :: Ecto.Changeset.t()
@@ -77,6 +78,32 @@ defmodule Brando.Content.Blocks do
     |> Changeset.put_assoc(:vars, remove_pk_from_vars(module.vars))
     |> Changeset.put_assoc(:refs, refs)
     |> Map.put(:action, :insert)
+  end
+
+  @doc """
+  A block of the module `module_reference` for a file dropped on a multi
+  block (the parent module's `media_drop`), built as `build_module_block/5`
+  builds a `:module_entry`. Its ref `ref_name` takes the file's `kind`
+  (`:image` or `:video`): a `:media` ref becomes a picture or a video ref,
+  with the ref's template for it (`MediaBlock.typed/2`); a `:picture` or
+  `:video` ref stays as it is.
+  """
+  @spec build_media_drop_block(term(), String.t(), :image | :video, integer() | nil, module()) :: changeset
+  def build_media_drop_block(module_reference, ref_name, kind, user_id, source) do
+    block_cs = build_module_block(module_reference, user_id, nil, source, :module_entry)
+
+    refs =
+      block_cs
+      |> Changeset.get_assoc(:refs, :struct)
+      |> Enum.map(fn
+        %Ref{name: ^ref_name, data: %MediaBlock{data: data}} = ref ->
+          %{ref | data: MediaBlock.typed(data, if(kind == :video, do: "video", else: "picture"))}
+
+        ref ->
+          ref
+      end)
+
+    Changeset.put_assoc(block_cs, :refs, refs)
   end
 
   @doc """
