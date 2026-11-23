@@ -25,7 +25,7 @@ defmodule Brando.FrontendEdit.Manifest do
 
   @field_marker ~r/<!-- \[\+:F<([^>]+)>\] -->/
   @block_marker ~r/<!-- \[\+:B<([^>]+)>\] -->/
-  @entry_field_marker ~r/<!-- \[\+:[EW]<([^>]+)>\] -->/
+  @entry_field_marker ~r/<!-- \[\+:[EWTR]<([^>]+)>\] -->/
 
   @doc "The field keys marked in `html`, in order of appearance."
   def field_keys(html), do: @field_marker |> Regex.scan(html, capture: :all_but_first) |> List.flatten() |> Enum.uniq()

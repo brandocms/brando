@@ -22,9 +22,9 @@ defmodule Brando.Villain.Tags.EditableField do
   def render([field: argument], context) do
     case Brando.Villain.Tags.Editable.resolve_with_rule(argument, context) do
       {%{__struct__: _} = entry, field, rich, context} when is_atom(field) and not is_nil(field) ->
+        {html, kind} = print(entry, field, rich)
         # Liquid in the field is text to the entry's final pass
-        html = entry |> render_value(field, rich) |> InertLiquid.encode_all()
-        {[Fields.wrap(html, entry, field, :value)], context}
+        {[Fields.wrap(InertLiquid.encode_all(html), entry, field, kind)], context}
 
       {_other, _field, _rich, context} ->
         # Not an entry field: print the value escaped.
@@ -33,21 +33,13 @@ defmodule Brando.Villain.Tags.EditableField do
     end
   end
 
-  # A subform row read through its owner prints by the owner's forms, as
-  # `{{ }}` prints it: rich text sanitized, other text escaped
-  defp render_value(entry, field, nil), do: Fields.render_value(entry, field)
+  # A record prints by its own forms, a subform row read through its owner by
+  # the owner's forms, as `{{ }}` prints it. Its markers say which rule, so
+  # the frontend editor updates the page by it as the field is edited.
+  defp print(entry, field, nil), do: {Fields.render_value(entry, field), :value}
 
-  defp render_value(entry, field, rich) do
-    case Map.get(entry, field) do
-      text when is_binary(text) ->
-        if field in rich,
-          do: TemplateView.sanitize_rich_text(text),
-          else: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-
-      _value ->
-        Fields.render_value(entry, field)
-    end
-  end
+  defp print(entry, field, rich),
+    do: {Fields.render_value(entry, field, rich), if(field in rich, do: :rich_text, else: :text)}
 
   defp printable(nil), do: ""
   defp printable(value) when is_binary(value), do: value

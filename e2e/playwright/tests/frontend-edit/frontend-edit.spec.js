@@ -352,6 +352,44 @@ test.describe('entry fields', () => {
     await expect.poll(() => page.locator('.project-header picture').first().innerHTML(), { timeout: 10000 }).not.toBe(before)
   })
 
+  // A field a page prints by more than one rule (a subform row's field, by
+  // its owner's forms and by its own) has a marker of each kind. Here a place
+  // marked as text follows the title's own two, in the page and in the page
+  // fetched again after a save.
+  test('a field marked by more than one kind updates each place by its kind', async ({ page }) => {
+    // The page in edit mode, with the place marked as text: holding "Old" as
+    // the page is opened, and "Fresh" in the page fetched again after a save
+    let served = 0
+    await page.route(
+      url => url.pathname === '/frontend-edit',
+      async route => {
+        const response = await route.fetch()
+        const body = await response.text()
+        const key = body.match(/\[\+:E<([^>]+:title)>\]/)?.[1]
+        if (!key) return route.fulfill({ response, body })
+
+        const text = served++ === 0 ? 'Old' : 'Fresh'
+        const place = `<p class="fe-text-place"><!-- [+:T<${key}>] -->${text}<!-- [-:T<${key}>] --></p>`
+        await route.fulfill({ response, body: body.replace('</main>', `${place}</main>`) })
+      }
+    )
+
+    await startEditing(page)
+    await expect(page.locator('p.fe-text-place')).toHaveText('Old')
+    await titleField(page).click()
+    const editor = sidebar(page)
+    await expect(titleInput(editor)).toHaveValue('Frontend edit', { timeout: 15000 })
+    await titleInput(editor).fill('Fish & chips')
+    await expect(titleField(page)).toHaveText('Fish & chips', { timeout: 10000 })
+    await expect(page.locator('p.fe-text-place')).toHaveText('Fish & chips')
+
+    await editor.getByTestId('submit').click()
+    await expect(editor.locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('p.fe-text-place')).toHaveText('Fresh', { timeout: 10000 })
+    await expect(titleField(page)).toHaveText('Fish & chips')
+    await expect(page.locator('p.fe-block-title')).toHaveText('On Fish & chips', { timeout: 10000 })
+  })
+
   test('the full editor opens at the field', async ({ page }) => {
     await startEditing(page)
     await titleField(page).click()

@@ -193,6 +193,32 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
       assert html =~ "?field=title"
     end
 
+    test "sends the value printed by each kind of marker the page names", %{conn: conn, page: page} do
+      key = Brando.FrontendEdit.Fields.key(Page, page.id, :title)
+      {view, _html} = live_form(conn, "/admin/frontend-edit?field=#{key}&kinds=TE", @form)
+
+      view
+      |> element("##{@form}_form")
+      |> render_change(%{"page" => %{"title" => "Fish & chips"}, "_target" => ["page", "title"]})
+
+      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, printed: printed})
+      assert printed == %{"E" => "Fish &amp; chips", "T" => "Fish &amp; chips"}
+    end
+
+    test "takes the kinds the page names when the field is selected again", %{conn: conn, page: page} do
+      {view, _html} = field_editor(conn, page)
+      key = Brando.FrontendEdit.Fields.key(Page, page.id, :title)
+
+      render_hook(view, "select", %{"field" => key, "kinds" => "TE"})
+
+      view
+      |> element("##{@form}_form")
+      |> render_change(%{"page" => %{"title" => "Fish & chips"}, "_target" => ["page", "title"]})
+
+      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, printed: printed})
+      assert printed == %{"E" => "Fish &amp; chips", "T" => "Fish &amp; chips"}
+    end
+
     test "shows the value on the page as it changes, and saves only it", %{conn: conn, page: page} do
       {view, _html} = field_editor(conn, page)
       key = Brando.FrontendEdit.Fields.key(Page, page.id, :title)
@@ -202,7 +228,9 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
       |> render_change(%{"page" => %{"title" => "Fish & chips"}, "_target" => ["page", "title"]})
 
       assert_push_event(view, "b:frontend-edit", %{type: "dirty", dirty: true})
-      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, html: "Fish &amp; chips"})
+      # Only the kind of marker the page names, its entry's own when it names none
+      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, printed: printed})
+      assert printed == %{"E" => "Fish &amp; chips"}
 
       view |> form("##{@form}_form", %{"page" => %{"title" => "Fish & chips"}}) |> render_submit()
       assert_push_event(view, "b:submit", %{}, 2_000)

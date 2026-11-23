@@ -305,7 +305,32 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
 
       key = Brando.FrontendEdit.Fields.key(CheckedItem, 7, :text)
       html = Brando.FrontendEdit.annotation_scope(true, fn -> render(template, entry) end)
-      assert html =~ "<!-- [+:E<#{key}>] -->&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;<!-- [-:E<#{key}>] -->"
+      assert html =~ "<!-- [+:T<#{key}>] -->&lt;a href=&quot;/help&quot;&gt;Help&lt;/a&gt;<!-- [-:T<#{key}>] -->"
+    end
+
+    # As a field is edited, the frontend editor sends what each kind of marker
+    # holds, and the page puts it in each place by the marker's kind: a row's
+    # field updates by the rule the page printed it by (#3848)
+    for {name, template, entry} <- [
+          {"a row its owner draws as text", "{% editable_field entry.checked_items[0].text %}",
+           quote(do: &%PlainOwner{title: "T", checked_items: [&1]})},
+          {"a row its owner draws as rich text", "{% editable_field entry.checked_items[0].text %}",
+           quote(do: &%Entry{title: "T", checked_items: [&1]})},
+          {"a record of its own", "{% editable_field entry.text %}", quote(do: & &1)}
+        ] do
+      test "the editor's update of #{name} prints as the page does" do
+        page = fn row ->
+          html = Brando.FrontendEdit.annotation_scope(true, fn -> render(unquote(template), unquote(entry).(row)) end)
+          Regex.scan(~r/<!-- \[\+:(\w)<[^>]+>\] -->(.*?)<!-- \[-:/s, html, capture: :all_but_first)
+        end
+
+        row = %CheckedItem{id: 7, text: "<p>Old</p>"}
+        edited = %{row | text: ~s(<p>New <a href="/help">help</a></p>)}
+
+        assert [[kind, _old]] = page.(row)
+        assert [[^kind, printed]] = page.(edited)
+        assert Brando.FrontendEdit.Fields.printed(edited, :text, kind) == %{kind => printed}
+      end
     end
 
     test "editable_field prints a row field as markup when the owner draws it as rich text" do

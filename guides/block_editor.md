@@ -363,15 +363,19 @@ assigned with `raw`. A `{% video %}` svg cover takes its `opacity`, `width`
 and `height` as numbers only, and its size from the aspect ratio otherwise;
 the `<video>` element gets `width` and `height` as written (`"100%"`).
 
-Text that `assign` stores is escaped, as `{{ }}` prints it. The arguments that
-escape what they print read an assigned text as the text it stands for, so it
-is escaped once, as the field passed directly is: `alt` on `{% picture %}`, the
+Text that `assign` stores is escaped, as `{{ }}` prints it, and so is each
+string a `for` loop reads of a list of strings. The arguments that escape what
+they print read such a variable as the text it stands for, so it is escaped
+once, as the field passed directly is: `alt` on `{% picture %}`, the
 arguments of `{% route %}` and `{% route_i18n %}`, `{% editable_field %}` and
-`{% inspect %}`. They do so for the variable itself (`alt: q`), not for an
-expression on it (`q.size` counts the stored text), and only when the assign
-starts from a field or variable: a value that starts from a literal
-(`{% assign q = "A&amp;B" %}`) was never escaped, and reaches them as it is. `{% assign alt = entry.title %}{% picture entry.cover { alt: alt } %}`
-prints the title escaped once, and `{% route %}` builds its address from the
+`{% inspect %}`. An assigned list of strings reaches them as its strings. They
+do so for the variable itself (`alt: q`), not for an expression on it
+(`q.size` counts the stored text), and only when the assign or the loop's list
+reads a field or variable, also in a filter (`{% assign alt = "Photo: " | append: entry.title %}`):
+a value set from literals alone (`{% assign q = "A&amp;B" %}`), or from a
+name holding one, was never escaped, and reaches them as it is. `{% assign alt = entry.title %}{% picture entry.cover { alt: alt } %}`
+and `{% for tag in entry.tags %}{% picture entry.cover { alt: tag } %}{% endfor %}`
+print the text escaped once, and `{% route %}` builds its address from the
 text as typed. Every other tag and option gets the assigned text escaped. A
 tag of your own that escapes what it prints can read an argument the same way
 with `Brando.Villain.TemplateView.eval_typed/2`. A variable set with `capture`

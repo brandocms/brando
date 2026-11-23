@@ -57,7 +57,7 @@ defmodule Brando.Villain.TemplateView do
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
-  # Escaped text `{% assign %}` gave a variable, with the text it stands for (`assign/4`)
+  # What `{% assign %}` and `{% for %}` set each name to (`assign/4`, `loop/4`)
   @typed_texts :brando_template_view_typed_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
@@ -192,17 +192,18 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
-  `eval/2`, with an argument that is a variable `{% assign %}` gave escaped
-  plain text read as the text it stands for (`assign/4`): so a field passed
-  through `assign` is escaped once, as the field passed directly is. Any
-  other expression (`q.size`) reads the value assigned. For a tag argument
-  that escapes what it prints (picture's `alt`, `route`); every other
-  argument reads with `eval/2`.
+  `eval/2`, with an argument that is a variable `{% assign %}` or `{% for %}`
+  gave escaped plain text read as the text it stands for (`assign/4`,
+  `loop/4`): so a field passed through `assign`, or a string of a list a loop
+  reads, is escaped once, as the field passed directly is. Any other
+  expression (`q.size`) reads the value assigned. For a tag argument that
+  escapes what it prints (picture's `alt`, `route`); every other argument
+  reads with `eval/2`.
   """
   @spec eval_typed(term(), Context.t()) :: term()
   def eval_typed(argument, %Context{} = context) do
     with name when is_binary(name) <- variable(argument),
-         {:ok, text} <- Map.fetch(typed_texts(context), name) do
+         text when is_binary(text) or is_list(text) <- mark(context, name) do
       eval(argument, Context.push_scope(context, %{name => text}))
     else
       _ -> eval(argument, context)
@@ -214,6 +215,21 @@ defmodule Brando.Villain.TemplateView do
   defp variable({:keyword, [_key, value]}), do: variable(value)
   defp variable({:field, [key: name]}), do: name
   defp variable(_argument), do: nil
+
+  @doc """
+  Whether `expression`, the right side of an `{% assign %}` with its filters
+  or the collection of a `{% for %}`, reads a field or variable, which is read
+  escaped: in itself or in a filter's argument. A literal the template
+  writes is not read, nor a name holding a value the template set from one.
+  """
+  @spec read?(term(), Context.t()) :: boolean()
+  def read?(expression, context) when is_list(expression), do: Enum.any?(expression, &read?(&1, context))
+  def read?({:field, [{:key, name} | _keys]}, context), do: mark(context, name) != :literal
+  def read?({:filters, filters}, context), do: read?(filters, context)
+  def read?({:filter, [_name | arguments]}, context), do: read?(arguments, context)
+  def read?({:arguments, arguments}, context), do: read?(arguments, context)
+  def read?({:keyword, [_key, value]}, context), do: read?(value, context)
+  def read?(_argument, _context), do: false
 
   @doc """
   A tag's option that it prints as markup (a caption), evaluated as `{{ }}`
@@ -229,38 +245,78 @@ defmodule Brando.Villain.TemplateView do
   @doc """
   `context` with `name` set to `value`, for `{% assign %}`. Text read from an
   entry is escaped, as `{{ name }}` prints it. For escaped plain text (no
-  rich text, no record, no number) the text it stands for is kept beside it,
-  the inverse of the escape (`Brando.Villain.Parser.unescape_var_value/1`),
-  for the arguments that read it as typed (`eval_typed/2`). `read?` says the
-  expression starts from a field or variable, which is read escaped; text
-  that starts from a literal the template writes was never escaped, and is
-  kept as it is only.
+  rich text, no record, no number), or a list of it, the text it stands for
+  is kept beside it, the inverse of the escape
+  (`Brando.Villain.Parser.unescape_var_value/1`), for the arguments that read
+  it as typed (`eval_typed/2`). `read?` says the expression reads a field or
+  variable, which is read escaped (`read?/2`); text set from literals alone
+  was never escaped, and is kept as it is only.
   """
   @spec assign(Context.t(), String.t(), term(), boolean()) :: Context.t()
-  def assign(%Context{private: private} = context, name, value, read?) do
-    typed = Map.get(private, @typed_texts, %{})
-
-    typed =
-      if read? and is_binary(value) and read_mode(:escape, context) == :escape and not read_as_rich_text?(value),
-        do: Map.put(typed, name, {value, Parser.unescape_var_value(value)}),
-        else: Map.delete(typed, name)
-
-    context = Context.assign_global(context, name, value)
-    %{context | private: Map.put(context.private, @typed_texts, typed)}
+  def assign(%Context{} = context, name, value, read?) do
+    context
+    |> Context.assign_global(name, value)
+    |> put_marks(name, [value], read?)
   end
 
-  # Liquex binds a name to a value only, and `capture` and loops set names
-  # without `assign/4`, so the text is tied to the value: a variable still
-  # holding the bytes it was assigned reads as typed. A `capture` or loop
-  # variable of the same name and bytes reads the same, which can change the
-  # characters an argument shows, never whether they are escaped: every
+  @doc """
+  `context` for the body of `{% for name in collection %}`: each string, or
+  list of strings, of the `items` of a collection that is read (`read?/2`) is
+  escaped plain text, as `assign/4` keeps it, for the arguments that read it
+  as typed; of any other collection, a literal.
+  """
+  @spec loop(Context.t(), String.t(), term(), boolean()) :: Context.t()
+  def loop(%Context{} = context, name, items, read?) when is_list(items), do: put_marks(context, name, items, read?)
+  def loop(%Context{} = context, _name, _items, _read?), do: context
+
+  # Each name `assign/4` and `loop/4` set, with what each string or list of
+  # strings it was given stands for: `:literal`, or the text it holds escaped.
+  #
+  # Liquex binds a name to a value only, and `capture` sets names without
+  # `assign/4`, and a loop's name is bound or not as Liquex decides, so the
+  # mark is tied to the value: a name reads by the mark of the value it holds
+  # now, and a value it was never given here is read. A mark is never taken
+  # back, and a later one for the same bytes replaces it: so a name holding
+  # the same bytes from elsewhere reads the same, which can change the
+  # characters an argument shows, never whether they are escaped, as every
   # argument that reads typed text escapes it.
-  defp typed_texts(%Context{private: private} = context) do
-    for {name, {value, text}} <- Map.get(private, @typed_texts, %{}),
-        Access.get(context, name) === value,
-        into: %{},
-        do: {name, text}
+  defp mark(%Context{private: private} = context, name) do
+    case private do
+      %{@typed_texts => %{^name => marks}} -> Map.get(marks, Access.get(context, name))
+      _ -> nil
+    end
   end
+
+  defp put_marks(%Context{private: private} = context, name, values, read?) do
+    names = Map.get(private, @typed_texts, %{})
+    escaped? = read_mode(:escape, context) == :escape
+
+    marks =
+      values
+      |> Enum.filter(&(is_binary(&1) or is_list(&1)))
+      |> Enum.reduce(Map.get(names, name, %{}), fn value, marks ->
+        mark =
+          cond do
+            not read? -> :literal
+            escaped? -> typed_text(value)
+            true -> nil
+          end
+
+        if mark, do: Map.put(marks, value, mark), else: Map.delete(marks, value)
+      end)
+
+    %{context | private: Map.put(private, @typed_texts, Map.put(names, name, marks))}
+  end
+
+  defp typed_text(value) when is_binary(value),
+    do: if(not read_as_rich_text?(value), do: Parser.unescape_var_value(value))
+
+  defp typed_text([_ | _] = values) do
+    if Enum.all?(values, &(is_binary(&1) and not read_as_rich_text?(&1))),
+      do: Enum.map(values, &Parser.unescape_var_value/1)
+  end
+
+  defp typed_text(_value), do: nil
 
   @doc """
   The value in a view, with credentials left out: a list's items, and a keyword
@@ -699,16 +755,20 @@ defmodule Brando.Villain.TemplateView do
       to_string(key) in Enum.map(struct.__blocks_fields__(), &"rendered_#{&1.name}")
   end
 
-  defp rich_text?(%TextBlock.Data{}, key, _rich), do: to_string(key) == "text"
+  defp rich_text?(value, key, rich), do: to_string(key) in Enum.map(rich_text_fields(value, rich), &Atom.to_string/1)
 
-  defp rich_text?(%Var{type: type}, key, _rich) when type in [:rich_text, :html], do: to_string(key) == "value"
-
-  # A field the default form draws as rich text, or only named forms do
-  defp rich_text?(%struct{}, key, nil),
-    do: to_string(key) in Enum.map(Brando.RichText.fields_for_printing(struct), &Atom.to_string/1)
-
-  # A subform row's field by its owner's forms alone (`with_rich_rows/3`)
-  defp rich_text?(_row, key, rich), do: to_string(key) in Enum.map(rich, &Atom.to_string/1)
+  @doc """
+  The fields of `value` that `{{ }}` prints as rich text: a text block's
+  `text`, a rich-text var's `value`, the fields a record's default form draws
+  as rich text or only named forms do (`Brando.RichText.fields_for_printing/1`),
+  and of a subform row read through its owner, `rich`: those its owner's forms
+  draw so (`with_rich_rows/3`).
+  """
+  @spec rich_text_fields(struct(), [atom()] | nil) :: [atom()]
+  def rich_text_fields(%TextBlock.Data{}, _rich), do: [:text]
+  def rich_text_fields(%Var{type: type}, _rich) when type in [:rich_text, :html], do: [:value]
+  def rich_text_fields(%struct{}, nil), do: Brando.RichText.fields_for_printing(struct)
+  def rich_text_fields(_row, rich), do: rich
 
   # Decoded first, as a heading is: a character reference typed into a title
   # (`&shy;`) is the character it names, and text escaped already stays as it is.

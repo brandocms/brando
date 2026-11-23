@@ -106,17 +106,15 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
 
   @doc """
   An entry field changed in the form. In field mode the page shows the new
-  value at once; blocks reading the field follow with the next preview
-  render (`replace_fields/3`).
+  value at once, each place as it printed it (`Fields.printed/3`); blocks
+  reading the field follow with the next preview render (`replace_fields/3`).
   """
   def field_changed(%{assigns: %{frontend_edit: %{input: field} = frontend_edit}} = socket) when not is_nil(field) do
     entry = Ecto.Changeset.apply_changes(socket.assigns.form.source)
     notify(:dirty)
 
-    notify(
-      {:entry_field,
-       %{key: frontend_edit.target, html: IO.iodata_to_binary(Brando.FrontendEdit.Fields.render_value(entry, field))}}
-    )
+    printed = Brando.FrontendEdit.Fields.printed(entry, field, frontend_edit.kinds)
+    notify({:entry_field, %{key: frontend_edit.target, printed: printed}})
   end
 
   def field_changed(%{assigns: %{frontend_edit: %{}}}), do: notify(:dirty)

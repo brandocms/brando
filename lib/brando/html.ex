@@ -1355,7 +1355,8 @@ defmodule Brando.HTML do
 
       <h1><.editable_field entry={@page} field={:title} /></h1>
 
-  Rich-text fields print their HTML; other values are escaped. Outside edit
+  Rich-text fields print their HTML sanitized, as `{{ }}` prints them in
+  Liquid; other values are escaped. Outside edit
   mode this prints the value and nothing else. See `Brando.FrontendEdit.Fields`
   and the frontend edit guide.
   """

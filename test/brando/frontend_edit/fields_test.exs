@@ -40,8 +40,39 @@ defmodule Brando.FrontendEdit.FieldsTest do
   describe "values" do
     test "are escaped, except rich text", %{page: page} do
       assert IO.iodata_to_binary(Fields.render_value(page, :title)) == "Tom &amp; &lt;Jerry&gt;"
-      refute Fields.rich_text?(Page, :title)
       assert Fields.render_value(%{page | title: nil}, :title) == ""
+    end
+
+    # Markup the sanitizer removes: an event handler, a script and a
+    # javascript: link (#3848)
+    test "print a rich-text field as {{ }} prints it, sanitized" do
+      entry = %Brando.RichTextRows.Entry{
+        id: 1,
+        title: "T",
+        intro: ~s{<p onclick="alert(1)">A <script>alert(2)</script><a href="javascript:alert(3)">b</a></p>}
+      }
+
+      context = Brando.Villain.get_base_context(entry)
+      printed = Brando.Villain.parse_and_render("{{ entry.intro }}", context)
+      refute printed =~ "alert"
+
+      assert Brando.Villain.parse_and_render("{% editable_field entry.intro %}", context) == printed
+      assert render_component(&Brando.HTML.editable_field/1, entry: entry, field: :intro) == printed
+    end
+
+    # The values Liquid prints as rich text without a form drawing them so
+    test "print a text block's text and a rich-text var's value as {{ }} prints them" do
+      html = "<p><em>Hello</em></p>"
+
+      for {value, field} <- [
+            {%Brando.Villain.Blocks.TextBlock.Data{text: html}, :text},
+            {%Brando.Content.Var{type: :rich_text, value: html}, :value}
+          ] do
+        printed = Brando.Villain.parse_and_render("{{ entry.#{field} }}", Brando.Villain.get_base_context(value))
+        assert printed == html
+        assert IO.iodata_to_binary(Fields.render_value(value, field)) == printed
+        assert render_component(&Brando.HTML.editable_field/1, entry: value, field: field) == printed
+      end
     end
   end
 

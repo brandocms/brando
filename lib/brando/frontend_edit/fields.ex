@@ -19,13 +19,21 @@ defmodule Brando.FrontendEdit.Fields do
 
   Outside edit mode these print exactly what they wrap. While annotating
   (see `Brando.FrontendEdit.annotating?/0`) they add markers: `[+:E<key>]`
-  around a printed value, which the page updates as the field is edited,
-  and `[+:W<key>]` around other markup, which is refreshed after a save.
-  `key` is `Schema:id:field`.
+  around a printed value, which the page updates as the field is edited
+  (`[+:T<key>]` and `[+:R<key>]` for a subform row's field printed by its
+  owner's forms, as text or as rich text: `open/2`), and `[+:W<key>]`
+  around other markup, which is refreshed after a save. `key` is
+  `Schema:id:field`.
   """
 
   alias Brando.Blueprint.Forms
   alias Brando.FrontendEdit
+  alias Brando.Villain.TemplateView
+
+  @type kind :: :value | :text | :rich_text | :markup
+
+  # The letter each kind of marker carries (`open/2`)
+  @kinds %{value: "E", text: "T", rich_text: "R", markup: "W"}
 
   @doc "The key a field's markers carry: `Schema:id:field`."
   def key(schema, id, field), do: FrontendEdit.field_key(schema, id, field)
@@ -115,25 +123,36 @@ defmodule Brando.FrontendEdit.Fields do
   defp humanize(field), do: field |> to_string() |> Phoenix.Naming.humanize()
 
   @doc """
-  The field's value as HTML: rich text as it is stored, anything else
+  The field's value as HTML, as `{{ }}` prints it: a field it prints as rich
+  text (`Brando.Villain.TemplateView.rich_text_fields/2`) sanitized
+  (`Brando.Villain.TemplateView.sanitize_rich_text/1`), anything else
   escaped. Media and relations have no value to print; mark the markup that
   shows them with `editable` instead.
   """
   @spec render_value(map(), atom()) :: iodata()
-  def render_value(%{__struct__: schema} = entry, field) do
+  def render_value(%{__struct__: _} = entry, field),
+    do: render_value(entry, field, TemplateView.rich_text_fields(entry, nil))
+
+  def render_value(entry, field) when is_map(entry), do: entry |> Map.get(field) |> to_string_or_empty() |> escape()
+
+  @doc """
+  `render_value/2` by the rule `rich`, the fields printed as rich text: for a
+  subform row read through its owner, those the owner's forms draw so
+  (`Brando.RichText.row_fields_for_printing/2`).
+  """
+  @spec render_value(map(), atom(), [atom()]) :: iodata()
+  def render_value(entry, field, rich) do
     value = Map.get(entry, field)
 
     cond do
       is_nil(value) -> ""
-      rich_text?(schema, field) and is_binary(value) -> value
-      is_binary(value) -> Phoenix.HTML.html_escape(value) |> Phoenix.HTML.safe_to_string()
+      is_binary(value) and field in rich -> TemplateView.sanitize_rich_text(value)
+      is_binary(value) -> escape(value)
       is_number(value) or is_atom(value) -> value |> to_string() |> escape()
       printable?(value) -> value |> to_string() |> escape()
       true -> ""
     end
   end
-
-  def render_value(entry, field) when is_map(entry), do: entry |> Map.get(field) |> to_string_or_empty() |> escape()
 
   defp printable?(value), do: String.Chars.impl_for(value) && not is_struct(value, Ecto.Association.NotLoaded)
 
@@ -143,16 +162,11 @@ defmodule Brando.FrontendEdit.Fields do
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
-  @doc "Whether the field is edited as rich text."
-  def rich_text?(schema, field) do
-    match?(%Forms.Input{type: :rich_text}, input(schema, field))
-  end
-
   @doc """
-  Wraps `html` in value markers (`:value`) or markup markers (`:markup`) for
-  `entry`'s `field`, while annotating. Otherwise returns `html` untouched.
+  Wraps `html` in markers of `kind` (`open/2`) for `entry`'s `field`, while
+  annotating. Otherwise returns `html` untouched.
   """
-  @spec wrap(iodata(), map(), atom() | binary(), :value | :markup) :: iodata()
+  @spec wrap(iodata(), map(), atom() | binary(), kind()) :: iodata()
   def wrap(html, entry, field, kind) do
     case marker_key(entry, field) do
       nil -> html
@@ -170,13 +184,31 @@ defmodule Brando.FrontendEdit.Fields do
   def marker_key(_entry, _field), do: nil
 
   @doc """
-  The comment that opens a field marker: `:value` wraps the field's own rendered
-  value, `:markup` wraps other markup that shows it. Close it with `close/2`.
+  The comment that opens a field marker of `kind`. `:value` wraps the field's
+  value as the entry's own forms print it (`render_value/2`); `:text` and
+  `:rich_text` wrap it printed as text or as rich text by another rule, a
+  subform row's field by its owner's forms (`render_value/3`); `:markup`
+  wraps other markup that shows the field. Close it with `close/2`.
   """
-  def open(:value, key), do: ["<!-- [+:E<", key, ">] -->"]
-  def open(:markup, key), do: ["<!-- [+:W<", key, ">] -->"]
+  def open(kind, key), do: ["<!-- [+:", Map.fetch!(@kinds, kind), "<", key, ">] -->"]
 
   @doc "The comment that closes a marker opened with `open/2` for the same kind and key."
-  def close(:value, key), do: ["<!-- [-:E<", key, ">] -->"]
-  def close(:markup, key), do: ["<!-- [-:W<", key, ">] -->"]
+  def close(kind, key), do: ["<!-- [-:", Map.fetch!(@kinds, kind), "<", key, ">] -->"]
+
+  @doc """
+  What each kind of value marker of `entry`'s `field` that `letters` name
+  holds, by the letter its comments carry: as the page prints it there. The
+  page names the kinds it has markers of, and puts each in the places marked
+  with its kind as the field is edited.
+  """
+  @spec printed(map(), atom(), String.t()) :: %{String.t() => String.t()}
+  def printed(entry, field, letters) do
+    for {kind, letter} <- @kinds, kind != :markup, String.contains?(letters, letter), into: %{} do
+      {letter, entry |> print(field, kind) |> IO.iodata_to_binary()}
+    end
+  end
+
+  defp print(entry, field, :value), do: render_value(entry, field)
+  defp print(entry, field, :text), do: render_value(entry, field, [])
+  defp print(entry, field, :rich_text), do: render_value(entry, field, [field])
 end

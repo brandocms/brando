@@ -105,10 +105,13 @@ shows, with the same helper everywhere:
 {% editable entry.cover %}{% picture entry.cover %}{% endeditable %}
 ```
 
-- `editable_field` prints the value: rich-text fields as their HTML, anything
-  else escaped. Use it where the value shows as text, not inside an attribute.
+- `editable_field` prints the value as `{{ }}` prints it: rich-text fields as
+  their sanitized HTML, anything else escaped. A subform row's field reached
+  through its owner (`entry.items[0].text`) prints by the owner's subform.
+  Use it where the value shows as text, not inside an attribute.
   In edit mode the page shows changes to it as they are typed, wherever it is
-  printed, and blocks that read the field render again.
+  printed and by the rule it was printed by, and blocks that read the field
+  render again.
 - `editable` wraps other markup showing the field, such as a picture or a list
   of related entries. The page shows the change once it is saved.
 - `<Brando.HTML.render_rich_text entry={…} field={…} />` marks its field by
