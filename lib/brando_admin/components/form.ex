@@ -7438,6 +7438,15 @@ defmodule BrandoAdmin.Components.Form do
 
       {:error, :forbidden} ->
         refused_drawer_save(socket, "image", validated_changeset)
+
+      # The browser has hidden the drawer already: it closes, and says why
+      {:error, %Changeset{}} ->
+        BrandoAdmin.Toast.send_to(socket.assigns.current_user, gettext("The image details could not be saved"), %{
+          level: :error,
+          type: :notification
+        })
+
+        {:noreply, close_refused_drawer(socket, :editing_image?)}
     end
   end
 

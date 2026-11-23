@@ -20390,6 +20390,11 @@ msgstr ""
 msgid "The image could not be copied for this field"
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The image details could not be saved"
+msgstr ""
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "The image file could not be read"
