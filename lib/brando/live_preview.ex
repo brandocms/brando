@@ -625,7 +625,7 @@ defmodule Brando.LivePreview do
     expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
     authorize = &Brando.Authorization.Preview.authorize_share/2
 
-    with :ok <- authorize_given(changeset, user, authorize),
+    with :ok <- authorize_given(changeset, user, authorize, schema_module, [:create, :export]),
          {:ok, url} <-
            store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, %{}, authorize) do
       {:ok, url, expiry_days}
@@ -662,7 +662,7 @@ defmodule Brando.LivePreview do
 
     authorize = &Brando.Authorization.Preview.authorize_snapshot/2
 
-    with :ok <- authorize_given(changeset, user, authorize),
+    with :ok <- authorize_given(changeset, user, authorize, schema_module, [:create]),
          {:ok, shared_from} <- proposal_shared_from(),
          attrs = Map.put(shared_from, :proposal_id, proposal_id),
          {:ok, url} <- store_pinned(schema_module, changeset, user, %{}, target, expires_at, attrs, authorize) do
@@ -683,9 +683,13 @@ defmodule Brando.LivePreview do
   end
 
   # A changeset is authorized before the asset set is pinned; a builder's
-  # (`share/5`) as it builds it.
-  defp authorize_given(%Ecto.Changeset{} = changeset, user, authorize), do: authorize.(user, changeset)
-  defp authorize_given(build, _user, _authorize) when is_function(build, 1), do: :ok
+  # (`share/5`) as it builds it, after what holds for any new entry of the
+  # type (`actions` on it) is checked before the set is pinned.
+  defp authorize_given(%Ecto.Changeset{} = changeset, user, authorize, _schema, _actions),
+    do: authorize.(user, changeset)
+
+  defp authorize_given(build, user, _authorize, schema_module, actions) when is_function(build, 1),
+    do: Brando.Authorization.Preview.authorize_type(user, Module.concat([schema_module]), actions)
 
   defp with_changeset(%Ecto.Changeset{} = changeset, _user, _authorize, fun), do: fun.(changeset)
 

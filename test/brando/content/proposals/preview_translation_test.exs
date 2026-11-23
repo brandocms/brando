@@ -269,6 +269,44 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
     end
   end
 
+  describe "a translation the proposal creates, shared by one who may not export pages" do
+    alias Brando.Authorization.Catalog, as: Grants
+    alias Brando.Authorization.Groups
+    alias Brando.Authorization.Scope
+
+    setup c do
+      pages = card_pages(c)
+      Brando.Test.Support.put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      Repo.update_all(from(p in Page, where: p.id == ^pages.source.id), set: [status: :draft])
+
+      editor = Factory.insert(:random_user, role: :user)
+
+      grants =
+        Enum.map([:read, :create, :update, :duplicate], &Grants.get(&1, Page).key) ++
+          [Grants.get(:read, Brando.Content.Module).key, "brando.admin.access"]
+
+      {:ok, group} = Groups.create(Scope.standalone(c.user), %{name: "Page editors"}, grants)
+      {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, editor.id)
+      refute Brando.Authorization.Engine.can?(Scope.standalone(editor), :export, Page)
+
+      Map.put(pages, :editor, editor)
+    end
+
+    # Refused before the site's assets are captured for the link
+    test "is refused before anything is captured", c do
+      context = %Context{actor: c.editor, origin: :mcp, client: "Claude Code"}
+      id = prepare!(context, [create_op(c.source)], "Add the English page")
+      {:ok, proposal} = Brando.Content.Proposals.get(id, c.editor)
+      sets = Repo.aggregate(Brando.Assets.SiteAssetSet, :count)
+
+      assert {:error, :forbidden} =
+               Brando.Content.Proposals.Preview.share(proposal, {:new, "english"}, c.editor, preview_target: :blocks)
+
+      assert Repo.aggregate(Brando.Assets.SiteAssetSet, :count) == sets
+    end
+  end
+
   describe "a translation the proposal creates beside the one its link points at" do
     setup c do
       card_pages(c, other_en: false)
