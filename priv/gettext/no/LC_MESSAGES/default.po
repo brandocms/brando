@@ -20392,6 +20392,11 @@ msgstr "Vertsnavnet ble ikke funnet"
 msgid "The image could not be copied for this field"
 msgstr "Bildet kunne ikke kopieres til dette feltet"
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The image details could not be saved"
+msgstr "Bildedetaljene kunne ikke lagres"
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "The image file could not be read"
