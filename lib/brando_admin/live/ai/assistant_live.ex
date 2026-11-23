@@ -812,6 +812,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <span class="assistant-empty-mark" aria-hidden="true"><.icon name="plug" /></span>
       <h2 :if={@connected_empty?}>{gettext("Nothing to review")}</h2>
       <h2 :if={!@connected_empty?}>{gettext("Choose a proposal")}</h2>
+      <.stale_notice :if={@stale} stale={@stale} />
       <p :if={@connected_empty?}>
         {gettext(
           "When a tool connected over MCP, such as Claude Code, prepares content changes as you, they appear here for review. Nothing is saved until you apply them."
@@ -904,18 +905,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       <div :if={@error} class="assistant-feedback is-error" role="alert">{@error}</div>
 
-      <div
-        :if={@stale}
-        class="assistant-feedback is-warning assistant-stale"
-        role="status"
-        id="assistant-stale"
-        data-reason={@stale.reason}
-      >
-        <p>{stale_label(@stale.reason)}</p>
-        <.link :if={@stale[:newest]} patch={"/admin/assistant/connected/#{@stale.newest}"} class="btn">
-          {gettext("Show it")}
-        </.link>
-      </div>
+      <.stale_notice :if={@stale} stale={@stale} />
 
       <div :if={@problems? and !@receipt} class="assistant-feedback is-warning" role="status">
         <p>{gettext("This proposal cannot be applied yet. Ask the assistant to adjust it.")}</p>
@@ -967,7 +957,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         media={@media}
         aliases={@aliases}
         share_url={@share_url}
-        shareable?={page_shareable?(@proposal) and is_nil(@stale)}
+        shareable?={page_shareable?(@proposal) and is_nil(@stale) and !expired?(@proposal)}
       />
 
       <div :if={!@preview and @replacements != []} class="assistant-section-head">
@@ -2531,9 +2521,36 @@ defmodule BrandoAdmin.AI.AssistantLive do
         )
   end
 
+  attr :stale, :map, required: true
+
+  # Why the proposal that was on screen can no longer be acted on, with the
+  # way to its newer version when it was replaced
+  defp stale_notice(assigns) do
+    ~H"""
+    <div
+      class="assistant-feedback is-warning assistant-stale"
+      role="status"
+      id="assistant-stale"
+      data-reason={@stale.reason}
+    >
+      <p>{stale_label(@stale.reason)}</p>
+      <.link :if={@stale[:newest]} patch={"/admin/assistant/connected/#{@stale.newest}"} class="btn">
+        {gettext("Show it")}
+      </.link>
+    </div>
+    """
+  end
+
   # A page link is made for a proposal a review link could still show.
   defp page_shareable?(nil), do: false
   defp page_shareable?(proposal), do: proposal.status in ~w(pending approved applied)
+
+  # Past its deadline a proposal under review can no longer be acted on, and
+  # the server refuses what is sent for it.
+  defp expired?(%{status: status, expires_at: %DateTime{} = at}) when status in ~w(pending approved),
+    do: DateTime.compare(at, DateTime.utc_now()) != :gt
+
+  defp expired?(_proposal), do: false
 
   def terminate(_reason, socket) do
     Proposals.Preview.discard(socket.assigns[:preview_keys] || [])
@@ -2856,11 +2873,22 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   # One that could not be loaded offers only Discard, until it is discarded
-  # or applied elsewhere.
+  # or applied elsewhere. A newer version that replaced it is named in its
+  # place, as for one that could be read.
   defp check_stale(%{assigns: %{proposal: nil, unloadable_id: id}} = socket) when is_binary(id) do
-    if Proposals.discardable?(id, socket.assigns.current_user),
-      do: socket,
-      else: assign(socket, unloadable_id: nil, error: nil)
+    user = socket.assigns.current_user
+
+    if Proposals.discardable?(id, user) do
+      socket
+    else
+      stale =
+        case Proposals.standing(id, user) do
+          {:ok, %{status: "superseded"} = standing} -> stale("pending", standing)
+          _ -> nil
+        end
+
+      assign(socket, unloadable_id: nil, error: nil, stale: stale)
+    end
   end
 
   defp check_stale(socket), do: socket
@@ -3289,7 +3317,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # while something else would remain.
   defp can_leave_out?(assigns) do
     !assigns.shared and is_nil(assigns.receipt) and assigns.proposal.status in ~w(pending approved) and
-      is_nil(assigns[:stale]) and length(assigns.proposal.operations) > 1 and !running?(assigns.run)
+      is_nil(assigns[:stale]) and !expired?(assigns.proposal) and length(assigns.proposal.operations) > 1 and
+      !running?(assigns.run)
   end
 
   defp entry_summary(effects) do

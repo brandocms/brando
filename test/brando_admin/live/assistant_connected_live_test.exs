@@ -208,7 +208,7 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
 
   test "a row stops waiting for review when its deadline passes", %{conn: conn} = c do
     id = prepare(c, "Expires while open")
-    at = expires_in(id, 800)
+    at = expires_in(id, 1500)
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
     assert has_element?(view, row(id) <> " [data-testid=assistant-state-waiting]")
 
@@ -221,7 +221,6 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
   test "a proposal under review expires on time when it is not among the listed rows",
        %{conn: conn, current_user: user} = c do
     id = prepare(c, "Older than the list")
-    at = expires_in(id, 800)
     pending = Repo.get!(Record, id)
 
     # Newer, finished ones fill the list
@@ -234,6 +233,9 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
           inserted_at: DateTime.add(pending.inserted_at, n, :second)
       })
     end
+
+    # Set last, so the rows above and the two pages are in place well before it
+    at = expires_in(id, 2000)
 
     {:ok, chat, _} = live(conn, "/admin/assistant")
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
@@ -262,6 +264,21 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
 
     refute has_element?(view, row(id))
     refute has_element?(view, "#assistant-unloadable")
+  end
+
+  test "an unloadable proposal the tool replaces says so, with the newer version", %{conn: conn} = c do
+    id = prepare(c, "Names a type outside the catalogue")
+    op = %{"op" => "create_entry", "content_type" => "Brando.Sites.GlobalSet", "ref" => "set", "fields" => %{}}
+    Repo.update_all(from(r in Record, where: r.id == ^id), set: [operations: [op]])
+
+    {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+    assert has_element?(view, "#assistant-unloadable")
+
+    newer = prepare(c, "Prepared again", %{"replaces" => id})
+
+    refute has_element?(view, "#assistant-unloadable")
+    assert has_element?(view, "#assistant-stale[data-reason=superseded]")
+    assert has_element?(view, ~s(#assistant-stale a[href="/admin/assistant/connected/#{newer}"]))
   end
 
   test "an approve of a version superseded since is refused", %{conn: conn} = c do

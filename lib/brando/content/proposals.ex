@@ -3826,11 +3826,11 @@ defmodule Brando.Content.Proposals do
   """
   @spec leave_out(Ecto.UUID.t(), integer(), [non_neg_integer()], term()) :: {:ok, Proposal.t()} | {:error, String.t()}
   def leave_out(id, version, indices, actor) do
+    # Storing the next version tells the person's pages, which read the list
+    # and this proposal's standing again
     with {:ok, record} <- Error.protect(fn -> under_review!(id, version, actor) end),
-         {:ok, operations} <- Codec.decode_all(record.operations),
-         {:ok, proposal} <- operations |> remaining_operations(indices) |> propose_remaining(record, id, actor) do
-      changed(id, actor)
-      {:ok, proposal}
+         {:ok, operations} <- Codec.decode_all(record.operations) do
+      operations |> remaining_operations(indices) |> propose_remaining(record, id, actor)
     end
   end
 
