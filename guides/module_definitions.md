@@ -705,7 +705,9 @@ end
 `child` is the UID or the Elixir module name of one of the module's children,
 and `ref` names a `:media`, `:picture` or `:video` ref of that child. Anything
 else is refused, naming the module and what is wrong. Left out, files dropped
-on the module's blocks make no entries.
+on the module's blocks make no entries. A stored setting that no longer fits
+the module's children is left out of an export, so importing the export
+changes nothing.
 
 A table template uses the same var declarations for columns:
 

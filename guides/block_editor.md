@@ -206,9 +206,27 @@ entry of that child module, in the order dropped, with the file in the ref. A
 `media` ref takes an image as a picture and a video as a video, with the ref's
 templates for them; a `picture` ref takes only images and a `video` ref only
 videos. The files upload as a file dropped on the ref does, with the ref's
-upload config. A file the ref does not take, by type or size, makes no entry
-and is listed to the editor; an entry whose upload fails or is cancelled is
-removed again. A file dropped on an entry's own ref still fills only that ref.
+upload config. A file the upload would refuse, by its extension, type or
+size, makes no entry and is listed to the editor, and so are the files of a
+drop the block no longer takes (its setting changed since the page opened)
+and those past the first 20 of one drop, the upload manager's batch. A file
+dropped on an entry's own ref still fills only that ref.
+
+An entry whose upload fails or is cancelled is removed again, wherever it has
+been moved since, as long as it is still exactly as the drop made it. An entry
+someone has changed in the meantime (typed in, or put a file in its ref) stays,
+and the editor is told the upload failed.
+
+The zone is not shown in a synchronized translation, whose blocks follow the
+source, nor in the frontend editor while the block is an ancestor of the block
+being edited.
+
+The setting goes stale when its child module is deleted or moved, or the ref is
+renamed or retyped in the child's editor. The block then shows no zone, the
+definition export leaves the setting out, and the System check (`mix
+brando.doctor`) names the module. The module editor shows the setting with what
+is wrong so it can be chosen again or cleared, and saves of the module's other
+fields still go through. Turning **Allow multiple entries** off clears it.
 
 <!-- usage-rules:start -->
 
