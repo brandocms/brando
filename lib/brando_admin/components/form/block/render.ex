@@ -97,7 +97,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         has_children?={@has_children?}
         paste_multi_module_id={@paste_multi_module_id}
         hidden_block_fields={@hidden_block_fields}
-        media_drop={@media_drop}
+        media_drop={Block.media_drop_open(assigns)}
       >
         <div
           id={"#{@id}-children"}
@@ -1047,7 +1047,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </form>
         <%= if @has_children? do %>
           {render_slot(@inner_block)}
-          <.media_drop_zone :if={@multi && @media_drop && !@source_locked} uid={@uid} media_drop={@media_drop} />
+          <.media_drop_zone :if={@multi && @media_drop} uid={@uid} media_drop={@media_drop} />
           <.plus
             click={@insert_multi_block}
             modal={@module_picker_id}
@@ -1061,7 +1061,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <div class="blocks-empty-instructions">
               {gettext("Click the plus to start adding content blocks")}
             </div>
-            <.media_drop_zone :if={@media_drop && !@source_locked} uid={@uid} media_drop={@media_drop} />
+            <.media_drop_zone :if={@media_drop} uid={@uid} media_drop={@media_drop} />
             <.plus
               click={@insert_multi_block}
               modal={@module_picker_id}

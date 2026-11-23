@@ -19938,7 +19938,12 @@ msgstr "Sjekken kunne ikke kjøres."
 msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
 msgstr "Autentiseringsappen ble fjernet fra %{email}. Kodene fra den logger ikke lenger inn."
 
-#: lib/brando_admin/components/form/block/events.ex
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The block made for the file was kept, as it has been changed since."
+msgstr "Blokken som ble laget for filen, ble beholdt, siden den er endret etterpå."
+
+#: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "The block made for this file shows no field for it, so it was not added."
 msgstr "Blokken som ble laget for denne filen, har ikke noe felt for den, så den ble ikke lagt til."
@@ -22549,7 +22554,12 @@ msgstr "Last opp en ZIP-fil for å gå gjennom endringene før eksisterende modu
 msgid "Upload anyway"
 msgstr "Last opp likevel"
 
-#: lib/brando_admin/components/form/block/events.ex
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Upload cancelled"
+msgstr "Opplasting avbrutt"
+
+#: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
@@ -24686,6 +24696,11 @@ msgstr "modul"
 msgid "modules in this set"
 msgstr "moduler i dette settet"
 
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "more than %{count} files in one drop"
+msgstr "mer enn %{count} filer i ett slipp"
+
 #: lib/brando_admin/live/command_palette_live.ex
 #, elixir-autogen, elixir-format
 msgid "move"
@@ -25159,6 +25174,11 @@ msgstr "deretter"
 #, elixir-autogen, elixir-format
 msgid "then re-renders %{count} entries, %{live} of them live."
 msgstr "og gjengir %{count} oppføringer på nytt, %{live} av dem publisert."
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "this block no longer takes dropped files"
+msgstr "denne blokken tar ikke lenger imot filer som slippes"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format

@@ -54,6 +54,19 @@ function formDataToParams(form) {
 export default app => ({
   mounted() {
     // No recovery on fresh mount — only on reconnect after disconnect
+
+    // An upload handed to a block made for a dropped file has settled
+    // (`MediaDrop`): the field keeps the pending drops, so this reaches it
+    // wherever the block has moved since
+    this.onHandedUploadSettled = (event) => {
+      const { uid, token, failed, error, unavailable } = event.detail
+      this.pushEventTo(this.el, 'media_drop_settled', { uid, token, failed, error, unavailable: !!unavailable })
+    }
+    this.el.addEventListener('brando:handed-upload-settled', this.onHandedUploadSettled)
+  },
+
+  destroyed() {
+    this.el.removeEventListener('brando:handed-upload-settled', this.onHandedUploadSettled)
   },
 
   updated() {

@@ -12,15 +12,18 @@ import { partition } from '../shared/mediaBatch'
  *
  * Per drop:
  *
- *   1. sort out the files the ref does not take (`shared/mediaBatch`) and
- *      report them (`media_drop_rejected`)
+ *   1. sort out the files the ref's upload would refuse
+ *      (`shared/mediaBatch`, by extension as the upload manager checks)
+ *      and report them (`media_drop_rejected`)
  *   2. ask the block for one child per remaining file, in the order dropped
- *      (`media_drop`); the reply names each child's ref field
+ *      (`media_drop`); the reply names each child's ref field and the token
+ *      its upload reports back with
  *   3. hand each file to that field's UploadTrigger (`brando:upload-files`),
  *      so it uploads exactly as a file dropped on the field does
- *   4. a handed upload that fails or is cancelled before the field has its
- *      file (`brando:handed-upload-failed`) removes the child again
- *      (`media_drop_failed`)
+ *   4. the field says when that upload has settled
+ *      (`brando:handed-upload-settled`, bubbling); the block field takes it
+ *      from there (`BlockField` hook, `media_drop_settled`), wherever the
+ *      child has moved since. A field not on the page says so the same way.
  *
  * While a file is dragged over the block, the block carries
  * `data-media-drop="dragging"`, which styles the zone.
@@ -32,7 +35,6 @@ import { partition } from '../shared/mediaBatch'
 export default (app) => ({
   mounted() {
     this.block = this.el.closest('.block')
-    this.handed = new Map()
 
     this.onDragOver = (event) => {
       if (!this.takes(event)) return
@@ -54,18 +56,10 @@ export default (app) => ({
       this.intake(Array.from(event.dataTransfer.files))
     }
 
-    this.onHandedUploadFailed = (event) => {
-      const uid = this.handed.get(event.target.id)
-      if (!uid) return
-      this.handed.delete(event.target.id)
-      this.pushEventTo(this.el, 'media_drop_failed', { uid, error: event.detail.error })
-    }
-
     this.block.addEventListener('dragenter', this.onDragOver)
     this.block.addEventListener('dragover', this.onDragOver)
     this.block.addEventListener('dragleave', this.onDragLeave)
     this.block.addEventListener('drop', this.onDrop)
-    this.block.addEventListener('brando:handed-upload-failed', this.onHandedUploadFailed)
     this.el.addEventListener('click', () => this.openPicker())
   },
 
@@ -75,7 +69,6 @@ export default (app) => ({
     this.block.removeEventListener('dragover', this.onDragOver)
     this.block.removeEventListener('dragleave', this.onDragLeave)
     this.block.removeEventListener('drop', this.onDrop)
-    this.block.removeEventListener('brando:handed-upload-failed', this.onHandedUploadFailed)
   },
 
   takes(event) {
@@ -124,7 +117,7 @@ export default (app) => ({
   },
 
   intake(files) {
-    const { accepted, rejected } = partition(files, this.kinds())
+    const { accepted, rejected } = partition(files, this.kinds(), { byExtension: true })
 
     if (rejected.length) this.pushEventTo(this.el, 'media_drop_rejected', { files: rejected })
     if (!accepted.length) return
@@ -138,19 +131,21 @@ export default (app) => ({
 
   // The reply comes once its render is patched in, so the children's fields
   // are normally there; a few frames more cover a patch still settling.
-  handOver(file, { uid, field }, attempt = 0) {
+  handOver(file, { uid, field, token }, attempt = 0) {
     const trigger = document.getElementById(field)
 
     if (!trigger) {
       if (attempt < 10) {
-        requestAnimationFrame(() => this.handOver(file, { uid, field }, attempt + 1))
+        requestAnimationFrame(() => this.handOver(file, { uid, field, token }, attempt + 1))
       } else {
-        this.pushEventTo(this.el, 'media_drop_failed', { uid, unavailable: true })
+        this.el.dispatchEvent(new CustomEvent('brando:handed-upload-settled', {
+          bubbles: true,
+          detail: { uid, token, failed: true, unavailable: true },
+        }))
       }
       return
     }
 
-    this.handed.set(field, uid)
-    trigger.dispatchEvent(new CustomEvent('brando:upload-files', { detail: { files: [file] } }))
+    trigger.dispatchEvent(new CustomEvent('brando:upload-files', { detail: { files: [file], handover: { uid, token } } }))
   },
 })

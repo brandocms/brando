@@ -85,8 +85,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:source_locked, false)
     # Set by the block field: whether HTML and SVG refs show their markup
     |> assign(:current_user_superuser, false)
-    # Children this block made for dropped files (`insert_media_drop_children/2`)
-    |> assign(:media_drop_uids, MapSet.new())
     |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})
@@ -1141,12 +1139,25 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   @doc """
+  The block's `media_drop` while it takes dropped files, nil otherwise: not
+  in a synchronized translation, whose blocks follow the source, and not
+  while the block is an ancestor of the focused block, which renders only
+  the way down to it and so would show no field for a new child.
+  """
+  def media_drop_open(%{source_locked: true}), do: nil
+  def media_drop_open(%{focus_role: :ancestor}), do: nil
+  def media_drop_open(%{media_drop: media_drop}), do: media_drop
+
+  @doc """
   Appends one child per dropped file to this multi block, in the order of
   `kinds` (`:image` or `:video` per file), each a block of the `media_drop`
   child module with its ref ready for the file
   (`ContentBlocks.build_media_drop_block/5`), put in as "add child" puts
-  one in. Returns the socket and, per file, the child's uid and the id of
-  its ref's upload field (`MediaField`), which the browser hands the file to.
+  one in. Returns the socket and, per file, the child's uid, the id of its
+  ref's upload field (`MediaField`), which the browser hands the file to,
+  and the token that upload reports back with. The block field keeps the
+  pending drops (`BlockField`, "media_drop_pending"), so the cleanup of a
+  failed upload follows a child moved to another block.
   """
   def insert_media_drop_children(socket, kinds) do
     %{module_reference: reference, ref_name: ref_name} = socket.assigns.media_drop
@@ -1164,17 +1175,19 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         uid = Changeset.get_field(block_cs, :uid)
         socket = put_new_child(socket, block_cs, length(socket.assigns.block_list))
-        {socket, [%{uid: uid, field: media_drop_field_id(block_cs, ref_name)} | children]}
+        child = %{uid: uid, field: media_drop_field_id(block_cs, ref_name), token: Brando.Utils.random_string(16)}
+        {socket, [child | children]}
       end)
 
-    uids = MapSet.new(children, & &1.uid)
+    children = Enum.reverse(children)
 
-    socket =
-      socket
-      |> update(:media_drop_uids, &MapSet.union(&1, uids))
-      |> refresh_live_preview()
+    send_update(BlockField,
+      id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",
+      event: "media_drop_pending",
+      children: Enum.map(children, &Map.take(&1, [:uid, :token]))
+    )
 
-    {socket, Enum.reverse(children)}
+    {refresh_live_preview(socket), children}
   end
 
   defp media_drop_field_id(block_cs, ref_name) do

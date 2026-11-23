@@ -19938,7 +19938,12 @@ msgstr ""
 msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
 msgstr ""
 
-#: lib/brando_admin/components/form/block/events.ex
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The block made for the file was kept, as it has been changed since."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "The block made for this file shows no field for it, so it was not added."
 msgstr ""
@@ -22547,7 +22552,12 @@ msgstr ""
 msgid "Upload anyway"
 msgstr ""
 
-#: lib/brando_admin/components/form/block/events.ex
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Upload cancelled"
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
@@ -24684,6 +24694,11 @@ msgstr ""
 msgid "modules in this set"
 msgstr ""
 
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "more than %{count} files in one drop"
+msgstr ""
+
 #: lib/brando_admin/live/command_palette_live.ex
 #, elixir-autogen, elixir-format
 msgid "move"
@@ -25156,6 +25171,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "then re-renders %{count} entries, %{live} of them live."
+msgstr ""
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "this block no longer takes dropped files"
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex

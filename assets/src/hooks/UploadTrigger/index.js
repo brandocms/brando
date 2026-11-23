@@ -114,10 +114,11 @@ export default (app) => ({
 
     // Files handed over by another drop target: a multi block's media drop
     // (`MediaDrop`), which made this field's block for them. They upload as
-    // a file dropped here does; if that fails or is cancelled while the
-    // field is still empty, `brando:handed-upload-failed` says so.
+    // a file dropped here does; `brando:handed-upload-settled` says, with
+    // the handover's uid and token, whether that upload got the field its
+    // file or failed or was cancelled first.
     this.el.addEventListener('brando:upload-files', (e) => {
-      this._handedOver = true
+      this._handover = e.detail.handover || null
       this.intake(Array.from(e.detail.files))
     })
 
@@ -371,16 +372,17 @@ export default (app) => ({
   },
 
   reportHandedOver(state) {
-    if (!this._handedOver || !state) return
-    if (state.status === 'done' || state.status === 'processing' || this.el.dataset.assetId) {
-      this._handedOver = false
-    } else if (state.status === 'error' || state.status === 'cancelled') {
-      this._handedOver = false
-      this.el.dispatchEvent(new CustomEvent('brando:handed-upload-failed', {
-        bubbles: true,
-        detail: { error: state.status === 'error' ? state.error : null },
-      }))
-    }
+    if (!this._handover || !state) return
+    const done = state.status === 'done' || state.status === 'processing' || !!this.el.dataset.assetId
+    const failed = state.status === 'error' || state.status === 'cancelled'
+    if (!done && !failed) return
+
+    const handover = this._handover
+    this._handover = null
+    this.el.dispatchEvent(new CustomEvent('brando:handed-upload-settled', {
+      bubbles: true,
+      detail: { ...handover, failed: !done, error: state.status === 'error' ? state.error : null },
+    }))
   },
 
   recentFolders() {
