@@ -185,6 +185,14 @@ defmodule Brando.MCP.FigmaTest do
     picture
   end
 
+  # Noise in shades of gray: as few colours as its spread gives
+  defp gray_noise(width, height, sigma) do
+    gray = noise(width, height, 1, sigma)
+    {:ok, joined} = Operation.bandjoin([gray, gray, gray])
+    {:ok, picture} = Operation.copy(joined, interpretation: :VIPS_INTERPRETATION_sRGB)
+    picture
+  end
+
   defp png(picture), do: Picture.write!(picture, :memory, suffix: ".png")
   defp jpeg(picture), do: Picture.write!(picture, :memory, suffix: ".jpg", quality: 95)
 
@@ -1467,8 +1475,11 @@ defmodule Brando.MCP.FigmaTest do
     end
 
     test "with fit, a single-frame GIF without transparency is stored as a JPEG", %{tenant: tenant, token: token} do
-      # Little noise: Vix reads this GIF with an alpha band, opaque here
-      original = gif(noise(200, 100, 3, 1.0))
+      # A few shades leave the palette entries to spare, and libvips writes
+      # one as transparent: Vix reads the GIF with an alpha band, opaque here.
+      # Colour noise drew 254 to 281 colours, and a GIF of one that filled
+      # its palette had no alpha band.
+      original = gif(gray_noise(200, 100, 1.0))
       assert original |> Picture.from_binary!() |> Picture.has_alpha?()
       jpeg = original |> Picture.from_binary!() |> Picture.flatten!() |> jpeg()
       assert byte_size(jpeg) * 1.3 < byte_size(original)

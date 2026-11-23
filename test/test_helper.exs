@@ -6,7 +6,8 @@ alias BrandoIntegration.Repo, as: Repo
 File.rm_rf!(Application.fetch_env!(:brando, :media_path))
 File.mkdir_p!(Application.fetch_env!(:brando, :media_path))
 
-BrandoIntegration.Repo.start_link()
+# Emptied and seeded first, unless another session uses the database
+:ok = Brando.Test.Database.start_repo!()
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
