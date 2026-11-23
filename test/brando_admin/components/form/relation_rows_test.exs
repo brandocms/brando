@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
 
   alias Brando.Repo
   alias BrandoAdmin.Components.Form.RelationRows
+  alias BrandoAdmin.Components.Form.RowEdits
   alias Ecto.Changeset
 
   defmodule Tag do
@@ -132,6 +133,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       field :rank, :integer
       # Set by the changeset, not typed: a new row gets another each cast
       field :uid, :string
+      field :meta, :map
     end
 
     def changeset(quote, params) do
@@ -529,13 +531,26 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     # The browser's rows, in the order it sends them
     defp form_rows(rows), do: rows |> Enum.with_index() |> Map.new(fn {row, n} -> {to_string(n), row} end)
 
-    defp kept_texts(saved, previous, base) do
-      saved
-      |> Changeset.change()
-      |> RelationRows.keep(previous, base, :quotes)
-      |> Changeset.get_field(:quotes)
-      |> Enum.map(& &1.text)
+    # What the form recorded of the editor's own edits (`RowEdits`)
+    defp edits(opts) do
+      %{
+        RowEdits.empty()
+        | typed: Map.new(opts[:typed] || [], fn {key, fields} -> {key, MapSet.new(fields)} end),
+          added: MapSet.new(opts[:added] || []),
+          removed: MapSet.new(opts[:removed] || []),
+          moved?: opts[:moved?] || false
+      }
     end
+
+    defp kept_list(saved, previous, edits, keys \\ %{}),
+      do: saved |> Changeset.change() |> RelationRows.keep_list(previous, :quotes, edits(edits), keys)
+
+    defp kept_texts(saved, previous, edits, keys \\ %{}) do
+      {kept, _renamed} = kept_list(saved, previous, edits, keys)
+      kept |> Changeset.get_field(:quotes) |> Enum.map(& &1.text)
+    end
+
+    defp saved_rows(base), do: for(%{id: id, text: text} <- base.quotes, do: %{"id" => id, "text" => text})
 
     # B moved the third row first and changed the first; A's save added a
     # row at the end, after the third, and one after the first
@@ -553,7 +568,8 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       [one, two, three] = base.quotes
       saved = %{base | quotes: [one, %Quote{id: "5", text: "Five by A"}, two, three, %Quote{id: "4", text: "Four by A"}]}
 
-      assert kept_texts(saved, previous, base) == ["Three", "Four by A", "One by B", "Five by A", "Two"]
+      assert kept_texts(saved, previous, typed: [{"id-1", [:text]}], moved?: true) ==
+               ["Three", "Four by A", "One by B", "Five by A", "Two"]
     end
 
     # B added a row after the first and changed the third; A's save moved
@@ -565,7 +581,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
           "quotes" =>
             form_rows([
               %{"id" => "1", "text" => "One"},
-              %{"text" => "New by B"},
+              %{"_key" => "new-b", "text" => "New by B"},
               %{"id" => "2", "text" => "Two"},
               %{"id" => "3", "text" => "Three by B"}
             ])
@@ -574,7 +590,28 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       [one, two, three] = base.quotes
       saved = %{base | quotes: [two, one, three]}
 
-      assert kept_texts(saved, previous, base) == ["Two", "One", "New by B", "Three by B"]
+      assert kept_texts(saved, previous, added: ["new-b"], typed: [{"id-3", [:text]}]) ==
+               ["Two", "One", "New by B", "Three by B"]
+    end
+
+    # B's form holds a value another editor sent for the first row: not
+    # B's edit, so the save's value wins. B's own in the second stays.
+    test "a value the form only received takes the saved value", %{base: base} do
+      [one, two, three] = base.quotes
+
+      previous =
+        Board.changeset(base, %{
+          "quotes" =>
+            form_rows([
+              %{"id" => "1", "text" => "One y"},
+              %{"id" => "2", "text" => "Two by B"},
+              %{"id" => "3", "text" => "Three"}
+            ])
+        })
+
+      saved = %{base | quotes: [%{one | text: "One z"}, two, three]}
+
+      assert kept_texts(saved, previous, typed: [{"id-2", [:text]}]) == ["One z", "Two by B", "Three"]
     end
 
     test "rows without a key are kept whole", %{base: base} do
@@ -590,32 +627,46 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       refute RelationRows.embedded_rows?(saved, previous, unsaved, :quotes)
     end
 
-    # B added a fourth quote and the other editors were sent it; A's save
-    # wrote it, with a key and a value the cast sets (`uid`) of its own.
-    # B typed on in it after it was sent.
-    test "a new row the others were sent, which the save wrote, is that saved row once", %{base: base} do
-      rows = for {id, text} <- [{"1", "One"}, {"2", "Two"}, {"3", "Three"}], do: %{"id" => id, "text" => text}
-      shipped = Board.changeset(base, %{"quotes" => form_rows(rows ++ [%{"_key" => "new-1", "text" => "Four"}])})
-      previous = Board.changeset(base, %{"quotes" => form_rows(rows ++ [%{"_key" => "new-1", "text" => "Four on"}])})
-      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4", text: "Four", uid: "stored"}]}
+    # B added a fourth quote and typed in it; A's save wrote it, with a key
+    # and a value the cast sets (`uid`) of its own, and maps B's key to it.
+    test "a new row the save wrote is that saved row once, by its key", %{base: base} do
+      previous =
+        Board.changeset(base, %{"quotes" => form_rows(saved_rows(base) ++ [%{"_key" => "new-1", "text" => "Four on"}])})
 
-      kept = saved |> Changeset.change() |> RelationRows.keep(previous, base, :quotes, shipped.changes.quotes)
+      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4", text: "Four", uid: "stored"}]}
+      keys = %{"new-1" => "id-4"}
+
+      {kept, renamed} = kept_list(saved, previous, [added: ["new-1"], typed: [{"new-1", [:text]}]], keys)
       quotes = Changeset.get_field(kept, :quotes)
 
       assert Enum.map(quotes, &{&1.id, &1.text}) == [{"1", "One"}, {"2", "Two"}, {"3", "Three"}, {"4", "Four on"}]
       assert [%{uid: "stored"}] = Enum.filter(quotes, &(&1.id == "4"))
+      assert renamed == %{"new-1" => "id-4"}
 
-      # Not typed on: the row is the one sent
-      kept = saved |> Changeset.change() |> RelationRows.keep(shipped, base, :quotes, shipped.changes.quotes)
-      assert kept |> Changeset.get_field(:quotes) |> Enum.map(& &1.id) == ["1", "2", "3", "4"]
+      # Not typed in since: the row is the saved one
+      assert kept_texts(saved, previous, [added: ["new-1"]], keys) == ["One", "Two", "Three", "Four"]
     end
 
-    test "a row B added and not sent stays a new row beside the one the save added", %{base: base} do
-      rows = for {id, text} <- [{"1", "One"}, {"2", "Two"}, {"3", "Three"}], do: %{"id" => id, "text" => text}
-      previous = Board.changeset(base, %{"quotes" => form_rows(rows ++ [%{"_key" => "new-1", "text" => "Four by B"}])})
-      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4", text: "Four by A"}]}
+    # Both hold only defaults: a row is told by its key, not what it holds
+    test "a row B added stays a new row beside the one the save added, though both are empty", %{base: base} do
+      previous = Board.changeset(base, %{"quotes" => form_rows(saved_rows(base) ++ [%{"_key" => "new-b"}])})
+      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4"}]}
 
-      assert kept_texts(saved, previous, base) == ["One", "Two", "Three", "Four by B", "Four by A"]
+      {kept, renamed} = kept_list(saved, previous, [added: ["new-b"]], %{"new-a" => "id-4"})
+
+      assert kept |> Changeset.get_field(:quotes) |> Enum.map(&{&1.id, &1.text}) ==
+               [{"1", "One"}, {"2", "Two"}, {"3", "Three"}, {nil, nil}, {"4", nil}]
+
+      assert renamed == %{}
+    end
+
+    # Another editor's new row B received, which the save doesn't hold; and
+    # the same with no saver's map (a rewrite no form made)
+    test "a new row B only received goes unless the save has no map of its rows", %{base: base} do
+      previous = Board.changeset(base, %{"quotes" => form_rows(saved_rows(base) ++ [%{"_key" => "new-c", "text" => "By C"}])})
+
+      assert kept_texts(base, previous, [typed: [{"id-1", [:text]}]], %{}) == ["One", "Two", "Three"]
+      assert kept_texts(base, previous, [typed: [{"id-1", [:text]}]], nil) == ["One", "Two", "Three", "By C"]
     end
 
     # B typed a value the rank can't take in the second row; A's save
@@ -634,13 +685,25 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
             ])
         })
 
-      carried = %{base | quotes: [one, three]} |> Changeset.change() |> RelationRows.keep(previous, base, :quotes)
+      {carried, renamed} = kept_list(%{base | quotes: [one, three]}, previous, typed: [{"id-2", [:rank]}])
 
       assert [row] = Enum.filter(carried.changes.quotes, &(&1.action == :insert))
       assert Keyword.has_key?(row.errors, :rank)
       assert row.params["rank"] == "abc"
       refute row.valid?
       refute carried.valid?
+      assert %{"id-2" => "new-" <> _} = renamed
+    end
+
+    # A map field read back from the database has string keys; the form may
+    # hold the row as written, with atom keys
+    test "rows compare as stored", %{base: base} do
+      [one | _] = base.quotes
+
+      assert RelationRows.stored([%{one | meta: %{source: "a"}}]) ==
+               RelationRows.stored([%{one | meta: %{"source" => "a"}}])
+
+      refute RelationRows.stored([%{one | meta: %{source: "a"}}]) == RelationRows.stored([%{one | meta: %{"source" => "b"}}])
     end
   end
 

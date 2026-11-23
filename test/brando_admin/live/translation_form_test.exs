@@ -1665,6 +1665,65 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert {saved.year, saved.title, hd(texts(saved))} == {2030, "Tittel", "Typed paragraph"}
     end
 
+    defp shown_quotes(view) do
+      rows = view |> render() |> form_params("#article_form_form") |> get_in(["article", "quotes"])
+      for {_, row} <- Enum.sort_by(rows || %{}, &String.to_integer(elem(&1, 0))), do: row["text"]
+    end
+
+    defp type_quote(view, index, text) do
+      path = ["article", "quotes", to_string(index), "text"]
+      form = with_target(view, cid_of(view, "#article_form-el"))
+      form |> render_hook("focus", %{"field" => "article[quotes][#{index}][text]"})
+      params = view |> render() |> form_params("#article_form_form") |> put_in(path, text)
+      view |> element("#article_form_form") |> render_change(Map.put(params, "_target", path))
+    end
+
+    # The form is behind with typing in a quote when the other editor's save
+    # of the quotes comes, which waits for it to leave them. The button
+    # loads the session's version with the quotes as saved, now: the
+    # editor's typing in them goes, as in any field, and leaving them later
+    # changes nothing.
+    test "a form behind in the quotes loads the session's version with the saved quotes", %{conn: conn} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{
+            title: "Sitater",
+            slug: "sitater",
+            language: "no",
+            status: "published",
+            year: 2020,
+            quotes: [%{text: "En"}, %{text: "To"}]
+          },
+          c.current_user
+        )
+
+      TranslationFixtures.add_block(source, c.module, c.current_user, "Første avsnitt", 0)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, c.current_user, mark_translate: false)
+      translate(target, ["First paragraph"])
+      c = %{c | source: source, target: target}
+
+      first = change_source(c)
+      view = open_version(conn, target.id, first)
+      {_other, other_conn} = other_conn()
+      other = open_version(other_conn, target.id, first)
+      type_quote(other, 0, "One by other")
+
+      type_quote(view, 1, "Two by view")
+      change_source_again(c, 2030)
+      save_and_stay(view)
+      await_selector(view, "input[name='article[year]'][value='2030']", 3_000)
+      third = Translations.get_pending_version(Article, target.id)
+      await_selector(other, "#translation-panel [data-translation-behind]")
+      assert shown_quotes(other) == ["One by other", "To"]
+
+      load_session_version(other)
+      await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
+      assert shown_quotes(other) == ["En", "Two by view"]
+
+      other |> with_target(cid_of(other, "#article_form-el")) |> render_hook("blur", %{})
+      assert shown_quotes(other) == ["En", "Two by view"]
+    end
+
     # The session moves on twice while the form is behind: the button loads
     # the latest version.
     test "a form behind twice in a row loads the latest version", %{conn: conn} = c do

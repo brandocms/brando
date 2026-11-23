@@ -11,6 +11,7 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
   use Brando.LiveCase
 
   import Brando.EditSessionEditors, only: [await: 1]
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.SyncTest
   alias Brando.SyncTest.Article
@@ -30,10 +31,11 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
 
     other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
     path = "/admin/articles/update/#{article.id}"
+    b_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
     {a, _} = live_form(conn, path, "article_form")
-    {b, _} = live_form(log_in_user(Phoenix.ConnTest.build_conn(), other), path, "article_form")
+    {b, _} = live_form(b_conn, path, "article_form")
 
-    %{article: article, a: a, b: b}
+    %{article: article, a: a, b: b, b_conn: b_conn, path: path}
   end
 
   defp form_of(view), do: with_target(view, cid_of(view, "#article_form-el"))
@@ -82,6 +84,21 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
   end
 
   defp stored(article), do: Enum.map(Repo.get!(Article, article.id).quotes, & &1.text)
+
+  # B's recovery copy, as its browser captures the form it shows
+  defp capture(view) do
+    main = view |> render() |> form_params("#article_form_form") |> Plug.Conn.Query.encode()
+    view |> form_of() |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+  end
+
+  defp latest_copy(article) do
+    Repo.one(
+      from d in Brando.Drafts.EntryDraft,
+        where: d.entry_id == ^article.id and is_nil(d.resolved_at),
+        order_by: [desc: d.id],
+        limit: 1
+    )
+  end
 
   # A saves; B's form shows `shown` once the save reaches it and B has left
   # the field, and B's save stores it.
@@ -198,6 +215,111 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
     remove(c.a, c.article, "Three")
     a_saves_then_b(c, ["One by A", "Two"])
     assert Repo.get!(Article, c.article.id).title == "Title by B"
+  end
+
+  # What B's form holds because A sent it is A's, not B's: A's save of it
+  # wins, whatever B typed elsewhere in the list.
+  describe "a quote B only received" do
+    test "a new one A changed and saved takes A's saved text", c do
+      add(c.a)
+      focus(c.a, 3)
+      type(c.a, 3, "Al")
+      leave(c.a)
+      await(fn -> quotes(c.b) == ["One", "Two", "Three", "Al"] end)
+
+      focus(c.b, 0)
+      type(c.b, 0, "One by B")
+
+      focus(c.a, 3)
+      type(c.a, 3, "Alpha")
+      a_saves_then_b(c, ["One by B", "Two", "Three", "Alpha"])
+    end
+
+    test "a saved one A changed again and saved takes A's saved text", c do
+      focus(c.a, 0)
+      type(c.a, 0, "One y")
+      leave(c.a)
+      await(fn -> quotes(c.b) == ["One y", "Two", "Three"] end)
+
+      focus(c.b, 1)
+      type(c.b, 1, "Two by B")
+
+      focus(c.a, 0)
+      type(c.a, 0, "One z")
+      a_saves_then_b(c, ["One z", "Two by B", "Three"])
+    end
+  end
+
+  # A new row is told by its key alone (`_key`), which the saver maps to
+  # the row it wrote; never by what it holds.
+  describe "a new quote" do
+    # Each adds one while B is in the list; A is in it too, and holds B's
+    # until it leaves, so A's save is without it.
+    test "each editor added and left empty stays, one each", c do
+      focus(c.b, 0)
+      type(c.b, 0, "One by B")
+
+      focus(c.a, 0)
+      add(c.a)
+      add(c.b)
+      type(c.b, 0, "One by B, on")
+
+      save(c.a)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", nil] end)
+      settle(c.b)
+      leave(c.b)
+      await(fn -> quotes(c.b) == ["One by B, on", "Two", "Three", "", ""] end)
+
+      save(c.b)
+      await(fn -> stored(c.article) == ["One by B, on", "Two", "Three", nil, nil] end)
+    end
+
+    # A is in the list when B's last change to its row comes, and saves the
+    # row as B sent it before
+    test "B changed after A had it is in B's form once, with B's text", c do
+      add(c.b)
+      focus(c.b, 3)
+      type(c.b, 3, "Four by B")
+      leave(c.b)
+      await(fn -> quotes(c.a) == ["One", "Two", "Three", "Four by B"] end)
+
+      focus(c.a, 0)
+      focus(c.b, 3)
+      type(c.b, 3, "Four by B, on")
+      leave(c.b)
+
+      save(c.a)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by B"] end)
+      settle(c.b)
+      assert quotes(c.b) == ["One", "Two", "Three", "Four by B, on"]
+
+      save(c.b)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by B, on"] end)
+    end
+  end
+
+  # B's tab drops while A's save waits for B to leave the quotes; the
+  # reopened form offers the recovery copy B's browser captured then. The
+  # copy holds the rows B's form showed, not the saved ones: restoring it
+  # asks for a review first rather than putting the old rows over A's save.
+  test "B's recovery copy captured while A's save waits doesn't put the old rows back", c do
+    focus(c.b, 1)
+    type(c.b, 1, "Two by B")
+
+    focus(c.a, 0)
+    remove(c.a, c.article, "One")
+    save(c.a)
+    await(fn -> stored(c.article) == ["Two", "Three"] end)
+    settle(c.b)
+
+    capture(c.b)
+    await(fn -> latest_copy(c.article) != nil end)
+    kill_live(c.b)
+
+    {b, _} = live_form(c.b_conn, c.path, "article_form")
+    b |> form_of() |> render_hook("draft_restore", %{"id" => latest_copy(c.article).id})
+    settle(b)
+    assert quotes(b) == ["Two", "Three"]
   end
 
   # A row another editor added reaches B through field sync without a key:
