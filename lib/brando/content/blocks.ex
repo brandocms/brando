@@ -711,6 +711,13 @@ defmodule Brando.Content.Blocks do
   A row is written once, by the first schema whose pass finds the link. An
   entry rendered for it is rendered for each of `modules` on the same table
   too, whichever of them came first.
+
+  Forms open on an entry whose rows were rewritten are told, as of a save,
+  once the transaction around the rewrite commits, and not when it rolls
+  back or the schema's step fails. That needs a transaction begun with
+  `Brando.Repo.transaction/1`: in one begun on the application's Ecto repo
+  directly, they are told at once, before the commit, and also when it
+  rolls back.
   """
   def update_identifier_links_in_rich_text_fields(identifier_id, new_url, modules \\ identifier_link_modules()) do
     if RichText.allowed_uri?(new_url) do
@@ -906,10 +913,21 @@ defmodule Brando.Content.Blocks do
       end)
       |> Enum.uniq()
 
-    Enum.each(entries, &announce_rewritten/1)
+    # In a caller's transaction, told once the renders are queued: a failure
+    # rolls the step back to its savepoint, and its entries are as they were.
+    # Outside one, each row has committed by itself, renders or not.
+    if Repo.repo().in_transaction?() do
+      enqueue_rewritten_for_render(entries)
+      Enum.each(entries, &announce_rewritten/1)
+    else
+      Enum.each(entries, &announce_rewritten/1)
+      enqueue_rewritten_for_render(entries)
+    end
+  end
 
-    # Only entries the render can load: a row of a schema without a context
-    # function of its own is evicted, not rendered.
+  # Only entries the render can load: a row of a schema without a context
+  # function of its own is evicted, not rendered.
+  defp enqueue_rewritten_for_render(entries) do
     case Enum.filter(entries, fn {schema, _id} -> Brando.Blueprint.EntryQuery.loadable?(schema) end) do
       [] -> :ok
       entries -> entries |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> enqueue_entry_map_for_render()
@@ -919,14 +937,13 @@ defmodule Brando.Content.Blocks do
   # Open forms on the entry take the rewritten rows as they take another
   # editor's save (`take_saved_entry` in the admin Form), keeping what the
   # editor changed. Saved by no editor, so no tab is left out. Once the
-  # rewrite has committed: the forms read the entry again.
+  # rewrite has committed: the forms read the entry again. The topic is the
+  # rewrite's environment, which may not be the one current at the commit.
   defp announce_rewritten({schema, id}) do
+    topic = Brando.Tenant.Topic.entry("field_sync", schema, id)
+
     Repo.after_commit(fn ->
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        Brando.Tenant.Topic.entry("field_sync", schema, id),
-        {:entry_saved, %{tab: nil, user_id: nil}}
-      )
+      Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:entry_saved, %{tab: nil, user_id: nil}})
     end)
   end
 
