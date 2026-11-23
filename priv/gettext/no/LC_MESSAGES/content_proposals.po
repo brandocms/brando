@@ -448,6 +448,41 @@ msgstr "Filen til bilde %{new} leveres gjennom et annet CDN enn feltet til bilde
 msgid "Image %{old}'s field takes %{types}; the file of image %{new} is %{type}."
 msgstr "Feltet til bilde %{old} tar %{types}; filen til bilde %{new} er %{type}."
 
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: %{reason} It waits for review."
+msgstr "Det ble ikke tatt i bruk automatisk: %{reason} Det venter på gjennomgang."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: a translation it creates would not be an unpublished draft. It waits for review."
+msgstr "Det ble ikke tatt i bruk automatisk: en oversettelse det oppretter ville ikke blitt et upublisert utkast. Det venter på gjennomgang."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: applying it failed. It waits for review."
+msgstr "Det ble ikke tatt i bruk automatisk: det feilet. Det venter på gjennomgang."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: only a connected tool, on a connection that is still allowed to, can apply without review. It waits for review."
+msgstr "Det ble ikke tatt i bruk automatisk: bare et tilkoblet verktøy, på en tilkobling som fortsatt har lov, kan ta i bruk uten gjennomgang. Det venter på gjennomgang."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: only a proposal whose every operation is create_translation, or translate of a translation it creates ({\"new\": ref}), is. It waits for review."
+msgstr "Det ble ikke tatt i bruk automatisk: bare et forslag der hver operasjon er create_translation, eller translate av en oversettelse det oppretter ({\"new\": ref}), blir det. Det venter på gjennomgang."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: the person may not review proposals (Assistant → Use). It waits for review."
+msgstr "Det ble ikke tatt i bruk automatisk: personen kan ikke gå gjennom forslag (Assistent → Bruke). Det venter på gjennomgang."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
+msgid "It was not applied automatically: this connection is not set to apply unpublished translations without review. It waits for review; a site manager can change that under Configuration → Integrations → Connected AI tools."
+msgstr "Det ble ikke tatt i bruk automatisk: denne tilkoblingen er ikke satt til å ta i bruk upubliserte oversettelser uten gjennomgang. Det venter på gjennomgang; en som administrerer nettstedet kan endre det under Konfigurasjon → Integrasjoner → Tilkoblede AI-verktøy."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Markdown"
