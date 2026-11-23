@@ -1721,14 +1721,16 @@ defmodule Brando.Villain.Parser do
 
   # The key says which entry, image or file the var holds; the loaded struct
   # is a cache of it, which a change of the key does not replace (a save cast
-  # onto the saved row, a translation relinked). One that no longer matches
-  # is read again by its key, as a video is (`process_var/1`).
+  # onto the saved row, a translation relinked). One that no longer matches,
+  # or was empty when the key was set, is read again by its key, as a video
+  # is (`process_var/1`).
   defp unload_moved_relations(%Brando.Content.Var{} = var) do
     Enum.reduce([identifier: :identifier_id, image: :image_id, file: :file_id], var, fn {name, key}, var ->
       case {Map.get(var, name), Map.get(var, key)} do
         {%{id: id}, id} -> var
         {%{id: _}, nil} -> Map.put(var, name, nil)
         {%{id: _}, _} -> Map.put(var, name, not_loaded(name))
+        {nil, id} when not is_nil(id) -> Map.put(var, name, not_loaded(name))
         _ -> var
       end
     end)
