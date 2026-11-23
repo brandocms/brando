@@ -3550,9 +3550,10 @@ defmodule Brando.Content.Proposals do
 
   defp topic(actor), do: Brando.Tenant.Topic.scoped("brando:proposals:#{user!(actor).id}")
 
+  # Told once committed: a subscriber reads the proposal again at once.
   defp changed(id, actor) do
-    Phoenix.PubSub.broadcast(Brando.pubsub(), topic(actor), {__MODULE__, :changed, id})
-    :ok
+    topic = topic(actor)
+    Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {__MODULE__, :changed, id}) end)
   end
 
   ## A connected tool's own proposals

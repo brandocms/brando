@@ -76,6 +76,19 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert has_element?(view, row(id), "From a new connection")
   end
 
+  test "a change is told once it is committed", %{current_user: user} = c do
+    id = prepare(c, "Cancelled in a transaction")
+    :ok = Proposals.subscribe(user)
+
+    {:ok, _} =
+      Brando.Repo.transaction(fn ->
+        :ok = Proposals.cancel(id, user)
+        refute_received {Proposals, :changed, ^id}
+      end)
+
+    assert_received {Proposals, :changed, ^id}
+  end
+
   test "each status change shows without a reload", %{conn: conn, current_user: user} = c do
     applied = prepare(c, "Applied one")
     {:ok, view, _} = live(conn, "/admin/assistant/connected")
