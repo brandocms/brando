@@ -287,13 +287,17 @@ defmodule Brando.MCP do
 
         {:ok, setting} =
           Repo.transaction(fn ->
-            lock_switch(tenant, "pg_advisory_xact_lock")
+            setting =
+              Repo.insert!(setting,
+                on_conflict: [set: [enabled: enabled?, changed_by_id: actor.id, updated_at: now]],
+                conflict_target: {:unsafe_fragment, "(coalesce(site_id, 0), coalesce(environment_id, 0))"},
+                returning: true
+              )
 
-            Repo.insert!(setting,
-              on_conflict: [set: [enabled: enabled?, changed_by_id: actor.id, updated_at: now]],
-              conflict_target: {:unsafe_fragment, "(coalesce(site_id, 0), coalesce(environment_id, 0))"},
-              returning: true
-            )
+            # Taken after the write, which may wait for a Figma token refresh
+            # holding the row: applies keep going until then
+            lock_switch(tenant, "pg_advisory_xact_lock")
+            setting
           end)
 
         revoked = if enabled?, do: 0, else: revoke_tenant_grants(tenant, actor)
