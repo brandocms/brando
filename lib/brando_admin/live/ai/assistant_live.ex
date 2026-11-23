@@ -81,7 +81,6 @@ defmodule BrandoAdmin.AI.AssistantLive do
        connected: [],
        connected_count: 0,
        connections: %{},
-       watched: MapSet.new(),
        expiry_timer: nil,
        stale: nil
      )}
@@ -2260,16 +2259,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
-  # A connected tool stored or cancelled a proposal (`Brando.MCP.Watch`),
-  # or the person applied, undid, discarded or narrowed one, here or in
-  # another tab. The event says only that something changed: what the page
-  # shows is read again as it is read when the page opens.
-  def handle_info({Watch, %{state: :ok, tool: tool}}, socket) do
-    if Watch.short_name(tool) in ~w(prepare_proposal cancel_proposal),
-      do: {:noreply, refresh_connected(socket)},
-      else: {:noreply, socket}
-  end
-
+  # A connected tool stored or cancelled a proposal, or the person applied,
+  # undid, discarded or narrowed one, here or in another tab. The event says
+  # only that something changed: what the page shows is read again as it is
+  # read when the page opens.
   def handle_info({Proposals, :changed, _id}, socket), do: {:noreply, refresh_connected(socket)}
 
   def handle_info({__MODULE__, :expiry}, socket),
@@ -2775,14 +2768,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     socket
     |> assign(connected: Proposals.list_external(user), connected_count: Proposals.count_external(user))
-    |> watch_connections()
+    |> assign_connections()
     |> schedule_expiry()
   end
 
-  # The person's connections to this site environment: the page follows
-  # their calls, as their live pages do (`Brando.MCP.Watch`), and links each
-  # proposal to the live page of the newest connection of its client.
-  defp watch_connections(socket) do
+  # The person's connections to this site environment: each proposal links
+  # to the live page (`Brando.MCP.Watch`) of the newest connection of its
+  # client. Read with the list, so a connection made since is linked too.
+  defp assign_connections(socket) do
     site_id = socket.assigns[:current_site] && socket.assigns.current_site.id
     environment_id = socket.assigns[:current_environment] && socket.assigns.current_environment.id
 
@@ -2791,16 +2784,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
           grant.site_id == site_id and grant.environment_id == environment_id,
           do: grant
 
-    ids = MapSet.new(grants, & &1.id)
-
-    if connected?(socket) do
-      Enum.each(MapSet.difference(ids, socket.assigns.watched), &Watch.subscribe/1)
-      Enum.each(MapSet.difference(socket.assigns.watched, ids), &Watch.unsubscribe/1)
-    end
-
     # Newest first: the first of a client is its newest connection
     connections = grants |> Enum.reverse() |> Map.new(&{&1.client_name, Watch.path(&1)})
-    assign(socket, connections: connections, watched: if(connected?(socket), do: ids, else: MapSet.new()))
+    assign(socket, :connections, connections)
   end
 
   # A proposal expires with time, not with a write: the list and the open

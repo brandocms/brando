@@ -65,6 +65,17 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert has_element?(chat, ".assistant-connected-link .assistant-count", "1")
   end
 
+  test "a proposal from a connection made after the page opened appears", %{conn: conn, current_user: user} = c do
+    {:ok, view, _} = live(conn, "/admin/assistant/connected")
+    assert has_element?(view, ".assistant-connected-empty")
+
+    # The tool signs in again: a new connection the page has never read
+    tokens = connect_directly(user, c.tenant)
+    id = prepare(%{c | token: token(tokens)}, "From a new connection")
+
+    assert has_element?(view, row(id), "From a new connection")
+  end
+
   test "each status change shows without a reload", %{conn: conn, current_user: user} = c do
     applied = prepare(c, "Applied one")
     {:ok, view, _} = live(conn, "/admin/assistant/connected")
@@ -196,7 +207,6 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
       })
 
     # Even told of them, the page reads the list as it opens it
-    send(view.pid, {Watch, %{id: "x", tool: "brando_content_prepare_proposal", state: :ok, at: DateTime.utc_now()}})
     send(view.pid, {Proposals, :changed, elsewhere.id})
 
     refute has_element?(view, row(theirs))

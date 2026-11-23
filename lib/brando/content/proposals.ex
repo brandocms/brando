@@ -3239,6 +3239,7 @@ defmodule Brando.Content.Proposals do
         {Repo.insert!(new_record(proposal, previous, opts)), previous}
       end)
 
+    changed(record.id, actor)
     %{with_record(proposal, record) | supersedes_summary: previous && previous.summary}
   end
 
@@ -3538,11 +3539,11 @@ defmodule Brando.Content.Proposals do
   end
 
   @doc """
-  Subscribes the caller to the changes the actor makes to their proposals
-  in this site/environment outside a connected tool's calls: an apply, an
-  undo, a discard, and a change left out, which stores a new version. Each
-  comes as `{Brando.Content.Proposals, :changed, id}`. A connected tool's
-  calls are told on its connection's live topic (`Brando.MCP.Watch`).
+  Subscribes the caller to the changes to the actor's proposals in this
+  site/environment, whoever makes them: a proposal stored, by a connected
+  tool or the Assistant, which may supersede an earlier version; an apply,
+  an undo, a discard or a cancel; and a change left out, which stores a new
+  version. Each comes as `{Brando.Content.Proposals, :changed, id}`.
   """
   @spec subscribe(term()) :: :ok | {:error, term()}
   def subscribe(actor), do: Phoenix.PubSub.subscribe(Brando.pubsub(), topic(actor))
