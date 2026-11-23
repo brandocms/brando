@@ -25,6 +25,15 @@ defmodule Brando.Content.Definition.Plan do
   removes colours, `keys` are `{:color, key}` and `blocks` those that use
   the palette: CSS that reads a removed colour is the author's to change.
 
+  For a module update that carries out renames its file declares
+  (`Brando.Content.Definition.Renames`), `moves`: the `renames` (each with
+  how many `blocks` and `entries` hold its source), the `blocks`, the
+  `entries` and how many of them keep no revisions (`unrevisioned`), and
+  what is `refused` (a refusal makes the item `:migration_required`). What a
+  rename moves is not in `removes`. `remaps` are the declared renames the
+  update leaves to a resolve, each with `ok?`: whether `resolve --map`
+  would move them after the apply.
+
   `kind` is `"module"`, `"table_template"`, `"palette"` or `"container"`.
   """
   alias Brando.Tenant
@@ -80,46 +89,81 @@ defmodule Brando.Content.Definition.Plan do
   def removal_text(_item), do: nil
 
   @doc """
-  The `mix brando.modules resolve` command that drops what an update of
-  `plan` leaves in blocks, as it runs in the current environment, or nil
-  when no block holds it or the plan has no user to name. Each value is
-  quoted for a POSIX shell.
+  What an update moves under renamed keys, as the plan prints it, or nil:
+  `moves var title → heading in 12 blocks (8 entries)`.
   """
-  def resolve_command(%__MODULE__{creator_id: user_id}, %{
-        kind: "module",
-        uid: uid,
-        removes: %{held: held, blocks: blocks}
-      })
-      when blocks > 0 and not is_nil(user_id) do
-    environment =
-      if Tenant.enabled?(),
-        do: ["--site", Tenant.current_site_key(), "--environment", Tenant.current_environment_key()],
-        else: []
+  def move_text(%{action: :update, moves: %{renames: [_ | _] = renames}}) do
+    "moves " <>
+      Enum.map_join(renames, ", ", fn rename ->
+        "#{rename.kind} #{rename.from} → #{rename.to} in #{count(rename.blocks, "block")} (#{count(rename.entries, "entry", "entries")})"
+      end)
+  end
 
-    drops = Enum.flat_map(held, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end)
+  def move_text(_item), do: nil
 
-    (~w(mix brando.modules resolve --uid) ++ [uid, "--user", to_string(user_id)] ++ environment ++ drops ++ ["--apply"])
-    |> Enum.map_join(" ", &shell_quote/1)
+  @doc "An update's `move_text/1` and `removal_text/1`, joined, or nil when it has neither."
+  def changes_text(item) do
+    case Enum.reject([move_text(item), removal_text(item)], &is_nil/1) do
+      [] -> nil
+      texts -> Enum.join(texts, "; ")
+    end
+  end
+
+  defp count(count, one, many \\ nil)
+  defp count(1, one, _many), do: "1 #{one}"
+  defp count(count, one, many), do: "#{count} #{many || one <> "s"}"
+
+  @doc """
+  The `mix brando.modules resolve` command that clears what an update of
+  `plan` leaves in blocks, as it runs in the current environment: it drops
+  each removed key blocks hold, and moves each one the files rename
+  (`remaps`) onto its new key. Nil when no block holds one, when the plan
+  has no user to name, or when a dry run of a move refuses something
+  (resolve those under Resolve blocks). Each value is quoted for a POSIX
+  shell.
+  """
+  def resolve_command(%__MODULE__{creator_id: user_id}, %{kind: "module", uid: uid} = item)
+      when not is_nil(user_id) do
+    remaps = Map.get(item, :remaps, [])
+    mapped = MapSet.new(remaps, &{&1.kind, &1.from})
+    held = for held <- held(item), not MapSet.member?(mapped, held), do: held
+
+    if (held != [] or remaps != []) and Enum.all?(remaps, & &1.ok?) do
+      environment =
+        if Tenant.enabled?(),
+          do: ["--site", Tenant.current_site_key(), "--environment", Tenant.current_environment_key()],
+          else: []
+
+      drops = Enum.flat_map(held, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end)
+      maps = Enum.flat_map(remaps, &["--map", "#{&1.kind}:#{&1.from}=#{&1.to}"])
+      args = drops ++ maps
+
+      (~w(mix brando.modules resolve --uid) ++ [uid, "--user", to_string(user_id)] ++ environment ++ args ++ ["--apply"])
+      |> Enum.map_join(" ", &shell_quote/1)
+    end
   end
 
   def resolve_command(_plan, _item), do: nil
 
-  @doc """
-  The line that follows an update whose removed keys blocks hold: the
-  `resolve_command/2`, or without a user, where to resolve them. Nil when
-  no block holds them.
-  """
-  def resolve_line(plan, %{removes: %{blocks: blocks}} = item) when blocks > 0 do
-    case resolve_command(plan, item) do
-      nil ->
-        "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
+  defp held(%{removes: %{held: held, blocks: blocks}}) when blocks > 0, do: held
+  defp held(_item), do: []
 
-      command ->
-        "resolve: " <> command
+  @doc """
+  The line that follows an update whose removed or renamed keys blocks
+  hold: the `resolve_command/2`, or where to resolve them. Nil when no block
+  holds them.
+  """
+  def resolve_line(plan, item) do
+    if match?(%{removes: %{blocks: blocks}} when blocks > 0, item) or Map.get(item, :remaps, []) != [] do
+      case resolve_command(plan, item) do
+        nil ->
+          "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
+
+        command ->
+          "resolve: " <> command
+      end
     end
   end
-
-  def resolve_line(_plan, _item), do: nil
 
   defp shell_quote(value) do
     if value =~ ~r/\A[A-Za-z0-9_@%+=:,.\/-]+\z/,

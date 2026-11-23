@@ -15,21 +15,23 @@ defmodule Brando.Content.Definitions.Release.Proposed do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.{Blocks, Module, Ref, TableTemplate}
-  alias Brando.Content.Definition.Params
+  alias Brando.Content.Definition.{Params, Renames}
   alias Brando.Repo
   alias Ecto.Changeset
 
   @type t :: %{
           modules: [Module.t()],
           changed: %{integer() => Module.t()},
-          uids: %{integer() => String.t()}
+          uids: %{integer() => String.t()},
+          renames: %{integer() => [Renames.rename()]}
         }
 
   @doc """
   The modules renders read (`Brando.Villain.render_modules/1`), with each
   proposed module in place of the stored one: `%{modules: list, changed:
-  %{module_id => module}, uids: %{module_id => uid}}`. Options: `conflicts:`,
-  the UIDs of conflicts to propose the release's version of.
+  %{module_id => module}, uids: %{module_id => uid}, renames: %{module_id =>
+  renames}}`, `renames` those an apply moves values under. Options:
+  `conflicts:`, the UIDs of conflicts to propose the release's version of.
   """
   @spec build(map(), keyword()) :: t()
   def build(%{plan: plan, items: items}, opts \\ []) do
@@ -63,7 +65,14 @@ defmodule Brando.Content.Definitions.Release.Proposed do
         end
       end)
 
-    %{modules: modules, changed: changed, uids: Map.new(records, &{&1.id, &1.uid})}
+    moves = for %{moves: %{renames: renames, refused: []}, uid: uid} <- items, into: %{}, do: {uid, renames}
+
+    %{
+      modules: modules,
+      changed: changed,
+      uids: Map.new(records, &{&1.id, &1.uid}),
+      renames: for(record <- records, renames = moves[record.uid], into: %{}, do: {record.id, renames})
+    }
   end
 
   defp propose(definition, record, references, tables) do
@@ -82,8 +91,9 @@ defmodule Brando.Content.Definitions.Release.Proposed do
   @doc """
   `entry_blocks` (an entry's blocks, as `Brando.Villain.parse/3` takes them)
   with every block of a proposed module synced to it, as applying it would
-  (`Brando.Content.Blocks.sync_module/2`): a var or ref the release adds gets
-  its default. In memory.
+  (`Brando.Content.Blocks.sync_module/2`): a value under a renamed key moves
+  to its new one (`Brando.Content.Definition.Renames.rename/2`), and a var
+  or ref the release adds gets its default. In memory.
   """
   def sync_entry_blocks(entry_blocks, %{changed: changed}) when map_size(changed) == 0, do: entry_blocks
 
@@ -103,7 +113,11 @@ defmodule Brando.Content.Definitions.Release.Proposed do
       case changed[Map.get(block, :module_id)] do
         %Module{} = module when is_list(block.refs) and is_list(block.vars) ->
           if Map.get(block, :module_origin, :local) in [:local, nil, "local"],
-            do: block |> Blocks.sync_module(module) |> Changeset.apply_changes(),
+            do:
+              block
+              |> Renames.rename(Map.get(proposed, :renames, %{})[module.id] || [])
+              |> Blocks.sync_module(module)
+              |> Changeset.apply_changes(),
             else: block
 
         _ ->

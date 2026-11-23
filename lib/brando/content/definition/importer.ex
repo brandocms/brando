@@ -1,11 +1,13 @@
 defmodule Brando.Content.Definition.Importer do
   @moduledoc false
 
+  use Gettext, backend: Brando.Gettext
+
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.{Block, Blocks, Container, Module, ModuleDiff, Palette, Ref, Var}
-  alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Snapshot, Value}
+  alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Renames, Snapshot, Value}
   alias Brando.Content.Definitions
   alias Brando.Query.Mutations
   alias Brando.Repo
@@ -142,8 +144,18 @@ defmodule Brando.Content.Definition.Importer do
       result
     end
   rescue
-    Ecto.StaleEntryError -> {:error, "definition changed while applying; create a new plan"}
-    Ecto.ConstraintError -> {:error, "a database constraint rejected the import; no definitions were committed"}
+    Ecto.StaleEntryError ->
+      {:error, "definition changed while applying; create a new plan"}
+
+    Ecto.ConstraintError ->
+      {:error, "a database constraint rejected the import; no definitions were committed"}
+
+    # An editor's save took a block the apply moves values in, and Postgres
+    # aborted the apply to break the wait
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:deadlock_detected, :serialization_failure],
+        do: {:error, gettext("An editor saved the same blocks at the same moment, and nothing was applied. Try again.")},
+        else: reraise(error, __STACKTRACE__)
   end
 
   defp apply!(plan, actor, opts) do
@@ -167,10 +179,18 @@ defmodule Brando.Content.Definition.Importer do
         References.bind!(Map.merge(plan.bundle, %{"source" => plan.scope, "references" => plan.references}), %{}, actor)
         {current, records} = plan!(plan.bundle, actor, creator, plan.references, settings)
 
+        check_moves!(plan, current)
+
         unless current.fingerprint == plan.fingerprint and Plan.applicable?(current),
           do: Repo.rollback("target changed after planning; create a new plan")
 
-        changes = Brando.Activity.with_batch(opts[:batch_id], fn -> persist!(current, records, actor, creator) end)
+        changes =
+          Brando.Activity.with_batch(opts[:batch_id], fn ->
+            changes = persist!(current, records, actor, creator)
+            move!(current, records, changes, creator, opts)
+            changes
+          end)
+
         Baselines.record!(current, changes, records.snapshots, actor, opts)
         # The caller's own records of the apply, in its transaction
         if in_transaction = opts[:in_transaction], do: in_transaction.(current, changes)
@@ -216,6 +236,8 @@ defmodule Brando.Content.Definition.Importer do
       bundle: bundle,
       actor: actor,
       creator: creator,
+      # Whose entries a refusal names: the person a system plan is for
+      viewer: if(actor == :system and creator.id != 0, do: creator, else: actor),
       bindings: bindings,
       records: records,
       mode: settings.mode,
@@ -232,15 +254,19 @@ defmodule Brando.Content.Definition.Importer do
       snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
-    items = Enum.map(Model.definitions(bundle), &plan_item!(&1, ctx))
+    items = bundle |> Model.definitions() |> Enum.map(&plan_item!(&1, ctx)) |> limit_moves(settings.selection)
     scope = References.scope()
 
+    # The renames are no part of a definition's digest: a changed one
+    # changes the plan all the same
     fingerprint =
-      Value.digest(%{
+      %{
         "scope" => scope,
         "items" => Enum.map(items, &Map.take(&1, [:uid, :before, :after, :action])),
         "bindings" => bindings
-      })
+      }
+      |> Map.merge(Map.take(bundle, ["renames"]))
+      |> Value.digest()
 
     {%Plan{
        bundle: bundle,
@@ -292,6 +318,8 @@ defmodule Brando.Content.Definition.Importer do
       fields: [],
       diff: [],
       removes: nil,
+      moves: nil,
+      remaps: [],
       block_count: 0,
       entry_count: 0
     }
@@ -314,13 +342,14 @@ defmodule Brando.Content.Definition.Importer do
     baseline = if matches.target, do: old_digest, else: base
     block_ids = block_ids(kind, record)
 
-    {action, reason} =
+    {{action, reason}, moves, remaps} =
       case palette do
         {:in_trash, palette} ->
-          {:conflict, ~s(palette "#{palette}" is in the trash here; restore it to apply the files' version)}
+          {{:conflict, ~s(palette "#{palette}" is in the trash here; restore it to apply the files' version)}, nil, []}
 
         :ok ->
-          action(ctx, {state, source}, fn ->
+          ctx
+          |> action({state, source}, fn ->
             classify(
               definition,
               old,
@@ -330,6 +359,7 @@ defmodule Brando.Content.Definition.Importer do
               {ctx.parents[uid], ctx.current_parents[uid]}
             )
           end)
+          |> moves(definition, record, changeset, ctx)
       end
 
     %{
@@ -346,10 +376,105 @@ defmodule Brando.Content.Definition.Importer do
       after: digest,
       fields: changed_fields(old, definition),
       diff: field_diff(old, definition),
-      removes: removes(action, kind, record, {changeset, old, definition}, block_ids),
+      removes: removes(action, kind, record, {changeset, old, definition}, block_ids, moves),
+      moves: moves,
+      remaps: remaps,
       block_count: length(block_ids),
       entry_count: entry_count(block_ids)
     }
+  end
+
+  # The values an update of a module moves under its declared renames
+  # (`Renames`), and the renames it leaves to a resolve. A move refused in
+  # any block makes the update need a migration. A conflict gets only the
+  # moves an apply of the files' version makes, for the review to preview.
+  defp moves({:update, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx) do
+    case Renames.declared(ctx.bundle, uid) do
+      [] ->
+        {action, nil, []}
+
+      renames ->
+        module = Changeset.apply_changes(changeset)
+        {active, rest} = Renames.split(renames, ModuleDiff.diff(record, changeset))
+        moves = if active != [], do: Renames.plan(record, module, active, ctx.viewer)
+        remaps = Renames.remaps(record, module, rest)
+
+        case moves do
+          %{refused: [_ | _] = refused} -> {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
+          _ -> {action, moves, remaps}
+        end
+    end
+  end
+
+  defp moves({:conflict, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx)
+       when not is_nil(record) do
+    {active, _rest} = ctx.bundle |> Renames.declared(uid) |> Renames.split(ModuleDiff.diff(record, changeset))
+    moves = if active != [], do: Renames.plan(record, Changeset.apply_changes(changeset), active, ctx.viewer)
+    {action, moves, []}
+  end
+
+  defp moves(action, _definition, _record, _changeset, _ctx), do: {action, nil, []}
+
+  # A move the review saw that is refused now, as the apply plans again
+  # under its lock: the blocks changed in between
+  defp check_moves!(reviewed, current) do
+    planned = Map.new(reviewed.items, &{&1.uid, &1.action})
+
+    refused =
+      for item <- current.items,
+          planned[item.uid] == :update,
+          %{refused: [_ | _] = refused} <- [item.moves],
+          reason <- refused,
+          do: reason
+
+    if refused != [], do: Repo.rollback(Renames.changed_since_review(refused))
+  end
+
+  # The selected updates' moves together, refused when they are more than
+  # one apply moves (`Renames.over_limit/1`). With nothing selected (a
+  # review of a whole release, an import) each module stays within its own
+  # limit and can be chosen; `Renames.move!/3` refuses what one apply then
+  # moves together.
+  defp limit_moves(items, nil), do: items
+
+  defp limit_moves(items, selection) do
+    moving =
+      for %{action: :update, moves: %{} = moves} = item <- items,
+          MapSet.member?(selection, item.uid),
+          do: {item.uid, moves}
+
+    case Renames.over_limit(Enum.map(moving, &elem(&1, 1))) do
+      nil ->
+        items
+
+      totals ->
+        uids = Map.new(moving)
+        Enum.map(items, &if(moves = uids[&1.uid], do: over_limit(&1, moves, totals), else: &1))
+    end
+  end
+
+  defp over_limit(item, moves, totals) do
+    reason = Renames.over_limit_text(moves.renames, totals)
+    %{item | action: :migration_required, reason: reason, moves: %{moves | refused: [reason]}}
+  end
+
+  # The values the selected module updates move, as the person who applies
+  defp move!(plan, records, changes, person, opts) do
+    saved = Map.new(changes, &{{&1.kind, &1.uid}, &1.id})
+
+    moves =
+      for item <- plan.items,
+          item.kind == "module" and item.action == :update and Plan.selected?(plan, item),
+          %{renames: renames} <- [item.moves],
+          id = saved[{"module", item.uid}] do
+        %{
+          record: records.modules[item.uid],
+          module: Repo.preload(Repo.get!(Module, id), [:refs, :vars]),
+          renames: Enum.map(renames, &Map.take(&1, [:kind, :from, :to]))
+        }
+      end
+
+    Renames.move!(moves, person, release: opts[:release])
   end
 
   defp action(%{mode: :database}, {:deleted, _source}, _classify),
@@ -685,26 +810,45 @@ defmodule Brando.Content.Definition.Importer do
   defp reinterprets?(diff),
     do: diff.retyped_refs != [] or diff.retyped_vars != [] or diff.contract_changes != []
 
-  # A var defined again under a key its blocks still hold a leftover of
-  # another type for: a sync would copy the new type onto the stored value
-  # (`Blocks.reapply_vars/3`)
-  defp returning_over_leftovers(_record, _cs, %{added_vars: []}), do: nil
+  # A ref or var defined again under a name its blocks still hold a
+  # leftover of another type for: a sync would copy the new type onto the
+  # stored value (`Blocks.reapply_vars/3`), or pass a ref of another type
+  # through and never add the new one (`Blocks.sync_module/2`)
+  defp returning_over_leftovers(_record, _cs, %{added_vars: [], added_refs: []}), do: nil
 
   defp returning_over_leftovers(record, cs, diff) do
-    types = cs |> Changeset.apply_changes() |> Map.get(:vars) |> Map.new(&{&1.key, &1.type})
+    module = Changeset.apply_changes(cs)
+    var_types = Map.new(module.vars, &{&1.key, &1.type})
+    ref_types = Map.new(module.refs, &{&1.name, &1.data.__struct__})
 
-    from(v in Var,
-      join: b in Block,
-      on: b.id == v.block_id,
-      where: b.module_id == ^record.id and b.module_origin == :local and v.key in ^diff.added_vars,
-      order_by: [v.key, b.id],
-      select: {v.key, v.type, b.id}
-    )
-    |> Repo.all()
-    |> Enum.reject(fn {key, type, _block_id} -> type == types[key] end)
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 2))
-    |> Enum.map(fn {key, block_ids} ->
-      ~s(var "#{key}" returns as #{types[key]} while blocks #{Enum.map_join(block_ids, ", ", &"##{&1}")} ) <>
+    vars =
+      from(v in Var,
+        join: b in Block,
+        on: b.id == v.block_id,
+        where: b.module_id == ^record.id and b.module_origin == :local and v.key in ^diff.added_vars,
+        order_by: [v.key, b.id],
+        select: {v.key, v.type, b.id}
+      )
+      |> Repo.all()
+      |> Enum.reject(fn {key, type, _block_id} -> type == var_types[key] end)
+      |> Enum.map(fn {key, _type, block_id} -> {{:var, key, var_types[key]}, block_id} end)
+
+    refs =
+      from(r in Ref,
+        join: b in Block,
+        on: b.id == r.block_id,
+        where: b.module_id == ^record.id and b.module_origin == :local and r.name in ^diff.added_refs,
+        order_by: [r.name, b.id]
+      )
+      |> Repo.all()
+      |> Enum.reject(&Brando.Villain.Blocks.ref_types_compatible?(ref_types[&1.name], &1.data && &1.data.__struct__))
+      |> Enum.map(&{{:ref, &1.name, ref_type_name(ref_types[&1.name])}, &1.block_id})
+
+    (vars ++ refs)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.sort()
+    |> Enum.map(fn {{kind, key, type}, block_ids} ->
+      ~s(#{kind} "#{key}" returns as #{type} while blocks #{Enum.map_join(Enum.uniq(block_ids), ", ", &"##{&1}")} ) <>
         "hold a leftover of another type; resolve it first"
     end)
     |> case do
@@ -713,19 +857,26 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
+  defp ref_type_name(struct),
+    do: Enum.find_value(Brando.Villain.Blocks.list_blocks(), fn {name, mod} -> mod == struct && to_string(name) end)
+
   # What an update removes, the keys of it blocks hold (`held`), and the
   # blocks that hold one and keep it as a leftover (`Brando.Content.StaleBlocks`).
   # A palette's colours: the CSS that reads a removed one is the author's, and
   # the blocks that use the palette are counted.
-  defp removes(:update, "palette", _record, {_cs, old, new}, block_ids) do
+  defp removes(:update, "palette", _record, {_cs, old, new}, block_ids, _moves) do
     keys = Enum.map(old["colors"], & &1["key"]) -- Enum.map(new["colors"], & &1["key"])
 
     if keys != [],
       do: %{keys: Enum.map(keys, &{:color, &1}), blocks: length(block_ids), entries: entry_count(block_ids)}
   end
 
-  defp removes(:update, "module", record, {cs, _old, _new}, _block_ids) do
+  # What a rename moves is not left over
+  defp removes(:update, "module", record, {cs, _old, _new}, _block_ids, moves) do
     diff = ModuleDiff.diff(record, cs)
+    moved = if moves, do: Enum.map(moves.renames, &{&1.kind, &1.from}), else: []
+    diff = %{diff | removed_refs: diff.removed_refs -- moved_keys(moved, :ref)}
+    diff = %{diff | removed_vars: diff.removed_vars -- moved_keys(moved, :var)}
     keys = Enum.map(diff.removed_refs, &{:ref, &1}) ++ Enum.map(diff.removed_vars, &{:var, &1})
 
     if keys != [] do
@@ -742,7 +893,9 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
-  defp removes(_action, _kind, _record, _changes, _block_ids), do: nil
+  defp removes(_action, _kind, _record, _changes, _block_ids, _moves), do: nil
+
+  defp moved_keys(moved, kind), do: for({^kind, key} <- moved, do: key)
 
   # `{{kind, key}, block_id}` for each removed key a block of the module
   # holds. The module is in this database: a block of a shared library
