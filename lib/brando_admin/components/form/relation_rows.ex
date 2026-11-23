@@ -463,23 +463,11 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     row = applied(held)
 
     cond do
-      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) && edits ->
-        with_typed(held, saved, Map.get(edits.typed, SubformHelpers.row_key(held), MapSet.new()))
-
-      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) ->
-        onto(held, saved)
-
-      saved && assoc.on_replace in [:raise, :update] ->
-        held |> edited() |> onto_saved(saved) |> typed(held)
-
-      new?(row) ->
-        held
-
-      changed?(held) ->
-        as_new(held)
-
-      true ->
-        :keep
+      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) -> onto(held, saved, edits)
+      saved && assoc.on_replace in [:raise, :update] -> held |> edited() |> onto_saved(saved) |> typed(held)
+      new?(row) -> held
+      changed?(held) -> as_new(held)
+      true -> :keep
     end
   end
 
@@ -498,7 +486,13 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp remove_one(%{on_replace: on_replace}, _saved, _base) when on_replace in [:raise, :update], do: :keep
   defp remove_one(_assoc, _saved, _base), do: nil
 
-  # The editor's row onto the saved one: its changes, over the saved values.
+  # The editor's row onto the saved one: its changes, over the saved values;
+  # with `edits`, the fields they record.
+  defp onto(held, saved, nil), do: onto(held, saved)
+
+  defp onto(held, saved, edits),
+    do: with_typed(held, saved, Map.get(edits.typed, SubformHelpers.row_key(held), MapSet.new()))
+
   defp onto(%Changeset{} = held, saved) do
     if changed?(held), do: typed(%{held | data: saved, params: %{}}, held), else: saved
   end
