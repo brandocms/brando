@@ -711,6 +711,13 @@ defmodule Brando.Content.Blocks do
   A row is written once, by the first schema whose pass finds the link. An
   entry rendered for it is rendered for each of `modules` on the same table
   too, whichever of them came first.
+
+  Forms open on an entry whose rows were rewritten are told, as of a save,
+  once the transaction around the rewrite commits, and not when it rolls
+  back or the schema's step fails. That needs a transaction begun with
+  `Brando.Repo.transaction/1`: in one begun on the application's Ecto repo
+  directly, they are told at once, before the commit, and also when it
+  rolls back.
   """
   def update_identifier_links_in_rich_text_fields(identifier_id, new_url, modules \\ identifier_link_modules()) do
     if RichText.allowed_uri?(new_url) do
@@ -867,10 +874,10 @@ defmodule Brando.Content.Blocks do
   defp row_contains_identifier?(_row, _fields, _identifier_id), do: false
 
   # In the bulk lane: a link that moved can reach any number of entries.
-  # `rendered` is kept newest first and reversed once.
-  defp rewrite_identifier_links([], rendered, tables), do: enqueue_rendered(Enum.reverse(rendered), tables)
+  # `rewritten` is kept newest first and reversed once.
+  defp rewrite_identifier_links([], rewritten, tables), do: rewritten_entries(Enum.reverse(rewritten), tables)
 
-  defp rewrite_identifier_links([rewrite | rewrites], rendered, tables) do
+  defp rewrite_identifier_links([rewrite | rewrites], rewritten, tables) do
     result =
       try do
         in_holder_transaction(rewrite)
@@ -879,34 +886,65 @@ defmodule Brando.Content.Blocks do
         # the entries rewritten before this one still get their renders. In
         # one, the step's savepoint takes them back.
         kind, reason ->
-          unless Repo.repo().in_transaction?(), do: enqueue_rendered(Enum.reverse(rendered), tables)
+          unless Repo.repo().in_transaction?(), do: rewritten_entries(Enum.reverse(rewritten), tables)
           :erlang.raise(kind, reason, __STACKTRACE__)
       end
 
-    rendered =
+    rewritten =
       case result do
-        {:updated, entries} -> Enum.reverse(entries, rendered)
-        _ -> rendered
+        {:updated, entries} -> Enum.reverse(entries, rewritten)
+        _ -> rewritten
       end
 
-    rewrite_identifier_links(rewrites, rendered, tables)
+    rewrite_identifier_links(rewrites, rewritten, tables)
+  end
+
+  # The entries whose rows were rewritten, those in the trash too: a restore
+  # does not render an ordinary entry, so it is rendered now to come back
+  # with the new address. Each is told to its open forms and rendered for
+  # every walked module on its table as well: a later module's pass finds
+  # the row already rewritten and queues nothing. The cache is kept by
+  # table, so the eviction of the rewrite covers them.
+  defp rewritten_entries(entries, tables) do
+    entries =
+      entries
+      |> Enum.flat_map(fn {schema, id} = entry ->
+        [entry | for(module <- Map.get(tables, table_of(schema), []), do: {module, id})]
+      end)
+      |> Enum.uniq()
+
+    # In a caller's transaction, told once the renders are queued: a failure
+    # rolls the step back to its savepoint, and its entries are as they were.
+    # Outside one, each row has committed by itself, renders or not.
+    if Repo.repo().in_transaction?() do
+      enqueue_rewritten_for_render(entries)
+      Enum.each(entries, &announce_rewritten/1)
+    else
+      Enum.each(entries, &announce_rewritten/1)
+      enqueue_rewritten_for_render(entries)
+    end
   end
 
   # Only entries the render can load: a row of a schema without a context
-  # function of its own is evicted, not rendered. An entry is rendered for
-  # every walked module on its table as well: a later module's pass finds the
-  # row already rewritten and queues nothing. The cache is kept by table, so
-  # the eviction of the rewrite covers them.
-  defp enqueue_rendered(entries, tables) do
-    entries =
-      Enum.flat_map(entries, fn {schema, id} = entry ->
-        [entry | for(module <- Map.get(tables, table_of(schema), []), do: {module, id})]
-      end)
-
-    case Enum.filter(Enum.uniq(entries), fn {schema, _id} -> Brando.Blueprint.EntryQuery.loadable?(schema) end) do
+  # function of its own is evicted, not rendered.
+  defp enqueue_rewritten_for_render(entries) do
+    case Enum.filter(entries, fn {schema, _id} -> Brando.Blueprint.EntryQuery.loadable?(schema) end) do
       [] -> :ok
       entries -> entries |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> enqueue_entry_map_for_render()
     end
+  end
+
+  # Open forms on the entry take the rewritten rows as they take another
+  # editor's save (`take_saved_entry` in the admin Form), keeping what the
+  # editor changed. Saved by no editor, so no tab is left out. Once the
+  # rewrite has committed: the forms read the entry again. The topic is the
+  # rewrite's environment, which may not be the one current at the commit.
+  defp announce_rewritten({schema, id}) do
+    topic = Brando.Tenant.Topic.entry("field_sync", schema, id)
+
+    Repo.after_commit(fn ->
+      Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:entry_saved, %{tab: nil, user_id: nil}})
+    end)
   end
 
   # Lock only the matching row while rewriting. A concurrent author must
