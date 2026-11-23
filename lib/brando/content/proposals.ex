@@ -2701,17 +2701,13 @@ defmodule Brando.Content.Proposals do
         {entry, _group} = create_translation!(op, user)
         made = {:new, op.ref}
 
-        cond do
-          made == target ->
-            entry
-
-          translated?(proposal.operations, made) ->
-            tap(copy, fn _ -> save_translation!(schema, entry.id, proposal, made, user) end)
-
-          true ->
-            copy
-        end
+        if made == target, do: entry, else: fill_in!(copy, schema, entry, proposal, made, user)
     end
+  end
+
+  defp fill_in!(copy, schema, entry, proposal, made, user) do
+    if translated?(proposal.operations, made), do: save_translation!(schema, entry.id, proposal, made, user)
+    copy
   end
 
   defp translated_changeset!({schema, id} = target, proposal, user) do
