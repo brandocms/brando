@@ -1716,8 +1716,28 @@ defmodule Brando.Villain.Parser do
 
   def process_vars(vars, opts) do
     escape? = Keyword.get(opts, :escape, false)
-    Map.new(vars, &process_var(&1, escape?))
+    Map.new(vars, &(&1 |> unload_moved_relations() |> process_var(escape?)))
   end
+
+  # The key says which entry, image or file the var holds; the loaded struct
+  # is a cache of it, which a change of the key does not replace (a save cast
+  # onto the saved row, a translation relinked). One that no longer matches
+  # is read again by its key, as a video is (`process_var/1`).
+  defp unload_moved_relations(%Brando.Content.Var{} = var) do
+    Enum.reduce([identifier: :identifier_id, image: :image_id, file: :file_id], var, fn {name, key}, var ->
+      case {Map.get(var, name), Map.get(var, key)} do
+        {%{id: id}, id} -> var
+        {%{id: _}, nil} -> Map.put(var, name, nil)
+        {%{id: _}, _} -> Map.put(var, name, not_loaded(name))
+        _ -> var
+      end
+    end)
+  end
+
+  defp unload_moved_relations(var), do: var
+
+  defp not_loaded(name),
+    do: %Ecto.Association.NotLoaded{__field__: name, __owner__: Brando.Content.Var, __cardinality__: :one}
 
   # Sanitized once in a render (`TemplateView.sanitize_rich_text/1`), so a
   # filter such as `markdown` on it reuses that, and text to the entry's final
