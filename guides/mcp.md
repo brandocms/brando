@@ -532,6 +532,12 @@ proposal with the modules that match.
   clipping and masks: an image cropped by its frame or a mask can reach
   past the cell it shows in.
 
+  Each image has the `image_ref` of the picture it shows. It identifies the
+  picture: layers with the same `image_ref` show the same picture, and
+  `brando_figma_import_images` imports it once. It does not say which image
+  of the media library that is; the import names it, reusing an image the
+  library already has.
+
   Each image has its `scale_mode` (`fill`, `fit`, `crop` or `tile`), its
   `crop` when cropped (`x`, `y`, `width`, `height` as fractions of the
   image), its `rotation` when turned (clockwise, in degrees) and
@@ -543,7 +549,8 @@ proposal with the modules that match.
   of an edge lists every image that shows, and its section says so in
   `note`. The image fills that do not show, under one that covers or at no
   opacity, are listed as the bottom image's `hidden_fills` and are not
-  imported.
+  imported. They are often leftovers of an earlier design, so they say
+  nothing about the picture the layer shows.
 
   Figma's API documents no direction for the `rotation` of a filled, fit
   or tiled image. It is read as clockwise, as Figma's Rotate 90° control

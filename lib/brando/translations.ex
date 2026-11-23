@@ -226,7 +226,9 @@ defmodule Brando.Translations do
 
   @doc "The attributes `schema` matches its language versions by (`trait :translatable, matched_by: [...]`)."
   def matched_by(schema) do
-    if function_exported?(schema, :__translatable_matched_by__, 0), do: schema.__translatable_matched_by__(), else: []
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__translatable_matched_by__, 0),
+      do: schema.__translatable_matched_by__(),
+      else: []
   end
 
   defp exclude_trashed(query, schema) do
@@ -964,7 +966,7 @@ defmodule Brando.Translations do
   defp walk_blocks(block), do: [block | Enum.flat_map(loaded_list(block.children), &walk_blocks/1)]
 
   defp blocks_fields(schema) do
-    if function_exported?(schema, :__blocks_fields__, 0),
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__blocks_fields__, 0),
       do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
       else: []
   end
@@ -2388,7 +2390,9 @@ defmodule Brando.Translations do
   end
 
   defp schema_version(schema) do
-    if function_exported?(schema, :__schema_version__, 0), do: schema.__schema_version__(), else: 0
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__schema_version__, 0),
+      do: schema.__schema_version__(),
+      else: 0
   end
 
   defp exists?(query), do: Repo.one(from(q in query, select: true, limit: 1)) == true

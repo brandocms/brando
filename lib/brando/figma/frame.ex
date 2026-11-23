@@ -14,7 +14,9 @@ defmodule Brando.Figma.Frame do
   tiled or cropped short of an edge lists every image that shows, in fill
   order, and its section says so under `note`. The image fills that do not
   show (under one that covers, or at no opacity) are listed under the
-  bottom image's `hidden_fills`. Each image has its `scale_mode` (`fill`,
+  bottom image's `hidden_fills`. Each image has the `image_ref` of the
+  picture it shows, which identifies it: layers with the same `image_ref`
+  show the same picture. Each image has its `scale_mode` (`fill`,
   `fit`, `crop`, `tile`), its `crop` as fractions of the image when
   cropped, its `rotation`, clockwise in degrees, when turned, and
   `mirrored` when a crop flips it (it then has no `rotation`).
@@ -91,12 +93,12 @@ defmodule Brando.Figma.Frame do
   """
   @spec images(map()) :: [image()]
   def images(node) do
-    for {section, index} <- Enum.with_index(sections(node, keep_refs: true)),
+    for {section, index} <- Enum.with_index(sections(node)),
         image <- section.images,
         do: Map.put(image, :section, index)
   end
 
-  defp sections(%{document: document} = node, opts \\ []) do
+  defp sections(%{document: document} = node) do
     frame = %{id: document["id"], origin: origin(document), box: box(document, origin(document))}
 
     names = %{components: node.components, component_sets: node.component_sets}
@@ -108,7 +110,7 @@ defmodule Brando.Figma.Frame do
       |> group(names, frame)
 
     only? = match?([_], sections)
-    Enum.map(sections, &finish(&1, frame, only?, Keyword.get(opts, :keep_refs, false)))
+    Enum.map(sections, &finish(&1, frame, only?))
   end
 
   # What the walk finds, as a reversed list: an outermost instance starts a
@@ -392,9 +394,8 @@ defmodule Brando.Figma.Frame do
     ~s[Layer "#{node["name"]}" (#{node["id"]}) shows #{count} images stacked: the ones above are translucent, blended, fit, tiled or cropped short of an edge, so the ones under them show too.]
   end
 
-  defp finish(section, frame, only?, keep_refs?) do
+  defp finish(section, frame, only?) do
     images = Enum.reverse(section.images)
-    images = if keep_refs?, do: images, else: Enum.map(images, &Map.delete(&1, :image_ref))
 
     note =
       case Map.get(section, :notes, []) do
