@@ -1129,13 +1129,15 @@ defmodule BrandoAdmin.Components.Form do
   #
   # Whatever a change in the form does besides, this does too, without asking
   # the browser for its fields (which could be a row behind): the other
-  # editors learn the field is changed, the blocks that read it get its rows,
-  # and the live preview and the website editor follow it.
+  # editors get the rows at the click (a button sends no blur), the blocks
+  # that read it get its rows, and the live preview and the website editor
+  # follow it.
   def update(%{action: :update_entries, field: field, op: op} = message, socket) do
     changeset = socket.assigns.form.source
     # A multi-select in a row applying another editor's picks
     # (`multi_select_changed`) changes the list for them, not for this editor.
-    put = if message[:remote] == true, do: &put_received_form/2, else: &put_local_form/2
+    remote? = message[:remote] == true
+    put = if remote?, do: &put_received_form/2, else: &put_local_form/2
 
     case SubformHelpers.apply_relation_op(changeset, field, op) do
       :stale ->
@@ -1170,7 +1172,7 @@ defmodule BrandoAdmin.Components.Form do
           |> maybe_rerender_live_preview_for([to_string(field)])
           |> maybe_fetch_root_blocks(:live_preview_update, 0)
 
-        {:ok, socket}
+        {:ok, if(remote?, do: socket, else: ship_all_field_changes(socket))}
     end
   end
 
@@ -3271,7 +3273,8 @@ defmodule BrandoAdmin.Components.Form do
   #     and it is never sent: it protects this form alone.
 
   # Ships the fields this editor changed since its last shipment. Used on
-  # field blur and focus, save, and after an asset or a multi-select change.
+  # field blur and focus, save, and after an asset, a multi-select or a
+  # subform row change.
   # A field whose value the rich-text check refused doesn't ship
   # (`pending_changes/1`) and stays unshipped: it is still this editor's
   # edit, which another editor's save keeps (`unsaved_edits/6`), and ships
@@ -3795,13 +3798,28 @@ defmodule BrandoAdmin.Components.Form do
   defp refused_recovered(_socket, _entry_params), do: []
 
   # The entry field `_target` names (`["page", "title"]` or a path into a
-  # subform, `["page", "items", "0", "name"]`, which names the relation).
+  # subform, `["page", "items", "0", "name"]`, which names the relation). A
+  # relation's drop or sort param names the relation: a row removed or moved
+  # is this editor's edit, never the browser's old form (`drop_echoes/4`).
   defp target_field(socket, singular, [singular, key | _]) do
     {fields, _belongs_to} = sync_fields(socket)
-    Enum.find(fields ++ relation_fields(socket), &(Atom.to_string(&1) == key))
+    fields = fields ++ relation_fields(socket)
+    Enum.find(fields, &(Atom.to_string(&1) == key)) || control_target(socket, fields, key)
   end
 
   defp target_field(_socket, _singular, _target), do: nil
+
+  # A `_target` naming a synced relation's drop or sort param: a row removed
+  # or moved by the browser rather than typed into
+  defp row_control?(%{assigns: %{singular: singular}} = socket, [singular, key | _]) do
+    {fields, _belongs_to} = sync_fields(socket)
+    control_target(socket, fields, key) != nil
+  end
+
+  defp row_control?(_socket, _target), do: false
+
+  defp control_target(socket, fields, key),
+    do: Enum.find(fields, &(key in PendingRows.control_params(socket.assigns.schema, &1)))
 
   # A replaced field that arrives with a value the browser showed before the
   # change replaced it, in an event that does not name it, is the browser's
@@ -11072,6 +11090,8 @@ defmodule BrandoAdmin.Components.Form do
     # then dropped, so a reconnect silently restored nothing.
     socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
     socket = if recovery?, do: share_recovered(socket, offline, entry_params), else: socket
+    # A row removed (its button sends no blur) ships at the click, as an add does
+    socket = if row_control?(socket, params["_target"]), do: ship_all_field_changes(socket), else: socket
 
     case Map.get(params, "_target") do
       [^singular | rest] ->

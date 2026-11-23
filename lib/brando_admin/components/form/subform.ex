@@ -146,7 +146,12 @@ defmodule BrandoAdmin.Components.Form.Subform do
                       name={Phoenix.HTML.Form.input_name(sub_form, name)}
                       value={value}
                     />
-                    <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
+                    <input
+                      type="hidden"
+                      name={"#{@field.form.name}[#{@sort_param}][]"}
+                      value={sub_form.index}
+                      data-sort-input
+                    />
                     <input
                       :if={SubformHelpers.new_row_key(sub_form)}
                       type="hidden"
