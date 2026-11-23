@@ -1739,10 +1739,28 @@ defmodule Brando.Villain.Parser do
   typed is printed as text too rather than run by the entry's final Liquid
   pass.
   """
+  # What `escape_var_value/1` writes for each character it changes
+  @escaped_characters %{
+    "&lt;" => "<",
+    "&gt;" => ">",
+    "&amp;" => "&",
+    "&quot;" => "\"",
+    "&#39;" => "'",
+    "&#123;" => "{",
+    "&#125;" => "}"
+  }
+
   def escape_var_value(value) when is_binary(value),
     do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> Brando.Villain.InertLiquid.encode()
 
   def escape_var_value(value), do: value
+
+  @doc """
+  The text `escape_var_value/1` was given: its exact inverse. Escaped text
+  holds a `&` only as one of the references it makes.
+  """
+  def unescape_var_value(value) when is_binary(value),
+    do: String.replace(value, Map.keys(@escaped_characters), &Map.fetch!(@escaped_characters, &1))
 
   @doc """
   A link var as Liquid gets it: `{{ link.value }}` and `{{ link.link_text }}`

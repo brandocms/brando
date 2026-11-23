@@ -17,7 +17,8 @@ defmodule Brando.Villain.Tags.Inspect do
   def render([source: source], context) do
     # Whole structs, printed for a developer: no credentials, and Liquid in
     # them is text to the entry's final pass.
-    assigns = %{src: source |> TemplateView.eval(context) |> TemplateView.printable()}
+    # HEEx escapes it: read as typed (`TemplateView.eval_typed/2`)
+    assigns = %{src: source |> TemplateView.eval_typed(context) |> TemplateView.printable()}
 
     comp = ~H"""
     <div class="brando-inspect">

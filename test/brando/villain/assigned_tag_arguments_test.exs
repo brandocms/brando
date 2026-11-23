@@ -1,11 +1,15 @@
 defmodule Brando.Villain.AssignedTagArgumentsTest do
   # A value passed through `assign` prints as the value printed directly: in
-  # `{{ }}` as the same expression, escaped once, and in a tag as the field
-  # holding the same text, which the tag escapes once (#3825).
+  # `{{ }}` as the same expression, escaped once. The tag arguments that read
+  # an assigned text as typed (picture's `alt`, `route`, `route_i18n`,
+  # `editable_field`, `inspect`) print it as the field holding that text,
+  # escaped once (#3825). Every other tag and option gets what it got before:
+  # the text as `{{ }}` prints it.
   use Brando.ConnCase, async: true
 
   alias Brando.Factory
   alias Brando.RichTextRows.Entry
+  alias Brando.Villain.Parser
 
   @typed ~s(<b> & "q" it's)
   @rich ~s(<p>A &amp; <strong>B</strong> it's</p>)
@@ -20,21 +24,28 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
   # Each way of printing it: the template, with `V` for the value, and what it
   # prints the same as. `:expression`: the template with the value itself in
   # place of `V`. `:field`: the template with a plain field holding the text
-  # the value has. `link` takes a link, which is no text: an assigned link is
-  # a record, and reaches the tag as it does without `assign`. `video` prints
-  # text only from the options it prints as markup (`caption`, `title`,
-  # `play_button`); its other options are settings.
+  # the value has. `:escaped`: that text, escaped once. `:as_printed`: the
+  # template with a literal holding the text as `{{ }}` prints it, which is
+  # what an assigned variable gave every tag before.
   @printed [
     text: {"{{ V }}", :expression},
     attribute: {~s(<i title="{{ V }}"></i>), :expression},
+    # Arguments that read an assigned text as typed
     picture_alt: {"{% picture entry.cover { lazyload: false, alt: V } %}", :field},
     route: {"{% route page_path show { V } %}", :field},
     route_in_attribute: {~s(<a href="{% route page_path show { V } %}"></a>), :field},
     route_i18n: {~s({% route_i18n "en" page_path show { V } %}), :field},
     route_i18n_in_attribute: {~s(<a href="{% route_i18n "en" page_path show { V } %}"></a>), :field},
-    # Options a tag prints as markup get the text as `{{ }}` prints it, as before
+    inspect: {"{% inspect V %}", :field},
+    editable_field: {"{% editable_field V %}", :escaped},
+    # Every other tag and option
     picture_caption: {"{% picture entry.cover { lazyload: false, caption: V } %}", :as_printed},
-    video_caption: {"{% video entry.video { caption: V } %}", :as_printed}
+    picture_class: {"{% picture entry.cover { lazyload: false, picture_class: V } %}", :as_printed},
+    video_caption: {"{% video entry.video { caption: V } %}", :as_printed},
+    video_opacity: {"{% video entry.video { cover: 'svg', opacity: V } %}", :as_printed},
+    video_width: {"{% video entry.video { cover: 'svg', width: V } %}", :as_printed},
+    video_height: {"{% video entry.video { cover: 'svg', height: V } %}", :as_printed},
+    form: {"{% form V %}", :as_printed}
   ]
 
   setup do
@@ -70,9 +81,13 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
           :field ->
             render(with_value(template, "entry.title"), %{entry | title: unquote(text)})
 
+          :escaped ->
+            Parser.escape_var_value(unquote(text))
+
           :as_printed ->
             printed = render("{{ #{value} }}", entry)
-            render(with_value(template, "entry.title"), %{entry | title: "MARK"}) |> String.replace("MARK", printed)
+            refute printed =~ ~s(")
+            render(with_value(template, ~s("#{printed}")), entry)
         end
 
       assert render("{% assign q = #{value} %}" <> with_value(template, "q"), entry) == expected
@@ -94,7 +109,50 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
     assert html == render("{% route page_path show { entry.title } %}", %{entry | title: @typed <> "!"})
   end
 
+  # The text a tag reads is tied to the value: a capture of the same name
+  # holding the same bytes reads as the assigned text, and is escaped all the same
+  test "a capture of the same name and bytes still prints an escaped alt", %{entry: entry} do
+    html =
+      render(
+        "{% assign q = entry.title %}{% capture q %}{{ entry.title }}{% endcapture %}" <>
+          "{% picture entry.cover { lazyload: false, alt: q } %}",
+        entry
+      )
+
+    refute html =~ "<b>"
+    assert [@typed | _] = html |> Floki.parse_fragment!() |> Floki.attribute("img", "alt")
+  end
+
   test "raw keeps what it gives an assigned value", %{entry: entry} do
     assert render("{% assign q = entry.title | raw %}{{ q }}", entry) == render("{{ entry.title | raw }}", entry)
+  end
+
+  # An assigned value no tag reads runs its filters once, on the value `{{ }}` reads
+  test "an assign of a filtered atom field works as it prints" do
+    page = %Brando.Pages.Page{title: "T", status: :published}
+
+    assert Brando.Villain.parse_and_render(
+             "{% assign q = entry.status | base_encode64 %}{{ q }}",
+             Brando.Villain.get_base_context(page)
+           ) == Base.encode64("published")
+  end
+
+  # The text a tag reads is the exact inverse of the escape a field is read with
+  # (random texts of the characters it changes and those its references are made of)
+  test "unescaping gives back the escaped text" do
+    alphabet = String.graphemes(~s(<>&"'{}%amp;lt#123 ))
+    random = for _ <- 1..500, do: Enum.map_join(1..:rand.uniform(12), fn _ -> Enum.random(alphabet) end)
+
+    for text <-
+          [
+            @typed,
+            "{{ entry.title }} {% if x %}",
+            "&amp; &lt; &#39; &#123;",
+            "",
+            "<script>{}</script>",
+            "ø–é"
+          ] ++ random do
+      assert text |> Parser.escape_var_value() |> Parser.unescape_var_value() == text, inspect(text)
+    end
   end
 end

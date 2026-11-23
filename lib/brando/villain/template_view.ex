@@ -57,8 +57,8 @@ defmodule Brando.Villain.TemplateView do
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
-  # Text `{% assign %}` gave a variable, with what a tag reads of it (`assign/3`)
-  @assigned_texts :brando_template_view_assigned_texts
+  # Escaped text `{% assign %}` gave a variable, with the text it stands for (`assign/3`)
+  @typed_texts :brando_template_view_typed_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
   # a field of rendered blocks it was read from (`read_as_rendered_blocks/2`)
@@ -167,72 +167,60 @@ defmodule Brando.Villain.TemplateView do
 
   @doc """
   Evaluates a tag's `argument` to the value itself, its text unescaped. A tag
-  escapes what it prints, or passes it to something that does. A variable
-  `{% assign %}` gave text is read as the tag reads what it was assigned
-  (`assign/3`).
+  escapes what it prints, or passes it to something that does.
   """
   @spec eval(term(), Context.t()) :: term()
-  def eval(argument, %Context{} = context), do: eval(argument, context, true)
-
-  @doc """
-  A tag's option, `{key, value}`, as `eval/2` gives it, except an option
-  among `markup`, which the tag prints as it is: an assigned variable gives
-  it the text as `{{ }}` prints it, escaped.
-  """
-  @spec eval_option(term(), Context.t(), [String.t()]) :: {String.t(), term()}
-  def eval_option({:keyword, [key, _value]} = argument, %Context{} = context, markup),
-    do: eval(argument, context, key not in markup)
-
-  defp eval(argument, context, assigned?) do
-    {value, _context} = Liquex.Argument.eval(argument, tag_context(context, assigned?))
+  def eval(argument, %Context{private: private} = context) do
+    {value, _context} = Liquex.Argument.eval(argument, %{context | private: Map.put(private, @raw_flag, true)})
     unwrap(value)
   end
 
   @doc """
-  `context` with `name` set to the value `evaluate` gives in it, for
-  `{% assign %}`. Assigned text is the text the template read, escaped as
-  `{{ name }}` prints it. A tag reading `name` while it holds that value gets
-  the text it would get from what was assigned (`eval/2`), so a field passed
-  through `assign` reaches a tag as the field does, and is escaped once: for
-  that, `evaluate` runs a second time, as a tag reads.
+  `eval/2`, with a variable `{% assign %}` gave escaped plain text read as
+  the text it stands for (`assign/3`): so a field passed through `assign` is
+  escaped once, as the field passed directly is. For a tag argument that
+  escapes what it prints (picture's `alt`, `route`); every other argument
+  reads with `eval/2`.
   """
-  @spec assign(Context.t(), String.t(), (Context.t() -> {term(), Context.t()})) :: Context.t()
-  def assign(%Context{} = context, name, evaluate) do
-    {value, assigned} = evaluate.(context)
-    texts = Map.get(assigned.private, @assigned_texts, %{})
-
-    texts =
-      if text?(value) and read_mode(:escape, context) == :escape do
-        {text, _context} = evaluate.(tag_context(context))
-        Map.put(texts, name, {value, text})
-      else
-        Map.delete(texts, name)
-      end
-
-    assigned = Context.assign_global(assigned, name, value)
-    %{assigned | private: Map.put(assigned.private, @assigned_texts, texts)}
+  @spec eval_typed(term(), Context.t()) :: term()
+  def eval_typed(argument, %Context{} = context) do
+    case typed_texts(context) do
+      typed when map_size(typed) == 0 -> eval(argument, context)
+      typed -> eval(argument, Context.push_scope(context, typed))
+    end
   end
 
-  defp text?(value) when is_binary(value), do: true
-  defp text?(value) when is_list(value), do: Enum.any?(value, &text?/1)
-  defp text?(_value), do: false
+  @doc """
+  `context` with `name` set to `value`, for `{% assign %}`. Text read from an
+  entry is escaped, as `{{ name }}` prints it. For escaped plain text (no
+  rich text, no record, no number) the text it stands for is kept beside it,
+  the inverse of the escape (`Brando.Villain.Parser.unescape_var_value/1`),
+  for the arguments that read it as typed (`eval_typed/2`).
+  """
+  @spec assign(Context.t(), String.t(), term()) :: Context.t()
+  def assign(%Context{private: private} = context, name, value) do
+    typed = Map.get(private, @typed_texts, %{})
 
-  # A tag reads text unescaped, and an assigned variable as what it was
-  # assigned while it holds the same value: a loop or `capture` may have set
-  # the name since
-  defp tag_context(%Context{private: private} = context, assigned? \\ true) do
-    context = %{context | private: Map.put(private, @raw_flag, true)}
+    typed =
+      if is_binary(value) and read_mode(:escape, context) == :escape and not read_as_rich_text?(value),
+        do: Map.put(typed, name, {value, Parser.unescape_var_value(value)}),
+        else: Map.delete(typed, name)
 
-    case Map.get(private, @assigned_texts, %{}) do
-      texts when map_size(texts) == 0 or not assigned? ->
-        context
+    context = Context.assign_global(context, name, value)
+    %{context | private: Map.put(context.private, @typed_texts, typed)}
+  end
 
-      texts ->
-        Context.push_scope(
-          context,
-          for({name, {value, text}} <- texts, Access.get(context, name) === value, into: %{}, do: {name, text})
-        )
-    end
+  # Liquex binds a name to a value only, and `capture` and loops set names
+  # without `assign/3`, so the text is tied to the value: a variable still
+  # holding the bytes it was assigned reads as typed. A `capture` or loop
+  # variable of the same name and bytes reads the same, which can change the
+  # characters an argument shows, never whether they are escaped: every
+  # argument that reads typed text escapes it.
+  defp typed_texts(%Context{private: private} = context) do
+    for {name, {value, text}} <- Map.get(private, @typed_texts, %{}),
+        Access.get(context, name) === value,
+        into: %{},
+        do: {name, text}
   end
 
   @doc """
@@ -308,6 +296,7 @@ defmodule Brando.Villain.TemplateView do
   end
 
   defp rich_rows(%__MODULE__{rich: rich} = view, acc) when is_list(rich), do: Map.put(acc, unwrap(view), rich)
+
   defp rich_rows(list, acc) when is_list(list), do: Enum.reduce(list, acc, &rich_rows/2)
   defp rich_rows({_key, value}, acc), do: rich_rows(value, acc)
   defp rich_rows(_value, acc), do: acc

@@ -28,7 +28,7 @@ defmodule Brando.Villain.Tags.EditableField do
 
       {_other, _field, context} ->
         # Not an entry field: print the value escaped.
-        value = TemplateView.eval(argument, context)
+        value = TemplateView.eval_typed(argument, context)
         {[value |> printable() |> Brando.Villain.Parser.escape_var_value()], context}
     end
   end
