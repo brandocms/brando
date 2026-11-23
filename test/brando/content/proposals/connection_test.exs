@@ -166,7 +166,7 @@ defmodule Brando.Content.Proposals.ConnectionTest do
       id = prepare!(mcp(c), [op], "Take the year")
 
       assert [%{proposal_id: ^id, synced_translations: synced}] = list!(mcp(c))
-      assert synced == [%{content_type: "Brando.SyncTest.Article", id: target.id, links: 0, media: 0, values: 1}]
+      assert synced == [%{content_type: "Brando.SyncTest.Article", id: target.id, links: 0, media: 0, values: 1, left: 0}]
 
       [definition] = Enum.filter(Tools.definitions(:mcp), &(&1.name == "list_proposals"))
       assert definition.description =~ "synced_translations"

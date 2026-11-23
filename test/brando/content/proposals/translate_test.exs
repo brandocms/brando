@@ -1080,7 +1080,9 @@ defmodule Brando.Content.Proposals.TranslateTest do
         {var.key, Repo.insert!(%{var | label: %{"en" => var.key}, block_id: child.id, sequence: sequence})}
       end)
 
-    struct(Article.Blocks, %{entry_id: c.source.id, block_id: parent.id, sequence: 1}) |> Repo.insert!()
+    struct(values[:join] || Article.Blocks, %{entry_id: c.source.id, block_id: parent.id, sequence: 1})
+    |> Repo.insert!()
+
     Translations.source_saved(load(c.source.id))
     vars
   end
@@ -1329,6 +1331,45 @@ defmodule Brando.Content.Proposals.TranslateTest do
       takes = %{"links" => 1, "media" => 0, "values" => 2}
       assert Codec.encode(%{op | takes: takes}) == Map.put(map, "takes", takes)
       assert {:ok, %SyncTranslation{target: {:new, "en"}}} = Codec.decode(%{map | "target" => %{"new" => "en"}})
+    end
+  end
+
+  describe "sync_translation and a block field its form does not show" do
+    # The cover of a card in `notes`, which only the `notes` form shows,
+    # replaced in the source: the default form's save keeps it as saved
+    setup c do
+      %{"cover" => cover} =
+        add_cards(c, join: Article.Notes, image_id: Factory.insert(:image, path: "images/first.jpg").id)
+
+      target = create_translation(c)
+      cover |> Ecto.Changeset.change(image_id: Factory.insert(:image, path: "images/second.jpg").id) |> Repo.update!()
+      Translations.source_saved(load(c.source.id))
+      %{target: target}
+    end
+
+    test "is refused when the save could take nothing", c do
+      assert [{:shared_update, "entry_notes/" <> _}] =
+               Enum.filter(open_items(c.target.id), &(elem(&1, 0) == :shared_update))
+
+      assert [{0, :not_in_form, nil}] = problems([%SyncTranslation{target: {Article, c.target.id}}], c.user)
+    end
+
+    test "counts what the save takes, and says what it leaves", c do
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+
+      {:ok, proposal} = Proposals.propose([%SyncTranslation{target: {Article, c.target.id}}], c.user)
+      assert proposal.problems == []
+
+      assert [%SyncTranslation{takes: %{"links" => 0, "media" => 0, "values" => 1, "left" => 1}}] =
+               proposal.operations
+
+      assert [%{changes: [%{type: :sync_translation, takes: %{values: 1, left: 1}}]}] = Review.entries(proposal)
+
+      {:ok, _} = approve_and_apply(proposal, c.user)
+      assert Repo.get!(Article, c.target.id).year == 2001
+
+      assert [{:shared_update, "entry_notes/" <> _}] =
+               Enum.filter(open_items(c.target.id), &(elem(&1, 0) == :shared_update))
     end
   end
 

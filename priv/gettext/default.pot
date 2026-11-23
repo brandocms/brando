@@ -177,6 +177,13 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} change in a block field its main form does not show stays open."
+msgid_plural "%{count} changes in block fields its main form does not show stay open."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} changed block"

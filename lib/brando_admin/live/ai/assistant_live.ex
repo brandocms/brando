@@ -1632,6 +1632,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
         else: gettext("Update the translation from its source")}
     </span>
     <p class="assistant-placement">{sync_takes(@change.takes)}</p>
+    <p :if={@change.takes.left > 0} class="assistant-placement" data-testid="assistant-sync-left">
+      {ngettext(
+        "%{count} change in a block field its main form does not show stays open.",
+        "%{count} changes in block fields its main form does not show stay open.",
+        @change.takes.left
+      )}
+    </p>
     <p class="assistant-placement">{sync_note(@change)}</p>
     """
   end

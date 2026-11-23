@@ -1032,6 +1032,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "What this translation's source changed is in block fields its main form does not show, which sync_translation cannot take: they are taken when the translation is saved in the form that shows them. Leave sync_translation out."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "You cannot publish or unpublish this content type."
 msgstr ""
 

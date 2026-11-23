@@ -998,8 +998,9 @@ defmodule Brando.Content.Proposals do
   defp sync_take_problems(op, takes, work) do
     cond do
       op.digest != work.digest -> [sync_changed()]
-      not work.changed? and Enum.all?(takes, &(elem(&1, 1) == 0)) -> [up_to_date()]
-      true -> []
+      work.changed? or Enum.any?(takes, fn {kind, count} -> kind != "left" and count > 0 end) -> []
+      takes["left"] > 0 -> [not_in_form()]
+      true -> [up_to_date()]
     end
   end
 
@@ -1010,6 +1011,16 @@ defmodule Brando.Content.Proposals do
         dgettext(
           "content_proposals",
           "This translation is up to date with its source: its links, media and source-controlled values are the source's, and there is nothing for sync_translation to take. Leave it out; its texts are answered with translate."
+        )
+      )
+
+  defp not_in_form,
+    do:
+      problem(
+        :not_in_form,
+        dgettext(
+          "content_proposals",
+          "What this translation's source changed is in block fields its main form does not show, which sync_translation cannot take: they are taken when the translation is saved in the form that shows them. Leave sync_translation out."
         )
       )
 
@@ -1036,20 +1047,27 @@ defmodule Brando.Content.Proposals do
             type in [:image, :file, :video, :gallery],
             do: to_string(name)
 
-      counts = work.units |> Enum.map(&take_kind(&1, assets)) |> Enum.frequencies()
-      takes = Map.new(~w(links media values), &{&1, Map.get(counts, &1, 0)})
+      counts = work.units |> Enum.map(&take_kind(&1, assets, pending)) |> Enum.frequencies()
+      takes = Map.new(~w(links media values left), &{&1, Map.get(counts, &1, 0)})
       {:ok, takes, Map.merge(work, Map.take(pending, [:digest, :changed?]))}
     end
   end
 
   defp sync_takes(_target), do: {:error, :unlinked}
 
-  defp take_kind(%{kind: "relinked"}, _assets), do: "links"
+  # An item in a block field the save keeps as saved stays open (`"left"`)
+  defp take_kind(%{kind: kind, key: key} = unit, assets, pending) when kind in ~w(relinked shared_update) do
+    if hd(String.split(key, "/", parts: 2)) in pending.left_out,
+      do: "left",
+      else: taken_kind(unit, assets)
+  end
 
-  defp take_kind(%{kind: "shared_update", key: key}, assets),
+  defp take_kind(_unit, _assets, _pending), do: nil
+
+  defp taken_kind(%{kind: "relinked"}, _assets), do: "links"
+
+  defp taken_kind(%{kind: "shared_update", key: key}, assets),
     do: if(key in assets or String.ends_with?(key, ["/media", "/gallery"]), do: "media", else: "values")
-
-  defp take_kind(_unit, _assets), do: nil
 
   defp readable_source(schema, source_id, actor) do
     case Error.protect(fn -> load!({schema, source_id}, actor, action: :read) end) do

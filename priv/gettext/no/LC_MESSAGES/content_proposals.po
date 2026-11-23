@@ -1032,6 +1032,11 @@ msgstr "Ukjent opphav for forslaget."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "What this translation's source changed is in block fields its main form does not show, which sync_translation cannot take: they are taken when the translation is saved in the form that shows them. Leave sync_translation out."
+msgstr "Det kilden til denne oversettelsen endret, ligger i blokkfelt hovedskjemaet ikke viser, og dem kan ikke sync_translation hente: de hentes når oversettelsen lagres i skjemaet som viser dem. Utelat sync_translation."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "You cannot publish or unpublish this content type."
 msgstr "Du kan ikke publisere eller avpublisere denne innholdstypen."
 

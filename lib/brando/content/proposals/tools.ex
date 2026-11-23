@@ -347,7 +347,7 @@ defmodule Brando.Content.Proposals.Tools do
           "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id). " <>
           "A proposal that replaces an image's file lists it in replaced_images ({kind, id, with: {kind, id}}: the library image that takes the file of the one in with), " <>
           "not in entries; the entries using that image are not listed. " <>
-          "A proposal with sync_translation lists synced_translations ({content_type, id, links, media, values}: what each translation's save takes from its source, counted when it was prepared).",
+          "A proposal with sync_translation lists synced_translations ({content_type, id, links, media, values, left}: what each translation's save takes from its source, counted when it was prepared; left counts the changes in block fields its main form does not show, which it leaves open).",
       parameters: %{
         type: "object",
         properties: %{
@@ -1080,7 +1080,8 @@ defmodule Brando.Content.Proposals.Tools do
           id: id,
           links: takes["links"] || 0,
           media: takes["media"] || 0,
-          values: takes["values"] || 0
+          values: takes["values"] || 0,
+          left: takes["left"] || 0
         }
       end
 
