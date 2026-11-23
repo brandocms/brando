@@ -49,7 +49,7 @@ defmodule Brando.Villain.LiquexParser.Builder do
         {Liquex.Tag.ObjectTag, built_in_parser.("Simple"), :object, nil},
         {Liquex.Tag.RawTag, built_in_parser.("Blocks"), :raw, nil},
         {Liquex.Tag.RenderTag, built_in_parser.("Simple"), :render, :render_liquid},
-        {Liquex.Tag.TablerowTag, built_in_parser.("Iteration"), :tablerow, :tablerow_liquid},
+        {tag_module.("Tablerow"), built_in_parser.("Iteration"), :tablerow, :tablerow_liquid},
         {Liquex.Tag.UnlessTag, built_in_parser.("Conditionals"), :unless_tag, :unless_liquid}
       ]
 

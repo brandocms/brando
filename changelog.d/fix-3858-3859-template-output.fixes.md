@@ -1,0 +1,1 @@
+- A string a `tablerow` loop reads of a list of strings is escaped once in a tag argument that escapes what it prints, as in a `for` loop: `{% tablerow tag in entry.tags %}{% picture entry.cover { alt: tag } %}{% endtablerow %}` no longer prints `R&amp;amp;D` for `R&D`.
