@@ -89,15 +89,17 @@ defmodule Brando.Tenant do
 
   @doc """
   Raises `ArgumentError` when `entry` was loaded in another environment
-  than the current one, where its id names another row. A struct that
-  names no schema of its own (built, not loaded) passes.
+  than the current one, where its id names another row. A struct with no
+  prefix (built, not loaded) passes, and so does one whose schema lives in
+  one place for every environment (a user, a shared preview): its id names
+  the same row from all of them.
   """
   @spec ensure_current!(struct()) :: :ok
   def ensure_current!(%schema{} = entry) do
     loaded = Ecto.get_meta(entry, :prefix)
     current = schema_name(current_prefix())
 
-    if is_nil(loaded) or schema_name(loaded) == current do
+    if is_nil(loaded) or loaded == schema.__schema__(:prefix) or schema_name(loaded) == current do
       :ok
     else
       raise ArgumentError,

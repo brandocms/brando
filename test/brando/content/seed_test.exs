@@ -492,6 +492,14 @@ defmodule Brando.Content.SeedTest do
       end)
     end
 
+    # A user's id names the same row from every environment
+    test "an entry of a schema every environment shares belongs to each of them", %{user: user} do
+      Brando.Tenant.with_prefix(@prefix, fn ->
+        assert Brando.Tenant.ensure_current!(user) == :ok
+        assert Brando.Tenant.ensure_current!(%Brando.Users.User{id: user.id}) == :ok
+      end)
+    end
+
     test "builds a block of a shared module, not of a local module with its id", %{user: user} do
       {:ok, shared} =
         Brando.Content.SharedLibrary.create_shared(
