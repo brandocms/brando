@@ -4,7 +4,7 @@ defmodule BrandoAdmin.MediaDropLiveTest do
   # through the op "add child" emits, and names each child's ref field for the
   # browser to hand the file to. A failed upload takes its child away again.
   # The browser side (MediaDrop, UploadTrigger) is covered by
-  # e2e/playwright/tests/blocks/media-drop-multi.spec.js.
+  # e2e/playwright/tests/blocks/block-multi-media-drop.spec.js.
   use Brando.LiveCase
 
   alias Brando.Content
