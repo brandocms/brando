@@ -170,11 +170,11 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
 
   describe "the copy's slug" do
     alias Brando.SlugScopeTest
-    alias Brando.SlugScopeTest.LanguageArticle
-    alias Brando.SlugScopeTest.TableArticle
+    alias Brando.SlugScopeTest.IndependentLanguageArticle, as: LanguageArticle
+    alias Brando.SlugScopeTest.IndependentTableArticle, as: TableArticle
 
     defp slug_article(schema, slug, language, user) do
-      create = if schema == LanguageArticle, do: :create_language_article, else: :create_table_article
+      create = :"create_#{schema.__naming__().singular}"
 
       {:ok, entry} =
         apply(SlugScopeTest, create, [%{title: "Banzha", slug: slug, language: language, status: "published"}, user])
@@ -182,40 +182,42 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
       entry
     end
 
-    # Translate to [EN]. The fixtures have no form, so the translation
-    # derives no slug from a translated title: the copy's slug stands.
-    defp translate_to_english(conn, path, source) do
+    # Translate to [NO], as the source's row offers it in the English listing. The fixtures have no
+    # form, so the translation derives no slug from a translated title: the
+    # copy's slug stands.
+    defp translate_to_norwegian(conn, path, source) do
       Brando.AIStub.configure()
       Brando.AIStub.reply(fn _prompt -> "" end)
 
       {:ok, view, _html} = live(conn, path)
-      render_click(view, "translate_entry_to_language", %{"id" => "#{source.id}", "language" => "en"})
+      await_selector(view, ".list-row")
+      view |> element("#action_default_translate_entry_to_lang_#{source.id}_lang_no") |> render_click()
       await_selector(view, ".translation-dialog-link", 5_000)
     end
 
-    defp english_slugs(schema),
-      do: Repo.all(from a in schema, where: a.language == :en, order_by: a.id, select: a.slug)
+    defp norwegian_slugs(schema),
+      do: Repo.all(from a in schema, where: a.language == :no, order_by: a.id, select: a.slug)
 
     test "is the source's when the slug is unique per language", c do
-      source = slug_article(LanguageArticle, "banzha", "no", c.current_user)
-      translate_to_english(c.conn, "/admin/slug-scope/language-articles", source)
+      source = slug_article(LanguageArticle, "banzha", "en", c.current_user)
+      translate_to_norwegian(c.conn, "/admin/slug-scope/language-articles", source)
 
-      assert english_slugs(LanguageArticle) == ["banzha"]
+      assert norwegian_slugs(LanguageArticle) == ["banzha"]
     end
 
     test "has the language appended when the slug is unique across the table", c do
-      source = slug_article(TableArticle, "banzha", "no", c.current_user)
-      translate_to_english(c.conn, "/admin/slug-scope/table-articles", source)
+      source = slug_article(TableArticle, "banzha", "en", c.current_user)
+      translate_to_norwegian(c.conn, "/admin/slug-scope/table-articles", source)
 
-      assert english_slugs(TableArticle) == ["banzha-en"]
+      assert norwegian_slugs(TableArticle) == ["banzha-no"]
     end
 
     test "is numbered when the language already uses it", c do
-      source = slug_article(LanguageArticle, "banzha", "no", c.current_user)
-      slug_article(LanguageArticle, "banzha", "en", c.current_user)
-      translate_to_english(c.conn, "/admin/slug-scope/language-articles", source)
+      source = slug_article(LanguageArticle, "banzha", "en", c.current_user)
+      slug_article(LanguageArticle, "banzha", "no", c.current_user)
+      translate_to_norwegian(c.conn, "/admin/slug-scope/language-articles", source)
 
-      assert english_slugs(LanguageArticle) == ["banzha", "banzha-2"]
+      assert norwegian_slugs(LanguageArticle) == ["banzha", "banzha-2"]
     end
   end
 end
