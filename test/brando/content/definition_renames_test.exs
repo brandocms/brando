@@ -582,7 +582,9 @@ defmodule Brando.Content.DefinitionRenamesTest do
 
       # Each change in the file that holds `from`
       write = fn from, to ->
-        [file] = path |> Path.join("content/**/*.{exs,liquid}") |> Path.wildcard() |> Enum.filter(&(File.read!(&1) =~ from))
+        [file] =
+          path |> Path.join("content/**/*.{exs,liquid}") |> Path.wildcard() |> Enum.filter(&(File.read!(&1) =~ from))
+
         File.write!(file, String.replace(File.read!(file), from, to))
       end
 

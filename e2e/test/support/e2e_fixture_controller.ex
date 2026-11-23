@@ -236,6 +236,11 @@ defmodule E2EFixtureController do
         "release-removal" ->
           create_release_removal()
 
+        # The same, renaming the var (`renamed_from`): the apply moves the
+        # block's value
+        "release-rename" ->
+          create_release_removal(:rename)
+
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor
         "write-with-ai-module" ->
@@ -371,7 +376,7 @@ defmodule E2EFixtureController do
     user
   end
 
-  defp create_release_removal do
+  defp create_release_removal(change \\ :remove) do
     user = get_admin_user()
     dir = Brando.Content.Definitions.Release.path()
     File.rm_rf!(dir)
@@ -399,8 +404,21 @@ defmodule E2EFixtureController do
 
     file = release_file!(dir, module)
     source = File.read!(file)
-    File.write!(file, Regex.replace(~r/\n    var "show_border", "boolean" do\n.*?\n    end\n/s, source, "\n"))
 
+    edited =
+      case change do
+        :remove ->
+          Regex.replace(~r/\n    var "show_border", "boolean" do\n.*?\n    end\n/s, source, "\n")
+
+        :rename ->
+          String.replace(
+            source,
+            ~s(var "show_border", "boolean" do\n),
+            ~s(var "framed", "boolean" do\n      renamed_from "show_border"\n)
+          )
+      end
+
+    File.write!(file, edited)
     user
   end
 

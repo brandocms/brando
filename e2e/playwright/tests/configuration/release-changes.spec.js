@@ -149,3 +149,29 @@ test('a release that removes a var is applied, and the module links to Resolve b
   await page.getByTestId('release-resolve-blocks').click()
   await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/update\/\d+\/stale-blocks$/)
 })
+
+// brandocms/brando#3844: a release that renames a var a block holds a value
+// for lists the move, and the apply moves the value: nothing is left to resolve.
+test('a release that renames a var moves the value in the apply', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/release-rename')).ok()).toBe(true)
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+
+  await page.goto('/admin/config/content/modules/release')
+  await syncLV(page)
+
+  const row = page.getByTestId('release-row').filter({ hasText: 'Enkelt bilde med bildetekst' })
+  await expect(row.getByTestId('release-row-check')).toBeChecked()
+  await row.click()
+  await syncLV(page)
+  await expect(page.getByTestId('release-moves').locator('li')).toContainText('show_border → framed')
+  await expect(page.getByTestId('release-removals')).toHaveCount(0)
+
+  await page.getByTestId('release-apply').click()
+  await page.getByTestId('release-confirm-apply').click()
+  await syncLV(page)
+
+  const applied = page.getByTestId('release-applied-row').filter({ hasText: 'Enkelt bilde med bildetekst' })
+  await applied.click()
+  await syncLV(page)
+  await expect(page.getByTestId('release-resolve-blocks')).toHaveCount(0)
+})
