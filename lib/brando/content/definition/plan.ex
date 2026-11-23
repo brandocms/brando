@@ -153,8 +153,8 @@ defmodule Brando.Content.Definition.Plan do
   hold: the `resolve_command/2`, or where to resolve them. Nil when no block
   holds them.
   """
-  def resolve_line(plan, %{kind: "module"} = item) do
-    if held(item) != [] or Map.get(item, :remaps, []) != [] do
+  def resolve_line(plan, item) do
+    if match?(%{removes: %{blocks: blocks}} when blocks > 0, item) or Map.get(item, :remaps, []) != [] do
       case resolve_command(plan, item) do
         nil ->
           "resolve: after the apply, under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
@@ -164,8 +164,6 @@ defmodule Brando.Content.Definition.Plan do
       end
     end
   end
-
-  def resolve_line(_plan, _item), do: nil
 
   defp shell_quote(value) do
     if value =~ ~r/\A[A-Za-z0-9_@%+=:,.\/-]+\z/,
