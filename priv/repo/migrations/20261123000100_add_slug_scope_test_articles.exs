@@ -2,12 +2,13 @@ defmodule BrandoIntegration.Repo.Migrations.AddSlugScopeTestArticles do
   use Ecto.Migration
 
   @moduledoc """
-  Synchronized test articles whose slug is unique per language or across the
-  table (`Brando.SlugScopeTest`): the slug a new translation gets.
+  Synchronized test articles whose slug is unique per language, per language
+  and status, or across the table (`Brando.SlugScopeTest`): the slug a new
+  translation gets.
   """
 
   def change do
-    for table <- [:slug_scope_language_articles, :slug_scope_table_articles] do
+    for table <- [:slug_scope_language_articles, :slug_scope_status_articles, :slug_scope_table_articles] do
       create table(table) do
         add :title, :text
         add :slug, :text
@@ -29,6 +30,7 @@ defmodule BrandoIntegration.Repo.Migrations.AddSlugScopeTestArticles do
     end
 
     create unique_index(:slug_scope_language_articles, [:slug, :language])
+    create unique_index(:slug_scope_status_articles, [:slug, :language, :status])
     create unique_index(:slug_scope_table_articles, [:slug])
   end
 end

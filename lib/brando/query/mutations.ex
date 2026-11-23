@@ -278,8 +278,12 @@ defmodule Brando.Query.Mutations do
 
       has_blocks? = module.has_trait(Trait.Blocks)
 
+      # The copy is a draft before its change fields run, so one that looks
+      # for a free value (a slug unique per status) looks among drafts, and
+      # again after them, so none can leave it published.
       cloned_entry =
         entry
+        |> maybe_set_status()
         |> maybe_change_fields(merged_opts)
         |> maybe_delete_fields(merged_opts)
         |> maybe_set_status()
