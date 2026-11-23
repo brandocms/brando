@@ -14,6 +14,7 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
   alias Brando.Pages.Page
   alias Brando.ProposalFixtures
   alias Ecto.Adapters.SQL.Sandbox
+  alias Ecto.Changeset
 
   @repo Brando.Repo.repo()
 
@@ -162,22 +163,22 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
         %{block_id: id} = entry_block when id == block.id ->
           vars =
             Enum.map(entry_block.block.vars, fn
-              %{key: "tagline"} = var -> Ecto.Changeset.change(var, value: value)
-              var -> Ecto.Changeset.change(var)
+              %{key: "tagline"} = var -> Changeset.change(var, value: value)
+              var -> Changeset.change(var)
             end)
 
           block =
             entry_block.block
-            |> Ecto.Changeset.change(rendered_html: "<p>#{value}</p>")
-            |> Ecto.Changeset.put_assoc(:vars, vars)
+            |> Changeset.change(rendered_html: "<p>#{value}</p>")
+            |> Changeset.put_assoc(:vars, vars)
 
-          entry_block |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:block, block)
+          entry_block |> Changeset.change() |> Changeset.put_assoc(:block, block)
 
         entry_block ->
-          Ecto.Changeset.change(entry_block)
+          Changeset.change(entry_block)
       end)
 
-    page |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:entry_blocks, entry_blocks)
+    page |> Changeset.change() |> Changeset.put_assoc(:entry_blocks, entry_blocks)
   end
 
   # A module whose file renames var tagline to heading; one page's first
