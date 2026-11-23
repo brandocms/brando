@@ -57,7 +57,7 @@ defmodule Brando.Villain.TemplateView do
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
-  # The names `{% assign %}` and `{% for %}` set (`assign/4`, `loop/4`)
+  # What `{% assign %}` and `{% for %}` set each name to (`assign/4`, `loop/4`)
   @typed_texts :brando_template_view_typed_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
@@ -203,8 +203,7 @@ defmodule Brando.Villain.TemplateView do
   @spec eval_typed(term(), Context.t()) :: term()
   def eval_typed(argument, %Context{} = context) do
     with name when is_binary(name) <- variable(argument),
-         %{} = texts <- Map.get(set_names(context), name),
-         {:ok, text} <- Map.fetch(texts, Access.get(context, name)) do
+         text when is_binary(text) or is_list(text) <- mark(context, name) do
       eval(argument, Context.push_scope(context, %{name => text}))
     else
       _ -> eval(argument, context)
@@ -218,14 +217,18 @@ defmodule Brando.Villain.TemplateView do
   defp variable(_argument), do: nil
 
   @doc """
-  Whether `argument`, the expression of an `{% assign %}` or the collection of
-  a `{% for %}`, starts from a field or variable, which is read escaped: not
-  from a literal the template writes, nor from a name the template set from
-  one.
+  Whether `expression`, the right side of an `{% assign %}` with its filters
+  or the collection of a `{% for %}`, reads a field or variable, which is read
+  escaped: in itself or in a filter's argument. A literal the template
+  writes is not read, nor a name holding a value the template set from one.
   """
   @spec read?(term(), Context.t()) :: boolean()
-  def read?([argument], context), do: read?(argument, context)
-  def read?({:field, [{:key, name} | _keys]}, context), do: Map.get(set_names(context), name) != :literal
+  def read?(expression, context) when is_list(expression), do: Enum.any?(expression, &read?(&1, context))
+  def read?({:field, [{:key, name} | _keys]}, context), do: mark(context, name) != :literal
+  def read?({:filters, filters}, context), do: read?(filters, context)
+  def read?({:filter, [_name | arguments]}, context), do: read?(arguments, context)
+  def read?({:arguments, arguments}, context), do: read?(arguments, context)
+  def read?({:keyword, [_key, value]}, context), do: read?(value, context)
   def read?(_argument, _context), do: false
 
   @doc """
@@ -245,55 +248,64 @@ defmodule Brando.Villain.TemplateView do
   rich text, no record, no number), or a list of it, the text it stands for
   is kept beside it, the inverse of the escape
   (`Brando.Villain.Parser.unescape_var_value/1`), for the arguments that read
-  it as typed (`eval_typed/2`). `read?` says the expression starts from a
-  field or variable, which is read escaped (`read?/2`); text that starts from
-  a literal the template writes was never escaped, and is kept as it is only.
+  it as typed (`eval_typed/2`). `read?` says the expression reads a field or
+  variable, which is read escaped (`read?/2`); text set from literals alone
+  was never escaped, and is kept as it is only.
   """
   @spec assign(Context.t(), String.t(), term(), boolean()) :: Context.t()
   def assign(%Context{} = context, name, value, read?) do
     context
     |> Context.assign_global(name, value)
-    |> put_set_name(name, if(read?, do: typed_texts([value], context), else: :literal))
+    |> put_marks(name, [value], read?)
   end
 
   @doc """
   `context` for the body of `{% for name in collection %}`: each string, or
-  list of strings, in the `items` of a collection that is read
-  (`read?/2`) is escaped plain text, as `assign/4` keeps it, for the
-  arguments that read it as typed. Returns what the name had before, for
-  `end_loop/3`.
+  list of strings, of the `items` of a collection that is read (`read?/2`) is
+  escaped plain text, as `assign/4` keeps it, for the arguments that read it
+  as typed; of any other collection, a literal.
   """
-  @spec loop(Context.t(), String.t(), term(), boolean()) :: {Context.t(), term()}
-  def loop(%Context{} = context, name, items, read?) do
-    before = Map.get(set_names(context), name)
-    set = if read?, do: typed_texts(if(is_list(items), do: items, else: []), context), else: :literal
-    {put_set_name(context, name, set), before}
-  end
+  @spec loop(Context.t(), String.t(), term(), boolean()) :: Context.t()
+  def loop(%Context{} = context, name, items, read?) when is_list(items), do: put_marks(context, name, items, read?)
+  def loop(%Context{} = context, _name, _items, _read?), do: context
 
-  @doc "`context` after the loop `loop/4` began, with `name` as it was before it."
-  @spec end_loop(Context.t(), String.t(), term()) :: Context.t()
-  def end_loop(%Context{} = context, name, before), do: put_set_name(context, name, before)
-
-  # The names `assign/4` and `loop/4` set: `:literal`, or the escaped plain
-  # texts the name was given, each with the text it stands for.
+  # Each name `assign/4` and `loop/4` set, with what each string or list of
+  # strings it was given stands for: `:literal`, or the text it holds escaped.
   #
   # Liquex binds a name to a value only, and `capture` sets names without
-  # `assign/4`, so the text is tied to the value: a variable still holding
-  # bytes it was given reads as typed. A `capture` of the same name and bytes
-  # reads the same, which can change the characters an argument shows, never
-  # whether they are escaped: every argument that reads typed text escapes it.
-  defp set_names(%Context{private: private}), do: Map.get(private, @typed_texts, %{})
+  # `assign/4`, and a loop's name is bound or not as Liquex decides, so the
+  # mark is tied to the value: a name reads by the mark of the value it holds
+  # now, and a value it was never given here is read. A mark is never taken
+  # back, and a later one for the same bytes replaces it: so a name holding
+  # the same bytes from elsewhere reads the same, which can change the
+  # characters an argument shows, never whether they are escaped, as every
+  # argument that reads typed text escapes it.
+  defp mark(%Context{private: private} = context, name) do
+    case private do
+      %{@typed_texts => %{^name => marks}} -> Map.get(marks, Access.get(context, name))
+      _ -> nil
+    end
+  end
 
-  defp put_set_name(%Context{private: private} = context, name, nil),
-    do: %{context | private: Map.put(private, @typed_texts, Map.delete(set_names(context), name))}
+  defp put_marks(%Context{private: private} = context, name, values, read?) do
+    names = Map.get(private, @typed_texts, %{})
+    escaped? = read_mode(:escape, context) == :escape
 
-  defp put_set_name(%Context{private: private} = context, name, set),
-    do: %{context | private: Map.put(private, @typed_texts, Map.put(set_names(context), name, set))}
+    marks =
+      values
+      |> Enum.filter(&(is_binary(&1) or is_list(&1)))
+      |> Enum.reduce(Map.get(names, name, %{}), fn value, marks ->
+        mark =
+          cond do
+            not read? -> :literal
+            escaped? -> typed_text(value)
+            true -> nil
+          end
 
-  defp typed_texts(values, context) do
-    if read_mode(:escape, context) == :escape,
-      do: values |> Enum.map(&{&1, typed_text(&1)}) |> Enum.reject(&is_nil(elem(&1, 1))) |> Map.new(),
-      else: %{}
+        if mark, do: Map.put(marks, value, mark), else: Map.delete(marks, value)
+      end)
+
+    %{context | private: Map.put(private, @typed_texts, Map.put(names, name, marks))}
   end
 
   defp typed_text(value) when is_binary(value),

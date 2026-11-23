@@ -13,7 +13,7 @@ defmodule Brando.Villain.Tags.Assign do
 
   @impl true
   def render([left: name, right: [right, filters: filters]], context) when is_binary(name) do
-    read? = TemplateView.read?(right, context)
+    read? = TemplateView.read?([right, filters: filters], context)
     {value, context} = Liquex.Argument.eval(right, context)
     {value, context} = Render.apply_filters(value, filters, context)
     {[], TemplateView.assign(context, name, value, read?)}

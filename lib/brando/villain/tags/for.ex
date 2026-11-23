@@ -16,9 +16,7 @@ defmodule Brando.Villain.Tags.For do
   @impl true
   def render([identifier: name, collection: collection] ++ _rest = contents, context) do
     read? = TemplateView.read?(collection, context)
-    {items, context} = if read?, do: Liquex.Argument.eval(collection, context), else: {nil, context}
-    {context, before} = TemplateView.loop(context, name, items, read?)
-    {result, context} = Liquex.Tag.ForTag.render(contents, context)
-    {result, TemplateView.end_loop(context, name, before)}
+    {items, context} = Liquex.Argument.eval(collection, context)
+    Liquex.Tag.ForTag.render(contents, TemplateView.loop(context, name, items, read?))
   end
 end

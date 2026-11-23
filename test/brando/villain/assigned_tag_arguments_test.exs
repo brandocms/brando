@@ -173,6 +173,74 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
     assert html == render("{% route page_path show { entry.title } %}", entry)
   end
 
+  # What a name was set from is tied to the value it holds, not to the name:
+  # a later loop, assign or capture of it marks only what it gives the name
+  test "a name a loop set again, or an assign in a loop, reads as it holds after the loop", %{entry: entry} do
+    expected = render("{% route page_path show { entry.title } %}", entry)
+
+    for template <- [
+          "{% for q in (1..1) %}{% assign q = entry.title %}{% endfor %}",
+          "{% for q in entry.tags %}{% assign q = entry.title %}{% endfor %}",
+          ~s({% assign q = "x" %}{% for q in entry.tags %}{% endfor %}{% assign q = entry.title %})
+        ] do
+      assert render(template <> "{% route page_path show { q } %}", entry) == expected, template
+    end
+  end
+
+  test "a name a loop over nothing would set reads as it holds in the loop's else", %{entry: entry} do
+    entry = %{entry | tags: []}
+
+    html =
+      render(
+        "{% assign q = entry.title %}{% for q in entry.tags %}{{ q }}" <>
+          "{% else %}{% picture entry.cover { lazyload: false, alt: q } %}{% endfor %}",
+        entry
+      )
+
+    assert html == render("{% picture entry.cover { lazyload: false, alt: entry.title } %}", entry)
+  end
+
+  # A value that starts from a name set from a literal, or from a literal,
+  # and reads a field in a filter holds the field's text escaped
+  test "an assigned value a filter adds a field to reads as the field", %{entry: entry} do
+    for template <- [
+          "{% picture entry.cover { lazyload: false, alt: V } %}",
+          "{% route page_path show { V } %}"
+        ],
+        assigns <- [
+          ~s({% assign prefix = "Photo: " %}{% assign alt = prefix | append: entry.title %}),
+          ~s({% assign alt = "Photo: " | append: entry.title %})
+        ] do
+      assert render(assigns <> with_value(template, "alt"), entry) ==
+               render(with_value(template, "entry.title"), %{entry | title: "Photo: " <> @typed}),
+             assigns <> template
+    end
+  end
+
+  test "a capture of a name set from a literal reads as what it captured", %{entry: entry} do
+    html =
+      render(
+        ~s({% assign q = "x" %}{% capture q %}{{ entry.title }}{% endcapture %}{% assign alt = q %}) <>
+          "{% route page_path show { alt } %}",
+        entry
+      )
+
+    assert html == render("{% route page_path show { entry.title } %}", entry)
+  end
+
+  # `break` and `continue` in a loop's else leave the loop around it
+  test "break and continue in an inner loop's else reach the outer loop", %{entry: entry} do
+    entry = %{entry | tags: []}
+
+    for {signal, expected} <- [{"break", "1"}, {"continue", "12"}] do
+      template =
+        "{% for x in (1..2) %}{{ x }}{% for tag in entry.tags %}{{ tag }}" <>
+          "{% else %}{% #{signal} %}{% endfor %}-{% endfor %}"
+
+      assert render(template, entry) == expected, signal
+    end
+  end
+
   test "a loop variable of the same name is read as the loop's", %{entry: entry} do
     html =
       render(
@@ -202,22 +270,17 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
     assert [@typed | _] = html |> Floki.parse_fragment!() |> Floki.attribute("img", "alt")
   end
 
-  # A value that starts from a literal was never escaped: it reaches every tag
-  # as before, the value `{{ }}` prints of it
-  test "an assigned value that starts from a literal reaches a tag as it prints", %{entry: entry} do
+  # A literal was never escaped: assigned, it reaches every tag as before
+  test "an assigned literal reaches a tag as it is", %{entry: entry} do
     for template <- [
           "{% picture entry.cover { lazyload: false, alt: V } %}",
           "{% route page_path show { V } %}",
           "{% inspect V %}",
           "{% editable_field V %}"
-        ],
-        value <- [~s("A&amp;B"), ~s("A&amp;B" | append: entry.title)] do
-      printed = render("{{ #{value} }}", entry)
-      refute printed =~ ~s(")
-
-      assert render("{% assign label = #{value} %}" <> with_value(template, "label"), entry) ==
-               render(with_value(template, ~s("#{printed}")), entry),
-             "#{template} #{value}"
+        ] do
+      assert render(~s({% assign label = "A&amp;B" %}) <> with_value(template, "label"), entry) ==
+               render(with_value(template, ~s("A&amp;B")), entry),
+             template
     end
   end
 
