@@ -249,6 +249,21 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     refute has_element?(view, ".assistant-apply")
   end
 
+  test "an unloadable proposal discarded elsewhere no longer offers Discard", %{conn: conn, current_user: user} = c do
+    id = prepare(c, "Names a type outside the catalogue")
+    # As an earlier version stored it, before the catalogue was checked
+    op = %{"op" => "create_entry", "content_type" => "Brando.Sites.GlobalSet", "ref" => "set", "fields" => %{}}
+    Repo.update_all(from(r in Record, where: r.id == ^id), set: [operations: [op]])
+
+    {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+    assert has_element?(view, "#assistant-unloadable button[phx-click=cancel_proposal]")
+
+    :ok = Proposals.cancel(id, user)
+
+    refute has_element?(view, row(id))
+    refute has_element?(view, "#assistant-unloadable")
+  end
+
   test "an approve of a version superseded since is refused", %{conn: conn} = c do
     first = prepare(c, "First version")
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{first}")

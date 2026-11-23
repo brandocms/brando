@@ -2855,6 +2855,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
     assign(socket, :stale, stale)
   end
 
+  # One that could not be loaded offers only Discard, until it is discarded
+  # or applied elsewhere.
+  defp check_stale(%{assigns: %{proposal: nil, unloadable_id: id}} = socket) when is_binary(id) do
+    if Proposals.discardable?(id, socket.assigns.current_user),
+      do: socket,
+      else: assign(socket, unloadable_id: nil, error: nil)
+  end
+
   defp check_stale(socket), do: socket
 
   defp stale(_shown, %{status: "superseded", newest: newest}), do: %{reason: :superseded, newest: newest}
