@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.BlockRemountWorkTest do
   # A child block moved to another row mounts again under its new parent,
-  # as a new component. Work addressed to it while it moves, an upload
-  # finishing into one of its refs or a change typed into one of its fields,
-  # stays with the block.
+  # as a new component. An upload finishing into one of its refs while it
+  # moves stays with the block. (Typing just before a move is in
+  # e2e/playwright/tests/blocks/block-remount-work.spec.js.)
   # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
   # "naming", whose URIs concurrent transactions would wait on
   use Brando.LiveCase, async: true, group: :shared_locks
@@ -127,6 +127,7 @@ defmodule BrandoAdmin.BlockRemountWorkTest do
       [_alpha, beta, _gamma] = c.child_uids
       view = open(conn, c.work)
       ready = video_ready(c, beta)
+
       during(view, "reposition", ready, fn ->
         drop_on_canvas(view, beta, c.multi_uid, 1, c.row_uid, 0)
       end)
