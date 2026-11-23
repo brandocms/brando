@@ -12,8 +12,10 @@ defmodule Brando.Doctor.Checks.ModuleMediaDrop do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Module
+  alias Brando.Content.{Module, SharedLibrary}
   alias Brando.Doctor.Context
+  alias Brando.Sites.Site
+  alias Brando.Tenant
 
   @impl true
   def id, do: "module_media_drop"
@@ -39,12 +41,29 @@ defmodule Brando.Doctor.Checks.ModuleMediaDrop do
     )
     |> Brando.Repo.all()
     |> Enum.flat_map(fn module ->
-      case Module.media_drop_issue(module, module.children) do
+      case Module.media_drop_issue(module, fn -> children(module) end) do
         nil -> []
         issue -> [{module_name(module), module.uid, Module.translate_media_drop_issue(issue)}]
       end
     end)
   end
+
+  # A shared-library module customized here holds the setting but no children
+  # of its own: the block editor offers it the library module's children, or
+  # their overrides here, as the site has them (`SharedLibrary.list_available/3`)
+  defp children(%{source_module_id: source_id}) when not is_nil(source_id) do
+    with prefix when is_binary(prefix) <- Tenant.current_prefix(),
+         site_key when is_binary(site_key) <- Tenant.current_site_key(),
+         %Site{} = site <- Tenant.Registry.get_site_by_key(site_key) do
+      :module
+      |> SharedLibrary.list_available(site, prefix)
+      |> Enum.filter(&(&1.parent_id == source_id))
+    else
+      _no_site -> []
+    end
+  end
+
+  defp children(module), do: module.children
 
   @doc "Turns `[{environment_label, [{module_name, uid, problem}]}]` into a result."
   def evaluate(per_environment) do
