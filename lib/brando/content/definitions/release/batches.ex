@@ -13,6 +13,8 @@ defmodule Brando.Content.Definitions.Release.Batches do
   created stays.
   """
 
+  use Gettext, backend: Brando.Gettext
+
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.Definition.{Baselines, Model, Plan, References, Snapshot}
@@ -164,7 +166,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
   defp moved(batch) do
     for %{"uid" => uid, "moves" => [_ | _] = moves} <- (batch.definitions || %{})["items"] || [], into: %{} do
       text = Enum.map_join(moves, ", ", &"#{&1["from"]} to #{&1["to"]}")
-      {uid, "the apply moved values from #{text}"}
+      {uid, gettext("the apply moved values from %{renames}", renames: text)}
     end
   end
 

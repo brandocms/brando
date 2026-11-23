@@ -198,6 +198,24 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert [%Var{value: "Default tagline"}] =
                Repo.all(from(v in Var, where: v.block_id == ^other.id and v.key == "heading"))
     end
+
+    test "of two keys leaves a block's value under one new key when the block holds only the other old key", c do
+      # The block holds body, and heading as a leftover with text, but no tagline
+      block = first_block(c.identity)
+      Repo.delete_all(from(v in Var, where: v.block_id == ^block.id and v.key == "tagline"))
+      leftover!(block, "heading", "Typed later")
+      rename_tagline!(c)
+      rename_body!(c)
+
+      plan = plan!(c)
+      assert [%{action: :update, moves: %{renames: [_, _]}}] = plan.items
+      proposed = Proposed.sync_block(load_tree(block), Proposed.build(%{plan: plan, items: plan.items}))
+      assert Enum.find(proposed.vars, &(&1.key == "heading")).value == "Typed later"
+
+      import!(c)
+      assert var(block, "heading").value == "Typed later"
+      assert ref(block, "copy").data.data.text == "<p>Identity 0</p>"
+    end
   end
 
   describe "a rename is refused" do
@@ -243,6 +261,17 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert %{refused: [reason]} = Renames.plan(record, module, [%{kind: :var, from: "tagline", to: "size"}], c.user)
       assert reason =~ "blocks ##{held.id}"
       assert reason =~ "hold a value of tagline that is not one of size's options"
+
+      # A select without options takes no choice either
+      assert %{refused: [reason]} =
+               Renames.plan(
+                 record,
+                 %{record | vars: [%{target | options: []}]},
+                 [%{kind: :var, from: "tagline", to: "size"}],
+                 c.user
+               )
+
+      assert reason =~ "blocks ##{held.id}"
     end
 
     test "when a block's region under the new ref holds blocks, as both names own children", c do
@@ -373,6 +402,21 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert var(held, "heading").value == "Typed since"
     end
 
+    test "that Postgres aborts as a deadlock is an error to try again, not a crash", c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      rename_tagline!(c)
+      plan = plan!(c)
+
+      deadlock = fn _plan, _changes ->
+        Repo.repo().query!("DO $$ BEGIN RAISE EXCEPTION USING ERRCODE = '40P01'; END $$")
+      end
+
+      assert {:error, reason} = Definitions.apply(plan, c.user, in_transaction: deadlock)
+      assert reason =~ ~r/try again/i
+      assert var(held, "tagline").value == "Kept words"
+      assert [%{action: :update}] = plan!(c).items
+    end
+
     test "is retried after the commit without moving again: a refresh adds no revisions", c do
       c.identity |> first_block() |> set!("tagline", "Kept words")
       rename_tagline!(c)
@@ -417,6 +461,25 @@ defmodule Brando.Content.DefinitionRenamesTest do
       # Once resolved, no plan prints it again
       refute Enum.any?(import!(c, ["--dry-run"]), &(&1 =~ "resolve:"))
     end
+
+    test "the resolve --map line is not offered when it would replace a value or leave a ref's slots", c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      record = Repo.preload(module(c), [:refs, :vars])
+      tagline = [%{kind: :var, from: "tagline", to: "heading"}]
+      module = %{record | vars: [%Var{key: "heading", type: :string, label: %{"en" => "Heading"}}]}
+      assert [%{ok?: true}] = Renames.remaps(record, module, tagline)
+
+      leftover!(held, "heading", "Typed later")
+      assert [%{ok?: false}] = Renames.remaps(record, module, tagline)
+
+      [body] = record.refs
+      body_to_copy = [%{kind: :ref, from: "body", to: "copy"}]
+      module = %{record | refs: [%{body | name: "copy"}]}
+      assert [%{ok?: true}] = Renames.remaps(record, module, body_to_copy)
+
+      footnote!(c, held, "body")
+      assert [%{ok?: false}] = Renames.remaps(record, module, body_to_copy)
+    end
   end
 
   describe "a release" do
@@ -453,6 +516,37 @@ defmodule Brando.Content.DefinitionRenamesTest do
 
       assert {:error, :needs_migration} = Batches.revert(batch, c.user)
       assert var(held, "heading").value == "Kept words"
+    end
+
+    test "previews a conflict the operator takes the release's version of with the values moved, as the apply moves them",
+         c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      rename_tagline!(c)
+      # Edited here since the last release
+      Repo.update_all(from(m in Module, where: m.id == ^c.module.id), set: [class: "edited-here"])
+      opts = [path: c.path, version: "2.0.0", user: c.user.id]
+
+      {:ok, report} = Release.plan(opts)
+      assert [%{action: :conflict, state: :changed_in_both}] = report.items
+      proposed = Proposed.build(report, conflicts: [c.module.uid])
+      synced = Proposed.sync_block(load_tree(held), proposed)
+      assert Enum.find(synced.vars, &(&1.key == "heading")).value == "Kept words"
+      assert %{verdict: :same} = Verify.check(Page, c.identity.id, proposed)
+
+      {:ok, _} = Release.apply(:all, opts ++ [wait: false, discard: [c.module.uid]])
+      assert var(held, "heading").value == "Kept words"
+    end
+
+    test "records no moves, and can revert, when no block held the old key", c do
+      Repo.delete_all(from(v in Var, where: v.key == "tagline" and not is_nil(v.block_id)))
+      rename_tagline!(c)
+      opts = [path: c.path, version: "2.0.0", user: c.user.id]
+
+      {:ok, %{batch_id: batch_id}} = Release.apply(:all, opts ++ [wait: false])
+      batch = Batches.get(batch_id)
+      assert [item] = batch.definitions["items"]
+      refute Map.has_key?(item, "moves")
+      assert {:ok, %{revert: [_], irreversible: []}} = Batches.preview(batch, c.user)
     end
 
     test "refuses an apply whose renames changed after the review", c do
@@ -521,43 +615,48 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert [%{key: "title"}] = Repo.preload(Repo.get!(Module, card.id), :vars).vars
     end
 
-    test "to as many entries as an apply moves while editors' saves wait", c do
-      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    test "to as many blocks as an apply moves while editors' saves wait, counted before they are loaded", c do
+      bare_blocks!(c, c.module, "tagline", 480)
+      rename_tagline!(c)
 
-      blocks =
-        for _ <- 1..480 do
-          %{
-            uid: Brando.Utils.generate_uid(),
-            type: :module,
-            module_id: c.module.id,
-            module_origin: :local,
-            creator_id: c.user.id,
-            inserted_at: now,
-            updated_at: now
-          }
-        end
+      assert [%{action: :migration_required, moves: %{entries: []}, reason: reason}] = plan!(c).items
+      assert reason =~ "would move values in 486 blocks,"
+      assert reason =~ "mix brando.modules resolve --map var:tagline=heading"
+    end
 
-      {_, inserted} = Repo.insert_all(Block, blocks, returning: [:id])
+    test "to as many blocks across the modules an apply selects", c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
 
-      Repo.insert_all(
-        Var,
-        for(
-          %{id: id} <- inserted,
-          do: %{
-            block_id: id,
-            key: "tagline",
-            type: :string,
-            label: %{"en" => "Tagline"},
-            inserted_at: now,
-            updated_at: now
-          }
+      bare_blocks!(c, c.module, "tagline", 240)
+      bare_blocks!(c, card, "title", 240)
+
+      path = c.path <> "-limit"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      rename_tagline!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
         )
       )
 
-      rename_tagline!(c)
-      assert [%{action: :migration_required, reason: reason}] = plan!(c).items
+      # Each module alone is within the limit; the two together are not
+      items = plan!(c).items
+      assert [%{action: :migration_required, reason: reason}, %{action: :migration_required}] = items
       assert reason =~ "would move values in 486 blocks of 2 entries"
-      assert reason =~ "mix brando.modules resolve --map var:tagline=heading"
+
+      {:ok, bundle} = Definitions.read(path)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid])
+      assert %{action: :update} = Enum.find(plan.items, &(&1.uid == c.module.uid))
     end
   end
 
@@ -675,6 +774,34 @@ defmodule Brando.Content.DefinitionRenamesTest do
   end
 
   ## Fixtures
+
+  # `count` blocks of `module` in no entry, each holding `key`
+  defp bare_blocks!(c, module, key, count) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    blocks =
+      for _ <- 1..count do
+        %{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: module.id,
+          module_origin: :local,
+          creator_id: c.user.id,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    {_, inserted} = Repo.insert_all(Block, blocks, returning: [:id])
+
+    Repo.insert_all(
+      Var,
+      for(
+        %{id: id} <- inserted,
+        do: %{block_id: id, key: key, type: :string, label: %{"en" => key}, inserted_at: now, updated_at: now}
+      )
+    )
+  end
 
   defp leftover!(block, key, value) do
     Repo.insert!(%Var{block_id: block.id, key: key, type: :string, label: %{"en" => key}, value: value})

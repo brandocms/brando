@@ -44,6 +44,8 @@ defmodule Brando.Content.Definitions.Release do
   [module definitions guide](module_definitions.md).
   """
 
+  use Gettext, backend: Brando.Gettext
+
   import Kernel, except: [apply: 2]
 
   alias Brando.Authorization.{Boundary, Engine}
@@ -286,7 +288,7 @@ defmodule Brando.Content.Definitions.Release do
   defp reviewed(report, digest) do
     if renames_digest(report) == digest,
       do: :ok,
-      else: {:error, "the renames in the release changed since you reviewed it; review it again"}
+      else: {:error, gettext("the renames in the release changed since you reviewed it; review it again")}
   end
 
   # The apply, its rows and its batch in one transaction; the batch confirms
@@ -317,7 +319,13 @@ defmodule Brando.Content.Definitions.Release do
   # revert can't move them back (`Batches`)
   defp record_batch!(report, plan, changes, batch_id, user) do
     names = display_names(report.plan.bundle)
-    moves = for %{moves: %{renames: renames}, uid: uid} <- plan.items, into: %{}, do: {uid, renames}
+
+    moves =
+      for %{moves: %{renames: renames}, uid: uid} <- plan.items,
+          moved = Enum.filter(renames, &(&1.blocks > 0)),
+          moved != [],
+          into: %{},
+          do: {uid, moved}
 
     items =
       Enum.map(changes, fn change ->

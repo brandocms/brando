@@ -65,7 +65,7 @@ defmodule Brando.Content.Definitions.Release.Proposed do
         end
       end)
 
-    moves = for %{moves: %{renames: renames}, uid: uid} <- items, into: %{}, do: {uid, renames}
+    moves = for %{moves: %{renames: renames, refused: []}, uid: uid} <- items, into: %{}, do: {uid, renames}
 
     %{
       modules: modules,

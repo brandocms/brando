@@ -1,6 +1,8 @@
 defmodule Brando.Content.Definition.Importer do
   @moduledoc false
 
+  use Gettext, backend: Brando.Gettext
+
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
@@ -142,8 +144,18 @@ defmodule Brando.Content.Definition.Importer do
       result
     end
   rescue
-    Ecto.StaleEntryError -> {:error, "definition changed while applying; create a new plan"}
-    Ecto.ConstraintError -> {:error, "a database constraint rejected the import; no definitions were committed"}
+    Ecto.StaleEntryError ->
+      {:error, "definition changed while applying; create a new plan"}
+
+    Ecto.ConstraintError ->
+      {:error, "a database constraint rejected the import; no definitions were committed"}
+
+    # An editor's save took a block the apply moves values in, and Postgres
+    # aborted the apply to break the wait
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:deadlock_detected, :serialization_failure],
+        do: {:error, gettext("An editor saved the same blocks at the same moment, and nothing was applied. Try again.")},
+        else: reraise(error, __STACKTRACE__)
   end
 
   defp apply!(plan, actor, opts) do
@@ -242,7 +254,7 @@ defmodule Brando.Content.Definition.Importer do
       snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
-    items = Enum.map(Model.definitions(bundle), &plan_item!(&1, ctx))
+    items = bundle |> Model.definitions() |> Enum.map(&plan_item!(&1, ctx)) |> limit_moves(settings.selection)
     scope = References.scope()
 
     # The renames are no part of a definition's digest: a changed one
@@ -374,11 +386,13 @@ defmodule Brando.Content.Definition.Importer do
 
   # The values an update of a module moves under its declared renames
   # (`Renames`), and the renames it leaves to a resolve. A move refused in
-  # any block makes the update need a migration.
-  defp moves({:update, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx) do
+  # any block makes the update need a migration. A conflict gets the moves
+  # an apply of the files' version makes, for the review to preview.
+  defp moves({action, _reason} = result, %{"kind" => "module", "uid" => uid}, record, changeset, ctx)
+       when action == :update or (action == :conflict and not is_nil(record)) do
     case Renames.declared(ctx.bundle, uid) do
       [] ->
-        {action, nil, []}
+        {result, nil, []}
 
       renames ->
         module = Changeset.apply_changes(changeset)
@@ -387,8 +401,11 @@ defmodule Brando.Content.Definition.Importer do
         remaps = Renames.remaps(record, module, rest)
 
         case moves do
-          %{refused: [_ | _] = refused} -> {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
-          _ -> {action, moves, remaps}
+          %{refused: [_ | _] = refused} when action == :update ->
+            {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
+
+          _ ->
+            {result, moves, remaps}
         end
     end
   end
@@ -407,8 +424,33 @@ defmodule Brando.Content.Definition.Importer do
           reason <- refused,
           do: reason
 
-    if refused != [],
-      do: Repo.rollback("content changed since you reviewed it: #{Enum.join(refused, "; ")}; review again")
+    if refused != [], do: Repo.rollback(Renames.changed_since_review(refused))
+  end
+
+  # The selected updates' moves together, refused when they are more than
+  # one apply moves (`Renames.over_limit/1`)
+  defp limit_moves(items, selection) do
+    moving =
+      for %{action: :update, moves: %{} = moves} = item <- items,
+          is_nil(selection) or MapSet.member?(selection, item.uid),
+          do: {item.uid, moves}
+
+    case Renames.over_limit(Enum.map(moving, &elem(&1, 1))) do
+      nil ->
+        items
+
+      totals ->
+        uids = Map.new(moving)
+
+        Enum.map(items, fn item ->
+          if moves = uids[item.uid] do
+            reason = Renames.over_limit_text(moves.renames, totals)
+            %{item | action: :migration_required, reason: reason, moves: %{moves | refused: [reason]}}
+          else
+            item
+          end
+        end)
+    end
   end
 
   # The values the selected module updates move, as the person who applies
