@@ -189,6 +189,12 @@
       outline: 1px dashed var(--brando-line-strong);
       outline-offset: -1px;
     }
+
+    /* A row with no entries takes one where it would show them */
+    &.is-empty.is-drop-target {
+      min-height: 56px;
+      margin: 10px;
+    }
   }
 }
 

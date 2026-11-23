@@ -12,6 +12,7 @@ defmodule BrandoAdmin.BlockMoveBetweenRowsTest do
 
   alias Brando.Content.Block
   alias Brando.Pages.Page
+  alias BrandoAdmin.Components.Form.Block, as: BlockComponent
 
   setup do
     c = Brando.ProposalFixtures.context()
@@ -148,6 +149,52 @@ defmodule BrandoAdmin.BlockMoveBetweenRowsTest do
     drop_on_canvas(view, epsilon.uid, nested.uid, 0, c.multi_uid, 0)
     assert shown(view, c.multi_uid) == [epsilon.uid, beta, gamma]
     assert shown(view, nested.uid) == [alpha]
+  end
+
+  # The rows that take an entry are the ones the canvas and the Outline drag
+  # it to (`Block.multi_children_group/2`). An event written by hand, naming
+  # any other block of the field, used to move the entry there: it was saved
+  # under a plain module or a container, and shown nowhere.
+  test "a block that does not take the entry is refused, on the canvas and in the Outline", %{conn: conn} = c do
+    container = Brando.ProposalFixtures.root_block!(c, :container, nil, 3)
+
+    other_multi =
+      Brando.ProposalFixtures.module!(c.user, "Other projects", ~s(<section>{{ content }}</section>), multi: true)
+
+    other_row = Brando.ProposalFixtures.root_block!(c, :module, other_multi, 4)
+    [alpha, beta, gamma] = c.child_uids
+    view = open(conn, c.work)
+
+    for to_uid <- [c.intro_uid, container.uid, other_row.uid] do
+      drop_on_canvas(view, beta, c.multi_uid, 1, to_uid, 0)
+      drop_in_outline(view, alpha, c.multi_uid, 0, to_uid, 0)
+    end
+
+    assert shown(view, c.multi_uid) == [alpha, beta, gamma]
+
+    save(view)
+
+    assert_eventually(fn -> saved_children(c.row_uid) == [c.delta_uid] end)
+    assert saved_children(c.multi_uid) == [alpha, beta, gamma]
+    assert saved_children(c.intro_uid) == []
+    assert saved_children(container.uid) == []
+    assert saved_children(other_row.uid) == []
+  end
+
+  # A row of another block field is no drop target, even for the same module
+  test "a row's drag group names its block field", %{conn: conn} = c do
+    view = open(conn, c.work)
+    module_group = BlockComponent.multi_children_group(c.projects_module.id, :local)
+
+    [group] =
+      view
+      |> element(children(c.multi_uid))
+      |> render()
+      |> then(&Regex.run(~r/data-blocks-wrapper-type="([^"]+)"/, &1, capture: :all_but_first))
+
+    assert group != module_group
+    assert group =~ "blocks"
+    assert group =~ module_group
   end
 
   defp assert_eventually(fun, tries \\ 50) do

@@ -68,13 +68,23 @@ test.describe('Multi blocks: dragging an entry to another row', () => {
     await awaitBlockShip(page)
     const handle = entry.locator('.sort-handle').first()
     const handleBox = await handle.boundingBox()
-    const overBox = await over.boundingBox()
 
     await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
     await page.mouse.down()
     await page.waitForTimeout(100)
-    await page.mouse.move(overBox.x + overBox.width / 2, overBox.y + overBox.height - 8, { steps: 20 })
+    // Past Sortable's tolerance: the drag starts, and an empty row that
+    // takes the entry opens up for it
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2 + 10, { steps: 2 })
+    await holdOver(page, over)
   }
+
+  const holdOver = async (page, over) => {
+    const box = await over.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + Math.max(box.height / 2, box.height - 8), { steps: 20 })
+  }
+
+  const placeholderIndex = row =>
+    entries(row).evaluateAll(els => els.findIndex(el => el.classList.contains('is-sorting')))
 
   test('an entry dragged into another row of its module moves there and is saved there', async ({ page }) => {
     await createPage(page, 'Multi Row Move', 'multi-row-move')
@@ -85,9 +95,7 @@ test.describe('Multi blocks: dragging an entry to another row', () => {
     // row does not.
     await expect(second.locator('.block-children')).toHaveClass(/is-drop-target/)
     await expect(other.locator('.block-children')).not.toHaveClass(/is-drop-target/)
-    await expect
-      .poll(() => entries(second).evaluateAll(els => els.findIndex(el => el.classList.contains('is-sorting'))))
-      .toBe(1)
+    await expect.poll(() => placeholderIndex(second)).toBe(1)
     await page.mouse.up()
     await syncLV(page)
 
@@ -121,5 +129,72 @@ test.describe('Multi blocks: dragging an entry to another row', () => {
     await expect.poll(() => names(first)).toEqual(['Alice', 'Bob'])
     await expect.poll(() => names(second)).toEqual(['Carol'])
     await expect(entries(other)).toHaveCount(1)
+  })
+
+  // Sortable leaves the placeholder in the last row that took it, and the
+  // move used to go there though the entry was released over a row that
+  // does not take it.
+  test('an entry carried over a row that takes it and released over one that does not stays', async ({ page }) => {
+    await createPage(page, 'Multi Row Pass Over', 'multi-row-pass-over')
+    const [first, other, second] = [rows(page).nth(0), rows(page).nth(1), rows(page).nth(2)]
+
+    await pickUpAndHold(page, entries(first).nth(1), entries(second).nth(0))
+    await expect.poll(() => placeholderIndex(second)).toBe(1)
+    await holdOver(page, entries(other).nth(0))
+    await expect(other.locator('.block-children > .is-sorting')).toHaveCount(0)
+    await page.mouse.up()
+    await syncLV(page)
+
+    await expect.poll(() => names(first)).toEqual(['Alice', 'Bob'])
+    await expect.poll(() => names(second)).toEqual(['Carol'])
+    await expect(entries(other)).toHaveCount(1)
+  })
+
+  // A row with no entries takes one while it is dragged: a new row, and a
+  // row whose last entry went and is wanted back.
+  test('an empty row takes an entry, and takes it back after it left', async ({ page }) => {
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await page.getByLabel('Title', { exact: true }).fill('Multi Row Empty')
+    await page.getByLabel('URI').fill('multi-row-empty')
+    await addRow(page, 'COPY PASTE TEST', 'Team Section')
+    await addEntry(page, rows(page).nth(0), 'COPY PASTE TEST', /^Team Member\b/, 'Alice')
+    await addEntry(page, rows(page).nth(0), 'COPY PASTE TEST', /^Team Member\b/, 'Bob')
+    await addRow(page, 'COPY PASTE TEST', 'Team Section')
+    const [first, empty] = [rows(page).nth(0), rows(page).nth(1)]
+    await expect(entries(empty)).toHaveCount(0)
+
+    await pickUpAndHold(page, entries(first).nth(1), empty.locator('.block-children'))
+    await expect(empty.locator('.block-children')).toHaveClass(/is-drop-target/)
+    await expect.poll(() => placeholderIndex(empty)).toBe(0)
+    await page.mouse.up()
+    await syncLV(page)
+    await expect.poll(() => names(first)).toEqual(['Alice'])
+    await expect.poll(() => names(empty)).toEqual(['Bob'])
+
+    // Back to the first row, and into the emptied row again
+    await pickUpAndHold(page, entries(empty).nth(0), entries(first).nth(0))
+    await expect.poll(() => placeholderIndex(first)).toBe(1)
+    await page.mouse.up()
+    await syncLV(page)
+    await expect.poll(() => names(first)).toEqual(['Alice', 'Bob'])
+    await expect(entries(empty)).toHaveCount(0)
+
+    await pickUpAndHold(page, entries(first).nth(1), empty.locator('.block-children'))
+    await expect.poll(() => placeholderIndex(empty)).toBe(0)
+    await page.mouse.up()
+    await syncLV(page)
+    await expect.poll(() => names(first)).toEqual(['Alice'])
+    await expect.poll(() => names(empty)).toEqual(['Bob'])
+
+    await awaitBlockShip(page)
+    await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Multi Row Empty', exact: true }).click()
+    await syncLV(page)
+
+    await expect.poll(() => names(rows(page).nth(0))).toEqual(['Alice'])
+    await expect.poll(() => names(rows(page).nth(1))).toEqual(['Bob'])
   })
 })

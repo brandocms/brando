@@ -709,7 +709,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       event: "move_child",
       uid: uid,
       parent_uid: parent_uid,
-      at: at
+      at: at,
+      from_uid: own_uid
     )
 
     {:halt, socket}

@@ -572,8 +572,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # A child dropped into another multi block on the canvas (`Block.Events`).
-  def update(%{event: "move_child", uid: uid, parent_uid: parent_uid, at: at}, socket) do
-    {:ok, move_child(socket, uid, parent_uid, at)}
+  def update(%{event: "move_child", uid: uid, parent_uid: parent_uid, at: at} = message, socket) do
+    {:ok, move_child(socket, uid, parent_uid, at, message[:from_uid])}
   end
 
   # INSERT ROOT BLOCK
@@ -1078,7 +1078,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:remote, replica, displayed} ->
         socket
         |> assign(:edit_session, replica)
-        |> show_state(displayed, hint_uids(message.op))
+        |> show_state(displayed, hint_uids(message.op, socket.assigns.block_ops))
         |> forget_undo(message.op, :remote)
 
       :stale ->
@@ -1647,11 +1647,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # The uids an op names, to narrow `Ops.changed_roots/3`. Ops that move or
-  # remove blocks compare every root.
+  # remove blocks compare every root. A child inserted under another parent
+  # (`move_child`) changes the root it left too, which `shown` still has it
+  # under.
+  defp hint_uids({:insert_child, parent_uid, uid, _at, _params}, %Ops{} = shown),
+    do: Enum.uniq([parent_uid | List.wrap(shown.parents[uid])])
+
+  defp hint_uids(op, _shown), do: hint_uids(op)
+
   defp hint_uids({:update, uid, _params}), do: [uid]
   defp hint_uids({:set_field, uid, _path, _value, _rev}), do: [uid]
   defp hint_uids({:set_fields, uid, _changes, _rev}), do: [uid]
-  defp hint_uids({:insert_child, parent_uid, _uid, _at, _params}), do: [parent_uid]
   defp hint_uids({:reorder_children, parent_uid, _uids}), do: [parent_uid]
   defp hint_uids({:move, _uid, _at}), do: []
   defp hint_uids({:move, _uid, _to, _from}), do: []
@@ -2069,39 +2075,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The changeset base for materializing a root block: its persisted entry
   # block when it exists, otherwise a fresh struct with an empty (loaded)
   # block so cast_assoc has something to cast against.
-  # Rebuild a child's changeset from the op store — the only holder of its
-  # current content once its own component has been destroyed by a move.
   # A child moved to another parent, dragged on the canvas or in the
   # Outline. The store takes the move first, and only a move it took is
   # shown: the parent the child leaves lets go of it and the one it joins
-  # takes it, so a move the store refuses (the parent is gone, or the
-  # translation follows its source) leaves the child where it was. The
-  # child goes as the store holds it, not as its old parent's seed form.
-  defp move_child(socket, uid, parent_uid, at) do
+  # takes it, so a move the store refuses (the parent is gone, it does not
+  # take the child, or the translation follows its source) leaves the child
+  # where it was. The child goes as the store holds it, not as its old
+  # parent's seed form. `dragged_from` is the parent the editor dragged it
+  # out of, which lets go of it too: a view of another editor's move that
+  # is not shown yet still has the child there.
+  defp move_child(socket, uid, parent_uid, at, dragged_from) do
     shown = socket.assigns.block_ops
     from_uid = shown.parents[uid]
 
     case build_child_changeset(socket, uid) do
       {:ok, cs} when from_uid not in [nil, parent_uid] ->
-        moved = moved_child_changeset(cs, socket.assigns.current_user.id)
-        moved_socket = apply_block_op(socket, {:insert_child, parent_uid, uid, at, Ops.block_diff_params(moved)})
-
-        if moved_socket.assigns.block_ops.parents[uid] == parent_uid do
-          send_update(Block, id: component_id(shown, from_uid), event: "release_children", uids: [uid])
-
-          send_update(Block,
-            id: component_id(shown, parent_uid),
-            event: "insert_moved_child",
-            block_cs: moved,
-            sequence: at
-          )
-
-          moved_socket
-          |> refresh_live_preview()
-          |> rebuild_outline_items()
-        else
-          moved_socket
-        end
+        if takes_child?(socket, from_uid, parent_uid),
+          do: put_moved_child(socket, cs, uid, {from_uid, dragged_from}, parent_uid, at),
+          else: refuse_move(socket, uid, parent_uid)
 
       {:ok, _cs} ->
         socket
@@ -2112,6 +2103,49 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  defp put_moved_child(socket, cs, uid, {from_uid, dragged_from}, parent_uid, at) do
+    shown = socket.assigns.block_ops
+    moved = moved_child_changeset(cs, socket.assigns.current_user.id)
+    moved_socket = apply_block_op(socket, {:insert_child, parent_uid, uid, at, Ops.block_diff_params(moved)})
+
+    if moved_socket.assigns.block_ops.parents[uid] == parent_uid do
+      for parent <- Enum.uniq([from_uid, dragged_from]), parent && parent != parent_uid && Ops.known?(shown, parent) do
+        send_update(Block, id: component_id(shown, parent), event: "release_children", uids: [uid])
+      end
+
+      send_update(Block,
+        id: component_id(shown, parent_uid),
+        event: "insert_moved_child",
+        block_cs: moved,
+        sequence: at
+      )
+
+      moved_socket
+      |> refresh_live_preview()
+      |> rebuild_outline_items()
+    else
+      moved_socket
+    end
+  end
+
+  # A child moves only to a block that takes the children of the one it
+  # leaves: the rule the canvas and the Outline drag by.
+  defp takes_child?(socket, from_uid, parent_uid) do
+    group = Block.children_group(stored_block(socket, from_uid))
+    group != nil and group == Block.children_group(stored_block(socket, parent_uid))
+  end
+
+  defp refuse_move(socket, uid, parent_uid) do
+    Logger.error(
+      "BlockField (#{socket.assigns.block_field}) did not move #{inspect(uid)}: " <>
+        "#{inspect(parent_uid)} does not take it"
+    )
+
+    socket
+  end
+
+  # Rebuild a child's changeset from the op store — the only holder of its
+  # current content once its own component has been destroyed by a move.
   defp build_child_changeset(socket, uid) do
     with {:ok, params} <- Ops.materialize_child(socket.assigns.block_ops, uid) do
       {:ok,
@@ -2379,6 +2413,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp collection_owner(socket, uid) do
+    case stored_block(socket, uid) do
+      %{type: :module, multi: false} = owner -> {:ok, owner}
+      nil -> {:error, :unknown_owner}
+      _ -> {:error, :invalid_owner}
+    end
+  end
+
+  # A block as the store holds it, or nil for a uid it does not know.
+  defp stored_block(socket, uid) do
     if Ops.known?(socket.assigns.block_ops, uid) do
       root_uid = Ops.root_of(socket.assigns.block_ops, uid)
       {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
@@ -2389,12 +2432,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
         |> Changeset.get_assoc(:block, :struct)
 
-      case find_block_by_uid([root], uid) do
-        %{type: :module, multi: false} = owner -> {:ok, owner}
-        _ -> {:error, :invalid_owner}
-      end
-    else
-      {:error, :unknown_owner}
+      find_block_by_uid([root], uid)
     end
   end
 
@@ -3192,7 +3230,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
       {:noreply, rebuild_outline_items(socket)}
     else
-      {:noreply, move_child(socket, uid, to_parent_uid, new_idx)}
+      {:noreply, move_child(socket, uid, to_parent_uid, new_idx, from_parent_uid)}
     end
   end
 

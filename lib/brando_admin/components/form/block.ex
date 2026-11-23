@@ -2531,6 +2531,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   def multi_children_group(module_id, module_origin), do: "multi-#{module_origin || :local}-#{module_id}"
 
   @doc """
+  The drag group of a block's children, or nil for a block whose children
+  are not dragged to another block: a multi module block's
+  (`multi_children_group/2`), or a container's, whose children move between
+  containers in the Outline.
+  """
+  def children_group(%{type: :container}), do: "container-children"
+
+  def children_group(%{type: :module, multi: true, module_id: id, module_origin: origin}),
+    do: multi_children_group(id, origin)
+
+  def children_group(_block), do: nil
+
+  @doc """
   Where `uid` goes when moved `by` places (-1 up, 1 down) among `order`, its
   siblings' uids: `{old_index, new_index}`, or nil when it is not there or
   is already first (up) or last (down).

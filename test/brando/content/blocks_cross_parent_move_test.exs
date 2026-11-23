@@ -120,10 +120,10 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert child.uid == "childC"
     original_child_id = child.id
 
-    # The outline move lands as insert_child with a known uid (reparent). The
-    # diff below stands in for the child's CURRENT content — which is what the
-    # extract path ships now that it materializes from the op store rather than
-    # from the parent's mount-time seed form. See "a child edited before an
+    # A move to another parent lands as insert_child with a known uid
+    # (reparent). The diff below stands in for the child's CURRENT content —
+    # which is what BlockField's move_child ships: it materializes the child
+    # from the op store rather than from the parent's mount-time seed form. See "a child edited before an
     # outline move keeps its edits" for the case where the two differ.
     ops = Ops.from_entry_blocks(entry_blocks)
 
@@ -438,10 +438,10 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     end
   end
 
-  # The move ships the child as BlockField's insert_extracted_child
-  # builds it, a changeset over its row (`Ops.block_diff_params/1`), which
-  # holds only its changes. Under the new parent the child is a new row, so
-  # whatever it did not change has to travel too.
+  # The move ships the child as BlockField's move_child builds it, a
+  # changeset over its row (`Ops.block_diff_params/1`), which holds only its
+  # changes. Under the new parent the child is a new row, so whatever it did
+  # not change has to travel too.
   test "a moved child keeps its refs, vars and fields it did not change" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
@@ -486,7 +486,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     [%{block: %{children: [row]}} | _] = entry_blocks
     ops = Ops.from_entry_blocks(entry_blocks)
 
-    # as BlockField's insert_extracted_child and the target Block do it
+    # as BlockField's move_child does it
     {:ok, params} = Ops.materialize_child(ops, "childR")
     block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
     moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
