@@ -685,6 +685,13 @@ sender first, before the first compile.
   pasted Figma token keeps using it, with its expiry date, until an
   administrator connects Figma. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. See [Connect Figma](mcp.md#connect-figma).
+- **Media dropped on a multi module.** `brando_246` adds
+  `content_modules.media_drop_child` and `media_drop_ref` in every
+  environment: the child module each image or video dropped on a multi
+  module's blocks becomes, and the ref it goes in. Both start empty, so no
+  module takes dropped media until it is set. Run `mix brando.gen.migrations`
+  for it, then `mix brando.migrate`. See
+  [Dropping media on a multi module](block_editor.md#dropping-media-on-a-multi-module).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

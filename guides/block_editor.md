@@ -21,7 +21,8 @@ For exporting modules to editable Elixir DSL and importing changes back, see
   blocks. Each child is a block with `type: :module_entry`; these are distinct
   from blocks nested inside a container. An editor drags an entry to another
   block of the same multi module on the canvas or in the block outline; a
-  block of another module does not take it.
+  block of another module does not take it. A multi module with a media drop
+  (below) makes an entry for each image or video dropped on its blocks.
 - **Module set** (`Brando.Content.ModuleSet`) — a named subset of modules that
   a `blocks` form field offers via `module_set:`.
 
@@ -188,6 +189,25 @@ HEEx).
 
 Modules are managed in the admin under Configuration → Modules; entries
 reference them by id, so template edits apply everywhere on next render.
+
+### Dropping media on a multi module
+
+A multi module can take images and videos dropped on its blocks. In the module
+editor, under Behavior, **Dropped media creates** names one of its child
+modules and **Dropped media goes in** one of that child's `media`, `picture`
+or `video` refs; in a definition file it is
+`media_drop child: "<child uid>", ref: :<ref name>`
+([Module definitions](module_definitions.md#children-and-table-templates)).
+
+Its blocks then show a drop zone under their entries. Each file dropped
+anywhere on the block, or chosen after clicking the zone, becomes one new
+entry of that child module, in the order dropped, with the file in the ref. A
+`media` ref takes an image as a picture and a video as a video, with the ref's
+templates for them; a `picture` ref takes only images and a `video` ref only
+videos. The files upload as a file dropped on the ref does, with the ref's
+upload config. A file the ref does not take, by type or size, makes no entry
+and is listed to the editor; an entry whose upload fails or is cancelled is
+removed again. A file dropped on an entry's own ref still fills only that ref.
 
 <!-- usage-rules:start -->
 
