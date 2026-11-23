@@ -196,20 +196,20 @@ defmodule Brando.Content.Proposals.ExternalTest do
   test "the entry to preview is the first with a page preview that the proposal changes" do
     alias Brando.Content.Proposals.{CopyBlock, CreateEntry, Proposal, Review, SetFields}
 
-    article = {Brando.SyncTest.Article, 1}
+    fragment = {Brando.Pages.Fragment, 1}
 
     assert Review.preview_key(%Proposal{
-             operations: [%SetFields{target: article, fields: %{}}],
-             targets: %{article => %{}}
+             operations: [%SetFields{target: fragment, fields: %{}}],
+             targets: %{fragment => %{}}
            }) == nil
 
     operations = [
-      %SetFields{target: article, fields: %{}},
+      %SetFields{target: fragment, fields: %{}},
       %CopyBlock{target: {Page, 1}, block_uid: "a", to_target: {:new, "lobby"}},
       %CreateEntry{schema: Page, ref: "lobby", fields: %{}}
     ]
 
-    targets = %{article => %{}, {Page, 1} => %{}, {:new, "lobby"} => Page}
+    targets = %{fragment => %{}, {Page, 1} => %{}, {:new, "lobby"} => Page}
     # The page blocks are only copied from is read, not changed.
     assert Review.preview_key(%Proposal{operations: operations, targets: targets}) == "new:lobby"
   end
