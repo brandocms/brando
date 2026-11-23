@@ -50,9 +50,12 @@ defmodule Brando.Images.Source do
   def record(%Image{id: image_id, content_hash: hash}, source, ref, variant, config_target) do
     now = NaiveDateTime.utc_now(:second)
 
+    # FOR SHARE waits for a replacement still writing the image and then
+    # checks its committed hash
     row =
       from(i in Image,
         where: i.id == ^image_id,
+        lock: "FOR SHARE",
         select: %{
           image_id: i.id,
           source: ^source,
