@@ -274,6 +274,13 @@ defmodule Brando.Authorization.Boundary do
     {:ok, container}
   end
 
+  # A palette's blocks rendered without its colours while it was in the trash
+  defp after_restore(%{__struct__: Brando.Content.Palette} = palette, _trashed, _user) do
+    Brando.Content.render_entries_using_palette(palette)
+    Brando.Content.Definitions.changed()
+    {:ok, palette}
+  end
+
   defp after_restore(entry, _trashed, _user), do: {:ok, entry}
 
   def change(:system, _, _), do: :ok

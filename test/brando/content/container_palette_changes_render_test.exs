@@ -83,6 +83,19 @@ defmodule Brando.Content.ContainerPaletteChangesRenderTest do
       assert {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
       assert rendered(page) =~ ~r{<section b-section>\s*<p>inside</p>\s*</section>}
     end
+
+    test "and restoring the palette queues the render that prints its colours again", c do
+      ink = palette!(c.user, "ink")
+      page = page!(c.user, %{type: :container, palette_id: ink.id, children: [inside()]})
+      {:ok, deleted} = Brando.Content.delete_palette(ink.id, c.user)
+      {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
+      refute rendered(page) =~ "--background"
+
+      job = queues_render(page, fn -> Brando.Authorization.Boundary.restore(c.user, deleted) end)
+
+      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
+      assert rendered(page) =~ "--background: #fff9f4"
+    end
   end
 
   describe "saving a palette" do
