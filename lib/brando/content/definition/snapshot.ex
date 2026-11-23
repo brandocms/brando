@@ -34,9 +34,10 @@ defmodule Brando.Content.Definition.Snapshot do
     selected_tables = Enum.filter(tables, &(opts[:all_tables] || &1.id in table_ids))
     table_uids = Map.new(tables, &{&1.id, &1.uid})
     bindings = Keyword.get(opts, :bindings, %{})
-    # A palette is named by its uid wherever a definition points at it
+    # A palette is named by its uid wherever a definition points at it,
+    # unless the caller carries palettes its own way (`styles: false`)
     palette_uids = Map.new(palettes, &{&1.id, &1.uid})
-    uids = %{"palette" => palette_uids}
+    uids = if Keyword.get(opts, :styles, true), do: %{"palette" => palette_uids}, else: %{}
 
     {definitions, bindings} =
       Enum.map_reduce(selected, bindings, fn module, bindings ->
@@ -74,7 +75,10 @@ defmodule Brando.Content.Definition.Snapshot do
         {Model.table_record(table) |> Map.put("vars", vars), bindings}
       end)
 
-    {selected_palettes, selected_containers} = select_styles(opts[:uids], palettes, containers, definitions)
+    {selected_palettes, selected_containers} =
+      if Keyword.get(opts, :styles, true),
+        do: select_styles(opts[:uids], palettes, containers, definitions),
+        else: {[], []}
 
     bundle = %{
       "format_version" => 1,
@@ -130,10 +134,11 @@ defmodule Brando.Content.Definition.Snapshot do
   @doc "The record of `kind` with `uid` among `records` (what `take!/1` returns), or nil."
   def record(records, kind, uid), do: Map.fetch!(records, records_key(kind))[uid]
 
-  defp records_key("module"), do: :modules
-  defp records_key("table_template"), do: :tables
-  defp records_key("palette"), do: :palettes
-  defp records_key("container"), do: :containers
+  @doc "The key of `kind`'s records in what `take!/1` returns."
+  def records_key("module"), do: :modules
+  def records_key("table_template"), do: :tables
+  def records_key("palette"), do: :palettes
+  def records_key("container"), do: :containers
 
   # Version 2 digests leave empty values out, so a field added to a block type
   # doesn't turn every untouched definition into a conflict. Lockfiles without

@@ -2,11 +2,30 @@ defmodule Brando.Content.Definition.Params do
   @moduledoc false
 
   alias Brando.Content.Definition.{Model, References}
-  alias Brando.Content.{Module, RefGuard, TableTemplate}
+  alias Brando.Content.{Container, Module, Palette, RefGuard, TableTemplate}
   alias Brando.Content.Var.ValidateValue
   alias Ecto.Changeset
 
-  def changeset(definition, record, references, creator, tables, parent_id \\ nil) do
+  # A palette's colours are replaced as a set: the definition is the whole
+  # palette. A new palette is published; its status is the environment's
+  # from then on.
+  def changeset(%{"kind" => "palette"} = definition, record, _references, creator, _tables, _parent_id) do
+    attrs = Map.take(definition, ~w(uid name namespace key global instructions colors))
+    attrs = if record, do: attrs, else: Map.put(attrs, "status", "published")
+    Palette.changeset(record || struct(Palette), attrs, creator)
+  end
+
+  # The container's default palette is the one here with its uid: one the
+  # same import creates is written first
+  def changeset(%{"kind" => "container"} = definition, record, _references, creator, _tables, _parent_id) do
+    attrs = Map.take(definition, Enum.map(Model.container_fields(), &to_string/1))
+
+    (record || struct(Container))
+    |> Container.changeset(attrs, creator)
+    |> Changeset.put_change(:palette_id, References.palette_id(definition["palette"]))
+  end
+
+  def changeset(definition, record, references, creator, tables, parent_id) do
     vars = association(definition["vars"], loaded(record, :vars), "key", references)
 
     case definition["kind"] do

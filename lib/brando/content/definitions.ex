@@ -108,6 +108,9 @@ defmodule Brando.Content.Definitions do
       them, to replace with the bundle's version anyway
     * `:creator` - a user or user ID for new records when the actor is
       `:system`; `:none` makes a plan that can't be applied
+    * `:catch_up` - against the lockfile, a definition that no longer
+      equals the lockfile's baseline but equals what was last applied here
+      is compared with that apply: the lockfile's write failed after it
 
   See `Brando.Content.Definition.Plan` for what each item says.
   """
