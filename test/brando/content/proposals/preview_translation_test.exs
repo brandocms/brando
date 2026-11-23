@@ -227,8 +227,16 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
                )
 
       assert open(url).resp_body =~ "Om oss"
+
+      # Async tests beside it keep their own
       {:ok, keys} = Cachex.keys(:cache)
-      assert Enum.filter(keys, &(is_binary(&1) and &1 =~ "__VAR__")) == []
+
+      assert for(
+               key <- keys,
+               is_binary(key) and key =~ "__VAR__employees",
+               {:ok, [%{name: "Om oss"}]} = Cachex.get(:cache, key),
+               do: key
+             ) == []
     end
 
     test "shows the untranslated copy without a translate", c do
