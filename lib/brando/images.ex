@@ -112,11 +112,13 @@ defmodule Brando.Images do
 
   # A focal point is saved before the image is processed, and processing then
   # sees no change: the save queues the renders of the entries that show the
-  # image. A save that clears the sizes (a crop's new file) leaves them to its
-  # processing, which renders with the new sizes.
+  # image, once it has committed. An image left with no sizes (a crop's new
+  # file) leaves them to its processing, which renders with the new sizes.
   mutation :update, Image do
     fn image, changeset ->
-      unless Map.has_key?(changeset.changes, :sizes), do: Images.Rerender.after_refocus(changeset.data, image)
+      if image.sizes not in [nil, %{}],
+        do: Repo.after_commit(fn -> Images.Rerender.after_refocus(changeset.data, image) end)
+
       {:ok, image}
     end
   end

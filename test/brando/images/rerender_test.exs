@@ -694,6 +694,46 @@ defmodule Brando.Images.RerenderTest do
 
       assert renders_of(page) == []
     end
+
+    test "leaves them to processing when the image has no sizes yet", %{user: user} do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg", sizes: %{})
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}, sizes: %{}}, user)
+      end)
+
+      assert renders_of(page) == []
+    end
+
+    # An API caller's replacement sizes are rendered now: no processing follows
+    test "renders them when the save replaces the sizes", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+      sizes = %{"small" => "images/avatars/small/27i97a.jpeg"}
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}, sizes: sizes}, user)
+      end)
+
+      assert [%{state: "available"}] = renders_of(page)
+    end
+
+    # A save rolled back (with group authorization the save runs in a
+    # transaction) queues nothing, and the queueing cannot abort the save
+    test "renders them once the save has committed", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Brando.Repo.transaction(fn ->
+          assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}}, user)
+          assert renders_of(page) == []
+        end)
+      end)
+
+      assert [%{state: "available"}] = renders_of(page)
+    end
   end
 
   describe "the entries that show an image" do

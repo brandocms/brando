@@ -172,6 +172,33 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerTargetsTest do
       assert field(view, :author).portrait_id == portrait.id
       refute form_assigns(view).editing_image?
     end
+
+    test "is not started by the drawer's Remove", %{conn: conn, article: article, current_user: user} do
+      {view, _html} = open(conn, article, :media)
+      open_portrait_drawer(view, image(user))
+
+      form_hook(view, "reset_image_field", %{})
+
+      assert field(view, :author) == nil
+    end
+
+    test "on a new entry is started by an upload and kept by Done", %{conn: conn, current_user: user} do
+      portrait = image(user)
+      {view, _html} = live_form(conn, "/admin/articles/create/media", "article_form")
+
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :image,
+        field: :portrait,
+        path: [:author],
+        asset: portrait
+      )
+
+      open_portrait_drawer(view, portrait)
+      close_drawer(view)
+
+      assert field(view, :author).portrait_id == portrait.id
+    end
   end
 
   describe "the picker's \"Edit image\"" do
@@ -319,6 +346,25 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerTargetsTest do
       refute_push_event(view, "b:validate", _)
       assert form_assigns(view).entry.cover.id == stored.id
       assert field(view, :cover_id) == stored.id
+    end
+
+    # Closing the drawer saves the image it shows, the picked one
+    test "after the field locked mid-edit, the drawer's Done leaves the field",
+         %{conn: conn, article: article, stored: stored, current_user: user} do
+      picked = image_on_disk(user)
+      {view, _html} = open(conn, article, :superuser_media)
+      open_cover_drawer(view, stored)
+      send_form(view, action: :open_image_editor_from_picker, image: picked)
+      send_form(view, current_user: %{user | role: :editor})
+      form_hook(view, "image_editor_save", %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70})
+
+      form_hook(view, "save_image", %{"image" => %{"alt" => "Picked"}})
+
+      assert %{"en" => "Picked"} = Repo.get!(Brando.Images.Image, picked.id).alt
+      refute_push_event(view, "b:validate", _)
+      assert form_assigns(view).entry.cover.id == stored.id
+      assert field(view, :cover_id) == stored.id
+      refute form_assigns(view).editing_image?
     end
   end
 
