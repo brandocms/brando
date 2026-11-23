@@ -229,6 +229,25 @@ defmodule BrandoAdmin.MediaDropLiveTest do
     assert row_block(view, from).assigns.block_list == []
   end
 
+  # A provider upload ends when the move takes its hook off the page. Before,
+  # nothing said so, and a later failed upload into the field took the child
+  # away as if it were the drop's.
+  test "a child whose upload stopped when it was moved is taken away, and the editor is told why",
+       %{conn: conn, page: page, row: row, current_user: user} do
+    Brando.Test.insert_block(page, row, user: user)
+    view = open(conn, page)
+    uid = root_uid(view)
+
+    drop(view, uid, ~w(video))
+    assert_reply(view, %{children: [child]})
+
+    settle(view, child, %{"failed" => true, "aborted" => true})
+
+    assert_push_event(view, "b:alert", %{message: message, type: "error"})
+    assert message != ""
+    await(fn -> row_block(view, uid).assigns.block_list == [] end)
+  end
+
   test "more files than the upload manager takes at once: the rest are said and make no child",
        %{conn: conn, page: page, row: row, current_user: user} do
     Brando.Test.insert_block(page, row, user: user)

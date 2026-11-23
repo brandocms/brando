@@ -712,7 +712,13 @@ sender first, before the first compile.
   module takes dropped media until it is set. Run `mix brando.gen.migrations`
   for it, then `mix brando.migrate`. See
   [Dropping media on a multi module](block_editor.md#dropping-media-on-a-multi-module).
-- **Where an image came from.** `brando_247` adds `images_sources` in every
+- **Translations applied without review.** `brando_247` adds
+  `mcp_grants.auto_apply` (`"none"` for every existing connection),
+  `auto_apply_set_by_id` and `auto_apply_set_at`, and
+  `content_proposals.auto_applied_grant_id` and `auto_apply_reason`. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
+  [Apply translations without review](mcp.md#apply-translations-without-review).
+- **Where an image came from.** `brando_248` adds `images_sources` in every
   environment: the Figma picture of each image `brando_figma_import_images`
   stores or reuses, from which `brando_figma_read_frame` names the library
   image each layer shows. It starts empty, so a frame imported before has

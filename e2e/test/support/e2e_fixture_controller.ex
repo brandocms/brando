@@ -191,6 +191,14 @@ defmodule E2EFixtureController do
         "mcp-watch-empty" ->
           create_mcp_watch(false)
 
+        # The connection alone, set to apply unpublished translations
+        # without review (Configuration → Integrations → Connected AI tools)
+        "mcp-auto-apply" ->
+          user = create_mcp_watch(false)
+          [grant | _] = Brando.MCP.list_user_grants(user)
+          :ok = Brando.MCP.set_auto_apply(grant.id, "unpublished_translations", user)
+          user
+
         # Assistant → From connected tools, open while a tool works: the
         # connection with one proposal stored through the endpoint's tools,
         # then ("-next") the tool's newer version of it and a proposal about
@@ -250,6 +258,35 @@ defmodule E2EFixtureController do
         # block's value
         "release-rename" ->
           create_release_removal(:rename)
+
+        # Screenshots only: the same, with the module edited here since its
+        # last apply, so the rename is in a conflict
+        "release-rename-conflict" ->
+          user = create_release_removal(:rename)
+          module = Brando.Repo.get_by!(Brando.Content.Module, class: "single-image-caption")
+          module |> Ecto.Changeset.change(class: "edited-here") |> Brando.Repo.update!()
+          Brando.Activity.record(:updated, module, user, fields: ["class"])
+          user
+
+        # Screenshots only: the same, with the block holding a value of its
+        # own under the new key, so the move is refused
+        "release-rename-conflict-refused" ->
+          user = create_release_removal(:rename)
+          module = Brando.Repo.get_by!(Brando.Content.Module, class: "single-image-caption")
+          module |> Ecto.Changeset.change(class: "edited-here") |> Brando.Repo.update!()
+          Brando.Activity.record(:updated, module, user, fields: ["class"])
+          # The block create_release_removal/1 added, the module's newest
+          block = Brando.Content.Block |> Brando.Repo.all() |> Enum.filter(&(&1.module_id == module.id)) |> Enum.max_by(& &1.id)
+
+          Brando.Repo.insert!(%Brando.Content.Var{
+            block_id: block.id,
+            key: "framed",
+            type: :boolean,
+            label: %{"en" => "Framed"},
+            value_boolean: true
+          })
+
+          user
 
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor

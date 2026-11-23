@@ -69,7 +69,16 @@ defmodule Brando.Content.Usage do
   def list_combined(_kind, []), do: []
 
   def list_combined(kind, ids) when kind in @kinds do
-    entries = kind |> references(ids) |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+    kind |> references(ids) |> Enum.map(&elem(&1, 1)) |> describe()
+  end
+
+  @doc """
+  What to show of `{schema, entry_id}` entries, each once: shaped as a list
+  in `list/2`.
+  """
+  @spec describe([{module(), integer()}]) :: [usage() | hidden()]
+  def describe(entries) do
+    entries = Enum.uniq(entries)
     shown(entries, readable_labels(entries))
   end
 

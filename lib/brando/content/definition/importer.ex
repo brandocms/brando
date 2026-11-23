@@ -254,7 +254,7 @@ defmodule Brando.Content.Definition.Importer do
       snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
-    items = bundle |> Model.definitions() |> Enum.map(&plan_item!(&1, ctx)) |> limit_moves(settings.selection)
+    items = bundle |> Model.definitions() |> Enum.map(&plan_item!(&1, ctx)) |> limit_moves(settings.selection, ctx.viewer)
     scope = References.scope()
 
     # The renames are no part of a definition's digest: a changed one
@@ -435,9 +435,9 @@ defmodule Brando.Content.Definition.Importer do
   # review of a whole release, an import) each module stays within its own
   # limit and can be chosen; `Renames.move!/3` refuses what one apply then
   # moves together.
-  defp limit_moves(items, nil), do: items
+  defp limit_moves(items, nil, _viewer), do: items
 
-  defp limit_moves(items, selection) do
+  defp limit_moves(items, selection, viewer) do
     moving =
       for %{action: :update, moves: %{} = moves} = item <- items,
           MapSet.member?(selection, item.uid),
@@ -449,12 +449,12 @@ defmodule Brando.Content.Definition.Importer do
 
       totals ->
         uids = Map.new(moving)
-        Enum.map(items, &if(moves = uids[&1.uid], do: over_limit(&1, moves, totals), else: &1))
+        Enum.map(items, &if(moves = uids[&1.uid], do: over_limit(&1, moves, totals, viewer), else: &1))
     end
   end
 
-  defp over_limit(item, moves, totals) do
-    reason = Renames.over_limit_text(moves.renames, totals)
+  defp over_limit(item, moves, totals, viewer) do
+    reason = Renames.over_limit_text([{item.uid, moves.renames}], totals, viewer)
     %{item | action: :migration_required, reason: reason, moves: %{moves | refused: [reason]}}
   end
 
@@ -1016,7 +1016,7 @@ defmodule Brando.Content.Definition.Importer do
     palette = Repo.get!(Palette, change.id)
     Brando.Cache.Query.evict({:ok, palette})
     Brando.Cache.Palettes.update({:ok, palette})
-    if change.action == :update, do: Blocks.render_entries_with_palette_id(palette.id)
+    if change.action == :update, do: Brando.Content.render_entries_using_palette(palette)
     %{uid: change.uid, status: :requested, stale_block_ids: []}
   end
 

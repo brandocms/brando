@@ -150,6 +150,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:error, {:fragments, :group_has_synchronized_members}} ->
         send(self(), {:toast, synchronized_fragment_message()})
 
+      {:error, :module_in_use} ->
+        send(self(), {:toast, module_in_use_message()})
+
       {:error, {:fragments, :target_not_found}} ->
         send(
           self(),
@@ -177,9 +180,17 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    for entry_id <- ids,
-        {:error, :group_has_synchronized_members} <- [apply(context, :"delete_#{singular}", [entry_id, user])] do
-      send(self(), {:toast, synchronized_members_message(schema, entry_id)})
+    for entry_id <- ids do
+      case apply(context, :"delete_#{singular}", [entry_id, user]) do
+        {:error, :group_has_synchronized_members} ->
+          send(self(), {:toast, synchronized_members_message(schema, entry_id)})
+
+        {:error, :module_in_use} ->
+          send(self(), {:toast, module_in_use_message()})
+
+        _ ->
+          :ok
+      end
     end
 
     update_list_entries(schema)
@@ -401,6 +412,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       gettext(
         "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
       )
+
+  defp module_in_use_message,
+    do: gettext("A module that blocks use was not deleted. Delete on its row lists the entries using it.")
 
   defp synchronized_members_message(schema, entry_id) do
     if Brando.Translations.trashed_synchronized_targets?(schema, entry_id) do

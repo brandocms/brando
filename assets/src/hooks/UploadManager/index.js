@@ -1,4 +1,5 @@
 import { trackUpload, updateUpload, uploadTargetKey } from '../shared/uploadProgress'
+import { handOver, settleUpload } from '../shared/mediaDropHandover'
 
 /**
  * UploadManager — hook mounted on the sticky BrandoAdmin.UploadManager LiveView.
@@ -6,7 +7,10 @@ import { trackUpload, updateUpload, uploadTargetKey } from '../shared/uploadProg
  * Registers the global `window.BrandoUploads` bridge that UploadTrigger hooks
  * (and programmatic callers) use to hand File objects into the manager:
  *
- *   window.BrandoUploads.enqueue(files, target)
+ *   window.BrandoUploads.enqueue(files, target, handover)
+ *
+ * `handover`, optional: the media drop that handed the files to their field
+ * (`shared/mediaDropHandover`), told when each file's upload settles.
  *
  * The bridge shim is registered at module scope (import time) so calls that
  * happen before the manager hook mounts are buffered and flushed on mount.
@@ -24,22 +28,22 @@ if (!window.BrandoUploads) {
     _hook: null,
     _buffer: [],
 
-    enqueue(files, target) {
+    enqueue(files, target, handover = null) {
       target = { ...target, scope_token: document.querySelector("[data-authorization-upload]")?.dataset.authorizationUpload || null }
       const fileList = Array.from(files)
       if (!fileList.length) return
 
       if (this._hook) {
-        this._hook.enqueueFiles(fileList, target)
+        this._hook.enqueueFiles(fileList, target, handover)
       } else {
-        this._buffer.push([fileList, target])
+        this._buffer.push([fileList, target, handover])
       }
     },
 
     _attach(hook) {
       this._hook = hook
       const buffered = this._buffer.splice(0)
-      buffered.forEach(([files, target]) => hook.enqueueFiles(files, target))
+      buffered.forEach(([files, target, handover]) => hook.enqueueFiles(files, target, handover))
     },
 
     _detach(hook) {
@@ -84,12 +88,16 @@ export default (app) => ({
     this._activeTransfers = new Set()
     this._activeGroups = new Map()
 
-    this.handleEvent('b:uploads:state', ({ ref, ...state }) => updateUpload(ref, state))
+    this.handleEvent('b:uploads:state', ({ ref, ...state }) => {
+      updateUpload(ref, state)
+      settleUpload(ref, state)
+    })
 
     this.handleEvent('b:uploads:released', ({ ref }) => this.releaseSlot(ref))
 
     this.handleEvent('b:uploads:cancel', ({ ref }) => {
       updateUpload(ref, { status: 'cancelled' })
+      settleUpload(ref, { status: 'cancelled' })
       this._transferQueue = this._transferQueue.filter((task) => task.ref !== ref)
       const xhr = this._directXhrs[ref]
       if (xhr) {
@@ -111,7 +119,7 @@ export default (app) => ({
     window.BrandoUploads._detach(this)
   },
 
-  enqueueFiles(files, target) {
+  enqueueFiles(files, target, handover = null) {
     const fileMetas = files.map((file, index) => ({
       index,
       name: file.name,
@@ -128,7 +136,9 @@ export default (app) => ({
           status: decision.error ? 'error' : 'queued',
           error: decision.error || null,
         })
+        if (handover) handOver(decision.ref, handover)
         if (decision.error) {
+          settleUpload(decision.ref, { status: 'error', error: decision.error })
           console.warn(`[UploadManager] rejected "${files[decision.index]?.name}": ${decision.error}`)
           return
         }

@@ -1,4 +1,4 @@
-import { alertConfirm } from '../../alerts'
+import { alertConfirm, alertWarning } from '../../alerts'
 
 /**
  * Asks before running the element's `phx-confirm-click` JS/event.
@@ -17,6 +17,9 @@ import { alertConfirm } from '../../alerts'
  * A reply may also carry a `choice` (see `alertConfirm`): the values chosen
  * are added to the event's push, as a page's delete says where its
  * fragments go.
+ *
+ * A reply with `refused` says why the action can't be done (a module that
+ * blocks use): a warning with only OK, and nothing is pushed.
  */
 // The chosen values join each push of the JS command
 function withValues(event, values) {
@@ -68,9 +71,10 @@ export default app => ({
       const describe = this.el.getAttribute('phx-confirm-click-describe')
 
       if (describe) {
-        this.pushEvent(describe, { id: this.el.getAttribute('phx-value-id') }, reply =>
-          confirm(reply && (reply.message || reply.html) ? reply : fromElement)
-        )
+        this.pushEvent(describe, { id: this.el.getAttribute('phx-value-id') }, reply => {
+          if (reply && reply.refused) alertWarning(reply.title, { html: reply.html })
+          else confirm(reply && (reply.message || reply.html) ? reply : fromElement)
+        })
       } else {
         confirm(fromElement)
       }

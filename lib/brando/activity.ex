@@ -27,7 +27,8 @@ defmodule Brando.Activity do
   A change from a content proposal (`Brando.Content.Proposals`, applied or
   undone) also names the proposal (`proposal_id`) and the user who approved
   and applied it (`approver_id`), apart from the agent that prepared it
-  (`with_proposal/5`). By kind (`actor_kind/1`), an event is a person's, the
+  (`with_proposal/5`); no one for one a connection applied without review
+  (`details["auto_applied"]`), made as the connection's user. By kind (`actor_kind/1`), an event is a person's, the
   Assistant's, a connected tool's over MCP, or an automatic job's
   (scheduled publishing and the system).
 

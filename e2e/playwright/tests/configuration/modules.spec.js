@@ -216,3 +216,24 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await expect(page.getByRole('button', { name: 'Edit reference intro_text', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit reference intro_text_copy', exact: true })).toHaveCount(0)
 })
+
+// A module that pages use can't go to the trash: the seeded Index pages use
+// Example module, so its Delete names them, linked, and offers only OK (#3882).
+test('Delete on a module pages use lists them and deletes nothing', async ({ page }) => {
+  await page.goto('/admin/config/content/modules')
+  await syncLV(page)
+
+  const row = page.locator('.list-row').filter({ hasText: 'Example module' }).first()
+  await row.getByTestId('circle-dropdown-button').click()
+  await row.getByRole('button', { name: 'Delete', exact: true }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Module in use' })
+  await expect(dialog.getByRole('link').first()).toHaveAttribute('href', /^\/admin\/pages\/update\/\d+$/)
+  await expect(dialog.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'OK', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  await page.reload()
+  await syncLV(page)
+  await expect(page.locator('.list-row').filter({ hasText: 'Example module' }).first()).toBeVisible()
+})

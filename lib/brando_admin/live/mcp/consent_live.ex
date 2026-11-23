@@ -72,12 +72,17 @@ defmodule BrandoAdmin.MCP.ConsentLive do
                 {gettext("Propose changes. You review and approve them in Brando, under Assistant → From connected tools")}
               </li>
               <li>{gettext("Add images to the media library. They are added at once, without review")}</li>
+              <li>
+                {gettext(
+                  "Create unpublished translations without review, if the site's managers allow it for this connection. They are saved in your name"
+                )}
+              </li>
             </ul>
           </div>
           <div>
             <h3>{gettext("It cannot")}</h3>
             <ul>
-              <li>{gettext("Save, publish or delete entries, or delete media")}</li>
+              <li>{gettext("Publish or delete entries, change them without your review, or delete media")}</li>
               <li>{gettext("Reach other sites or environments")}</li>
             </ul>
           </div>

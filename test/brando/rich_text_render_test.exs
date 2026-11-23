@@ -97,8 +97,9 @@ defmodule Brando.RichTextRenderTest do
     end
   end
 
-  # Each parse drops one leading line break from a `pre`, and a heading met
-  # inside a heading closes it: such markup reads differently a second time.
+  # A comment or a refused element taken out of a `pre` leaves a line break
+  # at the start of its text, which a parse drops unless it is written twice,
+  # and a heading met inside a heading closes it.
   test "markup that a second parse changes keeps its markup" do
     for html <- [
           "<p>Intro</p><pre><!-- sample -->\ncode()</pre><p>Outro</p>",

@@ -218,7 +218,9 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert has_element?(view, row(id) <> " [data-testid=assistant-state-expired]")
   end
 
-  test "a proposal under review expires on time when it is not among the listed rows",
+  # Every proposal under review is listed (Proposals.list_external/2), however
+  # many newer ones finished
+  test "a proposal under review older than the listed finished ones is listed, and expires on time",
        %{conn: conn, current_user: user} = c do
     id = prepare(c, "Older than the list")
     pending = Repo.get!(Record, id)
@@ -239,7 +241,7 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
 
     {:ok, chat, _} = live(conn, "/admin/assistant")
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
-    refute has_element?(view, row(id))
+    assert has_element?(view, row(id))
     assert has_element?(chat, ".assistant-connected-link .assistant-count", "1")
     assert has_element?(view, ".assistant-apply")
     assert Proposals.count_external(user) == 1

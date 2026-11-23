@@ -2235,7 +2235,11 @@ defmodule Brando.Translations do
 
     # A block whose module no longer matches it would be left out, and with
     # it the translation's text: refused rather than saved without it.
-    case Brando.Drafts.Restore.prepare(draft, saved, schema, user, accept_conflict: true, compatible_only: true) do
+    case Brando.Drafts.Restore.prepare(draft, saved, schema, user,
+           accept_conflict: true,
+           compatible_only: true,
+           load_entry_relations: true
+         ) do
       {:ok, changeset, []} -> {:ok, changeset}
       _ -> :error
     end

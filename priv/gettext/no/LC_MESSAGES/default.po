@@ -910,6 +910,20 @@ msgstr "%{model} står ikke i modellkatalogen Brando leser, så prisen og om den
 msgid "%{module} block"
 msgstr "%{module}-blokk"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} is used by blocks in one entry, so it can't be deleted."
+msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted."
+msgstr[0] "%{module} brukes av blokker i én oppføring, så den kan ikke slettes."
+msgstr[1] "%{module} brukes av blokker i %{count} oppføringer, så den kan ikke slettes."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} is used by blocks in one entry, so it can't be deleted: %{places}."
+msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted: %{places}."
+msgstr[0] "%{module} brukes av blokker i én oppføring, så den kan ikke slettes: %{places}."
+msgstr[1] "%{module} brukes av blokker i %{count} oppføringer, så den kan ikke slettes: %{places}."
+
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{ms} ms"
@@ -1043,6 +1057,11 @@ msgstr "Publiseringsmålene for %{name} ble endret et annet sted, så ingenting 
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "%{name}’s edit is replaced when you apply, and values move to the renamed refs and vars, so the apply can’t be reverted."
+msgstr "Endringen til %{name} erstattes når du tar releasen i bruk, og verdiene flyttes til refsene og variablene som får nytt navn, så endringen kan ikke tilbakestilles."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "%{name}’s edit is replaced when you apply. The apply keeps it, and Revert brings it back."
 msgstr "Endringen til %{name} erstattes når du tar releasen i bruk. Den tas vare på, og Tilbakestill henter den tilbake."
 
@@ -1078,18 +1097,23 @@ msgstr "%{renames} i %{module}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and move the values after the apply with mix brando.modules resolve %{maps}"
-msgstr "%{renames} ville sammen med de andre navnebyttene i denne endringen flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen, eller ta renamed_from ut av filen og flytt verdiene etter endringen med mix brando.modules resolve %{maps}"
+msgid "%{renames} would move no values, but the other renames this apply selects move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once."
+msgstr "%{renames} ville ikke flytte noen verdier, men de andre navnebyttene i denne endringen flytter verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen."
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with mix brando.modules resolve %{maps}"
-msgstr "%{renames} ville flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med mix brando.modules resolve %{maps}"
+msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
+msgstr "%{renames} ville sammen med de andre navnebyttene i denne endringen flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta i bruk færre av disse modulene om gangen, eller ta renamed_from ut av filen og flytt verdiene etter endringen med %{command}, som en bruker som kan redigere disse oppføringene. Uten renamed_from sletter planens resolve-linje dem i stedet: ikke kjør den."
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with mix brando.modules resolve %{maps}"
-msgstr "%{renames} ville flytte verdier i %{blocks} blokker, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med mix brando.modules resolve %{maps}"
+msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
+msgstr "%{renames} ville flytte verdier i %{blocks} blokker i %{entries} oppføringer, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_entries} oppføringer, %{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med %{command}, som en bruker som kan redigere disse oppføringene. Uten renamed_from sletter planens resolve-linje dem i stedet: ikke kjør den."
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
+msgstr "%{renames} ville flytte verdier i %{blocks} blokker, mer enn én endring flytter mens redaktørenes lagringer venter på den (%{max_blocks} blokker): ta renamed_from ut av filen, og flytt verdiene etter endringen med %{command}, som en bruker som kan redigere disse oppføringene. Uten renamed_from sletter planens resolve-linje dem i stedet: ikke kjør den."
 
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
@@ -1644,6 +1668,11 @@ msgstr "Andre innlegg som er koblet sammen med dette innlegget. Vanligvis er dis
 #, elixir-autogen, elixir-format
 msgid "A media, picture or video reference of the child module."
 msgstr "En media-, bilde- eller videoreferanse i undermodulen."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "A module that blocks use was not deleted. Delete on its row lists the entries using it."
+msgstr "En modul som blokker bruker, ble ikke slettet. Slett i raden dens viser oppføringene som bruker den."
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
@@ -2644,6 +2673,7 @@ msgstr "Alle videoer"
 
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Allow"
 msgstr "Tillat"
@@ -2673,6 +2703,11 @@ msgstr "Tillat egen lenketekst"
 #, elixir-autogen, elixir-format
 msgid "Allow setting opacity"
 msgstr "Tillat å sette gjennomsiktighet"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allow translations"
+msgstr "Tillat oversettelser"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -2921,6 +2956,11 @@ msgstr "Anker på denne siden"
 msgid "And %{count} more"
 msgstr "Og %{count} til"
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Another change to the same content was saved at the same moment, and nothing was saved. Save again."
+msgstr "En annen endring av det samme innholdet ble lagret i samme øyeblikk, og ingenting ble lagret. Lagre igjen."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Another client ID than the one saved removes the connection, and Figma has to be connected again. The same client ID with a new secret keeps it."
@@ -3088,10 +3128,26 @@ msgid_plural "Applied %{count} module changes."
 msgstr[0] "1 modulendring tatt i bruk."
 msgstr[1] "%{count} modulendringer tatt i bruk."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applied automatically"
+msgstr "Tatt i bruk automatisk"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Applied automatically as %{name}"
+msgstr "Tatt i bruk automatisk som %{name}"
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Applied by %{name}"
 msgstr "Tatt i bruk av %{name}"
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Applied version %{version} without review"
+msgstr "Tok i bruk versjon %{version} uten gjennomgang"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
@@ -6115,6 +6171,11 @@ msgstr "Opprett oppføringen som utkast"
 msgid "Create translation"
 msgstr "Opprett oversettelse"
 
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create unpublished translations without review, if the site's managers allow it for this connection. They are saved in your name"
+msgstr "Opprette upubliserte oversettelser uten gjennomgang, hvis nettstedets administratorer tillater det for denne tilkoblingen. De lagres i ditt navn"
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create user"
@@ -8419,6 +8480,11 @@ msgstr "Alle åpne tekster er gjennomgått eller endret. Bruk KI-knappen på en 
 #, elixir-autogen, elixir-format
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
 msgstr "Alle andre nettlesere der du er logget inn, blir logget ut, og de tilkoblede appene dine kobles fra. Denne forblir innlogget."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every proposal from this connection waits for review."
+msgstr "Alle forslag fra denne tilkoblingen venter på gjennomgang."
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -10956,6 +11022,16 @@ msgstr "Utelat denne endringen fra forslaget"
 msgid "Leave this field empty"
 msgstr "La dette feltet stå tomt"
 
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves every proposal for review"
+msgstr "Lar alle forslag vente på gjennomgang"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves every proposal for review: set by %{name}, %{date}"
+msgstr "Lar alle forslag vente på gjennomgang: satt av %{name}, %{date}"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Left out of the proposal: %{change}"
@@ -11000,6 +11076,11 @@ msgstr "Tidligere regler konverteres ikke automatisk. Sammenlign hver regel med 
 #, elixir-autogen, elixir-format
 msgid "Legal name"
 msgstr "Juridisk navn"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Let %{client} apply translations without review?"
+msgstr "La %{client} ta i bruk oversettelser uten gjennomgang?"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -12015,6 +12096,11 @@ msgstr "Seksjoner i moduleditoren"
 #, elixir-autogen, elixir-format
 msgid "Module groups"
 msgstr "Modulgrupper"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Module in use"
+msgstr "Modulen er i bruk"
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -13684,6 +13770,11 @@ msgid_plural "Notes, %{count} open"
 msgstr[0] "Notater, %{count} åpent"
 msgstr[1] "Notater, %{count} åpne"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing"
+msgstr "Ingenting"
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing changes for visitors at once: %{domain} keeps reaching whatever its DNS or CDN points at, a static host included, until it is pointed at this installation. Forms on pages deployed to a static host stop accepting submissions, and Publishing leaves the site’s menu."
@@ -15342,6 +15433,11 @@ msgstr "Forslag til gjennomgang"
 msgid "Proposal · version %{version}"
 msgstr "Forslag · versjon %{version}"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Proposals that only create unpublished translations are saved at once, in %{name}'s name, without review. Publishing them and every other change still wait for review."
+msgstr "Forslag som bare oppretter upubliserte oversettelser lagres med en gang, i %{name}s navn, uten gjennomgang. Publisering av dem og alle andre endringer venter fortsatt på gjennomgang."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Proposals that tools such as Claude Code prepared as you, through MCP. Review and apply them here. To change one, ask the tool again."
@@ -15428,6 +15524,11 @@ msgstr "Publiser"
 #, elixir-autogen, elixir-format
 msgid "Publish at"
 msgstr "Publiseringstidspunkt"
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publish or delete entries, change them without your review, or delete media"
+msgstr "Publisere eller slette innhold, endre det uten din gjennomgang, eller slette media"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -17097,6 +17198,11 @@ msgstr "Gjennomgå og rediger gruppetillatelser og medlemskap før du aktiverer 
 msgid "Review changes"
 msgstr "Gjennomgå endringer"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review everything"
+msgstr "Gå gjennom alt"
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Review groups"
@@ -17615,11 +17721,6 @@ msgstr "Lagre webhook"
 msgid "Save your changes before you leave this block?"
 msgstr "Vil du lagre endringene før du forlater denne blokken?"
 
-#: lib/brando_admin/live/mcp/consent_live.ex
-#, elixir-autogen, elixir-format
-msgid "Save, publish or delete entries, or delete media"
-msgstr "Lagre, publisere eller slette oppføringer, eller slette media"
-
 #: lib/brando/frontend_edit/text.ex
 #: lib/brando_admin/components/form/frontend_editor.ex
 #, elixir-autogen, elixir-format
@@ -17713,6 +17814,16 @@ msgstr "Lagret, men siden ble ikke oppdatert"
 #, elixir-autogen, elixir-format
 msgid "Saved, but the page was not updated: a block template failed, so visitors see the page as it was."
 msgstr "Lagret, men siden ble ikke oppdatert: en blokkmal feilet, så besøkende ser siden slik den var."
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saves unpublished translations in your name without review"
+msgstr "Lagrer upubliserte oversettelser i ditt navn uten gjennomgang"
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saves unpublished translations in your name without review: set by %{name}, %{date}"
+msgstr "Lagrer upubliserte oversettelser i ditt navn uten gjennomgang: satt av %{name}, %{date}"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -18486,6 +18597,16 @@ msgstr "I bruk nå"
 msgid "Sessions"
 msgstr "Økter"
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Set %{date}"
+msgstr "Satt %{date}"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Set %{date} by %{name}"
+msgstr "Satt %{date} av %{name}"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Set %{environment} live"
@@ -18567,6 +18688,16 @@ msgstr "Lagre nytt passord"
 #, elixir-autogen, elixir-format
 msgid "Set password"
 msgstr "Lagre passord"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set to apply unpublished translations without review"
+msgstr "Satt til å ta i bruk upubliserte oversettelser uten gjennomgang"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set to leave every proposal for review"
+msgstr "Satt til å la alle forslag vente på gjennomgang"
 
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -19659,6 +19790,11 @@ msgstr "Tabelldata"
 msgid "Take editing back"
 msgstr "Ta tilbake redigeringen"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Take its blocks out of these entries, or move them to the trash, first."
+msgstr "Ta først blokkene dens ut av disse oppføringene, eller flytt oppføringene til papirkurven."
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
@@ -20246,6 +20382,11 @@ msgstr "Tilkoblingsforsøket tok mer enn ti minutter, så ingenting ble lagret. 
 #, elixir-autogen, elixir-format
 msgid "The connection can no longer be decrypted, as after a change of the encryption secret. Connected tools cannot reach Figma until it is connected again, and do not use the access token meanwhile."
 msgstr "Tilkoblingen kan ikke lenger dekrypteres, slik som etter en endring av krypteringshemmeligheten. Tilkoblede verktøy når ikke Figma før den er koblet til igjen, og bruker ikke tilgangstokenet i mellomtiden."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "The connection could not be changed."
+msgstr "Tilkoblingen kunne ikke endres."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -20857,6 +20998,11 @@ msgstr "Releasen har ingen priv/modules, eller release_path er ikke satt opp."
 msgid "The release’s definitions can’t be planned"
 msgstr "Releasens definisjoner kan ikke planlegges"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "The release’s version can’t be applied until its values can move to the renamed refs and vars. %{name}’s edit stays until then."
+msgstr "Releasens versjon kan ikke tas i bruk før verdiene kan flyttes til refsene og variablene som får nytt navn. Endringen til %{name} blir stående til da."
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "The reset link could not be sent."
@@ -21112,6 +21258,11 @@ msgstr "Opplastingen mislyktes. Velg filen på nytt."
 #, elixir-autogen, elixir-format
 msgid "The upload finished in a tab that is no longer editing. It is in the library, not in the entry."
 msgstr "Opplastingen ble ferdig i en fane som ikke redigerer lenger. Den ligger i biblioteket, ikke i elementet."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The upload stopped before it finished. Drop the file again."
+msgstr "Opplastingen stoppet før den var ferdig. Slipp filen på nytt."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -21447,6 +21598,11 @@ msgstr[1] "Dette endrer %{count} oppføringer. En revisjon av hver lagres først
 msgid "This collection is no longer in %{provider}. Choose another one."
 msgstr "Denne samlingen finnes ikke lenger i %{provider}. Velg en annen."
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "This connection applies unpublished translations without review."
+msgstr "Denne tilkoblingen tar i bruk upubliserte oversettelser uten gjennomgang."
+
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "This connection has ended, so nothing new will appear. To follow the tool again, connect it again and use the link it gives."
@@ -21659,6 +21815,11 @@ msgstr "Denne kartadressen kan ikke bygges inn."
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"
 msgstr "Dette kan skje under en serveroppdatering eller omstart"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This module"
+msgstr "Denne modulen"
 
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
@@ -22599,6 +22760,11 @@ msgstr "Upublisert innhold du kan redigere, vises her."
 #, elixir-autogen, elixir-format
 msgid "Unpublished on schedule"
 msgstr "Avpublisert som planlagt"
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unpublished translations"
+msgstr "Upubliserte oversettelser"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -23852,6 +24018,11 @@ msgstr "Bare med advarsler"
 #, elixir-autogen, elixir-format
 msgid "Without a connected Figma app, connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame, with a personal access token. They see the Figma files the token's owner can open."
 msgstr "Uten en tilkoblet Figma-app leser tilkoblede verktøy en Figma-ramme fra lenken og importerer bildene til mediebiblioteket, i en mappe oppkalt etter rammen, med et personlig tilgangstoken. De ser Figma-filene tokenets eier kan åpne."
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Without review"
+msgstr "Uten gjennomgang"
 
 #: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/environment_live.ex

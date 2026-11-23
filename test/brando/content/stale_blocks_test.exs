@@ -906,7 +906,7 @@ defmodule Brando.Content.StaleBlocksTest do
       output = run_task(["refresh", "--uid", c.module.uid, "--user", to_string(c.user.id)])
       assert output =~ "1 stale blocks remain"
       assert output =~ "They hold refs or vars the module no longer defines: var link (1 blocks)."
-      assert output =~ "mix brando.modules resolve --uid #{c.module.uid} --user ID"
+      assert output =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID"
       assert output =~ "/admin/config/content/modules/update/#{c.module.id}/stale-blocks"
     end
   end
