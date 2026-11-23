@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.Brando247AddImagesSources do
+defmodule Brando.Repo.Migrations.Brando248AddImagesSources do
   use Ecto.Migration
 
   @moduledoc """

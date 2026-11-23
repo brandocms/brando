@@ -1,11 +1,11 @@
-defmodule Brando.Migrations.Brando247AddImagesSourcesTest do
+defmodule Brando.Migrations.Brando248AddImagesSourcesTest do
   # Runs the upgrade template inside the sandbox transaction; Postgres DDL is
   # transactional, so everything is undone afterwards.
   use Brando.ConnCase
 
   import Brando.MigrationTemplates
 
-  @template "brando_247_add_images_sources.exs"
+  @template "brando_248_add_images_sources.exs"
   @table "images_sources"
   @acme "tenant_acme_production"
   @other "tenant_other_production"
