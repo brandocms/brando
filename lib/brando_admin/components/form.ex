@@ -7356,21 +7356,8 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event(
         "save_image",
         %{"image" => image_params},
-        %{
-          assigns: %{
-            form: form,
-            entry: entry,
-            schema: schema,
-            singular: singular,
-            edit_image:
-              %{image: image, path: path, field: field, relation_field: relation_field} =
-                edit_image,
-            current_user: current_user
-          }
-        } = socket
+        %{assigns: %{edit_image: %{image: image} = edit_image, current_user: current_user}} = socket
       ) do
-    entry_or_default = entry || struct(schema)
-
     validated_changeset =
       image
       |> Images.Image.changeset(drawer_params(image_params, "image"), current_user)
@@ -7386,11 +7373,6 @@ defmodule BrandoAdmin.Components.Form do
         # status/sizes since the drawer was opened.
         {:ok, updated_image} = Images.get_image(image.id)
 
-        # Processing sees the focal point already saved: the entries that
-        # show the image render again from here
-        if Map.has_key?(validated_changeset.changes, :focal),
-          do: Images.Rerender.after_refocus(image, updated_image)
-
         Brando.Blueprint.AfterSave.run(
           Images.Image,
           updated_image,
@@ -7399,42 +7381,15 @@ defmodule BrandoAdmin.Components.Form do
         )
 
         edit_image = Map.put(edit_image, :image, updated_image)
-        relation_key = relation_field_key(relation_field, field)
-        relation_full_path = path ++ [relation_key]
-        field_full_path = path ++ [field]
-
-        updated_changeset =
-          form.source
-          |> put_key_at(path, relation_key, image.id)
-          |> put_asset_in_data(path, field, updated_image)
-
-        updated_entry =
-          entry_with_relation(entry_or_default, updated_changeset, field_full_path, &drawer_image(&1, updated_image))
-
-        # Subscribe parent live view to changes to this image
-        Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
-
-        if requeue_processing?(validated_changeset, updated_image) do
-          Images.Processing.queue_processing(updated_image, current_user, field_full_path, silent: true)
-        end
-
-        target_field_name =
-          Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
         {:noreply,
          socket
          |> ship_all_field_changes()
-         |> assign(:entry, updated_entry)
-         |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
-         |> put_form(to_form(updated_changeset, []))
+         |> put_drawer_image(edit_image, validated_changeset)
          |> assign(:image_changeset, validated_changeset)
          |> assign(:edit_image, edit_image)
          |> assign(:editing_image?, false)
-         |> assign_drawer_recovery_state()
-         |> push_event("b:validate", %{
-           target: target_field_name,
-           value: image.id
-         })}
+         |> assign_drawer_recovery_state()}
 
       {:error, :forbidden} ->
         refused_drawer_save(socket, "image", validated_changeset)
@@ -8305,12 +8260,7 @@ defmodule BrandoAdmin.Components.Form do
       )
       |> Map.put(:action, :update)
 
-    with {:ok, updated_image} <- Images.update_image(changeset, current_user) do
-      # Processing sees the focal point already saved: the entries that show
-      # the image render again from here
-      Images.Rerender.after_refocus(image, updated_image)
-      {:ok, updated_image}
-    end
+    Images.update_image(changeset, current_user)
   end
 
   # The image editor's point with the mode the editor shows it in. A mode sent
@@ -8449,16 +8399,23 @@ defmodule BrandoAdmin.Components.Form do
 
   # Non-block path: update entry with the image so the Image input
   # detects the change when the form re-validates (same pattern as new_copy).
+  # A locked field keeps what it holds, checked at the save: the field may
+  # have locked since the editor opened. The drawer shows the saved image.
   defp show_saved_editor_image(socket, edit_image, updated_image) do
-    field_atom = String.to_existing_atom("#{edit_image.field}")
-    image_changeset = change(updated_image)
-    updated_edit_image = Map.merge(edit_image, %{image: updated_image})
+    socket =
+      socket
+      |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
+      |> assign(:image_changeset, change(updated_image))
 
-    socket
-    |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
-    |> assign(:edit_image, updated_edit_image)
-    |> assign(:image_changeset, image_changeset)
-    |> push_event("b:validate", %{})
+    if edit_asset_locked?(socket, edit_image) do
+      socket
+    else
+      field_atom = String.to_existing_atom("#{edit_image.field}")
+
+      socket
+      |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
+      |> push_event("b:validate", %{})
+    end
   end
 
   defp external_video_params?(%{"type" => type}) when type in ["external_file", "vimeo", "youtube"], do: true
@@ -10649,6 +10606,51 @@ defmodule BrandoAdmin.Components.Form do
   defp topic_ref("form:" <> uuid), do: "form:" <> String.slice(uuid, 0, 8) <> "…"
   defp topic_ref(other), do: inspect(other)
 
+  # The drawer's image goes into its field, which the form validates. A
+  # locked field keeps another image (it may have locked since the drawer
+  # opened): only the image is saved, and processed for no field.
+  defp put_drawer_image(socket, %{image: image, path: path, field: field} = edit_image, validated_changeset) do
+    leave_field? =
+      edit_asset_locked?(socket, edit_image) and not holds_relation?(socket.assigns.form.source, field, image)
+
+    field_full_path = if leave_field?, do: [], else: path ++ [field]
+
+    if requeue_processing?(validated_changeset, image) do
+      Images.Processing.queue_processing(image, socket.assigns.current_user, field_full_path, silent: true)
+    end
+
+    if leave_field?, do: socket, else: put_drawer_image_in_field(socket, edit_image)
+  end
+
+  defp put_drawer_image_in_field(
+         %{assigns: %{form: form, entry: entry, schema: schema, singular: singular}} = socket,
+         %{image: image, path: path, field: field, relation_field: relation_field}
+       ) do
+    relation_key = relation_field_key(relation_field, field)
+    relation_full_path = path ++ [relation_key]
+    field_full_path = path ++ [field]
+
+    updated_changeset =
+      form.source
+      |> put_key_at(path, relation_key, image.id)
+      |> put_asset_in_data(path, field, image)
+
+    updated_entry =
+      entry_with_relation(entry || struct(schema), updated_changeset, field_full_path, &drawer_image(&1, image))
+
+    # Subscribe parent live view to changes to this image
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+
+    target_field_name =
+      Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
+
+    socket
+    |> assign(:entry, updated_entry)
+    |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
+    |> put_form(to_form(updated_changeset, []))
+    |> push_event("b:validate", %{target: target_field_name, value: image.id})
+  end
+
   # Inputs the image pipeline actually derives its output from. The drawer's
   # other fields (title / credits / alt) are metadata — the sizes on disk do
   # not depend on them.
@@ -11224,6 +11226,13 @@ defmodule BrandoAdmin.Components.Form do
       :error ->
         changeset
     end
+  end
+
+  # A one-to-one subform with no row yet: the form shows an empty one, and
+  # a value starts it. Clearing the key leaves it unstarted.
+  defp put_key_at(%Changeset{changes: changes, data: data} = changeset, [field], key, value)
+       when is_atom(field) and not is_map_key(changes, field) and is_nil(:erlang.map_get(field, data)) do
+    if is_nil(value), do: changeset, else: Changeset.put_change(changeset, field, %{key => value})
   end
 
   defp put_key_at(changeset, path, key, value) do

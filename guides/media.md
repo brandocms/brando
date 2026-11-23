@@ -160,7 +160,8 @@ their markup reads from the image (its sizes, formats or dimensions, or the
 config it was made with: a size whose width or crop ratio changed under the
 same name keeps its path, but its `srcset` width and its crop do not). An
 image that Recreate changed images adopts counts as changed too, and so does
-a focal point saved in the image editor or the image drawer, and an image
+a focal point saved, in the image editor or drawer or with
+`Brando.Images.update_image/3`, and an image
 whose CDN upload marks it as on the CDN: its pages were rendered with the
 media folder's addresses, and with `keep_local_copy: false` those files go.
 The

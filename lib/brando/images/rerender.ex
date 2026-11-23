@@ -3,8 +3,8 @@ defmodule Brando.Images.Rerender do
   # The entries that show an image render again when its processing changed
   # what a render reads from it. This is the one place that decides, for
   # every processing: an image size run (Utilities → Image sizes), the image
-  # editor's crop, or a new file; and for a focal point saved in the image
-  # editor or drawer, before its processing (`after_refocus/3`).
+  # editor's crop, or a new file; and for a focal point saved with
+  # `Brando.Images.update_image/3`, before its processing (`after_refocus/3`).
   #
   # What a render reads from an image record is `render_inputs/1`: the
   # picture markup (`Brando.HTML.Images`) takes the path, the sizes and
@@ -88,9 +88,9 @@ defmodule Brando.Images.Rerender do
 
   @doc """
   Queues the renders of the entries that show `saved` when its focal point
-  is not `before`'s (`after_processing/3`). The image editor and the image
-  drawer save the focal point before they queue processing, which then sees
-  no change. Never raises.
+  is not `before`'s (`after_processing/3`). `Brando.Images.update_image/3`
+  calls it: a focal point is saved before processing is queued, which then
+  sees no change. Never raises.
   """
   @spec after_refocus(map(), map(), keyword()) :: [{:ok, Oban.Job.t()}]
   def after_refocus(before, saved, opts \\ []), do: after_processing(%{saved | focal: before.focal}, saved, opts)
