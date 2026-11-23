@@ -110,6 +110,9 @@ defmodule Brando.SlugScopeTest.IndependentLanguageArticle do
 
   table "slug_scope_language_articles"
 
+  # Shares its table with the synchronized fixture
+  authorization key: "brando.slug_scope_independent_language_articles"
+
   trait :creator
   trait :status
   trait :timestamped
@@ -141,6 +144,9 @@ defmodule Brando.SlugScopeTest.IndependentTableArticle do
     gettext_module: Brando.Gettext
 
   table "slug_scope_table_articles"
+
+  # Shares its table with the synchronized fixture
+  authorization key: "brando.slug_scope_independent_table_articles"
 
   trait :creator
   trait :status
