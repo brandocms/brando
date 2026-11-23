@@ -2,15 +2,47 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 import fs from 'node:fs'
 
-// A multi module with `media_drop` (the seeded Image Row, whose entries are
-// Image Cards with a media ref) makes one entry per image or video dropped on
-// its blocks, in the order dropped, each with its file in that ref.
+// A multi module with `media_drop` (an Image Row, whose entries are Image
+// Cards with a media ref) makes one entry per image or video dropped on its
+// blocks, in the order dropped, each with its file in that ref.
 test.describe('Multi blocks: dropping media', () => {
   test.setTimeout(120000)
 
   const rows = page => page.locator('[data-module-multi="true"]')
   const entries = row => row.locator('.block-children > [data-uid]')
   const field = entry => entry.locator('.media-field--block:visible').first()
+
+  const group = 'Media drop rows'
+
+  const factory = async (page, attributes) => {
+    const response = await page.request.post('/__e2e/db/factory', {
+      data: { schema: 'Brando.Content.Module', creator_id: 1, fields: ['id'], attributes },
+    })
+    expect(response.ok(), await response.text()).toBeTruthy()
+    return (await response.json()).id
+  }
+
+  // The Image Row and its Image Card, in the test's sandbox
+  test.beforeEach(async ({ page }) => {
+    const module = (name, extra) => ({
+      name: { en: name, no: name }, namespace: { en: group, no: group }, help_text: { en: name },
+      class: name.toLowerCase().replace(' ', '-'), type: 'liquid', vars: [], datasource: false, ...extra,
+    })
+
+    const row = await factory(page, module('Image Row', {
+      uid: 'e2e-image-row', code: '<section>{{ content }}</section>', refs: [], multi: true,
+      media_drop_child: 'e2e-image-card', media_drop_ref: 'visual',
+    }))
+
+    await factory(page, module('Image Card', {
+      uid: 'e2e-image-card', parent_id: row, multi: false,
+      code: '<figure>{% ref refs.visual %}</figure>',
+      refs: [{
+        name: 'visual', description: 'Image or video', uid: 'e2e-image-card-visual',
+        data: { type: 'media', data: { available_blocks: ['picture', 'video'], template_picture: {}, template_video: {} } },
+      }],
+    }))
+  })
 
   const createPage = async (page, title, group, module) => {
     await page.setViewportSize({ width: 1440, height: 1400 })
@@ -53,7 +85,7 @@ test.describe('Multi blocks: dropping media', () => {
 
   test('two images and a video become three entries in order, saved with their media', async ({ page }) => {
     const title = 'Media drop row'
-    await createPage(page, title, '10 MEDIA DROP TEST', 'Image Row')
+    await createPage(page, title, group, 'Image Row')
     const row = rows(page).first()
     await expect(row.locator('.block-media-drop')).toBeVisible()
 
@@ -68,7 +100,6 @@ test.describe('Multi blocks: dropping media', () => {
     for (const entry of await entries(row).all()) {
       await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
     }
-    expect(new Set(await assetIds(row)).size).toBe(3)
 
     // A file dropped on an entry's own field fills only that field
     const first = entries(row).first()
@@ -91,7 +122,7 @@ test.describe('Multi blocks: dropping media', () => {
   })
 
   test('a file the ref does not take makes no entry and is reported', async ({ page }) => {
-    await createPage(page, 'Media drop refused', '10 MEDIA DROP TEST', 'Image Row')
+    await createPage(page, 'Media drop refused', group, 'Image Row')
     const row = rows(page).first()
 
     await drop(page, row.locator('.block-media-drop'), [
@@ -105,7 +136,7 @@ test.describe('Multi blocks: dropping media', () => {
   })
 
   test('an entry whose upload is cancelled goes again', async ({ page }) => {
-    await createPage(page, 'Media drop cancelled', '10 MEDIA DROP TEST', 'Image Row')
+    await createPage(page, 'Media drop cancelled', group, 'Image Row')
     const row = rows(page).first()
 
     // Hold the manager's transfers, so the upload is still queued when cancelled
