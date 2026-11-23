@@ -215,6 +215,22 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
       assert Brando.Translations.get_member(Page, c.source.id) == nil
     end
 
+    # The listing's assigns hold the copy's id and title, gone once rolled back
+    test "keeps none of the view's assigns", c do
+      id = prepare!(mcp(c), [create_op(c.source), translate_new(c)], "Translate the page")
+
+      assert {:ok, %{url: url}} =
+               Tools.call(
+                 "preview_proposal",
+                 %{"proposal_id" => id, "target" => %{"new" => "english"}, "preview_target" => "listing"},
+                 mcp(c)
+               )
+
+      assert open(url).resp_body =~ "Om oss"
+      {:ok, keys} = Cachex.keys(:cache)
+      assert Enum.filter(keys, &(is_binary(&1) and &1 =~ "__VAR__")) == []
+    end
+
     test "shows the untranslated copy without a translate", c do
       id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
       before = kept()

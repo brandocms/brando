@@ -109,7 +109,9 @@ defmodule Brando.LivePreview do
     # value_fns see un-mutated data.
     entry = maybe_preload(entry, opts.schema_preloads)
 
-    processed_assigns = process_assigns(opts.assigns, entry, language, cache_key)
+    # A snapshot renders once: its assigns are not kept for a next render
+    assigns_key = if Keyword.get(render_opts, :cache_assigns, true), do: cache_key
+    processed_assigns = process_assigns(opts.assigns, entry, language, assigns_key)
 
     {tpl_module, template} =
       if is_function(opts.template) do
@@ -722,7 +724,7 @@ defmodule Brando.LivePreview do
     entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
     schema_module
-    |> render(entry_struct, cache_key, include_meta: true, target: target)
+    |> render(entry_struct, cache_key, include_meta: true, target: target, cache_assigns: false)
     |> Utils.term_to_binary()
   end
 
@@ -767,6 +769,8 @@ defmodule Brando.LivePreview do
       _no_tenant -> %{site_id: nil, environment_id: nil}
     end
   end
+
+  defp resolve_cached_var(nil, key, value_fn), do: {key, value_fn.()}
 
   defp resolve_cached_var(cache_key, key, value_fn) do
     case get_var(cache_key, key) do
