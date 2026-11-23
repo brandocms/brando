@@ -123,6 +123,42 @@ defmodule Brando.Villain.AssignedTagArgumentsTest do
     assert [@typed | _] = html |> Floki.parse_fragment!() |> Floki.attribute("img", "alt")
   end
 
+  # A value that starts from a literal was never escaped: it reaches every tag
+  # as before, the value `{{ }}` prints of it
+  test "an assigned value that starts from a literal reaches a tag as it prints", %{entry: entry} do
+    for template <- [
+          "{% picture entry.cover { lazyload: false, alt: V } %}",
+          "{% route page_path show { V } %}",
+          "{% inspect V %}",
+          "{% editable_field V %}"
+        ],
+        value <- [~s("A&amp;B"), ~s("A&amp;B" | append: entry.title)] do
+      printed = render("{{ #{value} }}", entry)
+      refute printed =~ ~s(")
+
+      assert render("{% assign label = #{value} %}" <> with_value(template, "label"), entry) ==
+               render(with_value(template, ~s("#{printed}")), entry),
+             "#{template} #{value}"
+    end
+  end
+
+  # Only the variable read as itself is read as typed: an expression on it
+  # reads the value assigned, as before
+  test "an expression on an assigned variable reads the value assigned", %{entry: entry} do
+    entry = %{entry | title: "<"}
+    assert render("{% assign q = entry.title %}{{ q.size }}", entry) == "4"
+
+    for template <- [
+          "{% picture entry.cover { lazyload: false, alt: V } %}",
+          "{% inspect V %}",
+          "{% editable_field V %}"
+        ] do
+      assert render("{% assign q = entry.title %}" <> with_value(template, "q.size"), entry) ==
+               render(with_value(template, "4"), entry),
+             template
+    end
+  end
+
   test "raw keeps what it gives an assigned value", %{entry: entry} do
     assert render("{% assign q = entry.title | raw %}{{ q }}", entry) == render("{{ entry.title | raw }}", entry)
   end

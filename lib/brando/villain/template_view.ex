@@ -57,7 +57,7 @@ defmodule Brando.Villain.TemplateView do
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
-  # Escaped text `{% assign %}` gave a variable, with the text it stands for (`assign/3`)
+  # Escaped text `{% assign %}` gave a variable, with the text it stands for (`assign/4`)
   @typed_texts :brando_template_view_typed_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
@@ -176,19 +176,28 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
-  `eval/2`, with a variable `{% assign %}` gave escaped plain text read as
-  the text it stands for (`assign/3`): so a field passed through `assign` is
-  escaped once, as the field passed directly is. For a tag argument that
-  escapes what it prints (picture's `alt`, `route`); every other argument
-  reads with `eval/2`.
+  `eval/2`, with an argument that is a variable `{% assign %}` gave escaped
+  plain text read as the text it stands for (`assign/4`): so a field passed
+  through `assign` is escaped once, as the field passed directly is. Any
+  other expression (`q.size`) reads the value assigned. For a tag argument
+  that escapes what it prints (picture's `alt`, `route`); every other
+  argument reads with `eval/2`.
   """
   @spec eval_typed(term(), Context.t()) :: term()
   def eval_typed(argument, %Context{} = context) do
-    case typed_texts(context) do
-      typed when map_size(typed) == 0 -> eval(argument, context)
-      typed -> eval(argument, Context.push_scope(context, typed))
+    with name when is_binary(name) <- variable(argument),
+         {:ok, text} <- Map.fetch(typed_texts(context), name) do
+      eval(argument, Context.push_scope(context, %{name => text}))
+    else
+      _ -> eval(argument, context)
     end
   end
+
+  # The name of the variable an argument is, read as itself
+  defp variable([argument]), do: variable(argument)
+  defp variable({:keyword, [_key, value]}), do: variable(value)
+  defp variable({:field, [key: name]}), do: name
+  defp variable(_argument), do: nil
 
   @doc """
   A tag's option that it prints as markup (a caption), evaluated as `{{ }}`
@@ -206,14 +215,17 @@ defmodule Brando.Villain.TemplateView do
   entry is escaped, as `{{ name }}` prints it. For escaped plain text (no
   rich text, no record, no number) the text it stands for is kept beside it,
   the inverse of the escape (`Brando.Villain.Parser.unescape_var_value/1`),
-  for the arguments that read it as typed (`eval_typed/2`).
+  for the arguments that read it as typed (`eval_typed/2`). `read?` says the
+  expression starts from a field or variable, which is read escaped; text
+  that starts from a literal the template writes was never escaped, and is
+  kept as it is only.
   """
-  @spec assign(Context.t(), String.t(), term()) :: Context.t()
-  def assign(%Context{private: private} = context, name, value) do
+  @spec assign(Context.t(), String.t(), term(), boolean()) :: Context.t()
+  def assign(%Context{private: private} = context, name, value, read?) do
     typed = Map.get(private, @typed_texts, %{})
 
     typed =
-      if is_binary(value) and read_mode(:escape, context) == :escape and not read_as_rich_text?(value),
+      if read? and is_binary(value) and read_mode(:escape, context) == :escape and not read_as_rich_text?(value),
         do: Map.put(typed, name, {value, Parser.unescape_var_value(value)}),
         else: Map.delete(typed, name)
 
@@ -222,7 +234,7 @@ defmodule Brando.Villain.TemplateView do
   end
 
   # Liquex binds a name to a value only, and `capture` and loops set names
-  # without `assign/3`, so the text is tied to the value: a variable still
+  # without `assign/4`, so the text is tied to the value: a variable still
   # holding the bytes it was assigned reads as typed. A `capture` or loop
   # variable of the same name and bytes reads the same, which can change the
   # characters an argument shows, never whether they are escaped: every
