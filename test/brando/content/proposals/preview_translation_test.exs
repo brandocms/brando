@@ -287,6 +287,27 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
       assert message =~ "changed"
     end
 
+    # The copy's rows and the source's lock are held while the page renders,
+    # for as long as the transaction may take. The connection is dropped
+    # then, the test's sandbox with it, so nothing is read after.
+    test "tells a render that outlasts its transaction", c do
+      id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
+      {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)
+
+      slow = fn _changeset ->
+        Process.sleep(300)
+        Repo.aggregate(Page, :count)
+      end
+
+      {result, _log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          Brando.Content.Proposals.with_translation(proposal, {:new, "english"}, c.user, [timeout: 100], slow)
+        end)
+
+      assert {:error, message} = result
+      assert message =~ "took too long"
+    end
+
     test "is refused once the language is taken", c do
       id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
       {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)

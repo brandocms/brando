@@ -261,7 +261,11 @@ operations on it written in, its links pointing at their versions in that
 language, rendered with that language's templates and navigation. The copy is
 made for the preview in a transaction that is rolled back once the page is
 rendered, so nothing of it is kept; making it takes the permission to create
-the translation, and is refused once the language has a version.
+the translation, and is refused once the language has a version. While the
+page renders, the preview holds a database connection, the copy's rows and
+a lock on the source: a sync job, an apply, or another preview of the same
+translation waits for it. A render that outlasts the transaction's timeout
+is stopped and the tool says the page took too long.
 
 In multi-site mode the link opens only under the site environment the
 proposal belongs to: on the admin's host and on that environment's own

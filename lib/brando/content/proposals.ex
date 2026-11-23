@@ -2626,6 +2626,11 @@ defmodule Brando.Content.Proposals do
   (`Brando.Repo.after_commit/1`: broadcasts, cache evictions) never runs, no
   query result read in it is cached, and jobs are rows the rollback removes.
 
+  The copy's rows, and the locks on its source, are held while `fun` runs,
+  for no longer than the transaction's timeout (`:timeout`, the repo's
+  default otherwise): a `fun` that outlasts it gets the connection dropped,
+  and `{:error, message}` is returned.
+
   It checks what `materialize/3` checks, with `shared: true` as it takes it,
   and the texts the proposal translates against their sources, under the
   sources' locks, as applying does (`check_translated_sources!/1`). It makes
@@ -2640,16 +2645,32 @@ defmodule Brando.Content.Proposals do
     ref = make_ref()
 
     rolled_back =
-      Repo.transaction(fn ->
-        Brando.Cache.Query.skip_in_transaction()
-        Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
-      end)
+      try do
+        Repo.transaction(
+          fn ->
+            Brando.Cache.Query.skip_in_transaction()
+            Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
+          end,
+          Keyword.take(opts, [:timeout])
+        )
+      rescue
+        # The connection is dropped once the transaction outlasts its timeout
+        DBConnection.ConnectionError -> {:error, {ref, :timeout}}
+      end
 
     case rolled_back do
+      {:error, {^ref, :timeout}} -> {:error, preview_timed_out()}
       {:error, {^ref, result}} -> result
       {:error, reason} -> {:error, translation_failed(reason)}
     end
   end
+
+  defp preview_timed_out,
+    do:
+      dgettext(
+        "content_proposals",
+        "The page took too long to render, and the translation made for it was thrown away. Try again, or preview a lighter view."
+      )
 
   defp with_copy(proposal, target, %CreateTranslation{source: {schema, _}}, actor, opts, fun) do
     copy =

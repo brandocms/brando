@@ -630,6 +630,11 @@ msgstr "Modulen har ingen variabel som heter %{key}."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The page took too long to render, and the translation made for it was thrown away. Try again, or preview a lighter view."
+msgstr "Siden brukte for lang tid på å bli vist, og oversettelsen som ble laget for den, ble forkastet. Prøv igjen, eller forhåndsvis en lettere visning."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The proposal has problems, so it cannot be previewed: it copies a block that is not there."
 msgstr "Forslaget har problemer, så det kan ikke forhåndsvises: det kopierer en blokk som ikke finnes."
 
