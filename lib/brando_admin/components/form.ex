@@ -8169,7 +8169,12 @@ defmodule BrandoAdmin.Components.Form do
 
   defp refused_save_error(socket, reason) do
     send(self(), {:progress_popup, "Saving entry failed..."})
-    BrandoAdmin.Toast.send_to(socket.assigns.current_user, refused_save_text(reason), %{level: :error, type: :notification})
+
+    BrandoAdmin.Toast.send_to(socket.assigns.current_user, refused_save_text(reason), %{
+      level: :error,
+      type: :notification
+    })
+
     assign(socket, :minor_save?, false)
   end
 
