@@ -18,10 +18,12 @@ const handovers = new Map()
  * data-deliver-topic (the form component's root element) unless set directly.
  *
  * Optional behaviors:
- * - data-folder-browser="true": before enqueueing, open the media folder
- *   browser (handled by the form component / ImagePicker). Files are held
- *   until `b:block_upload_folder_confirmed` comes back with this element's id
- *   as upload_name; the chosen folder/folder_id ride along in the target.
+ * - data-folder-browser="true": an image uploads to the folder chosen for
+ *   this field, or the last one used. "Change" (`.media-destination-change`)
+ *   opens the media folder browser (the form component / ImagePicker) for the
+ *   next uploads; `b:block_upload_folder_confirmed` comes back with this
+ *   element's id as upload_name and the chosen folder/folder_id. No files
+ *   wait on that choice.
  * - data-click-mode="trigger": only clicks on a `.upload-trigger` element open
  *   the file dialog (for wrappers containing other interactive content).
  *   Default: any click outside buttons/links opens it.
@@ -40,7 +42,6 @@ const handovers = new Map()
  */
 export default (app) => ({
   mounted() {
-    this._pendingFiles = []
     this._confirmedFolder = null
     this._folderConfigTarget = this.el.dataset.configTarget || 'default'
     this.configureInput()
@@ -131,9 +132,6 @@ export default (app) => ({
     })
 
     if (this.el.dataset.folderBrowser === 'true') {
-      this.handleEvent('b:block_upload_folder_cancelled', ({ upload_name, request_id }) => {
-        if (upload_name === this.el.id && request_id === this._pendingRequest) this._pendingFiles = []
-      })
       this.handleEvent('b:block_upload_folder_confirmed', ({ upload_name, request_id, folder, folder_id }) => {
         if (upload_name !== this.el.id || request_id !== this._pendingRequest) return
 
@@ -142,8 +140,6 @@ export default (app) => ({
         if (confirmedFolders.size > 100) confirmedFolders.delete(confirmedFolders.keys().next().value)
         this.storeRecentFolder(folder)
         this.configureInput()
-        const files = this._pendingFiles.splice(0)
-        if (files.length) this.enqueue(files, { folder, folder_id })
       })
     }
   },
@@ -171,7 +167,6 @@ export default (app) => ({
   updated() {
     if (this._folderConfigTarget !== (this.el.dataset.configTarget || 'default')) {
       this._confirmedFolder = null
-      this._pendingFiles = []
       this._folderConfigTarget = this.el.dataset.configTarget || 'default'
     }
     this.subscribeProgress()
@@ -246,7 +241,6 @@ export default (app) => ({
   // "Change": choose the folder for this field's next uploads, with no files
   // waiting.
   changeDestination() {
-    this._pendingFiles = []
     this._pendingRequest = crypto.randomUUID()
     this.openFolderBrowser([])
   },
@@ -259,7 +253,6 @@ export default (app) => ({
     const formRoot = this.el.closest('[data-deliver-topic]')
 
     if (!formRoot || !formRoot.id) {
-      this._pendingFiles = []
       this.showProgress({ status: 'error', error: 'The upload destination is unavailable. Reopen this editor.' })
       return
     }
@@ -329,8 +322,8 @@ export default (app) => ({
       this._onProviderUpload = ({ detail }) => {
         if (detail.ref !== this._providerRef) return
         if (detail.status === 'uploading') this.showProgress({ status: 'uploading', progress: detail.progress })
-        else if (detail.status === 'error') this.showProgress({ status: 'error', error: detail.error })
-        else this.showProgress(null)
+        else if (detail.error) this.showProgress({ status: 'error', error: detail.error })
+        else this.showProgress({ status: 'done' })
       }
       hook.addEventListener('brando:video-upload', this._onProviderUpload)
       this._providerHook = hook

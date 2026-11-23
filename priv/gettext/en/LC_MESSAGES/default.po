@@ -21051,6 +21051,11 @@ msgstr ""
 msgid "The video provider refused the upload. Check its settings, or try again."
 msgstr ""
 
+#: lib/brando_admin/components/assets/provider_video_upload.ex
+#, elixir-autogen, elixir-format
+msgid "The video was uploaded, but could not be added here."
+msgstr ""
+
 #: lib/brando/workers/video_metadata_sweep.ex
 #, elixir-autogen, elixir-format
 msgid "The videos are already being looked up"

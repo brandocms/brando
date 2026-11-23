@@ -20,7 +20,8 @@
  * Each request's progress is also announced on the hook element as a
  * `brando:video-upload` event, `detail: { ref, status, progress, error }` with
  * status `uploading`, `done` or `error`, for a caller that shows it in place:
- * `Brando.UploadTrigger` on a video field.
+ * `Brando.UploadTrigger` on a video field. A `done` carrying an `error` is a
+ * file the provider has but the server could not complete.
  *
  * Transfers run one at a time. Video files are large and each one costs a
  * server round-trip to provision, so a dropped batch of ten uploads in filename
@@ -88,12 +89,12 @@ export default function providerVideoUploader({ label, startTransfer }) {
       this.activeUploads.clear()
     },
 
-    pushVideoEvent(event, payload) {
+    pushVideoEvent(event, payload, onReply) {
       const target = this.el.dataset.target
       if (target) {
-        this.pushEventTo(target, event, payload)
+        this.pushEventTo(target, event, payload, onReply)
       } else {
-        this.pushEvent(event, payload)
+        this.pushEvent(event, payload, onReply)
       }
     },
 
@@ -188,12 +189,19 @@ export default function providerVideoUploader({ label, startTransfer }) {
     },
 
     // The server signed `uploadToken` for this request when it created the
-    // video; it, not a video id, says which upload finished.
+    // video; it, not a video id, says which upload finished. `done` is
+    // announced once the server has answered, and its patch shows what the
+    // owning component took, with the answer's `error` if it took nothing.
     reportSuccess(requestRef, uploadToken) {
       this.activeUploads.delete(requestRef)
-      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken })
-      window.BrandoUploads?.externalComplete?.(requestRef)
-      this.announce(requestRef, { status: 'done' })
+      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken }, (reply) => {
+        if (reply?.error) {
+          window.BrandoUploads?.externalError?.(requestRef, reply.error)
+        } else {
+          window.BrandoUploads?.externalComplete?.(requestRef)
+        }
+        this.announce(requestRef, { status: 'done', error: reply?.error })
+      })
     },
 
     reportError(requestRef, file, error) {
