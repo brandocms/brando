@@ -21104,8 +21104,8 @@ msgstr "Opplastingen ble ferdig i en fane som ikke redigerer lenger. Den ligger 
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "The upload stopped when the block made for the file was moved. Drop the file again."
-msgstr "Opplastingen stoppet da blokken som ble laget for filen, ble flyttet. Slipp filen på nytt."
+msgid "The upload stopped before it finished. Drop the file again."
+msgstr "Opplastingen stoppet før den var ferdig. Slipp filen på nytt."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format

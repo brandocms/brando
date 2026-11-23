@@ -21102,7 +21102,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
-msgid "The upload stopped when the block made for the file was moved. Drop the file again."
+msgid "The upload stopped before it finished. Drop the file again."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
