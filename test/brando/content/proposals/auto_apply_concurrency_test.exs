@@ -234,11 +234,12 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
     test "the person's apply committed first wins: the tool is told the person applied it", c do
       grant = grant!(c)
       proposal = propose!(c)
-      {task, pid} = start_apply(c, proposal, grant, :queued)
+      # Checked the proposal pending, before it queues for the apply lock
+      {task, pid} = start_apply(c, proposal, grant, :receipt_read)
 
       assert {:ok, _} = unboxed(fn -> Proposals.approve(proposal.id, proposal.version, c.user) end)
       assert {:ok, %Receipt{}} = unboxed(fn -> Proposals.apply(proposal.id, proposal.version, c.user) end)
-      send(pid, {:resume, :queued})
+      send(pid, {:resume, :receipt_read})
 
       assert {:settled, "applied", _reason} = Task.await(task, 10_000)
       assert %{status: "applied", receipt?: true, translated?: true} = state(c, proposal)
@@ -289,6 +290,7 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
     do: if(query =~ "FOR UPDATE", do: :grant_locked)
 
   defp pause_point(%{source: "content_proposal_receipts", query: "INSERT" <> _}), do: :receipt
+  defp pause_point(%{source: "content_proposal_receipts", query: "SELECT" <> _}), do: :receipt_read
   defp pause_point(_metadata), do: nil
 
   # Until another connection waits on a row lock on `table`
