@@ -116,28 +116,32 @@ defmodule Brando.Content.Definition.Model do
   end
 
   defp validate_rename!(%{"kind" => kind, "from" => from, "to" => to}, declared, spec) do
-    subject = ~s(#{kind} "#{to}")
-    entities = if kind == "ref", do: Map.get(spec, :refs, []), else: Map.get(spec, :vars, [])
-    defined = Enum.map(entities, &to_string(Map.get(&1, :name) || &1.key))
+    same_kind = Enum.filter(declared, &(&1["kind"] == kind))
+    sharing = for rename <- same_kind, rename["from"] == from, do: rename["to"]
 
-    cond do
-      from == to ->
-        Error.raise!(subject, "renamed_from names the #{kind} itself")
+    problem =
+      cond do
+        from == to ->
+          "renamed_from names the #{kind} itself"
 
-      Enum.any?(declared, &(&1["kind"] == kind and &1["to"] == from)) ->
-        Error.raise!(subject, ~s(renamed_from "#{from}", which is itself renamed: rename each key in its own release))
+        Enum.any?(same_kind, &(&1["to"] == from)) ->
+          ~s(renamed_from "#{from}", which is itself renamed: rename each key in its own release)
 
-      from in defined ->
-        Error.raise!(subject, ~s(renamed_from "#{from}", which the file still defines))
+        from in defined(spec, kind) ->
+          ~s(renamed_from "#{from}", which the file still defines)
 
-      Enum.count(declared, &(&1["kind"] == kind and &1["from"] == from)) > 1 ->
-        names = for r <- declared, r["kind"] == kind, r["from"] == from, do: r["to"]
-        Error.raise!(subject, ~s(#{Enum.join(names, " and ")} are both renamed_from "#{from}"))
+        length(sharing) > 1 ->
+          ~s(#{Enum.join(sharing, " and ")} are both renamed_from "#{from}")
 
-      true ->
-        :ok
-    end
+        true ->
+          nil
+      end
+
+    if problem, do: Error.raise!(~s(#{kind} "#{to}"), problem)
   end
+
+  defp defined(spec, "ref"), do: Enum.map(Map.get(spec, :refs, []), &to_string(&1.name))
+  defp defined(spec, "var"), do: Enum.map(Map.get(spec, :vars, []), &to_string(&1.key))
 
   defp definition!(spec, root, names) do
     opts = spec.options

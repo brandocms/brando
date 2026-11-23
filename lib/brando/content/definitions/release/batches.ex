@@ -180,11 +180,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
     conflicts = Enum.map(conflicts, &Map.update!(&1, :edited, fn edited -> edited || superseded[&1.uid] end))
 
-    irreversible =
-      for item <- rest, item.action not in [:update, :noop] or Map.has_key?(moved, item.uid) do
-        if reason = moved[item.uid], do: %{item | reason: reason}, else: item
-      end
-
+    irreversible = irreversible(rest, moved)
     blocked = MapSet.new(conflicts ++ irreversible, &tree_root(&1.uid, plan.bundle))
     palettes = Map.new(plan.bundle["containers"] || [], &{&1["uid"], &1["palette"]})
 
@@ -195,6 +191,12 @@ defmodule Brando.Content.Definitions.Release.Batches do
       end)
 
     {revert, conflicts, irreversible}
+  end
+
+  defp irreversible(items, moved) do
+    for item <- items, item.action not in [:update, :noop] or Map.has_key?(moved, item.uid) do
+      if reason = moved[item.uid], do: %{item | reason: reason}, else: item
+    end
   end
 
   # Definitions applied again after this batch (a later import): what the

@@ -398,16 +398,16 @@ defmodule Brando.Content.Definition.Renames do
     refs = for ref <- block.refs, ref.name != to, do: if(ref.name == from, do: %{ref | name: to}, else: ref)
 
     case Map.get(block, :children) do
-      children when is_list(children) ->
-        children =
-          for child <- children, not (slot?(child, to) and child.slot_kind == :region and empty?(child)) do
-            if slot?(child, from), do: %{child | slot_name: to}, else: child
-          end
+      children when is_list(children) -> %{block | refs: refs, children: rename_slots(children, from, to)}
+      _ -> %{block | refs: refs}
+    end
+  end
 
-        %{block | refs: refs, children: children}
-
-      _ ->
-        %{block | refs: refs}
+  # An empty region under the new name gives way, as the block's own copy
+  # of the new ref does
+  defp rename_slots(children, from, to) do
+    for child <- children, not (slot?(child, to) and child.slot_kind == :region and empty?(child)) do
+      if slot?(child, from), do: %{child | slot_name: to}, else: child
     end
   end
 
