@@ -1,0 +1,1 @@
+- `mix brando.fragments.pair` no longer stops with "declares no trait :translatable, matched_by" on a site where nothing has loaded `Brando.Pages.Fragment` yet.
