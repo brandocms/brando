@@ -33,21 +33,10 @@ defmodule Brando.Villain.Tags.EditableField do
     end
   end
 
-  # A subform row read through its owner prints by the owner's forms, as
-  # `{{ }}` prints it: rich text sanitized, other text escaped
+  # A subform row read through its owner prints by the owner's forms, a
+  # record of its own by its own, as `{{ }}` prints it
   defp render_value(entry, field, nil), do: Fields.render_value(entry, field)
-
-  defp render_value(entry, field, rich) do
-    case Map.get(entry, field) do
-      text when is_binary(text) ->
-        if field in rich,
-          do: TemplateView.sanitize_rich_text(text),
-          else: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-
-      _value ->
-        Fields.render_value(entry, field)
-    end
-  end
+  defp render_value(entry, field, rich), do: Fields.render_value(entry, field, rich)
 
   defp printable(nil), do: ""
   defp printable(value) when is_binary(value), do: value

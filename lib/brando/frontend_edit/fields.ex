@@ -26,6 +26,7 @@ defmodule Brando.FrontendEdit.Fields do
 
   alias Brando.Blueprint.Forms
   alias Brando.FrontendEdit
+  alias Brando.Villain.TemplateView
 
   @doc "The key a field's markers carry: `Schema:id:field`."
   def key(schema, id, field), do: FrontendEdit.field_key(schema, id, field)
@@ -115,25 +116,36 @@ defmodule Brando.FrontendEdit.Fields do
   defp humanize(field), do: field |> to_string() |> Phoenix.Naming.humanize()
 
   @doc """
-  The field's value as HTML: rich text as it is stored, anything else
+  The field's value as HTML, as `{{ }}` prints it: a field the entry's forms
+  print as rich text (`Brando.RichText.fields_for_printing/1`) sanitized
+  (`Brando.Villain.TemplateView.sanitize_rich_text/1`), anything else
   escaped. Media and relations have no value to print; mark the markup that
   shows them with `editable` instead.
   """
   @spec render_value(map(), atom()) :: iodata()
-  def render_value(%{__struct__: schema} = entry, field) do
+  def render_value(%{__struct__: schema} = entry, field),
+    do: render_value(entry, field, Brando.RichText.fields_for_printing(schema))
+
+  def render_value(entry, field) when is_map(entry), do: entry |> Map.get(field) |> to_string_or_empty() |> escape()
+
+  @doc """
+  `render_value/2` by the rule `rich`, the fields printed as rich text: for a
+  subform row read through its owner, those the owner's forms draw so
+  (`Brando.RichText.row_fields_for_printing/2`).
+  """
+  @spec render_value(map(), atom(), [atom()]) :: iodata()
+  def render_value(entry, field, rich) do
     value = Map.get(entry, field)
 
     cond do
       is_nil(value) -> ""
-      rich_text?(schema, field) and is_binary(value) -> value
-      is_binary(value) -> Phoenix.HTML.html_escape(value) |> Phoenix.HTML.safe_to_string()
+      is_binary(value) and field in rich -> TemplateView.sanitize_rich_text(value)
+      is_binary(value) -> escape(value)
       is_number(value) or is_atom(value) -> value |> to_string() |> escape()
       printable?(value) -> value |> to_string() |> escape()
       true -> ""
     end
   end
-
-  def render_value(entry, field) when is_map(entry), do: entry |> Map.get(field) |> to_string_or_empty() |> escape()
 
   defp printable?(value), do: String.Chars.impl_for(value) && not is_struct(value, Ecto.Association.NotLoaded)
 
@@ -142,11 +154,6 @@ defmodule Brando.FrontendEdit.Fields do
   defp to_string_or_empty(value), do: if(String.Chars.impl_for(value), do: to_string(value), else: "")
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-
-  @doc "Whether the field is edited as rich text."
-  def rich_text?(schema, field) do
-    match?(%Forms.Input{type: :rich_text}, input(schema, field))
-  end
 
   @doc """
   Wraps `html` in value markers (`:value`) or markup markers (`:markup`) for

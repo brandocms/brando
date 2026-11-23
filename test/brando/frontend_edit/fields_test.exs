@@ -40,8 +40,24 @@ defmodule Brando.FrontendEdit.FieldsTest do
   describe "values" do
     test "are escaped, except rich text", %{page: page} do
       assert IO.iodata_to_binary(Fields.render_value(page, :title)) == "Tom &amp; &lt;Jerry&gt;"
-      refute Fields.rich_text?(Page, :title)
       assert Fields.render_value(%{page | title: nil}, :title) == ""
+    end
+
+    # Markup the sanitizer removes: an event handler, a script and a
+    # javascript: link (#3848)
+    test "print a rich-text field as {{ }} prints it, sanitized" do
+      entry = %Brando.RichTextRows.Entry{
+        id: 1,
+        title: "T",
+        intro: ~s{<p onclick="alert(1)">A <script>alert(2)</script><a href="javascript:alert(3)">b</a></p>}
+      }
+
+      context = Brando.Villain.get_base_context(entry)
+      printed = Brando.Villain.parse_and_render("{{ entry.intro }}", context)
+      refute printed =~ "alert"
+
+      assert Brando.Villain.parse_and_render("{% editable_field entry.intro %}", context) == printed
+      assert render_component(&Brando.HTML.editable_field/1, entry: entry, field: :intro) == printed
     end
   end
 
