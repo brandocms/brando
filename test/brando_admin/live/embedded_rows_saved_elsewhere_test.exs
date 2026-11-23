@@ -11,7 +11,6 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
   use Brando.LiveCase
 
   import Brando.EditSessionEditors, only: [await: 1]
-  import Ecto.Query, only: [from: 2]
 
   alias Brando.SyncTest
   alias Brando.SyncTest.Article
@@ -84,21 +83,6 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
   end
 
   defp stored(article), do: Enum.map(Repo.get!(Article, article.id).quotes, & &1.text)
-
-  # B's recovery copy, as its browser captures the form it shows
-  defp capture(view) do
-    main = view |> render() |> form_params("#article_form_form") |> Plug.Conn.Query.encode()
-    view |> form_of() |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
-  end
-
-  defp latest_copy(article) do
-    Repo.one(
-      from d in Brando.Drafts.EntryDraft,
-        where: d.entry_id == ^article.id and is_nil(d.resolved_at),
-        order_by: [desc: d.id],
-        limit: 1
-    )
-  end
 
   # A saves; B's form shows `shown` once the save reaches it and B has left
   # the field, and B's save stores it.
@@ -296,30 +280,6 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
       save(c.b)
       await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by B, on"] end)
     end
-  end
-
-  # B's tab drops while A's save waits for B to leave the quotes; the
-  # reopened form offers the recovery copy B's browser captured then. The
-  # copy holds the rows B's form showed, not the saved ones: restoring it
-  # asks for a review first rather than putting the old rows over A's save.
-  test "B's recovery copy captured while A's save waits doesn't put the old rows back", c do
-    focus(c.b, 1)
-    type(c.b, 1, "Two by B")
-
-    focus(c.a, 0)
-    remove(c.a, c.article, "One")
-    save(c.a)
-    await(fn -> stored(c.article) == ["Two", "Three"] end)
-    settle(c.b)
-
-    capture(c.b)
-    await(fn -> latest_copy(c.article) != nil end)
-    kill_live(c.b)
-
-    {b, _} = live_form(c.b_conn, c.path, "article_form")
-    b |> form_of() |> render_hook("draft_restore", %{"id" => latest_copy(c.article).id})
-    settle(b)
-    assert quotes(b) == ["Two", "Three"]
   end
 
   # A row another editor added reaches B through field sync without a key:

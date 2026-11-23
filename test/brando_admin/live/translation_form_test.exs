@@ -1719,9 +1719,21 @@ defmodule BrandoAdmin.TranslationFormTest do
       load_session_version(other)
       await_selector(other, "input[name='translation_review[version_id]'][value='#{third.id}']")
       assert shown_quotes(other) == ["En", "Two by view"]
+      # The save no longer waits for the editor to leave the quotes, to put
+      # its rows over what the form holds then
+      refute other |> form_assigns() |> Map.fetch!(:held_remote) |> Map.has_key?(:quotes)
 
       other |> with_target(cid_of(other, "#article_form-el")) |> render_hook("blur", %{})
       assert shown_quotes(other) == ["En", "Two by view"]
+    end
+
+    defp form_assigns(view) do
+      {components, _, _} = :sys.get_state(view.pid).components
+
+      Enum.find_value(components, fn
+        {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> assigns
+        _ -> nil
+      end)
     end
 
     # The session moves on twice while the form is behind: the button loads
