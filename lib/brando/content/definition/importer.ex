@@ -441,16 +441,13 @@ defmodule Brando.Content.Definition.Importer do
 
       totals ->
         uids = Map.new(moving)
-
-        Enum.map(items, fn item ->
-          if moves = uids[item.uid] do
-            reason = Renames.over_limit_text(moves.renames, totals)
-            %{item | action: :migration_required, reason: reason, moves: %{moves | refused: [reason]}}
-          else
-            item
-          end
-        end)
+        Enum.map(items, &if(moves = uids[&1.uid], do: over_limit(&1, moves, totals), else: &1))
     end
+  end
+
+  defp over_limit(item, moves, totals) do
+    reason = Renames.over_limit_text(moves.renames, totals)
+    %{item | action: :migration_required, reason: reason, moves: %{moves | refused: [reason]}}
   end
 
   # The values the selected module updates move, as the person who applies
