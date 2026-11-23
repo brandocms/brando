@@ -337,6 +337,11 @@ test.describe('Multi blocks: dropping media', () => {
     await createPage(page, 'Media drop provider moved', group, 'Video Row')
     await addRow(page, 'Video Row')
     const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
+    const settled = []
+    page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+      const frame = JSON.parse(String(payload))
+      if (frame[4]?.event === 'media_drop_settled') settled.push(frame[4].value)
+    }))
 
     // The provider never answers, so the transfer is still running at the move
     await page.route('**/e2e/bunny/tus**', () => {})
@@ -348,6 +353,8 @@ test.describe('Multi blocks: dropping media', () => {
     await moveTo(page, entries(first).first(), second)
 
     await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(1, { timeout: 30000 })
+    // the alert for a stopped upload, not one carrying the hook's own error
+    expect(settled).toEqual([expect.objectContaining({ failed: true, aborted: true })])
     await expect(entries(second)).toHaveCount(0)
     await expect(entries(first)).toHaveCount(0)
   })
