@@ -663,9 +663,14 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       handler = "list-external-#{System.unique_integer([:positive])}"
       test_pid = self()
 
-      :telemetry.attach(handler, Repo.config()[:telemetry_prefix] ++ [:query], fn _, _, meta, _ ->
-        if meta[:source] == "content_proposals", do: send(test_pid, :proposals_query)
-      end, nil)
+      :telemetry.attach(
+        handler,
+        Repo.config()[:telemetry_prefix] ++ [:query],
+        fn _, _, meta, _ ->
+          if meta[:source] == "content_proposals", do: send(test_pid, :proposals_query)
+        end,
+        nil
+      )
 
       listed =
         try do
