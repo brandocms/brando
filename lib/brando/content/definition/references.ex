@@ -207,8 +207,8 @@ defmodule Brando.Content.Definition.References do
 
   defp palette_ids(uids) do
     import Ecto.Query, only: [from: 2]
-    Repo.all(from(p in Brando.Content.Palette, where: p.uid in ^uids and is_nil(p.deleted_at), select: {p.uid, p.id}))
-    |> Map.new()
+    query = from(p in Brando.Content.Palette, where: p.uid in ^uids and is_nil(p.deleted_at), select: {p.uid, p.id})
+    query |> Repo.all() |> Map.new()
   end
 
   defp canonicalize(%{"type" => "markdown_source", "data" => data} = ref, bindings) when is_map(data) do
