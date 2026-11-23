@@ -138,6 +138,69 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerTargetsTest do
     end
   end
 
+  # The form shows an empty author row on an article without one
+  describe "an image in a one-to-one subform with no row yet" do
+    setup %{current_user: user} do
+      {:ok, article} =
+        SyncTest.create_article(%{title: "No author", slug: "no-author", language: "en", status: "published"}, user)
+
+      {:ok, article: article}
+    end
+
+    test "uploaded starts the row", %{conn: conn, article: article, current_user: user} do
+      portrait = image(user)
+      {view, _html} = open(conn, article, :media)
+
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :image,
+        field: :portrait,
+        path: [:author],
+        asset: portrait
+      )
+
+      assert field(view, :author).portrait_id == portrait.id
+    end
+
+    test "is kept by the drawer's Done", %{conn: conn, article: article, current_user: user} do
+      portrait = image(user)
+      {view, _html} = open(conn, article, :media)
+
+      open_portrait_drawer(view, portrait)
+      close_drawer(view)
+
+      assert field(view, :author).portrait_id == portrait.id
+      refute form_assigns(view).editing_image?
+    end
+
+    test "is not started by the drawer's Remove", %{conn: conn, article: article, current_user: user} do
+      {view, _html} = open(conn, article, :media)
+      open_portrait_drawer(view, image(user))
+
+      form_hook(view, "reset_image_field", %{})
+
+      assert field(view, :author) == nil
+    end
+
+    test "on a new entry is started by an upload and kept by Done", %{conn: conn, current_user: user} do
+      portrait = image(user)
+      {view, _html} = live_form(conn, "/admin/articles/create/media", "article_form")
+
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :image,
+        field: :portrait,
+        path: [:author],
+        asset: portrait
+      )
+
+      open_portrait_drawer(view, portrait)
+      close_drawer(view)
+
+      assert field(view, :author).portrait_id == portrait.id
+    end
+  end
+
   describe "the picker's \"Edit image\"" do
     # A gallery's editor left its keys in `edit_image`. The picker's editor
     # opened since is not the gallery's: its "Save" changes the library image
@@ -240,6 +303,68 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerTargetsTest do
       assert Repo.get!(Brando.Images.Image, portrait.id).focal.x == 30
       assert Repo.get!(Brando.Images.Image, picked.id).focal.x == 50
       assert form_assigns(view).edit_image.image.focal.x == 30
+    end
+  end
+
+  # The editor's "Save" (replace) changes the image, never a locked field
+  # (#3884): the field keeps its image and the form is not validated with it
+  describe "the editor's Save in a locked field" do
+    for {name, params} <- [
+          refocus: %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70},
+          crop: %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70, "crop_applied" => true}
+        ] do
+      test "from the drawer's own Edit image (#{name}) saves the image and leaves the field",
+           %{conn: conn, article: article} = ctx do
+        cover = image_on_disk(ctx.current_user)
+        article = article |> Ecto.Changeset.change(cover_id: cover.id) |> Repo.update!()
+        {view, _html} = open(conn, article, :locked_media)
+        open_cover_drawer(view, cover)
+
+        form_hook(view, "open_image_editor", %{"image_id" => to_string(cover.id)})
+        form_hook(view, "image_editor_save", Map.put(unquote(Macro.escape(params)), "image_id", to_string(cover.id)))
+
+        refute_push_event(view, "b:validate", _)
+        assert field(view, :cover_id) == cover.id
+        assert form_assigns(view).edit_image.image.id == cover.id
+        if unquote(name) == :refocus, do: assert(Repo.get!(Brando.Images.Image, cover.id).focal.x == 30)
+      end
+    end
+
+    # The picker's "Edit image" in the field's open drawer, then the field
+    # locks: the parent's next render passes a user it is locked for
+    test "after the field locked mid-edit saves the picked image and leaves the field",
+         %{conn: conn, article: article, stored: stored, current_user: user} do
+      picked = image_on_disk(user)
+      {view, _html} = open(conn, article, :superuser_media)
+      open_cover_drawer(view, stored)
+      send_form(view, action: :open_image_editor_from_picker, image: picked)
+
+      send_form(view, current_user: %{user | role: :editor})
+      form_hook(view, "image_editor_save", %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70})
+
+      assert Repo.get!(Brando.Images.Image, picked.id).focal.x == 30
+      refute_push_event(view, "b:validate", _)
+      assert form_assigns(view).entry.cover.id == stored.id
+      assert field(view, :cover_id) == stored.id
+    end
+
+    # Closing the drawer saves the image it shows, the picked one
+    test "after the field locked mid-edit, the drawer's Done leaves the field",
+         %{conn: conn, article: article, stored: stored, current_user: user} do
+      picked = image_on_disk(user)
+      {view, _html} = open(conn, article, :superuser_media)
+      open_cover_drawer(view, stored)
+      send_form(view, action: :open_image_editor_from_picker, image: picked)
+      send_form(view, current_user: %{user | role: :editor})
+      form_hook(view, "image_editor_save", %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70})
+
+      form_hook(view, "save_image", %{"image" => %{"alt" => "Picked"}})
+
+      assert %{"en" => "Picked"} = Repo.get!(Brando.Images.Image, picked.id).alt
+      refute_push_event(view, "b:validate", _)
+      assert form_assigns(view).entry.cover.id == stored.id
+      assert field(view, :cover_id) == stored.id
+      refute form_assigns(view).editing_image?
     end
   end
 

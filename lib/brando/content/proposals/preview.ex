@@ -244,16 +244,31 @@ defmodule Brando.Content.Proposals.Preview do
     end
   end
 
-  # The proposal on screen may have been discarded in another tab since it
-  # was read: its stored status decides, as for `Proposals.get_shared/3`.
+  # The proposal on screen may have been discarded in another tab, or have
+  # expired, since it was read: its stored status and deadline decide, as
+  # for `Proposals.get_shared/3`.
   defp shown(%{id: id}) do
-    status =
+    stored =
       id &&
-        Repo.one(from(r in Proposals.Record, where: r.id == ^id and r.scope == ^Transfer.scope(), select: r.status))
+        Repo.one(
+          from(r in Proposals.Record,
+            where: r.id == ^id and r.scope == ^Transfer.scope(),
+            select: {r.status, r.expires_at}
+          )
+        )
 
-    if status in ~w(pending approved applied),
-      do: :ok,
-      else: {:error, dgettext("content_proposals", "This proposal is no longer under review.")}
+    case stored do
+      {"applied", _} ->
+        :ok
+
+      {status, expires_at} when status in ~w(pending approved) ->
+        if DateTime.compare(expires_at, DateTime.utc_now()) == :gt,
+          do: :ok,
+          else: {:error, dgettext("content_proposals", "This proposal has expired. Prepare it again.")}
+
+      _ ->
+        {:error, dgettext("content_proposals", "This proposal is no longer under review.")}
+    end
   end
 
   defp initialize(changeset, actor, preview_target) do

@@ -964,6 +964,26 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute has_element?(view, "#assistant-page-link")
     end
 
+    test "an expired proposal offers neither Leave out nor a page link", %{conn: conn} = c do
+      {:ok, fresh, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      assert has_element?(fresh, ~s(button[phx-click="leave_out"]))
+
+      past = DateTime.add(DateTime.utc_now(), -60, :second)
+
+      Brando.Repo.update_all(from(r in Brando.Content.Proposals.Record, where: r.id == ^c.proposal.id),
+        set: [expires_at: past]
+      )
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      refute has_element?(view, ~s(button[phx-click="leave_out"]))
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+    end
+
     # A reason is not always an atom or a message: the asset capture names a
     # file it could not read in a tuple, and a stored preview's insert returns
     # a changeset.

@@ -156,6 +156,18 @@
   a:hover { background: var(--brando-surface-hover); }
   a[aria-current="page"] { background: var(--brando-surface-selected); }
   .badge { grid-column: 2; grid-row: 1; align-self: start; }
+
+  /* The connection's live page, under the proposal's row */
+  .assistant-connected-live {
+    display: inline-flex;
+    padding: 0 12px 8px;
+    color: var(--assistant-muted);
+    font-size: var(--brando-text-sm);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .assistant-connected-live:hover { background: none; color: inherit; }
 }
 
 .assistant-connected-summary { grid-column: 1; grid-row: 1; font-size: var(--brando-text-md); font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
@@ -811,6 +823,8 @@
   &.is-warning { display: grid; gap: 6px; background: var(--brando-attention); color: var(--assistant-warning); }
   &.is-success { display: grid; gap: 8px; background: var(--assistant-sage); color: var(--assistant-accent); }
 }
+
+.assistant-stale .btn { justify-self: start; }
 
 .assistant-feedback-problems {
   display: grid;

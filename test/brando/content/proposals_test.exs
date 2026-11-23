@@ -604,6 +604,16 @@ defmodule Brando.Content.ProposalsTest do
       assert is_binary(message)
     end
 
+    test "an expired proposal makes no page link", c do
+      assert {:ok, proposal} = Proposals.propose(workflow(c), c.user)
+      past = DateTime.add(DateTime.utc_now(), -1)
+      Repo.update_all(from(r in Proposals.Record, where: r.id == ^proposal.id), set: [expires_at: past])
+
+      # The proposal as it was read before it expired
+      assert {:error, message} = Preview.share(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+      assert message =~ "expired"
+    end
+
     test "only a language field that takes the site's default gets it" do
       article = Brando.MetaDrawerTest.ActionsArticle
       default = to_string(Brando.Languages.default_language())
@@ -1526,6 +1536,26 @@ defmodule Brando.Content.ProposalsTest do
       assert {:error, _} = Proposals.leave_out(proposal.id, proposal.version, [1], c.user)
       assert {:error, message} = Proposals.leave_out(refined.id, refined.version, [0], c.user)
       assert message =~ "Discard"
+    end
+
+    test "nothing is left out of an expired proposal", c do
+      [alpha, beta, _] = c.child_uids
+      target = {Page, c.work.id}
+
+      ops = [
+        %SetBlockValues{target: target, block_uid: alpha, values: %{size: "50"}},
+        %SetBlockValues{target: target, block_uid: beta, values: %{size: "50"}}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      past = DateTime.add(DateTime.utc_now(), -1)
+      Repo.update_all(from(r in Proposals.Record, where: r.id == ^proposal.id), set: [expires_at: past])
+
+      # A click that arrives just after the deadline
+      assert {:error, message} = Proposals.leave_out(proposal.id, proposal.version, [0], c.user)
+      assert message =~ "expired"
+      assert {:ok, %{status: "pending"}} = Proposals.get(proposal.id, c.user)
+      assert Repo.aggregate(from(r in Proposals.Record, where: r.supersedes_id == ^proposal.id), :count) == 0
     end
   end
 
