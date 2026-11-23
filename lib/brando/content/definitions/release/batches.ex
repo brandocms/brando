@@ -15,7 +15,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.{Baselines, Plan, References, Snapshot}
+  alias Brando.Content.Definition.{Baselines, Model, Plan, References, Snapshot}
   alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions, StaleBlocks}
   alias Brando.Content.Definitions.Release
   alias Brando.Repo
@@ -160,7 +160,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
   # The items to restore; those changed here since the apply (conflicts), by
   # an edit or a later import; and those a revert can't undo without a
   # migration. A tree with either in it is left out whole: an apply writes
-  # whole trees.
+  # whole trees, and a container with its palette.
   defp split(plan, uids, superseded) do
     items = Enum.filter(plan.items, &(&1.uid in uids))
 
@@ -170,7 +170,14 @@ defmodule Brando.Content.Definitions.Release.Batches do
     conflicts = Enum.map(conflicts, &Map.update!(&1, :edited, fn edited -> edited || superseded[&1.uid] end))
     irreversible = Enum.filter(rest, &(&1.action not in [:update, :noop]))
     blocked = MapSet.new(conflicts ++ irreversible, &tree_root(&1.uid, plan.bundle))
-    revert = Enum.filter(rest, &(&1.action == :update and not MapSet.member?(blocked, tree_root(&1.uid, plan.bundle))))
+    palettes = Map.new(plan.bundle["containers"] || [], &{&1["uid"], &1["palette"]})
+
+    revert =
+      Enum.filter(rest, fn item ->
+        item.action == :update and not MapSet.member?(blocked, tree_root(item.uid, plan.bundle)) and
+          not (item.kind == "container" and MapSet.member?(blocked, palettes[item.uid]))
+      end)
+
     {revert, conflicts, irreversible}
   end
 
@@ -346,21 +353,29 @@ defmodule Brando.Content.Definitions.Release.Batches do
   end
 
   # The definitions as they are here, with each one `rows` restores as it
-  # was before the apply, for the trees they belong to. `previous` holds its
-  # tokens as the records they name (`"image:42"`).
+  # was before the apply, for the trees they belong to, and every table
+  # template, palette and container. `previous` holds its tokens as the
+  # records they name (`"image:42"`, `"palette@uid"`).
   defp bundle(rows) do
     {snapshot, _records} = Snapshot.take!(all_tables: true)
-    previous = Map.new(rows, &{&1.uid, &1.previous})
+    previous = Map.new(rows, &{{&1.kind, &1.uid}, &1.previous})
     parents = for module <- snapshot["modules"], child <- module["children"], into: %{}, do: {child, module["uid"]}
-    roots = MapSet.new(Map.keys(previous), &root(&1, parents))
+    roots = for {{"module", uid}, _} <- previous, into: MapSet.new(), do: root(uid, parents)
 
     modules =
       for module <- snapshot["modules"],
           MapSet.member?(roots, root(module["uid"], parents)),
-          do: Map.get(previous, module["uid"], module)
+          do: Map.get(previous, {"module", module["uid"]}, module)
 
-    tables = Enum.map(snapshot["table_templates"], &Map.get(previous, &1["uid"], &1))
-    bundle = %{"format_version" => 1, "modules" => modules, "table_templates" => tables}
+    restored = fn kind -> Enum.map(snapshot[Model.bundle_key(kind)], &Map.get(previous, {kind, &1["uid"]}, &1)) end
+
+    bundle = %{
+      "format_version" => 1,
+      "modules" => modules,
+      "table_templates" => restored.("table_template"),
+      "palettes" => restored.("palette"),
+      "containers" => restored.("container")
+    }
 
     Map.merge(bundle, %{
       "references" => references(bundle, snapshot["references"]),
@@ -374,18 +389,9 @@ defmodule Brando.Content.Definitions.Release.Batches do
     |> Map.new(fn {token, kind} ->
       case known[token] do
         %{"kind" => ^kind} = binding -> {token, binding}
-        _ -> {token, %{"kind" => kind, "id" => parse_id(token, kind)}}
+        _ -> {token, References.canonical_binding(token, kind) || %{"kind" => kind, "id" => nil}}
       end
     end)
-  end
-
-  defp parse_id(token, kind) do
-    with [^kind, id | _] <- String.split(token, ":"),
-         {id, ""} <- Integer.parse(id) do
-      id
-    else
-      _ -> nil
-    end
   end
 
   @doc """

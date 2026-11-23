@@ -4,6 +4,8 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
 
   alias Brando.Content.{Container, Definitions, Module, Palette}
   alias Brando.Content.Definition.{Plan, Snapshot}
+  alias Brando.Content.Definitions.Release
+  alias Brando.Content.Definitions.Release.{Batches, Review}
   alias Brando.{Factory, Repo, Tenant}
 
   import Ecto.Query, only: [from: 2]
@@ -605,6 +607,117 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
     end
   end
 
+  describe "a release" do
+    setup c do
+      palette = palette!(c.user)
+      container = container!(c.user, palette)
+      release = Path.join(c.path, "release")
+      assert {:ok, _} = Definitions.export(release, c.user, uids: [container.uid])
+      File.rm!(Path.join(release, "modules.lock.json"))
+      assert {:ok, %{adopted: 2}} = Release.plan(path: release, version: "1.0.0")
+      %{palette: palette, container: container, release: release}
+    end
+
+    defp release_opts(c, extra), do: Keyword.merge([path: c.release, version: "2.0.0", user: c.user.id], extra)
+
+    defp edit_release!(c, file, from, to) do
+      path = Path.join(c.release, file)
+      File.write!(path, String.replace(File.read!(path), from, to))
+    end
+
+    # The release adds a night palette and points the container at it, with
+    # a new template, and changes the paper palette's background
+    defp night_release!(c) do
+      paper = File.read!(Path.join(c.release, "palettes/paper.exs"))
+
+      File.write!(
+        Path.join(c.release, "palettes/night.exs"),
+        paper
+        |> String.replace(c.palette.uid, "acme-palette-night")
+        |> String.replace("Palettes.Paper", "Palettes.Night")
+        |> String.replace(~s(key "paper"), ~s(key "night"))
+        |> String.replace(~s(name "Paper"), ~s(name "Night"))
+      )
+
+      edit_release!(c, "containers/tinted-section.exs", ~s(palette "#{c.palette.uid}"), ~s(palette "acme-palette-night"))
+
+      File.write!(
+        Path.join(c.release, "containers/tinted-section.liquid"),
+        ~s(<aside b-section="site-night">{{ content }}</aside>)
+      )
+
+      edit_release!(c, "palettes/paper.exs", "#fff9f4", "#f0f0f0")
+    end
+
+    test "plan and apply list palettes and containers; the container brings its new palette; revert restores", c do
+      night_release!(c)
+      assert {:ok, report} = Release.plan(release_opts(c, []))
+
+      assert report.items |> Map.new(&{&1.uid, {&1.kind, &1.action}}) == %{
+               "acme-palette-night" => {"palette", :create},
+               c.palette.uid => {"palette", :update},
+               c.container.uid => {"container", :update}
+             }
+
+      text = Enum.join(Release.lines(report), "\n")
+      assert text =~ "create palette Night (acme-palette-night): new"
+      assert text =~ "update container Tinted section (#{c.container.uid})"
+
+      manual(fn ->
+        assert {:ok, %{batch_id: batch_id, result: result}} =
+                 Release.apply([c.container.uid], release_opts(c, wait: false))
+
+        assert result.changes |> Enum.map(& &1.uid) |> Enum.sort() == Enum.sort(["acme-palette-night", c.container.uid])
+        night = Repo.get_by!(Palette, uid: "acme-palette-night")
+        container = Repo.get!(Container, c.container.id)
+        assert container.palette_id == night.id
+        assert container.code =~ "<aside"
+        # Not selected: the paper palette stays as it was
+        assert hd(Repo.get!(Palette, c.palette.id).colors).hex_value == "#fff9f4"
+
+        assert {:ok, %{reverted: [%{uid: uid}], created: ["acme-palette-night"]}} =
+                 Batches.revert(Batches.get(batch_id), c.user)
+
+        assert uid == c.container.uid
+        container = Repo.get!(Container, c.container.id)
+        assert container.palette_id == c.palette.id
+        assert container.code == c.container.code
+
+        assert {:ok, %{batch_id: batch_id}} = Release.apply([c.palette.uid], release_opts(c, wait: false))
+        assert hd(Repo.get!(Palette, c.palette.id).colors).hex_value == "#f0f0f0"
+        assert {:ok, %{reverted: [_]}} = Batches.revert(Batches.get(batch_id), c.user)
+        assert swatches(Repo.get!(Palette, c.palette.id)) == swatches(c.palette)
+      end)
+    end
+
+    test "a container whose palette is in conflict is refused, by name", c do
+      edit_release!(c, "palettes/paper.exs", "#fff9f4", "#f0f0f0")
+      File.write!(Path.join(c.release, "containers/tinted-section.liquid"), "<div>{{ content }}</div>")
+      assert {:ok, _} = Brando.Content.update_palette(c.palette.id, %{name: "Edited here"}, c.user)
+
+      assert {:error, message} = Release.apply([c.container.uid], release_opts(c, []))
+      assert message =~ "(#{c.palette.uid}): target changed"
+      assert Repo.get!(Container, c.container.id).code == c.container.code
+    end
+
+    test "the review lists a container with its palette in one row, and a palette's colours", c do
+      night_release!(c)
+      assert {:ok, report} = Release.plan(release_opts(c, []))
+      rows = Review.rows(report)
+
+      assert [%{uid: container_uid, kind: "container", uids: uids}, %{uid: palette_uid, kind: "palette"}] =
+               Enum.sort_by(rows, &(&1.kind != "container"))
+
+      assert container_uid == c.container.uid and palette_uid == c.palette.uid
+      assert Enum.sort(uids) == Enum.sort([c.container.uid, "acme-palette-night"])
+
+      %{here: here, release: release} = Review.definitions(report, c.palette.uid)
+
+      assert [%{key: "background", change: :changed}, %{key: "foreground", change: :same}] =
+               Review.structure(here, release).colors
+    end
+  end
+
   describe "files from before palettes and containers were definitions" do
     test "a bundle, lockfile and ZIP without them still load and plan", c do
       File.cp!("test/fixtures/definitions/hero.exs.txt", Path.join(c.path, "hero.exs"))
@@ -670,6 +783,8 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
     {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
     page
   end
+
+  defp manual(fun), do: Oban.Testing.with_testing_mode(:manual, fun)
 
   defp tinted_uid, do: Repo.one!(from(c in Container, select: c.uid, limit: 1))
 

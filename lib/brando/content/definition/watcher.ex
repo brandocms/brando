@@ -29,7 +29,7 @@ defmodule Brando.Content.Definition.Watcher do
 
   require Logger
 
-  alias Brando.Content.Definition.{Plan, Reader, References, Snapshot}
+  alias Brando.Content.Definition.{Model, Plan, Reader, References, Snapshot}
   alias Brando.Content.Definitions
   alias Brando.Tenant
   alias Brando.Tenant.Registry
@@ -195,8 +195,10 @@ defmodule Brando.Content.Definition.Watcher do
   end
 
   defp sync_in_tenant(path, user) do
+    # A lockfile whose write failed after an apply is behind it: the
+    # apply's record is the baseline, unless the admin changed it since
     with {:ok, bundle} <- Definitions.read(path),
-         {:ok, plan} <- Definitions.plan(bundle, user) do
+         {:ok, plan} <- Definitions.plan(bundle, user, catch_up: true) do
       names = names(bundle)
       changes = plan.items |> Enum.reject(&(&1.action == :noop)) |> Enum.map(&Map.put(&1, :name, names[&1.uid]))
 
@@ -224,7 +226,7 @@ defmodule Brando.Content.Definition.Watcher do
   defp names(bundle) do
     language = to_string(Brando.config(:default_admin_language) || "en")
 
-    Map.new(bundle["modules"] ++ bundle["table_templates"], fn definition ->
+    Map.new(Model.definitions(bundle), fn definition ->
       name =
         case definition["name"] do
           %{^language => name} when name not in [nil, ""] -> name

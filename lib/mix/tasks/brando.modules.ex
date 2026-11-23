@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Brando.Modules do
   @render_workers [Brando.Worker.EntryRenderer, Brando.Worker.EntryCascade]
   @moduledoc """
   Exports and imports complete module definitions, including refs, vars, children,
-  table templates and adjacent HEEx/Liquid source.
+  table templates and adjacent HEEx/Liquid source, and palettes and containers.
 
       mix brando.modules export --out priv/modules --user 1
       mix brando.modules import --from priv/modules --user 1 --dry-run
@@ -20,7 +20,7 @@ defmodule Mix.Tasks.Brando.Modules do
   Tenant applications must select `--site KEY --environment KEY`. Standalone
   applications omit both. Every command requires an active `--user ID` and uses
   the account's normal authorization. Export accepts repeatable `--uid UID` to
-  select complete trees. Import accepts `--references FILE`, a JSON object mapping
+  select complete trees, palettes and containers (with the palettes they name). Import accepts `--references FILE`, a JSON object mapping
   exported asset tokens to destination record IDs.
 
   Export requires a new output directory. Import prints a plan, refuses conflicts
@@ -205,7 +205,9 @@ defmodule Mix.Tasks.Brando.Modules do
       end
 
     result = unwrap!(Definitions.export(directory, user, selection))
-    Mix.shell().info("Exported #{length(result.bundle["modules"])} modules to #{result.directory}")
+
+    counts = Enum.map_join(~w(module palette container), ", ", &count(length(result.bundle[&1 <> "s"]), &1))
+    Mix.shell().info("Exported #{counts} to #{result.directory}")
   end
 
   defp execute("import", opts, user) do
@@ -430,6 +432,9 @@ defmodule Mix.Tasks.Brando.Modules do
 
   defp unwrap_resolve!({:ok, value}), do: value
   defp unwrap_resolve!({:error, reason}), do: Mix.raise("Resolve: #{reason}")
+
+  defp count(1, noun), do: "1 #{noun}"
+  defp count(n, noun), do: "#{n} #{noun}s"
 
   # Whether every module was refreshed
   defp report_refresh(results) do
