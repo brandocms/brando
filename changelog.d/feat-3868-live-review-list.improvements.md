@@ -1,0 +1,1 @@
+- Assistant → From connected tools updates live as proposals are stored, replaced, applied, cancelled or expire; the proposal under review stays as it was read, with a line saying when a newer version arrived or it can no longer be applied, and each proposal links to its connection's live page.
