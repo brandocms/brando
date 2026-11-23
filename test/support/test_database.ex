@@ -43,11 +43,14 @@ defmodule Brando.Test.Database do
     {:ok, _} = Repo.start_link()
 
     cond do
+      not exclusive? ->
+        IO.puts(:stderr, "Test database #{database()} not reset: another test run is using it")
+
       connected > 0 ->
         IO.puts(:stderr, "Test database #{database()} not reset: #{connected} other session(s) connected")
 
       # Without tables, not migrated: test_helper.exs says how to rebuild it
-      exclusive? and tables?(conn) ->
+      tables?(conn) ->
         empty!()
         Code.eval_file("priv/repo/seeds.exs")
         drop_upgrade_databases!(conn)
@@ -99,8 +102,13 @@ defmodule Brando.Test.Database do
       query!(
         conn,
         # Postgres hides most columns of another role's sessions from a role
-        # without pg_read_all_stats, but not these two
-        "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()",
+        # without pg_read_all_stats (backend_type reads NULL), so only the
+        # background workers it shows (autovacuum, parallel workers) are left out
+        """
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid()
+          AND coalesce(backend_type, 'client backend') = 'client backend'
+        """,
         []
       )
 
