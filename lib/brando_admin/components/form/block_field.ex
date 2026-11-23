@@ -2131,8 +2131,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # A child moves only to a block that takes the children of the one it
   # leaves: the rule the canvas and the Outline drag by.
   defp takes_child?(socket, from_uid, parent_uid) do
-    group = Block.children_group(stored_block(socket, from_uid))
-    group != nil and group == Block.children_group(stored_block(socket, parent_uid))
+    [from, parent] = stored_blocks(socket, [from_uid, parent_uid])
+    group = Block.children_group(from)
+    group != nil and group == Block.children_group(parent)
   end
 
   defp refuse_move(socket, uid, parent_uid) do
@@ -2421,19 +2422,26 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # A block as the store holds it, or nil for a uid it does not know.
-  defp stored_block(socket, uid) do
-    if Ops.known?(socket.assigns.block_ops, uid) do
-      root_uid = Ops.root_of(socket.assigns.block_ops, uid)
-      {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
+  defp stored_block(socket, uid), do: socket |> stored_blocks([uid]) |> hd()
 
-      root =
-        socket
-        |> materialize_base_struct(root_uid)
-        |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
-        |> Changeset.get_assoc(:block, :struct)
+  # `stored_block/2` for each of `uids`, materializing each root once.
+  defp stored_blocks(socket, uids) do
+    ops = socket.assigns.block_ops
+    roots = for uid <- uids, Ops.known?(ops, uid), uniq: true, do: Ops.root_of(ops, uid)
+    root_blocks = Map.new(roots, &{&1, stored_root(socket, &1)})
 
-      find_block_by_uid([root], uid)
-    end
+    Enum.map(uids, fn uid ->
+      if Ops.known?(ops, uid), do: find_block_by_uid([root_blocks[Ops.root_of(ops, uid)]], uid)
+    end)
+  end
+
+  defp stored_root(socket, root_uid) do
+    {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
+
+    socket
+    |> materialize_base_struct(root_uid)
+    |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+    |> Changeset.get_assoc(:block, :struct)
   end
 
   # The mounted root takes its new form through `replace_form`. Its seed
