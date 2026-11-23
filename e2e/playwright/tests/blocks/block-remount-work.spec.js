@@ -2,8 +2,9 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, awaitBlockShip } from '../../utils'
 
 // An entry moved to another row mounts again under its new parent. What the
-// editor had typed into it a moment before, still inside the field's
-// debounce, goes with it: moved by this editor, or by another.
+// editor had typed into it a moment before goes with it: moved by this
+// editor (sent as the drag takes the focus), or by another (still inside the
+// field's debounce, carried to the new block).
 test.describe('Block editor: work in a block that mounts again', () => {
   test.setTimeout(120000)
   // Sortable's fallback drag finds its target with elementFromPoint: the
@@ -80,14 +81,16 @@ test.describe('Block editor: work in a block that mounts again', () => {
     await syncLV(page)
   }
 
-  test('text typed just before the editor drags the entry to another row goes with it', async ({ page }) => {
+  // Picking the entry up takes the focus from the field, which sends what
+  // was typed before the move: the server has it, and the moved entry is
+  // drawn with it. Nothing is left to carry to the new block (that is the
+  // next test). Settled before the drop: a moved entry whose last change is
+  // still being answered can be drawn without its fields (seen on main too).
+  test('text typed just before the editor drags the entry to another row is sent on pick-up and saved where it went', async ({ page }) => {
     const title = 'Remount typed own move'
     await createPage(page, title)
     const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
 
-    // Picking the entry up takes the focus from the field, which sends what
-    // was typed. Settled before the drop: a moved entry whose last change is
-    // still being answered can be drawn without its fields (seen on main too).
     await nameField(entries(first).nth(1)).fill('Bobby')
     await pickUpAndHold(page, entries(first).nth(1), second, { settle: true })
     await page.mouse.up()
