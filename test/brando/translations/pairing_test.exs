@@ -151,6 +151,14 @@ defmodule Brando.Translations.PairingTest do
   end
 
   describe "mix brando.fragments.pair" do
+    # The shell is global, and tests that run side by side can leave it
+    # switched to the one that sends messages, which prints nothing
+    setup do
+      shell = Mix.shell()
+      Mix.shell(Mix.Shell.IO)
+      on_exit(fn -> Mix.shell(shell) end)
+    end
+
     test "lists without --apply, and links with it" do
       no = fragment!(:no, "contact")
       en = fragment!(:en, "contact")
