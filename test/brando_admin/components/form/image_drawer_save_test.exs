@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerSaveTest do
     |> render_hook("save_image", %{"image" => %{"title" => %{"en" => "Changed"}, "focal" => %{"x" => "left"}}})
 
     assert Process.alive?(view.pid)
-    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}, 2_000
     refute form_assigns(view).editing_image?
 
     stored = Repo.get!(Image, image.id)

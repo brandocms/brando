@@ -7,7 +7,7 @@ alias BrandoIntegration.Repo
 
 {:ok, _} = Repo.start_link()
 
-Repo.query!("""
+reset = """
 DO $$
 DECLARE name text;
 BEGIN
@@ -24,6 +24,9 @@ BEGIN
     WHERE schemaname = 'public' AND tablename <> 'schema_migrations'
   );
 END $$
-""")
+"""
+
+# Dropping the schemas a killed run left can take long on a busy server
+Repo.query!(reset, [], timeout: :infinity)
 
 Code.eval_file("priv/repo/seeds.exs")
