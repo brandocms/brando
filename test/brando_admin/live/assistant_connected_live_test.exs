@@ -103,6 +103,7 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert has_element?(view, row(second))
     assert has_element?(view, "#proposal-#{first}")
     assert has_element?(view, "#assistant-stale[data-reason=superseded]", "A newer version")
+    assert has_element?(view, ".assistant-proposal-head h2", "Replaced by a newer version")
     refute has_element?(view, ".assistant-apply")
     refute has_element?(view, ~s(button[phx-click="cancel_proposal"]))
 
@@ -121,6 +122,7 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     apply!(id, user)
 
     assert has_element?(view, "#assistant-stale[data-reason=applied]", "applied elsewhere")
+    assert has_element?(view, ".assistant-proposal-head h2", "Applied")
     refute has_element?(view, ".assistant-apply")
     # Still the version that was read: not swapped for its receipt
     refute has_element?(view, ".assistant-receipt")

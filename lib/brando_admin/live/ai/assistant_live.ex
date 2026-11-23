@@ -858,7 +858,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           {gettext("Proposal · version %{version}", version: @proposal.version)}
           <span :if={is_nil(@receipt) and @proposal.status in ~w(pending approved)}> · {gettext("not applied")}</span>
         </span>
-        <h2 :if={!@preview}>{proposal_title(@proposal, @receipt)}</h2>
+        <h2 :if={!@preview}>{if @stale, do: stale_title(@stale.reason), else: proposal_title(@proposal, @receipt)}</h2>
         <p :if={@proposal.summary && !@preview} class="assistant-summary">{@proposal.summary}</p>
         <div :if={@origin && !@preview} class="ai-proposal assistant-origin" id="assistant-origin">
           <p class="ai-proposal-label"><.icon name="sparkles" />{@origin}</p>
@@ -3224,6 +3224,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
       do: assign(socket, :run_check, Process.send_after(self(), :check_run, Agent.heartbeat())),
       else: socket
   end
+
+  # What the proposal on screen became since it was read
+  defp stale_title(:superseded), do: gettext("Replaced by a newer version")
+  defp stale_title(:applied), do: gettext("Applied")
+  defp stale_title(:cancelled), do: gettext("Discarded")
+  defp stale_title(:undone), do: gettext("Undone")
+  defp stale_title(:expired), do: gettext("Expired")
 
   defp proposal_title(%{status: "undone"}, _receipt), do: gettext("Undone")
   defp proposal_title(_proposal, receipt) when not is_nil(receipt), do: gettext("Applied")
