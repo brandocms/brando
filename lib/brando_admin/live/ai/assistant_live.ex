@@ -858,7 +858,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <div class="assistant-proposal-head">
         <span class="assistant-eyebrow">
           {gettext("Proposal · version %{version}", version: @proposal.version)}
-          <span :if={is_nil(@receipt) and @proposal.status in ~w(pending approved)}> · {gettext("not applied")}</span>
+          <span :if={is_nil(@receipt) and @proposal.status in ~w(pending approved) and !match?(%{reason: :applied}, @stale)}>
+            · {gettext("not applied")}
+          </span>
         </span>
         <h2 :if={!@preview}>{if @stale, do: stale_title(@stale.reason), else: proposal_title(@proposal, @receipt)}</h2>
         <p :if={@proposal.summary && !@preview} class="assistant-summary">{@proposal.summary}</p>
@@ -2866,7 +2868,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         %{reason: :applied}
 
       "undone" ->
-        %{reason: :applied}
+        %{reason: :undone}
 
       "cancelled" ->
         %{reason: :cancelled}

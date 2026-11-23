@@ -175,6 +175,21 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     refute has_element?(view, ".assistant-receipt")
   end
 
+  test "the open review's labels follow what happened to it elsewhere", %{conn: conn, current_user: user} = c do
+    id = prepare(c, "Applied, then undone, in another tab")
+    {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+    assert has_element?(view, ".assistant-eyebrow", "not applied")
+
+    apply!(id, user)
+    assert has_element?(view, ".assistant-proposal-head h2", "Applied")
+    refute has_element?(view, ".assistant-eyebrow", "not applied")
+
+    {:ok, _} = Proposals.undo(id, user)
+    assert has_element?(view, row(id) <> " [data-testid=assistant-state-undone]")
+    assert has_element?(view, "#assistant-stale[data-reason=undone]")
+    assert has_element?(view, ".assistant-proposal-head h2", "Undone")
+  end
+
   test "the tool cancelling or the proposal expiring withdraws Approve", %{conn: conn} = c do
     id = prepare(c, "Cancelled by the tool")
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
