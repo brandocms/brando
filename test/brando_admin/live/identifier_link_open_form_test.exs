@@ -19,6 +19,7 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
   alias Brando.SyncTest.Article
   alias Brando.SyncTest.ArticleItem
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Transformer
 
   @old_url "https://client.example/work"
   @new_url "/cases/client-work"
@@ -119,6 +120,25 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
   defp link_subtitle(article, identifier),
     do: Repo.update_all(from(a in Article, where: a.id == ^article.id), set: [subtitle: linked(identifier, @old_url)])
 
+  defp transformer(view), do: Enum.find(components(view), &(&1.module == Transformer)).assigns
+
+  defp shown_link(item), do: Map.merge(Map.new(Map.take(item.source, [:link])), item.changes)[:link]
+
+  # The editor's recovery copy, as the browser captures it while they type
+  defp capture(view) do
+    params = %{"main" => browser_form(view, []), "blocks" => %{}, "generation" => 1, "request_id" => 1}
+    view |> form_target() |> render_hook("draft_capture", params)
+  end
+
+  defp latest_copy(article) do
+    Repo.one(
+      from d in Brando.Drafts.EntryDraft,
+        where: d.entry_id == ^article.id and is_nil(d.resolved_at),
+        order_by: [desc: d.id],
+        limit: 1
+    )
+  end
+
   defp stored_quotes(article), do: Enum.map(Repo.get!(Article, article.id).quotes, & &1.text)
 
   defp stored_items(article),
@@ -135,6 +155,21 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
       params = view |> render() |> form_params("#article_form_form")
       assert get_in(params, ["article", "quotes", "0", "text"]) == new
       assert get_in(params, ["article", "items", "0", "link"]) == new
+    end
+
+    test "the recovery copy holds the new address", %{conn: conn, article: article} = c do
+      view = open(conn, article)
+      type(view, "title", "Changed")
+
+      move(c.target)
+      settle(view)
+      capture(view)
+      await(fn -> latest_copy(article) != nil end)
+
+      payload = inspect(latest_copy(article).payload)
+      assert payload =~ "Changed"
+      assert payload =~ @new_url
+      refute payload =~ @old_url
     end
   end
 
@@ -171,6 +206,9 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
       # The form hears of the rewrite and hands the rows to the transformer
       settle(view)
       settle(view)
+
+      new = linked(c.identifier, @new_url)
+      assert Enum.map(transformer(view).items, &shown_link/1) == [new, "<p>Plain</p>"]
 
       save_title(view, article, "Saved after the move")
 
