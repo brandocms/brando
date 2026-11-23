@@ -74,9 +74,12 @@ defmodule Brando.Query.Mutations do
   @decorate span("brando.query.create", schema: :module)
   def create_with_changeset(module, changeset, user, callback_block, opts) do
     if changeset.data.__struct__ == module do
-      Boundary.run(user, :create, module, fn user ->
-        atomically(fn -> do_create_with_changeset(module, changeset, user, callback_block, opts) end)
-      end)
+      Boundary.run(
+        user,
+        :create,
+        module,
+        atomically(&do_create_with_changeset(module, changeset, &1, callback_block, opts))
+      )
     else
       {:error, :forbidden}
     end
@@ -189,9 +192,12 @@ defmodule Brando.Query.Mutations do
   @decorate span("brando.query.update", schema: :module, entry_id: [:changeset, :data, :id])
   def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     if changeset.data.__struct__ == module do
-      Boundary.run(user, Keyword.get(opts, :action, :update), module, fn user ->
-        atomically(fn -> do_update_with_changeset(module, changeset, user, preloads, callback_block, opts) end)
-      end)
+      Boundary.run(
+        user,
+        Keyword.get(opts, :action, :update),
+        module,
+        atomically(&do_update_with_changeset(module, changeset, &1, preloads, callback_block, opts))
+      )
     else
       {:error, :forbidden}
     end
@@ -249,21 +255,19 @@ defmodule Brando.Query.Mutations do
 
   # One transaction, as group authorization runs a save already: the entry,
   # its identifier, revision and Activity are written together, so a save
-  # Postgres cancels at any step has written nothing and can be saved again
-  defp atomically(fun) do
-    result =
-      Repo.transaction(fn ->
-        case fun.() do
-          {:error, reason} -> Repo.rollback(reason)
-          value -> value
-        end
-      end)
-
-    case result do
-      {:ok, value} -> value
-      error -> error
+  # Postgres cancels at any step has written nothing and can be saved again.
+  # `mutation` takes the user `Boundary.run/4` hands it.
+  defp atomically(mutation) do
+    fn user ->
+      case Repo.transaction(fn -> commit_or_rollback(mutation.(user)) end) do
+        {:ok, value} -> value
+        error -> error
+      end
     end
   end
+
+  defp commit_or_rollback({:error, reason}), do: Repo.rollback(reason)
+  defp commit_or_rollback(value), do: value
 
   # An update's callback may take the changeset as well, which holds the
   # record as it was before the save (`changeset.data`).
