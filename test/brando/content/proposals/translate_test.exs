@@ -1019,6 +1019,178 @@ defmodule Brando.Content.Proposals.TranslateTest do
     end
   end
 
+  # Cards in a multi module, each drawn only when its link var's identifier
+  # is there, with a cover image and a video. `values` sets the card's var
+  # columns. Returns the card's vars by key.
+  defp add_cards(c, values) do
+    module = fn fields ->
+      params =
+        Factory.params_for(:module, Keyword.merge([namespace: %{"en" => "Content"}, help_text: %{}, refs: []], fields))
+
+      {:ok, module} = Brando.Content.create_module(params, c.user)
+      module
+    end
+
+    cards = module.(name: %{"en" => "Cards"}, code: ~s(<section class="cards">{{ content }}</section>), multi: true)
+
+    card =
+      module.(
+        name: %{"en" => "Card"},
+        parent_id: cards.id,
+        code:
+          ~s({% if project and project.identifier %}<a class="card">{{ project.identifier.title }}</a>{% endif %}) <>
+            ~s({% if cover %}<img class="cover" src="{{ cover.path }}">{% endif %}) <>
+            ~s({% if clip %}<img class="poster" src="{{ clip.thumbnail.path }}">{% endif %}),
+        vars: [
+          %{key: "project", type: "link", label: "Project", link_type: "identifier"},
+          %{key: "cover", type: "image", label: "Cover"},
+          %{key: "clip", type: "video", label: "Clip"}
+        ]
+      )
+
+    insert_block = fn module, type, parent_id ->
+      %Block{}
+      |> Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => type,
+          "module_id" => module.id,
+          "multi" => module.multi,
+          "parent_id" => parent_id,
+          "creator_id" => c.user.id,
+          "source" => to_string(Article.Blocks)
+        },
+        c.user
+      )
+      |> Repo.insert!()
+    end
+
+    parent = insert_block.(cards, "module", nil)
+    child = insert_block.(card, "module_entry", parent.id)
+
+    vars =
+      [
+        %Var{key: "project", type: :link, link_type: :identifier, identifier_id: values[:identifier_id]},
+        %Var{key: "cover", type: :image, image_id: values[:image_id]},
+        %Var{key: "clip", type: :video, video_id: values[:video_id]}
+      ]
+      |> Enum.with_index()
+      |> Map.new(fn {var, sequence} ->
+        {var.key, Repo.insert!(%{var | label: %{"en" => var.key}, block_id: child.id, sequence: sequence})}
+      end)
+
+    struct(Article.Blocks, %{entry_id: c.source.id, block_id: parent.id, sequence: 1}) |> Repo.insert!()
+    Translations.source_saved(load(c.source.id))
+    vars
+  end
+
+  defp create_linked_article(c) do
+    {:ok, other} =
+      SyncTest.create_article(
+        %{
+          title: "Prosjekt",
+          slug: "prosjekt-#{System.unique_integer([:positive])}",
+          language: "no",
+          status: "published"
+        },
+        c.user
+      )
+
+    {:ok, identifier} = Brando.Content.create_identifier(Article, other)
+    {other, identifier}
+  end
+
+  defp translate_linked_article(c, other) do
+    {:ok, other_en} = Translations.create_target(Article, other.id, :en, c.user)
+    {:ok, _} = SyncTest.update_article(other_en.id, %{title: "Project"}, c.user)
+  end
+
+  defp apply_translate(c) do
+    {:ok, proposal} = Proposals.propose([translate(c.target, %{"title" => "Title"}, keys: ["title"])], c.user)
+    assert proposal.problems == []
+    {:ok, _} = approve_and_apply(proposal, c.user)
+    Repo.get!(Article, c.target.id).rendered_blocks
+  end
+
+  describe "a translation whose blocks link to other entries" do
+    # The card links to an article translated after the translation was made:
+    # the pending version points the card at the English article.
+    setup c do
+      {other, identifier} = create_linked_article(c)
+
+      %{"cover" => cover} =
+        add_cards(c, identifier_id: identifier.id, image_id: Factory.insert(:image, path: "images/first.jpg").id)
+
+      target = create_translation(c)
+      translate_linked_article(c, other)
+      assert Enum.any?(open_items(target.id), &match?({:relinked, _}, &1))
+
+      # The source's cover changes after the translation was made
+      cover |> Ecto.Changeset.change(image_id: Factory.insert(:image, path: "images/second.jpg").id) |> Repo.update!()
+      Translations.source_saved(load(c.source.id))
+      assert Enum.any?(open_items(target.id), &match?({:shared_update, _}, &1))
+
+      %{target: target}
+    end
+
+    test "is rendered with the entries its links point at and the media its source has now", c do
+      rendered = apply_translate(c)
+      assert rendered =~ ~s(<a class="card">Project</a>)
+      assert rendered =~ "second.jpg"
+      refute rendered =~ "Prosjekt"
+      refute rendered =~ "first.jpg"
+    end
+  end
+
+  describe "a translation whose blocks were empty when it was made" do
+    # The source's card gains a link, a cover and a video after the
+    # translation was made: the translation saved them empty.
+    setup c do
+      {other, identifier} = create_linked_article(c)
+      translate_linked_article(c, other)
+      vars = add_cards(c, [])
+      target = create_translation(c)
+
+      thumbnail = Factory.insert(:image, path: "images/poster.jpg")
+      video = Factory.insert(:video, thumbnail_id: thumbnail.id)
+
+      Repo.update!(Ecto.Changeset.change(vars["project"], identifier_id: identifier.id))
+      Repo.update!(Ecto.Changeset.change(vars["cover"], image_id: Factory.insert(:image, path: "images/cover.jpg").id))
+      Repo.update!(Ecto.Changeset.change(vars["clip"], video_id: video.id))
+      Translations.source_saved(load(c.source.id))
+      assert Enum.any?(open_items(target.id), &match?({:shared_update, _}, &1))
+
+      %{target: target}
+    end
+
+    test "is rendered with the link, cover and video its source has now", c do
+      rendered = apply_translate(c)
+      assert rendered =~ ~s(<a class="card">Project</a>)
+      assert rendered =~ "cover.jpg"
+      assert rendered =~ ~s(<img class="poster" src="images/poster.jpg">)
+    end
+  end
+
+  describe "a translation whose video the source replaced" do
+    # The translation was saved with a video that has no thumbnail; the
+    # source's has one now.
+    setup c do
+      vars = add_cards(c, video_id: Factory.insert(:video).id)
+      target = create_translation(c)
+
+      thumbnail = Factory.insert(:image, path: "images/poster.jpg")
+      Repo.update!(Ecto.Changeset.change(vars["clip"], video_id: Factory.insert(:video, thumbnail_id: thumbnail.id).id))
+      Translations.source_saved(load(c.source.id))
+      assert Enum.any?(open_items(target.id), &match?({:shared_update, _}, &1))
+
+      %{target: target}
+    end
+
+    test "is rendered with the new video's thumbnail", c do
+      assert apply_translate(c) =~ ~s(<img class="poster" src="images/poster.jpg">)
+    end
+  end
+
   test "the codec decodes and encodes it" do
     map = %{
       "op" => "translate",

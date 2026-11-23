@@ -191,6 +191,39 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
       assert preview_image_id(view) == c.first.id
     end
 
+    # The copy holds another image than the saved entry, and the form casts
+    # each edit onto the saved entry: the preview keeps the copy's image.
+    test "a restored recovery copy's image stays in the preview after typing", c do
+      {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+      await(fn -> form_assigns(view).blocks_ready? end)
+      upload(view, c.second)
+
+      view
+      |> with_target(cid_of(view, "#page_form-el"))
+      |> render_hook("draft_capture", %{
+        "main" => view |> render() |> form_params("#page_form_form") |> Plug.Conn.Query.encode(),
+        "blocks" => %{},
+        "generation" => 1,
+        "request_id" => 1
+      })
+
+      identity = Brando.Drafts.identity(Brando.Pages.Page, c.page.id, c.current_user.id)
+      await(fn -> Brando.Drafts.list(identity) != [] end)
+      [copy] = Brando.Drafts.list(identity)
+      assert copy.payload["main"]["meta_image_id"] == c.second.id
+      kill_live(view)
+
+      {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+      await(fn -> form_assigns(view).blocks_ready? end)
+      view |> with_target(cid_of(view, "#page_form-el")) |> render_click("draft_restore", %{"id" => copy.id})
+      assert preview_image_id(view) == c.second.id
+
+      main = view |> render() |> form_params("#page_form_form") |> put_in(["page", "title"], "Typed")
+      view |> element("#page_form_form") |> render_change(Map.put(main, "_target", ["page", "title"]))
+
+      assert preview_image_id(view) == c.second.id
+    end
+
     defp processed_image(user),
       do: Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
 

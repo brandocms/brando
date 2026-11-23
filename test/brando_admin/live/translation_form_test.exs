@@ -197,6 +197,57 @@ defmodule BrandoAdmin.TranslationFormTest do
     assert saved.status == :draft or saved.status == :published
   end
 
+  # A card links to an article translated after the translation was made:
+  # the pending version points the card at the English article.
+  test "saving a relinked card renders the link the version holds", %{conn: conn, current_user: user} do
+    card =
+      Brando.ProposalFixtures.module!(
+        user,
+        "Card",
+        ~s({% if project and project.identifier %}<a class="card">{{ project.identifier.title }}</a>{% endif %}),
+        vars: [%{key: "project", type: "link", label: "Project", link_type: "identifier"}]
+      )
+
+    article = fn title ->
+      {:ok, article} =
+        SyncTest.create_article(
+          %{title: title, slug: "a-#{System.unique_integer([:positive])}", language: "no", status: "published"},
+          user
+        )
+
+      article
+    end
+
+    source = article.("Om oss")
+    other = article.("Prosjekt")
+    {:ok, identifier} = Brando.Content.create_identifier(Article, other)
+    block = add_block(%{module: card, current_user: user}, source, %{}, 0).block_id
+
+    Repo.insert!(%Brando.Content.Var{
+      key: "project",
+      type: :link,
+      link_type: :identifier,
+      label: %{"en" => "Project"},
+      identifier_id: identifier.id,
+      block_id: block,
+      sequence: 0
+    })
+
+    {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+    {:ok, other_en} = Translations.create_target(Article, other.id, :en, user)
+    {:ok, _} = SyncTest.update_article(other_en.id, %{title: "Project"}, user)
+    version = Translations.get_pending_version(Article, target.id)
+    assert Enum.any?(version.work_items, &(&1.kind == :relinked))
+
+    view = open(conn, target.id)
+    await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+    save(view)
+
+    rendered = Repo.get!(Article, target.id).rendered_blocks
+    assert rendered =~ ~s(<a class="card">Project</a>)
+    refute rendered =~ "Prosjekt"
+  end
+
   test "work that was not done stays open after a save", %{conn: conn} = c do
     change_source(c)
     view = open(conn, c.target.id)
