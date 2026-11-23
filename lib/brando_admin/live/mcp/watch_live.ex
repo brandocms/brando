@@ -476,6 +476,9 @@ defmodule BrandoAdmin.MCP.WatchLive do
     end
   end
 
+  defp proposal_state(%{status: "applied", auto_applied_grant_id: id}) when is_integer(id),
+    do: {gettext("Applied automatically"), "badge--success"}
+
   defp proposal_state(%{status: "applied"}), do: {gettext("Applied"), "badge--success"}
   defp proposal_state(%{status: "approved"}), do: {gettext("Approved"), "badge--success"}
   defp proposal_state(%{status: "undone"}), do: {gettext("Undone"), nil}
