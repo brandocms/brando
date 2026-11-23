@@ -250,6 +250,26 @@ defmodule E2EFixtureController do
           Brando.Activity.record(:updated, module, user, fields: ["class"])
           user
 
+        # Screenshots only: the same, with the block holding a value of its
+        # own under the new key, so the move is refused
+        "release-rename-conflict-refused" ->
+          user = create_release_removal(:rename)
+          module = Brando.Repo.get_by!(Brando.Content.Module, class: "single-image-caption")
+          module |> Ecto.Changeset.change(class: "edited-here") |> Brando.Repo.update!()
+          Brando.Activity.record(:updated, module, user, fields: ["class"])
+          # The block create_release_removal/1 added, the module's newest
+          block = Brando.Content.Block |> Brando.Repo.all() |> Enum.filter(&(&1.module_id == module.id)) |> Enum.max_by(& &1.id)
+
+          Brando.Repo.insert!(%Brando.Content.Var{
+            block_id: block.id,
+            key: "framed",
+            type: :boolean,
+            label: %{"en" => "Framed"},
+            value_boolean: true
+          })
+
+          user
+
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor
         "write-with-ai-module" ->
