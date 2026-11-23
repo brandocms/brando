@@ -340,6 +340,38 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
 
       a_saves_then_b(c, ["One by A", "Two", "Three by C"])
     end
+
+    # C adds a row while B is in the list; A, elsewhere, takes it and saves
+    # it. C's change, held at B with the save, applies when B leaves: the
+    # row keeps the id A's save gave it, and no form shows it twice.
+    test "takes a row a third editor added that the save wrote, once", c do
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {third, _} = live_form(log_in_user(Phoenix.ConnTest.build_conn(), other), c.path, "article_form")
+      four = ["One", "Two", "Three", "Four by C"]
+
+      focus(c.b, 1)
+      add(third)
+      focus(third, 3)
+      type(third, 3, "Four by C")
+      leave(third)
+      await(fn -> quotes(c.a) == four end)
+
+      c.a |> element("#article_form_form") |> render_change(put_in(params(c.a), ["article", "title"], "Title by A"))
+      save(c.a)
+      await(fn -> stored(c.article) == four end)
+      ids = Enum.map(Repo.get!(Article, c.article.id).quotes, & &1.id)
+      settle(c.b)
+      leave(c.b)
+      await(fn -> quotes(c.b) == four end)
+
+      c.b |> element("#article_form_form") |> render_change(put_in(params(c.b), ["article", "title"], "Title by B"))
+      save(c.b)
+      await(fn -> Repo.get!(Article, c.article.id).title == "Title by B" end)
+      assert stored(c.article) == four
+      assert Enum.map(Repo.get!(Article, c.article.id).quotes, & &1.id) == ids
+      settle(third)
+      assert quotes(third) == four
+    end
   end
 
   # What B typed and sent is B's until another editor sends something else
