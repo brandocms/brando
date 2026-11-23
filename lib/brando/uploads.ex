@@ -47,6 +47,7 @@ defmodule Brando.Uploads do
   require Logger
 
   @image_exts ~w(.jpg .jpeg .png .gif .webp .svg)
+  @video_exts ~w(.mp4 .webm .mov .avi .ogv)
   @max_file_size 50_000_000
   # This is the Phoenix transport envelope, not the per-asset authorization
   # limit. Intake applies the target config's size_limit to the size the client
@@ -732,6 +733,11 @@ defmodule Brando.Uploads do
   def image_exts, do: @image_exts
 
   @doc """
+  Extensions accepted for video uploads.
+  """
+  def video_exts, do: @video_exts
+
+  @doc """
   Validate an intake request for a single file before any bytes move.
 
   `size_limit` comes from the resolved field config's `:size_limit` (see
@@ -767,7 +773,7 @@ defmodule Brando.Uploads do
   def validate_intake(:video, filename, _size, _size_limit) do
     ext = filename |> Path.extname() |> String.downcase()
 
-    if ext in ~w(.mp4 .webm .mov .avi .ogv) do
+    if ext in @video_exts do
       :ok
     else
       {:error, "Unsupported video type [#{ext}]"}

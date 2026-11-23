@@ -130,6 +130,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        open_slot_uid: nil,
        slot_title: nil,
        note_observers: %{},
+       # Children made for dropped files whose upload has not settled, by uid
+       # (`Block.insert_media_drop_children/2`, "media_drop_settled")
+       media_drop_pending: %{},
        live_preview_active?: false,
        live_preview_cache_key: nil,
        # `data-site` on the wrapper, which the application's admin stylesheet
@@ -498,6 +501,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(%{event: "delete_block", uid: uid}, socket) do
     {:ok, recorded_delete(socket, uid, &remove_block_from_state(&1, uid))}
+  end
+
+  # Children a multi block made for dropped files (after their inserts): the
+  # token each upload reports back with, and the child as the drop built it
+  def update(%{event: "media_drop_pending", children: children}, socket) do
+    shown = socket.assigns.block_ops
+    pending = Map.new(children, &{&1.uid, %{token: &1.token, built: media_drop_state(shown, &1.uid)}})
+    {:ok, update(socket, :media_drop_pending, &Map.merge(&1, pending))}
   end
 
   # blocks (any level) emit their content/structural ops directly — see
@@ -2425,6 +2436,58 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp stored_block(socket, uid), do: socket |> stored_blocks([uid]) |> hd()
 
   # `stored_block/2` for each of `uids`, materializing each root once.
+  defp media_drop_failed(socket, uid, built, params) do
+    shown = socket.assigns.block_ops
+
+    cond do
+      not Ops.known?(shown, uid) ->
+        socket
+
+      media_drop_state(shown, uid) == built ->
+        send_update(Block, id: component_id(shown, shown.parents[uid]), event: "delete_block", uid: uid, dom_id: nil)
+        alert_media_drop_failed(socket, params, nil)
+
+      true ->
+        alert_media_drop_failed(
+          socket,
+          params,
+          gettext("The block made for the file was kept, as it has been changed since.")
+        )
+    end
+  end
+
+  # A child as the store holds it, apart from where it sits and what the
+  # server keeps of it: a move to another block leaves it as it was built
+  defp media_drop_state(shown, uid) do
+    case Ops.materialize_child(shown, uid) do
+      {:ok, params} -> Map.drop(params, ~w(sequence parent_id module_version sync_uid))
+      {:error, _} -> nil
+    end
+  end
+
+  defp alert_media_drop_failed(socket, %{"unavailable" => true}, kept) do
+    alert_media_drop(
+      socket,
+      gettext("Upload failed"),
+      gettext("The block made for this file shows no field for it, so it was not added."),
+      kept
+    )
+  end
+
+  defp alert_media_drop_failed(socket, %{"error" => error}, kept) when is_binary(error) and error != "",
+    do: alert_media_drop(socket, gettext("Upload failed"), error, kept)
+
+  # Cancelled by the editor, who knows: said only when the block stays
+  defp alert_media_drop_failed(socket, _cancelled, nil), do: socket
+
+  defp alert_media_drop_failed(socket, _cancelled, kept),
+    do: alert_media_drop(socket, gettext("Upload cancelled"), nil, kept)
+
+  defp alert_media_drop(socket, title, message, kept) do
+    message = [message, kept] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+    push_event(socket, "b:alert", %{title: title, message: message, type: "error"})
+  end
+
   defp stored_blocks(socket, uids) do
     ops = socket.assigns.block_ops
     roots = for uid <- uids, Ops.known?(ops, uid), uniq: true, do: Ops.root_of(ops, uid)
@@ -3218,6 +3281,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
       ) do
     {:noreply, socket}
+  end
+
+  # The upload handed to a child made for a dropped file has settled
+  # (`Brando.MediaDrop`). After a failure or a cancel the child goes again,
+  # wherever it has moved, while it is exactly as the drop built it; a child
+  # changed since stays, and the editor is told. Either way, and after a
+  # success, the child is no longer pending. Only the upload handed to the
+  # child, by its token, settles it.
+  def handle_event("media_drop_settled", %{"uid" => uid, "token" => token} = params, socket)
+      when is_binary(uid) and is_binary(token) do
+    case socket.assigns.media_drop_pending do
+      %{^uid => %{token: ^token, built: built}} ->
+        socket = update(socket, :media_drop_pending, &Map.delete(&1, uid))
+        {:noreply, if(params["failed"] == true, do: media_drop_failed(socket, uid, built, params), else: socket)}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("outline_reposition", params, socket) do

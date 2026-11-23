@@ -83,6 +83,7 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     for {schema, trait} <- [
           {Brando.Content.Ref, Brando.Trait.EnsureUID},
           {Brando.Content.Module, Brando.Trait.ValidateVarKeys},
+          {Brando.Content.Module, Brando.Trait.ValidateMediaDrop},
           {Brando.Content.Module, Brando.Trait.ModuleVersioned},
           {Brando.Pages.Page, Brando.Trait.CastPolymorphicEmbeds},
           {Brando.Pages.Page, Brando.Trait.Revisioned},

@@ -787,6 +787,39 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     {:halt, socket}
   end
 
+  # Files dropped on a multi block whose module takes them (`media_drop`),
+  # each already checked in the browser against what its ref takes: one
+  # child per file, in order, up to the upload manager's batch. The reply
+  # names each child's ref field, which the browser hands the file to, and
+  # the token its upload reports back to the block field with
+  # (`BlockField`, "media_drop_settled"). Files that make no child are
+  # said, as the browser says the ones it refuses.
+  def handle_block_event("media_drop", %{"files" => [_ | _] = files}, socket) do
+    case Block.media_drop_open(socket.assigns) do
+      %{kinds: kinds} ->
+        {taken, over} = Enum.split(files, BrandoAdmin.UploadManager.max_entries())
+        kinds_dropped = Enum.map(taken, &media_drop_kind(&1, kinds))
+
+        if Enum.member?(kinds_dropped, nil) do
+          {:halt, %{children: []},
+           alert_media_drop_refused(socket, files, gettext("not an image or video this block takes"))}
+        else
+          {socket, children} = Block.insert_media_drop_children(socket, kinds_dropped)
+          too_many = gettext("more than %{count} files in one drop", count: length(taken))
+          {:halt, %{children: children}, alert_media_drop_refused(socket, over, too_many)}
+        end
+
+      nil ->
+        {:halt, %{children: []},
+         alert_media_drop_refused(socket, files, gettext("this block no longer takes dropped files"))}
+    end
+  end
+
+  # Files the browser found the ref does not take, which made no child
+  def handle_block_event("media_drop_rejected", %{"files" => [_ | _] = files}, socket) do
+    {:halt, alert_media_drop_files(socket, Enum.map(files, &{&1["filename"], media_drop_rejection(&1)}))}
+  end
+
   def handle_block_event("delete_block", _params, socket) do
     uid = socket.assigns.uid
     parent_ref = socket.assigns.parent_ref
@@ -1204,5 +1237,32 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       nil -> []
       assoc -> assoc
     end
+  end
+
+  defp media_drop_kind(%{"kind" => "image"}, %{image: _}), do: :image
+  defp media_drop_kind(%{"kind" => "video"}, %{video: _}), do: :video
+  defp media_drop_kind(_file, _kinds), do: nil
+
+  defp media_drop_rejection(%{"reason" => "size", "limit" => limit}) when is_integer(limit),
+    do: gettext("larger than %{size}", size: Brando.Utils.human_size(limit))
+
+  defp media_drop_rejection(_file), do: gettext("not an image or video this block takes")
+
+  defp alert_media_drop_refused(socket, [], _reason), do: socket
+
+  defp alert_media_drop_refused(socket, files, reason),
+    do: alert_media_drop_files(socket, Enum.map(files, &{&1["filename"], reason}))
+
+  defp alert_media_drop_files(socket, files) do
+    items =
+      Enum.map_join(files, fn {filename, reason} ->
+        "<li>#{BrandoAdmin.Alert.escape(filename)}: #{BrandoAdmin.Alert.escape(reason)}</li>"
+      end)
+
+    push_event(socket, "b:alert", %{
+      title: gettext("Some files were not added"),
+      html: "<ul>#{items}</ul>",
+      type: "error"
+    })
   end
 end

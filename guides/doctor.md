@@ -128,6 +128,7 @@ and summaries are prose.
 | Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ, counted by how they differ (formats, sizes, missing files, dimensions). With no image files in the media folder at all, it says so and asks for the media instead of a recreate |
 | Image srcset sizes | Image and gallery fields whose `srcset` names a size their config does not have with the `default_config` in effect: a field with a `srcset` and no `sizes` of its own takes its sizes from `default_config`, which may have been narrowed since. Such a field is read and rendered without those entries, and the log says so once per field. The fix: add the size to `default_config`, or to the field's own `sizes` |
 | Modules | Blocks behind their module's version, per module |
+| Module media drop | Multi modules whose media drop setting no longer fits their children: the child module deleted or moved, its ref renamed or retyped, or the module no longer multi. Their blocks show no drop zone and the definition export leaves the setting out; choose the child and ref again in the module editor, or clear them |
 | Module entry paths | Liquid module code that reads a multi module's entries as Villain stored them, `{{ link.data.vars.url }}`, which renders nothing since the blocks conversion; `brando_219` rewrites it to `{{ link.vars.url }}`. Datasource modules are left out: their `entries` are records |
 | Link globals in HEEx | HEEx module and container code that uses a link global as a string: joins it with `<>`, compares it, passes it to a function or gives it to a component attribute such as `<.link href={...}>`. A link global is its var in HEEx, so these raise, compare false or link nowhere; wrap it in `Brando.Villain.Filters.link_url/1`. `<.entry_link var={...} />`, `<.entry_link href={...}>`, `:if` and printing it need no change. It reads the code as text, so a use it lists may be fine, and a global reached through a variable is not seen |
 | Liquid in editor text | Refs and vars holding `{{` or `{%`, on blocks and module definitions, which print as text; SVG and HTML refs are templates and are left out |
@@ -148,7 +149,7 @@ and summaries are prose.
 | Test database | In development, the Repo's database for `:test` (read from `config/config.exs` and `config/runtime.exs` in the current shell) against the one in use: a `runtime.exs` that reads the Repo `url:` from the environment in every environment makes `mix test` use, and migrate, the development database |
 
 With tenancy enabled, the content checks (pages without their template, image configs, modules, module
-entry paths, block uids, stored colours, sitemap, JSON-LD, alt text, media paths) run in every
+media drop, module entry paths, block uids, stored colours, sitemap, JSON-LD, alt text, media paths) run in every
 environment of every active site, and their details name the environment.
 
 ## In the admin

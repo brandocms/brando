@@ -1058,6 +1058,24 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "ModuleMediaDrop" do
+    test "names a multi module whose media drop setting no longer fits its children" do
+      assert %Result{status: :ok} = Checks.ModuleMediaDrop.run(context())
+
+      row = Factory.insert(:module, name: %{"en" => "Image row"}, uid: "image-row-doctor", multi: true)
+      card = Factory.insert(:module, name: %{"en" => "Image card"}, uid: "image-card-doctor", parent_id: row.id)
+
+      Brando.Repo.update_all(from(m in Brando.Content.Module, where: m.id == ^row.id),
+        set: [media_drop_child: card.uid, media_drop_ref: "photo"]
+      )
+
+      result = Checks.ModuleMediaDrop.run(context())
+      assert result.status == :warning
+      assert result.summary == "1 module with a media drop setting that no longer fits"
+      assert result.items == ["Image row (image-row-doctor): image-card-doctor has no ref photo"]
+    end
+  end
+
   describe "BlockUids" do
     defp block_with_uid(user, uid) do
       Brando.Repo.insert!(%Brando.Content.Block{uid: uid, type: :container, creator_id: user.id, sequence: 0})

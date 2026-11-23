@@ -459,7 +459,8 @@ definitions and templates from trusted authors.
 filename, translated display name or namespace. Keep it when updating an
 existing module. `name`, `namespace` and `help_text` use locale maps or keyword
 lists. Other declarations are `class`, `svg`, `color`, `write_with_ai`,
-`multi`, `sequence`, `datasource`, `datasource_module`, `datasource_type` and
+`multi`, `media_drop` (see [Children and table templates](#children-and-table-templates)),
+`sequence`, `datasource`, `datasource_module`, `datasource_type` and
 `datasource_query`. Datasource configuration uses the same values as the
 admin. `write_with_ai true` offers Write with AI in the module's text blocks;
 left out, it is off.
@@ -698,6 +699,27 @@ end
 Every child must exist in the bundle, may have only one parent, and cannot form
 a cycle. Child declaration order controls child order. All definitions in the
 bundle are planned and persisted in dependency order in one transaction.
+
+`media_drop` makes each image or video dropped on the module's blocks a new
+entry of one of its children, with the file in one of that child's refs
+([Dropping media on a multi module](block_editor.md#dropping-media-on-a-multi-module)):
+
+```elixir
+multi true
+media_drop child: "acme-image-card", ref: :picture
+
+children do
+  child "acme-image-card"
+  child "acme-quote"
+end
+```
+
+`child` is the UID or the Elixir module name of one of the module's children,
+and `ref` names a `:media`, `:picture` or `:video` ref of that child. Anything
+else is refused, naming the module and what is wrong. Left out, files dropped
+on the module's blocks make no entries. A stored setting that no longer fits
+the module's children is left out of an export, so importing the export
+changes nothing.
 
 A table template uses the same var declarations for columns:
 

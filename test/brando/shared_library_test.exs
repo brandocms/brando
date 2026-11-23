@@ -223,6 +223,56 @@ defmodule Brando.Content.SharedLibraryTest do
     assert override.write_with_ai
   end
 
+  test "module customization keeps a media drop setting it has no children to check against",
+       %{site: site, user: user} do
+    attrs =
+      "Shared image row"
+      |> module_attrs()
+      |> Map.merge(%{multi: true, media_drop_child: "image-card", media_drop_ref: "photo"})
+
+    assert {:ok, shared} = SharedLibrary.create_shared(:module, attrs, user)
+    assert :ok = SharedLibrary.enable(site, :module, shared.id)
+    assert {:ok, override} = SharedLibrary.customize(:module, shared.id, site, @prefix, user)
+    assert {override.media_drop_child, override.media_drop_ref} == {"image-card", "photo"}
+  end
+
+  test "a module customized from the library, with children only in the library, offers the media drop it reports as fitting",
+       %{site: site, user: user} do
+    row_attrs =
+      "Shared image row"
+      |> module_attrs()
+      |> Map.merge(%{uid: "image-row", multi: true, media_drop_child: "image-card", media_drop_ref: "photo"})
+
+    assert {:ok, row} = SharedLibrary.create_shared(:module, row_attrs, user)
+
+    card_attrs =
+      "Shared image card"
+      |> module_attrs()
+      |> Map.merge(%{
+        uid: "image-card",
+        parent_id: row.id,
+        refs: [
+          %{
+            name: "photo",
+            uid: Brando.Utils.generate_uid(),
+            sequence: 0,
+            data: %{type: "picture", data: %{}}
+          }
+        ]
+      })
+
+    assert {:ok, card} = SharedLibrary.create_shared(:module, card_attrs, user)
+    assert :ok = SharedLibrary.set_enabled(site, :module, [row.id, card.id])
+    assert {:ok, _override} = SharedLibrary.customize(:module, row.id, site, @prefix, user)
+
+    Tenant.with_prefix(@prefix, fn ->
+      effective = SharedLibrary.get(:module, row.id, :shared, site, @prefix)
+      assert effective.override_id
+      assert %{ref_name: "photo"} = BrandoAdmin.Components.Form.Block.media_drop(effective)
+      assert Brando.Doctor.Checks.ModuleMediaDrop.stale() == []
+    end)
+  end
+
   test "origin-qualified block fields round-trip independently from integer IDs" do
     changeset =
       Block.block_changeset(

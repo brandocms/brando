@@ -53,7 +53,8 @@ defmodule Brando.Content.Definition.Params do
 
         table_id = if uid = definition["table_template"], do: Map.get(tables, uid), else: nil
 
-        Module.changeset(record || struct(Module), attrs, creator)
+        # The files were checked against each other for the media drop setting
+        Module.changeset(record || struct(Module), attrs, creator, nil, media_drop_checked: true)
         |> read_stored_defaults()
         |> Changeset.put_change(:table_template_id, table_id)
         |> Changeset.put_change(:parent_id, parent_id)

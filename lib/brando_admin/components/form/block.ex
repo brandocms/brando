@@ -53,6 +53,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.RichTextAI
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
@@ -395,56 +397,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "delete_block", uid: uid, dom_id: _dom_id}, socket) do
-    changesets = socket.assigns.changesets
-    block_list = socket.assigns.block_list
-    updated_changesets = delete_child_changeset(changesets, uid)
-    new_block_list = List.delete(block_list, uid)
-    changeset = socket.assigns.form.source
-    belongs_to = socket.assigns.belongs_to
-    block_cs = get_block_changeset(changeset, belongs_to)
-
-    has_children? = new_block_list !== []
-
-    # if we deleted the last child block, put_assoc the empty children list
-    updated_block_cs =
-      if has_children? do
-        block_cs
-      else
-        Changeset.put_assoc(block_cs, :children, [])
-      end
-
-    # NOTE: the form id must use this block's own uid — the deleted child's
-    # uid would change the parent form's id on every delete
-    own_uid = socket.assigns.uid
-
-    updated_form =
-      if belongs_to == :root do
-        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_cs)
-
-        to_form(
-          updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{own_uid}"
-        )
-      else
-        to_form(
-          updated_block_cs,
-          as: "child_block",
-          id: "child_block_form-#{own_uid}"
-        )
-      end
-
-    socket
-    |> assign(:changesets, updated_changesets)
-    |> assign(:block_list, new_block_list)
-    |> assign(:has_children?, has_children?)
-    |> assign_block_form(updated_form)
-    |> update(:children_forms, &Map.delete(&1, uid))
-    |> emit_block_op({:delete, uid})
-    |> refresh_live_preview()
-    |> then(&{:ok, &1})
-  end
+  def update(%{event: "delete_block", uid: uid, dom_id: _dom_id}, socket), do: {:ok, delete_child(socket, uid)}
 
   def update(%{event: "clear_changesets"}, socket) do
     id = socket.assigns.id
@@ -1104,38 +1057,144 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp insert_child_module(%{sequence: sequence, module_id: module_id, type: type}, socket) do
     module_reference = Brando.Content.SharedLibrary.reference(module_id)
-    user_id = socket.assigns.current_user_id
-    parent_id = nil
     sequence = (is_binary(sequence) && String.to_integer(sequence)) || sequence
-    source = socket.assigns.block_module
 
-    empty_block_cs = BlockField.build_block(module_reference, user_id, parent_id, source, type)
+    empty_block_cs =
+      BlockField.build_block(module_reference, socket.assigns.current_user_id, nil, socket.assigns.block_module, type)
+
     uid = Changeset.get_field(empty_block_cs, :uid)
-    # insert the new block uid into the block_list
-    block_list = socket.assigns.block_list
-    updated_block_list = List.insert_at(block_list, sequence, uid)
 
-    block_form =
-      to_change_form(
-        empty_block_cs,
-        %{sequence: sequence},
-        user_id
-      )
+    socket
+    |> put_new_child(empty_block_cs, sequence)
+    |> refresh_live_preview()
+    |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})
+    |> then(&{:ok, &1})
+  end
 
+  @doc """
+  Removes the child `uid` from this block, with its `:delete` op.
+  """
+  def delete_child(socket, uid) do
     changesets = socket.assigns.changesets
-    updated_changesets = insert_child_changeset(changesets, uid, sequence)
+    block_list = socket.assigns.block_list
+    updated_changesets = delete_child_changeset(changesets, uid)
+    new_block_list = List.delete(block_list, uid)
+    changeset = socket.assigns.form.source
+    belongs_to = socket.assigns.belongs_to
+    block_cs = get_block_changeset(changeset, belongs_to)
 
-    selector = "[data-block-uid=\"#{uid}\"]"
+    has_children? = new_block_list !== []
+
+    # if we deleted the last child block, put_assoc the empty children list
+    updated_block_cs =
+      if has_children? do
+        block_cs
+      else
+        Changeset.put_assoc(block_cs, :children, [])
+      end
+
+    # NOTE: the form id must use this block's own uid — the deleted child's
+    # uid would change the parent form's id on every delete
+    own_uid = socket.assigns.uid
+
+    updated_form =
+      if belongs_to == :root do
+        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_cs)
+
+        to_form(
+          updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{own_uid}"
+        )
+      else
+        to_form(
+          updated_block_cs,
+          as: "child_block",
+          id: "child_block_form-#{own_uid}"
+        )
+      end
+
+    socket
+    |> assign(:changesets, updated_changesets)
+    |> assign(:block_list, new_block_list)
+    |> assign(:has_children?, has_children?)
+    |> assign_block_form(updated_form)
+    |> update(:children_forms, &Map.delete(&1, uid))
+    |> emit_block_op({:delete, uid})
+    |> refresh_live_preview()
+  end
+
+  # A new child at `sequence`, as "add child" puts one in: its seed form, its
+  # place in this block's list and the `:insert_child` op
+  defp put_new_child(socket, block_cs, sequence) do
+    uid = Changeset.get_field(block_cs, :uid)
+    block_form = to_change_form(block_cs, %{sequence: sequence}, socket.assigns.current_user_id)
 
     socket
     |> put_child_seed_form(uid, block_form)
     |> assign(:has_children?, true)
-    |> assign(:block_list, updated_block_list)
-    |> assign(:changesets, updated_changesets)
-    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(empty_block_cs)})
-    |> refresh_live_preview()
-    |> push_event("b:scroll_to", %{selector: selector})
-    |> then(&{:ok, &1})
+    |> assign(:block_list, List.insert_at(socket.assigns.block_list, sequence, uid))
+    |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
+    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(block_cs)})
+  end
+
+  @doc """
+  The block's `media_drop` while it takes dropped files, nil otherwise: not
+  in a synchronized translation, whose blocks follow the source, and not
+  while the block is an ancestor of the focused block, which renders only
+  the way down to it and so would show no field for a new child.
+  """
+  def media_drop_open(%{source_locked: true}), do: nil
+  def media_drop_open(%{focus_role: :ancestor}), do: nil
+  def media_drop_open(%{media_drop: media_drop}), do: media_drop
+
+  @doc """
+  Appends one child per dropped file to this multi block, in the order of
+  `kinds` (`:image` or `:video` per file), each a block of the `media_drop`
+  child module with its ref ready for the file
+  (`ContentBlocks.build_media_drop_block/5`), put in as "add child" puts
+  one in. Returns the socket and, per file, the child's uid, the id of its
+  ref's upload field (`MediaField`), which the browser hands the file to,
+  and the token that upload reports back with. The block field keeps the
+  pending drops (`BlockField`, "media_drop_pending"), so the cleanup of a
+  failed upload follows a child moved to another block.
+  """
+  def insert_media_drop_children(socket, kinds) do
+    %{module_reference: reference, ref_name: ref_name} = socket.assigns.media_drop
+
+    {socket, children} =
+      Enum.reduce(kinds, {socket, []}, fn kind, {socket, children} ->
+        block_cs =
+          ContentBlocks.build_media_drop_block(
+            reference,
+            ref_name,
+            kind,
+            socket.assigns.current_user_id,
+            socket.assigns.block_module
+          )
+
+        uid = Changeset.get_field(block_cs, :uid)
+        socket = put_new_child(socket, block_cs, length(socket.assigns.block_list))
+        child = %{uid: uid, field: media_drop_field_id(block_cs, ref_name), token: Brando.Utils.random_string(16)}
+        {socket, [child | children]}
+      end)
+
+    children = Enum.reverse(children)
+
+    send_update(BlockField,
+      id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",
+      event: "media_drop_pending",
+      children: Enum.map(children, &Map.take(&1, [:uid, :token]))
+    )
+
+    {refresh_live_preview(socket), children}
+  end
+
+  defp media_drop_field_id(block_cs, ref_name) do
+    case Enum.find(Changeset.get_assoc(block_cs, :refs, :struct), &(&1.name == ref_name)) do
+      %{uid: uid, data: %Brando.Villain.Blocks.VideoBlock{}} -> "block-#{uid}-video-upload"
+      %{uid: uid} -> "block-#{uid}-upload"
+    end
   end
 
   # The block's identity inputs — uid/type/anchor/multi/module_id/parent_id/
@@ -1595,6 +1654,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:heex_compiled_module, fn -> nil end)
     |> assign_new(:module_color, fn -> :blue end)
     |> assign_new(:module_write_with_ai, fn -> false end)
+    |> assign_new(:media_drop, fn -> nil end)
     |> assign_new(:is_datasource?, fn -> false end)
     |> assign_new(:has_table_template?, fn -> false end)
     |> assign_new(:table_template, fn -> nil end)
@@ -1622,6 +1682,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:heex_compiled_module, fn -> nil end)
         |> assign_new(:module_color, fn -> module.color end)
         |> assign_new(:module_write_with_ai, fn -> module.write_with_ai == true end)
+        |> assign_new(:media_drop, fn -> media_drop(module) end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
         |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
         |> assign_new(:table_template, fn -> module_table_template(module.table_template_id) end)
@@ -1633,6 +1694,58 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:entry_template, fn -> module.entry_template end)
         |> maybe_register_block_wanting_entry()
     end
+  end
+
+  @doc """
+  Where files dropped on a block of the multi `module` go (its `media_drop`):
+  the child module, offered as the module picker offers it, the ref, and what
+  that ref takes from an upload by kind (`MediaField.upload_policy/2`). Nil
+  for a module without the setting, or one whose child or ref is gone or
+  takes no uploads.
+  """
+  def media_drop(%{multi: true, media_drop_child: child_uid, media_drop_ref: ref_name} = module)
+      when is_binary(child_uid) and is_binary(ref_name) do
+    with %{} = child <- Enum.find(ModulePicker.child_modules(module.id), &(&1.uid == child_uid)),
+         %{data: ref_block} <- Enum.find(child.refs, &(&1.name == ref_name)),
+         kinds when kinds != %{} <- media_drop_kinds(ref_block) do
+      %{
+        module_reference: {Map.get(child, :library_origin) || :local, child.id},
+        module_name: child.name,
+        ref_name: ref_name,
+        kinds: kinds
+      }
+    else
+      _ -> nil
+    end
+  end
+
+  def media_drop(_module), do: nil
+
+  defp media_drop_kinds(%Brando.Villain.Blocks.PictureBlock{data: data}),
+    do: media_drop_policies(image: data && data.config_target)
+
+  defp media_drop_kinds(%Brando.Villain.Blocks.VideoBlock{data: data}),
+    do: media_drop_policies(video: data && data.config_target)
+
+  defp media_drop_kinds(%Brando.Villain.Blocks.MediaBlock{data: data}) do
+    available = Brando.Villain.Blocks.MediaBlock.available_blocks(data)
+
+    media_drop_policies(
+      image: "picture" in available && media_drop_template_target(data, :template_picture),
+      video: "video" in available && media_drop_template_target(data, :template_video)
+    )
+  end
+
+  defp media_drop_kinds(_ref_block), do: %{}
+
+  defp media_drop_template_target(data, key), do: get_in(data, [Access.key(key), Access.key(:config_target)]) || "default"
+
+  defp media_drop_policies(targets) do
+    for {kind, target} <- targets,
+        target != false,
+        policy = MediaField.upload_policy(kind, target || "default"),
+        into: %{},
+        do: {kind, policy}
   end
 
   defp datasource_module_label(module) do
@@ -2202,8 +2315,14 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def generate_rich_text(socket, _), do: socket
 
-  defp refresh_module_settings(%{assigns: %{module_id: module_id}} = socket, module_id) when not is_nil(module_id),
-    do: assign(socket, :module_write_with_ai, module_write_with_ai?(socket))
+  defp refresh_module_settings(%{assigns: %{module_id: module_id} = assigns} = socket, module_id)
+       when not is_nil(module_id) do
+    module = get_module(module_id, Map.get(assigns, :module_origin, :local))
+
+    socket
+    |> assign(:module_write_with_ai, match?(%{write_with_ai: true}, module))
+    |> assign(:media_drop, module && media_drop(module))
+  end
 
   defp refresh_module_settings(socket, _module_id), do: socket
 

@@ -463,15 +463,36 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   Returns the human-readable upload size limit for a field config, such as
   `"25 MB"`. Falls back to the global upload limit when the config sets none.
   """
-  def upload_limit(config) do
-    bytes =
-      case Map.get(config, :size_limit) do
-        limit when is_integer(limit) and limit > 0 -> limit
-        _ -> Uploads.max_file_size()
-      end
+  def upload_limit(config), do: config |> limit_bytes() |> size_label()
 
-    size_label(bytes)
+  defp limit_bytes(config) do
+    case Map.get(config, :size_limit) do
+      limit when is_integer(limit) and limit > 0 -> limit
+      _ -> Uploads.max_file_size()
+    end
   end
+
+  @doc """
+  What a block ref's field of `type` on `config_target` takes from an upload,
+  as `field/1` decides it for a ref (whose provider video hook the ref
+  renders): nil when it takes none, else the `extensions` intake accepts, the
+  config's `mimetypes` (nil for any, as a config's `["*"]` is) and its size
+  `limit` in bytes.
+  """
+  def upload_policy(type, config_target) when type in [:image, :video] do
+    {config, _resolved_target} = config(type, ConfigTarget.serialize(field_config_target(config_target)))
+
+    if upload_enabled?(type, config) or provider_hook_id(type, config, "provider") != nil do
+      %{
+        extensions: if(type == :image, do: Uploads.image_exts(), else: Uploads.video_exts()),
+        mimetypes: policy_mimetypes(Map.get(config, :allowed_mimetypes)),
+        limit: limit_bytes(config)
+      }
+    end
+  end
+
+  defp policy_mimetypes(["*"]), do: nil
+  defp policy_mimetypes(mimetypes), do: mimetypes
 
   defp size_label(bytes) when bytes >= 1_000_000 do
     size = bytes |> Kernel./(1_000_000) |> Float.round(1) |> Float.to_string() |> String.trim_trailing(".0")

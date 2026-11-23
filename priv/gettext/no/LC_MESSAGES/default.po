@@ -58,6 +58,16 @@ msgstr "%{browser} på %{system}"
 msgid "%{built}/%{total} built"
 msgstr "%{built}/%{total} bygget"
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "%{child} has no ref %{ref}"
+msgstr "%{child} har ingen referanse %{ref}"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "%{child} is not a child module of this module"
+msgstr "%{child} er ikke en undermodul av denne modulen"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "%{client} via MCP"
@@ -1569,6 +1579,11 @@ msgstr "En overskrift som starter en ny gruppe felter"
 #, elixir-autogen, elixir-format
 msgid "A list of entries connected to this entry. Usually this is used to link translations together for search engines."
 msgstr "Andre innlegg som er koblet sammen med dette innlegget. Vanligvis er disse koblet sammen for søkemotoroptimalisering og skifting av språk på nettsiden."
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "A media, picture or video reference of the child module."
+msgstr "En media-, bilde- eller videoreferanse i undermodulen."
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
@@ -7324,10 +7339,20 @@ msgstr "Slipp et bilde for å erstatte"
 msgid "Drop here to start a new row"
 msgstr "Slipp her for å starte en ny rad"
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Drop images and videos here, or click to choose"
+msgstr "Slipp bilder og videoer her, eller klikk for å velge"
+
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Drop images and videos here, or click to pick"
 msgstr "Slipp bilder og videoer her, eller klikk for å velge"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Drop images here, or click to choose"
+msgstr "Slipp bilder her, eller klikk for å velge"
 
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
@@ -7371,6 +7396,11 @@ msgstr "Slipp for å legge til i dette galleriet"
 msgid "Drop to replace"
 msgstr "Slipp for å erstatte"
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Drop videos here, or click to choose"
+msgstr "Slipp videoer her, eller klikk for å velge"
+
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Drop videos here, or click to pick"
@@ -7392,6 +7422,16 @@ msgstr[1] "Slettet %{count} arkiver."
 #, elixir-autogen, elixir-format
 msgid "Dropped %{keys}"
 msgstr "Forkastet %{keys}"
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped media creates"
+msgstr "Sluppede medier lager"
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped media goes in"
+msgstr "Sluppede medier legges i"
 
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/form/image_drawer.ex
@@ -7468,6 +7508,11 @@ msgstr "Dynamisk"
 #, elixir-autogen, elixir-format
 msgid "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
 msgstr "Dynamisk leveres direkte av Phoenix. Statisk krever en konfigurert SSG-bygg- og publiseringsflyt."
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Each file becomes a new %{module}"
+msgstr "Hver fil blir en ny %{module}"
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
@@ -9907,6 +9952,11 @@ msgstr "Bilder"
 #, elixir-autogen, elixir-format
 msgid "Images and videos"
 msgstr "Bilder og videoer"
+
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Images and videos dropped on this module's blocks each become a new entry of this child module."
+msgstr "Bilder og videoer som slippes på denne modulens blokker, blir hver sin nye oppføring av denne undermodulen."
 
 #: lib/brando_admin/command_palette.ex
 #, elixir-autogen, elixir-format
@@ -18942,6 +18992,11 @@ msgstr "Noen beskrivelser kunne ikke skrives"
 msgid "Some entries could not be copied."
 msgstr "Noen av oppføringene kunne ikke kopieres."
 
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "Some files were not added"
+msgstr "Noen filer ble ikke lagt til"
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some images could not be described"
@@ -20014,6 +20069,16 @@ msgstr "Sjekken kunne ikke kjøres."
 #, elixir-autogen, elixir-format
 msgid "The authenticator app was removed from %{email}. Its codes no longer log in."
 msgstr "Autentiseringsappen ble fjernet fra %{email}. Kodene fra den logger ikke lenger inn."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The block made for the file was kept, as it has been changed since."
+msgstr "Blokken som ble laget for filen, ble beholdt, siden den er endret etterpå."
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "The block made for this file shows no field for it, so it was not added."
+msgstr "Blokken som ble laget for denne filen, har ikke noe felt for den, så den ble ikke lagt til."
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -22644,6 +22709,12 @@ msgstr "Last opp en ZIP-fil for å gå gjennom endringene før eksisterende modu
 msgid "Upload anyway"
 msgstr "Last opp likevel"
 
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Upload cancelled"
+msgstr "Opplasting avbrutt"
+
+#: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
@@ -24722,6 +24793,11 @@ msgstr "taster"
 msgid "language"
 msgstr "språk"
 
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "larger than %{size}"
+msgstr "større enn %{size}"
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "last active %{date}"
@@ -24784,6 +24860,11 @@ msgstr "modul"
 #, elixir-autogen, elixir-format
 msgid "modules in this set"
 msgstr "moduler i dette settet"
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "more than %{count} files in one drop"
+msgstr "mer enn %{count} filer i ett slipp"
 
 #: lib/brando_admin/live/command_palette_live.ex
 #, elixir-autogen, elixir-format
@@ -24878,10 +24959,25 @@ msgstr "kan ikke inneholde duplikater"
 msgid "must use s3://bucket/optional-prefix"
 msgstr "må bruke s3://bøtte/valgfritt-prefiks"
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "name the child module the dropped files create"
+msgstr "velg undermodulen som sluppede filer lager"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "name the ref of %{child} the dropped files go in"
+msgstr "velg referansen i %{child} som sluppede filer legges i"
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "needs a migration"
 msgstr "trenger en migrering"
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "needs a multi module"
+msgstr "krever en multimodul"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -24962,6 +25058,11 @@ msgstr "ikke en ISO 8601-dato"
 #, elixir-autogen, elixir-format
 msgid "not an ISO 8601 duration"
 msgstr "ikke en ISO 8601-varighet"
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "not an image or video this block takes"
+msgstr "ikke et bilde eller en video denne blokken tar imot"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -25122,6 +25223,11 @@ msgstr "i kø"
 msgid "re-rendering entries"
 msgstr "gjengir oppføringer på nytt"
 
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "ref %{ref} of %{child} is a %{type} ref, not a media, picture or video ref"
+msgstr "referansen %{ref} i %{child} er en %{type}-referanse, ikke en media-, bilde- eller videoreferanse"
+
 #: lib/brando_admin/live/content/module_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "references"
@@ -25258,6 +25364,11 @@ msgstr "deretter"
 #, elixir-autogen, elixir-format
 msgid "then re-renders %{count} entries, %{live} of them live."
 msgstr "og gjengir %{count} oppføringer på nytt, %{live} av dem publisert."
+
+#: lib/brando_admin/components/form/block/events.ex
+#, elixir-autogen, elixir-format
+msgid "this block no longer takes dropped files"
+msgstr "denne blokken tar ikke lenger imot filer som slippes"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format

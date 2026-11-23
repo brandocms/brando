@@ -26,6 +26,7 @@ defmodule BrandoAdmin.UploadManager do
 
   # Finished items clear themselves; errors stay until dismissed.
   @auto_dismiss_ms 4_000
+  @max_entries 20
 
   # e2e/acceptance runs use the Ecto SQL sandbox — the manager writes to the
   # DB at consume, so it must join the test's sandbox connection like every
@@ -39,6 +40,9 @@ defmodule BrandoAdmin.UploadManager do
 
   on_mount({BrandoAdmin.UserAuth, :mount_current_user})
 
+  @doc "How many files the manager's queue takes at once."
+  def max_entries, do: @max_entries
+
   def mount(_params, _session, socket) do
     {:ok,
      socket
@@ -48,7 +52,7 @@ defmodule BrandoAdmin.UploadManager do
      |> assign(:open?, true)
      |> allow_upload(:queue,
        accept: :any,
-       max_entries: 20,
+       max_entries: @max_entries,
        # Intake applies the resolved target config's size_limit to the declared
        # size, and consuming the entry applies it to the file that arrived. This
        # larger value is the Phoenix transport backstop; using the 50 MB fallback

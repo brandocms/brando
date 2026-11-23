@@ -14,7 +14,7 @@ defmodule Brando.Content.Definitions.Release.Review do
   alias Brando.Repo
 
   @class_order [:metadata, :render, :compatible, :destructive]
-  @metadata ~w(name namespace help_text class type color svg multi datasource datasource_module datasource_type datasource_query write_with_ai table_template key global instructions allow_custom_palette palette_namespace palette)
+  @metadata ~w(name namespace help_text class type color svg multi datasource datasource_module datasource_type datasource_query write_with_ai media_drop_child media_drop_ref table_template key global instructions allow_custom_palette palette_namespace palette)
 
   @type row :: %{
           uid: String.t(),

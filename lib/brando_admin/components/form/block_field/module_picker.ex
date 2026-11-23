@@ -567,6 +567,12 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     {translated_namespace, namespace, sorted_modules}
   end
 
+  @doc """
+  The child modules the picker offers for an entry of the multi module
+  `parent_id`.
+  """
+  def child_modules(parent_id), do: list_picker_modules(%{parent_id: parent_id})
+
   defp list_picker_modules(filter) do
     modules =
       case current_site_and_prefix() do

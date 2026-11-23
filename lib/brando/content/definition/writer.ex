@@ -196,6 +196,11 @@ defmodule Brando.Content.Definition.Writer do
     table =
       if definition["table_template"], do: ["  table_template ", literal(definition["table_template"]), "\n"], else: ""
 
+    media_drop =
+      if child = definition["media_drop_child"],
+        do: ["  media_drop child: ", literal(child), ", ref: ", literal(definition["media_drop_ref"]), "\n"],
+        else: ""
+
     refs = section("refs", Enum.map(definition["refs"] || [], &ref/1))
     vars = section("vars", Enum.map(definition["vars"] || [], &var/1))
     children = section("children", Enum.map(definition["children"] || [], &["    child ", literal(&1), "\n"]))
@@ -206,13 +211,15 @@ defmodule Brando.Content.Definition.Writer do
         do: ["\n  template_file :", definition["type"], ", ", literal(Path.basename(template_name)), "\n"],
         else: ""
 
-    source = IO.iodata_to_binary([header, kind, attributes, table, refs, vars, children, colors, template, "end\n"])
+    source =
+      IO.iodata_to_binary([header, kind, attributes, table, media_drop, refs, vars, children, colors, template, "end\n"])
+
     source = source |> Code.format_string!(locals_without_parens: locals(), line_length: 100) |> IO.iodata_to_binary()
     files = [{name <> ".exs", source <> "\n"}]
     if templated?, do: files ++ [{template_name, definition["code"]}], else: files
   end
 
-  defp fields("module"), do: Model.module_fields() -- [:type, :code]
+  defp fields("module"), do: Model.module_fields() -- [:type, :code, :media_drop_child, :media_drop_ref]
   defp fields("table_template"), do: [:uid, :name]
   defp fields("palette"), do: ~w(uid name namespace key global instructions)a
   defp fields("container"), do: (Model.container_fields() -- [:type, :code]) ++ [:palette]
@@ -292,7 +299,7 @@ defmodule Brando.Content.Definition.Writer do
 
   defp locals do
     Enum.map(
-      ~w(kind uid name namespace help_text class svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query table_template description active collapsed config default assets label placeholder instructions width placement new_row options settings key global palette allow_custom_palette palette_namespace)a,
+      ~w(kind uid name namespace help_text class svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query table_template media_drop description active collapsed config default assets label placeholder instructions width placement new_row options settings key global palette allow_custom_palette palette_namespace)a,
       &{&1, 1}
     ) ++
       [ref: 2, var: 2, child: 1, color: 2, template_file: 2]

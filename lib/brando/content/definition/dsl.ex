@@ -62,6 +62,13 @@ defmodule Brando.Content.Definition.Dsl do
     color: [type: :any],
     write_with_ai: [type: :any],
     multi: [type: :any],
+    media_drop: [
+      type: :keyword_list,
+      keys: [
+        child: [type: {:or, [:atom, :string]}, required: true],
+        ref: [type: {:or, [:atom, :string]}, required: true]
+      ]
+    ],
     sequence: [type: :any],
     datasource: [type: :any],
     datasource_module: [type: :any],

@@ -19,6 +19,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
+  import Ecto.Query, only: [from: 2]
+
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
     shared_library? = socket.assigns.live_action == :shared_update
 
@@ -557,6 +559,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         {:noreply, socket}
 
       {:ok, entry} ->
+        entry = preload_children(entry)
         send(self(), {:toast, gettext("Module updated")})
         # This save may have put the module out of step with its file
         socket = socket |> assign(:entry, entry) |> assign_stale_blocks() |> assign_definition_file(fresh: true)
@@ -688,7 +691,15 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       else
         Brando.Content.get_module!(%{matches: %{id: entry_id}, preload: [:vars, :refs]})
       end
+      |> preload_children()
     end)
+  end
+
+  # With its refs, for the media drop settings and their validation
+  # (`Brando.Content.Module.validate_media_drop/1`)
+  defp preload_children(module) do
+    children = from(c in Brando.Content.Module, where: is_nil(c.deleted_at), order_by: [asc: c.sequence, asc: c.id])
+    Brando.Repo.preload(module, children: {children, [:refs]})
   end
 
   defp assign_form(%{assigns: %{entry: entry, current_user: current_user}} = socket) do

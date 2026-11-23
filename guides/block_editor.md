@@ -21,7 +21,9 @@ For exporting modules to editable Elixir DSL and importing changes back, see
   blocks. Each child is a block with `type: :module_entry`; these are distinct
   from blocks nested inside a container. An editor drags an entry to another
   block of the same multi module, an empty one too, on the canvas or in the
-  block outline; a block of another module does not take it.
+  block outline; a block of another module does not take it. A multi module
+  with a media drop (below) makes an entry for each image or video dropped on
+  its blocks.
 - **Module set** (`Brando.Content.ModuleSet`) — a named subset of modules that
   a `blocks` form field offers via `module_set:`.
 
@@ -188,6 +190,43 @@ HEEx).
 
 Modules are managed in the admin under Configuration → Modules; entries
 reference them by id, so template edits apply everywhere on next render.
+
+### Dropping media on a multi module
+
+A multi module can take images and videos dropped on its blocks. In the module
+editor, under Behavior, **Dropped media creates** names one of its child
+modules and **Dropped media goes in** one of that child's `media`, `picture`
+or `video` refs; in a definition file it is
+`media_drop child: "<child uid>", ref: :<ref name>`
+([Module definitions](module_definitions.md#children-and-table-templates)).
+
+Its blocks then show a drop zone under their entries. Each file dropped
+anywhere on the block, or chosen after clicking the zone, becomes one new
+entry of that child module, in the order dropped, with the file in the ref. A
+`media` ref takes an image as a picture and a video as a video, with the ref's
+templates for them; a `picture` ref takes only images and a `video` ref only
+videos. The files upload as a file dropped on the ref does, with the ref's
+upload config. A file the upload would refuse, by its extension, type or
+size, makes no entry and is listed to the editor, and so are the files of a
+drop the block no longer takes (its setting changed since the page opened)
+and those past the first 20 of one drop, the upload manager's batch. A file
+dropped on an entry's own ref still fills only that ref.
+
+An entry whose upload fails or is cancelled is removed again, wherever it has
+been moved since, as long as it is still exactly as the drop made it. An entry
+someone has changed in the meantime (typed in, or put a file in its ref) stays,
+and the editor is told the upload failed.
+
+The zone is not shown in a synchronized translation, whose blocks follow the
+source, nor in the frontend editor while the block is an ancestor of the block
+being edited.
+
+The setting goes stale when its child module is deleted or moved, or the ref is
+renamed or retyped in the child's editor. The block then shows no zone, the
+definition export leaves the setting out, and the System check (`mix
+brando.doctor`) names the module. The module editor shows the setting with what
+is wrong so it can be chosen again or cleared, and saves of the module's other
+fields still go through. Turning **Allow multiple entries** off clears it.
 
 <!-- usage-rules:start -->
 
