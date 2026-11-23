@@ -270,6 +270,7 @@ defmodule Brando.Authorization.Boundary do
   # A container's blocks rendered without it while it was in the trash
   defp after_restore(%{__struct__: Brando.Content.Container} = container, _trashed, _user) do
     Brando.Content.render_entries_using_container(container)
+    Brando.Content.Definitions.changed()
     {:ok, container}
   end
 

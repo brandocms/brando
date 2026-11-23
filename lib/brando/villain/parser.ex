@@ -1363,7 +1363,8 @@ defmodule Brando.Villain.Parser do
         """
         |> maybe_annotate(block.uid, opts)
 
-      {:error, {:palette, :not_found, nil}} ->
+      # None, or one in the trash
+      {:error, {:palette, :not_found, _id}} ->
         """
         <section b-section#{target_id}>
           #{children_html}

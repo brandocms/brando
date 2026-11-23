@@ -4,6 +4,8 @@ defmodule Brando.Content.ContainerPaletteChangesRenderTest do
   # render reads the cached containers and palettes.
   use Brando.ConnCase, async: false
 
+  import Brando.Test.Support, only: [preserve_cache: 1]
+
   alias Brando.Content.Palette
   alias Brando.Factory
   alias Brando.Pages.Page
@@ -18,6 +20,7 @@ defmodule Brando.Content.ContainerPaletteChangesRenderTest do
       Cachex.clear(:query)
     end)
 
+    preserve_cache([:palettes, :palettes_css])
     user = Factory.insert(:random_user)
     paper = palette!(user)
     %{user: user, paper: paper, container: container!(user, paper)}
@@ -46,6 +49,39 @@ defmodule Brando.Content.ContainerPaletteChangesRenderTest do
 
       assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
       assert rendered(page) =~ ~s(<section class="v1"><p>inside</p></section>)
+    end
+
+    test "and restoring it tells the Release changes screen", c do
+      {:ok, deleted} = Brando.Content.delete_container(c.container.id, c.user)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Content.Definitions.topic())
+
+      assert {:ok, _} = Brando.Authorization.Boundary.restore(c.user, deleted)
+      assert_received {:definitions_changed, _prefix}
+    end
+
+    test "renders the blocks without a palette when theirs is in the trash", c do
+      ink = palette!(c.user, "ink")
+      block = %{type: :container, container_id: c.container.id, palette_id: ink.id, children: [inside()]}
+      page = page!(c.user, block)
+      {:ok, _} = Brando.Content.delete_palette(ink.id, c.user)
+
+      job = queues_render(page, fn -> Brando.Content.delete_container(c.container.id, c.user) end)
+
+      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
+      html = rendered(page)
+      assert html =~ ~r{<section b-section>\s*<p>inside</p>\s*</section>}
+      refute html =~ ~s(class="v1")
+    end
+  end
+
+  describe "a section whose palette is in the trash" do
+    test "renders without a palette", c do
+      ink = palette!(c.user, "ink")
+      page = page!(c.user, %{type: :container, palette_id: ink.id, children: [inside()]})
+      {:ok, _} = Brando.Content.delete_palette(ink.id, c.user)
+
+      assert {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
+      assert rendered(page) =~ ~r{<section b-section>\s*<p>inside</p>\s*</section>}
     end
   end
 
@@ -92,13 +128,13 @@ defmodule Brando.Content.ContainerPaletteChangesRenderTest do
     containers
   end
 
-  defp palette!(user) do
+  defp palette!(user, key \\ "paper") do
     {:ok, palette} =
       Brando.Content.create_palette(
         %{
-          "name" => "Paper",
+          "name" => String.capitalize(key),
           "namespace" => "site",
-          "key" => "paper",
+          "key" => key,
           "status" => "published",
           "colors" => [%{"name" => "Background", "key" => "background", "hex_value" => "#fff9f4"}]
         },
