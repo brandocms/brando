@@ -222,6 +222,24 @@ defmodule Brando.Content.Proposals.PreviewProposalTest do
       assert body =~ ~r/Naming.*Identity/s
     end
 
+    test "a list a preview target names still gets what the Blueprint loads beneath it", c do
+      {:ok, article} =
+        Brando.SyncTest.create_article(%{title: "Article", slug: "article", language: "en", status: "published"}, c.user)
+
+      {:ok, identifier} = Brando.Content.create_identifier(Page, c.identity)
+      join = Brando.SyncTest.Article.__schema__(:association, :related_entries).related
+      Repo.insert!(struct(join, parent_id: article.id, identifier_id: identifier.id, sequence: 0))
+
+      article_target = %{"content_type" => "Brando.SyncTest.Article", "id" => article.id}
+      title = %{"op" => "set_fields", "target" => article_target, "fields" => %{"title" => "Renamed"}}
+      id = prepare!(mcp(c), [title])
+
+      for version <- ["proposed", "before"] do
+        params = %{"preview_target" => "related_named", "version" => version}
+        assert open(preview!(mcp(c), id, article_target, params)).resp_body =~ "Identity"
+      end
+    end
+
     test "two calls give two links, each working until its own expiry", c do
       id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
       first = preview!(mcp(c), id, page(c.identity))

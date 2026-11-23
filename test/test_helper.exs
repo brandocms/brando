@@ -339,6 +339,15 @@ defmodule BrandoIntegrationWeb.LivePreview do
     layout {BrandoIntegrationWeb.Layouts, "app"}
   end
 
+  # The same, with the list named by the target (PreviewProposalTest)
+  preview_target Brando.SyncTest.Article do
+    name :related_named
+    label "Related, named"
+    template {BrandoIntegrationWeb.ArticleHTML, "related"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    schema_preloads [:related_entries]
+  end
+
   # A type with a record policy (PreviewProposalTest)
   preview_target Brando.SyncPolicyTest.Article do
     template {BrandoIntegrationWeb.ArticleHTML, "titled"}

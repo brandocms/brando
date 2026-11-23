@@ -19,6 +19,7 @@ defmodule Brando.Content.Proposals.Preview do
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.Error
   alias Brando.LivePreview
+  alias Brando.Repo
 
   @doc """
   Render `target` of `proposal`.
@@ -111,29 +112,33 @@ defmodule Brando.Content.Proposals.Preview do
   # alternates. They load after the proposal's changes apply, so a media
   # field it changes shows its new picture; a list it sets keeps its rows,
   # which get what they read (an entries list's identifiers). What the
-  # preview target's own `schema_preloads` names is left to its query, which
-  # may load less (published children only).
+  # preview target's own `schema_preloads` names is loaded by its query
+  # first, which may pick fewer rows (published children only); those rows
+  # then get what the Blueprint loads beneath them (a gallery's objects).
   defp page_entry(entry, preview_target) do
-    targeted = target_preloads(entry.__struct__, preview_target)
+    entry =
+      entry.__struct__
+      |> target_preloads(preview_target)
+      |> Enum.reject(&Ecto.assoc_loaded?(Map.get(entry, preload_name(&1))))
+      |> then(&Repo.preload(entry, &1))
 
     {loaded, unloaded} =
       entry.__struct__
       |> Brando.Blueprint.preloads_for(skip_blocks: true)
-      |> Enum.reject(&(preload_name(&1) in targeted))
       |> Enum.split_with(&Ecto.assoc_loaded?(Map.get(entry, preload_name(&1))))
 
     # On the loaded rows, not through the entry: Ecto refuses a loaded list
     # on an entry without an id, as a new one is
     loaded
     |> Enum.reduce(entry, fn preload, entry ->
-      Map.update!(entry, preload_name(preload), &Brando.Repo.preload(&1, nested(preload)))
+      Map.update!(entry, preload_name(preload), &Repo.preload(&1, nested(preload)))
     end)
-    |> Brando.Repo.preload(unloaded)
+    |> Repo.preload(unloaded)
     |> Ecto.Changeset.change()
   end
 
   defp target_preloads(schema, preview_target) do
-    schema |> LivePreview.get_target_config(preview_target) |> Map.fetch!(:schema_preloads) |> Enum.map(&preload_name/1)
+    schema |> LivePreview.get_target_config(preview_target) |> Map.fetch!(:schema_preloads)
   rescue
     # An unknown target fails where the preview renders
     Brando.Exception.LivePreviewError -> []
@@ -160,7 +165,7 @@ defmodule Brando.Content.Proposals.Preview do
          :ok <- shown(proposal),
          {:ok, changeset} <- changeset(proposal, target, actor, :proposed, opts[:shared], opts[:preview_target]) do
       scope = Boundary.actor_scope(actor)
-      user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
+      user = Repo.get!(Brando.Users.User, scope.user_id)
 
       Boundary.with_scope(scope, fn ->
         LivePreview.share(changeset.data.__struct__, changeset, user, %{}, opts[:preview_target])
@@ -202,7 +207,7 @@ defmodule Brando.Content.Proposals.Preview do
              else: {:ok, proposed}
            ) do
       scope = Boundary.actor_scope(actor)
-      user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
+      user = Repo.get!(Brando.Users.User, scope.user_id)
 
       Boundary.with_scope(scope, fn ->
         LivePreview.share_proposal(changeset.data.__struct__, changeset, user, proposal.id, preview_target)
@@ -244,9 +249,7 @@ defmodule Brando.Content.Proposals.Preview do
   defp shown(%{id: id}) do
     status =
       id &&
-        Brando.Repo.one(
-          from(r in Proposals.Record, where: r.id == ^id and r.scope == ^Transfer.scope(), select: r.status)
-        )
+        Repo.one(from(r in Proposals.Record, where: r.id == ^id and r.scope == ^Transfer.scope(), select: r.status))
 
     if status in ~w(pending approved applied),
       do: :ok,
