@@ -696,6 +696,22 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert %{"id-2" => "new-" <> _} = renamed
     end
 
+    # A shared a new row, which B removed; A saved it before B's removal
+    # reached A. B's removal goes by the saved key from then on, so a save
+    # with no map of its rows (a rewrite) that still holds it leaves it out.
+    test "a new row the editor removed stays out after the save that wrote it", %{base: base} do
+      previous = Board.changeset(base, %{"quotes" => form_rows(saved_rows(base))})
+      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4", text: "Four by A"}]}
+
+      {_kept, renamed} = kept_list(saved, previous, [removed: ["new-k"]], %{"new-k" => "id-4"})
+      assert renamed == %{"new-k" => "id-4"}
+
+      edits = %{quotes: edits(removed: ["new-k"])} |> RowEdits.rename(:quotes, renamed) |> RowEdits.get(:quotes)
+      {kept, _renamed} = saved |> Changeset.change() |> RelationRows.keep_list(previous, :quotes, edits, nil)
+
+      assert kept |> Changeset.get_field(:quotes) |> Enum.map(& &1.text) == ["One", "Two", "Three"]
+    end
+
     # A map field read back from the database has string keys; the form may
     # hold the row as written, with atom keys
     test "rows compare as stored", %{base: base} do
@@ -735,6 +751,18 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert %Quote{id: "g"} = Changeset.get_field(carried, :feature)
     end
 
+    # A sent a text for the feature, which B's form took; B changed the
+    # rank. A's save has another text: B keeps the rank alone.
+    test "one keeps the fields the editor changed, not those it received", %{base: base} do
+      previous = Board.changeset(base, %{"feature" => %{"id" => "f", "text" => "Feature by A", "rank" => "2"}})
+      saved = %{base | feature: %Quote{id: "f", text: "Feature by A, on"}}
+      edits = %{RowEdits.empty() | typed: %{"id-f" => MapSet.new([:rank])}}
+
+      carried = saved |> Changeset.change() |> RelationRows.keep(previous, base, :feature, edits)
+
+      assert %Quote{text: "Feature by A, on", rank: 2} = Changeset.get_field(carried, :feature)
+    end
+
     # A required one cleared doesn't cast: the form keeps it as the editor
     # left it, with its error, rather than the saved row beside the error.
     test "a required one the editor cleared is kept as the form holds it", %{base: base} do
@@ -742,6 +770,39 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert Keyword.has_key?(previous.errors, :feature)
 
       refute RelationRows.embedded_rows?(Changeset.change(base), previous, base, :feature)
+    end
+  end
+
+  # What the form records of the editor's own edits as they make them
+  describe "RowEdits" do
+    setup do
+      [one, two, three] = for {id, text} <- [{"1", "One"}, {"2", "Two"}, {"3", "Three"}], do: %Quote{id: id, text: text}
+      %{base: %Board{id: "b", quotes: [one, two, three], feature: %Quote{id: "f", text: "Feature"}}}
+    end
+
+    test "an input in an embedded one is a field of the row the form holds", %{base: base} do
+      params = %{"feature" => %{"text" => "Feature by B"}}
+      previous = Changeset.change(base)
+      changeset = Board.changeset(base, params)
+
+      edits = RowEdits.typed(%{}, [:quotes, :feature], previous, changeset, ["board", "feature", "text"], params)
+
+      assert RowEdits.get(edits, :feature).typed == %{"id-f" => MapSet.new([:text])}
+    end
+
+    # B typed in the first and second quotes and sent them; another editor
+    # sends the first otherwise, and the second as B sent it
+    test "a field another editor sends a value of their own for is theirs", %{base: base} do
+      [one, two, three] = base.quotes
+      form = Changeset.change(%{base | quotes: [%{one | text: "One by B"}, %{two | text: "Two by B"}, three]})
+      edits = %{quotes: %{RowEdits.empty() | typed: %{"id-1" => MapSet.new([:text]), "id-2" => MapSet.new([:text])}}}
+      theirs = [%{one | text: "One by A"}, %{two | text: "Two by B"}, three]
+
+      assert RowEdits.get(RowEdits.received(edits, :quotes, form, theirs, false), :quotes).typed ==
+               %{"id-2" => MapSet.new([:text])}
+
+      # The form holds the list as it recovered it: every row they send is theirs
+      assert RowEdits.received(edits, :quotes, form, theirs, true) == %{}
     end
   end
 end

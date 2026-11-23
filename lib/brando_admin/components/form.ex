@@ -3263,11 +3263,12 @@ defmodule BrandoAdmin.Components.Form do
   #     ship; another editor's save keeps them (`take_saved_entry/1`). Marked
   #     like `unshipped_fields`, and never by a list another editor's
   #     multi-select sent (`put_received_form/2`).
-  #   * `row_edits`: the rows of each embedded list this editor changed since
-  #     the form loaded or its last save, and the fields it typed in them
-  #     (`RowEdits`): what another editor's save keeps of the list
-  #     (`RelationRows.keep_list/5`). A shipment doesn't clear it, and a
-  #     value received never enters it.
+  #   * `row_edits`: the rows of each embedded list (and embedded one) this
+  #     editor changed since the form loaded or its last save, and the fields
+  #     it typed in them (`RowEdits`): what another editor's save keeps of
+  #     the list (`RelationRows.keep_list/5`). A shipment doesn't clear it,
+  #     and a value received never enters it; a row's field another editor
+  #     sends otherwise leaves it (`receive_rows/3`).
   #   * `replaced_values`: field => values the browser may still show for a
   #     field another editor's change replaced. An event that carries one of
   #     them for a field it does not name is the browser's old form, sent
