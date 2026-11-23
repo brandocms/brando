@@ -6616,7 +6616,8 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("open_image_editor", %{"image_id" => _image_id}, socket) do
     %{edit_image: edit_image} = socket.assigns
 
-    {:noreply, push_event(socket, "b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
+    {:noreply,
+     push_event(socket, "b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
   end
 
   def handle_event(
