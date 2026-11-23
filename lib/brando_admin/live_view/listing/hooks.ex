@@ -182,9 +182,14 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
     for entry_id <- ids do
       case apply(context, :"delete_#{singular}", [entry_id, user]) do
-        {:error, :group_has_synchronized_members} -> send(self(), {:toast, synchronized_members_message(schema, entry_id)})
-        {:error, :module_in_use} -> send(self(), {:toast, module_in_use_message()})
-        _ -> :ok
+        {:error, :group_has_synchronized_members} ->
+          send(self(), {:toast, synchronized_members_message(schema, entry_id)})
+
+        {:error, :module_in_use} ->
+          send(self(), {:toast, module_in_use_message()})
+
+        _ ->
+          :ok
       end
     end
 
