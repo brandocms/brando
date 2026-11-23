@@ -192,6 +192,7 @@ export default (app) => ({
   // A click-selected file and a dropped file must therefore follow the same
   // configured-folder/current-folder/default-folder precedence.
   intake(files, handover = null) {
+    this._providerState = null
     if (this.el.dataset.uploadEnabled === 'false') {
       this.refuse(this.el.dataset.uploadUnavailable, handover)
       return
@@ -320,9 +321,10 @@ export default (app) => ({
       this._providerHook?.removeEventListener('brando:video-upload', this._onProviderUpload)
       this._onProviderUpload = ({ detail }) => {
         if (detail.ref !== this._providerRef) return
-        if (detail.status === 'uploading') this.showProgress({ status: 'uploading', progress: detail.progress })
-        else if (detail.error) this.showProgress({ status: 'error', error: detail.error })
-        else this.showProgress({ status: 'done' })
+        const state = detail.status === 'uploading' ? { status: 'uploading', progress: detail.progress } :
+          detail.error ? { status: 'error', error: detail.error } : { status: 'done' }
+        this._providerState = { state, assetId: this.el.dataset.assetId }
+        this.showProgress(state)
       }
       hook.addEventListener('brando:video-upload', this._onProviderUpload)
       this._providerHook = hook
@@ -346,7 +348,15 @@ export default (app) => ({
   subscribeProgress() {
     if (!this.el.querySelector(':scope > .media-field-progress')) return
     this._unsubscribeProgress?.()
-    this._unsubscribeProgress = subscribeToUpload(this.uploadTarget(), state => this.showProgress(state))
+    this._unsubscribeProgress = subscribeToUpload(this.uploadTarget(), state => this.showProgress(state || this.providerState()))
+  },
+
+  // What the provider last said of this field's upload, which the upload
+  // manager does not hold: shown again after a patch, until the editor
+  // uploads again or the field shows another selection
+  providerState() {
+    if (this._providerState?.assetId !== this.el.dataset.assetId) this._providerState = null
+    return this._providerState?.state || null
   },
 
   showProgress(state) {
