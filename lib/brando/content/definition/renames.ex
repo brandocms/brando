@@ -1,7 +1,7 @@
 defmodule Brando.Content.Definition.Renames do
   # How many entries and blocks one apply moves values in, for all the
   # modules it selects: see the moduledoc
-  @limit [entries: 120, blocks: 480]
+  @limit [entries: 500, blocks: 1500]
 
   @moduledoc """
   The renames a module's definition file declares (`renamed_from:` on a ref
@@ -32,7 +32,19 @@ defmodule Brando.Content.Definition.Renames do
   in more than #{@limit[:entries]} entries or #{@limit[:blocks]} blocks, counted
   across the modules one apply selects, are refused too, and their values
   are moved with `resolve --map` after an apply without the rename.
-  MEASUREMENTS
+
+  Measured on the development machine the limit was set on (pages with
+  three blocks each; from the apply's call to the end of its transaction):
+
+  | Entries | Blocks | Lock held | With fresh table statistics |
+  |---|---|---|---|
+  | 120 | 360 | 0.5–0.6 s | 0.3 s |
+  | 500 | 1500 | 1.7–1.9 s | 1.3 s |
+  | 1000 | 3000 | 5.3–5.7 s | 3.6 s |
+
+  The revisions and Activity rows are written in bulk; most of what is
+  left is each entry's content event (about 1.7 ms) and each block's sync
+  (about 0.25 ms). Raise the limit here if editors' saves may wait longer.
   """
   use Gettext, backend: Brando.Gettext
 

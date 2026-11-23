@@ -83,14 +83,21 @@ defmodule Brando.Content.BlockMoves do
   what `change` returns.
   """
   def write!(entries, user, opts, change) do
-    loaded = Map.new(entries, fn %{schema: schema, id: id} -> {{schema, id}, Repo.get!(schema, id)} end)
-    before = Map.new(loaded, fn {key, entry} -> {key, revision!(entry, user, opts[:before])} end)
+    keys = Enum.map(entries, &{&1.schema, &1.id})
+    before = revisions!(load(keys), user, false, opts[:before])
     result = change.()
+    loaded = load(keys)
+    saved = revisions!(loaded, user, true, nil)
 
-    Enum.each(loaded, fn {key, %schema{id: id}} ->
-      entry = Repo.get!(schema, id)
-      revision = revision!(entry, user, nil, true)
-      record_entry(entry, user, revision || before[key], opts[:details])
+    records =
+      for %schema{id: id} = entry <- loaded, Brando.Activity.logged?(schema) do
+        key = {schema, id}
+        {entry, revision: saved[key] || before[key], details: opts[:details]}
+      end
+
+    Brando.Activity.record_all(:updated, records, user)
+
+    Enum.each(loaded, fn entry ->
       Brando.EditSession.sync_saved(entry)
       Repo.after_commit(fn -> Brando.Cache.Query.evict({:ok, entry}) end)
     end)
@@ -98,26 +105,23 @@ defmodule Brando.Content.BlockMoves do
     result
   end
 
-  defp revision!(%schema{} = entry, user, description, active? \\ false) do
-    if schema.has_trait(Brando.Trait.Revisioned) do
-      entry |> Brando.Revisions.create_revision(user, active?) |> stored_revision!(entry, description)
+  defp load(keys) do
+    keys
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.flat_map(fn {schema, ids} -> Repo.all(from(e in schema, where: e.id in ^ids, order_by: e.id)) end)
+  end
+
+  # A revision of each entry whose schema keeps them
+  defp revisions!(entries, user, active?, description) do
+    revisioned = Enum.filter(entries, fn %schema{} -> schema.has_trait(Brando.Trait.Revisioned) end)
+
+    case Brando.Revisions.create_revisions(revisioned, user, active?, description) do
+      {:ok, revisions} ->
+        revisions
+
+      {:error, reason} ->
+        Repo.rollback(gettext("Could not store the entries' revisions: %{reason}", reason: inspect(reason)))
     end
-  end
-
-  defp stored_revision!({:ok, revision}, %schema{} = entry, description) do
-    if description, do: Brando.Revisions.describe_revision(schema, entry.id, revision.revision, description)
-    revision.revision
-  end
-
-  defp stored_revision!({:error, reason}, entry, _description),
-    do:
-      Repo.rollback(
-        gettext("Could not store a revision of %{entry}: %{reason}", entry: entry.id, reason: inspect(reason))
-      )
-
-  defp record_entry(%schema{} = entry, user, revision, details) do
-    if Brando.Activity.logged?(schema),
-      do: Brando.Activity.record(:updated, entry, user, revision: revision, details: details)
   end
 
   @doc """

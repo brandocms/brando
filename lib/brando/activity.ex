@@ -330,6 +330,45 @@ defmodule Brando.Activity do
   end
 
   @doc """
+  `record/4` for many entries at once: `records` are `{entry, opts}`. The
+  same events, inserted together.
+  """
+  def record_all(_action, [], _user), do: :ok
+
+  def record_all(action, records, user) do
+    source = source(user)
+    now = DateTime.utc_now()
+    proposal = Process.get(@proposal_key) || %{}
+
+    rows =
+      for {entry, opts} <- records do
+        Map.merge(proposal, %{
+          action: action,
+          source: source,
+          user_id: user_id(user),
+          schema: to_string(entry.__struct__),
+          entry_id: entry.id,
+          title: title(entry),
+          language: language(entry),
+          fields: Keyword.get(opts, :fields, []),
+          revision: Keyword.get(opts, :revision),
+          details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
+          batch_id: Process.get(@batch_key),
+          inserted_at: now
+        })
+      end
+
+    insert_all(rows)
+    Enum.each(records, fn {entry, opts} -> Brando.ContentEvents.activity_recorded(action, entry, source, opts) end)
+  end
+
+  defp insert_all(rows) do
+    Repo.transaction(fn -> Repo.insert_all(Event, rows) end)
+  rescue
+    error -> Logger.warning("[Brando.Activity] Could not record activity: " <> Exception.message(error))
+  end
+
+  @doc """
   Record `action` (`:created`, `:updated` or `:deleted`) on a setting that is
   not a Blueprint entry, such as a webhook. `title` names it in the log;
   `details` say what changed, never secrets. Sends no content event.

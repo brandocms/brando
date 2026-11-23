@@ -616,11 +616,11 @@ defmodule Brando.Content.DefinitionRenamesTest do
     end
 
     test "to as many blocks as an apply moves while editors' saves wait, counted before they are loaded", c do
-      bare_blocks!(c, c.module, "tagline", 480)
+      bare_blocks!(c, c.module, "tagline", 1500)
       rename_tagline!(c)
 
       assert [%{action: :migration_required, moves: %{entries: []}, reason: reason}] = plan!(c).items
-      assert reason =~ "would move values in 486 blocks,"
+      assert reason =~ "would move values in 1506 blocks,"
       assert reason =~ "mix brando.modules resolve --map var:tagline=heading"
     end
 
@@ -630,8 +630,8 @@ defmodule Brando.Content.DefinitionRenamesTest do
           vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
         )
 
-      bare_blocks!(c, c.module, "tagline", 240)
-      bare_blocks!(c, card, "title", 240)
+      bare_blocks!(c, c.module, "tagline", 750)
+      bare_blocks!(c, card, "title", 750)
 
       path = c.path <> "-limit"
       {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
@@ -652,7 +652,7 @@ defmodule Brando.Content.DefinitionRenamesTest do
       # Each module alone is within the limit; the two together are not
       items = plan!(c).items
       assert [%{action: :migration_required, reason: reason}, %{action: :migration_required}] = items
-      assert reason =~ "would move values in 486 blocks of 2 entries"
+      assert reason =~ "would move values in 1506 blocks of 2 entries"
 
       {:ok, bundle} = Definitions.read(path)
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid])
