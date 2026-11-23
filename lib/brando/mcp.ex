@@ -664,17 +664,23 @@ defmodule Brando.MCP do
   def lock_auto_apply(grant_id, kind, tenant) when is_integer(grant_id) do
     switched_on? = secure_base?() and locked_setting_enabled?(tenant)
     grant = Repo.one(from(g in Grant, where: g.id == ^grant_id, lock: "FOR UPDATE"))
+    # The site as it is now, not as the request found it
+    tenant = with %{site: %Site{id: id}} <- tenant, do: %{tenant | site: Repo.get(Site, id, prefix: "public")}
 
     cond do
       is_nil(grant) or not is_nil(grant.revoked_at) -> {:error, :revoked}
       grant_expired?(grant) -> {:error, :revoked}
       not same_grant_tenant?(grant, tenant) -> {:error, :revoked}
       not switched_on? -> {:error, :disabled}
+      not site_active?(tenant) -> {:error, :disabled}
       not can_connect?(Repo.get(User, grant.user_id), tenant) -> {:error, :forbidden}
       grant.auto_apply != kind -> {:error, :not_allowed}
       true -> {:ok, grant}
     end
   end
+
+  defp site_active?(%{site: nil, environment: nil}), do: true
+  defp site_active?(%{site: site}), do: match?(%Site{status: :active}, site)
 
   defp locked_setting_enabled?(tenant) do
     tenant

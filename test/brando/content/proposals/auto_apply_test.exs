@@ -339,6 +339,33 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert_waiting(c, prepare(c, other, [create(c.source)]), "only a connected tool")
     end
 
+    test "a site suspended after the call was authenticated applies nothing", c do
+      {:ok, site} =
+        Brando.Tenant.Registry.create_site(%{
+          name: "Other",
+          key: "other#{System.unique_integer([:positive])}",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, environment} =
+        Brando.Tenant.Registry.create_environment(site, %{name: "production", key: "production", live: true})
+
+      # The site as the request was authenticated, active then
+      tenant = MCP.tenant(site, environment) |> switch!()
+      grant = allowed!(c, site_id: site.id, environment_id: environment.id, resource: MCP.resource(tenant))
+
+      assert {:ok, {:ok, _grant}} =
+               Repo.transaction(fn -> MCP.lock_auto_apply(grant.id, AutoApply.kind(), tenant) end)
+
+      {:ok, _site} = Brando.Tenant.Registry.update_site(site, %{status: :suspended})
+
+      assert {:ok, {:error, _reason}} =
+               Repo.transaction(fn -> MCP.lock_auto_apply(grant.id, AutoApply.kind(), tenant) end)
+    end
+
     test "the Assistant and the development server never apply, whatever they pass", c do
       args = %{"summary" => "Translate", "operations" => [create(c.source)], "apply" => "if_allowed"}
 
