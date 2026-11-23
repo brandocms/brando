@@ -366,14 +366,8 @@ defmodule Brando.Content.Definition.Model do
       end
 
     case Module.media_drop_problem(children, child, ref) do
-      nil ->
-        :ok
-
-      {_field, message, keys} ->
-        text =
-          Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
-
-        Error.raise!(definition["uid"], "media_drop: " <> text)
+      nil -> :ok
+      issue -> Error.raise!(definition["uid"], "media_drop: " <> Module.describe_media_drop_issue(issue))
     end
   end
 

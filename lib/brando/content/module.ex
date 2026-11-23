@@ -36,6 +36,8 @@ defmodule Brando.Content.Module do
   import Brando.Blueprint.Listings.Components.Children, only: [children_button: 1]
   import Brando.Blueprint.Listings.Components.Core
 
+  import Ecto.Query, only: [from: 2]
+
   alias Ecto.Changeset
   alias Phoenix.LiveView.JS
 
@@ -312,41 +314,69 @@ defmodule Brando.Content.Module do
   def media_drop_ref_types, do: @media_drop_ref_types
 
   @doc """
-  Validates `media_drop_child` and `media_drop_ref`: both or neither, on a
-  multi module. When the changeset's module has its children loaded, with
-  their refs, the child must be one of them and the ref one of that child's
-  `:media`, `:picture` or `:video` refs.
+  Validates `media_drop_child` and `media_drop_ref` when this change sets
+  them (`media_drop_issue/2`), against the module's children, loaded here
+  when the caller did not. A module not yet stored has none to check the
+  child against, and is checked as far as it can be: a shared-library
+  override copies the setting without the children. Turning `multi` off
+  clears the setting. A stored setting gone stale is left for the module
+  editor to show, and never blocks a save of another field.
   """
   def validate_media_drop(changeset) do
-    child = Changeset.get_field(changeset, :media_drop_child)
-    ref = Changeset.get_field(changeset, :media_drop_ref)
-
     cond do
-      is_nil(child) and is_nil(ref) ->
-        changeset
+      Changeset.changed?(changeset, :media_drop_child) or Changeset.changed?(changeset, :media_drop_ref) ->
+        module = Changeset.apply_changes(changeset)
 
-      is_nil(child) ->
-        Changeset.add_error(changeset, :media_drop_child, "name the child module the dropped files create")
+        case media_drop_issue(module, fn -> media_drop_children(changeset.data) end) do
+          nil -> changeset
+          {field, message, keys} -> Changeset.add_error(changeset, field, message, keys)
+        end
 
-      is_nil(ref) ->
-        Changeset.add_error(changeset, :media_drop_ref, "name the ref of %{child} the dropped files go in", child: child)
-
-      Changeset.get_field(changeset, :multi) != true ->
-        Changeset.add_error(changeset, :media_drop_child, "needs a multi module")
+      Changeset.changed?(changeset, :multi) and Changeset.get_field(changeset, :multi) != true ->
+        Changeset.change(changeset, media_drop_child: nil, media_drop_ref: nil)
 
       true ->
-        validate_media_drop_target(changeset, changeset.data.children, child, ref)
+        changeset
     end
   end
 
-  defp validate_media_drop_target(changeset, children, child_uid, ref_name) when is_list(children) do
-    case media_drop_problem(Enum.reject(children, & &1.deleted_at), child_uid, ref_name) do
-      nil -> changeset
-      {field, message, keys} -> Changeset.add_error(changeset, field, message, keys)
+  # The module's children with their refs, nil for a module not yet stored
+  defp media_drop_children(%__MODULE__{id: nil}), do: nil
+
+  defp media_drop_children(%__MODULE__{} = module) do
+    children = from(c in __MODULE__, where: is_nil(c.deleted_at), order_by: [asc: c.sequence, asc: c.id])
+
+    module
+    |> Brando.Repo.preload(children: {children, [:refs]})
+    |> Map.fetch!(:children)
+    |> Enum.reject(& &1.deleted_at)
+    |> Brando.Repo.preload(:refs)
+  end
+
+  @doc """
+  What is wrong with `module`'s `media_drop` (`media_drop_child`,
+  `media_drop_ref` and `multi`) among its `children`, as `media_drop_problem/3`
+  takes them; `children` may be a function returning them, called only when
+  needed, and nil leaves the child unchecked. Returns `{field, message, keys}`,
+  or nil when nothing is wrong or nothing is set.
+  """
+  def media_drop_issue(%{media_drop_child: nil, media_drop_ref: nil}, _children), do: nil
+
+  def media_drop_issue(%{media_drop_child: child, media_drop_ref: ref} = module, children) do
+    cond do
+      is_nil(child) -> {:media_drop_child, "name the child module the dropped files create", []}
+      is_nil(ref) -> {:media_drop_ref, "name the ref of %{child} the dropped files go in", [child: child]}
+      module.multi != true -> {:media_drop_child, "needs a multi module", []}
+      true -> media_drop_target_issue(if(is_function(children, 0), do: children.(), else: children), child, ref)
     end
   end
 
-  defp validate_media_drop_target(changeset, _not_loaded, _child, _ref), do: changeset
+  defp media_drop_target_issue(nil, _child, _ref), do: nil
+  defp media_drop_target_issue(children, child, ref), do: media_drop_problem(children, child, ref)
+
+  @doc "A `media_drop_issue/2` as text, its keys filled in."
+  def describe_media_drop_issue({_field, message, keys}),
+    do: Enum.reduce(keys, message, fn {key, value}, text -> String.replace(text, "%{#{key}}", to_string(value)) end)
 
   @doc """
   What is wrong with a `media_drop` naming `child_uid` and `ref_name` among

@@ -122,6 +122,51 @@ defmodule Brando.Content.ModuleMediaDropTest do
                )
     end
 
+    test "is checked against the module's children when they are not loaded", %{user: user} do
+      {row, _card} = image_row(user)
+
+      changeset =
+        Module.changeset(Repo.get!(Module, row.id), %{media_drop_child: "quote-card", media_drop_ref: "photo"}, user)
+
+      assert [{:media_drop_child, _message, [child: "quote-card"]}] = errors(changeset)
+
+      changeset =
+        Module.changeset(Repo.get!(Module, row.id), %{media_drop_child: "image-card", media_drop_ref: "photo"}, user)
+
+      assert changeset.valid?, inspect(changeset.errors)
+    end
+
+    test "turning multi off clears it", %{user: user} do
+      {row, _card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "photo"})
+      changeset = Module.changeset(editor_module(row), %{multi: false}, user)
+
+      assert changeset.valid?, inspect(changeset.errors)
+      assert {:ok, %{multi: false, media_drop_child: nil, media_drop_ref: nil}} = Repo.update(changeset)
+    end
+
+    test "a stale setting does not block a save of another field", %{user: user} do
+      {row, card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "photo"})
+      Repo.soft_delete!(card)
+
+      changeset = Module.changeset(editor_module(row), %{class: "image-row-renamed"}, user)
+      assert changeset.valid?, inspect(changeset.errors)
+      assert {:ok, %{class: "image-row-renamed", media_drop_child: "image-card"}} = Repo.update(changeset)
+    end
+
+    test "names what is stale in a stored setting", %{user: user} do
+      {row, card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "photo"})
+      assert Module.media_drop_issue(editor_module(row), editor_module(row).children) == nil
+
+      Repo.soft_delete!(card)
+      module = editor_module(row)
+
+      assert {:media_drop_child, "%{child} is not a child module of this module", [child: "image-card"]} =
+               Module.media_drop_issue(module, module.children)
+
+      assert Module.describe_media_drop_issue(Module.media_drop_issue(module, module.children)) ==
+               "image-card is not a child module of this module"
+    end
+
     test "cleared, both go", %{user: user} do
       {row, _card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "photo"})
       changeset = Module.changeset(editor_module(row), %{media_drop_child: "", media_drop_ref: ""}, user)
@@ -181,6 +226,38 @@ defmodule Brando.Content.ModuleMediaDropTest do
       assert {:ok, plan} = Definitions.plan(changed, user)
       assert {:ok, _} = Definitions.apply(plan, user)
       assert Repo.get_by!(Module, uid: "image-row").media_drop_ref == "photo"
+    end
+
+    test "leave out a setting gone stale, so the export still reads and plans as a noop",
+         %{user: user, directory: directory} do
+      {_row, card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "visual"})
+
+      # The ref is renamed in the child's editor: the parent's setting names a ref that is gone
+      card = Repo.preload(card, :refs)
+      visual = Enum.find(card.refs, &(&1.name == "visual"))
+      Repo.update!(Ecto.Changeset.change(visual, name: "picture"))
+
+      assert {:ok, exported} = Definitions.export(directory, user, uids: ["image-row"])
+      sources = for file <- exported.files, String.ends_with?(file, ".exs"), do: File.read!(Path.join(directory, file))
+      refute Enum.any?(sources, &(&1 =~ "media_drop"))
+
+      assert {:ok, bundle} = Definitions.read(directory)
+      assert %{"media_drop_child" => nil, "media_drop_ref" => nil} = row_definition(bundle)
+      assert {:ok, %{items: items}} = Definitions.plan(bundle, user)
+      assert Enum.all?(items, &(&1.action == :noop))
+
+      # The stored setting is left as it is
+      assert %{media_drop_child: "image-card", media_drop_ref: "visual"} = Repo.get_by!(Module, uid: "image-row")
+    end
+
+    test "leave out a setting on a module no longer multi", %{user: user, directory: directory} do
+      {row, _card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "visual"})
+      Repo.update_all(from(m in Module, where: m.id == ^row.id), set: [multi: false])
+      Repo.update_all(from(m in Module, where: m.parent_id == ^row.id), set: [parent_id: nil])
+
+      assert {:ok, _exported} = Definitions.export(directory, user, uids: ["image-row"])
+      assert {:ok, bundle} = Definitions.read(directory)
+      assert %{"media_drop_child" => nil, "media_drop_ref" => nil} = row_definition(bundle)
     end
 
     test "are refused with a message naming a child the module does not have, or a ref that is no media ref",

@@ -43,7 +43,9 @@ defmodule Brando.Content.Definition.Snapshot do
         children = Enum.filter(modules, &(&1.parent_id == module.id)) |> Enum.map(& &1.uid)
 
         definition =
-          Model.module_record(module)
+          module
+          |> without_stale_media_drop(modules)
+          |> Model.module_record()
           |> Map.merge(%{
             "refs" => refs,
             "vars" => vars,
@@ -74,6 +76,18 @@ defmodule Brando.Content.Definition.Snapshot do
     bundle = Model.canonicalize(bundle)
     bundle = Map.put(bundle, "baseline", baselines(bundle))
     {bundle, %{modules: Map.new(modules, &{&1.uid, &1}), tables: Map.new(tables, &{&1.uid, &1})}}
+  end
+
+  # A `media_drop` its child module no longer fits (the child deleted or
+  # moved, its ref renamed or retyped, the module no longer multi) is left
+  # out, as if unset: the module renders no drop zone, an import of the
+  # export plans a noop, and `Brando.Doctor.Checks.ModuleMediaDrop` names it.
+  defp without_stale_media_drop(module, modules) do
+    children = Enum.filter(modules, &(&1.parent_id == module.id))
+
+    if Module.media_drop_issue(module, children),
+      do: %{module | media_drop_child: nil, media_drop_ref: nil},
+      else: module
   end
 
   # Version 2 digests leave empty values out, so a field added to a block type

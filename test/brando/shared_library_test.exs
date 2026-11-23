@@ -194,6 +194,19 @@ defmodule Brando.Content.SharedLibraryTest do
     assert override.write_with_ai
   end
 
+  test "module customization keeps a media drop setting it has no children to check against",
+       %{site: site, user: user} do
+    attrs =
+      "Shared image row"
+      |> module_attrs()
+      |> Map.merge(%{multi: true, media_drop_child: "image-card", media_drop_ref: "photo"})
+
+    assert {:ok, shared} = SharedLibrary.create_shared(:module, attrs, user)
+    assert :ok = SharedLibrary.enable(site, :module, shared.id)
+    assert {:ok, override} = SharedLibrary.customize(:module, shared.id, site, @prefix, user)
+    assert {override.media_drop_child, override.media_drop_ref} == {"image-card", "photo"}
+  end
+
   test "origin-qualified block fields round-trip independently from integer IDs" do
     changeset =
       Block.block_changeset(
