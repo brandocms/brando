@@ -64,7 +64,8 @@ defmodule Brando.Villain.Tags.RouteI18n do
   defp prepare_args(args, context, function, action) do
     evaled_args =
       args
-      |> Enum.map(&TemplateView.eval(&1, context))
+      # A path helper encodes them: read as typed (`TemplateView.eval_typed/2`)
+      |> Enum.map(&TemplateView.eval_typed(&1, context))
       |> Enum.reject(&(&1 == nil))
 
     if function == "page_path" and action == "show" do

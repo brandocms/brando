@@ -33,7 +33,7 @@ defmodule Brando.Villain.LiquexParser.Builder do
       ]
 
       built_in_tags = [
-        {Liquex.Tag.AssignTag, built_in_parser.("Simple"), :assign, :assign_liquid},
+        {tag_module.("Assign"), built_in_parser.("Simple"), :assign, :assign_liquid},
         {Liquex.Tag.BreakTag, built_in_parser.("Simple"), :break, :break_liquid},
         {Liquex.Tag.CaptureTag, built_in_parser.("Blocks"), :capture, nil},
         {Liquex.Tag.CaseTag, built_in_parser.("Conditionals"), :case_tag, :case_liquid},

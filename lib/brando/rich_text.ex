@@ -228,34 +228,46 @@ defmodule Brando.RichText do
   `:rich_text` input. When forms disagree on a field, the default form
   decides, and a field it does not draw is not rich text.
 
+  Nil when no form of `module` has a subform on `relation` that draws the
+  rows' fields (one a component draws, with no fields of its own, does
+  not): its rows print by their own schema's forms.
+
   A save checks rows by other rules: the default form
   (`validate_blueprint/2`), and the form it comes from (`validate_form/2`).
   """
-  @spec row_fields_for_printing(module(), atom() | String.t()) :: [atom()]
+  @spec row_fields_for_printing(module(), atom() | String.t()) :: [atom()] | nil
   def row_fields_for_printing(module, relation) when is_atom(module) do
-    if function_exported?(module, :__forms__, 0) do
-      relation = to_string(relation)
-      inputs = for form <- module.__forms__(), input <- subform_inputs(form, relation), do: input
+    relation = to_string(relation)
+    forms = if function_exported?(module, :__forms__, 0), do: module.__forms__(), else: []
+
+    if Enum.any?(forms, &(subforms(&1, relation) != [])) do
+      inputs = for form <- forms, input <- subform_inputs(form, relation), do: input
 
       default = if function_exported?(module, :__form__, 0), do: module.__form__(), else: nil
       default_rich = for {name, :rich_text} <- subform_inputs(default, relation), do: name
       Enum.uniq(default_rich ++ rich_everywhere(inputs))
-    else
-      []
     end
   end
 
-  # `{name, type}` for each input in a form's subforms on `relation`
-  defp subform_inputs(%{tabs: tabs}, relation) do
+  # A form's subforms on `relation` that draw their rows' fields: one a
+  # component draws, with no fields of its own, gives no rule
+  defp subforms(%{tabs: tabs}, relation) do
     for tab <- tabs,
         fieldset <- tab.fields,
-        %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields} <- Map.get(fieldset, :fields, []),
+        %Brando.Blueprint.Forms.Subform{name: name} = subform <- Map.get(fieldset, :fields, []),
         Atom.to_string(name) == relation,
+        not match?(%{component: component, sub_fields: []} when not is_nil(component), subform),
+        do: subform
+  end
+
+  defp subforms(_form, _relation), do: []
+
+  # `{name, type}` for each input in a form's subforms on `relation`
+  defp subform_inputs(form, relation) do
+    for %Brando.Blueprint.Forms.Subform{sub_fields: sub_fields} <- subforms(form, relation),
         %Brando.Blueprint.Forms.Input{type: type, name: field} <- sub_fields,
         do: {field, type}
   end
-
-  defp subform_inputs(_form, _relation), do: []
 
   # The names among `{name, type}` inputs drawn only as `:rich_text`, sorted
   defp rich_everywhere(inputs) do

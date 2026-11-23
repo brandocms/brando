@@ -28,9 +28,15 @@ defmodule Brando.Villain.LiquexParserTest do
     for template <- templates do
       assert {:ok, expected} = Liquex.parse(template, Liquex.Parser.Base)
       assert {:ok, parsed} = Liquex.parse(template, LiquexParser)
-      assert Output.unwrap(parsed) == expected
+      assert Output.unwrap(parsed) == with_brando_renderers(expected)
     end
   end
+
+  # Brando renders `assign` with its own tag, on Liquex's grammar
+  defp with_brando_renderers({:tag, Liquex.Tag.AssignTag}), do: {:tag, Brando.Villain.Tags.Assign}
+  defp with_brando_renderers(list) when is_list(list), do: Enum.map(list, &with_brando_renderers/1)
+  defp with_brando_renderers({key, value}), do: {with_brando_renderers(key), with_brando_renderers(value)}
+  defp with_brando_renderers(other), do: other
 
   test "a tag knows whether template text comes right before and after it" do
     template = ~S(a{{ x }}{{ y }}{% if z %}{% echo w %}b{% endif %})

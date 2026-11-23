@@ -16,6 +16,11 @@ defmodule Brando.Villain.Tags.Picture do
   alias Brando.Villain.LiquexParser.TagGrammar
   alias Brando.Villain.TemplateView
 
+  # Read as typed and escaped where printed (`TemplateView.eval_typed/2`)
+  @typed_options ~w(alt)
+  # Printed as markup, so read as `{{ }}` reads them (`TemplateView.eval_markup/2`)
+  @markup_options ~w(caption)
+
   @impl true
   def parse, do: TagGrammar.parse(:picture)
 
@@ -25,7 +30,7 @@ defmodule Brando.Villain.Tags.Picture do
 
     evaled_args =
       Enum.map(args, fn arg ->
-        {key, val} = TemplateView.eval(arg, context)
+        {key, val} = eval_option(arg, context)
         {String.to_existing_atom(key), val}
       end)
 
@@ -43,4 +48,12 @@ defmodule Brando.Villain.Tags.Picture do
 
     {[html], context}
   end
+
+  defp eval_option({:keyword, [key, _]} = arg, context) when key in @typed_options,
+    do: TemplateView.eval_typed(arg, context)
+
+  defp eval_option({:keyword, [key, _]} = arg, context) when key in @markup_options,
+    do: TemplateView.eval_markup(arg, context)
+
+  defp eval_option(arg, context), do: TemplateView.eval(arg, context)
 end

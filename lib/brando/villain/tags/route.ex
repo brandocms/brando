@@ -18,7 +18,8 @@ defmodule Brando.Villain.Tags.Route do
   # that exist: an atom made from it would never be freed.
   @impl true
   def render([function: function, action: action, args: args], context) do
-    evaled_args = Enum.map(args, &TemplateView.eval(&1, context))
+    # A path helper encodes them: read as typed (`TemplateView.eval_typed/2`)
+    evaled_args = Enum.map(args, &TemplateView.eval_typed(&1, context))
 
     evaled_args =
       if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args

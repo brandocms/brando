@@ -25,12 +25,13 @@ defmodule Brando.HTML.Video do
     - `aspect_ratio`
     - `caption` -> `true` resolves to `opts[:title]`, then the record's caption
       or title, which print as text or sanitized rich text; a string, like
-      `opts[:title]`, is the template's markup and prints as it is
+      `opts[:title]`, is markup and prints as it is (the `{% video %}` tag
+      passes a plain field's text escaped)
     - `progress`
     - `play_button` -> `true`, or a string to use as the button's label
-    - `opacity` -> background opacity of the `:svg` cover
-    - `width`
-    - `height`
+    - `opacity` -> background opacity of the `:svg` cover, a number
+    - `width`, `height` -> the `<video>`'s attributes as given; the `:svg`
+      cover takes a number, and the ratio's size for anything else
     - `quality` -> `:auto`, `:hls` or `:mp4_270` to `:mp4_2160`: whether a
       Bunny or Mux video streams or plays an MP4, see `Brando.Videos.Playback`
 
@@ -302,7 +303,7 @@ defmodule Brando.HTML.Video do
       |> assign(:src, src)
       |> assign(:loop, setting(opts, video, :loop, true))
       |> assign(:play_button, play_button)
-      |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
+      |> assign(:video_cover, get_video_cover(cover, cover_size({width, height}, aspect_ratio), opacity))
       |> assign(:caption, caption(opts, video))
       |> assign_new(:cover, fn -> nil end)
 
@@ -379,6 +380,25 @@ defmodule Brando.HTML.Video do
     opts
     |> Keyword.fetch(key)
     |> from_opts_or_record(video, key, default)
+  end
+
+  # The cover builds its markup by hand: a size or opacity goes in as a number,
+  # from text holding one, and as the default (a size from the ratio) otherwise
+  defp cover_size({width, height}, aspect_ratio) do
+    {ratio_width, ratio_height} = fallback_dimensions(aspect_ratio)
+    {number(width, ratio_width), number(height, ratio_height)}
+  end
+
+  defp number(number, _default) when is_number(number), do: number
+  defp number(text, default) when is_binary(text), do: parse_number(String.trim(text), default)
+  defp number(_value, default), do: default
+
+  defp parse_number(text, default) do
+    case {Integer.parse(text), Float.parse(text)} do
+      {{integer, ""}, _} -> integer
+      {_, {float, ""}} -> float
+      _ -> default
+    end
   end
 
   defp from_opts_or_record({:ok, value}, _video, _key, _default), do: value
@@ -538,7 +558,9 @@ defmodule Brando.HTML.Video do
   defp validate_poster("http" <> _ = url), do: url
   defp validate_poster(_), do: false
 
-  defp get_video_cover(:svg, width, height, opacity) do
+  defp get_video_cover(:svg, {width, height}, opacity) do
+    opacity = number(opacity, 0)
+
     if width do
       ~s(
          <div data-cover aria-hidden="true">
@@ -556,22 +578,22 @@ defmodule Brando.HTML.Video do
 
   # The editor stores `cover` as a string ("false" or "svg"), so the block's own
   # setting arrives as "svg" where a template would pass :svg.
-  defp get_video_cover("svg", width, height, opacity), do: get_video_cover(:svg, width, height, opacity)
+  defp get_video_cover("svg", size, opacity), do: get_video_cover(:svg, size, opacity)
 
-  defp get_video_cover("true", _, _, _), do: nil
-  defp get_video_cover(true, _, _, _), do: nil
-  defp get_video_cover("false", _, _, _), do: nil
-  defp get_video_cover(false, _, _, _), do: nil
-  defp get_video_cover(nil, _, _, _), do: nil
+  defp get_video_cover("true", _, _), do: nil
+  defp get_video_cover(true, _, _), do: nil
+  defp get_video_cover("false", _, _), do: nil
+  defp get_video_cover(false, _, _), do: nil
+  defp get_video_cover(nil, _, _), do: nil
 
   # Any other string, such as the thumbnail URL a Villain-era block could hold,
   # gets the placeholder Brando drew for it before 0.54, rather than being
   # printed as text. Markup a template passes (`Phoenix.HTML.raw/1`, a
   # rendered component) is used as it is.
-  defp get_video_cover(cover, width, height, opacity) when is_binary(cover),
-    do: get_video_cover(:svg, width, height, opacity)
+  defp get_video_cover(cover, size, opacity) when is_binary(cover),
+    do: get_video_cover(:svg, size, opacity)
 
-  defp get_video_cover(html, _, _, _), do: html
+  defp get_video_cover(html, _, _), do: html
 
   defp get_play_button(false), do: Phoenix.HTML.raw("")
 

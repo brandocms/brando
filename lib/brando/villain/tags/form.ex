@@ -40,7 +40,7 @@ defmodule Brando.Villain.Tags.Form do
 
     case resolve(evaled_source, language) do
       nil ->
-        {["<!-- form #{inspect(key_of(evaled_source))} is not published in #{language} -->"], context}
+        {["<!-- form #{comment_key(key_of(evaled_source))} is not published in #{language} -->"], context}
 
       form ->
         assigns =
@@ -61,6 +61,10 @@ defmodule Brando.Villain.Tags.Form do
       key -> Forms.get_published_form(key, language)
     end
   end
+
+  # Escaped: no key closes the comment or starts Liquid in the final pass
+  defp comment_key(nil), do: "nil"
+  defp comment_key(key), do: ~s("#{Brando.Villain.Parser.escape_var_value(key)}")
 
   defp key_of(%Brando.Forms.Form{key: key}), do: key
   defp key_of(key) when is_binary(key) and key != "", do: key
