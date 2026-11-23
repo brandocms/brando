@@ -123,15 +123,15 @@ defmodule Brando.FrontendEdit.Fields do
   defp humanize(field), do: field |> to_string() |> Phoenix.Naming.humanize()
 
   @doc """
-  The field's value as HTML, as `{{ }}` prints it: a field the entry's forms
-  print as rich text (`Brando.RichText.fields_for_printing/1`) sanitized
+  The field's value as HTML, as `{{ }}` prints it: a field it prints as rich
+  text (`Brando.Villain.TemplateView.rich_text_fields/2`) sanitized
   (`Brando.Villain.TemplateView.sanitize_rich_text/1`), anything else
   escaped. Media and relations have no value to print; mark the markup that
   shows them with `editable` instead.
   """
   @spec render_value(map(), atom()) :: iodata()
-  def render_value(%{__struct__: schema} = entry, field),
-    do: render_value(entry, field, Brando.RichText.fields_for_printing(schema))
+  def render_value(%{__struct__: _} = entry, field),
+    do: render_value(entry, field, TemplateView.rich_text_fields(entry, nil))
 
   def render_value(entry, field) when is_map(entry), do: entry |> Map.get(field) |> to_string_or_empty() |> escape()
 

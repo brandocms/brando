@@ -59,6 +59,21 @@ defmodule Brando.FrontendEdit.FieldsTest do
       assert Brando.Villain.parse_and_render("{% editable_field entry.intro %}", context) == printed
       assert render_component(&Brando.HTML.editable_field/1, entry: entry, field: :intro) == printed
     end
+
+    # The values Liquid prints as rich text without a form drawing them so
+    test "print a text block's text and a rich-text var's value as {{ }} prints them" do
+      html = "<p><em>Hello</em></p>"
+
+      for {value, field} <- [
+            {%Brando.Villain.Blocks.TextBlock.Data{text: html}, :text},
+            {%Brando.Content.Var{type: :rich_text, value: html}, :value}
+          ] do
+        printed = Brando.Villain.parse_and_render("{{ entry.#{field} }}", Brando.Villain.get_base_context(value))
+        assert printed == html
+        assert IO.iodata_to_binary(Fields.render_value(value, field)) == printed
+        assert render_component(&Brando.HTML.editable_field/1, entry: value, field: field) == printed
+      end
+    end
   end
 
   describe "components" do

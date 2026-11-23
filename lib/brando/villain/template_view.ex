@@ -755,16 +755,20 @@ defmodule Brando.Villain.TemplateView do
       to_string(key) in Enum.map(struct.__blocks_fields__(), &"rendered_#{&1.name}")
   end
 
-  defp rich_text?(%TextBlock.Data{}, key, _rich), do: to_string(key) == "text"
+  defp rich_text?(value, key, rich), do: to_string(key) in Enum.map(rich_text_fields(value, rich), &Atom.to_string/1)
 
-  defp rich_text?(%Var{type: type}, key, _rich) when type in [:rich_text, :html], do: to_string(key) == "value"
-
-  # A field the default form draws as rich text, or only named forms do
-  defp rich_text?(%struct{}, key, nil),
-    do: to_string(key) in Enum.map(Brando.RichText.fields_for_printing(struct), &Atom.to_string/1)
-
-  # A subform row's field by its owner's forms alone (`with_rich_rows/3`)
-  defp rich_text?(_row, key, rich), do: to_string(key) in Enum.map(rich, &Atom.to_string/1)
+  @doc """
+  The fields of `value` that `{{ }}` prints as rich text: a text block's
+  `text`, a rich-text var's `value`, the fields a record's default form draws
+  as rich text or only named forms do (`Brando.RichText.fields_for_printing/1`),
+  and of a subform row read through its owner, `rich`: those its owner's forms
+  draw so (`with_rich_rows/3`).
+  """
+  @spec rich_text_fields(struct(), [atom()] | nil) :: [atom()]
+  def rich_text_fields(%TextBlock.Data{}, _rich), do: [:text]
+  def rich_text_fields(%Var{type: type}, _rich) when type in [:rich_text, :html], do: [:value]
+  def rich_text_fields(%struct{}, nil), do: Brando.RichText.fields_for_printing(struct)
+  def rich_text_fields(_row, rich), do: rich
 
   # Decoded first, as a heading is: a character reference typed into a title
   # (`&shy;`) is the character it names, and text escaped already stays as it is.
