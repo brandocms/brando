@@ -1,0 +1,1 @@
+- "Save as new copy" in the image editor opened from an image field's drawer gives a copy with the original's focal point and focal mode, not one cut around the centre.

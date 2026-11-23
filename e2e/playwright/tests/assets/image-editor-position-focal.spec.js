@@ -86,8 +86,10 @@ async function uploadSource(page, name) {
 }
 
 // The same file as an image whose focal point is in position mode, as the
-// Figma import sets it, on a project whose form is then open.
+// Figma import sets it (or in the mode `focal` names), on a project whose form
+// is then open.
 async function openOnPositionImage(page, { client, source }, focal, slug) {
+  const mode = focal.mode ?? 'position'
   const path = new URL(source.image_src, page.url()).pathname.replace(/^\/media\//, '')
   const image = await factory(page, 'Brando.Images.Image', {
     path,
@@ -97,7 +99,7 @@ async function openOnPositionImage(page, { client, source }, focal, slug) {
     height: source.image_height,
     config_target: source.config_target,
     status: 'processed',
-    focal: { x: focal.x, y: focal.y, mode: 'position' },
+    focal: { x: focal.x, y: focal.y, mode },
   })
   const project = await factory(page, 'E2eProject.Projects.Project', {
     title: slug, slug, client_id: client.id, listing_image_id: image.id,
@@ -108,7 +110,7 @@ async function openOnPositionImage(page, { client, source }, focal, slug) {
   await syncLV(page)
   await recordEditorPayloads(page)
   await openEditor(page)
-  expect(await lastEditorPayload(page)).toMatchObject({ image_id: image.id, focal_x: focal.x, focal_y: focal.y, focal_mode: 'position' })
+  expect(await lastEditorPayload(page)).toMatchObject({ image_id: image.id, focal_x: focal.x, focal_y: focal.y, focal_mode: mode })
   return image
 }
 
@@ -131,6 +133,29 @@ async function reopenAfterSave(page) {
   await recordEditorPayloads(page)
   await openEditor(page)
   return lastEditorPayload(page)
+}
+
+// "Save as new copy" from the image drawer: the field takes the copy. Saved
+// with the entry, the copy is read back from the database.
+async function copyAndReopen(page, original) {
+  const details = page.getByRole('dialog', { name: 'Image details', exact: true })
+  const preview = page.locator('#image-drawer-form-preview')
+  await page.locator('#image-editor-save-new').click()
+  await expect(page.locator('#image-editor-drawer')).toBeHidden()
+  await expect(preview).not.toHaveAttribute('data-asset-id', String(original.id), { timeout: 30000 })
+  const copyId = Number(await preview.getAttribute('data-asset-id'))
+  await syncLV(page, 30000)
+  await details.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(details).toBeHidden()
+
+  const entry = page.url()
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL(/\/admin\/projects\/projects$/, { timeout: 30000 })
+  await page.goto(entry)
+  await syncLV(page)
+  await recordEditorPayloads(page)
+  await openEditor(page)
+  return { copyId, payload: await lastEditorPayload(page) }
 }
 
 // The 3:2 frame is 260 × 173 of the 292 × 173 image: 32 columns to move in.
@@ -241,4 +266,18 @@ test('a position-mode image is saved in the mode the editor shows', async ({ pag
   expect(await reopenAfterSave(page)).toMatchObject({
     image_id: zoomed.id, image_width: 130, image_height: 87, focal_x: 75, focal_y: 0, focal_mode: 'position',
   })
+})
+
+test('Save as new copy from the image drawer keeps the point and its mode', async ({ page }) => {
+  test.setTimeout(180000)
+
+  const uploaded = await uploadSource(page, 'PosFocalCopy')
+
+  const placed = await openOnPositionImage(page, uploaded, { x: 75, y: 0 }, 'posfocalcopy')
+  const placedCopy = await copyAndReopen(page, placed)
+  expect(placedCopy.payload).toMatchObject({ image_id: placedCopy.copyId, focal_x: 75, focal_y: 0, focal_mode: 'position' })
+
+  const centred = await openOnPositionImage(page, uploaded, { x: 20, y: 30, mode: 'center' }, 'centrefocalcopy')
+  const centredCopy = await copyAndReopen(page, centred)
+  expect(centredCopy.payload).toMatchObject({ image_id: centredCopy.copyId, focal_x: 20, focal_y: 30, focal_mode: 'center' })
 })
