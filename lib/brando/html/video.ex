@@ -25,10 +25,11 @@ defmodule Brando.HTML.Video do
     - `aspect_ratio`
     - `caption` -> `true` resolves to `opts[:title]`, then the record's caption
       or title, which print as text or sanitized rich text; a string, like
-      `opts[:title]`, is the template's markup and prints as it is
+      `opts[:title]`, is markup and prints as it is (the `{% video %}` tag
+      passes a plain field's text escaped)
     - `progress`
     - `play_button` -> `true`, or a string to use as the button's label
-    - `opacity` -> background opacity of the `:svg` cover
+    - `opacity` -> background opacity of the `:svg` cover, a number
     - `width`
     - `height`
     - `quality` -> `:auto`, `:hls` or `:mp4_270` to `:mp4_2160`: whether a

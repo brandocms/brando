@@ -666,7 +666,10 @@ forms draw as rich text prints as text when the owner's subform draws it as
 plain text. Draw it as `:rich_text` in the owner's subform to print its
 markup. The same record printed as an entry of its own (in its own listing or
 detail template), or reached through a relation no form of the owner has a
-subform on, prints by its own schema's forms.
+subform on, prints by its own schema's forms; so do the rows of a subform a
+component draws (`component` with no inputs). A record reached through two
+owners and combined in one list (`concat`) prints a field as rich text only
+when both owners' subforms do.
 
 Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `h4`, `list`, `orderedList`, `link`, `button`, `bold`, `italic`, `sub`,
