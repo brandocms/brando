@@ -129,11 +129,12 @@ defmodule Brando.Content.Proposals.AutoApply do
         dgettext("content_proposals", "It was not applied automatically: %{reason} It waits for review.", reason: message)
   end
 
-  # What is stored decides. Under review still: the reason is kept on that
-  # version, apart from its problems.
+  # What is stored decides. Waiting still: the reason is kept on that
+  # version, apart from its problems. One a person approved meanwhile is
+  # theirs to apply, so it is settled and is given no reason to wait.
   defp outcome(id, version, grant_id, reason) do
     case Repo.update_all(
-           from(r in Record, where: r.id == ^id and r.version == ^version and r.status in ~w(pending approved)),
+           from(r in Record, where: r.id == ^id and r.version == ^version and r.status == "pending"),
            set: [auto_apply_reason: reason]
          ) do
       {1, _} -> {:waiting, reason}

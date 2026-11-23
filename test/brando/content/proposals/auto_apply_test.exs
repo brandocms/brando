@@ -463,6 +463,15 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert [%{not_applied: ^reason}] = listed(c, grant)
     end
 
+    test "one a person approved meanwhile is settled, and is given no reason to wait", c do
+      id = prepare(c, grant!(c.user, c.tenant), [create(c.source)])["proposal_id"]
+      before = record(id).auto_apply_reason
+      {:ok, _} = Brando.Content.Proposals.approve(id, 1, c.user)
+
+      assert {:settled, "approved", _reason} = Brando.Content.Proposals.AutoApply.with_problems(id, 1)
+      assert record(id).auto_apply_reason == before
+    end
+
     test "a waiting proposal is not one with problems: the tool's next proposal leaves it alone", c do
       waiting = prepare(c, grant!(c.user, c.tenant), [create(c.source)])
       other = article!(c.user, c.module)
