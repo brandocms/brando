@@ -103,6 +103,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
     {usages, hidden} = module |> Brando.Content.list_entries_using_module() |> Usage.describe() |> Usage.split()
     count = length(usages) + hidden
+    # The same page in two languages has one title
+    usages = Enum.map(usages, &with_language/1)
 
     in_use =
       case usages do
@@ -282,6 +284,11 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
           )
     end
   end
+
+  defp with_language(%{language: language, label: label} = usage) when not is_nil(language),
+    do: %{usage | label: "#{label} [#{language |> to_string() |> String.upcase()}]"}
+
+  defp with_language(usage), do: usage
 
   # The first few places, linked where they have an admin page, and a count
   # of the rest

@@ -20,7 +20,7 @@ defmodule BrandoAdmin.ModuleDeleteLiveTest do
     render_hook(view, "describe_delete", %{"id" => to_string(c.module.id)})
     assert_reply(view, %{refused: true, html: html})
     assert html =~ ~s(href="/admin/pages/update/#{page.id}")
-    assert html =~ "Front page"
+    assert html =~ "Front page [EN]"
 
     render_click(view, "delete_entry", %{"id" => to_string(c.module.id)})
     assert %{deleted_at: nil} = Repo.get!(Module, c.module.id)
