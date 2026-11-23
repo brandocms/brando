@@ -35,7 +35,7 @@ defmodule Brando.Drafts.Restore do
     blocks
     |> Map.keys()
     |> Enum.reduce(changeset, &put_block_field(&2, &1, blocks[&1], entry, schema, user))
-    |> load_moved_relations_below()
+    |> load_moved_relations()
   end
 
   # Each row is cast onto the saved row it restores, which keeps that row's
@@ -43,41 +43,65 @@ defmodule Brando.Drafts.Restore do
   # entry still holds the identifier it was saved with, and a render reads
   # that. A relation whose key the changeset changes is loaded again, at the
   # new key, with the preloads its schema declares (`Var.preloads/0`,
-  # `Ref.preloads/0`), or as deep as the saved one was loaded.
-  defp load_moved_relations(%Changeset{data: %schema{} = data, changes: changes} = changeset) do
-    data =
-      for name <- schema.__schema__(:associations),
-          %Ecto.Association.BelongsTo{owner_key: key, related_key: related_key} <-
-            [schema.__schema__(:association, name)],
-          Map.has_key?(changes, key),
-          loaded <- [Map.get(data, name)],
-          not match?(%Ecto.Association.NotLoaded{}, loaded),
-          (loaded && Map.get(loaded, related_key)) != changes[key],
-          reduce: data do
-        data -> Map.put(data, name, load_relation(data, name, key, changes[key], loaded))
-      end
-
-    load_moved_relations_below(%{changeset | data: data})
-  end
-
-  defp load_moved_relations(changesets) when is_list(changesets), do: Enum.map(changesets, &load_moved_relations/1)
-  defp load_moved_relations(value), do: value
-
+  # `Ref.preloads/0`), or as deep as the saved one was loaded: those of the
+  # same relation and preloads in one query.
+  #
   # The entry's own relations are left as they are: the form merges the ones
   # its changeset moves over the entry it casts each edit onto
   # (`rebuild_preview_relations/1` in the form), which needs them unmoved.
-  defp load_moved_relations_below(%Changeset{changes: changes} = changeset),
-    do: %{changeset | changes: Map.new(changes, fn {field, value} -> {field, load_moved_relations(value)} end)}
+  defp load_moved_relations(changeset) do
+    loaded =
+      changeset
+      |> moved_below()
+      |> Enum.reject(&is_nil(elem(&1, 3)))
+      |> Enum.group_by(fn {schema, name, preloads, _id} -> {schema, name, preloads} end, &elem(&1, 3))
+      |> Enum.flat_map(fn {{schema, name, preloads}, ids} -> load_relations(schema, name, preloads, Enum.uniq(ids)) end)
+      |> Map.new()
 
-  defp load_relation(_data, _name, _key, nil, _loaded), do: nil
-
-  defp load_relation(%schema{} = data, name, key, id, loaded) do
-    data
-    |> Map.put(key, id)
-    |> Map.put(name, Map.get(struct(schema), name))
-    |> Brando.Repo.preload([{name, relation_preloads(schema, name, loaded)}])
-    |> Map.get(name)
+    put_moved_below(changeset, loaded)
   end
+
+  defp load_relations(schema, name, preloads, ids) do
+    key = schema.__schema__(:association, name).owner_key
+
+    ids
+    |> Enum.map(&Map.put(struct(schema), key, &1))
+    |> Brando.Repo.preload([{name, preloads}])
+    |> Enum.map(&{{schema, name, preloads, Map.get(&1, key)}, Map.get(&1, name)})
+  end
+
+  # `{schema, name, preloads, new key}` for each relation `changeset` moves
+  defp moved(%Changeset{data: %schema{} = data, changes: changes}) do
+    for name <- schema.__schema__(:associations),
+        %Ecto.Association.BelongsTo{owner_key: key, related_key: related_key} <-
+          [schema.__schema__(:association, name)],
+        Map.has_key?(changes, key),
+        loaded <- [Map.get(data, name)],
+        not match?(%Ecto.Association.NotLoaded{}, loaded),
+        (loaded && Map.get(loaded, related_key)) != changes[key],
+        do: {schema, name, relation_preloads(schema, name, loaded), changes[key]}
+  end
+
+  defp moved_below(%Changeset{changes: changes}), do: changes |> Map.values() |> Enum.flat_map(&moved_tree/1)
+
+  defp moved_tree(%Changeset{} = changeset), do: moved(changeset) ++ moved_below(changeset)
+  defp moved_tree(changesets) when is_list(changesets), do: Enum.flat_map(changesets, &moved_tree/1)
+  defp moved_tree(_value), do: []
+
+  defp put_moved_below(%Changeset{changes: changes} = changeset, loaded),
+    do: %{changeset | changes: Map.new(changes, fn {field, value} -> {field, put_moved(value, loaded)} end)}
+
+  defp put_moved(%Changeset{data: data} = changeset, loaded) do
+    data =
+      Enum.reduce(moved(changeset), data, fn {schema, name, preloads, id}, data ->
+        Map.put(data, name, id && Map.fetch!(loaded, {schema, name, preloads, id}))
+      end)
+
+    put_moved_below(%{changeset | data: data}, loaded)
+  end
+
+  defp put_moved(changesets, loaded) when is_list(changesets), do: Enum.map(changesets, &put_moved(&1, loaded))
+  defp put_moved(value, _loaded), do: value
 
   defp relation_preloads(schema, name, loaded) do
     declared = if function_exported?(schema, :preloads, 0), do: schema.preloads(), else: []

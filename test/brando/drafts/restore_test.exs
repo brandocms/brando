@@ -5,6 +5,7 @@ defmodule Brando.Drafts.RestoreTest do
   alias Brando.Drafts.Params
   alias Brando.Drafts.Restore
   alias Brando.Factory
+  alias Brando.Repo
   alias Ecto.Changeset
 
   setup do
@@ -202,6 +203,113 @@ defmodule Brando.Drafts.RestoreTest do
 
     assert {:review, :entry_changed, []} =
              Restore.prepare(ctx.draft, %{ctx.page | title: "Changed in the same second"}, Brando.Pages.Page, ctx.user)
+  end
+
+  describe "a copy that moves the image of saved cards" do
+    # `count` saved cards each hold the same image; the copy gives each its own
+    setup ctx do
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module, vars: [%{key: "cover", label: "Cover", type: :image}]),
+          ctx.user
+        )
+
+      %{module: module, saved: Factory.insert(:image)}
+    end
+
+    test "loads the moved images together, however many cards move", ctx do
+      assert queries_restoring(ctx, 1) == queries_restoring(ctx, 4)
+    end
+
+    test "draws each card with its own image", ctx do
+      {cs, images} = restore_cards(ctx, 3)
+
+      covers =
+        for join <- Changeset.get_assoc(cs, :entry_blocks),
+            [var] = join |> Changeset.get_assoc(:block) |> Changeset.get_assoc(:vars),
+            do: Changeset.apply_changes(var).image.id
+
+      assert Enum.sort(covers) == Enum.sort(Enum.map(images, & &1.id))
+    end
+
+    defp queries_restoring(ctx, count) do
+      test = self()
+      handler = "restore-#{System.unique_integer([:positive])}"
+      event = Repo.repo().config()[:telemetry_prefix] ++ [:query]
+      :ok = :telemetry.attach(handler, event, fn _, _, _, _ -> if self() == test, do: send(test, :query) end, nil)
+
+      try do
+        restore_cards(ctx, count, fn -> flush_queries() end)
+      after
+        :telemetry.detach(handler)
+      end
+
+      flush_queries()
+    end
+
+    defp flush_queries(count \\ 0) do
+      receive do
+        :query -> flush_queries(count + 1)
+      after
+        0 -> count
+      end
+    end
+
+    # Saves `count` cards on a page, then restores a copy giving each a new image
+    defp restore_cards(ctx, count, before_restore \\ fn -> :ok end) do
+      page = Factory.insert(:page, creator: ctx.user)
+
+      for sequence <- 1..count do
+        block =
+          %Brando.Content.Block{}
+          |> Brando.Content.Block.recursive_block_changeset(
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "type" => "module",
+              "module_id" => ctx.module.id,
+              "creator_id" => ctx.user.id,
+              "source" => to_string(Brando.Pages.Page.Blocks)
+            },
+            ctx.user
+          )
+          |> Repo.insert!()
+
+        Repo.insert!(%Brando.Content.Var{
+          key: "cover",
+          type: :image,
+          label: %{"en" => "Cover"},
+          image_id: ctx.saved.id,
+          block_id: block.id,
+          sequence: 0
+        })
+
+        Repo.insert!(%Brando.Pages.Page.Blocks{entry_id: page.id, block_id: block.id, sequence: sequence})
+      end
+
+      {:ok, page} = Brando.Blueprint.EntryQuery.get(Brando.Pages.Page, page.id)
+      images = for _ <- 1..count, do: Factory.insert(:image)
+
+      rows =
+        page.entry_blocks
+        |> Params.snapshot()
+        |> Enum.zip(images)
+        |> Enum.map(fn {row, image} ->
+          update_in(row, ["block", "vars"], fn [var] -> [Map.put(var, "image_id", image.id)] end)
+        end)
+
+      blocks = %{"blocks" => rows}
+
+      draft = %{
+        format_version: 1,
+        schema_version: Brando.Blueprint.Snapshot.get_current_version(Brando.Pages.Page),
+        base_fingerprint: Drafts.fingerprint(page),
+        payload: %{"main" => %{}, "blocks" => blocks, "modules" => Modules.manifest(blocks)}
+      }
+
+      before_restore.()
+      assert {:ok, cs, []} = Restore.prepare(draft, page, Brando.Pages.Page, ctx.user)
+      {cs, images}
+    end
   end
 
   test "unsupported payloads fail without modifying the entry", ctx do
