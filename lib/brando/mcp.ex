@@ -667,16 +667,19 @@ defmodule Brando.MCP do
     # The site as it is now, not as the request found it
     tenant = with %{site: %Site{id: id}} <- tenant, do: %{tenant | site: Repo.get(Site, id, prefix: "public")}
 
-    cond do
-      is_nil(grant) or not is_nil(grant.revoked_at) -> {:error, :revoked}
-      grant_expired?(grant) -> {:error, :revoked}
-      not same_grant_tenant?(grant, tenant) -> {:error, :revoked}
-      not switched_on? -> {:error, :disabled}
-      not site_active?(tenant) -> {:error, :disabled}
-      not can_connect?(Repo.get(User, grant.user_id), tenant) -> {:error, :forbidden}
-      grant.auto_apply != kind -> {:error, :not_allowed}
-      true -> {:ok, grant}
+    with :ok <- grant_valid(grant, tenant),
+         :ok <- if(switched_on? and site_active?(tenant), do: :ok, else: {:error, :disabled}),
+         :ok <- if(can_connect?(Repo.get(User, grant.user_id), tenant), do: :ok, else: {:error, :forbidden}),
+         :ok <- if(grant.auto_apply == kind, do: :ok, else: {:error, :not_allowed}) do
+      {:ok, grant}
     end
+  end
+
+  # Not revoked or expired, and for `tenant`
+  defp grant_valid(grant, tenant) do
+    if is_nil(grant) or not is_nil(grant.revoked_at) or grant_expired?(grant) or not same_grant_tenant?(grant, tenant),
+      do: {:error, :revoked},
+      else: :ok
   end
 
   defp site_active?(%{site: nil, environment: nil}), do: true
