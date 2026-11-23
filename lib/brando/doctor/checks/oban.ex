@@ -121,9 +121,9 @@ defmodule Brando.Doctor.Checks.Oban do
       no_site_usage?(findings) ->
         warning(summary <> " · " <> dgettext("doctor", "site usage is not measured"),
           fix:
-            dgettext(
-              "doctor",
-              "add site_usage: [limit: 1] to the queues and {\"45 5 * * *\", Brando.Worker.SiteUsage, args: %{\"all\" => true}} to the crontab in config :brando, Oban"
+            dgettext("doctor", "add %{queue} to the queues and %{cron} to the crontab in config :brando, Oban",
+              queue: "site_usage: [limit: 1]",
+              cron: ~s({"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}})
             ),
           items: items
         )

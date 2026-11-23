@@ -180,10 +180,15 @@ defmodule Brando.Doctor.ChecksTest do
     end
 
     test "warns when each site's usage is not measured, with several sites" do
-      result = Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: false})
-      assert result.status == :warning
-      assert result.fix =~ "Brando.Worker.SiteUsage"
-      assert result.fix =~ "site_usage"
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          result = Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: false})
+          assert result.status == :warning
+          assert result.fix =~ ~s({"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}})
+          assert result.fix =~ "site_usage: [limit: 1]"
+        end)
+
+      refute log =~ "missing Gettext bindings"
 
       assert %Result{status: :ok} =
                Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], site_usage: true})

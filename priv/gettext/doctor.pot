@@ -1125,14 +1125,14 @@ msgstr ""
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr ""
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add %{queue} to the queues and %{cron} to the crontab in config :brando, Oban"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_srcsets.ex
 #, elixir-autogen, elixir-format
 msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
-msgstr ""
-
-#: lib/brando/doctor/checks/oban.ex
-#, elixir-autogen, elixir-format
-msgid "add site_usage: [limit: 1] to the queues and {\"45 5 * * *\", Brando.Worker.SiteUsage, args: %{\"all\" => true}} to the crontab in config :brando, Oban"
 msgstr ""
 
 #: lib/brando/doctor/checks/soft_delete_repo.ex
