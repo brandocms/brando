@@ -161,6 +161,25 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerCopyTest do
     assert cover_id(view) == stored.id
   end
 
+  # "Save" (replace) in the picker's editor changes the library image; no
+  # field of the entry holds it, and the entry is left alone
+  test "a replace from the picker's editor leaves the entry alone", %{view: view, current_user: user} do
+    name = "replace-#{System.unique_integer([:positive])}.jpg"
+    picked = image(user, path: "image/#{name}")
+    original = Path.join(Brando.Tenant.Storage.current_media_root(), picked.path)
+    File.mkdir_p!(Path.dirname(original))
+    on_exit(fn -> File.rm(original) end)
+    File.cp!(@sample, original)
+
+    send_form(view, action: :open_image_editor_from_picker, image: picked)
+    entry = form_assigns(view).entry
+
+    form_hook(view, "image_editor_save", %{"mode" => "replace", "focal_x" => 30, "focal_y" => 70})
+
+    assert form_assigns(view).entry == entry
+    assert Repo.get!(Brando.Images.Image, picked.id).focal.x == 30
+  end
+
   # A gallery opened the editor before: its copy went back to the gallery.
   # The picker's editor opened since is not the gallery's, and its copy
   # replaces nothing there.

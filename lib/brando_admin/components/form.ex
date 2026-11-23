@@ -8133,6 +8133,14 @@ defmodule BrandoAdmin.Components.Form do
     |> assign_refreshed_form()
   end
 
+  # The picker's editor with no field drawer open: the library image is
+  # saved, and no field of the entry holds it.
+  defp show_saved_editor_image(socket, %{field: nil} = edit_image, updated_image) do
+    socket
+    |> assign(:edit_image, Map.merge(edit_image, %{image: updated_image}))
+    |> assign(:image_changeset, change(updated_image))
+  end
+
   # Non-block path: update entry with the image so the Image input
   # detects the change when the form re-validates (same pattern as new_copy).
   defp show_saved_editor_image(socket, edit_image, updated_image) do
