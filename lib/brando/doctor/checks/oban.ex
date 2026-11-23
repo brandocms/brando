@@ -2,7 +2,8 @@ defmodule Brando.Doctor.Checks.Oban do
   @moduledoc """
   Background jobs: the queues Oban runs, whether Brando's own queues for
   content events, webhook deliveries, the search index and notifications
-  are among them,
+  are among them, whether each site's usage is measured daily with
+  `tenancy_mode: :multi` (`Brando.Worker.SiteUsage` and its queue),
   jobs stuck waiting or executing for more than an hour, and jobs discarded
   in the last 24 hours.
 
@@ -38,17 +39,29 @@ defmodule Brando.Doctor.Checks.Oban do
       queues: queues(context),
       stuck: stuck_jobs(context),
       discarded: discarded_jobs(context),
-      sweep: sweep_scheduled?(context.oban)
+      sweep: sweep_scheduled?(context.oban),
+      site_usage: Brando.Tenant.mode() != :multi or site_usage_scheduled?(context.oban)
     })
   end
-
-  @sweep inspect(Brando.Worker.ScheduledPublishingSweep)
 
   @doc """
   Whether the Oban configuration schedules `Brando.Worker.ScheduledPublishingSweep`,
   through `cron: [crontab: …]` or the cron plugin in `plugins`.
   """
-  def sweep_scheduled?(oban) when is_list(oban) do
+  def sweep_scheduled?(oban), do: scheduled?(oban, Brando.Worker.ScheduledPublishingSweep)
+
+  @doc """
+  Whether the Oban configuration schedules `Brando.Worker.SiteUsage` and has
+  its `site_usage` queue.
+  """
+  def site_usage_scheduled?(oban) do
+    queues = if is_list(oban[:queues]), do: Keyword.keys(oban[:queues]), else: []
+    :site_usage in queues and scheduled?(oban, Brando.Worker.SiteUsage)
+  end
+
+  @doc "Whether the Oban configuration schedules `worker`."
+  def scheduled?(oban, worker) when is_list(oban) do
+    worker = inspect(worker)
     plugins = if is_list(oban[:plugins]), do: oban[:plugins], else: []
     cron = if is_list(oban[:cron]), do: oban[:cron], else: []
 
@@ -59,20 +72,21 @@ defmodule Brando.Doctor.Checks.Oban do
     crontabs
     |> Enum.flat_map(&List.wrap/1)
     |> Enum.any?(fn
-      {_schedule, worker} -> inspect(worker) == @sweep
-      {_schedule, worker, _opts} -> inspect(worker) == @sweep
+      {_schedule, scheduled} -> inspect(scheduled) == worker
+      {_schedule, scheduled, _opts} -> inspect(scheduled) == worker
       _ -> false
     end)
   end
 
-  def sweep_scheduled?(_oban), do: false
+  def scheduled?(_oban, _worker), do: false
 
   @doc """
   Turns what was found into a result. `findings` has `:testing` (Oban's
   testing mode or nil), `:queues` (`[%{queue, limit, paused, live}]`), and
   `:stuck` and `:discarded` (`[%{id, worker, state, at, error}]`), and
-  `:sweep`, whether the crontab has `Brando.Worker.ScheduledPublishingSweep`
-  (taken as true when left out).
+  `:sweep`, whether the crontab has `Brando.Worker.ScheduledPublishingSweep`,
+  and `:site_usage`, whether each site's usage is measured where it should
+  be (both taken as true when left out).
   """
   def evaluate(findings) do
     queues = findings.queues
@@ -100,6 +114,16 @@ defmodule Brando.Doctor.Checks.Oban do
             dgettext(
               "doctor",
               "add {\"*/10 * * * *\", Brando.Worker.ScheduledPublishingSweep} to the crontab in config :brando, Oban"
+            ),
+          items: items
+        )
+
+      no_site_usage?(findings) ->
+        warning(summary <> " · " <> dgettext("doctor", "site usage is not measured"),
+          fix:
+            dgettext("doctor", "add %{queue} to the queues and %{cron} to the crontab in config :brando, Oban",
+              queue: "site_usage: [limit: 1]",
+              cron: ~s({"45 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}})
             ),
           items: items
         )
@@ -138,6 +162,11 @@ defmodule Brando.Doctor.Checks.Oban do
   defp no_sweep?(%{testing: testing}) when testing in [:inline, :manual], do: false
   defp no_sweep?(%{queues: []}), do: false
   defp no_sweep?(findings), do: Map.get(findings, :sweep, true) == false
+
+  # With several sites, the Sites screen's storage figures never come
+  defp no_site_usage?(%{testing: testing}) when testing in [:inline, :manual], do: false
+  defp no_site_usage?(%{queues: []}), do: false
+  defp no_site_usage?(findings), do: Map.get(findings, :site_usage, true) == false
 
   defp missing_queues(%{testing: testing}) when testing in [:inline, :manual], do: []
   defp missing_queues(%{queues: []}), do: []

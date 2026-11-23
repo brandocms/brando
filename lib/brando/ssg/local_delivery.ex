@@ -498,7 +498,8 @@ defmodule Brando.SSG.LocalDelivery do
           put_resp_header(conn, "content-disposition", ~s[attachment; filename="#{URI.encode(Path.basename(relative))}"]),
         else: conn
 
-    send_file(conn, status, Path.join(build.root, relative))
+    path = Path.join(build.root, relative)
+    conn |> Brando.Plug.Usage.put_file(path) |> send_file(status, path)
   end
 
   # A file gone since the build was listed, or one reached through a symbolic

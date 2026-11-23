@@ -111,19 +111,24 @@ defmodule Brando.Uploads.ContentType do
     if allowed_image?(actual, allowed), do: :ok, else: {:error, rejected_message(actual, allowed)}
   end
 
+  @doc """
+  The video types `head`, the first bytes of a file, may be, most likely
+  first, or `[]` when it is not a video.
+  """
+  @spec video(binary) :: [String.t()]
   # An AVIF or HEIC is the same container as an MP4, told apart by its brand
-  defp video(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _::binary>>)
-       when brand in @avif_brands or brand in @heic_brands,
-       do: []
+  def video(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _::binary>>)
+      when brand in @avif_brands or brand in @heic_brands,
+      do: []
 
-  defp video(<<_size::binary-size(4), box::binary-size(4), _::binary>>)
-       when box in ~w(ftyp styp uuid moov mdat free skip wide pnot),
-       do: @isobmff_video
+  def video(<<_size::binary-size(4), box::binary-size(4), _::binary>>)
+      when box in ~w(ftyp styp uuid moov mdat free skip wide pnot),
+      do: @isobmff_video
 
-  defp video(<<0x1A, 0x45, 0xDF, 0xA3, _::binary>>), do: ~w(video/webm video/x-matroska)
-  defp video(<<"RIFF", _size::binary-size(4), "AVI ", _::binary>>), do: ~w(video/x-msvideo video/avi)
-  defp video(<<"OggS", _::binary>>), do: ~w(video/ogg application/ogg)
-  defp video(_data), do: []
+  def video(<<0x1A, 0x45, 0xDF, 0xA3, _::binary>>), do: ~w(video/webm video/x-matroska)
+  def video(<<"RIFF", _size::binary-size(4), "AVI ", _::binary>>), do: ~w(video/x-msvideo video/avi)
+  def video(<<"OggS", _::binary>>), do: ~w(video/ogg application/ogg)
+  def video(_data), do: []
 
   defp allowed_image?("image/jpeg", allowed), do: "image/jpeg" in allowed or "image/jpg" in allowed
   defp allowed_image?(actual, allowed), do: actual in allowed

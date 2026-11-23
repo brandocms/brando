@@ -249,7 +249,7 @@ defmodule Brando.MigrationTemplates do
   def environment_tables,
     do: ~w(sites_not_found_hits entry_notes note_mentions webhooks webhook_deliveries sites_indexnow search_documents
          listing_views listing_view_defaults notification_routes notification_deliveries content_definition_applies
-         content_definition_batches)
+         content_definition_batches pages_fragments_alternates)
 
   @doc "What the 2xx migrations add in every environment: columns by table"
   def environment_columns do
@@ -267,10 +267,13 @@ defmodule Brando.MigrationTemplates do
     }
   end
 
+  @doc "The tables of `environment_tables/0` that rolling the 2xx migrations back keeps: they hold links editors made"
+  def kept_environment_tables, do: ~w(pages_fragments_alternates)
+
   @doc "What the 2xx migrations add in `public` only: tables"
   def public_tables do
     ~w(users_security users_recovery_codes users_security_events users_security_policy users_passkeys
-       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes)
+       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes sites_usage_days)
   end
 
   @doc "What the 2xx migrations add in `public` only: columns by table"

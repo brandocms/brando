@@ -10,6 +10,10 @@ defmodule E2eProjectWeb.Endpoint do
     signing_salt: "flX6/aG5"
   ]
 
+  # Counts each request on a site's own hosts for the site's usage, whatever
+  # answers it, so it comes before every plug that can answer
+  plug Brando.Plug.Usage
+
   if Application.compile_env(:e2e_project, :sql_sandbox) do
     # Rows a test writes are rolled back with its sandbox, but pages and 404
     # lookups rendered from them stay in Brando's query caches for 15 minutes,

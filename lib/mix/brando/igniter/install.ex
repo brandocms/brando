@@ -449,6 +449,10 @@ if Code.ensure_loaded?(Igniter) do
       |> Source.ensure_call(endpoint, :plug, [1, 2], Brando.Plug.SiteAssets, "plug Brando.Plug.SiteAssets",
         before: {:plug, [1, 2], Plug.Static}
       )
+      # Counts each site's requests whatever answers them (`tenancy_mode: :multi`)
+      |> Source.ensure_call(endpoint, :plug, [1, 2], Brando.Plug.Usage, "plug Brando.Plug.Usage",
+        before: {:plug, [1, 2], Brando.Plug.SiteAssets}
+      )
       |> Source.ensure_call(
         endpoint,
         :plug,

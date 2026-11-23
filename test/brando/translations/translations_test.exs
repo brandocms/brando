@@ -1278,7 +1278,7 @@ defmodule Brando.TranslationsTest do
       {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
 
       assert Translations.decode_payload(pending(en)).parent_id == parent_en.id
-      assert Translations.entry_map(c.source, Article, "en") == %{c.parent.id => parent_en.id}
+      assert Translations.entry_map(c.source, Article, "en") == %{{:parent, c.parent.id} => parent_en.id}
     end
   end
 
@@ -1404,6 +1404,14 @@ defmodule Brando.TranslationsTest do
       put_test_env(Article, translatable: [mode: :synchronized])
 
       assert_raise BlueprintError, ~r/does not declare trait :translatable, runtime_config: true/, fn ->
+        Translatable.check_runtime_config!()
+      end
+    end
+
+    test "a synchronized fragment's page cannot be language-controlled" do
+      put_test_env(Brando.Pages.Fragment, translatable: [mode: :synchronized, language_controlled_fields: [:page]])
+
+      assert_raise BlueprintError, ~r/page always follows the source in synchronized mode/, fn ->
         Translatable.check_runtime_config!()
       end
     end

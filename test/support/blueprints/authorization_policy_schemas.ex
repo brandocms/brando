@@ -64,3 +64,32 @@ defmodule Brando.AuthorizationTestResources.UnscopedPage do
     attribute :title, :string
   end
 end
+
+defmodule Brando.AuthorizationTestResources.Snippet do
+  @moduledoc false
+  # Language versions matched by key, behind a record policy: each editor
+  # reads only the snippets they made (`Brando.AuthorizationTestPolicy`)
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "AuthorizationTestResources",
+    schema: "Snippet",
+    singular: "snippet",
+    plural: "snippets",
+    gettext_module: Brando.Gettext
+
+  table "authorization_test_snippets"
+
+  authorization(key: "authorization.policy_snippets", actions: [:read, :update], policy: Brando.AuthorizationTestPolicy)
+
+  trait :timestamped
+  trait :translatable, matched_by: [:key]
+
+  identifier "{{ entry.title }}"
+  persist_identifier false
+
+  attributes do
+    attribute :title, :string
+    attribute :key, :string
+    attribute :creator_id, :integer
+  end
+end

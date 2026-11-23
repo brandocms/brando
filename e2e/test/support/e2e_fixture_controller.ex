@@ -281,6 +281,16 @@ defmodule E2EFixtureController do
 
         "multi-site-many" ->
           MultiSiteHosts.setup(get_admin_user(), many_sites: true)
+
+        "multi-site-usage" ->
+          MultiSiteHosts.setup(get_admin_user(), usage: true)
+
+        # An installation upgraded before the usage table's migration ran;
+        # the sandbox rolls the drop back
+        "multi-site-usage-no-table" ->
+          scenario = MultiSiteHosts.setup(get_admin_user())
+          E2eProject.Repo.query!("DROP TABLE public.sites_usage_days")
+          scenario
       end
 
     # Log the user in

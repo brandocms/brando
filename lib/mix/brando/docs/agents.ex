@@ -42,6 +42,8 @@ defmodule Mix.Brando.Docs.Agents do
      "running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents."},
     {"module-definitions", "Module definitions as files",
      "exporting, editing and importing modules and their templates as files."},
+    {"seeding", "Creating content from code",
+     "seed scripts, demo content, imports and data migrations: blocks with images and galleries, entries, menus, with several sites."},
     {"rendering", "Pages, menus, forms and the parser",
      "page controllers and templates, fragments, menus, site forms, and changing the HTML blocks render to."},
     {"datasources", "Datasources",

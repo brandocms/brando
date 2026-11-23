@@ -460,7 +460,15 @@ defmodule Brando.Query.Compiler do
     mutation_engine = mutation_engine_ast()
 
     quote do
-      def unquote(:"delete_#{singular_schema}")(id, user \\ :system) do
+      # The entry or its id, as `update_*` takes
+      def unquote(:"delete_#{singular_schema}")(entry_or_id, user \\ :system)
+
+      def unquote(:"delete_#{singular_schema}")(%unquote(module){id: id} = entry, user) do
+        Brando.Tenant.ensure_current!(entry)
+        unquote(:"delete_#{singular_schema}")(id, user)
+      end
+
+      def unquote(:"delete_#{singular_schema}")(id, user) do
         unquote(mutation_engine).delete(
           __MODULE__,
           unquote(module),

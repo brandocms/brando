@@ -176,9 +176,11 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert alternates.type == :has_many
     assert Brando.Pages.Page.has_alternates?()
     assert Brando.Pages.Page.Alternate.__schema__(:source) == "pages_alternates"
-    refute Brando.Pages.Fragment.has_alternates?()
+    refute Brando.Navigation.Menu.has_alternates?()
+    assert Brando.Navigation.Menu.__trait__(Brando.Trait.Translatable) == [alternates: false]
 
-    assert Brando.Pages.Fragment.__trait__(Brando.Trait.Translatable) ==
-             [alternates: false]
+    assert Brando.Pages.Fragment.has_alternates?()
+    assert Brando.Pages.Fragment.Alternate.__schema__(:source) == "pages_fragments_alternates"
+    assert Brando.Pages.Fragment.__translatable_matched_by__() == [:parent_key, :key]
   end
 end

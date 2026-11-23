@@ -1126,6 +1126,11 @@ msgstr "legg til %{dependency} i deps i mix.exs og kjør mix deps.get, eller fje
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add %{queue} to the queues and %{cron} to the crontab in config :brando, Oban"
+msgstr "legg %{queue} til køene og %{cron} til crontab i config :brando, Oban"
+
 #: lib/brando/doctor/checks/image_srcsets.ex
 #, elixir-autogen, elixir-format
 msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
@@ -1928,6 +1933,11 @@ msgstr "sett `config :brando, Brando.Mailer, from: …` til en adresse e-postlev
 #, elixir-autogen, elixir-format
 msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
 msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: …`"
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "site usage is not measured"
+msgstr "nettstedenes forbruk måles ikke"
 
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format

@@ -54,6 +54,24 @@ defmodule Brando.Test.BlocksTest do
     assert_raise ArgumentError, ~r/no ref "image"/, fn -> render_block(module, refs: %{"image" => %{}}) end
   end
 
+  test "says user: is required for uploads, galleries and inserting", %{module: module, user: user} do
+    jpg = Path.expand("../../fixtures/sample.jpg", __DIR__)
+
+    assert_raise ArgumentError, ~r/user:/, fn -> render_block(module, refs: %{"cover" => jpg}) end
+    assert_raise ArgumentError, ~r/user:/, fn -> build_block(module, refs: %{"cover" => jpg}) end
+
+    gallery_module =
+      Brando.ProposalFixtures.module!(user, "Slides", ~s({% ref refs.slides %}),
+        refs: [Brando.ProposalFixtures.ref("slides", %{type: "gallery", data: %{}})]
+      )
+
+    {:ok, image} = Brando.Content.Seed.upload_image(jpg, user)
+    assert_raise ArgumentError, ~r/user:/, fn -> render_block(gallery_module, refs: %{"slides" => [image]}) end
+
+    page = insert_entry(Page, %{title: "Identity"}, user: user)
+    assert_raise ArgumentError, ~r/user:/, fn -> insert_block(page, module) end
+  end
+
   test "adds a block to an entry and renders the entry", %{module: module, user: user} do
     page = insert_entry(Page, %{title: "Identity"}, user: user)
     block = insert_block(page, module, vars: %{"heading" => "Added"}, user: user)
@@ -75,13 +93,11 @@ defmodule Brando.Test.BlocksTest do
 
     setup do
       put_test_env(:tenancy_mode, :multi)
-      repo = Brando.Repo.repo()
-      repo.query!(~s(CREATE SCHEMA "#{@prefix}"))
+      Brando.Repo.repo().query!(~s(CREATE SCHEMA "#{@prefix}"))
 
-      for table <-
-            ~w(content_modules content_blocks content_refs content_vars content_table_rows content_block_identifiers content_containers sites_identities pages pages_blocks pages_alternates pages_fragments content_palettes sites_global_sets navigation_menus navigation_items) do
-        repo.query!(~s|CREATE TABLE "#{@prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
-      end
+      # Every site table, as a provisioned environment has them: adding a
+      # block saves the entry through its context
+      Brando.TenantCloners.clone_structure("public", @prefix)
 
       :ok
     end
@@ -124,6 +140,7 @@ defmodule Brando.Test.BlocksTest do
             uri: "tenant-page",
             language: :en,
             template: "default.html",
+            status: :published,
             creator_id: user.id
           })
 
