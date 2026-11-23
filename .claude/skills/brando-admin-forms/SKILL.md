@@ -82,7 +82,10 @@ area in [the section map](form-map.md) and grep for the names it lists.
   and moves its recovery baseline (`Drafts.rebase/2`; the blocks part when
   the block field reads the saved rows, `entry_blocks_reloaded`). A kept
   relation keeps the editor's rows whole (`RelationRows.keep/4`), with the
-  saved values in rows it didn't change; rows are never merged. When the
+  saved values in rows it didn't change; rows are never merged. A kept
+  embedded list whose rows carry keys (`RelationRows.embedded_rows?/3`) is
+  kept the same way, and takes the rows the save added; one without keys
+  stays whole. When the
   save changed that relation too, the form asks which to keep
   (`relation_conflicts`, `Form.SavedElsewhere`). The browser sends the rows
   it showed before until it has drawn the new ones: the form revision

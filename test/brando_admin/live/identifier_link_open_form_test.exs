@@ -190,6 +190,20 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
 
       assert stored_items(article) == [linked(c.identifier, @new_url), "<p>Plain</p>"]
     end
+
+    # The quotes are one column of the article: the form keeps the row the
+    # editor changed and takes the rewritten one
+    test "of the quotes: the linked quote keeps the new address", %{conn: conn, article: article} = c do
+      view = open(conn, article)
+
+      type(view, ["quotes", "1", "text"], "<p>Changed</p>")
+
+      move(c.target)
+      settle(view)
+      save_title(view, article, "Saved after the move")
+
+      assert stored_quotes(article) == [linked(c.identifier, @new_url), "<p>Changed</p>"]
+    end
   end
 
   describe "the editor changed the text that holds the link" do

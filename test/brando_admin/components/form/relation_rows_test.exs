@@ -123,6 +123,40 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     def changeset(article, params), do: article |> Changeset.cast(params, [:title]) |> Changeset.cast_assoc(:author)
   end
 
+  defmodule Quote do
+    @moduledoc false
+    use Ecto.Schema
+
+    embedded_schema do
+      field :text, :string
+    end
+
+    def changeset(quote, params), do: Changeset.cast(quote, params, [:text])
+  end
+
+  # Rows stored without a key of their own
+  defmodule BareQuote do
+    @moduledoc false
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      field :text, :string
+    end
+  end
+
+  defmodule Board do
+    @moduledoc false
+    use Ecto.Schema
+
+    embedded_schema do
+      embeds_many :quotes, Quote, on_replace: :delete
+      embeds_many :bare_quotes, BareQuote, on_replace: :delete
+    end
+
+    def changeset(board, params), do: board |> Changeset.cast(params, []) |> Changeset.cast_embed(:quotes)
+  end
+
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo.repo())
     [kept, added, saved] = for _ <- 1..3, do: Repo.insert!(%Tag{})
@@ -447,6 +481,76 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
 
       assert %{name: "Name by A", links: [%{label: "Link by B"}]} =
                written |> reload(author: :links) |> Map.fetch!(:author)
+    end
+  end
+
+  describe "an embedded list" do
+    setup do
+      [one, two, three] = for {id, text} <- [{"1", "One"}, {"2", "Two"}, {"3", "Three"}], do: %Quote{id: id, text: text}
+      %{base: %Board{id: "b", quotes: [one, two, three]}}
+    end
+
+    # The browser's rows, in the order it sends them
+    defp form_rows(rows), do: rows |> Enum.with_index() |> Map.new(fn {row, n} -> {to_string(n), row} end)
+
+    defp kept_texts(saved, previous, base) do
+      saved
+      |> Changeset.change()
+      |> RelationRows.keep(previous, base, :quotes)
+      |> Changeset.get_field(:quotes)
+      |> Enum.map(& &1.text)
+    end
+
+    # B moved the third row first and changed the first; A's save added a
+    # row at the end, and one after the first
+    test "the editor's order wins, and the rows the save added keep their place", %{base: base} do
+      previous =
+        Board.changeset(base, %{
+          "quotes" =>
+            form_rows([
+              %{"id" => "3", "text" => "Three"},
+              %{"id" => "1", "text" => "One by B"},
+              %{"id" => "2", "text" => "Two"}
+            ])
+        })
+
+      [one, two, three] = base.quotes
+      saved = %{base | quotes: [one, %Quote{id: "5", text: "Five by A"}, two, three, %Quote{id: "4", text: "Four by A"}]}
+
+      assert kept_texts(saved, previous, base) == ["Three", "One by B", "Five by A", "Two", "Four by A"]
+    end
+
+    # B added a row after the first and changed the third; A's save moved
+    # the second row first
+    test "the save's order wins when the editor moved nothing, and the editor's new row goes after its neighbour",
+         %{base: base} do
+      previous =
+        Board.changeset(base, %{
+          "quotes" =>
+            form_rows([
+              %{"id" => "1", "text" => "One"},
+              %{"text" => "New by B"},
+              %{"id" => "2", "text" => "Two"},
+              %{"id" => "3", "text" => "Three by B"}
+            ])
+        })
+
+      [one, two, three] = base.quotes
+      saved = %{base | quotes: [two, one, three]}
+
+      assert kept_texts(saved, previous, base) == ["Two", "One", "New by B", "Three by B"]
+    end
+
+    test "rows without a key are kept whole", %{base: base} do
+      bare = %{base | bare_quotes: [%BareQuote{text: "One"}]}
+      saved = Changeset.change(bare)
+
+      assert RelationRows.embedded_rows?(saved, bare, :quotes)
+      refute RelationRows.embedded_rows?(saved, bare, :bare_quotes)
+
+      unsaved = %{base | quotes: [%Quote{text: "Stored without a key"}]}
+      refute RelationRows.embedded_rows?(Changeset.change(unsaved), base, :quotes)
+      refute RelationRows.embedded_rows?(saved, unsaved, :quotes)
     end
   end
 end

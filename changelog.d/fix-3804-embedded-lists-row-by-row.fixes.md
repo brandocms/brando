@@ -1,0 +1,1 @@
+- An entry form that takes another editor's save, or a linked entry's new address, keeps an embedded list (`embeds_many`, `embeds_one`) row by row: the rows the editor changed stay, the others take the saved values, so the editor's next save no longer undoes the other save's rows or writes an old link back.

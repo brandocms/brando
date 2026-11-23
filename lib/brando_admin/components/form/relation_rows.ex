@@ -8,6 +8,12 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # the editor settles (`Form` "Saves by other editors"); the rows are never
   # merged. Rows compare by content (`rows/2`): the rows a form builds again
   # from the browser's params are new structs.
+  #
+  # An embedded list (`embeds_many`, `embeds_one`) ships between editors as
+  # a field, but another editor's save that reaches a form with unshipped
+  # changes to it is kept here too, row by row (`keep/4`), when its rows
+  # carry keys (`embedded_rows?/3`). It has no conflict to settle: the rows
+  # the save added come in.
 
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias Ecto.Association
@@ -129,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   kept, unless the relation can't replace a row (`on_replace: :raise`).
   """
   def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field) do
-    assoc = schema.__schema__(:association, field)
+    assoc = schema.__schema__(:association, field) || schema.__schema__(:embed, field)
     current = Map.get(data, field)
     base = if is_map(base), do: Map.get(base, field)
     base = if Ecto.assoc_loaded?(base), do: base, else: nil
@@ -141,6 +147,10 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       assoc.cardinality == :one ->
         put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base)))
 
+      match?(%Ecto.Embedded{}, assoc) ->
+        held = Enum.map(List.wrap(held(previous, field)), &as_change(&1, base))
+        put_kept(saved, field, keep_embedded(current, held, base))
+
       true ->
         put_kept(
           saved,
@@ -150,9 +160,29 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     end
   end
 
+  @doc """
+  Whether `keep/4` can keep the embedded rows of `field` row by row: the
+  rows carry a primary key, in the saved entry and in `base`, the entry
+  the form was built on. A schema without one (`primary_key: false`), or a
+  row stored without its key, can't be matched, and the form keeps the
+  editor's list whole.
+  """
+  def embedded_rows?(%Changeset{data: %schema{} = data}, base, field) do
+    case schema.__schema__(:embed, field) do
+      %Ecto.Embedded{related: related} ->
+        related.__schema__(:primary_key) != [] and
+          Enum.all?(List.wrap(Map.get(data, field)) ++ List.wrap(base && Map.get(base, field)), &(not new?(&1)))
+
+      nil ->
+        false
+    end
+  end
+
   # A row of the form's data the form changed itself: its changes against
   # the row in `base`.
-  defp as_change(%_{__meta__: _} = row, base) do
+  defp as_change(%Changeset{} = row, _base), do: row
+
+  defp as_change(%_{} = row, base) do
     key = Ecto.primary_key(row)
 
     case Enum.find(List.wrap(base), &(Ecto.primary_key(&1) == key)) do
@@ -186,7 +216,12 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   end
 
   defp put_kept(changeset, _field, :keep), do: changeset
-  defp put_kept(changeset, field, value), do: Changeset.put_assoc(changeset, field, value)
+
+  defp put_kept(%Changeset{data: %schema{}} = changeset, field, value) do
+    if schema.__schema__(:embed, field),
+      do: Changeset.put_embed(changeset, field, value),
+      else: Changeset.put_assoc(changeset, field, value)
+  end
 
   # The rows the form holds: changesets from its changes, or the structs in
   # its data. In a list, a row the editor took out (`:delete`, a
@@ -240,6 +275,59 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       removed?(entry) or not changed?(entry) -> nil
       true -> as_new(entry)
     end
+  end
+
+  # An embedded list: the rows the editor holds, kept as a has_many's
+  # (`keep_row/2`), and the rows the save added. A has_many leaves those
+  # to the editor's answer (`Form` "Saves by other editors"); an embedded
+  # list has none to give. A row the editor took out is in `base` and not
+  # held: it stays out. The order is the editor's if they moved a row, the
+  # save's otherwise; a row only the other side has goes beside its
+  # neighbours there (`interleave/2`).
+  defp keep_embedded(saved, held, base) do
+    based = Enum.map(List.wrap(base), &Ecto.primary_key/1)
+    rows = for entry <- held, row = keep_row(entry, by_key(saved)), do: {row_id(row), row}
+    held_keys = MapSet.new(held, &(&1 |> applied() |> Ecto.primary_key()))
+    gone = MapSet.union(held_keys, MapSet.new(based))
+    added = for row <- saved, key = Ecto.primary_key(row), not MapSet.member?(gone, key), do: {key, row}
+
+    by_id = Map.new(rows ++ added)
+    editor = Enum.map(rows, &elem(&1, 0))
+    save = for row <- saved, key = Ecto.primary_key(row), Map.has_key?(by_id, key), do: key
+    {lead, other} = if moved?(editor, based), do: {editor, save}, else: {save, editor}
+
+    lead |> interleave(other) |> Enum.map(&Map.fetch!(by_id, &1))
+  end
+
+  # A new row has no key to tell it by
+  defp row_id(row), do: if(new?(applied(row)), do: make_ref(), else: Ecto.primary_key(applied(row)))
+
+  # Whether the editor put the rows they hold from `based` in another order.
+  defp moved?(editor, based) do
+    {editor_set, based_set} = {MapSet.new(editor), MapSet.new(based)}
+    Enum.filter(editor, &MapSet.member?(based_set, &1)) != Enum.filter(based, &MapSet.member?(editor_set, &1))
+  end
+
+  # `lead` with the rows only `other` has: last if no row after it in
+  # `other` is in the list, else after the nearest row before it that is,
+  # else before the nearest one after it.
+  defp interleave(lead, other) do
+    other
+    |> Enum.with_index()
+    |> Enum.reduce(lead, fn {key, index}, list ->
+      if key in list do
+        list
+      else
+        before = other |> Enum.take(index) |> Enum.reverse() |> Enum.find(&(&1 in list))
+        next = other |> Enum.drop(index + 1) |> Enum.find(&(&1 in list))
+
+        cond do
+          is_nil(next) -> list ++ [key]
+          before -> List.insert_at(list, Enum.find_index(list, &(&1 == before)) + 1, key)
+          true -> List.insert_at(list, Enum.find_index(list, &(&1 == next)), key)
+        end
+      end
+    end)
   end
 
   # A has_one: the row the editor holds, the saved one if it is that row.
@@ -345,7 +433,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
 
   defp new_struct(%row_schema{} = row) do
     row = Enum.reduce(row_schema.__schema__(:primary_key), row, &Map.put(&2, &1, nil))
-    row = put_in(row.__meta__.state, :built)
+    # An embedded row has no state
+    row = if Map.has_key?(row, :__meta__), do: put_in(row.__meta__.state, :built), else: row
 
     Enum.reduce(fields(row_schema, []), row, fn name, row ->
       case {row_schema.__schema__(:association, name), Map.get(row, name)} do

@@ -4267,7 +4267,10 @@ defmodule BrandoAdmin.Components.Form do
   # shipment, or one whose value the editors hold unsaved (shipped,
   # received) if the save has another, and a relation it changed
   # (`edited_relations`) whose rows differ from the saved ones, with its
-  # rows as it holds them (`RelationRows.keep/4`). Every other field takes
+  # rows as it holds them (`RelationRows.keep/4`). An embedded list it
+  # changed is kept the same way when its rows carry keys, and takes the
+  # rows the save added: the rows it didn't change are the saved ones, so
+  # its next save doesn't write the old ones back. Every other field takes
   # the saved value, as a change from another editor does
   # (`apply_remote/2`): the browser's old value for it is an echo from then
   # on (`drop_echoes/4`). The blocks sync through the edit session: the
@@ -4278,10 +4281,11 @@ defmodule BrandoAdmin.Components.Form do
   # Rows are not merged. A relation the save changed too is a conflict
   # (`relation_conflicts`): the form keeps this editor's rows and asks which
   # to keep, its own (`keep_own_relation`) or the saved ones
-  # (`take_saved_relation`). A relation's rows the browser shows change
-  # with the form revision (`form_rev`, rendered as `_form_rev`): until the
-  # browser sends the new one, the rows it sends are the ones it showed
-  # before, and the form keeps its own (`stale_relations/2`).
+  # (`take_saved_relation`); an embedded list asks nothing. A relation's
+  # (or a kept embedded list's) rows the browser shows change with the form
+  # revision (`form_rev`, rendered as `_form_rev`): until the browser sends
+  # the new one, the rows it sends are the ones it showed before, and the
+  # form keeps its own (`stale_relations/2`).
 
   defp announce_save(socket, %{id: id}, :update) do
     Phoenix.PubSub.broadcast(
@@ -4323,15 +4327,16 @@ defmodule BrandoAdmin.Components.Form do
     {fields, belongs_to} = sync_fields(socket)
     relations = relation_fields(socket)
     kept = socket |> unsaved_edits(previous, saved, fields, belongs_to, relations) |> Enum.filter(keep?)
+    opened = socket.assigns.entry
+    by_row = relations ++ Enum.filter(kept, &RelationRows.embedded_rows?(saved, opened, &1))
 
-    changeset = Enum.reduce(kept, saved, &carry_edit(&2, previous, socket.assigns.entry, &1, relations))
+    changeset = Enum.reduce(kept, saved, &carry_edit(&2, previous, opened, &1, by_row))
     taken = Enum.filter((fields -- belongs_to) ++ relations, &(&1 not in kept))
-    changeset = carry_form_state(changeset, previous, kept, taken ++ relations)
+    changeset = carry_form_state(changeset, previous, kept, taken ++ by_row)
     changed = Enum.filter(taken, &(echo_value(previous, &1) != echo_value(changeset, &1)))
     replaced = Enum.reduce(changed -- relations, replaced_values(socket), &replace_value(&2, previous, changeset, &1))
     kept_relations = Map.take(socket.assigns[:updated_entry_assocs] || %{}, kept)
     conflicts = conflicts(socket, saved, kept)
-    opened = socket.assigns.entry
 
     socket
     |> drop_conflicts(relation_conflicts(socket) -- kept)
@@ -4342,7 +4347,7 @@ defmodule BrandoAdmin.Components.Form do
     )
     |> assign_read_entry(entry)
     |> put_form(to_form(changeset, []))
-    |> redraw_relations(previous, changeset, relations)
+    |> redraw_relations(previous, changeset, by_row)
     |> assign(:replaced_values, replaced)
     |> assign(:unshipped_fields, MapSet.intersection(unshipped_fields(socket), MapSet.new(kept)))
     |> assign(:synced_values, Map.take(synced_values(socket), kept))
@@ -4527,12 +4532,13 @@ defmodule BrandoAdmin.Components.Form do
   defp owner_key(%Changeset{data: %schema{}}, field), do: schema.__schema__(:association, field).owner_key
 
   # A field the form keeps goes onto the saved entry as it was: its change,
-  # or the value it opened with if it was set back to that. A relation keeps
+  # or the value it opened with if it was set back to that. A relation, and
+  # an embed whose rows carry keys (`RelationRows.embedded_rows?/3`), keeps
   # its rows (`RelationRows.keep/4`; `base` is the entry the form was built
-  # on).
-  defp carry_edit(changeset, previous, base, field, relations) do
+  # on): the rows the editor didn't change take the saved values.
+  defp carry_edit(changeset, previous, base, field, by_row) do
     cond do
-      field in relations ->
+      field in by_row ->
         RelationRows.keep(changeset, previous, base, field)
 
       Map.has_key?(previous.changes, field) ->
