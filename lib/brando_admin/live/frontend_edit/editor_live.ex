@@ -5,7 +5,8 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   iframe.
 
   Mounted with the uid of a clicked block (`?uid=`) or the key of a clicked
-  entry field (`?field=`, see `Brando.FrontendEdit.Fields`). It resolves what
+  entry field (`?field=`, see `Brando.FrontendEdit.Fields`, with `?kinds=`,
+  the letters of the kinds of value markers the page has for it). It resolves what
   to edit and its entry (`Brando.FrontendEdit.Targets`), runs the same form
   hooks an entry's admin form does, and renders the entry form narrowed to
   it (`BrandoAdmin.Components.Form.FrontendEditor`).
@@ -47,7 +48,8 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
 
     case resolve(target(params), socket.assigns.current_user) do
       {:ok, resolved} ->
-        {:ok, socket |> assign_resolved(resolved) |> setup(session), layout: {BrandoAdmin.Layouts, :frontend_edit}}
+        {:ok, socket |> assign_resolved(resolved, params) |> setup(session),
+         layout: {BrandoAdmin.Layouts, :frontend_edit}}
 
       {:error, reason} ->
         {:ok, assign(socket, unavailable: reason, page_title: gettext("Edit block")),
@@ -97,7 +99,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
 
   defp resolve_target(nil), do: {:error, :not_found}
 
-  defp assign_resolved(socket, resolved) do
+  defp assign_resolved(socket, resolved, params) do
     {schema, id, _field} = resolved.owner
 
     socket
@@ -107,7 +109,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
     # find the form by it.
     |> assign(:form_id, "#{schema.__naming__().singular}_form")
     |> assign(:owner, resolved.owner)
-    |> assign(:focus, resolved.focus)
+    |> assign(:focus, with_kinds(resolved.focus, params))
     |> assign(:title, resolved.title)
     # Present at the entry's admin form, as someone editing from the website.
     |> assign(:presence_path, schema.__admin_route__(:update, [id]))
@@ -159,10 +161,10 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
 
         case resolve(target, socket.assigns.current_user) do
           {:ok, %{owner: {^schema, ^id, _}} = resolved} ->
-            {:noreply, socket |> assign_resolved(resolved) |> assign(:saved?, false)}
+            {:noreply, socket |> assign_resolved(resolved, params) |> assign(:saved?, false)}
 
           _ ->
-            {:noreply, push_navigate(socket, to: editor_path(target))}
+            {:noreply, push_navigate(socket, to: editor_path(target, params))}
         end
 
       _ ->
@@ -173,12 +175,12 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_event("select", %{"uid" => uid}, socket) when is_binary(uid) do
-    {:noreply, push_patch(socket, to: editor_path({:block, uid}))}
+  def handle_event("select", %{"uid" => uid} = params, socket) when is_binary(uid) do
+    {:noreply, push_patch(socket, to: editor_path({:block, uid}, params))}
   end
 
-  def handle_event("select", %{"field" => key}, socket) when is_binary(key) do
-    {:noreply, push_patch(socket, to: editor_path({:field, key}))}
+  def handle_event("select", %{"field" => key} = params, socket) when is_binary(key) do
+    {:noreply, push_patch(socket, to: editor_path({:field, key}, params))}
   end
 
   # The page reloads to drop this editor's changes and fetch someone else's,
@@ -264,10 +266,19 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
   defp bridge(socket, :reload),
     do: push_event(socket, "b:frontend-edit", %{type: "reload", uid: socket.assigns.focus.target})
 
-  defp editor_path({:block, uid}), do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"uid" => uid})
+  defp editor_path({:block, uid}, _params),
+    do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"uid" => uid})
 
-  defp editor_path({:field, key}),
-    do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"field" => key})
+  defp editor_path({:field, key}, params),
+    do: Brando.Plug.FrontendEdit.editor_path() <> "?" <> URI.encode_query(%{"field" => key, "kinds" => kinds(params)})
+
+  # A field's focus carries the kinds of value markers the page has for it
+  # (`Brando.FrontendEdit.Fields.printed/3`): those it names, else the entry's own
+  defp with_kinds(%{input: field} = focus, params) when not is_nil(field), do: Map.put(focus, :kinds, kinds(params))
+  defp with_kinds(focus, _params), do: focus
+
+  defp kinds(%{"kinds" => kinds}) when is_binary(kinds), do: kinds
+  defp kinds(_params), do: "E"
 
   @impl true
   def render(%{unavailable: reason} = assigns) when not is_nil(reason) do

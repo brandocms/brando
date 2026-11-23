@@ -329,7 +329,7 @@ defmodule Brando.Villain.RichTextRowsPrintingTest do
 
         assert [[kind, _old]] = page.(row)
         assert [[^kind, printed]] = page.(edited)
-        assert Brando.FrontendEdit.Fields.printed(edited, :text)[kind] == printed
+        assert Brando.FrontendEdit.Fields.printed(edited, :text, kind) == %{kind => printed}
       end
     end
 

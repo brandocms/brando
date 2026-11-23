@@ -196,16 +196,19 @@ defmodule Brando.FrontendEdit.Fields do
   def close(kind, key), do: ["<!-- [-:", Map.fetch!(@kinds, kind), "<", key, ">] -->"]
 
   @doc """
-  What each kind of value marker of `entry`'s `field` holds, by the letter
-  its comments carry: as the page prints it there. The page puts each in the
-  places marked with its kind as the field is edited.
+  What each kind of value marker of `entry`'s `field` that `letters` name
+  holds, by the letter its comments carry: as the page prints it there. The
+  page names the kinds it has markers of, and puts each in the places marked
+  with its kind as the field is edited.
   """
-  @spec printed(map(), atom()) :: %{String.t() => String.t()}
-  def printed(entry, field) do
-    %{
-      @kinds.value => entry |> render_value(field) |> IO.iodata_to_binary(),
-      @kinds.text => entry |> render_value(field, []) |> IO.iodata_to_binary(),
-      @kinds.rich_text => entry |> render_value(field, [field]) |> IO.iodata_to_binary()
-    }
+  @spec printed(map(), atom(), String.t()) :: %{String.t() => String.t()}
+  def printed(entry, field, letters) do
+    for {kind, letter} <- @kinds, kind != :markup, String.contains?(letters, letter), into: %{} do
+      {letter, entry |> print(field, kind) |> IO.iodata_to_binary()}
+    end
   end
+
+  defp print(entry, field, :value), do: render_value(entry, field)
+  defp print(entry, field, :text), do: render_value(entry, field, [])
+  defp print(entry, field, :rich_text), do: render_value(entry, field, [field])
 end

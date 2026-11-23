@@ -509,8 +509,15 @@
   // -- Sidebar -----------------------------------------------------------------
 
   function editorUrl(id) {
-    const param = isField(id) ? 'field' : 'uid'
-    return `${EDITOR_PATH}?${param}=${encodeURIComponent(id)}`
+    if (!isField(id)) return `${EDITOR_PATH}?uid=${encodeURIComponent(id)}`
+    return `${EDITOR_PATH}?field=${encodeURIComponent(id)}&kinds=${valueKinds(id)}`
+  }
+
+  // The kinds of value markers the page has for a field (`E`, `T`, `R`): the
+  // editor sends the field's value printed by each of them as it is edited.
+  function valueKinds(key) {
+    const kinds = (state.fields.get(key) || []).map(occurrence => occurrence.kind).filter(kind => kind !== 'W')
+    return [...new Set(kinds)].join('')
   }
 
   function select(uid, occurrence = null) {
@@ -530,7 +537,7 @@
     scheduleRender()
 
     if (state.sidebar && state.ready) {
-      post(isField(uid) ? { type: 'select', field: uid } : { type: 'select', uid })
+      post(isField(uid) ? { type: 'select', field: uid, kinds: valueKinds(uid) } : { type: 'select', uid })
     } else {
       openSidebar(uid)
     }
@@ -742,7 +749,11 @@
 
       rebuildRegistry()
       state.fields.forEach((occurrences, key) => {
-        occurrences.forEach((occurrence, index) => {
+        // The nth place of a kind takes the nth fresh one of that kind
+        const seen = new Map()
+        occurrences.forEach(occurrence => {
+          const index = seen.get(occurrence.kind) || 0
+          seen.set(occurrence.kind, index + 1)
           const html = (fresh.get(`${occurrence.kind}:${key}`) || [])[index]
           if (html !== undefined) replaceBetween(occurrence.start, occurrence.end, html)
         })
@@ -797,8 +808,9 @@
 
     // A printed field value changed: every place it is printed shows it, as
     // that place printed it. `printed` holds the value for each kind of value
-    // marker: by the entry's own forms (`E`), as text (`T`) or as rich text
-    // (`R`), a subform row's field by its owner's forms.
+    // marker the page has for it (`valueKinds`): by the entry's own forms
+    // (`E`), as text (`T`) or as rich text (`R`), a subform row's field by its
+    // owner's forms.
     entry_field({ key, printed }) {
       rebuildRegistry()
       ;(state.fields.get(key) || [])
