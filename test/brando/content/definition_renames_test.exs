@@ -472,6 +472,160 @@ defmodule Brando.Content.DefinitionRenamesTest do
     end
   end
 
+  describe "the moves are scoped" do
+    test "to this module's blocks, not a shared library module's with the same id", c do
+      shared = first_block(c.naming)
+      Repo.update_all(from(b in Block, where: b.id == ^shared.id), set: [module_origin: :shared])
+      rename_tagline!(c)
+
+      assert [%{moves: %{blocks: 5}}] = plan!(c).items
+      import!(c)
+      assert var(shared, "tagline").value == "Default tagline"
+      assert var(shared, "heading") == nil
+    end
+
+    test "to the modules a release applies: one of two renamed modules", c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
+
+      cards = ProposalFixtures.page!(c.user, "Cards", card)
+      card.id |> Blocks.list_block_ids_using_module() |> Blocks.sync_blocks(card.id)
+      card_block = cards |> first_block() |> set!("title", "Card words")
+
+      path = c.path <> "-two"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      File.rm!(Path.join(path, "modules.lock.json"))
+      assert {:ok, %{adopted: 2}} = Release.plan(path: path, version: "1.0.0")
+
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      rename_tagline!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
+        )
+      )
+
+      {:ok, _} = Release.apply([c.module.uid], path: path, version: "2.0.0", user: c.user.id, wait: false)
+      assert var(held, "heading").value == "Kept words"
+      assert var(card_block, "title").value == "Card words"
+      assert var(card_block, "name") == nil
+      assert [%{key: "title"}] = Repo.preload(Repo.get!(Module, card.id), :vars).vars
+    end
+
+    test "to as many entries as an apply moves while editors' saves wait", c do
+      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+      blocks =
+        for _ <- 1..480 do
+          %{
+            uid: Brando.Utils.generate_uid(),
+            type: :module,
+            module_id: c.module.id,
+            module_origin: :local,
+            creator_id: c.user.id,
+            inserted_at: now,
+            updated_at: now
+          }
+        end
+
+      {_, inserted} = Repo.insert_all(Block, blocks, returning: [:id])
+
+      Repo.insert_all(
+        Var,
+        for(
+          %{id: id} <- inserted,
+          do: %{
+            block_id: id,
+            key: "tagline",
+            type: :string,
+            label: %{"en" => "Tagline"},
+            inserted_at: now,
+            updated_at: now
+          }
+        )
+      )
+
+      rename_tagline!(c)
+      assert [%{action: :migration_required, reason: reason}] = plan!(c).items
+      assert reason =~ "would move values in 486 blocks of 2 entries"
+      assert reason =~ "mix brando.modules resolve --map var:tagline=heading"
+    end
+  end
+
+  describe "a revert of a batch whose apply moved values" do
+    test "leaves out the renamed module's tree, a sibling changed with it, and reverts an unrelated module", c do
+      parent = ProposalFixtures.module!(c.user, "Row", "<div>{{ content }}</div>", multi: true)
+
+      child =
+        ProposalFixtures.module!(c.user, "Cell", "<p>{{ caption }}</p>",
+          parent_id: parent.id,
+          vars: [%{type: "string", key: "caption", label: "Caption", value: "Default caption"}]
+        )
+
+      sibling = ProposalFixtures.module!(c.user, "Other cell", "<p>Other</p>", parent_id: parent.id)
+      held = child_block!(c, child, "Cell words")
+
+      path = c.path <> "-tree"
+      {:ok, _} = Definitions.export(path, c.user, uids: [parent.uid, c.module.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      File.rm!(Path.join(path, "modules.lock.json"))
+      assert {:ok, %{adopted: 4}} = Release.plan(path: path, version: "1.0.0")
+
+      # Each change in the file that holds `from`
+      write = fn from, to ->
+        [file] = path |> Path.join("content/**/*.{exs,liquid}") |> Path.wildcard() |> Enum.filter(&(File.read!(&1) =~ from))
+        File.write!(file, String.replace(File.read!(file), from, to))
+      end
+
+      write.(~s(var "caption", "string" do\n), ~s(var "text", "string" do\n      renamed_from "caption"\n))
+      write.("{{ caption }}", "{{ text }}")
+      write.("<p>Other</p>", "<p>Other, changed</p>")
+      write.("<p>{{ tagline }}</p>", "<h2>{{ tagline }}</h2>")
+
+      opts = [path: path, version: "2.0.0", user: c.user.id, wait: false]
+      {:ok, %{batch_id: batch_id}} = Release.apply(:all, opts)
+      assert var(held, "text").value == "Cell words"
+
+      assert {:ok, %{reverted: reverted, irreversible: [%{uid: irreversible}]}} =
+               Batches.revert(Batches.get(batch_id), c.user)
+
+      assert irreversible == child.uid
+      assert Enum.map(reverted, & &1.uid) == [c.module.uid]
+      assert Repo.get!(Module, c.module.id).code =~ "<p>{{ tagline }}</p>"
+      assert Repo.get!(Module, sibling.id).code =~ "Other, changed"
+      assert var(held, "text").value == "Cell words"
+    end
+  end
+
+  describe "a refusal names the entries the person may open" do
+    test "and counts the others", c do
+      held = first_block(c.identity)
+      leftover!(held, "heading", "Typed later")
+      record = Repo.preload(module(c), [:refs, :vars])
+      module = %{record | vars: [%Var{key: "heading", type: :string}]}
+      rename = [%{kind: :var, from: "tagline", to: "heading"}]
+
+      assert %{refused: [named]} = Renames.plan(record, module, rename, c.user)
+      assert named =~ "(in Identity)"
+
+      put_test_env(:authorization_mode, :groups)
+      assert {:ok, _} = Brando.Authorization.Migration.run()
+      nobody = Brando.Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      assert %{refused: [counted]} = Renames.plan(record, module, rename, nobody)
+      refute counted =~ "Identity"
+      assert counted =~ "(in 1 entry you cannot open)"
+    end
+  end
+
   describe "BlockMoves.content?/2" do
     test "judges by the stored fields: a link's target setting and a form are choices; a copied default ref is not" do
       default = %Var{type: :link, key: "cta", value: "https://a", link_text: "Read", link_target_blank: false}
@@ -548,6 +702,35 @@ defmodule Brando.Content.DefinitionRenamesTest do
     })
 
     slot
+  end
+
+  defp child_block!(c, module, caption) do
+    page = Brando.Factory.insert(:page, creator: c.user, title: "Grid", uri: "grid")
+
+    row =
+      Repo.insert!(%Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        multi: true,
+        module_id: module.parent_id,
+        creator_id: c.user.id,
+        source: Page.Blocks
+      })
+
+    Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: row.id, sequence: 0})
+
+    cell =
+      Repo.insert!(%Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module_entry,
+        module_id: module.id,
+        parent_id: row.id,
+        creator_id: c.user.id,
+        source: Page.Blocks
+      })
+
+    Repo.insert!(%Var{block_id: cell.id, key: "caption", type: :string, label: %{"en" => "Caption"}, value: caption})
+    cell
   end
 
   defp load_tree(block) do

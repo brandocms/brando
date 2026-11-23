@@ -1,4 +1,7 @@
 defmodule Brando.Content.Definition.Renames do
+  @max_entries 120
+  @max_blocks 480
+
   @moduledoc """
   The renames a module's definition file declares (`renamed_from:` on a ref
   or var, read by `Brando.Content.Definition.Model.renames!/1`), and the
@@ -22,6 +25,14 @@ defmodule Brando.Content.Definition.Renames do
 
   The apply plans the moves again with the rows locked (`move!/3`), and
   rolls back when anything is refused now.
+
+  The apply holds the definition tables locked while it moves, and every
+  editor's save in the environment waits for it: a module whose renames
+  move values in more than #{@max_entries} entries or #{@max_blocks} blocks
+  is refused too, and its values are moved with `resolve --map` after an
+  apply without the rename. Measured at about two seconds (each entry
+  costs a revision before and after and an Activity record, about 12 ms;
+  each block a sync, about 0.5 ms).
   """
   use Gettext, backend: Brando.Gettext
 
@@ -90,9 +101,21 @@ defmodule Brando.Content.Definition.Renames do
       blocks: length(blocks),
       entries: moved,
       unrevisioned: Enum.count(moved, &(not &1.revisioned?)),
-      refused: refused
+      refused: refused ++ too_many(planned, length(blocks), length(moved))
     }
   end
+
+  defp too_many(renames, blocks, entries) when blocks > @max_blocks or entries > @max_entries do
+    maps = Enum.map_join(renames, " ", &"--map #{&1.kind}:#{&1.from}=#{&1.to}")
+
+    [
+      "#{text(renames)} would move values in #{blocks} blocks of #{entries} entries, more than an apply moves " <>
+        "while editors' saves wait for it (#{@max_entries} entries, #{@max_blocks} blocks): take renamed_from " <>
+        "out of the file, and move the values after the apply with mix brando.modules resolve #{maps}"
+    ]
+  end
+
+  defp too_many(_renames, _blocks, _entries), do: []
 
   # The blocks of the module, here, that hold a source key
   defp holder_ids(_module_id, []), do: []

@@ -1,0 +1,1 @@
+- A module definition file can rename a ref or var with `renamed_from: "old"`: the apply that removes the old key and adds the new one moves each block's value in the same transaction, with a revision of each entry before and after, so the page never shows the new key's default.

@@ -155,6 +155,14 @@ template never places isn't editable. This holds for a `:comment` ref too:
 it renders nothing on the site, but still has to be placed to be written in
 the editor.
 
+A ref or var renamed in the file names its old key with `renamed_from "title"`
+in its `do` block: the apply that removes the old key and adds the new one
+moves each block's value in the same transaction, with a revision of each
+entry before and after. A rename that changes type, or a block that already
+holds a value under the new key, makes the plan refuse it. Keep
+`renamed_from` until every environment has applied the release; see the
+[guide](../guides/module_definitions.md#renaming-a-ref-or-var).
+
 #### Vars: values, controls and layout
 
 The DSL supports the schema's var types: `:boolean`, `:string`, `:text`,

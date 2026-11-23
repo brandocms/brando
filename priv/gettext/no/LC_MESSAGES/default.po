@@ -1178,6 +1178,7 @@ msgid "/cookies"
 msgstr "/cookies"
 
 #: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 block"
 msgid_plural "%{count} blocks"
@@ -1241,6 +1242,7 @@ msgstr[0] "1 er ulik"
 msgstr[1] "%{count} er ulike"
 
 #: lib/brando_admin/components/form/subform.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 entry"
 msgid_plural "%{count} entries"
@@ -1262,6 +1264,13 @@ msgid "1 entry fails to render in Verify."
 msgid_plural "%{count} entries fail to render in Verify."
 msgstr[0] "1 oppføring kan ikke gjengis i verifiseringen."
 msgstr[1] "%{count} oppføringer kan ikke gjengis i verifiseringen."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry keeps no history"
+msgid_plural "%{count} entries keep no history"
+msgstr[0] "1 oppføring har ingen historikk"
+msgstr[1] "%{count} oppføringer har ingen historikk"
 
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
@@ -3104,6 +3113,11 @@ msgstr "Når forslaget tas i bruk, lagres også blokkene og mediene kilden har l
 msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
 msgstr "Å ta i bruk endringen sletter ingenting en redaktør har skrevet. Blokkene beholder verdiene til du løser dem etterpå: fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå. Til da vises de der malen fortsatt nevner dem."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying moves each block’s value from the old name to the new one in the same step. A revision of each entry is stored before and after, and the apply can’t be reverted: keep it, or restore the entries’ revisions."
+msgstr "Når endringen tas i bruk, flyttes hver blokks verdi fra det gamle navnet til det nye i samme steg. En revisjon av hver oppføring lagres før og etter, og endringen kan ikke tilbakestilles: behold den, eller gjenopprett oppføringenes revisjoner."
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Applying translations..."
@@ -3490,6 +3504,16 @@ msgstr "Enkel"
 msgid "Before"
 msgstr "Før"
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "Before applying module definitions: %{renames}"
+msgstr "Før moduldefinisjonene ble tatt i bruk: %{renames}"
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "Before release %{release}: %{renames}"
+msgstr "Før release %{release}: %{renames}"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Before resolving blocks on older versions of %{module}"
@@ -3534,7 +3558,7 @@ msgstr "Blokker"
 msgid "Block #%{id}"
 msgstr "Blokk #%{id}"
 
-#: lib/brando/content/stale_blocks.ex
+#: lib/brando/content/block_moves.ex
 #, elixir-autogen, elixir-format
 msgid "Block #%{id} could not be saved: %{errors}"
 msgstr "Blokk #%{id} kunne ikke lagres: %{errors}"
@@ -5792,7 +5816,7 @@ msgstr "Kunne ikke lagre skissen"
 msgid "Could not set video thumbnail"
 msgstr "Klarte ikke å sette videominiatyren"
 
-#: lib/brando/content/stale_blocks.ex
+#: lib/brando/content/block_moves.ex
 #, elixir-autogen, elixir-format
 msgid "Could not store a revision of %{entry}: %{reason}"
 msgstr "Kunne ikke lagre en revisjon av %{entry}: %{reason}"
@@ -23087,6 +23111,11 @@ msgstr "Gyldig"
 msgid "Value"
 msgstr "Verdi"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Values move to the renamed refs and vars"
+msgstr "Verdiene flyttes til refsene og variablene som får nytt navn"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Variable"
@@ -24312,6 +24341,11 @@ msgstr "en kollega"
 #, elixir-autogen, elixir-format
 msgid "a new %{module} block"
 msgstr "en ny %{module}-blokk"
+
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a value of its own"
+msgstr "en egen verdi"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
