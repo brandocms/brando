@@ -988,12 +988,7 @@ defmodule Brando.Content.Proposals.Tools do
   defp preview_error(:not_created, _proposal, _target),
     do: "The proposal creates this entry, so it has no version before it. Leave out version, or use \"proposed\"."
 
-  defp preview_error(:no_preview_target, proposal, target) do
-    if Proposals.translation(proposal.operations, target),
-      do:
-        "This translation is copied from its source when the proposal is applied, so it has no preview of its own. Preview the source entry.",
-      else: "This content type has no page preview."
-  end
+  defp preview_error(:no_preview_target, _proposal, _target), do: "This content type has no page preview."
 
   defp preview_error(:problems, _proposal, _target),
     do:

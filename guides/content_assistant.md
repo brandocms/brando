@@ -479,6 +479,10 @@ new tab.
   the version the proposal was prepared from; if the entry has changed since,
   the preview says so and the proposal must be prepared again. A new entry has
   no Before.
+- **A new translation** shows the page applying the proposal makes: the
+  source's copy in that language with the proposal's translated texts written
+  in, and its links pointing at their versions in that language. The copy is
+  made for the preview and thrown away as soon as the page is rendered.
 - **Views** appear when a content type has more than one preview target, for
   example the page and its listing.
 - **Desktop / Mobile** set the frame width. **Show changes** outlines the

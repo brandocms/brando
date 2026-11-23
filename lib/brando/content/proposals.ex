@@ -2599,8 +2599,9 @@ defmodule Brando.Content.Proposals do
     end)
   end
 
-  # A translation has no changeset: it is the source's copy, made as the
-  # proposal is applied (`create_translation!/2`).
+  # A translation the proposal creates has no changeset here: it is the
+  # source's copy, made as the proposal is applied (`create_translation!/2`;
+  # `with_translation/5` makes one for a preview).
   # A translation a `Translate` fills in is its pending version with the
   # texts written in (`Translations.work_changeset/4`).
   defp materialize!(proposal, entries, user) do
@@ -2609,6 +2610,116 @@ defmodule Brando.Content.Proposals do
         do: {target, translated_changeset!(target, proposal, user)},
         else: {target, target |> base_changeset(proposal, entries, user) |> put_blocks(target, proposal, entries, user)}
     end
+  end
+
+  @doc """
+  Run `fun` with the changeset of `target`, a translation the proposal
+  creates (`translation/2`), as applying the proposal makes it: the source's
+  copy in its language (`Brando.Translations.create_target/5`) as its pending
+  version, with the texts of the proposal's `Translate` operations on it
+  written in (`Translations.work_changeset/4`), so its links point at their
+  versions in its language. The proposal's other translations are made
+  too, each in its turn, as applying makes them, so links to them do too.
+
+  The copy is made in a transaction that is rolled back once `fun` returns,
+  so `fun` renders it there and keeps only what it holds outside the
+  database. Nothing else is kept: work held for after the commit
+  (`Brando.Repo.after_commit/1`: broadcasts, cache evictions) never runs, no
+  query result read in it is cached, and jobs are rows the rollback removes.
+
+  The copy's rows, and the locks on its source, are held while `fun` runs.
+  Called on its own, as the review page's frame calls it, that is for no
+  longer than the transaction's timeout (`:timeout`, the repo's default
+  otherwise): a `fun` that outlasts it gets the connection dropped, and
+  `{:error, message}` is returned. Called on a connection already checked
+  out, as a snapshot is under the site's asset lock, the transaction has no
+  deadline of its own, and they are held until `fun` returns.
+
+  It checks what `materialize/3` checks, with `shared: true` as it takes it,
+  and the texts the proposal translates against their sources, under the
+  sources' locks, as applying does (`check_translated_sources!/1`). It makes
+  the copy as `actor`, who must be allowed to create it. Returns
+  `fun`'s result, or `{:error, message}`.
+  """
+  @spec with_translation(Proposal.t(), Proposal.target(), term(), keyword(), (Changeset.t() -> result)) ::
+          result | {:error, String.t()}
+        when result: var
+  def with_translation(%Proposal{} = proposal, target, actor, opts, fun) when is_function(fun, 1) do
+    %CreateTranslation{} = op = translation(proposal.operations, target)
+    ref = make_ref()
+    timeout = opts[:timeout] || Repo.repo().config()[:timeout] || 15_000
+    started = System.monotonic_time(:millisecond)
+
+    rolled_back =
+      try do
+        Repo.transaction(
+          fn ->
+            Brando.Cache.Query.skip_in_transaction()
+            Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
+          end,
+          timeout: timeout
+        )
+      rescue
+        # The connection is dropped once the transaction outlasts its
+        # timeout. Any other connection error is not the render's doing.
+        error in DBConnection.ConnectionError ->
+          if System.monotonic_time(:millisecond) - started >= timeout,
+            do: {:error, {ref, :timeout}},
+            else: reraise(error, __STACKTRACE__)
+      end
+
+    case rolled_back do
+      {:error, {^ref, :timeout}} -> {:error, preview_timed_out()}
+      {:error, {^ref, result}} -> result
+      {:error, reason} -> {:error, translation_failed(reason)}
+    end
+  end
+
+  defp preview_timed_out,
+    do:
+      dgettext(
+        "content_proposals",
+        "The page took too long to render, and the translation made for it was thrown away. Try again, or preview a lighter view."
+      )
+
+  defp with_copy(proposal, target, %CreateTranslation{source: {schema, _}}, actor, opts, fun) do
+    copy =
+      Error.protect(fn ->
+        if opts[:shared], do: Transfer.ensure_scope!(actor), else: authorize_proposal!(proposal, actor)
+        current!(proposal, actor, if(opts[:shared], do: :read, else: :update))
+        # Under the sources' locks, as applying checks them, taken in the
+        # order applying takes them (`apply_lock_order/1`): a preview and an
+        # apply that took two sources in opposite order would deadlock
+        lock_translated_sources!(proposal)
+        check_translated_sources!(proposal)
+        user = user!(actor)
+        entry = create_translations!(proposal, target, user)
+
+        case Translations.work_changeset(schema, entry.id, translated_answer(proposal, target).texts, user) do
+          {:ok, changeset, _version_id} -> changeset
+          {:error, reason} -> Error.fail!(translate_failed(reason))
+        end
+      end)
+
+    with {:ok, changeset} <- copy, do: fun.(changeset)
+  end
+
+  # Every translation the proposal creates, in the order applying makes
+  # them, the others filled in as applying fills them, so the copy's links
+  # point at them. Returns `target`'s copy, not yet filled in.
+  defp create_translations!(proposal, target, user) do
+    for %CreateTranslation{source: {schema, _}} = op <- proposal.operations, reduce: nil do
+      copy ->
+        {entry, _group} = create_translation!(op, user)
+        made = {:new, op.ref}
+
+        if made == target, do: entry, else: fill_in!(copy, schema, entry, proposal, made, user)
+    end
+  end
+
+  defp fill_in!(copy, schema, entry, proposal, made, user) do
+    if translated?(proposal.operations, made), do: save_translation!(schema, entry.id, proposal, made, user)
+    copy
   end
 
   defp translated_changeset!({schema, id} = target, proposal, user) do
@@ -4550,6 +4661,14 @@ defmodule Brando.Content.Proposals do
     |> Enum.concat(translated_sources(proposal))
     |> Enum.uniq()
     |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+  end
+
+  defp lock_translated_sources!(proposal) do
+    proposal
+    |> translated_sources()
+    |> Enum.uniq()
+    |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+    |> Enum.each(fn {schema, id} -> lock_source!(schema, id) end)
   end
 
   defp translated_sources(proposal) do

@@ -77,9 +77,8 @@ defmodule Brando.Content.Proposals.Review do
     |> Enum.find_value(fn {target, value} ->
       schema = if match?({:new, _}, target), do: value, else: elem(target, 0)
 
-      if target not in sources and is_nil(Brando.Content.Proposals.translation(proposal.operations, target)) and
-           Brando.LivePreview.has_live_preview_target(schema),
-         do: Proposal.key(target)
+      if target not in sources and Brando.LivePreview.has_live_preview_target(schema),
+        do: Proposal.key(target)
     end)
   end
 
@@ -153,8 +152,9 @@ defmodule Brando.Content.Proposals.Review do
     }
   end
 
-  # The copy is made as the proposal is applied, so it has no page to preview
-  # yet, and it stays unpublished: its texts are still to translate. Its title
+  # The copy is made as the proposal is applied, and stays unpublished: its
+  # texts are still to translate. Its page is previewed as a copy made and
+  # rolled back (`Brando.Content.Proposals.with_translation/5`). Its title
   # is the source's, as the copy keeps it. The source is read as the reviewer
   # may read it.
   defp translation(target, schema, %CreateTranslation{source: {_, id}} = op, proposal) do
@@ -186,8 +186,8 @@ defmodule Brando.Content.Proposals.Review do
       changes: changes,
       media: [],
       highlight: [],
-      preview?: false,
-      preview_targets: [],
+      preview?: Brando.LivePreview.has_live_preview_target(schema),
+      preview_targets: preview_targets(schema),
       placeholders: [],
       problems: problems(proposal, target)
     }
