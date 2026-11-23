@@ -129,9 +129,18 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
 
     embedded_schema do
       field :text, :string
+      field :rank, :integer
+      # Set by the changeset, not typed: a new row gets another each cast
+      field :uid, :string
     end
 
-    def changeset(quote, params), do: Changeset.cast(quote, params, [:text])
+    def changeset(quote, params) do
+      quote
+      |> Changeset.cast(params, [:text, :rank])
+      |> then(
+        &if(Changeset.get_field(&1, :uid), do: &1, else: Changeset.put_change(&1, :uid, "#{System.unique_integer()}"))
+      )
+    end
   end
 
   # Rows stored without a key of their own
@@ -152,9 +161,16 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     embedded_schema do
       embeds_many :quotes, Quote, on_replace: :delete
       embeds_many :bare_quotes, BareQuote, on_replace: :delete
+      # A Blueprint's `embeds_one` default
+      embeds_one :feature, Quote, on_replace: :update
     end
 
-    def changeset(board, params), do: board |> Changeset.cast(params, []) |> Changeset.cast_embed(:quotes)
+    def changeset(board, params, opts \\ []) do
+      board
+      |> Changeset.cast(params, [])
+      |> Changeset.cast_embed(:quotes)
+      |> Changeset.cast_embed(:feature, required: Keyword.get(opts, :required, false))
+    end
   end
 
   setup do
@@ -422,6 +438,26 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert shown[:sequence].value == "1.5"
     end
 
+    # B typed a value the sequence can't take; A's save removed the row
+    test "a row the save removed keeps the values typed that didn't cast, and their errors", c do
+      item = Repo.insert!(%Item{article_id: c.article.id, label: "Old", sequence: 4})
+      base = reload(c.article, [:author, :items])
+
+      previous =
+        Article.changeset(base, %{"items" => %{"0" => %{"id" => "#{item.id}", "label" => "Old", "sequence" => "abc"}}})
+
+      Repo.delete!(item)
+      saved = base |> reload([:author, :items]) |> Changeset.change()
+
+      carried = RelationRows.keep(saved, previous, base, :items)
+
+      assert [row] = carried.changes.items
+      assert row.action == :insert
+      assert Keyword.has_key?(row.errors, :sequence)
+      assert row.params["sequence"] == "abc"
+      refute carried.valid?
+    end
+
     test "rows that can't be replaced: this form's edit in one, the save's in another", c do
       [first, second] =
         for {label, n} <- [{"Old", 0}, {"Second", 1}],
@@ -502,8 +538,8 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     end
 
     # B moved the third row first and changed the first; A's save added a
-    # row at the end, and one after the first
-    test "the editor's order wins, and the rows the save added keep their place", %{base: base} do
+    # row at the end, after the third, and one after the first
+    test "the editor's order wins, and the rows the save added go after their neighbours", %{base: base} do
       previous =
         Board.changeset(base, %{
           "quotes" =>
@@ -517,7 +553,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       [one, two, three] = base.quotes
       saved = %{base | quotes: [one, %Quote{id: "5", text: "Five by A"}, two, three, %Quote{id: "4", text: "Four by A"}]}
 
-      assert kept_texts(saved, previous, base) == ["Three", "One by B", "Five by A", "Two", "Four by A"]
+      assert kept_texts(saved, previous, base) == ["Three", "Four by A", "One by B", "Five by A", "Two"]
     end
 
     # B added a row after the first and changed the third; A's save moved
@@ -544,13 +580,103 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     test "rows without a key are kept whole", %{base: base} do
       bare = %{base | bare_quotes: [%BareQuote{text: "One"}]}
       saved = Changeset.change(bare)
+      previous = Changeset.change(bare)
 
-      assert RelationRows.embedded_rows?(saved, bare, :quotes)
-      refute RelationRows.embedded_rows?(saved, bare, :bare_quotes)
+      assert RelationRows.embedded_rows?(saved, previous, bare, :quotes)
+      refute RelationRows.embedded_rows?(saved, previous, bare, :bare_quotes)
 
       unsaved = %{base | quotes: [%Quote{text: "Stored without a key"}]}
-      refute RelationRows.embedded_rows?(Changeset.change(unsaved), base, :quotes)
-      refute RelationRows.embedded_rows?(saved, unsaved, :quotes)
+      refute RelationRows.embedded_rows?(Changeset.change(unsaved), previous, base, :quotes)
+      refute RelationRows.embedded_rows?(saved, previous, unsaved, :quotes)
+    end
+
+    # B added a fourth quote and the other editors were sent it; A's save
+    # wrote it, with a key and a value the cast sets (`uid`) of its own.
+    # B typed on in it after it was sent.
+    test "a new row the others were sent, which the save wrote, is that saved row once", %{base: base} do
+      rows = for {id, text} <- [{"1", "One"}, {"2", "Two"}, {"3", "Three"}], do: %{"id" => id, "text" => text}
+      shipped = Board.changeset(base, %{"quotes" => form_rows(rows ++ [%{"_key" => "new-1", "text" => "Four"}])})
+      previous = Board.changeset(base, %{"quotes" => form_rows(rows ++ [%{"_key" => "new-1", "text" => "Four on"}])})
+      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4", text: "Four", uid: "stored"}]}
+
+      kept = saved |> Changeset.change() |> RelationRows.keep(previous, base, :quotes, shipped.changes.quotes)
+      quotes = Changeset.get_field(kept, :quotes)
+
+      assert Enum.map(quotes, &{&1.id, &1.text}) == [{"1", "One"}, {"2", "Two"}, {"3", "Three"}, {"4", "Four on"}]
+      assert List.last(quotes).uid == "stored"
+
+      # Not typed on: the row is the one sent
+      kept = saved |> Changeset.change() |> RelationRows.keep(shipped, base, :quotes, shipped.changes.quotes)
+      assert kept |> Changeset.get_field(:quotes) |> Enum.map(& &1.id) == ["1", "2", "3", "4"]
+    end
+
+    test "a row B added and not sent stays a new row beside the one the save added", %{base: base} do
+      rows = for {id, text} <- [{"1", "One"}, {"2", "Two"}, {"3", "Three"}], do: %{"id" => id, "text" => text}
+      previous = Board.changeset(base, %{"quotes" => form_rows(rows ++ [%{"_key" => "new-1", "text" => "Four by B"}])})
+      saved = %{base | quotes: base.quotes ++ [%Quote{id: "4", text: "Four by A"}]}
+
+      assert kept_texts(saved, previous, base) == ["One", "Two", "Three", "Four by B", "Four by A"]
+    end
+
+    # B typed a value the rank can't take in the second row; A's save
+    # removed the row.
+    test "a row the save removed keeps what the editor typed that didn't cast, and its error", %{base: base} do
+      [one, two, three] = base.quotes
+      base = %{base | quotes: [one, %{two | rank: 4}, three]}
+
+      previous =
+        Board.changeset(base, %{
+          "quotes" =>
+            form_rows([
+              %{"id" => "1", "text" => "One"},
+              %{"id" => "2", "text" => "Two", "rank" => "abc"},
+              %{"id" => "3", "text" => "Three"}
+            ])
+        })
+
+      carried = %{base | quotes: [one, three]} |> Changeset.change() |> RelationRows.keep(previous, base, :quotes)
+
+      assert [row] = Enum.filter(carried.changes.quotes, &(&1.action == :insert))
+      assert Keyword.has_key?(row.errors, :rank)
+      assert row.params["rank"] == "abc"
+      refute row.valid?
+      refute carried.valid?
+    end
+  end
+
+  describe "an embedded one" do
+    setup do
+      %{base: %Board{id: "b", quotes: [], feature: %Quote{id: "f", text: "Feature"}}}
+    end
+
+    # B cleared the feature; A's save is of another field. The Blueprint's
+    # `on_replace: :update` takes a removal.
+    test "one the editor cleared stays cleared when the saved row is the one they removed", %{base: base} do
+      previous = Board.changeset(base, %{"feature" => nil})
+      assert Map.has_key?(previous.changes, :feature)
+
+      carried = base |> Changeset.change() |> RelationRows.keep(previous, base, :feature)
+
+      assert Changeset.get_field(carried, :feature) == nil
+    end
+
+    # A's save put another row there: B's removal was of a row gone since
+    test "one the editor cleared takes the row the save put there instead", %{base: base} do
+      previous = Board.changeset(base, %{"feature" => nil})
+      saved = %{base | feature: %Quote{id: "g", text: "Other by A"}}
+
+      carried = saved |> Changeset.change() |> RelationRows.keep(previous, base, :feature)
+
+      assert %Quote{id: "g"} = Changeset.get_field(carried, :feature)
+    end
+
+    # A required one cleared doesn't cast: the form keeps it as the editor
+    # left it, with its error, rather than the saved row beside the error.
+    test "a required one the editor cleared is kept as the form holds it", %{base: base} do
+      previous = Board.changeset(base, %{"feature" => nil}, required: true)
+      assert Keyword.has_key?(previous.errors, :feature)
+
+      refute RelationRows.embedded_rows?(Changeset.change(base), previous, base, :feature)
     end
   end
 end

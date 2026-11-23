@@ -5,9 +5,9 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
   # has_many already is kept. Before, B kept every row as its form loaded
   # them, and B's next save undid A's rows.
   #
-  # B is in a quote's input when A saves: the quotes A ships wait until B
-  # leaves them (`held_remote`), so what B's form holds is decided by A's
-  # save reaching it (`take_saved_entry`).
+  # B is in a quote's input when A saves: the quotes A ships, and A's save
+  # itself, wait until B leaves them (`held_remote`). Until then B's rows
+  # stay where B's browser draws them, so B's typing goes into B's rows.
   use Brando.LiveCase
 
   import Brando.EditSessionEditors, only: [await: 1]
@@ -42,6 +42,9 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
 
   defp focus(view, index),
     do: view |> form_of() |> render_hook("focus", %{"field" => "article[quotes][#{index}][text]"})
+
+  # B leaves the field it is in
+  defp leave(view), do: view |> form_of() |> render_hook("blur", %{})
 
   # A keystroke as the browser sends it: the whole form, one field changed
   defp type(view, index, value), do: type_in(view, render(view), index, value)
@@ -80,10 +83,12 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
 
   defp stored(article), do: Enum.map(Repo.get!(Article, article.id).quotes, & &1.text)
 
-  # A saves; B's form shows `shown` once the save reaches it, and B's save
-  # stores it.
+  # A saves; B's form shows `shown` once the save reaches it and B has left
+  # the field, and B's save stores it.
   defp a_saves_then_b(c, shown) do
     save(c.a)
+    settle(c.b)
+    leave(c.b)
     await(fn -> quotes(c.b) == shown end)
 
     save(c.b)
@@ -98,27 +103,43 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
     a_saves_then_b(c, ["One by A", "Two by B", "Three"])
   end
 
-  # B's browser sends a keystroke from the form it showed before A's save
-  # reached it, with A's row as it was: the form keeps A's row. The input B
-  # types in keeps its text while it has focus, and the next keystroke
-  # sends it again.
-  test "B's keystroke from the form before A's save keeps A's row", c do
+  # A's save removes the first row while B types in the second: B's rows
+  # stay as B's browser draws them until B leaves the field, so the next
+  # keystroke goes into B's own row, not the one A's save moved there.
+  test "B's keystroke while A's save waits goes into B's own row", c do
     focus(c.b, 1)
     type(c.b, 1, "Two by B")
-    before = render(c.b)
 
-    type(c.a, 0, "One by A")
+    focus(c.a, 0)
+    remove(c.a, c.article, "One")
     save(c.a)
-    await(fn -> quotes(c.b) == ["One by A", "Two by B", "Three"] end)
-
-    type_in(c.b, before, 1, "Two by B!")
-    assert quotes(c.b) == ["One by A", "Two by B", "Three"]
+    settle(c.b)
+    assert quotes(c.b) == ["One", "Two by B", "Three"]
 
     type(c.b, 1, "Two by B!")
-    assert quotes(c.b) == ["One by A", "Two by B!", "Three"]
+    leave(c.b)
+    await(fn -> quotes(c.b) == ["Two by B!", "Three"] end)
 
     save(c.b)
-    await(fn -> stored(c.article) == ["One by A", "Two by B!", "Three"] end)
+    await(fn -> stored(c.article) == ["Two by B!", "Three"] end)
+  end
+
+  test "B's keystroke while A's save adds a row before it goes into B's own row", c do
+    focus(c.b, 1)
+    type(c.b, 1, "Two by B")
+
+    c.a |> subform() |> render_click("insert_subentry", %{"index" => 0})
+    focus(c.a, 0)
+    type(c.a, 0, "Zero by A")
+    save(c.a)
+    settle(c.b)
+
+    type(c.b, 1, "Two by B!")
+    leave(c.b)
+    await(fn -> quotes(c.b) == ["Zero by A", "One", "Two by B!", "Three"] end)
+
+    save(c.b)
+    await(fn -> stored(c.article) == ["Zero by A", "One", "Two by B!", "Three"] end)
   end
 
   test "a row B removed stays removed, though A saved a change to it", c do
@@ -177,5 +198,81 @@ defmodule BrandoAdmin.EmbeddedRowsSavedElsewhereTest do
     remove(c.a, c.article, "Three")
     a_saves_then_b(c, ["One by A", "Two"])
     assert Repo.get!(Article, c.article.id).title == "Title by B"
+  end
+
+  # A row another editor added reaches B through field sync without a key:
+  # keys are made when the repo writes. Rows only the form received are the
+  # saved ones once saved, and a new row the save wrote is that row, once.
+  describe "a row added and sent before the save" do
+    defp add_and_send(view, index, text) do
+      add(view)
+      focus(view, index)
+      type(view, index, text)
+      leave(view)
+    end
+
+    test "by A while B is elsewhere is in B's form once", c do
+      add_and_send(c.a, 3, "Four by A")
+      await(fn -> quotes(c.b) == ["One", "Two", "Three", "Four by A"] end)
+
+      save(c.a)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by A"] end)
+      settle(c.b)
+      assert quotes(c.b) == ["One", "Two", "Three", "Four by A"]
+
+      c.b |> element("#article_form_form") |> render_change(put_in(params(c.b), ["article", "title"], "Title by B"))
+      save(c.b)
+      await(fn -> Repo.get!(Article, c.article.id).title == "Title by B" end)
+      assert stored(c.article) == ["One", "Two", "Three", "Four by A"]
+    end
+
+    test "by B, which A saves, is in B's form once", c do
+      add_and_send(c.b, 3, "Four by B")
+      await(fn -> quotes(c.a) == ["One", "Two", "Three", "Four by B"] end)
+
+      save(c.a)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by B"] end)
+      settle(c.b)
+      assert quotes(c.b) == ["One", "Two", "Three", "Four by B"]
+
+      c.b |> element("#article_form_form") |> render_change(put_in(params(c.b), ["article", "title"], "Title by B"))
+      save(c.b)
+      await(fn -> Repo.get!(Article, c.article.id).title == "Title by B" end)
+      assert stored(c.article) == ["One", "Two", "Three", "Four by B"]
+    end
+
+    test "by both, which A saves, is in B's form once each", c do
+      add_and_send(c.a, 3, "Four by A")
+      await(fn -> quotes(c.b) == ["One", "Two", "Three", "Four by A"] end)
+      add_and_send(c.b, 4, "Five by B")
+      await(fn -> quotes(c.a) == ["One", "Two", "Three", "Four by A", "Five by B"] end)
+
+      save(c.a)
+      await(fn -> length(stored(c.article)) == 5 end)
+      settle(c.b)
+      assert quotes(c.b) == ["One", "Two", "Three", "Four by A", "Five by B"]
+
+      c.b |> element("#article_form_form") |> render_change(put_in(params(c.b), ["article", "title"], "Title by B"))
+      save(c.b)
+      await(fn -> Repo.get!(Article, c.article.id).title == "Title by B" end)
+      assert stored(c.article) == ["One", "Two", "Three", "Four by A", "Five by B"]
+    end
+
+    # B typed on in its row after it was sent, and is still in it
+    test "by B, typed on since, keeps B's text in the saved row", c do
+      add_and_send(c.b, 3, "Four by B")
+      await(fn -> quotes(c.a) == ["One", "Two", "Three", "Four by B"] end)
+      focus(c.b, 3)
+      type(c.b, 3, "Four by B, on")
+
+      save(c.a)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by B"] end)
+      settle(c.b)
+      leave(c.b)
+      await(fn -> quotes(c.b) == ["One", "Two", "Three", "Four by B, on"] end)
+
+      save(c.b)
+      await(fn -> stored(c.article) == ["One", "Two", "Three", "Four by B, on"] end)
+    end
   end
 end

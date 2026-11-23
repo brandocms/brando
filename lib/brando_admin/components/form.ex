@@ -3262,7 +3262,9 @@ defmodule BrandoAdmin.Components.Form do
   #     before the change reached it, and the replacing value is kept.
   #   * `held_remote`: another editor's change to the field this editor is
   #     in. It applies when the editor leaves the field without having
-  #     changed it; otherwise what they typed wins and is shipped.
+  #     changed it; otherwise what they typed wins and is shipped. Also
+  #     another editor's save of an embedded list the editor is in
+  #     (`held_lists/4`), which applies when they leave it or save.
   #   * `field_clocks`: field => the clock of the value the other editors
   #     hold (`stamp/2`, `take_newer/2`).
   #   * `unsent_clocks`: field => the clock of a value this editor holds
@@ -3861,7 +3863,11 @@ defmodule BrandoAdmin.Components.Form do
     {outdone, changes} = Enum.split_with(changes, &(Map.get(&1, :clock, {0, ""}) <= Map.get(unsent, &1.field, {0, ""})))
     {held, changes} = Enum.split_with(changes, &focused_field?(socket, &1.field))
 
-    held_remote = Enum.reduce(held, held_remote(socket), &Map.put(&2, &1.field, &1))
+    # A held save (`hold_saved_rows/4`) stays held with the change
+    held_remote =
+      Enum.reduce(held, held_remote(socket), fn change, held_remote ->
+        Map.update(held_remote, change.field, change, &Map.merge(&1, change))
+      end)
 
     socket
     |> apply_remote(changes)
@@ -4032,14 +4038,61 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Changes held while this editor was in their field apply once it has left
-  # it without changing it.
-  defp apply_held_remote(socket) do
-    {left, still_in} = socket |> held_remote() |> Map.values() |> Enum.split_with(&(not focused_field?(socket, &1.field)))
+  # it without changing it. A save held for an embedded list
+  # (`held_lists/4`) applies once it has left it, or as this editor saves
+  # (`saving?`): the list takes the saved rows (`take_held_rows/2`), and a
+  # change sent since applies over them as any.
+  defp apply_held_remote(socket, saving? \\ false) do
+    {left, still_in} =
+      socket
+      |> held_remote()
+      |> Map.values()
+      |> Enum.split_with(&(not focused_field?(socket, &1.field) or (saving? and Map.has_key?(&1, :saved_rows))))
+
     unshipped = unshipped_fields(socket)
+    {saves, _changes} = Enum.split_with(left, &Map.has_key?(&1, :saved_rows))
 
     socket
     |> assign(:held_remote, Map.new(still_in, &{&1.field, &1}))
-    |> apply_remote(Enum.reject(left, &MapSet.member?(unshipped, &1.field)))
+    |> take_held_rows(saves)
+    |> apply_remote(Enum.reject(left, &(MapSet.member?(unshipped, &1.field) or not Map.has_key?(&1, :value))))
+  end
+
+  # The saved rows of a list the editor was in when the save came. A list
+  # they changed is kept row by row (`RelationRows.keep/5`), from the rows
+  # the form was built on, which their typing since was cast onto;
+  # otherwise it takes the saved rows.
+  defp take_held_rows(socket, saves) do
+    Enum.reduce(saves, socket, fn %{field: field, saved_rows: rows} = held, socket ->
+      %{form: %{source: previous}, entry: entry} = socket.assigns
+      changes = Map.delete(previous.changes, field)
+      errors = Keyword.delete(previous.errors, field)
+      valid? = errors == [] and Enum.all?(Map.values(changes), &valid_change?/1)
+
+      saved = %{
+        previous
+        | data: Map.put(previous.data, field, rows),
+          changes: changes,
+          errors: errors,
+          valid?: valid?,
+          params: drop_param(previous.params, field)
+      }
+
+      changeset =
+        if held.kept? or MapSet.member?(unshipped_fields(socket), field),
+          do: RelationRows.keep(saved, previous, entry, field, held.shipped),
+          else: saved
+
+      changed = Enum.filter([field], &(echo_value(previous, &1) != echo_value(changeset, &1)))
+
+      socket
+      |> assign(:entry, Map.put(entry, field, rows))
+      |> put_form(to_form(changeset, []))
+      |> redraw_relations(previous, changeset, [field])
+      |> Drafts.dirty()
+      |> send_remote_fields_to_blocks(changeset, changed)
+      |> preview_changed_fields(changed)
+    end)
   end
 
   # Each field's value carries a clock, `{n, tab}`, a hybrid logical clock:
@@ -4267,11 +4320,15 @@ defmodule BrandoAdmin.Components.Form do
   # shipment, or one whose value the editors hold unsaved (shipped,
   # received) if the save has another, and a relation it changed
   # (`edited_relations`) whose rows differ from the saved ones, with its
-  # rows as it holds them (`RelationRows.keep/4`). An embedded list it
+  # rows as it holds them (`RelationRows.keep/5`). An embedded list it
   # changed is kept the same way when its rows carry keys, and takes the
   # rows the save added: the rows it didn't change are the saved ones, so
-  # its next save doesn't write the old ones back. Every other field takes
-  # the saved value, as a change from another editor does
+  # its next save doesn't write the old ones back. A new row it holds that
+  # the save wrote is that saved row. What the other editors hold from it
+  # (`synced_values`) takes the saved rows too (`merge_synced/5`). One it
+  # only received takes the saved list whole (`received_lists/1`), and one
+  # the editor is in waits until they leave it (`held_lists/4`). Every
+  # other field takes the saved value, as a change from another editor does
   # (`apply_remote/2`): the browser's old value for it is an echo from then
   # on (`drop_echoes/4`). The blocks sync through the edit session: the
   # entry is read back without them, the form keeps the ones it holds, and
@@ -4309,8 +4366,10 @@ defmodule BrandoAdmin.Components.Form do
   defp take_saved_entry(%{assigns: %{entry: %{id: id}}} = socket) when not is_nil(id) do
     case fetch_entry(entry_source(socket), skip_blocks: true) do
       {:ok, entry} ->
+        received = received_lists(socket)
+
         socket
-        |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry))
+        |> take_saved_entry(with_form_blocks(entry, socket.assigns.entry), &(&1 not in received))
         |> hand_saved_rows_to_transformers("entry_saved_elsewhere")
 
       :not_found ->
@@ -4320,23 +4379,29 @@ defmodule BrandoAdmin.Components.Form do
 
   defp take_saved_entry(socket), do: socket
 
-  # `keep?` narrows the unsaved fields the form keeps (`discard_entry_edits/1`).
-  defp take_saved_entry(socket, entry, keep? \\ fn _field -> true end) do
+  # `keep?` narrows the unsaved fields the form keeps (`discard_entry_edits/1`,
+  # and the embedded lists the form only received, `received_lists/1`).
+  defp take_saved_entry(socket, entry, keep?) do
     %{schema: schema, current_user: user, form: %{source: previous}} = socket.assigns
     saved = schema.changeset(entry, %{}, user)
     {fields, belongs_to} = sync_fields(socket)
     relations = relation_fields(socket)
     kept = socket |> unsaved_edits(previous, saved, fields, belongs_to, relations) |> Enum.filter(keep?)
     opened = socket.assigns.entry
-    by_row = relations ++ Enum.filter(kept, &RelationRows.embedded_rows?(saved, opened, &1))
+    embedded = Enum.filter(kept, &RelationRows.embedded_rows?(saved, previous, opened, &1))
+    held = held_lists(socket, saved, previous, opened)
+    by_row = relations ++ (embedded -- held)
+    carried = Enum.uniq(kept ++ held)
 
-    changeset = Enum.reduce(kept, saved, &carry_edit(&2, previous, opened, &1, by_row))
-    taken = Enum.filter((fields -- belongs_to) ++ relations, &(&1 not in kept))
-    changeset = carry_form_state(changeset, previous, kept, taken ++ by_row)
+    changeset = Enum.reduce(carried, saved, &carry_edit(&2, previous, opened, &1, by_row))
+    taken = Enum.filter((fields -- belongs_to) ++ relations, &(&1 not in carried))
+    changeset = carry_form_state(changeset, previous, carried, taken ++ by_row)
     changed = Enum.filter(taken, &(echo_value(previous, &1) != echo_value(changeset, &1)))
+    merged = Enum.filter(embedded -- held, &(echo_value(previous, &1) != echo_value(changeset, &1)))
     replaced = Enum.reduce(changed -- relations, replaced_values(socket), &replace_value(&2, previous, changeset, &1))
     kept_relations = Map.take(socket.assigns[:updated_entry_assocs] || %{}, kept)
     conflicts = conflicts(socket, saved, kept)
+    synced = socket |> synced_values() |> Map.take(kept) |> merge_synced(saved, previous, opened, embedded)
 
     socket
     |> drop_conflicts(relation_conflicts(socket) -- kept)
@@ -4345,12 +4410,13 @@ defmodule BrandoAdmin.Components.Form do
       :conflict_bases,
       &Map.merge(&1, Map.new(conflicts, fn field -> {field, RelationRows.base(opened, field)} end))
     )
-    |> assign_read_entry(entry)
+    |> hold_saved_rows(held, entry, kept)
+    |> assign_read_entry(Map.merge(entry, Map.take(opened, held)))
     |> put_form(to_form(changeset, []))
     |> redraw_relations(previous, changeset, by_row)
     |> assign(:replaced_values, replaced)
     |> assign(:unshipped_fields, MapSet.intersection(unshipped_fields(socket), MapSet.new(kept)))
-    |> assign(:synced_values, Map.take(synced_values(socket), kept))
+    |> assign(:synced_values, synced)
     |> assign(:edited_relations, MapSet.intersection(edited_relations(socket), MapSet.new(kept)))
     |> assign(:uncast_fields, MapSet.intersection(uncast_fields(socket), MapSet.new(kept)))
     |> own_changed_assets(changed)
@@ -4358,9 +4424,64 @@ defmodule BrandoAdmin.Components.Form do
     |> update(:updated_entry_assocs, &Map.merge(&1, kept_relations))
     |> Drafts.rebase(entry)
     |> force_svelte_remounts(changed)
-    |> send_remote_fields_to_blocks(changeset, changed)
-    |> preview_changed_fields(changed)
+    |> send_remote_fields_to_blocks(changeset, changed ++ merged)
+    |> preview_changed_fields(changed ++ merged)
     |> broadcast_dirty_fields()
+  end
+
+  # The embedded lists the form holds only because other editors sent them:
+  # a save takes them whole. A new row in one is a row the save wrote (keys
+  # are made when the repo writes), and a row's value is what the sender
+  # had then.
+  defp received_lists(%{assigns: %{schema: schema}} = socket),
+    do: Enum.filter(received_fields(socket), &schema.__schema__(:embed, &1))
+
+  # The embedded lists the editor is in that the save changed: the save
+  # waits until they leave the list (`held_remote`, `apply_held_remote/2`).
+  # The rows the browser draws around the input they type in stay where
+  # they are until then, so a keystroke goes into the row it was typed in,
+  # not the one the save moved there. The form keeps its rows meanwhile,
+  # and casts them onto the rows it was built on (`entry`).
+  defp held_lists(socket, %Changeset{data: saved} = saved_changeset, previous, opened) do
+    for field <- embed_fields(socket),
+        focused_field?(socket, field),
+        RelationRows.embedded_rows?(saved_changeset, previous, opened, field),
+        Map.get(saved, field) != Map.get(opened, field),
+        do: field
+  end
+
+  # A held save keeps the rows the form was first sent (`shipped`): the
+  # other editors' values for it move to the saved rows now
+  # (`merge_synced/5`), and a new row this form sent is told by them.
+  # A change held before the save is older than it, and goes.
+  defp hold_saved_rows(socket, held, entry, kept) do
+    synced = synced_values(socket)
+
+    held_remote =
+      Enum.reduce(held, held_remote(socket), fn field, held_remote ->
+        hold = %{field: field, saved_rows: Map.get(entry, field), kept?: field in kept, shipped: Map.get(synced, field)}
+        Map.update(held_remote, field, hold, &Map.put(hold, :shipped, Map.get(&1, :shipped, hold.shipped)))
+      end)
+
+    assign(socket, :held_remote, held_remote)
+  end
+
+  # The values of the kept embedded lists the other editors hold from this
+  # form (`synced_values`, what an editor who opens the entry later is
+  # given, `ship_fields_to/2`), with the save's rows where they took them:
+  # the rows the editor typed in and didn't send stay theirs alone.
+  defp merge_synced(synced, saved, previous, opened, fields) do
+    Enum.reduce(fields, synced, fn field, synced ->
+      case Map.fetch(synced, field) do
+        {:ok, value} ->
+          sent = %{previous | changes: Map.put(previous.changes, field, value)}
+          merged = RelationRows.keep(saved, sent, opened, field, value)
+          Map.put(synced, field, field_change(merged, field, []).value)
+
+        :error ->
+          synced
+      end
+    end)
   end
 
   # This editor's own unsaved changes to the entry's fields: what a save by
@@ -4533,8 +4654,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # A field the form keeps goes onto the saved entry as it was: its change,
   # or the value it opened with if it was set back to that. A relation, and
-  # an embed whose rows carry keys (`RelationRows.embedded_rows?/3`), keeps
-  # its rows (`RelationRows.keep/4`; `base` is the entry the form was built
+  # an embed whose rows carry keys (`RelationRows.embedded_rows?/4`), keeps
+  # its rows (`RelationRows.keep/5`; `base` is the entry the form was built
   # on): the rows the editor didn't change take the saved values.
   defp carry_edit(changeset, previous, base, field, by_row) do
     cond do
@@ -6374,7 +6495,9 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    socket = assign(socket, :save_token, nil)
+    # A save held for the list the editor is in is taken first: the form
+    # writes the rows it shows from then on.
+    socket = socket |> assign(:save_token, nil) |> apply_held_remote(true)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -6475,7 +6598,7 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     # The token of the `b:submit` this write answers is used up, as in the
     # save with blocks: the same token again is a save that wrote already.
-    socket = socket |> assign(:save_token, nil) |> ship_all_field_changes()
+    socket = socket |> assign(:save_token, nil) |> apply_held_remote(true) |> ship_all_field_changes()
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user

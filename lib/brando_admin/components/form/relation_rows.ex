@@ -11,8 +11,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   #
   # An embedded list (`embeds_many`, `embeds_one`) ships between editors as
   # a field, but another editor's save that reaches a form with unshipped
-  # changes to it is kept here too, row by row (`keep/4`), when its rows
-  # carry keys (`embedded_rows?/3`). It has no conflict to settle: the rows
+  # changes to it is kept here too, row by row (`keep/5`), when its rows
+  # carry keys (`embedded_rows?/4`). It has no conflict to settle: the rows
   # the save added come in.
 
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
@@ -133,8 +133,14 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   the entry the form was built on. A row it holds that the save removed is a new row, if the
   editor changed it, and gone otherwise. The rows the save added are not
   kept, unless the relation can't replace a row (`on_replace: :raise`).
+
+  An embedded list takes the rows the save added. A new row the form holds
+  that the save wrote is that saved row, with what the editor typed in it
+  since: the row as `shipped` has it (the list the other editors were
+  sent, `Form` "Entry field sync") or as the form holds it shows the same
+  inputs as one of them.
   """
-  def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field) do
+  def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field, shipped \\ []) do
     assoc = schema.__schema__(:association, field) || schema.__schema__(:embed, field)
     current = Map.get(data, field)
     base = if is_map(base), do: Map.get(base, field)
@@ -145,11 +151,11 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
         keep_unloaded(saved, previous, field)
 
       assoc.cardinality == :one ->
-        put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base)))
+        put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base), base))
 
       match?(%Ecto.Embedded{}, assoc) ->
         held = Enum.map(List.wrap(held(previous, field)), &as_change(&1, base))
-        put_kept(saved, field, keep_embedded(current, held, base))
+        put_kept(saved, field, keep_embedded(current, held, base, List.wrap(shipped)))
 
       true ->
         put_kept(
@@ -161,16 +167,19 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   end
 
   @doc """
-  Whether `keep/4` can keep the embedded rows of `field` row by row: the
+  Whether `keep/5` can keep the embedded rows of `field` row by row: the
   rows carry a primary key, in the saved entry and in `base`, the entry
   the form was built on. A schema without one (`primary_key: false`), or a
   row stored without its key, can't be matched, and the form keeps the
-  editor's list whole.
+  editor's list whole. So does an embedded one whose removal in
+  `previous`, the form, didn't cast (a required one): the form keeps
+  showing it removed, with its error.
   """
-  def embedded_rows?(%Changeset{data: %schema{} = data}, base, field) do
+  def embedded_rows?(%Changeset{data: %schema{} = data}, %Changeset{} = previous, base, field) do
     case schema.__schema__(:embed, field) do
-      %Ecto.Embedded{related: related} ->
+      %Ecto.Embedded{related: related, cardinality: cardinality} ->
         related.__schema__(:primary_key) != [] and
+          not (cardinality == :one and Keyword.has_key?(previous.errors, field)) and
           Enum.all?(List.wrap(Map.get(data, field)) ++ List.wrap(base && Map.get(base, field)), &(not new?(&1)))
 
       nil ->
@@ -280,16 +289,19 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # An embedded list: the rows the editor holds, kept as a has_many's
   # (`keep_row/2`), and the rows the save added. A has_many leaves those
   # to the editor's answer (`Form` "Saves by other editors"); an embedded
-  # list has none to give. A row the editor took out is in `base` and not
-  # held: it stays out. The order is the editor's if they moved a row, the
-  # save's otherwise; a row only the other side has goes beside its
-  # neighbours there (`interleave/2`).
-  defp keep_embedded(saved, held, base) do
+  # list has none to give. A new row the save wrote is that saved row
+  # (`written/3`). A row the editor took out is in `base` and not held: it
+  # stays out. The order is the editor's if they moved a row, the save's
+  # otherwise; a row only the other side has goes after its nearest
+  # earlier neighbour there (`interleave/2`).
+  defp keep_embedded(saved, held, base, shipped) do
     based = Enum.map(List.wrap(base), &Ecto.primary_key/1)
-    rows = for entry <- held, row = keep_row(entry, by_key(saved)), do: {row_id(row), row}
     held_keys = MapSet.new(held, &(&1 |> applied() |> Ecto.primary_key()))
     gone = MapSet.union(held_keys, MapSet.new(based))
-    added = for row <- saved, key = Ecto.primary_key(row), not MapSet.member?(gone, key), do: {key, row}
+    added = for row <- saved, key = Ecto.primary_key(row), not MapSet.member?(gone, key), do: row
+    {held, added} = written(held, added, shipped)
+    rows = for entry <- held, row = keep_row(entry, by_key(saved)), do: {row_id(row), row}
+    added = for row <- added, do: {Ecto.primary_key(row), row}
 
     by_id = Map.new(rows ++ added)
     editor = Enum.map(rows, &elem(&1, 0))
@@ -297,6 +309,51 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     {lead, other} = if moved?(editor, based), do: {editor, save}, else: {save, editor}
 
     lead |> interleave(other) |> Enum.map(&Map.fetch!(by_id, &1))
+  end
+
+  # The new rows in `held` the save wrote, among the rows it `added`: one
+  # that shows the same inputs as a saved row, as the form holds it or as
+  # the other editors were sent it (`shipped`, told by its `_key`), is that
+  # row, with what the editor typed in it since as its changes.
+  defp written(held, added, shipped) do
+    Enum.map_reduce(held, added, fn entry, added ->
+      sent = if new?(applied(entry)), do: [entry | Enum.filter(shipped, &same_new_row?(&1, entry))], else: []
+
+      case Enum.find(added, fn row -> Enum.any?(sent, &same_inputs?(&1, row)) end) do
+        nil -> {entry, added}
+        row -> {as_written(entry, row), List.delete(added, row)}
+      end
+    end)
+  end
+
+  defp same_new_row?(%Changeset{params: %{"_key" => key}}, %Changeset{params: %{"_key" => key}}) when is_binary(key),
+    do: true
+
+  defp same_new_row?(_row, _entry), do: false
+
+  # The inputs a row shows are the fields its params name; a value the
+  # changeset sets itself (a generated `uid`) differs with each cast.
+  defp same_inputs?(entry, %row_schema{} = saved) do
+    row = applied(entry)
+    fields = inputs(entry, row_schema)
+    fields != [] and Map.take(row, fields) == Map.take(saved, fields)
+  end
+
+  defp inputs(%Changeset{params: %{} = params}, row_schema),
+    do: for(field <- row_schema.__schema__(:fields), Map.has_key?(params, Atom.to_string(field)), do: field)
+
+  defp inputs(_row, _row_schema), do: []
+
+  defp as_written(entry, %row_schema{} = saved) do
+    row = applied(entry)
+
+    changes =
+      for field <- inputs(entry, row_schema),
+          Map.get(row, field) != Map.get(saved, field),
+          into: %{},
+          do: {field, Map.get(row, field)}
+
+    saved |> Changeset.change(changes) |> Map.put(:action, :update) |> typed(entry)
   end
 
   # A new row has no key to tell it by
@@ -308,9 +365,9 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     Enum.filter(editor, &MapSet.member?(based_set, &1)) != Enum.filter(based, &MapSet.member?(editor_set, &1))
   end
 
-  # `lead` with the rows only `other` has: last if no row after it in
-  # `other` is in the list, else after the nearest row before it that is,
-  # else before the nearest one after it.
+  # `lead` with the rows only `other` has: after the nearest row before it
+  # in `other` that is in the list, else before the nearest one after it,
+  # else last.
   defp interleave(lead, other) do
     other
     |> Enum.with_index()
@@ -324,16 +381,18 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     next = Enum.find(after_rows, &(&1 in list))
 
     cond do
-      is_nil(next) -> list ++ [key]
       before -> List.insert_at(list, Enum.find_index(list, &(&1 == before)) + 1, key)
-      true -> List.insert_at(list, Enum.find_index(list, &(&1 == next)), key)
+      next -> List.insert_at(list, Enum.find_index(list, &(&1 == next)), key)
+      true -> list ++ [key]
     end
   end
 
   # A has_one: the row the editor holds, the saved one if it is that row.
-  defp keep_one(assoc, saved, nil), do: remove_one(assoc, saved)
+  # `base` is the row the form was built on.
+  defp keep_one(assoc, saved, held, base \\ nil)
+  defp keep_one(assoc, saved, nil, base), do: remove_one(assoc, saved, base)
 
-  defp keep_one(assoc, saved, held) do
+  defp keep_one(assoc, saved, held, _base) do
     row = applied(held)
 
     cond do
@@ -349,9 +408,16 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp as_removed(saved, %Changeset{changes: changes}),
     do: saved |> Changeset.change(Map.take(changes, [:marked_as_deleted])) |> Map.put(:action, :delete)
 
-  defp remove_one(_assoc, nil), do: :keep
-  defp remove_one(%{on_replace: on_replace}, _saved) when on_replace in [:raise, :update], do: :keep
-  defp remove_one(_assoc, _saved), do: nil
+  # An embedded one the editor removed (`on_replace: :update`, a Blueprint's
+  # default, takes `nil`) stays removed if the saved row is the one they
+  # removed.
+  defp remove_one(_assoc, nil, _base), do: :keep
+
+  defp remove_one(%Ecto.Embedded{on_replace: :update}, saved, %_{} = base),
+    do: if(Ecto.primary_key(saved) == Ecto.primary_key(base), do: nil, else: :keep)
+
+  defp remove_one(%{on_replace: on_replace}, _saved, _base) when on_replace in [:raise, :update], do: :keep
+  defp remove_one(_assoc, _saved, _base), do: nil
 
   # The editor's row onto the saved one: its changes, over the saved values.
   defp onto(%Changeset{} = held, saved) do
@@ -421,7 +487,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp typed(changeset, _row), do: changeset
 
   # A row the save removed that the editor changed: a new row, with a key of
-  # its own, holding what the editor's form showed.
+  # its own, holding what the editor's form showed, typed values that
+  # didn't cast and their errors too.
   defp as_new(entry) do
     entry
     |> applied()
@@ -429,6 +496,7 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     |> Changeset.change()
     |> Map.put(:action, :insert)
     |> SubformHelpers.new_row()
+    |> typed(entry)
   end
 
   defp new_struct(%row_schema{} = row) do
