@@ -271,7 +271,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
                 |> Enum.join(" · ")}
               </span>
               <span
-                :if={grant.auto_apply != "none"}
+                :if={grant.auto_apply != "none" or not is_nil(grant.auto_apply_set_at)}
                 class="security-item-meta"
                 data-testid="connected-app-auto-apply"
               >
@@ -554,6 +554,8 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
 
   # A site manager let the connection save unpublished translations in this
   # person's name, without review
+  defp auto_apply_note(%{auto_apply: "none"} = grant), do: review_note(grant)
+
   defp auto_apply_note(%{auto_apply_set_by: %{name: name}, auto_apply_set_at: %DateTime{} = at}),
     do:
       gettext("Saves unpublished translations in your name without review: set by %{name}, %{date}",
@@ -562,6 +564,12 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
       )
 
   defp auto_apply_note(_grant), do: gettext("Saves unpublished translations in your name without review")
+
+  # Set back to review everything: who did it and when stays in view
+  defp review_note(%{auto_apply_set_by: %{name: name}, auto_apply_set_at: %DateTime{} = at}),
+    do: gettext("Leaves every proposal for review: set by %{name}, %{date}", name: name, date: date(at))
+
+  defp review_note(_grant), do: gettext("Leaves every proposal for review")
 
   defp date(datetime), do: Brando.Utils.Datetime.format_datetime(datetime, "%-d %B %Y")
 

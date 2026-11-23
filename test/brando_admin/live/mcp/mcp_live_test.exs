@@ -112,6 +112,11 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       assert %Grant{auto_apply: "none"} = Repo.get!(Grant, grant.id)
       assert has_element?(view, "[data-testid=mcp-grant-auto-apply][data-auto-apply=none]")
 
+      # Set back, the person still sees who did it
+      {:ok, security, _html} = live(conn, "/admin/users/security")
+      assert has_element?(security, "[data-testid=connected-app-auto-apply]", "Leaves every proposal for review: set by")
+      assert has_element?(security, "[data-testid=connected-app-auto-apply]", user.name)
+
       # Connected again, the client starts over: nothing without review
       :ok = MCP.set_auto_apply(grant.id, "unpublished_translations", user)
       connect!(conn, tenant)
