@@ -2431,7 +2431,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   containers in the Outline.
   """
   def children_group(%{type: :container}), do: "container-children"
-  def children_group(%{type: :module, multi: true, module_id: id, module_origin: origin}), do: multi_children_group(id, origin)
+
+  def children_group(%{type: :module, multi: true, module_id: id, module_origin: origin}),
+    do: multi_children_group(id, origin)
+
   def children_group(_block), do: nil
 
   @doc """
