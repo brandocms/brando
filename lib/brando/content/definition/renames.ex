@@ -4,8 +4,8 @@ defmodule Brando.Content.Definition.Renames do
 
   @moduledoc """
   The renames a module's definition file declares (`renamed_from:` on a ref
-  or var, read by `Brando.Content.Definition.Model.renames!/1`), and the
-  values they move when the definition is applied.
+  or var, carried in the bundle's `"renames"`), and the values they move
+  when the definition is applied.
 
   A rename moves values only in the apply that removes its source key and
   adds its destination (`split/2`): there it moves each block's value from
