@@ -12,6 +12,12 @@ defmodule Brando.Content.Proposals.Record do
   no conversation). `client` names that tool when it is known, such as
   "Claude Code". Proposals stored before `brando_207` without a
   conversation have no origin.
+
+  `auto_applied_grant_id` is the connection (`Brando.MCP.Grant`) under which
+  the proposal was applied without review (`Brando.Content.Proposals.AutoApply`),
+  kept without a foreign key so the mark outlives the connection. A proposal
+  that asked to be applied so and was left for review instead keeps why in
+  `auto_apply_reason`, apart from its `problems`.
   """
   use Ecto.Schema
 
@@ -38,6 +44,8 @@ defmodule Brando.Content.Proposals.Record do
     field :effects, :map
     field :status, :string, default: "pending"
     field :approved_at, :utc_datetime_usec
+    field :auto_applied_grant_id, :integer
+    field :auto_apply_reason, :string
     field :expires_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
