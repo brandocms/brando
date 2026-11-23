@@ -842,6 +842,11 @@ msgstr[1] ""
 msgid "%{label} needs %{needed} units — only %{free} free in that row. Narrow another variable, or start a new row."
 msgstr ""
 
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgid "%{label}, row %{row}"
+msgstr ""
+
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
 msgid "%{languages} is not one of the installation's languages (config :brando, :languages)"
