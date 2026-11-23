@@ -153,6 +153,70 @@ defmodule Brando.Revisions do
 
   def create_revision(%{id: nil}, _user, _set_active), do: {:error, {:entry, :not_persisted}}
 
+  @doc """
+  `create_revision/3` for many stored entries at once, with `description`
+  on each: the same revisions, written in a few queries. Returns
+  `{:ok, %{{entry_type, entry_id} => revision_number}}`.
+  """
+  @spec create_revisions([map()], user(), revision_active(), String.t() | nil) ::
+          {:ok, %{{module(), integer()} => integer()}} | {:error, term()}
+  def create_revisions(entries, user, set_active, description \\ nil) do
+    Repo.transaction(fn ->
+      entries
+      |> Enum.group_by(& &1.__struct__)
+      |> Enum.flat_map(fn {entry_type, entries} ->
+        insert_revisions(entry_type, entries, user, set_active, description)
+      end)
+      |> Map.new()
+    end)
+  end
+
+  defp insert_revisions(entry_type, entries, user, set_active, description) do
+    entry_type_binary = to_string(entry_type)
+    ids = entries |> Enum.map(& &1.id) |> Enum.uniq()
+    locked = from(e in entry_type, where: e.id in ^ids, order_by: e.id, select: e.id, lock: "FOR UPDATE")
+    if length(Repo.all(locked)) != length(ids), do: Repo.rollback({:entry, :not_found})
+
+    if set_active do
+      from(r in Revision, where: r.active == true and r.entry_type == ^entry_type_binary and r.entry_id in ^ids)
+      |> Repo.update_all(set: [active: false])
+    end
+
+    last =
+      from(r in Revision,
+        where: r.entry_type == ^entry_type_binary and r.entry_id in ^ids,
+        group_by: r.entry_id,
+        select: {r.entry_id, max(r.revision)}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    version = Brando.Blueprint.Snapshot.get_current_version(entry_type)
+
+    rows =
+      for entry <- Repo.preload(entries, Brando.Blueprint.preloads_for(entry_type)) do
+        %{
+          active: set_active,
+          creator_id: user_id(user),
+          description: description,
+          encoded_entry: Utils.term_to_binary(entry),
+          entry_id: entry.id,
+          entry_type: entry_type_binary,
+          metadata: %{},
+          protected: false,
+          revision: if(revision = last[entry.id], do: revision + 1, else: 0),
+          scheduled: false,
+          schema_version: version,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(Revision, rows)
+    Enum.map(rows, &{{entry_type, &1.entry_id}, &1.revision})
+  end
+
   @doc "Set the human-readable description for a revision."
   def describe_revision(entry_type, entry_id, revision_number, description) do
     entry_type_binary = to_string(entry_type)

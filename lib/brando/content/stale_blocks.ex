@@ -50,11 +50,10 @@ defmodule Brando.Content.StaleBlocks do
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.Block
-  alias Brando.Content.BlockReferences
+  alias Brando.Content.BlockMoves
   alias Brando.Content.Blocks
   alias Brando.Content.Module
   alias Brando.Content.Ref
-  alias Brando.Content.Usage
   alias Brando.Content.Var
   alias Brando.Repo
   alias Brando.Villain.Blocks, as: RefTypes
@@ -137,6 +136,24 @@ defmodule Brando.Content.StaleBlocks do
     }
   end
 
+  @doc """
+  What `resolutions` would do to the blocks `block_ids` were `module` (with
+  its refs and vars) their module's definition: a dry run of a resolve
+  after an apply that leaves the module so (`plan/2`).
+  """
+  @spec plan_for(Module.t(), [integer()], resolutions()) :: map()
+  def plan_for(module, block_ids, resolutions) do
+    blocks =
+      from(b in Block,
+        where: b.id in ^block_ids,
+        order_by: [asc: b.id],
+        preload: [vars: ^vars_query(), refs: ^refs_query()]
+      )
+      |> Repo.all()
+
+    module |> build_report(blocks) |> plan(resolutions)
+  end
+
   ## Applying
 
   @doc """
@@ -188,44 +205,18 @@ defmodule Brando.Content.StaleBlocks do
 
   defp write!(plan, actor) do
     user = user(actor)
-    entries = load_entries(plan.entries)
-
-    before =
-      Map.new(entries, fn {key, entry} ->
-        {key,
-         revision!(
-           entry,
-           user,
-           gettext("Before resolving blocks on older versions of %{module}", module: module_name(plan.module))
-         )}
-      end)
-
-    Enum.each(plan.changes, &change!/1)
-    module = Repo.preload(plan.module, [:vars, refs: Ref.preloads()], force: true)
-
-    plan.changed
-    |> load_for_sync()
-    |> Enum.each(fn block ->
-      case block |> Blocks.sync_module(module) |> Repo.update() do
-        {:ok, _} -> :ok
-        {:error, changeset} -> Repo.rollback(sync_error(block, changeset))
-      end
-    end)
-
-    # Every owner, those in the trash too: one restored from it shows the
-    # resolved blocks.
-    plan.entries
-    |> Enum.group_by(& &1.schema, & &1.id)
-    |> Blocks.enqueue_entry_map_for_render()
-
     details = activity_details(plan)
+    before = gettext("Before resolving blocks on older versions of %{module}", module: module_name(plan.module))
 
-    Enum.each(entries, fn {key, entry} ->
-      entry = reload_entry(entry)
-      revision = revision!(entry, user, nil, true)
-      record_entry(entry, user, revision || before[key], details)
-      Brando.EditSession.sync_saved(entry)
-      Repo.after_commit(fn -> Brando.Cache.Query.evict({:ok, entry}) end)
+    BlockMoves.write!(plan.entries, user, [before: before, details: details], fn ->
+      Enum.each(plan.changes, &change!/1)
+      BlockMoves.sync!(plan.module, plan.changed)
+
+      # Every owner, those in the trash too: one restored from it shows the
+      # resolved blocks.
+      plan.entries
+      |> Enum.group_by(& &1.schema, & &1.id)
+      |> Blocks.enqueue_entry_map_for_render()
     end)
 
     Brando.Activity.setting_changed(:updated, plan.module, module_name(plan.module), user, details: details)
@@ -235,9 +226,6 @@ defmodule Brando.Content.StaleBlocks do
   defp result(plan) do
     %{changed: plan.changed, stamped: plan.stamped, remaining: plan.remaining, entries: plan.entries}
   end
-
-  defp sync_error(block, changeset),
-    do: gettext("Block #%{id} could not be saved: %{errors}", id: block.id, errors: error_lines(changeset))
 
   # The changes of one block: dropping deletes the row; mapping renames it
   # to the target (taking the place of the block's own copy of the target,
@@ -255,28 +243,6 @@ defmodule Brando.Content.StaleBlocks do
   defp change!(%{action: {:map, target}, row: %Ref{} = ref} = change) do
     if change.replaced_row, do: Repo.delete!(change.replaced_row)
     ref |> Changeset.change(name: target) |> Repo.update!()
-  end
-
-  defp revision!(%schema{} = entry, user, description, active? \\ false) do
-    if schema.has_trait(Brando.Trait.Revisioned) do
-      entry |> Brando.Revisions.create_revision(user, active?) |> stored_revision!(entry, description)
-    end
-  end
-
-  defp stored_revision!({:ok, revision}, %schema{} = entry, description) do
-    if description, do: Brando.Revisions.describe_revision(schema, entry.id, revision.revision, description)
-    revision.revision
-  end
-
-  defp stored_revision!({:error, reason}, entry, _description),
-    do:
-      Repo.rollback(
-        gettext("Could not store a revision of %{entry}: %{reason}", entry: entry.id, reason: inspect(reason))
-      )
-
-  defp record_entry(%schema{} = entry, user, revision, details) do
-    if Brando.Activity.logged?(schema),
-      do: Brando.Activity.record(:updated, entry, user, revision: revision, details: details)
   end
 
   defp activity_details(plan) do
@@ -331,10 +297,6 @@ defmodule Brando.Content.StaleBlocks do
   defp vars_query, do: from(v in Var, order_by: [asc: v.sequence, asc: v.id], preload: ^Var.preloads())
   defp refs_query, do: from(r in Ref, order_by: [asc: r.sequence, asc: r.id], preload: ^Ref.preloads())
 
-  defp load_for_sync(ids) do
-    Repo.all(from(b in Block, where: b.id in ^ids, preload: [:vars, refs: ^Ref.preloads()]))
-  end
-
   defp build_report(module, blocks) do
     defined = %{
       ref: Map.new(module.refs, &{&1.name, &1}),
@@ -343,7 +305,7 @@ defmodule Brando.Content.StaleBlocks do
       any_type: for(ref <- module.refs, Module.any_ref_type?(module, ref.name), into: MapSet.new(), do: ref.name)
     }
 
-    entries_by_block = entries_for(Enum.map(blocks, & &1.id))
+    entries_by_block = BlockMoves.entries(Enum.map(blocks, & &1.id))
 
     reports =
       Enum.map(blocks, fn block ->
@@ -440,11 +402,7 @@ defmodule Brando.Content.StaleBlocks do
 
   defp problems(_block, _module, _leftovers), do: []
 
-  defp error_lines(changeset) do
-    changeset
-    |> Changeset.traverse_errors(fn {message, _} -> message end)
-    |> inspect()
-  end
+  defp error_lines(changeset), do: BlockMoves.error_lines(changeset)
 
   defp groups(reports, defined) do
     reports
@@ -616,21 +574,19 @@ defmodule Brando.Content.StaleBlocks do
   end
 
   # What the block's own copy of the target loses: its value, unless empty
-  # or the definition's. A ref of another type than the definition's, as
-  # the Legacy Content Wrapper's `content` holds, is named by its type when
-  # it shows nothing (a picture that lost its image).
+  # or the definition's (`BlockMoves.content?/2`, by the stored fields: two
+  # links with one label still differ). One that shows nothing, or what the
+  # definition shows, is named by what it is: a ref by its type (a picture
+  # that lost its image, a ref of another type than the definition's, as
+  # the Legacy Content Wrapper's `content` holds).
   defp replaced_value(existing, source) do
     value = preview(existing)
 
     cond do
-      value not in ["", preview(source)] ->
-        value
-
-      match?(%Ref{}, existing) and ref_type(existing) != ref_type(source) ->
-        gettext("a %{type} reference", type: ref_type(existing))
-
-      true ->
-        nil
+      not BlockMoves.content?(existing, source) -> nil
+      value not in ["", preview(source)] -> value
+      match?(%Ref{}, existing) -> gettext("a %{type} reference", type: ref_type(existing))
+      true -> gettext("a value of its own")
     end
   end
 
@@ -688,66 +644,6 @@ defmodule Brando.Content.StaleBlocks do
     |> Enum.map_join("<br>", &(&1 |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()))
     |> then(&"<p>#{&1}</p>")
   end
-
-  ## Entries
-
-  defp entries_for([]), do: %{}
-
-  # Entries in the trash own their blocks too: a resolve changes them like
-  # any other, and restoring one from the trash brings back what it held.
-  defp entries_for(block_ids) do
-    by_block = BlockReferences.list_entries_for_block_ids(block_ids, include_deleted: true)
-    entries = by_block |> Map.values() |> List.flatten() |> Enum.uniq()
-    labels = Usage.labels(entries)
-    states = states(entries)
-
-    Map.new(by_block, fn {block_id, entries} ->
-      {block_id, Enum.map(entries, &entry(&1, labels[&1], Map.get(states, &1, %{})))}
-    end)
-  end
-
-  # `revisioned?`: History can restore it (not every schema with blocks
-  # keeps revisions: templates do not).
-  defp entry({schema, id}, label, state) do
-    trashed? = Map.get(state, :deleted_at) != nil
-
-    label
-    |> Map.merge(%{
-      schema: schema,
-      id: id,
-      trashed?: trashed?,
-      revisioned?: schema.has_trait(Brando.Trait.Revisioned)
-    })
-    |> Map.update(:language, nil, &(&1 || Map.get(state, :language)))
-    |> Map.update(:url, nil, &if(trashed?, do: trash_url(&1), else: &1))
-  end
-
-  # The listing's trash: an entry in it has no edit page.
-  defp trash_url(nil), do: nil
-  defp trash_url(url), do: String.replace(url, ~r{/update/\d+$}, "") <> "?status=deleted"
-
-  # What an entry's identifier row does not say: its language (an entry
-  # without one has it only on itself) and whether it is in the trash.
-  defp states(entries) do
-    entries
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.flat_map(fn {schema, ids} ->
-      fields = Enum.filter([:id, :language, :deleted_at], &(&1 in schema.__schema__(:fields)))
-
-      from(e in schema, where: e.id in ^ids, select: map(e, ^fields))
-      |> Repo.all()
-      |> Enum.map(&{{schema, &1.id}, &1})
-    end)
-    |> Map.new()
-  end
-
-  defp load_entries(entries) do
-    Map.new(entries, fn %{schema: schema, id: id} ->
-      {{schema, id}, Repo.get!(schema, id)}
-    end)
-  end
-
-  defp reload_entry(%schema{id: id}), do: Repo.get!(schema, id)
 
   ## Authorization
 

@@ -966,24 +966,96 @@ back with the same type) gives the blocks their values back.
 
 ### Renaming a ref or var
 
-A rename is a removal and an addition: rename the key in the file and in the
-template, import, then move the values with `--map OLD=NEW`:
+Rename the key in the file and in the template, and name the old key with
+`renamed_from`:
+
+```elixir
+vars do
+  var :heading, :string do
+    renamed_from "title"
+    label "Heading"
+  end
+end
+
+refs do
+  ref :lead, :text do
+    renamed_from "intro"
+  end
+end
+```
+
+The apply that removes `title` and adds `heading` moves each block's value
+from the old key to the new one, in the same transaction as the definition:
+the template never renders `heading`'s default in between. A ref's region
+or footnotes move with it. The plan says what moves, in how many blocks and
+entries, and the Release changes screen lists it under Ready to apply:
+
+```
+update module kulturslider: moves var title → heading in 12 blocks (8 entries)
+```
+
+The move is a change to entries made outside their editors, recorded as the
+person who applied (the `--user` account for `mix brando.modules import`, the
+operator for a release, also when they apply with the
+`brando.module_definitions.apply` grant): a revision of each entry before
+the apply and one after, however many of its modules move, and an Activity
+record on each entry and module naming the release and the renames. Entries
+in the trash move too. An entry whose schema keeps no revisions (a template)
+moves without a restore point; the review screen counts them. A release
+apply that moved values can't be reverted: keep it, or restore the entries'
+revisions.
+
+The first version moves values that keep their type. The plan refuses
+(`migration_required`, naming the blocks and the entries you may open) a
+rename that also changes the type (rename in one release and change the type
+in the next), a block whose stored value doesn't fit the new key (stored
+under another type, or not one of a select's options), and a block that
+already holds a value of its own under the new key, a leftover from an
+older version of the module. A value that is empty or equal to the
+definition's default gives way. The apply plans the moves again with the
+blocks locked, and rolls back everything, definitions included, with
+"content changed since you reviewed it" when a block changed since the plan.
+An editor who saves one of those blocks at the same moment can make the
+database stop the apply; nothing is applied, and you try again.
+
+Every editor's save in the environment waits while values move, so one
+apply moves values in at most 500 entries or 1,500 blocks, counted across
+all the modules it applies (a 500-entry move takes under two seconds). A
+module over that on its own is refused in the plan. Modules each within it
+but over it together are refused when applied together: select fewer of them
+on the Release changes screen, or apply them one by one with
+`mix brando.modules apply --release --uid`. Or take `renamed_from` out and
+move the values with `resolve --map` after the apply.
+
+`renamed_from` is read from the file and never stored: the database keeps no
+rename, and an export doesn't write it. Keep it in the file until every
+environment has applied that release. After its apply it does nothing. In an
+environment that already defines the new key, or no longer the old one, the
+apply keeps the old key in the blocks as a leftover, as for a removal, and
+the plan prints the resolve command that moves it (`--map var:title=heading`)
+when a dry run of it moves something, refuses nothing and replaces no
+block's value, and the old ref has no blocks in its region or footnotes
+(`--map` doesn't move those); otherwise it points to **Resolve blocks**. Without `renamed_from`, a rename is a removal
+and an addition, and `--map OLD=NEW` moves the values afterwards:
 
 ```sh
-mix brando.modules import --from priv/modules --user 1
 mix brando.modules resolve --uid kulturslider --user 1 --map title=heading
 mix brando.modules resolve --uid kulturslider --user 1 --map title=heading --apply
 ```
 
 The first `resolve` is a dry run that lists what it moves and what it
 would replace; a mapping that loses content is refused, and **Resolve
-blocks** in the admin makes exceptions per block. Between the import and the
-resolve the blocks render the new key's default, so run the two together.
+blocks** in the admin makes exceptions per block.
+
+`renamed_from` is refused when the files are read on a table template's var,
+onto the key itself, from a key the file still defines (a chain of renames is
+one), and when two refs or two vars name the same old key. A ref and a var
+may each be renamed from the same old key.
 
 A key added back with another type while blocks still hold its leftover is
 `migration_required`, and names the blocks: the next sync would read the
-stored value as the new type. Resolve the leftover first, or choose another
-key.
+stored value as the new type, or keep the leftover ref in the new one's
+place. Resolve the leftover first, or choose another key.
 
 ### Moving values to child modules
 
