@@ -8169,7 +8169,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp refused_save_error(socket, reason) do
     send(self(), {:progress_popup, "Saving entry failed..."})
-    send(self(), {:toast, refused_save_text(reason)})
+    BrandoAdmin.Toast.send_to(socket.assigns.current_user, refused_save_text(reason), %{level: :error, type: :notification})
     assign(socket, :minor_save?, false)
   end
 
@@ -9139,7 +9139,8 @@ defmodule BrandoAdmin.Components.Form do
     end
   rescue
     # Postgres cancelled the save to break a wait on the same rows (another
-    # save, a release apply moving values in its blocks): nothing was written
+    # save, a release apply moving values in its blocks). A context's save is
+    # one transaction (`Brando.Query.Mutations`): nothing was written
     error in Postgrex.Error ->
       if error.postgres[:code] in [:deadlock_detected, :serialization_failure],
         do: {:error, :try_again},

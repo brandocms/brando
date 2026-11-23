@@ -5,6 +5,8 @@ defmodule BrandoAdmin.FormCancelledSaveTest do
   # typed, says so, and the next save writes it.
   use Brando.LiveCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias BrandoAdmin.Components.Form
 
   setup %{conn: conn, current_user: user} do
@@ -14,18 +16,23 @@ defmodule BrandoAdmin.FormCancelledSaveTest do
     {:ok, conn: conn, page: Factory.insert(:page, title: "Om oss")}
   end
 
-  # The pages table cancels its next update as Postgres cancels a deadlock's
-  # victim, until `allow_saves!/0`
-  defp cancel_saves! do
+  # The `table` cancels each `write` (UPDATE, INSERT) as Postgres cancels a
+  # deadlock's victim, until `allow_saves!/1`
+  defp cancel_saves!(write \\ "UPDATE", table \\ "pages") do
     Repo.query!("""
     CREATE FUNCTION cancel_save() RETURNS trigger AS $$
     BEGIN RAISE EXCEPTION 'deadlock detected' USING ERRCODE = '40P01'; END $$ LANGUAGE plpgsql
     """)
 
-    Repo.query!("CREATE TRIGGER cancel_save BEFORE UPDATE ON pages FOR EACH ROW EXECUTE FUNCTION cancel_save()")
+    Repo.query!("CREATE TRIGGER cancel_save BEFORE #{write} ON #{table} FOR EACH ROW EXECUTE FUNCTION cancel_save()")
   end
 
-  defp allow_saves!, do: Repo.query!("DROP TRIGGER cancel_save ON pages")
+  defp allow_saves!(table \\ "pages"), do: Repo.query!("DROP TRIGGER cancel_save ON #{table}")
+
+  # The toast that asks to save again; a refusal is an error
+  defp assert_try_again_toast do
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, type: :notification}}, 2_000
+  end
 
   defp open(conn, page) do
     tab = %{"brando_tab" => "cancelled", "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
@@ -78,7 +85,7 @@ defmodule BrandoAdmin.FormCancelledSaveTest do
 
     save(view)
 
-    assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+    assert_try_again_toast()
     assert Process.alive?(view.pid)
     refute form_assigns(view).processing
     assert shown_title(view) == "Typed"
@@ -87,5 +94,42 @@ defmodule BrandoAdmin.FormCancelledSaveTest do
     allow_saves!()
     save(view)
     assert saved_title(page, "Typed") == "Typed"
+  end
+
+  # Without group authorization the steps after the insert (identifier,
+  # revision, Activity) are written apart from it unless the save is one
+  # transaction: a cancel there would leave the entry saved while the form
+  # says nothing was, and saving again would add a second one.
+  test "a new entry's save Postgres cancels after its insert writes nothing, and saving again writes one", %{
+    conn: conn
+  } do
+    {view, _} = live_form(conn, "/admin/pages/create")
+    params = %{"page" => %{"title" => "Fresh", "uri" => "fresh", "template" => "default.html", "language" => "en"}}
+    cancel_saves!("INSERT", "content_identifiers")
+
+    save_new(view, params)
+
+    assert_try_again_toast()
+    refute form_assigns(view).entry.id
+    assert fresh_pages() == 0
+
+    allow_saves!("content_identifiers")
+    save_new(view, params)
+    assert await_fresh_pages() == 1
+  end
+
+  defp save_new(view, params) do
+    view |> form("#page_form_form", params) |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 2_000)
+    view |> form("#page_form_form", params) |> render_submit()
+  end
+
+  defp fresh_pages, do: Repo.aggregate(from(p in Brando.Pages.Page, where: p.uri == "fresh"), :count)
+
+  defp await_fresh_pages(tries \\ 100) do
+    case fresh_pages() do
+      0 when tries > 0 -> Process.sleep(20) && await_fresh_pages(tries - 1)
+      count -> count
+    end
   end
 end
