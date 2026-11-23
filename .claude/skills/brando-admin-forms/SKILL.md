@@ -99,17 +99,23 @@ area in [the section map](form-map.md) and grep for the names it lists.
   and moves its recovery baseline (`Drafts.rebase/2`; the blocks part when
   the block field reads the saved rows, `entry_blocks_reloaded`). A kept
   relation keeps the editor's rows whole (`RelationRows.keep/5`), with the
-  saved values in rows it didn't change; rows are never merged. A kept
-  embedded list whose rows carry keys (`RelationRows.embedded_rows?/4`) is
-  kept the same way, and takes the rows the save added; one without keys
-  stays whole. Only the editor's own edits count: a list the form only
-  received takes the saved list (`received_lists`), a new row the save
-  wrote is that saved row (matched by its inputs, or as it was sent,
-  `synced_values`), and `synced_values` takes the saved rows too, so a
+  saved values in rows it didn't change; rows are never merged. An
+  embedded list whose rows carry keys (`RelationRows.embedded_rows?/4`)
+  is kept by the editor's own edits (`row_edits`, `Form.RowEdits`: the
+  row and field each `validate` names, and the rows a change of theirs
+  added, removed or moved, recorded as they make them, never a value
+  received), put on the saved rows (`RelationRows.keep_list/5`); it takes
+  the rows the save added, and one without keys stays whole. A new row
+  is told by its `_key` alone: the saver's notice maps the keys of the
+  new rows it wrote to their ids (`keys`, `RelationRows.written/2`); a
+  save no form made (the identifier-link rewrite) has no map, and every
+  new row stays. A list the form only received takes the saved list
+  (`received_lists`), and `synced_values` takes the saved rows too, so a
   joiner isn't given the old ones. While the editor is in the list the
-  save waits in `held_remote` (`held_lists`, applied on leaving or on
-  save by `take_held_rows`), and their typing is cast onto the rows the
-  form was built on, so it can't land in a row the save moved. When the
+  save waits in `held_remote` (`held_lists`, rows compared as stored,
+  applied on leaving or on save by `take_held_rows`; a discard drops
+  it), and their typing is cast onto the rows the form was built on, so
+  it can't land in a row the save moved. When the
   save changed that relation too, the form asks which to keep
   (`relation_conflicts`, `Form.SavedElsewhere`). The browser sends the rows
   it showed before until it has drawn the new ones: the form revision
