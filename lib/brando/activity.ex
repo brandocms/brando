@@ -27,7 +27,8 @@ defmodule Brando.Activity do
   A change from a content proposal (`Brando.Content.Proposals`, applied or
   undone) also names the proposal (`proposal_id`) and the user who approved
   and applied it (`approver_id`), apart from the agent that prepared it
-  (`with_proposal/5`). By kind (`actor_kind/1`), an event is a person's, the
+  (`with_proposal/5`); no one for one a connection applied without review
+  (`details["auto_applied"]`), made as the connection's user. By kind (`actor_kind/1`), an event is a person's, the
   Assistant's, a connected tool's over MCP, or an automatic job's
   (scheduled publishing and the system).
 
@@ -327,6 +328,48 @@ defmodule Brando.Activity do
       details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
       batch_id: Process.get(@batch_key)
     })
+  end
+
+  @doc """
+  `record/4` for many entries at once: `records` are `{entry, opts}`. The
+  same events, inserted together.
+  """
+  def record_all(_action, [], _user), do: :ok
+
+  def record_all(action, records, user) do
+    source = source(user)
+    now = DateTime.utc_now()
+    proposal = Process.get(@proposal_key) || %{}
+
+    rows =
+      for {entry, opts} <- records do
+        Map.merge(proposal, %{
+          action: action,
+          source: source,
+          user_id: user_id(user),
+          schema: to_string(entry.__struct__),
+          entry_id: entry.id,
+          title: title(entry),
+          language: language(entry),
+          fields: Keyword.get(opts, :fields, []),
+          revision: Keyword.get(opts, :revision),
+          details: Map.merge(source_details(), Keyword.get(opts, :details, %{})),
+          batch_id: Process.get(@batch_key),
+          inserted_at: now
+        })
+      end
+
+    insert_all(rows)
+    Enum.each(records, fn {entry, opts} -> Brando.ContentEvents.activity_recorded(action, entry, source, opts) end)
+  end
+
+  # As `insert/1`: inside a transaction a failed insert rolls back only its
+  # savepoint, so the save it records goes on
+  defp insert_all(rows) do
+    opts = if Repo.repo().in_transaction?(), do: [mode: :savepoint], else: []
+    Repo.insert_all(Event, rows, opts)
+  rescue
+    error -> Logger.warning("[Brando.Activity] Could not record activity: " <> Exception.message(error))
   end
 
   @doc """

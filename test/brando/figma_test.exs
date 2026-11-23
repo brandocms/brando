@@ -317,6 +317,7 @@ defmodule Brando.FigmaTest do
       assert image == %{
                node_id: "2:1",
                name: "Photo",
+               image_ref: "new",
                scale_mode: "fill",
                x: 0,
                y: 0,
@@ -553,7 +554,18 @@ defmodule Brando.FigmaTest do
                width: 1440,
                height: 900,
                texts: [%{node_id: "1:12", name: "Caption", text: "Second in the layout", x: 0, y: 0}],
-               images: [%{node_id: "1:11", name: "Photo", scale_mode: "fill", x: 0, y: 500, width: 1440, height: 810}],
+               images: [
+                 %{
+                   node_id: "1:11",
+                   name: "Photo",
+                   image_ref: "ref-a",
+                   scale_mode: "fill",
+                   x: 0,
+                   y: 500,
+                   width: 1440,
+                   height: 810
+                 }
+               ],
                videos: [%{node_id: "1:13", name: "Film"}]
              }
 

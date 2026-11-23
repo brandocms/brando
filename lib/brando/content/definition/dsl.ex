@@ -8,6 +8,7 @@ defmodule Brando.Content.Definition.Dsl do
       :type,
       :uid,
       :description,
+      :renamed_from,
       :__spark_metadata__,
       active: true,
       collapsed: false,
@@ -22,6 +23,7 @@ defmodule Brando.Content.Definition.Dsl do
     defstruct [
       :key,
       :type,
+      :renamed_from,
       :__spark_metadata__,
       label: :__unset__,
       placeholder: :__unset__,
@@ -87,6 +89,7 @@ defmodule Brando.Content.Definition.Dsl do
     name: [type: {:or, [:atom, :string]}, required: true],
     type: [type: {:or, [:atom, :string]}, required: true],
     uid: [type: :string],
+    renamed_from: [type: {:or, [:atom, :string]}],
     description: [type: :any],
     active: [type: :boolean, default: true],
     collapsed: [type: :boolean, default: false],
@@ -98,6 +101,7 @@ defmodule Brando.Content.Definition.Dsl do
   @var_schema [
     key: [type: {:or, [:atom, :string]}, required: true],
     type: [type: {:or, [:atom, :string]}, required: true],
+    renamed_from: [type: {:or, [:atom, :string]}],
     label: [type: :any, default: :__unset__],
     placeholder: [type: :any, default: :__unset__],
     instructions: [type: :any, default: :__unset__],

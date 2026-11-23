@@ -121,6 +121,19 @@ defmodule Brando.RichTextSanitizeTest do
     end
   end
 
+  # A parser drops the line break right after `<pre>`: a blank line at the
+  # top of a code block is two line breaks there, and each save keeps both.
+  test "a blank line at the top of a pre survives every save" do
+    for html <- ["<p>Code:</p><pre>\n\nfirst()\n</pre>", ~s{<pre class="x" title="a &amp; b">\n\n\nfirst()</pre>}] do
+      first = Data.changeset(%Data{}, %{text: html}).changes.text
+      second = Data.changeset(%Data{}, %{text: first}).changes.text
+      assert {first, second} == {html, html}
+    end
+
+    # One line break there shows nothing, and goes
+    assert RichText.sanitize_html("<pre>\nfirst()</pre>") == {:ok, "<pre>first()</pre>"}
+  end
+
   test "harmless normalisation of other markup" do
     assert RichText.sanitize_html("<p>a<br/>b</p>") == {:ok, "<p>a<br>b</p>"}
     assert RichText.sanitize_html("<p class='x'>a</p>") == {:ok, ~s(<p class="x">a</p>)}

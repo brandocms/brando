@@ -261,7 +261,9 @@ subscribe to their own `deliver_topic` the same way.
   the assoc in changeset data, and pushes a targeted `b:validate` (`%{target, value}`),
   because the inputs render the hidden relation input from the assoc. The clauses
   leave `editing_*?` as they are: an upload inside an open drawer keeps the drawer's
-  recovery snapshot and save guard.
+  recovery snapshot and save guard. The drawer shows the asset only when it is on
+  the delivered field (`show_delivered_asset/4`); an upload that lands after its
+  drawer closed leaves another field's drawer alone.
 - **Gallery fields** (`input/gallery.ex`): `kind: "entry_field_gallery"`; delivery
   appends a gallery object (`put_assoc` + `sequence`) and updates the picker and
   input. Video uploads show when `Brando.Uploads.video_upload_available?/1` holds.

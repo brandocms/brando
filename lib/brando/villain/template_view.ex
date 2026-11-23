@@ -57,7 +57,8 @@ defmodule Brando.Villain.TemplateView do
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
-  # What `{% assign %}` and `{% for %}` set each name to (`assign/4`, `loop/4`)
+  # What `{% assign %}`, `{% for %}` and `{% tablerow %}` set each name to
+  # (`assign/4`, `loop/4`)
   @typed_texts :brando_template_view_typed_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
@@ -192,10 +193,10 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
-  `eval/2`, with an argument that is a variable `{% assign %}` or `{% for %}`
-  gave escaped plain text read as the text it stands for (`assign/4`,
-  `loop/4`): so a field passed through `assign`, or a string of a list a loop
-  reads, is escaped once, as the field passed directly is. Any other
+  `eval/2`, with an argument that is a variable `{% assign %}` or a loop
+  (`{% for %}`, `{% tablerow %}`) gave escaped plain text read as the text it
+  stands for (`assign/4`, `loop/4`): so a field passed through `assign`, or a
+  string of a list a loop reads, is escaped once, as the field passed directly is. Any other
   expression (`q.size`) reads the value assigned. For a tag argument that
   escapes what it prints (picture's `alt`, `route`); every other argument
   reads with `eval/2`.
@@ -218,7 +219,7 @@ defmodule Brando.Villain.TemplateView do
 
   @doc """
   Whether `expression`, the right side of an `{% assign %}` with its filters
-  or the collection of a `{% for %}`, reads a field or variable, which is read
+  or the collection of a loop, reads a field or variable, which is read
   escaped: in itself or in a filter's argument. A literal the template
   writes is not read, nor a name holding a value the template set from one.
   """
@@ -260,7 +261,8 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
-  `context` for the body of `{% for name in collection %}`: each string, or
+  `context` for the body of `{% for name in collection %}` or
+  `{% tablerow name in collection %}`: each string, or
   list of strings, of the `items` of a collection that is read (`read?/2`) is
   escaped plain text, as `assign/4` keeps it, for the arguments that read it
   as typed; of any other collection, a literal.

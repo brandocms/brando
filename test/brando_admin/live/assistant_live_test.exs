@@ -964,6 +964,26 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute has_element?(view, "#assistant-page-link")
     end
 
+    test "an expired proposal offers neither Leave out nor a page link", %{conn: conn} = c do
+      {:ok, fresh, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      assert has_element?(fresh, ~s(button[phx-click="leave_out"]))
+
+      past = DateTime.add(DateTime.utc_now(), -60, :second)
+
+      Brando.Repo.update_all(from(r in Brando.Content.Proposals.Record, where: r.id == ^c.proposal.id),
+        set: [expires_at: past]
+      )
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      refute has_element?(view, ~s(button[phx-click="leave_out"]))
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+    end
+
     # A reason is not always an atom or a message: the asset capture names a
     # file it could not read in a tuple, and a stored preview's insert returns
     # a changeset.
@@ -1427,6 +1447,35 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
       [event] = Brando.Repo.all(from(e in Brando.Activity.Event, where: e.schema == "Elixir.Brando.Pages.Page"))
       assert {event.source, event.details["client"]} == {:mcp, "Claude Code"}
+    end
+
+    # Brando.Content.Proposals.AutoApply marks the proposal with its connection
+    test "lists one its connection applied without review as applied automatically", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+
+      Brando.Repo.update_all(from(r in Brando.Content.Proposals.Record, where: r.id == ^id),
+        set: [status: "applied", auto_applied_grant_id: 1]
+      )
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected")
+
+      assert has_element?(
+               view,
+               "#assistant-connected-list [data-testid=assistant-state-auto_applied]",
+               "Applied automatically"
+             )
+    end
+
+    test "says why a proposal was not applied without review", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+      reason = "It was not applied automatically: this connection is not set to apply unpublished translations."
+
+      Brando.Repo.update_all(from(r in Brando.Content.Proposals.Record, where: r.id == ^id),
+        set: [auto_apply_reason: reason]
+      )
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+      assert has_element?(view, "#assistant-auto-apply-reason", reason)
     end
 
     # A tool links straight to the page it changed: `prepare_proposal`'s

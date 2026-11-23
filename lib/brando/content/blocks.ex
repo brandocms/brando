@@ -589,6 +589,27 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Render all entries with a block using `module_id`, without syncing the
+  blocks with the module: for one put in the trash or restored from it.
+  """
+  def render_entries_with_module_id_as_is(module_id, origin) do
+    module_id
+    |> list_entry_ids_using_module(origin)
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  The entries with a block using `module_id`, as `%{schema => [id]}`.
+  Entries in the trash are left out.
+  """
+  def list_entry_ids_using_module(module_id, origin) do
+    module_id
+    |> list_block_ids_using_module(origin)
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+  end
+
+  @doc """
   Render and update all entries with a block using `fragment_id`
   """
   def render_entries_with_fragment_id(fragment_id) do

@@ -270,6 +270,13 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
                 |> Enum.filter(& &1)
                 |> Enum.join(" · ")}
               </span>
+              <span
+                :if={grant.auto_apply != "none" or not is_nil(grant.auto_apply_set_at)}
+                class="security-item-meta"
+                data-testid="connected-app-auto-apply"
+              >
+                {auto_apply_note(grant)}
+              </span>
             </div>
             <div class="security-item-actions">
               <.link
@@ -544,6 +551,25 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
 
   # Anything else, such as a test mailer's copy of an email sent from here
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # A site manager let the connection save unpublished translations in this
+  # person's name, without review
+  defp auto_apply_note(%{auto_apply: "none"} = grant), do: review_note(grant)
+
+  defp auto_apply_note(%{auto_apply_set_by: %{name: name}, auto_apply_set_at: %DateTime{} = at}),
+    do:
+      gettext("Saves unpublished translations in your name without review: set by %{name}, %{date}",
+        name: name,
+        date: date(at)
+      )
+
+  defp auto_apply_note(_grant), do: gettext("Saves unpublished translations in your name without review")
+
+  # Set back to review everything: who did it and when stays in view
+  defp review_note(%{auto_apply_set_by: %{name: name}, auto_apply_set_at: %DateTime{} = at}),
+    do: gettext("Leaves every proposal for review: set by %{name}, %{date}", name: name, date: date(at))
+
+  defp review_note(_grant), do: gettext("Leaves every proposal for review")
 
   defp date(datetime), do: Brando.Utils.Datetime.format_datetime(datetime, "%-d %B %Y")
 

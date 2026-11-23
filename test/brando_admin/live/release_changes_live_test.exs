@@ -325,6 +325,105 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     end)
   end
 
+  describe "a renamed var" do
+    setup c do
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: c.case_module.id,
+          creator_id: c.user.id
+        })
+
+      Repo.insert!(%Brando.Content.Var{
+        block_id: block.id,
+        key: "wide",
+        type: :boolean,
+        label: %{"en" => "Wide"},
+        value_boolean: true
+      })
+
+      exs = Path.join(c.path, "content/case.exs")
+      source = File.read!(exs)
+
+      renamed =
+        String.replace(source, ~s(var "wide", "boolean" do\n), ~s(var "full", "boolean" do\n      renamed_from "wide"\n))
+
+      assert renamed != source
+      File.write!(exs, renamed)
+      %{block: block, exs: exs}
+    end
+
+    test "lists the move under Ready to apply, and the apply moves the value", %{conn: conn} = c do
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+        assert has_element?(view, "[data-testid=release-moves] li[data-uid=#{c.case_module.uid}]", "wide → full")
+        refute has_element?(view, "[data-testid=release-removals]")
+
+        view |> element("[data-testid=release-apply]") |> render_click()
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+        assert %{value_boolean: true} = Repo.get_by(Brando.Content.Var, block_id: c.block.id, key: "full")
+        refute Repo.get_by(Brando.Content.Var, block_id: c.block.id, key: "wide")
+      end)
+    end
+
+    test "in a conflict, says the values move and the apply can't be reverted once the release's version is chosen",
+         %{conn: conn} = c do
+      case_module(c) |> Changeset.change(code: case_module(c).code <> "<!-- here -->") |> Repo.update!()
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+        assert has_element?(view, "[data-testid=release-choices]")
+        refute has_element?(view, "[data-testid=release-moves]")
+
+        view |> element("[data-testid=release-choice-release]") |> render_click()
+        assert has_element?(view, "[data-testid=release-moves] li[data-uid=#{c.case_module.uid}]", "wide → full")
+
+        view |> element("[data-testid=release-apply]") |> render_click()
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+        assert %{value_boolean: true} = Repo.get_by(Brando.Content.Var, block_id: c.block.id, key: "full")
+      end)
+    end
+
+    test "in a conflict whose moves are refused, shows the refusal, not the moves, once the release's version is chosen",
+         %{conn: conn} = c do
+      # The block holds a value of its own under the new key: the move is refused
+      Repo.insert!(%Brando.Content.Var{
+        block_id: c.block.id,
+        key: "full",
+        type: :boolean,
+        label: %{"en" => "Full"},
+        value_boolean: true
+      })
+
+      case_module(c) |> Changeset.change(code: case_module(c).code <> "<!-- here -->") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+      view |> element("[data-testid=release-choice-release]") |> render_click()
+
+      refute has_element?(view, "[data-testid=release-moves]")
+      assert has_element?(view, "[data-testid=release-move-refusals] li[data-uid=#{c.case_module.uid}]", "wide")
+    end
+
+    test "is refused at apply when the files' renames changed after the review", %{conn: conn} = c do
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+        view |> element("[data-testid=release-apply]") |> render_click()
+
+        File.write!(c.exs, String.replace(File.read!(c.exs), ~s(\n      renamed_from "wide"), ""))
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+
+        assert render(view) =~ "review it again"
+        assert Repo.get_by(Brando.Content.Var, block_id: c.block.id, key: "wide")
+        assert [_ | _] = Repo.preload(case_module(c), :vars).vars |> Enum.filter(&(&1.key == "wide"))
+      end)
+    end
+  end
+
   describe "a conflict" do
     setup c do
       release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")

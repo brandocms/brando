@@ -35,7 +35,9 @@ defmodule Brando.MCP.Server do
   # on; some ignore these instructions.
   @instructions [
     "Brando's content tools for one site environment: read content types, entries, modules and media, and prepare proposals.",
-    "A proposal changes nothing until the person approves it in the Brando admin.",
+    "A proposal changes nothing until the person approves it in the Brando admin, " <>
+      "except one that only creates unpublished translations, prepared with apply: \"if_allowed\" on a connection a site manager set to allow it: " <>
+      "that one is saved at once, without review.",
     "To learn whether the person has approved, applied or cancelled your proposals, call brando_content_list_proposals instead of asking; " <>
       "brando_content_cancel_proposal withdraws one of yours still under review, " <>
       "and brando_content_preview_proposal gives a link to a proposal's page that your browser opens without a login, before it is approved.",

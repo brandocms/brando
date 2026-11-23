@@ -37,17 +37,18 @@ defmodule Brando.Images.URL do
 
   def url(image, "smallest", opts), do: url(image, :smallest, opts)
 
+  # Thumb and micro are cropped or placeholder sizes. A config with nothing
+  # else falls back to :largest, which picks thumb over micro
   def url(image, :smallest, opts) do
     {:ok, config} = ConfigResolver.get(image)
 
-    size =
-      config.sizes
-      |> Map.drop(["thumb", "micro"])
-      |> Enum.map(fn {key, %{"size" => dimensions}} -> {key, dimension(dimensions)} end)
-      |> Enum.min_by(&elem(&1, 1))
-      |> elem(0)
-
-    url(image, size, opts)
+    config.sizes
+    |> Map.drop(["thumb", "micro"])
+    |> Enum.map(fn {key, %{"size" => dimensions}} -> {key, dimension(dimensions)} end)
+    |> case do
+      [] -> url(image, :largest, opts)
+      sizes -> url(image, sizes |> Enum.min_by(&elem(&1, 1)) |> elem(0), opts)
+    end
   end
 
   def url(image, "original", opts), do: url(image, :original, opts)

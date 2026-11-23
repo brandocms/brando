@@ -28,6 +28,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content
   alias Brando.Content.BlockSlots
   alias Brando.Content.Proposals
+  alias Brando.Content.Proposals.AutoApply
   alias Brando.Content.Proposals.BlockTree
   alias Brando.Content.Proposals.Codec
   alias Brando.Content.Proposals.EntryFields
@@ -51,9 +52,14 @@ defmodule Brando.Content.Proposals.Tools do
     one, a call in a conversation is the Assistant's and any other is
     `:mcp`. `client` names the connected tool, such as "Claude Code", from
     the MCP client's `clientInfo`; the admin shows it with the proposal.
+
+    `grant_id` and `tenant` are the connection (`Brando.MCP.Grant`) that
+    authenticated the call and its site environment, set by `Brando.MCP.Tools`
+    only. A `prepare_proposal` call without them is never applied without
+    review (`Brando.Content.Proposals.AutoApply`).
     """
     @type t :: %__MODULE__{}
-    defstruct [:actor, :conversation_id, :proposal_id, :origin, :client, attachments: %{}]
+    defstruct [:actor, :conversation_id, :proposal_id, :origin, :client, :grant_id, :tenant, attachments: %{}]
   end
 
   @max_results 20
@@ -276,7 +282,7 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "prepare_proposal",
       description: """
-      Validate a complete set of changes and store it for the user to review. Nothing is saved until the user approves it in the admin. In an Assistant conversation, calling this again replaces the proposal under review with a new version. A connected tool's call replaces its latest proposal under review when that one has problems or touches the same entries, and otherwise stores a separate proposal; pass "replaces" with an earlier result's proposal_id to choose the one to replace. The result's "replaced" is the id of the proposal it replaced, with "replaced_summary" and "replaced_version": check them, and if it replaced the wrong one, prepare that proposal again; nothing else undoes it. A created entry counts as the same entry when it has the same content type, language and slug (or uri for pages, key and parent_key for fragments, or else title); its ref does not count. Operations:
+      Validate a complete set of changes and store it for the user to review. Nothing is saved until the user approves it in the admin, except a proposal of unpublished translations applied with "apply" (below). In an Assistant conversation, calling this again replaces the proposal under review with a new version. A connected tool's call replaces its latest proposal under review when that one has problems or touches the same entries, and otherwise stores a separate proposal; pass "replaces" with an earlier result's proposal_id to choose the one to replace. The result's "replaced" is the id of the proposal it replaced, with "replaced_summary" and "replaced_version": check them, and if it replaced the wrong one, prepare that proposal again; nothing else undoes it. A created entry counts as the same entry when it has the same content type, language and slug (or uri for pages, key and parent_key for fragments, or else title); its ref does not count. A ref is at most 128 characters. Operations:
       {"op":"create_entry","content_type":T,"ref":R,"fields":{}}
       {"op":"create_translation","source":{"content_type":T,"id":N},"language":L,"ref":R}
       {"op":"set_fields","target":{"content_type":T,"id":N},"fields":{}}
@@ -301,6 +307,7 @@ defmodule Brando.Content.Proposals.Tools do
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Uids are unique across the site, not only in the entry: prefix yours, for example with the entry's ref or slug. Returns problems to fix; call again with the corrected operations. Outside an Assistant conversation it also returns review_url, where the user reviews the proposal, and preview_url when an entry has a page preview: the review opened on that page. Give the user preview_url when there is one.
       Outside an Assistant conversation, preview_proposal gives a link to the proposed page that your browser can open without a login, to compare it with its design before the person approves it.
       Outside an Assistant conversation, list_proposals tells whether the person has approved, applied or cancelled your proposals, and cancel_proposal withdraws one still under review: check there instead of asking the person.
+      With "apply":"if_allowed", a proposal that only creates unpublished translations (every operation create_translation, or translate of {"new":R} a create_translation in it makes) is applied at once, without review, when the person's connection is set to allow it: the result then has applied: true, status "applied" and created (each ref's new entry id), and no review_url. Otherwise it is stored for review as usual, with applied: false and not_applied (why); when the person cancelled or applied it in the admin meanwhile, the result has its status instead of a review_url. If the answer to a call never arrives, call list_proposals before you call again: a second call stores a second proposal.
       """,
       parameters: %{
         type: "object",
@@ -311,6 +318,12 @@ defmodule Brando.Content.Proposals.Tools do
             type: "string",
             description:
               "Outside an Assistant conversation: the proposal_id of your earlier proposal, still under review, that this one replaces."
+          },
+          apply: %{
+            type: "string",
+            enum: ["if_allowed"],
+            description:
+              "Over MCP: apply the proposal at once, without review, if it only creates unpublished translations and the connection allows it."
           }
         },
         required: ["summary", "operations"]
@@ -326,7 +339,10 @@ defmodule Brando.Content.Proposals.Tools do
           "Check here whether the person has approved or applied a proposal before a next step depends on it, instead of asking, " <>
           "and whether a proposal is still under review before you pass it as replaces. " <>
           "Each proposal has proposal_id, version, summary (cut to #{@listed_summary} characters, with summary_cut: true, when longer), status, changed_at (when its status or its problems last changed), " <>
-          "changed_by where it is known (\"person\": the person approved, applied or undid it in the admin), " <>
+          "changed_by where it is known (\"person\": the person approved, applied or undid it in the admin; " <>
+          "\"connection\": it was applied without review, as the connection allows), " <>
+          "applied_automatically: true when it was applied without review (and perhaps undone by the person since), " <>
+          "not_applied: why one you asked to apply without review waits for review instead, " <>
           "expires_at, expired: true when a pending or approved proposal can no longer be approved (prepare it again), " <>
           "and entries: those it changes ({content_type, id}) and creates ({content_type, ref}, with id once it is applied: the saved entry's id). " <>
           "A proposal that replaces an image's file lists it in replaced_images ({kind, id, with: {kind, id}}: the library image that takes the file of the one in with), " <>
@@ -772,6 +788,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp run("prepare_proposal", args, context) do
     aliases = Map.new(context.attachments, fn {alias, a} -> {alias, {a.kind, a.id}} end)
+    auto? = auto_apply?(args["apply"])
 
     with {:ok, operations} <- Codec.decode_all(List.wrap(args["operations"]), aliases),
          {:ok, proposal} <-
@@ -783,7 +800,7 @@ defmodule Brando.Content.Proposals.Tools do
              origin: origin(context),
              client: context.client
            ) do
-      review(proposal)
+      if auto?, do: auto_apply(proposal, context), else: review(proposal)
     else
       {:error, message} -> Error.fail!(message)
     end
@@ -863,6 +880,43 @@ defmodule Brando.Content.Proposals.Tools do
 
       {:error, reason} ->
         Error.fail!(preview_error(reason, proposal, target))
+    end
+  end
+
+  defp auto_apply?(nil), do: false
+  defp auto_apply?("if_allowed"), do: true
+  defp auto_apply?(other), do: Error.fail!(~s(apply is "if_allowed" or left out, not #{inspect(other)}.))
+
+  # Stored and committed already; applied now when the connection and the
+  # operations allow it, else it waits for review as any proposal does.
+  # A proposal with problems is not tried.
+  defp auto_apply(proposal, context) do
+    outcome =
+      if proposal.problems == [],
+        do: AutoApply.run(proposal.id, proposal.version, context.actor, context.grant_id, context.tenant),
+        else: AutoApply.with_problems(proposal.id, proposal.version)
+
+    case outcome do
+      # What it replaced and what changes nothing, as a review says them
+      {:applied, receipt} ->
+        %{
+          proposal_id: proposal.id,
+          version: proposal.version,
+          status: "applied",
+          applied: true,
+          applicable: true,
+          created: receipt.mappings["created"] || %{},
+          note: "Applied without review, as this connection allows: the translations are saved as unpublished drafts."
+        }
+        |> Map.merge(replaced(proposal))
+        |> Map.merge(unchanged(proposal))
+
+      {:waiting, reason} ->
+        proposal |> review() |> Map.merge(%{applied: false, not_applied: reason})
+
+      # Settled in the admin meanwhile: nothing left to review
+      {:settled, status, reason} ->
+        %{proposal_id: proposal.id, version: proposal.version, status: status, applied: false, not_applied: reason}
     end
   end
 
@@ -971,14 +1025,31 @@ defmodule Brando.Content.Proposals.Tools do
       entries: proposal_entries(record.operations, created)
     }
     |> Map.merge(listed_summary(record.summary))
+    # Why it was not applied without review, while it waits
+    |> Map.merge(
+      if(record.auto_apply_reason && record.status in ~w(pending approved),
+        do: %{not_applied: record.auto_apply_reason},
+        else: %{}
+      )
+    )
     |> Map.merge(replaced_images(record.operations))
     |> Map.merge(synced_translations(record.operations))
     |> Map.merge(if(expired?, do: %{expired: true}, else: %{}))
     |> Map.merge(if(superseded_by, do: %{superseded_by: superseded_by}, else: %{}))
-    # Only the person can approve, apply or undo their proposal. Who stored
-    # a version or cancelled one is not kept.
-    |> Map.merge(if(record.status in ~w(approved applied undone), do: %{changed_by: "person"}, else: %{}))
+    # Only the person can approve, apply or undo their proposal, except one
+    # their connection applied without review. Who stored a version or
+    # cancelled one is not kept.
+    |> Map.merge(changed_by(record))
   end
+
+  defp changed_by(%{status: "applied", auto_applied_grant_id: id}) when is_integer(id),
+    do: %{changed_by: "connection", applied_automatically: true}
+
+  defp changed_by(%{status: "undone", auto_applied_grant_id: id}) when is_integer(id),
+    do: %{changed_by: "person", applied_automatically: true}
+
+  defp changed_by(%{status: status}) when status in ~w(approved applied undone), do: %{changed_by: "person"}
+  defp changed_by(_record), do: %{}
 
   defp listed_summary(summary) when is_binary(summary) do
     if String.length(summary) > @listed_summary,
@@ -1079,19 +1150,21 @@ defmodule Brando.Content.Proposals.Tools do
       note: "The user reviews and approves this in the admin. Nothing is saved yet."
     }
     |> Map.merge(review_place(proposal))
-    |> then(fn review ->
-      case Proposals.notes(proposal) do
-        [] ->
-          review
-
-        notes ->
-          Map.put(review, :unchanged, %{
-            operations: notes,
-            advice: "These change nothing. Drop them, or tell the editor why."
-          })
-      end
-    end)
+    |> Map.merge(unchanged(proposal))
   end
+
+  defp unchanged(proposal) do
+    case Proposals.notes(proposal) do
+      [] -> %{}
+      notes -> %{unchanged: %{operations: notes, advice: "These change nothing. Drop them, or tell the editor why."}}
+    end
+  end
+
+  # The connected tool's earlier proposal this one replaced
+  defp replaced(%{supersedes_id: id} = proposal) when not is_nil(id),
+    do: %{replaced: id, replaced_summary: proposal.supersedes_summary, replaced_version: proposal.version - 1}
+
+  defp replaced(_proposal), do: %{}
 
   # A proposal from outside the admin is reviewed under "From connected tools".
   # With an entry whose page can be previewed, and no problems (the preview
@@ -1106,15 +1179,7 @@ defmodule Brando.Content.Proposals.Tools do
       review_url: review_url(path)
     }
 
-    place =
-      if proposal.supersedes_id,
-        do:
-          Map.merge(place, %{
-            replaced: proposal.supersedes_id,
-            replaced_summary: proposal.supersedes_summary,
-            replaced_version: proposal.version - 1
-          }),
-        else: place
+    place = Map.merge(place, replaced(proposal))
 
     case proposal.problems in [nil, []] && Review.preview_key(proposal) do
       key when is_binary(key) -> Map.put(place, :preview_url, review_url(Review.preview_path(path, key)))

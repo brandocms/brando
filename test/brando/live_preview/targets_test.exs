@@ -22,7 +22,9 @@ defmodule Brando.LivePreview.TargetsTest do
              :broken,
              :localized,
              :site,
-             :partials
+             :partials,
+             :head,
+             :children
            ]
 
     assert_raise Brando.Exception.LivePreviewError, fn ->

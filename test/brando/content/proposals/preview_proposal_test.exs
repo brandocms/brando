@@ -158,6 +158,88 @@ defmodule Brando.Content.Proposals.PreviewProposalTest do
       assert get_resp_header(conn, "x-robots-tag") == []
     end
 
+    test "a page its block operations change has its head, with its meta image or without one", c do
+      Repo.update_all(from(p in Page, where: p.id == ^c.identity.id), set: [meta_image_id: c.image.id])
+      id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby"), insert_op(c, c.naming, "Lobby")])
+
+      for version <- ["proposed", "before"] do
+        args = %{"preview_target" => "head", "version" => version}
+
+        with_image = open(preview!(mcp(c), id, page(c.identity), args)).resp_body
+        assert with_image =~ ~r/<meta property="og:image" content="[^"]*#{c.image.sizes["xlarge"]}"/
+
+        without = open(preview!(mcp(c), id, page(c.naming), args)).resp_body
+        assert without =~ ~s(<meta property="og:title")
+        refute without =~ c.image.sizes["xlarge"]
+      end
+    end
+
+    test "a meta image the proposal sets is the one its head shows", c do
+      sizes = Map.new(c.image.sizes, fn {size, path} -> {size, String.replace(path, "1.jpg", "2.jpg")} end)
+      other = Factory.insert(:image, path: "image/2.jpg", sizes: sizes, creator_id: c.user.id)
+      Repo.update_all(from(p in Page, where: p.id == ^c.identity.id), set: [meta_image_id: c.image.id])
+
+      set_image = %{"op" => "set_fields", "target" => page(c.identity), "fields" => %{"meta_image_id" => other.id}}
+      id = prepare!(mcp(c), [set_image, insert_op(c, c.identity, "Lobby")])
+
+      body = open(preview!(mcp(c), id, page(c.identity), %{"preview_target" => "head"})).resp_body
+      assert body =~ ~r/<meta property="og:image" content="[^"]*#{other.sizes["xlarge"]}"/
+      refute body =~ c.image.sizes["xlarge"]
+    end
+
+    test "a preview target's own preloads decide what the page lists", c do
+      for {title, status} <- [{"Published child", :published}, {"Draft child", :draft}],
+          do: Factory.insert(:page, creator: c.user, parent_id: c.identity.id, title: title, status: status)
+
+      id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
+
+      for version <- ["proposed", "before"] do
+        body =
+          open(preview!(mcp(c), id, page(c.identity), %{"preview_target" => "children", "version" => version})).resp_body
+
+        assert body =~ "Published child"
+        refute body =~ "Draft child"
+      end
+    end
+
+    test "entries a proposal lists come with their identifiers", c do
+      {:ok, article} =
+        Brando.SyncTest.create_article(%{title: "Article", slug: "article", language: "en", status: "published"}, c.user)
+
+      article_target = %{"content_type" => "Brando.SyncTest.Article", "id" => article.id}
+      related = %{"related_entries" => [page(c.naming), page(c.identity)]}
+      id = prepare!(mcp(c), [%{"op" => "set_fields", "target" => article_target, "fields" => related}])
+
+      body = open(preview!(mcp(c), id, article_target, %{"preview_target" => "related"})).resp_body
+      assert body =~ ~r/Naming.*Identity/s
+
+      # A new entry, which has no id to load them through
+      fields = Map.merge(related, %{"title" => "New", "slug" => "new", "language" => "en"})
+      create = %{"op" => "create_entry", "content_type" => "Brando.SyncTest.Article", "ref" => "new", "fields" => fields}
+      id = prepare!(mcp(c), [create])
+
+      body = open(preview!(mcp(c), id, %{"new" => "new"}, %{"preview_target" => "related"})).resp_body
+      assert body =~ ~r/Naming.*Identity/s
+    end
+
+    test "a list a preview target names still gets what the Blueprint loads beneath it", c do
+      {:ok, article} =
+        Brando.SyncTest.create_article(%{title: "Article", slug: "article", language: "en", status: "published"}, c.user)
+
+      {:ok, identifier} = Brando.Content.create_identifier(Page, c.identity)
+      join = Brando.SyncTest.Article.__schema__(:association, :related_entries).related
+      Repo.insert!(struct(join, parent_id: article.id, identifier_id: identifier.id, sequence: 0))
+
+      article_target = %{"content_type" => "Brando.SyncTest.Article", "id" => article.id}
+      title = %{"op" => "set_fields", "target" => article_target, "fields" => %{"title" => "Renamed"}}
+      id = prepare!(mcp(c), [title])
+
+      for version <- ["proposed", "before"] do
+        params = %{"preview_target" => "related_named", "version" => version}
+        assert open(preview!(mcp(c), id, article_target, params)).resp_body =~ "Identity"
+      end
+    end
+
     test "two calls give two links, each working until its own expiry", c do
       id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
       first = preview!(mcp(c), id, page(c.identity))

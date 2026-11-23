@@ -191,6 +191,19 @@ HEEx).
 Modules are managed in the admin under Configuration → Modules; entries
 reference them by id, so template edits apply everywhere on next render.
 
+A module that blocks use can't be moved to the trash while an entry outside
+the trash holds one of them: `Brando.Content.delete_module/2` returns
+`{:error, :module_in_use}`, and the admin's Delete names those entries
+(`Brando.Content.list_entries_using_module/1`). Take the blocks out of them,
+or move the entries to the trash, first. The check covers saved blocks at
+the moment of the delete: a block added in an editor that is still open, or
+an entry restored from the trash later, can still hold the module. A site's
+customization of a library module goes to the trash all the same, since its
+blocks then render as the library module. That is not a **Reset to shared**:
+the customization stays in the trash, and to customize the module again,
+restore it from there. Restoring a module from the trash renders again the
+entries that use it.
+
 ### Dropping media on a multi module
 
 A multi module can take images and videos dropped on its blocks. In the module
@@ -215,7 +228,10 @@ dropped on an entry's own ref still fills only that ref.
 An entry whose upload fails or is cancelled is removed again, wherever it has
 been moved since, as long as it is still exactly as the drop made it. An entry
 someone has changed in the meantime (typed in, or put a file in its ref) stays,
-and the editor is told the upload failed.
+and the editor is told the upload failed. Only the upload of the dropped file
+counts: another file dropped on the entry's ref meanwhile is that ref's own. A
+video uploading straight to its provider (Mux, Bunny, Cloudflare, Vimeo) stops
+when its entry is moved to another block, and that upload has failed.
 
 The zone is not shown in a synchronized translation, whose blocks follow the
 source, nor in the frontend editor while the block is an ancestor of the block
@@ -364,7 +380,7 @@ and `height` as numbers only, and its size from the aspect ratio otherwise;
 the `<video>` element gets `width` and `height` as written (`"100%"`).
 
 Text that `assign` stores is escaped, as `{{ }}` prints it, and so is each
-string a `for` loop reads of a list of strings. The arguments that escape what
+string a `for` or `tablerow` loop reads of a list of strings. The arguments that escape what
 they print read such a variable as the text it stands for, so it is escaped
 once, as the field passed directly is: `alt` on `{% picture %}`, the
 arguments of `{% route %}` and `{% route_i18n %}`, `{% editable_field %}` and

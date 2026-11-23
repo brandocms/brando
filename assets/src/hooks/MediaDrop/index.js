@@ -1,4 +1,5 @@
 import { partition } from '../shared/mediaBatch'
+import { settle } from '../shared/mediaDropHandover'
 
 /**
  * MediaDrop — images and videos dropped on a multi block whose module has a
@@ -20,10 +21,11 @@ import { partition } from '../shared/mediaBatch'
  *      its upload reports back with
  *   3. hand each file to that field's UploadTrigger (`brando:upload-files`),
  *      so it uploads exactly as a file dropped on the field does
- *   4. the field says when that upload has settled
- *      (`brando:handed-upload-settled`, bubbling); the block field takes it
- *      from there (`BlockField` hook, `media_drop_settled`), wherever the
- *      child has moved since. A field not on the page says so the same way.
+ *   4. that upload, not the field, tells the block field when it has
+ *      settled (`shared/mediaDropHandover`, `brando:handed-upload-settled`),
+ *      which takes it from there (`BlockField` hook, `media_drop_settled`),
+ *      wherever the child has moved since. A field not on the page says so
+ *      the same way.
  *
  * While a file is dragged over the block, the block carries
  * `data-media-drop="dragging"`, which styles the zone.
@@ -123,29 +125,28 @@ export default (app) => ({
     if (!accepted.length) return
 
     const payload = { files: accepted.map(({ file, kind }) => ({ kind, filename: file.name })) }
+    // read now: by the reply this element can be off the page
+    const blockField = this.el.closest('[phx-hook="Brando.BlockField"]')?.id
 
     this.pushEventTo(this.el, 'media_drop', payload, (reply) => {
-      ;(reply?.children || []).forEach((child, index) => this.handOver(accepted[index].file, child))
+      ;(reply?.children || []).forEach((child, index) => this.handOver(accepted[index].file, { ...child, blockField }))
     })
   },
 
   // The reply comes once its render is patched in, so the children's fields
   // are normally there; a few frames more cover a patch still settling.
-  handOver(file, { uid, field, token }, attempt = 0) {
+  handOver(file, { uid, field, token, blockField }, attempt = 0) {
     const trigger = document.getElementById(field)
 
     if (!trigger) {
       if (attempt < 10) {
-        requestAnimationFrame(() => this.handOver(file, { uid, field, token }, attempt + 1))
+        requestAnimationFrame(() => this.handOver(file, { uid, field, token, blockField }, attempt + 1))
       } else {
-        this.el.dispatchEvent(new CustomEvent('brando:handed-upload-settled', {
-          bubbles: true,
-          detail: { uid, token, failed: true, unavailable: true },
-        }))
+        settle({ uid, token, blockField }, { failed: true, unavailable: true })
       }
       return
     }
 
-    trigger.dispatchEvent(new CustomEvent('brando:upload-files', { detail: { files: [file], handover: { uid, token } } }))
+    trigger.dispatchEvent(new CustomEvent('brando:upload-files', { detail: { files: [file], handover: { uid, token, blockField } } }))
   },
 })

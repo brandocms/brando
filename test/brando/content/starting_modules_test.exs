@@ -158,10 +158,11 @@ defmodule Brando.Content.StartingModulesTest do
     offered = [c.intro, c.text]
     assert summary(tiles(c, modules: offered)) == [{"intro", nil, nil, nil}, {"text", nil, nil, nil}]
 
-    # The picker's root modules leave out a deleted module.
-    assert Enum.any?(ModulePicker.root_modules("all"), &(&1.id == c.hero.id))
-    {:ok, _} = Content.delete_module(c.hero.id, c.user)
-    refute Enum.any?(ModulePicker.root_modules("all"), &(&1.id == c.hero.id))
+    # The picker's root modules leave out a deleted module; one no page uses,
+    # as one in use can't be deleted.
+    assert Enum.any?(ModulePicker.root_modules("all"), &(&1.id == c.image.id))
+    {:ok, _} = Content.delete_module(c.image.id, c.user)
+    refute Enum.any?(ModulePicker.root_modules("all"), &(&1.id == c.image.id))
   end
 
   test "the picker leaves out the upgrade's legacy content wrapper", c do

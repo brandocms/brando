@@ -1,0 +1,1 @@
+- A video dropped on a multi block whose video uploads to its provider (Mux, Bunny, Cloudflare, Vimeo) no longer takes the blame for a later failed upload into its field: its entry is settled once the provider has the file, and an upload the server cannot complete shows why in the field and removes the entry made for it, as any failed drop does.

@@ -668,6 +668,75 @@ defmodule Brando.Images.RerenderTest do
     end
   end
 
+  # Processing is queued after the focal point is saved, and sees no change:
+  # the save renders the entries, whoever saves it (#3878)
+  describe "a focal point saved with update_image/3" do
+    test "renders the entries that show the image", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+      {owner, listing} = in_field(user, image)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}}, user)
+      end)
+
+      for entry <- [page, owner, listing], do: assert([%{state: "available"}] = renders_of(entry))
+    end
+
+    # A crop's new file: its processing renders them, with the new sizes
+    test "leaves the renders to processing when the save clears the sizes", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}, sizes: %{}}, user)
+      end)
+
+      assert renders_of(page) == []
+    end
+
+    test "leaves them to processing when the image has no sizes yet", %{user: user} do
+      image = Factory.insert(:image, path: "images/avatars/27i97a.jpeg", sizes: %{})
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}, sizes: %{}}, user)
+      end)
+
+      assert renders_of(page) == []
+    end
+
+    # A new focal point saved with replacement sizes renders now: no
+    # processing follows to render it
+    test "renders a new focal point saved with replacement sizes", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+      sizes = %{"small" => "images/avatars/small/27i97a.jpeg"}
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}, sizes: sizes}, user)
+      end)
+
+      assert [%{state: "available"}] = renders_of(page)
+    end
+
+    # A save rolled back (with group authorization the save runs in a
+    # transaction) queues nothing, and the queueing cannot abort the save
+    test "renders them once the save has committed", %{user: user} do
+      image = image()
+      page = page_with(user, [image])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Brando.Repo.transaction(fn ->
+          assert {:ok, _} = Brando.Images.update_image(image, %{focal: %{x: 20, y: 30}}, user)
+          assert renders_of(page) == []
+        end)
+      end)
+
+      assert [%{state: "available"}] = renders_of(page)
+    end
+  end
+
   describe "the entries that show an image" do
     test "are each listed once, out of the trash, and only those with blocks", %{user: user} do
       image = image()

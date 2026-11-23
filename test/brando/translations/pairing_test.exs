@@ -186,4 +186,29 @@ defmodule Brando.Translations.PairingTest do
       end
     end
   end
+
+  # A Mix task names `Brando.Pages.Fragment` before anything has loaded it;
+  # a module compiled to disk and not loaded stands in for it here.
+  @tag :tmp_dir
+  test "matched_by/1 reads a schema that is not loaded yet", %{tmp_dir: dir} do
+    module = Module.concat(__MODULE__, "Unloaded#{System.unique_integer([:positive])}")
+
+    [{^module, beam}] =
+      Code.compile_quoted(
+        quote do
+          defmodule unquote(module) do
+            def __translatable_matched_by__, do: [:parent_key, :key]
+          end
+        end
+      )
+
+    File.write!(Path.join(dir, "#{module}.beam"), beam)
+    :code.delete(module)
+    :code.purge(module)
+    Code.prepend_path(dir)
+    on_exit(fn -> Code.delete_path(dir) end)
+
+    refute :code.is_loaded(module)
+    assert Brando.Translations.matched_by(module) == [:parent_key, :key]
+  end
 end

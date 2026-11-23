@@ -44,10 +44,12 @@ defmodule Brando.Content.Definitions.Release do
   [module definitions guide](module_definitions.md).
   """
 
+  use Gettext, backend: Brando.Gettext
+
   import Kernel, except: [apply: 2]
 
   alias Brando.Authorization.{Boundary, Engine}
-  alias Brando.Content.Definition.{Baselines, Error, Model, Plan}
+  alias Brando.Content.Definition.{Baselines, Error, Model, Plan, Renames, Value}
   alias Brando.Content.{DefinitionApply, Definitions}
   alias Brando.Content.Definitions.Release.Batches
   alias Brando.Tenant
@@ -241,6 +243,9 @@ defmodule Brando.Content.Definitions.Release do
   again, on whichever node runs the jobs (`Brando.Content.Definitions.await_refresh/2`):
   `:timeout` in milliseconds (10 minutes) and `:on_progress` are passed on.
   `wait: false` leaves the renders queued and only reports them.
+  `renames:` is the `renames_digest/1` of the report the operator reviewed:
+  the apply is refused when the renames the release declares changed since,
+  as the values they move are part of what was reviewed.
   `:on_applied` is called with `%{report: report, result: result}` once the
   definitions are committed, before the wait.
 
@@ -255,6 +260,7 @@ defmodule Brando.Content.Definitions.Release do
          :ok <- require_user(opts),
          {:ok, %{} = report} <- plan(Keyword.put(opts, :select, uids)) |> on(:off),
          :ok <- applicable(report),
+         :ok <- reviewed(report, opts[:renames]),
          {:ok, actor, _plan_opts} <- actor(opts),
          {:ok, user} <- user(opts[:user]),
          {{:ok, result}, run} <- track(report, actor, user) do
@@ -272,6 +278,17 @@ defmodule Brando.Content.Definitions.Release do
       {{:error, reason}, _run} -> {:error, Error.describe(reason)}
       error -> error
     end
+  end
+
+  @doc "What a review of `report` saw of the renames the release declares (`apply/2`'s `renames:`)."
+  def renames_digest(report), do: Value.digest(report.plan.bundle["renames"] || %{})
+
+  defp reviewed(_report, nil), do: :ok
+
+  defp reviewed(report, digest) do
+    if renames_digest(report) == digest,
+      do: :ok,
+      else: {:error, gettext("the renames in the release changed since you reviewed it; review it again")}
   end
 
   # The apply, its rows and its batch in one transaction; the batch confirms
@@ -298,12 +315,31 @@ defmodule Brando.Content.Definitions.Release do
     end)
   end
 
-  defp record_batch!(report, _plan, changes, batch_id, user) do
+  # Each item records the values its apply moved under renamed keys: a
+  # revert can't move them back (`Batches`)
+  defp record_batch!(report, plan, changes, batch_id, user) do
     names = display_names(report.plan.bundle)
+
+    moves =
+      for %{moves: %{renames: renames}, uid: uid} <- plan.items,
+          moved = Enum.filter(renames, &(&1.blocks > 0)),
+          moved != [],
+          into: %{},
+          do: {uid, moved}
 
     items =
       Enum.map(changes, fn change ->
-        %{"uid" => change.uid, "kind" => change.kind, "action" => to_string(change.action), "name" => names[change.uid]}
+        item = %{
+          "uid" => change.uid,
+          "kind" => change.kind,
+          "action" => to_string(change.action),
+          "name" => names[change.uid]
+        }
+
+        case moves[change.uid] do
+          nil -> item
+          renames -> Map.put(item, "moves", Enum.map(renames, &Renames.to_json/1))
+        end
       end)
 
     Batches.insert!(
@@ -662,8 +698,7 @@ defmodule Brando.Content.Definitions.Release do
   defp item_line(item) do
     detail =
       case item do
-        %{action: :update, removes: %{}} -> Plan.removal_text(item)
-        %{action: :update, class: class} -> "#{class || "update"}; #{item.entry_count} entries"
+        %{action: :update, class: class} -> Plan.changes_text(item) || "#{class || "update"}; #{item.entry_count} entries"
         %{action: :create} -> "new"
         %{state: :never_applied} -> item.reason <> " (replace: [#{inspect(item.uid)}])"
         %{action: :conflict} -> conflict_detail(item)

@@ -267,6 +267,27 @@ defmodule Brando.Authorization.Boundary do
     with {:ok, _fragments} <- Brando.Pages.restore_fragments(trashed, user), do: Brando.Pages.restored(page)
   end
 
+  # A container's blocks rendered without it while it was in the trash
+  defp after_restore(%{__struct__: Brando.Content.Container} = container, _trashed, _user) do
+    Brando.Content.render_entries_using_container(container)
+    Brando.Content.Definitions.changed()
+    {:ok, container}
+  end
+
+  # A palette's blocks rendered without its colours while it was in the trash
+  defp after_restore(%{__struct__: Brando.Content.Palette} = palette, _trashed, _user) do
+    Brando.Content.render_entries_using_palette(palette)
+    Brando.Content.Definitions.changed()
+    {:ok, palette}
+  end
+
+  # A module's blocks rendered without it while it was in the trash
+  defp after_restore(%{__struct__: Brando.Content.Module} = module, _trashed, _user) do
+    Brando.Content.render_entries_using_module(module)
+    Brando.Content.Definitions.changed()
+    {:ok, module}
+  end
+
   defp after_restore(entry, _trashed, _user), do: {:ok, entry}
 
   def change(:system, _, _), do: :ok

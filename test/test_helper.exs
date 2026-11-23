@@ -6,7 +6,8 @@ alias BrandoIntegration.Repo, as: Repo
 File.rm_rf!(Application.fetch_env!(:brando, :media_path))
 File.mkdir_p!(Application.fetch_env!(:brando, :media_path))
 
-BrandoIntegration.Repo.start_link()
+# Emptied and seeded first, unless another session uses the database
+:ok = Brando.Test.Database.start_repo!()
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
@@ -189,6 +190,17 @@ defmodule BrandoIntegrationWeb.Layouts do
     </html>
     """
   end
+
+  def head(assigns) do
+    ~H"""
+    <html>
+      <head><Brando.Meta.HTML.render_meta conn={@conn} /></head>
+      <body>
+        {@inner_content}
+      </body>
+    </html>
+    """
+  end
 end
 
 defmodule BrandoIntegrationWeb.ArticleHTML do
@@ -202,11 +214,23 @@ defmodule BrandoIntegrationWeb.ArticleHTML do
     </main>
     """
   end
+
+  def related(assigns) do
+    ~H"""
+    <main>
+      <h1>{@entry.title}</h1>
+      <ul>
+        <li :for={row <- @entry.related_entries}>{row.identifier.title}</li>
+      </ul>
+    </main>
+    """
+  end
 end
 
 defmodule BrandoIntegrationWeb.LivePreview do
   @moduledoc false
   use Brando.LivePreview
+  import Ecto.Query, only: [from: 2]
 
   # Pages have no `key`: the default view fails on purpose, as a site's view
   # can, and the tests of how a failed render is shown use it. They capture
@@ -289,6 +313,40 @@ defmodule BrandoIntegrationWeb.LivePreview do
       {:ok, partials} = Brando.Pages.get_fragments(%{filter: %{parent_key: "partials", language: language}})
       partials
     end
+  end
+
+  # The page's meta tags, as a site's head renders them (PreviewProposalTest)
+  preview_target Brando.Pages.Page do
+    name :head
+    label "Head"
+    template {BrandoIntegrationWeb.PageHTML, "blocks"}
+    layout {BrandoIntegrationWeb.Layouts, "head"}
+  end
+
+  # The page's published children only (PreviewProposalTest)
+  preview_target Brando.Pages.Page do
+    name :children
+    label "Children"
+    template {BrandoIntegrationWeb.PageHTML, "children"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    schema_preloads children: from(p in Brando.Pages.Page, where: p.status == :published)
+  end
+
+  # The article's related entries, by their identifiers (PreviewProposalTest)
+  preview_target Brando.SyncTest.Article do
+    name :related
+    label "Related"
+    template {BrandoIntegrationWeb.ArticleHTML, "related"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+  end
+
+  # The same, with the list named by the target (PreviewProposalTest)
+  preview_target Brando.SyncTest.Article do
+    name :related_named
+    label "Related, named"
+    template {BrandoIntegrationWeb.ArticleHTML, "related"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    schema_preloads [:related_entries]
   end
 
   # A type with a record policy (PreviewProposalTest)

@@ -294,6 +294,9 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     end
 
     test "remaps the user fields of a snapshot by its entry type's own references to users", context do
+      # A killed run leaves the table: the partitions' reset empties tables, it does not drop them
+      query!("DROP TABLE IF EXISTS public.import_articles")
+
       query!("""
       CREATE TABLE public.import_articles (
         id bigserial PRIMARY KEY, title text, author_id bigint, creator_id bigint REFERENCES public.users (id)

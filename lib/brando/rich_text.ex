@@ -7,7 +7,9 @@ defmodule Brando.RichText do
   elements whose content browsers read differently from other parsers are
   left out; everything else is kept, and markup that is not safe (scripts,
   event handlers, LiveView bindings, embedded documents, script addresses) is
-  refused rather than stripped. Unrelated raw HTML fields are not rewritten.
+  refused on save rather than stripped. Stored text that holds such markup
+  renders without it (`render_html/1`). Unrelated raw HTML fields are not
+  rewritten.
   """
   alias Brando.HTML.Tree
   alias Ecto.Changeset
@@ -397,25 +399,33 @@ defmodule Brando.RichText do
   """
   @spec sanitize_html(term()) :: {:ok, String.t()} | :error
   def sanitize_html(html) when is_binary(html) do
-    clean = canonical(html, @html_tags, true)
+    clean = canonical(html, @html_tags, @hidden_tags)
     if safe_tokens?(clean, @unsafe_tags), do: {:ok, clean}, else: :error
   end
 
   def sanitize_html(_), do: :error
 
   @doc """
-  Rich text as it may be rendered: sanitized (`sanitize_html/1`), or, when
-  it holds unsafe markup that saving it now would refuse, its text alone
-  without any markup. `nil` stays `nil`, so an empty value is still falsy in
-  a template (`{% if intro %}`).
+  Rich text as it may be rendered: sanitized (`sanitize_html/1`), with the
+  unsafe markup that saving it now would refuse removed, an element with
+  what it holds, and the rest of its markup kept. `nil` stays `nil`, so an
+  empty value is still falsy in a template (`{% if intro %}`).
 
   For rich text stored before it was sanitized on save, such as `rich_text`
   vars saved when they were called `html`.
   """
   @spec render_html(term()) :: String.t() | nil
   def render_html(html) when is_binary(html) do
-    case sanitize_html(html) do
-      {:ok, clean} -> clean
+    safe =
+      html
+      |> canonical(@html_tags -- @unsafe_tags, @unsafe_tags ++ @hidden_tags)
+      |> without_refused_attributes()
+
+    # Some markup reads differently when parsed again (a heading inside a
+    # heading): its sanitized form, once that is stable, is rendered instead.
+    case sanitize_html(safe) do
+      {:ok, ^safe} -> safe
+      {:ok, clean} -> if sanitize_html(clean) == {:ok, clean}, do: clean, else: text_only(html)
       :error -> text_only(html)
     end
   end
@@ -514,7 +524,7 @@ defmodule Brando.RichText do
     names = for [name] <- Regex.scan(@tag_name, html, capture: :all_but_first), do: tag_key(name)
 
     with true <- Enum.all?(names, &(&1 in known or &1 == "img")),
-         {:ok, tokens} <- html |> canonical(tags, false) |> String.trim() |> tokens(),
+         {:ok, tokens} <- html |> canonical(tags, nil) |> String.trim() |> tokens(),
          true <- kept_all?(names, tokens) do
       {:ok, tokens}
     else
@@ -541,13 +551,13 @@ defmodule Brando.RichText do
   defp subsequence?([name | wanted], [name | kept]), do: subsequence?(wanted, kept)
   defp subsequence?(wanted, [_ | kept]), do: subsequence?(wanted, kept)
 
-  defp canonical(html, tags, strip?) do
-    hidden = if strip?, do: @hidden_tags, else: []
-
+  # `tags` kept, `removed` left out with what they hold, and comments with
+  # them; `nil` removes neither.
+  defp canonical(html, tags, removed) do
     MDEx.safe_html(html,
       sanitize: [
         tags: tags,
-        clean_content_tags: hidden,
+        clean_content_tags: removed || [],
         generic_attribute_prefixes: [""],
         generic_attributes: [],
         tag_attributes: %{},
@@ -556,11 +566,29 @@ defmodule Brando.RichText do
         url_relative: :passthrough,
         link_rel: nil,
         allowed_classes: %{},
-        strip_comments: strip?,
+        strip_comments: removed != nil,
         id_prefix: nil
       ],
       escape: [content: false, curly_braces_in_code: false]
     )
+    |> keep_pre_line_break()
+  end
+
+  # A parser drops the line break right after `<pre>`, so a `pre` whose text
+  # starts with one is written with another, as browsers serialize it;
+  # ammonia leaves it out, and each save lost a blank line.
+  defp keep_pre_line_break(html) do
+    with true <- String.contains?(html, "<pre"),
+         {:ok, pieces} <- pieces(html) do
+      pieces
+      |> Enum.chunk_every(2, 1)
+      |> Enum.map_join(fn
+        [{{:start, "pre", _}, tag}, {{:text, "\n" <> _}, _}] -> tag <> "\n"
+        [{_token, whole} | _] -> whole
+      end)
+    else
+      _ -> html
+    end
   end
 
   defp safe_tokens?(html, refused) do
@@ -583,20 +611,27 @@ defmodule Brando.RichText do
   @token ~r{\G(?:([^<]+)|<!--(.*?)-->|</([a-zA-Z][a-zA-Z0-9-]*)>|<([a-zA-Z][a-zA-Z0-9-]*)((?: [a-zA-Z_:][-a-zA-Z0-9_:.]*="[^"]*")*)>)}s
   @attribute ~r{ ([a-zA-Z_:][-a-zA-Z0-9_:.]*)="([^"]*)"}
 
-  defp tokens(html), do: tokens(html, 0, [])
+  defp tokens(html) do
+    with {:ok, pieces} <- pieces(html), do: {:ok, Enum.map(pieces, &elem(&1, 0))}
+  end
 
-  defp tokens(html, offset, acc) when offset >= byte_size(html), do: {:ok, Enum.reverse(acc)}
+  # Each token with the text it was read from
+  defp pieces(html), do: pieces(html, 0, [])
 
-  defp tokens(html, offset, acc) do
+  defp pieces(html, offset, acc) when offset >= byte_size(html), do: {:ok, Enum.reverse(acc)}
+
+  defp pieces(html, offset, acc) do
     case Regex.run(@token, html, offset: offset, capture: :all) do
-      [whole, text] -> tokens(html, offset + byte_size(whole), [{:text, text} | acc])
-      [whole, "", comment] -> tokens(html, offset + byte_size(whole), [{:comment, comment} | acc])
-      [whole, "", _, tag] -> tokens(html, offset + byte_size(whole), [{:end, tag} | acc])
-      [whole, "", _, "", tag, attrs] -> tokens(html, offset + byte_size(whole), [{:start, tag, attributes(attrs)} | acc])
-      [whole, "", _, "", tag] -> tokens(html, offset + byte_size(whole), [{:start, tag, []} | acc])
+      [whole | _] = match -> pieces(html, offset + byte_size(whole), [{token(match), whole} | acc])
       nil -> :error
     end
   end
+
+  defp token([_whole, text]), do: {:text, text}
+  defp token([_whole, "", comment]), do: {:comment, comment}
+  defp token([_whole, "", _, tag]), do: {:end, tag}
+  defp token([_whole, "", _, "", tag, attrs]), do: {:start, tag, attributes(attrs)}
+  defp token([_whole, "", _, "", tag]), do: {:start, tag, []}
 
   defp attributes(attrs) do
     for [_, name, value] <- Regex.scan(@attribute, attrs), do: {String.downcase(name, :ascii), unescape(value)}
@@ -613,6 +648,26 @@ defmodule Brando.RichText do
       name == "style" -> !Regex.match?(~r/(?:url\s*\(|expression\s*\(|@import|\\)/i, value)
       true -> true
     end
+  end
+
+  # Sanitized text without the attributes `safe_attribute?/1` refuses. The
+  # text holds no element whose content is raw text (they are removed with
+  # it), so each start tag is one token. `nil` when it cannot be tokenized.
+  defp without_refused_attributes(html) do
+    case pieces(html) do
+      {:ok, pieces} -> pieces |> Enum.map(&safe_piece/1) |> IO.iodata_to_binary()
+      :error -> nil
+    end
+  end
+
+  defp safe_piece({{:start, tag, attrs}, whole}), do: start_tag(tag, whole, attrs)
+
+  defp safe_piece({_token, whole}), do: whole
+
+  # The start tag with its safe attributes, each as it was written
+  defp start_tag(tag, whole, attrs) do
+    written = for [attribute | _] <- Regex.scan(@attribute, whole), do: attribute
+    ["<", tag, for({attribute, written} <- Enum.zip(attrs, written), safe_attribute?(attribute), do: written), ">"]
   end
 
   def update_identifier_url(html, identifier_id, url) when is_binary(html) and is_integer(identifier_id) do

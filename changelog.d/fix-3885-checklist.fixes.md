@@ -1,0 +1,1 @@
+- A blank line at the top of a code block in rich text is kept when the text is saved, rather than lost one line per save.
