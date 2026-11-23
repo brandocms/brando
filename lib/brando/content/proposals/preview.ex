@@ -90,7 +90,7 @@ defmodule Brando.Content.Proposals.Preview do
 
   defp changeset(proposal, target, actor, :proposed, shared) do
     with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared),
-         do: {:ok, Map.fetch!(changesets, target)}
+         do: {:ok, changesets |> Map.fetch!(target) |> Brando.Utils.apply_changes_recursively() |> page_entry()}
   end
 
   defp changeset(proposal, target, actor, :before, shared) do
@@ -100,8 +100,25 @@ defmodule Brando.Content.Proposals.Preview do
       proposal
       |> Proposals.current!(actor, if(shared, do: :read, else: :update))
       |> Map.fetch!(target)
-      |> Ecto.Changeset.change()
+      |> page_entry()
     end)
+  end
+
+  # The entry is loaded with its blocks only, and the page reads it as a
+  # saved one is read: its media (the head's meta image), relations and
+  # alternates. What is not loaded is loaded after the proposal's changes
+  # apply, so a media field it changes shows its new picture, and a list it
+  # sets keeps its rows.
+  defp page_entry(entry) do
+    preloads =
+      for preload <- Brando.Blueprint.preloads_for(entry.__struct__, skip_blocks: true),
+          name = if(is_tuple(preload), do: elem(preload, 0), else: preload),
+          not Ecto.assoc_loaded?(Map.get(entry, name)),
+          do: preload
+
+    entry
+    |> Brando.Repo.preload(preloads)
+    |> Ecto.Changeset.change()
   end
 
   @doc """

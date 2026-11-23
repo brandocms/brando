@@ -189,6 +189,17 @@ defmodule BrandoIntegrationWeb.Layouts do
     </html>
     """
   end
+
+  def head(assigns) do
+    ~H"""
+    <html>
+      <head><Brando.Meta.HTML.render_meta conn={@conn} /></head>
+      <body>
+        {@inner_content}
+      </body>
+    </html>
+    """
+  end
 end
 
 defmodule BrandoIntegrationWeb.ArticleHTML do
@@ -289,6 +300,14 @@ defmodule BrandoIntegrationWeb.LivePreview do
       {:ok, partials} = Brando.Pages.get_fragments(%{filter: %{parent_key: "partials", language: language}})
       partials
     end
+  end
+
+  # The page's meta tags, as a site's head renders them (PreviewProposalTest)
+  preview_target Brando.Pages.Page do
+    name :head
+    label "Head"
+    template {BrandoIntegrationWeb.PageHTML, "blocks"}
+    layout {BrandoIntegrationWeb.Layouts, "head"}
   end
 
   # A type with a record policy (PreviewProposalTest)
