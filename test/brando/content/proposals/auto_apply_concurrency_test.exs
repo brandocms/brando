@@ -195,6 +195,25 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
       assert %{status: "applied", receipt?: true, translated?: true} = state(c, proposal)
       assert %Grant{auto_apply: "none"} = unboxed(fn -> Repo.get!(Grant, grant.id) end)
     end
+
+    test "the endpoint switched off after the apply read it waits for the apply, which is kept", c do
+      grant = grant!(c)
+      proposal = propose!(c)
+      # Past the connection's checks, about to write the receipt
+      {task, pid} = start_apply(c, proposal, grant, :receipt)
+
+      off = Task.async(fn -> unboxed(fn -> MCP.set_enabled(c.tenant, false, c.user) end) end)
+      await_lock_wait("mcp_settings")
+      # Not switched off before the apply commits
+      assert unboxed(fn -> MCP.enabled?(c.tenant) end)
+      send(pid, {:resume, :receipt})
+
+      assert {:applied, %Receipt{}} = Task.await(task, 10_000)
+      assert :ok = Task.await(off, 10_000)
+      assert %{status: "applied", receipt?: true, translated?: true} = state(c, proposal)
+      refute unboxed(fn -> MCP.enabled?(c.tenant) end)
+      assert %Grant{revoked_reason: "endpoint_off"} = unboxed(fn -> Repo.get!(Grant, grant.id) end)
+    end
   end
 
   describe "discarding in the admin" do
@@ -253,6 +272,7 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
   defp pause_point(%{source: "mcp_grants", query: "SELECT" <> _ = query}),
     do: if(query =~ "FOR UPDATE", do: :grant_locked)
 
+  defp pause_point(%{source: "content_proposal_receipts", query: "INSERT" <> _}), do: :receipt
   defp pause_point(_metadata), do: nil
 
   # Until another connection waits on a row lock on `table`

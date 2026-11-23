@@ -16,10 +16,13 @@ defmodule Brando.Content.Proposals.AutoApply do
   validation and Activity as an approval in the admin, without an approval.
   Inside the apply's transaction:
 
-    * the connection is locked and checked by the rule that authorizes each
-      request (`Brando.MCP.lock_auto_apply/3`), so turning the setting off,
-      revoking the connection or turning the endpoint off, committed first,
-      applies nothing;
+    * the endpoint's switch and the connection are locked and checked by
+      the rule that authorizes each request (`Brando.MCP.lock_auto_apply/3`),
+      so turning the setting off, revoking the connection or turning the
+      endpoint off, committed first, applies nothing, and one that comes
+      later waits for the apply. Losing Connect (a group, role or site
+      assignment) or the site being suspended takes no lock: what is
+      committed when the apply checks it counts;
     * the user must still be allowed to review proposals (Assistant → Use);
     * every entry the proposal created must come out a draft with no
       publishing date ahead. A context's own save could publish it, and a

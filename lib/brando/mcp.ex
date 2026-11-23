@@ -646,26 +646,42 @@ defmodule Brando.MCP do
   end
 
   @doc """
-  Inside a transaction: locks the connection `grant_id` and returns it when it
+  Inside a transaction: locks the endpoint's switch for `tenant` (shared)
+  and then the connection `grant_id`, and returns the connection when it
   may apply `kind` without review now, by the same rule that authorizes each
-  request (not revoked or expired, the endpoint on for `tenant`, its user
-  still allowed to connect there), and `auto_apply` is `kind`. `{:error,
-  reason}` otherwise. Holding the lock, a reset, revocation or kill switch
-  committed first is seen, and one that comes later waits for the apply.
+  request (not revoked or expired, the endpoint on for `tenant`, the site
+  active, its user still allowed to connect there), and `auto_apply` is
+  `kind`. `{:error, reason}` otherwise.
+
+  The locks are held until the commit: turning the setting off, revoking
+  the connection or turning the endpoint off (`set_enabled/3`, which writes
+  the switch before it revokes) either committed first and is seen here, or
+  waits for the apply. Losing Connect, through a group, a role or a site
+  assignment, or the site being suspended, takes no lock: it is read here,
+  so a change committed before this read is seen and one after it is not.
   """
   @spec lock_auto_apply(integer(), String.t(), tenant()) :: {:ok, Grant.t()} | {:error, atom()}
   def lock_auto_apply(grant_id, kind, tenant) when is_integer(grant_id) do
+    switched_on? = secure_base?() and locked_setting_enabled?(tenant)
     grant = Repo.one(from(g in Grant, where: g.id == ^grant_id, lock: "FOR UPDATE"))
 
     cond do
       is_nil(grant) or not is_nil(grant.revoked_at) -> {:error, :revoked}
       grant_expired?(grant) -> {:error, :revoked}
       not same_grant_tenant?(grant, tenant) -> {:error, :revoked}
-      not enabled?(tenant) -> {:error, :disabled}
+      not switched_on? -> {:error, :disabled}
       not can_connect?(Repo.get(User, grant.user_id), tenant) -> {:error, :forbidden}
       grant.auto_apply != kind -> {:error, :not_allowed}
       true -> {:ok, grant}
     end
+  end
+
+  defp locked_setting_enabled?(tenant) do
+    tenant
+    |> setting_query()
+    |> lock("FOR SHARE")
+    |> select([s], s.enabled)
+    |> Repo.repo().one() == true
   end
 
   defp same_grant_tenant?(grant, tenant) do
