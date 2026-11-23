@@ -194,10 +194,14 @@ export default function providerVideoUploader({ label, startTransfer }) {
     // owning component took, with the answer's `error` if it took nothing.
     reportSuccess(requestRef, uploadToken) {
       this.activeUploads.delete(requestRef)
-      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken }, (reply) =>
+      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken }, (reply) => {
+        if (reply?.error) {
+          window.BrandoUploads?.externalError?.(requestRef, reply.error)
+        } else {
+          window.BrandoUploads?.externalComplete?.(requestRef)
+        }
         this.announce(requestRef, { status: 'done', error: reply?.error })
-      )
-      window.BrandoUploads?.externalComplete?.(requestRef)
+      })
     },
 
     reportError(requestRef, file, error) {

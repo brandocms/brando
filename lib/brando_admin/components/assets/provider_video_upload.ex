@@ -179,6 +179,7 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   @doc """
   What to tell the editor about a `complete/3` that failed.
   """
+  def complete_error_message({:error, %Ecto.Changeset{}}), do: complete_error_message(:error)
   def complete_error_message({:error, reason}), do: Brando.Uploads.video_upload_error_message(reason)
   def complete_error_message(:error), do: gettext("The video was uploaded, but could not be added here.")
 

@@ -92,6 +92,15 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert ref_video_id(view) in [nil, ""]
     end
 
+    # The provider took the file; saving the video failed, so blaming the
+    # provider's settings would send the editor the wrong way.
+    test "an upload saved with an error is not blamed on the provider" do
+      alias BrandoAdmin.Components.Assets.ProviderVideoUpload
+
+      assert ProviderVideoUpload.complete_error_message({:error, %Ecto.Changeset{}}) ==
+               ProviderVideoUpload.complete_error_message(:error)
+    end
+
     # The ref took the video while Bunny still had it: it showed a bare film
     # icon until the entry was reloaded, as nothing told it the video was ready.
     test "an upload shows as processing until the provider reports it ready", ctx do
