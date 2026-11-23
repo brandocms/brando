@@ -149,6 +149,37 @@ defmodule BrandoAdmin.VideoFieldProviderUploadTest do
     assert clip_id(view) == ""
   end
 
+  # Before, the field read the video again after completing it, and a video
+  # trashed in between took the form down.
+  test "an upload whose video is trashed while it completes is answered with why", ctx do
+    view = open(ctx)
+
+    view
+    |> with_target(cid_of(view, @hook))
+    |> render_hook("get_video_upload_url", %{
+      "request_ref" => "field-trashed",
+      "filename" => "clip.mp4",
+      "size" => 1_000,
+      "mime_type" => "video/mp4"
+    })
+
+    assert_push_event(view, "video_upload_url_ready", %{
+      request_ref: "field-trashed",
+      video_id: video_id,
+      upload_token: token
+    })
+
+    Brando.TrashOnRead.trash_video_after_first_read(view.pid, video_id)
+
+    view
+    |> with_target(cid_of(view, @hook))
+    |> render_hook("video_upload_complete", %{"request_ref" => "field-trashed", "upload_token" => token})
+
+    assert_reply(view, %{error: error})
+    assert is_binary(error)
+    assert clip_id(view) == ""
+  end
+
   test "a refused upload is reported to the hook", ctx do
     view = open(ctx)
 

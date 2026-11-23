@@ -398,9 +398,17 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], socket.assigns.video_id, nil)
 
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
-      {:ok, video} when still_shown? -> select_video(socket, video.id)
-      {:ok, _video} -> {:noreply, socket}
-      failed -> {:reply, %{error: ProviderVideoUpload.complete_error_message(failed)}, socket}
+      {:ok, video} when still_shown? ->
+        # Trashed since it completed: the field keeps what it had
+        select_video(socket, video.id,
+          on_missing: &{:reply, %{error: ProviderVideoUpload.complete_error_message(:error)}, &1}
+        )
+
+      {:ok, _video} ->
+        {:noreply, socket}
+
+      failed ->
+        {:reply, %{error: ProviderVideoUpload.complete_error_message(failed)}, socket}
     end
   end
 
@@ -410,8 +418,14 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   def handle_event("upload_error", _params, socket), do: {:noreply, socket}
 
   defp select_video(%{assigns: %{form_id: form_id}} = socket, selected_video_id, opts \\ []) do
+    case Brando.Videos.get_video(%{matches: %{id: selected_video_id}, preload: [:thumbnail, :file]}) do
+      {:ok, video} -> show_video(socket, video, form_id, opts)
+      _missing -> Keyword.get(opts, :on_missing, &{:noreply, &1}).(socket)
+    end
+  end
+
+  defp show_video(socket, video, form_id, opts) do
     on_change = socket.assigns.on_change
-    {:ok, video} = Brando.Videos.get_video(%{matches: %{id: selected_video_id}, preload: [:thumbnail, :file]})
 
     if Keyword.get(opts, :sync_picker?, true) do
       send_update(BrandoAdmin.Components.VideoPicker,

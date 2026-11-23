@@ -323,7 +323,9 @@ export default (app) => ({
         if (detail.ref !== this._providerRef) return
         const state = detail.status === 'uploading' ? { status: 'uploading', progress: detail.progress } :
           detail.error ? { status: 'error', error: detail.error } : { status: 'done' }
-        this._providerState = { state, assetId: this.el.dataset.assetId }
+        // Only a failure outlives a patch: a progress the socket never got to
+        // finish would otherwise stay on the field
+        this._providerState = state.status === 'error' ? { state, assetId: this.el.dataset.assetId } : null
         this.showProgress(state)
       }
       hook.addEventListener('brando:video-upload', this._onProviderUpload)

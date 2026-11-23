@@ -11,7 +11,6 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
   use Brando.LiveCase
 
   import Brando.EditSessionEditors, only: [await: 1]
-  import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.Block
   alias Brando.Pages.Page
@@ -218,7 +217,7 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       view = open(ctx)
       hook = "#" <> var_hook(view)
       {video_id, token} = request_upload(view, hook, "var-trashed")
-      trash_after_first_read(view.pid, video_id)
+      Brando.TrashOnRead.trash_video_after_first_read(view.pid, video_id)
 
       complete_upload(view, hook, "var-trashed", token)
       assert_reply(view, %{error: error})
@@ -401,24 +400,6 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     |> with_target(cid_of(view, hook))
     |> render_hook("video_upload_complete", %{"request_ref" => request_ref, "upload_token" => token})
   end
-
-  # Trashes the video in `pid` once that process has read it
-  defp trash_after_first_read(pid, video_id) do
-    id = make_ref()
-    event = BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query]
-    :ok = :telemetry.attach(id, event, &__MODULE__.trash_on_read/4, {pid, video_id})
-    on_exit(fn -> :telemetry.detach(id) end)
-  end
-
-  @doc false
-  def trash_on_read(_event, _measurements, %{source: "videos"}, {pid, video_id}) do
-    if self() == pid and !Process.put(:trashed_on_read, true) do
-      from(v in Brando.Videos.Video, where: v.id == ^video_id)
-      |> Repo.update_all(set: [deleted_at: DateTime.truncate(DateTime.utc_now(), :second)])
-    end
-  end
-
-  def trash_on_read(_event, _measurements, _metadata, _config), do: :ok
 
   defp ref_hook_id(ctx), do: "block-#{ctx.ref_uid}-video-uploader"
 
