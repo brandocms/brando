@@ -247,9 +247,17 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp do_reset(kind, id, prefix) do
-    case get_override(kind, normalize_id!(id), prefix) do
-      nil -> :ok
-      override -> override |> Repo.delete(prefix: prefix) |> result_to_ok()
+    id = normalize_id!(id)
+
+    case get_override(kind, id, prefix) do
+      nil ->
+        :ok
+
+      override ->
+        with :ok <- override |> Repo.delete(prefix: prefix) |> result_to_ok() do
+          rerender_prefix(prefix, kind, id)
+          :ok
+        end
     end
   end
 
@@ -262,10 +270,13 @@ defmodule Brando.Content.SharedLibrary do
     id = normalize_id!(id)
 
     with override when not is_nil(override) <- get_override(kind, id, prefix),
-         shared when not is_nil(shared) <- get_public(kind, id) do
-      replace_override(kind, override, shared, prefix, user)
+         shared when not is_nil(shared) <- get_public(kind, id),
+         {:ok, _replacement} = result <- replace_override(kind, override, shared, prefix, user) do
+      rerender_prefix(prefix, kind, id)
+      result
     else
       nil -> {:error, :not_found}
+      error -> error
     end
   end
 
@@ -576,9 +587,10 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp rerender_environment(site, environment, kind, id) do
-    prefix = Tenant.prefix(site, environment)
-    Tenant.with_prefix(prefix, fn -> rerender_kind(kind, id) end)
+    site |> Tenant.prefix(environment) |> rerender_prefix(kind, id)
   end
+
+  defp rerender_prefix(prefix, kind, id), do: Tenant.with_prefix(prefix, fn -> rerender_kind(kind, id) end)
 
   defp rerender_kind(:module, id), do: Blocks.render_entries_with_module_id(id, :shared)
   defp rerender_kind(:container, id), do: Blocks.render_entries_with_container_id(id, :shared)

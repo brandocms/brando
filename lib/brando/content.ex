@@ -162,11 +162,23 @@ defmodule Brando.Content do
     end
   end
 
+  # Its blocks render as not found (`Brando.Villain.Parser`), or, for a
+  # site's override, as the library module
   mutation :delete, Module do
     fn entry ->
+      render_entries_using_module(entry)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
+  end
+
+  @doc """
+  Queues the renders of the entries whose blocks use `module`, leaving the
+  blocks as they are: for a module put in the trash or restored from it.
+  """
+  def render_entries_using_module(module) do
+    {id, origin} = rendered_reference(module.id, module.source_module_id)
+    ContentBlocks.render_entries_with_module_id_as_is(id, origin)
   end
 
   @doc """
