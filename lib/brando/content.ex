@@ -496,8 +496,7 @@ defmodule Brando.Content do
 
   mutation :update, Palette do
     fn palette ->
-      {id, origin} = rendered_reference(palette.id, palette.source_palette_id)
-      ContentBlocks.render_entries_with_palette_id(id, origin)
+      render_entries_using_palette(palette)
       Brando.Content.Definitions.changed()
       Brando.Cache.Palettes.update({:ok, palette})
     end
@@ -704,18 +703,32 @@ defmodule Brando.Content do
 
   mutation :update, Container do
     fn entry ->
-      {id, origin} = rendered_reference(entry.id, entry.source_container_id)
-      ContentBlocks.render_entries_with_container_id(id, origin)
+      render_entries_using_container(entry)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
   end
 
+  # Its blocks render as sections of their own (`Brando.Villain.Parser`)
   mutation :delete, Container do
     fn entry ->
+      render_entries_using_container(entry)
       Brando.Content.Definitions.changed()
       {:ok, entry}
     end
+  end
+
+  @doc "Queues the renders of the entries whose blocks use `container`."
+  def render_entries_using_container(container) do
+    {id, origin} = rendered_reference(container.id, container.source_container_id)
+    ContentBlocks.render_entries_with_container_id(id, origin)
+  end
+
+  @doc "Queues the renders of the entries whose blocks use `palette`, after clearing the cached containers holding it."
+  def render_entries_using_palette(palette) do
+    Brando.Cache.Query.evict_schema(Container)
+    {id, origin} = rendered_reference(palette.id, palette.source_palette_id)
+    ContentBlocks.render_entries_with_palette_id(id, origin)
   end
 
   mutation :duplicate, {Container, change_fields: [:name, uid: &__MODULE__.duplicate_uid/2]}

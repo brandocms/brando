@@ -845,6 +845,11 @@ msgstr ""
 msgid "%{key} moved to %{surface}."
 msgstr ""
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{kind} \"%{to}\" renamed from \"%{from}\""
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "%{kind} %{key} → %{target}: %{reason}."
@@ -1066,6 +1071,26 @@ msgstr ""
 msgid "%{provider} no longer has this video."
 msgstr ""
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} in %{module}"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and move the values after the apply with mix brando.modules resolve %{maps}"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with mix brando.modules resolve %{maps}"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with mix brando.modules resolve %{maps}"
+msgstr ""
+
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{scope} · saved %{time}"
@@ -1104,6 +1129,26 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{storage} · %{requests} requests"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or move the values with mix brando.modules resolve --map"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{subject}: blocks %{blocks} already hold a value under %{to}; drop or move it under Resolve blocks first"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{subject}: blocks %{blocks} hold %{from} as another type than %{to} has"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{subject}: blocks %{blocks} hold a value of %{from} that is not one of %{to}'s options"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -1178,6 +1223,7 @@ msgid "/cookies"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 block"
 msgid_plural "%{count} blocks"
@@ -1263,6 +1309,13 @@ msgid_plural "%{count} entries fail to render in Verify."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry keeps no history"
+msgid_plural "%{count} entries keep no history"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
 msgid "1 entry published as scheduled"
@@ -1281,6 +1334,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 entry unpublished as scheduled"
 msgid_plural "%{count} entries unpublished as scheduled"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry you cannot open"
+msgid_plural "%{count} entries you cannot open"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -2745,6 +2805,11 @@ msgstr ""
 msgid "An authenticator app was set up for %{email}. Logging in now asks for a code from it, and the account was logged out on other devices."
 msgstr ""
 
+#: lib/brando/content/definition/importer.ex
+#, elixir-autogen, elixir-format
+msgid "An editor saved the same blocks at the same moment, and nothing was applied. Try again."
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "An editor-only note"
@@ -3107,6 +3172,11 @@ msgstr ""
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying moves each block’s value from the old name to the new one in the same step. A revision of each entry is stored before and after, and the apply can’t be reverted: keep it, or restore the entries’ revisions."
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -3495,6 +3565,16 @@ msgstr ""
 msgid "Before"
 msgstr ""
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "Before applying module definitions: %{renames}"
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "Before release %{release}: %{renames}"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Before resolving blocks on older versions of %{module}"
@@ -3539,7 +3619,7 @@ msgstr ""
 msgid "Block #%{id}"
 msgstr ""
 
-#: lib/brando/content/stale_blocks.ex
+#: lib/brando/content/block_moves.ex
 #, elixir-autogen, elixir-format
 msgid "Block #%{id} could not be saved: %{errors}"
 msgstr ""
@@ -5797,14 +5877,14 @@ msgstr "Could not save the sketch"
 msgid "Could not set video thumbnail"
 msgstr ""
 
-#: lib/brando/content/stale_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Could not store a revision of %{entry}: %{reason}"
-msgstr ""
-
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not store the AI context fields"
+msgstr ""
+
+#: lib/brando/content/block_moves.ex
+#, elixir-autogen, elixir-format
+msgid "Could not store the entries' revisions: %{reason}"
 msgstr ""
 
 #: lib/brando/uploads.ex
@@ -16312,6 +16392,11 @@ msgstr ""
 msgid "Rename, update and delete the listing views other people share. Everyone manages their own without it."
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Renames refs or vars. Blocks’ values move to the new names in the apply."
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Render"
@@ -20401,6 +20486,11 @@ msgstr ""
 msgid "The image could not be copied for this field"
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The image details could not be saved"
+msgstr ""
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "The image file could not be read"
@@ -21060,6 +21150,11 @@ msgstr ""
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider refused the upload. Check its settings, or try again."
+msgstr ""
+
+#: lib/brando_admin/components/assets/provider_video_upload.ex
+#, elixir-autogen, elixir-format
+msgid "The video was uploaded, but could not be added here."
 msgstr ""
 
 #: lib/brando/workers/video_metadata_sweep.ex
@@ -23116,6 +23211,11 @@ msgstr ""
 msgid "Value"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Values move to the renamed refs and vars"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Variable"
@@ -24342,6 +24442,11 @@ msgstr ""
 msgid "a new %{module} block"
 msgstr ""
 
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a value of its own"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "affects %{count} live page"
@@ -24547,6 +24652,11 @@ msgstr[1] ""
 msgid "connected %{date}"
 msgstr ""
 
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "content changed since you reviewed it: %{reasons}; review again"
+msgstr ""
+
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "could not be seeded in %{environment}, so nothing was saved: %{reason}"
@@ -24750,6 +24860,11 @@ msgid "in %{count} block"
 msgid_plural "in %{count} blocks"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "in %{entries}"
+msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -25354,6 +25469,11 @@ msgstr ""
 msgid "still held"
 msgstr ""
 
+#: lib/brando/content/definitions/release/batches.ex
+#, elixir-autogen, elixir-format
+msgid "the apply moved values from %{renames}"
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "the definitions changed since"
@@ -25367,6 +25487,11 @@ msgstr ""
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "the module has no %{kind} %{key}"
+msgstr ""
+
+#: lib/brando/content/definitions/release.ex
+#, elixir-autogen, elixir-format
+msgid "the renames in the release changed since you reviewed it; review it again"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex

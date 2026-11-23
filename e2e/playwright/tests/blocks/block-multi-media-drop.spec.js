@@ -206,6 +206,108 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(entries(second)).toHaveCount(0)
   })
 
+  // The folder question ("Change") holds no files: a dropped file uploads
+  // whatever the editor answers, and settles its entry once. A later upload
+  // into the same field that fails is that upload's own.
+  test('a folder choice cancelled while a dropped file waits leaves the entry to its upload', async ({ page }) => {
+    await createPage(page, 'Media drop folder cancelled', group, 'Image Row')
+    const row = rows(page).first()
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
+    await drop(page, rowBlock(row), [['image.jpg', 'image/jpeg']])
+    await expect(entries(row)).toHaveCount(1)
+    const entry = entries(row).first()
+    await expect(page.locator('.upload-item.status-queued').filter({ hasText: 'image.jpg' })).toBeVisible()
+
+    await field(entry).getByRole('button', { name: 'Change upload folder', exact: true }).click()
+    const picker = page.locator('#image-picker')
+    await picker.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(picker).not.toBeVisible()
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 3; window.BrandoUploads._hook.pumpTransfers() })
+    await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+
+    // Emptied, the field would settle nothing pending as a success: the
+    // upload refused next is the field's own, not the drop's
+    await field(entry).getByRole('button', { name: 'Remove', exact: true }).click()
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    await drop(page, field(entry), [['photo.bin', 'image/jpeg', 'image.jpg']])
+    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'error')
+    await expect(page.locator('.upload-item.status-error')).toHaveCount(1)
+    await syncLV(page)
+
+    await expect(entries(row)).toHaveCount(1)
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    // no alert that the dropped file's upload failed
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+  })
+
+  // A Video Row whose Video Card's ref uploads to its provider, the E2E
+  // app's fake Bunny, which answers on its CDN hostname here
+  const videoRow = async page => {
+    await page.route('https://bunny-cdn.e2e.test/**', route => route.fulfill({ path: './fixtures/image.jpg', contentType: 'image/jpeg' }))
+    const row = await factory(page, {
+      name: { en: 'Video Row', no: 'Video Row' }, namespace: { en: group, no: group }, help_text: { en: 'Video Row' },
+      class: 'video-row', type: 'liquid', vars: [], datasource: false,
+      uid: 'e2e-video-row', code: '<section>{{ content }}</section>', refs: [], multi: true,
+      media_drop_child: 'e2e-video-card', media_drop_ref: 'visual',
+    })
+    await factory(page, {
+      name: { en: 'Video Card', no: 'Video Card' }, namespace: { en: group, no: group }, help_text: { en: 'Video Card' },
+      class: 'video-card', type: 'liquid', vars: [], datasource: false,
+      uid: 'e2e-video-card', parent_id: row, multi: false,
+      code: '<figure>{% ref refs.visual %}</figure>',
+      refs: [{
+        name: 'visual', description: 'Video', uid: 'e2e-video-card-visual',
+        data: {
+          type: 'media',
+          data: { available_blocks: ['video'], template_video: { config_target: 'video:E2eProject.Projects.Project:bunny_video' } },
+        },
+      }],
+    })
+  }
+
+  // The provider's `done` settles the drop once the ref shows the video.
+  // Emptied after that, the field's next failed upload is its own.
+  test('a video dropped on a provider ref settles its entry when the ref takes it', async ({ page }) => {
+    await videoRow(page)
+    await createPage(page, 'Media drop provider', group, 'Video Row')
+    const row = rows(page).first()
+    await drop(page, rowBlock(row), [['video.mp4', 'video/mp4']])
+    await expect(entries(row)).toHaveCount(1)
+    const entry = entries(row).first()
+    await expect(field(entry)).toHaveAttribute('data-video-hook-id', /uploader$/)
+    await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+
+    await field(entry).getByRole('button', { name: 'Remove', exact: true }).click()
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    await page.route('**/e2e/bunny/tus**', route => route.fulfill({ status: 403 }))
+    await drop(page, field(entry), [['video.mp4', 'video/mp4']])
+    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'error', { timeout: 30000 })
+    await syncLV(page)
+
+    await expect(entries(row)).toHaveCount(1)
+    await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
+    // no alert that the dropped file's upload failed
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+  })
+
+  // The provider has the file, but the server cannot complete the upload:
+  // the drop failed, and its entry goes as any failed drop's does
+  test('a video the server cannot complete after its provider upload removes its entry', async ({ page }) => {
+    await videoRow(page)
+    await createPage(page, 'Media drop provider refused', group, 'Video Row')
+    // A token the server never signed, as the provider hook gets it
+    await page.evaluate(() => {
+      window.addEventListener('phx:video_upload_url_ready', event => { event.detail.upload_token = 'forged' }, { capture: true })
+    })
+
+    const row = rows(page).first()
+    await drop(page, rowBlock(row), [['video.mp4', 'video/mp4']])
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(1, { timeout: 30000 })
+    await expect(entries(row)).toHaveCount(0)
+  })
+
   test('a multi block without media_drop shows no drop zone', async ({ page }) => {
     await createPage(page, 'Media drop none', '06 COPY PASTE TEST', 'Team Section')
     await expect(rows(page)).toHaveCount(1)

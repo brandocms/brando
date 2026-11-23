@@ -364,7 +364,7 @@ and `height` as numbers only, and its size from the aspect ratio otherwise;
 the `<video>` element gets `width` and `height` as written (`"100%"`).
 
 Text that `assign` stores is escaped, as `{{ }}` prints it, and so is each
-string a `for` loop reads of a list of strings. The arguments that escape what
+string a `for` or `tablerow` loop reads of a list of strings. The arguments that escape what
 they print read such a variable as the text it stands for, so it is escaped
 once, as the field passed directly is: `alt` on `{% picture %}`, the
 arguments of `{% route %}` and `{% route_i18n %}`, `{% editable_field %}` and

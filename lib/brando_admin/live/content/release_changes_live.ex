@@ -603,7 +603,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           item.state == :changed_in_both,
           do: item.uid
 
-    Release.apply(uids, user: user.id, replace: replace, discard: discard, wait: false)
+    Release.apply(uids,
+      user: user.id,
+      replace: replace,
+      discard: discard,
+      renames: Release.renames_digest(assigns.report),
+      wait: false
+    )
   end
 
   defp applied_text(nil, keep_here),
@@ -952,7 +958,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       <:class_line>
         <span class={["badge", status_badge(@row.status)]}>{RC.status_label(@row.status)}</span>
         <span :if={@row.class} class="badge badge--outline">{RC.class_label(@row.class)}</span>
-        {RC.class_help(@row.class)}
+        {class_help(@row)}
       </:class_line>
     </RC.detail_head>
     <RC.tabs tab={@tab} entries={length(@row_entries)} tabs={row_tabs(@row)} />
@@ -1165,9 +1171,36 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   end
 
   defp choice_body(%{row: %{group: :ready, items: items}} = assigns) do
-    assigns = assign(assigns, :removing, Enum.filter(items, &(&1[:removes] && &1.removes.blocks > 0)))
+    assigns =
+      assigns
+      |> assign(:removing, Enum.filter(items, &(&1[:removes] && &1.removes.blocks > 0)))
+      |> assign(:moving, Enum.filter(items, &(&1[:moves] && &1.moves.blocks > 0)))
 
     ~H"""
+    <RC.notice
+      :if={@moving != []}
+      icon="info"
+      headline={gettext("Values move to the renamed refs and vars")}
+    >
+      {gettext(
+        "Applying moves each block’s value from the old name to the new one in the same step. A revision of each entry is stored before and after, and the apply can’t be reverted: keep it, or restore the entries’ revisions."
+      )}
+      <ul data-testid="release-moves">
+        <li :for={item <- @moving} data-uid={item.uid}>
+          {item.name}: {moved_keys(item.moves.renames)} · {ngettext(
+            "1 block",
+            "%{count} blocks",
+            item.moves.blocks
+          )}, {pngettext("release", "1 entry", "%{count} entries", length(item.moves.entries))}<span :if={
+            item.moves.unrevisioned > 0
+          }> · {ngettext(
+            "1 entry keeps no history",
+            "%{count} entries keep no history",
+            item.moves.unrevisioned
+          )}</span>
+        </li>
+      </ul>
+    </RC.notice>
     <RC.notice
       :if={@removing != []}
       icon="info"
@@ -1192,7 +1225,18 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   defp choice_body(assigns), do: ~H""
 
+  # A row that only renames keeps nothing behind: its values move
+  defp class_help(%{class: :destructive, items: items} = row) do
+    if Enum.any?(items, & &1[:moves]) and not Enum.any?(items, & &1[:removes]),
+      do: gettext("Renames refs or vars. Blocks’ values move to the new names in the apply."),
+      else: RC.class_help(row.class)
+  end
+
+  defp class_help(row), do: RC.class_help(row.class)
+
   defp removed_keys(keys), do: Enum.map_join(keys, ", ", fn {kind, key} -> "#{key} (#{kind})" end)
+
+  defp moved_keys(renames), do: Enum.map_join(renames, ", ", &"#{&1.from} → #{&1.to} (#{&1.kind})")
 
   defp template_description(item, defs, version) do
     case {item.action, defs.applied} do
