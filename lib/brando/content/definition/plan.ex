@@ -92,7 +92,7 @@ defmodule Brando.Content.Definition.Plan do
   What an update moves under renamed keys, as the plan prints it, or nil:
   `moves var title → heading in 12 blocks (8 entries)`.
   """
-  def move_text(%{moves: %{renames: [_ | _] = renames, refused: []}}) do
+  def move_text(%{action: :update, moves: %{renames: [_ | _] = renames}}) do
     "moves " <>
       Enum.map_join(renames, ", ", fn rename ->
         "#{rename.kind} #{rename.from} → #{rename.to} in #{count(rename.blocks, "block")} (#{count(rename.entries, "entry", "entries")})"

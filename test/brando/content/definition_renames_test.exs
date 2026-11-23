@@ -527,7 +527,9 @@ defmodule Brando.Content.DefinitionRenamesTest do
       opts = [path: c.path, version: "2.0.0", user: c.user.id]
 
       {:ok, report} = Release.plan(opts)
-      assert [%{action: :conflict, state: :changed_in_both}] = report.items
+      assert [%{action: :conflict, state: :changed_in_both, remaps: []} = conflict] = report.items
+      # The plan prints the conflict, not the moves
+      assert Brando.Content.Definition.Plan.changes_text(conflict) == nil
       proposed = Proposed.build(report, conflicts: [c.module.uid])
       synced = Proposed.sync_block(load_tree(held), proposed)
       assert Enum.find(synced.vars, &(&1.key == "heading")).value == "Kept words"

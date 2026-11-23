@@ -386,13 +386,12 @@ defmodule Brando.Content.Definition.Importer do
 
   # The values an update of a module moves under its declared renames
   # (`Renames`), and the renames it leaves to a resolve. A move refused in
-  # any block makes the update need a migration. A conflict gets the moves
-  # an apply of the files' version makes, for the review to preview.
-  defp moves({action, _reason} = result, %{"kind" => "module", "uid" => uid}, record, changeset, ctx)
-       when action == :update or (action == :conflict and not is_nil(record)) do
+  # any block makes the update need a migration. A conflict gets only the
+  # moves an apply of the files' version makes, for the review to preview.
+  defp moves({:update, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx) do
     case Renames.declared(ctx.bundle, uid) do
       [] ->
-        {result, nil, []}
+        {action, nil, []}
 
       renames ->
         module = Changeset.apply_changes(changeset)
@@ -401,13 +400,17 @@ defmodule Brando.Content.Definition.Importer do
         remaps = Renames.remaps(record, module, rest)
 
         case moves do
-          %{refused: [_ | _] = refused} when action == :update ->
-            {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
-
-          _ ->
-            {result, moves, remaps}
+          %{refused: [_ | _] = refused} -> {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
+          _ -> {action, moves, remaps}
         end
     end
+  end
+
+  defp moves({:conflict, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx)
+       when not is_nil(record) do
+    {active, _rest} = ctx.bundle |> Renames.declared(uid) |> Renames.split(ModuleDiff.diff(record, changeset))
+    moves = if active != [], do: Renames.plan(record, Changeset.apply_changes(changeset), active, ctx.viewer)
+    {action, moves, []}
   end
 
   defp moves(action, _definition, _record, _changeset, _ctx), do: {action, nil, []}
