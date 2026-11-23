@@ -252,6 +252,11 @@ msgstr ""
 msgid "A proposal requires an authenticated user."
 msgstr ""
 
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A ref is at most %{max} characters."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "A slot cannot be moved or deleted."

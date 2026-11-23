@@ -406,6 +406,17 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert %Record{status: "applied", auto_apply_reason: nil} = record(id)
     end
 
+    test "a created entry's ref is at most 128 characters, refused before anything is stored", c do
+      long = String.duplicate("r", 129)
+
+      for op <- [create(c.source, long), %{"op" => "create_entry", "content_type" => @article, "ref" => long}] do
+        assert {:error, message} = Codec.decode_all([op])
+        assert message =~ "at most 128 characters"
+      end
+
+      assert {:ok, [_]} = Codec.decode_all([create(c.source, String.duplicate("r", 128))])
+    end
+
     test "a crash leaves the proposal waiting", c do
       Process.put({:synctest_duplicate, c.source.id}, :raise)
       assert_waiting(c, prepare(c, allowed!(c), [create(c.source)]), "It was not applied automatically")

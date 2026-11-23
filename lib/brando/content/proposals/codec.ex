@@ -96,7 +96,7 @@ defmodule Brando.Content.Proposals.Codec do
   defp decode!("create_entry", map, attachments),
     do: %CreateEntry{
       schema: writable!(map["content_type"]),
-      ref: string!(map["ref"], "ref"),
+      ref: ref!(map["ref"]),
       fields: values(map!(map["fields"]), attachments)
     }
 
@@ -104,7 +104,7 @@ defmodule Brando.Content.Proposals.Codec do
     do: %CreateTranslation{
       source: source!(map["source"]),
       language: string!(map["language"], "language"),
-      ref: string!(map["ref"], "ref")
+      ref: ref!(map["ref"])
     }
 
   # The answer's shape is checked with the rest of it, as a problem the
@@ -666,6 +666,16 @@ defmodule Brando.Content.Proposals.Codec do
   defp map!(nil), do: %{}
   defp map!(map) when is_map(map), do: Map.new(map, fn {key, value} -> {to_string(key), value} end)
   defp map!(_), do: invalid!(dgettext("content_proposals", "Expected an object."))
+
+  # A created entry's ref, which results name it by: as short as a block uid
+  @max_ref 128
+  defp ref!(value) do
+    ref = string!(value, "ref")
+
+    if String.length(ref) > @max_ref,
+      do: invalid!(dgettext("content_proposals", "A ref is at most %{max} characters.", max: @max_ref)),
+      else: ref
+  end
 
   defp string!(value, _) when is_binary(value) and value != "", do: value
   defp string!(value, _) when is_atom(value) and not is_nil(value), do: to_string(value)

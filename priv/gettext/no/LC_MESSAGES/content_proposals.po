@@ -253,6 +253,11 @@ msgstr "Et forslag kan ikke opprette eller endre oppføringer av typen %{name}. 
 msgid "A proposal requires an authenticated user."
 msgstr "Et forslag krever en innlogget bruker."
 
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A ref is at most %{max} characters."
+msgstr "En ref er på høyst %{max} tegn."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "A slot cannot be moved or deleted."
