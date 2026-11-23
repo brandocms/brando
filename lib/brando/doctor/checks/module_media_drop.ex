@@ -40,12 +40,14 @@ defmodule Brando.Doctor.Checks.ModuleMediaDrop do
       preload: [children: ^children]
     )
     |> Brando.Repo.all()
-    |> Enum.flat_map(fn module ->
-      case Module.media_drop_issue(module, fn -> children(module) end) do
-        nil -> []
-        issue -> [{module_name(module), module.uid, Module.translate_media_drop_issue(issue)}]
-      end
-    end)
+    |> Enum.flat_map(&stale_item/1)
+  end
+
+  defp stale_item(module) do
+    case Module.media_drop_issue(module, fn -> children(module) end) do
+      nil -> []
+      issue -> [{module_name(module), module.uid, Module.translate_media_drop_issue(issue)}]
+    end
   end
 
   # A shared-library module customized here holds the setting but no children
