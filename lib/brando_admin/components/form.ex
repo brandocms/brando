@@ -2189,11 +2189,6 @@ defmodule BrandoAdmin.Components.Form do
 
   defp commit_selected_asset(socket, _edit_asset, _asset), do: socket
 
-  # Delivery for the three single-asset entry fields. They differ only in which
-  # pair of assigns they write (`edit_image`/`image_changeset` and so on), so one
-  # function keeps their `editing_*?` handling from drifting apart. Galleries are
-  # genuinely different — they append to an assoc — and stay on their own
-  # clauses.
   # A new image for an entry field, uploaded in its drawer or made by the
   # image editor (`own_or_field_copy/3`): followed while it processes, and
   # shown in the picker.
@@ -2209,6 +2204,11 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
+  # Delivery for the three single-asset entry fields. They differ only in which
+  # pair of assigns they write (`edit_image`/`image_changeset` and so on), so one
+  # function keeps their `editing_*?` handling from drifting apart. Galleries are
+  # genuinely different — they append to an assoc — and stay on their own
+  # clauses.
   defp deliver_entry_field_asset(socket, asset_type, field, path, asset) do
     if locked_field?(socket, path, field),
       do: socket,
@@ -9326,15 +9326,15 @@ defmodule BrandoAdmin.Components.Form do
     rows = path_row_keys(changeset, path)
     shown = shown_asset(changeset, path, rows, relation_key)
 
-    if not edit_asset_locked?(socket, copy_of) and same_rows?(copy_of.rows, rows) and
-         Brando.Uploads.AssetIntent.current_selection?(copy_of.shown, shown) do
+    if edit_asset_locked?(socket, copy_of) or not same_rows?(copy_of.rows, rows) or
+         not Brando.Uploads.AssetIntent.current_selection?(copy_of.shown, shown) do
+      copy_left_in_library(socket)
+    else
       {:noreply,
        socket
        |> follow_new_image(image)
        |> commit_entry_field_asset(field, path, relation_key, image)
        |> show_delivered_asset(:image, copy_of, image)}
-    else
-      copy_left_in_library(socket)
     end
   end
 
