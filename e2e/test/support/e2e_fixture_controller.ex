@@ -241,6 +241,15 @@ defmodule E2EFixtureController do
         "release-rename" ->
           create_release_removal(:rename)
 
+        # Screenshots only: the same, with the module edited here since its
+        # last apply, so the rename is in a conflict
+        "release-rename-conflict" ->
+          user = create_release_removal(:rename)
+          module = Brando.Repo.get_by!(Brando.Content.Module, class: "single-image-caption")
+          module |> Ecto.Changeset.change(class: "edited-here") |> Brando.Repo.update!()
+          Brando.Activity.record(:updated, module, user, fields: ["class"])
+          user
+
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor
         "write-with-ai-module" ->
