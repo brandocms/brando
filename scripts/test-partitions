@@ -31,11 +31,11 @@
 # Given test paths, it falls back to `mix test --partitions N` over them, and
 # takes no --shard or timings option.
 #
-# Compiles once, then makes each partition's database afresh: drops, creates,
-# migrates and seeds it. A run that was killed leaves the rows its tests had
-# committed (a Site, a Superuser), which fail the next run's tests. Prints one
-# line per partition, and the output of those that failed; on GitHub Actions,
-# the others' output folded in a group each. Fails if any partition fails.
+# Compiles once, then creates and migrates each partition's database, empties
+# it and seeds it (scripts/test_database_reset.exs): a run that was killed
+# leaves rows its tests had committed. Prints one line per partition, and the
+# output of those that failed; on GitHub Actions, the others' output folded in
+# a group each. Fails if any partition fails.
 #
 # Uses mise (`mise exec --`) when mix is not on PATH. Works with macOS's bash 3.
 set -uo pipefail
@@ -228,10 +228,8 @@ fi
 
 prepare() {
   MIX_TEST_PARTITION="$1" "${mix_cmd[@]}" do \
-    ecto.drop --quiet --no-compile --force-drop + \
     ecto.create --quiet --no-compile + ecto.migrate --quiet --no-compile + \
-    run --no-compile -e 'BrandoIntegration.Repo.start_link()
-      Code.eval_file("priv/repo/seeds.exs")'
+    run --no-compile scripts/test_database_reset.exs
 }
 
 i=1
