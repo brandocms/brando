@@ -190,10 +190,26 @@
       outline-offset: -1px;
     }
 
-    /* A row with no entries takes one where it would show them */
-    &.is-empty.is-drop-target {
-      min-height: 56px;
-      margin: 10px;
+    /* A row with no entries shows that it takes one over its instructions,
+       without taking room: starting a drag moves nothing on the page. The
+       box is the list's own, so the pointer over it is over the list, and
+       the entry, once it is over the row, opens the room it takes. */
+    &.is-empty.is-drop-target:not(:has(> .is-sorting)) {
+      position: relative;
+      outline: none;
+
+      &::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        height: 56px;
+        border-radius: var(--brando-radius-sm);
+        background-color: var(--brando-surface-selected);
+        outline: 1px dashed var(--brando-line-strong);
+        outline-offset: -1px;
+      }
     }
   }
 }
