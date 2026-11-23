@@ -63,7 +63,7 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
   const serverValue = new WeakMap()
   // What the server last rendered into an input while this editor was in it
   const rendered = new WeakMap()
-  // block uid → { at, inputs: [{ name, value, focus }] }, from a block that went
+  // block uid → { at, inputs: [{ name, value, server, typed, focus }] }, from a block that went
   const carried = new Map()
   // The element with the focus, as focus events last said, and the one
   // that last lost it: a browser takes the focus from an element as it
