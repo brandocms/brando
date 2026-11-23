@@ -899,6 +899,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:deferred_roots, MapSet.new())
     |> assign(:remote_refresh, MapSet.new())
     |> assign(:remote_refresh_scheduled?, false)
+    |> assign(:remote_shown, nil)
     |> assign(:remote_preview_dirty?, false)
     |> assign(:rescue_standby, %{})
     |> assign(:blocks_initialized, true)
@@ -1650,13 +1651,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:blocks_changed?, not Ops.pristine?(new, base))
 
       if Keyword.get(opts, :mounted?, true) do
-        # The roots are refreshed one update at a time, so a child `new`
-        # puts under another parent would show in both in between: its
-        # parent lets go of it first. Shown twice in one render, its
-        # components reach the new place as markers for elements the
-        # browser has only in the old one.
-        release_leaving(old, for({uid, _} <- old.parents, Ops.known?(new, uid), into: %{}, do: {uid, new.parents[uid]}))
-        socket |> assign(:remote_preview_dirty?, true) |> queue_refresh(changed)
+        socket
+        |> assign(:remote_preview_dirty?, true)
+        |> update(:remote_shown, &(&1 || old))
+        |> queue_refresh(changed)
       else
         Enum.reduce(changed, socket, &put_seed_form(&2, &1, materialized_form(&2, new, &1)))
       end
@@ -1716,10 +1714,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:remote_refresh, MapSet.new())
     |> update(:deferred_roots, &MapSet.union(&1, MapSet.new(in_use)))
+    |> release_moved_away()
     |> refresh_roots(others)
     |> refresh_roots(in_use, :skip_focused)
     |> refresh_preview_after_remote()
   end
+
+  # The roots are refreshed one update at a time, so a child another
+  # editor put under another parent would show in both in between: the
+  # parent it was shown under lets go of it first. Shown twice in one
+  # render, its components reach the new place as markers for elements the
+  # browser has only in the old one, and show as empty boxes.
+  defp release_moved_away(%{assigns: %{remote_shown: %Ops{} = shown}} = socket) do
+    now = socket.assigns.block_ops
+    release_leaving(shown, for({uid, _} <- shown.parents, Ops.known?(now, uid), into: %{}, do: {uid, now.parents[uid]}))
+    assign(socket, :remote_shown, nil)
+  end
+
+  defp release_moved_away(socket), do: socket
 
   # Other editors' changes reach the live preview once per flush, and only
   # while it is open.
@@ -2038,6 +2050,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     op = {:carry, ops, base}
     shown = socket.assigns.block_ops
     {:ok, restored} = Ops.apply_op(shown, op)
+
+    # The roots are refreshed one update at a time, so a child the restore
+    # puts under another parent would show in both in between: its parent
+    # lets go of it first.
+    release_leaving(
+      shown,
+      for({uid, _} <- shown.parents, Ops.known?(restored, uid), into: %{}, do: {uid, restored.parents[uid]})
+    )
 
     socket
     |> show_state(restored, :all)

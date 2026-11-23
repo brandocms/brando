@@ -23,6 +23,8 @@
 // Node.
 
 export const PENDING_INPUT_MS = 2000
+// An element taken out of the page lost the focus in the same patch
+const REMOVAL_BLUR_MS = 100
 const TYPED_VALUES = 50
 
 export const blockInput = el =>
@@ -50,9 +52,11 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
   const serverValue = new WeakMap()
   // block uid → { at, inputs: [{ name, value, focus }] }, from a block that went
   const carried = new Map()
-  // The element with the focus, as focus events last said: a focused input
-  // taken out of the page sends no focusout, so it stays named here.
+  // The element with the focus, as focus events last said, and the one
+  // that last lost it: a browser takes the focus from an element as it
+  // takes the element out of the page, or does not, and sends no focusout.
   let focusedEl = null
+  let blurred = { el: null, at: -Infinity }
 
   // This editor typed into `input`.
   const typed = input => {
@@ -131,7 +135,7 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
     if (!uid) return
     const inputs = Array.from(blockEl.querySelectorAll?.('input, textarea') || [])
       .filter(input => textInput(input) && now() - (lastInput.get(input) || -Infinity) < PENDING_INPUT_MS)
-      .map(input => ({ name: input.name, value: input.value, focus: input === focusedEl }))
+      .map(input => ({ name: input.name, value: input.value, focus: input === focusedEl || (input === blurred.el && now() - blurred.at < REMOVAL_BLUR_MS) }))
     if (inputs.length) carried.set(uid, { at: now(), inputs })
   }
 
@@ -168,5 +172,10 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
     focusedEl = el
   }
 
-  return { typed, patching, left, went, came, focused }
+  const unfocused = el => {
+    focusedEl = null
+    blurred = { el, at: now() }
+  }
+
+  return { typed, patching, left, went, came, focused, unfocused }
 }

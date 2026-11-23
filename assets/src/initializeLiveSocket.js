@@ -33,7 +33,7 @@ document.addEventListener('focusin', ({ target }) => pending.focused(target), tr
 document.addEventListener(
   'focusout',
   ({ target }) => {
-    pending.focused(null)
+    pending.unfocused(target)
     // after LiveView has flushed the field's own debounced change
     if (target?.closest?.('[data-block-uid]')) {
       const widget = target.closest('[phx-hook]') || target

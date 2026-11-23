@@ -267,7 +267,8 @@ test('a block mounted again with what was typed sends nothing, and the focus sta
   name.value = 'Bobby'
   inputs.typed(name)
   // the editor left the field (a drag handle took the focus): its change was sent
-  inputs.focused(null)
+  inputs.unfocused(name)
+  inputs.focused({ tagName: 'BUTTON' })
   clock.now = 1500
   inputs.went(blockElement([name]), 'uid')
 
@@ -275,6 +276,24 @@ test('a block mounted again with what was typed sends nothing, and the focus sta
   inputs.came(blockElement([newName]), 'uid')
   assert.deepEqual(newName.sent, [])
   assert.equal(newName.focused, undefined)
+})
+
+// Chrome takes the focus from an element as it takes it out of the page
+test('an input that lost the focus as its block went gets it back in the new block', () => {
+  const { clock, inputs } = setup()
+  const name = textInput('child_block[vars][0][value]', 'Bob')
+  inputs.focused(name)
+  name.value = 'Bobby'
+  inputs.typed(name)
+
+  clock.now = 1100
+  inputs.unfocused(name)
+  inputs.went(blockElement([name]), 'uid')
+
+  clock.now = 1300
+  const newName = textInput('child_block[vars][0][value]', 'Bobby')
+  inputs.came(blockElement([newName]), 'uid')
+  assert.equal(newName.focused, true)
 })
 
 test('nothing is carried from typing long before, or to another block', () => {

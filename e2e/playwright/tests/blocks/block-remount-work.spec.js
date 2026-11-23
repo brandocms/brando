@@ -61,11 +61,13 @@ test.describe('Block editor: work in a block that mounts again', () => {
     await expect(entries(rows(page).nth(1))).toHaveCount(1, { timeout: 15000 })
   }
 
-  // `entry` picked up by its handle and held below the last entry of `row`
-  const pickUpAndHold = async (page, entry, row) => {
+  // `entry` picked up by its handle and held below the last entry of `row`.
+  // `settle` waits for what picking it up sent: the field it left.
+  const pickUpAndHold = async (page, entry, row, { settle = false } = {}) => {
     const handle = await entry.locator('.sort-handle').first().boundingBox()
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
     await page.mouse.down()
+    if (settle) await syncLV(page)
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 10, { steps: 2 })
     const last = await entries(row).last().boundingBox()
     await page.mouse.move(last.x + last.width / 2, last.y + last.height - 8, { steps: 20 })
@@ -83,8 +85,11 @@ test.describe('Block editor: work in a block that mounts again', () => {
     await createPage(page, title)
     const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
 
+    // Picking the entry up takes the focus from the field, which sends what
+    // was typed. Settled before the drop: a moved entry whose last change is
+    // still being answered can be drawn without its fields (seen on main too).
     await nameField(entries(first).nth(1)).fill('Bobby')
-    await pickUpAndHold(page, entries(first).nth(1), second)
+    await pickUpAndHold(page, entries(first).nth(1), second, { settle: true })
     await page.mouse.up()
     await syncLV(page)
 
