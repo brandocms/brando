@@ -1029,7 +1029,10 @@ but over it together are refused when applied together: select fewer of them
 on the Release changes screen, or apply them one by one with
 `mix brando.modules apply --release --uid`. Or take `renamed_from` out and
 move the values after the apply with the `resolve --map` command the
-refusal prints for each module.
+refusal prints for each module, as a user who may edit the entries that
+hold them (`USER_ID` when the plan ran without one). Without `renamed_from`
+the plan's own resolve line for that module drops the old key instead: run
+the refusal's command, not that one.
 
 `renamed_from` is read from the file and never stored: the database keeps no
 rename, and an export doesn't write it. Keep it in the file until every

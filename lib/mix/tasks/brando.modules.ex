@@ -530,7 +530,7 @@ defmodule Mix.Tasks.Brando.Modules do
           do: Mix.shell().info("  They hold refs or vars the module no longer defines: #{held}.")
 
         Mix.shell().info(
-          "  Resolve them with: mix brando.modules resolve --uid #{uid} --user ID\n" <>
+          "  Resolve them with: mix brando.modules resolve --uid #{uid} --user USER_ID\n" <>
             "  or in the admin: /admin/config/content/modules/update/#{module.id}/stale-blocks"
         )
 

@@ -139,8 +139,9 @@ defmodule Brando.Content.Definition.Plan do
   @doc """
   The `mix brando.modules resolve --apply` command that runs `drops`
   (`--drop` arguments) and moves the values of `renames` (`--map`) in the
-  blocks of the module `uid`, as the user `user_id` (`ID` when nil) in the
-  current environment. Each value is quoted for a POSIX shell.
+  blocks of the module `uid`, as the user `user_id` (the placeholder
+  `USER_ID` when nil) in the current environment. Each value is quoted for
+  a POSIX shell.
   """
   def resolve_command(uid, user_id, drops, renames) do
     environment =
@@ -151,7 +152,7 @@ defmodule Brando.Content.Definition.Plan do
     maps = Enum.flat_map(renames, &["--map", "#{&1.kind}:#{&1.from}=#{&1.to}"])
 
     (~w(mix brando.modules resolve --uid) ++
-       [uid, "--user", to_string(user_id || "ID")] ++ environment ++ drops ++ maps ++ ["--apply"])
+       [uid, "--user", to_string(user_id || "USER_ID")] ++ environment ++ drops ++ maps ++ ["--apply"])
     |> Enum.map_join(" ", &shell_quote/1)
   end
 

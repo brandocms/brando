@@ -101,18 +101,20 @@ defmodule Brando.Content.Definition.Renames do
   end
 
   defp counted(record, renames, holders, ids, viewer) do
+    counted = Enum.map(renames, &Map.merge(&1, %{blocks: length(holders[&1]), entries: 0}))
+
     %{
-      renames: Enum.map(renames, &Map.merge(&1, %{blocks: length(holders[&1]), entries: 0})),
+      renames: counted,
       blocks: length(ids),
       entries: [],
       unrevisioned: 0,
       refused: [
         gettext(
-          "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with %{command}",
+          "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
           renames: text(renames),
           blocks: length(ids),
           max_blocks: @limit[:blocks],
-          command: resolve_command([{record.uid, renames}], viewer)
+          command: resolve_command([{record.uid, counted}], viewer)
         )
       ]
     }
@@ -177,21 +179,26 @@ defmodule Brando.Content.Definition.Renames do
     if count == 1,
       do:
         gettext(
-          "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and move the values after the apply with %{command}",
+          "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
           bindings
         ),
       else:
         gettext(
-          "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and move the values after the apply with %{command}",
+          "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
           bindings
         )
   end
 
   # The resolve command of each module, as one shell line, that moves the
-  # values of `modules` once their renames are out of the files
+  # values of `modules` once their renames are out of the files: only the
+  # renames blocks hold a value of, as resolve refuses a key no block holds
   defp resolve_command(modules, viewer) do
     user_id = if is_map(viewer), do: viewer.id
-    Enum.map_join(modules, " && ", fn {uid, renames} -> Plan.resolve_command(uid, user_id, [], renames) end)
+
+    for {uid, renames} <- modules, held = Enum.filter(renames, &(&1.blocks > 0)), held != [] do
+      Plan.resolve_command(uid, user_id, [], held)
+    end
+    |> Enum.join(" && ")
   end
 
   # The blocks of the module, here, that hold a source key
@@ -403,7 +410,7 @@ defmodule Brando.Content.Definition.Renames do
 
         totals ->
           Enum.flat_map(plans, & &1.refused) ++
-            [over_limit_text(Enum.map(moves, &{&1.record.uid, &1.renames}), totals, person)]
+            [over_limit_text(Enum.map(planned, &{&1.record.uid, &1.plan.renames}), totals, person)]
       end
 
     if refused != [], do: Repo.rollback(changed_since_review(refused))

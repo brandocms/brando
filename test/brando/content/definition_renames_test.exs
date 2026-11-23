@@ -645,6 +645,28 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert var(held, "tagline") == nil
     end
 
+    test "with a resolve command that leaves out the renames no block holds a value of", c do
+      bare_blocks!(c, c.module, "tagline", 1500)
+      Repo.delete_all(from(r in Ref, join: b in Block, on: b.id == r.block_id, where: b.module_id == ^c.module.id))
+      rename_tagline!(c)
+      rename_body!(c)
+
+      [%{action: :migration_required, reason: reason}] = plan!(c).items
+      [command] = Regex.run(~r/mix brando\.modules resolve .*--apply/, reason)
+
+      assert command ==
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+    end
+
+    test "with a resolve command whose user is a placeholder when the plan has none", c do
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+
+      {:ok, bundle} = Definitions.read(c.path)
+      {:ok, %{items: [%{reason: reason}]}} = Definitions.plan(bundle, :system, creator: :none)
+      assert reason =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID --map var:tagline=heading --apply"
+    end
+
     test "to as many blocks across the modules an apply selects", c do
       card =
         ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
