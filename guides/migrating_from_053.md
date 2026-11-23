@@ -712,6 +712,12 @@ sender first, before the first compile.
   module takes dropped media until it is set. Run `mix brando.gen.migrations`
   for it, then `mix brando.migrate`. See
   [Dropping media on a multi module](block_editor.md#dropping-media-on-a-multi-module).
+- **Translations applied without review.** `brando_247` adds
+  `mcp_grants.auto_apply` (`"none"` for every existing connection),
+  `auto_apply_set_by_id` and `auto_apply_set_at`, and
+  `content_proposals.auto_applied_grant_id` and `auto_apply_reason`. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`. See
+  [Apply translations without review](mcp.md#apply-translations-without-review).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

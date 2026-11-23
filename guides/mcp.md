@@ -4,7 +4,10 @@ Brando can let people connect Claude, ChatGPT, Claude Code, VS Code and other
 [MCP](https://modelcontextprotocol.io) clients to a site. A connected tool
 reads content and prepares proposals, as the person who connected it; the
 person reviews and applies the proposals in the Assistant, under **From
-connected tools**. Nothing a tool does saves, publishes or deletes content.
+connected tools**. Nothing a tool does publishes or deletes content, and
+nothing it proposes is saved without review, except unpublished translations
+on a connection a site's managers allow to create them
+([Apply translations without review](#apply-translations-without-review)).
 With Figma connected, a tool can also read a Figma frame and import its
 images into the media library, to build an entry from a design (see
 [Build from Figma](#build-from-figma)).
@@ -219,8 +222,10 @@ of asking the person:
   it takes, `with`), not in the entries, and does not list the entries
   that use the image. A superseded one names the version that
   replaced it as `superseded_by`. `changed_by` is `"person"` for an
-  approved, applied or undone proposal, since only the person can do those;
-  who stored a version or cancelled a proposal is not kept. It filters by
+  approved, applied or undone proposal, since only the person can do those,
+  and `"connection"` for one applied without review; such a proposal has
+  `applied_automatically: true`, undone or not. Who stored a version or
+  cancelled a proposal is not kept. It filters by
   `status` and `proposal_id`, and gives 20 proposals, or up to 50 with
   `limit`. It changes nothing.
 - `brando_content_cancel_proposal` cancels one of the tool's own proposals
@@ -238,6 +243,55 @@ of asking the person:
   otherwise). The page is rendered by the site's own templates against the
   site's frontend assets and stored as a snapshot, as the editor's **Get
   shareable link** stores one; nothing else is saved.
+
+### Apply translations without review
+
+A connection can be let to apply, without review, proposals that only create
+unpublished translations. It starts set to review everything, and so does a
+new connection from the same tool. Under **Configuration → Integrations →
+Connected AI tools**, someone who manages connected tools sets it per
+connection in the **Without review** column: **Allow translations**, and
+**Review everything** to take it back, each asking for the password, a code
+or a passkey when the session has not given one lately. The column says who
+set it and when; the connection's person sees it under **Security →
+Connected apps**, and the consent screen says the site's managers may allow
+it. Each change is written to Activity.
+
+The tool asks for it with `apply: "if_allowed"` in `prepare_proposal`. The
+proposal is stored as any proposal is, and then applied as the person, with
+their permissions at that moment, as an approval in the admin applies it
+(locks, staleness checks, validation, Activity), when all of these hold:
+
+- the connection that authenticated the call is set to allow it, still
+  valid, its endpoint on, its site active, and its person still allowed to
+  connect, checked under a lock on the endpoint's switch and the
+  connection, so turning the setting off, revoking the connection or
+  turning the endpoint off first applies nothing, and doing it while the
+  apply runs waits for the apply;
+- the person may review proposals (**Assistant → Use**);
+- every operation is a `create_translation`, or a `translate` of
+  `{"new": ref}` that a `create_translation` in the same proposal creates,
+  read from the stored proposal;
+- every entry it created is a draft with no publication date ahead once all
+  operations have run. A content type without a status never qualifies.
+
+Applied, the result has `applied: true`, `status: "applied"` and `created`
+(each ref's new entry id), with no `review_url`. Otherwise nothing of the
+attempt is kept: the proposal waits for review, unapproved, and the result
+has `applied: false` and `not_applied`, a sentence saying why. When the
+person cancelled or applied the proposal in the admin while it was being
+tried, the result says so, with its `status` and no `review_url`. Why a
+proposal waits is kept with it: `list_proposals` returns it as
+`not_applied`, and its review page shows it. A waiting
+proposal does not count as one with problems, so the tool's next proposal
+does not replace it. The Assistant and the local development server never
+apply a proposal so.
+
+A proposal applied so is marked **Applied automatically** in the list under
+**Assistant → From connected tools** and on the connection's live page, and
+Activity says "Applied automatically as" the person instead of "Approved
+by". It is undone as any applied proposal is. Proposals that wait are always
+listed there, however many were applied since.
 
 ### Proposal preview links
 

@@ -67,6 +67,9 @@ defmodule Brando.MCP.OAuthTest do
       assert html =~ "Test Client"
       assert html =~ "client.example"
       assert html =~ "127.0.0.1:43123"
+      # What a site's managers may let it do without review, in the person's name
+      assert html =~ "Create unpublished translations without review"
+      refute html =~ "Save, publish or delete entries"
       # Nothing is approved without the click.
       assert Repo.aggregate(AuthorizationCode, :count) == 0
 

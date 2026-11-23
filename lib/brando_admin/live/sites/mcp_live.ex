@@ -5,14 +5,17 @@ defmodule BrandoAdmin.Sites.MCPLive do
   token its tools read Figma with (`Brando.Figma`), the guidance for
   building from Figma that `brando_figma_read_frame` returns
   (`Brando.AI.Agent.Guidance`, kind `:figma`), and every connection people
-  have made to it, with a revoke button for each.
+  have made to it, with a revoke button for each, and whether it may apply
+  proposals that only create unpublished translations without review
+  (`Brando.MCP.set_auto_apply/3`).
 
   The guidance is edited by those who may configure the assistant
   (`Brando.AI.Agent.Guidance.configurable?/1`), as the assistant's guidance
   is; others see it read-only. Every save is a version.
 
   For people who may manage connections (`Brando.MCP.can_manage?/2`).
-  Turning the endpoint on or off, adding or removing the Figma token and
+  Turning the endpoint on or off, adding or removing the Figma token,
+  letting a connection apply translations without review or stopping it, and
   revoking ask for the password, a code or a passkey when the session has
   not given one lately (`BrandoAdmin.Reauth`). The token is never shown
   again once saved: only its last four characters.
@@ -45,7 +48,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
   on_mount(
     {BrandoAdmin.Reauth,
      events:
-       ~w(enable disable revoke save_figma_token remove_figma_token save_figma_app remove_figma_app connect_figma disconnect_figma)}
+       ~w(enable disable revoke set_auto_apply save_figma_token remove_figma_token save_figma_app remove_figma_app connect_figma disconnect_figma)}
   )
 
   def __authorization__, do: {:manage, :mcp}
@@ -476,6 +479,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
                 <th scope="col">{gettext("Person")}</th>
                 <th scope="col">{gettext("Connected")}</th>
                 <th scope="col">{gettext("Last used")}</th>
+                <th scope="col">{gettext("Without review")}</th>
                 <th scope="col"><span class="workspace-sr-only">{gettext("Actions")}</span></th>
               </tr>
             </thead>
@@ -497,6 +501,46 @@ defmodule BrandoAdmin.Sites.MCPLive do
                 </td>
                 <td data-label={gettext("Last used")}>
                   {if grant.last_used_at, do: date(grant.last_used_at), else: gettext("Not used yet")}
+                </td>
+                <td
+                  data-label={gettext("Without review")}
+                  data-testid="mcp-grant-auto-apply"
+                  data-auto-apply={grant.auto_apply}
+                >
+                  {auto_apply_label(grant)}
+                  <small :if={auto_apply_set(grant)}>{auto_apply_set(grant)}</small>
+                  <button
+                    :if={grant.auto_apply == "none"}
+                    type="button"
+                    class="btn btn--quiet btn--sm"
+                    phx-click="set_auto_apply"
+                    phx-value-id={grant.id}
+                    phx-value-kind="unpublished_translations"
+                    data-testid="mcp-grant-auto-apply-on"
+                    data-confirm-title={
+                      gettext("Let %{client} apply translations without review?", client: grant.client_name)
+                    }
+                    data-confirm={
+                      gettext(
+                        "Proposals that only create unpublished translations are saved at once, in %{name}'s name, without review. Publishing them and every other change still wait for review.",
+                        name: grant.user && grant.user.name
+                      )
+                    }
+                    data-confirm-ok={gettext("Allow")}
+                  >
+                    {gettext("Allow translations")}
+                  </button>
+                  <button
+                    :if={grant.auto_apply != "none"}
+                    type="button"
+                    class="btn btn--quiet btn--sm"
+                    phx-click="set_auto_apply"
+                    phx-value-id={grant.id}
+                    phx-value-kind="none"
+                    data-testid="mcp-grant-auto-apply-off"
+                  >
+                    {gettext("Review everything")}
+                  </button>
                 </td>
                 <td class="row-actions">
                   <.link navigate={MCP.Watch.path(grant)} class="btn btn--quiet" data-testid="mcp-grant-watch">
@@ -1134,6 +1178,23 @@ defmodule BrandoAdmin.Sites.MCPLive do
     {:noreply, socket |> assign(:figma_form?, false) |> load() |> check_figma_token()}
   end
 
+  def handle_event("set_auto_apply", %{"id" => id, "kind" => kind}, socket) do
+    user = socket.assigns.current_user
+
+    case MCP.set_auto_apply(id, kind, user) do
+      :ok when kind == "none" ->
+        Toast.send_to(user, gettext("Every proposal from this connection waits for review."))
+
+      :ok ->
+        Toast.send_to(user, gettext("This connection applies unpublished translations without review."))
+
+      {:error, _reason} ->
+        Toast.send_to(user, gettext("The connection could not be changed."), %{level: :error})
+    end
+
+    {:noreply, load(socket)}
+  end
+
   def handle_event("revoke", %{"id" => id}, socket) do
     user = socket.assigns.current_user
 
@@ -1172,6 +1233,17 @@ defmodule BrandoAdmin.Sites.MCPLive do
 
     load(socket)
   end
+
+  defp auto_apply_label(%{auto_apply: "unpublished_translations"}), do: gettext("Unpublished translations")
+  defp auto_apply_label(_grant), do: gettext("Nothing")
+
+  # Who set it, when someone has
+  defp auto_apply_set(%{auto_apply_set_at: nil}), do: nil
+
+  defp auto_apply_set(%{auto_apply_set_at: at, auto_apply_set_by: %{name: name}}),
+    do: gettext("Set %{date} by %{name}", date: date(at), name: name)
+
+  defp auto_apply_set(%{auto_apply_set_at: at}), do: gettext("Set %{date}", date: date(at))
 
   defp site_label(%{site: nil}), do: Brando.config(:app_name) || "Brando"
   defp site_label(%{site: site, environment: environment}), do: "#{site.name} · #{environment.name}"

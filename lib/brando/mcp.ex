@@ -578,7 +578,7 @@ defmodule Brando.MCP do
     from(g in Grant,
       where: g.user_id == ^user_id and is_nil(g.revoked_at),
       order_by: [desc: g.inserted_at, desc: g.id],
-      preload: [:site, :environment]
+      preload: [:site, :environment, :auto_apply_set_by]
     )
     |> Repo.all()
   end
@@ -590,7 +590,7 @@ defmodule Brando.MCP do
     |> grant_query()
     |> where([g], is_nil(g.revoked_at))
     |> order_by([g], desc: g.inserted_at, desc: g.id)
-    |> preload(user: :avatar)
+    |> preload([:auto_apply_set_by, user: :avatar])
     |> Repo.all()
   end
 
@@ -598,6 +598,106 @@ defmodule Brando.MCP do
 
   defp grant_query(%{site: %{id: site_id}, environment: %{id: environment_id}}),
     do: from(g in Grant, where: g.site_id == ^site_id and g.environment_id == ^environment_id)
+
+  ## Applying without review
+
+  @doc """
+  Sets what the connection `grant_id` may apply without review, as `actor`,
+  who must be allowed to manage connections to its site environment
+  (`can_manage?/2`): `"none"`, or `"unpublished_translations"`
+  (`Brando.Content.Proposals.AutoApply`). Records who set it and when, and
+  writes it to Activity. A revoked connection is not changed.
+
+  The row is locked while it changes, so an automatic apply in flight, which
+  locks it too, sees either the setting before or the one after.
+  """
+  @spec set_auto_apply(integer() | String.t(), String.t(), User.t()) ::
+          :ok | {:error, :not_found | :forbidden | :invalid}
+  def set_auto_apply(grant_id, kind, %User{} = actor) do
+    with true <- kind in Grant.auto_apply_kinds() || {:error, :invalid},
+         {id, ""} <- Integer.parse(to_string(grant_id)),
+         {:ok, :ok} <- Repo.transaction(fn -> set_auto_apply!(id, kind, actor) end) do
+      :ok
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :not_found}
+    end
+  end
+
+  defp set_auto_apply!(id, kind, actor) do
+    with %Grant{} = grant <-
+           Repo.one(from(g in Grant, where: g.id == ^id and is_nil(g.revoked_at), lock: "FOR UPDATE")),
+         true <- can_manage?(actor, grant_tenant(grant)) || {:error, :forbidden} do
+      grant
+      |> Ecto.Changeset.change(auto_apply: kind, auto_apply_set_by_id: actor.id, auto_apply_set_at: DateTime.utc_now())
+      |> Repo.update!()
+
+      details = %{"client" => grant.client_name, "mcp" => "auto_apply", "auto_apply" => kind}
+
+      in_tenant(grant_tenant(grant), fn ->
+        Brando.Activity.setting_changed(:updated, grant, grant.client_name, actor, details: details)
+      end)
+
+      :ok
+    else
+      {:error, reason} -> Repo.rollback(reason)
+      nil -> Repo.rollback(:not_found)
+    end
+  end
+
+  @doc """
+  Inside a transaction: locks the endpoint's switch for `tenant` (shared)
+  and then the connection `grant_id`, and returns the connection when it
+  may apply `kind` without review now, by the same rule that authorizes each
+  request (not revoked or expired, the endpoint on for `tenant`, the site
+  active, its user still allowed to connect there), and `auto_apply` is
+  `kind`. `{:error, reason}` otherwise.
+
+  The locks are held until the commit: turning the setting off, revoking
+  the connection or turning the endpoint off (`set_enabled/3`, which writes
+  the switch before it revokes) either committed first and is seen here, or
+  waits for the apply. Losing Connect, through a group, a role or a site
+  assignment, or the site being suspended, takes no lock: it is read here,
+  so a change committed before this read is seen and one after it is not.
+  """
+  @spec lock_auto_apply(integer(), String.t(), tenant()) :: {:ok, Grant.t()} | {:error, atom()}
+  def lock_auto_apply(grant_id, kind, tenant) when is_integer(grant_id) do
+    switched_on? = secure_base?() and locked_setting_enabled?(tenant)
+    grant = Repo.one(from(g in Grant, where: g.id == ^grant_id, lock: "FOR UPDATE"))
+    # The site as it is now, not as the request found it
+    tenant = with %{site: %Site{id: id}} <- tenant, do: %{tenant | site: Repo.get(Site, id, prefix: "public")}
+
+    with :ok <- grant_valid(grant, tenant),
+         :ok <- if(switched_on? and site_active?(tenant), do: :ok, else: {:error, :disabled}),
+         :ok <- if(can_connect?(Repo.get(User, grant.user_id), tenant), do: :ok, else: {:error, :forbidden}),
+         :ok <- if(grant.auto_apply == kind, do: :ok, else: {:error, :not_allowed}) do
+      {:ok, grant}
+    end
+  end
+
+  # Not revoked or expired, and for `tenant`
+  defp grant_valid(grant, tenant) do
+    if is_nil(grant) or not is_nil(grant.revoked_at) or grant_expired?(grant) or not same_grant_tenant?(grant, tenant),
+      do: {:error, :revoked},
+      else: :ok
+  end
+
+  defp site_active?(%{site: nil, environment: nil}), do: true
+  defp site_active?(%{site: site}), do: match?(%Site{status: :active}, site)
+
+  defp locked_setting_enabled?(tenant) do
+    tenant
+    |> setting_query()
+    |> lock("FOR SHARE")
+    |> select([s], s.enabled)
+    |> Repo.repo().one() == true
+  end
+
+  defp same_grant_tenant?(grant, tenant) do
+    grant.site_id == (tenant.site && tenant.site.id) and
+      grant.environment_id == (tenant.environment && tenant.environment.id) and
+      grant.resource == resource(tenant)
+  end
 
   @doc """
   Revokes the connection `grant_id` as `actor`: its own user, or someone who

@@ -89,6 +89,59 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       assert rpc(tenant, tokens["access_token"], "ping").status == 401
     end
 
+    test "lets a connection apply unpublished translations without review, and back, saying who set it",
+         %{conn: conn, tenant: tenant, current_user: user} do
+      switch!(tenant)
+      connect!(conn, tenant)
+      grant = Repo.one!(Grant)
+
+      {:ok, view, html} = live(conn, "/admin/config/mcp")
+      assert html =~ ~s(data-auto-apply="none")
+
+      view |> element("[data-testid=mcp-grant-auto-apply-on]") |> render_click()
+      user_id = user.id
+      assert %Grant{auto_apply: "unpublished_translations", auto_apply_set_by_id: ^user_id} = Repo.get!(Grant, grant.id)
+      assert has_element?(view, "[data-testid=mcp-grant-auto-apply][data-auto-apply=unpublished_translations]", user.name)
+
+      # The person whose name it saves in sees it on their connection
+      {:ok, _security, html} = live(conn, "/admin/users/security")
+      assert html =~ ~s(data-testid="connected-app-auto-apply")
+      assert html =~ user.name
+
+      view |> element("[data-testid=mcp-grant-auto-apply-off]") |> render_click()
+      assert %Grant{auto_apply: "none"} = Repo.get!(Grant, grant.id)
+      assert has_element?(view, "[data-testid=mcp-grant-auto-apply][data-auto-apply=none]")
+
+      # Set back, the person still sees who did it
+      {:ok, security, _html} = live(conn, "/admin/users/security")
+      assert has_element?(security, "[data-testid=connected-app-auto-apply]", "Leaves every proposal for review: set by")
+      assert has_element?(security, "[data-testid=connected-app-auto-apply]", user.name)
+
+      # Connected again, the client starts over: nothing without review
+      :ok = MCP.set_auto_apply(grant.id, "unpublished_translations", user)
+      connect!(conn, tenant)
+      newest = Repo.one!(from g in Grant, where: g.id != ^grant.id)
+      assert %Grant{auto_apply: "none"} = newest
+    end
+
+    test "asks to confirm either way when the session has not lately", %{conn: conn, tenant: tenant, current_user: user} do
+      switch!(tenant)
+      connect!(conn, tenant)
+      grant = Repo.one!(Grant)
+      token = get_session(conn, :user_token)
+      hour_ago = NaiveDateTime.add(NaiveDateTime.utc_now(), -3600, :second)
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token), set: [confirmed_at: hour_ago])
+
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert view |> element("[data-testid=mcp-grant-auto-apply-on]") |> render_click() =~ "reauth-modal"
+      assert %Grant{auto_apply: "none"} = Repo.get!(Grant, grant.id)
+
+      :ok = MCP.set_auto_apply(grant.id, "unpublished_translations", user)
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert view |> element("[data-testid=mcp-grant-auto-apply-off]") |> render_click() =~ "reauth-modal"
+      assert %Grant{auto_apply: "unpublished_translations"} = Repo.get!(Grant, grant.id)
+    end
+
     test "adds, replaces and removes the Figma token, showing only its last four characters",
          %{conn: conn, tenant: tenant} do
       stub_me(200, %{"handle" => "Ada"})

@@ -191,6 +191,14 @@ defmodule E2EFixtureController do
         "mcp-watch-empty" ->
           create_mcp_watch(false)
 
+        # The connection alone, set to apply unpublished translations
+        # without review (Configuration → Integrations → Connected AI tools)
+        "mcp-auto-apply" ->
+          user = create_mcp_watch(false)
+          [grant | _] = Brando.MCP.list_user_grants(user)
+          :ok = Brando.MCP.set_auto_apply(grant.id, "unpublished_translations", user)
+          user
+
         # Assistant → From connected tools, open while a tool works: the
         # connection with one proposal stored through the endpoint's tools,
         # then ("-next") the tool's newer version of it and a proposal about

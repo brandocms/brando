@@ -302,6 +302,14 @@ defmodule BrandoAdmin.MCP.WatchLiveTest do
       assert has_element?(view, "#mcp-call-approved [data-proposal-id='#{record.id}'] .badge", "Approved")
     end
 
+    test "a proposal its connection applied without review says so", %{conn: conn, grant: grant, current_user: user} do
+      record = proposal!(user, %{status: "applied", problems: [], auto_applied_grant_id: grant.id})
+      {:ok, view, _html} = page(conn, grant)
+
+      Watch.finished(grant.id, "auto", proposal_details(record), {:error, :not_recorded})
+      assert has_element?(view, "#mcp-call-auto [data-proposal-id='#{record.id}'] .badge", "Applied automatically")
+    end
+
     test "an image moved to the trash shows no thumbnail", %{conn: conn, grant: grant} do
       image = Factory.insert(:image, deleted_at: DateTime.utc_now())
       {:ok, view, _html} = page(conn, grant)

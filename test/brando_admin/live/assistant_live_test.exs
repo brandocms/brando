@@ -1449,6 +1449,35 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert {event.source, event.details["client"]} == {:mcp, "Claude Code"}
     end
 
+    # Brando.Content.Proposals.AutoApply marks the proposal with its connection
+    test "lists one its connection applied without review as applied automatically", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+
+      Brando.Repo.update_all(from(r in Brando.Content.Proposals.Record, where: r.id == ^id),
+        set: [status: "applied", auto_applied_grant_id: 1]
+      )
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected")
+
+      assert has_element?(
+               view,
+               "#assistant-connected-list [data-testid=assistant-state-auto_applied]",
+               "Applied automatically"
+             )
+    end
+
+    test "says why a proposal was not applied without review", %{conn: conn} = c do
+      id = mcp_proposal(c, c.current_user)
+      reason = "It was not applied automatically: this connection is not set to apply unpublished translations."
+
+      Brando.Repo.update_all(from(r in Brando.Content.Proposals.Record, where: r.id == ^id),
+        set: [auto_apply_reason: reason]
+      )
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{id}")
+      assert has_element?(view, "#assistant-auto-apply-reason", reason)
+    end
+
     # A tool links straight to the page it changed: `prepare_proposal`'s
     # `preview_url`. The preview opens on the default view, which fails here.
     @tag :capture_log

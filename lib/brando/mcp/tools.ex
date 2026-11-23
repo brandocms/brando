@@ -7,9 +7,13 @@ defmodule Brando.MCP.Tools do
 
   The list is fixed here rather than taken from the registry, so a tool
   added to the registry later is not offered over the network until it is
-  added below. None of them approves, applies or deletes anything:
+  added below. None of them approves or deletes anything:
   `prepare_proposal` stores a proposal for the person to review in the admin,
-  marked as coming from the connected client. `list_proposals` lists the
+  marked as coming from the connected client. The one exception is a proposal
+  that only creates unpublished translations, when the tool asks with `apply:
+  "if_allowed"` and the connection is set to allow it
+  (`Brando.Content.Proposals.AutoApply`): it is applied as the person,
+  without review. `list_proposals` lists the
   client's own proposals with their status, `cancel_proposal` cancels one
   still under review, and `preview_proposal` returns a short-lived public
   link to a proposal's page before it is approved
@@ -136,7 +140,16 @@ defmodule Brando.MCP.Tools do
   """
   @spec call(String.t(), map(), map(), MCP.tenant()) :: {:ok, map()} | {:error, :unknown}
   def call(@prefix <> name, args, auth, tenant) when name in @offered and is_map(args) do
-    context = %Registry.Context{actor: auth.user, origin: :mcp, client: auth.grant.client_name}
+    # The connection that authenticated the call: an automatic apply follows
+    # its setting, and no other's
+    context = %Registry.Context{
+      actor: auth.user,
+      origin: :mcp,
+      client: auth.grant.client_name,
+      grant_id: auth.grant.id,
+      tenant: tenant
+    }
+
     args = Map.delete(args, "_meta")
     call = fn -> name |> Registry.call(args, context) |> with_guidance(name) end
     called(name, args, auth, tenant, fn -> run(name, context, tenant, call) end)

@@ -186,6 +186,9 @@ defmodule BrandoAdmin.Components.ToolSteps do
        when not is_map_key(result, "replaced_images"),
        do: step_text("prepare_proposal", args, Map.put(result, "replaced_images", count))
 
+  defp step_text("prepare_proposal", _, %{"version" => version, "applied" => true}),
+    do: gettext("Applied version %{version} without review", version: strong(version))
+
   defp step_text("prepare_proposal", _, %{"version" => version, "applicable" => true, "replaced_images" => count})
        when is_integer(count) and count > 0,
        do:

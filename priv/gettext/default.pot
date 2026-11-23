@@ -2671,6 +2671,7 @@ msgstr ""
 
 #: lib/brando_admin/components/crawler_policy.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
+#: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Allow"
 msgstr ""
@@ -2699,6 +2700,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Allow setting opacity"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Allow translations"
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
@@ -3120,9 +3126,25 @@ msgid_plural "Applied %{count} module changes."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/mcp/watch_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applied automatically"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Applied automatically as %{name}"
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Applied by %{name}"
+msgstr ""
+
+#: lib/brando_admin/components/tool_steps.ex
+#, elixir-autogen, elixir-format
+msgid "Applied version %{version} without review"
 msgstr ""
 
 #: lib/brando_admin/components/release_changes.ex
@@ -6147,6 +6169,11 @@ msgstr ""
 msgid "Create translation"
 msgstr ""
 
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Create unpublished translations without review, if the site's managers allow it for this connection. They are saved in your name"
+msgstr ""
+
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Create user"
@@ -8450,6 +8477,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every proposal from this connection waits for review."
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -10988,6 +11020,16 @@ msgstr ""
 msgid "Leave this field empty"
 msgstr ""
 
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves every proposal for review"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves every proposal for review: set by %{name}, %{date}"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Left out of the proposal: %{change}"
@@ -11031,6 +11073,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Legal name"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Let %{client} apply translations without review?"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
@@ -13721,6 +13768,11 @@ msgid_plural "Notes, %{count} open"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing"
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing changes for visitors at once: %{domain} keeps reaching whatever its DNS or CDN points at, a static host included, until it is pointed at this installation. Forms on pages deployed to a static host stop accepting submissions, and Publishing leaves the site’s menu."
@@ -15379,6 +15431,11 @@ msgstr ""
 msgid "Proposal · version %{version}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Proposals that only create unpublished translations are saved at once, in %{name}'s name, without review. Publishing them and every other change still wait for review."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Proposals that tools such as Claude Code prepared as you, through MCP. Review and apply them here. To change one, ask the tool again."
@@ -15464,6 +15521,11 @@ msgstr ""
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Publish at"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publish or delete entries, change them without your review, or delete media"
 msgstr ""
 
 #: lib/brando_admin/components/form/structured_data.ex
@@ -17134,6 +17196,11 @@ msgstr ""
 msgid "Review changes"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review everything"
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Review groups"
@@ -17652,11 +17719,6 @@ msgstr ""
 msgid "Save your changes before you leave this block?"
 msgstr ""
 
-#: lib/brando_admin/live/mcp/consent_live.ex
-#, elixir-autogen, elixir-format
-msgid "Save, publish or delete entries, or delete media"
-msgstr ""
-
 #: lib/brando/frontend_edit/text.ex
 #: lib/brando_admin/components/form/frontend_editor.ex
 #, elixir-autogen, elixir-format
@@ -17749,6 +17811,16 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Saved, but the page was not updated: a block template failed, so visitors see the page as it was."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saves unpublished translations in your name without review"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saves unpublished translations in your name without review: set by %{name}, %{date}"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -18523,6 +18595,16 @@ msgstr ""
 msgid "Sessions"
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Set %{date}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Set %{date} by %{name}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Set %{environment} live"
@@ -18603,6 +18685,16 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Set password"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set to apply unpublished translations without review"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set to leave every proposal for review"
 msgstr ""
 
 #: lib/brando_admin/live/sites/integrations_live.ex
@@ -20291,6 +20383,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
+msgid "The connection could not be changed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
 msgid "The connection was revoked."
 msgstr ""
 
@@ -21497,6 +21594,11 @@ msgstr[1] ""
 msgid "This collection is no longer in %{provider}. Choose another one."
 msgstr ""
 
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "This connection applies unpublished translations without review."
+msgstr ""
+
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "This connection has ended, so nothing new will appear. To follow the tool again, connect it again and use the link it gives."
@@ -22653,6 +22755,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unpublished on schedule"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unpublished translations"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -23906,6 +24013,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Without a connected Figma app, connected tools read a Figma frame from its link and import its images into the media library, in a folder named after the frame, with a personal access token. They see the Figma files the token's owner can open."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "Without review"
 msgstr ""
 
 #: lib/brando_admin/live/nav.ex

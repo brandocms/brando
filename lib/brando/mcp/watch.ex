@@ -209,6 +209,8 @@ defmodule Brando.MCP.Watch do
 
   defp output("prepare_proposal", data) do
     output = %{"version" => integer(data["version"]), "applicable" => data["applicable"] == true}
+    # Applied without review, as its connection allows
+    output = if data["applied"] == true, do: Map.put(output, "applied", true), else: output
 
     case data["effects"] do
       %{"replaced_images" => count} when is_integer(count) and count > 0 -> Map.put(output, "replaced_images", count)

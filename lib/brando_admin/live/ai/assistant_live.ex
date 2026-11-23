@@ -872,6 +872,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
               "Prepared outside the admin, as you. Review it here like any proposal: leave out what you do not want, or discard it. To change it, ask the tool again."
             )}
           </p>
+          <p :if={!@shared and @under_review? and @proposal.auto_apply_reason} id="assistant-auto-apply-reason">
+            {@proposal.auto_apply_reason}
+          </p>
         </div>
         <p :if={!@preview} class="assistant-counts">
           <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>
@@ -3202,6 +3205,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp origin_label(%{conversation_id: nil, origin: nil}), do: gettext("From outside the Assistant")
   defp origin_label(_proposal), do: nil
 
+  defp connected_state(%{status: "applied", auto_applied_grant_id: id}) when is_integer(id), do: "auto_applied"
   defp connected_state(%{status: status}) when status in ~w(applied undone), do: status
 
   defp connected_state(record) do
@@ -3219,11 +3223,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
     do: gettext("This proposal expired, so it can no longer be applied. Ask the tool to prepare it again.")
 
   defp connected_state_tone("waiting"), do: "badge--ai"
-  defp connected_state_tone("applied"), do: "badge--success"
+  defp connected_state_tone(state) when state in ~w(applied auto_applied), do: "badge--success"
   defp connected_state_tone(_state), do: nil
 
   defp connected_state_label("waiting"), do: gettext("Waiting for review")
   defp connected_state_label("applied"), do: gettext("Applied")
+  defp connected_state_label("auto_applied"), do: gettext("Applied automatically")
   defp connected_state_label("undone"), do: gettext("Undone")
   defp connected_state_label("expired"), do: gettext("Expired")
 
