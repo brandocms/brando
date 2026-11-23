@@ -228,6 +228,20 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
 
       assert stored_items(article) == [linked(c.identifier, @new_url), "<p>Plain</p>"]
     end
+
+    # The quotes are one column of the article: the form keeps the row the
+    # editor changed and takes the rewritten one
+    test "of the quotes: the linked quote keeps the new address", %{conn: conn, article: article} = c do
+      view = open(conn, article)
+
+      type(view, ["quotes", "1", "text"], "<p>Changed</p>")
+
+      move(c.target)
+      settle(view)
+      save_title(view, article, "Saved after the move")
+
+      assert stored_quotes(article) == [linked(c.identifier, @new_url), "<p>Changed</p>"]
+    end
   end
 
   describe "the editor changed the text that holds the link" do
@@ -273,5 +287,63 @@ defmodule BrandoAdmin.IdentifierLinkOpenFormTest do
 
       assert Repo.get!(Article, article.id).subtitle == own
     end
+  end
+
+  describe "the editor changed another quote and sent it" do
+    # B's quotes, as the others were sent them, keep the old link in the
+    # first quote until B's form takes the rewrite. An editor who opens the
+    # entry after it is given B's quotes (`ship_fields_to/2`), and saves
+    # them with their own change.
+    test "an editor who opens the entry later is given the new address", %{conn: conn, article: article} = c do
+      b = open(conn, article)
+      b |> form_target() |> render_hook("focus", %{"field" => "article[quotes][1][text]"})
+      type(b, ["quotes", "1", "text"], "<p>Changed</p>")
+      b |> form_target() |> render_hook("blur", %{})
+
+      move(c.target)
+      settle(b)
+
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      later = open(log_in_user(build_conn(), other), article)
+      settle(later)
+      new = linked(c.identifier, @new_url)
+
+      await(fn ->
+        get_in(form_params(render(later), "#article_form_form"), ["article", "quotes", "1", "text"]) == "<p>Changed</p>"
+      end)
+
+      save_title(later, article, "Saved by a later editor")
+
+      assert stored_quotes(article) == [new, "<p>Changed</p>"]
+    end
+  end
+
+  # A block that reads the quotes follows the rewritten quote the editor's
+  # kept list took, as it follows a field the form takes whole. The fan-out
+  # is a `send_update` to the block, watched for on the editor's LiveView.
+  @tag :capture_log
+  test "the blocks that read the quotes are told of the rewritten quote", %{conn: conn, article: article} = c do
+    view = open(conn, article)
+    block = {BrandoAdmin.Components.Form.Block, "a-block-reading-quotes"}
+
+    Phoenix.LiveView.send_update(view.pid, Form,
+      id: "article_form",
+      event: "register_block_wanting_entry",
+      block_ref: block,
+      fields: ["quotes"]
+    )
+
+    type(view, ["quotes", "1", "text"], "<p>Changed</p>")
+    :erlang.trace(view.pid, true, [:receive])
+    move(c.target)
+    settle(view)
+
+    assert_receive {:trace, _, :receive,
+                    {:phoenix, :send_update,
+                     {^block, %{event: "update_entry_field", path: [_], change: [_ | _] = change}}}},
+                   2_000
+
+    :erlang.trace(view.pid, false, [:receive])
+    assert Enum.map(change, & &1.text) == [linked(c.identifier, @new_url), "<p>Changed</p>"]
   end
 end

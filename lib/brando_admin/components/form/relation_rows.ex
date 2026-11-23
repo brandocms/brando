@@ -8,6 +8,14 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # the editor settles (`Form` "Saves by other editors"); the rows are never
   # merged. Rows compare by content (`rows/2`): the rows a form builds again
   # from the browser's params are new structs.
+  #
+  # An embedded list (`embeds_many`) ships between editors as a field, but
+  # another editor's save that reaches a form whose editor changed its rows
+  # is kept here too, row by row (`keep_list/5`), when its rows carry keys
+  # (`embedded_rows?/4`): this editor's own edits (`Form.RowEdits`) on top
+  # of the saved rows. It has no conflict to settle: the rows the save added
+  # come in. An `embeds_one` is kept as a has_one is (`keep/5`), with only
+  # the fields this editor changed over the saved row.
 
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias Ecto.Association
@@ -127,19 +135,23 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   the entry the form was built on. A row it holds that the save removed is a new row, if the
   editor changed it, and gone otherwise. The rows the save added are not
   kept, unless the relation can't replace a row (`on_replace: :raise`).
+
+  An embedded one that is the saved row keeps only the fields `edits`
+  records (`Form.RowEdits`): one the editor only received is the save's.
   """
-  def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field) do
-    assoc = schema.__schema__(:association, field)
+  def keep(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field, edits \\ nil) do
+    assoc = schema.__schema__(:association, field) || schema.__schema__(:embed, field)
     current = Map.get(data, field)
     base = if is_map(base), do: Map.get(base, field)
     base = if Ecto.assoc_loaded?(base), do: base, else: nil
+    edits = if match?(%Ecto.Embedded{}, assoc), do: edits
 
     cond do
       not Ecto.assoc_loaded?(current) ->
         keep_unloaded(saved, previous, field)
 
       assoc.cardinality == :one ->
-        put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base)))
+        put_kept(saved, field, keep_one(assoc, current, as_change(held(previous, field), base), base, edits))
 
       true ->
         put_kept(
@@ -150,9 +162,181 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     end
   end
 
+  @doc """
+  An embedded list as `previous`, the form, holds it, on `saved`: the saved
+  rows, with this editor's own `edits` (`Form.RowEdits`) on top. A row they
+  typed in keeps the fields they typed, over the saved values; the rows they
+  added stay, those they removed stay out, and if they moved a row, their
+  order wins. Everything else in the form is the save's: a value it holds
+  because another editor sent it is never an edit.
+
+  A new row (no id yet) is the saved row its key names in `keys`, the
+  saver's map of the new rows it wrote (`_key` => `id-…`). One the map
+  doesn't name stays if this editor added or typed in it; otherwise it is a
+  row the save doesn't hold, and goes. Without a map (a save no form made,
+  `nil`) every new row stays. A saved row the save removed comes back as a
+  new row if the editor typed in it, and goes otherwise.
+
+  Returns the changeset and the rows that go by another key now
+  (old key => new key).
+  """
+  def keep_list(%Changeset{data: data} = saved, %Changeset{} = previous, field, edits, keys) do
+    saved_rows = Map.get(data, field)
+    by_key = Map.new(saved_rows, &{SubformHelpers.row_key(&1), &1})
+    removed = MapSet.new(edits.removed, &(saved_key(&1, by_key, keys) || &1))
+
+    {rows, renamed} =
+      previous
+      |> held(field)
+      |> List.wrap()
+      |> Enum.reduce({[], removed_renamed(edits.removed, keys)}, fn entry, {rows, renamed} ->
+        key = SubformHelpers.row_key(entry)
+        typed = Map.get(edits.typed, key, MapSet.new())
+
+        case kept_row(entry, key, saved_key(key, by_key, keys), by_key, typed, edits, keys) do
+          nil -> {rows, renamed}
+          {id, row} -> {[{id, row} | rows], rename(renamed, key, id, row)}
+        end
+      end)
+
+    rows = Enum.reverse(rows)
+    held_ids = MapSet.new(rows, &elem(&1, 0))
+
+    added =
+      for row <- saved_rows,
+          key = SubformHelpers.row_key(row),
+          not MapSet.member?(held_ids, key) and not MapSet.member?(removed, key),
+          do: {key, row}
+
+    by_id = Map.new(rows ++ added)
+    editor = Enum.map(rows, &elem(&1, 0))
+    save = for row <- saved_rows, key = SubformHelpers.row_key(row), Map.has_key?(by_id, key), do: key
+    {lead, other} = if edits.moved?, do: {editor, save}, else: {save, editor}
+    kept = lead |> interleave(other) |> Enum.map(&Map.fetch!(by_id, &1))
+
+    {Changeset.put_embed(saved, field, kept), renamed}
+  end
+
+  # The saved row's key a row of the form goes by: its own, or the one the
+  # saver's map gives its `_key`.
+  defp saved_key(key, by_key, keys) do
+    key = if Map.has_key?(by_key, key), do: key, else: Map.get(keys || %{}, key)
+    if Map.has_key?(by_key, key), do: key
+  end
+
+  # A row of the form, by its place in the save: the saved row it is, with
+  # the fields the editor typed on top; a new row of this editor's; a saved
+  # row the save removed, as a new one if they typed in it. `nil` when it
+  # goes.
+  defp kept_row(entry, key, saved_key, by_key, typed, edits, keys) do
+    cond do
+      saved_key ->
+        {saved_key, with_typed(entry, Map.fetch!(by_key, saved_key), typed)}
+
+      new?(applied(entry)) ->
+        if is_nil(keys) or is_nil(key) or MapSet.member?(edits.added, key) or MapSet.size(typed) > 0,
+          do: {make_ref(), entry}
+
+      MapSet.size(typed) > 0 ->
+        {make_ref(), as_new(entry)}
+
+      true ->
+        nil
+    end
+  end
+
+  # The new rows the editor removed that the save wrote: their removal goes
+  # by the saved key from then on, so a later save that still holds the
+  # row doesn't bring it back.
+  defp removed_renamed(removed, keys) do
+    for key <- removed, id = Map.get(keys || %{}, key), into: %{}, do: {key, id}
+  end
+
+  defp rename(renamed, key, id, row) do
+    case if(is_reference(id), do: SubformHelpers.row_key(row), else: id) do
+      ^key -> renamed
+      nil -> renamed
+      new_key -> Map.put(renamed, key, new_key)
+    end
+  end
+
+  # The saved row, with the fields the editor typed as the form holds them:
+  # their values, and what they typed that didn't cast with its error.
+  defp with_typed(entry, saved, typed) do
+    if MapSet.size(typed) == 0 do
+      saved
+    else
+      fields = MapSet.to_list(typed)
+      changeset = Changeset.change(saved, Map.take(applied(entry), fields))
+      {params, errors} = typed_input(entry, fields)
+      %{changeset | action: :update, params: params, errors: errors, valid?: changeset.valid? and errors == []}
+    end
+  end
+
+  defp typed_input(%Changeset{params: params, errors: errors}, fields),
+    do: {Map.take(params || %{}, Enum.map(fields, &Atom.to_string/1)), Keyword.take(errors, fields)}
+
+  defp typed_input(_row, _fields), do: {%{}, []}
+
+  @doc """
+  The new rows of each embedded list a save wrote, by their key in the
+  form that saved (`_key` => `id-…`), for the other forms to tell them by
+  (`keep_list/5`): the new rows of `changeset`, the save's, in order, are
+  the new rows of `entry`, the saved entry.
+  """
+  def written(%Changeset{data: %schema{}, changes: changes}, entry) do
+    for field <- schema.__schema__(:embeds),
+        rows when is_list(rows) <- [Map.get(changes, field)],
+        sent = Enum.reject(rows, &removed?/1),
+        saved = Map.get(entry, field),
+        is_list(saved) and length(sent) == length(saved),
+        keys = written_keys(sent, saved),
+        keys != %{},
+        into: %{},
+        do: {field, keys}
+  end
+
+  defp written_keys(sent, saved) do
+    for {%Changeset{action: :insert} = row, saved_row} <- Enum.zip(sent, saved),
+        key = SubformHelpers.row_key(row),
+        is_binary(key),
+        into: %{},
+        do: {key, SubformHelpers.row_key(saved_row)}
+  end
+
+  @doc """
+  Embedded rows as they are stored: a map field read back has string keys,
+  whatever the form held.
+  """
+  def stored(rows),
+    do: rows |> List.wrap() |> Enum.map(&Ecto.embedded_dump(&1, :json)) |> Jason.encode!() |> Jason.decode!()
+
+  @doc """
+  Whether `keep/4` (an `embeds_one`) or `keep_list/5` can keep the embedded rows of `field` row by row: the
+  rows carry a primary key, in the saved entry and in `base`, the entry
+  the form was built on. A schema without one (`primary_key: false`), or a
+  row stored without its key, can't be matched, and the form keeps the
+  editor's list whole. So does an embedded one whose removal in
+  `previous`, the form, didn't cast (a required one): the form keeps
+  showing it removed, with its error.
+  """
+  def embedded_rows?(%Changeset{data: %schema{} = data}, %Changeset{} = previous, base, field) do
+    case schema.__schema__(:embed, field) do
+      %Ecto.Embedded{related: related, cardinality: cardinality} ->
+        related.__schema__(:primary_key) != [] and
+          not (cardinality == :one and Keyword.has_key?(previous.errors, field)) and
+          Enum.all?(List.wrap(Map.get(data, field)) ++ List.wrap(base && Map.get(base, field)), &(not new?(&1)))
+
+      nil ->
+        false
+    end
+  end
+
   # A row of the form's data the form changed itself: its changes against
   # the row in `base`.
-  defp as_change(%_{__meta__: _} = row, base) do
+  defp as_change(%Changeset{} = row, _base), do: row
+
+  defp as_change(%_{} = row, base) do
     key = Ecto.primary_key(row)
 
     case Enum.find(List.wrap(base), &(Ecto.primary_key(&1) == key)) do
@@ -186,7 +370,12 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   end
 
   defp put_kept(changeset, _field, :keep), do: changeset
-  defp put_kept(changeset, field, value), do: Changeset.put_assoc(changeset, field, value)
+
+  defp put_kept(%Changeset{data: %schema{}} = changeset, field, value) do
+    if schema.__schema__(:embed, field),
+      do: Changeset.put_embed(changeset, field, value),
+      else: Changeset.put_assoc(changeset, field, value)
+  end
 
   # The rows the form holds: changesets from its changes, or the structs in
   # its data. In a list, a row the editor took out (`:delete`, a
@@ -242,14 +431,39 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     end
   end
 
-  # A has_one: the row the editor holds, the saved one if it is that row.
-  defp keep_one(assoc, saved, nil), do: remove_one(assoc, saved)
+  # `lead` with the rows only `other` has: after the nearest row before it
+  # in `other` that is in the list, else before the nearest one after it,
+  # else last.
+  defp interleave(lead, other) do
+    other
+    |> Enum.with_index()
+    |> Enum.reduce(lead, fn {key, index}, list ->
+      if key in list, do: list, else: place(list, key, Enum.take(other, index), Enum.drop(other, index + 1))
+    end)
+  end
 
-  defp keep_one(assoc, saved, held) do
+  defp place(list, key, before_rows, after_rows) do
+    before = before_rows |> Enum.reverse() |> Enum.find(&(&1 in list))
+    next = Enum.find(after_rows, &(&1 in list))
+
+    cond do
+      before -> List.insert_at(list, Enum.find_index(list, &(&1 == before)) + 1, key)
+      next -> List.insert_at(list, Enum.find_index(list, &(&1 == next)), key)
+      true -> list ++ [key]
+    end
+  end
+
+  # A has_one: the row the editor holds, the saved one if it is that row.
+  # `base` is the row the form was built on. An embedded one with `edits`
+  # (`Form.RowEdits`) keeps only the fields they record over the saved row.
+  defp keep_one(assoc, saved, held, base \\ nil, edits \\ nil)
+  defp keep_one(assoc, saved, nil, base, _edits), do: remove_one(assoc, saved, base)
+
+  defp keep_one(assoc, saved, held, _base, edits) do
     row = applied(held)
 
     cond do
-      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) -> onto(held, saved)
+      saved && Ecto.primary_key(row) == Ecto.primary_key(saved) -> onto(held, saved, edits)
       saved && assoc.on_replace in [:raise, :update] -> held |> edited() |> onto_saved(saved) |> typed(held)
       new?(row) -> held
       changed?(held) -> as_new(held)
@@ -261,11 +475,24 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp as_removed(saved, %Changeset{changes: changes}),
     do: saved |> Changeset.change(Map.take(changes, [:marked_as_deleted])) |> Map.put(:action, :delete)
 
-  defp remove_one(_assoc, nil), do: :keep
-  defp remove_one(%{on_replace: on_replace}, _saved) when on_replace in [:raise, :update], do: :keep
-  defp remove_one(_assoc, _saved), do: nil
+  # An embedded one the editor removed (`on_replace: :update`, a Blueprint's
+  # default, takes `nil`) stays removed if the saved row is the one they
+  # removed.
+  defp remove_one(_assoc, nil, _base), do: :keep
 
-  # The editor's row onto the saved one: its changes, over the saved values.
+  defp remove_one(%Ecto.Embedded{on_replace: :update}, saved, %_{} = base),
+    do: if(Ecto.primary_key(saved) == Ecto.primary_key(base), do: nil, else: :keep)
+
+  defp remove_one(%{on_replace: on_replace}, _saved, _base) when on_replace in [:raise, :update], do: :keep
+  defp remove_one(_assoc, _saved, _base), do: nil
+
+  # The editor's row onto the saved one: its changes, over the saved values;
+  # with `edits`, the fields they record.
+  defp onto(held, saved, nil), do: onto(held, saved)
+
+  defp onto(held, saved, edits),
+    do: with_typed(held, saved, Map.get(edits.typed, SubformHelpers.row_key(held), MapSet.new()))
+
   defp onto(%Changeset{} = held, saved) do
     if changed?(held), do: typed(%{held | data: saved, params: %{}}, held), else: saved
   end
@@ -333,7 +560,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp typed(changeset, _row), do: changeset
 
   # A row the save removed that the editor changed: a new row, with a key of
-  # its own, holding what the editor's form showed.
+  # its own, holding what the editor's form showed, typed values that
+  # didn't cast and their errors too.
   defp as_new(entry) do
     entry
     |> applied()
@@ -341,11 +569,13 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     |> Changeset.change()
     |> Map.put(:action, :insert)
     |> SubformHelpers.new_row()
+    |> typed(entry)
   end
 
   defp new_struct(%row_schema{} = row) do
     row = Enum.reduce(row_schema.__schema__(:primary_key), row, &Map.put(&2, &1, nil))
-    row = put_in(row.__meta__.state, :built)
+    # An embedded row has no state
+    row = if Map.has_key?(row, :__meta__), do: put_in(row.__meta__.state, :built), else: row
 
     Enum.reduce(fields(row_schema, []), row, fn name, row ->
       case {row_schema.__schema__(:association, name), Map.get(row, name)} do

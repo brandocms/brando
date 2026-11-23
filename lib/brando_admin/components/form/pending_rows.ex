@@ -163,10 +163,10 @@ defmodule BrandoAdmin.Components.Form.PendingRows do
     |> put_list(drop_name, drop)
   end
 
-  # The browser's row: a saved row by its id, a new one by its `_key`.
-  defp param_key(%{"id" => id}) when is_binary(id) and id != "", do: "id-" <> id
-  defp param_key(%{"_key" => key}) when is_binary(key) and key != "", do: key
-  defp param_key(_row), do: nil
+  @doc "The key of a row as the browser sends it: a saved row by its id, a new one by its `_key`."
+  def param_key(%{"id" => id}) when is_binary(id) and id != "", do: "id-" <> id
+  def param_key(%{"_key" => key}) when is_binary(key) and key != "", do: key
+  def param_key(_row), do: nil
 
   # The params index of the nearest row above `position` that the params list.
   defp preceding_index(rows, server_keys, position) do
