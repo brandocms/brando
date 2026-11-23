@@ -588,9 +588,18 @@ proposal with the modules that match.
 
   Each image has the `image_ref` of the picture it shows. It identifies the
   picture: layers with the same `image_ref` show the same picture, and
-  `brando_figma_import_images` imports it once. It does not say which image
-  of the media library that is; the import names it, reusing an image the
-  library already has.
+  `brando_figma_import_images` imports it once.
+
+  An image whose picture `brando_figma_import_images` has imported, or
+  reused a library image for, has its `asset` (`{"kind": "image", "id":
+  N}`): the media library image that import gave it, for the image's
+  rotation (a picture shown turned a quarter is a turned copy of its own).
+  It is one the person may read and that is not in the trash, the oldest
+  when there are several, as the import reuses the oldest. Reading it costs
+  no download and no call to Figma. An image without an `asset` has no
+  library image recorded for its picture and rotation that the person may
+  read and is not in the trash; the library may still have the picture,
+  uploaded some other way, and the import finds it by its contents.
 
   Each image has its `scale_mode` (`fill`, `fit`, `crop` or `tile`), its
   `crop` when cropped (`x`, `y`, `width`, `height` as fractions of the
