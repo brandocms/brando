@@ -107,12 +107,13 @@ area in [the section map](form-map.md) and grep for the names it lists.
   has it (`stale_relations/2`): its params are dropped before the cast
   (`PendingRows.drop/3`), and a recovery capture copies the form's rows.
   A save that arrives while the form saves is taken once that save fails
-  (`take_after_save`); one that arrives while the form asks to redirect
-  the old address is in the entry its refresh reads back after the
-  answer, as one in the gap of its save. On reconnect, each relation's base
-  (`_relation_bases`, `RelationRows.base/2`: its rows in the entry the
-  form is built on, read order left out, computed at render from
-  `@entry`) tells whether its rows were saved otherwise meanwhile; if so,
+  (`take_after_save`). One that arrives while the form asks to redirect
+  the old address is taken in its fields then, and its transformer rows
+  reach the transformers with the refresh after the answer, on the rows
+  the form's own save wrote (`hand_rows_saved_elsewhere/1`). On
+  reconnect, each relation's base (`_relation_bases`,
+  `RelationRows.base/2`: its rows in the entry the form is built on, read
+  order left out, computed at render from `@entry`) tells whether its rows were saved otherwise meanwhile; if so,
   recovered rows that differ from the saved ones are a conflict
   (`settle_edit/4`). An unanswered conflict keeps its pre-take base
   (`conflict_bases`), so a reconnect asks again. A save of other fields

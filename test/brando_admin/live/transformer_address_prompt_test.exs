@@ -1,11 +1,13 @@
 defmodule BrandoAdmin.TransformerAddressPromptTest do
   # B saves a new transformer row with a change of the entry's address, and
   # the form asks whether to redirect the old address. While B's prompt is
-  # open, A saves the entry. B's form takes A's save once B answers, as it
-  # takes a save that lands during its own (TransformerSavedElsewhereTest):
-  # B's row shows once, and B's next save stores it once. Before, B's
-  # transformer took A's save while the prompt was open, with B's row still
-  # new in it: the row showed twice, and B's next save stored it again.
+  # open, A saves the entry. B's form takes A's save in its fields then
+  # (its rich-text editors and recovery baseline too), and its transformer
+  # takes A's rows once B answers, as it takes a save that lands during its
+  # own (TransformerSavedElsewhereTest): B's row shows once, and B's next
+  # save stores it once. Before, B's transformer took A's save while the
+  # prompt was open, with B's row still new in it: the row showed twice, and
+  # B's next save stored it again.
   #
   # Each save is the browser's, as in TransformerSavedElsewhereTest: a first
   # `save_form` collects the rows (and blocks), the second, with the token
@@ -20,6 +22,7 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
   alias Brando.SyncTest
   alias Brando.SyncTest.ArticleItem
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.Transformer
 
   setup %{conn: conn, current_user: me} do
@@ -98,6 +101,15 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
   # The rows the transformer shows: label, and id once saved
   defp shown(form), do: Enum.map(transformer(form).items, &{shown_label(&1), if(!&1.is_new, do: &1.source.id)})
 
+  # The row cards the browser draws with `label`
+  defp drawn(%{view: view}, label) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find(".subform-listing strong")
+    |> Enum.count(&(Floki.text(&1) == label))
+  end
+
   defp browser_form(%{view: view, id: id}, changes) do
     view
     |> render()
@@ -135,6 +147,14 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
 
   defp saved_title(article), do: Repo.one(from a in "synctest_articles", where: a.id == ^article.id, select: a.title)
 
+  # What recovery compares a copy with: the entry as saved now
+  defp saved_baseline(%{view: view, id: id}, article) do
+    %{schema: schema, form_blueprint: blueprint, current_user: user} = form_assigns(view, id)
+    entry = schema |> Repo.get!(article.id) |> Repo.preload(Brando.Blueprint.preloads_for(schema), force: true)
+    payload = Drafts.saved_payload(schema, blueprint, entry, user)
+    payload |> Map.put("modules", Brando.Drafts.Modules.manifest(payload["blocks"])) |> Brando.Drafts.Content.checksum()
+  end
+
   # B saves a new row with a new address, and A saves while B's prompt is
   # open: A's change of the title, or A's own new row
   defp save_under_prompt(a, b, article, a_saves) do
@@ -159,9 +179,11 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
 
         {a_id, b_id, from_b} = save_under_prompt(a, b, article, &save_title(&1, article, "Saved by A"))
         assert Enum.map(shown(b), &elem(&1, 0)) == ["A", "B", "From B"]
+        assert drawn(b, "From B") == 1
 
         answer(b, "skip_permalink_redirect")
         assert shown(b) == [{"A", a_id}, {"B", b_id}, {"From B", from_b}]
+        assert drawn(b, "From B") == 1
         assert form_title(b) == "Saved by A"
 
         save_title(b, article, "Saved by B")
@@ -187,11 +209,39 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
           saved = rows(article)
           assert [{"A", _}, {"B", _}, {"From B", _}, {"From A", _}] = saved
           assert shown(b) == saved
+          assert drawn(b, "From B") == 1
 
           save_title(b, article, "Saved by B")
           assert rows(article) == saved
           assert shown(b) == saved
         end
+      end
+
+      # B's recovery compares with the entry as A saved it: A's title is
+      # not B's edit to keep a copy of
+      test "B's recovery baseline is A's save", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+
+        save_under_prompt(a, b, article, &save_title(&1, article, "Saved by A"))
+        answer(b, "skip_permalink_redirect")
+
+        assert form_assigns(b.view, b.id).draft.baseline == saved_baseline(b, article)
+      end
+
+      # A rich-text editor in B's browser keeps its text until the form
+      # sends it the new one
+      test "B's rich-text editor shows the text A saved", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+
+        save_under_prompt(a, b, article, fn a ->
+          save(a, [{[a.singular, "subtitle"], "<p>Saved by A</p>"}])
+          await(fn -> Repo.one(from x in "synctest_articles", where: x.id == ^article.id, select: x.subtitle) end)
+        end)
+
+        answer(b, "skip_permalink_redirect")
+        assert_push_event(b.view, "b:tiptap:update", %{html: "<p>Saved by A</p>"})
       end
     end
   end

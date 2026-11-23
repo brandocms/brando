@@ -1,7 +1,7 @@
 # A form without blocks that has a transformer (TransformerSavesTest), on
 # the `synctest_articles` table: its rows are the articles' items. A saved
-# change of its address asks to redirect the old one
-# (TransformerAddressPromptTest).
+# change of its address asks to redirect the old one, and its subtitle is
+# rich text (TransformerAddressPromptTest).
 defmodule Brando.TransformerSaveTest.Album do
   @moduledoc false
   use Brando.Blueprint,
@@ -25,6 +25,7 @@ defmodule Brando.TransformerSaveTest.Album do
   attributes do
     attribute :title, :string, required: true
     attribute :slug, :string
+    attribute :subtitle, :text
   end
 
   relations do
@@ -44,6 +45,7 @@ defmodule Brando.TransformerSaveTest.Album do
         fieldset do
           input :title, :text
           input :slug, :text
+          input :subtitle, :rich_text
 
           inputs_for :items do
             cardinality :many
@@ -62,8 +64,8 @@ end
 
 # A form with blocks and a transformer that creates its entry and stays on
 # it (TransformerSavesTest), on the `synctest_articles` table too. A saved
-# change of its address asks to redirect the old one
-# (TransformerAddressPromptTest).
+# change of its address asks to redirect the old one, and its subtitle is
+# rich text (TransformerAddressPromptTest).
 defmodule Brando.TransformerSaveTest.Reel do
   @moduledoc false
   use Brando.Blueprint,
@@ -87,6 +89,7 @@ defmodule Brando.TransformerSaveTest.Reel do
   attributes do
     attribute :title, :string, required: true
     attribute :slug, :string
+    attribute :subtitle, :text
   end
 
   relations do
@@ -108,6 +111,7 @@ defmodule Brando.TransformerSaveTest.Reel do
         fieldset do
           input :title, :text
           input :slug, :text
+          input :subtitle, :rich_text
 
           inputs_for :items do
             cardinality :many
