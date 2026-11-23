@@ -20,10 +20,11 @@ import { partition } from '../shared/mediaBatch'
  *      its upload reports back with
  *   3. hand each file to that field's UploadTrigger (`brando:upload-files`),
  *      so it uploads exactly as a file dropped on the field does
- *   4. the field says when that upload has settled
- *      (`brando:handed-upload-settled`, bubbling); the block field takes it
- *      from there (`BlockField` hook, `media_drop_settled`), wherever the
- *      child has moved since. A field not on the page says so the same way.
+ *   4. that upload, not the field, tells the block field when it has
+ *      settled (`shared/mediaDropHandover`, `brando:handed-upload-settled`),
+ *      which takes it from there (`BlockField` hook, `media_drop_settled`),
+ *      wherever the child has moved since. A field not on the page says so
+ *      the same way, bubbling from here.
  *
  * While a file is dragged over the block, the block carries
  * `data-media-drop="dragging"`, which styles the zone.
@@ -146,6 +147,7 @@ export default (app) => ({
       return
     }
 
-    trigger.dispatchEvent(new CustomEvent('brando:upload-files', { detail: { files: [file], handover: { uid, token } } }))
+    const blockField = this.el.closest('[phx-hook="Brando.BlockField"]')?.id
+    trigger.dispatchEvent(new CustomEvent('brando:upload-files', { detail: { files: [file], handover: { uid, token, blockField } } }))
   },
 })

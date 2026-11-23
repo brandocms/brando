@@ -76,6 +76,32 @@ test.describe('Multi blocks: dropping media', () => {
   // The row's own block element, which takes a drop anywhere on it
   const rowBlock = row => row.locator('.block').first()
 
+  // A second row of `module` below the first
+  const addRow = async (page, module) => {
+    await page.getByRole('button', { name: 'Add block' }).last().click()
+    await page.getByRole('button', { name: group }).click()
+    await expect(page.locator('.module-picker-namespace.active')).toContainText(group)
+    await page.getByRole('button', { name: module, exact: true }).click()
+    await syncLV(page)
+    await expect(rows(page).last()).toContainText(module)
+  }
+
+  // `entry` dragged by its handle into `row`'s children
+  const moveTo = async (page, entry, row) => {
+    const handle = await entry.locator('.sort-handle').first().boundingBox()
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+    await page.mouse.down()
+    // the hold Sortable takes before a drag starts (block-multi-move-between-rows.spec.js)
+    await page.waitForTimeout(100)
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 10, { steps: 2 })
+    await expect(row.locator('.block-children')).toHaveClass(/is-drop-target/)
+    const target = await row.locator('.block-children').boundingBox()
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 20 })
+    await expect(row.locator('.block-children > .is-sorting')).toHaveCount(1)
+    await page.mouse.up()
+    await syncLV(page)
+  }
+
   const kinds = row =>
     entries(row).evaluateAll(items =>
       items.map(item => (item.querySelector('.video-block') ? 'video' : item.querySelector('.picture-block') ? 'picture' : null))
@@ -172,10 +198,7 @@ test.describe('Multi blocks: dropping media', () => {
   test('an entry moved to another row while its upload waits goes when the upload is cancelled', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 2200 })
     await createPage(page, 'Media drop moved', group, 'Image Row')
-    await page.getByRole('button', { name: 'Add block' }).last().click()
-    await page.getByRole('button', { name: group }).click()
-    await page.getByRole('button', { name: 'Image Row', exact: true }).click()
-    await syncLV(page)
+    await addRow(page, 'Image Row')
     const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
 
     await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
@@ -185,18 +208,7 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(queued).toBeVisible()
 
     const fieldBefore = await field(entries(first).first()).elementHandle()
-    const handle = await entries(first).first().locator('.sort-handle').first().boundingBox()
-    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
-    await page.mouse.down()
-    // the hold Sortable takes before a drag starts (block-multi-move-between-rows.spec.js)
-    await page.waitForTimeout(100)
-    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 10, { steps: 2 })
-    await expect(second.locator('.block-children')).toHaveClass(/is-drop-target/)
-    const target = await second.locator('.block-children').boundingBox()
-    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 20 })
-    await expect(second.locator('.block-children > .is-sorting')).toHaveCount(1)
-    await page.mouse.up()
-    await syncLV(page)
+    await moveTo(page, entries(first).first(), second)
     await expect(entries(second)).toHaveCount(1)
     await expect(entries(first)).toHaveCount(0)
     // the field is another element now
@@ -204,6 +216,30 @@ test.describe('Multi blocks: dropping media', () => {
 
     await queued.getByRole('button', { name: 'Cancel' }).click()
     await expect(entries(second)).toHaveCount(0)
+  })
+
+  // The drop hands its file's upload to the field. A file dropped straight
+  // on the field meanwhile is the field's own: its failure leaves the entry
+  // to the dropped file's upload.
+  test('a file dropped on the field while the dropped file waits leaves the entry to that upload', async ({ page }) => {
+    await createPage(page, 'Media drop second file', group, 'Image Row')
+    const row = rows(page).first()
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })
+    await drop(page, rowBlock(row), [['image.jpg', 'image/jpeg']])
+    await expect(entries(row)).toHaveCount(1)
+    const entry = entries(row).first()
+    await expect(page.locator('.upload-item.status-queued').filter({ hasText: 'image.jpg' })).toBeVisible()
+
+    // refused by the upload manager at once
+    await drop(page, field(entry), [['photo.bin', 'image/jpeg', 'image.jpg']])
+    await expect(field(entry).locator('.media-field-progress')).toHaveAttribute('data-state', 'error')
+    await syncLV(page)
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+
+    await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 3; window.BrandoUploads._hook.pumpTransfers() })
+    await expect(entries(row)).toHaveCount(1)
+    await expect(field(entry)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
   })
 
   // The folder question ("Change") holds no files: a dropped file uploads
@@ -290,6 +326,30 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(field(entry)).not.toHaveAttribute('data-asset-id', /./)
     // no alert that the dropped file's upload failed
     await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(0)
+  })
+
+  // Moved to another row, the entry's field mounts again, and the provider's
+  // hook with it: the transfer ends there. The drop's upload failed, and
+  // says so; a later upload into the field is the field's own.
+  test('a video whose provider upload a move ends removes its entry, and says why', async ({ page }) => {
+    await videoRow(page)
+    await page.setViewportSize({ width: 1440, height: 2200 })
+    await createPage(page, 'Media drop provider moved', group, 'Video Row')
+    await addRow(page, 'Video Row')
+    const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
+
+    // The provider never answers, so the transfer is still running at the move
+    await page.route('**/e2e/bunny/tus**', () => {})
+    const transfer = page.waitForRequest('**/e2e/bunny/tus**')
+    await drop(page, rowBlock(first), [['video.mp4', 'video/mp4']])
+    await expect(entries(first)).toHaveCount(1)
+    await transfer
+
+    await moveTo(page, entries(first).first(), second)
+
+    await expect(page.locator('dialog.admin-dialog[open]')).toHaveCount(1, { timeout: 30000 })
+    await expect(entries(second)).toHaveCount(0)
+    await expect(entries(first)).toHaveCount(0)
   })
 
   // The provider has the file, but the server cannot complete the upload:
