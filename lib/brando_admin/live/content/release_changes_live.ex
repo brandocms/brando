@@ -986,6 +986,14 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
               old={Review.definition_text(defs.here)}
               new={Review.definition_text(defs.release)}
             />
+            <RC.template_diff
+              :if={container_fields_changed?(defs)}
+              id={"def-#{item.uid}"}
+              label={gettext("%{name} · definition", name: item.name)}
+              description={template_description(item, defs, @report.version)}
+              old={Review.definition_text(Map.delete(defs.here, "code"))}
+              new={Review.definition_text(Map.delete(defs.release, "code"))}
+            />
           <% end %>
         <% "refs" -> %>
           <%= for item <- @row.items, defs = @detail.definitions[item.uid] do %>
@@ -1199,6 +1207,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     end
   end
 
+  # A container has no refs tab for its fields: when its template changed
+  # too, they get a diff of their own
+  defp container_fields_changed?(%{release: %{"kind" => "container"} = release, here: %{} = here}),
+    do: here["code"] != release["code"] and Map.delete(here, "code") != Map.delete(release, "code")
+
+  defp container_fields_changed?(_defs), do: false
+
   # A module's tree has refs and vars, and renders with the release's
   # modules in Verify and Preview; a container or a palette shows its
   # definition and the entries that use it
@@ -1208,10 +1223,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp meta(row, entries) do
     counts = Entries.counts(entries)
 
+    # A container's row holds the palette it brings
     children =
-      if row.children == [],
-        do: "",
-        else: " · " <> ngettext("1 child module", "%{count} child modules", length(row.children))
+      cond do
+        row.children == [] -> ""
+        row.kind == "container" -> " · " <> gettext("palette %{name}", name: Enum.join(row.children, ", "))
+        true -> " · " <> ngettext("1 child module", "%{count} child modules", length(row.children))
+      end
 
     entries =
       if counts.entries == 0,

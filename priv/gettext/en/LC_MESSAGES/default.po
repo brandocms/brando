@@ -24924,6 +24924,11 @@ msgstr ""
 msgid "page URL"
 msgstr ""
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "palette %{name}"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "palettes"
@@ -25237,6 +25242,11 @@ msgstr[1] ""
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
 msgid "with its %{children}"
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "with palette %{name}"
 msgstr ""
 
 #: lib/brando_admin/live/mcp/watch_live.ex

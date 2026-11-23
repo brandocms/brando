@@ -24926,6 +24926,11 @@ msgstr "uendret resultat"
 msgid "page URL"
 msgstr "sidens URL"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "palette %{name}"
+msgstr "palett %{name}"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "palettes"
@@ -25240,6 +25245,11 @@ msgstr[1] "med undermoduler %{names}"
 #, elixir-autogen
 msgid "with its %{children}"
 msgstr "med sine %{children}"
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "with palette %{name}"
+msgstr "med paletten %{name}"
 
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
