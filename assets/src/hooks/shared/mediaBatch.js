@@ -7,6 +7,10 @@
 //   { image: { extensions: ['.jpg', …], mimetypes: ['image/jpeg', …] | null, limit: 4000000 | null },
 //     video: { … } }
 //
+// `mimetypes` null takes any type. A block ref's kinds come from its upload
+// field (`MediaField.upload_policy/2`), which turns a config's `["*"]` into
+// null.
+//
 // The upload manager checks everything again at intake: this only spares
 // the editor an entry or a block for a file that would be refused.
 
@@ -16,15 +20,17 @@ export function extension(file) {
 }
 
 // Extension first: a .mov can arrive with an empty or lying MIME type, and
-// the extension lists are what intake validates against.
-export function classify(file, kinds) {
+// the extension lists are what intake validates against. With `byExtension`
+// a file goes only by its extension, as the upload manager's intake takes
+// it; without, a file with an unlisted extension goes by its MIME type.
+export function classify(file, kinds, { byExtension = false } = {}) {
   const ext = extension(file)
   const takes = (kind) => !!kinds[kind]
   const listed = (kind) => (kinds[kind].extensions || []).includes(ext)
 
   const kind =
     ['image', 'video'].find((k) => takes(k) && listed(k)) ||
-    ['image', 'video'].find((k) => takes(k) && file.type.startsWith(`${k}/`))
+    (!byExtension && ['image', 'video'].find((k) => takes(k) && file.type.startsWith(`${k}/`)))
 
   if (!kind) return null
   const mimetypes = kinds[kind].mimetypes
@@ -33,8 +39,8 @@ export function classify(file, kinds) {
 }
 
 // `{ file, kind }`, or `{ rejected: { filename, reason: 'type' | 'size', limit } }`
-export function validate(file, kinds) {
-  const kind = classify(file, kinds)
+export function validate(file, kinds, options = {}) {
+  const kind = classify(file, kinds, options)
   if (!kind) return { rejected: { filename: file.name, reason: 'type' } }
 
   const limit = kinds[kind].limit
@@ -44,12 +50,13 @@ export function validate(file, kinds) {
 }
 
 // The files `kinds` takes, in the order given, and the ones it refuses
-export function partition(files, kinds) {
+// (`options` as for `classify`)
+export function partition(files, kinds, options = {}) {
   const accepted = []
   const rejected = []
 
   files.forEach((file) => {
-    const entry = validate(file, kinds)
+    const entry = validate(file, kinds, options)
     if (entry.rejected) rejected.push(entry.rejected)
     else accepted.push(entry)
   })

@@ -56,9 +56,12 @@ test.describe('Multi blocks: dropping media', () => {
     await syncLV(page)
   }
 
-  // Files dropped on `target` as the browser drops them
+  // Files dropped on `target` as the browser drops them: `[name, type]`, or
+  // `[name, type, fixture]` for a fixture's bytes under another name
   const drop = async (page, target, files) => {
-    const payload = files.map(([name, type]) => ({ name, type, bytes: [...fs.readFileSync(`./fixtures/${name}`)] }))
+    const payload = files.map(([name, type, fixture = name]) => ({
+      name, type, bytes: [...fs.readFileSync(`./fixtures/${fixture}`)],
+    }))
     const transfer = await page.evaluateHandle(files => {
       const transfer = new DataTransfer()
       for (const { name, type, bytes } of files) transfer.items.add(new File([new Uint8Array(bytes)], name, { type }))
@@ -133,6 +136,17 @@ test.describe('Multi blocks: dropping media', () => {
     await expect(page.getByRole('dialog').filter({ hasText: 'test.pdf' })).toBeVisible()
     await expect(entries(row)).toHaveCount(1)
     await expect(field(entries(row).first())).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+  })
+
+  // The upload manager takes an image by its extension, whatever its type says
+  test('an image with an extension the upload refuses makes no entry and is reported', async ({ page }) => {
+    await createPage(page, 'Media drop extension', group, 'Image Row')
+    const row = rows(page).first()
+
+    await drop(page, rowBlock(row), [['photo.bin', 'image/jpeg', 'image.jpg']])
+
+    await expect(page.getByRole('dialog').filter({ hasText: 'photo.bin' })).toBeVisible()
+    await expect(entries(row)).toHaveCount(0)
   })
 
   test('an entry whose upload is cancelled goes again', async ({ page }) => {
