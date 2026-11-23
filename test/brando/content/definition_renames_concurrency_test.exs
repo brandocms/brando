@@ -14,6 +14,7 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
   alias Brando.Pages.Page
   alias Brando.ProposalFixtures
   alias Ecto.Adapters.SQL.Sandbox
+  alias Ecto.Changeset
 
   @repo Brando.Repo.repo()
 
@@ -65,6 +66,8 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
     editor =
       Task.async(fn ->
         unboxed(fn ->
+          send(test, {:editor, backend_pid()})
+
           @repo.update_all(from(v in Var, where: v.block_id == ^block.id and v.key == "heading"),
             set: [value: "Typed meanwhile"]
           )
@@ -72,7 +75,7 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
       end)
 
     # The editor's write waits for the apply's lock on the values
-    refute Task.yield(editor, 500)
+    await_blocked!()
     send(apply.pid, :go)
 
     assert {:ok, _} = Task.await(apply, 30_000)
@@ -89,6 +92,97 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
                  )
                )
     end)
+  end
+
+  test "an editor's save that Postgres cancels to break a deadlock with the apply raises, and the apply lands", %{
+    path: path
+  } do
+    {user, page, block, plan} = unboxed(fn -> rename_fixture!(path) end)
+
+    test = self()
+    handler = "renames-deadlock-#{System.unique_integer([:positive])}"
+
+    apply =
+      Task.async(fn ->
+        receive do
+          :start -> unboxed(fn -> Definitions.apply(plan, user) end)
+        end
+      end)
+
+    # The apply stops once it holds the definition tables, before it locks
+    # the blocks
+    :telemetry.attach(
+      handler,
+      @repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, apply_pid ->
+        if self() == apply_pid and metadata.query =~ "LOCK TABLE" do
+          send(test, :locked)
+
+          receive do
+            :go -> :ok
+          end
+        end
+      end,
+      apply.pid
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    send(apply.pid, :start)
+    assert_receive :locked, 10_000
+
+    # The editor's save writes the block's row, then waits for the apply's
+    # table lock to write its vars; the apply then waits for the block
+    editor =
+      Task.async(fn ->
+        unboxed(fn ->
+          send(test, {:editor, backend_pid()})
+
+          try do
+            page |> editor_save(block, "Typed by the editor") |> Brando.Pages.update_page(user)
+          rescue
+            error -> error
+          end
+        end)
+      end)
+
+    await_blocked!()
+    send(apply.pid, :go)
+
+    assert {:ok, _} = Task.await(apply, 30_000)
+    assert %Postgrex.Error{postgres: %{code: :deadlock_detected}} = Task.await(editor, 30_000)
+
+    unboxed(fn ->
+      assert [%Var{key: "heading", value: "Kept words"}] =
+               @repo.all(from(v in Var, where: v.block_id == ^block.id and v.key in ["heading", "tagline"]))
+    end)
+  end
+
+  # The entry `page` as the editor saves it: `block` rendered again, with
+  # `value` typed into its tagline
+  defp editor_save(page, block, value) do
+    page = @repo.preload(page, entry_blocks: [block: [:vars, :refs]])
+
+    entry_blocks =
+      Enum.map(page.entry_blocks, fn
+        %{block_id: id} = entry_block when id == block.id ->
+          vars =
+            Enum.map(entry_block.block.vars, fn
+              %{key: "tagline"} = var -> Changeset.change(var, value: value)
+              var -> Changeset.change(var)
+            end)
+
+          block =
+            entry_block.block
+            |> Changeset.change(rendered_html: "<p>#{value}</p>")
+            |> Changeset.put_assoc(:vars, vars)
+
+          entry_block |> Changeset.change() |> Changeset.put_assoc(:block, block)
+
+        entry_block ->
+          Changeset.change(entry_block)
+      end)
+
+    page |> Changeset.change() |> Changeset.put_assoc(:entry_blocks, entry_blocks)
   end
 
   # A module whose file renames var tagline to heading; one page's first
@@ -139,6 +233,24 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
   end
 
   defp unboxed(fun), do: Sandbox.unboxed_run(@repo, fun)
+
+  defp backend_pid, do: hd(hd(@repo.query!("SELECT pg_backend_pid()").rows))
+
+  # Until Postgres reports the editor's connection waiting for another's lock
+  defp await_blocked! do
+    assert_receive {:editor, pid}, 10_000
+    await_blocked!(pid, 500)
+  end
+
+  defp await_blocked!(pid, tries) do
+    blocked? = unboxed(fn -> hd(hd(@repo.query!("SELECT pg_blocking_pids($1) <> '{}'", [pid]).rows)) end)
+
+    cond do
+      blocked? -> :ok
+      tries == 0 -> flunk("the editor's connection never waited for the apply")
+      true -> Process.sleep(20) && await_blocked!(pid, tries - 1)
+    end
+  end
 
   # The last id of each table, and of the revisions (keyed by entry)
   defp last_ids do

@@ -623,7 +623,48 @@ defmodule Brando.Content.DefinitionRenamesTest do
 
       assert [%{action: :migration_required, moves: %{entries: []}, reason: reason}] = plan!(c).items
       assert reason =~ "would move values in 1506 blocks,"
-      assert reason =~ "mix brando.modules resolve --map var:tagline=heading"
+    end
+
+    test "with a refusal whose resolve command runs as printed once renamed_from is out of the file", c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+
+      [%{action: :migration_required, reason: reason}] = plan!(c).items
+      [command] = Regex.run(~r/mix brando\.modules resolve .*--apply/, reason)
+
+      assert command ==
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      edit!(c, ~s(\n      renamed_from "tagline"), "")
+      import!(c)
+      assert var(held, "tagline").value == "Kept words"
+
+      command |> String.split() |> Enum.drop(2) |> run_task()
+      assert var(held, "heading").value == "Kept words"
+      assert var(held, "tagline") == nil
+    end
+
+    test "with a resolve command that leaves out the renames no block holds a value of", c do
+      bare_blocks!(c, c.module, "tagline", 1500)
+      Repo.delete_all(from(r in Ref, join: b in Block, on: b.id == r.block_id, where: b.module_id == ^c.module.id))
+      rename_tagline!(c)
+      rename_body!(c)
+
+      [%{action: :migration_required, reason: reason}] = plan!(c).items
+      [command] = Regex.run(~r/mix brando\.modules resolve .*--apply/, reason)
+
+      assert command ==
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+    end
+
+    test "with a resolve command whose user is a placeholder when the plan has none", c do
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+
+      {:ok, bundle} = Definitions.read(c.path)
+      {:ok, %{items: [%{reason: reason}]}} = Definitions.plan(bundle, :system, creator: :none)
+      assert reason =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID --map var:tagline=heading --apply"
     end
 
     test "to as many blocks across the modules an apply selects", c do
@@ -658,10 +699,18 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert [%{action: :update}, %{action: :update}] = plan.items
       assert {:error, reason} = Definitions.apply(plan, c.user)
       assert reason =~ "would move values in 1506 blocks of 2 entries"
+      # One command per module, as resolve takes one module
+      assert reason =~
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      assert reason =~ "mix brando.modules resolve --uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
 
       {:ok, bundle} = Definitions.read(path)
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
       assert [%{action: :migration_required}, %{action: :migration_required}] = plan.items
+      card_item = Enum.find(plan.items, &(&1.uid == card.uid))
+      assert card_item.reason =~ "--uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
+      refute card_item.reason =~ "--uid #{c.module.uid}"
 
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid])
       assert %{action: :update} = Enum.find(plan.items, &(&1.uid == c.module.uid))
@@ -732,6 +781,17 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert %{refused: [counted]} = Renames.plan(record, module, rename, nobody)
       refute counted =~ "Identity"
       assert counted =~ "(in 1 entry you cannot open)"
+    end
+  end
+
+  describe "an over-limit refusal of several modules" do
+    test "a module no block holds a value of is told to apply fewer, with no empty command" do
+      totals = %{blocks: 1_600, entries: 40, modules: 2}
+      empty = [%{kind: :var, from: "caption", to: "text", blocks: 0}]
+      held = [%{kind: :var, from: "tagline", to: "heading", blocks: 1_600}]
+
+      refute Renames.over_limit_text([{"empty-module", empty}], totals, nil) =~ "resolve"
+      assert Renames.over_limit_text([{"held-module", held}], totals, nil) =~ "mix brando.modules resolve"
     end
   end
 
