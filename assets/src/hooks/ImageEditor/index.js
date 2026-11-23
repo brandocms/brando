@@ -253,7 +253,6 @@ export default app => ({
     this.cropGroups = payload.crop_groups || []
     this.zoom = 1
     this.freeformMode = this.cropGroups.length === 0
-    this.fromBlock = !!payload.from_block
     this.imageId = payload.image_id || null
     this.configTarget = payload.config_target || null
 
@@ -1442,53 +1441,31 @@ export default app => ({
     const focalY = Math.round(this.focalY)
     const focalMode = this.focalMode
 
-    if (this.fromBlock) {
-      const configTarget = this.configTarget
+    const configTarget = this.configTarget
 
-      exportCanvas.toBlob((blob) => {
-        if (!blob) return
+    exportCanvas.toBlob((blob) => {
+      if (!blob) return
 
-        // Store focal and config_target on the server before triggering upload
-        this.pushEventTo(this.el, 'image_editor_save', {
-          mode: 'new_copy',
-          focal_x: focalX,
-          focal_y: focalY,
-          focal_mode: focalMode,
-          config_target: configTarget || 'default'
-        })
+      // Store focal and config_target on the server before triggering upload
+      this.pushEventTo(this.el, 'image_editor_save', {
+        mode: 'new_copy',
+        focal_x: focalX,
+        focal_y: focalY,
+        focal_mode: focalMode,
+        config_target: configTarget || 'default'
+      })
 
-        const file = new File([blob], this.copyFilename(), { type: 'image/jpeg' })
+      const file = new File([blob], this.copyFilename(), { type: 'image/jpeg' })
 
-        // Forward to LiveView upload
-        const liveInput = document.querySelector('input[name="image_editor_upload"]')
-        if (liveInput) {
-          const formEl = liveInput.closest('form')
-          if (formEl) {
-            this.uploadTo(`#${formEl.id}`, 'image_editor_upload', [file])
-          }
+      // Forward to LiveView upload
+      const liveInput = document.querySelector('input[name="image_editor_upload"]')
+      if (liveInput) {
+        const formEl = liveInput.closest('form')
+        if (formEl) {
+          this.uploadTo(`#${formEl.id}`, 'image_editor_upload', [file])
         }
-      }, 'image/jpeg', 0.95)
-    } else {
-      exportCanvas.toBlob((blob) => {
-        if (!blob) return
-
-        const uploadInput = document.querySelector('#image-drawer-form input[type="file"]')
-        if (uploadInput) {
-          const file = new File([blob], this.copyFilename(), { type: 'image/jpeg' })
-          const dataTransfer = new DataTransfer()
-          dataTransfer.items.add(file)
-          uploadInput.files = dataTransfer.files
-          uploadInput.dispatchEvent(new Event('change', { bubbles: true }))
-
-          this.pushEventTo(this.el, 'image_editor_save', {
-            mode: 'new_copy',
-            focal_x: focalX,
-            focal_y: focalY,
-            focal_mode: focalMode
-          })
-        }
-      }, 'image/jpeg', 0.95)
-    }
+      }
+    }, 'image/jpeg', 0.95)
   },
 
   // A copy is named after the image it was made from ("lobby-copy.jpg"),

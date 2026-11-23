@@ -903,10 +903,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     crop_groups = build_crop_groups_for(image)
 
-    # `from_block`: the editor's copy goes through the form's own editor
-    # upload, which hands it back here (`image_editor_new_copy`), as from a
-    # block. The other route fills the image drawer's file input, and this
-    # field has no image drawer.
+    # The editor's copy is handed back here (`image_editor_new_copy`), as to
+    # a block.
     {:noreply,
      push_event(socket, "b:image_editor:init", %{
        image_src: Utils.img_url(image, :original, prefix: Utils.media_url()),
@@ -917,7 +915,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
        focal_y: (image.focal && image.focal.y) || 50,
        focal_mode: Brando.Images.Focal.mode(image.focal),
        crop_groups: crop_groups,
-       from_block: true,
        # The gallery's: an image picked from the library keeps the target it
        # was uploaded for, another field's, which the copy is not for
        config_target: socket.assigns.config_target

@@ -20169,6 +20169,11 @@ msgstr ""
 msgid "The conventions the content assistant follows when it builds content for editors."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The copy is in the library. The form could not add it to the field it was made for."
+msgstr ""
+
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "The copy is loaded into the editor. Nothing changes here until you save it."

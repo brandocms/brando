@@ -21,7 +21,11 @@ defmodule BrandoAdmin.UploadManagerReceivedTest do
         allowed_mimetypes: ["image/jpeg", "image/svg+xml"],
         random_filename: false,
         size_limit: 1_000_000,
-        sizes: %{"thumb" => %{"size" => "150x150", "quality" => 70, "crop" => true}}
+        # A field shows an image at its smallest size other than "thumb"
+        sizes: %{
+          "thumb" => %{"size" => "150x150", "quality" => 70, "crop" => true},
+          "small" => %{"size" => "300", "quality" => 70}
+        }
       })
     )
 

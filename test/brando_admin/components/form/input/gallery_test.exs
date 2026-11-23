@@ -520,7 +520,6 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       assert [payload] =
                for(["b:image_editor:init", payload] <- Phoenix.LiveView.Utils.get_push_events(socket), do: payload)
 
-      assert payload.from_block
       assert payload.config_target == gallery_target
     end
 

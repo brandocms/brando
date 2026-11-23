@@ -1,0 +1,2 @@
+- "Save as new copy" in the image editor opened from an image field's drawer gives a copy with the original's focal point and focal mode, not one cut around the centre.
+- "Save as new copy" from the image picker's "Edit image", when the picker was opened by a block, a var or a gallery, keeps the copy in the library: it no longer replaces the image of the field whose drawer was open last.
