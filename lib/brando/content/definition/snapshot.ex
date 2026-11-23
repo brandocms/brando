@@ -77,7 +77,7 @@ defmodule Brando.Content.Definition.Snapshot do
 
     {selected_palettes, selected_containers} =
       if Keyword.get(opts, :styles, true),
-        do: select_styles(opts[:uids], palettes, containers, definitions),
+        do: select_styles(opts[:uids], palettes, containers, definitions ++ table_definitions),
         else: {[], []}
 
     bundle = %{
@@ -112,8 +112,8 @@ defmodule Brando.Content.Definition.Snapshot do
 
   # The local palettes and containers an export writes (a shared-library
   # override is the library's): every one, or those `uids` names, with the
-  # palettes the selected containers and modules point at
-  defp select_styles(uids, palettes, containers, modules) do
+  # palettes the selected containers, modules and table templates point at
+  defp select_styles(uids, palettes, containers, with_vars) do
     local_palettes = Enum.filter(palettes, &is_nil(&1.source_palette_id))
     local_containers = Enum.filter(containers, &is_nil(&1.source_container_id))
 
@@ -122,7 +122,7 @@ defmodule Brando.Content.Definition.Snapshot do
     else
       selected_containers = Enum.filter(local_containers, &(&1.uid in uids))
       by_id = Map.new(palettes, &{&1.id, &1.uid})
-      used = for module <- modules, var <- module["vars"], token = var["assets"]["palette"], do: token
+      used = for definition <- with_vars, var <- definition["vars"], token = var["assets"]["palette"], do: token
 
       named =
         MapSet.new(uids ++ used ++ for(container <- selected_containers, uid = by_id[container.palette_id], do: uid))

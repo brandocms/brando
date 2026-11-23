@@ -377,6 +377,20 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert %{action: :conflict} = Enum.find(plan.items, &(&1.uid == palette.uid))
     end
 
+    test "a selected module brings the palette only its table template's var names, in apply and export", c do
+      palette = palette!(c.user)
+      palette!(c.user, %{"key" => "other", "name" => "Other"})
+      write_priced!(c.path, palette.uid)
+      import!(read!(c.path), c.user)
+
+      exported = export!(c, "selected", uids: ["priced"])
+      assert Enum.map(exported["table_templates"], & &1["uid"]) == ["acme-prices"]
+      assert Enum.map(exported["palettes"], & &1["uid"]) == [palette.uid]
+
+      assert {:ok, %{selection: selection}} = Definitions.plan(export!(c), c.user, select: ["priced"])
+      assert MapSet.equal?(selection, MapSet.new(["priced", "acme-prices", palette.uid]))
+    end
+
     test "the apply locks and rechecks palettes and containers: an edit or a trashed palette since planning is no overwrite",
          c do
       import!(read!(fixtures!(c.path, ~w(paper tinted))), c.user)
@@ -823,6 +837,36 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       end
 
       template :liquid, "<div>{{ theme }}</div>"
+    end
+    """)
+  end
+
+  defp write_priced!(path, palette_uid) do
+    File.write!(Path.join(path, "prices.exs"), """
+    defmodule Prices do
+      use Brando.Content.Definition
+      kind :table_template
+      uid "acme-prices"
+      name "Prices"
+
+      vars do
+        var :tone, :color do
+          label "Tone"
+          assets palette: #{inspect(palette_uid)}
+        end
+      end
+    end
+    """)
+
+    File.write!(Path.join(path, "priced.exs"), """
+    defmodule Priced do
+      use Brando.Content.Definition
+      uid "priced"
+      name en: "Priced"
+      namespace en: "Sections"
+      class "priced"
+      table_template Prices
+      template :liquid, "<div></div>"
     end
     """)
   end

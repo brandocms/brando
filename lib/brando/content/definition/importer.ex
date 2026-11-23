@@ -83,7 +83,7 @@ defmodule Brando.Content.Definition.Importer do
   end
 
   # A selected module brings its whole tree (root, siblings and descendants),
-  # the table templates the tree uses and the palettes its vars name; a
+  # the table templates the tree uses and the palettes their vars name; a
   # container brings its palette: what the export selects too. Each is in
   # the bundle, or here.
   defp select_trees!(bundle, uids) do
@@ -102,7 +102,7 @@ defmodule Brando.Content.Definition.Importer do
       Map.has_key?(lookup.modules, uid) ->
         tree = uid |> root(lookup.parents) |> descendants(lookup.modules)
         tables = for tree_uid <- tree, table = lookup.modules[tree_uid]["table_template"], do: table
-        tree ++ tables ++ Enum.filter(palette_tokens(bundle, tree), &MapSet.member?(lookup.palettes, &1))
+        tree ++ tables ++ Enum.filter(palette_tokens(bundle, tree ++ tables), &MapSet.member?(lookup.palettes, &1))
 
       Map.has_key?(lookup.containers, uid) ->
         palette = lookup.containers[uid]["palette"]
@@ -116,11 +116,11 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
-  # The palettes the vars of the modules `uids` name by uid
+  # The palettes the vars of the modules and table templates `uids` name by uid
   defp palette_tokens(bundle, uids) do
-    for module <- bundle["modules"],
-        module["uid"] in uids,
-        var <- module["vars"],
+    for definition <- bundle["modules"] ++ bundle["table_templates"],
+        definition["uid"] in uids,
+        var <- definition["vars"],
         token = var["assets"]["palette"],
         binding = get_in(bundle, ["references", token]) || %{},
         not Map.has_key?(binding, "id"),

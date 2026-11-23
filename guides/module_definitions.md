@@ -24,7 +24,7 @@ the same definitions, authorization checks and importer as the CLI.
 1. Choose **Prepare export**, then **Download ZIP** for all local modules in the
    current workspace. To export particular modules, select their listing rows and
    choose **Export DSL files**. Child modules, required table templates and the
-   palettes their vars name travel with the selected module trees. The full
+   palettes the vars of either name travel with the selected module trees. The full
    export has every local palette and container.
 2. Unzip the bundle, edit its `.exs`, `.heex` or `.liquid` files, and zip them
    together with `modules.lock.json`. Files may be at the archive root or inside
@@ -789,7 +789,8 @@ modules, so a container or a var can point at a palette the same import
 creates. A container whose palette is neither in the files nor here is
 refused when planning, by name; a palette in the trash doesn't count.
 Selecting a container brings its palette, and selecting a module brings the
-palettes its vars name (`--uid`, `select:`, a release apply), so a selection
+palettes its vars and its table template's vars name (`--uid`, `select:`, a
+release apply), so a selection
 whose palette is a conflict is refused.
 
 An update replaces a palette's colours as a set, the definition being the
@@ -806,8 +807,11 @@ Palettes and containers saved in the admin get a uid of their own. The
 `brando_245` upgrade migration gives existing ones a uid derived from what
 two environments seeded alike share, `palette-<namespace>-<key>` and
 `container-<namespace>-<name>`, so the first import of one environment's
-files into the other adopts its rows instead of creating copies. Within one
-bundle, and here, a uid belongs to one kind.
+files into the other adopts its rows instead of creating copies; a derived
+uid another definition of any kind has gets `-2`, `-3`, …. Within one
+bundle, and here, a uid belongs to one kind, the trash included: a palette
+is refused the uid of a module in the trash, which a restore would bring
+back.
 
 ## Media and content references
 
