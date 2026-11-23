@@ -3376,6 +3376,23 @@ defmodule Brando.Content.Proposals do
 
   defp supersede!(nil, _actor), do: nil
 
+  # A change left out (`leave_out/4`): the version read must still be under
+  # review, deadline included, under the lock that supersedes it.
+  defp supersede!({id, version}, actor) do
+    previous = record!(id, actor, lock: true)
+
+    cond do
+      previous.version != version or previous.status not in ~w(pending approved) ->
+        Error.fail!(dgettext("content_proposals", "This proposal is no longer under review."))
+
+      DateTime.compare(previous.expires_at, DateTime.utc_now()) != :gt ->
+        Error.fail!(dgettext("content_proposals", "This proposal has expired. Prepare it again."))
+
+      true ->
+        previous |> Changeset.change(status: "superseded") |> Repo.update!()
+    end
+  end
+
   defp supersede!(id, actor) do
     previous = record!(id, actor, lock: true)
 
@@ -3816,7 +3833,8 @@ defmodule Brando.Content.Proposals do
   defp propose_remaining([], _record, _id, _actor),
     do: {:error, dgettext("content_proposals", "Nothing would be left. Discard the proposal instead.")}
 
-  defp propose_remaining(rest, record, id, actor), do: propose(rest, actor, supersedes: id, summary: record.summary)
+  defp propose_remaining(rest, record, id, actor),
+    do: propose(rest, actor, supersedes: {id, record.version}, summary: record.summary)
 
   defp under_review!(id, version, actor) do
     record = record!(id, actor)
