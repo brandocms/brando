@@ -59,7 +59,8 @@ defmodule Brando.Doctor.Checks.Oban do
     :site_usage in queues and scheduled?(oban, Brando.Worker.SiteUsage)
   end
 
-  defp scheduled?(oban, worker) when is_list(oban) do
+  @doc "Whether the Oban configuration schedules `worker`."
+  def scheduled?(oban, worker) when is_list(oban) do
     worker = inspect(worker)
     plugins = if is_list(oban[:plugins]), do: oban[:plugins], else: []
     cron = if is_list(oban[:cron]), do: oban[:cron], else: []
@@ -77,7 +78,7 @@ defmodule Brando.Doctor.Checks.Oban do
     end)
   end
 
-  defp scheduled?(_oban, _worker), do: false
+  def scheduled?(_oban, _worker), do: false
 
   @doc """
   Turns what was found into a result. `findings` has `:testing` (Oban's

@@ -9,8 +9,9 @@ defmodule Brando.Worker.SiteUsage do
   measured all the same. Outside `tenancy_mode: :multi` it does nothing, also
   when it was queued before the mode changed.
 
-  Brando's default Oban configuration schedules it and runs its `site_usage`
-  queue. An application with its own `config :brando, Oban` adds both:
+  With `tenancy_mode: :multi`, Brando's default Oban configuration schedules
+  it and runs its `site_usage` queue. An application with its own
+  `config :brando, Oban` adds both on a `:multi` installation:
 
       queues: [site_usage: [limit: 1], ...],
       cron: [crontab: [{"30 5 * * *", Brando.Worker.SiteUsage, args: %{"all" => true}}, ...]]

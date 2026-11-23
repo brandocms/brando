@@ -109,6 +109,79 @@ defmodule Brando.Worker.SiteUsageTest do
       assert Measure.site(acme).media_bytes == 700
     end
 
+    test "never follows a link between the site's folder and its builds", %{acme: acme, beta: beta} do
+      write(Path.join([Builds.build_root(beta), "v1", "index.html"]), 900)
+      File.mkdir_p!(Storage.site_root(acme))
+      # The site's `ssg` is a link into another site's
+      File.ln_s!(Path.join(Storage.site_root(beta), "ssg"), Path.join(Storage.site_root(acme), "ssg"))
+
+      assert Measure.site(acme).builds_bytes == 0
+
+      File.rm!(Path.join(Storage.site_root(acme), "ssg"))
+      File.mkdir_p!(Path.join(Storage.site_root(acme), "ssg"))
+      # Its `builds` is
+      File.ln_s!(Builds.build_root(beta), Builds.build_root(acme))
+
+      assert Measure.site(acme).builds_bytes == 0
+      assert Measure.site(beta).builds_bytes == 900
+    end
+
+    test "a site keyed archive has its own schemas, not archives" do
+      {:ok, site} = SiteAssetsFixtures.create_site("Archive", "archive", "archive.usage-job.test")
+      live = create_schema("tenant_archive_production", 1)
+      archived = create_schema("tenant_archive_production_archive_20261101120000", 1)
+
+      assert Enum.sort_by(Measure.site(site).databases, & &1["schema"]) == [
+               %{
+                 "schema" => "tenant_archive_production",
+                 "environment" => "production",
+                 "archive" => false,
+                 "bytes" => live
+               },
+               %{
+                 "schema" => "tenant_archive_production_archive_20261101120000",
+                 "environment" => "production",
+                 "archive" => true,
+                 "bytes" => archived
+               }
+             ]
+    end
+
+    test "archives of a site with a long key, whose names are cut short" do
+      # 23 and 30 characters: the archive names are cut inside the key, or
+      # right after it
+      for key <- ["usage-job-long-key-abcd", "usage-job-a-very-long-key-abcd"] do
+        {:ok, site} = SiteAssetsFixtures.create_site("Long", key, "#{key}.usage-job.test")
+        base = "tenant_#{key}_production"
+        hash = :sha256 |> :crypto.hash(base) |> Base.encode16(case: :lower) |> binary_part(0, 8)
+        cut = "#{binary_part(base, 0, 31)}_archive_20261101120000_#{hash}"
+        live = create_schema(base, 1)
+        archived = create_schema(cut, 1)
+
+        assert Enum.sort_by(Measure.site(site).databases, & &1["archive"]) == [
+                 %{"schema" => base, "environment" => "production", "archive" => false, "bytes" => live},
+                 %{"schema" => cut, "environment" => "production", "archive" => true, "bytes" => archived}
+               ]
+      end
+    end
+
+    test "an archive whose cut name no environment of the site carries any more is the site's when its log says so" do
+      key = "usage-job-a-very-long-key-abcd"
+      {:ok, site} = SiteAssetsFixtures.create_site("Long", key, "#{key}.usage-job.test")
+      cut = "#{binary_part("tenant_#{key}_gone", 0, 31)}_archive_20261101120000_0123abcd"
+      # Another site's, with the same first characters
+      other = "#{binary_part("tenant_#{key}_gone", 0, 31)}_archive_20261101120000_4567abcd"
+      archived = create_schema(cut, 1)
+      create_schema(other, 1)
+
+      Repo.insert!(%Brando.Environments.OperationLog{site_id: site.id, operation: :copy, archive_schema: cut})
+
+      assert %{"schema" => ^cut, "environment" => nil, "archive" => true, "bytes" => ^archived} =
+               Enum.find(Measure.site(site).databases, & &1["archive"])
+
+      assert Enum.count(Measure.site(site).databases, & &1["archive"]) == 1
+    end
+
     test "the free space of the volume holding a path", %{root: root} do
       assert Measure.free_bytes(root) > 0
       assert Measure.free_bytes(Path.join(root, "missing")) == nil
@@ -123,6 +196,12 @@ defmodule Brando.Worker.SiteUsageTest do
 
     test "a schema that does not exist has no size" do
       assert Measure.schema_bytes("tenant_usage-job-gone_production") == nil
+    end
+
+    # Any other failure fails the measurement, so the site keeps its last
+    # snapshot instead of a smaller total. It ends the test's transaction.
+    test "a sizing query that fails raises" do
+      assert_raise Postgrex.Error, fn -> Measure.schema_bytes("tenant_usage-job-bad\0name") end
     end
   end
 

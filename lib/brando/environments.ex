@@ -1082,7 +1082,9 @@ defmodule Brando.Environments do
       else: candidate
   end
 
-  defp archive_prefix(base_prefix, timestamp) do
+  @doc false
+  # The archive's name; one too long is cut short (`Brando.Sites.Usage.Measure` reads it)
+  def archive_prefix(base_prefix, timestamp) do
     full = "#{base_prefix}_archive_#{timestamp}"
 
     if byte_size(full) <= 63 do
