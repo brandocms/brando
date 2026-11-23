@@ -37,15 +37,15 @@ defmodule Brando.Villain.Blocks.MediaBlock do
 
   @doc """
   The block a media ref holds once `type` is chosen for it: a block of that
-  type with the ref's template for it (`template_picture` and so on), or the
-  type's empty data when the ref has none. `data` is the media ref's `Data`,
-  or nil.
+  type with the ref's template for it (`template_picture` and so on). With
+  no template its data is nil, except a file's, which is its empty data.
+  `data` is the media ref's `Data`, or nil.
   """
   def typed(data, "picture"), do: %Blocks.PictureBlock{type: "picture", data: template(data, :template_picture)}
   def typed(data, "video"), do: %Blocks.VideoBlock{type: "video", data: template(data, :template_video)}
   def typed(data, "gallery"), do: %Blocks.GalleryBlock{type: "gallery", data: template(data, :template_gallery)}
   def typed(data, "svg"), do: %Blocks.SvgBlock{type: "svg", data: template(data, :template_svg)}
-  def typed(data, "file"), do: %Blocks.FileBlock{type: "file", data: template(data, :template_file)}
+  def typed(data, "file"), do: %Blocks.FileBlock{type: "file", data: file_template(data)}
 
   @doc """
   The types a media ref with `data` lets an editor choose.
@@ -53,13 +53,7 @@ defmodule Brando.Villain.Blocks.MediaBlock do
   def available_blocks(%{available_blocks: types}) when is_list(types), do: types
   def available_blocks(_data), do: ["picture", "video"]
 
-  @templates %{
-    template_picture: Blocks.PictureBlock.Data,
-    template_video: Blocks.VideoBlock.Data,
-    template_gallery: Blocks.GalleryBlock.Data,
-    template_svg: Blocks.SvgBlock.Data,
-    template_file: Blocks.FileBlock.Data
-  }
+  defp template(data, key), do: data && Map.get(data, key)
 
-  defp template(data, key), do: (data && Map.get(data, key)) || struct(Map.fetch!(@templates, key))
+  defp file_template(data), do: template(data, :template_file) || %Blocks.FileBlock.Data{}
 end
