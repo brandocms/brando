@@ -318,18 +318,25 @@ defmodule Brando.Content.Module do
   them (`media_drop_issue/2`), against the module's children, loaded here
   when the caller did not. A module not yet stored has none to check the
   child against, and is checked as far as it can be: a shared-library
-  override copies the setting without the children. Turning `multi` off
-  clears the setting. A stored setting gone stale is left for the module
-  editor to show, and never blocks a save of another field.
+  override copies the setting without the children. A definitions import
+  passes `media_drop_checked: true`: its files were checked against each
+  other (`Brando.Content.Definition.Model.validate_graph!/1`), and may add
+  the child or rename its ref in the same import. Turning `multi` off clears
+  the setting. A stored setting gone stale is left for the module editor to
+  show, and never blocks a save of another field.
   """
-  def validate_media_drop(changeset) do
+  def validate_media_drop(changeset, opts \\ []) do
     cond do
       Changeset.changed?(changeset, :media_drop_child) or Changeset.changed?(changeset, :media_drop_ref) ->
         module = Changeset.apply_changes(changeset)
+        children = if opts[:media_drop_checked], do: nil, else: fn -> media_drop_children(changeset.data) end
 
-        case media_drop_issue(module, fn -> media_drop_children(changeset.data) end) do
-          nil -> changeset
-          {field, message, keys} -> Changeset.add_error(changeset, field, message, keys)
+        case media_drop_issue(module, children) do
+          nil ->
+            changeset
+
+          {field, message, keys} ->
+            Changeset.add_error(changeset, field, message, keys)
         end
 
       Changeset.changed?(changeset, :multi) and Changeset.get_field(changeset, :multi) != true ->

@@ -228,6 +228,53 @@ defmodule Brando.Content.ModuleMediaDropTest do
       assert Repo.get_by!(Module, uid: "image-row").media_drop_ref == "photo"
     end
 
+    test "change it together with a new child it names", %{user: user, directory: directory} do
+      image_row(user)
+      assert {:ok, _exported} = Definitions.export(directory, user, uids: ["image-row"])
+      assert {:ok, bundle} = Definitions.read(directory)
+
+      # A new child, image-tile, added under the row and named by its setting in the same files
+      tile =
+        definition(bundle, "image-card")
+        |> Map.merge(%{"uid" => "image-tile", "class" => "image-tile"})
+        |> Map.update!("refs", fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
+
+      bundle =
+        bundle
+        |> Map.update!("modules", &(&1 ++ [tile]))
+        |> update_row(fn row ->
+          row
+          |> Map.update!("children", &(&1 ++ ["image-tile"]))
+          |> Map.merge(%{"media_drop_child" => "image-tile", "media_drop_ref" => "photo"})
+        end)
+
+      assert_imports_then_noop(bundle, user)
+      assert %{media_drop_child: "image-tile", media_drop_ref: "photo"} = Repo.get_by!(Module, uid: "image-row")
+    end
+
+    test "change it together with the name of the child's ref it names", %{user: user, directory: directory} do
+      image_row(user, %{media_drop_child: "image-card", media_drop_ref: "visual"})
+      assert {:ok, _exported} = Definitions.export(directory, user, uids: ["image-row"])
+      assert {:ok, bundle} = Definitions.read(directory)
+
+      bundle =
+        bundle
+        |> put_in(
+          [
+            "modules",
+            Access.filter(&(&1["uid"] == "image-card")),
+            "refs",
+            Access.filter(&(&1["name"] == "visual")),
+            "name"
+          ],
+          "still"
+        )
+        |> update_row(&Map.put(&1, "media_drop_ref", "still"))
+
+      assert_imports_then_noop(bundle, user)
+      assert %{media_drop_child: "image-card", media_drop_ref: "still"} = Repo.get_by!(Module, uid: "image-row")
+    end
+
     test "leave out a setting gone stale, so the export still reads and plans as a noop",
          %{user: user, directory: directory} do
       {_row, card} = image_row(user, %{media_drop_child: "image-card", media_drop_ref: "visual"})
@@ -283,6 +330,17 @@ defmodule Brando.Content.ModuleMediaDropTest do
       assert {:ok, bundle} = Definitions.read(directory)
       assert %{"media_drop_child" => "image-card", "media_drop_ref" => "photo"} = row_definition(bundle)
     end
+  end
+
+  defp update_row(bundle, fun),
+    do: update_in(bundle, ["modules", Access.filter(&(&1["uid"] == "image-row"))], fun)
+
+  defp assert_imports_then_noop(bundle, user) do
+    assert {:ok, plan} = Definitions.plan(bundle, user)
+    assert {:ok, _} = Definitions.apply(plan, user)
+    # Against what was applied: the lockfile in the files is not rewritten here
+    assert {:ok, %{items: items}} = Definitions.plan(bundle, user, baseline: :database)
+    assert Enum.all?(items, &(&1.action == :noop)), inspect(Enum.map(items, &{&1.uid, &1.action, &1.reason}))
   end
 
   defp definition(bundle, uid), do: Enum.find(bundle["modules"], &(&1["uid"] == uid))

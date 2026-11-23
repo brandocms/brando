@@ -4,7 +4,7 @@ defmodule Brando.Trait.ValidateMediaDrop do
   """
   use Brando.Trait
 
-  def changeset_mutator(_, _, changeset, _, _) do
-    Brando.Content.Module.validate_media_drop(changeset)
+  def changeset_mutator(_, _, changeset, _, opts) do
+    Brando.Content.Module.validate_media_drop(changeset, opts)
   end
 end
