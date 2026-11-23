@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   import Phoenix.Component
   import BrandoAdmin.Utils, only: [send_to_ref: 2]
   alias BrandoAdmin.Components.Form.Block
+  alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias Ecto.Changeset
@@ -689,6 +690,27 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       type: :module_entry,
       sequence: sequence,
       parent_ref: parent_ref
+    )
+
+    {:halt, socket}
+  end
+
+  # Dropped into another multi block of this module (the drag group,
+  # `Block.multi_children_group/2`). The block field moves it: it holds the
+  # store, which takes the move before either parent shows it.
+  def handle_block_event(
+        "reposition",
+        %{"uid" => uid, "new" => at, "to" => %{"parentUid" => parent_uid}},
+        %{assigns: %{uid: own_uid}} = socket
+      )
+      when parent_uid != own_uid do
+    send_update(BlockField,
+      id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",
+      event: "move_child",
+      uid: uid,
+      parent_uid: parent_uid,
+      at: at,
+      from_uid: own_uid
     )
 
     {:halt, socket}

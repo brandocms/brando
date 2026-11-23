@@ -19,7 +19,9 @@ For exporting modules to editable Elixir DSL and importing changes back, see
   `type: :module` renders the module named by its `module_id`.
 - **Multi module** — a module with `multi: true` whose template renders child
   blocks. Each child is a block with `type: :module_entry`; these are distinct
-  from blocks nested inside a container.
+  from blocks nested inside a container. An editor drags an entry to another
+  block of the same multi module, an empty one too, on the canvas or in the
+  block outline; a block of another module does not take it.
 - **Module set** (`Brando.Content.ModuleSet`) — a named subset of modules that
   a `blocks` form field offers via `module_set:`.
 

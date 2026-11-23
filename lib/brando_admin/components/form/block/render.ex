@@ -99,13 +99,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         hidden_block_fields={@hidden_block_fields}
       >
         <div
-          :if={@has_children?}
           id={"#{@id}-children"}
-          class="block-children"
+          class={["block-children", !@has_children? && "is-empty"]}
           phx-hook="Brando.SortableBlocks"
           data-sortable-id={"sortable-blocks-multi-#{@uid}"}
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".block"
+          data-blocks-wrapper-type={"#{@block_field}:#{Block.multi_children_group(@module_id, @module_origin)}"}
+          data-parent-uid={@uid}
         >
           <div
             :for={
@@ -1052,6 +1053,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           />
         <% else %>
           <%= if @multi do %>
+            {render_slot(@inner_block)}
             <div class="blocks-empty-instructions">
               {gettext("Click the plus to start adding content blocks")}
             </div>
