@@ -931,10 +931,115 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert palette_id == c.palette.id
     end
 
+    test "the same files are in sync, though they name the palette by uid", c do
+      assert {:ok, report} = Release.plan(release_opts(c.release, c, "2.0.0"))
+      assert [%{state: :in_sync, action: :noop}] = Enum.filter(report.items, &(&1.uid == "swatch"))
+    end
+
     test "the next release updates the module it applied, as no edit here", c do
       File.write!(c.template, String.replace(File.read!(c.template), "<p>", "<p class=\"next\">"))
       assert {:ok, report} = Release.plan(release_opts(c.release, c, "3.0.0"))
       assert [%{uid: "swatch", action: :update}] = Enum.filter(report.items, &(&1.uid == "swatch"))
+    end
+  end
+
+  # A module var's palette is named by id (`palette:<id>`, as files exported
+  # before palettes had uids hold it, and apply rows written then digest it)
+  # or by uid: each side of a plan compares it as the same palette
+  describe "a palette named by id or by uid" do
+    defp swatch_item(items), do: Enum.find(items, &(&1.uid == "swatch"))
+
+    defp edit_swatch!(path) do
+      file = Path.join(path, "swatch.exs")
+      File.write!(file, String.replace(File.read!(file), "<div>", "<p>"))
+    end
+
+    defp stored_digests,
+      do: Repo.all(from(a in Brando.Content.DefinitionApply, order_by: a.id, select: {a.id, a.digest}))
+
+    test "a release whose files map the palette's token to its id is in sync when planned again", c do
+      palette = palette!(c.user)
+      release = Path.join(c.path, "release")
+      File.mkdir_p!(release)
+      write_module!(release, "palette:12")
+      opts = [path: release, version: "1.0.0", user: c.user.id, wait: false]
+
+      manual(fn ->
+        assert {:ok, %{report: %{items: [%{action: :create}]}}} =
+                 Release.apply(:all, opts ++ [references: %{"palette:12" => palette.id}])
+      end)
+
+      digests = stored_digests()
+      assert {:ok, report} = Release.plan(opts)
+      assert %{state: :in_sync, action: :noop} = swatch_item(report.items)
+      # Read as it was written, and planning adopts nothing again
+      assert %{{"module", "swatch"} => %{digest: digest}} = Baselines.latest()
+      assert [{_id, ^digest}] = digests
+      assert stored_digests() == digests
+
+      edit_swatch!(release)
+      assert {:ok, report} = Release.plan(opts)
+      assert %{state: :changed_in_release, action: :update} = swatch_item(report.items)
+    end
+
+    test "right after an apply that maps the palette's token by id, the same files are in sync", c do
+      palette = palette!(c.user)
+      write_module!(c.path, "palette:12")
+      bundle = Map.merge(read!(c.path), %{"source" => "elsewhere", "references" => %{}})
+      import!(bundle, c.user, references: %{"palette:12" => palette.id})
+
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      assert [%{uid: "swatch", state: :in_sync, action: :noop}] = plan.items
+
+      edit_swatch!(c.path)
+      bundle = Map.merge(read!(c.path), %{"source" => "elsewhere", "references" => %{}})
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      assert [%{uid: "swatch", state: :changed_in_release, action: :update}] = plan.items
+    end
+
+    test "the lockfile's catch-up compares an apply of a token mapped by id as no edit here", c do
+      palette = palette!(c.user)
+      token = "palette:#{palette.id}"
+      write_module!(c.path, token)
+
+      lockfile = fn baseline ->
+        Map.merge(read!(c.path), %{
+          "source" => Brando.Content.Definition.References.scope(),
+          "references" => %{token => %{"kind" => "palette", "id" => palette.id}},
+          "baseline" => baseline
+        })
+      end
+
+      import!(lockfile.(%{}), c.user)
+      edit_swatch!(c.path)
+      # The lockfile's write failed after that apply: its baseline is older
+      bundle = lockfile.(%{"modules" => %{"swatch" => "older"}})
+
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      assert [%{action: :conflict}] = plan.items
+      assert {:ok, plan} = Definitions.plan(bundle, c.user, catch_up: true)
+      assert [%{uid: "swatch", state: :changed_in_release, action: :update, baseline: :applied}] = plan.items
+    end
+
+    test "a palette in the trash is no longer the one the files name by uid; restored, it is", c do
+      palette = palette!(c.user)
+      write_module!(c.path, palette.uid)
+      import!(read!(c.path), c.user)
+      release = Path.join(c.path, "release")
+      assert {:ok, _} = Definitions.export(release, c.user, uids: ["swatch"])
+      File.rm!(Path.join(release, "modules.lock.json"))
+      assert {:ok, %{adopted: 1}} = Release.plan(path: release, version: "1.0.0")
+      opts = [path: release, version: "1.0.0", user: c.user.id]
+
+      trashed = palette |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+      assert {:ok, report} = Release.plan(opts)
+      assert %{state: state} = swatch_item(report.items)
+      assert state != :in_sync
+      refute Plan.applicable?(report.plan)
+
+      trashed |> Ecto.Changeset.change(deleted_at: nil) |> Repo.update!()
+      assert {:ok, report} = Release.plan(opts)
+      assert %{state: :in_sync, action: :noop} = swatch_item(report.items)
     end
   end
 

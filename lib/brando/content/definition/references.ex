@@ -176,30 +176,64 @@ defmodule Brando.Content.Definition.References do
   `definition` with each token it uses written as the record `bindings` bind
   it to (`"image:42"`), so two spellings of the same reference compare equal.
   A token `bindings` doesn't know stays as it is.
+
+  A palette is written by its id here whichever way it is named, by id or
+  by uid (`"palette@uid"`, bound or already written so): apply rows written
+  before palettes had uids name it by id, and compare equal unchanged. Only
+  one with no active palette here, none yet or in the trash, keeps its uid.
   """
-  def canonical(%{"type" => "markdown_source", "data" => data} = ref, bindings) when is_map(data) do
+  def canonical(value, bindings), do: canonicalize(value, palettes_by_id(value, bindings))
+
+  defp palettes_by_id(value, bindings) do
+    uids =
+      for token <- palette_tokens(value, []),
+          %{"kind" => "palette", "uid" => uid} <- [bindings[token] || uid_binding(token, "palette")],
+          into: %{},
+          do: {token, uid}
+
+    ids = palette_ids(Map.values(uids))
+
+    for {token, uid} <- uids, id = ids[uid], into: bindings, do: {token, %{"kind" => "palette", "id" => id}}
+  end
+
+  defp palette_tokens(%{"assets" => %{"palette" => token}} = value, tokens) when is_binary(token),
+    do: value |> Map.delete("assets") |> palette_tokens([token | tokens])
+
+  defp palette_tokens(value, tokens) when is_map(value), do: value |> Map.values() |> palette_tokens(tokens)
+  defp palette_tokens(value, tokens) when is_list(value), do: Enum.reduce(value, tokens, &palette_tokens/2)
+  defp palette_tokens(_value, tokens), do: tokens
+
+  defp palette_ids([]), do: %{}
+
+  defp palette_ids(uids) do
+    import Ecto.Query, only: [from: 2]
+    Repo.all(from(p in Brando.Content.Palette, where: p.uid in ^uids and is_nil(p.deleted_at), select: {p.uid, p.id}))
+    |> Map.new()
+  end
+
+  defp canonicalize(%{"type" => "markdown_source", "data" => data} = ref, bindings) when is_map(data) do
     data =
       Enum.reduce(Map.keys(@markdown_fields), data, &Map.update(&2, &1, nil, fn token -> resolved(token, bindings) end))
 
     %{ref | "data" => data}
   end
 
-  def canonical(%{"object_id" => token} = override, bindings) when not is_nil(token) do
-    override |> Map.delete("object_id") |> canonical(bindings) |> Map.put("object_id", resolved(token, bindings))
+  defp canonicalize(%{"object_id" => token} = override, bindings) when not is_nil(token) do
+    override |> Map.delete("object_id") |> canonicalize(bindings) |> Map.put("object_id", resolved(token, bindings))
   end
 
-  def canonical(value, bindings) when is_map(value) do
+  defp canonicalize(value, bindings) when is_map(value) do
     Map.new(value, fn
       {"assets", assets} when is_map(assets) ->
         {"assets", Map.new(assets, fn {kind, token} -> {kind, resolved(token, bindings)} end)}
 
       {key, nested} ->
-        {key, canonical(nested, bindings)}
+        {key, canonicalize(nested, bindings)}
     end)
   end
 
-  def canonical(value, bindings) when is_list(value), do: Enum.map(value, &canonical(&1, bindings))
-  def canonical(value, _bindings), do: value
+  defp canonicalize(value, bindings) when is_list(value), do: Enum.map(value, &canonicalize(&1, bindings))
+  defp canonicalize(value, _bindings), do: value
 
   defp resolved(nil, _bindings), do: nil
 

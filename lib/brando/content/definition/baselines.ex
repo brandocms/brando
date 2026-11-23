@@ -18,49 +18,7 @@ defmodule Brando.Content.Definition.Baselines do
       preload: [:applied_by]
     )
     |> Repo.all()
-    |> respelled()
     |> Map.new(&{{&1.kind, &1.uid}, &1})
-  end
-
-  # A row written before palettes were named by uid names one by id
-  # (`"palette:12"`): its definition is spelled, and its digest taken again,
-  # with the uid of that palette here, as a plan spells it today
-  defp respelled(rows) do
-    uids = rows |> Enum.flat_map(&palette_ids(&1.definition)) |> Enum.uniq() |> palette_uids()
-    Enum.map(rows, &respelled(&1, uids))
-  end
-
-  defp respelled(row, uids) do
-    if Enum.any?(palette_ids(row.definition), &is_map_key(uids, &1)) do
-      definition = Map.update!(row.definition, "vars", fn vars -> Enum.map(vars, &respell_var(&1, uids)) end)
-      %{row | definition: definition, digest: digest(definition, %{})}
-    else
-      row
-    end
-  end
-
-  defp palette_uids([]), do: %{}
-
-  defp palette_uids(ids) do
-    from(p in Brando.Content.Palette,
-      where: p.id in ^ids and is_nil(p.deleted_at) and not is_nil(p.uid),
-      select: {p.id, p.uid}
-    )
-    |> Repo.all()
-    |> Map.new()
-  end
-
-  defp palette_ids(definition) do
-    for var <- (definition || %{})["vars"] || [],
-        %{"id" => id} <- [References.canonical_binding(get_in(var, ["assets", "palette"]), "palette")],
-        do: id
-  end
-
-  defp respell_var(var, uids) do
-    case References.canonical_binding(get_in(var, ["assets", "palette"]), "palette") do
-      %{"id" => id} when is_map_key(uids, id) -> put_in(var, ["assets", "palette"], "palette@" <> uids[id])
-      _ -> var
-    end
   end
 
   @doc """
