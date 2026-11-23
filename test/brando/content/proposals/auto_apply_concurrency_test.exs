@@ -203,7 +203,8 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
       {task, pid} = start_apply(c, proposal, grant, :receipt)
 
       off = Task.async(fn -> unboxed(fn -> MCP.set_enabled(c.tenant, false, c.user) end) end)
-      await_lock_wait("mcp_settings")
+      # On the switch's lock, which the apply holds shared
+      await_lock_wait("pg_advisory_xact_lock(")
       # Not switched off before the apply commits
       assert unboxed(fn -> MCP.enabled?(c.tenant) end)
       send(pid, {:resume, :receipt})
@@ -213,6 +214,41 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
       assert %{status: "applied", receipt?: true, translated?: true} = state(c, proposal)
       refute unboxed(fn -> MCP.enabled?(c.tenant) end)
       assert %Grant{revoked_reason: "endpoint_off"} = unboxed(fn -> Repo.get!(Grant, grant.id) end)
+    end
+  end
+
+  describe "a Figma token refresh" do
+    test "holding the settings row while Figma answers does not hold the apply up", c do
+      grant = grant!(c)
+      proposal = propose!(c)
+      test = self()
+
+      # The row lock a refresh keeps while it waits for Figma
+      refresh =
+        Task.async(fn ->
+          unboxed(fn ->
+            Repo.transaction(fn ->
+              Repo.one!(from(s in MCP.setting_query(c.tenant), lock: "FOR UPDATE"))
+              send(test, :locked)
+
+              receive do
+                :answer -> :ok
+              after
+                10_000 -> :ok
+              end
+            end)
+          end)
+        end)
+
+      assert_receive :locked, 5_000
+
+      apply =
+        Task.async(fn -> unboxed(fn -> AutoApply.run(proposal.id, proposal.version, c.user, grant.id, c.tenant) end) end)
+
+      assert {:ok, {:applied, %Receipt{}}} = Task.yield(apply, 5_000)
+      send(refresh.pid, :answer)
+      Task.await(refresh, 10_000)
+      assert %{status: "applied", receipt?: true, translated?: true} = state(c, proposal)
     end
   end
 
@@ -293,8 +329,9 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
   defp pause_point(%{source: "content_proposal_receipts", query: "SELECT" <> _}), do: :receipt_read
   defp pause_point(_metadata), do: nil
 
-  # Until another connection waits on a row lock on `table`
-  defp await_lock_wait(table, tries \\ 100) do
+  # Until another connection waits on a lock in a statement containing
+  # `text`: a table's name, or the lock function's
+  defp await_lock_wait(text, tries \\ 100) do
     waiting =
       unboxed(fn ->
         Repo.query!(
@@ -302,7 +339,7 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
           SELECT count(*) FROM pg_stat_activity
           WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%' || $1 || '%'
           """,
-          [table]
+          [text]
         ).rows
       end)
 
@@ -311,11 +348,11 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
         :ok
 
       tries == 0 ->
-        flunk("nothing ever waited on the row lock")
+        flunk("nothing ever waited on the lock")
 
       true ->
         Process.sleep(20)
-        await_lock_wait(table, tries - 1)
+        await_lock_wait(text, tries - 1)
     end
   end
 end

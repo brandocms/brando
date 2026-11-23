@@ -286,11 +286,15 @@ defmodule Brando.MCP do
         }
 
         {:ok, setting} =
-          Repo.insert(setting,
-            on_conflict: [set: [enabled: enabled?, changed_by_id: actor.id, updated_at: now]],
-            conflict_target: {:unsafe_fragment, "(coalesce(site_id, 0), coalesce(environment_id, 0))"},
-            returning: true
-          )
+          Repo.transaction(fn ->
+            lock_switch(tenant, "pg_advisory_xact_lock")
+
+            Repo.insert!(setting,
+              on_conflict: [set: [enabled: enabled?, changed_by_id: actor.id, updated_at: now]],
+              conflict_target: {:unsafe_fragment, "(coalesce(site_id, 0), coalesce(environment_id, 0))"},
+              returning: true
+            )
+          end)
 
         revoked = if enabled?, do: 0, else: revoke_tenant_grants(tenant, actor)
 
@@ -646,9 +650,11 @@ defmodule Brando.MCP do
   end
 
   @doc """
-  Inside a transaction: locks the endpoint's switch for `tenant` (shared)
-  and then the connection `grant_id`, and returns the connection when it
-  may apply `kind` without review now, by the same rule that authorizes each
+  Inside a transaction: locks the endpoint's switch for `tenant` (shared,
+  an advisory lock rather than the settings row, which a Figma token
+  refresh holds while it waits on Figma) and then the connection
+  `grant_id`, and returns the connection when it may apply `kind` without
+  review now, by the same rule that authorizes each
   request (not revoked or expired, the endpoint on for `tenant`, the site
   active, its user still allowed to connect there), and `auto_apply` is
   `kind`. `{:error, reason}` otherwise.
@@ -662,7 +668,8 @@ defmodule Brando.MCP do
   """
   @spec lock_auto_apply(integer(), String.t(), tenant()) :: {:ok, Grant.t()} | {:error, atom()}
   def lock_auto_apply(grant_id, kind, tenant) when is_integer(grant_id) do
-    switched_on? = secure_base?() and locked_setting_enabled?(tenant)
+    lock_switch(tenant, "pg_advisory_xact_lock_shared")
+    switched_on? = enabled?(tenant)
     grant = Repo.one(from(g in Grant, where: g.id == ^grant_id, lock: "FOR UPDATE"))
     # The site as it is now, not as the request found it
     tenant = with %{site: %Site{id: id}} <- tenant, do: %{tenant | site: Repo.get(Site, id, prefix: "public")}
@@ -685,12 +692,15 @@ defmodule Brando.MCP do
   defp site_active?(%{site: nil, environment: nil}), do: true
   defp site_active?(%{site: site}), do: match?(%Site{status: :active}, site)
 
-  defp locked_setting_enabled?(tenant) do
-    tenant
-    |> setting_query()
-    |> lock("FOR SHARE")
-    |> select([s], s.enabled)
-    |> Repo.repo().one() == true
+  # The endpoint's switch has a lock of its own, apart from the settings row,
+  # which a Figma token refresh keeps locked while it waits on Figma:
+  # `set_enabled/3` takes it exclusively while it writes the switch, and an
+  # automatic apply shared until its commit
+  defp lock_switch(tenant, function) do
+    key =
+      "brando-mcp-switch:#{(tenant.site && tenant.site.id) || 0}:#{(tenant.environment && tenant.environment.id) || 0}"
+
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT #{function}(hashtextextended($1, 0))", [key])
   end
 
   defp same_grant_tenant?(grant, tenant) do
