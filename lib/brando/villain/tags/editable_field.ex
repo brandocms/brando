@@ -22,9 +22,9 @@ defmodule Brando.Villain.Tags.EditableField do
   def render([field: argument], context) do
     case Brando.Villain.Tags.Editable.resolve_with_rule(argument, context) do
       {%{__struct__: _} = entry, field, rich, context} when is_atom(field) and not is_nil(field) ->
+        {html, kind} = print(entry, field, rich)
         # Liquid in the field is text to the entry's final pass
-        html = entry |> render_value(field, rich) |> InertLiquid.encode_all()
-        {[Fields.wrap(html, entry, field, :value)], context}
+        {[Fields.wrap(InertLiquid.encode_all(html), entry, field, kind)], context}
 
       {_other, _field, _rich, context} ->
         # Not an entry field: print the value escaped.
@@ -33,10 +33,13 @@ defmodule Brando.Villain.Tags.EditableField do
     end
   end
 
-  # A subform row read through its owner prints by the owner's forms, a
-  # record of its own by its own, as `{{ }}` prints it
-  defp render_value(entry, field, nil), do: Fields.render_value(entry, field)
-  defp render_value(entry, field, rich), do: Fields.render_value(entry, field, rich)
+  # A record prints by its own forms, a subform row read through its owner by
+  # the owner's forms, as `{{ }}` prints it. Its markers say which rule, so
+  # the frontend editor updates the page by it as the field is edited.
+  defp print(entry, field, nil), do: {Fields.render_value(entry, field), :value}
+
+  defp print(entry, field, rich),
+    do: {Fields.render_value(entry, field, rich), if(field in rich, do: :rich_text, else: :text)}
 
   defp printable(nil), do: ""
   defp printable(value) when is_binary(value), do: value

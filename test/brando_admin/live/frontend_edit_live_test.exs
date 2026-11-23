@@ -202,7 +202,7 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
       |> render_change(%{"page" => %{"title" => "Fish & chips"}, "_target" => ["page", "title"]})
 
       assert_push_event(view, "b:frontend-edit", %{type: "dirty", dirty: true})
-      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, html: "Fish &amp; chips"})
+      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, printed: %{"E" => "Fish &amp; chips"}})
 
       view |> form("##{@form}_form", %{"page" => %{"title" => "Fish & chips"}}) |> render_submit()
       assert_push_event(view, "b:submit", %{}, 2_000)

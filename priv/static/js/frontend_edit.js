@@ -10,7 +10,8 @@
  * comes from `block_patch.js` (`window.BrandoBlockPatch`).
  *
  * Besides blocks, entry fields a template marks with `editable_field` or
- * `editable` can be clicked (`[+:E<key>]` and `[+:W<key>]` comments). Field
+ * `editable` can be clicked (`[+:E<key>]` and `[+:W<key>]` comments, and
+ * `[+:T<key>]` or `[+:R<key>]` for a value printed by another rule). Field
  * targets are their keys (`Schema:id:field`), block targets their uids; a uid
  * never contains a colon.
  *
@@ -218,7 +219,7 @@
   }
 
   // key → the places the field is marked: `{ start, end, kind }`, `kind` being
-  // `E` (a printed value) or `W` (other markup showing the field).
+  // `E`, `T` or `R` (a printed value) or `W` (other markup showing the field).
   function buildFieldRegistry() {
     const fields = new Map()
     const iterator = document.createNodeIterator(document.body, NodeFilter.SHOW_COMMENT)
@@ -227,7 +228,7 @@
 
     while ((node = iterator.nextNode())) {
       const value = node.nodeValue.trim()
-      const match = value.match(/^\[([+-]):([EW])<(.+)>\]$/)
+      const match = value.match(/^\[([+-]):([EWTR])<(.+)>\]$/)
       if (!match) continue
 
       const [, sign, kind, key] = match
@@ -719,7 +720,7 @@
       let node
 
       while ((node = iterator.nextNode())) {
-        const match = node.nodeValue.trim().match(/^\[([+-]):([EW])<(.+)>\]$/)
+        const match = node.nodeValue.trim().match(/^\[([+-]):([EWTR])<(.+)>\]$/)
         if (!match) continue
         const [, sign, kind, key] = match
         if (sign === '+') {
@@ -794,12 +795,15 @@
       scheduleRender()
     },
 
-    // A printed field value changed: every place it is printed shows it.
-    entry_field({ key, html }) {
+    // A printed field value changed: every place it is printed shows it, as
+    // that place printed it. `printed` holds the value for each kind of value
+    // marker: by the entry's own forms (`E`), as text (`T`) or as rich text
+    // (`R`), a subform row's field by its owner's forms.
+    entry_field({ key, printed }) {
       rebuildRegistry()
       ;(state.fields.get(key) || [])
-        .filter(occurrence => occurrence.kind === 'E')
-        .forEach(occurrence => replaceBetween(occurrence.start, occurrence.end, html))
+        .filter(occurrence => typeof printed[occurrence.kind] === 'string')
+        .forEach(occurrence => replaceBetween(occurrence.start, occurrence.end, printed[occurrence.kind]))
       rebuildRegistry()
       scheduleRender()
     },
