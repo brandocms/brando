@@ -4493,7 +4493,10 @@ defmodule BrandoAdmin.Components.Form do
     replaced = Enum.reduce(changed -- relations, replaced_values(socket), &replace_value(&2, previous, changeset, &1))
     kept_relations = Map.take(socket.assigns[:updated_entry_assocs] || %{}, kept)
     conflicts = conflicts(socket, saved, kept)
-    synced = socket |> synced_values() |> Map.take(kept) |> merge_synced(saved, previous, opened, ones, listed, edits, keys)
+
+    synced =
+      socket |> synced_values() |> Map.take(kept) |> merge_synced(saved, previous, opened, ones, listed, edits, keys)
+
     # Recovery compares with the entry as the form shows it: a held list
     # with the rows it was built on, until the editor leaves it
     read = Map.merge(entry, Map.take(opened, held))
@@ -4509,7 +4512,10 @@ defmodule BrandoAdmin.Components.Form do
     |> assign_read_entry(read)
     |> put_form(to_form(changeset, []))
     |> redraw_relations(previous, changeset, by_row ++ embed_fields(socket))
-    |> assign(:row_edits, Enum.reduce(renamed, edits, fn {field, names}, edits -> RowEdits.rename(edits, field, names) end))
+    |> assign(
+      :row_edits,
+      Enum.reduce(renamed, edits, fn {field, names}, edits -> RowEdits.rename(edits, field, names) end)
+    )
     |> assign(:replaced_values, replaced)
     |> assign(:unshipped_fields, MapSet.intersection(unshipped_fields(socket), MapSet.new(kept)))
     |> assign(:synced_values, synced)
@@ -4568,8 +4574,11 @@ defmodule BrandoAdmin.Components.Form do
         hold = %{field: field, saved_rows: Map.get(entry, field), kept?: field in kept, keys: list_keys}
 
         case Map.fetch(held_remote, field) do
-          {:ok, %{saved_rows: _} = earlier} -> Map.put(held_remote, field, %{hold | keys: merge_keys(earlier.keys, list_keys)})
-          _ -> Map.put(held_remote, field, hold)
+          {:ok, %{saved_rows: _} = earlier} ->
+            Map.put(held_remote, field, %{hold | keys: merge_keys(earlier.keys, list_keys)})
+
+          _ ->
+            Map.put(held_remote, field, hold)
         end
       end)
 

@@ -663,7 +663,8 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     # Another editor's new row B received, which the save doesn't hold; and
     # the same with no saver's map (a rewrite no form made)
     test "a new row B only received goes unless the save has no map of its rows", %{base: base} do
-      previous = Board.changeset(base, %{"quotes" => form_rows(saved_rows(base) ++ [%{"_key" => "new-c", "text" => "By C"}])})
+      previous =
+        Board.changeset(base, %{"quotes" => form_rows(saved_rows(base) ++ [%{"_key" => "new-c", "text" => "By C"}])})
 
       assert kept_texts(base, previous, [typed: [{"id-1", [:text]}]], %{}) == ["One", "Two", "Three"]
       assert kept_texts(base, previous, [typed: [{"id-1", [:text]}]], nil) == ["One", "Two", "Three", "By C"]
@@ -703,7 +704,8 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert RelationRows.stored([%{one | meta: %{source: "a"}}]) ==
                RelationRows.stored([%{one | meta: %{"source" => "a"}}])
 
-      refute RelationRows.stored([%{one | meta: %{source: "a"}}]) == RelationRows.stored([%{one | meta: %{"source" => "b"}}])
+      refute RelationRows.stored([%{one | meta: %{source: "a"}}]) ==
+               RelationRows.stored([%{one | meta: %{"source" => "b"}}])
     end
   end
 

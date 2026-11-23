@@ -296,7 +296,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   Embedded rows as they are stored: a map field read back has string keys,
   whatever the form held.
   """
-  def stored(rows), do: rows |> List.wrap() |> Enum.map(&Ecto.embedded_dump(&1, :json)) |> Jason.encode!() |> Jason.decode!()
+  def stored(rows),
+    do: rows |> List.wrap() |> Enum.map(&Ecto.embedded_dump(&1, :json)) |> Jason.encode!() |> Jason.decode!()
 
   @doc """
   Whether `keep/4` (an `embeds_one`) or `keep_list/5` can keep the embedded rows of `field` row by row: the
