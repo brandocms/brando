@@ -706,8 +706,9 @@ defmodule Brando.Images.RerenderTest do
       assert renders_of(page) == []
     end
 
-    # An API caller's replacement sizes are rendered now: no processing follows
-    test "renders them when the save replaces the sizes", %{user: user} do
+    # A new focal point saved with replacement sizes renders now: no
+    # processing follows to render it
+    test "renders a new focal point saved with replacement sizes", %{user: user} do
       image = image()
       page = page_with(user, [image])
       sizes = %{"small" => "images/avatars/small/27i97a.jpeg"}
