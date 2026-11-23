@@ -685,6 +685,14 @@ sender first, before the first compile.
   pasted Figma token keeps using it, with its expiry date, until an
   administrator connects Figma. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`. See [Connect Figma](mcp.md#connect-figma).
+- **Palettes and containers as definition files.** `brando_245` adds
+  `uid` to `content_palettes` and `content_containers` in every environment,
+  and gives each existing row one derived from its namespace and key
+  (palette) or namespace and name (container), so two environments seeded
+  alike agree on them. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`. The next `mix brando.modules export` writes them as
+  files beside the modules. See
+  [Palettes and containers](module_definitions.md#palettes-and-containers).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
