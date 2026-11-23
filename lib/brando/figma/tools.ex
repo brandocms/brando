@@ -45,7 +45,9 @@ defmodule Brando.Figma.Tools do
           "A section is a component instance — its component and variant name, to match with a module (brando_content_list_modules, brando_content_describe_module) — with its texts, images and videos in reading order; " <>
           "or a text, image or video outside any instance. Images are listed by layer (node_id, name), each with the image_ref of the picture it shows: " <>
           "a layer's picture is identified by its image_ref, not by hidden_fills, and layers with the same image_ref show the same picture. " <>
-          "read_frame does not say which library image that is: import the images with brando_figma_import_images, which names each one's asset (reusing one the library already has), to use them in a proposal or to compare them with an entry's. " <>
+          ~s[An image whose picture brando_figma_import_images has imported or reused before has its asset ({"kind": "image", "id": N}): the library image that import gave it, at the image's rotation, that the person may read and is not in the trash. ] <>
+          "Use it in a proposal, or compare it with an entry's image, as it is. " <>
+          "An image without an asset has no library image recorded for its picture and rotation that the person may read and is not in the trash, which does not mean the library lacks the picture: import it with brando_figma_import_images, which names its asset and reuses one the library already has. " <>
           "Each image has its scale_mode (fill, fit, crop or tile), its crop when cropped ({x, y, width, height} as fractions of the image, from its top left) its rotation when turned (clockwise, in degrees), and mirrored: true when a crop flips it (it then has no rotation). " <>
           "A layer whose top image fill covers it (opaque, unblended, and filled, or cropped to reach every corner of the layer) is one image. " <>
           "A layer whose top fill is translucent, blended, fit, tiled or cropped short of an edge lists every image that shows, in fill order, and its section says so under note. " <>
@@ -150,17 +152,19 @@ defmodule Brando.Figma.Tools do
   defp offset(offset) when is_integer(offset) and offset >= 0, do: {:ok, offset}
   defp offset(_offset), do: {:error, "offset is a whole number, 0 or more."}
 
-  defp run("read_frame", link, credential, %{"offset" => offset}, _actor, tenant) do
+  # Each image's library asset is put on before the page is measured
+  defp run("read_frame", link, credential, %{"offset" => offset}, actor, tenant) do
     with {:ok, node} <- Figma.node(credential, link) do
       outline = Frame.outline(node)
-      {page, next} = page(outline.sections, offset, @page_bytes)
+      sections = Import.put_assets(outline.sections, actor)
+      {page, next} = page(sections, offset, @page_bytes)
 
       result =
         with_expiry_note(
           %{
             file_name: outline.file_name,
             frame: outline.frame,
-            sections_total: length(outline.sections),
+            sections_total: length(sections),
             offset: offset,
             sections: page,
             next_offset: next
