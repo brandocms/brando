@@ -169,6 +169,11 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   def capture(%{assigns: %{draft: nil}} = socket, _), do: socket
   def capture(%{assigns: %{processing: true}} = socket, _), do: socket
   def capture(%{assigns: %{blocks_ready?: false}} = socket, _), do: socket
+
+  # The redirect prompt holds back the rows saved elsewhere, so the form's
+  # transformers still hold this tab's saved rows as new. The answer marks the
+  # draft dirty again.
+  def capture(%{assigns: %{pending_permalink_redirect: %{}}} = socket, _), do: socket
   def capture(%{assigns: %{draft: %{capture: capture}}} = socket, _) when not is_nil(capture), do: socket
 
   # A tab that edits no more captures twice: once as it hands over (the copy

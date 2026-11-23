@@ -155,6 +155,20 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
     payload |> Map.put("modules", Brando.Drafts.Modules.manifest(payload["blocks"])) |> Brando.Drafts.Content.checksum()
   end
 
+  # B's recovery copy, as the browser captures it
+  defp capture(form) do
+    params = %{"main" => browser_form(form, []), "blocks" => %{}, "generation" => 1, "request_id" => 1}
+    form |> form_target() |> render_hook("draft_capture", params)
+    settle(form.view)
+  end
+
+  defp open_copies(article) do
+    Repo.aggregate(
+      from(d in Brando.Drafts.EntryDraft, where: d.entry_id == ^article.id and is_nil(d.resolved_at)),
+      :count
+    )
+  end
+
   # B saves a new row with a new address, and A saves while B's prompt is
   # open: A's change of the title, or A's own new row
   defp save_under_prompt(a, b, article, a_saves) do
@@ -227,6 +241,22 @@ defmodule BrandoAdmin.TransformerAddressPromptTest do
         answer(b, "skip_permalink_redirect")
 
         assert form_assigns(b.view, b.id).draft.baseline == saved_baseline(b, article)
+      end
+
+      # Until B answers, B's transformer still holds B's saved row as new: a
+      # copy captured then would store the row again when restored
+      test "B keeps no recovery copy of B's saved row", %{a_conn: a_conn, b_conn: b_conn, article: article} do
+        a = open(a_conn, article, unquote(kind), "a")
+        b = open(b_conn, article, unquote(kind), "b")
+
+        save_under_prompt(a, b, article, &save_title(&1, article, "Saved by A"))
+        capture(b)
+        assert open_copies(article) == 0
+
+        answer(b, "skip_permalink_redirect")
+        assert_push_event(b.view, "b:draft-dirty", _)
+        capture(b)
+        assert open_copies(article) == 0
       end
 
       # A rich-text editor in B's browser keeps its text until the form

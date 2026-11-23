@@ -8468,6 +8468,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:pending_permalink_redirect, nil)
     |> assign(:permalink_redirect_error, nil)
     |> continue.()
+    |> Drafts.dirty()
   end
 
   defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil
