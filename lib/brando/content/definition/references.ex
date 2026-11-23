@@ -77,8 +77,12 @@ defmodule Brando.Content.Definition.References do
   # In the bundle, or here: one here must be readable by the actor
   defp bind_palette!(uid, palettes, actor) do
     case palette_id(uid) do
-      nil -> unless MapSet.member?(palettes, uid), do: Error.raise!(uid, "palette is neither in the files nor here")
-      id -> authorize!(actor, "palette", Brando.Content.Palette, %{id: id})
+      nil ->
+        unless MapSet.member?(palettes, uid), do: Error.raise!(uid, "palette is neither in the files nor here")
+
+      id ->
+        if Brando.Authorization.Boundary.authorize_record(actor, :read, Brando.Content.Palette, id) != :ok,
+          do: Error.raise!(~s(palette "#{uid}"), "forbidden")
     end
 
     %{"kind" => "palette", "uid" => uid}
@@ -133,30 +137,40 @@ defmodule Brando.Content.Definition.References do
   end
 
   @doc """
-  Reads bundles written before gallery overrides were bound by media. They
-  recorded an override's (media) id under a `gallery_object` reference kind;
-  it becomes the kind of the image or video the override is for.
+  Reads bundles written before gallery overrides were bound by media, or
+  before palettes were named by uid.
+
+  Gallery overrides recorded an override's (media) id under a
+  `gallery_object` reference kind; it becomes the kind of the image or
+  video the override is for. A palette bound by id in a bundle written here
+  (a stored release batch's) is bound by its uid, as a plan binds it today.
   """
   def upgrade(%{"references" => references} = bundle) when is_map(references) do
-    if Enum.any?(references, &match?({_, %{"kind" => "gallery_object"}}, &1)) do
-      declared = declared!(bundle)
+    declared = declared!(bundle)
+    same_scope? = bundle["source"] == scope()
 
-      references =
-        Map.new(references, fn
-          {token, %{"kind" => "gallery_object"} = binding} when is_map_key(declared, token) ->
-            {token, Map.put(binding, "kind", declared[token])}
+    references =
+      Map.new(references, fn
+        {token, %{"kind" => "gallery_object"} = binding} when is_map_key(declared, token) ->
+          {token, Map.put(binding, "kind", declared[token])}
 
-          pair ->
-            pair
-        end)
+        {token, %{"kind" => "palette", "id" => id} = binding} when same_scope? and is_integer(id) ->
+          {token, palette_binding(id) || binding}
 
-      Map.put(bundle, "references", references)
-    else
-      bundle
-    end
+        pair ->
+          pair
+      end)
+
+    Map.put(bundle, "references", references)
   end
 
   def upgrade(bundle), do: bundle
+
+  defp palette_binding(id) do
+    import Ecto.Query, only: [from: 2]
+    query = from(p in Brando.Content.Palette, where: p.id == ^id and is_nil(p.deleted_at), select: p.uid)
+    if uid = Repo.one(query), do: %{"kind" => "palette", "uid" => uid}
+  end
 
   @doc """
   `definition` with each token it uses written as the record `bindings` bind

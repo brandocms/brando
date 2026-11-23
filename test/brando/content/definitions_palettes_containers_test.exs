@@ -2,8 +2,8 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
-  alias Brando.Content.{Container, Definitions, Module, Palette}
-  alias Brando.Content.Definition.{Plan, Snapshot}
+  alias Brando.Content.{Container, Definitions, Module, Palette, TableTemplate}
+  alias Brando.Content.Definition.{Baselines, Plan, Snapshot}
   alias Brando.Content.Definitions.Release
   alias Brando.Content.Definitions.Release.{Batches, Review}
   alias Brando.{Factory, Repo, Tenant}
@@ -513,6 +513,33 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       assert {:ok, [%{status: :requested}]} = Definitions.refresh(["acme-palette-paper"], c.user)
     end
 
+    # Planning a container or a module takes a superuser (their code), who
+    # reads every palette; a table template is no code, and its var may name
+    # a palette here the actor may not read
+    test "a palette here the actor may not read is refused, by name", c do
+      palette = palette!(c.user)
+      put_test_env(:authorization_mode, :groups)
+      alias Brando.Authorization.{Catalog, Grant, Groups, Migration, Scope}
+      owner = Factory.insert(:random_user, role: :superuser)
+      assert {:ok, _} = Migration.run()
+      member = Factory.insert(:random_user, role: :user)
+      scope = Scope.standalone(owner)
+      assert {:ok, group} = Groups.create(scope, %{name: "Table authors"}, ["brando.admin.access"])
+
+      for action <- [:create, :update],
+          do: Repo.insert!(%Grant{group_id: group.id, permission_key: Catalog.get(action, TableTemplate).key})
+
+      assert {:ok, :ok} = Groups.add_member(scope, group.id, member.id)
+      write_priced!(c.path, palette.uid)
+      File.rm!(Path.join(c.path, "priced.exs"))
+
+      assert {:error, message} = Definitions.plan(read!(c.path), member)
+      assert message =~ ~s(palette "#{palette.uid}": forbidden)
+
+      Repo.insert!(%Grant{group_id: group.id, permission_key: Catalog.get(:read, Palette).key})
+      assert {:ok, %{items: [%{action: :create}]}} = Definitions.plan(read!(c.path), member)
+    end
+
     test "a dry run compiles no container HEEx for a non-superuser, whatever grant a group holds", c do
       palette!(c.user) |> Ecto.Changeset.change(uid: "acme-palette-paper") |> Repo.update!()
       fixtures!(c.path, ~w(tinted))
@@ -846,6 +873,68 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
 
       assert {:ok, zip} = Brando.Content.Definition.Archive.pack(files)
       assert {:ok, %{bundle: %{"palettes" => [], "containers" => []}}} = Brando.Content.Definition.Archive.read(zip)
+    end
+  end
+
+  describe "a release batch from before palettes and containers were definitions" do
+    # A release changed the module whose var names the palette, and its
+    # rows are as an apply wrote them then: the palette named by a token
+    # mapped to its id, in the definitions and their digests
+    setup c do
+      palette = palette!(c.user)
+      write_module!(c.path, palette.uid)
+      import!(read!(c.path), c.user)
+      release = Path.join(c.path, "release")
+      assert {:ok, _} = Definitions.export(release, c.user, uids: ["swatch"])
+      File.rm!(Path.join(release, "modules.lock.json"))
+      assert {:ok, %{adopted: 1}} = Release.plan(path: release, version: "1.0.0")
+      [template] = for path <- Path.wildcard(Path.join(release, "**/swatch*")), File.read!(path) =~ "<div>", do: path
+      File.write!(template, String.replace(File.read!(template), "<div>", "<p>"))
+
+      batch_id =
+        manual(fn ->
+          assert {:ok, %{batch_id: batch_id}} = Release.apply(["swatch"], release_opts(release, c, "2.0.0"))
+          batch_id
+        end)
+
+      token = "palette:#{palette.id}"
+      old = &put_in(&1, ["vars", Access.at(0), "assets", "palette"], token)
+
+      for row <- Repo.all(from(a in Brando.Content.DefinitionApply, where: a.uid == "swatch")) do
+        {definition, previous} = {old.(row.definition), row.previous && old.(row.previous)}
+
+        row
+        |> Ecto.Changeset.change(
+          definition: definition,
+          digest: Baselines.digest(definition, %{}),
+          previous: previous,
+          previous_digest: previous && Baselines.digest(previous, %{}),
+          references: %{token => %{"kind" => "palette", "id" => palette.id}}
+        )
+        |> Repo.update!()
+      end
+
+      %{palette: palette, release: release, template: template, batch_id: batch_id}
+    end
+
+    defp release_opts(release, c, version), do: [path: release, version: version, user: c.user.id, wait: false]
+
+    test "still loads and reverts", c do
+      manual(fn ->
+        assert {:ok, %{revert: [%{uid: "swatch"}], conflicts: []}} = Batches.preview(Batches.get(c.batch_id), c.user)
+        assert {:ok, %{reverted: [%{uid: "swatch"}]}} = Batches.revert(Batches.get(c.batch_id), c.user)
+      end)
+
+      module = Repo.get_by!(Module, uid: "swatch") |> Repo.preload(:vars)
+      assert module.code == "<div>{{ theme }}</div>"
+      assert [%{palette_id: palette_id}] = module.vars
+      assert palette_id == c.palette.id
+    end
+
+    test "the next release updates the module it applied, as no edit here", c do
+      File.write!(c.template, String.replace(File.read!(c.template), "<p>", "<p class=\"next\">"))
+      assert {:ok, report} = Release.plan(release_opts(c.release, c, "3.0.0"))
+      assert [%{uid: "swatch", action: :update}] = Enum.filter(report.items, &(&1.uid == "swatch"))
     end
   end
 
