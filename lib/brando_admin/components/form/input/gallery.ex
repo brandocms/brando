@@ -915,6 +915,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
        image_id: image.id,
        focal_x: (image.focal && image.focal.x) || 50,
        focal_y: (image.focal && image.focal.y) || 50,
+       focal_mode: Brando.Images.Focal.mode(image.focal),
        crop_groups: crop_groups,
        from_block: true,
        # The gallery's: an image picked from the library keeps the target it
