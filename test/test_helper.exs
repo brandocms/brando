@@ -213,11 +213,23 @@ defmodule BrandoIntegrationWeb.ArticleHTML do
     </main>
     """
   end
+
+  def related(assigns) do
+    ~H"""
+    <main>
+      <h1>{@entry.title}</h1>
+      <ul>
+        <li :for={row <- @entry.related_entries}>{row.identifier.title}</li>
+      </ul>
+    </main>
+    """
+  end
 end
 
 defmodule BrandoIntegrationWeb.LivePreview do
   @moduledoc false
   use Brando.LivePreview
+  import Ecto.Query, only: [from: 2]
 
   # Pages have no `key`: the default view fails on purpose, as a site's view
   # can, and the tests of how a failed render is shown use it. They capture
@@ -308,6 +320,23 @@ defmodule BrandoIntegrationWeb.LivePreview do
     label "Head"
     template {BrandoIntegrationWeb.PageHTML, "blocks"}
     layout {BrandoIntegrationWeb.Layouts, "head"}
+  end
+
+  # The page's published children only (PreviewProposalTest)
+  preview_target Brando.Pages.Page do
+    name :children
+    label "Children"
+    template {BrandoIntegrationWeb.PageHTML, "children"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    schema_preloads children: from(p in Brando.Pages.Page, where: p.status == :published)
+  end
+
+  # The article's related entries, by their identifiers (PreviewProposalTest)
+  preview_target Brando.SyncTest.Article do
+    name :related
+    label "Related"
+    template {BrandoIntegrationWeb.ArticleHTML, "related"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
   end
 
   # A type with a record policy (PreviewProposalTest)

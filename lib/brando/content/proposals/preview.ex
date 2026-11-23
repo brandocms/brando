@@ -42,7 +42,7 @@ defmodule Brando.Content.Proposals.Preview do
     version = Keyword.get(opts, :version, :proposed)
 
     with :ok <- renderable(proposal, target, version),
-         {:ok, changeset} <- changeset(proposal, target, actor, version, opts[:shared]),
+         {:ok, changeset} <- changeset(proposal, target, actor, version, opts[:shared], opts[:preview_target]),
          {:ok, key} <- initialize(changeset, actor, opts[:preview_target]) do
       {:ok, html} = LivePreview.get_cache(key)
       {:ok, %{key: key, html: html}}
@@ -88,38 +88,63 @@ defmodule Brando.Content.Proposals.Preview do
     end
   end
 
-  defp changeset(proposal, target, actor, :proposed, shared) do
-    with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared),
-         do: {:ok, changesets |> Map.fetch!(target) |> Brando.Utils.apply_changes_recursively() |> page_entry()}
+  defp changeset(proposal, target, actor, :proposed, shared, preview_target) do
+    with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared) do
+      entry = changesets |> Map.fetch!(target) |> Brando.Utils.apply_changes_recursively()
+      {:ok, page_entry(entry, preview_target)}
+    end
   end
 
-  defp changeset(proposal, target, actor, :before, shared) do
+  defp changeset(proposal, target, actor, :before, shared, preview_target) do
     Error.protect(fn ->
       unless shared, do: Proposals.authorize_proposal!(proposal, actor)
 
       proposal
       |> Proposals.current!(actor, if(shared, do: :read, else: :update))
       |> Map.fetch!(target)
-      |> page_entry()
+      |> page_entry(preview_target)
     end)
   end
 
   # The entry is loaded with its blocks only, and the page reads it as a
   # saved one is read: its media (the head's meta image), relations and
-  # alternates. What is not loaded is loaded after the proposal's changes
-  # apply, so a media field it changes shows its new picture, and a list it
-  # sets keeps its rows.
-  defp page_entry(entry) do
-    preloads =
-      for preload <- Brando.Blueprint.preloads_for(entry.__struct__, skip_blocks: true),
-          name = if(is_tuple(preload), do: elem(preload, 0), else: preload),
-          not Ecto.assoc_loaded?(Map.get(entry, name)),
-          do: preload
+  # alternates. They load after the proposal's changes apply, so a media
+  # field it changes shows its new picture; a list it sets keeps its rows,
+  # which get what they read (an entries list's identifiers). What the
+  # preview target's own `schema_preloads` names is left to its query, which
+  # may load less (published children only).
+  defp page_entry(entry, preview_target) do
+    targeted = target_preloads(entry.__struct__, preview_target)
 
-    entry
-    |> Brando.Repo.preload(preloads)
+    {loaded, unloaded} =
+      entry.__struct__
+      |> Brando.Blueprint.preloads_for(skip_blocks: true)
+      |> Enum.reject(&(preload_name(&1) in targeted))
+      |> Enum.split_with(&Ecto.assoc_loaded?(Map.get(entry, preload_name(&1))))
+
+    # On the loaded rows, not through the entry: Ecto refuses a loaded list
+    # on an entry without an id, as a new one is
+    loaded
+    |> Enum.reduce(entry, fn preload, entry ->
+      Map.update!(entry, preload_name(preload), &Brando.Repo.preload(&1, nested(preload)))
+    end)
+    |> Brando.Repo.preload(unloaded)
     |> Ecto.Changeset.change()
   end
+
+  defp target_preloads(schema, preview_target) do
+    schema |> LivePreview.get_target_config(preview_target) |> Map.fetch!(:schema_preloads) |> Enum.map(&preload_name/1)
+  rescue
+    # An unknown target fails where the preview renders
+    Brando.Exception.LivePreviewError -> []
+  end
+
+  defp preload_name({name, _nested}), do: name
+  defp preload_name(name), do: name
+
+  defp nested({_name, %Ecto.Query{preloads: preloads}}), do: preloads
+  defp nested({_name, preloads}), do: preloads
+  defp nested(_name), do: []
 
   @doc """
   A public link to the proposed page, for any browser: a static snapshot
@@ -133,7 +158,7 @@ defmodule Brando.Content.Proposals.Preview do
   def share(proposal, target, actor, opts \\ []) do
     with :ok <- renderable(proposal, target, :proposed),
          :ok <- shown(proposal),
-         {:ok, changeset} <- changeset(proposal, target, actor, :proposed, opts[:shared]) do
+         {:ok, changeset} <- changeset(proposal, target, actor, :proposed, opts[:shared], opts[:preview_target]) do
       scope = Boundary.actor_scope(actor)
       user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
 
@@ -169,10 +194,13 @@ defmodule Brando.Content.Proposals.Preview do
 
     with :ok <- renderable(proposal, target, version),
          {:ok, preview_target} <- preview_target(proposal, target, opts[:preview_target]),
-         {:ok, proposed} <- changeset(proposal, target, actor, :proposed, nil),
+         {:ok, proposed} <- changeset(proposal, target, actor, :proposed, nil, preview_target),
          :ok <- authorize_snapshot(actor, proposed),
          {:ok, changeset} <-
-           if(version == :before, do: changeset(proposal, target, actor, :before, nil), else: {:ok, proposed}) do
+           if(version == :before,
+             do: changeset(proposal, target, actor, :before, nil, preview_target),
+             else: {:ok, proposed}
+           ) do
       scope = Boundary.actor_scope(actor)
       user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
 

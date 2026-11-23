@@ -187,6 +187,41 @@ defmodule Brando.Content.Proposals.PreviewProposalTest do
       refute body =~ c.image.sizes["xlarge"]
     end
 
+    test "a preview target's own preloads decide what the page lists", c do
+      for {title, status} <- [{"Published child", :published}, {"Draft child", :draft}],
+          do: Factory.insert(:page, creator: c.user, parent_id: c.identity.id, title: title, status: status)
+
+      id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
+
+      for version <- ["proposed", "before"] do
+        body =
+          open(preview!(mcp(c), id, page(c.identity), %{"preview_target" => "children", "version" => version})).resp_body
+
+        assert body =~ "Published child"
+        refute body =~ "Draft child"
+      end
+    end
+
+    test "entries a proposal lists come with their identifiers", c do
+      {:ok, article} =
+        Brando.SyncTest.create_article(%{title: "Article", slug: "article", language: "en", status: "published"}, c.user)
+
+      article_target = %{"content_type" => "Brando.SyncTest.Article", "id" => article.id}
+      related = %{"related_entries" => [page(c.naming), page(c.identity)]}
+      id = prepare!(mcp(c), [%{"op" => "set_fields", "target" => article_target, "fields" => related}])
+
+      body = open(preview!(mcp(c), id, article_target, %{"preview_target" => "related"})).resp_body
+      assert body =~ ~r/Naming.*Identity/s
+
+      # A new entry, which has no id to load them through
+      fields = Map.merge(related, %{"title" => "New", "slug" => "new", "language" => "en"})
+      create = %{"op" => "create_entry", "content_type" => "Brando.SyncTest.Article", "ref" => "new", "fields" => fields}
+      id = prepare!(mcp(c), [create])
+
+      body = open(preview!(mcp(c), id, %{"new" => "new"}, %{"preview_target" => "related"})).resp_body
+      assert body =~ ~r/Naming.*Identity/s
+    end
+
     test "two calls give two links, each working until its own expiry", c do
       id = prepare!(mcp(c), [insert_op(c, c.identity, "Lobby")])
       first = preview!(mcp(c), id, page(c.identity))
