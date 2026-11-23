@@ -11,8 +11,8 @@ defmodule BrandoAdmin.BlockMoveBetweenRowsTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.Block
-  alias BrandoAdmin.Components.Form.Block, as: BlockComponent
   alias Brando.Pages.Page
+  alias BrandoAdmin.Components.Form.Block, as: BlockComponent
 
   setup do
     c = Brando.ProposalFixtures.context()
