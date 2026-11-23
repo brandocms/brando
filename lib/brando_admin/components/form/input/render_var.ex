@@ -987,7 +987,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                 <Input.i18n_text field={opt[:label]} label={gettext("Label")} />
                                 <Input.text field={opt[:value]} label={gettext("Value")} />
 
-                                <input type="hidden" name={"#{@var.name}[sort_option_ids][]"} value={opt.index} />
+                                <input
+                                  type="hidden"
+                                  name={"#{@var.name}[sort_option_ids][]"}
+                                  value={opt.index}
+                                  data-sort-input
+                                />
                                 <button
                                   class="module-item-action module-danger"
                                   type="button"

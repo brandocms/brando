@@ -19,9 +19,10 @@ export default (app) => ({
       swapThreshold: 0.5,
       forceFallback: true,
       onEnd: (e) => {
-        this.el
-          .closest('form')
-          .querySelector('input')
+        // On the moved row's sort input, so the change names the list's
+        // sort param and the form sends the new order to other editors
+        e.item
+          .querySelector(':scope > [data-sort-input]')
           .dispatchEvent(new Event('input', { bubbles: true }))
 
         let params = {
