@@ -53,13 +53,13 @@ defmodule Brando.RichTextTest do
     assert {:ok, "./example.com/path"} = RichText.normalize_url("./example.com/path")
   end
 
-  test "LiveView bindings are not safe, and stored ones render as text" do
+  test "LiveView bindings are not safe, and stored ones render without them" do
     binding = ~s|<p class="lede" phx-mounted="x">Text</p>|
 
     assert RichText.sanitize_html(binding) == :error
     refute RichText.safe_html?(binding)
     refute RichText.safe_svg?(~s|<svg phx-click="x"></svg>|)
-    assert RichText.render_html(binding) == "Text"
+    assert RichText.render_html(binding) == ~s|<p class="lede">Text</p>|
 
     # Other names that merely start the same way stay
     kept = ~s|<p data-phoenix="x" data-type="phx-mounted">Text</p>|
