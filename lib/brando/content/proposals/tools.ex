@@ -306,7 +306,7 @@ defmodule Brando.Content.Proposals.Tools do
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Uids are unique across the site, not only in the entry: prefix yours, for example with the entry's ref or slug. Returns problems to fix; call again with the corrected operations. Outside an Assistant conversation it also returns review_url, where the user reviews the proposal, and preview_url when an entry has a page preview: the review opened on that page. Give the user preview_url when there is one.
       Outside an Assistant conversation, preview_proposal gives a link to the proposed page that your browser can open without a login, to compare it with its design before the person approves it.
       Outside an Assistant conversation, list_proposals tells whether the person has approved, applied or cancelled your proposals, and cancel_proposal withdraws one still under review: check there instead of asking the person.
-      With "apply":"if_allowed", a proposal that only creates unpublished translations (every operation create_translation, or translate of {"new":R} a create_translation in it makes) is applied at once, without review, when the person's connection is set to allow it: the result then has applied: true, status "applied" and created (each ref's new entry id), and no review_url. Otherwise it is stored for review as usual, with applied: false and not_applied (why). If the answer to a call never arrives, call list_proposals before you call again: a second call stores a second proposal.
+      With "apply":"if_allowed", a proposal that only creates unpublished translations (every operation create_translation, or translate of {"new":R} a create_translation in it makes) is applied at once, without review, when the person's connection is set to allow it: the result then has applied: true, status "applied" and created (each ref's new entry id), and no review_url. Otherwise it is stored for review as usual, with applied: false and not_applied (why); when the person cancelled or applied it in the admin meanwhile, the result has its status instead of a review_url. If the answer to a call never arrives, call list_proposals before you call again: a second call stores a second proposal.
       """,
       parameters: %{
         type: "object",
@@ -907,6 +907,10 @@ defmodule Brando.Content.Proposals.Tools do
 
       {:waiting, reason} ->
         proposal |> review() |> Map.merge(%{applied: false, not_applied: reason})
+
+      # Settled in the admin meanwhile: nothing left to review
+      {:settled, status, reason} ->
+        %{proposal_id: proposal.id, version: proposal.version, status: status, applied: false, not_applied: reason}
     end
   end
 

@@ -225,8 +225,24 @@ defmodule Brando.Content.Proposals.AutoApplyConcurrencyTest do
       assert :ok = unboxed(fn -> Proposals.cancel(proposal.id, c.user) end)
       send(pid, {:resume, :queued})
 
-      assert {:waiting, _reason} = Task.await(task, 10_000)
+      # The tool is told it was cancelled, not sent to review it
+      assert {:settled, "cancelled", reason} = Task.await(task, 10_000)
+      assert reason =~ "cancelled"
       assert %{status: "cancelled", receipt?: false, translated?: false} = state(c, proposal)
+    end
+
+    test "the person's apply committed first wins: the tool is told the person applied it", c do
+      grant = grant!(c)
+      proposal = propose!(c)
+      {task, pid} = start_apply(c, proposal, grant, :queued)
+
+      assert {:ok, _} = unboxed(fn -> Proposals.approve(proposal.id, proposal.version, c.user) end)
+      assert {:ok, %Receipt{}} = unboxed(fn -> Proposals.apply(proposal.id, proposal.version, c.user) end)
+      send(pid, {:resume, :queued})
+
+      assert {:settled, "applied", _reason} = Task.await(task, 10_000)
+      assert %{status: "applied", receipt?: true, translated?: true} = state(c, proposal)
+      assert %Record{auto_applied_grant_id: nil} = unboxed(fn -> Repo.get!(Record, proposal.id) end)
     end
 
     test "an apply holding the proposal wins: the discard that read it pending is refused", c do

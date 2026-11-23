@@ -395,6 +395,17 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert Translations.alternate_languages(Article, c.source.id) == []
     end
 
+    test "a failure after the copies committed reports what is stored: applied", c do
+      grant = allowed!(c)
+      result = prepare(c, grant, [create(c.source)])
+      assert %{"applied" => true} = result
+
+      # Attempted again, the apply refuses; the proposal is applied all the same
+      assert {:applied, %Receipt{id: id}} = AutoApply.run(result["proposal_id"], 1, c.user, grant.id, c.tenant)
+      assert id == result["proposal_id"]
+      assert %Record{status: "applied", auto_apply_reason: nil} = record(id)
+    end
+
     test "a crash leaves the proposal waiting", c do
       Process.put({:synctest_duplicate, c.source.id}, :raise)
       assert_waiting(c, prepare(c, allowed!(c), [create(c.source)]), "It was not applied automatically")

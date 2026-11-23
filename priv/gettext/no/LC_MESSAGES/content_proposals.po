@@ -465,6 +465,11 @@ msgstr "Det ble ikke tatt i bruk automatisk: det feilet. Det venter på gjennomg
 
 #: lib/brando/content/proposals/auto_apply.ex
 #, elixir-autogen, elixir-format
+msgid "It was not applied automatically: meanwhile it became %{status}. Call list_proposals to see where it stands."
+msgstr "Det ble ikke tatt i bruk automatisk: i mellomtiden fikk det status %{status}. Kall list_proposals for å se hvor det står."
+
+#: lib/brando/content/proposals/auto_apply.ex
+#, elixir-autogen, elixir-format
 msgid "It was not applied automatically: only a connected tool, on a connection that is still allowed to, can apply without review. It waits for review."
 msgstr "Det ble ikke tatt i bruk automatisk: bare et tilkoblet verktøy, på en tilkobling som fortsatt har lov, kan ta i bruk uten gjennomgang. Det venter på gjennomgang."
 

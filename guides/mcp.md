@@ -263,9 +263,11 @@ their permissions at that moment, as an approval in the admin applies it
 (locks, staleness checks, validation, Activity), when all of these hold:
 
 - the connection that authenticated the call is set to allow it, still
-  valid, its endpoint on, and its person still allowed to connect, checked
-  under a lock on the connection, so turning the setting off, revoking the
-  connection or turning the endpoint off first applies nothing;
+  valid, its endpoint on, its site active, and its person still allowed to
+  connect, checked under a lock on the endpoint's switch and the
+  connection, so turning the setting off, revoking the connection or
+  turning the endpoint off first applies nothing, and doing it while the
+  apply runs waits for the apply;
 - the person may review proposals (**Assistant → Use**);
 - every operation is a `create_translation`, or a `translate` of
   `{"new": ref}` that a `create_translation` in the same proposal creates,
@@ -276,7 +278,9 @@ their permissions at that moment, as an approval in the admin applies it
 Applied, the result has `applied: true`, `status: "applied"` and `created`
 (each ref's new entry id), with no `review_url`. Otherwise nothing of the
 attempt is kept: the proposal waits for review, unapproved, and the result
-has `applied: false` and `not_applied`, a sentence saying why. Such a
+has `applied: false` and `not_applied`, a sentence saying why. When the
+person cancelled or applied the proposal in the admin while it was being
+tried, the result says so, with its `status` and no `review_url`. A waiting
 proposal does not count as one with problems, so the tool's next proposal
 does not replace it. The Assistant and the local development server never
 apply a proposal so.

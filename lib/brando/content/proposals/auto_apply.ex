@@ -40,6 +40,7 @@ defmodule Brando.Content.Proposals.AutoApply do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Content.Proposals.Receipt
   alias Brando.Content.Proposals.Record
   alias Brando.Content.Transfer.Error
   alias Brando.MCP
@@ -73,30 +74,38 @@ defmodule Brando.Content.Proposals.AutoApply do
 
   @doc """
   Applies the stored version `version` of proposal `id` without review,
-  as `actor`, under the connection `grant_id` at `tenant`. Returns
-  `{:applied, receipt}`, or `{:waiting, reason}`: the proposal waits for
-  review, and `reason` says why in a sentence a tool can act on. Never
-  raises: a crash leaves the proposal waiting too.
+  as `actor`, under the connection `grant_id` at `tenant`, and says what is
+  stored after the attempt, whatever the attempt returned:
+
+    * `{:applied, receipt}`: applied under this connection;
+    * `{:waiting, reason}`: still under review, and `reason` says why it was
+      not applied, in a sentence a tool can act on;
+    * `{:settled, status, reason}`: the person settled it in the admin
+      meanwhile (cancelled or applied it), or a newer version replaced it.
+
+  Never raises: a crash reads what is stored too.
   """
   @spec run(Ecto.UUID.t(), pos_integer(), term(), integer() | nil, MCP.tenant() | nil) ::
-          {:applied, Brando.Content.Proposals.Receipt.t()} | {:waiting, String.t()}
-  def run(_id, _version, _actor, grant_id, tenant) when is_nil(grant_id) or is_nil(tenant),
-    do: {:waiting, no_connection()}
+          {:applied, Receipt.t()}
+          | {:waiting, String.t()}
+          | {:settled, String.t(), String.t()}
+  def run(id, version, _actor, grant_id, tenant) when is_nil(grant_id) or is_nil(tenant),
+    do: outcome(id, version, grant_id, no_connection())
 
   def run(id, version, actor, grant_id, tenant) do
-    case Brando.Content.Proposals.apply(id, version, actor, auto: %{grant_id: grant_id, tenant: tenant}) do
-      {:ok, receipt} -> {:applied, receipt}
-      {:error, message} -> wait(id, version, reason(message))
-    end
-  rescue
-    exception ->
-      Logger.error("[Brando.Content.Proposals.AutoApply] Applying #{id} failed: " <> Exception.message(exception))
+    reason =
+      try do
+        case Brando.Content.Proposals.apply(id, version, actor, auto: %{grant_id: grant_id, tenant: tenant}) do
+          {:ok, _receipt} -> failed()
+          {:error, message} -> reason(message)
+        end
+      rescue
+        exception ->
+          Logger.error("[Brando.Content.Proposals.AutoApply] Applying #{id} failed: " <> Exception.message(exception))
+          failed()
+      end
 
-      wait(
-        id,
-        version,
-        dgettext("content_proposals", "It was not applied automatically: applying it failed. It waits for review.")
-      )
+    outcome(id, version, grant_id, reason)
   end
 
   # The apply's own refusal (content changed, a validation) is said as why
@@ -108,15 +117,38 @@ defmodule Brando.Content.Proposals.AutoApply do
         dgettext("content_proposals", "It was not applied automatically: %{reason} It waits for review.", reason: message)
   end
 
-  # Kept on the version still pending, apart from its problems
-  defp wait(id, version, reason) do
-    Repo.update_all(
-      from(r in Record, where: r.id == ^id and r.version == ^version and r.status == "pending"),
-      set: [auto_apply_reason: reason]
-    )
-
-    {:waiting, reason}
+  # What is stored decides. Under review still: the reason is kept on that
+  # version, apart from its problems.
+  defp outcome(id, version, grant_id, reason) do
+    case Repo.update_all(
+           from(r in Record, where: r.id == ^id and r.version == ^version and r.status in ~w(pending approved)),
+           set: [auto_apply_reason: reason]
+         ) do
+      {1, _} -> {:waiting, reason}
+      {0, _} -> settled(id, version, grant_id)
+    end
   end
+
+  defp settled(id, version, grant_id) do
+    case Repo.one(from(r in Record, where: r.id == ^id, select: {r.version, r.status, r.auto_applied_grant_id})) do
+      {^version, "applied", ^grant_id} when is_integer(grant_id) ->
+        {:applied, Repo.one!(from(r in Receipt, where: r.id == ^id))}
+
+      {_version, status, _grant_id} ->
+        {:settled, status, settled_reason(status)}
+
+      nil ->
+        {:settled, "cancelled", settled_reason("cancelled")}
+    end
+  end
+
+  defp settled_reason(status),
+    do:
+      dgettext(
+        "content_proposals",
+        "It was not applied automatically: meanwhile it became %{status}. Call list_proposals to see where it stands.",
+        status: status
+      )
 
   @doc """
   Inside `Brando.Content.Proposals.apply/4`, before anything is locked:
@@ -167,6 +199,9 @@ defmodule Brando.Content.Proposals.AutoApply do
 
   defp scheduled?(%DateTime{} = publish_at, now), do: DateTime.after?(publish_at, now)
   defp scheduled?(_publish_at, _now), do: false
+
+  defp failed,
+    do: dgettext("content_proposals", "It was not applied automatically: applying it failed. It waits for review.")
 
   defp no_connection,
     do:
