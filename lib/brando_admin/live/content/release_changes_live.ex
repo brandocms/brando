@@ -106,8 +106,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   defp derive(socket, report) do
     rows = Review.rows(report)
-    module_ids = rows |> Enum.flat_map(& &1.uids) |> Entries.module_ids()
-    entries = readable(Entries.list(module_ids))
+    sources = rows |> Enum.flat_map(& &1.uids) |> Entries.sources()
+    entries = readable(Entries.list(sources))
 
     by_row =
       Map.new(rows, fn row -> {row.uid, Enum.filter(entries, &Enum.any?(&1.modules, fn uid -> uid in row.uids end))} end)
@@ -195,7 +195,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         irreversible = Enum.map(status.irreversible, &Map.put(&1, :name, names[&1.uid]))
 
         uids = Enum.map(batch.definitions["items"] || [], & &1["uid"])
-        applied_entries = uids |> Entries.module_ids() |> Entries.list() |> readable()
+        applied_entries = uids |> Entries.sources() |> Entries.list() |> readable()
 
         socket
         |> assign(
@@ -266,10 +266,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   def handle_event("select_row", %{"uid" => uid}, socket) do
     socket = socket |> assign(current: uid, filters: @filters) |> discard_preview() |> load_detail()
 
+    row = Enum.find(socket.assigns.rows, &(&1.uid == uid))
+
     tab =
-      if String.starts_with?(uid, "applied:") and socket.assigns.tab in ["refs", "preview"],
-        do: "template",
-        else: socket.assigns.tab
+      if (String.starts_with?(uid, "applied:") or (row && row.kind in ~w(palette container))) and
+           socket.assigns.tab in ["refs", "preview"],
+         do: "template",
+         else: socket.assigns.tab
 
     {:noreply, assign(socket, :tab, tab)}
   end
@@ -921,7 +924,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp detail(assigns) do
     row = current_row(assigns)
     entries = assigns.entries_by_row[row.uid] || []
-    root_record = Brando.Repo.get_by(Brando.Content.Module, uid: row.uid)
+    root_record = if row.kind == "module", do: Brando.Repo.get_by(Brando.Content.Module, uid: row.uid)
 
     assigns =
       assign(assigns,
@@ -935,7 +938,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     <RC.detail_head
       row={@row}
       meta={meta(@row, @row_entries)}
-      verify?={@row_entries != [] and @row.group != :blocked}
+      verify?={@row_entries != [] and @row.group != :blocked and @row.kind not in ~w(palette container)}
       module_id={@module_id}
     >
       <:class_line>
@@ -944,14 +947,17 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         {RC.class_help(@row.class)}
       </:class_line>
     </RC.detail_head>
-    <RC.tabs tab={@tab} entries={length(@row_entries)} />
+    <RC.tabs tab={@tab} entries={length(@row_entries)} tabs={row_tabs(@row)} />
     <div class="release-tab-body">
       <%= case @tab do %>
         <% "template" -> %>
           <.choice_body row={@row} detail={@detail} report={@report} choices={@choices} replace={@replace} />
           <%= for item <- @row.items, defs = @detail.definitions[item.uid], defs.release, @row.status not in [:conflict] do %>
             <RC.template_diff
-              :if={defs.release["kind"] == "module" and (is_nil(defs.here) or defs.here["code"] != defs.release["code"])}
+              :if={
+                defs.release["kind"] in ~w(module container) and
+                  (is_nil(defs.here) or defs.here["code"] != defs.release["code"])
+              }
               id={"tpl-#{item.uid}"}
               label={gettext("%{name} · template", name: item.name)}
               description={template_description(item, defs, @report.version)}
@@ -960,10 +966,15 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
               type={defs.release["type"]}
             />
             <RC.template_diff
-              :if={defs.release["kind"] != "module" or (defs.here && defs.here["code"] == defs.release["code"])}
+              :if={
+                defs.release["kind"] not in ~w(module container) or (defs.here && defs.here["code"] == defs.release["code"])
+              }
               id={"def-#{item.uid}"}
               label={gettext("%{name} · definition", name: item.name)}
-              description={template_description(item, defs, @report.version) <> " · " <> gettext("the template is unchanged")}
+              description={
+                template_description(item, defs, @report.version) <>
+                  if(defs.release["code"], do: " · " <> gettext("the template is unchanged"), else: "")
+              }
               old={Review.definition_text(defs.here)}
               new={Review.definition_text(defs.release)}
             />
@@ -1179,6 +1190,12 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         gettext("Here → release %{version}", version: version)
     end
   end
+
+  # A module's tree has refs and vars, and renders with the release's
+  # modules in Verify and Preview; a container or a palette shows its
+  # definition and the entries that use it
+  defp row_tabs(%{kind: kind}) when kind in ~w(palette container), do: ~w(template entries)
+  defp row_tabs(_row), do: ~w(template refs entries preview)
 
   defp meta(row, entries) do
     counts = Entries.counts(entries)

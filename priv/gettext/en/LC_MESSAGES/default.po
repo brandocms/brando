@@ -5295,6 +5295,7 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #: lib/brando_admin/components/form/block_field/outline.ex
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Container"
@@ -10060,7 +10061,7 @@ msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
-msgid "Includes child modules and table templates."
+msgid "Includes child modules, table templates, palettes and containers."
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -14429,6 +14430,7 @@ msgid "Pages a Perplexity user asks for. Usually ignores robots.txt"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
+#: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Palette"
 msgstr ""
@@ -19365,6 +19367,7 @@ msgid "Table Templates"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
+#: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Table template"
 msgstr ""
