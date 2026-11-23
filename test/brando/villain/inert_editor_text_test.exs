@@ -437,6 +437,22 @@ defmodule Brando.Villain.InertEditorTextTest do
       refute html =~ "&amp;amp;"
     end
 
+    # `assign` stores the field's text escaped, and the tag escapes it again.
+    # Not fixed here: the fix changes what such templates print today (#3807).
+    @tag skip: "assign stores escaped text, which a tag argument escapes again (#3807)"
+    test "a tag argument escapes a value assigned first once, as it does the field", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      entry = %Page{title: "<b>", language: :en} |> Map.put(:cover, image)
+
+      alt = fn code ->
+        html = render(block(module!(user, code), []), entry)
+        html |> Floki.parse_fragment!() |> Floki.find("img") |> Floki.attribute("alt") |> Enum.uniq()
+      end
+
+      assert alt.("{% picture entry.cover { lazyload: false, alt: entry.title } %}") == ["<b>"]
+      assert alt.("{% assign q = entry.title %}{% picture entry.cover { lazyload: false, alt: q } %}") == ["<b>"]
+    end
+
     test "a filter on a record gets the record", %{user: user} do
       image = Factory.insert(:image, creator: user, alt: %{"en" => "Alt <b>"})
       entry = Map.put(%Page{title: "T", language: :en}, :cover, image)

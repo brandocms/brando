@@ -799,6 +799,7 @@ files:
 - `brando:admin-ui` ([usage-rules/admin-ui.md](usage-rules/admin-ui.md)): listing components and menu items, custom and selection actions, live updates, the form LiveView, select options, multi-selects and block editors.
 - `brando:generators` ([usage-rules/generators.md](usage-rules/generators.md)): running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents.
 - `brando:module-definitions` ([usage-rules/module-definitions.md](usage-rules/module-definitions.md)): exporting, editing and importing modules and their templates as files.
+- `brando:seeding` ([usage-rules/seeding.md](usage-rules/seeding.md)): seed scripts, demo content, imports and data migrations: blocks with images and galleries, entries, menus, with several sites.
 - `brando:rendering` ([usage-rules/rendering.md](usage-rules/rendering.md)): page controllers and templates, fragments, menus, site forms, and changing the HTML blocks render to.
 - `brando:datasources` ([usage-rules/datasources.md](usage-rules/datasources.md)): feeding a module entries from a query or an editor's selection, and keeping them fresh.
 - `brando:live-preview` ([usage-rules/live-preview.md](usage-rules/live-preview.md)): configuring preview targets, their assigns and refreshes.

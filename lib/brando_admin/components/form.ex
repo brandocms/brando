@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.AI.FieldAction
   alias Brando.Blueprint.Callback
+  alias Brando.Blueprint.ErrorTranslator
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Content.Blocks
   alias Brando.EditSession
@@ -135,6 +136,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:replaced_values, %{})
      |> assign(:held_remote, %{})
      |> assign(:field_clocks, %{})
+     |> assign(:unsent_clocks, %{})
      |> assign(:blocks_detached?, false)
      |> assign(:working_copy, nil)
      |> assign(:hidden_block_fields, [])
@@ -331,9 +333,19 @@ defmodule BrandoAdmin.Components.Form do
   # Another of the editor's tabs takes over: what this form changed goes to
   # it now, and its recovery copy with it (`Drafts.release/2`).
   def update(%{event: "tab_release", to: to}, socket) do
-    # values typed that didn't cast are this tab's, and don't ship
-    uncast = Enum.map(uncast_fields(socket), &to_string/1)
-    {:ok, socket |> ship_all_field_changes() |> Drafts.release(to, uncast)}
+    socket = ship_all_field_changes(socket)
+    changeset = socket.assigns.form.source
+
+    # values typed that didn't cast, or that the rich-text check refused,
+    # are this tab's, and don't ship
+    held =
+      socket
+      |> unshipped_fields()
+      |> MapSet.filter(&Brando.RichText.refused?(changeset, &1))
+      |> MapSet.union(uncast_fields(socket))
+      |> Enum.map(&to_string/1)
+
+    {:ok, Drafts.release(socket, to, held)}
   end
 
   def update(%{event: "tab_release_timeout", token: token}, socket), do: {:ok, Drafts.release_timeout(socket, token)}
@@ -3251,6 +3263,12 @@ defmodule BrandoAdmin.Components.Form do
   #   * `held_remote`: another editor's change to the field this editor is
   #     in. It applies when the editor leaves the field without having
   #     changed it; otherwise what they typed wins and is shipped.
+  #   * `field_clocks`: field => the clock of the value the other editors
+  #     hold (`stamp/2`, `take_newer/2`).
+  #   * `unsent_clocks`: field => the clock of a value this editor holds
+  #     back, typed offline and refused by the rich-text check
+  #     (`share_recovered/3`). A value older than it doesn't enter the form,
+  #     and it is never sent: it protects this form alone.
 
   # Ships the fields this editor changed since its last shipment. Used on
   # field blur and focus, save, and after an asset or a multi-select change.
@@ -3530,10 +3548,14 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A value the form wrote itself, with no event from the browser to follow
-  # (AI text, an uploaded video, an image copy): ship it now.
+  # (AI text, an uploaded video, an image copy): ship it now. Its rich text
+  # is checked as a `validate` checks it (`cast_entry_edit/5`): a value the
+  # check refuses stays this editor's (`pending_changes/1`).
   defp put_written_form(socket, form) do
+    changeset = check_rich_text(form.source, socket, &Brando.RichText.recheck_form/2)
+
     socket
-    |> put_local_form(form)
+    |> put_local_form(to_form(changeset, []))
     |> Drafts.dirty()
     |> ship_all_field_changes()
   end
@@ -3704,8 +3726,25 @@ defmodule BrandoAdmin.Components.Form do
   # rich-text check refuses stays in this tab, as in `pending_changes/1`,
   # marked as this editor's unshipped edit, so another editor's save keeps
   # it (`unsaved_edits/6`) and it ships once corrected.
+  #
+  # A refused value typed offline gets a clock stamped now, as an offline
+  # value that ships does, but kept apart (`unsent_clocks`): a value from
+  # before the recovery, in a join reply that arrives after it, doesn't
+  # replace it (`receive_field_changes/2`), and a real edit made since
+  # wins. A refused value typed before the tab went offline gets none: an
+  # edit another editor made meanwhile is newer.
   defp share_recovered(socket, offline, entry_params) do
-    socket = socket |> mark_local(offline ++ refused_recovered(socket, entry_params)) |> ship_all_field_changes()
+    changeset = socket.assigns.form.source
+
+    refused_offline = for field <- offline, Brando.RichText.refused?(changeset, field), do: %{field: field}
+    {unsent, _socket} = stamp(refused_offline, socket)
+
+    socket =
+      socket
+      |> assign(:unsent_clocks, Map.merge(unsent_clocks(socket), Map.new(unsent, &{&1.field, &1.clock})))
+      |> mark_local(offline ++ refused_recovered(socket, entry_params))
+      |> ship_all_field_changes()
+
     entry = socket.assigns[:entry]
 
     if entry && entry.id && is_map(entry_params) && may_update?(socket) do
@@ -3808,7 +3847,9 @@ defmodule BrandoAdmin.Components.Form do
   defp drop_param(params, _field), do: params
 
   # Another editor's changes. The field this editor is in is held until it
-  # leaves it (`apply_held_remote/1`); the rest apply now.
+  # leaves it (`apply_held_remote/1`); the rest apply now, except a value
+  # older than one this editor holds back (`unsent_clocks`): the others hold
+  # it, this form keeps its own.
   # A change to a field this editor may not change (`LockedFields`), from an
   # editor it isn't locked for, doesn't enter the form: its save keeps what
   # the form has (the entry's value, or a working copy's or translation's).
@@ -3816,13 +3857,15 @@ defmodule BrandoAdmin.Components.Form do
     locked = locked_keys(socket)
     changes = Enum.reject(changes, &(&1.field in locked))
     {changes, socket} = take_newer(changes, socket)
+    unsent = unsent_clocks(socket)
+    {outdone, changes} = Enum.split_with(changes, &(Map.get(&1, :clock, {0, ""}) <= Map.get(unsent, &1.field, {0, ""})))
     {held, changes} = Enum.split_with(changes, &focused_field?(socket, &1.field))
 
     held_remote = Enum.reduce(held, held_remote(socket), &Map.put(&2, &1.field, &1))
 
     socket
     |> apply_remote(changes)
-    |> mark_synced(held)
+    |> mark_synced(held ++ outdone)
     |> assign(:held_remote, held_remote)
   end
 
@@ -4037,6 +4080,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp field_clocks(socket), do: socket.assigns[:field_clocks] || %{}
+  defp unsent_clocks(socket), do: socket.assigns[:unsent_clocks] || %{}
 
   # Fields back to the saved value, as the entry loaded, like a change from
   # another editor: the browser's old value for them is an echo from then on.
@@ -4690,7 +4734,7 @@ defmodule BrandoAdmin.Components.Form do
         |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
 
       socket
-      |> store_revision(changeset)
+      |> store_revision(changeset, put_again)
       |> clear_blocks_root_changesets()
       |> reset_transformer_changesets()
     else
@@ -8434,11 +8478,14 @@ defmodule BrandoAdmin.Components.Form do
   # This tab took over from another of the editor's tabs, with its recovery
   # copy (`Drafts.adopt/2`). The fields and blocks it edited came already,
   # through the field sync and the edit session. What doesn't sync comes
-  # from the copy: values it typed that didn't cast (`fields`, which the
-  # field sync leaves out), and relations and transformers it has otherwise
-  # than this form, which edited nothing. Both tabs show the same saved
-  # entry, so the copy's rows are cast as they are (`Restore.reconcile/2` is
-  # for a copy of an entry that may have changed since).
+  # from the copy: values it typed that didn't cast or that the rich-text
+  # check refused (`fields`, which the field sync leaves out), and relations
+  # and transformers it has otherwise than this form, which edited nothing.
+  # Both tabs show the same saved entry, so the copy's rows are cast as they
+  # are (`Restore.reconcile/2` is for a copy of an entry that may have
+  # changed since), and checked by this form's rich-text check, as a
+  # `validate` is: a refused value shows its error and stays this editor's
+  # unshipped edit.
   #
   # A revision's working copy left the edit session (`BlockField`, `detach`):
   # its blocks are in the copy alone, which is restored as a working copy
@@ -8454,8 +8501,16 @@ defmodule BrandoAdmin.Components.Form do
     copy = update_in(copy.payload["main"], &Map.merge(&1 || %{}, Map.take(own, keep)))
 
     case Brando.Drafts.Restore.prepare(copy, entry, schema, user, accept_conflict: true, compatible_only: true) do
-      {:ok, changeset, _issues} -> apply_restored_changeset(socket, changeset, :recovery_copy, working_copy)
-      _ -> Drafts.refresh_candidates(socket)
+      {:ok, changeset, _issues} ->
+        changeset =
+          changeset
+          |> check_rich_text(socket, &Brando.RichText.validate_form/2)
+          |> Map.put(:action, :validate)
+
+        apply_restored_changeset(socket, changeset, :recovery_copy, working_copy)
+
+      _ ->
+        Drafts.refresh_candidates(socket)
     end
   end
 
@@ -8476,7 +8531,12 @@ defmodule BrandoAdmin.Components.Form do
         |> Map.merge(Map.take(handed_transformers, transformers))
         |> Map.drop(["id", "creator_id", "deleted_at"])
 
-      form = to_form(schema.changeset(entry, params, user), [])
+      form =
+        entry
+        |> schema.changeset(params, user)
+        |> check_rich_text(socket, &Brando.RichText.validate_form/2)
+        |> Map.put(:action, :validate)
+        |> to_form([])
 
       for name <- transformers do
         send_update(BrandoAdmin.Components.Form.Transformer,
@@ -8488,7 +8548,11 @@ defmodule BrandoAdmin.Components.Form do
 
       # as they were in the other tab: errors of this editor's, not changes
       uncast =
-        for key <- uncast, field = String.to_existing_atom(key), Keyword.has_key?(form.source.errors, field), do: field
+        for key <- uncast,
+            field = String.to_existing_atom(key),
+            Keyword.has_key?(form.source.errors, field),
+            not Brando.RichText.refused?(form.source, field),
+            do: field
 
       socket
       |> put_local_form(form)
@@ -8827,7 +8891,7 @@ defmodule BrandoAdmin.Components.Form do
     }
   end
 
-  defp store_revision(socket, changeset) do
+  defp store_revision(socket, changeset, put_again) do
     result =
       with :ok <- Brando.Authorization.Boundary.change(socket.assigns.current_user, :update, changeset),
            do: Changeset.apply_action(changeset, :update)
@@ -8843,7 +8907,7 @@ defmodule BrandoAdmin.Components.Form do
               action: :refresh_revisions
             )
 
-            socket
+            clear_refused_values(socket, put_again)
 
           {:error, reason} ->
             revision_error(socket, reason)
@@ -8861,6 +8925,21 @@ defmodule BrandoAdmin.Components.Form do
           socket.assigns.schema
         )
     end
+  end
+
+  # A refused revision left its errors in the form; a value corrected
+  # without a cast (another editor's) would show them until its next cast.
+  # The stored revision put the rows of `put_again` from what the block
+  # fields and transformers sent, so the refused ones go.
+  defp clear_refused_values(%{assigns: %{form: %{source: %{valid?: true}}}} = socket, _put_again), do: socket
+
+  defp clear_refused_values(socket, put_again) do
+    source =
+      socket.assigns.form.source
+      |> without_rows(put_again)
+      |> check_rich_text(socket, &Brando.RichText.recheck_form/2)
+
+    put_form(socket, to_form(source, []))
   end
 
   defp revision_error(socket, reason) do
@@ -8959,20 +9038,24 @@ defmodule BrandoAdmin.Components.Form do
 
     error_keys = Map.keys(traversed_errors)
 
+    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
+
+    # A field this form does not draw (a named form that leaves it out) can
+    # still be refused: no input marks it, so the alert gives its messages
+    {drawn_keys, undrawn_keys} = Enum.split_with(error_keys -- grouped_keys, &ErrorTranslator.drawn?(&1, form, schema))
+
     tab_with_first_error =
-      error_keys
+      (drawn_keys ++ error_keys)
       |> List.first()
       |> Brando.Blueprint.Forms.get_tab_for_field(form)
 
-    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
-
     translated_error_keys =
-      (error_keys -- grouped_keys)
+      drawn_keys
       |> Brando.Blueprint.Utils.translate_error_keys(form, schema)
       |> Kernel.++(group_items)
 
     # Include nested association errors as "parent → child → field" paths
-    nested_error_paths = flatten_nested_errors(traversed_errors)
+    nested_error_paths = traversed_errors |> Map.drop(undrawn_keys) |> flatten_nested_errors()
 
     all_error_items =
       for key <- translated_error_keys do
@@ -8982,9 +9065,24 @@ defmodule BrandoAdmin.Components.Form do
           "<li class=\"text-mono\">#{Alert.escape(path)}: #{Alert.escape(Enum.join(messages, ", "))}</li>"
         end
 
+    undrawn_items =
+      for key <- undrawn_keys do
+        {label, message} = ErrorTranslator.undrawn_entry(changeset, key, schema, &Primitives.translate_error/1)
+        "<li class=\"text-mono\">#{Alert.escape(label)}: #{Alert.escape(message)}</li>"
+      end
+
+    undrawn_notice =
+      if undrawn_items != [] do
+        """
+        <br>#{gettext("This form does not show these fields:")}<br><br>
+        <ul class="error-keys">#{undrawn_items}</ul>
+        """
+      end
+
     error_msg = """
     #{error_notice}<br><br>
     <ul class="error-keys">#{all_error_items}</ul>
+    #{undrawn_notice}
     """
 
     require Logger
@@ -9022,7 +9120,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
     |> Enum.uniq()
     |> Enum.reduce({[], []}, fn fields, {items, keys} ->
-      labels = Brando.Blueprint.Utils.translate_error_keys(fields, form, schema)
+      labels = Enum.map(fields, &ErrorTranslator.label_in(&1, form, schema))
       item = Enum.join(labels, " #{gettext("or")} ")
 
       {items ++ [item], keys ++ Enum.map(fields, &group_error_key(changeset, &1))}

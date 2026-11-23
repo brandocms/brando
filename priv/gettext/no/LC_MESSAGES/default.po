@@ -842,6 +842,11 @@ msgstr[1] "%{label} +%{count} til"
 msgid "%{label} needs %{needed} units — only %{free} free in that row. Narrow another variable, or start a new row."
 msgstr "%{label} trenger %{needed} enheter – bare %{free} er ledige i den raden. Gjør en annen variabel smalere, eller start en ny rad."
 
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgid "%{label}, row %{row}"
+msgstr "%{label}, rad %{row}"
+
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
 msgid "%{languages} is not one of the installation's languages (config :brando, :languages)"
@@ -1163,6 +1168,13 @@ msgstr[1] "%{count} blokker er ulike"
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "1 block holds values the module no longer defines"
+msgid_plural "%{count} blocks hold values the module no longer defines"
+msgstr[0] "1 blokk har verdier modulen ikke lenger definerer"
+msgstr[1] "%{count} blokker har verdier modulen ikke lenger definerer"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
 msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
 msgstr[0] "1 blokk beholder det endringene la til; løs det under Blokkmoduler → Blokker på eldre versjoner."
@@ -1304,6 +1316,13 @@ msgid "1 object"
 msgid_plural "%{count} objects"
 msgstr[0] "1 objekt"
 msgstr[1] "%{count} objekter"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 of %{total} blocks holds a value"
+msgid_plural "%{count} of %{total} blocks hold a value"
+msgstr[0] "1 av %{total} blokker har en verdi"
+msgstr[1] "%{count} av %{total} blokker har en verdi"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -3050,6 +3069,11 @@ msgstr "Når forslaget tas i bruk, lagres også blokkene og mediene kilden har l
 msgid "Applying also saves the blocks and media its source added or changed since the last save, with their texts in the source's language until they are translated."
 msgstr "Når forslaget tas i bruk, lagres også blokkene og mediene kilden har lagt til eller endret siden forrige lagring, med tekstene på kildens språk til de er oversatt."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Applying deletes nothing an editor typed. The blocks keep the values until you resolve them after the apply: drop them, or move them onto a ref or var the module defines now. Until then they keep printing wherever the template still names them."
+msgstr "Å ta i bruk endringen sletter ingenting en redaktør har skrevet. Blokkene beholder verdiene til du løser dem etterpå: fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå. Til da vises de der malen fortsatt nevner dem."
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Applying translations..."
@@ -3600,6 +3624,16 @@ msgstr "Blokkene får refen, tom eller med standardinnholdet"
 #, elixir-autogen, elixir-format
 msgid "Blocks in this translation follow the source. Add, remove or move them in the source."
 msgstr "Blokkene i denne oversettelsen følger kilden. Legg til, fjern eller flytt dem i kilden."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks keep what they hold in the removed refs and vars"
+msgstr "Blokkene beholder det de har i refsene og variablene som fjernes"
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks keep what they hold until it is resolved"
+msgstr "Blokkene beholder det de har til det er løst"
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -12179,11 +12213,6 @@ msgstr "Navigasjon"
 msgid "Needs a choice"
 msgstr "Trenger et valg"
 
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Needs a migration"
-msgstr "Trenger en migrering"
-
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "Needs at least %{count} impressions on Google's first page."
@@ -16138,8 +16167,8 @@ msgstr "Fjernet Figma-tilkoblingen som ble laget med den forrige appen"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
-msgid "Removes a var that blocks hold values for. Those values are dropped when the blocks re-render."
-msgstr "Fjerner en variabel som blokker har verdier i. Verdiene forsvinner når blokkene gjengis på nytt."
+msgid "Removes refs or vars. Blocks keep what they hold in them until you resolve the blocks after the apply."
+msgstr "Fjerner refs eller variabler. Blokkene beholder det de har i dem til du løser blokkene etter at endringen er tatt i bruk."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -16565,7 +16594,9 @@ msgid_plural "Resolve %{count} blocks?"
 msgstr[0] "Løse %{count} blokk?"
 msgstr[1] "Løse %{count} blokker?"
 
+#: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/stale_blocks.ex
+#: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -20980,6 +21011,11 @@ msgstr "De flyttes til papirkurven, og kommer tilbake hvis siden gjenopprettes."
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
 msgstr "De kan lastes inn når revisjonen du har åpen er lukket, eller lagringen som pågår er ferdig."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+msgstr "De vises fortsatt der malen nevner dem. Fjern dem, eller flytt dem til en ref eller variabel modulen definerer nå."
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "They keep the HTML they have now until the template or their content is fixed."
@@ -21284,6 +21320,11 @@ msgstr "Denne fotnoten ble ikke funnet i dette feltet."
 #, elixir-autogen, elixir-format
 msgid "This footnote could not be found. Its marker may have been pasted without its content."
 msgstr "Denne fotnoten ble ikke funnet. Markøren kan ha blitt limt inn uten innholdet."
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "This form does not show these fields:"
+msgstr "Dette skjemaet viser ikke disse feltene:"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -22870,11 +22911,6 @@ msgstr "Gyldig"
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr "Verdi"
-
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "Values are dropped when blocks re-render"
-msgstr "Verdiene forsvinner når blokkene gjengis på nytt"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

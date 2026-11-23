@@ -13,6 +13,7 @@ defmodule BrandoAdmin.RichTextDefaultFormTest do
 
   import Brando.EditSessionEditors, only: [await: 1]
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Brando.Revisions.Revision
   alias Brando.RichTextDefaultFormTest.Note
@@ -136,6 +137,42 @@ defmodule BrandoAdmin.RichTextDefaultFormTest do
         assert Keyword.has_key?(form_source(view).errors, :subtitle)
         assert revisions(note) == before
       end
+    end
+  end
+
+  describe "a refused field" do
+    # The omitted form draws no subtitle, so no field can show the error: the
+    # alert names it, under the default form's label, and a refusal the
+    # editor is told about is no error in the log
+    test "the form does not draw is named in the alert", %{conn: conn, note: note} do
+      view = open(conn, note, "omitted")
+      stale = view |> render() |> form_params("#note_form_form")
+      other_ships_subtitle(view, note, @unsafe)
+
+      log = capture_log(fn -> save(view, stale) end)
+
+      assert_push_event(view, "b:alert", %{type: "error", html: html})
+      assert html =~ "Lede"
+      refute log =~ "Could not get field"
+    end
+
+    # The refused revision put its changeset in the form; the corrected one
+    # arrives as a field change, with no cast to clear the old error
+    test "shows no error once a corrected revision is stored", %{conn: conn, note: note} do
+      view = open(conn, note, "plain")
+
+      other_ships_subtitle(view, note, @unsafe)
+      view |> form_of() |> render_hook("store_revision", %{})
+      assert_push_event(view, "b:scroll_to_first_error", %{}, 5_000)
+      assert Keyword.has_key?(form_source(view).errors, :subtitle)
+
+      before = revisions(note)
+      other_ships_subtitle(view, note, "<p>Safe</p>")
+      view |> form_of() |> render_hook("store_revision", %{})
+      await(fn -> revisions(note) == before + 1 end)
+
+      refute Keyword.has_key?(form_source(view).errors, :subtitle)
+      refute view |> render() |> Floki.parse_document!() |> Floki.find(".field-error") |> Enum.any?()
     end
   end
 end

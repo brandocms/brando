@@ -221,7 +221,9 @@ defmodule Brando.Villain.RawOnRichTextTest do
       for {{TemplateView, _} = key, _} <- Process.get(), do: Process.delete(key)
     end
 
-    defp marks, do: for({{TemplateView, _}, %MapSet{} = value} <- Process.get(), do: value)
+    # The marked texts, in the current store and the one kept from before
+    # the cap was reached
+    defp marks, do: Enum.flat_map([:rich_texts, :rich_texts_before], &Map.keys(Process.get({TemplateView, &1}, %{})))
 
     # Markup is marked, for `markdown`: escaped text never holds a `<`
     test "text with nothing for raw to decode and no markup is not marked" do
@@ -263,7 +265,7 @@ defmodule Brando.Villain.RawOnRichTextTest do
 
       # And the memory stays bounded
       for n <- 1..5_000, do: TemplateView.read_as_rich_text("&amp;more#{n}")
-      assert marks() |> Enum.map(&MapSet.size/1) |> Enum.sum() <= 2_000
+      assert length(marks()) in 1..2_000
     end
 
     test "rendering Markdown leaves no marks", %{user: user} do

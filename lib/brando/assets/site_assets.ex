@@ -388,13 +388,54 @@ defmodule Brando.Assets.SiteAssets do
   """
   @spec unscoped_path(String.t()) :: String.t() | nil
   def unscoped_path(relative_path) when is_binary(relative_path) do
-    with [_ | _] = candidates <- Map.get(unscoped_index(), relative_path, []),
+    with {:ok, index} <- unscoped_index(),
+         [_ | _] = candidates <- Map.get(index, relative_path, []),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
       candidates
       |> Enum.filter(&previewable?/1)
       |> agreed_file()
     else
       _miss -> nil
+    end
+  end
+
+  @doc """
+  Resolves a request path that `unscoped_path/1` left unanswered on the
+  admin's host, from the `public/` folder of the development site's Vite
+  project (`Brando.Assets.DevSite.public_file/2`), for its live preview: only
+  while no set of a site that can be previewed holds the path, so another
+  site's preview keeps its set's file. Nil without a development site, when
+  the sets' paths could not be read, and for a path the release's
+  `priv/static` holds.
+  """
+  @spec unscoped_public_file(String.t()) :: String.t() | nil
+  def unscoped_public_file(relative_path) when is_binary(relative_path) do
+    with site_key when is_binary(site_key) <- DevSite.key(),
+         {:ok, index} <- unscoped_index(),
+         false <- index |> Map.get(relative_path, []) |> Enum.any?(&previewable?/1) do
+      dev_site_public_file(site_key, nil, relative_path)
+    else
+      _no_dev_site_or_a_set_holds_it_or_unread -> nil
+    end
+  end
+
+  @doc """
+  Resolves a request path that `serve_path/3` and `other_environment_path/3`
+  left unanswered on a host of the development site
+  (`Brando.Assets.DevSite`) that resolves to `environment`, from the
+  `public/` folder of its Vite project (`Brando.Assets.DevSite.public_file/2`):
+  only while no other environment's set answers the path, so a path whose
+  sets hold other contents stays unanswered. A path the release's
+  `priv/static` holds is left to it. Nil for every other site.
+  """
+  @spec dev_site_public_file(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
+  def dev_site_public_file(site, environment, relative_path) when is_binary(relative_path) do
+    with file when is_binary(file) <- DevSite.public_file(site, relative_path),
+         [] <- other_environment_candidates(site, environment, relative_path),
+         false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
+      file
+    else
+      _miss_or_release_file -> nil
     end
   end
 
@@ -420,17 +461,21 @@ defmodule Brando.Assets.SiteAssets do
   the active, environment, pinned and set caches, on every node.
   """
   @spec other_environment_path(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
-  def other_environment_path(_site, nil, _relative_path), do: nil
-
-  def other_environment_path(site, %Environment{id: environment_id, site_id: site_id}, relative_path)
-      when is_binary(relative_path) do
-    with [_ | _] = candidates <- environment_index() |> Map.get(site_id, %{}) |> Map.get(relative_path, []),
-         [_ | _] = others <- Enum.reject(candidates, &match?({^environment_id, _file, _content}, &1)),
-         [_ | _] = others <- answering_environments(site, others),
+  def other_environment_path(site, environment, relative_path) when is_binary(relative_path) do
+    with [_ | _] = others <- other_environment_candidates(site, environment, relative_path),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
       agreed_file(others)
     else
       _miss -> nil
+    end
+  end
+
+  defp other_environment_candidates(_site, nil, _relative_path), do: []
+
+  defp other_environment_candidates(site, %Environment{id: environment_id, site_id: site_id}, relative_path) do
+    with [_ | _] = candidates <- environment_index() |> Map.get(site_id, %{}) |> Map.get(relative_path, []),
+         [_ | _] = others <- Enum.reject(candidates, &match?({^environment_id, _file, _content}, &1)) do
+      answering_environments(site, others)
     end
   end
 
@@ -793,7 +838,7 @@ defmodule Brando.Assets.SiteAssets do
   defp unscoped_index do
     case :persistent_term.get(@unscoped_key, :not_cached) do
       :not_cached -> warm_unscoped()
-      index -> index
+      index -> {:ok, index}
     end
   end
 
@@ -803,8 +848,8 @@ defmodule Brando.Assets.SiteAssets do
     fence = change_fence()
 
     case load_unscoped(fence) do
-      {:ok, index} -> fill(@unscoped_key, index, fence)
-      :error -> %{}
+      {:ok, index} -> {:ok, fill(@unscoped_key, index, fence)}
+      :error -> :error
     end
   end
 

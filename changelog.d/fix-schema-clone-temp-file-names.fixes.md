@@ -1,0 +1,1 @@
+- Cloning or importing an environment no longer fails with `temporary_dump_failed, :eexist` when an earlier, interrupted clone left its dump file behind or another node clones at the same time.

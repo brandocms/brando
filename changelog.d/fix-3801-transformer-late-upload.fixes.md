@@ -1,0 +1,1 @@
+- An image that finishes uploading after its transformer card was removed, given another file, or replaced by a restored recovery copy no longer appears as a new row.

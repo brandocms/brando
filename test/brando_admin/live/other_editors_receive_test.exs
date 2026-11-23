@@ -27,7 +27,7 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       )
 
     other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
-    %{article: article, other_conn: log_in_user(Phoenix.ConnTest.build_conn(), other)}
+    %{article: article, other: other, other_conn: log_in_user(Phoenix.ConnTest.build_conn(), other)}
   end
 
   # `form`: a named form, or nil for the default form
@@ -36,6 +36,26 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       live_form(conn, Enum.join(["/admin/articles/update", article.id | List.wrap(form)], "/"), "article_form")
 
     view
+  end
+
+  # A browser tab of the editor's: its id goes with every join
+  defp open_tab(conn, article, form, tab) do
+    params = %{"brando_tab" => tab, "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+    conn |> Phoenix.LiveViewTest.put_connect_params(params) |> open(article, form)
+  end
+
+  # `to` presses Edit here; `from`'s browser answers with its last capture
+  defp take_over(to, from) do
+    to |> element(~s([data-testid="tab-notice"] button[phx-click="brando_tab_claim"])) |> render_click()
+    assert_push_event(from, "b:draft-release", %{})
+    main = from |> params() |> Plug.Conn.Query.encode()
+
+    from
+    |> form_of()
+    |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => "r1"})
+
+    await(fn -> :sys.get_state(to.pid).socket.assigns.tab_access.mode == :editing end)
+    settle(to)
   end
 
   defp form_of(view), do: with_target(view, cid_of(view, "#article_form-el"))
@@ -72,6 +92,18 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       _ -> nil
     end)
   end
+
+  defp clocks(view, field) do
+    {components, _, _} = :sys.get_state(view.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> Map.get(assigns.field_clocks, field)
+      _ -> nil
+    end)
+  end
+
+  # The error messages the form shows under a field
+  defp shown_errors(view, id), do: view |> render() |> Floki.parse_document!() |> Floki.find("##{id}-error .field-error")
 
   defp subtitle(view), do: Ecto.Changeset.get_field(form_source(view), :subtitle)
 
@@ -192,6 +224,188 @@ defmodule BrandoAdmin.OtherEditorsReceiveTest do
       type(a, "subtitle", "<p>Fixed</p>")
       leave(a, "article[subtitle]")
       await(fn -> subtitle(b) == "<p>Fixed</p>" end)
+    end
+
+    # Not shipped, the value has no clock from a shipment: the recovery
+    # stamps one, so the other editor's older value loses
+    test "typed offline stays when the join reply comes after the recovery", %{conn: conn, article: article} = c do
+      a = open(conn, article, "notes")
+      b = open(c.other_conn, article, "notes")
+
+      type(b, "subtitle", "<p>From B</p>")
+      leave(b, "article[subtitle]")
+      await(fn -> subtitle(a) == "<p>From B</p>" end)
+
+      recovered =
+        a
+        |> params()
+        |> put_in(["article", "subtitle"], @unsafe)
+        |> Map.put("__offline_edits", "article[subtitle]")
+        |> Map.put("_target", ["image_editor_upload"])
+
+      kill_live(a)
+
+      # B's join reply waits until A's recovered form is in
+      :sys.suspend(b.pid)
+      a = open(conn, article, "notes")
+      a |> form_of() |> render_hook("recover_form", recovered)
+      :sys.resume(b.pid)
+      settle_both(a, b)
+
+      assert subtitle(a) == @unsafe
+      assert subtitle(b) == "<p>From B</p>"
+    end
+
+    # Typed before the connection dropped, not offline: an edit the other
+    # editor made meanwhile is newer, and wins
+    test "typed before a drop gives way to the other editor's edit made meanwhile",
+         %{conn: conn, article: article} = c do
+      a = open(conn, article, "notes")
+      b = open(c.other_conn, article, "notes")
+
+      type(a, "subtitle", @unsafe)
+      recovered = a |> params() |> Map.put("_target", ["image_editor_upload"])
+      kill_live(a)
+
+      type(b, "subtitle", "<p>From B</p>")
+      leave(b, "article[subtitle]")
+
+      :sys.suspend(b.pid)
+      a = open(conn, article, "notes")
+      a |> form_of() |> render_hook("recover_form", recovered)
+      :sys.resume(b.pid)
+      settle_both(a, b)
+
+      assert subtitle(a) == "<p>From B</p>"
+    end
+
+    # The join reply came first and filled the field's synced value: the
+    # value typed offline still gets its clock, so a reply between the two
+    # loses to it
+    test "typed offline stays when a reply older than the recovery comes after it",
+         %{conn: conn, article: article} = c do
+      a = open(conn, article, "notes")
+      b = open(c.other_conn, article, "notes")
+
+      type(b, "subtitle", "<p>From B</p>")
+      leave(b, "article[subtitle]")
+      await(fn -> subtitle(a) == "<p>From B</p>" end)
+
+      recovered =
+        a
+        |> params()
+        |> put_in(["article", "subtitle"], @unsafe)
+        |> Map.put("__offline_edits", "article[subtitle]")
+        |> Map.put("_target", ["image_editor_upload"])
+
+      kill_live(a)
+      a = open(conn, article, "notes")
+      settle_both(a, b)
+      {n, _tab} = clocks(a, :subtitle)
+      a |> form_of() |> render_hook("recover_form", recovered)
+
+      late = %{field: :subtitle, value: "<p>Late</p>", assoc?: false, clock: {n + 1, "tab-late"}}
+      send(a.pid, {:fields_shipped, %{changes: [late], clocks: nil, user_id: c.other.id, tab: "tab-late", to: nil}})
+      settle(a)
+
+      assert subtitle(a) == @unsafe
+    end
+
+    # The clock the recovery gives a refused value protects it in this form
+    # alone: a joining editor gets the value the others hold, with its clock
+    test "typed offline keeps its clock from an editor who joins", %{conn: conn, article: article} = c do
+      a = open(conn, article, "notes")
+      b = open(c.other_conn, article, "notes")
+
+      type(a, "subtitle", "<p>From A</p>")
+      leave(a, "article[subtitle]")
+      await(fn -> subtitle(b) == "<p>From A</p>" end)
+
+      recovered =
+        a
+        |> params()
+        |> put_in(["article", "subtitle"], @unsafe)
+        |> Map.put("__offline_edits", "article[subtitle]")
+        |> Map.put("_target", ["image_editor_upload"])
+
+      kill_live(a)
+
+      :sys.suspend(b.pid)
+      a = open(conn, article, "notes")
+      a |> form_of() |> render_hook("recover_form", recovered)
+      :sys.resume(b.pid)
+      settle_both(a, b)
+      assert subtitle(a) == @unsafe
+
+      # A's join reply reaches the third editor before B's
+      third = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      :sys.suspend(b.pid)
+      d = open(log_in_user(Phoenix.ConnTest.build_conn(), third), article, "notes")
+      settle_both(a, d)
+      :sys.resume(b.pid)
+      settle_both(b, d)
+
+      assert subtitle(d) == "<p>From A</p>"
+    end
+  end
+
+  # The field sync leaves out a refused value, so the copy the editor's
+  # other tab hands over carries it, and the tab that takes over checks it
+  # by its own form: the value stays the editor's, refused and unshipped.
+  describe "a refused value when another of the editor's tabs takes over" do
+    test "goes over with the copy, with its error", %{conn: conn, article: article} = c do
+      a = open_tab(conn, article, "notes", "tab-a")
+      b = open_tab(conn, article, "notes", "tab-b")
+      other = open(c.other_conn, article, "notes")
+
+      type(a, "subtitle", @unsafe)
+      assert [_ | _] = shown_errors(a, "article_subtitle")
+      take_over(b, a)
+
+      assert subtitle(b) == @unsafe
+      assert [_ | _] = shown_errors(b, "article_subtitle")
+
+      leave(b, "article[subtitle]")
+      settle_both(b, other)
+      assert subtitle(other) == "<p>Stored</p>"
+    end
+
+    # A revision's working copy goes over whole (`Restore.prepare/5`)
+    test "goes over with a working copy, with its error", %{conn: conn, article: article} = c do
+      entry =
+        SyncTest.Article
+        |> Brando.Repo.get!(article.id)
+        |> Brando.Repo.preload(Brando.Blueprint.preloads_for(SyncTest.Article))
+
+      {:ok, revision} = Brando.Revisions.create_revision(entry, c.current_user)
+      a = open_tab(conn, article, "notes", "tab-a")
+      b = open_tab(conn, article, "notes", "tab-b")
+
+      drawer = cid_of(a, "#article_form-revisions-drawer-tab-activity")
+      a |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision.revision})
+      settle(a)
+      type(a, "subtitle", @unsafe)
+      take_over(b, a)
+
+      assert subtitle(b) == @unsafe
+      assert [_ | _] = shown_errors(b, "article_subtitle")
+    end
+
+    test "in a row goes over with the copy, checked by the form in use", %{conn: conn, article: article} = c do
+      a = open_tab(conn, article, "rich_quotes", "tab-a")
+      b = open_tab(conn, article, "rich_quotes", "tab-b")
+      other = open(c.other_conn, article, "rich_quotes")
+
+      type(a, ["quotes", "1", "text"], @unsafe)
+      assert [_ | _] = shown_errors(a, "article_quotes_1_text")
+      take_over(b, a)
+
+      assert quotes(b) == ["<p>Første</p>", @unsafe]
+      assert [_ | _] = shown_errors(b, "article_quotes_1_text")
+
+      leave(b, "article[quotes][1][text]")
+      settle_both(b, other)
+      assert quotes(other) == ["<p>Første</p>", "<p>Andre</p>"]
     end
   end
 

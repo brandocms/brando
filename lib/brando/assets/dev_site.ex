@@ -13,6 +13,9 @@ defmodule Brando.Assets.DevSite do
   `Brando.Plug.SiteAssets` would serve while no shared preview pins the set
   (`Brando.Assets.SiteAssets.serve_path/3`). Every other site renders
   as in production, from its active set or the release's `priv/static`.
+  The files of the dev site's project `public/` folder answer on its hosts
+  and the admin's, as the dev server's pages name them host-relative
+  (`public_file/2`).
 
   A shared preview of the dev site never loads from the dev server: it
   renders from the set it pins (`Brando.Assets.SiteAssets.Capture.ensure_set/2`),
@@ -86,6 +89,30 @@ defmodule Brando.Assets.DevSite do
   def own_project?(%Site{key: site_key}), do: own_project?(site_key)
   def own_project?(site_key) when is_binary(site_key), do: File.dir?(Path.join("assets/sites", site_key))
   def own_project?(_none), do: false
+
+  @doc """
+  The file at `relative_path` in the `public/` folder of the dev site's
+  Vite project (`assets/sites/<key>/public`), as an absolute path, or nil:
+  when `site` is not the dev site while the setting applies, when the
+  folder has no such file, and when the path leaves the folder, through
+  `..`, as an absolute path or through a symlink.
+
+  Vite serves these files on its own origin, but the dev site's pages name
+  them host-relative: the layout's favicon, and the fonts in its CSS, which
+  Vite injects into the page in development.
+  """
+  @spec public_file(Site.t() | String.t() | nil, String.t()) :: String.t() | nil
+  def public_file(site, relative_path) when is_binary(relative_path) do
+    with true <- dev_site?(site),
+         public_dir = Path.expand(Path.join(["assets/sites", key(), "public"])),
+         {:ok, safe_path} when safe_path != "" <- Path.safe_relative(relative_path, public_dir),
+         file = Path.join(public_dir, safe_path),
+         true <- File.regular?(file) do
+      file
+    else
+      _miss -> nil
+    end
+  end
 
   @doc """
   Warns once when `dev_site` is set where it does nothing: outside `:multi`,

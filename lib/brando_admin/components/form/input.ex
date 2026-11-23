@@ -833,6 +833,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:name, assigns.name || assigns.field.name)
       |> assign(:values, values ++ [""])
       |> assign(:last, length(values))
+      |> assign(:row_label, string_list_label(assigns))
       |> process_input_id()
       |> assign_a11y()
 
@@ -869,7 +870,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           placeholder={index == @last && gettext("Add another…")}
           phx-debounce="300"
           aria-invalid={@aria_invalid}
-          aria-label={"#{@field.field} #{index + 1}"}
+          aria-label={gettext("%{label}, row %{row}", label: @row_label, row: index + 1)}
         />
         <button
           :if={index < @last}
@@ -1204,6 +1205,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
+  # Each row's aria-label ends with its number, which the `Brando.StringList`
+  # hook rewrites when rows are inserted or removed.
+  defp string_list_label(%{label: label}) when label not in [nil, :hidden], do: Options.label_text(label)
+  defp string_list_label(%{field: field}), do: field.field |> to_string() |> Brando.Utils.humanize()
+
   defp drop_trailing_blanks(rows),
     do: rows |> Enum.reverse() |> Enum.drop_while(&(String.trim(&1) == "")) |> Enum.reverse()
 
@@ -1236,7 +1242,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       locked={@locked}
     >
       <:value>{@field.value |> Brando.Type.StringList.cast() |> elem(1) |> value_text()}</:value>
-      <.input type={:string_list} field={@field} sync_insert={@sync_insert} />
+      <.input type={:string_list} field={@field} label={@label} sync_insert={@sync_insert} />
     </Primitives.field_base>
     """
   end
@@ -1622,7 +1628,6 @@ defmodule BrandoAdmin.Components.Form.Input do
   # A blueprint label may arrive HTML-safe ({:safe, iodata}); an attribute
   # built by interpolation needs its text.
   defp label_text({:safe, _} = label), do: Phoenix.HTML.safe_to_string(label)
-  defp label_text(nil), do: ""
   defp label_text(label), do: to_string(label)
 
   # One tab per language over a single input area. Which tab is open lives
@@ -1682,7 +1687,9 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
       # One language has nothing to switch to: no tabs, just the input.
       |> assign(:tabs?, match?([_, _ | _], languages))
-      |> assign(:label_text, label_text(assigns[:label]))
+      # The label the field shows (`Primitives.field_base/1`): without one
+      # from the Blueprint, the field's name
+      |> assign(:label_text, label_text(assigns[:label] || Brando.Utils.humanize(to_string(assigns.field.field))))
       # A language is only missing once another has text; an empty field is
       # just empty, not missing a translation in every language.
       |> assign(:written?, Enum.any?(languages, fn {language, _} -> !blank_i18n?(value[language]) end))

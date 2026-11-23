@@ -12,6 +12,21 @@ defmodule Brando.Blueprint.ErrorTranslator do
   alias Brando.Content.Transfer.Labels
   alias Ecto.Changeset
 
+  # The meta drawer (`Brando.Trait.Meta`) edits these outside the Blueprint
+  # form, under these labels in Brando's own catalog.
+  @meta_drawer_labels %{
+    "meta_title" => "Meta title",
+    "meta_description" => "Meta description",
+    "meta_canonical_url" => "Canonical URL",
+    "meta_nosnippet" => "No snippet",
+    "meta_max_snippet" => "Snippet length",
+    "meta_image" => "Meta image",
+    "meta_image_id" => "Meta image"
+  }
+
+  # The scheduled publishing drawer's, for a schema with the trait
+  @publishing_drawer_labels %{"publish_at" => "Publish at", "unpublish_at" => "Expires"}
+
   @doc """
   Returns translated labels for `error_keys` in the Blueprint `form`.
 
@@ -24,6 +39,62 @@ defmodule Brando.Blueprint.ErrorTranslator do
   def translate_keys(error_keys, form, schema) do
     Enum.map(error_keys, &translate_key(&1, form, schema, fn key -> log_missing_field(key, form) end))
   end
+
+  @doc """
+  Whether `form` draws an input for `error_key`: in its tabs, as one of its
+  block fields, or in a drawer of `schema`'s (meta, scheduled publishing),
+  where the editor corrects it.
+  """
+  @spec drawn?(atom() | String.t(), struct(), module()) :: boolean()
+  def drawn?(error_key, form, schema) do
+    form_input(error_key, form) != nil or drawer_label(error_key, schema) != nil
+  end
+
+  @doc """
+  The label of `error_key` in `form`, or, when `form` does not draw it, its
+  label in `schema`'s default form (`undrawn_label/2`). Not logged.
+  """
+  @spec label_in(atom() | String.t(), struct(), module()) :: String.t()
+  def label_in(error_key, form, schema) do
+    if drawn?(error_key, form, schema),
+      do: translate_key(error_key, form, schema, fn _key -> :ok end),
+      else: undrawn_label(error_key, schema)
+  end
+
+  @doc """
+  The label of a field the form does not draw: the one the schema's default
+  form gives it, else its general label.
+  """
+  @spec undrawn_label(atom() | String.t(), module()) :: String.t()
+  def undrawn_label(error_key, schema) do
+    default = schema.__form__()
+
+    if default && form_input(error_key, default),
+      do: translate_key(error_key, default, schema, fn _key -> :ok end),
+      else: Labels.field(error_key)
+  end
+
+  @doc """
+  A field the form does not draw as one `{label, message}` entry: its own
+  messages and those of the nested changesets under it (a relation's rows),
+  each translated by `translate` (given `{message, opts}`), joined.
+  """
+  @spec undrawn_entry(Changeset.t(), atom(), module(), ({String.t(), keyword()} -> String.t())) ::
+          {String.t(), String.t()}
+  def undrawn_entry(%Changeset{} = changeset, error_key, schema, translate) do
+    messages =
+      changeset
+      |> Changeset.traverse_errors(translate)
+      |> Map.get(error_key, [])
+      |> messages()
+      |> Enum.uniq()
+
+    {undrawn_label(error_key, schema), Enum.join(messages, ", ")}
+  end
+
+  defp messages(message) when is_binary(message), do: [message]
+  defp messages(list) when is_list(list), do: Enum.flat_map(list, &messages/1)
+  defp messages(map) when is_map(map), do: map |> Map.values() |> Enum.flat_map(&messages/1)
 
   @doc """
   The fields of `changeset` that carry errors, at any depth: an error in a
@@ -119,31 +190,37 @@ defmodule Brando.Blueprint.ErrorTranslator do
       function_exported?(schema, :__modules__, 0)
   end
 
-  # The meta drawer (`Brando.Trait.Meta`) edits these outside the Blueprint
-  # form, under these labels in Brando's own catalog.
-  @meta_drawer_labels %{
-    "meta_title" => "Meta title",
-    "meta_description" => "Meta description",
-    "meta_canonical_url" => "Canonical URL",
-    "meta_nosnippet" => "No snippet",
-    "meta_max_snippet" => "Snippet length",
-    "meta_image" => "Meta image",
-    "meta_image_id" => "Meta image"
-  }
-
   defp translate_key(error_key, form, schema, on_missing) do
-    case {Forms.get_field(error_key, form), Map.get(@meta_drawer_labels, to_string(error_key))} do
+    case {form_input(error_key, form), drawer_label(error_key, schema)} do
       {nil, nil} ->
         on_missing.(error_key)
         humanize(error_key)
 
-      {nil, meta_label} ->
-        Gettext.dgettext(Brando.Gettext, "default", meta_label)
+      {nil, drawer_label} ->
+        Gettext.dgettext(Brando.Gettext, "default", drawer_label)
 
       {field, _} ->
         gettext_domain = String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}")
         Gettext.dgettext(schema.__modules__().gettext, gettext_domain, field_label(field, error_key))
     end
+  end
+
+  # An input in the form's tabs, or the block field whose blocks are the
+  # entry's `entry_<name>` relation
+  defp form_input(error_key, form) do
+    Forms.get_field(error_key, form) ||
+      Enum.find(form.blocks, &("entry_#{&1.name}" == to_string(error_key)))
+  end
+
+  defp drawer_label(error_key, schema) do
+    key = to_string(error_key)
+
+    Map.get(@meta_drawer_labels, key) ||
+      if scheduled_publishing?(schema), do: Map.get(@publishing_drawer_labels, key)
+  end
+
+  defp scheduled_publishing?(schema) do
+    function_exported?(schema, :has_trait, 1) and schema.has_trait(Brando.Trait.ScheduledPublishing)
   end
 
   defp field_label(%{__struct__: Forms.Subform} = field, _error_key) do

@@ -380,6 +380,23 @@ defmodule BrandoAdmin.TransformerSavedElsewhereTest do
         assert rows(article) == [{"B", b_id}, {"A", a_id}]
       end
 
+      # The copy names a row another save has deleted since (#3807): the
+      # restore leaves it out, as that save did, and B's save neither fails
+      # nor writes it again.
+      test "leaves out a row deleted since the copy", %{b_conn: b_conn, article: article} do
+        b = open(b_conn, article, unquote(kind), "b")
+        [{"A", a_id}, {"B", b_id}, {"C", c_id}] = rows(article)
+        set_field(b, dom_id_of(b, "C"), "label", "C, by B")
+        capture(b)
+        Repo.delete!(Repo.get!(ArticleItem, c_id))
+
+        b = reconnect_and_restore(b, b_conn, article, unquote(kind), "b")
+        assert shown(b) == [{"A", a_id}, {"B", b_id}]
+
+        save_title(b, article, "Saved by B")
+        assert rows(article) == [{"A", a_id}, {"B", b_id}]
+      end
+
       # Another tab of B's takes editing over with the copy's rows, cast
       # the same way.
       test "a tab taking over leaves out a row B removed", %{b_conn: b_conn, article: article} do

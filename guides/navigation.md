@@ -20,7 +20,8 @@ title. Save and reopen the menu to verify the selection and ordering survived.
 
 <!-- usage-rules:start topic="rendering" -->
 
-For a seed or import, the equivalent literal-link menu is:
+For a seed or import, the equivalent menu is built with
+`Brando.Content.Seed.menu_item/3` (see [Creating content from code](seeding.md)):
 
 ```elixir
 {:ok, menu} = Brando.Navigation.create_menu(%{
@@ -28,29 +29,16 @@ For a seed or import, the equivalent literal-link menu is:
   key: "main",
   language: "en",
   status: :published,
-  items: [%{
-    key: "about",
-    status: :published,
-    sequence: 0,
-    link: %{
-      type: :link,
-      key: "link",
-      label: "Link",
-      link_type: :url,
-      link_text: "About us",
-      value: "/about"
-    }
-  }]
+  items: [Brando.Content.Seed.menu_item("About us", "/about", key: "about")]
 }, current_user)
 ```
 
-For an entry-backed link, replace `link_type: :url` and `value` with
-`link_type: :identifier` and `identifier_id: identifier.id`. The identifier is a
-`Brando.Content.Identifier` record, **not the page ID**. The admin picker handles
-that distinction. `link_text: nil` lets the renderer use the identifier title; a non-nil
-`link_text` overrides it. `link_target_blank: true` opens a new tab. An entry
-whose blueprint sends links elsewhere (`absolute_url ..., link_others_to:`)
-renders that destination.
+Give `menu_item/3` an entry instead of a URL to link to the entry's
+identifier: a `Brando.Content.Identifier` record, **not the entry's ID**,
+which is what the admin picker stores too. Text `nil` lets the renderer use
+the identifier title; other text overrides it. `new_tab: true` opens a new
+tab. An entry whose blueprint sends links elsewhere
+(`absolute_url ..., link_others_to:`) renders that destination.
 
 <!-- usage-rules:end -->
 

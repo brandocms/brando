@@ -1074,6 +1074,44 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       await(fn -> block_text(other_view, uid) == "EN Første avsnitt" end)
     end
 
+    # A filled text is checked as typed text is: on `notes`, which draws the
+    # subtitle as rich text, the check refuses it, and it stays this
+    # editor's, out of the second editor's form. A source without markup
+    # lets the reply add some.
+    test "a second editor does not get a filled text the form's rich-text check refuses",
+         %{conn: conn, current_user: user} = c do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{title: "Tittel", subtitle: "Undertittel", slug: "tittel", language: "no", status: "published"},
+          user
+        )
+
+      TranslationFixtures.add_block(source, c.module, user, "Første avsnitt", 0)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      unsafe = ~s{<p><a href="javascript:alert(1)">link</a></p>}
+
+      answer(fn
+        %{"source" => "Undertittel"} -> unsafe
+        item -> "EN " <> item["source"]
+      end)
+
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      other_conn = log_in_user(Phoenix.ConnTest.build_conn(), other)
+      view = open(conn, target.id, "/notes")
+      other_view = open(other_conn, target.id, "/notes")
+      subtitle = &(&1 |> render() |> form_params("#article_form_form") |> get_in(["article", "subtitle"]))
+      saved = load(target.id).subtitle
+
+      translate_all(view)
+      render_async(view, 5_000)
+      await(fn -> title(other_view) == "EN Tittel" end)
+      settle(view)
+      settle(other_view)
+
+      assert subtitle.(view) == unsafe
+      assert subtitle.(other_view) == saved
+    end
+
     test "a link with translate=ai starts nothing for a legacy account that may not write",
          %{target: target} do
       answer_and_report()

@@ -638,29 +638,6 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Update identifier link URLs in refs and re-render all entries referencing the identifier.
-
-  When an identifier's URL changes, this:
-  1. Updates the `href` in all block refs containing `data-identifier-id="ID"`
-  2. Re-renders all entries with blocks referencing the identifier (through vars or inline links)
-  """
-  def update_identifier_links_and_rerender(identifier_id, new_url) do
-    update_identifier_links_in_refs(identifier_id, new_url)
-
-    update_identifier_links_in_html_vars(identifier_id, new_url)
-
-    var_block_ids = list_block_ids_using_identifier(identifier_id)
-    ref_block_ids = list_block_ids_with_identifier_in_refs(identifier_id)
-    html_var_block_ids = list_block_ids_with_identifier_in_html_vars(identifier_id)
-
-    (var_block_ids ++ ref_block_ids ++ html_var_block_ids)
-    |> Enum.uniq()
-    |> list_root_block_ids_by_source()
-    |> list_entry_ids_for_root_blocks_by_source()
-    |> enqueue_entry_map_for_render()
-  end
-
-  @doc """
   Update the href of identifier links in all refs that reference the given identifier.
 
   A failure is logged and leaves the refs as they were.

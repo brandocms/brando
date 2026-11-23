@@ -1,0 +1,1 @@
+- In development with `tenancy_mode: :multi` and a `dev_site`, the files in that site's Vite project `public/` folder (fonts, favicon) load on its hosts and in its live preview instead of answering 404.
