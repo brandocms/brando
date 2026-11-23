@@ -2794,8 +2794,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
           grant.site_id == site_id and grant.environment_id == environment_id,
           do: grant
 
-    # Newest first: the first of a client is its newest connection
-    connections = grants |> Enum.reverse() |> Map.new(&{&1.client_name, Watch.path(&1)})
+    # Newest first: the first of a client is its newest connection, keyed
+    # by the name its proposals store
+    connections = grants |> Enum.reverse() |> Map.new(&{Proposals.client_name(&1.client_name), Watch.path(&1)})
     assign(socket, :connections, connections)
   end
 

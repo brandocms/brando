@@ -3447,6 +3447,14 @@ defmodule Brando.Content.Proposals do
       else: Error.fail!(dgettext("content_proposals", "Unknown proposal origin."))
   end
 
+  @doc """
+  A connected tool's name as a proposal stores it: one line, trimmed and
+  cut to 80 characters, or nil when blank. Compare a connection's name with
+  a proposal's `client` through it.
+  """
+  @spec client_name(term()) :: String.t() | nil
+  def client_name(name), do: client(name)
+
   # A connected tool names itself; keep a short, single line of it.
   @client_length 80
 

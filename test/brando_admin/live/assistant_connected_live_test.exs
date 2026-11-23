@@ -99,6 +99,19 @@ defmodule BrandoAdmin.AssistantConnectedLiveTest do
     assert_received {Proposals, :changed, ^id}
   end
 
+  test "Follow live finds a client whose name is stored shortened", %{conn: conn} = c do
+    # A name the proposal stores on one line, trimmed and cut to 80 characters
+    name = "  My   Tool\n" <> String.duplicate("x", 100)
+    Repo.update_all(from(g in Grant, where: g.id == ^c.grant.id), set: [client_name: name])
+
+    id = prepare(c, "From a long name")
+    assert Repo.get!(Record, id).client != name
+    {:ok, view, _} = live(conn, "/admin/assistant/connected")
+
+    assert has_element?(view, row(id))
+    assert has_element?(view, ~s([data-testid=assistant-connected-live][href="#{Watch.path(c.grant)}"]))
+  end
+
   test "each status change shows without a reload", %{conn: conn, current_user: user} = c do
     applied = prepare(c, "Applied one")
     {:ok, view, _} = live(conn, "/admin/assistant/connected")
