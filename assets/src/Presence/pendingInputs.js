@@ -16,8 +16,12 @@
 // another) is a new element: what was typed into the old one in the last
 // moments may still be waiting on the input's debounce, which LiveView drops
 // with the element. It is carried to the input of the same name in the block
-// that takes its place, and sent from there; the focus goes with it. Rich
-// text is not carried.
+// that takes its place (never one of the blocks inside it, whose inputs have
+// the same names), and sent from there; the focus goes with it. It is not
+// put back over a value the server took from elsewhere since: one noted
+// while this editor was in the field (the move leaves the field, which
+// takes it), or one the new block renders that is neither what the server
+// last had nor one this editor typed.
 //
 // Dependency free, so `test/javascript/pending_inputs.test.mjs` runs it in
 // Node.
@@ -30,9 +34,16 @@ const TYPED_VALUES = 50
 export const blockInput = el =>
   (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA') && !!el.closest('[data-block-uid]')
 
-// An input the editor types into, which a carried value can be put back in.
-// A rich text field's hidden input is not: its editor shows what it holds.
-const textInput = el => !!el.name && !['hidden', 'checkbox', 'radio', 'file'].includes(el.type)
+// An input the editor types into, which a carried value can be put back in:
+// a rich text field's hidden input too, whose editor shows what it holds.
+const textInput = el =>
+  !!el.name && (el.type === 'hidden' ? !!el.classList?.contains('tiptap-text') : !['checkbox', 'radio', 'file'].includes(el.type))
+
+// The input types a caret can be set in (others throw)
+const SELECTABLE = ['text', 'textarea', 'search', 'url', 'tel', 'password']
+
+const ownInputs = blockEl =>
+  Array.from(blockEl.querySelectorAll?.('input, textarea') || []).filter(input => input.closest('[phx-hook="Brando.Block"]') === blockEl)
 
 // The rich text editor this hidden input belongs to has the focus.
 const editorInUse = (input, active) =>
@@ -50,6 +61,8 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
   const lastInput = new WeakMap()
   const typedValues = new WeakMap()
   const serverValue = new WeakMap()
+  // What the server last rendered into an input while this editor was in it
+  const rendered = new WeakMap()
   // block uid → { at, inputs: [{ name, value, focus }] }, from a block that went
   const carried = new Map()
   // The element with the focus, as focus events last said, and the one
@@ -96,6 +109,7 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
     const focused = from === active
     const richText = !focused && editorInUse(from, active)
     if (!focused && !richText) return
+    rendered.set(from, to.value)
 
     if (from.value === to.value) {
       serverValue.delete(from)
@@ -130,34 +144,45 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
 
   // The element of block `uid` went (its hook was destroyed): the inputs
   // typed into in the last moments are kept for the block that takes its
-  // place.
+  // place, with what the server had in them (the value attribute a focused
+  // input keeps from before its focus, or a later render; a hidden input's
+  // attribute is its value, so only a render tells) and what this editor
+  // typed.
   const went = (blockEl, uid) => {
     if (!uid) return
-    const inputs = Array.from(blockEl.querySelectorAll?.('input, textarea') || [])
+    const inputs = ownInputs(blockEl)
       .filter(input => textInput(input) && now() - (lastInput.get(input) || -Infinity) < PENDING_INPUT_MS)
-      .map(input => ({ name: input.name, value: input.value, focus: input === focusedEl || (input === blurred.el && now() - blurred.at < REMOVAL_BLUR_MS) }))
+      .map(input => ({
+        name: input.name,
+        value: serverValue.get(input)?.value ?? input.value,
+        server: rendered.has(input) ? rendered.get(input) : input.type === 'hidden' ? undefined : input.defaultValue,
+        typed: typedValues.get(input) || [],
+        focus: input === focusedEl || (input === blurred.el && now() - blurred.at < REMOVAL_BLUR_MS),
+      }))
     if (inputs.length) carried.set(uid, { at: now(), inputs })
   }
 
   // Block `uid` mounted: what its last element held is put back where the
-  // render shows something else, and sent (an `input` event, as typing sends
-  // it).
+  // render shows what the server had before it, and sent (an `input` event,
+  // as typing sends it).
   const came = (blockEl, uid) => {
     const carry = uid && carried.get(uid)
     if (!carry) return
     carried.delete(uid)
     if (now() - carry.at >= PENDING_INPUT_MS) return
 
-    carry.inputs.forEach(({ name, value, focus }) => {
-      const input = Array.from(blockEl.querySelectorAll?.('input, textarea') || []).find(el => el.name === name)
+    const inputs = ownInputs(blockEl)
+    carry.inputs.forEach(({ name, value, server, typed, focus }) => {
+      const input = inputs.find(el => el.name === name)
       if (!input) return
-      if (input.value !== value) {
+      if (input.value !== value && (server === undefined || input.value === server || typed.includes(input.value))) {
         input.value = value
         input.dispatchEvent(new Event('input', { bubbles: true }))
+        input.closest('[phx-hook="Brando.TipTap"]')?.dispatchEvent(new CustomEvent('brando:tiptap:sync'))
       }
       if (focus && !activeInDocument()) {
         input.focus()
-        input.setSelectionRange?.(value.length, value.length)
+        if (SELECTABLE.includes(input.type)) input.setSelectionRange(input.value.length, input.value.length)
       }
     })
   }

@@ -347,7 +347,8 @@ A moved child mounts again under its new parent, from the store, as new rows
 move is shown the same way round: the coalesced refresh has the parent it was
 shown under let go first (`release_moved_away/1`), since a child shown in two
 places in one render arrives in the new one as LiveView skip markers (empty boxes). Text typed into the old element and not yet
-sent is carried to the new one by `Presence/pendingInputs.js` (`went`/`came`).
+sent is carried to the new one by `Presence/pendingInputs.js` (`went`/`came`): only the
+block's own inputs, since its children's inputs inside its element have the same names.
 
 ---
 
