@@ -10,7 +10,6 @@ defmodule BrandoAdmin.EmbedRowSyncTest do
   import Brando.EditSessionEditors, only: [await: 1]
 
   alias Brando.SyncTest
-  alias BrandoAdmin.Components.Form.Input.SubformHelpers
 
   @rows ["<p>Første</p>", "<p>Andre</p>", "<p>Tredje</p>"]
 
@@ -85,13 +84,21 @@ defmodule BrandoAdmin.EmbedRowSyncTest do
     view |> form() |> render_hook("validate", params)
   end
 
-  # As `Brando.SortableEmbeds` sends a drop: the rows' keys in their new order
+  # As the browser sends a drag: `Brando.SortableEmbeds` moves the rows and
+  # dispatches `input` on the moved row's sort input, so the whole form
+  # arrives in the new order with `_target` naming the sort param
   defp reorder(view, order) do
-    keys = SubformHelpers.row_keys(form_assigns(view).form.source, :quotes)
+    params = params(view)
+    rows = get_in(params, ["article", "quotes"])
+    keys = Enum.map(order, &to_string/1)
 
-    view
-    |> with_target(cid_of(view, "#article_quotes-sortable"))
-    |> render_hook("sequenced_subform", %{"ids" => Enum.map(order, &Enum.at(keys, &1)), "embeds" => true})
+    params =
+      params
+      |> put_in(["article", "quotes"], Map.new(keys, &{&1, rows[&1]}))
+      |> put_in(["article", "sort_quotes_ids"], keys)
+      |> Map.put("_target", ["article", "sort_quotes_ids"])
+
+    view |> form() |> render_hook("validate", params)
   end
 
   for form <- ["rich_quotes", "quote_listing"] do
@@ -125,6 +132,32 @@ defmodule BrandoAdmin.EmbedRowSyncTest do
         await(fn -> quotes(b) == ["<p>Tredje</p>", "<p>Første</p>", "<p>Andre</p>"] end)
       end
     end
+  end
+
+  # B's last value from before A's add is one the browser may still show
+  # (`replaced_values`): removing the added row gives that value again, and
+  # it is B's removal, not B's browser lagging behind
+  test "a row the other editor added can be removed by this editor", c do
+    {a, b} = editors(c, "rich_quotes")
+
+    add_row(a)
+    await(fn -> length(quotes(b)) == 4 end)
+
+    remove_row(b, 3)
+    assert quotes(b) == @rows
+    await(fn -> quotes(a) == @rows end)
+  end
+
+  # The same for a move: moving back rows the other editor moved
+  test "rows the other editor moved can be moved back by this editor", c do
+    {a, b} = editors(c, "rich_quotes")
+
+    reorder(a, [2, 0, 1])
+    await(fn -> quotes(b) == ["<p>Tredje</p>", "<p>Første</p>", "<p>Andre</p>"] end)
+
+    reorder(b, [1, 2, 0])
+    assert quotes(b) == @rows
+    await(fn -> quotes(a) == @rows end)
   end
 
   test "a row the other editor inserts reaches this editor at the click", c do

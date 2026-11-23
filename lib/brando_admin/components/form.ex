@@ -3798,22 +3798,28 @@ defmodule BrandoAdmin.Components.Form do
   defp refused_recovered(_socket, _entry_params), do: []
 
   # The entry field `_target` names (`["page", "title"]` or a path into a
-  # subform, `["page", "items", "0", "name"]`, which names the relation).
+  # subform, `["page", "items", "0", "name"]`, which names the relation). A
+  # relation's drop or sort param names the relation: a row removed or moved
+  # is this editor's edit, never the browser's old form (`drop_echoes/4`).
   defp target_field(socket, singular, [singular, key | _]) do
     {fields, _belongs_to} = sync_fields(socket)
-    Enum.find(fields ++ relation_fields(socket), &(Atom.to_string(&1) == key))
+    fields = fields ++ relation_fields(socket)
+    Enum.find(fields, &(Atom.to_string(&1) == key)) || control_target(socket, fields, key)
   end
 
   defp target_field(_socket, _singular, _target), do: nil
 
   # A `_target` naming a synced relation's drop or sort param: a row removed
   # or moved by the browser rather than typed into
-  defp row_control?(%{assigns: %{singular: singular, schema: schema}} = socket, [singular, key | _]) do
+  defp row_control?(%{assigns: %{singular: singular}} = socket, [singular, key | _]) do
     {fields, _belongs_to} = sync_fields(socket)
-    Enum.any?(fields, &(key in PendingRows.control_params(schema, &1)))
+    control_target(socket, fields, key) != nil
   end
 
   defp row_control?(_socket, _target), do: false
+
+  defp control_target(socket, fields, key),
+    do: Enum.find(fields, &(key in PendingRows.control_params(socket.assigns.schema, &1)))
 
   # A replaced field that arrives with a value the browser showed before the
   # change replaced it, in an event that does not name it, is the browser's
