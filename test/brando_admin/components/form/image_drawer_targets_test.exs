@@ -151,7 +151,13 @@ defmodule BrandoAdmin.Components.Form.ImageDrawerTargetsTest do
       portrait = image(user)
       {view, _html} = open(conn, article, :media)
 
-      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :portrait, path: [:author], asset: portrait)
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :image,
+        field: :portrait,
+        path: [:author],
+        asset: portrait
+      )
 
       assert field(view, :author).portrait_id == portrait.id
     end
