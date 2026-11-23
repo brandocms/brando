@@ -101,13 +101,17 @@ defmodule BrandoAdmin.Components.Form.PendingRows do
     names =
       Enum.flat_map(
         fields,
-        &[Atom.to_string(&1), param_name(module, &1, :sort_param), param_name(module, &1, :drop_param)]
+        &[Atom.to_string(&1) | control_params(module, &1)]
       )
 
     Map.drop(entry_params, names)
   end
 
   def drop(entry_params, _module, _fields), do: entry_params
+
+  @doc "The names of the sort and drop params of the relation `field`."
+  @spec control_params(module(), atom()) :: [String.t()]
+  def control_params(module, field), do: [param_name(module, field, :sort_param), param_name(module, field, :drop_param)]
 
   defp key_sort(key) do
     case Integer.parse(key) do

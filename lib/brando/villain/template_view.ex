@@ -9,11 +9,12 @@ defmodule Brando.Villain.TemplateView do
   field is printed as text. A field its schema's forms draw as rich text
   (`Brando.RichText.fields_for_printing/1`), a text ref's `text` and a
   placement's caption arrive sanitized, to print as markup, each value
-  sanitized once in a render (`sanitize_rich_text/1`). So does a subform
-  row's field that its owner's forms draw as rich text, by the same rule
-  (`Brando.RichText.row_fields_for_printing/2`): the rows' views carry those
-  names, also through a filter that selects or reorders the rows
-  (`keep_rich_rows/2`). A template opts in to a plain field's markup with the `raw` filter
+  sanitized once in a render (`sanitize_rich_text/1`). A subform row read
+  through its owner prints by its owner's forms alone, by the same rule
+  (`Brando.RichText.row_fields_for_printing/2`), whatever the row schema's
+  own forms draw: the rows' views carry the names, none included, also
+  through a filter that selects or reorders the rows (`keep_rich_rows/2`).
+  A template opts in to a plain field's markup with the `raw` filter
   (`Brando.Villain.Filters.raw/2`). A field of rendered blocks is escaped too,
   and `raw` prints it as it is stored (`read_as_rendered_blocks/2`).
 
@@ -47,14 +48,17 @@ defmodule Brando.Villain.TemplateView do
   alias Brando.Villain.Parser
   alias Liquex.Context
 
-  # `rich`: the fields of a subform row that its owner's forms draw as rich text
-  defstruct [:value, mode: :escape, rich: []]
+  # `rich`: the fields of a subform row that its owner's forms draw as rich
+  # text, nil for a value not read as one
+  defstruct [:value, :rich, mode: :escape]
 
   @type mode :: :escape | :processed | :raw | :names
-  @type t :: %__MODULE__{value: map(), mode: mode(), rich: [atom()]}
+  @type t :: %__MODULE__{value: map(), mode: mode(), rich: [atom()] | nil}
 
   # In the context's private data, where no template can read or set it
   @raw_flag :brando_template_view_raw
+  # Escaped text `{% assign %}` gave a variable, with the text it stands for (`assign/4`)
+  @typed_texts :brando_template_view_typed_texts
 
   # Text read as rich text (`read_as_rich_text/1`), each with the stored HTML of
   # a field of rendered blocks it was read from (`read_as_rendered_blocks/2`)
@@ -166,9 +170,96 @@ defmodule Brando.Villain.TemplateView do
   escapes what it prints, or passes it to something that does.
   """
   @spec eval(term(), Context.t()) :: term()
-  def eval(argument, %Context{private: private} = context) do
+  def eval(argument, %Context{} = context), do: argument |> eval_view(context) |> unwrap()
+
+  @doc """
+  `eval/2` for a record a tag prints a field of, with the fields that print
+  as rich text by its owner's forms when it is a subform row read through
+  its owner (`Brando.RichText.row_fields_for_printing/2`), else nil: the
+  record's own forms decide.
+  """
+  @spec eval_record(term(), Context.t()) :: {term(), [atom()] | nil}
+  def eval_record(argument, %Context{} = context) do
+    case eval_view(argument, context) do
+      %__MODULE__{rich: rich} = view -> {unwrap(view), rich}
+      value -> {unwrap(value), nil}
+    end
+  end
+
+  defp eval_view(argument, %Context{private: private} = context) do
     {value, _context} = Liquex.Argument.eval(argument, %{context | private: Map.put(private, @raw_flag, true)})
+    value
+  end
+
+  @doc """
+  `eval/2`, with an argument that is a variable `{% assign %}` gave escaped
+  plain text read as the text it stands for (`assign/4`): so a field passed
+  through `assign` is escaped once, as the field passed directly is. Any
+  other expression (`q.size`) reads the value assigned. For a tag argument
+  that escapes what it prints (picture's `alt`, `route`); every other
+  argument reads with `eval/2`.
+  """
+  @spec eval_typed(term(), Context.t()) :: term()
+  def eval_typed(argument, %Context{} = context) do
+    with name when is_binary(name) <- variable(argument),
+         {:ok, text} <- Map.fetch(typed_texts(context), name) do
+      eval(argument, Context.push_scope(context, %{name => text}))
+    else
+      _ -> eval(argument, context)
+    end
+  end
+
+  # The name of the variable an argument is, read as itself
+  defp variable([argument]), do: variable(argument)
+  defp variable({:keyword, [_key, value]}), do: variable(value)
+  defp variable({:field, [key: name]}), do: name
+  defp variable(_argument), do: nil
+
+  @doc """
+  A tag's option that it prints as markup (a caption), evaluated as `{{ }}`
+  reads it: a plain field's text escaped, rich text sanitized, and a literal
+  the template writes, or a value it gave `raw`, as it is.
+  """
+  @spec eval_markup(term(), Context.t()) :: term()
+  def eval_markup(argument, %Context{} = context) do
+    {value, _context} = Liquex.Argument.eval(argument, context)
     unwrap(value)
+  end
+
+  @doc """
+  `context` with `name` set to `value`, for `{% assign %}`. Text read from an
+  entry is escaped, as `{{ name }}` prints it. For escaped plain text (no
+  rich text, no record, no number) the text it stands for is kept beside it,
+  the inverse of the escape (`Brando.Villain.Parser.unescape_var_value/1`),
+  for the arguments that read it as typed (`eval_typed/2`). `read?` says the
+  expression starts from a field or variable, which is read escaped; text
+  that starts from a literal the template writes was never escaped, and is
+  kept as it is only.
+  """
+  @spec assign(Context.t(), String.t(), term(), boolean()) :: Context.t()
+  def assign(%Context{private: private} = context, name, value, read?) do
+    typed = Map.get(private, @typed_texts, %{})
+
+    typed =
+      if read? and is_binary(value) and read_mode(:escape, context) == :escape and not read_as_rich_text?(value),
+        do: Map.put(typed, name, {value, Parser.unescape_var_value(value)}),
+        else: Map.delete(typed, name)
+
+    context = Context.assign_global(context, name, value)
+    %{context | private: Map.put(context.private, @typed_texts, typed)}
+  end
+
+  # Liquex binds a name to a value only, and `capture` and loops set names
+  # without `assign/4`, so the text is tied to the value: a variable still
+  # holding the bytes it was assigned reads as typed. A `capture` or loop
+  # variable of the same name and bytes reads the same, which can change the
+  # characters an argument shows, never whether they are escaped: every
+  # argument that reads typed text escapes it.
+  defp typed_texts(%Context{private: private} = context) do
+    for {name, {value, text}} <- Map.get(private, @typed_texts, %{}),
+        Access.get(context, name) === value,
+        into: %{},
+        do: {name, text}
   end
 
   @doc """
@@ -243,7 +334,11 @@ defmodule Brando.Villain.TemplateView do
     end
   end
 
-  defp rich_rows(%__MODULE__{rich: [_ | _] = rich} = view, acc), do: Map.put(acc, unwrap(view), rich)
+  # A row reached through two rules prints by the stricter: a field is rich
+  # text only if both say so
+  defp rich_rows(%__MODULE__{rich: rich} = view, acc) when is_list(rich),
+    do: Map.update(acc, unwrap(view), rich, &Enum.filter(&1, fn field -> field in rich end))
+
   defp rich_rows(list, acc) when is_list(list), do: Enum.reduce(list, acc, &rich_rows/2)
   defp rich_rows({_key, value}, acc), do: rich_rows(value, acc)
   defp rich_rows(_value, acc), do: acc
@@ -558,7 +653,7 @@ defmodule Brando.Villain.TemplateView do
         html = Captions.caption_html(text)
         if Captions.rich?(text), do: read_as_rich_text(html), else: html
 
-      rich_text?(value, key) or named?(rich, key) ->
+      rich_text?(value, key, rich) ->
         text |> sanitize_rich_text() |> read_as_rich_text()
 
       # Escaped as a plain field is, and `raw` prints the HTML as it is stored
@@ -573,17 +668,17 @@ defmodule Brando.Villain.TemplateView do
   defp read_text(_view, _key, text), do: escape(text)
 
   # A blueprint's subform rows, each view given the fields its owner's forms
-  # draw as rich text
+  # draw as rich text, none included
   defp with_rich_rows(rows, %struct{}, key) when is_list(rows) do
     case rich_row_fields(rows, struct, key) do
-      [] -> rows
+      nil -> rows
       fields -> Enum.map(rows, &put_rich(&1, fields))
     end
   end
 
   defp with_rich_rows(%__MODULE__{value: %_{}} = row, %struct{}, key) do
     case rich_row_fields([row], struct, key) do
-      [] -> row
+      nil -> row
       fields -> put_rich(row, fields)
     end
   end
@@ -591,21 +686,12 @@ defmodule Brando.Villain.TemplateView do
   defp with_rich_rows(field, _value, _key), do: field
 
   defp rich_row_fields(rows, struct, key) do
-    if relation?(struct, key) and Enum.any?(rows, &match?(%__MODULE__{value: %_{}}, &1)),
-      do: Brando.RichText.row_fields_for_printing(struct, key),
-      else: []
-  end
-
-  defp relation?(struct, key) do
-    function_exported?(struct, :__schema__, 1) and
-      to_string(key) in Enum.map(struct.__schema__(:associations) ++ struct.__schema__(:embeds), &Atom.to_string/1)
+    if Enum.any?(rows, &match?(%__MODULE__{value: %_{}}, &1)),
+      do: Brando.RichText.row_fields_for_printing(struct, key)
   end
 
   defp put_rich(%__MODULE__{value: %_{}} = row, fields), do: %{row | rich: fields}
   defp put_rich(row, _fields), do: row
-
-  defp named?([], _key), do: false
-  defp named?(fields, key), do: to_string(key) in Enum.map(fields, &Atom.to_string/1)
 
   # `rendered_blocks`, and `rendered_<name>` for each other block field
   defp rendered_blocks?(%struct{}, key) do
@@ -613,13 +699,16 @@ defmodule Brando.Villain.TemplateView do
       to_string(key) in Enum.map(struct.__blocks_fields__(), &"rendered_#{&1.name}")
   end
 
-  defp rich_text?(%TextBlock.Data{}, key), do: to_string(key) == "text"
+  defp rich_text?(%TextBlock.Data{}, key, _rich), do: to_string(key) == "text"
 
-  defp rich_text?(%Var{type: type}, key) when type in [:rich_text, :html], do: to_string(key) == "value"
+  defp rich_text?(%Var{type: type}, key, _rich) when type in [:rich_text, :html], do: to_string(key) == "value"
 
   # A field the default form draws as rich text, or only named forms do
-  defp rich_text?(%struct{}, key),
+  defp rich_text?(%struct{}, key, nil),
     do: to_string(key) in Enum.map(Brando.RichText.fields_for_printing(struct), &Atom.to_string/1)
+
+  # A subform row's field by its owner's forms alone (`with_rich_rows/3`)
+  defp rich_text?(_row, key, rich), do: to_string(key) in Enum.map(rich, &Atom.to_string/1)
 
   # Decoded first, as a heading is: a character reference typed into a title
   # (`&shy;`) is the character it names, and text escaped already stays as it is.

@@ -576,6 +576,28 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # The same rows as a listing: a summary per row, its fields opening
+    # under it (OtherEditorsReceiveTest)
+    form :quote_listing do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+        end
+
+        fieldset do
+          inputs_for :quotes do
+            cardinality :many
+            style :listing
+            listing &__MODULE__.quote_summary/1
+            default %{}
+
+            input :text, :rich_text
+          end
+        end
+      end
+    end
+
     # No input for some translatable texts (TranslationAIFillTest): the
     # subtitle shows only for a featured article, and the items' rows have
     # no label
@@ -628,6 +650,13 @@ defmodule Brando.SyncTest.Article do
   end
 
   def write_after_save(_entry, _user), do: :ok
+
+  # A quote's row in form `:quote_listing`
+  def quote_summary(assigns) do
+    ~H"""
+    <span class="quote-summary">{@entry.text}</span>
+    """
+  end
 
   def module_options(_, _), do: Brando.Content.list_modules!(%{filter: %{parent_id: nil}, order: "asc name"})
 

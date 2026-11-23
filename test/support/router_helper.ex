@@ -493,6 +493,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id/superuser_items", BrandoAdmin.SyncTest.ArticleMediaFormLive, :superuser_items
     live "/articles/update/:entry_id/partial", BrandoAdmin.SyncTest.ArticleMediaFormLive, :partial
     live "/articles/update/:entry_id/rich_quotes", BrandoAdmin.SyncTest.ArticleMediaFormLive, :rich_quotes
+    live "/articles/update/:entry_id/quote_listing", BrandoAdmin.SyncTest.ArticleMediaFormLive, :quote_listing
     live "/articles/update/:entry_id/entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :entries
     live "/articles/update/:entry_id/locked_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :locked_entries
     live "/articles/update/:entry_id/policy_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :policy_entries

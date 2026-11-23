@@ -354,6 +354,29 @@ data, also inside a list, and a filter given that record gets its credential
 fields empty. A tag of your own reads its argument with
 `Brando.Villain.TemplateView.eval/2`, and escapes what it prints.
 
+An option a tag prints as markup (`caption` on `{% picture %}` and
+`{% video %}`, `title` and `play_button` on `{% video %}`) reads its value as
+`{{ }}` does: a plain field's text is escaped, a rich-text field prints as
+sanitized markup, and a literal the template writes prints as it is. To print
+a plain field's markup there, make the field rich text, or pass a variable
+assigned with `raw`. A `{% video %}` svg cover takes its `opacity`, `width`
+and `height` as numbers only, and its size from the aspect ratio otherwise;
+the `<video>` element gets `width` and `height` as written (`"100%"`).
+
+Text that `assign` stores is escaped, as `{{ }}` prints it. The arguments that
+escape what they print read an assigned text as the text it stands for, so it
+is escaped once, as the field passed directly is: `alt` on `{% picture %}`, the
+arguments of `{% route %}` and `{% route_i18n %}`, `{% editable_field %}` and
+`{% inspect %}`. They do so for the variable itself (`alt: q`), not for an
+expression on it (`q.size` counts the stored text), and only when the assign
+starts from a field or variable: a value that starts from a literal
+(`{% assign q = "A&amp;B" %}`) was never escaped, and reaches them as it is. `{% assign alt = entry.title %}{% picture entry.cover { alt: alt } %}`
+prints the title escaped once, and `{% route %}` builds its address from the
+text as typed. Every other tag and option gets the assigned text escaped. A
+tag of your own that escapes what it prints can read an argument the same way
+with `Brando.Villain.TemplateView.eval_typed/2`. A variable set with `capture`
+holds the HTML it printed, which a tag escapes again.
+
 A plain map a filter of your own builds reads like what the filter was given.
 Built from `entry` or a datasource's `entries`, it reads like entry data. Built
 from what the parser has already escaped, such as `block`, `globals` or the

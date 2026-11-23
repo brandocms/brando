@@ -961,6 +961,17 @@ defmodule Brando.Content do
   defp soft_deleted(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: true
   defp soft_deleted(_), do: false
 
+  @doc """
+  Updates the identifier of `module`'s `entry` from the entry, or creates it.
+  When the entry's link destination changes, the stored links to it are
+  rewritten (`Brando.Content.Blocks.update_identifier_links_in_rich_text_fields/3`).
+
+  Forms open on the entries rewritten are told once the transaction around
+  the update commits. That holds for a transaction begun with
+  `Brando.Repo.transaction/1`: in one begun on the application's Ecto repo
+  directly, they are told at once, before the commit, and also when it
+  rolls back.
+  """
   def update_identifier(module, entry) do
     with {:ok, :has_identifier} <- has_identifier(module),
          {:ok, :persist_identifier} <- persist_identifier(module),

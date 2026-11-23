@@ -48,16 +48,26 @@ defmodule Brando.Villain.Tags.Editable do
   entry and `"title"`, since the field is the last key of the path and the entry
   everything before it. Returns `{nil, nil, context}` for any other argument.
   """
-  def resolve({:field, [_, _ | _] = accesses}, context) do
+  def resolve(argument, context) do
+    {entry, field, _rich, context} = resolve_with_rule(argument, context)
+    {entry, field, context}
+  end
+
+  @doc """
+  `resolve/2`, with the fields the entry prints as rich text by its owner's
+  forms when it is a subform row read through its owner, else nil
+  (`Brando.Villain.TemplateView.eval_record/2`).
+  """
+  def resolve_with_rule({:field, [_, _ | _] = accesses}, context) do
     case Enum.split(accesses, -1) do
       {parent, [{:key, name}]} ->
-        entry = TemplateView.eval({:field, parent}, context)
-        {entry, Fields.field(entry, name), context}
+        {entry, rich} = TemplateView.eval_record({:field, parent}, context)
+        {entry, Fields.field(entry, name), rich, context}
 
       _ ->
-        {nil, nil, context}
+        {nil, nil, nil, context}
     end
   end
 
-  def resolve(_argument, context), do: {nil, nil, context}
+  def resolve_with_rule(_argument, context), do: {nil, nil, nil, context}
 end

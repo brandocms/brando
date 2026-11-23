@@ -437,9 +437,6 @@ defmodule Brando.Villain.InertEditorTextTest do
       refute html =~ "&amp;amp;"
     end
 
-    # `assign` stores the field's text escaped, and the tag escapes it again.
-    # Not fixed here: the fix changes what such templates print today (#3807).
-    @tag skip: "assign stores escaped text, which a tag argument escapes again (#3807)"
     test "a tag argument escapes a value assigned first once, as it does the field", %{user: user} do
       image = Factory.insert(:image, creator: user)
       entry = %Page{title: "<b>", language: :en} |> Map.put(:cover, image)

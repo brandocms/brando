@@ -1,3 +1,36 @@
+defmodule Brando.TrashLinkTest.Description do
+  @moduledoc false
+  # A page's meta description drawn as rich text, so that a rewrite given
+  # this module looks for links in it (IdentifierLinkRewriteTest). The
+  # entry rendered is the page itself, `Brando.Pages.Page` on the same
+  # table, which is in the trash.
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "TrashLinkTest",
+    schema: "Description",
+    singular: "description",
+    plural: "descriptions",
+    gettext_module: Brando.Gettext
+
+  table "pages"
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :meta_description, :text
+  end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :meta_description, :rich_text
+        end
+      end
+    end
+  end
+end
+
 defmodule Brando.Content.IdentifierLinkRewriteTest do
   # Where a moved identifier's rich-text links are rewritten, and what one
   # failing schema leaves for the others. Synchronous: some tests make a
@@ -99,6 +132,19 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
     repo.query!("""
     CREATE TRIGGER brando_test_count_update BEFORE UPDATE ON #{table}
     FOR EACH ROW EXECUTE FUNCTION brando_test_count_update()
+    """)
+  end
+
+  # Postgres raises for every render job queued for `schema`
+  defp refuse_render_jobs(schema) do
+    Brando.Repo.repo().query!("""
+    CREATE OR REPLACE FUNCTION brando_test_refuse_job() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'refused by the test'; END $$
+    """)
+
+    Brando.Repo.repo().query!("""
+    CREATE TRIGGER brando_test_refuse_job BEFORE INSERT ON oban_jobs
+    FOR EACH ROW WHEN (NEW.args->>'schema' = '#{schema}') EXECUTE FUNCTION brando_test_refuse_job()
     """)
   end
 
@@ -397,6 +443,187 @@ defmodule Brando.Content.IdentifierLinkRewriteTest do
       assert Brando.Repo.get!(Chapter, chapter.id).body =~ ~s(href="#{url}")
       assert Brando.Repo.get!(Article, entry.id).subtitle =~ ~s(href="#{url}")
       assert entry.id in rendered(jobs, Article)
+    end
+  end
+
+  describe "open forms" do
+    # A process that forwards what the entry's open forms hear, as `heard`
+    defp listen(schema, id, heard \\ nil) do
+      test = self()
+      topic = Brando.Tenant.Topic.entry("field_sync", schema, id)
+
+      spawn_link(fn ->
+        Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+        send(test, {:listening, topic})
+        forward(test, heard || {schema, id})
+      end)
+
+      assert_receive {:listening, ^topic}
+    end
+
+    defp forward(test, entry) do
+      receive do
+        message -> send(test, {:heard, entry, message})
+      end
+
+      forward(test, entry)
+    end
+
+    test "on each entry whose rows are rewritten hear of it as of a save by no editor" do
+      {target, identifier} = insert_case()
+      entry = article(%{subtitle: linked_html(identifier)})
+      quoted = article(%{slug: "quoted", quotes: [%ArticleQuote{text: linked_html(identifier)}]})
+      other = article(%{slug: "other", subtitle: "<p>No link</p>"})
+      parent = holder(%{slug: "parent"})
+      Brando.Repo.insert!(%Chapter{case_id: parent.id, title: "Linked", body: linked_html(identifier)})
+
+      for {schema, id} <- [{Article, entry.id}, {Article, quoted.id}, {Article, other.id}, {Case, parent.id}],
+          do: listen(schema, id)
+
+      move(target)
+
+      for heard <- [{Article, entry.id}, {Article, quoted.id}, {Case, parent.id}],
+          do: assert_receive({:heard, ^heard, {:entry_saved, %{tab: nil, user_id: nil}}})
+
+      refute_receive {:heard, {Article, _id}, _message}
+    end
+
+    test "hear of it once the transaction around the rewrite has committed" do
+      {_target, identifier} = insert_case()
+      entry = article(%{subtitle: linked_html(identifier)})
+      listen(Article, entry.id)
+
+      {:ok, _jobs} =
+        Brando.Repo.transaction(fn ->
+          jobs = rewrite(identifier)
+          refute_receive {:heard, _entry, _message}
+          jobs
+        end)
+
+      assert_receive {:heard, {Article, _id}, {:entry_saved, %{tab: nil}}}
+    end
+
+    test "hear nothing of a rewrite rolled back" do
+      {_target, identifier} = insert_case()
+      entry = article(%{subtitle: linked_html(identifier)})
+      listen(Article, entry.id)
+
+      {:error, :rolled_back} =
+        Brando.Repo.transaction(fn ->
+          rewrite(identifier)
+          Brando.Repo.rollback(:rolled_back)
+        end)
+
+      refute_receive {:heard, _entry, _message}
+    end
+
+    test "hear nothing of a schema's step rolled back in the transaction around the rewrite" do
+      {_target, identifier} = insert_case()
+      parent = holder(%{slug: "parent"})
+      chapter = Brando.Repo.insert!(%Chapter{case_id: parent.id, title: "Linked", body: linked_html(identifier)})
+      entry = article(%{subtitle: linked_html(identifier)})
+      # The chapter's step cannot queue its parent's render, and is rolled
+      # back to its savepoint; the transaction goes on
+      refuse_render_jobs(Case)
+      listen(Case, parent.id)
+      listen(Article, entry.id)
+
+      log =
+        Brando.Test.OwnLog.capture(fn ->
+          assert {:ok, _jobs} = Brando.Repo.transaction(fn -> rewrite(identifier) end)
+        end)
+
+      assert log =~ "refused by the test"
+      assert Brando.Repo.get!(Chapter, chapter.id).body == linked_html(identifier)
+      assert Brando.Repo.get!(Article, entry.id).subtitle =~ ~s(href="#{@new_url}")
+      assert_receive {:heard, {Article, _id}, {:entry_saved, %{tab: nil}}}
+      refute_receive {:heard, {Case, _id}, _message}
+    end
+  end
+
+  describe "open forms in another environment" do
+    # Two environments, each with its own copy of the pages table and of a
+    # page made before them
+    setup do
+      user = Brando.Factory.insert(:random_user)
+      {:ok, page} = Brando.Pages.create_page(Brando.Factory.params_for(:page, uri: "linked"), user)
+      put_test_env(:tenancy_mode, :single)
+
+      prefixes = %{
+        production: Brando.Tenant.prefix("acme", "production"),
+        staging: Brando.Tenant.prefix("acme", "staging")
+      }
+
+      for prefix <- Map.values(prefixes) do
+        Brando.Repo.repo().query!(~s(CREATE SCHEMA "#{prefix}"))
+        Brando.Repo.repo().query!(~s[CREATE TABLE "#{prefix}".pages (LIKE public.pages INCLUDING ALL)])
+      end
+
+      Map.put(prefixes, :page, page)
+    end
+
+    test "hear of a rewrite in their environment, made in a transaction begun in another", c do
+      {_target, identifier} = insert_case()
+      page = c.page
+
+      # Each environment holds a page with this id, linking to the moved entry
+      for prefix <- [c.production, c.staging] do
+        Brando.Repo.repo().query!(~s(INSERT INTO "#{prefix}".pages SELECT * FROM public.pages WHERE id = $1), [page.id])
+
+        Brando.Repo.repo().query!(~s(UPDATE "#{prefix}".pages SET meta_description = $1 WHERE id = $2), [
+          linked_html(identifier),
+          page.id
+        ])
+      end
+
+      Brando.Tenant.with_prefix(c.production, fn -> listen(Page, page.id, :production) end)
+      Brando.Tenant.with_prefix(c.staging, fn -> listen(Page, page.id, :staging) end)
+
+      Brando.Tenant.with_prefix(c.production, fn ->
+        {:ok, _jobs} =
+          Brando.Repo.transaction(fn ->
+            Brando.Tenant.with_prefix(c.staging, fn ->
+              rewrite(identifier, @new_url, [Brando.TrashLinkTest.Description, Page])
+            end)
+          end)
+      end)
+
+      in_staging = Brando.Tenant.with_prefix(c.staging, fn -> Brando.Repo.get!(Page, page.id) end)
+      assert in_staging.meta_description == linked_html(identifier, @new_url)
+      assert_receive {:heard, :staging, {:entry_saved, %{tab: nil}}}
+      refute_receive {:heard, :production, _message}
+    end
+  end
+
+  describe "an entry in the trash" do
+    # Rewritten and rendered like any other: a restore does not render it,
+    # so the render now is what brings it back with the new address
+    test "has its links rewritten and its HTML rendered, and is restored with the new address" do
+      {_target, identifier} = insert_case()
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      module = Brando.ProposalFixtures.module!(user, "Description", "<div>{{ entry.meta_description }}</div>", [])
+      page = Brando.ProposalFixtures.page!(user, "Trashed", module)
+      trashed_at = DateTime.truncate(DateTime.utc_now(), :second)
+
+      Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id),
+        set: [meta_description: linked_html(identifier), deleted_at: trashed_at]
+      )
+
+      jobs = rewrite(identifier, @new_url, [Brando.TrashLinkTest.Description, Page])
+
+      assert Brando.Repo.get!(Page, page.id).meta_description == linked_html(identifier, @new_url)
+      assert [job] = for(job <- jobs, job.args["schema"] == to_string(Page), do: job)
+      assert job.args["entry_id"] == page.id
+
+      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
+      html = Brando.Repo.get!(Page, page.id).rendered_blocks
+      assert html =~ @new_url
+      refute html =~ @old_url
+
+      assert {:ok, restored} = Brando.Authorization.Boundary.restore(user, Brando.Repo.get!(Page, page.id))
+      assert restored.deleted_at == nil
+      assert restored.meta_description == linked_html(identifier, @new_url)
+      assert restored.rendered_blocks == html
     end
   end
 end
