@@ -168,7 +168,8 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
         end
 
       _ ->
-        {:noreply, socket}
+        # The same field again: the page may print it in more places now
+        {:noreply, update(socket, :focus, &with_kinds(&1, params))}
     end
   end
 

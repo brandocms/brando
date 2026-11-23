@@ -205,6 +205,20 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
       assert printed == %{"E" => "Fish &amp; chips", "T" => "Fish &amp; chips"}
     end
 
+    test "takes the kinds the page names when the field is selected again", %{conn: conn, page: page} do
+      {view, _html} = field_editor(conn, page)
+      key = Brando.FrontendEdit.Fields.key(Page, page.id, :title)
+
+      render_hook(view, "select", %{"field" => key, "kinds" => "TE"})
+
+      view
+      |> element("##{@form}_form")
+      |> render_change(%{"page" => %{"title" => "Fish & chips"}, "_target" => ["page", "title"]})
+
+      assert_push_event(view, "b:frontend-edit", %{type: "entry_field", key: ^key, printed: printed})
+      assert printed == %{"E" => "Fish &amp; chips", "T" => "Fish &amp; chips"}
+    end
+
     test "shows the value on the page as it changes, and saves only it", %{conn: conn, page: page} do
       {view, _html} = field_editor(conn, page)
       key = Brando.FrontendEdit.Fields.key(Page, page.id, :title)
