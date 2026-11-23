@@ -869,16 +869,7 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "entry_field_upload_complete", asset_type: :image, field: field, path: path, asset: image},
         socket
       ) do
-    socket =
-      if image.status != :processed do
-        update(socket, :processing_images, &[image.id | &1])
-      else
-        socket
-      end
-
-    send_update(ImagePicker, id: "image-picker", refresh_images: true)
-
-    {:ok, deliver_entry_field_asset(socket, :image, field, path, image)}
+    {:ok, deliver_entry_field_image(socket, field, path, image)}
   end
 
   def update(
@@ -2162,7 +2153,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:editing_image?, true)
     |> assign(:image_changeset, change(image))
     |> assign_drawer_recovery_state()
-    |> push_event("b:image_editor:init", image_editor_payload(image))
+    |> push_event("b:image_editor:init", field_image_editor_payload(socket, edit_image, image))
   end
 
   # A picker's selection (or a duplicate) in the image, file or video drawer.
@@ -2196,6 +2187,21 @@ defmodule BrandoAdmin.Components.Form do
   # function keeps their `editing_*?` handling from drifting apart. Galleries are
   # genuinely different — they append to an assoc — and stay on their own
   # clauses.
+  # An image uploaded for an entry field: by the field's drawer, or as the
+  # image editor's copy (`image_editor_copy_created/2`).
+  defp deliver_entry_field_image(socket, field, path, image) do
+    socket =
+      if image.status != :processed do
+        update(socket, :processing_images, &[image.id | &1])
+      else
+        socket
+      end
+
+    send_update(ImagePicker, id: "image-picker", refresh_images: true)
+
+    deliver_entry_field_asset(socket, :image, field, path, image)
+  end
+
   defp deliver_entry_field_asset(socket, asset_type, field, path, asset) do
     if locked_field?(socket, path, field),
       do: socket,
@@ -6602,18 +6608,15 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil, image: image, id: image.id, own: true})
      |> assign(:editing_image?, true)
      |> assign(:image_changeset, change(image))
-     # `from_block`: a new copy goes through the form's own editor upload
-     # (`handle_image_editor_upload_progress/3`), as from a block. The other
-     # route fills the image drawer's field upload, and this form has no field.
-     |> push_event("b:image_editor:init", Map.put(image_editor_payload(image), :from_block, true))}
+     |> push_event("b:image_editor:init", image_editor_payload(image))}
   end
 
   def handle_event("open_own_image_editor", _, socket), do: {:noreply, socket}
 
   def handle_event("open_image_editor", %{"image_id" => _image_id}, socket) do
-    image = socket.assigns.edit_image.image
+    %{edit_image: edit_image} = socket.assigns
 
-    {:noreply, push_event(socket, "b:image_editor:init", image_editor_payload(image))}
+    {:noreply, push_event(socket, "b:image_editor:init", field_image_editor_payload(socket, edit_image, edit_image.image))}
   end
 
   def handle_event(
@@ -9307,18 +9310,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp own_or_field_copy(socket, edit_image, updated_image) do
-    # Non-block path
-    relation_key = String.to_existing_atom("#{edit_image.field}_id")
-    image_changeset = change(updated_image)
-
-    updated_edit_image =
-      Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
-
-    {:noreply,
-     socket
-     |> update_changeset(edit_image.path, relation_key, updated_image.id)
-     |> assign(:edit_image, updated_edit_image)
-     |> assign(:image_changeset, image_changeset)}
+    {:noreply, deliver_entry_field_image(socket, edit_image.field, Map.get(edit_image, :path) || [], updated_image)}
   end
 
   defp resolve_block_image_config(config_target) do
@@ -10866,6 +10858,16 @@ defmodule BrandoAdmin.Components.Form do
       end
     end)
   end
+
+  # An image field's editor: its copy is made for the field, so it takes the
+  # field's sizes, whichever field the image was uploaded for.
+  defp field_image_editor_payload(socket, %{field: field} = edit_image, image) when not is_nil(field) do
+    schema = Map.get(edit_image, :schema) || socket.assigns.schema
+
+    %{image_editor_payload(image) | config_target: Brando.Assets.ConfigTarget.serialize({"image", schema, field})}
+  end
+
+  defp field_image_editor_payload(_socket, _edit_image, image), do: image_editor_payload(image)
 
   defp image_editor_payload(image) do
     crop_groups =
