@@ -19,14 +19,14 @@ defmodule Brando.Drafts.Restore do
           {:review, :modules_changed, issues}
 
         true ->
-          {:ok, build_changeset(draft, entry, schema, user, blocks), issues}
+          {:ok, build_changeset(draft, entry, schema, user, blocks, opts), issues}
       end
     end
   rescue
     _ -> {:error, "This recovery copy could not be applied. Its contents are still available below."}
   end
 
-  defp build_changeset(draft, entry, schema, user, blocks) do
+  defp build_changeset(draft, entry, schema, user, blocks, opts) do
     params = draft.payload["main"] || %{}
     params = Map.merge(params, draft.payload["transformers"] || %{})
     params = reconcile(params, entry) |> Map.drop(["id", "creator_id", "deleted_at"])
@@ -35,7 +35,7 @@ defmodule Brando.Drafts.Restore do
     blocks
     |> Map.keys()
     |> Enum.reduce(changeset, &put_block_field(&2, &1, blocks[&1], entry, schema, user))
-    |> load_moved_relations()
+    |> load_moved_relations(opts[:load_entry_relations])
   end
 
   # Each row is cast onto the saved row it restores, which keeps that row's
@@ -46,31 +46,37 @@ defmodule Brando.Drafts.Restore do
   # `Ref.preloads/0`), or as deep as the saved one was loaded: those of the
   # same relation and preloads in one query.
   #
-  # The entry's own relations are left as they are: the form merges the ones
-  # its changeset moves over the entry it casts each edit onto
-  # (`rebuild_preview_relations/1` in the form), which needs them unmoved.
-  defp load_moved_relations(changeset) do
+  # The entry's own relations are loaded too only with `load_entry_relations:
+  # true`, for a changeset rendered as it is. The form leaves them as they
+  # are: it merges the ones its changeset moves over the entry it casts each
+  # edit onto (`rebuild_preview_relations/1` in the form), which needs them
+  # unmoved.
+  defp load_moved_relations(changeset, entry?) do
+    moved = if entry?, do: moved_tree(changeset), else: moved_below(changeset)
+
     loaded =
-      changeset
-      |> moved_below()
-      |> Enum.reject(&is_nil(elem(&1, 3)))
-      |> Enum.group_by(fn {schema, name, preloads, _id} -> {schema, name, preloads} end, &elem(&1, 3))
-      |> Enum.flat_map(fn {{schema, name, preloads}, ids} -> load_relations(schema, name, preloads, Enum.uniq(ids)) end)
+      moved
+      |> Enum.reject(&is_nil(elem(&1, 4)))
+      |> Enum.group_by(&Tuple.delete_at(&1, 4), &elem(&1, 4))
+      |> Enum.flat_map(fn {relation, ids} -> load_relations(relation, Enum.uniq(ids)) end)
       |> Map.new()
 
-    put_moved_below(changeset, loaded)
+    if entry?, do: put_moved(changeset, loaded), else: put_moved_below(changeset, loaded)
   end
 
-  defp load_relations(schema, name, preloads, ids) do
+  # Read from the schema (tenant prefix) of the rows they belong to
+  defp load_relations({schema, name, preloads, prefix} = relation, ids) do
     key = schema.__schema__(:association, name).owner_key
+    owner = Ecto.put_meta(struct(schema), prefix: prefix)
 
     ids
-    |> Enum.map(&Map.put(struct(schema), key, &1))
+    |> Enum.map(&Map.put(owner, key, &1))
     |> Brando.Repo.preload([{name, preloads}])
-    |> Enum.map(&{{schema, name, preloads, Map.get(&1, key)}, Map.get(&1, name)})
+    |> Enum.map(&{Tuple.insert_at(relation, 4, Map.get(&1, key)), Map.get(&1, name)})
   end
 
-  # `{schema, name, preloads, new key}` for each relation `changeset` moves
+  # `{schema, name, preloads, prefix, new key}` for each relation `changeset`
+  # moves
   defp moved(%Changeset{data: %schema{} = data, changes: changes}) do
     for name <- schema.__schema__(:associations),
         %Ecto.Association.BelongsTo{owner_key: key, related_key: related_key} <-
@@ -79,7 +85,7 @@ defmodule Brando.Drafts.Restore do
         loaded <- [Map.get(data, name)],
         not match?(%Ecto.Association.NotLoaded{}, loaded),
         (loaded && Map.get(loaded, related_key)) != changes[key],
-        do: {schema, name, relation_preloads(schema, name, loaded), changes[key]}
+        do: {schema, name, relation_preloads(schema, name, loaded), Ecto.get_meta(data, :prefix), changes[key]}
   end
 
   defp moved_below(%Changeset{changes: changes}), do: changes |> Map.values() |> Enum.flat_map(&moved_tree/1)
@@ -93,8 +99,8 @@ defmodule Brando.Drafts.Restore do
 
   defp put_moved(%Changeset{data: data} = changeset, loaded) do
     data =
-      Enum.reduce(moved(changeset), data, fn {schema, name, preloads, id}, data ->
-        Map.put(data, name, id && Map.fetch!(loaded, {schema, name, preloads, id}))
+      Enum.reduce(moved(changeset), data, fn {_schema, name, _preloads, _prefix, id} = moved, data ->
+        Map.put(data, name, id && Map.fetch!(loaded, moved))
       end)
 
     put_moved_below(%{changeset | data: data}, loaded)
