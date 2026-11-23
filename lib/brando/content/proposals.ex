@@ -2627,7 +2627,9 @@ defmodule Brando.Content.Proposals do
   query result read in it is cached, and jobs are rows the rollback removes.
 
   It checks what `materialize/3` checks, with `shared: true` as it takes it,
-  and makes the copy as `actor`, who must be allowed to create it. Returns
+  and the texts the proposal translates against their sources, under the
+  sources' locks, as applying does (`check_translated_sources!/1`). It makes
+  the copy as `actor`, who must be allowed to create it. Returns
   `fun`'s result, or `{:error, message}`.
   """
   @spec with_translation(Proposal.t(), Proposal.target(), term(), keyword(), (Changeset.t() -> result)) ::
@@ -2654,6 +2656,8 @@ defmodule Brando.Content.Proposals do
       Error.protect(fn ->
         if opts[:shared], do: Transfer.ensure_scope!(actor), else: authorize_proposal!(proposal, actor)
         current!(proposal, actor, if(opts[:shared], do: :read, else: :update))
+        # Under the sources' locks, as applying checks them
+        check_translated_sources!(proposal)
         user = user!(actor)
         entry = create_translations!(proposal, target, user)
 

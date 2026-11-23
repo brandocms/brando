@@ -246,6 +246,20 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
       assert kept() == before
     end
 
+    # The text the proposal translated is checked again as the copy is made,
+    # as when the proposal is applied
+    test "is refused once the source's text has changed", c do
+      id = prepare!(mcp(c), [create_op(c.source), translate_new(c)], "Translate the page")
+      {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)
+
+      Repo.update_all(from(v in Brando.Content.Var, where: v.key == "kicker"), set: [value: "Alle prosjekter"])
+
+      assert {:error, message} =
+               Brando.Content.Proposals.with_translation(proposal, {:new, "english"}, c.user, [], fn _ -> flunk() end)
+
+      assert message =~ "changed"
+    end
+
     test "is refused once the language is taken", c do
       id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
       {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)
