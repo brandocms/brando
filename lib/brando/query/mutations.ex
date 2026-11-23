@@ -257,12 +257,12 @@ defmodule Brando.Query.Mutations do
   # its identifier, revision and Activity are written together, so a save
   # Postgres cancels at any step has written nothing and can be saved again.
   # `mutation` takes the user `Boundary.run/4` hands it.
-  defp atomically(mutation) do
-    fn user ->
-      case Repo.transaction(fn -> commit_or_rollback(mutation.(user)) end) do
-        {:ok, value} -> value
-        error -> error
-      end
+  defp atomically(mutation), do: &in_transaction(mutation, &1)
+
+  defp in_transaction(mutation, user) do
+    case Repo.transaction(fn -> commit_or_rollback(mutation.(user)) end) do
+      {:ok, value} -> value
+      error -> error
     end
   end
 
