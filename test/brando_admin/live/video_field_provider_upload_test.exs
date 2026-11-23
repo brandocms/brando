@@ -124,6 +124,31 @@ defmodule BrandoAdmin.VideoFieldProviderUploadTest do
     assert Repo.get(Brando.Videos.Video, video_id)
   end
 
+  # Before, the field took nothing and said nothing: the editor saw the
+  # upload finish and no video.
+  test "an upload it cannot complete is answered with why", ctx do
+    view = open(ctx)
+
+    view
+    |> with_target(cid_of(view, @hook))
+    |> render_hook("get_video_upload_url", %{
+      "request_ref" => "field-forged",
+      "filename" => "clip.mp4",
+      "size" => 1_000,
+      "mime_type" => "video/mp4"
+    })
+
+    assert_push_event(view, "video_upload_url_ready", %{request_ref: "field-forged"})
+
+    view
+    |> with_target(cid_of(view, @hook))
+    |> render_hook("video_upload_complete", %{"request_ref" => "field-forged", "upload_token" => "forged"})
+
+    assert_reply(view, %{error: error})
+    assert is_binary(error)
+    assert clip_id(view) == ""
+  end
+
   test "a refused upload is reported to the hook", ctx do
     view = open(ctx)
 

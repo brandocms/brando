@@ -2054,21 +2054,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   # The file is with the provider; the var shows the video from now on,
-  # unless another one, or another var, was chosen meanwhile.
+  # unless another one, or another var, was chosen meanwhile. An upload it
+  # cannot complete is answered with why, which the var shows.
   def handle_event("video_upload_complete", params, socket) do
     {still_shown?, socket} =
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], socket.assigns.video_id, socket.assigns.key)
 
-    with {:ok, video} <- ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params),
-         true <- still_shown?,
-         {:ok, video} <- Brando.Videos.get_video(%{matches: %{id: video.id}, preload: [:thumbnail, :file]}) do
-      socket
-      |> assign(:video, video)
-      |> assign(:video_id, video.id)
-      |> on_change(%{video: video, video_id: video.id})
-      |> then(&{:noreply, &1})
-    else
-      _ -> {:noreply, socket}
+    case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
+      {:ok, video} when still_shown? -> show_video(socket, video.id)
+      {:ok, _video} -> {:noreply, socket}
+      failed -> {:reply, %{error: ProviderVideoUpload.complete_error_message(failed)}, socket}
     end
   end
 
@@ -2108,16 +2103,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("select_video", %{"id" => video_id}, %{assigns: %{type: :video}} = socket) do
-    {:ok, video} =
-      Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
-
-    socket
-    |> assign(:video_id, video.id)
-    |> assign(:video, video)
-    |> on_change(%{video: video, video_id: video.id})
-    |> then(&{:noreply, &1})
-  end
+  def handle_event("select_video", %{"id" => video_id}, %{assigns: %{type: :video}} = socket),
+    do: show_video(socket, video_id)
 
   def handle_event("select_image", %{"id" => image_id}, %{assigns: %{type: :gallery}} = socket) do
     {:noreply, toggle_gallery_media(socket, :image, image_id)}
@@ -2133,6 +2120,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   def handle_event("toggle_visible", _, socket) do
     {:noreply, update(socket, :visible, &(!&1))}
+  end
+
+  defp show_video(socket, video_id) do
+    {:ok, video} =
+      Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
+
+    socket
+    |> assign(:video_id, video.id)
+    |> assign(:video, video)
+    |> on_change(%{video: video, video_id: video.id})
+    |> then(&{:noreply, &1})
   end
 
   defp toggle_gallery_media(socket, media_type, media_id) do

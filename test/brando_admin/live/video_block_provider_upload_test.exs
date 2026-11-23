@@ -198,6 +198,19 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert Repo.get(Brando.Videos.Video, video_id)
     end
 
+    # Before, the var took nothing and said nothing: the editor saw the
+    # upload finish and no video.
+    test "an upload it cannot complete is answered with why", ctx do
+      view = open(ctx)
+      hook = "#" <> var_hook(view)
+      request_upload(view, hook, "var-forged")
+
+      complete_upload(view, hook, "var-forged", "forged")
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert var_video_id(view) in [nil, ""]
+    end
+
     test "an upload shows as processing until the provider reports it ready", ctx do
       view = open(ctx)
       hook_id = var_hook(view)
@@ -262,6 +275,17 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
 
       assert_push_event(view, "b:validate", %{target: "page[vars][0][video_id]", value: ^video_id})
       assert entry_var_video_id(view, 0) == to_string(video_id)
+    end
+
+    test "an upload it cannot complete is answered with why", ctx do
+      view = open_entry(ctx)
+      hook = "#page_vars_0-video-uploader"
+      request_upload(view, hook, "entry-forged")
+
+      complete_upload(view, hook, "entry-forged", "forged")
+      assert_reply(view, %{error: error})
+      assert is_binary(error)
+      assert entry_var_video_id(view, 0) in [nil, ""]
     end
 
     test "changed to another type and back, it offers Upload again", ctx do

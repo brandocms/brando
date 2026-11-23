@@ -391,14 +391,16 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
   # The file is with the provider, which encodes it and reports back
   # (`video_processed`); the field shows the video from now on, unless
-  # another one was chosen meanwhile.
+  # another one was chosen meanwhile. An upload it cannot complete is
+  # answered with why, which the field shows.
   def handle_event("video_upload_complete", params, socket) do
     {still_shown?, socket} =
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], socket.assigns.video_id, nil)
 
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
       {:ok, video} when still_shown? -> select_video(socket, video.id)
-      _ -> {:noreply, socket}
+      {:ok, _video} -> {:noreply, socket}
+      failed -> {:reply, %{error: ProviderVideoUpload.complete_error_message(failed)}, socket}
     end
   end
 
