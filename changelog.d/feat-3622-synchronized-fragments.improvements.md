@@ -1,0 +1,1 @@
+- `trait :translatable, matched_by: [...]` names the attributes an entry's language versions share; an unlinked entry with them in a language counts as its version there. `always_source_controlled: [...]` lists fields that are source-controlled in synchronized mode whatever the application configures.

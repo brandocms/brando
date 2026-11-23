@@ -10875,6 +10875,7 @@ msgstr ""
 msgid "Lines written to robots.txt"
 msgstr ""
 
+#: lib/brando_admin/components/form/alternates_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
@@ -13202,6 +13203,7 @@ msgstr ""
 msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
 msgstr ""
 
+#: lib/brando_admin/live/pages/page_list_live.ex
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
@@ -13265,6 +13267,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Not included: %{rows}."
+msgstr ""
+
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Not linked, with the same keys"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex
@@ -13628,6 +13635,11 @@ msgstr ""
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing was connected. Start again from the app."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
@@ -20922,6 +20934,11 @@ msgstr ""
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
+msgstr ""
+
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "These entries have this entry's keys in another language, but are not linked to it. Link one to make it this entry's version in its language."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
