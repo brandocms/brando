@@ -228,17 +228,13 @@ defmodule Brando.Authorization.Boundary do
   # gives it one only with group authorization, so in legacy mode and for
   # `:system` this does.
   def restore(actor, %{__struct__: schema} = entry) do
-    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Brando.Trait.Blocks) do
-      Repo.transaction(fn ->
-        case restore_with_run(actor, entry) do
-          {:ok, restored} -> restored
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-    else
-      restore_with_run(actor, entry)
-    end
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Brando.Trait.Blocks),
+      do: Repo.transaction(fn -> commit_or_rollback(restore_with_run(actor, entry)) end),
+      else: restore_with_run(actor, entry)
   end
+
+  defp commit_or_rollback({:ok, restored}), do: restored
+  defp commit_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp restore_with_run(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
