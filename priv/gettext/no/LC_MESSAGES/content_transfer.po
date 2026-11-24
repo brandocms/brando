@@ -1161,6 +1161,16 @@ msgstr "Ingen"
 msgid "Norwegian"
 msgstr "Norsk"
 
+#: lib/brando/content/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "Not imported: in “%{entry}”, %{block} uses a module that is in the trash."
+msgstr "Ikke importert: i «%{entry}» bruker %{block} en modul som ligger i papirkurven."
+
+#: lib/brando/content/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "Not imported: in “%{entry}”, %{block} uses the module “%{module}”, which is in the trash. Restore the module from the trash, then review the import again."
+msgstr "Ikke importert: i «%{entry}» bruker %{block} modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen fra papirkurven, og gå så gjennom importen på nytt."
+
 #: lib/brando_admin/live/sites/content_transfer_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not recorded"
@@ -1698,6 +1708,11 @@ msgstr "Den inkluderte oppføringen støtter ikke innholdslenker."
 #, elixir-autogen, elixir-format
 msgid "The media original is missing from the archive."
 msgstr "Den originale mediefilen mangler i arkivet."
+
+#: lib/brando/content/transfer/dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "The module “%{module}” is in the trash. Restore it from the trash first."
+msgstr "Modulen «%{module}» ligger i papirkurven. Gjenopprett den fra papirkurven først."
 
 #: lib/brando_admin/live/sites/content_transfer_live.ex
 #, elixir-autogen, elixir-format

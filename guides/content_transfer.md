@@ -81,7 +81,11 @@ not deploy application code or service credentials.
    value whatever the bundle says, on an existing entry and a new one: only an
    input's `default:` or a slug generated from its source fills it. A new entry
    that needs such a value, as an image needs its `path`, is refused; images
-   come over as media dependencies instead.
+   come over as media dependencies instead. A module put in the trash since
+   the review refuses the import, naming the entry, the block and the module:
+   restore the module from the trash, then review the import again. A preview
+   that maps a module in the trash names it as a problem to whoever may read
+   modules.
 
 Uploading, previewing and cancelling are read-only. **Install missing
 definitions** is a separate, explicitly labelled write: those definitions remain
@@ -192,8 +196,10 @@ refuses to overwrite entries or owned content edited since import. It restores
 updated entries, permanently removes newly created entries and their owned
 records in reverse dependency order, and refreshes rendering. New relationships
 and rich-text links to created entries block removal; remove those references
-first. Recovery rechecks permissions and module contracts. A database rejection
-rolls back the entire recovery operation.
+first. Recovery rechecks permissions and module contracts, and refuses to put
+back a block of a module in the trash, naming the module: restore the module
+from the trash and recover again. A refused recovery, or a database rejection,
+rolls back the entire recovery operation and leaves the receipt to retry.
 
 Entries selected with **Use existing unchanged** are excluded from the saved
 entry count and recovery snapshots; recovery leaves their content untouched.

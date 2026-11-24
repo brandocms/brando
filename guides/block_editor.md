@@ -203,7 +203,9 @@ trashed with it) is refused with a message naming the module to restore
 first. Activating a revision that would bring back a block of it, and
 duplicating an entry that holds one, are refused the same way, naming the
 module and the block; a scheduled revision refused for it is not published,
-and its schedule is dropped with a note in Activity. Blocks an entry already
+and its schedule is dropped with a note in Activity. A content transfer's
+import and recovery are refused as well ([Content
+transfer](content_transfer.md#recovery)). Blocks an entry already
 holds don't stop its saves, nor a revision that keeps them. The delete and
 such a save or restore can't pass each other: whichever reaches the module
 first finishes, and the other is refused. A site's
