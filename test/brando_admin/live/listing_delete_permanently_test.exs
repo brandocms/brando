@@ -290,6 +290,20 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
       refute has_element?(view, "[id$='_delete_entry_permanently_#{user.id}']")
     end
 
+    test "a listing with default actions and a delete of its own offers no Delete permanently", c do
+      {:ok, view, _html} = live(c.conn, "/admin/own-delete-pages?status=deleted")
+      assert has_element?(view, "#action_default_edit_entry_#{c.page.id}")
+      refute has_element?(view, "#action_default_delete_entry_permanently_#{c.page.id}")
+
+      [cid] = view |> render() |> Floki.parse_document!() |> Floki.attribute(".selection-clear", "phx-target")
+
+      view
+      |> with_target("[data-phx-component='#{cid}']")
+      |> render_click("select_row", %{"id" => to_string(c.page.id), "shiftKey" => "true"})
+
+      refute has_element?(view, "#selection-action-delete-permanently")
+    end
+
     test "a listing that asks again on delete asks again on Delete permanently" do
       guarded =
         for %{id: {BrandoAdmin.Reauth, opts}} <- __MODULE__.StepUpListLive.__live__()[:lifecycle].mount,

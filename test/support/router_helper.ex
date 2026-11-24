@@ -133,6 +133,31 @@ defmodule BrandoAdmin.SyncPolicyTest.ArticleListLive do
   def render(assigns), do: ~H""
 end
 
+# A page listing with a delete of its own (`overrides`), default actions on
+# (ListingDeletePermanentlyTest)
+defmodule BrandoAdmin.OwnDeleteTest.PageListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Pages.Page, overrides: ~w(delete_entry)
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Content.List}
+      id={"content_listing_#{@schema}_default"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:default}
+    />
+    """
+  end
+
+  def handle_event("delete_entry", _params, socket), do: {:noreply, socket}
+end
+
 defmodule BrandoAdmin.SyncTest.ArticleUserContextListLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Listing, schema: Brando.SyncTest.Article
@@ -546,6 +571,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
     live "/articles", BrandoAdmin.SyncTest.ArticleListLive
     live "/policy-articles", BrandoAdmin.SyncPolicyTest.ArticleListLive
+    live "/own-delete-pages", BrandoAdmin.OwnDeleteTest.PageListLive
     live "/slug-scope/language-articles", BrandoAdmin.SlugScopeTest.IndependentLanguageArticleListLive
 
     live "/slug-scope/language-articles/update/:entry_id",

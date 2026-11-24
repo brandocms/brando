@@ -53,15 +53,20 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     |> attach_listing_info_hooks(schema)
   end
 
-  # Events the view handles itself (the `overrides` option) pass on to it. A
-  # view with a delete of its own (the user listing) deletes nothing
-  # permanently from the trash here.
+  @doc """
+  Whether a listing view with these `overrides` deletes entries permanently
+  from the trash: not one with a delete of its own (the user listing). Its
+  menus offer Delete permanently only then.
+  """
+  def deletes_permanently?(overrides), do: "delete_entry" not in overrides
+
+  # Events the view handles itself (the `overrides` option) pass on to it
   defp listing_event(event, params, socket, schema, overrides) do
     cond do
       event in overrides ->
         {:cont, socket}
 
-      event in ~w(delete_entry_permanently delete_selected_permanently) and "delete_entry" in overrides ->
+      event in ~w(delete_entry_permanently delete_selected_permanently) and not deletes_permanently?(overrides) ->
         delete_refused(gettext("This list does not delete entries permanently. Nothing was deleted."))
         {:halt, socket}
 

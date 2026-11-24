@@ -41,6 +41,11 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       use BrandoAdmin, :live_view
 
       def __authorization_resource__, do: {:listing, unquote(schema)}
+
+      @doc false
+      def __deletes_permanently__,
+        do: BrandoAdmin.LiveView.Listing.Hooks.deletes_permanently?(unquote(overrides))
+
       import Phoenix.Component
 
       unquote(reauth)
