@@ -6772,6 +6772,7 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
       {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
       {:error, reason} when reason in [:forbidden, :try_again] -> refused_save_with_blocks(socket, reason)
+      {:error, {:module_in_trash, _} = reason} -> refused_save_with_blocks(socket, reason)
       {:error, %Changeset{} = changeset} -> failed_save_with_blocks(socket, changeset, save)
     end
   end
@@ -8137,6 +8138,8 @@ defmodule BrandoAdmin.Components.Form do
 
   defp refused_save_text(:try_again),
     do: gettext("Another change to the same content was saved at the same moment, and nothing was saved. Save again.")
+
+  defp refused_save_text({:module_in_trash, refusal}), do: Brando.Content.module_in_trash_message(refusal)
 
   # The errors only: the changes hold what was typed, passwords and email addresses too.
   defp log_rejected_save(changeset) do

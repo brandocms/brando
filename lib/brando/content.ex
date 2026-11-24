@@ -32,6 +32,7 @@ defmodule Brando.Content do
 
   """
   use Brando.Query
+  use Gettext, backend: Brando.Gettext
   import Ecto.Query
 
   alias Brando.Content.Block
@@ -196,12 +197,58 @@ defmodule Brando.Content do
   blocks using it, which would render as not found:
   `{:error, :module_in_use}`. A site's override goes: its blocks render as
   the library module, as after a Reset.
+
+  Run it in the delete's transaction: it locks the module first, so a save
+  or restore that brings the module into use
+  (`Brando.Content.Blocks.guard_added_modules/1`) either commits before the
+  check sees its blocks, or waits and finds the module in the trash.
   """
   def guard_delete(Module, %Module{source_module_id: nil} = module) do
+    Repo.one!(from(m in Module, where: m.id == ^module.id, lock: "FOR UPDATE", select: m.id))
     if list_entries_using_module(module) == [], do: :ok, else: {:error, :module_in_use}
   end
 
   def guard_delete(_schema, _entry), do: :ok
+
+  @doc """
+  Refuses to restore `entry` from the trash while it holds a block of a
+  module in the trash: `{:error, {:module_in_trash, %{module: name}}}`. A
+  page counts the fragments its restore brings back with it
+  (`Brando.Pages.restore_fragments/2`). Run it in the restore's transaction,
+  as `Brando.Content.Blocks.guard_restored_modules/1` says.
+  """
+  def guard_restore(%{__struct__: Brando.Pages.Page} = page),
+    do: ContentBlocks.guard_restored_modules([page | Brando.Pages.list_fragments_trashed_with(page)])
+
+  def guard_restore(entry), do: ContentBlocks.guard_restored_modules([entry])
+
+  @doc """
+  The editor's text for `{:error, {:module_in_trash, refusal}}`, from an
+  entry save (`Brando.Content.Blocks.guard_added_modules/1`) or a restore
+  (`guard_restore/1`).
+  """
+  def module_in_trash_message(%{module: name, block: place}) do
+    gettext(
+      "Not saved: %{block} uses the module “%{module}”, which is in the trash. Remove the block, or restore the module from the trash, and save again.",
+      block: block_place(place),
+      module: translated_name(name)
+    )
+  end
+
+  def module_in_trash_message(%{module: name}) do
+    gettext("Not restored: it holds blocks of the module “%{module}”, which is in the trash. Restore the module first.",
+      module: translated_name(name)
+    )
+  end
+
+  defp block_place({:described, description}), do: "“#{description}”"
+  defp block_place({:root, position}), do: gettext("block %{number}", number: position)
+  defp block_place({:inside, place}), do: gettext("a block inside %{block}", block: block_place(place))
+
+  defp translated_name(name) when is_map(name),
+    do: name[Gettext.get_locale(Brando.Gettext)] || name[Brando.Languages.default_language()] || name["en"] || ""
+
+  defp translated_name(name), do: name
 
   @doc """
   Duplicates the module `id` as a new module: a new lineage at v1, as an

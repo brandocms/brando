@@ -96,6 +96,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:error, {:recorded_here, live}} ->
         send(self(), {:toast, Brando.Videos.restore_refused_message(live)})
 
+      {:error, {:module_in_trash, refusal}} ->
+        send(self(), {:toast, Brando.Content.module_in_trash_message(refusal)})
+
       {:error, _error} ->
         send(
           self(),
