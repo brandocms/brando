@@ -32,6 +32,7 @@ defmodule BrandoAdmin.FormLanguageSwitchTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
+  alias Brando.Pages.Fragment
   alias Brando.Pages.Page
   alias Brando.Repo
   alias Brando.SyncTest
@@ -221,6 +222,22 @@ defmodule BrandoAdmin.FormLanguageSwitchTest do
       assert has_element?(view, "#{option("en")}[disabled]")
       assert is_binary(forge(view, "en"))
       assert stored(user) == "no"
+    end
+  end
+
+  describe "fragments, matched by their keys" do
+    test "a version in the trash says so", %{conn: conn, current_user: user} do
+      prefer(user, "no")
+      norsk = Factory.insert(:fragment, title: "Bunn", parent_key: "footer", key: "contact", language: :no)
+      english = Factory.insert(:fragment, title: "Footer", parent_key: "footer", key: "contact", language: :en)
+
+      view = open_form(conn, "/admin/pages/fragments/update/#{norsk.id}", "fragment_form")
+      assert has_element?(view, "#{option("en")}[data-leaves-form]")
+
+      trash(Fragment, english.id)
+      view = open_form(conn, "/admin/pages/fragments/update/#{norsk.id}", "fragment_form")
+      assert has_element?(view, "#{option("en")}[disabled]", gettext("In the trash"))
+      refute has_element?(view, "#{@options} [phx-click*=create_translation]")
     end
   end
 
