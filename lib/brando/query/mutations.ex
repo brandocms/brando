@@ -510,14 +510,21 @@ defmodule Brando.Query.Mutations do
     |> map_new_rows(module, fn %row_module{} = row -> put_galleries(row, row_module, clones) end)
   end
 
-  # The rows of the entry's subforms that the copy inserts (`detach_children/3`
-  # copied them), whose galleries are the copy's own as well.
+  # The rows the copy inserts, whose galleries are the copy's own as well:
+  # its subform rows (`detach_children/3` copied them) and the rows a
+  # `change_fields` handler built, like a page's fragments and child pages.
   defp new_rows(entry, module) do
-    for name <- owned_relations(module), row <- List.wrap(Map.get(entry, name)), new_row?(row), do: row
+    for name <- has_relations(module), row <- List.wrap(Map.get(entry, name)), new_row?(row), do: row
   end
 
   defp map_new_rows(entry, module, fun) do
-    Enum.reduce(owned_relations(module), entry, fn name, acc -> Map.update!(acc, name, &map_new_row(&1, fun)) end)
+    Enum.reduce(has_relations(module), entry, fn name, acc -> Map.update!(acc, name, &map_new_row(&1, fun)) end)
+  end
+
+  defp has_relations(module) do
+    for name <- module.__schema__(:associations),
+        match?(%Ecto.Association.Has{}, module.__schema__(:association, name)),
+        do: name
   end
 
   defp map_new_row(rows, fun) when is_list(rows), do: Enum.map(rows, &map_new_row(&1, fun))

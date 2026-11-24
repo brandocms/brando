@@ -754,4 +754,125 @@ defmodule Brando.PagesTest do
     refute duplicated_child_var.id == original_child_var.id
     assert duplicated_child_var.value == original_child_var.value
   end
+
+  test "duplicate_page gives the copy's fragments and child pages galleries of their own" do
+    user = Factory.insert(:random_user)
+    {:ok, module} = Brando.Content.create_module(Factory.params_for(:module, %{code: "gallery"}), user)
+    image = Factory.insert(:image)
+
+    new_gallery = fn ->
+      gallery = Factory.insert(:gallery, config_target: "ref:gallery")
+      Factory.insert(:gallery_object, gallery_id: gallery.id, image_id: image.id, sequence: 0, creator_id: user.id)
+      gallery
+    end
+
+    gallery_ref = fn name, gallery ->
+      %Brando.Content.Ref{
+        name: name,
+        uid: Brando.Utils.generate_uid(),
+        gallery_id: gallery.id,
+        data: %Brando.Villain.Blocks.GalleryBlock{type: "gallery", data: %Brando.Villain.Blocks.GalleryBlock.Data{}}
+      }
+    end
+
+    gallery_var = fn gallery ->
+      %Brando.Content.Var{type: :gallery, label: "Gallery", key: "gallery", gallery_id: gallery.id, creator_id: user.id}
+    end
+
+    # A container whose child module block holds the galleries
+    container = fn source, refs, vars ->
+      %Brando.Content.Block{
+        type: :container,
+        source: source,
+        uid: Brando.Utils.generate_uid(),
+        creator_id: user.id,
+        children: [
+          %Brando.Content.Block{
+            type: :module,
+            source: source,
+            module_id: module.id,
+            uid: Brando.Utils.generate_uid(),
+            creator_id: user.id,
+            refs: refs,
+            vars: vars
+          }
+        ]
+      }
+    end
+
+    page = Factory.insert(:page, title: "Parent", uri: "gallery-parent", creator: user)
+    child = Factory.insert(:page, title: "Child", uri: "gallery-child", parent_id: page.id, creator: user)
+    fragment = Factory.insert(:fragment, parent_key: "gallery-parent", key: "header", page_id: page.id)
+
+    shared = new_gallery.()
+    fragment_var_gallery = new_gallery.()
+    child_ref_gallery = new_gallery.()
+    child_var_gallery = new_gallery.()
+
+    # Two refs in the original's fragment share one gallery
+    Brando.Repo.insert!(%Brando.Pages.Fragment.Blocks{
+      entry_id: fragment.id,
+      sequence: 0,
+      block:
+        container.(
+          "Elixir.Brando.Pages.Fragment.Blocks",
+          [gallery_ref.("one", shared), gallery_ref.("two", shared)],
+          [gallery_var.(fragment_var_gallery)]
+        )
+    })
+
+    Brando.Repo.insert!(%Brando.Pages.Page.Blocks{
+      entry_id: child.id,
+      sequence: 0,
+      block:
+        container.(
+          "Elixir.Brando.Pages.Page.Blocks",
+          [gallery_ref.("one", child_ref_gallery)],
+          [gallery_var.(child_var_gallery)]
+        )
+    })
+
+    originals = [shared.id, fragment_var_gallery.id, child_ref_gallery.id, child_var_gallery.id]
+
+    assert {:ok, copy} = Pages.duplicate_page(page.id, user)
+
+    copy =
+      Brando.Repo.preload(copy,
+        fragments: [entry_blocks: [block: [children: [:refs, :vars]]]],
+        children: [entry_blocks: [block: [children: [:refs, :vars]]]]
+      )
+
+    [%{entry_blocks: [%{block: %{children: [fragment_block]}}]}] = copy.fragments
+    [%{entry_blocks: [%{block: %{children: [child_block]}}]}] = copy.children
+
+    [ref_one, ref_two] = Enum.sort_by(fragment_block.refs, & &1.name)
+    [fragment_var] = fragment_block.vars
+    [child_ref] = child_block.refs
+    [child_var] = child_block.vars
+
+    copied = [ref_one.gallery_id, fragment_var.gallery_id, child_ref.gallery_id, child_var.gallery_id]
+
+    assert Enum.all?(copied, & &1)
+    assert MapSet.disjoint?(MapSet.new(copied), MapSet.new(originals))
+    # Four galleries in the original are four in the copy
+    assert copied |> Enum.uniq() |> length() == 4
+    # The copy's two refs keep sharing one gallery, as the original's do
+    assert ref_two.gallery_id == ref_one.gallery_id
+
+    # Each copy has the original's pictures
+    for id <- copied do
+      assert [%{image_id: image_id}] =
+               Brando.Repo.all(from(o in Brando.Galleries.GalleryObject, where: o.gallery_id == ^id))
+
+      assert image_id == image.id
+    end
+
+    # Changing a copy's gallery leaves the original's alone
+    Brando.Repo.delete_all(from(o in Brando.Galleries.GalleryObject, where: o.gallery_id in ^copied))
+
+    assert Brando.Repo.aggregate(
+             from(o in Brando.Galleries.GalleryObject, where: o.gallery_id in ^originals),
+             :count
+           ) == 4
+  end
 end
