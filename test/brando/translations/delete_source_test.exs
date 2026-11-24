@@ -291,6 +291,42 @@ defmodule Brando.Translations.DeleteSourceTest do
     end
   end
 
+  describe "with groups authorization" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      Boundary.put_scope(nil)
+      on_exit(fn -> Boundary.put_scope(nil) end)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      :ok
+    end
+
+    test "a page delete refused at the end leaves membership as it was", c do
+      fragment = Factory.insert(:fragment, page_id: c.source.id, key: "footer", language: :no, creator: c.user)
+      {:ok, _} = Translations.create_target(Fragment, fragment.id, :en, c.user)
+
+      assert {:error, {:fragments, :group_has_synchronized_members}} =
+               Translations.delete_keeping_translations(
+                 Page,
+                 c.source.id,
+                 nil,
+                 fingerprint(Page, c.source.id),
+                 c.user,
+                 source_args: [[fragments: :delete]]
+               )
+
+      assert %{synchronized: true} = member(Page, c.english.id)
+      assert trashed_at(Page, c.source.id) == nil
+    end
+
+    test "deletes the group, and restores it", c do
+      assert {:ok, %{translations: [_]}} = delete_with(c)
+      assert trashed_at(Page, c.english.id) == trashed_at(Page, c.source.id)
+
+      assert {:ok, _} = Boundary.restore(c.user, Repo.get!(Page, c.source.id))
+      assert trashed_at(Page, c.english.id) == nil
+    end
+  end
+
   describe "restoring" do
     setup c do
       {:ok, _} = delete_with(c)
