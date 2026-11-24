@@ -267,8 +267,16 @@ subscribe to their own `deliver_topic` the same way.
   drawer closed leaves another field's drawer alone. In a subform row the target
   carries the row's key (`row_key`, from the row's `data-row-key` or the drawer's
   edit map): `Form` puts the asset in the row with that key wherever it is now,
-  and in no row, with an error toast, when the row is gone. Input names stay
-  positional (#3160).
+  and in no row, with an error toast in that tab only (`Toast.upload_row_gone/1`,
+  `b:toast`), when the row is gone. A key that names no row is gone: every row
+  gets a key when it is added or copied (`SubformHelpers.new_row/1`), so a
+  keyless row at the index is another row. A save while the file uploads gives
+  a new row an id: the form (subform rows) and each `Block` taking its saved
+  form (table rows; the save's blocks come from the edit session without keys)
+  send `{:saved_row_keys, %{new_key => "id-…"}}`, and the LiveView's delivery
+  hook renames the target's `row_key` before delivering. A provider video from
+  a row's drawer completes through `deliver_uploaded_video/3`, which finds the
+  row by the drawer's `row_key` too. Input names stay positional (#3160).
 - **Gallery fields** (`input/gallery.ex`): `kind: "entry_field_gallery"`; delivery
   appends a gallery object (`put_assoc` + `sequence`) and updates the picker and
   input. Video uploads show when `Brando.Uploads.video_upload_available?/1` holds.
