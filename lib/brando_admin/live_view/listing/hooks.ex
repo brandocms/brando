@@ -169,7 +169,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
           ngettext(
             "%{entry} deleted, with its translation",
             "%{entry} deleted, with its %{count} translations",
-            length(translations), entry: String.capitalize(translated_singular(schema)))
+            length(translations),
+            entry: String.capitalize(translated_singular(schema))
+          )
 
         send(self(), {:toast, message})
         update_list_entries(schema)
