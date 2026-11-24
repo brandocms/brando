@@ -11375,6 +11375,11 @@ msgstr "Lenket fil"
 msgid "Linked file from %{host}"
 msgstr "Lenket fil fra %{host}"
 
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Linked through %{language}"
+msgstr "Lenket via %{language}"
+
 #: lib/brando/sites/identity.ex
 #, elixir-autogen, elixir-format
 msgid "Linked to %{page}"

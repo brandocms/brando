@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
   attr :show_url, :boolean, default: false
   slot :inner_block
   slot :delete
+  slot :detail, doc: "Text after the type and language"
 
   def content(assigns) do
     identifier = assigns.identifier
@@ -47,6 +48,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
       <span class="identifier-details">
         <span class="identifier-type">{@type}</span>
         <span :if={@language} class="identifier-language">{String.upcase(to_string(@language))}</span>
+        <span :for={detail <- @detail}>{render_slot(detail)}</span>
       </span>
     </span>
     <span :if={@selectable} class="identifier-check" aria-hidden="true">

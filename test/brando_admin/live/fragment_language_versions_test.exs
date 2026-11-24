@@ -74,7 +74,7 @@ defmodule BrandoAdmin.FragmentLanguageVersionsTest do
     own = Repo.insert!(%Snippet{title: "No key", language: :no, creator_id: user.id})
     Repo.insert!(%Snippet{title: "Also no key", language: :en, creator_id: user.id})
 
-    assert %{linked: [], unlinked: []} = Brando.Translations.language_versions(Snippet, own, nil)
+    assert %{linked: [], matched: []} = Brando.Translations.language_versions(Snippet, own, nil)
     assert "en" in Brando.Translations.missing_languages(Snippet, own)
 
     html = render_component(AlternatesDrawer, id: "snippet-alternates", entry: own, current_user: nil, on_close: nil)

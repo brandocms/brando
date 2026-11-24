@@ -44,6 +44,12 @@ defmodule E2EFixtureController do
         "revision-panel" ->
           create_revision_panel()
 
+        # The Index page linked to a Norwegian page, which is linked to
+        # another English one: the Index page's Languages drawer lists that
+        # one as linked through Norwegian
+        "language-set" ->
+          create_language_set()
+
         # A page with three rich-text variables (rich-text-rows.spec.js)
         "rich-text-vars-page" ->
           create_rich_text_vars_page()
@@ -2031,6 +2037,27 @@ defmodule E2EFixtureController do
         user
       )
 
+    user
+  end
+
+  defp create_language_set do
+    user = get_admin_user()
+
+    page = fn title, uri, language ->
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: title,
+        uri: uri,
+        language: language,
+        status: :published,
+        template: "default.html",
+        creator_id: user.id
+      })
+    end
+
+    norsk = page.("Om oss", "om-oss", :no)
+    english = page.("About us (archive)", "about-us-archive", :en)
+    :ok = Brando.Pages.Page.Alternate.add(1, norsk.id)
+    :ok = Brando.Pages.Page.Alternate.add(norsk.id, english.id)
     user
   end
 

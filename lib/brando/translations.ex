@@ -172,33 +172,162 @@ defmodule Brando.Translations do
   end
 
   @doc """
-  The other language versions of `entry` that `actor` may read, for its form:
-  `linked`, the entries linked to it as alternates, those in the trash
-  included, and `unlinked`, those not in the trash that hold its `matched_by`
-  values (`trait :translatable, matched_by: [...]`) in another language
-  without being linked to it. `unlinked` is empty for a schema without
-  `matched_by`, or for an entry with a nil `matched_by` value.
+  The language versions of `entry`, one set, the same from every member:
+  every entry reached from it through alternate links and, on a synchronized
+  type, through group membership, followed through other versions, those in
+  the trash and those `actor` may not read included. Then the entries with
+  its `matched_by` values in another language
+  (`trait :translatable, matched_by: [...]`), not followed further.
+
+    * `linked`: the versions `actor` may read, `entry` left out, by language,
+      as `%{entry: entry, linked?: linked?, via: via, group?: group?}`.
+      `linked?` is true for one linked to `entry` itself as an alternate, the
+      pair the form can remove; `via` is the language of the version one was
+      reached through, nil for one reached from `entry` itself (a
+      translation's sibling is reached through their source); `group?` is
+      true for a member of `entry`'s group.
+    * `matched`: the entries with `entry`'s `matched_by` values outside the
+      set that `actor` may read, those in the trash included. Empty for a
+      schema without `matched_by`, or for an entry with a nil value.
+    * `taken`: the languages that have a version, whoever looks: `entry`'s,
+      its set's and its matched entries'. A version in the trash holds its
+      language only as a member of `entry`'s group, so a restore puts it back
+      as it was.
+
+  Nothing about a version `actor` may not read is in it but its language in
+  `taken`.
   """
   def language_versions(schema, %{id: id} = entry, actor) do
-    linked_ids = if schema.has_alternates?(), do: alternate_ids(schema, id), else: []
+    %{members: members, matched: matched, taken: taken} = walk(schema, entry)
+    language = to_string(entry.language)
 
-    linked =
-      from(e in schema, where: e.id in ^linked_ids, order_by: [asc: e.language, asc: e.id])
+    readable =
+      from(e in schema, where: e.id in ^Enum.map(members ++ matched, & &1.id))
       |> readable(schema, actor)
       |> Repo.all()
+      |> Map.new(&{&1.id, &1})
 
-    unlinked =
-      case same_values_query(schema, entry) do
-        nil ->
-          []
-
-        query ->
-          from(e in query, where: e.id not in ^linked_ids, order_by: [asc: e.language, asc: e.id])
-          |> readable(schema, actor)
-          |> Repo.all()
+    linked =
+      for member <- members, version = readable[member.id], member.id != id do
+        %{entry: version, linked?: member.linked?, via: member.via, group?: member.group?}
       end
 
-    %{linked: linked, unlinked: unlinked}
+    %{
+      language: language,
+      linked: Enum.sort_by(linked, &{to_string(&1.entry.language), &1.entry.id}),
+      matched: for(member <- matched, version = readable[member.id], do: version),
+      taken: taken
+    }
+  end
+
+  @doc """
+  The other language versions of `entry` that `actor` may read, one per
+  language, keyed by language code (`language_versions/3`). Where a language
+  has several: one outside the trash before one in it, then one reached from
+  `entry` itself or in its group before another reached through a version,
+  then one with `entry`'s `matched_by` values, then the lowest id.
+  """
+  def versions_by_language(schema, entry, actor),
+    do: schema |> language_versions(entry, actor) |> by_language()
+
+  @doc "The versions of a set from `language_versions/3`, one per language, as `versions_by_language/3` has them."
+  def by_language(%{language: language, linked: linked, matched: matched}) do
+    (Enum.map(linked, &{&1.entry, if(&1.via && not &1.group?, do: 1, else: 0)}) ++ Enum.map(matched, &{&1, 2}))
+    |> Enum.reject(fn {version, _rank} -> to_string(version.language) == language end)
+    |> Enum.sort_by(fn {version, rank} -> {match?(%{deleted_at: %DateTime{}}, version), rank, version.id} end)
+    |> Enum.uniq_by(fn {version, _rank} -> to_string(version.language) end)
+    |> Map.new(fn {version, _rank} -> {to_string(version.language), version} end)
+  end
+
+  # The set of `entry`, whoever looks (`language_versions/3`): its members
+  # as `%{id, language, trashed?, linked?, via, group?}`, `entry` first, its matched
+  # entries as `%{id, language, trashed?}`, the languages taken, and the ids
+  # of `entry`'s group. Each entry is visited once: links are stored in pairs.
+  defp walk(schema, %{id: id} = entry) do
+    reached = reach(schema, [id], %{id => {nil, nil}})
+    rows = rows(from(e in schema, where: e.id in ^Map.keys(reached)), schema)
+    language_of = Map.new(rows, &{&1.id, &1.language})
+    group = group_entry_ids(schema, id)
+
+    members =
+      for row <- Enum.sort_by(rows, &(&1.id != id)) do
+        {from, kind} = reached[row.id]
+        via = if from in [nil, id], do: nil, else: language_of[from]
+        Map.merge(row, %{linked?: from == id and kind == :alternate, via: via, group?: row.id in group})
+      end
+
+    matched =
+      case matching_values_query(schema, entry) do
+        nil -> []
+        query -> query |> where([e], e.id not in ^Map.keys(reached)) |> rows(schema)
+      end
+
+    taken =
+      Enum.uniq([
+        to_string(entry.language) | for(row <- members ++ matched, not row.trashed? or row.id in group, do: row.language)
+      ])
+
+    %{members: members, matched: matched, taken: taken, group: group}
+  end
+
+  # Breadth first from `frontier`; `reached` maps each entry to the one it was
+  # reached from and how, an alternate link before group membership
+  defp reach(_schema, [], reached), do: reached
+
+  defp reach(schema, frontier, reached) do
+    next =
+      (alternate_edges(schema, frontier) ++ group_edges(schema, frontier))
+      |> Enum.sort_by(fn {from, to, kind} -> {from, kind != :alternate, to} end)
+      |> Enum.reject(fn {_from, to, _kind} -> Map.has_key?(reached, to) end)
+      |> Enum.uniq_by(&elem(&1, 1))
+
+    reached = Enum.reduce(next, reached, fn {from, to, kind}, acc -> Map.put(acc, to, {from, kind}) end)
+    reach(schema, Enum.map(next, &elem(&1, 1)), reached)
+  end
+
+  defp alternate_edges(schema, ids) do
+    if schema.has_alternates?() do
+      Repo.all(
+        from a in Module.concat(schema, Alternate),
+          where: a.entry_id in ^ids,
+          select: {a.entry_id, a.linked_entry_id, :alternate}
+      )
+    else
+      []
+    end
+  end
+
+  # A group's source reaches its members, and a member its source
+  defp group_edges(schema, ids) do
+    if synchronized?(schema) do
+      type = entry_type(schema)
+
+      Repo.all(
+        from m in Member,
+          join: o in Member,
+          on: o.group_id == m.group_id and o.id != m.id,
+          where: m.entry_type == ^type and m.entry_id in ^ids and (m.role == :source or o.role == :source),
+          select: {m.entry_id, o.entry_id, :group}
+      )
+    else
+      []
+    end
+  end
+
+  defp group_entry_ids(schema, id) do
+    case synchronized?(schema) && get_member(schema, id) do
+      %Member{group_id: group_id} -> Repo.all(from m in Member, where: m.group_id == ^group_id, select: m.entry_id)
+      _ -> []
+    end
+  end
+
+  defp rows(query, schema) do
+    fields = Enum.filter([:id, :language, :deleted_at], &(&1 in schema.__schema__(:fields)))
+
+    query
+    |> select([e], map(e, ^fields))
+    |> Repo.all()
+    |> Enum.map(&%{id: &1.id, language: to_string(&1.language), trashed?: Map.get(&1, :deleted_at) != nil})
   end
 
   @doc "The entries of `schema` in other languages than `entry`'s, not in the trash, that `actor` may read."
@@ -208,51 +337,6 @@ defmodule Brando.Translations do
     |> readable(schema, actor)
     |> Repo.all()
   end
-
-  @doc """
-  The other language versions of `entry` that `actor` may read, one per
-  language, keyed by language code: the entries linked to it as alternates,
-  those with its `matched_by` values, and, for a member of a synchronized
-  group, the group's other members, those in the trash included. Where a
-  language has a version in the trash and one outside it, the one outside.
-  """
-  def versions_by_language(schema, %{id: id} = entry, actor) do
-    %{linked: linked} = language_versions(schema, entry, actor)
-    language = to_string(entry.language)
-
-    (linked ++ group_versions(schema, id, actor) ++ matched_versions(schema, entry, actor))
-    |> Enum.reject(&(&1.id == id or to_string(&1.language) == language))
-    |> Enum.sort_by(&match?(%{deleted_at: %DateTime{}}, &1))
-    |> Enum.uniq_by(&to_string(&1.language))
-    |> Map.new(&{to_string(&1.language), &1})
-  end
-
-  # The entries of the group `id` is a member of, those in the trash included
-  defp group_versions(schema, id, actor) do
-    case synchronized?(schema) && get_member(schema, id) do
-      %Member{group_id: group_id} ->
-        ids = for %{entry_id: entry_id} <- list_members(group_id), entry_id != id, do: entry_id
-
-        from(e in schema, where: e.id in ^ids, order_by: [asc: e.id])
-        |> readable(schema, actor)
-        |> Repo.all()
-
-      _ ->
-        []
-    end
-  end
-
-  # The entries with `entry`'s `matched_by` values in another language, those
-  # in the trash included
-  defp matched_versions(schema, entry, actor) do
-    case matching_values_query(schema, entry) do
-      nil -> []
-      query -> query |> readable(schema, actor) |> Repo.all()
-    end
-  end
-
-  defp alternate_ids(schema, id),
-    do: Repo.all(from a in Module.concat(schema, Alternate), where: a.entry_id == ^id, select: a.linked_entry_id)
 
   # The entries of `schema` in other languages, not in the trash, with
   # `entry`'s `matched_by` values; nil without `matched_by`, or when one of
@@ -289,25 +373,12 @@ defmodule Brando.Translations do
 
   @doc """
   The site's languages (`Brando.Languages`) of `schema` that `entry` has no
-  version in yet: neither a member of its group nor an alternate linked to
-  its source (an existing, independent version is not joined to a group).
-  For an entry outside a group, its own language and its alternates'.
+  version in yet: not taken in its set (`language_versions/3`), whoever looks.
   """
-  def missing_languages(schema, %{id: id} = entry) do
-    taken =
-      case synchronized?(schema) && get_member(schema, id) do
-        %Member{group_id: group_id} ->
-          members = list_members(group_id)
-          source = Enum.find(members, &(&1.role == :source))
-          alternates = if source, do: alternate_languages(schema, source.entry_id), else: []
-          Enum.map(members, & &1.language) ++ alternates
+  def missing_languages(schema, entry), do: missing_in(schema, walk(schema, entry))
 
-        _ ->
-          [to_string(entry.language) | alternate_languages(schema, id)]
-      end
-
-    taken = taken ++ unlinked_languages(schema, entry)
-
+  @doc "The site's languages of `schema` that a set from `language_versions/3` has no version in, as `missing_languages/2`."
+  def missing_in(schema, %{taken: taken}) do
     site = Brando.Languages.codes()
 
     for value <- Ecto.Enum.values(schema, :language),
@@ -315,14 +386,6 @@ defmodule Brando.Translations do
         code in site,
         code not in taken,
         do: code
-  end
-
-  # The languages of the entries with `entry`'s `matched_by` values
-  defp unlinked_languages(schema, entry) do
-    case same_values_query(schema, entry) do
-      nil -> []
-      query -> query |> select([e], e.language) |> Repo.all() |> Enum.map(&to_string/1)
-    end
   end
 
   @doc "Returns the group membership of an entry, or nil."
@@ -2296,14 +2359,25 @@ defmodule Brando.Translations do
     end
   end
 
-  # An independent alternate isn't a group member, but it holds its language:
-  # a second version beside it would give the source two in one language.
-  # Checked before the source is enrolled, so a refusal leaves no group behind.
-  # A target is left to `source_member/3`, which refuses it as `:not_source`.
+  # A version in the source's set outside its group, such as an independent
+  # one linked to it or to one of its translations, holds its language: a
+  # second version beside it would give the set two in one language. Checked
+  # before the source is enrolled, so a refusal leaves no group behind. A
+  # target is left to `source_member/3`, which refuses it as `:not_source`.
   defp ensure_no_linked_version(schema, entry_id, language) do
-    case get_member(schema, entry_id) do
-      %Member{role: :target} -> :ok
-      _ -> if language in alternate_languages(schema, entry_id), do: {:error, :language_exists}, else: :ok
+    case {get_member(schema, entry_id), Repo.get(schema, entry_id)} do
+      {%Member{role: :target}, _entry} ->
+        :ok
+
+      {_member, nil} ->
+        :ok
+
+      {_member, entry} ->
+        %{members: members, group: group} = walk(schema, entry)
+
+        if Enum.any?(members, &(&1.language == language and not &1.trashed? and &1.id not in group)),
+          do: {:error, :language_exists},
+          else: :ok
     end
   end
 
