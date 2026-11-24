@@ -12,6 +12,7 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
   alias Brando.Pages.Page
   alias Brando.Repo
   alias Brando.Test.SiteRouter, as: Router
+  alias Ecto.Adapters.SQL
 
   setup do
     Brando.ProposalFixtures.context()
@@ -203,17 +204,17 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
     defp environment(site, key) do
       {:ok, environment} = Tenant.Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
       prefix = Tenant.prefix(site, environment)
-      Ecto.Adapters.SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
+      SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
 
       for [table] <-
-            Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT tablename FROM pg_tables WHERE schemaname = 'public'").rows,
+            SQL.query!(Repo.repo(), "SELECT tablename FROM pg_tables WHERE schemaname = 'public'").rows,
           not Tenant.SharedTables.member?(table) do
         Ecto.Adapters.SQL.query!(
           Repo.repo(),
           ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|
         )
 
-        Ecto.Adapters.SQL.query!(Repo.repo(), ~s|INSERT INTO "#{prefix}"."#{table}" SELECT * FROM public."#{table}"|)
+        SQL.query!(Repo.repo(), ~s|INSERT INTO "#{prefix}"."#{table}" SELECT * FROM public."#{table}"|)
       end
 
       environment
