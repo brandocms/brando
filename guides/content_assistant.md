@@ -193,7 +193,7 @@ as an editor's save, so they get pending versions with the source's structure,
 media and new text to translate.
 
 A synchronized translation follows its source, so a proposal changes it in
-two ways only. Its text is translation work, written with `translate`
+three ways only. Its text is translation work, written with `translate`
 ([Translating with a proposal](#translating-with-a-proposal)), and what its
 source changed besides text is taken with `sync_translation` ([Taking the
 source's changes](#taking-the-sources-changes)). Its own
@@ -351,21 +351,30 @@ Applied, it saves the translation's pending version as it is, as saving its
 form without editing it does: links now pointing at this language's versions
 (*relinked*), and media and source-controlled values the source changed
 (*shared_update*), follow the source, and those items are resolved. Its texts
-are not changed and stay to translate, and a link waiting for its target's
-translation (*awaiting_translation*) stays open until that version exists.
-With a `translate` on the same translation in the proposal, the two are one
-save.
+are saved as the pending version holds them, a block the source added with
+its text in the source's language, and stay to translate; a link waiting for
+its target's translation (*awaiting_translation*) stays open until that
+version exists. The save restores the block fields of the translation's main
+form only: a change in a block field only another form shows stays open, to
+be taken when the translation is saved in that form. With a `translate` on
+the same translation in the proposal, the two are one save.
 
 It is refused when the proposal is prepared on a translation with nothing to
-take (the problem says it is up to date), on `{"new": R}`, whose copy is its
-source's, and on an entry that is not a synchronized translation. What it
-takes is counted when it is prepared; the review card and `list_proposals`
+take (the problem says it is up to date, or that its changes are in block
+fields its main form does not show), on `{"new": R}`, whose copy is its
+source's, on an entry that is not a synchronized translation, in a proposal
+that also changes the translation's source (that change goes in a proposal of
+its own), and a second time on the same translation. What it takes is counted
+when it is prepared; the review card and `list_proposals`
 (`synced_translations`) show the number of links, media selections and
-source-controlled values, and the card how many texts stay to translate. A
-published translation's page changes when it is applied. The counts are
-checked again when the proposal is approved and applied, under the source's
-lock: a source that changed them since makes the proposal stale. **Undo**
-puts the translation back and opens the resolved items again.
+source-controlled values, and the changes it leaves in block fields its main
+form does not show (`left`), and the card how many texts stay to translate,
+leaving out those a `translate` beside it answers. A published translation's
+page changes when it is applied. What it takes is checked again when the
+proposal is approved and applied, value by value, under the source's and the
+translation group's locks, held through the save: a source that changed or
+took back any of it since makes the proposal stale, and the message says so.
+**Undo** puts the translation back and opens the resolved items again.
 
 ## Build with AI from the block editor
 

@@ -1,1 +1,1 @@
-- A proposal's `sync_translation` operation takes a synchronized translation's links, media and source-controlled values from its source, as saving its form without editing does; its texts stay to translate.
+- A proposal's `sync_translation` operation takes a synchronized translation's links, media and source-controlled values from its source, as saving its form without editing does, in the block fields its main form shows; its texts stay to translate, and what it takes is checked value by value again at approve and apply.
