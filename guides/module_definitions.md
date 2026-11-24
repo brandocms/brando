@@ -1220,11 +1220,13 @@ of their entries open, with the blocks as the form loaded them. When the
 entry is saved, each block whose refs or vars the save writes is compared
 with its saved rows (`module_version`, refs and vars). A block whose saved
 rows differ from what the form loaded is rebuilt from the saved rows, with
-the save's own changes on top, and synced with the module it uses now, in
-the save's transaction (`Brando.Content.Blocks.sync_written_blocks/1`): it
-gets the module's new refs and vars and its ref and var settings, keeps what
-the editor changed, settings included, and keeps what other saves wrote to
-the refs this save did not change. The form shows the synced block after the
+the save's own changes on top, in the save's transaction
+(`Brando.Content.Blocks.sync_written_blocks/1`): it keeps the module's new
+refs and vars and the ref and var settings the module save wrote, what the
+editor changed, settings included, and what other saves wrote to the refs
+this save did not change. The form rendered the page from its own copy of
+the blocks, so such a save queues the entry's render once it has committed,
+and the page shows what was saved. The form shows the saved block after the
 save. A block the form holds as it is saved is written as the form sends it.
 
 ## Blocks left on an older version
