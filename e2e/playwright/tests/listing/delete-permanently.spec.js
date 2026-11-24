@@ -4,7 +4,8 @@ import { syncLV } from '../../utils'
 // Delete permanently in a listing's trash (#3927): two cases in the trash
 // (E2EFixtureController :trashed_projects), one that nothing refers to and
 // one a category row still refers to. The admin is in Norwegian, so the
-// locators read its labels.
+// locators read its labels. The E2E setup hides the toasts: they are
+// asserted by their level.
 
 test.beforeEach(async ({ page }) => {
   expect((await page.request.post('/e2e/setup_fixtures/admin-language-no')).ok()).toBe(true)
@@ -32,7 +33,7 @@ test('deletes a case in the trash for good, and refuses one something refers to'
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
 
-  await page.goto('/admin/projects?status=deleted')
+  await page.goto('/admin/projects/projects?status=deleted')
   await syncLV(page)
   await expect(trashRow(page, 'Old case')).toHaveCount(1)
 
@@ -41,9 +42,7 @@ test('deletes a case in the trash for good, and refuses one something refers to'
   await expect(page.locator('.toast--success')).toHaveCount(1)
 
   await deletePermanently(page, 'Categorised case')
-  const refused = page.locator('.toast--error')
-  await expect(refused).toHaveCount(1)
-  await refused.screenshot({ path: testInfo.outputPath('delete-permanently-refused.png') })
+  await expect(page.locator('.toast--error')).toHaveCount(1)
   await syncLV(page)
   await expect(trashRow(page, 'Categorised case')).toHaveCount(1)
 
