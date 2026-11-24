@@ -167,7 +167,9 @@ defmodule Brando.Translations.DeleteSourceTest do
     end
 
     test "a type without a trash deletes them for good, and its group goes", c do
-      {:ok, source} = SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "published"}, c.user)
+      {:ok, source} =
+        SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "published"}, c.user)
+
       {:ok, target} = Translations.create_target(Article, source.id, :en, c.user)
       %{group_id: group_id} = member(Article, source.id)
 

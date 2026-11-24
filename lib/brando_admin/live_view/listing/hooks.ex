@@ -166,17 +166,20 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
       {:ok, %{translations: translations}} ->
         message =
-          ngettext("%{entry} deleted, with its translation", "%{entry} deleted, with its %{count} translations",
-            length(translations),
-            entry: String.capitalize(translated_singular(schema))
-          )
+          ngettext(
+            "%{entry} deleted, with its translation",
+            "%{entry} deleted, with its %{count} translations",
+            length(translations), entry: String.capitalize(translated_singular(schema)))
 
         send(self(), {:toast, message})
         update_list_entries(schema)
         {:halt, socket}
 
       {:error, :group_changed} ->
-        delete_refused(gettext("Nothing was deleted: its translations changed since the dialog opened. Check them again."))
+        delete_refused(
+          gettext("Nothing was deleted: its translations changed since the dialog opened. Check them again.")
+        )
+
         update_list_entries(schema)
         {:halt, push_event(socket, "b:confirm-click-again", %{id: params["opener"]})}
 

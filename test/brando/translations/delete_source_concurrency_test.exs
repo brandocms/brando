@@ -90,7 +90,9 @@ defmodule Brando.Translations.DeleteSourceConcurrencyTest do
       end)
 
     assert_receive :enrolled, 10_000
-    delete = Task.async(fn -> unboxed(fn -> Translations.delete_with_translations(Article, c.source.id, shown, c.user) end) end)
+
+    delete =
+      Task.async(fn -> unboxed(fn -> Translations.delete_with_translations(Article, c.source.id, shown, c.user) end) end)
 
     # The delete waits for the enrolment's lock on the source
     assert Task.yield(delete, 500) == nil

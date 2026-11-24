@@ -304,7 +304,9 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   and `reason`, as text.
   """
   def translation_refused(schema, entry, reason),
-    do: gettext("Nothing was deleted: %{translation} was not changed.", translation: translation_name(schema, entry)) <> " " <> reason
+    do:
+      gettext("Nothing was deleted: %{translation} was not changed.", translation: translation_name(schema, entry)) <>
+        " " <> reason
 
   @doc "Why a restore of the source of synchronized translations stopped at one of them, as text."
   def restore_refused(schema, entry, reason),
@@ -320,7 +322,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         gettext("Not restored: its source is in the trash. Restore the source, and its translations come back with it.")
 
       name ->
-        gettext("Not restored: its source %{source} is in the trash. Restore the source, and its translations come back with it.",
+        gettext(
+          "Not restored: its source %{source} is in the trash. Restore the source, and its translations come back with it.",
           source: name
         )
     end
@@ -343,8 +346,11 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
           for %{entry: entry} <- group.translations, name = named(Fragment, entry), do: name
 
         case translations do
-          [] -> name
-          names -> gettext("%{fragment} (translated as %{translations})", fragment: name, translations: to_sentence(names))
+          [] ->
+            name
+
+          names ->
+            gettext("%{fragment} (translated as %{translations})", fragment: name, translations: to_sentence(names))
         end
       end
 

@@ -74,7 +74,9 @@ defmodule BrandoAdmin.DeleteSourceDialogTest do
     assert group == Translations.source_group(Page, c.source.id).fingerprint
 
     # The published translation in a section of its own, with its language
-    assert [section] = reply.html |> String.split(~s(<div class="admin-dialog-section">)) |> Enum.filter(&(&1 =~ "About us"))
+    assert [section] =
+             reply.html |> String.split(~s(<div class="admin-dialog-section">)) |> Enum.filter(&(&1 =~ "About us"))
+
     assert section =~ "[EN]"
     refute section =~ "Om oss"
 
@@ -153,7 +155,13 @@ defmodule BrandoAdmin.DeleteSourceDialogTest do
     page = Factory.insert(:page, title: "Kontakt", uri: "kontakt", language: :no, creator: c.current_user)
 
     fragment =
-      Factory.insert(:fragment, page_id: page.id, key: "footer", title: "Bunntekst", language: :no, creator: c.current_user)
+      Factory.insert(:fragment,
+        page_id: page.id,
+        key: "footer",
+        title: "Bunntekst",
+        language: :no,
+        creator: c.current_user
+      )
 
     {:ok, _} = Translations.create_target(Fragment, fragment.id, :en, c.current_user)
 
