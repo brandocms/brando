@@ -320,18 +320,16 @@ defmodule Brando.SoftDelete.Query do
 
   # The row goes in `delete_remote/2`'s purge, under the video's lock and
   # before the provider is asked, and is checked again there. Asked first
-  # too, so a refusal says why and leaves the provider alone.
+  # too, so a refusal says why and leaves the provider alone. The purge runs
+  # in this process and answers `delete_remote/2` with a boolean, so it sends
+  # the reason for a refusal here.
   defp purge_video_entry(video, actor) do
-    purge = fn ->
-      match?(
-        {:ok, :ok},
-        Repo.transaction(fn -> purge_trashed(Brando.Videos.Video, video.id, video.deleted_at, actor) end)
-      )
-    end
+    ref = make_ref()
+    purge = fn -> purge_video_row(video, actor, ref) end
 
     if may_purge?(actor, video) do
       case Brando.Videos.Uploader.delete_remote(video, purge) do
-        {:error, :not_purged} -> {:error, :not_in_trash}
+        {:error, :not_purged} -> {:error, purge_refusal(ref)}
         {:error, reason} when reason in [:busy, :holdings_unavailable] -> {:error, reason}
         {:error, {:retry, _reason}} = error -> error
         # Deleted here; any other answer is the provider's, which is not asked again
@@ -339,6 +337,27 @@ defmodule Brando.SoftDelete.Query do
       end
     else
       {:error, :forbidden}
+    end
+  end
+
+  defp purge_video_row(video, actor, ref) do
+    case Repo.transaction(fn -> purge_trashed(Brando.Videos.Video, video.id, video.deleted_at, actor) end) do
+      {:ok, :ok} -> true
+      {:ok, {:error, reason}} -> refuse_purge(ref, reason)
+      {:error, reason} -> refuse_purge(ref, reason)
+    end
+  end
+
+  defp refuse_purge(ref, reason) do
+    send(self(), {ref, reason})
+    false
+  end
+
+  defp purge_refusal(ref) do
+    receive do
+      {^ref, reason} -> reason
+    after
+      0 -> :not_in_trash
     end
   end
 

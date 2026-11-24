@@ -290,6 +290,20 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
       refute has_element?(view, "[id$='_delete_entry_permanently_#{user.id}']")
     end
 
+    test "a listing with default actions and a delete of its own offers no Delete permanently", c do
+      {:ok, view, _html} = live(c.conn, "/admin/own-delete-pages?status=deleted")
+      assert has_element?(view, "#action_default_edit_entry_#{c.page.id}")
+      refute has_element?(view, "#action_default_delete_entry_permanently_#{c.page.id}")
+
+      [cid] = view |> render() |> Floki.parse_document!() |> Floki.attribute(".selection-clear", "phx-target")
+
+      view
+      |> with_target("[data-phx-component='#{cid}']")
+      |> render_click("select_row", %{"id" => to_string(c.page.id), "shiftKey" => "true"})
+
+      refute has_element?(view, "#selection-action-delete-permanently")
+    end
+
     test "a listing that asks again on delete asks again on Delete permanently" do
       guarded =
         for %{id: {BrandoAdmin.Reauth, opts}} <- __MODULE__.StepUpListLive.__live__()[:lifecycle].mount,
@@ -298,7 +312,9 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
             do: event
 
       assert "delete_entry_permanently" in guarded
-      refute "delete_selected_permanently" in guarded
+      # A selection of one row is that row: it asks as the row menu does
+      assert "delete_selected_permanently" in guarded
+      refute "delete_selected" in guarded
     end
   end
 
@@ -351,6 +367,44 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
 
       assert {_message, :error} = toast()
       assert Repo.get!(Page, c.page.id).deleted_at
+    end
+
+    test "a refused selection names only the entries the person may read", c do
+      alias Brando.SyncPolicyTest.Article
+
+      {:ok, readers} =
+        Groups.create(
+          c.scope,
+          %{name: "Article readers"},
+          ~w(brando.admin.access authorization.policy_articles.read authorization.policy_articles.delete)
+        )
+
+      {:ok, :ok} = Groups.add_member(c.scope, readers.id, c.editor.id)
+
+      # The policy reads the creator
+      article = fn title, creator ->
+        {:ok, article} =
+          Brando.SyncPolicyTest.create_article(
+            %{title: title, slug: Brando.Utils.slugify(title), language: "en", status: :draft},
+            c.current_user
+          )
+
+        Repo.update_all(from(a in Article, where: a.id == ^article.id), set: [creator_id: creator.id])
+        article
+      end
+
+      own = article.("Own article", c.editor)
+      hidden = article.("Hidden article", c.current_user)
+      {:ok, view, _html} = live(c.editor_conn, "/admin/policy-articles")
+
+      # Sent anyway, with the id of an entry the editor may not read
+      entries = for entry <- [own, hidden], do: %{id: entry.id, deleted_at: DateTime.to_iso8601(DateTime.utc_now())}
+      render_click(view, "delete_selected_permanently", %{"entries" => Jason.encode!(entries)})
+
+      assert {refused, :error} = toast()
+      assert refused =~ "Own article"
+      refute refused =~ "Hidden article"
+      assert Repo.get!(Article, hidden.id)
     end
 
     test "a permission revoked after the confirmation opened deletes nothing", c do

@@ -116,6 +116,25 @@ defmodule Brando.SoftDelete.PurgeEntryTest do
       assert Brando.Repo.get!(Video, video.id).deleted_at
     end
 
+    test "a video something still refers to says so, and the provider is left alone", %{user: user, video: video} do
+      answer(204)
+      # An application's own foreign key to videos, which the purge does not clear
+      BrandoIntegration.Repo.query!("ALTER TABLE projects ADD COLUMN purge_test_video_id bigint REFERENCES videos(id)")
+
+      BrandoIntegration.Repo.query!(
+        "INSERT INTO projects (title, slug, language, purge_test_video_id, inserted_at, updated_at) " <>
+          "VALUES ('Project', 'project', 'en', $1, now(), now())",
+        [video.id]
+      )
+
+      capture_log(fn ->
+        assert {:error, {:referenced, _constraint}} = Query.purge_entry(Video, video.id, video.deleted_at, user)
+      end)
+
+      refute_received {:provider, _}
+      assert Brando.Repo.get!(Video, video.id).deleted_at
+    end
+
     test "a stale trash time leaves the provider alone", %{user: user, video: video} do
       answer(204)
 

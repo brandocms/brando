@@ -1365,6 +1365,14 @@ msgstr[1] "%{count} oppføringer"
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
+msgctxt "delete"
+msgid "1 entry"
+msgid_plural "%{count} entries"
+msgstr[0] "1 oppføring"
+msgstr[1] "%{count} oppføringer"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
 msgid "1 entry deleted permanently"
 msgid_plural "%{count} entries deleted permanently"
 msgstr[0] "1 oppføring slettet for godt"
@@ -1476,6 +1484,14 @@ msgid "1 of %{total} blocks holds a value"
 msgid_plural "%{count} of %{total} blocks hold a value"
 msgstr[0] "1 av %{total} blokker har en verdi"
 msgstr[1] "%{count} av %{total} blokker har en verdi"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgctxt "delete"
+msgid "1 other entry"
+msgid_plural "%{count} other entries"
+msgstr[0] "1 annen oppføring"
+msgstr[1] "%{count} andre oppføringer"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format

@@ -53,15 +53,20 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     |> attach_listing_info_hooks(schema)
   end
 
-  # Events the view handles itself (the `overrides` option) pass on to it. A
-  # view with a delete of its own (the user listing) deletes nothing
-  # permanently from the trash here.
+  @doc """
+  Whether a listing view with these `overrides` deletes entries permanently
+  from the trash: not one with a delete of its own (the user listing). Its
+  menus offer Delete permanently only then.
+  """
+  def deletes_permanently?(overrides), do: "delete_entry" not in overrides
+
+  # Events the view handles itself (the `overrides` option) pass on to it
   defp listing_event(event, params, socket, schema, overrides) do
     cond do
       event in overrides ->
         {:cont, socket}
 
-      event in ~w(delete_entry_permanently delete_selected_permanently) and "delete_entry" in overrides ->
+      event in ~w(delete_entry_permanently delete_selected_permanently) and not deletes_permanently?(overrides) ->
         delete_refused(gettext("This list does not delete entries permanently. Nothing was deleted."))
         {:halt, socket}
 
@@ -264,8 +269,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     end
 
     for {reason, rows} <- Enum.group_by(refused, &elem(elem(&1, 1), 1), &elem(&1, 0)) do
-      listed = Enum.map_join(rows, ", ", &"“#{Map.get(names, &1, "##{&1}")}”")
-      message = gettext("Not deleted: %{entries}.", entries: listed) <> " " <> purge_error_message(reason, length(rows))
+      message =
+        gettext("Not deleted: %{entries}.", entries: refused_entries(rows, names)) <>
+          " " <> purge_error_message(reason, length(rows))
+
       delete_refused(message)
     end
 
@@ -576,22 +583,38 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   # The trash's deleted_at as the menu showed it, of the schema's type
   defp purge_entry(schema, entry_id, deleted_at, user) do
     deleted_at =
-      case Ecto.Type.cast(schema.__schema__(:type, :deleted_at), deleted_at) do
-        {:ok, deleted_at} -> deleted_at
+      with type when not is_nil(type) <- schema.__schema__(:type, :deleted_at),
+           {:ok, deleted_at} <- Ecto.Type.cast(type, deleted_at) do
+        deleted_at
+      else
         _ -> nil
       end
 
     Brando.SoftDelete.Query.purge_entry(schema, entry_id, deleted_at, user)
   end
 
+  # The refused rows by name, as far as the person may read them; the rest
+  # are counted
+  defp refused_entries(ids, names) do
+    named = for id <- ids, name = names[id], do: "“#{name}”"
+
+    case length(ids) - length(named) do
+      0 -> Enum.join(named, ", ")
+      hidden when named == [] -> pngettext("delete", "1 entry", "%{count} entries", hidden)
+      hidden -> Enum.join(named ++ [pngettext("delete", "1 other entry", "%{count} other entries", hidden)], ", ")
+    end
+  end
+
+  # The names of the entries among `ids` the person may read, in the read
+  # scope the listing reads them in
   defp entry_names(schema, ids) do
     import Ecto.Query, only: [from: 2]
 
-    for entry <- Brando.Repo.all(from(t in schema, where: t.id in ^ids)),
-        name = BrandoAdmin.LiveView.Listing.DeleteDescription.entry_name(schema, entry),
-        name != nil,
+    readable = from(t in schema, where: t.id in ^ids) |> Brando.Authorization.Boundary.query(schema) |> Brando.Repo.all()
+
+    for entry <- readable,
         into: %{},
-        do: {entry.id, name}
+        do: {entry.id, BrandoAdmin.LiveView.Listing.DeleteDescription.entry_name(schema, entry) || "##{entry.id}"}
   end
 
   defp translation_reason(:forbidden), do: gettext("You do not have permission to do this.")

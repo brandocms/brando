@@ -8,7 +8,12 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       use BrandoAdmin.LiveView.Listing, schema: MyApp.Projects.Project
   """
 
-  @permanent_deletes [{"delete_entry", "delete_entry_permanently"}, {"delete_selected", "delete_selected_permanently"}]
+  # Each Delete permanently, and the deletes that ask for step-up on it. A
+  # selection of one row is that row, so the selection asks as the row does.
+  @permanent_deletes [
+    {"delete_entry_permanently", ~w(delete_entry)},
+    {"delete_selected_permanently", ~w(delete_entry delete_selected)}
+  ]
 
   defmacro __using__(opts), do: build(opts)
 
@@ -36,6 +41,11 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       use BrandoAdmin, :live_view
 
       def __authorization_resource__, do: {:listing, unquote(schema)}
+
+      @doc false
+      def __deletes_permanently__,
+        do: BrandoAdmin.LiveView.Listing.Hooks.deletes_permanently?(unquote(overrides))
+
       import Phoenix.Component
 
       unquote(reauth)
@@ -50,11 +60,12 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
   end
 
   @doc """
-  The `step_up` events with Delete permanently in the trash, which asks as
-  the delete it stands in for does.
+  The `step_up` events with Delete permanently in the trash: the row's asks
+  when `delete_entry` does, the selection's when `delete_entry` or
+  `delete_selected` does.
   """
   def with_permanent_deletes(step_up) do
-    permanent = for {event, permanent} <- @permanent_deletes, event in step_up, do: permanent
+    permanent = for {permanent, deletes} <- @permanent_deletes, Enum.any?(deletes, &(&1 in step_up)), do: permanent
     Enum.uniq(step_up ++ permanent)
   end
 end

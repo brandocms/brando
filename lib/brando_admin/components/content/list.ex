@@ -461,11 +461,22 @@ defmodule BrandoAdmin.Components.Content.List do
         listing
       end)
 
-    assign_new(socket, :sortable?, fn ->
+    socket
+    |> assign_new(:sortable?, fn ->
       socket.assigns.listing.sortable && schema.has_trait(Sequenced) &&
         BrandoAdmin.Authorization.allowed?(:reorder, schema)
     end)
+    |> assign_new(:permanent_delete?, fn ->
+      socket.assigns.listing.default_actions && deletes_permanently?(socket.view)
+    end)
   end
+
+  # Delete permanently is the listing view's to handle, as its hooks decide
+  # (`BrandoAdmin.LiveView.Listing.Hooks.deletes_permanently?/1`)
+  defp deletes_permanently?(view),
+    do:
+      Code.ensure_loaded?(view) and function_exported?(view, :__deletes_permanently__, 0) and
+        view.__deletes_permanently__()
 
   defp assign_filter(%{assigns: %{listing: %{filters: filters}}} = socket, _assigns) do
     assign_new(socket, :active_filter, fn -> List.first(filters) end)
@@ -1590,7 +1601,11 @@ defmodule BrandoAdmin.Components.Content.List do
   attr :selection_actions, :list, required: true
   attr :target, :any, required: true
   attr :trash?, :boolean, default: false, doc: "the selection is in the trash: its delete is Delete permanently"
-  attr :permanent_delete?, :boolean, default: false, doc: "the listing offers Delete permanently (`default_actions`)"
+
+  attr :permanent_delete?, :boolean,
+    default: false,
+    doc: "the listing offers Delete permanently (`default_actions`, and its view handles it)"
+
   attr :selection_trashed_at, :map, default: %{}, doc: "each selected row's `deleted_at`, as shown"
 
   def selected_rows(assigns) do
