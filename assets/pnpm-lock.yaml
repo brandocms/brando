@@ -265,8 +265,8 @@ importers:
         specifier: 1.8.16
         version: 1.8.16
       phoenix_live_view:
-        specifier: 1.2.13
-        version: 1.2.13
+        specifier: 1.2.14
+        version: 1.2.14
       slugify:
         specifier: 1.6.9
         version: 1.6.9
@@ -974,8 +974,8 @@ packages:
   phoenix@1.8.16:
     resolution: {integrity: sha512-bNNJkYBnES2MHo8XjBg6ROK7iU7FeYfkANpTnYzh2ecOipI+8ZF1wiiWdvqv2YfV4MVb9yFJBE2BPF+RXgXXuw==}
 
-  phoenix_live_view@1.2.13:
-    resolution: {integrity: sha512-HsDIXeM5R6p8ZBrcND6qZm5LtWnmp3pVF4K+zqBRsvEpL7CWPr7brJQyFXhuGhU5LuyEtOk8E2sFkomR6lz2Kw==}
+  phoenix_live_view@1.2.14:
+    resolution: {integrity: sha512-IxjIqMOzgvsxEkOKl4+i56cc/7eIeJuSrQCIcasz1+DoKmkpgV2P1S9cRfbCtArP9g0iiPTPDmqkv59OX3ZbIw==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -1811,7 +1811,7 @@ snapshots:
 
   phoenix@1.8.16: {}
 
-  phoenix_live_view@1.2.13: {}
+  phoenix_live_view@1.2.14: {}
 
   picocolors@1.1.1: {}
 
