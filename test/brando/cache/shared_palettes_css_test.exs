@@ -100,6 +100,34 @@ defmodule Brando.Cache.SharedPalettesCssTest do
     assert css(@production) =~ "#0000ff"
   end
 
+  # Another node hears "forget the allowlist" and "rebuild the palettes" as
+  # two refreshes, and runs them in whichever order
+  test "another node's rebuild holds a palette enabled there before it forgets the allowlist", c do
+    :ok = SharedLibrary.enable(c.site, :palette, c.library.id, c.user)
+    # This node's allowlist as it was before the other node enabled it
+    SharedLibrary.Cache.put(c.site.id, :palette, [])
+
+    :ok = Brando.Cache.refresh_node_cache({:palettes, @production})
+    :ok = SharedLibrary.Cache.refresh_node_cache({c.site.id, :palette})
+
+    assert css(@production) =~ "#0000ff"
+  end
+
+  test "customizing one palette and enabling another in one transaction holds both in the CSS", c do
+    {:ok, other} = SharedLibrary.create_shared(:palette, palette_attrs("other", "#00aa00"), c.user)
+    :ok = SharedLibrary.enable(c.site, :palette, other.id, c.user)
+
+    {:ok, :ok} =
+      Brando.Repo.transaction(fn ->
+        {:ok, _override} = SharedLibrary.customize(:palette, other.id, c.site, @production, c.user)
+        :ok = SharedLibrary.enable(c.site, :palette, c.library.id, c.user)
+      end)
+
+    production = css(@production)
+    assert production =~ "#00aa00"
+    assert production =~ "#0000ff"
+  end
+
   test "a customized palette is in the CSS in place of its shared one", c do
     :ok = SharedLibrary.enable(c.site, :palette, c.library.id, c.user)
     {:ok, override} = SharedLibrary.customize(:palette, c.library.id, c.site, @production, c.user)

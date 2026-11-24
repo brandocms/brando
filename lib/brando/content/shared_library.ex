@@ -114,8 +114,8 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   # The site's palette CSS holds the shared palettes enabled for it
-  # (`Brando.Cache.Palettes`): rebuilt in each of its environments once the
-  # allowlist is forgotten, which the caller held to run first.
+  # (`Brando.Cache.Palettes`, which reads the allowlist again): rebuilt in
+  # each of its environments once the transaction commits.
   defp rebuild_palettes_css(site) do
     for environment <- Registry.list_environments(site) do
       Tenant.with_prefix(Tenant.prefix(site, environment), fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
@@ -172,7 +172,7 @@ defmodule Brando.Content.SharedLibrary do
 
   @doc "Lists site-local entries plus only the shared entries enabled for new content."
   def list_available(kind, %Site{} = site, prefix) when kind in @kinds do
-    list_effective(kind, site, prefix, :enabled)
+    list_effective(kind, prefix, enabled_ids(site, kind))
   end
 
   @doc """
@@ -182,14 +182,24 @@ defmodule Brando.Content.SharedLibrary do
   was revoked continue to render; the picker uses `list_available/3` instead.
   """
   def list_for_rendering(kind, %Site{} = site, prefix) when kind in @kinds do
-    list_effective(kind, site, prefix, :rendering)
+    list_rendered(kind, prefix, enabled_ids(site, kind))
   end
 
-  def list_for_current_tenant(kind) when kind in @kinds do
+  @doc """
+  `list_for_rendering/3` for the current site and environment, or the local
+  entries outside a site. With `cached_allowlist: false` it reads the site's
+  allowlist from the database rather than this node's cache: for a cache
+  built from it, whose rebuild may run before the allowlist is forgotten,
+  on this node or on one that hears of both changes at once.
+  """
+  def list_for_current_tenant(kind, opts \\ []) when kind in @kinds do
+    opts = Keyword.validate!(opts, cached_allowlist: true)
+
     with prefix when is_binary(prefix) <- Tenant.current_prefix(),
          site_key when is_binary(site_key) <- Tenant.current_site_key(),
          %Site{} = site <- Registry.get_site_by_key(site_key) do
-      list_for_rendering(kind, site, prefix)
+      enabled = if opts[:cached_allowlist], do: enabled_ids(site, kind), else: MapSet.new(load_enabled_ids(site.id, kind))
+      list_rendered(kind, prefix, enabled)
     else
       _no_tenant -> list_local(kind, nil)
     end
@@ -534,17 +544,14 @@ defmodule Brando.Content.SharedLibrary do
   def reference({origin, id}), do: {normalize_origin(origin), normalize_id!(id)}
   def encode_reference(origin, id), do: "#{normalize_origin(origin)}:#{normalize_id!(id)}"
 
-  defp list_effective(kind, site, prefix, shared_scope) do
+  defp list_rendered(kind, prefix, enabled),
+    do: list_effective(kind, prefix, MapSet.union(enabled, referenced_shared_ids(kind, prefix)))
+
+  defp list_effective(kind, prefix, shared_ids) do
     definition = definition(kind)
     locals = list_local(kind, prefix)
     {site_specific, overrides} = Enum.split_with(locals, &is_nil(Map.get(&1, definition.source_field)))
     overrides_by_source = Map.new(overrides, &{Map.fetch!(&1, definition.source_field), &1})
-
-    shared_ids =
-      case shared_scope do
-        :enabled -> enabled_ids(site, kind)
-        :rendering -> MapSet.union(enabled_ids(site, kind), referenced_shared_ids(kind, prefix))
-      end
 
     shared =
       kind

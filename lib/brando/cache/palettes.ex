@@ -50,10 +50,17 @@ defmodule Brando.Cache.Palettes do
   # which look them up by local id. The CSS holds every palette the site's
   # content resolves (`SharedLibrary.list_for_rendering/3`): its own, and the
   # shared ones enabled for it or used by its blocks, a customized one in
-  # place of its shared one. Its own wins a namespace and key.
+  # place of its shared one. Its own wins a namespace and key. It reads the
+  # allowlist from the database: on another node, the refresh that forgets
+  # the cached one may run after the one that rebuilds this cache.
   def load do
     {:ok, palettes} = Content.list_palettes()
-    css_palettes = :palette |> SharedLibrary.list_for_current_tenant() |> Enum.uniq_by(&{&1.namespace, &1.key})
+
+    css_palettes =
+      :palette
+      |> SharedLibrary.list_for_current_tenant(cached_allowlist: false)
+      |> Enum.uniq_by(&{&1.namespace, &1.key})
+
     [palettes: palettes, palettes_css: process_palettes(css_palettes)]
   end
 
