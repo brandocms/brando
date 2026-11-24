@@ -624,7 +624,7 @@ defmodule Brando.Content.Blocks do
   the delete sees the save's blocks, or the save sees the module in the
   trash. Before that it takes the lock its writes of refs and vars take,
   so it queues behind a definition apply, which locks those tables and then
-  updates the modules (`Brando.Content.Definition.Importer`), instead of
+  updates the modules (`Brando.Content.Definitions.apply/3`), instead of
   holding a module the apply waits for.
   """
   def guard_added_modules(%Changeset{data: %schema{}} = changeset) do
