@@ -111,6 +111,15 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:error, {:recorded_here, live}} ->
         send(self(), {:toast, Brando.Videos.restore_refused_message(live)})
 
+      {:error, {:source_in_trash, source}} ->
+        delete_refused(BrandoAdmin.LiveView.Listing.DeleteDescription.source_in_trash(schema, source))
+
+      {:error, {:translation, translation, reason}} ->
+        message =
+          BrandoAdmin.LiveView.Listing.DeleteDescription.restore_refused(schema, translation, translation_reason(reason))
+
+        delete_refused(message)
+
       {:error, {:module_in_trash, refusal}} ->
         send(self(), {:toast, Brando.Content.module_in_trash_message(refusal)})
 
@@ -136,7 +145,58 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
         _ -> %{}
       end
 
+    if reply[:stale] do
+      delete_refused(gettext("This entry changed since the list was shown. Check it again."))
+      update_list_entries(schema)
+    end
+
     {:halt, reply, socket}
+  end
+
+  # The source of synchronized translations, as its dialog chose
+  # (`DeleteDescription`): deleted with them, or keeping them. A group that
+  # changed since the dialog showed it opens the dialog again (`opener`).
+  defp handle_listing_event(
+         "delete_entry",
+         %{"id" => entry_id, "translations" => choice} = params,
+         %{assigns: %{current_user: user}} = socket,
+         schema
+       ) do
+    if {:before_delete, 3} in schema.__info__(:functions) do
+      schema.before_delete(entry_id, socket, self())
+    end
+
+    case delete_source(schema, entry_id, choice, params, user) do
+      {:ok, %{translations: []}} ->
+        send(self(), {:toast, "#{String.capitalize(translated_singular(schema))} #{gettext("deleted")}"})
+        update_list_entries(schema)
+        {:halt, socket}
+
+      {:ok, %{translations: translations}} ->
+        message =
+          ngettext(
+            "%{entry} deleted, with its translation",
+            "%{entry} deleted, with its %{count} translations",
+            length(translations),
+            entry: String.capitalize(translated_singular(schema))
+          )
+
+        send(self(), {:toast, message})
+        update_list_entries(schema)
+        {:halt, socket}
+
+      {:error, :group_changed} ->
+        delete_refused(
+          gettext("Nothing was deleted: its translations changed since the dialog opened. Check them again.")
+        )
+
+        update_list_entries(schema)
+        {:halt, push_event(socket, "b:confirm-click-again", %{id: params["opener"]})}
+
+      {:error, reason} ->
+        delete_refused(delete_error_message(schema, entry_id, reason))
+        {:halt, socket}
+    end
   end
 
   defp handle_listing_event(
@@ -459,15 +519,38 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
   end
 
+  defp delete_source(schema, entry_id, "delete", params, user) do
+    Brando.Translations.delete_with_translations(schema, entry_id, params["translations_group"], user,
+      source_args: delete_opts(schema, params),
+      translation_args: translation_delete_opts(schema, params)
+    )
+  end
+
+  defp delete_source(schema, entry_id, choice, params, user) when choice in ["transfer", "detach"] do
+    successor = if choice == "transfer", do: params["translations_source"] || ""
+
+    Brando.Translations.delete_keeping_translations(schema, entry_id, successor, params["translations_group"], user,
+      source_args: delete_opts(schema, params)
+    )
+  end
+
+  defp delete_source(_schema, _entry_id, _choice, _params, _user), do: {:error, :invalid_choice}
+
   # A delete from the listing that was refused or failed: the error toast,
   # which stays until closed
   defp delete_refused(message), do: send(self(), {:toast, message, :error})
 
-  defp delete_error_message(schema, entry_id, :group_has_synchronized_members),
-    do: synchronized_members_message(schema, entry_id)
+  defp delete_error_message(_schema, _entry_id, :group_has_synchronized_members),
+    do: synchronized_members_message()
 
-  defp delete_error_message(_schema, _entry_id, {:fragments, :group_has_synchronized_members}),
-    do: synchronized_fragment_message()
+  defp delete_error_message(schema, entry_id, {:fragments, :group_has_synchronized_members}),
+    do: BrandoAdmin.LiveView.Listing.DeleteDescription.synchronized_fragments_message(schema, entry_id)
+
+  defp delete_error_message(schema, _entry_id, {:translation, entry, reason}),
+    do: BrandoAdmin.LiveView.Listing.DeleteDescription.translation_refused(schema, entry, translation_reason(reason))
+
+  defp delete_error_message(_schema, _entry_id, :not_a_synchronized_target),
+    do: gettext("Nothing was deleted: the new source must be one of its translations, outside the trash.")
 
   defp delete_error_message(_schema, _entry_id, :module_in_use), do: module_in_use_message()
 
@@ -565,26 +648,20 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
         do: {entry.id, BrandoAdmin.LiveView.Listing.DeleteDescription.entry_name(schema, entry) || "##{entry.id}"}
   end
 
-  defp synchronized_fragment_message,
-    do:
-      gettext(
-        "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
-      )
+  defp translation_reason(:forbidden), do: gettext("You do not have permission to do this.")
+  defp translation_reason({:taken, _constraint}), do: gettext("Another entry has its address now.")
+  defp translation_reason({:module_in_trash, refusal}), do: Brando.Content.module_in_trash_message(refusal)
+  defp translation_reason(_reason), do: gettext("It could not be changed.")
 
   defp module_in_use_message,
     do: gettext("A module that blocks use was not deleted. Delete on its row lists the entries using it.")
 
-  defp synchronized_members_message(schema, entry_id) do
-    if Brando.Translations.trashed_synchronized_targets?(schema, entry_id) do
+  # A selection, or a delete without the dialog's choice
+  defp synchronized_members_message,
+    do:
       gettext(
-        "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
+        "Not deleted: this entry is the source of synchronized translations. Delete it from its own row to choose what becomes of them."
       )
-    else
-      gettext(
-        "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
-      )
-    end
-  end
 
   defp translation_error_message({:error, :language_in_trash}),
     do: gettext("This language's version is in the trash. Restore it from the trash instead.")
@@ -835,4 +912,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   end
 
   defp delete_opts(_schema, _params), do: []
+
+  # The translations of a page deleted with it: their fragments go to the
+  # trash too when the source's do, and otherwise where
+  # `Brando.Pages.delete_page/3` moves them by default, in their own language
+  defp translation_delete_opts(Brando.Pages.Page, %{"fragments" => "delete"}), do: [[fragments: :delete]]
+  defp translation_delete_opts(_schema, _params), do: []
 end

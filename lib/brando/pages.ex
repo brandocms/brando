@@ -233,16 +233,22 @@ defmodule Brando.Pages do
   # A restore brings back the fragments on the page trashed at its own
   # `deleted_at`, stored to the second. One trashed on its own in that second
   # is set a second earlier, with its notes, so it stays in the trash.
-  defp keep_apart_from_page(%Page{id: id, deleted_at: deleted_at}) do
-    earlier = DateTime.add(deleted_at, -1)
+  defp keep_apart_from_page(%Page{id: id, deleted_at: deleted_at}),
+    do: trashed_fragments_moved([id], deleted_at, DateTime.add(deleted_at, -1))
 
+  @doc """
+  Sets the fragments of the pages `page_ids` in the trash at `from` to `to`,
+  with their notes: those a page's restore brings back (`restore_fragments/2`)
+  when it is in the trash at `from`.
+  """
+  def trashed_fragments_moved(page_ids, from, to) do
     {_, ids} =
       Brando.Repo.update_all(
-        from(f in Fragment, where: f.page_id == ^id and f.deleted_at == ^deleted_at, select: f.id),
-        set: [deleted_at: earlier]
+        from(f in Fragment, where: f.page_id in ^page_ids and f.deleted_at == ^from, select: f.id),
+        set: [deleted_at: to]
       )
 
-    Brando.Notes.entries_trash_moved(Fragment, ids, deleted_at, earlier)
+    Brando.Notes.entries_trash_moved(Fragment, ids, from, to)
   end
 
   # `{:moved, fragments}` once moved, `{:trash, fragments}` once each may be

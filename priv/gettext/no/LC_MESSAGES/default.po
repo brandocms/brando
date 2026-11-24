@@ -803,6 +803,13 @@ msgstr "%{email} ble logget ut overalt."
 msgid "%{entry} %{message}"
 msgstr "%{entry} %{message}"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry} deleted, with its translation"
+msgid_plural "%{entry} deleted, with its %{count} translations"
+msgstr[0] "%{entry} slettet, med oversettelsen"
+msgstr[1] "%{entry} slettet, med de %{count} oversettelsene"
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{environment} has no starting content in %{language}."
@@ -837,6 +844,11 @@ msgstr "%{field} · blokk %{number}"
 #, elixir-autogen, elixir-format
 msgid "%{first}–%{last} of %{total}"
 msgstr "%{first}–%{last} av %{total}"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "%{fragment} (translated as %{translations})"
+msgstr "%{fragment} (oversatt som %{translations})"
 
 #: lib/brando/environments/environment.ex
 #, elixir-autogen, elixir-format
@@ -3068,6 +3080,11 @@ msgstr "En annen redaktør lagret denne oversettelsen, og nyere endringer fra ki
 #, elixir-autogen, elixir-format
 msgid "Another editor saved this translation. Load the newer changes in the translation panel, then translate with AI."
 msgstr "En annen redaktør lagret denne oversettelsen. Last inn de nyere endringene i oversettelsespanelet, og oversett så med KI."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Another entry has its address now."
+msgstr "En annen oppføring har adressen nå."
 
 #: lib/brando/environments/environment.ex
 #: lib/brando/tenant/registry.ex
@@ -6775,6 +6792,11 @@ msgstr "Slett valgte"
 #, elixir-autogen, elixir-format
 msgid "Delete the job?"
 msgstr "Slette jobben?"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Delete them with it"
+msgstr "Slett dem med den"
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -10596,6 +10618,11 @@ msgstr "Den kan ikke oppdateres: %{error}"
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
+msgid "It could not be changed."
+msgstr "Den kunne ikke endres."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
 msgid "It could not be deleted."
 msgid_plural "They could not be deleted."
 msgstr[0] "Den kunne ikke slettes."
@@ -10614,6 +10641,13 @@ msgid "It has a fragment, which templates find by its key:"
 msgid_plural "It has %{count} fragments, which templates find by their keys:"
 msgstr[0] "Den har et fragment, som maler finner ved nøkkelen:"
 msgstr[1] "Den har %{count} fragmenter, som maler finner ved nøklene:"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "It has one more translation you may not see."
+msgid_plural "It has %{count} more translations you may not see."
+msgstr[0] "Den har én oversettelse til som du ikke har tilgang til."
+msgstr[1] "Den har %{count} oversettelser til som du ikke har tilgang til."
 
 #: lib/brando_admin/components/stale_blocks.ex
 #, elixir-autogen, elixir-format
@@ -10648,6 +10682,11 @@ msgstr "Den vises på siden igjen."
 #, elixir-autogen, elixir-format
 msgid "It is shown only this once. The receiver uses it to check the Brando-Signature header of every request."
 msgstr "Den vises bare denne ene gangen. Mottakeren bruker den til å sjekke Brando-Signature-headeren i hver forespørsel."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "It is the source of these translations:"
+msgstr "Den er kilden til disse oversettelsene:"
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -10799,6 +10838,11 @@ msgid_plural "Its %{count} submissions are deleted with it."
 msgstr[0] "Innsendingen slettes sammen med det."
 msgstr[1] "De %{count} innsendingene slettes sammen med det."
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Its translations"
+msgstr "Oversettelsene"
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
@@ -10873,6 +10917,16 @@ msgstr "Behold operasjonen"
 #, elixir-autogen, elixir-format
 msgid "Keep the version edited here"
 msgstr "Behold versjonen som er endret her"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Keep them as independent entries"
+msgstr "Behold dem som selvstendige oppføringer"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Keep them, and make this one the source:"
+msgstr "Behold dem, og gjør denne til kilde:"
 
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
@@ -11108,6 +11162,11 @@ msgstr "Utelat"
 #, elixir-autogen, elixir-format
 msgid "Leave the user name and password out of the address."
 msgstr "Utelat brukernavn og passord fra adressen."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Leave them in the trash"
+msgstr "La dem ligge i papirkurven"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -12739,6 +12798,11 @@ msgstr "Ny tjeneste"
 msgid "New site"
 msgstr "Nytt nettsted"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "New source"
+msgstr "Ny kilde"
+
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
 msgid "New submission: %{form}"
@@ -13619,14 +13683,8 @@ msgstr "Ikke slettet: %{entries}."
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
-msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
-msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde."
-
-#: lib/brando_admin/live/pages/page_list_live.ex
-#: lib/brando_admin/live_view/listing/hooks.ex
-#, elixir-autogen, elixir-format
-msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
-msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
+msgid "Not deleted: this entry is the source of synchronized translations. Delete it from its own row to choose what becomes of them."
+msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Slett den fra sin egen rad for å velge hva som skjer med dem."
 
 #: lib/brando/content.ex
 #, elixir-autogen, elixir-format
@@ -13747,6 +13805,16 @@ msgstr "Ikke gjenopprettet: %{block} i revisjonen bruker modulen «%{module}», 
 #, elixir-autogen, elixir-format
 msgid "Not restored: it holds blocks of the module “%{module}”, which is in the trash. Restore the module first."
 msgstr "Ikke gjenopprettet: den har blokker av modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen først."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: its source %{source} is in the trash. Restore the source, and its translations come back with it."
+msgstr "Ikke gjenopprettet: kilden %{source} er i papirkurven. Gjenopprett kilden, så kommer oversettelsene tilbake med den."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: its source is in the trash. Restore the source, and its translations come back with it."
+msgstr "Ikke gjenopprettet: kilden er i papirkurven. Gjenopprett kilden, så kommer oversettelsene tilbake med den."
 
 #: lib/brando/videos.ex
 #, elixir-autogen, elixir-format
@@ -14091,15 +14159,42 @@ msgstr "Ingenting ble koblet til."
 msgid "Nothing was connected. Start again from the app."
 msgstr "Ingenting ble koblet til. Start på nytt fra appen."
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: %{translation} was not changed."
+msgstr "Ingenting ble slettet: %{translation} ble ikke endret."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: a fragment is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
+msgstr "Ingenting ble slettet: et fragment er kilden til synkroniserte oversettelser. Åpne det og gjør oversettelsene selvstendige, eller gjør en av dem til kilde, og slett det så."
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing was deleted: a fragment of this page is the source of synchronized translations. Make them independent, or make one of them the source, first."
-msgstr "Ingenting ble slettet: et fragment på denne siden er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
+msgid "Nothing was deleted: its translations changed since the dialog opened. Check them again."
+msgstr "Ingenting ble slettet: oversettelsene er endret siden dialogen ble åpnet. Se over dem igjen."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
+msgid_plural "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Open each and make its translations independent, or make one of them the source, then delete them."
+msgstr[0] "Ingenting ble slettet: fragmentet %{fragments} er kilden til synkroniserte oversettelser. Åpne det og gjør oversettelsene selvstendige, eller gjør en av dem til kilde, og slett det så."
+msgstr[1] "Ingenting ble slettet: fragmentene %{fragments} er kilden til synkroniserte oversettelser. Åpne hvert av dem og gjør oversettelsene selvstendige, eller gjør en av dem til kilde, og slett dem så."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was deleted: the new source must be one of its translations, outside the trash."
+msgstr "Ingenting ble slettet: den nye kilden må være en av oversettelsene, utenfor papirkurven."
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing was removed: %{reason}"
 msgstr "Ingenting ble fjernet: %{reason}"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was restored: %{translation} could not be restored with it."
+msgstr "Ingenting ble gjenopprettet: %{translation} kunne ikke gjenopprettes med den."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -14760,6 +14855,11 @@ msgstr "Eller"
 #, elixir-autogen, elixir-format
 msgid "Or enter the 6-digit code from your authenticator app."
 msgstr "Eller skriv inn den sekssifrede koden fra autentiseringsappen."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Or move the fragments when you delete the page."
+msgstr "Eller flytt fragmentene når du sletter siden."
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
@@ -21046,6 +21146,11 @@ msgstr "Originalen blir værende her."
 msgid "The other tab was closed"
 msgstr "Den andre fanen ble lukket"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "The other translations follow it."
+msgstr "De andre oversettelsene følger den."
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "The output is unchanged."
@@ -21628,10 +21733,20 @@ msgstr "Disse versjonene har samme innhold."
 msgid "These settings apply to this use of the file."
 msgstr "Disse innstillingene gjelder for denne bruken av filen."
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "They are deleted with it. This can't be undone."
+msgstr "De slettes med den. Dette kan ikke angres."
+
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "They are logged out everywhere, and log in with their password alone until they set it up again."
 msgstr "Brukeren logges ut overalt, og logger inn med bare passordet til det er satt opp igjen."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "They are moved to the trash with it, and come back when it is restored."
+msgstr "De flyttes til papirkurven med den, og kommer tilbake når den gjenopprettes."
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -21652,6 +21767,16 @@ msgstr "De vises fortsatt der malen nevner dem. Fjern dem, eller flytt dem til e
 #, elixir-autogen, elixir-format
 msgid "They keep the HTML they have now until the template or their content is fixed."
 msgstr "De beholder HTML-en de har nå, til malen eller innholdet er rettet."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "They keep their content, and no longer follow a source."
+msgstr "De beholder innholdet, og følger ikke lenger en kilde."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "They keep their place in the group, and can be restored once it is."
+msgstr "De beholder plassen sin i gruppen, og kan gjenopprettes når den er det."
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -21878,6 +22003,11 @@ msgstr "Denne e-posten ble sendt av %{site}."
 msgid "This entry"
 msgstr "Denne oppføringen"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This entry changed since the list was shown. Check it again."
+msgstr "Denne oppføringen er endret siden listen ble vist. Sjekk den igjen."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "This entry has no address of its own, so no Markdown version."
@@ -22027,6 +22157,13 @@ msgstr "Dette er for langt."
 #, elixir-autogen, elixir-format
 msgid "This language already has a version."
 msgstr "Dette språket har allerede en versjon."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This language version is independent, and stays as it is:"
+msgid_plural "These language versions are independent, and stay as they are:"
+msgstr[0] "Denne språkversjonen er selvstendig, og blir værende som den er:"
+msgstr[1] "Disse språkversjonene er selvstendige, og blir værende som de er:"
 
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live_view/listing/hooks.ex
@@ -22265,6 +22402,13 @@ msgstr "Dette nettstedet kjører ingen notifications-kø, så varsler til Slack,
 msgid "This suggestion was already reviewed"
 msgstr "Dette forslaget er allerede gjennomgått"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This translation is in the trash already. It stays there, and becomes an independent entry if the translations are kept."
+msgid_plural "These translations are in the trash already. They stay there, and become independent entries if the translations are kept."
+msgstr[0] "Denne oversettelsen er allerede i papirkurven. Den blir liggende der, og blir en selvstendig oppføring hvis oversettelsene beholdes."
+msgstr[1] "Disse oversettelsene er allerede i papirkurven. De blir liggende der, og blir selvstendige oppføringer hvis oversettelsene beholdes."
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "This translation is now independent."
@@ -22274,6 +22418,13 @@ msgstr "Oversettelsen er nå selvstendig."
 #, elixir-autogen, elixir-format
 msgid "This translation is now the source."
 msgstr "Oversettelsen er nå kilden."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "This translation is published: deleting it takes it off the site."
+msgid_plural "These translations are published: deleting them takes them off the site."
+msgstr[0] "Denne oversettelsen er publisert: sletter du den, forsvinner den fra nettstedet."
+msgstr[1] "Disse oversettelsene er publisert: sletter du dem, forsvinner de fra nettstedet."
 
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
@@ -24497,6 +24648,11 @@ msgstr "Du kan tilbakestille endringene til de er beholdt."
 msgid "You can't add notes to this entry."
 msgstr "Du kan ikke legge til notater på denne oppføringen."
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "You can't see every translation, so they can't be deleted with it."
+msgstr "Du kan ikke se alle oversettelsene, så de kan ikke slettes med den."
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "You cannot change permissions in this row."
@@ -24644,10 +24800,20 @@ msgstr "Du har valgt for mange filer"
 msgid "You have this entry open in another tab (opened %{time})"
 msgstr "Du har dette elementet åpent i en annen fane (åpnet %{time})"
 
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "You may neither delete its translations nor change them so they stay without it, so it can't be deleted."
+msgstr "Du kan verken slette oversettelsene eller endre dem så de blir værende uten den, så den kan ikke slettes."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "You may no longer manage these settings, so Figma was not connected."
 msgstr "Du kan ikke lenger administrere disse innstillingene, så Figma ble ikke koblet til."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "You may not delete every translation, so they can't be deleted with it."
+msgstr "Du har ikke tilgang til å slette alle oversettelsene, så de kan ikke slettes med den."
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
@@ -24874,6 +25040,11 @@ msgstr "en kollega"
 #, elixir-autogen, elixir-format
 msgid "a new %{module} block"
 msgstr "en ny %{module}-blokk"
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "a translation you may not see"
+msgstr "en oversettelse du ikke har tilgang til"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

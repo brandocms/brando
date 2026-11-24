@@ -113,16 +113,13 @@ defmodule BrandoAdmin.Pages.PageListLive do
         BrandoAdmin.LiveView.Listing.update_list_entries(schema)
 
       {:error, :group_has_synchronized_members} ->
-        send(
-          self(),
-          {:toast,
-           gettext(
-             "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
-           )}
-        )
+        message =
+          BrandoAdmin.LiveView.Listing.DeleteDescription.synchronized_fragments_message(Brando.Pages.Fragment, entry_id)
+
+        send(self(), {:toast, message, :error})
 
       {:error, _error} ->
-        send(self(), {:toast, gettext("Error deleting fragment")})
+        send(self(), {:toast, gettext("Error deleting fragment"), :error})
     end
 
     {:noreply, socket}
