@@ -72,6 +72,37 @@ defmodule BrandoAdmin.TrashedModuleInUseLiveTest do
     end
   end
 
+  # #3923: where the editor activates a revision or duplicates an entry
+  test "the revisions drawer names the module when it refuses a revision that would bring back its block", c do
+    put_block!(Page, c.page, c.module)
+    {:ok, old} = Brando.Revisions.create_revision(c.page, c.current_user)
+    Repo.delete_all(from(j in Page.Blocks, where: j.entry_id == ^c.page.id))
+    {:ok, _} = Brando.Revisions.create_revision(c.page, c.current_user)
+    {:ok, _} = Brando.Content.delete_module(c.module.id, c.current_user)
+
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    drawer = view |> cid_of("#page_form-revisions-drawer-tab-activity") |> then(&with_target(view, &1))
+    drawer |> render_hook("activate_revision", %{"value" => to_string(old.revision)})
+
+    assert_push_event(view, "b:alert", %{type: "error", message: message})
+    assert message == Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :revision)
+    assert message =~ "Teaser"
+    assert Repo.aggregate(from(j in Page.Blocks, where: j.entry_id == ^c.page.id), :count) == 0
+  end
+
+  test "the listing names the module when it refuses to duplicate an entry holding its block", c do
+    put_block!(Page, c.page, c.module)
+    Repo.soft_delete!(c.module)
+    pages = Repo.aggregate(Page, :count)
+
+    {:ok, view, _html} = live(c.conn, "/admin/pages")
+    render_hook(view, "duplicate_entry", %{"id" => to_string(c.page.id)})
+
+    assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
+    assert message == Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+    assert Repo.aggregate(Page, :count) == pages
+  end
+
   defp assert_undelete_names_module(c) do
     {:ok, view, _html} = live(c.conn, "/admin/pages?status=deleted")
     render_hook(view, "undelete_entry", %{"id" => to_string(c.page.id)})

@@ -88,6 +88,24 @@ defmodule BrandoAdmin.ActivityLiveTest do
     assert has_element?(view, ".activity-row .activity-detail", "#7")
   end
 
+  test "a scheduled revision not published because it would bring back a trashed module names it and the block", %{
+    conn: conn,
+    current_user: user
+  } do
+    page = create_page(user, "Example Hotel")
+    refusal = %{module: %{"en" => "Teaser"}, block: {:inside, {:described, "Front teaser"}}}
+
+    Brando.Activity.with_source(:scheduler, fn ->
+      Brando.Activity.scheduled_revision_module_in_trash(page, user, 7, refusal)
+    end)
+
+    {:ok, view, _} = live(conn, "/admin/config/activity")
+
+    assert has_element?(view, ".activity-row .activity-detail", "#7")
+    assert has_element?(view, ".activity-row .activity-detail", "Teaser")
+    assert has_element?(view, ".activity-row .activity-detail", "Front teaser")
+  end
+
   test "an entry deleted for good keeps its title, without a link", %{conn: conn, current_user: user} do
     page = Factory.insert(:page, creator: user, title: "Gone")
     Brando.Repo.delete!(page)
