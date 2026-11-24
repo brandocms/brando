@@ -531,6 +531,7 @@ defmodule BrandoAdmin.ReadScopesTest do
         identifier_id: c.identifier.id,
         identifier: c.identifier
       }
+
       text = %Brando.Content.Var{type: :string, key: "name", label: "Name", value: "Visible excerpt"}
       selected = %Brando.Content.BlockIdentifier{identifier_id: c.identifier.id, identifier: c.identifier}
 
