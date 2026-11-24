@@ -1992,7 +1992,8 @@ defmodule Brando.Translations do
 
   # A restore brings back the translations in the trash at the source's
   # `deleted_at`, stored to the second. One trashed on its own in that second
-  # is set a second earlier, with its notes, so it stays in the trash.
+  # is set a second earlier, with its notes, so it stays in the trash; a
+  # page's fragments trashed with it move with it.
   defp keep_apart_from_source(schema, group, at) do
     ids = for %{in_trash: true, entry: %{deleted_at: ^at, id: id}} <- group.translations, do: id
 
@@ -2000,6 +2001,7 @@ defmodule Brando.Translations do
       earlier = DateTime.add(at, -1)
       Repo.update_all(from(e in schema, where: e.id in ^ids), set: [deleted_at: earlier])
       Brando.Notes.entries_trash_moved(schema, ids, at, earlier)
+      if schema == Brando.Pages.Page, do: Brando.Pages.trashed_fragments_moved(ids, at, earlier)
     end
   end
 

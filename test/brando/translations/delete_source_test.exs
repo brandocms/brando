@@ -137,6 +137,21 @@ defmodule Brando.Translations.DeleteSourceTest do
       assert trashed_at(Page, german.id) == german_at
     end
 
+    test "a page trashed on its own in that same second keeps its fragments with it", c do
+      fragment = Factory.insert(:fragment, page_id: c.english.id, key: "footer", language: :en, creator: c.user)
+      at = DateTime.truncate(DateTime.utc_now(), :second)
+      {:ok, _} = Brando.SoftDelete.Repo.at(at, fn -> Pages.delete_page(c.english.id, c.user, fragments: :delete) end)
+      assert trashed_at(Fragment, fragment.id) == at
+
+      assert {:ok, _} = Brando.SoftDelete.Repo.at(at, fn -> delete_with(c) end)
+      assert trashed_at(Page, c.english.id) == DateTime.add(at, -1)
+      assert trashed_at(Fragment, fragment.id) == DateTime.add(at, -1)
+
+      assert {:ok, _} = Boundary.restore(c.user, Repo.get!(Page, c.source.id))
+      assert {:ok, _} = Boundary.restore(c.user, Repo.get!(Page, c.english.id))
+      assert trashed_at(Fragment, fragment.id) == nil
+    end
+
     test "deletes nothing when the group changed since the dialog showed it", c do
       shown = fingerprint(Page, c.source.id)
 
