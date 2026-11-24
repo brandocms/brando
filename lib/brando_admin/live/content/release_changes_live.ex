@@ -892,7 +892,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         {gettext(
           "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
         )}
-        <p :if={@move_command}>
+        <p :if={@move_command} class="release-notice-more">
           {gettext(
             "The release renames some of them, and the apply left their values for this command, which moves them. Run it as a user who may edit those entries:"
           )}

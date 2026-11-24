@@ -144,6 +144,7 @@
   ul { grid-column: 2; margin: 6px 0 0; padding-left: 16px; font-size: var(--brando-text-sm); line-height: 18px; color: var(--brando-ink); }
   li + li { margin-top: 4px; }
   .release-notice-actions { grid-column: 2; display: flex; gap: 8px; margin-top: 10px; }
+  .release-notice-text > .release-notice-more { margin-top: 8px; }
   .release-command { display: block; margin-top: 4px; overflow-wrap: anywhere; font: var(--brando-text-xs)/16px var(--brando-font-mono); color: var(--brando-ink); }
 }
 
