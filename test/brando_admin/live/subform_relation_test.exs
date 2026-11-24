@@ -478,8 +478,15 @@ defmodule BrandoAdmin.SubformRelationTest do
 
     # What the upload manager sends the form when an upload to a row's image
     # field is stored
-    defp deliver_upload(view, path, image) do
-      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: path, asset: image)
+    defp deliver_upload(view, path, image, row_key \\ nil) do
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :image,
+        field: :cover,
+        path: path,
+        row_key: row_key,
+        asset: image
+      )
     end
 
     defp send_form(view, message) do
@@ -502,6 +509,74 @@ defmodule BrandoAdmin.SubformRelationTest do
       |> Enum.filter(&(&1.article_id == article.id))
       |> Enum.sort_by(& &1.label)
       |> Enum.map(&{&1.id, &1.cover_id})
+    end
+  end
+
+  # The upload names the row by its key as well as its index: the rows may
+  # be reordered, or the row removed, while it uploads (#3899)
+  describe "an upload delivered by its row's key" do
+    setup ctx do
+      {:ok, article} =
+        SyncTest.create_article(
+          %{
+            title: "Example Hotel",
+            slug: "example-hotel",
+            language: "en",
+            status: "published",
+            items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
+          },
+          ctx.current_user
+        )
+
+      [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
+      %{article: article, a: a, b: b, c: c}
+    end
+
+    test "goes to its row after the rows are reordered", ctx do
+      view = open(ctx)
+
+      params =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "sort_items_ids"], ["1", "2", "0"])
+        |> Map.put("_target", ["article", "sort_items_ids"])
+
+      view |> element(@form) |> render_change(params)
+      assert row_labels(render(view)) == ["B", "C", "A"]
+
+      # Started in the first row, A's, before the drag
+      deliver_upload(view, [:items, 0], ctx.image, "id-#{ctx.a.id}")
+
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][2][cover_id]", value: ^image_id})
+      assert cover_ids(render(view)) == ["", "", to_string(image_id)]
+      save(view)
+      assert saved_covers(ctx) == [{ctx.a.id, image_id}, {ctx.b.id, nil}, {ctx.c.id, nil}]
+    end
+
+    test "whose row was removed goes to no row, and the editor is told", ctx do
+      Brando.endpoint().subscribe("user:#{ctx.current_user.id}")
+      view = open(ctx)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][1][label]"])))
+      |> render_click("remove_subentry", %{"key" => "id-#{ctx.b.id}"})
+
+      assert row_labels(render(view)) == ["A", "C"]
+
+      deliver_upload(view, [:items, 1], ctx.image, "id-#{ctx.b.id}")
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+      refute_push_event(view, "b:validate", %{target: "article[items]" <> _})
+      assert cover_ids(render(view)) == ["", ""]
+    end
+
+    test "without a key goes to the row at its index", ctx do
+      view = open(ctx)
+      deliver_upload(view, [:items, 1], ctx.image)
+
+      assert cover_ids(render(view)) == ["", to_string(ctx.image.id), ""]
     end
   end
 

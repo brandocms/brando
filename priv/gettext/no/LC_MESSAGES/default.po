@@ -21309,6 +21309,11 @@ msgstr "Opplastingen mislyktes. Velg filen på nytt."
 msgid "The upload finished in a tab that is no longer editing. It is in the library, not in the entry."
 msgstr "Opplastingen ble ferdig i en fane som ikke redigerer lenger. Den ligger i biblioteket, ikke i elementet."
 
+#: lib/brando_admin/toast.ex
+#, elixir-autogen, elixir-format
+msgid "The upload is in the library. Its row was removed while it uploaded, so it was not added to the form."
+msgstr "Opplastingen ligger i biblioteket. Raden ble fjernet mens den lastet opp, så den ble ikke lagt til i skjemaet."
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "The upload stopped before it finished. Drop the file again."

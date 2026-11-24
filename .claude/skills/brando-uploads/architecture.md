@@ -191,6 +191,7 @@ A string-keyed map that rides the trigger dataset, the intake event, the item, t
 | `expected_asset_id` | selection the upload replaces; a stale completion leaves a newer selection alone |
 | `ref` | client correlation token echoed to transformers and conversations |
 | `file_id` | file being replaced (`file_replace`) |
+| `row_key` | key of the subform row or block table row the target is in (`SubformHelpers.row_key/1`); `path` names the row by index, and the delivery finds it by this key after a reorder |
 | `scope_token` | signed authorization scope (added by the bridge) |
 
 `config_target` resolves strictly through `Brando.Assets.ConfigTarget` (Blueprint
@@ -233,7 +234,7 @@ Phoenix.PubSub.broadcast(Brando.pubsub(), target["deliver_topic"], {:asset_ready
 
 | Kind | Receiver |
 |---|---|
-| `block_var`, `entry_var`, `*_var_gallery` | `RenderVar` `upload_complete` → `update_block_var` writes `image_id`/`file_id`/`video_id`; reaches the BlockField op store through `assign_block_form` |
+| `block_var`, `entry_var`, `*_var_gallery` | `RenderVar` `upload_complete` → `update_block_var` writes `image_id`/`file_id`/`video_id`; reaches the BlockField op store through `assign_block_form`. In a table row, `component_id` is the `Block` and `row_key` the row: `Block` `table_row_upload` delivers it again to the row's `RenderVar`, or tells the editor the row is gone |
 | `block_ref_picture` | `PictureBlock` `image_uploaded`; refreshes when processing ends |
 | `block_ref_file` | `FileBlock` `live_upload_complete` |
 | `block_ref_video` | `VideoBlock` `select_video` |
@@ -263,7 +264,11 @@ subscribe to their own `deliver_topic` the same way.
   leave `editing_*?` as they are: an upload inside an open drawer keeps the drawer's
   recovery snapshot and save guard. The drawer shows the asset only when it is on
   the delivered field (`show_delivered_asset/4`); an upload that lands after its
-  drawer closed leaves another field's drawer alone.
+  drawer closed leaves another field's drawer alone. In a subform row the target
+  carries the row's key (`row_key`, from the row's `data-row-key` or the drawer's
+  edit map): `Form` puts the asset in the row with that key wherever it is now,
+  and in no row, with an error toast, when the row is gone. Input names stay
+  positional (#3160).
 - **Gallery fields** (`input/gallery.ex`): `kind: "entry_field_gallery"`; delivery
   appends a gallery object (`put_assoc` + `sequence`) and updates the picker and
   input. Video uploads show when `Brando.Uploads.video_upload_available?/1` holds.
