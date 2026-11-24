@@ -323,7 +323,10 @@ defmodule Brando.SoftDelete.Query do
   # too, so a refusal says why and leaves the provider alone.
   defp purge_video_entry(video, actor) do
     purge = fn ->
-      match?({:ok, :ok}, Repo.transaction(fn -> purge_trashed(Brando.Videos.Video, video.id, video.deleted_at, actor) end))
+      match?(
+        {:ok, :ok},
+        Repo.transaction(fn -> purge_trashed(Brando.Videos.Video, video.id, video.deleted_at, actor) end)
+      )
     end
 
     if may_purge?(actor, video) do

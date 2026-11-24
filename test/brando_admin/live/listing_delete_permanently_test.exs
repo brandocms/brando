@@ -111,7 +111,10 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
   describe "Delete permanently" do
     test "deletes the entry with its revisions and notes, and records who did", c do
       {:ok, page} =
-        Pages.create_page(%{language: "en", template: "default.html", title: "Noted", uri: "noted", status: :draft}, c.current_user)
+        Pages.create_page(
+          %{language: "en", template: "default.html", title: "Noted", uri: "noted", status: :draft},
+          c.current_user
+        )
 
       {:ok, _note, _} = Brando.Notes.create_thread(Page, page.id, c.current_user, %{"body" => "Check this"})
       {:ok, _} = Pages.delete_page(page.id, c.current_user)
@@ -178,7 +181,7 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
       assert Enum.any?(
                Brando.Blueprint.list_blueprints(),
                &(&1.__schema__(:source) == "projects" and
-                   message =~ (&1 |> Brando.Blueprint.get_plural() |> String.downcase()))
+                   message =~ &1 |> Brando.Blueprint.get_plural() |> String.downcase())
              )
 
       assert Repo.get!(Page, c.page.id).deleted_at
@@ -244,7 +247,12 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
       assert has_element?(view, "#selection-action-delete-permanently[phx-confirm-click-destructive]")
       refute has_element?(view, "#selection-action-delete")
 
-      [push] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#selection-action-delete-permanently", "phx-confirm-click")
+      [push] =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("#selection-action-delete-permanently", "phx-confirm-click")
+
       assert [["push", %{"value" => %{"entries" => entries}}]] = Jason.decode!(push)
       assert [%{"id" => page.id, "deleted_at" => DateTime.to_iso8601(page.deleted_at)}] == Jason.decode!(entries)
     end
