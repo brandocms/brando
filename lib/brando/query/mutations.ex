@@ -224,7 +224,7 @@ defmodule Brando.Query.Mutations do
         identifier_id = get_identifier_id(identifier_result)
         render_entry? = render_entry?(module, changeset, rendered_status)
         enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?)
-        if resynced?, do: render_after_commit(module, entry)
+        maybe_render_after_commit(module, entry, resynced?)
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -896,7 +896,9 @@ defmodule Brando.Query.Mutations do
   # A save that rebuilt a stale block from its saved rows stored the HTML
   # its caller rendered from its own copy: the entry renders from what it
   # wrote once that has committed
-  defp render_after_commit(module, entry) do
+  defp maybe_render_after_commit(_module, _entry, false), do: :ok
+
+  defp maybe_render_after_commit(module, entry, true) do
     args = %{schema: to_string(module), entry_id: entry.id}
     Repo.after_commit(fn -> ContentBlocks.enqueue_entry_for_render(args) end)
   end
