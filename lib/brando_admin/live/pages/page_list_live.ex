@@ -85,6 +85,9 @@ defmodule BrandoAdmin.Pages.PageListLive do
         send(self(), {:toast, gettext("Fragment duplicated")})
         BrandoAdmin.LiveView.Listing.update_list_entries(Pages.Page)
 
+      {:error, {:module_in_trash, refusal}} ->
+        send(self(), {:toast, Brando.Content.module_in_trash_message(refusal, :duplicate)})
+
       {:error, error} ->
         require Logger
 

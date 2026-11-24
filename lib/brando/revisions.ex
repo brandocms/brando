@@ -376,6 +376,19 @@ defmodule Brando.Revisions do
     end)
   end
 
+  @doc """
+  Drops the schedule of `revision`, which scheduled publishing refused to
+  publish because it would bring back a block of a module in the trash
+  (`{:error, {:module_in_trash, refusal}}` from `set_entry_to_revision/5`),
+  and notes in Activity the module and the block `refusal` names. Locked
+  and checked like `drop_schedule_in_trash/5`.
+  """
+  def drop_schedule_with_trashed_module(entry_schema, entry_id, revision_number, user, refusal, still_current?) do
+    drop_refused_schedule(entry_schema, entry_id, revision_number, still_current?, fn entry ->
+      Brando.Activity.scheduled_revision_module_in_trash(entry, user, revision_number, refusal)
+    end)
+  end
+
   defp drop_refused_schedule(entry_schema, entry_id, revision_number, still_current?, note) do
     Repo.transaction(fn ->
       lock_entry!(entry_schema, entry_id)
@@ -448,18 +461,20 @@ defmodule Brando.Revisions do
         lock_entry!(entry_schema, entry_id)
 
         revision = get_revision_record!(entry_schema, entry_id, revision_number)
-        cancel_pending_activation!(entry_schema, entry_id, revision_number, publish?, user)
         target_entry = revision |> decode_revision!() |> clear_invalid_colors(entry_schema, entry_id)
-        restore_missing_block_links!(entry_schema, entry_id, target_entry)
-
-        current_entry =
-          entry_schema
-          |> Repo.get!(entry_id)
-          |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
+        current_entry = load_for_restore(entry_schema, entry_id)
 
         # An entry in the trash is not published (the scheduled revision's
         # job is cancelled). Read under the lock, so trashing can't slip in.
         if publish? and Map.get(current_entry, :deleted_at), do: Repo.rollback(:in_trash)
+
+        guard_trashed_modules!(target_entry, current_entry)
+        cancel_pending_activation!(entry_schema, entry_id, revision_number, publish?, user)
+
+        current_entry =
+          if restore_missing_block_links!(entry_schema, entry_id, target_entry),
+            do: load_for_restore(entry_schema, entry_id),
+            else: current_entry
 
         restore_params = prepare_restore_params(target_entry, current_entry, publish?, user, opts[:form])
 
@@ -471,6 +486,7 @@ defmodule Brando.Revisions do
 
         with :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
              {:ok, updated_entry} <- Query.update(changeset),
+             :ok <- sync_restored_blocks(entry_schema, updated_entry, target_entry),
              {:ok, updated_entry} <- recompute_derived(updated_entry),
              {:ok, identifier_result} <- Content.update_identifier(entry_schema, updated_entry),
              {:ok, _} <- Brando.Publisher.schedule_publishing(updated_entry, changeset, user) do
@@ -508,6 +524,34 @@ defmodule Brando.Revisions do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp load_for_restore(entry_schema, entry_id),
+    do: entry_schema |> Repo.get!(entry_id) |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
+
+  # A block of a module in the trash that the entry does not hold now does
+  # not come back (`Content.Blocks.guard_written_modules/2`). Checked
+  # against the entry before the restore reattaches the detached blocks it
+  # puts back, after which they would count as held.
+  defp guard_trashed_modules!(target_entry, current_entry) do
+    case Content.Blocks.guard_written_modules(target_entry, Content.Blocks.held_module_blocks(current_entry)) do
+      :ok -> :ok
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  # The restored blocks are at their modules as they are now, or behind
+  # them; none shows a revision's old settings while it counts as current
+  defp sync_restored_blocks(entry_schema, entry, target_entry) do
+    restored =
+      if function_exported?(entry_schema, :__blocks_fields__, 0),
+        do:
+          entry_schema.__blocks_fields__()
+          |> Enum.flat_map(&List.wrap(Map.get(target_entry, :"entry_#{&1.name}")))
+          |> BlockIdentity.index(),
+        else: %{}
+
+    Content.Blocks.sync_restored_blocks(entry, restored)
   end
 
   # A page's trail is computed from its parents, not content of the revision:
@@ -686,12 +730,12 @@ defmodule Brando.Revisions do
   # content block remains. Recreate that link before casting the historical
   # tree so Ecto can match and update the existing nested block instead of
   # trying to insert a new belongs_to alongside the old `block_id`.
+  # Whether it relinked any.
   defp restore_missing_block_links!(entry_schema, entry_id, target_entry) do
-    if function_exported?(entry_schema, :__blocks_fields__, 0) do
-      Enum.each(entry_schema.__blocks_fields__(), fn block_field ->
-        restore_missing_block_field_links!(entry_schema, entry_id, target_entry, block_field)
-      end)
-    end
+    function_exported?(entry_schema, :__blocks_fields__, 0) and
+      entry_schema.__blocks_fields__()
+      |> Enum.map(&restore_missing_block_field_links!(entry_schema, entry_id, target_entry, &1))
+      |> Enum.any?()
   end
 
   defp restore_missing_block_field_links!(entry_schema, entry_id, target_entry, block_field) do
@@ -701,31 +745,36 @@ defmodule Brando.Revisions do
 
     target_entry
     |> Map.get(association_name, [])
-    |> Enum.each(fn entry_block ->
-      restore_missing_block_link!(entry_block_schema, block_schema, entry_id, entry_block)
-    end)
+    |> Enum.map(&restore_missing_block_link!(entry_block_schema, block_schema, entry_id, &1))
+    |> Enum.any?()
   end
 
-  defp restore_missing_block_link!(_entry_block_schema, _block_schema, _entry_id, %{id: nil}), do: :ok
+  defp restore_missing_block_link!(_entry_block_schema, _block_schema, _entry_id, %{id: nil}), do: false
 
   defp restore_missing_block_link!(entry_block_schema, block_schema, entry_id, entry_block) do
-    if is_nil(Repo.get(entry_block_schema, entry_block.id)) do
-      if Repo.get(block_schema, entry_block.block_id) do
-        Repo.insert_all(
-          entry_block_schema,
-          [
-            %{
-              id: entry_block.id,
-              entry_id: entry_id,
-              block_id: entry_block.block_id,
-              sequence: entry_block.sequence
-            }
-          ],
-          on_conflict: :nothing
-        )
-      else
+    cond do
+      Repo.get(entry_block_schema, entry_block.id) ->
+        false
+
+      Repo.get(block_schema, entry_block.block_id) ->
+        {count, _} =
+          Repo.insert_all(
+            entry_block_schema,
+            [
+              %{
+                id: entry_block.id,
+                entry_id: entry_id,
+                block_id: entry_block.block_id,
+                sequence: entry_block.sequence
+              }
+            ],
+            on_conflict: :nothing
+          )
+
+        count > 0
+
+      true ->
         Repo.rollback({:revision, {:missing_block, entry_block.block_id}})
-      end
     end
   end
 

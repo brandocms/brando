@@ -804,6 +804,20 @@ defmodule BrandoAdmin.Components.Activity do
       gettext("The schedule was cancelled")
     ]
 
+  defp lines(
+         %{details: %{"scheduled_revision" => %{"reason" => "module_in_trash"} = refused}, revision: revision},
+         _fields,
+         _states
+       ),
+       do: [
+         gettext("Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash",
+           revision: revision,
+           block: refused["block"] |> Brando.Activity.decode_place() |> Brando.Content.block_place(),
+           module: Brando.Type.I18nString.localized(refused["module"]) || ""
+         ),
+         gettext("The schedule was cancelled")
+       ]
+
   defp lines(%{details: %{"scheduled_revision" => %{"reason" => "invalid"}}, revision: revision}, fields, _states),
     do: [
       gettext("Revision #%{revision} was not published as scheduled: it is no longer valid", revision: revision),

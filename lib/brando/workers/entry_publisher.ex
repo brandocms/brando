@@ -22,7 +22,8 @@ defmodule Brando.Worker.EntryPublisher do
   user no longer exists.
 
   A scheduled revision that no longer validates (a fragment key that no
-  longer fits its format) or whose entry is in the trash is not retried: the
+  longer fits its format), that would bring back a block of a module in the
+  trash, or whose entry is in the trash is not retried: the
   job is cancelled and the schedule dropped, and Activity says why. A unique
   value that the database refuses is retried on the next two attempts, as
   another save may have taken it at the same moment; on the third it is
@@ -151,6 +152,17 @@ defmodule Brando.Worker.EntryPublisher do
       {:error, :in_trash} ->
         Revisions.drop_schedule_in_trash(schema, id, revision, user, fn -> current_revision_job?(job) end)
         {:cancel, :in_trash}
+
+      # The revision would bring back a block of a module in the trash.
+      # Trying again gives the same answer until someone restores the
+      # module, and then the revision may be stale: the schedule is
+      # dropped, with a note in Activity naming the module and the block.
+      {:error, {:module_in_trash, refusal}} ->
+        Revisions.drop_schedule_with_trashed_module(schema, id, revision, user, refusal, fn ->
+          current_revision_job?(job)
+        end)
+
+        {:cancel, :module_in_trash}
 
       # The revision no longer validates, such as a fragment key that no
       # longer fits its format: trying again gives the same answer. The

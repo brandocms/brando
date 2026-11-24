@@ -241,9 +241,35 @@ defmodule Brando.Content do
     )
   end
 
-  defp block_place({:described, description}), do: "“#{description}”"
-  defp block_place({:root, position}), do: gettext("block %{number}", number: position)
-  defp block_place({:inside, place}), do: gettext("a block inside %{block}", block: block_place(place))
+  @doc """
+  The editor's text for `{:error, {:module_in_trash, refusal}}` from a
+  revision restore (`:revision`) or a duplicate (`:duplicate`), where
+  nothing was edited that could be saved again
+  (`Brando.Content.Blocks.guard_written_modules/2`).
+  """
+  def module_in_trash_message(%{module: name, block: place}, :revision) do
+    gettext(
+      "Not restored: %{block} of the revision uses the module “%{module}”, which is in the trash. Restore the module from the trash first.",
+      block: block_place(place),
+      module: translated_name(name)
+    )
+  end
+
+  def module_in_trash_message(%{module: name, block: place}, :duplicate) do
+    gettext(
+      "Not duplicated: %{block} uses the module “%{module}”, which is in the trash. Restore the module from the trash, or remove the block, first.",
+      block: block_place(place),
+      module: translated_name(name)
+    )
+  end
+
+  @doc """
+  How the editor finds a block a refusal names (`module_in_trash_message/1`):
+  by its description, or by its place among the entry's blocks.
+  """
+  def block_place({:described, description}), do: "“#{description}”"
+  def block_place({:root, position}), do: gettext("block %{number}", number: position)
+  def block_place({:inside, place}), do: gettext("a block inside %{block}", block: block_place(place))
 
   defp translated_name(name), do: Brando.Type.I18nString.localized(name) || ""
 
