@@ -345,6 +345,11 @@ msgstr "En annen sync_translation i dette forslaget lagrer allerede denne overse
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Another version has become the source of a translation in this proposal since it was approved. Prepare the proposal again."
+msgstr "En annen versjon har blitt kilden til en oversettelse i dette forslaget siden det ble godkjent. Lag forslaget på nytt."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Approve this version of the proposal before applying it."
 msgstr "Godkjenn denne versjonen av forslaget før du utfører det."
 

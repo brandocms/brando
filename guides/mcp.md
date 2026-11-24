@@ -322,8 +322,11 @@ made for the preview in a transaction that is rolled back once the page is
 rendered, so nothing of it is kept; making it takes the permission to create
 the translation, and is refused once the language has a version. While the
 page renders, the preview holds a database connection, the copy's rows and
-a lock on the source: a sync job, an apply, or another preview of the same
-translation waits for it, until the page is rendered.
+locks on its sources and their translation groups: a sync job, an apply, or
+another preview of the same translation waits for it. The copy and the
+render get the repo's timeout (15 seconds by default), counted from when the
+copy starts; a page that takes longer is stopped there, its copy and locks
+let go, and the tool is told the page took too long to render.
 
 In multi-site mode the link opens only under the site environment the
 proposal belongs to: on the admin's host and on that environment's own

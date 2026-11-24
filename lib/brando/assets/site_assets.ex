@@ -343,6 +343,24 @@ defmodule Brando.Assets.SiteAssets do
   def override, do: Process.get(@override_key)
 
   @doc """
+  Wraps `fun` to run, in another process, with the set installed in this one
+  (`override/0`), so templates rendered there read the same pinned set.
+  """
+  @spec capture_override((-> result)) :: (-> result) when result: var
+  def capture_override(fun) when is_function(fun, 0) do
+    case override() do
+      nil ->
+        fun
+
+      cached ->
+        fn ->
+          {:ok, result} = with_override(cached, fun)
+          result
+        end
+    end
+  end
+
+  @doc """
   Resolves a request path to a file in the set `environment` uses (its own,
   else the scope's active set) or, failing that, in a set pinned by an
   unexpired shared preview for the same scope. Pinned lookups

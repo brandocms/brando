@@ -218,4 +218,80 @@ defmodule Brando.ProposalFixtures do
 
     page
   end
+
+  # A source page with a card drawn only when its link var's identifier is
+  # there, linked to a page that has an English version, and a kicker to
+  # translate: the pending version points the card at the English page.
+  def card_pages(user, opts \\ []) do
+    card =
+      module!(
+        user,
+        "Card",
+        ~s(<h2 class="kicker">{{ kicker }}</h2>) <>
+          ~s({% if project and project.identifier %}<a class="card">{{ project.identifier.title }}</a>{% endif %}),
+        vars: [
+          %{key: "kicker", type: "string", label: "Kicker"},
+          %{key: "project", type: "link", label: "Project", link_type: "identifier"}
+        ]
+      )
+
+    source = Factory.insert(:page, title: "Om oss", uri: "om-oss", language: :no, creator: user)
+    other = Factory.insert(:page, title: "Prosjekt", uri: "prosjekt", language: :no, creator: user)
+    {:ok, identifier} = Brando.Content.create_identifier(Page, other)
+
+    block =
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => card.id,
+          "creator_id" => user.id,
+          "source" => to_string(Page.Blocks)
+        },
+        user
+      )
+      |> Repo.insert!()
+
+    Repo.insert!(%Brando.Content.Var{
+      key: "kicker",
+      type: :string,
+      label: %{"en" => "Kicker"},
+      value: "Våre prosjekter",
+      block_id: block.id,
+      sequence: 0
+    })
+
+    Repo.insert!(%Brando.Content.Var{
+      key: "project",
+      type: :link,
+      link_type: :identifier,
+      label: %{"en" => "Project"},
+      identifier_id: identifier.id,
+      block_id: block.id,
+      sequence: 1
+    })
+
+    struct(Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
+
+    if Keyword.get(opts, :other_en, true) do
+      {:ok, other_en} = Brando.Translations.create_target(Page, other.id, :en, user)
+      {:ok, _} = Brando.Pages.update_page(other_en.id, %{title: "Project"}, user)
+    end
+
+    %{source: source, other: other, kicker: "entry_blocks/#{block.uid}/vars/kicker/value"}
+  end
+
+  # The batch translating the kicker, as translation_work gives its token
+  def translate_kicker(units, scope, target, kicker) do
+    units = Enum.filter(units, &(&1.answerable and &1.key == kicker))
+    [_] = units
+
+    %{
+      "op" => "translate",
+      "target" => target,
+      "source_digest" => Brando.Translations.Work.token(scope, units),
+      "texts" => %{kicker => "Our projects"}
+    }
+  end
 end
