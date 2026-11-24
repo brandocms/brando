@@ -297,7 +297,9 @@ another field (`source: :title`) is derived again from the translated text:
 
 * `length:`, `min_length:`, `max_length:`: non-negative integers, checked
   with `validate_length/3` on strings and arrays.
-* `format:`: a regex, checked with `validate_format/3`.
+* `format:`: a regex, checked with `validate_format/3`. The error reads
+  `"has invalid format"`, or `format_message:`, which says what the field
+  needs. `format_message:` without `format:` fails the compilation.
 * `acceptance: true`: `validate_acceptance/2`, for a virtual "I accept"
   checkbox.
 * `confirmation: true`: `validate_confirmation/2`, which compares the field
@@ -309,6 +311,9 @@ another field (`source: :title`) is derived again from the translated text:
 ```elixir
 attribute :title, :string, required: true, constraints: [max_length: 120]
 attribute :email, :string, constraints: [format: ~r/@/]
+
+attribute :tagline, :string,
+  constraints: [format: ~r/\.\z/, format_message: "ends with a full stop"]
 ```
 
 Relations take `length`, `min_length` and `max_length` on collections

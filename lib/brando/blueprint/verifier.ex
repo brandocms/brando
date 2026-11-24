@@ -24,8 +24,16 @@ defmodule Brando.Blueprint.Verifier do
     :one_of_message
   ]
 
-  @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :media_path, :min_length] ++
-                               @shared_constraint_keys
+  @attribute_constraint_keys [
+                               :acceptance,
+                               :confirmation,
+                               :format,
+                               :format_message,
+                               :length,
+                               :max_length,
+                               :media_path,
+                               :min_length
+                             ] ++ @shared_constraint_keys
   @non_string_collision_types [
     :array,
     :boolean,
@@ -609,10 +617,15 @@ defmodule Brando.Blueprint.Verifier do
     allowed = constraint_keys_for(kind)
     unknown = Keyword.keys(constraints) -- allowed
 
-    if unknown == [] do
-      verify_constraint_values(dsl_state, kind, entity, constraints)
-    else
-      error(dsl_state, section(kind), entity, "`:constraints` contains unsupported options #{inspect(unknown)}")
+    cond do
+      unknown != [] ->
+        error(dsl_state, section(kind), entity, "`:constraints` contains unsupported options #{inspect(unknown)}")
+
+      Keyword.has_key?(constraints, :format_message) and not Keyword.has_key?(constraints, :format) ->
+        error(dsl_state, section(kind), entity, "constraint :format_message needs a :format constraint beside it")
+
+      true ->
+        verify_constraint_values(dsl_state, kind, entity, constraints)
     end
   end
 
@@ -648,7 +661,7 @@ defmodule Brando.Blueprint.Verifier do
     do: is_list(fields) and fields != [] and Enum.all?(fields, &is_atom/1)
 
   defp valid_constraint?(_, _, {key, message})
-       when key in [:one_of_message, :exactly_one_of_message, :check_message],
+       when key in [:one_of_message, :exactly_one_of_message, :check_message, :format_message],
        do: is_binary(message)
 
   defp valid_constraint?(_, _, {:check, name}) when is_atom(name) and not is_nil(name), do: true

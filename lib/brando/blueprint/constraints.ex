@@ -12,7 +12,8 @@ defmodule Brando.Blueprint.Constraints do
       - `min_length`
       - `max_length`
       - `length`
-      - `format` - see `Ecto.Changeset.validate_format/4`
+      - `format` - see `Ecto.Changeset.validate_format/4`; `format_message`
+        overrides its "has invalid format"
       - `acceptance` - see `Ecto.Changeset.validate_acceptance/3`
       - `confirmation` - see `Ecto.Changeset.validate_confirmation/3`
       - `media_path` - `true`: a path, or a map of paths, stored on a media record;
@@ -162,8 +163,10 @@ defmodule Brando.Blueprint.Constraints do
   defp run_validation({:length, length}, validated_changeset, %{name: name}),
     do: validate_length(validated_changeset, name, is: length)
 
-  defp run_validation({:format, format}, validated_changeset, %{name: name}),
-    do: validate_format(validated_changeset, name, format)
+  defp run_validation({:format, format}, validated_changeset, %{name: name} = attr) do
+    message = constraint_message(attr, :format_message, "has invalid format")
+    validate_format(validated_changeset, name, format, message: message)
+  end
 
   defp run_validation({:acceptance, true}, validated_changeset, %{name: name}),
     do: validate_acceptance(validated_changeset, name)
@@ -230,6 +233,8 @@ defmodule Brando.Blueprint.Constraints do
   defp run_validation({:exactly_one_of_message, _message}, changeset, _field_or_asset), do: changeset
 
   defp run_validation({:check_message, _message}, changeset, _field_or_asset), do: changeset
+
+  defp run_validation({:format_message, _message}, changeset, _field_or_asset), do: changeset
 
   defp run_validation({:require_blocks, required_classes}, changeset, %{name: name, opts: %{module: :blocks}}) do
     # Skip validation for drafts

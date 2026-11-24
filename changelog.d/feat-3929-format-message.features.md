@@ -1,0 +1,1 @@
+- An attribute's `format:` constraint takes a `format_message:` that replaces "has invalid format" in the form and in a proposal's problems.
