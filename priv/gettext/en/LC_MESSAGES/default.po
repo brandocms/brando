@@ -21964,6 +21964,11 @@ msgstr ""
 msgid "This entry"
 msgstr "This entry"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This entry changed since the list was shown. Check it again."
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "This entry has no address of its own, so no Markdown version."

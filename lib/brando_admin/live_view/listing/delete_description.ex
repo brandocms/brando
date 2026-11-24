@@ -43,7 +43,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   `translations_source`, or `detach`), and `values`, which go with the event
   too: `translations_group`, the group as shown
   (`Brando.Translations.source_group/2`). Two choices come as a list. With
-  no choice the viewer may take, the dialog is `refused`.
+  no choice the viewer may take, the dialog is `refused`. A group whose
+  source went away while it was read gives `%{stale: true}`: no dialog.
   """
   def describe(schema, entry) do
     case Brando.Content.guard_delete(schema, entry) do
@@ -109,6 +110,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   defp with_translations(description, schema, entry) do
     case Brando.Translations.source_group(schema, entry.id) do
       nil -> description
+      :changed -> %{stale: true}
       group -> translations_choice(description, schema, group)
     end
   end

@@ -22,7 +22,8 @@ import { alertConfirm, alertWarning } from '../../alerts'
  * when what it showed has changed.
  *
  * A reply with `refused` says why the action can't be done (a module that
- * blocks use): a warning with only OK, and nothing is pushed.
+ * blocks use): a warning with only OK, and nothing is pushed. One with
+ * `stale` opens nothing: the entry changed, and the server says so.
  */
 // The chosen values join each push of the JS command
 function withValues(event, values) {
@@ -84,6 +85,7 @@ export default app => ({
 
       if (describe) {
         this.pushEvent(describe, { id: this.el.getAttribute('phx-value-id') }, reply => {
+          if (reply && reply.stale) return
           if (reply && reply.refused) alertWarning(reply.title, { html: reply.html })
           else confirm(reply && (reply.message || reply.html) ? reply : fromElement)
         })

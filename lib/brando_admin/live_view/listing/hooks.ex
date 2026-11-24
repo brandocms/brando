@@ -142,6 +142,11 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
         _ -> %{}
       end
 
+    if reply[:stale] do
+      delete_refused(gettext("This entry changed since the list was shown. Check it again."))
+      update_list_entries(schema)
+    end
+
     {:halt, reply, socket}
   end
 

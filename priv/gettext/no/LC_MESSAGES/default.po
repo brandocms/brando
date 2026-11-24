@@ -21966,6 +21966,11 @@ msgstr "Denne e-posten ble sendt av %{site}."
 msgid "This entry"
 msgstr "Denne oppføringen"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This entry changed since the list was shown. Check it again."
+msgstr "Denne oppføringen er endret siden listen ble vist. Sjekk den igjen."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "This entry has no address of its own, so no Markdown version."

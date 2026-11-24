@@ -143,6 +143,11 @@ defmodule BrandoAdmin.DeleteSourceDialogTest do
     assert trashed_at(c.english) == nil
   end
 
+  test "a source that went away while its group was read gives no dialog", c do
+    Repo.delete_all(from(p in Page, where: p.id == ^c.source.id))
+    assert DeleteDescription.describe(Page, c.source) == %{stale: true}
+  end
+
   test "Delete selected still refuses a source, with the error toast", c do
     view = open_listing(c.conn)
     render_click(view, "delete_selected", %{"ids" => Jason.encode!([c.source.id])})

@@ -79,6 +79,13 @@ defmodule Brando.Translations.DeleteSourceTest do
       assert independent.entry.id == german.id
     end
 
+    test "is :changed when the source went away while it was read", c do
+      # As a purge that commits between reading the source's membership and
+      # its entries leaves it
+      Repo.delete_all(from(p in Page, where: p.id == ^c.source.id))
+      assert Translations.source_group(Page, c.source.id) == :changed
+    end
+
     test "is nil for a translation, and for a source with only independent versions", c do
       assert Translations.source_group(Page, c.english.id) == nil
       {:ok, _} = Translations.make_independent(Page, c.english.id, c.user)

@@ -1781,6 +1781,9 @@ defmodule Brando.Translations do
   whether each is published or in the trash. `delete_with_translations/5`
   and `delete_keeping_translations/6` take it back, and change nothing when
   the group no longer matches it.
+
+  `:changed` when the source went away while the group was read (deleted for
+  good meanwhile).
   """
   def source_group(schema, entry_id) do
     with true <- synchronized?(schema),
@@ -1807,7 +1810,13 @@ defmodule Brando.Translations do
         }
       end
 
-    {[source], others} = Enum.split_with(rows, &(&1.member.role == :source))
+    case Enum.split_with(rows, &(&1.member.role == :source)) do
+      {[source], others} -> describe_rows(source, others, rows)
+      _ -> :changed
+    end
+  end
+
+  defp describe_rows(source, others, rows) do
     {translations, independent} = Enum.split_with(others, & &1.member.synchronized)
 
     if translations != [] do
