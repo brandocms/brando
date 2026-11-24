@@ -27,7 +27,9 @@ defmodule Mix.Tasks.Brando.Modules do
   and structural migrations, and updates only the baseline lockfile after a
   successful apply. `--dry-run` performs no database or file writes. An update
   that removes a ref or var says how many blocks hold it, and prints the
-  `resolve` command that drops it from them after the import.
+  `resolve` command that drops it from them after the import. A key the
+  file renames (`renamed_from`) whose values an apply leaves over its limit
+  gets the command that moves them instead, on a line of its own.
 
   `plan --release` plans the definitions the release ships
   (`config :brando, Brando.Content.Definitions, release_path: "priv/modules"`)
@@ -56,7 +58,9 @@ defmodule Mix.Tasks.Brando.Modules do
   refs and vars they hold that the module no longer defines (a dry run).
   `--drop KEY` drops a leftover and `--map OLD=NEW` moves it onto a ref or var
   the module defines now; both are repeatable, and a key can be written
-  `ref:KEY` or `var:KEY` when a ref and a var share it. Nothing is written
+  `ref:KEY` or `var:KEY` when a ref and a var share it. A block whose target
+  holds a value of its own keeps both, and is listed; a key no block holds
+  as a leftover any more is named and skipped. Nothing is written
   without `--apply`. Applying stores a revision of every entry it changes,
   records the change in Activity and moves open editors onto the new rows
   (`Brando.Content.StaleBlocks`).

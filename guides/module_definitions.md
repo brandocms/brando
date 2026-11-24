@@ -1009,7 +1009,8 @@ conflict once you choose the release's version.
 The first version moves values that keep their type. The plan refuses
 (`migration_required`, naming the blocks and the entries you may open) a
 rename that also changes the type (rename in one release and change the type
-in the next), a block whose stored value doesn't fit the new key (stored
+in the next; when `resolve --map` converts the values, the refusal also
+prints the command that moves them after an apply without `renamed_from`), a block whose stored value doesn't fit the new key (stored
 under another type, or not one of a select's options), and a block that
 already holds a value of its own under the new key, a leftover from an
 older version of the module. A value that is empty or equal to the
@@ -1023,16 +1024,43 @@ they typed, and they save again.
 
 Every editor's save in the environment waits while values move, so one
 apply moves values in at most 500 entries or 1,500 blocks, counted across
-all the modules it applies (a 500-entry move takes under two seconds). A
-module over that on its own is refused in the plan. Modules each within it
-but over it together are refused when applied together: select fewer of them
-on the Release changes screen, or apply them one by one with
-`mix brando.modules apply --release --uid`. Or take `renamed_from` out and
-move the values after the apply with the `resolve --map` command the
-refusal prints for each module, as a user who may edit the entries that
-hold them (`USER_ID` when the plan ran without one). Without `renamed_from`
-the plan's own resolve line for that module drops the old key instead: run
-the refusal's command, not that one.
+all the modules it applies (a 500-entry move takes under two seconds). An
+apply over that moves none of them: it adds the new keys, each block keeps
+its value under the old key as a leftover, nothing is deleted, and until
+the values move the template shows the new keys' defaults. The plan says
+so for a module over the limit on its own, and for modules selected
+together (on the Release changes screen, or with
+`mix brando.modules apply --release --uid`) that are over it together;
+each module within it on its own is planned as moving, and the apply
+decides with the blocks locked, so a count that crossed the limit since the
+review moves or leaves accordingly. The apply's output says what it moved
+and what it left, with the command that moves the rest:
+
+```
+update module kulturslider: moves no values over the apply's limit; blocks keep var title (renamed to heading) in 1600 blocks for the resolve command
+  resolve: mix brando.modules resolve --uid kulturslider --user 1 --map var:title=heading --apply
+```
+
+Run it after the apply, as a user who may edit the entries that hold the
+values (`USER_ID` when the plan ran without a user; the status at boot
+names the `--map` to run). Keep `renamed_from` in the file until it has
+run: while it names the old key, every plan of the module, the release
+status and the module's applied row on the Release changes screen print
+that command. A module that also removes keys no rename accounts for gets
+their `--drop` command on a line of its own, so moving never needs a drop.
+An editor may fill in the new key in a block before the command runs: the
+command keeps that value, leaves the old one as a leftover in that block,
+and lists the block, for **Resolve blocks**. Run again once the values have
+moved, it says there is nothing left for that key. An apply over the limit
+records no move in the release's history, so it can be reverted like any
+other.
+
+Over the limit, the apply still refuses what the command can't move either:
+a rename that changes type, and a ref whose region or footnotes hold blocks
+(`--map` renames the ref, not what is in its slot); move those blocks out of
+the slot first, or apply fewer modules at once. A block whose value doesn't
+fit the new key is refused by the command, which names it, not by the
+apply.
 
 `renamed_from` is read from the file and never stored: the database keeps no
 rename, and an export doesn't write it. Keep it in the file until every
@@ -1040,19 +1068,20 @@ environment has applied that release. After its apply it does nothing. In an
 environment that already defines the new key, or no longer the old one, the
 apply keeps the old key in the blocks as a leftover, as for a removal, and
 the plan prints the resolve command that moves it (`--map var:title=heading`)
-when a dry run of it moves something, refuses nothing and replaces no
-block's value, and the old ref has no blocks in its region or footnotes
+when a dry run of it moves something and refuses nothing, and the old ref has no blocks in its region or footnotes
 (`--map` doesn't move those); otherwise it points to **Resolve blocks**. Without `renamed_from`, a rename is a removal
-and an addition, and `--map OLD=NEW` moves the values afterwards:
+and an addition, and `--map OLD=NEW` moves the values afterwards, but the plan has nothing
+to go on and its resolve line drops the old key: name the move yourself:
 
 ```sh
 mix brando.modules resolve --uid kulturslider --user 1 --map title=heading
 mix brando.modules resolve --uid kulturslider --user 1 --map title=heading --apply
 ```
 
-The first `resolve` is a dry run that lists what it moves and what it
-would replace; a mapping that loses content is refused, and **Resolve
-blocks** in the admin makes exceptions per block.
+The first `resolve` is a dry run that lists what it moves; a mapping that
+loses content is refused, a block whose new key holds a value of its own
+keeps both (the command lists it), and **Resolve blocks** in the admin makes
+exceptions per block.
 
 `renamed_from` is refused when the files are read on a table template's var,
 onto the key itself, from a key the file still defines (a chain of renames is
@@ -1243,7 +1272,11 @@ mix brando.modules resolve --uid kulturslider --user 1 --drop link --map title=h
 mix brando.modules resolve --uid kulturslider --user 1 --drop link --map title=heading --apply
 ```
 
-Write `ref:KEY` or `var:KEY` when a ref and a var share a key. Resolving stores
+Write `ref:KEY` or `var:KEY` when a ref and a var share a key. On the
+command line, a block whose target already holds a value of its own keeps
+both, and the command lists it for **Resolve blocks**, where you choose per
+block; a key no block holds as a leftover any more is named and skipped.
+Resolving stores
 a revision of every entry it changes first (History can restore it), re-syncs
 the blocks with the module, stamps their version, renders them and their
 entries, records the change in Activity, and moves editors who have an entry
