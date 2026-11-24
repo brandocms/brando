@@ -3,7 +3,9 @@
 # such as an independent German article linked to a synchronized group's
 # source. A Blueprint's `language` values are the installation's languages
 # when it compiles, two in the tests, so test_helper.exs compiles this file
-# alone, with German added for its compile.
+# alone, with German added for its compile. The traits' protocols are
+# consolidated by then: these articles have no implementations of them, so
+# keep them to the language versions tests.
 #
 # Their read policy lets a person read only the entries they created
 # (`Brando.AuthorizationTestPolicy`), and their update route is the test

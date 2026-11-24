@@ -58,13 +58,17 @@ defmodule BrandoIntegrationWeb.Villain.Filters do
 end
 
 # Articles in three languages (test/support/three_language_articles.exs): the
-# installation's two and German, for the compile of that file only
+# installation's two and German, for the compile of that file only. The
+# traits' protocols are consolidated by now, so their implementations for
+# these articles are left out, quietly.
 languages = Application.fetch_env!(:brando, :languages)
 Application.put_env(:brando, :languages, languages ++ [[value: "de", text: "Deutsch"]])
+Code.put_compiler_option(:ignore_already_consolidated, true)
 
 try do
   Code.require_file("support/three_language_articles.exs", __DIR__)
 after
+  Code.put_compiler_option(:ignore_already_consolidated, false)
   Application.put_env(:brando, :languages, languages)
 end
 
