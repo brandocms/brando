@@ -339,22 +339,7 @@ defmodule BrandoAdmin.SubformRelationTest do
   # the upload manager, a provider upload and the image editor's copy
   # (`commit_entry_field_asset`), and the drawers' saves.
   describe "a delivery to a row after a row marked for deletion" do
-    setup ctx do
-      {:ok, article} =
-        SyncTest.create_article(
-          %{
-            title: "Example Hotel",
-            slug: "example-hotel",
-            language: "en",
-            status: "published",
-            items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
-          },
-          ctx.current_user
-        )
-
-      [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
-      %{article: article, a: a, b: b, c: c}
-    end
+    setup :three_items
 
     test "a picked image goes on its row", ctx do
       view = open(ctx)
@@ -515,22 +500,7 @@ defmodule BrandoAdmin.SubformRelationTest do
   # The upload names the row by its key as well as its index: the rows may
   # be reordered, or the row removed, while it uploads (#3899)
   describe "an upload delivered by its row's key" do
-    setup ctx do
-      {:ok, article} =
-        SyncTest.create_article(
-          %{
-            title: "Example Hotel",
-            slug: "example-hotel",
-            language: "en",
-            status: "published",
-            items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
-          },
-          ctx.current_user
-        )
-
-      [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
-      %{article: article, a: a, b: b, c: c}
-    end
+    setup :three_items
 
     test "goes to its row after the rows are reordered", ctx do
       view = open(ctx)
@@ -778,6 +748,24 @@ defmodule BrandoAdmin.SubformRelationTest do
       path: "image/#{name}.jpg",
       title: %{"en" => title}
     )
+  end
+
+  # An article with the rows A, B and C
+  defp three_items(ctx) do
+    {:ok, article} =
+      SyncTest.create_article(
+        %{
+          title: "Example Hotel",
+          slug: "example-hotel",
+          language: "en",
+          status: "published",
+          items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
+        },
+        ctx.current_user
+      )
+
+    [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
+    %{article: article, a: a, b: b, c: c}
   end
 
   defp open(%{conn: conn, article: article}) do

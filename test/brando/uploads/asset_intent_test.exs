@@ -58,7 +58,10 @@ defmodule Brando.Uploads.AssetIntentTest do
     base = %{kind: "entry_field", field: "title", path: ["title", 1], asset_type: "image", deliver_topic: @topic}
 
     assert {:ok, %{"row_key" => "id-12"}} = AssetIntent.normalize(Map.put(base, :row_key, "id-12"))
-    assert {:ok, %{"row_key" => "new-28dRdii7fUD2aV"}} = AssetIntent.normalize(Map.put(base, :row_key, "new-28dRdii7fUD2aV"))
+
+    assert {:ok, %{"row_key" => "new-28dRdii7fUD2aV"}} =
+             AssetIntent.normalize(Map.put(base, :row_key, "new-28dRdii7fUD2aV"))
+
     assert {:ok, %{"row_key" => nil}} = AssetIntent.normalize(Map.put(base, :row_key, ""))
     assert {:ok, %{"row_key" => nil}} = AssetIntent.normalize(base)
     assert {:error, "Invalid upload row"} = AssetIntent.normalize(Map.put(base, :row_key, "12"))
