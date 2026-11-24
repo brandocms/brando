@@ -539,7 +539,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
+  # The keys of the rows a save gave an id (`Form`, `announce_saved_rows`).
+  defp handle_asset_delivery_info({:saved_row_keys, keys}, socket),
+    do: {:halt, assign(socket, :saved_row_keys, Map.merge(socket.assigns[:saved_row_keys] || %{}, keys))}
+
   defp handle_asset_delivery_info({:asset_ready, target, asset}, socket) do
+    target = saved_row(target, socket)
+
     # Gallery additions must land ONE PER RENDER CYCLE — parallel uploads
     # deliver in quick succession and LiveView batches the resulting
     # send_updates, making the block process multiple adds against the same
@@ -588,6 +594,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_asset_delivery_info(_, socket), do: {:cont, socket}
+
+  # An upload started in a new row names the key the row had then; a save
+  # since has given the row an id, which the form names it by now.
+  defp saved_row(%{"row_key" => "new-" <> _ = key} = target, socket),
+    do: %{target | "row_key" => Map.get(socket.assigns[:saved_row_keys] || %{}, key, key)}
+
+  defp saved_row(target, _socket), do: target
 
   defp upload_elsewhere_message,
     do: gettext("The upload finished in a tab that is no longer editing. It is in the library, not in the entry.")

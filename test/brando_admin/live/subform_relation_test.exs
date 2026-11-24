@@ -542,6 +542,32 @@ defmodule BrandoAdmin.SubformRelationTest do
       assert cover_ids(render(view)) == ["", ""]
     end
 
+    # The save gives the new row an id while its upload is on its way; the
+    # upload still names the key the row had when it started
+    test "into a new row goes to that row after a save", ctx do
+      view = open(ctx)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][0][label]"])))
+      |> render_click("add_subentry", %{})
+
+      settle(view)
+      ["new-" <> _ = key] = view |> render() |> row_keys() |> Enum.filter(&String.starts_with?(&1, "new-"))
+
+      stay(view)
+      save_and_stay(view)
+      [saved] = ctx |> saved_covers() |> Enum.map(&elem(&1, 0)) |> Kernel.--([ctx.a.id, ctx.b.id, ctx.c.id])
+      assert "id-#{saved}" in row_keys(render(view))
+
+      target = %{"kind" => "entry_field", "field" => "cover", "path" => ["items", 3], "row_key" => key}
+      send(view.pid, {:asset_ready, target, ctx.image})
+
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][" <> _, value: ^image_id})
+      save(view)
+      assert {saved, image_id} in saved_covers(ctx)
+    end
+
     test "without a key goes to the row at its index", ctx do
       view = open(ctx)
       deliver_upload(view, [:items, 1], ctx.image)
@@ -796,6 +822,23 @@ defmodule BrandoAdmin.SubformRelationTest do
     |> Floki.find(@row_cover)
     |> Floki.attribute("value")
     |> List.first()
+  end
+
+  defp row_keys(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(".subform-entry[data-row-key]")
+    |> Floki.attribute("data-row-key")
+  end
+
+  # "Save and continue editing": the form stays open on the saved entry
+  defp stay(view), do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("save_redirect_target", %{})
+
+  defp save_and_stay(view) do
+    view |> form(@form) |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 2_000)
+    view |> form(@form) |> render_submit()
+    settle(view)
   end
 
   # The first submit collects the block fields; the Submit hook then submits

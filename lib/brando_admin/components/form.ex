@@ -7958,6 +7958,7 @@ defmodule BrandoAdmin.Components.Form do
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     # The other tabs read the entry back: once all of the save is written.
     announce_save(socket, entry, save)
+    announce_saved_rows(save.changeset, entry)
 
     mutation_message =
       Brando.Gettext
@@ -8190,6 +8191,7 @@ defmodule BrandoAdmin.Components.Form do
     {socket, stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     announce_save(socket, entry, save)
+    announce_saved_rows(save.changeset, entry)
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
     {:noreply,
@@ -10902,6 +10904,37 @@ defmodule BrandoAdmin.Components.Form do
     BrandoAdmin.Toast.upload_row_gone(socket.assigns.current_user)
     socket
   end
+
+  # The keys this save's new rows had, by the saved rows' keys: an upload
+  # started in a new row still names its new key, and is delivered to the
+  # saved row (`Hooks`, `:saved_row_keys`). A list whose saved rows are not
+  # the changeset's, one for one in order, gives none, so the upload is
+  # told its row is gone rather than placed by position.
+  defp announce_saved_rows(changeset, entry) do
+    keys = changeset |> saved_row_keys(entry) |> Map.new()
+    if keys != %{}, do: send(self(), {:saved_row_keys, keys})
+  end
+
+  defp saved_row_keys(%Changeset{changes: changes}, %{} = saved),
+    do: Enum.flat_map(changes, fn {field, change} -> saved_row_keys(change, Map.get(saved, field)) end)
+
+  defp saved_row_keys([%Changeset{} | _] = rows, saved) when is_list(saved) do
+    rows = Enum.reject(rows, &(&1.action in [:replace, :delete]))
+    pairs = if length(rows) == length(saved), do: Enum.zip(rows, saved), else: []
+
+    if Enum.all?(pairs, fn {row, saved} -> row.data.id in [nil, saved.id] end),
+      do: Enum.flat_map(pairs, fn {row, saved} -> saved_row_key(row, saved) ++ saved_row_keys(row, saved) end),
+      else: []
+  end
+
+  defp saved_row_keys(_change, _saved), do: []
+
+  defp saved_row_key(row, %{id: id}) when not is_nil(id) do
+    key = SubformHelpers.row_key(row)
+    if SubformHelpers.new_key?(key), do: [{key, "id-#{id}"}], else: []
+  end
+
+  defp saved_row_key(_row, _saved), do: []
 
   # `path` with the index the row `key` names has now in its list, counted
   # as the form shows the rows (`SubformHelpers.row_key/1`); the rows above
