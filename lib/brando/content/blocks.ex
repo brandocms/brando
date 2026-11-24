@@ -639,7 +639,15 @@ defmodule Brando.Content.Blocks do
     refuse_trashed_modules(added)
   end
 
-  defp lock_block_content_tables do
+  @doc """
+  Takes the lock an entry save takes before it checks the modules of the
+  blocks it adds (`guard_added_modules/1`): `ROW EXCLUSIVE` on the refs and
+  vars tables of the current schema, which queues behind a definition apply.
+  A writer that locks module rows before it checks and writes blocks (a
+  content transfer) takes it first, so it never holds a module the apply
+  waits for while it waits for the apply.
+  """
+  def lock_block_content_tables do
     prefix = Brando.Tenant.current_prefix() || "public"
     tables = Enum.map_join(~w(content_refs content_vars), ", ", &~s("#{prefix}"."#{&1}"))
     Ecto.Adapters.SQL.query!(Repo.repo(), "LOCK TABLE " <> tables <> " IN ROW EXCLUSIVE MODE", [])

@@ -137,11 +137,19 @@ defmodule Brando.Content.Transfer.Dependencies do
       Repo.get(schema!(kind), id) ||
         Error.fail!(dgettext("content_transfer", "The %{value1} dependency is missing.", value1: kind))
 
-    if Map.get(record, :deleted_at),
-      do: Error.fail!(dgettext("content_transfer", "The %{value1} dependency has been deleted.", value1: kind))
-
+    if Map.get(record, :deleted_at), do: Error.fail!(deleted_message(kind, record, actor))
     authorize!(kind, record, actor, action)
     record
+  end
+
+  # A module in the trash is named to whoever may read it
+  defp deleted_message(kind, record, actor) do
+    if kind == "module" and Boundary.authorize(actor, :read, record) == :ok,
+      do:
+        dgettext("content_transfer", "The module “%{module}” is in the trash. Restore it from the trash first.",
+          module: Brando.Type.I18nString.localized(record.name) || ""
+        ),
+      else: dgettext("content_transfer", "The %{value1} dependency has been deleted.", value1: kind)
   end
 
   defp authorize!("identifier", record, actor, action) do

@@ -18,6 +18,7 @@ defmodule Brando.Content.Transfer do
   alias Brando.Activity
   alias Brando.Authorization.Boundary
   alias Brando.Content.Block
+  alias Brando.Content.Blocks
   alias Brando.Content.Definition.{References, Snapshot, Value}
   alias Brando.Content.Transfer.{Archive, Catalog, Contracts, Dependencies, EntryCodec, Error, Media, Portable, Receipt}
   alias Brando.Drafts.Params
@@ -465,6 +466,9 @@ defmodule Brando.Content.Transfer do
   end
 
   defp apply_plan!(plan, stage, actor) do
+    # Queues behind a definition apply before it locks the modules the
+    # imported blocks use (`Blocks.lock_block_content_tables/0`)
+    Blocks.lock_block_content_tables()
     # Lock owning rows in deterministic order; children and dependencies
     # are fingerprinted again after these locks are held.
     plan.fields
@@ -472,6 +476,7 @@ defmodule Brando.Content.Transfer do
     |> Enum.each(&Catalog.load!(&1.destination.schema, &1.destination.id, actor, :update, lock: true))
 
     lock_records!(plan)
+    guard_trashed_modules!(plan, actor)
 
     current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
 
@@ -492,6 +497,56 @@ defmodule Brando.Content.Transfer do
       end)
 
     Repo.insert!(plan_receipt(plan, before, after_fields, bindings, actor))
+  end
+
+  # A module put in the trash since the preview is refused by name, before
+  # the preview is taken again, which would find only that something changed
+  defp guard_trashed_modules!(plan, actor) do
+    bindings = preview_bindings(plan.archive.bundle, plan.bindings)
+
+    plan.fields
+    |> Enum.group_by(& &1.destination.key)
+    |> Enum.each(fn {_key, [field | _] = fields} ->
+      written = field.entry |> field_changeset(field_params(fields, bindings, actor), actor) |> Changeset.apply_changes()
+      refuse_trashed_modules!(written, field.entry, field.destination.title, plan.bindings, actor)
+    end)
+  end
+
+  @doc """
+  Fails when `written`, the entry an import is about to write over `entry`,
+  brings back a block of a module in the trash
+  (`Brando.Content.Blocks.guard_written_modules/2`). Call it in the import's
+  transaction, after `Brando.Content.Blocks.lock_block_content_tables/0`.
+  The message names `title`, the block, and the module when `actor` may read
+  it among the modules `bindings` bind.
+  """
+  def refuse_trashed_modules!(written, entry, title, bindings, actor) do
+    case Blocks.guard_written_modules(written, Blocks.held_module_blocks(entry)) do
+      :ok -> :ok
+      {:error, {:module_in_trash, refusal}} -> Error.fail!(module_in_trash_message(refusal, title, bindings, actor))
+    end
+  end
+
+  defp module_in_trash_message(%{module: name, block: place}, title, bindings, actor) do
+    readable? =
+      Enum.any?(bindings, fn {_token, record} ->
+        match?(%Brando.Content.Module{name: ^name}, record) and Boundary.authorize(actor, :read, record) == :ok
+      end)
+
+    if readable?,
+      do:
+        dgettext(
+          "content_transfer",
+          "Not imported: in “%{entry}”, %{block} uses the module “%{module}”, which is in the trash. Restore the module from the trash, then review the import again.",
+          entry: title,
+          block: Brando.Content.block_place(place),
+          module: Brando.Type.I18nString.localized(name) || ""
+        ),
+      else:
+        dgettext("content_transfer", "Not imported: in “%{entry}”, %{block} uses a module that is in the trash.",
+          entry: title,
+          block: Brando.Content.block_place(place)
+        )
   end
 
   defp plan_receipt(plan, before, after_fields, bindings, actor) do
@@ -936,6 +991,10 @@ defmodule Brando.Content.Transfer do
 
     if receipt.restored_at,
       do: Error.fail!(dgettext("content_transfer", "This import has already been restored."))
+
+    # Queues behind a definition apply before it locks the modules the
+    # restored blocks use (`Blocks.lock_block_content_tables/0`)
+    Blocks.lock_block_content_tables()
 
     if receipt.mappings["version"] == 2 do
       Brando.Content.Transfer.Entries.restore!(receipt, actor)
