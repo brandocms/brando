@@ -171,7 +171,7 @@ defmodule BrandoAdmin.ReauthTest do
        ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)},
       {BrandoAdmin.Sites.UtilsLive, ~w(authorization_apply authorization_backfill)},
       {BrandoAdmin.Users.UserListLive,
-       ~w(disable_user enable_user confirm_transfer_delete delete_selected undelete_entry)},
+       ~w(disable_user enable_user confirm_transfer_delete delete_selected delete_selected_permanently undelete_entry)},
       {BrandoAdmin.Users.GroupsLive, ~w(save delete add_member remove_member)},
       {BrandoAdmin.Users.UserSecurityLive, ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions)}
     ]

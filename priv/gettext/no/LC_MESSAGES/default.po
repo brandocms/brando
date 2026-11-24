@@ -1351,6 +1351,21 @@ msgid_plural "%{count} entries"
 msgstr[0] "1 oppføring"
 msgstr[1] "%{count} oppføringer"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgctxt "delete"
+msgid "1 entry"
+msgid_plural "%{count} entries"
+msgstr[0] "1 oppføring"
+msgstr[1] "%{count} oppføringer"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry deleted permanently"
+msgid_plural "%{count} entries deleted permanently"
+msgstr[0] "1 oppføring slettet for godt"
+msgstr[1] "%{count} oppføringer slettet for godt"
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "1 entry fails to render in Verify."
@@ -1457,6 +1472,14 @@ msgid "1 of %{total} blocks holds a value"
 msgid_plural "%{count} of %{total} blocks hold a value"
 msgstr[0] "1 av %{total} blokker har en verdi"
 msgstr[1] "%{count} av %{total} blokker har en verdi"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgctxt "delete"
+msgid "1 other entry"
+msgid_plural "%{count} other entries"
+msgstr[0] "1 annen oppføring"
+msgstr[1] "%{count} andre oppføringer"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -5816,6 +5839,11 @@ msgstr "Kunne ikke endre IndexNow"
 msgid "Could not change the environment's frontend assets"
 msgstr "Kunne ikke endre miljøets frontend-ressurser"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Could not check whether another site uses the video. Try again later."
+msgstr "Kunne ikke sjekke om et annet nettsted bruker videoen. Prøv igjen senere."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not check whether the recipient may read the entry"
@@ -6659,10 +6687,22 @@ msgstr[0] "Slette %{name}? %{count} medlem mister tillatelsene fra denne gruppen
 msgstr[1] "Slette %{name}? %{count} medlemmer mister tillatelsene fra denne gruppen."
 
 #: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{singular} permanently?"
+msgstr "Slette %{singular} for godt?"
+
+#: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
 msgid "Delete %{singular}?"
 msgstr "Slette %{singular}?"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Delete 1 entry permanently?"
+msgid_plural "Delete %{count} entries permanently?"
+msgstr[0] "Slette 1 oppføring for godt?"
+msgstr[1] "Slette %{count} oppføringer for godt?"
 
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/form/translation.ex
@@ -6699,6 +6739,12 @@ msgstr "Slett jobb"
 #, elixir-autogen, elixir-format
 msgid "Delete option"
 msgstr "Slett alternativ"
+
+#: lib/brando_admin/components/content/list.ex
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Delete permanently"
+msgstr "Slett for godt"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -10548,6 +10594,13 @@ msgstr "Den kan ikke lagres slik den er: %{errors}"
 msgid "It cannot be updated: %{error}"
 msgstr "Den kan ikke oppdateres: %{error}"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "It could not be deleted."
+msgid_plural "They could not be deleted."
+msgstr[0] "Den kunne ikke slettes."
+msgstr[1] "De kunne ikke slettes."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "It has %{count} row now."
@@ -10573,6 +10626,13 @@ msgstr[1] "De har referanser eller variabler som denne modulen ikke lenger defin
 #, elixir-autogen, elixir-format
 msgid "It is kept, but not shown on the page."
 msgstr "Den beholdes, men vises ikke på siden."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "It is no longer in the trash as it was shown: restored, deleted, or moved there again since."
+msgid_plural "They are no longer in the trash as they were shown: restored, deleted, or moved there again since."
+msgstr[0] "Den ligger ikke lenger i papirkurven slik den ble vist: gjenopprettet, slettet eller flyttet dit på nytt siden."
+msgstr[1] "De ligger ikke lenger i papirkurven slik de ble vist: gjenopprettet, slettet eller flyttet dit på nytt siden."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -10716,6 +10776,11 @@ msgstr "Eget"
 #, elixir-autogen, elixir-format
 msgid "Its requests switch immediately."
 msgstr "Forespørslene dit bytter med en gang."
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Its revisions and notes are deleted with it. This can't be undone."
+msgstr "Revisjonene og notatene slettes sammen med den. Dette kan ikke angres."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -13544,6 +13609,16 @@ msgstr "Ikke tilkoblet"
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
+msgid "Not deleted."
+msgstr "Ikke slettet."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not deleted: %{entries}."
+msgstr "Ikke slettet: %{entries}."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
 msgid "Not deleted: this entry is the source of synchronized translations, and one in the trash counts too. Restore it from the trash, then make it independent or make it the source."
 msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser, og en oversettelse i papirkurven teller også. Gjenopprett den fra papirkurven, og gjør den så selvstendig eller til kilde."
 
@@ -14697,6 +14772,13 @@ msgstr "Original"
 #, elixir-autogen, elixir-format
 msgid "Original image"
 msgstr "Originalbilde"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Other content still refers to it."
+msgid_plural "Other content still refers to them."
+msgstr[0] "Annet innhold viser fortsatt til den."
+msgstr[1] "Annet innhold viser fortsatt til dem."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -19278,6 +19360,13 @@ msgstr "Smart tekst"
 msgid "Snippet length"
 msgstr "Lengde på tekstutdrag"
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Some %{kind} still refer to it."
+msgid_plural "Some %{kind} still refer to them."
+msgstr[0] "Noen %{kind} viser fortsatt til den."
+msgstr[1] "Noen %{kind} viser fortsatt til dem."
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some deploy targets were refused. Nothing was saved."
@@ -21389,6 +21478,11 @@ msgstr "Versjonen her erstattes når du tar releasen i bruk; den tas vare på, o
 msgid "The version in %{language} is in the trash. Creating a new one deletes it for good."
 msgstr "Versjonen på %{language} ligger i papirkurven. Å opprette en ny sletter den for godt."
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "The video is being changed at its provider. Try again in a moment."
+msgstr "Videoen endres hos leverandøren. Prøv igjen om litt."
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The video is in the library. The form could not add it to the field it was uploaded for."
@@ -21398,6 +21492,11 @@ msgstr "Videoen ligger i biblioteket. Skjemaet kunne ikke legge den i feltet den
 #, elixir-autogen, elixir-format
 msgid "The video provider could not be reached. Please try again."
 msgstr "Videoleverandøren kunne ikke nås. Prøv igjen."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "The video provider could not be reached. Try again later."
+msgstr "Fikk ikke kontakt med videoleverandøren. Prøv igjen senere."
 
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
@@ -21438,6 +21537,11 @@ msgstr "Hele biblioteket. Et bilde som er satt opp for et annet felt, kopieres o
 #, elixir-autogen, elixir-format
 msgid "Their page is in the trash or gone, or they never had one. They still show on the site. Edit one to choose its page."
 msgstr "Siden deres er i papirkurven eller finnes ikke lenger, eller de har aldri hatt en. De vises fortsatt på nettstedet. Rediger et fragment for å velge siden det hører til."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Their revisions and notes are deleted with them. This can't be undone."
+msgstr "Revisjonene og notatene slettes sammen med dem. Dette kan ikke angres."
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -21914,6 +22018,11 @@ msgstr "Dette språket har allerede en versjon."
 #, elixir-autogen, elixir-format
 msgid "This language's version is in the trash. Restore it from the trash instead."
 msgstr "Versjonen på dette språket ligger i papirkurven. Gjenopprett den fra papirkurven i stedet."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "This list does not delete entries permanently. Nothing was deleted."
+msgstr "Denne listen sletter ikke oppføringer for godt. Ingenting ble slettet."
 
 #: lib/brando_admin/components/form/input/blocks/map_block.ex
 #, elixir-autogen, elixir-format
@@ -24525,6 +24634,13 @@ msgstr "Du har dette elementet åpent i en annen fane (åpnet %{time})"
 msgid "You may no longer manage these settings, so Figma was not connected."
 msgstr "Du kan ikke lenger administrere disse innstillingene, så Figma ble ikke koblet til."
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "You may not delete it permanently."
+msgid_plural "You may not delete them permanently."
+msgstr[0] "Du har ikke lov til å slette den for godt."
+msgstr[1] "Du har ikke lov til å slette dem for godt."
+
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "You may not move or delete these fragments, so the page can't be deleted."
@@ -24987,6 +25103,11 @@ msgstr "tilpasset i %{envs}"
 #, elixir-autogen, elixir-format
 msgid "deleted"
 msgstr "slettet"
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "deleted permanently"
+msgstr "slettet for godt"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format

@@ -26,6 +26,7 @@ defmodule BrandoAdmin.Components.Content.List do
     {:ok,
      socket
      |> assign(:selected_rows, [])
+     |> assign(:selection_trashed_at, %{})
      |> assign(:last_selected_row_id, nil)
      |> assign(:translation_dialog, nil)}
   end
@@ -224,10 +225,10 @@ defmodule BrandoAdmin.Components.Content.List do
 
     cond do
       shift? and command? ->
-        {:noreply, select_row(socket, parsed_id, :range)}
+        {:noreply, socket |> select_row(parsed_id, :range) |> put_selection_trashed_at()}
 
       shift? ->
-        {:noreply, select_row(socket, parsed_id, :toggle)}
+        {:noreply, socket |> select_row(parsed_id, :toggle) |> put_selection_trashed_at()}
 
       true ->
         {:noreply, socket}
@@ -261,6 +262,18 @@ defmodule BrandoAdmin.Components.Content.List do
 
     assign_entries(socket, socket.assigns)
   end
+
+  # When each selected row in the trash went there, as the row showed it:
+  # Delete permanently deletes it only if that has not changed since
+  defp put_selection_trashed_at(%{assigns: %{selected_rows: selected}} = socket) do
+    shown = for %{id: id, deleted_at: %{} = at} <- page_entries(socket.assigns.entries), into: %{}, do: {id, at}
+    trashed_at = socket.assigns.selection_trashed_at |> Map.merge(shown) |> Map.take(selected)
+    assign(socket, :selection_trashed_at, trashed_at)
+  end
+
+  defp page_entries(%{entries: entries}), do: entries
+  defp page_entries(entries) when is_list(entries), do: entries
+  defp page_entries(_entries), do: []
 
   defp select_row(socket, id, :toggle) do
     selected_rows = socket.assigns.selected_rows
@@ -448,11 +461,22 @@ defmodule BrandoAdmin.Components.Content.List do
         listing
       end)
 
-    assign_new(socket, :sortable?, fn ->
+    socket
+    |> assign_new(:sortable?, fn ->
       socket.assigns.listing.sortable && schema.has_trait(Sequenced) &&
         BrandoAdmin.Authorization.allowed?(:reorder, schema)
     end)
+    |> assign_new(:permanent_delete?, fn ->
+      socket.assigns.listing.default_actions && deletes_permanently?(socket.view)
+    end)
   end
+
+  # Delete permanently is the listing view's to handle, as its hooks decide
+  # (`BrandoAdmin.LiveView.Listing.Hooks.deletes_permanently?/1`)
+  defp deletes_permanently?(view),
+    do:
+      Code.ensure_loaded?(view) and function_exported?(view, :__deletes_permanently__, 0) and
+        view.__deletes_permanently__()
 
   defp assign_filter(%{assigns: %{listing: %{filters: filters}}} = socket, _assigns) do
     assign_new(socket, :active_filter, fn -> List.first(filters) end)
@@ -1518,6 +1542,9 @@ defmodule BrandoAdmin.Components.Content.List do
   attr :encoded_ids, :string, required: true
   attr :language, :string, default: nil
   attr :confirm, :any, default: false
+  attr :confirm_title, :string, default: nil
+  attr :confirm_label, :string, default: nil
+  attr :destructive, :boolean, default: false, doc: "the dialog's confirm button is red, and Cancel takes the focus"
   attr :danger, :boolean, default: false, doc: "a row that destroys something (`menu-item--danger`)"
   slot :inner_block, required: true
 
@@ -1537,6 +1564,9 @@ defmodule BrandoAdmin.Components.Content.List do
       class={["menu-item", @danger && "menu-item--danger"]}
       phx-hook="Brando.ConfirmClick"
       phx-confirm-click-message={@confirm}
+      phx-confirm-click-title={@confirm_title}
+      phx-confirm-click-confirm={@confirm_label}
+      phx-confirm-click-destructive={@destructive}
       phx-confirm-click={@confirm_event}
       phx-value-ids={@encoded_ids}
     >
@@ -1565,6 +1595,19 @@ defmodule BrandoAdmin.Components.Content.List do
     |> Enum.into(%{})
   end
 
+  attr :content_language, :string, required: true
+  attr :schema, :atom, required: true
+  attr :selected_rows, :list, required: true
+  attr :selection_actions, :list, required: true
+  attr :target, :any, required: true
+  attr :trash?, :boolean, default: false, doc: "the selection is in the trash: its delete is Delete permanently"
+
+  attr :permanent_delete?, :boolean,
+    default: false,
+    doc: "the listing offers Delete permanently (`default_actions`, and its view handles it)"
+
+  attr :selection_trashed_at, :map, default: %{}, doc: "each selected row's `deleted_at`, as shown"
+
   def selected_rows(assigns) do
     ctx = assigns.schema.__modules__().context
     singular = assigns.schema.__naming__().singular
@@ -1575,6 +1618,10 @@ defmodule BrandoAdmin.Components.Content.List do
     assigns =
       assigns
       |> assign(:encoded_selected_rows, Jason.encode!(assigns.selected_rows))
+      |> assign(
+        :encoded_trashed_rows,
+        Jason.encode!(for id <- assigns.selected_rows, do: %{id: id, deleted_at: assigns.selection_trashed_at[id]})
+      )
       |> assign(:selected_rows_count, Enum.count(assigns.selected_rows))
       |> assign(
         :duplicate_langs,
@@ -1618,7 +1665,7 @@ defmodule BrandoAdmin.Components.Content.List do
               </.selection_action_button>
             <% end %>
             <.selection_action_button
-              :if={BrandoAdmin.Authorization.allowed?(:delete, @schema)}
+              :if={!@trash? && BrandoAdmin.Authorization.allowed?(:delete, @schema)}
               id="selection-action-delete"
               event="delete_selected"
               confirm={delete_selected_confirm(@schema)}
@@ -1626,6 +1673,21 @@ defmodule BrandoAdmin.Components.Content.List do
               danger
             >
               {gettext("Delete selected")}
+            </.selection_action_button>
+            <.selection_action_button
+              :if={@trash? && @permanent_delete? && BrandoAdmin.Authorization.allowed?(:delete, @schema)}
+              id="selection-action-delete-permanently"
+              event={JS.push("delete_selected_permanently", value: %{entries: @encoded_trashed_rows})}
+              confirm={gettext("Their revisions and notes are deleted with them. This can't be undone.")}
+              confirm_title={
+                ngettext("Delete 1 entry permanently?", "Delete %{count} entries permanently?", @selected_rows_count)
+              }
+              confirm_label={gettext("Delete permanently")}
+              encoded_ids={@encoded_selected_rows}
+              destructive
+              danger
+            >
+              {gettext("Delete permanently")}
             </.selection_action_button>
             <%= for {%{event: event, label: label} = action, idx} <- Enum.with_index(@selection_actions) do %>
               <.selection_action_button

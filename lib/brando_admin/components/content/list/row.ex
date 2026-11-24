@@ -17,6 +17,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   # prop entry, :any
   # prop selected_rows, :list
   # prop listing, :any
+  # prop permanent_delete?, :boolean (the listing offers Delete permanently)
   # prop schema, :any
   # prop click_event, :string, required: true
   # prop sortable?, :boolean
@@ -84,6 +85,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           content_language={@content_language}
           entry={@entry}
           listing={@listing}
+          permanent_delete?={@permanent_delete?}
           current_user={assigns[:current_user]}
         />
       </div>
@@ -108,6 +110,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             target={@myself}
             content_language={@content_language}
             child_listing={@listing.child_listings}
+            permanent_delete?={@permanent_delete?}
           />
         </div>
         <.child_chips
@@ -118,6 +121,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           entries={Map.get(@entry, child_field, [])}
           child_listing={child_listing}
           parent_listing={@listing}
+          permanent_delete?={@permanent_delete?}
           schema={@schema}
           content_language={@content_language}
           current_user={assigns[:current_user]}
@@ -271,6 +275,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :content_language, :string
   attr :entry, :map
   attr :listing, :map
+  attr :permanent_delete?, :boolean, default: false, doc: "the listing offers Delete permanently"
   attr :current_user, :any, default: nil
 
   def entry_menu(assigns) do
@@ -303,6 +308,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assigns
       |> assign(:language, language)
       |> assign(:default_actions?, default_actions?)
+      |> assign(:trashed?, not is_nil(Map.get(assigns.entry, :deleted_at)))
       |> assign(:processed_actions, processed_actions)
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
@@ -331,7 +337,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Edit")}
         </.action_button>
         <.action_button
-          :if={BrandoAdmin.Authorization.allowed?(:delete, @entry)}
+          :if={!@trashed? && BrandoAdmin.Authorization.allowed?(:delete, @entry)}
           id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -343,6 +349,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           destructive
         >
           {gettext("Delete")}
+        </.action_button>
+        <.action_button
+          :if={@trashed? && @permanent_delete? && may_purge?(@entry)}
+          id={"action_#{@listing.name}_delete_entry_permanently_#{@entry.id}"}
+          entry_id={@entry.id}
+          language={@language}
+          event={JS.push("delete_entry_permanently", value: %{id: @entry.id, deleted_at: @entry.deleted_at})}
+          confirm={gettext("Its revisions and notes are deleted with it. This can't be undone.")}
+          confirm_title={gettext("Delete %{singular} permanently?", singular: String.downcase(@translated_singular))}
+          confirm_label={gettext("Delete permanently")}
+          destructive
+        >
+          {gettext("Delete permanently")}
         </.action_button>
         <.action_button
           :if={
@@ -440,6 +459,13 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       </.action_button>
     </CircleDropdown.render>
     """
+  end
+
+  # As `Brando.SoftDelete.Query.may_purge?/2` decides: one trashed while
+  # published takes the publish permission too
+  defp may_purge?(entry) do
+    BrandoAdmin.Authorization.allowed?(:delete, entry) and
+      (Map.get(entry, :status) != :published or BrandoAdmin.Authorization.allowed?(:publish, entry))
   end
 
   attr :active_sort, :any, default: nil
@@ -894,6 +920,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         entry={@entry}
         content_language={@content_language}
         listing={@listing}
+        permanent_delete?={@permanent_delete?}
         current_user={assigns[:current_user]}
       />
       <span class="list-row-progress" aria-hidden="true"></span>
@@ -938,6 +965,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :content_language, :string
   attr :current_user, :any, default: nil
   attr :listing, :any, default: nil, doc: "the child listing, when not the schema's own by name (its DOM ids)"
+  attr :permanent_delete?, :boolean, default: false
 
   # A `child_listing … style: :chips`: one line of small cards under the
   # parent, each the child listing's component with its state and menu, and
@@ -966,6 +994,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         entry={entry}
         icon={@icon}
         listing={@listing}
+        permanent_delete?={@permanent_delete?}
         schema={@schema}
         content_language={@content_language}
         current_user={@current_user}
@@ -1001,6 +1030,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :entry, :map, required: true
   attr :icon, :string, required: true
   attr :listing, :map, required: true
+  attr :permanent_delete?, :boolean, default: false
   attr :schema, :atom, required: true
   attr :content_language, :string
   attr :current_user, :any, default: nil
@@ -1024,6 +1054,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         entry={@entry}
         content_language={@content_language}
         listing={@listing}
+        permanent_delete?={@permanent_delete?}
         current_user={@current_user}
       />
       <span class="list-row-progress" aria-hidden="true"></span>

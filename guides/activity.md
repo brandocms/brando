@@ -23,7 +23,7 @@ Every Blueprint entry that changes through Brando records an event:
 | Updated | A save changes at least one field. Saves that only touch bookkeeping (`updated_at`, rendered HTML, sequence) record nothing. |
 | Published / Unpublished | A save, a listing's status menu or a scheduled job moves the status into or out of published. |
 | Moved to trash / Restored from trash | An entry with `trait :soft_delete` is deleted, or brought back. |
-| Deleted permanently | An entry without soft delete is deleted, or the trash removes an entry after 30 days. |
+| Deleted permanently | An entry without soft delete is deleted, someone deletes one from the trash with Delete permanently, or the trash removes an entry after 30 days. |
 | Restored revision | An editor activates an older revision. |
 | Duplicated | A copy is made; the event names the original. |
 | Imported | A [content transfer](content_transfer.md) creates or updates entries. One import shows as one row. Undoing it is recorded too. |
