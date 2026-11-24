@@ -56,6 +56,10 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     end
   end
 
+  # The captions, credits, alt texts and playback an editor gave the
+  # gallery's objects in this block: a module sync keeps them
+  def protected_attrs, do: [:gallery_object_overrides]
+
   def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target_changeset) do
     Brando.Villain.Block.merge_ref_template(:template_gallery, ref_src, ref_target_changeset, protected_attrs())
   end
