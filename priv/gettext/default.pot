@@ -13801,7 +13801,7 @@ msgstr ""
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
-msgid "Not restored: another entry has its address, and no address close to it is free. It is still in the trash."
+msgid "Not restored: another entry has its address. It is still in the trash."
 msgstr ""
 
 #: lib/brando/content.ex

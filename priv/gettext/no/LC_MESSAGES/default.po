@@ -13803,8 +13803,8 @@ msgstr "Ikke gjenopprettet: %{block} i revisjonen bruker modulen «%{module}», 
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
-msgid "Not restored: another entry has its address, and no address close to it is free. It is still in the trash."
-msgstr "Ikke gjenopprettet: en annen oppføring har adressen, og ingen adresse nær den er ledig. Den ligger fortsatt i papirkurven."
+msgid "Not restored: another entry has its address. It is still in the trash."
+msgstr "Ikke gjenopprettet: en annen oppføring har adressen. Den ligger fortsatt i papirkurven."
 
 #: lib/brando/content.ex
 #, elixir-autogen, elixir-format

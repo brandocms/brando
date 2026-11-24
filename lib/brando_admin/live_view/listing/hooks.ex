@@ -124,11 +124,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
         send(self(), {:toast, Brando.Content.module_in_trash_message(refusal)})
 
       {:error, {:taken, _field}} ->
-        delete_refused(
-          gettext(
-            "Not restored: another entry has its address, and no address close to it is free. It is still in the trash."
-          )
-        )
+        delete_refused(gettext("Not restored: another entry has its address. It is still in the trash."))
 
       # Restored, or deleted for good, since the list was drawn
       {:error, :not_in_trash} ->
