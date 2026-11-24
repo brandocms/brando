@@ -137,6 +137,32 @@ defmodule BrandoAdmin.Content.SharedLibraryLiveTest do
     assert has_element?(view, "#shared-library-container", "Shared wrapper")
   end
 
+  # A Reset with nothing to discard, and an Accept of a customization in the
+  # trash, are refused on the screen
+  test "Reset with no customization and Accept of a trashed one show an error", %{
+    conn: conn,
+    current_user: current_user,
+    site: site,
+    shared_module: shared_module
+  } do
+    :ok = SharedLibrary.enable(site, :module, shared_module.id)
+    Brando.endpoint().subscribe("user:#{current_user.id}")
+    {:ok, view, _html} = live(conn, "/admin/config/content/shared_library")
+
+    render_click(view, "reset", %{"kind" => "module", "id" => shared_module.id})
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+
+    {:ok, override} = SharedLibrary.customize(:module, shared_module.id, site, @prefix, current_user)
+
+    override
+    |> Ecto.Changeset.change(deleted_at: DateTime.truncate(DateTime.utc_now(), :second))
+    |> Brando.Repo.update!(prefix: @prefix)
+
+    render_click(view, "accept_update", %{"kind" => "module", "id" => shared_module.id})
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+    assert Brando.Repo.get!(Brando.Content.Module, override.id, prefix: @prefix).deleted_at
+  end
+
   test "the full module editor opens shared entries from public", %{
     conn: conn,
     shared_module: shared_module

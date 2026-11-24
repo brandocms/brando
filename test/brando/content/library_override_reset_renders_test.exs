@@ -112,7 +112,7 @@ defmodule Brando.Content.LibraryOverrideResetRendersTest do
     assert override(c.library)
   end
 
-  test "two resets at once both succeed, and the page's render is queued", c do
+  test "of two resets at once one discards the override, the other finds none, and the page's render is queued", c do
     # Oban runs a job inline when any process in the caller chain is inline
     manual_reset = fn ->
       Oban.Testing.with_testing_mode(:manual, fn ->
@@ -123,7 +123,7 @@ defmodule Brando.Content.LibraryOverrideResetRendersTest do
     Oban.Testing.with_testing_mode(:manual, fn ->
       results = [Task.async(manual_reset), Task.async(manual_reset)] |> Task.await_many()
 
-      assert results == [:ok, :ok]
+      assert Enum.sort(results) == [:ok, {:error, :not_customized}]
       assert [_job] = all_enqueued(worker: Brando.Worker.EntryRenderer, args: %{entry_id: c.page.id})
     end)
 
@@ -159,6 +159,9 @@ defmodule Brando.Content.LibraryOverrideResetRendersTest do
         override
         |> Palette.changeset(%{colors: [ink("#ff0000")]}, c.user)
         |> Brando.Repo.update(prefix: @prefix)
+
+      # As a palette save does
+      Tenant.with_prefix(@prefix, fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
 
       # Warm: what a visitor's page read while the override was red
       assert palettes_css() =~ "#ff0000"

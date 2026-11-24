@@ -91,6 +91,7 @@ defmodule Brando.Content.SharedLibrary do
       # transaction, once it commits, so a read before then is not kept.
       Repo.after_commit({Cache, site.id, kind}, fn -> Cache.invalidate(site.id, kind) end)
       Brando.CacheSync.broadcast(Cache, {site.id, kind})
+      if kind == :palette, do: rebuild_palettes_css(site)
       :ok
     end
   end
@@ -109,7 +110,17 @@ defmodule Brando.Content.SharedLibrary do
       Brando.CacheSync.broadcast_gathered(Cache, {site.id, kind})
     end
 
+    Enum.each(Registry.list_sites(), &rebuild_palettes_css/1)
     :ok
+  end
+
+  # The site's palette CSS holds the shared palettes enabled for it
+  # (`Brando.Cache.Palettes`): rebuilt in each of its environments once the
+  # allowlist is forgotten, which the caller held to run first.
+  defp rebuild_palettes_css(site) do
+    for environment <- Registry.list_environments(site) do
+      Tenant.with_prefix(Tenant.prefix(site, environment), fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
+    end
   end
 
   def enable(%Site{} = site, kind, id, user \\ :system) when kind in @kinds do
@@ -218,7 +229,11 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  @doc "Copies a shared entry into the tenant schema as an override."
+  @doc """
+  Copies a shared entry into the tenant schema as an override. The site's
+  override in the trash comes back instead, with its edits, restored as the
+  trash restores it: `user` needs what a restore needs too.
+  """
   def customize(kind, id, %Site{} = site, prefix, user \\ :system) when kind in @kinds do
     with :ok <- authorize_local(kind, site, prefix, user), do: do_customize(kind, id, site, prefix, user)
   end
@@ -226,23 +241,43 @@ defmodule Brando.Content.SharedLibrary do
   defp do_customize(kind, id, site, prefix, user) do
     id = normalize_id!(id)
 
-    cond do
-      not enabled?(site, kind, id) ->
-        {:error, :not_enabled}
+    if enabled?(site, kind, id),
+      do: Repo.transaction(fn -> customize_locked(kind, id, site, prefix, user) end),
+      else: {:error, :not_enabled}
+  end
 
-      override = get_override(kind, id, prefix) ->
-        {:ok, override}
+  # The override row, live or trashed, is locked as it is read: a purge of
+  # the trash waits, or has removed it
+  defp customize_locked(kind, id, site, prefix, user) do
+    lock_entry(kind, id, prefix)
 
-      shared = get_public(kind, id) ->
-        with {:ok, _override} = result <- create_override(kind, shared, prefix, user) do
-          Brando.Content.Definitions.changed(prefix)
-          result
+    case get_override(kind, id, prefix, lock: true, trashed: true) do
+      %{deleted_at: nil} = override ->
+        override
+
+      %{} = trashed ->
+        trashed |> restore_override(site, prefix, user) |> customized(kind, prefix)
+
+      nil ->
+        case get_public(kind, id) do
+          nil -> Repo.rollback(:not_found)
+          shared -> kind |> create_override(shared, prefix, user) |> customized(kind, prefix)
         end
-
-      true ->
-        {:error, :not_found}
     end
   end
+
+  defp customized({:ok, override}, kind, prefix) do
+    if kind == :palette, do: Tenant.with_prefix(prefix, fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
+    Brando.Content.Definitions.changed(prefix)
+    preload_one(override, definition(kind).preloads, prefix: prefix)
+  end
+
+  defp customized({:error, reason}, _kind, _prefix), do: Repo.rollback(reason)
+
+  # Its entries render with it again, their block values as they are
+  # (`Boundary.restore/2`)
+  defp restore_override(trashed, site, prefix, user),
+    do: Tenant.with_prefix(prefix, fn -> Boundary.restore(target_actor(site, prefix, user), trashed) end)
 
   @doc "Deletes a tenant override; origin-qualified blocks immediately use shared again."
   def reset(kind, id, %Site{} = site, prefix, user \\ :system) when kind in @kinds do
@@ -254,11 +289,13 @@ defmodule Brando.Content.SharedLibrary do
 
     result =
       Repo.transaction(fn ->
+        lock_entry(kind, id, prefix)
+
         with %{} = override <- get_override(kind, id, prefix, lock: true),
              {:ok, _deleted} <- Repo.delete(override, prefix: prefix) do
           override_changed(prefix, kind, id)
         else
-          nil -> :ok
+          nil -> Repo.rollback(:not_customized)
           {:error, changeset} -> Repo.rollback(changeset)
         end
       end)
@@ -275,6 +312,8 @@ defmodule Brando.Content.SharedLibrary do
     id = normalize_id!(id)
 
     Repo.transaction(fn ->
+      lock_entry(kind, id, prefix)
+
       with override when not is_nil(override) <- get_override(kind, id, prefix, lock: true),
            shared when not is_nil(shared) <- get_public(kind, id),
            {:ok, _deleted} <- Repo.delete(override, prefix: prefix),
@@ -457,12 +496,29 @@ defmodule Brando.Content.SharedLibrary do
     do: scope && scope.kind == :site && (scope.site_id != site.id or scope.prefix != prefix)
 
   defp authorize_target_site(kind, site, prefix, scope, actor) do
+    case target_scope(site, prefix, scope, actor) do
+      nil -> {:error, :forbidden}
+      target_scope -> Boundary.authorize(target_scope, :update, definition(kind).schema)
+    end
+  end
+
+  # The actor's scope in the environment `prefix` of `site`, or nil when it
+  # resolves to another
+  defp target_scope(site, prefix, scope, actor) do
     actor = if scope, do: %{id: scope.user_id}, else: actor
     target_scope = Tenant.with_prefix(prefix, fn -> Brando.Authorization.Scope.current(actor) end)
+    if target_scope.site_id == site.id, do: target_scope
+  end
 
-    if target_scope.site_id == site.id,
-      do: Boundary.authorize(target_scope, :update, definition(kind).schema),
-      else: {:error, :forbidden}
+  # Whom a write `authorize_local/4` let through acts as in the environment
+  defp target_actor(site, prefix, actor) do
+    scope = Boundary.current_scope()
+
+    cond do
+      not Brando.Authorization.enabled?() -> actor
+      is_nil(scope) and actor == :system -> :system
+      true -> target_scope(site, prefix, scope, actor)
+    end
   end
 
   def reference(value) when is_binary(value) do
@@ -538,23 +594,36 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  # `lock: true` holds the row until the transaction ends: a second Reset or
-  # Accept of it waits, and then finds the override gone.
+  # `lock: true` holds the row until the transaction ends. `trashed: true`
+  # finds one in the trash too: the index on the source field holds one row
+  # for a library entry, trashed or not.
   defp get_override(kind, source_id, prefix, opts \\ []) do
     definition = definition(kind)
     query_opts = [prefix: prefix]
 
     query =
       from(entry in definition.schema,
-        where: field(entry, ^definition.source_field) == ^source_id and is_nil(entry.deleted_at),
+        where: field(entry, ^definition.source_field) == ^source_id,
         limit: 1
       )
+
+    query = if opts[:trashed], do: query, else: from(entry in query, where: is_nil(entry.deleted_at))
 
     query = if opts[:lock], do: from(entry in query, lock: "FOR UPDATE"), else: query
 
     query
     |> Repo.one(query_opts)
     |> preload_one(definition.preloads, query_opts)
+  end
+
+  # Customize, Reset and Accept of one library entry in one environment, one
+  # at a time, until the transaction ends: each reads the override the one
+  # before it left. A row lock would not do: Accept replaces the row, and
+  # Customize may find none to lock.
+  defp lock_entry(kind, id, prefix) do
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando.shared_library.#{prefix}.#{kind}.#{id}"
+    ])
   end
 
   defp get_public(kind, id) do
@@ -602,7 +671,11 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp rerender_environment(site, environment, kind, id) do
-    site |> Tenant.prefix(environment) |> rerender_prefix(kind, id)
+    prefix = Tenant.prefix(site, environment)
+    rerender_prefix(prefix, kind, id)
+
+    if kind == :palette and (enabled?(site, :palette, id) or shared_reference_exists?(:palette, id, prefix)),
+      do: Tenant.with_prefix(prefix, fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
   end
 
   defp rerender_prefix(prefix, kind, id), do: Tenant.with_prefix(prefix, fn -> rerender_kind(kind, id) end)

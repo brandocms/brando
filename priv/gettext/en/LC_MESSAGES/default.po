@@ -21748,6 +21748,11 @@ msgstr ""
 msgid "This entry shows no video, or its videos lack a title, a thumbnail or an upload date, which Google needs."
 msgstr ""
 
+#: lib/brando_admin/live/content/shared_library_live.ex
+#, elixir-autogen, elixir-format
+msgid "This environment already uses the shared version."
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "This export is not available."
