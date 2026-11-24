@@ -3529,7 +3529,8 @@ defmodule Brando.Content.Proposals do
     %{link_type: :identifier, identifier_id: identifier.id}
   end
 
-  defp var_value(:link, url), do: %{link_type: :url, value: url}
+  # A URL link holds no entry, and no link holds neither.
+  defp var_value(:link, url), do: %{link_type: :url, value: url, identifier_id: nil}
   defp var_value(_type, value), do: %{value: value}
 
   ## Store, approve and apply
