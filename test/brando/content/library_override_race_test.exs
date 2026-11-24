@@ -74,9 +74,7 @@ defmodule Brando.Content.LibraryOverrideRaceTest do
     {:ok, _} = unboxed(fn -> SharedLibrary.customize(:module, c.library.id, c.site, @prefix, c.user) end)
 
     holder = hold(fn -> SharedLibrary.accept_update(:module, c.library.id, c.site, @prefix, c.user) end)
-    reset = Task.async(fn -> unboxed(fn -> SharedLibrary.reset(:module, c.library.id, c.site, @prefix, c.user) end) end)
-
-    wait_for_lock_waiter()
+    reset = waiter(fn -> SharedLibrary.reset(:module, c.library.id, c.site, @prefix, c.user) end)
     send(holder.pid, :commit)
     assert {:ok, {:ok, _replacement}} = Task.await(holder, 10_000)
 
@@ -89,10 +87,7 @@ defmodule Brando.Content.LibraryOverrideRaceTest do
   test "a Customize beside another returns the customization the first made", c do
     holder = hold(fn -> SharedLibrary.customize(:module, c.library.id, c.site, @prefix, c.user) end)
 
-    contender =
-      Task.async(fn -> unboxed(fn -> SharedLibrary.customize(:module, c.library.id, c.site, @prefix, c.user) end) end)
-
-    wait_for_lock_waiter()
+    contender = waiter(fn -> SharedLibrary.customize(:module, c.library.id, c.site, @prefix, c.user) end)
     send(holder.pid, :commit)
     assert {:ok, {:ok, %{id: id}}} = Task.await(holder, 10_000)
 
@@ -121,25 +116,43 @@ defmodule Brando.Content.LibraryOverrideRaceTest do
     end
   end
 
-  defp wait_for_lock_waiter(attempts \\ 500)
-  defp wait_for_lock_waiter(0), do: flunk("nothing waited for the lock")
+  # Runs `fun` on a connection of its own, and returns once that connection
+  # waits for the entry's advisory lock
+  defp waiter(fun) do
+    test = self()
 
-  defp wait_for_lock_waiter(attempts) do
-    waiting =
+    task =
+      Task.async(fn ->
+        unboxed(fn ->
+          %{rows: [[backend]]} = Repo.query!("SELECT pg_backend_pid()")
+          send(test, {:backend, backend})
+          fun.()
+        end)
+      end)
+
+    assert_receive {:backend, backend}, 10_000
+    wait_for_lock(backend)
+    task
+  end
+
+  defp wait_for_lock(backend, attempts \\ 500)
+  defp wait_for_lock(_backend, 0), do: flunk("nothing waited for the lock")
+
+  defp wait_for_lock(backend, attempts) do
+    waiting? =
       unboxed(fn ->
-        Repo.one(
+        Repo.exists?(
           from(l in "pg_locks",
-            where: l.locktype in ["advisory", "transactionid", "tuple"] and not l.granted,
-            select: count()
+            where:
+              l.pid == ^backend and l.locktype == "advisory" and not l.granted and
+                l.database == fragment("(SELECT oid FROM pg_database WHERE datname = current_database())")
           )
         )
       end)
 
-    if waiting > 0 do
-      :ok
-    else
+    unless waiting? do
       Process.sleep(10)
-      wait_for_lock_waiter(attempts - 1)
+      wait_for_lock(backend, attempts - 1)
     end
   end
 
