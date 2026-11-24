@@ -186,6 +186,21 @@ defmodule Brando.Cache.SharedPalettesCssTest do
     refute production =~ "#0000ff"
   end
 
+  test "two of the site's own palettes with one namespace and key are both in the CSS", c do
+    for hex <- ["#00ff00", "#ff00ff"] do
+      {:ok, _local} =
+        Tenant.with_prefix(@production, fn ->
+          %Palette{} |> Palette.changeset(palette_attrs("ink", hex), c.user) |> Brando.Repo.insert()
+        end)
+    end
+
+    Tenant.with_prefix(@production, fn -> Brando.Cache.rebuild_after_commit(:palettes) end)
+
+    production = css(@production)
+    assert production =~ "#00ff00"
+    assert production =~ "#ff00ff"
+  end
+
   test "a change to the shared palette rebuilds the CSS of the sites that use it", c do
     :ok = SharedLibrary.enable(c.site, :palette, c.library.id, c.user)
     assert css(@production) =~ "#0000ff"
