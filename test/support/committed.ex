@@ -13,8 +13,8 @@ defmodule Brando.Test.Committed do
 
   `start/0` marks where each `public` table is, puts the repo in `:auto`
   mode, and on exit deletes the rows above the mark (by id, or by
-  `inserted_at` in a table without an integer id), children before their
-  parents, and puts the sandbox back.
+  `inserted_at`, to the second, in a table without an integer id), children
+  before their parents, and puts the sandbox back.
   """
 
   alias BrandoIntegration.Repo
@@ -33,7 +33,9 @@ defmodule Brando.Test.Committed do
   end
 
   defp mark do
-    %{rows: [[at]]} = Repo.query!("SELECT (now() AT TIME ZONE 'utc')::timestamp")
+    # To the second: a row stamped in this second, which Ecto truncates or a
+    # `timestamp(0)` column rounds, may be stored below the exact time
+    %{rows: [[at]]} = Repo.query!("SELECT date_trunc('second', now() AT TIME ZONE 'utc')")
 
     %{rows: rows} =
       Repo.query!("""
