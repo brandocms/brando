@@ -92,7 +92,8 @@ test.describe('Multi blocks: dropping media', () => {
   // `entry` dragged by its handle into `row`'s children
   const moveTo = async (page, entry, row) => {
     // the whole page in the window, so that no scroll moves it (addRow)
-    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+    const overflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
+    expect(overflow, 'the page is taller than the window: createPage needs a larger height').toBeLessThanOrEqual(0)
     const handle = await entry.locator('.sort-handle').first().boundingBox()
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
     await page.mouse.down()
