@@ -648,6 +648,22 @@ defmodule Brando.Translations.ComputePendingTest do
       result = compute(source, target, baseline(source))
       assert result.work_items == []
     end
+
+    test "a link switched to an empty URL leaves the translation's link text and kind alone" do
+      entry = %Var{key: "cta", type: :link, link_type: :identifier, identifier_id: 3, label: "cta"}
+      base = baseline(article(:no, blocks: [block("a", vars: [entry])]))
+      source = article(:no, blocks: [block("a", vars: [%{url_link("") | identifier_id: 3}])])
+
+      translated = %{entry | identifier_id: 7, link_text: "Read more"}
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [translated])])
+
+      result = compute(source, target, base, identifiers: %{3 => 7})
+      [var] = hd(result.payload.entry_blocks).block.vars
+
+      assert var.link_type == :identifier
+      assert var.link_text == "Read more"
+      assert var.identifier_id == nil
+    end
   end
 
   describe "gallery refs" do

@@ -1064,29 +1064,43 @@ defmodule Brando.Translations.Sync do
             target_var,
             Map.take(source_var, var_shared_fields(source_var) ++ controlled_fields(source_var, controlled))
           )
+          |> drop_left_behind_entry(source_var)
           |> restart_changed_link(source_var, target_var)
       end
     end)
   end
+
+  # A URL link shares no entry, whatever identifier its row still holds.
+  defp drop_left_behind_entry(merged, %{type: :link, identifier_id: id} = source_var) when not is_nil(id) do
+    if linked_identifier_id(source_var),
+      do: merged,
+      else: %{unload(merged, :identifier) | identifier_id: nil}
+  end
+
+  defp drop_left_behind_entry(merged, _source_var), do: merged
 
   # A link that changed kind in the source (an entry to a URL, or back) starts
   # over from the source's value; the translation's old one belonged to the
   # other kind.
   defp restart_changed_link(merged, %{type: :link, link_type: kind} = source_var, %{link_type: old})
        when kind != old do
-    if FollowLinkDefault.empty_link?(source_var),
+    if no_link?(source_var),
       do: merged,
       else: Map.merge(merged, Map.take(source_var, [:value, :link_text]))
   end
 
   defp restart_changed_link(merged, _source_var, _target_var), do: merged
 
+  defp no_link?(%{type: :link} = var), do: is_nil(Var.link_target(var))
+  defp no_link?(_var), do: false
+
   defp controlled_fields(var, controlled), do: if(var.key in controlled, do: @var_values, else: [])
 
-  # An empty link's kind is only the tab its dialog opens on, which a module
-  # save can move (`FollowLinkDefault`): the translation keeps its own link.
+  # A link to nothing (`Var.link_target/1`) has a kind that is only the tab its
+  # dialog opens on, which a module save can move (`FollowLinkDefault`): the
+  # translation keeps its own link.
   defp var_shared_fields(var) do
-    kind = if FollowLinkDefault.empty_link?(var), do: [], else: link_kind(var)
+    kind = if no_link?(var), do: [], else: link_kind(var)
     [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs ++ kind]
   end
 
