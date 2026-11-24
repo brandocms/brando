@@ -142,21 +142,7 @@ defmodule Brando.Content.Definition.Plan do
   (resolve those under Resolve blocks). Each value is quoted for a POSIX
   shell.
   """
-  def resolve_commands(%__MODULE__{creator_id: user_id} = plan, %{kind: "module", uid: uid} = item)
-      when not is_nil(user_id) do
-    drops =
-      case dropped(item) do
-        [] ->
-          []
-
-        dropped ->
-          [resolve_command(uid, user_id, Enum.flat_map(dropped, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end), [])]
-      end
-
-    List.wrap(move_command(plan, item)) ++ drops
-  end
-
-  def resolve_commands(_plan, _item), do: []
+  def resolve_commands(plan, item), do: List.wrap(move_command(plan, item)) ++ List.wrap(drop_command(plan, item))
 
   @doc "The first of `resolve_commands/2`, the one that moves renamed keys' values, or nil."
   def move_command(%__MODULE__{creator_id: user_id}, %{kind: "module", uid: uid} = item) when not is_nil(user_id) do
@@ -165,6 +151,18 @@ defmodule Brando.Content.Definition.Plan do
   end
 
   def move_command(_plan, _item), do: nil
+
+  defp drop_command(%__MODULE__{creator_id: user_id}, %{kind: "module", uid: uid} = item) when not is_nil(user_id) do
+    case dropped(item) do
+      [] ->
+        nil
+
+      dropped ->
+        resolve_command(uid, user_id, Enum.flat_map(dropped, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end), [])
+    end
+  end
+
+  defp drop_command(_plan, _item), do: nil
 
   # The renames whose values blocks keep under the old key after the apply:
   # those the update leaves to a resolve, and those its apply moves none of
@@ -217,40 +215,38 @@ defmodule Brando.Content.Definition.Plan do
   to resolve them. Without a user to name, a move names the `--map` to
   run. Empty when no block holds them.
   """
-  def resolve_lines(plan, item) do
-    commands = resolve_commands(plan, item)
+  def resolve_lines(plan, item), do: Enum.uniq(move_lines(plan, item) ++ drop_lines(plan, item))
+
+  @elsewhere "resolve: under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
+
+  defp move_lines(plan, item) do
     remaps = remaps(item)
-    elsewhere = "resolve: under Resolve blocks on the module in the admin, or with mix brando.modules resolve"
 
-    moves =
-      cond do
-        remaps == [] ->
-          []
-
-        not Enum.all?(remaps, & &1.ok?) ->
-          [elsewhere]
-
-        commands == [] ->
-          maps = Enum.map_join(remaps, " ", &"--map #{&1.kind}:#{&1.from}=#{&1.to}")
-
-          [
-            "resolve: blocks keep the renamed keys' values under the old names until mix brando.modules resolve --uid #{shell_quote(item.uid)} #{maps} --apply moves them, as a user who may edit those entries"
-          ]
-
-        true ->
-          ["resolve: " <> hd(commands)]
-      end
-
-    drops =
-      cond do
-        not match?(%{removes: %{blocks: blocks}} when blocks > 0, item) -> []
-        item.kind == "module" and dropped(item) == [] -> []
-        commands != [] and item.kind == "module" -> ["resolve: " <> List.last(commands)]
-        true -> [elsewhere]
-      end
-
-    Enum.uniq(moves ++ drops)
+    cond do
+      remaps == [] -> []
+      not Enum.all?(remaps, & &1.ok?) -> [@elsewhere]
+      true -> [move_line(move_command(plan, item), item.uid, remaps)]
+    end
   end
+
+  defp move_line(nil, uid, remaps) do
+    maps = Enum.map_join(remaps, " ", &"--map #{&1.kind}:#{&1.from}=#{&1.to}")
+
+    "resolve: blocks keep the renamed keys' values under the old names until mix brando.modules resolve --uid #{shell_quote(uid)} #{maps} --apply moves them, as a user who may edit those entries"
+  end
+
+  defp move_line(command, _uid, _remaps), do: "resolve: " <> command
+
+  defp drop_lines(plan, item) do
+    cond do
+      not match?(%{removes: %{blocks: blocks}} when blocks > 0, item) -> []
+      item.kind == "module" and dropped(item) == [] -> []
+      true -> [drop_line(drop_command(plan, item))]
+    end
+  end
+
+  defp drop_line(nil), do: @elsewhere
+  defp drop_line(command), do: "resolve: " <> command
 
   defp shell_quote(value) do
     if value =~ ~r/\A[A-Za-z0-9_@%+=:,.\/-]+\z/,

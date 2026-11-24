@@ -1254,7 +1254,10 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   # The command that moves what an applied module's blocks keep under keys
   # the release renames
   defp move_command(%{plan: plan, items: items}, uid) do
-    if item = Enum.find(items, &(&1.uid == uid)), do: Plan.move_command(plan, item)
+    case Enum.find(items, &(&1.uid == uid)) do
+      nil -> nil
+      item -> Plan.move_command(plan, item)
+    end
   end
 
   defp move_command(_report, _uid), do: nil

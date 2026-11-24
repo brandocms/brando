@@ -2,7 +2,6 @@ defmodule Brando.Content.Definition.Renames do
   # How many entries and blocks one apply moves values in, for all the
   # modules it selects: see the moduledoc
   @limit [entries: 500, blocks: 1500]
-  @max_blocks @limit[:blocks]
 
   @moduledoc """
   The renames a module's definition file declares (`renamed_from:` on a ref
@@ -400,23 +399,23 @@ defmodule Brando.Content.Definition.Renames do
   def remaps(_record, _module, []), do: []
 
   def remaps(record, module, renames) do
-    Enum.flat_map(renames, fn rename ->
-      case if(target(module, rename.kind, rename.from), do: [], else: holder_ids(record.id, [rename])) do
-        [] ->
-          []
+    for rename <- renames,
+        !target(module, rename.kind, rename.from),
+        ids = holder_ids(record.id, [rename]),
+        ids != [],
+        do: Map.put(rename, :ok?, remap?(module, rename, ids))
+  end
 
-        ids when length(ids) > @max_blocks ->
-          [Map.put(rename, :ok?, slotted(rename, ids) == 0)]
-
-        ids ->
-          report = StaleBlocks.report_for(module, ids)
-          resolutions = %{{rename.kind, rename.from} => {:map, rename.to}}
-          {resolutions, _kept} = StaleBlocks.keep_filled(StaleBlocks.plan(report, resolutions), resolutions)
-          dry_run = StaleBlocks.plan(report, resolutions)
-          ok? = dry_run.refused == [] and dry_run.changes != [] and slotted(rename, ids) == 0
-          [Map.put(rename, :ok?, ok?)]
-      end
-    end)
+  defp remap?(module, rename, ids) do
+    if Enum.count(ids) > @limit[:blocks] do
+      slotted(rename, ids) == 0
+    else
+      report = StaleBlocks.report_for(module, ids)
+      resolutions = %{{rename.kind, rename.from} => {:map, rename.to}}
+      {resolutions, _kept} = StaleBlocks.keep_filled(StaleBlocks.plan(report, resolutions), resolutions)
+      dry_run = StaleBlocks.plan(report, resolutions)
+      dry_run.refused == [] and dry_run.changes != [] and slotted(rename, ids) == 0
+    end
   end
 
   # How many of the blocks `ids` hold blocks in a slot of the renamed ref
