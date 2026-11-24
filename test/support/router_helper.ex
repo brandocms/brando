@@ -124,6 +124,15 @@ defmodule BrandoAdmin.SyncTest.ArticleListLive do
   end
 end
 
+# A listing behind a record read policy: each editor reads only the articles
+# they made (ListingDeletePermanentlyTest)
+defmodule BrandoAdmin.SyncPolicyTest.ArticleListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.SyncPolicyTest.Article
+
+  def render(assigns), do: ~H""
+end
+
 defmodule BrandoAdmin.SyncTest.ArticleUserContextListLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Listing, schema: Brando.SyncTest.Article
@@ -536,6 +545,7 @@ defmodule BrandoIntegrationWeb.Router do
   admin_routes do
     live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
     live "/articles", BrandoAdmin.SyncTest.ArticleListLive
+    live "/policy-articles", BrandoAdmin.SyncPolicyTest.ArticleListLive
     live "/slug-scope/language-articles", BrandoAdmin.SlugScopeTest.IndependentLanguageArticleListLive
 
     live "/slug-scope/language-articles/update/:entry_id",

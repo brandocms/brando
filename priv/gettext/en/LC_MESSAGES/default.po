@@ -1353,6 +1353,14 @@ msgstr[1] ""
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
+msgctxt "delete"
+msgid "1 entry"
+msgid_plural "%{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
 msgid "1 entry deleted permanently"
 msgid_plural "%{count} entries deleted permanently"
 msgstr[0] ""
@@ -1462,6 +1470,14 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 of %{total} blocks holds a value"
 msgid_plural "%{count} of %{total} blocks hold a value"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgctxt "delete"
+msgid "1 other entry"
+msgid_plural "%{count} other entries"
 msgstr[0] ""
 msgstr[1] ""
 
