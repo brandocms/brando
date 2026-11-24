@@ -376,8 +376,12 @@ defmodule Brando.Content.Proposals do
   defp check_operation(%Translate{} = op, proposal, actor, trees),
     do: {translate_problems(op, proposal, actor), trees}
 
-  defp check_operation(%SyncTranslation{} = op, proposal, actor, trees),
-    do: {sync_problems(op, proposal, actor), trees}
+  # One per translation: it is one save, whatever else is answered beside it
+  defp check_operation(%SyncTranslation{target: target} = op, proposal, actor, trees) do
+    if Map.has_key?(trees, {:sync_translation, target}),
+      do: {[sync_once()], trees},
+      else: {sync_problems(op, proposal, actor), Map.put(trees, {:sync_translation, target}, true)}
+  end
 
   defp check_operation(op, proposal, actor, trees) do
     cond do
@@ -1021,6 +1025,16 @@ defmodule Brando.Content.Proposals do
         dgettext(
           "content_proposals",
           "This translation is up to date with its source: its links, media and source-controlled values are the source's, and there is nothing for sync_translation to take. Leave it out; its texts are answered with translate."
+        )
+      )
+
+  defp sync_once,
+    do:
+      problem(
+        :duplicate_sync,
+        dgettext(
+          "content_proposals",
+          "Another sync_translation in this proposal already saves this translation. Leave this one out."
         )
       )
 

@@ -1341,6 +1341,11 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert [%SyncTranslation{takes: %{"links" => 1, "media" => 1, "values" => 1}}] = proposal.operations
     end
 
+    test "is refused a second time on the same translation, beside any translate", c do
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      assert [{2, :duplicate_sync, nil}] = problems([sync(c.target), op, sync(c.target)], c.user)
+    end
+
     test "is refused with another operation on the same translation", c do
       set = %SetFields{target: {Article, c.target.id}, fields: %{"status" => "published"}}
       assert [{1, :translate_only, nil}] = problems([sync(c.target), set], c.user)
