@@ -649,18 +649,28 @@ defmodule Brando.Content.Blocks do
   Refuses to restore `entries` from the trash while one holds a block of a
   module in the trash: `{:error, {:module_in_trash, %{module: name}}}`.
   Takes the lock `guard_added_modules/1` takes, in the restore's
-  transaction.
+  transaction. It locks each entry's row before it reads its blocks, so a
+  save of the entry still open (which holds that row) commits first and its
+  blocks count.
   """
   def guard_restored_modules(entries) do
+    entries =
+      Enum.filter(entries, &(Brando.Blueprint.blueprint?(&1.__struct__) and &1.__struct__.has_trait(Trait.Blocks)))
+
+    Enum.each(entries, &lock_entry_row/1)
+
     module_ids =
       for %schema{id: id} <- entries,
-          Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks),
           %{name: name} <- schema.__blocks_fields__(),
           module_id <- module_ids_in_tree(Module.concat([schema, name |> to_string() |> Macro.camelize()]), id),
           do: {module_id, nil}
 
     refuse_trashed_modules(module_ids)
   end
+
+  # The lock an entry's save takes on its row (`store_fenced/3`)
+  defp lock_entry_row(%schema{id: id}),
+    do: Repo.one!(from(e in schema, where: e.id == ^id, lock: "FOR NO KEY UPDATE", select: e.id))
 
   defp block_field_changes(schema, changeset) do
     if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks) do

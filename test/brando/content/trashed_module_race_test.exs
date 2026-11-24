@@ -97,6 +97,85 @@ defmodule Brando.Content.TrashedModuleRaceTest do
     end
   end
 
+  # A save from a form opened before the page went to the trash adds a block
+  # of the module; the restore waits for it and must see that block, so a
+  # delete of the module that comes after the save commits is refused
+  test "a restore that waits for a save adding a block of the module counts that block", c do
+    {:ok, trashed} = unboxed(fn -> Pages.delete_page(c.page.id, c.user) end)
+
+    save = hold(fn -> add_block(c.page, c.module, c.user) end)
+    restore = paused_waiter(fn -> Boundary.restore(:system, trashed) end, &restore_write?/1)
+    send(save.pid, :commit)
+    assert {:ok, {:ok, _page}} = Task.await(save, 10_000)
+    assert_receive :paused, 10_000
+
+    delete = settled(fn -> Brando.Content.delete_module(c.module.id, :system) end)
+    send(restore.pid, :go)
+
+    assert {:ok, %{deleted_at: nil}} = Task.await(restore, 10_000)
+    assert {:error, :module_in_use} = Task.await(delete, 10_000)
+    assert %{deleted_at: nil} = unboxed(fn -> Repo.get!(Module, c.module.id) end)
+  end
+
+  defp restore_write?(%{query: query}), do: query =~ ~s(UPDATE "pages") and query =~ "deleted_at"
+
+  # `waiter/1`, which stops after the first query `pause?` matches until told
+  # to go on
+  defp paused_waiter(fun, pause?) do
+    test = self()
+    handler = "trashed-module-race-#{System.unique_integer([:positive])}"
+
+    :telemetry.attach(
+      handler,
+      Repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, test ->
+        if self() != test and Process.get(:pause_on_query) && pause?.(metadata) do
+          :telemetry.detach(handler)
+          send(test, :paused)
+          receive(do: (:go -> :ok))
+        end
+      end,
+      test
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    waiter(fn ->
+      Process.put(:pause_on_query, true)
+      fun.()
+    end)
+  end
+
+  # Runs `fun` on a connection of its own, and returns once it finished or
+  # waits for a lock
+  defp settled(fun) do
+    test = self()
+
+    task =
+      Task.async(fn ->
+        unboxed(fn ->
+          %{rows: [[backend]]} = Repo.query!("SELECT pg_backend_pid()")
+          send(test, {:backend, backend})
+          fun.()
+        end)
+      end)
+
+    assert_receive {:backend, backend}, 10_000
+    settle(task, backend, 500)
+    task
+  end
+
+  defp settle(_task, _backend, 0), do: flunk("neither finished nor waited for a lock")
+
+  defp settle(task, backend, attempts) do
+    waiting? = unboxed(fn -> Repo.exists?(from(l in "pg_locks", where: l.pid == ^backend and not l.granted)) end)
+
+    unless waiting? or Process.info(task.pid) == nil do
+      Process.sleep(10)
+      settle(task, backend, attempts - 1)
+    end
+  end
+
   # The form's save adding one root block of `module`
   defp add_block(page, module, user) do
     block = %{
