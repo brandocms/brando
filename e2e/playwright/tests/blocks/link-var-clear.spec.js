@@ -39,7 +39,8 @@ test.describe('Clearing a link var', () => {
     const entry = modal.locator('.identifier-options .identifier').first()
     const chosen = modal.locator('.identifier-options .identifier[aria-pressed="true"]')
 
-    await entry.click()
+    // A double-click chooses the entry: its second click does not let go of it
+    await entry.dblclick({ delay: 150 })
     await syncLV(page)
     await expect(entry).toHaveAttribute('aria-pressed', 'true')
     await expect(field.locator('.link-preview')).not.toHaveClass(/link-preview--empty/)
