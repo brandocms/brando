@@ -1405,7 +1405,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp settable(%{type: :link, link_allow_custom_text: false}),
     do:
-      ~s(a URL, an entry {"content_type":T,"id":N}, {"link":URL or entry,"new_tab":true|false}, or null for no link; ) <>
+      ~s(a URL, an entry {"content_type":T,"id":N}, {"link":URL, entry or null,"new_tab":true|false}, or null for no link; ) <>
         "the module gives it its text"
 
   defp settable(%{type: type}), do: settable(type)
@@ -1421,7 +1421,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp settable(:link),
     do:
-      ~s(a URL, an entry {"content_type":T,"id":N}, null for no link, or {"link":URL or entry,"text":T,"new_tab":true|false}: ) <>
+      ~s(a URL, an entry {"content_type":T,"id":N}, null for no link, or {"link":URL, entry or null,"text":T,"new_tab":true|false}: ) <>
         ~s(the text the link or button shows, plain, "" for the default; without "link" it keeps where it points)
 
   defp settable(:file), do: ~s({"kind":"file","id":N})

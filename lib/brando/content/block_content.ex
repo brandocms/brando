@@ -150,7 +150,7 @@ defmodule Brando.Content.BlockContent do
     do: Changeset.put_change(var, :"#{kind}_id", id)
 
   defp put_value(var, :link, {:link, target, opts}, user) do
-    var = if target, do: put_value(var, :link, target, user), else: var
+    var = if target, do: put_value(var, :link, if(target != :none, do: target), user), else: var
     Changeset.change(var, link_options(opts))
   end
 

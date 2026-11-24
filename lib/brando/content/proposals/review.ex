@@ -1143,6 +1143,8 @@ defmodule Brando.Content.Proposals.Review do
 
   defp option(%{type: :link}, nil), do: dgettext("content_proposals", "no link")
 
+  defp option(var, {:link, :none, opts}), do: link_view(option(var, nil), opts[:text], opts[:new_tab])
+
   defp option(var, {:link, target, opts}),
     do: link_view(target && option(var, target), opts[:text], opts[:new_tab])
 

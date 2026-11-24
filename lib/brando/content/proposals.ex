@@ -2261,8 +2261,12 @@ defmodule Brando.Content.Proposals do
   defp link_text_problems(_var, key, %{text: text}), do: unsafe(plain_text_problem(text, key))
   defp link_text_problems(_var, _key, _opts), do: []
 
-  defp link_target({:link, target, _opts}), do: target
+  defp link_target({:link, target, _opts}), do: link_value(target)
   defp link_target(value), do: value
+
+  # `{:link, :none, opts}` sets no link, as `null` does.
+  defp link_value(:none), do: nil
+  defp link_value(target), do: target
 
   defp target_schema({:new, _} = target, proposal) do
     case Map.fetch(proposal.targets, target) do
@@ -2352,7 +2356,7 @@ defmodule Brando.Content.Proposals do
   # A link's text shows as it is, so it is plain text; a module can keep it
   # for itself (`link_allow_custom_text`).
   defp value_problems(%{type: :link} = var, key, {:link, target, opts}, actor) do
-    target_problems = if target, do: value_problems(var, key, target, actor), else: []
+    target_problems = if target, do: value_problems(var, key, link_value(target), actor), else: []
     target_problems ++ link_text_problems(var, key, opts)
   end
 
@@ -3506,7 +3510,7 @@ defmodule Brando.Content.Proposals do
   defp var_value(kind, {kind, id}) when kind in [:image, :video, :file], do: %{:"#{kind}_id" => id}
 
   defp var_value(:link, {:link, target, opts}),
-    do: Map.merge(if(target, do: var_value(:link, target), else: %{}), BlockContent.link_options(opts))
+    do: Map.merge(if(target, do: var_value(:link, link_value(target)), else: %{}), BlockContent.link_options(opts))
 
   defp var_value(:link, {:entry, schema, id}) do
     {:ok, identifier} = Content.get_identifier(schema, %{id: id})

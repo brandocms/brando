@@ -804,6 +804,38 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert button_values(c)["cta"] == nil
       assert %{unchanged: %{operations: [_]}} = elem(propose!(c, [set.(%{"cta" => nil})]), 0)
     end
+
+    test "in the structured form, a null link clears it and an omitted one keeps it", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => entry}
+          }
+        ])
+
+      apply!(proposal, c)
+
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => %{"text" => "Read"}})])
+      apply!(proposal, c)
+      assert %{entry: "Naming"} = button_values(c)["cta"]
+      assert %{link_text: "Read"} = cta_var()
+
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => %{"link" => nil, "text" => ""}})])
+      apply!(proposal, c)
+      assert button_values(c)["cta"] == nil
+      assert %{identifier_id: nil, value: nil, link_text: nil} = cta_var()
+    end
   end
 
   defp cta_var do
