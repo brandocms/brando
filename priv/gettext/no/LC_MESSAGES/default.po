@@ -1175,8 +1175,8 @@ msgstr "%{subject} bytter type (%{old_type} → %{new_type}): gi nytt navn i én
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
-msgstr "%{subject} bytter type (%{old_type} → %{new_type}): gi nytt navn i én release og bytt type i den neste, eller ta renamed_from ut av filen, og flytt verdiene etter endringen med %{command}, som en bruker som kan redigere disse oppføringene. Uten renamed_from sletter planens resolve-linje dem i stedet: ikke kjør den."
+msgid "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries; it names any block whose value it can't convert, and then changes nothing. Without renamed_from the plan's resolve line drops them instead: don't run that one."
+msgstr "%{subject} bytter type (%{old_type} → %{new_type}): gi nytt navn i én release og bytt type i den neste, eller ta renamed_from ut av filen, og flytt verdiene etter endringen med %{command}, som en bruker som kan redigere disse oppføringene; kommandoen navngir hver blokk med en verdi den ikke kan konvertere, og endrer da ingenting. Uten renamed_from sletter planens resolve-linje dem i stedet: ikke kjør den."
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
