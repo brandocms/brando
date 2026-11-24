@@ -984,17 +984,19 @@ defmodule Brando.Content.Proposals do
   defp sync_problems(%SyncTranslation{target: {schema, _id} = target} = op, proposal, actor) do
     case sync_takes(target) do
       {:ok, takes, work} ->
-        if Enum.any?(proposal.operations, &({schema, work.source_id} in op_targets(&1))) do
-          [source_in_proposal()]
-        else
-          case readable_source(schema, work.source_id, actor) do
-            :ok -> sync_take_problems(op, takes, work)
-            {:error, problem} -> [problem]
-          end
-        end
+        if Enum.any?(proposal.operations, &({schema, work.source_id} in op_targets(&1))),
+          do: [source_in_proposal()],
+          else: readable_take_problems(op, takes, work, actor)
 
       {:error, reason} ->
         [not_a_translation(reason)]
+    end
+  end
+
+  defp readable_take_problems(%SyncTranslation{target: {schema, _id}} = op, takes, work, actor) do
+    case readable_source(schema, work.source_id, actor) do
+      :ok -> sync_take_problems(op, takes, work)
+      {:error, problem} -> [problem]
     end
   end
 
