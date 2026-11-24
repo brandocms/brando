@@ -836,6 +836,45 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert button_values(c)["cta"] == nil
       assert %{identifier_id: nil, value: nil, link_text: nil} = cta_var()
     end
+
+    test "a link set to where it already points, as it is stored, is unchanged", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+      other = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => entry}
+          }
+        ])
+
+      apply!(proposal, c)
+
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      unchanged? = fn values -> Map.has_key?(elem(propose!(c, [set.(values)]), 0), :unchanged) end
+
+      assert unchanged?.(%{"cta" => entry})
+      assert unchanged?.(%{"cta" => %{"link" => entry}})
+      refute unchanged?.(%{"cta" => other})
+      refute unchanged?.(%{"cta" => %{"link" => entry, "text" => "Read"}})
+
+      link = %{"link" => "https://example.com", "text" => "Go", "new_tab" => true}
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => link})])
+      apply!(proposal, c)
+
+      assert unchanged?.(%{"cta" => link})
+      assert unchanged?.(%{"cta" => %{"text" => "Go"}})
+      refute unchanged?.(%{"cta" => %{link | "new_tab" => false}})
+      refute unchanged?.(%{"cta" => %{link | "text" => ""}})
+    end
   end
 
   defp cta_var do

@@ -2734,7 +2734,7 @@ defmodule Brando.Content.Proposals do
     same =
       for {key, value} <- values,
           %{} = var <- [Enum.find(block.vars, &(&1.key == key))],
-          saved_value(var) == value,
+          saved?(var, value),
           do: key
 
     if same != [] and length(same) == map_size(values),
@@ -2770,6 +2770,18 @@ defmodule Brando.Content.Proposals do
   end
 
   defp unchanged(_op, _block), do: nil
+
+  # A link compares as stored: an entry by its identifier, and the text and
+  # new-tab setting a structured value gives.
+  defp saved?(%{type: :link} = var, {:link, target, opts}) do
+    options = BlockContent.link_options(opts)
+    (is_nil(target) or saved?(var, link_value(target))) and Map.take(var, Map.keys(options)) == options
+  end
+
+  defp saved?(%{type: :link} = var, {:entry, schema, id}),
+    do: match?({:identifier, _}, Var.link_target(var)) and match?(%{schema: ^schema, entry_id: ^id}, var.identifier)
+
+  defp saved?(var, value), do: saved_value(var) == value
 
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
   defp saved_value(%{type: kind} = var) when kind in [:image, :video, :file], do: {kind, Map.get(var, :"#{kind}_id")}
