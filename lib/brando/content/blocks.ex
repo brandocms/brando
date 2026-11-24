@@ -1722,8 +1722,7 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Syncs a block's vars and refs with a module. `block` is a block, or a
-  changeset on a saved one (an entry save, `sync_written_blocks/1`).
+  Syncs a block's vars and refs with a module.
 
   Called for every block using a module each time that module is saved, so this
   is the site-wide migration path — see `Brando.Content.ModuleDiff`.
@@ -1745,7 +1744,7 @@ defmodule Brando.Content.Blocks do
     module_ref_names = Enum.map(module_refs, & &1.name)
     changeset = Changeset.change(block)
 
-    current_refs = current_rows(changeset, :refs)
+    current_refs = Changeset.get_assoc(changeset, :refs)
 
     current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
     missing_ref_names = module_ref_names -- current_ref_names
@@ -1763,7 +1762,7 @@ defmodule Brando.Content.Blocks do
     module_vars = module.vars || []
     module_var_keys = Enum.map(module_vars, & &1.key)
 
-    current_vars = current_rows(changeset, :vars)
+    current_vars = Changeset.get_assoc(changeset, :vars)
     current_var_keys = Enum.map(current_vars, &Changeset.get_field(&1, :key))
 
     missing_var_keys = module_var_keys -- current_var_keys
@@ -1784,14 +1783,6 @@ defmodule Brando.Content.Blocks do
     |> Changeset.put_assoc(:vars, reapplied_vars)
     |> Changeset.put_assoc(:refs, reapplied_refs)
     |> stamp_module_version(module, reapplied_refs, new_vars, module_refs_by_name, module_var_keys)
-  end
-
-  # A form's changeset can hold rows its cast replaces: `put_assoc/3` takes
-  # those as the rows left out.
-  defp current_rows(changeset, field) do
-    changeset
-    |> Changeset.get_assoc(field)
-    |> Enum.reject(&(&1.action in [:replace, :delete]))
   end
 
   # `module_version` means "the newest module revision whose instance-data
@@ -1897,33 +1888,20 @@ defmodule Brando.Content.Blocks do
     end)
   end
 
-  # The module a block with `module_id` and `origin` resolves to now, with
-  # what `sync_module/2` reads, as `sync_blocks/3` finds it: a shared one is
-  # the site's override of it, if it has one.
-  defp sync_target(module_id, :local),
-    do: Content.get_module(%{matches: %{id: module_id}, preload: [:vars, refs: Ref.preloads()]})
-
-  defp sync_target(module_id, :shared) do
-    case Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared) do
-      nil -> {:error, :not_found}
-      module -> {:ok, module}
-    end
-  end
-
   @doc """
-  Brings the blocks an entry save writes up to their modules, as a module
-  save does (`sync_module/2`), when the form's copy of them is stale: for
-  every block field of `changeset`'s entry, nested blocks too.
+  Puts the changes an entry save makes to its blocks on the blocks as they
+  are saved, when the form's copy of them is stale: for every block field
+  of `changeset`'s entry, nested blocks too.
 
   An open form holds its blocks as it loaded them. A module save, a library
   Reset or Accept, or another save may have written them since, and the
   form would write its own copy back over that. A saved block whose refs or
   vars the save writes, and whose saved rows (its `module_version`, refs and
-  vars) differ from what the form loaded, is rebuilt from the saved rows:
-  this save's changes go on top (per ref, the settings it changed; a var or
-  ref the form adds that the saved rows hold under the same key or name is
-  that row), and the result is synced with the module the block resolves to
-  now. The ref settings the save changes are kept over the module's.
+  vars) differ from what the form loaded, is rebuilt from the saved rows,
+  with this save's changes on top: per ref, the settings it changed; per
+  var, its changes; a var or ref the form adds that the saved rows hold
+  under the same key or name is that row. No module is read: a module save,
+  a Reset and an Accept have synced the saved rows already.
 
   A block the form holds as it is saved is written as the form sends it.
   Left alone too: a block whose refs and vars the save does not write
@@ -1932,7 +1910,8 @@ defmodule Brando.Content.Blocks do
 
   Run it in the save's transaction, after authorization. A save that writes
   no block runs no query; one that does reads the written blocks' stamps,
-  refs and vars in a query each, and loads a module only for a stale block.
+  refs and vars in a query each. The changeset comes back unchanged when no
+  written block is stale.
   """
   @spec sync_written_blocks(changeset) :: changeset
   def sync_written_blocks(%Changeset{data: %schema{}} = changeset) do
@@ -1946,9 +1925,8 @@ defmodule Brando.Content.Blocks do
 
     with [_ | _] <- written,
          saved = saved_rows(written),
-         [_ | _] = stale <- Enum.filter(written, &stale?(&1, saved)) do
-      modules = sync_targets(stale)
-      sync = &sync_stale(&1, saved, modules)
+         [_ | _] <- Enum.filter(written, &stale?(&1, saved)) do
+      sync = &sync_stale(&1, saved)
       Enum.reduce(fields, changeset, &update_entry_blocks(&2, &1, sync))
     else
       _ -> changeset
@@ -1982,9 +1960,6 @@ defmodule Brando.Content.Blocks do
     do: not Map.has_key?(changes, :module_version) and (Map.has_key?(changes, :refs) or Map.has_key?(changes, :vars))
 
   defp written?(_block), do: false
-
-  defp module_reference(block),
-    do: {Changeset.get_field(block, :module_id), normalize_library_origin(Changeset.get_field(block, :module_origin))}
 
   # The written blocks as they are saved now, by id
   defp saved_rows(blocks) do
@@ -2022,13 +1997,6 @@ defmodule Brando.Content.Blocks do
   defp row_contents(rows),
     do: MapSet.new(rows, fn %schema{} = row -> Map.take(row, schema.__schema__(:fields) -- @row_bookkeeping) end)
 
-  defp sync_targets(blocks) do
-    for reference <- blocks |> Enum.map(&module_reference/1) |> Enum.uniq(),
-        {:ok, module} <- [sync_target(elem(reference, 0), elem(reference, 1))],
-        into: %{},
-        do: {reference, module}
-  end
-
   defp update_entry_blocks(changeset, field, sync) do
     entry_blocks =
       Enum.map(Changeset.get_change(changeset, field), fn entry_block ->
@@ -2058,25 +2026,16 @@ defmodule Brando.Content.Blocks do
     %{changeset | changes: Map.put(changes, field, value), valid?: valid?}
   end
 
-  defp sync_stale(block, saved, modules) do
-    with true <- written_module_block?(block) and stale?(block, saved),
-         {:ok, module} <- Map.fetch(modules, module_reference(block)) do
-      edits = ref_edits(block)
-
-      block
-      |> onto_saved_rows(Map.fetch!(saved, block.data.id))
-      |> sync_module(module)
-      |> keep_ref_edits(edits)
-    else
-      _ -> block
-    end
+  defp sync_stale(block, saved) do
+    if written_module_block?(block) and stale?(block, saved),
+      do: onto_saved_rows(block, Map.fetch!(saved, block.data.id)),
+      else: block
   end
 
   # The block as it is saved, with this save's changes on top: a row the
   # form changed carries its changes onto the saved row, a row the form
   # adds that is saved under the same key or name is that row, and a row
-  # saved since the form loaded the block joins as it is. A ref's data the
-  # save edits goes back on after the sync (`keep_ref_edits/2`).
+  # saved since the form loaded the block joins as it is.
   defp onto_saved_rows(%Changeset{data: data, changes: changes} = block, saved) do
     refs = onto_saved(Changeset.get_assoc(block, :refs), saved.refs, :name, &ref_onto_saved/2)
     vars = onto_saved(Changeset.get_assoc(block, :vars), saved.vars, :key, &%{&1 | data: &2})
@@ -2101,38 +2060,28 @@ defmodule Brando.Content.Blocks do
       end)
 
     claimed = MapSet.union(claimed, MapSet.new(added, & &1.data.id))
-    known ++ added ++ for(row <- saved_rows, not MapSet.member?(claimed, row.id), do: Changeset.change(row))
+    saved = for row <- saved_rows, not MapSet.member?(claimed, row.id), do: Changeset.change(row)
+    # A saved row is written as one, the rows of an association the save
+    # did not change included
+    Enum.map(known ++ added ++ saved, &if(&1.action, do: &1, else: %{&1 | action: :update}))
   end
 
-  # A ref's data edit of the same block type is put back after the sync; a
-  # save that changes the ref's block type writes its own data
+  # The settings a save changes on a ref of the same block type go on the
+  # saved ref's; a save that changes the ref's block type writes its own data
   defp ref_onto_saved(ref, saved_ref) do
-    changes =
-      case Changeset.fetch_change(ref, :data) do
-        {:ok, value} ->
-          if same_block_type?(ref.data.data, applied(value)), do: Map.delete(ref.changes, :data), else: ref.changes
-
-        :error ->
-          ref.changes
-      end
-
-    %{ref | data: saved_ref, changes: changes}
+    with {:ok, value} <- Changeset.fetch_change(ref, :data),
+         true <- same_block_type?(ref.data.data, applied(value)) do
+      %{ref | data: saved_ref, changes: Map.delete(ref.changes, :data)}
+      |> put_data_edits(data_edits(ref))
+    else
+      _ -> %{ref | data: saved_ref}
+    end
   end
 
   defp same_block_type?(%{__struct__: type}, %{__struct__: type}), do: true
   defp same_block_type?(_old, _new), do: false
 
-  # The settings of its saved refs the save itself changes, by ref id: the
-  # editor's, which the module's do not replace
-  defp ref_edits(block) do
-    for %Changeset{data: %Ref{id: id}} = ref <- current_rows(block, :refs),
-        id,
-        edits = data_edits(ref),
-        edits != %{},
-        into: %{},
-        do: {id, edits}
-  end
-
+  # The fields of the ref's block data the save changes
   defp data_edits(%Changeset{data: %Ref{data: %{data: %{__struct__: kind} = old}}} = ref) do
     with {:ok, value} <- Changeset.fetch_change(ref, :data),
          %{data: %{__struct__: ^kind} = new} <- applied(value) do
@@ -2147,25 +2096,10 @@ defmodule Brando.Content.Blocks do
   defp applied(%Changeset{} = changeset), do: Changeset.apply_changes(changeset)
   defp applied(value), do: value
 
-  defp keep_ref_edits(block, edits) when edits == %{}, do: block
+  defp put_data_edits(ref, edits) when edits == %{}, do: ref
 
-  defp keep_ref_edits(%Changeset{changes: %{refs: refs}} = block, edits) do
-    refs =
-      Enum.map(refs, fn %Changeset{data: %Ref{id: id}} = ref ->
-        case Map.fetch(edits, id) do
-          {:ok, ref_edits} ->
-            data = applied(Changeset.get_field(ref, :data))
-            Changeset.put_change(ref, :data, %{data | data: struct(data.data, ref_edits)})
-
-          :error ->
-            ref
-        end
-      end)
-
-    %{block | changes: Map.put(block.changes, :refs, refs)}
-  end
-
-  defp keep_ref_edits(block, _edits), do: block
+  defp put_data_edits(%Changeset{data: %Ref{data: saved}} = ref, edits),
+    do: Changeset.put_change(ref, :data, %{saved | data: struct(saved.data, edits)})
 
   # A module save migrates every block that uses it, one write at a time and
   # outside a transaction. A block that fails keeps its old data and its old

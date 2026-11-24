@@ -1,6 +1,7 @@
 defmodule Brando.Content.SaveSyncsBlocksTest do
-  # An entry save brings the blocks it writes up to their modules' current
-  # versions (#3901). Each save here is the form's: the entry's blocks as the
+  # An entry save writes its changes to a block onto the block as it is
+  # saved, which a module save may have synced since the form loaded it
+  # (#3901). Each save here is the form's: the entry's blocks as the
   # form loaded them, a changeset per entry block from the block field's
   # params, written through the context's update.
   use Brando.ConnCase, async: true
@@ -104,6 +105,17 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
     vars = Enum.map(module.vars, &%{id: &1.id}) ++ [%{type: "string", key: key, label: "Added", value: "Added"}]
     {:ok, module} = Content.update_module(module, %{vars: vars}, user)
     module
+  end
+
+  # A page with one Case block, as the module builds it
+  defp case_page!(c, uri) do
+    page = Brando.Factory.insert(:page, creator: c.user, title: uri, uri: uri)
+
+    {:ok, block} =
+      c.case_module.id |> Blocks.build_module_block(c.user.id, nil, to_string(Page.Blocks), :module) |> Repo.insert()
+
+    Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+    page
   end
 
   defp saved_block(uid), do: Repo.one!(from(b in Block, where: b.uid == ^uid, preload: [:vars, :refs]))
@@ -236,6 +248,31 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
       assert ref_data(block, "body").type == :lede
       assert var_keys(block) == ["credit", "heading"]
       assert Enum.find(block.vars, &(&1.key == "heading")).value == "Mine"
+    end
+
+    test "another editor's save keeps the settings it wrote on refs this save did not change", c do
+      page = case_page!(c, "two-editors")
+      editor_a = loaded(page)
+      editor_b = loaded(page)
+      [%{block: %{uid: uid, refs: refs, vars: vars}}] = editor_a.entry_blocks
+      cover = Enum.find(refs, &(&1.name == "cover"))
+      heading = Enum.find(vars, &(&1.key == "heading"))
+
+      alt = %{
+        "refs" => [
+          %{"id" => to_string(cover.id), "data" => %{"type" => "picture", "data" => %{"alt" => "A's alt"}}}
+        ]
+      }
+
+      editor_a |> form_changeset_with(c.user, %{uid => alt}) |> save!(c.user)
+
+      # B saves before the reload of A's save reaches B's block field
+      vars = %{"vars" => [%{"id" => to_string(heading.id), "value" => "B's heading"}]}
+      editor_b |> form_changeset_with(c.user, %{uid => vars}) |> save!(c.user)
+
+      block = saved_block(uid)
+      assert ref_data(block, "cover").alt == "A's alt"
+      assert Enum.find(block.vars, &(&1.key == "heading")).value == "B's heading"
     end
 
     test "a var the form fetched that a module save added is saved once, with the editor's value", c do
