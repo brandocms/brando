@@ -26,6 +26,7 @@ defmodule BrandoAdmin.FormLanguageSwitchTest do
   # the form of a type without languages, it sets the preference only.
   # Grouped, one at a time: the groups tests take the authorization lock
   use Brando.LiveCase, async: true, group: :shared_locks
+  use Gettext, backend: Brando.Gettext
 
   import Brando.Test.Users
   import Ecto.Query, only: [from: 2]
@@ -142,6 +143,20 @@ defmodule BrandoAdmin.FormLanguageSwitchTest do
                |> render_click("create_translation", %{"language" => "en"})
 
       assert stored(user) == "no"
+    end
+
+    test "a site language the type does not have has no version", %{conn: conn, current_user: user} do
+      put_test_env(:languages, [
+        [value: "no", text: "Norsk"],
+        [value: "en", text: "English"],
+        [value: "de", text: "Deutsch"]
+      ])
+
+      source = article(user)
+      view = open_form(conn, "/admin/articles/update/#{source.id}", "article_form")
+
+      assert has_element?(view, "#{option("de")}[disabled]", gettext("No version"))
+      assert is_binary(forge(view, "de"))
     end
 
     for mode <- [:legacy, :groups] do

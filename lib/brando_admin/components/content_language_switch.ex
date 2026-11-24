@@ -76,28 +76,27 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
     versions = Translations.versions_by_language(schema, entry, user)
     missing = Translations.missing_languages(schema, entry)
     create? = Translations.synchronized?(schema) and Translation.can_create?(schema, user)
+    type_languages = for value <- Ecto.Enum.values(schema, :language), do: to_string(value)
 
     for code <- Brando.Languages.codes(), code != to_string(entry.language), into: %{} do
       option =
         case versions do
           %{^code => %{deleted_at: %DateTime{}}} -> :trashed
           %{^code => version} -> url(schema, version)
-          _ -> without_version(code, missing, create?)
+          _ -> without_version(code in type_languages, code in missing, create?)
         end
 
       {code, option}
     end
   end
 
-  # A language with no version the editor may read: one with no version at
-  # all, or one with a version they may not read (not in `missing`)
-  defp without_version(code, missing, create?) do
-    cond do
-      code not in missing -> :unavailable
-      create? -> :create
-      true -> :none
-    end
-  end
+  # A language with no version the editor may read: one the type cannot
+  # have, one with no version at all, or one with a version they may not read
+  # (not in `missing`)
+  defp without_version(false = _type_language?, _missing?, _create?), do: :none
+  defp without_version(true, false, _create?), do: :unavailable
+  defp without_version(true, true, true), do: :create
+  defp without_version(true, true, false), do: :none
 
   defp url(schema, version) do
     case schema.__admin_route__(:update, [version.id]) do
