@@ -373,8 +373,8 @@ defmodule Brando.Content.Proposals do
   defp check_operation(%Translate{} = op, proposal, actor, trees),
     do: {translate_problems(op, proposal, actor), trees}
 
-  defp check_operation(%SyncTranslation{} = op, _proposal, actor, trees),
-    do: {sync_problems(op, actor), trees}
+  defp check_operation(%SyncTranslation{} = op, proposal, actor, trees),
+    do: {sync_problems(op, proposal, actor), trees}
 
   defp check_operation(op, proposal, actor, trees) do
     cond do
@@ -960,7 +960,7 @@ defmodule Brando.Content.Proposals do
   # Allowed where the translation's pending version has something to take
   # from its source, and checked again at approve and apply against what it
   # took when prepared: the reviewer approved those changes.
-  defp sync_problems(%SyncTranslation{target: {:new, _}}, _actor),
+  defp sync_problems(%SyncTranslation{target: {:new, _}}, _proposal, _actor),
     do: [
       problem(
         :not_translation,
@@ -971,12 +971,19 @@ defmodule Brando.Content.Proposals do
       )
     ]
 
-  defp sync_problems(%SyncTranslation{target: target} = op, actor) do
+  # A change to the source in the same proposal would reach the save
+  # uncounted, were the translation's pending version recomputed from it
+  # before the translation is saved: it is refused.
+  defp sync_problems(%SyncTranslation{target: {schema, _id} = target} = op, proposal, actor) do
     case sync_takes(target) do
       {:ok, takes, work} ->
-        case readable_source(elem(target, 0), work.source_id, actor) do
-          :ok -> sync_take_problems(op, takes, work)
-          {:error, problem} -> [problem]
+        if Enum.any?(proposal.operations, &({schema, work.source_id} in op_targets(&1))) do
+          [source_in_proposal()]
+        else
+          case readable_source(schema, work.source_id, actor) do
+            :ok -> sync_take_problems(op, takes, work)
+            {:error, problem} -> [problem]
+          end
         end
 
       {:error, reason} ->
@@ -1011,6 +1018,16 @@ defmodule Brando.Content.Proposals do
         dgettext(
           "content_proposals",
           "This translation is up to date with its source: its links, media and source-controlled values are the source's, and there is nothing for sync_translation to take. Leave it out; its texts are answered with translate."
+        )
+      )
+
+  defp source_in_proposal,
+    do:
+      problem(
+        :source_in_proposal,
+        dgettext(
+          "content_proposals",
+          "Another operation in this proposal changes this translation's source, and sync_translation takes only what the source holds when it is prepared. Put the change to the source in a proposal of its own, and prepare sync_translation once it is applied."
         )
       )
 

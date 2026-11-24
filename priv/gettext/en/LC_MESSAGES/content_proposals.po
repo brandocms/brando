@@ -335,6 +335,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Another operation in this proposal changes this translation's source, and sync_translation takes only what the source holds when it is prepared. Put the change to the source in a proposal of its own, and prepare sync_translation once it is applied."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Approve this version of the proposal before applying it."
 msgstr ""
 

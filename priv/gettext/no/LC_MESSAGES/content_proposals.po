@@ -335,6 +335,11 @@ msgstr "Et bilde kan ikke erstattes med seg selv."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Another operation in this proposal changes this translation's source, and sync_translation takes only what the source holds when it is prepared. Put the change to the source in a proposal of its own, and prepare sync_translation once it is applied."
+msgstr "En annen operasjon i dette forslaget endrer kilden til denne oversettelsen, og sync_translation henter bare det kilden har når forslaget forberedes. Legg endringen i kilden i et eget forslag, og forbered sync_translation når det er tatt i bruk."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Approve this version of the proposal before applying it."
 msgstr "Godkjenn denne versjonen av forslaget før du utfører det."
 

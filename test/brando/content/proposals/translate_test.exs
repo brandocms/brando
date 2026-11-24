@@ -1292,6 +1292,14 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert {1, :not_translation, nil} in problems([create, %SyncTranslation{target: {:new, "de"}}], c.user)
     end
 
+    # Saving the source recomputes the pending version before the
+    # translation is saved, when the sync runs in the save (as it does
+    # inline): the save would take the source's change uncounted
+    test "is refused with a change to its source in the same proposal", c do
+      set = %SetFields{target: {Article, c.source.id}, fields: %{"year" => 2002}}
+      assert [{1, :source_in_proposal, nil}] = problems([set, sync(c.target)], c.user)
+    end
+
     test "is refused with another operation on the same translation", c do
       set = %SetFields{target: {Article, c.target.id}, fields: %{"status" => "published"}}
       assert [{1, :translate_only, nil}] = problems([sync(c.target), set], c.user)
