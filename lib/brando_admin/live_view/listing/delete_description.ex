@@ -353,15 +353,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
     names =
       for fragment <- fragments,
           %{translations: translations} <- [Brando.Translations.source_group(Fragment, fragment.id)],
-          name = named(Fragment, fragment) do
-        case for(%{entry: entry} <- translations, name = named(Fragment, entry), do: name) do
-          [] ->
-            name
-
-          names ->
-            gettext("%{fragment} (translated as %{translations})", fragment: name, translations: to_sentence(names))
-        end
-      end
+          name = named(Fragment, fragment),
+          do: with_translations_named(name, translations)
 
     message =
       case names do
@@ -380,6 +373,13 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
       end
 
     message <> alternative
+  end
+
+  defp with_translations_named(name, translations) do
+    case for(%{entry: entry} <- translations, name = named(Fragment, entry), do: name) do
+      [] -> name
+      names -> gettext("%{fragment} (translated as %{translations})", fragment: name, translations: to_sentence(names))
+    end
   end
 
   defp translation_name(schema, entry), do: named(schema, entry) || gettext("a translation you may not see")
