@@ -694,8 +694,10 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  The blocks of a local module `entry` holds as it is loaded, for
-  `guard_written_modules/2`.
+  What `guard_written_modules/2` lets through again: `{uid, module_id}`
+  of each local module block under `entry` as loaded. Read it before a
+  writer changes the entry's rows (a restore reattaching detached blocks),
+  or those blocks count as held.
   """
   def held_module_blocks(entry) do
     for {%{uid: uid} = block, _place} <- loaded_module_blocks(entry),
