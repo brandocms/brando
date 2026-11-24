@@ -643,7 +643,11 @@ defmodule Brando.Content.Transfer.Entries do
   end
 
   defp import!(plan, actor, stage) do
+    # Queues behind a definition apply before it locks the modules the
+    # imported blocks use (`Brando.Content.Blocks.lock_block_content_tables/0`)
+    Brando.Content.Blocks.lock_block_content_tables()
     Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
+    guard_trashed_modules!(plan, actor)
     current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
 
     unless current.fingerprint == plan.fingerprint && Transfer.applicable?(current),
@@ -695,6 +699,15 @@ defmodule Brando.Content.Transfer.Entries do
           )
       }
     })
+  end
+
+  # A module put in the trash since the preview is refused by name, before
+  # the preview is taken again, which would find only that something changed
+  defp guard_trashed_modules!(plan, actor) do
+    for %{mode: mode} = item <- plan.entries, mode != "reuse" do
+      written = item.entry |> Transfer.field_changeset(item.params, actor) |> Changeset.apply_changes()
+      Transfer.refuse_trashed_modules!(written, item.entry, item.destination.title, plan.bindings, actor)
+    end
   end
 
   # A page's stored trail is the destination's: its parents and the site's
