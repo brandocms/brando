@@ -1265,6 +1265,7 @@ always stays.
 | `html` | `text`, `params`, `values` |
 | `input` | `value` |
 | `svg` | `code` |
+| `map` | `embed_url`, `source` (the address an editor pasted) |
 | `markdown_source` | `source_id`, `policy`, `version_id` |
 
 A picture, video, gallery or file in a `media` ref keeps the same fields, and

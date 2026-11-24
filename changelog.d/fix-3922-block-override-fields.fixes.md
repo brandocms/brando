@@ -1,1 +1,1 @@
-- Saving a module keeps the caption, credits, alt text and link an editor set on a picture in a block, a video's caption and cover, a gallery's per-object texts, and a file's title, label and description.
+- Saving a module keeps the caption, credits, alt text and link an editor set on a picture in a block, a video's caption and cover, a gallery's per-object texts, a file's title, label and description, and the address an editor pasted on a map.

@@ -194,7 +194,7 @@ defmodule Brando.Content.ModuleSyncTest do
     # An editor's own texts for one placement of a picture, video, gallery or
     # file, and the asset they chose, stay with the block on a module save;
     # the module's settings follow the module.
-    alias VillainBlocks.{FileBlock, GalleryBlock, GalleryObjectOverride, MediaBlock, PictureBlock, VideoBlock}
+    alias VillainBlocks.{FileBlock, GalleryBlock, GalleryObjectOverride, MapBlock, MediaBlock, PictureBlock, VideoBlock}
 
     defp synced_ref(block, module, name) do
       block
@@ -316,6 +316,22 @@ defmodule Brando.Content.ModuleSyncTest do
       assert synced.data.data.label == "Download"
       assert synced.data.data.description == "The 2026 report"
       assert synced.data.data.class == "from-module"
+    end
+
+    test "a map keeps the address an editor pasted" do
+      placed =
+        %MapBlock{
+          type: "map",
+          data: %MapBlock.Data{embed_url: "https://www.google.com/maps/embed?pb=harbour", source: :gmaps}
+        }
+
+      module_ref = ref("map", %MapBlock{type: "map", data: %MapBlock.Data{}})
+      block = block(refs: [ref("map", placed, id: 1)])
+
+      synced = synced_ref(block, module(refs: [module_ref]), "map")
+
+      assert synced.data.data.embed_url == "https://www.google.com/maps/embed?pb=harbour"
+      assert synced.data.data.source == :gmaps
     end
   end
 
