@@ -1319,6 +1319,17 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert [%SyncTranslation{takes: nil, digest: nil}] = proposal.operations
     end
 
+    test "counts a link the source switched to a URL as a value, not media", c do
+      c.waiting_vars["project"]
+      |> Ecto.Changeset.change(link_type: :url, identifier_id: nil, value: "https://example.com/")
+      |> Repo.update!()
+
+      Translations.source_saved(load(c.source.id))
+
+      {:ok, proposal} = Proposals.prepare([sync(c.target)], c.user)
+      assert [%SyncTranslation{takes: %{"links" => 1, "media" => 1, "values" => 1}}] = proposal.operations
+    end
+
     test "is refused with another operation on the same translation", c do
       set = %SetFields{target: {Article, c.target.id}, fields: %{"status" => "published"}}
       assert [{1, :translate_only, nil}] = problems([sync(c.target), set], c.user)

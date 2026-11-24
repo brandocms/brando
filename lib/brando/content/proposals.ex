@@ -1079,15 +1079,22 @@ defmodule Brando.Content.Proposals do
   defp take_kind(%{kind: kind, key: key} = unit, assets, pending) when kind in ~w(relinked shared_update) do
     if hd(String.split(key, "/", parts: 2)) in pending.left_out,
       do: "left",
-      else: taken_kind(unit, assets)
+      else: taken_kind(unit, assets, pending.shared)
   end
 
   defp take_kind(_unit, _assets, _pending), do: nil
 
-  defp taken_kind(%{kind: "relinked"}, _assets), do: "links"
+  defp taken_kind(%{kind: "relinked"}, _assets, _shared), do: "links"
 
-  defp taken_kind(%{kind: "shared_update", key: key}, assets),
-    do: if(key in assets or String.ends_with?(key, ["/media", "/gallery"]), do: "media", else: "values")
+  # A link variable keeps its target and kind under `/media` too: the source
+  # changing where it points is a source-controlled value
+  defp taken_kind(%{kind: "shared_update", key: key}, assets, shared) do
+    cond do
+      match?(%{link_type: _}, shared[key]) -> "values"
+      key in assets or String.ends_with?(key, ["/media", "/gallery"]) -> "media"
+      true -> "values"
+    end
+  end
 
   defp readable_source(schema, source_id, actor) do
     case Error.protect(fn -> load!({schema, source_id}, actor, action: :read) end) do
