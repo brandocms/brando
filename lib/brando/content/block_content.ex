@@ -159,7 +159,10 @@ defmodule Brando.Content.BlockContent do
     Changeset.change(var, link_type: :identifier, identifier_id: identifier.id)
   end
 
-  defp put_value(var, :link, url, _user) when is_binary(url), do: Changeset.change(var, link_type: :url, value: url)
+  # A URL link holds no entry, and no link holds neither.
+  defp put_value(var, :link, url, _user) when is_binary(url) or is_nil(url),
+    do: Changeset.change(var, link_type: :url, value: url, identifier_id: nil)
+
   defp put_value(var, _type, value, _user), do: Changeset.put_change(var, :value, value)
 
   # An empty text leaves the link to show its default: an entry's title.

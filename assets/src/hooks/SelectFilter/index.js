@@ -68,7 +68,10 @@ export default (app) => ({
       return
     }
 
-    $visible[0].click()
+    // the match already chosen stays chosen: clicking it again lets go of it
+    if ($visible[0].getAttribute('aria-pressed') !== 'true') {
+      $visible[0].click()
+    }
 
     const $modal = this.el.closest('.modal[data-modal-close]')
     if ($modal) {

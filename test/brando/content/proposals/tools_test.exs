@@ -760,6 +760,55 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert {:error, _} = insert.(%{"cta" => %{"link" => 5}})
       assert {:error, _} = insert.(%{"cta" => %{"new_tab" => "yes"}})
     end
+
+    test "a link is cleared with null, and a URL link with an empty address is no link", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => entry}
+          }
+        ])
+
+      apply!(proposal, c)
+      assert %{entry: "Naming"} = button_values(c)["cta"]
+
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      assert {:ok, %{applicable: false, problems: [%{code: :unsupported_value}]}} =
+               Tools.call("prepare_proposal", %{"summary" => "Links", "operations" => [set.(%{"cta" => ""})]}, c.context)
+
+      {result, proposal} = propose!(c, [set.(%{"cta" => nil})])
+      assert %{applicable: true} = result
+      refute result[:unchanged]
+
+      apply!(proposal, c)
+      assert button_values(c)["cta"] == nil
+      assert %{identifier_id: nil, value: nil} = cta_var()
+
+      # A row a URL switch left behind still holds its entry: it is no link.
+      {:ok, identifier} = Brando.Content.get_identifier(Page, c.naming)
+      cta_var() |> Ecto.Changeset.change(link_type: :url, value: "", identifier_id: identifier.id) |> Brando.Repo.update!()
+
+      assert button_values(c)["cta"] == nil
+      assert %{unchanged: %{operations: [_]}} = elem(propose!(c, [set.(%{"cta" => nil})]), 0)
+    end
+  end
+
+  defp cta_var do
+    import Ecto.Query, only: [from: 2]
+
+    Brando.Repo.one!(
+      from v in Brando.Content.Var, join: b in assoc(v, :block), where: b.uid == "button" and v.key == "cta"
+    )
   end
 
   test "guidance cannot make the assistant invent modules or settings", c do

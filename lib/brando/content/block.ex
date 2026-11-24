@@ -384,7 +384,18 @@ defmodule Brando.Content.Block do
         |> validate_media_fks()
         |> validate_var_value(definitions)
         |> Brando.Content.Var.SanitizeRichText.sanitize()
+        |> drop_url_link_entry()
     end
+  end
+
+  # A URL link holds no entry: switching a link to URL lets go of the one it
+  # pointed to, so switching back shows none chosen.
+  defp drop_url_link_entry(changeset) do
+    field = &Ecto.Changeset.get_field(changeset, &1)
+
+    if field.(:type) == :link and field.(:link_type) == :url and not is_nil(field.(:identifier_id)),
+       do: put_change(changeset, :identifier_id, nil),
+       else: changeset
   end
 
   # A restored revision's values were stored once, and print as text whatever

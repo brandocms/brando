@@ -105,6 +105,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Transfer.Catalog
   alias Brando.Content.Transfer.Dependencies
   alias Brando.Content.Transfer.Error
+  alias Brando.Content.Var
   alias Brando.Drafts.Params
   alias Brando.Repo
   alias Brando.Translations
@@ -2411,8 +2412,9 @@ defmodule Brando.Content.Proposals do
   defp settable?(%{type: :datetime}, value) when is_binary(value),
     do: match?({:ok, _, _}, DateTime.from_iso8601(value)) or match?({:ok, _}, NaiveDateTime.from_iso8601(value))
 
-  # A link var takes an address, or an entry (above).
+  # A link var takes an address, an entry (above), or null for no link.
   defp settable?(%{type: :link}, value) when is_binary(value), do: value != ""
+  defp settable?(%{type: :link}, nil), do: true
   defp settable?(_, _), do: false
 
   defp unsupported(%{type: :select}, key, value) when is_binary(value),
@@ -2420,6 +2422,13 @@ defmodule Brando.Content.Proposals do
       problem(
         :unsupported_value,
         dgettext("content_proposals", "%{key} has no option %{value}.", key: key, value: value)
+      )
+
+  defp unsupported(%{type: :link}, key, ""),
+    do:
+      problem(
+        :unsupported_value,
+        dgettext("content_proposals", ~s(%{key} takes null for no link, not "".), key: key)
       )
 
   defp unsupported(_var, key, _value),
@@ -2760,6 +2769,7 @@ defmodule Brando.Content.Proposals do
 
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
   defp saved_value(%{type: kind} = var) when kind in [:image, :video, :file], do: {kind, Map.get(var, :"#{kind}_id")}
+  defp saved_value(%{type: :link} = var), do: Var.link_target(var)
   defp saved_value(var), do: var.value
 
   defp ref_text(%{data: %{data: data}}), do: Map.get(data, :text) || Map.get(data, :code) || Map.get(data, :embed_url)

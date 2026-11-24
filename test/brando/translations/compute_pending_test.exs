@@ -635,6 +635,19 @@ defmodule Brando.Translations.ComputePendingTest do
       assert var.value == "/en/about"
       assert result.work_items == []
     end
+
+    # Switching a link to URL and leaving the address empty used to keep the
+    # entry it pointed to on the row.
+    test "an empty URL link is no link, whatever entry its row still holds" do
+      left_behind = %{url_link("") | identifier_id: 3}
+      source = article(:no, blocks: [block("a", vars: [left_behind])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [url_link("")])])
+
+      assert Sync.identifier_ids(source, Article) == []
+
+      result = compute(source, target, baseline(source))
+      assert result.work_items == []
+    end
   end
 
   describe "gallery refs" do

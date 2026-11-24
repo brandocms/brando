@@ -244,7 +244,16 @@ defmodule Brando.Translations.Sync do
       Enum.flat_map(loaded(block.children), &block_identifier_ids/1)
   end
 
-  defp var_identifier_ids(vars), do: for(%{identifier_id: id} <- vars, id, do: id)
+  defp var_identifier_ids(vars), do: for(var <- vars, id = linked_identifier_id(var), do: id)
+
+  # The entry a link points to as the page renders it (`Var.link_target/1`):
+  # none for a URL link, whatever identifier its row still holds.
+  defp linked_identifier_id(var) do
+    case Var.link_target(var) do
+      {:identifier, id} -> id
+      _ -> nil
+    end
+  end
 
   defp var_relations(spec), do: for(%{key: :key, name: name} <- spec.subforms, do: name)
 
@@ -477,7 +486,9 @@ defmodule Brando.Translations.Sync do
   defp flatten_var(var, parent_prefix, controlled? \\ false) do
     prefix = "#{parent_prefix}/#{var.key}"
     # A link's kind (an entry or a URL) follows the source like its target does
-    media = {prefix <> "/media", :shared, Map.take(var, [:identifier_id | @media_fks] ++ link_kind(var))}
+    media =
+      {prefix <> "/media", :shared,
+       var |> Map.take(@media_fks ++ link_kind(var)) |> Map.put(:identifier_id, linked_identifier_id(var))}
 
     values =
       cond do
@@ -1295,21 +1306,21 @@ defmodule Brando.Translations.Sync do
   end
 
   defp resolve_vars(vars, prefix, map, awaiting) do
-    Enum.map_reduce(vars, awaiting, fn
-      %{identifier_id: nil} = var, awaiting ->
-        {var, awaiting}
+    Enum.map_reduce(vars, awaiting, &resolve_var(&1, linked_identifier_id(&1), prefix, map, &2))
+  end
 
-      %{identifier_id: source_id} = var, awaiting ->
-        case map[source_id] do
-          # Keeps pointing at the source-language entry until its translation
-          # exists: a working link, not an empty one
-          nil ->
-            {var, [awaiting_item("#{prefix}/#{var.key}/identifier/#{source_id}") | awaiting]}
+  defp resolve_var(var, nil, _prefix, _map, awaiting), do: {var, awaiting}
 
-          target_id ->
-            {%{unload(var, :identifier) | identifier_id: target_id}, awaiting}
-        end
-    end)
+  defp resolve_var(var, source_id, prefix, map, awaiting) do
+    case map[source_id] do
+      # Keeps pointing at the source-language entry until its translation
+      # exists: a working link, not an empty one
+      nil ->
+        {var, [awaiting_item("#{prefix}/#{var.key}/identifier/#{source_id}") | awaiting]}
+
+      target_id ->
+        {%{unload(var, :identifier) | identifier_id: target_id}, awaiting}
+    end
   end
 
   # The preloaded association is the source's; the id alone now says where the

@@ -468,6 +468,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     end
   end
 
+  # Clicking the chosen entry again lets go of it
+  def handle_event("select_identifier", %{"id" => id}, %{assigns: %{selected_identifier_id: id}} = socket),
+    do: select_identifier(socket, nil)
+
   def handle_event("select_identifier", %{"id" => id}, socket) do
     with {:ok, identifier} <- Brando.Content.get_identifier(id),
          true <- !socket.assigns.require_url || RichText.allowed_uri?(Identifier.link_url(identifier)) do
@@ -496,8 +500,8 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
     socket
     |> assign(:selected_identifier, identifier)
-    |> assign(:selected_identifier_id, identifier.id)
-    |> assign(:loaded_identifier_id, identifier.id)
+    |> assign(:selected_identifier_id, identifier && identifier.id)
+    |> assign(:loaded_identifier_id, identifier && identifier.id)
     |> assign(:selected_creator, selected_creator(identifier))
     |> then(&{:noreply, &1})
   end
