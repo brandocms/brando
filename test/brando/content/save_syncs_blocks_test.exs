@@ -111,25 +111,32 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
       assert var_keys(saved_block(beta)) == ["credit", "size"]
     end
 
-    test "a new block built before the module save is written with its var", c do
+    test "a ref setting the save changes is kept over the module's", c do
+      stamp(c.text_module)
       page = loaded(c.identity)
-      {:ok, built} = Content.get_module(%{matches: %{id: c.text_module.id}, preload: [:vars, :refs]})
-      block = Blocks.build_module_block(built.id, c.user.id, nil, Page.Blocks, :module)
-      uid = Ecto.Changeset.get_field(block, :uid)
+      [%{block: %{uid: first, refs: [body]}} | _] = page.entry_blocks
+      save_module(c.text_module, c.user, "body", "heading")
 
-      new =
-        %Page.Blocks{}
-        |> Ecto.Changeset.change(sequence: 3)
-        |> Ecto.Changeset.put_assoc(:block, block)
-        |> Map.put(:action, :insert)
+      entry_blocks =
+        Enum.map(page.entry_blocks, fn %{block: block} = entry_block ->
+          refs =
+            if block.uid == first,
+              do: [%{"id" => to_string(body.id), "data" => %{"type" => "text", "data" => %{"type" => "lead"}}}],
+              else: []
 
-      module = save_module(c.text_module, c.user, "body", "heading")
-      page |> form_changeset(c.user, %{}, [new]) |> save!(c.user)
+          Page.Blocks.changeset(
+            entry_block,
+            %{"block" => %{"id" => to_string(block.id), "refs" => refs}},
+            c.user.id,
+            true
+          )
+        end)
 
-      saved = saved_block(uid)
-      assert var_keys(saved) == ["heading"]
-      assert ref_data(saved, "body").type == :lede
-      assert saved.module_version == module.version
+      page |> Page.changeset(%{}, c.user) |> Ecto.Changeset.put_assoc(:entry_blocks, entry_blocks) |> save!(c.user)
+
+      block = saved_block(first)
+      assert var_keys(block) == ["heading"]
+      assert ref_data(block, "body").type == :lead
     end
   end
 

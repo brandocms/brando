@@ -570,13 +570,14 @@ blocks are queued for re-render.
 - **An entry save syncs the blocks it writes that are behind.**
   `Blocks.sync_written_blocks/1` runs in `Brando.Query.Mutations`'
   `create_with_changeset`/`update_with_changeset`, after authorization: a
-  written block (changes besides `:children`, or an insert) whose stamp, as
-  the form loaded it, is not its module's current version goes through
-  `sync_module/2` on top of the form's changeset and of the rows saved since
-  (a var a module save added is one row, not two). An untouched block is not
-  written, so it stays as the module save left it. Stamps compare by
-  equality: an override and its library module count versions separately,
-  and an Accept's replacement starts at 1.
+  saved block whose refs or vars the save writes, and whose stamp as the form
+  loaded it is not its module's current version, goes through `sync_module/2`
+  on top of the form's changeset and of the rows saved since (a var a module
+  save added is one row, not two); ref settings the save itself changes win
+  over the module's. Left alone: new blocks, blocks only moved, and blocks
+  whose `module_version` the save sets (a revision's working copy). Stamps
+  compare by equality: an override and its library module count versions
+  separately, and an Accept's replacement starts at 1.
 
 ### Classifying a pending module change
 
