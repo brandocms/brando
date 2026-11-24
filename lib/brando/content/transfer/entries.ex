@@ -932,13 +932,20 @@ defmodule Brando.Content.Transfer.Entries do
       end)
 
     targets = %{source["key"] => %{"mode" => "update", "id" => entry.id, "publication" => "source"}}
-    plan = preview!(%{bundle: bundle, files: %{}}, targets, actor, dependencies: mappings)
-    unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
+    plan = recovery_plan!(bundle, targets, mappings, actor)
     Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
+    # Its dependencies read again under their locks: one may have gone to the trash
+    plan = recovery_plan!(bundle, targets, mappings, actor)
     bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
     {saved, _bindings} = persist!(plan, bindings, actor)
     Activity.import_undone(entry, actor, :update)
     saved
+  end
+
+  defp recovery_plan!(bundle, targets, mappings, actor) do
+    plan = preview!(%{bundle: bundle, files: %{}}, targets, actor, dependencies: mappings)
+    unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
+    plan
   end
 
   defp delete_owned!(entry) do

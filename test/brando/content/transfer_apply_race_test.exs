@@ -62,6 +62,24 @@ defmodule Brando.Content.TransferApplyRaceTest do
         assert_both_land(c, fn -> Transfer.restore(receipt.id, c.user) end)
       end
 
+      test "a recovery whose module goes to the trash after its preview read it is refused", c do
+        # The import maps the module to another, so the destinations' rows of
+        # it are not locked as part of their trees, and it can be trashed
+        receipt =
+          in_prefix(c, fn ->
+            other = ProposalFixtures.module!(c.user, "Other racer", "<p>{{ tagline }}</p>", vars: tagline_vars())
+            {:ok, receipt} = Transfer.apply(entry_plan(c, %{"module:#{c.module.id}" => other.id}), c.user)
+            receipt
+          end)
+
+        recovery = paused(c, fn -> Transfer.restore(receipt.id, c.user) end, &module_read?/1)
+        in_prefix(c, fn -> trash!(c.module) end)
+        send(recovery.pid, :go)
+
+        assert {:error, _} = Task.await(recovery, 30_000)
+        assert is_nil(in_prefix(c, fn -> Brando.Repo.get!(Receipt, receipt.id).restored_at end))
+      end
+
       test "an import that starts while the apply holds its locks waits for it", c do
         plan = in_prefix(c, fn -> entry_plan(c) end)
         apply = paused(c, fn -> Definitions.apply(c.definitions, c.user) end, &(&1.query =~ "LOCK TABLE"))
@@ -91,6 +109,16 @@ defmodule Brando.Content.TransferApplyRaceTest do
   end
 
   defp module_row_lock?(%{query: query}), do: query =~ ~s("content_modules") and query =~ "FOR UPDATE"
+
+  # The dependency loader's read of a module, which the preview runs before
+  # any lock on it
+  defp module_read?(%{query: query}) do
+    {:current_stacktrace, stack} = Process.info(self(), :current_stacktrace)
+    query =~ ~s("content_modules") and Enum.any?(stack, &match?({Brando.Content.Transfer.Dependencies, :load!, _, _}, &1))
+  end
+
+  defp trash!(module),
+    do: module |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Brando.Repo.update!()
 
   # Two sources, the second with a block of the module, and two
   # destinations, the second holding one too (which a recovery puts back),
@@ -124,9 +152,7 @@ defmodule Brando.Content.TransferApplyRaceTest do
 
   defp content!(prefix, user, path) do
     module =
-      ProposalFixtures.module!(user, "Racer", "<p>{{ tagline }}</p>",
-        vars: [%{type: "string", key: "tagline", label: "Tagline", value: "Default tagline"}]
-      )
+      ProposalFixtures.module!(user, "Racer", "<p>{{ tagline }}</p>", vars: tagline_vars())
 
     [first, second, first_target, second_target] =
       for title <- ["First", "Second", "First target", "Second target"], do: page!(title, user)
@@ -151,7 +177,9 @@ defmodule Brando.Content.TransferApplyRaceTest do
     }
   end
 
-  defp entry_plan(c) do
+  defp tagline_vars, do: [%{type: "string", key: "tagline", label: "Tagline", value: "Default tagline"}]
+
+  defp entry_plan(c, dependencies \\ %{}) do
     selectors = for page <- c.sources, do: %{schema: Page, id: page.id}
     archive = read!(Transfer.export(selectors, c.user, media: false))
 
@@ -161,7 +189,7 @@ defmodule Brando.Content.TransferApplyRaceTest do
          %{"mode" => "update", "id" => target.id, "publication" => "preserve", "attributes" => %{"uri" => target.uri}}}
       end)
 
-    plan!(archive, targets, c.user)
+    plan!(archive, targets, c.user, dependencies)
   end
 
   defp field_plan(c) do
@@ -181,8 +209,8 @@ defmodule Brando.Content.TransferApplyRaceTest do
     archive
   end
 
-  defp plan!(archive, targets, user) do
-    {:ok, plan} = Transfer.preview(archive, targets, user)
+  defp plan!(archive, targets, user, dependencies \\ %{}) do
+    {:ok, plan} = Transfer.preview(archive, targets, user, dependencies: dependencies)
     [] = plan.problems
     plan
   end
