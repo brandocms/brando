@@ -125,7 +125,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
       {:error, {:taken, _field}} ->
         delete_refused(
-          gettext("Not restored: another entry has its address, and no address close to it is free. It is still in the trash.")
+          gettext(
+            "Not restored: another entry has its address, and no address close to it is free. It is still in the trash."
+          )
         )
 
       # Restored, or deleted for good, since the list was drawn
