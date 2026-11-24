@@ -77,6 +77,31 @@ test('asks about unsaved changes, and staying keeps the form on its language', a
   await syncLV(page)
 })
 
+test('a click with a modifier key asks about unsaved changes too', async ({ page }) => {
+  const { source_id: sourceId } = await articles(page)
+
+  await page.goto(`/admin/sync_test/articles/update/${sourceId}`)
+  await syncLV(page)
+  await openSwitch(page)
+
+  // Offline, the edit stays out of recovery storage
+  await page.evaluate(() => window.liveSocket.disconnect())
+  const title = page.locator('input[name$="[title]"]').first()
+  await title.fill('Ulagret tittel')
+
+  // The option is a button the server answers: a modifier opens nothing elsewhere
+  const dialogPromise = page.waitForEvent('dialog')
+  const click = option(page, 'English').click({ modifiers: ['Shift'] })
+  const dialog = await dialogPromise
+  await dialog.dismiss()
+  await click
+
+  await expect(page).toHaveURL(new RegExp(`/update/${sourceId}$`))
+  await expect(title).toHaveValue('Ulagret tittel')
+  await page.evaluate(() => window.liveSocket.connect())
+  await syncLV(page)
+})
+
 test('a synchronized type creates the translation of a language without one', async ({ page }, testInfo) => {
   const { source_id: sourceId } = await articles(page, { source_only: 'true' })
 
