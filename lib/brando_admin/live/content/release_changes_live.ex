@@ -616,8 +616,18 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp applied_text(nil, keep_here),
     do: ngettext("Kept 1 version here.", "Kept %{count} versions here.", length(keep_here))
 
-  defp applied_text(%{result: result}, _keep_here),
-    do: ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
+  defp applied_text(%{result: result}, _keep_here) do
+    applied = ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
+
+    if Enum.any?(result.renamed, & &1.left?),
+      do:
+        applied <>
+          " " <>
+          gettext(
+            "Renamed refs and vars keep their values under the old names: the module’s row has the command that moves them."
+          ),
+      else: applied
+  end
 
   defp reverted_text(%{reverted: reverted, conflicts: conflicts, irreversible: irreversible} = result) do
     blocks = result |> Map.get(:leftovers, []) |> Enum.map(& &1.blocks) |> Enum.sum()

@@ -444,7 +444,7 @@ defmodule Brando.Content.Definition.Importer do
 
   defp limit_moves(items, selection) do
     moving =
-      for %{action: :update, moves: %{left?: false} = moves} = item <- items,
+      for %{action: :update, moves: %{} = moves} = item <- items,
           MapSet.member?(selection, item.uid),
           do: {item.uid, moves}
 

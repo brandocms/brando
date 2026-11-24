@@ -16527,6 +16527,11 @@ msgstr "Gi nytt navn til, oppdatere og slette listevisninger som andre deler. Eg
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "Renamed refs and vars keep their values under the old names: the module’s row has the command that moves them."
+msgstr "Refs og vars med nye navn beholder verdiene under de gamle navnene: modulens rad har kommandoen som flytter dem."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "Renames refs or vars. Blocks keep their values under the old names until the resolve command moves them."
 msgstr "Gir refs eller vars nye navn. Blokkene beholder verdiene under de gamle navnene til resolve-kommandoen flytter dem."
 
