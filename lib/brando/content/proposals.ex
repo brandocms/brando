@@ -4998,8 +4998,7 @@ defmodule Brando.Content.Proposals do
   end
 
   defp translated_source_problems(%Translate{target: {schema, id} = target} = op, proposal, opts) do
-    with {_schema, _id} = source <- translated_source(target, proposal), do: lock_source!(source, opts)
-    lock_group!(target, opts)
+    lock_translated_source!(target, proposal, opts)
 
     case Work.translation_units(schema, id) do
       {:ok, work} -> source_check(op, %{type: to_string(schema), id: id, language: work.language}, work.units)
@@ -5011,12 +5010,25 @@ defmodule Brando.Content.Proposals do
   # entry of the proposal) rechecks without holding the group while it renders.
   defp synced_source_problems(%SyncTranslation{target: {_schema, id} = target} = op, proposal, opts)
        when is_integer(id) do
-    with {_schema, _id} = source <- translated_source(target, proposal), do: lock_source!(source, opts)
-    lock_group!(target, opts)
+    lock_translated_source!(target, proposal, opts)
     sync_recheck(op)
   end
 
   defp synced_source_problems(_op, _proposal, _opts), do: []
+
+  # With the sources locked first, the group comes next and the source is read
+  # under it: a transfer of the role commits under the group's lock, so a
+  # source read before it could be the one the transfer replaces. On its own
+  # the check locks the source, then the group, the order applying takes.
+  defp lock_translated_source!(target, proposal, opts) do
+    if Keyword.has_key?(opts, :locked) do
+      lock_group!(target, opts)
+      with {_schema, _id} = source <- translated_source(target, proposal), do: lock_source!(source, opts)
+    else
+      with {_schema, _id} = source <- translated_source(target, proposal), do: lock_source!(source, opts)
+      lock_group!(target, opts)
+    end
+  end
 
   defp lock_group!({schema, id}, opts) do
     if Keyword.get(opts, :lock_groups, true) do
