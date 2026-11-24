@@ -1042,8 +1042,8 @@ update module kulturslider: moves no values over the apply's limit; blocks keep 
 ```
 
 Run it after the apply, as a user who may edit the entries that hold the
-values (`USER_ID` when the plan ran without a user; the status at boot
-names the `--map` to run). Keep `renamed_from` in the file until it has
+values (in place of `USER_ID` when the plan ran without a user, as the
+status at boot does). Keep `renamed_from` in the file until it has
 run: while it names the old key, every plan of the module, the release
 status and the module's applied row on the Release changes screen print
 that command. A module that also removes keys no rename accounts for gets

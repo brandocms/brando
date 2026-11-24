@@ -212,8 +212,8 @@ defmodule Brando.Content.Definition.Plan do
   @doc """
   The lines that follow an item whose removed or renamed keys blocks hold,
   one for the moves and one for the drops (`resolve_commands/2`), or where
-  to resolve them. Without a user to name, a move names the `--map` to
-  run. Empty when no block holds them.
+  to resolve them. Without a user to name, a move's command has the
+  `USER_ID` placeholder. Empty when no block holds them.
   """
   def resolve_lines(plan, item), do: Enum.uniq(move_lines(plan, item) ++ drop_lines(plan, item))
 
@@ -230,9 +230,7 @@ defmodule Brando.Content.Definition.Plan do
   end
 
   defp move_line(nil, uid, remaps) do
-    maps = Enum.map_join(remaps, " ", &"--map #{&1.kind}:#{&1.from}=#{&1.to}")
-
-    "resolve: blocks keep the renamed keys' values under the old names until mix brando.modules resolve --uid #{shell_quote(uid)} #{maps} --apply moves them, as a user who may edit those entries"
+    "resolve: blocks keep the renamed keys' values under the old names until #{resolve_command(uid, nil, [], remaps)} moves them, as a user who may edit those entries"
   end
 
   defp move_line(command, _uid, _remaps), do: "resolve: " <> command

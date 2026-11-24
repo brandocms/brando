@@ -739,8 +739,7 @@ defmodule Brando.Content.DefinitionRenamesTest do
       {:ok, bundle} = Definitions.read(c.path)
       {:ok, %{items: [item]} = plan} = Definitions.plan(bundle, :system, creator: :none)
       assert [line] = Brando.Content.Definition.Plan.resolve_lines(plan, item)
-      assert line =~ "mix brando.modules resolve --uid #{c.module.uid} --map var:tagline=heading --apply"
-      refute line =~ "--user"
+      assert line =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID --map var:tagline=heading --apply"
     end
 
     test "over the limit, a rename that changes type is still refused, with a valid rename beside it", c do
