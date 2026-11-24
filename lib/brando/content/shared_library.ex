@@ -110,7 +110,6 @@ defmodule Brando.Content.SharedLibrary do
       Brando.CacheSync.broadcast_gathered(Cache, {site.id, kind})
     end
 
-    Enum.each(Registry.list_sites(), &rebuild_palettes_css/1)
     :ok
   end
 

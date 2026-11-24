@@ -205,10 +205,12 @@ defmodule Brando.Cache do
       registry = if Tenant.enabled?(), do: [:registry], else: []
       if registry != [], do: :ok = Tenant.Cache.invalidate()
 
-      {entries, skipped} = Enum.reduce(contexts(), {0, []}, &clear_context/2)
-
+      # Before the site caches: the palette CSS holds the shared palettes
+      # each site's allowlist enables
       shared_library = if Tenant.mode() == :multi, do: [:shared_library], else: []
       if shared_library != [], do: :ok = Brando.Content.SharedLibrary.forget_allowlists()
+
+      {entries, skipped} = Enum.reduce(contexts(), {0, []}, &clear_context/2)
 
       {:ok,
        %{
