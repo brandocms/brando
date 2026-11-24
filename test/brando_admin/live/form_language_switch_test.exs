@@ -116,7 +116,9 @@ defmodule BrandoAdmin.FormLanguageSwitchTest do
       assert stored(user) == "no"
     end
 
-    test "offers to create the translation of a language without one", %{conn: conn, current_user: user} do
+    test "offers to create the translation of a language without one, and sets the preference to it",
+         %{conn: conn, current_user: user} do
+      prefer(user, "no")
       source = article(user)
       view = open_form(conn, "/admin/articles/update/#{source.id}", "article_form")
 
@@ -125,6 +127,21 @@ defmodule BrandoAdmin.FormLanguageSwitchTest do
 
       %{entry_id: target_id} = Repo.get_by!(Translations.Member, language: "en", entry_type: to_string(Article))
       assert to == "/admin/articles/update/#{target_id}"
+      assert stored(user) == "en"
+    end
+
+    test "a translation created from the form's translation panel keeps the preference",
+         %{conn: conn, current_user: user} do
+      prefer(user, "no")
+      source = article(user)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{source.id}", "article_form")
+
+      assert {:error, {:live_redirect, _}} =
+               view
+               |> with_target(cid_of(view, "#article_form-el"))
+               |> render_click("create_translation", %{"language" => "en"})
+
+      assert stored(user) == "no"
     end
 
     for mode <- [:legacy, :groups] do

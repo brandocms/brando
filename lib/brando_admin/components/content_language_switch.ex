@@ -203,7 +203,12 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
       role="option"
       aria-selected="false"
       data-leaves-form
-      phx-click={JS.push("create_translation", value: %{language: @code}, target: "[data-entry-form='#{@entry.id}']")}
+      phx-click={
+        JS.push("create_translation",
+          value: %{language: @code, content_language: true},
+          target: "[data-entry-form='#{@entry.id}']"
+        )
+      }
       phx-value-id={@code}
     >
       {@text}
