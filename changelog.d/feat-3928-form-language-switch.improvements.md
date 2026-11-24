@@ -1,0 +1,1 @@
+- In an entry's editor, the content language switch shows the entry's language, and choosing another opens the entry's version in it, or offers **Create translation** on a synchronized type.
