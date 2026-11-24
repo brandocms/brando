@@ -501,6 +501,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:edit, Map.get(assigns, :edit, false))
     |> assign(:modal_editor, Map.get(assigns, :modal_editor, false))
     |> assign(:upload_kind, if(Map.get(assigns, :on_change), do: "block_var", else: "entry_var"))
+    # Where an upload is delivered: a table row's variable names its block,
+    # which finds the row by its key (`Block.Render.table/1`)
+    |> assign(:upload_component_id, Map.get(assigns, :upload_component_id) || assigns.id)
     |> assign(:target, Map.get(assigns, :target, nil))
     |> assign(:should_render?, should_render?(Map.get(assigns, :render, :all), placement))
     # Blank, not just nil: after a validate round trip the id comes back as the
@@ -911,7 +914,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       target={@myself}
                       publish={@publish}
                       on_change={@on_change}
-                      component_id={@id}
+                      component_id={@upload_component_id}
                       var_key={@key}
                       upload_kind={@upload_kind}
                       provider_hook={@provider_hook}
@@ -1076,7 +1079,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               publish={@publish}
               compact={@compact}
               on_change={@on_change}
-              component_id={@id}
+              component_id={@upload_component_id}
               var_key={@key}
               upload_kind={@upload_kind}
               provider_hook={@provider_hook}

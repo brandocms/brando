@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias Ecto.Changeset
 
   def attach_block_events(socket) do
@@ -1069,6 +1070,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:vars, vars)
       |> Map.put(:action, :insert)
+      # A key of its own, which the row renders back, so an upload into it
+      # reaches it after a reorder (`Render.table/1`)
+      |> SubformHelpers.new_row()
 
     # Insert sends the index of the row it sits above; Add row has none and
     # appends. `sequence` follows the rows' order when the block is cast.

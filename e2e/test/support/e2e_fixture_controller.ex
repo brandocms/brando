@@ -259,6 +259,14 @@ defmodule E2EFixtureController do
         "release-rename" ->
           create_release_removal(:rename)
 
+        # Screenshots only: the same, with more blocks holding the old key
+        # than an apply moves, so the apply leaves them for resolve --map
+        "release-rename-over-limit" ->
+          user = create_release_removal(:rename)
+          module = Brando.Repo.get_by!(Brando.Content.Module, class: "single-image-caption")
+          bare_blocks!(module, "show_border", 1500, user)
+          user
+
         # Screenshots only: the same, with the module edited here since its
         # last apply, so the rename is in a conflict
         "release-rename-conflict" ->
@@ -421,6 +429,33 @@ defmodule E2EFixtureController do
     never |> Ecto.Changeset.change(class: "made-here") |> Brando.Repo.update!()
     Brando.Repo.delete_all(from(a in Brando.Content.DefinitionApply, where: a.uid == ^never.uid))
     user
+  end
+
+  # `count` blocks of `module` in no entry, each holding the boolean `key`
+  defp bare_blocks!(module, key, count, user) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    blocks =
+      for _ <- 1..count,
+          do: %{
+            uid: Brando.Utils.generate_uid(),
+            type: :module,
+            module_id: module.id,
+            module_origin: :local,
+            creator_id: user.id,
+            inserted_at: now,
+            updated_at: now
+          }
+
+    {_, inserted} = Brando.Repo.insert_all(Brando.Content.Block, blocks, returning: [:id])
+
+    Brando.Repo.insert_all(
+      Brando.Content.Var,
+      for(
+        %{id: id} <- inserted,
+        do: %{block_id: id, key: key, type: :boolean, label: %{"en" => key}, inserted_at: now, updated_at: now}
+      )
+    )
   end
 
   defp create_release_removal(change \\ :remove) do

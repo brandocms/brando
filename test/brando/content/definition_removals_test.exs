@@ -214,7 +214,7 @@ defmodule Brando.Content.DefinitionRemovalsTest do
       keys = [var: "sale price", ref: "it's $HOME"]
       item = %{kind: "module", uid: "a;b", removes: %{keys: keys, held: keys, blocks: 1, entries: 1}}
 
-      command = Brando.Content.Definition.Plan.resolve_command(plan, item)
+      [command] = Brando.Content.Definition.Plan.resolve_commands(plan, item)
       {printed, 0} = System.cmd("sh", ["-c", "printf '%s\\n' " <> command])
 
       assert String.split(printed, "\n", trim: true) ==
@@ -231,8 +231,9 @@ defmodule Brando.Content.DefinitionRemovalsTest do
         removes: %{keys: [var: "tagline"], held: [var: "tagline"], blocks: 1, entries: 1}
       }
 
-      assert Brando.Content.Definition.Plan.resolve_command(plan, item) == nil
-      refute Brando.Content.Definition.Plan.resolve_line(plan, item) =~ "--user"
+      assert Brando.Content.Definition.Plan.resolve_commands(plan, item) == []
+      assert [line] = Brando.Content.Definition.Plan.resolve_lines(plan, item)
+      refute line =~ "--user"
     end
   end
 

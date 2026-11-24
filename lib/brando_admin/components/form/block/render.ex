@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   alias BrandoAdmin.Components.Form.Input.Blocks.HtmlParams
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RichTextAI
   alias Ecto.Changeset
@@ -64,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div data-module-multi="true">
       <.module
         form={@form}
+        block_id={@id}
         focus_role={@focus_role}
         source_locked={@source_locked}
         dirty={@form_has_changes}
@@ -161,6 +163,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div>
       <.module
         form={@form}
+        block_id={@id}
         focus_role={@focus_role}
         source_locked={@source_locked}
         dirty={@form_has_changes}
@@ -223,6 +226,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     <div>
       <.module
         form={@form}
+        block_id={@id}
         focus_role={@focus_role}
         source_locked={@source_locked}
         dirty={@form_has_changes}
@@ -853,6 +857,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :paste_multi_module_id, :any, default: nil
   attr :paste_context, :any, default: :root
   attr :form_id, :any, default: nil
+  # The block component's id: an upload into a table row's variable goes
+  # through it (`table/1`)
+  attr :block_id, :string, default: nil
   attr :module_type, :atom, default: :liquid
   attr :heex_compiled_module, :any, default: nil
   attr :entry, :any, default: nil
@@ -960,6 +967,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               language={@entry_language}
             />
             <.module_content
+              block_id={@block_id}
               config_open={@config_open}
               source_locked={@source_locked}
               uid={@uid}
@@ -1017,6 +1025,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               language={@entry_language}
             />
             <.module_content
+              block_id={@block_id}
               config_open={@config_open}
               source_locked={@source_locked}
               uid={@uid}
@@ -1149,6 +1158,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
           <.table
             block_data={@block_form}
+            block_id={@block_id}
             source_locked={@source_locked}
             uid={@uid}
             target={@target}
@@ -1221,6 +1231,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
           <.table
             block_data={@block_form}
+            block_id={@block_id}
             source_locked={@source_locked}
             uid={@uid}
             target={@target}
@@ -3026,8 +3037,24 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  @doc """
+  The id of the `RenderVar` of the variable `var_key` in a table row: by the
+  row's key, so it follows the row when the rows are reordered, and an
+  upload into it reaches the row it was started in (`Block`,
+  `"table_row_upload"`). A row without a key is named by its position.
+  """
+  def table_row_var_id(uid, row_key, var_key) when is_binary(row_key), do: "block-#{uid}-table-row-#{row_key}-#{var_key}"
+
+  defp row_var_id(uid, table_row, var) do
+    case SubformHelpers.row_key(table_row) do
+      nil -> "block-#{uid}-table-row-#{var.id}"
+      row_key -> table_row_var_id(uid, row_key, var[:key].value)
+    end
+  end
+
   attr :block_data, :any, required: true
   attr :uid, :string, required: true
+  attr :block_id, :string, default: nil
   attr :target, :any, required: true
   attr :table_template_name, :string
   attr :form_id, :any, default: nil
@@ -3104,9 +3131,19 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                   data-sortable-dispatch-event="true"
                 >
                   <.inputs_for :let={table_row} field={@block_data[:table_rows]} skip_hidden>
-                    <div class="table-row draggable" data-id={table_row.index}>
+                    <div
+                      class="table-row draggable"
+                      data-id={table_row.index}
+                      data-table-row-key={SubformHelpers.row_key(table_row)}
+                    >
                       <input type="hidden" name={table_row[:id].name} value={table_row[:id].value} />
                       <input type="hidden" name={table_row[:_persistent_id].name} value={table_row.index} />
+                      <input
+                        :if={SubformHelpers.new_row_key(table_row)}
+                        type="hidden"
+                        name={table_row[:_key].name}
+                        value={SubformHelpers.new_row_key(table_row)}
+                      />
                       <input type="hidden" name={"#{@block_data.name}[sort_table_row_ids][]"} value={table_row.index} />
                       <div class="subform-tools">
                         <button
@@ -3127,8 +3164,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                       <.inputs_for :let={var} field={table_row[:vars]}>
                         <.live_component
                           module={RenderVar}
-                          id={"block-#{@uid}-table-row-#{var.id}"}
+                          id={row_var_id(@uid, table_row, var)}
                           var={var}
+                          upload_component_id={SubformHelpers.row_key(table_row) && @block_id}
                           render={:all}
                           form_id={@form_id}
                           provider_upload={false}

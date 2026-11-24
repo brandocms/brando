@@ -9,6 +9,7 @@ defmodule BrandoAdmin.SubformRelationTest do
   alias Brando.SyncTest.ArticleItem
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Image
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Input.Video
 
   @form "#article_form_form"
@@ -339,22 +340,7 @@ defmodule BrandoAdmin.SubformRelationTest do
   # the upload manager, a provider upload and the image editor's copy
   # (`commit_entry_field_asset`), and the drawers' saves.
   describe "a delivery to a row after a row marked for deletion" do
-    setup ctx do
-      {:ok, article} =
-        SyncTest.create_article(
-          %{
-            title: "Example Hotel",
-            slug: "example-hotel",
-            language: "en",
-            status: "published",
-            items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
-          },
-          ctx.current_user
-        )
-
-      [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
-      %{article: article, a: a, b: b, c: c}
-    end
+    setup :three_items
 
     test "a picked image goes on its row", ctx do
       view = open(ctx)
@@ -478,8 +464,15 @@ defmodule BrandoAdmin.SubformRelationTest do
 
     # What the upload manager sends the form when an upload to a row's image
     # field is stored
-    defp deliver_upload(view, path, image) do
-      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: path, asset: image)
+    defp deliver_upload(view, path, image, row_key \\ nil) do
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :image,
+        field: :cover,
+        path: path,
+        row_key: row_key,
+        asset: image
+      )
     end
 
     defp send_form(view, message) do
@@ -502,6 +495,126 @@ defmodule BrandoAdmin.SubformRelationTest do
       |> Enum.filter(&(&1.article_id == article.id))
       |> Enum.sort_by(& &1.label)
       |> Enum.map(&{&1.id, &1.cover_id})
+    end
+  end
+
+  # The upload names the row by its key as well as its index: the rows may
+  # be reordered, or the row removed, while it uploads (#3899)
+  describe "an upload delivered by its row's key" do
+    setup :three_items
+
+    test "goes to its row after the rows are reordered", ctx do
+      view = open(ctx)
+
+      params =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "sort_items_ids"], ["1", "2", "0"])
+        |> Map.put("_target", ["article", "sort_items_ids"])
+
+      view |> element(@form) |> render_change(params)
+      assert row_labels(render(view)) == ["B", "C", "A"]
+
+      # Started in the first row, A's, before the drag
+      deliver_upload(view, [:items, 0], ctx.image, "id-#{ctx.a.id}")
+
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][2][cover_id]", value: ^image_id})
+      assert cover_ids(render(view)) == ["", "", to_string(image_id)]
+      save(view)
+      assert saved_covers(ctx) == [{ctx.a.id, image_id}, {ctx.b.id, nil}, {ctx.c.id, nil}]
+    end
+
+    test "whose row was removed goes to no row, and the editor is told", ctx do
+      Brando.endpoint().subscribe("user:#{ctx.current_user.id}")
+      view = open(ctx)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][1][label]"])))
+      |> render_click("remove_subentry", %{"key" => "id-#{ctx.b.id}"})
+
+      assert row_labels(render(view)) == ["A", "C"]
+
+      deliver_upload(view, [:items, 1], ctx.image, "id-#{ctx.b.id}")
+
+      # This tab only: not on the channel every tab of the editor's listens on
+      assert_push_event(view, "b:toast", %{level: :error})
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast"}
+      refute_push_event(view, "b:validate", %{target: "article[items]" <> _})
+      assert cover_ids(render(view)) == ["", ""]
+    end
+
+    # The save gives the new row an id while its upload is on its way; the
+    # upload still names the key the row had when it started
+    test "into a new row goes to that row after a save", ctx do
+      view = open(ctx)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][0][label]"])))
+      |> render_click("add_subentry", %{})
+
+      settle(view)
+      ["new-" <> _ = key] = view |> render() |> row_keys() |> Enum.filter(&String.starts_with?(&1, "new-"))
+
+      stay(view)
+      save_and_stay(view)
+      [saved] = ctx |> saved_covers() |> Enum.map(&elem(&1, 0)) |> Kernel.--([ctx.a.id, ctx.b.id, ctx.c.id])
+      assert "id-#{saved}" in row_keys(render(view))
+
+      target = %{"kind" => "entry_field", "field" => "cover", "path" => ["items", 3], "row_key" => key}
+      send(view.pid, {:asset_ready, target, ctx.image})
+
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][" <> _, value: ^image_id})
+      save(view)
+      assert {saved, image_id} in saved_covers(ctx)
+    end
+
+    # An upload that finishes while the save runs is delivered before the
+    # LiveView has heard which key the new row got, still naming the new one
+    test "into a new row goes to that row when its delivery overtakes the save's row keys", ctx do
+      view = open(ctx)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][0][label]"])))
+      |> render_click("add_subentry", %{})
+
+      settle(view)
+      ["new-" <> _ = key] = view |> render() |> row_keys() |> Enum.filter(&String.starts_with?(&1, "new-"))
+
+      stay(view)
+      save_and_stay(view)
+      [saved] = ctx |> saved_covers() |> Enum.map(&elem(&1, 0)) |> Kernel.--([ctx.a.id, ctx.b.id, ctx.c.id])
+
+      deliver_upload(view, [:items, 3], ctx.image, key)
+
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][" <> _, value: ^image_id})
+      save(view)
+      assert {saved, image_id} in saved_covers(ctx)
+    end
+
+    # Every row an upload can start in has a key (`SubformHelpers.new_row/1`),
+    # so a row without one at the index is another row
+    test "naming a new row that is gone goes to no row, not to a row without a key", ctx do
+      view = open(ctx)
+      changeset = form_assigns(view).form.source
+      rows = SubformHelpers.current_entries(changeset, :items) ++ [Ecto.Changeset.change(%ArticleItem{}, label: "D")]
+      send_form(view, action: :update_changeset, changeset: Ecto.Changeset.put_assoc(changeset, :items, rows))
+      assert row_labels(render(view)) == ["A", "B", "C", "D"]
+
+      deliver_upload(view, [:items, 3], ctx.image, "new-gone")
+
+      refute_push_event(view, "b:validate", %{target: "article[items]" <> _})
+      assert cover_ids(render(view)) == ["", "", "", ""]
+    end
+
+    test "without a key goes to the row at its index", ctx do
+      view = open(ctx)
+      deliver_upload(view, [:items, 1], ctx.image)
+
+      assert cover_ids(render(view)) == ["", to_string(ctx.image.id), ""]
     end
   end
 
@@ -705,6 +818,24 @@ defmodule BrandoAdmin.SubformRelationTest do
     )
   end
 
+  # An article with the rows A, B and C
+  defp three_items(ctx) do
+    {:ok, article} =
+      SyncTest.create_article(
+        %{
+          title: "Example Hotel",
+          slug: "example-hotel",
+          language: "en",
+          status: "published",
+          items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
+        },
+        ctx.current_user
+      )
+
+    [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
+    %{article: article, a: a, b: b, c: c}
+  end
+
   defp open(%{conn: conn, article: article}) do
     {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}", "article_form")
     view
@@ -733,6 +864,23 @@ defmodule BrandoAdmin.SubformRelationTest do
     |> Floki.find(@row_cover)
     |> Floki.attribute("value")
     |> List.first()
+  end
+
+  defp row_keys(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(".subform-entry[data-row-key]")
+    |> Floki.attribute("data-row-key")
+  end
+
+  # "Save and continue editing": the form stays open on the saved entry
+  defp stay(view), do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("save_redirect_target", %{})
+
+  defp save_and_stay(view) do
+    view |> form(@form) |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 2_000)
+    view |> form(@form) |> render_submit()
+    settle(view)
   end
 
   # The first submit collects the block fields; the Submit hook then submits

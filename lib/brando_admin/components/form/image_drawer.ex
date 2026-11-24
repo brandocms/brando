@@ -89,6 +89,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           data-asset-id={@edit_image.image && @edit_image.image.id}
           data-field={@edit_image.field}
           data-path={Jason.encode!(@edit_image.path || [])}
+          data-row-key={Map.get(@edit_image, :row_key)}
           data-config-target={
             @edit_image.field &&
               Brando.Assets.ConfigTarget.serialize({"image", Map.get(@edit_image, :schema) || @schema, @edit_image.field})

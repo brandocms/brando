@@ -219,12 +219,24 @@ defmodule Brando.Content.DefinitionRenamesTest do
   end
 
   describe "a rename is refused" do
-    test "when it changes the type", c do
+    test "when it changes the type, with the resolve command when resolve converts the values", c do
       rename_tagline!(c, "text")
 
       assert [%{action: :migration_required, reason: reason}] = plan!(c).items
       assert reason =~ ~s|var "heading" renamed from "tagline" changes type (string → text)|
-      assert reason =~ "resolve --map"
+
+      assert reason =~
+               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      # A stored value may still not convert: the command names those blocks
+      assert reason =~ "names any block whose value it can't convert"
+
+      # resolve refuses a string that becomes a colour: no command
+      edit!(c, ~s(var "heading", "text" do), ~s(var "heading", "color" do))
+      edit!(c, ~s("Default tagline"), ~s("#000000"))
+      assert [%{action: :migration_required, reason: reason}] = plan!(c).items
+      assert reason =~ "changes type (string → color)"
+      refute reason =~ "mix brando.modules resolve"
     end
 
     test "when a block holds a value of its own under the new key, naming the blocks and entries", c do
@@ -462,15 +474,16 @@ defmodule Brando.Content.DefinitionRenamesTest do
       refute Enum.any?(import!(c, ["--dry-run"]), &(&1 =~ "resolve:"))
     end
 
-    test "the resolve --map line is not offered when it would replace a value or leave a ref's slots", c do
+    test "the resolve --map line is offered over a value an editor entered, not when it would leave a ref's slots", c do
       held = c.identity |> first_block() |> set!("tagline", "Kept words")
       record = Repo.preload(module(c), [:refs, :vars])
       tagline = [%{kind: :var, from: "tagline", to: "heading"}]
       module = %{record | vars: [%Var{key: "heading", type: :string, label: %{"en" => "Heading"}}]}
       assert [%{ok?: true}] = Renames.remaps(record, module, tagline)
 
+      # resolve keeps that block's value, and the leftover with it
       leftover!(held, "heading", "Typed later")
-      assert [%{ok?: false}] = Renames.remaps(record, module, tagline)
+      assert [%{ok?: true}] = Renames.remaps(record, module, tagline)
 
       [body] = record.refs
       body_to_copy = [%{kind: :ref, from: "body", to: "copy"}]
@@ -516,6 +529,41 @@ defmodule Brando.Content.DefinitionRenamesTest do
 
       assert {:error, :needs_migration} = Batches.revert(batch, c.user)
       assert var(held, "heading").value == "Kept words"
+    end
+
+    test "over the limit, previews no move, records none and can revert, before and after the resolve moves them", c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+      opts = [path: c.path, version: "2.0.0", user: c.user.id]
+      map = "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      {:ok, report} = Release.plan(opts)
+      assert [%{moves: %{left?: true}}] = report.items
+      assert Proposed.build(report).renames == %{}
+      assert ("    resolve: " <> map) in Release.lines(report)
+
+      {:ok, %{batch_id: batch_id, result: result}} =
+        Release.apply(:all, opts ++ [wait: false, renames: Release.renames_digest(report)])
+
+      assert [%{left?: true}] = result.renamed
+      assert var(held, "tagline").value == "Kept words"
+      assert revisions(c.identity) == []
+      batch = Batches.get(batch_id)
+      assert [item] = batch.definitions["items"]
+      refute Map.has_key?(item, "moves")
+      assert {:ok, %{revert: [_], irreversible: []}} = Batches.preview(batch, c.user)
+
+      # The release's report keeps the command while blocks hold the old key
+      {:ok, applied} = Release.plan(opts)
+      assert applied.pending == 0
+      assert ("    resolve: " <> map) in Release.lines(applied)
+
+      map |> String.split() |> Enum.drop(2) |> run_task()
+      assert var(held, "heading").value == "Kept words"
+      {:ok, resolved} = Release.plan(opts)
+      refute Enum.any?(Release.lines(resolved), &(&1 =~ "resolve:"))
+      assert {:ok, %{revert: [_], irreversible: []}} = Batches.preview(batch, c.user)
     end
 
     test "previews a conflict the operator takes the release's version of with the values moved, as the apply moves them",
@@ -621,53 +669,256 @@ defmodule Brando.Content.DefinitionRenamesTest do
       bare_blocks!(c, c.module, "tagline", 1500)
       rename_tagline!(c)
 
-      assert [%{action: :migration_required, moves: %{entries: []}, reason: reason}] = plan!(c).items
-      assert reason =~ "would move values in 1506 blocks,"
+      assert [%{action: :update, moves: %{left?: true, refused: [], entries: [], blocks: 1506}} = item] = plan!(c).items
+
+      assert Brando.Content.Definition.Plan.move_text(item) ==
+               "moves no values over the apply's limit; blocks keep var tagline (renamed to heading) in 1506 blocks for the resolve command"
     end
 
-    test "with a refusal whose resolve command runs as printed once renamed_from is out of the file", c do
+    test "over the limit, an apply leaves the values for the plan's --map line, which moves them", c do
       held = c.identity |> first_block() |> set!("tagline", "Kept words")
       bare_blocks!(c, c.module, "tagline", 1500)
       rename_tagline!(c)
+      # The file also drops the body ref, which no rename accounts for
+      File.write!(c.exs, Regex.replace(~r/    ref "body", "text" do\n.*?\n    end\n/s, File.read!(c.exs), ""))
+      edit_template!(c, "{% ref refs.body %}", "")
+      map = "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+      drop = "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --drop ref:body --apply"
+      lockfile = File.read!(Path.join(c.path, "modules.lock.json"))
 
-      [%{action: :migration_required, reason: reason}] = plan!(c).items
-      [command] = Regex.run(~r/mix brando\.modules resolve .*--apply/, reason)
+      # Moving and dropping are two commands, so moving never needs a drop
+      output = import!(c, ["--dry-run"])
+      assert ["  resolve: " <> ^map, "  resolve: " <> ^drop] = Enum.filter(output, &(&1 =~ "resolve:"))
 
-      assert command ==
-               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+      output = import!(c)
 
-      edit!(c, ~s(\n      renamed_from "tagline"), "")
-      import!(c)
+      assert Enum.any?(
+               output,
+               &(&1 =~ "#{c.module.uid}: var tagline → heading: the apply moves no values over its limit")
+             )
+
+      assert Enum.any?(output, &(&1 =~ map))
       assert var(held, "tagline").value == "Kept words"
+      assert var(held, "heading").value == "Default tagline"
+      assert revisions(c.identity) == []
 
-      command |> String.split() |> Enum.drop(2) |> run_task()
+      # A fresh plan of the applied files prints the --map line while blocks
+      # hold the old key, also after a baseline write that failed
+      assert [%{action: :noop, remaps: [%{kind: :var, from: "tagline", ok?: true}]}] = plan!(c).items
+      applied = File.read!(Path.join(c.path, "modules.lock.json"))
+      File.write!(Path.join(c.path, "modules.lock.json"), lockfile)
+      assert Enum.any?(import!(c, ["--dry-run"]), &(&1 == "  resolve: " <> map))
+      File.write!(Path.join(c.path, "modules.lock.json"), applied)
+
+      map |> String.split() |> Enum.drop(2) |> run_task()
       assert var(held, "heading").value == "Kept words"
       assert var(held, "tagline") == nil
+      assert length(revisions(c.identity)) == 2
+
+      refute Enum.any?(import!(c, ["--dry-run"]), &(&1 =~ "--map"))
+
+      # Run again, it says what is left instead of raising
+      output = map |> String.split() |> Enum.drop(2) |> run_task()
+      assert Enum.any?(output, &(&1 =~ "No block of #{c.module.uid} holds a leftover var:tagline"))
     end
 
-    test "with a resolve command that leaves out the renames no block holds a value of", c do
+    test "over the limit, leaves out of the command the renames no block holds a value of", c do
       bare_blocks!(c, c.module, "tagline", 1500)
       Repo.delete_all(from(r in Ref, join: b in Block, on: b.id == r.block_id, where: b.module_id == ^c.module.id))
       rename_tagline!(c)
       rename_body!(c)
 
-      [%{action: :migration_required, reason: reason}] = plan!(c).items
-      [command] = Regex.run(~r/mix brando\.modules resolve .*--apply/, reason)
+      plan = plan!(c)
+      [%{action: :update, moves: %{left?: true}} = item] = plan.items
 
-      assert command ==
+      assert Brando.Content.Definition.Plan.move_command(plan, item) ==
                "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
     end
 
-    test "with a resolve command whose user is a placeholder when the plan has none", c do
+    test "over the limit, says which --map to run when the plan has no user to name", c do
       bare_blocks!(c, c.module, "tagline", 1500)
       rename_tagline!(c)
 
       {:ok, bundle} = Definitions.read(c.path)
-      {:ok, %{items: [%{reason: reason}]}} = Definitions.plan(bundle, :system, creator: :none)
-      assert reason =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID --map var:tagline=heading --apply"
+      {:ok, %{items: [item]} = plan} = Definitions.plan(bundle, :system, creator: :none)
+      assert [line] = Brando.Content.Definition.Plan.resolve_lines(plan, item)
+      assert line =~ "mix brando.modules resolve --uid #{c.module.uid} --user USER_ID --map var:tagline=heading --apply"
     end
 
-    test "to as many blocks across the modules an apply selects", c do
+    test "over the limit, a rename that changes type is still refused, with a valid rename beside it", c do
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c, "text")
+      rename_body!(c)
+
+      assert [%{action: :migration_required, moves: %{left?: true}, reason: reason}] = plan!(c).items
+      assert reason =~ "changes type (string → text)"
+      refute reason =~ "body"
+    end
+
+    test "over the limit of entries, a rename that changes type is still refused", c do
+      entry_blocks!(c, c.module, "tagline", 501)
+      rename_tagline!(c, "text")
+      rename_body!(c)
+
+      assert [%{action: :migration_required, moves: %{left?: true, blocks: blocks}, reason: reason}] = plan!(c).items
+      assert blocks < 1500
+      assert reason =~ "changes type (string → text)"
+      refute reason =~ "body"
+    end
+
+    test "over the limit of entries, a plan after the apply offers the --map line without loading the blocks", c do
+      entry_blocks!(c, c.module, "tagline", 501)
+      rename_tagline!(c)
+      import!(c)
+
+      {items, queries} = queries_of(fn -> plan!(c).items end)
+      assert [%{action: :noop, remaps: [%{kind: :var, from: "tagline", ok?: true}]}] = items
+
+      # No query loads the holders, their vars or their refs
+      loads =
+        for {query, params} <- queries,
+            Enum.any?(params, &(is_list(&1) and length(&1) > 500)),
+            query =~ ~r/FROM "content_(blocks|vars|refs)" AS c0 WHERE \(c0\."(id|block_id)" = ANY/,
+            do: query
+
+      assert loads == []
+    end
+
+    # The admin removed the new key after the apply left the values: the
+    # command would be refused, so the plan sends the operator to Resolve blocks
+    test "a rename an apply left is not offered the --map line once the module lacks the new key", c do
+      entry_blocks!(c, c.module, "tagline", 501)
+      rename_tagline!(c)
+      import!(c)
+
+      {:ok, bundle} = Definitions.read(c.path)
+      renames = Renames.declared(bundle, c.module.uid)
+      record = c |> module() |> Repo.preload([:refs, :vars])
+      assert [%{from: "tagline", to: "heading", ok?: true}] = Renames.left(record, renames)
+
+      without = %{record | vars: Enum.reject(record.vars, &(&1.key == "heading"))}
+      assert [%{from: "tagline", ok?: false}] = Renames.left(without, renames)
+    end
+
+    test "over the limit, a ref whose slot holds blocks is refused, as resolve doesn't move them", c do
+      footnote!(c, first_block(c.identity), "body")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+      rename_body!(c)
+
+      assert [%{action: :migration_required, reason: reason}] = plan!(c).items
+      assert reason =~ ~s(ref "copy" renamed from "body": 1 block holds blocks in the slot of body)
+      refute reason =~ "tagline"
+    end
+
+    test "over the limit together in an apply without a selection, a ref whose slot holds blocks is refused as such",
+         c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
+
+      footnote!(c, first_block(c.identity), "body")
+      bare_blocks!(c, c.module, "tagline", 800)
+      bare_blocks!(c, card, "title", 800)
+      path = c.path <> "-slot-together"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      rename_tagline!(c)
+      rename_body!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
+        )
+      )
+
+      {:ok, bundle} = Definitions.read(path)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      assert Enum.all?(plan.items, &(&1.action == :update))
+      assert {:error, reason} = Definitions.apply(plan, c.user)
+      assert reason =~ ~s(ref "copy" renamed from "body": 1 block holds blocks in the slot of body)
+      # Nothing changed since the review: the reason isn't worded so
+      [changed, _] = String.split(Renames.changed_since_review(["X"]), "X")
+      refute reason =~ changed
+    end
+
+    test "over the limit in one module, leaves the renames of every module the apply selects", c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
+
+      bare_blocks!(c, c.module, "tagline", 1500)
+      bare_blocks!(c, card, "title", 10)
+      path = c.path <> "-one-over"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      rename_tagline!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
+        )
+      )
+
+      {:ok, bundle} = Definitions.read(path)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
+      assert [%{moves: %{left?: true}}, %{moves: %{left?: true}}] = plan.items
+      assert {:ok, %{renamed: [%{left?: true}, %{left?: true}]}} = Definitions.apply(plan, c.user)
+      assert Repo.aggregate(from(v in Var, where: v.key == "title" and not is_nil(v.block_id)), :count) == 10
+    end
+
+    test "across the modules an apply selects, counting one refused on its own, whose values are then left", c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
+
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      leftover!(held, "heading", "Typed later")
+      bare_blocks!(c, c.module, "tagline", 800)
+      bare_blocks!(c, card, "title", 800)
+      path = c.path <> "-refused-one"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      rename_tagline!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
+        )
+      )
+
+      # Alone, the module would replace the value an editor entered
+      {:ok, bundle} = Definitions.read(path)
+      assert {:ok, alone} = Definitions.plan(bundle, c.user, select: [c.module.uid])
+      assert %{action: :migration_required} = Enum.find(alone.items, &(&1.uid == c.module.uid))
+
+      # Together over the limit, both leave their values, and the block keeps both
+      assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
+      assert [%{action: :update, moves: %{left?: true}}, %{action: :update, moves: %{left?: true}}] = plan.items
+      assert {:ok, %{renamed: [%{left?: true}, %{left?: true}]}} = Definitions.apply(plan, c.user)
+      assert var(held, "tagline").value == "Kept words"
+      assert var(held, "heading").value == "Typed later"
+    end
+
+    test "to as many blocks across the modules an apply selects, and the apply decides under its lock", c do
       card =
         ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
           vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
@@ -675,6 +926,7 @@ defmodule Brando.Content.DefinitionRenamesTest do
 
       bare_blocks!(c, c.module, "tagline", 750)
       bare_blocks!(c, card, "title", 750)
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
 
       path = c.path <> "-limit"
       {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
@@ -692,28 +944,87 @@ defmodule Brando.Content.DefinitionRenamesTest do
         )
       )
 
-      # Each module alone is within the limit, so a review of the whole
-      # release offers both; an apply of the two together is refused, and
-      # one of them selected applies
-      plan = plan!(c)
-      assert [%{action: :update}, %{action: :update}] = plan.items
-      assert {:error, reason} = Definitions.apply(plan, c.user)
-      assert reason =~ "would move values in 1506 blocks of 2 entries"
-      # One command per module, as resolve takes one module
-      assert reason =~
-               "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
-
-      assert reason =~ "mix brando.modules resolve --uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
-
+      # Each module alone is within the limit and moves; selected together
+      # neither does, each with its own command
       {:ok, bundle} = Definitions.read(path)
+      assert [%{moves: %{left?: false}}, %{moves: %{left?: false}}] = plan!(c).items
       assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
-      assert [%{action: :migration_required}, %{action: :migration_required}] = plan.items
-      card_item = Enum.find(plan.items, &(&1.uid == card.uid))
-      assert card_item.reason =~ "--uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
-      refute card_item.reason =~ "--uid #{c.module.uid}"
+      assert [%{action: :update, moves: %{left?: true}}, %{action: :update, moves: %{left?: true}}] = plan.items
 
-      assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid])
-      assert %{action: :update} = Enum.find(plan.items, &(&1.uid == c.module.uid))
+      assert plan.items |> Enum.map(&Brando.Content.Definition.Plan.move_command(plan, &1)) |> Enum.sort() ==
+               Enum.sort([
+                 "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply",
+                 "mix brando.modules resolve --uid #{card.uid} --user #{c.user.id} --map var:title=name --apply"
+               ])
+
+      # Reviewed alone, but more blocks since: the apply leaves the values
+      assert {:ok, alone} = Definitions.plan(bundle, c.user, select: [c.module.uid])
+      assert %{moves: %{left?: false}} = Enum.find(alone.items, &(&1.uid == c.module.uid))
+      bare_blocks!(c, c.module, "tagline", 800)
+      assert {:ok, %{renamed: [%{uid: uid, left?: true, text: text}]}} = Definitions.apply(alone, c.user)
+      assert uid == c.module.uid
+      assert text =~ "--map var:tagline=heading --apply"
+      assert var(held, "tagline").value == "Kept words"
+
+      # Reviewed over the limit, fewer blocks since: the apply moves them
+      added = bare_blocks!(c, card, "title", 800)
+      assert {:ok, over} = Definitions.plan(bundle, c.user, select: [card.uid])
+      assert %{moves: %{left?: true}} = Enum.find(over.items, &(&1.uid == card.uid))
+      Repo.delete_all(from(b in Block, where: b.id in ^added))
+      assert {:ok, %{renamed: [%{uid: uid, left?: false}]}} = Definitions.apply(over, c.user)
+      assert uid == card.uid
+      assert Repo.aggregate(from(v in Var, where: v.key == "title" and not is_nil(v.block_id)), :count) == 0
+    end
+  end
+
+  describe "the resolve command after an apply that left the values" do
+    setup c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      other = c.naming |> first_block() |> set!("tagline", "Other words")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      %{held: held, other: other}
+    end
+
+    test "keeps a value an editor entered under the new key first, and lists the block", c do
+      rename_tagline!(c)
+      import!(c)
+      set!(c.held, "heading", "Typed first")
+
+      plan = plan!(c)
+      [item] = plan.items
+      command = Brando.Content.Definition.Plan.move_command(plan, item)
+      output = command |> String.split() |> Enum.drop(2) |> run_task()
+
+      assert Enum.any?(output, &(&1 =~ "block ##{c.held.id} var tagline stays a leftover; heading holds \"Typed first\""))
+      refute Enum.any?(output, &(&1 =~ "will be lost"))
+      assert var(c.held, "heading").value == "Typed first"
+      assert var(c.held, "tagline").value == "Kept words"
+      assert var(c.other, "heading").value == "Other words"
+      assert var(c.other, "tagline") == nil
+    end
+
+    test "says what is left when a --map pair's source is gone already", c do
+      rename_tagline!(c)
+      rename_body!(c)
+      import!(c)
+
+      plan = plan!(c)
+      [item] = plan.items
+      command = Brando.Content.Definition.Plan.move_command(plan, item)
+      assert command =~ "--map ref:body=copy --map var:tagline=heading"
+
+      run_task(~w(resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply))
+      assert var(c.held, "heading").value == "Kept words"
+
+      output = command |> String.split() |> Enum.drop(2) |> run_task()
+      assert Enum.any?(output, &(&1 =~ "No block of #{c.module.uid} holds a leftover var:tagline"))
+      assert ref(c.held, "copy").data.data.text == "<p>Identity 0</p>"
+      assert ref(c.held, "body") == nil
+
+      # Everything moved: both pairs are named, nothing raises
+      output = command |> String.split() |> Enum.drop(2) |> run_task()
+      assert Enum.any?(output, &(&1 =~ "0 blocks are behind"))
+      assert Enum.any?(output, &(&1 =~ "No block of #{c.module.uid} holds a leftover ref:body"))
     end
   end
 
@@ -784,14 +1095,13 @@ defmodule Brando.Content.DefinitionRenamesTest do
     end
   end
 
-  describe "an over-limit refusal of several modules" do
-    test "a module no block holds a value of is told to apply fewer, with no empty command" do
-      totals = %{blocks: 1_600, entries: 40, modules: 2}
+  describe "what an apply leaves over the limit" do
+    test "names no command for a module no block holds a value of" do
       empty = [%{kind: :var, from: "caption", to: "text", blocks: 0}]
       held = [%{kind: :var, from: "tagline", to: "heading", blocks: 1_600}]
 
-      refute Renames.over_limit_text([{"empty-module", empty}], totals, nil) =~ "resolve"
-      assert Renames.over_limit_text([{"held-module", held}], totals, nil) =~ "mix brando.modules resolve"
+      assert Renames.left_text("empty-module", empty, nil) == nil
+      assert Renames.left_text("held-module", held, nil) =~ "mix brando.modules resolve --uid held-module --user USER_ID"
     end
   end
 
@@ -868,6 +1178,64 @@ defmodule Brando.Content.DefinitionRenamesTest do
         %{id: id} <- inserted,
         do: %{block_id: id, key: key, type: :string, label: %{"en" => key}, inserted_at: now, updated_at: now}
       )
+    )
+
+    Enum.map(inserted, & &1.id)
+  end
+
+  def send_query(_event, _measurements, metadata, test_pid) do
+    if self() == test_pid, do: send(test_pid, {:query, metadata.query, metadata.params})
+  end
+
+  # What `fun` returns, and the queries it ran: `{sql, params}`
+  defp queries_of(fun) do
+    handler = "renames-#{System.unique_integer([:positive])}"
+    event = Repo.repo().config()[:telemetry_prefix] ++ [:query]
+    :ok = :telemetry.attach(handler, event, &__MODULE__.send_query/4, self())
+
+    result =
+      try do
+        fun.()
+      after
+        :telemetry.detach(handler)
+      end
+
+    {result, collect_queries([])}
+  end
+
+  defp collect_queries(queries) do
+    receive do
+      {:query, query, params} -> collect_queries([{query, params} | queries])
+    after
+      0 -> Enum.reverse(queries)
+    end
+  end
+
+  # `count` pages, each with one block of `module` holding `key`
+  defp entry_blocks!(c, module, key, count) do
+    ids = bare_blocks!(c, module, key, count)
+    Repo.update_all(from(b in Block, where: b.id in ^ids), set: [source: Page.Blocks])
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    pages =
+      for i <- 1..count do
+        %{
+          uri: "limit-#{i}",
+          language: :en,
+          status: :published,
+          title: "Limit #{i}",
+          template: "default.html",
+          creator_id: c.user.id,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    {_, pages} = Repo.insert_all(Page, pages, returning: [:id])
+
+    Repo.insert_all(
+      Page.Blocks,
+      for({%{id: page_id}, block_id} <- Enum.zip(pages, ids), do: %{entry_id: page_id, block_id: block_id, sequence: 0})
     )
   end
 

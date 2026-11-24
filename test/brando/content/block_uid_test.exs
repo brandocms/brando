@@ -15,6 +15,7 @@ defmodule Brando.Content.BlockUidTest do
   alias Brando.{Factory, FrontendEdit, FrontendEditFixtures, Repo}
   alias Brando.Pages.Page
   alias Brando.Villain.Parser
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias Ecto.Changeset
   import Ecto.Query, only: [from: 2]
 
@@ -244,6 +245,21 @@ defmodule Brando.Content.BlockUidTest do
         |> Changeset.apply_changes()
 
       assert Block.valid_uid?(copy.uid)
+    end
+
+    # An upload into a row of the copy finds the row by its key after the
+    # rows are reordered (`Block.Render.table/1`), as a row added with Add row does
+    test "gives each of the copy's table rows a key of its own" do
+      rows = [%Brando.Content.TableRow{id: 1, vars: []}, %Brando.Content.TableRow{id: 2, vars: []}]
+
+      keys =
+        %Block{}
+        |> Changeset.change()
+        |> Brando.Content.Blocks.duplicate_table_rows(rows, 1)
+        |> SubformHelpers.row_keys(:table_rows)
+
+      assert [<<"new-", _::binary>>, <<"new-", _::binary>>] = keys
+      assert keys == Enum.uniq(keys)
     end
   end
 

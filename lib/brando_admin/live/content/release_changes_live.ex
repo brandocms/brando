@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.{DefinitionApply, Definitions}
+  alias Brando.Content.Definition.Plan
   alias Brando.Content.Definitions.Release
   alias Brando.Content.Definitions.Release.{Batches, Entries, Preview, Proposed, Review, Verify}
   alias Brando.Content.StaleBlocks
@@ -615,8 +616,18 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp applied_text(nil, keep_here),
     do: ngettext("Kept 1 version here.", "Kept %{count} versions here.", length(keep_here))
 
-  defp applied_text(%{result: result}, _keep_here),
-    do: ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
+  defp applied_text(%{result: result}, _keep_here) do
+    applied = ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
+
+    if Enum.any?(result.renamed, & &1.left?),
+      do:
+        applied <>
+          " " <>
+          gettext(
+            "Renamed refs and vars keep their values under the old names: the module’s row has the command that moves them."
+          ),
+      else: applied
+  end
 
   defp reverted_text(%{reverted: reverted, conflicts: conflicts, irreversible: irreversible} = result) do
     blocks = result |> Map.get(:leftovers, []) |> Enum.map(& &1.blocks) |> Enum.sum()
@@ -855,6 +866,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         item: item,
         module: assigns.detail.module,
         leftovers: assigns.detail.leftovers,
+        move_command: move_command(assigns.report, uid),
         changed: changed,
         applied_row: applied_row,
         here: here,
@@ -890,6 +902,12 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         {gettext(
           "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
         )}
+        <p :if={@move_command} class="release-notice-more">
+          {gettext(
+            "The release renames some of them, and the apply left their values for this command, which moves them. Run it as a user who may edit those entries:"
+          )}
+          <code class="release-command" data-testid="release-move-command">{@move_command}</code>
+        </p>
         <:actions>
           <.link
             navigate={"/admin/config/content/modules/update/#{@module.id}/stale-blocks"}
@@ -1046,9 +1064,18 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     # migration: nothing moves then
     refused = Enum.filter(assigns.row.items, &match?(%{moves: %{refused: [_ | _]}}, &1))
     moving = if refused == [], do: Enum.filter(assigns.row.items, &moves?/1), else: []
+    leaving = if refused == [], do: Enum.filter(assigns.row.items, &leaves?/1), else: []
 
     assigns =
-      assign(assigns, item: item, defs: defs, hunks: hunks, who: RC.person(item.edited), moving: moving, refused: refused)
+      assign(assigns,
+        item: item,
+        defs: defs,
+        hunks: hunks,
+        who: RC.person(item.edited),
+        moving: moving,
+        leaving: leaving,
+        refused: refused
+      )
 
     ~H"""
     <RC.notice headline={gettext("Changed here and in this release")}>
@@ -1130,6 +1157,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       </label>
     </div>
     <.moves_notice :if={@choices[@row.uid] == "release"} items={@moving} />
+    <.left_notice :if={@choices[@row.uid] == "release"} items={@leaving} plan={@report.plan} />
     <RC.notice
       :if={@choices[@row.uid] == "release" and @refused != []}
       tone="error"
@@ -1204,9 +1232,11 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       assigns
       |> assign(:removing, Enum.filter(items, &(&1[:removes] && &1.removes.blocks > 0)))
       |> assign(:moving, Enum.filter(items, &moves?/1))
+      |> assign(:leaving, Enum.filter(items, &leaves?/1))
 
     ~H"""
     <.moves_notice items={@moving} />
+    <.left_notice items={@leaving} plan={@report.plan} />
     <RC.notice
       :if={@removing != []}
       icon="info"
@@ -1231,7 +1261,19 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
   defp choice_body(assigns), do: ~H""
 
-  defp moves?(item), do: match?(%{moves: %{blocks: blocks}} when blocks > 0, item)
+  # The command that moves what an applied module's blocks keep under keys
+  # the release renames
+  defp move_command(%{plan: plan, items: items}, uid) do
+    case Enum.find(items, &(&1.uid == uid)) do
+      nil -> nil
+      item -> Plan.move_command(plan, item)
+    end
+  end
+
+  defp move_command(_report, _uid), do: nil
+
+  defp moves?(item), do: match?(%{moves: %{blocks: blocks, left?: false}} when blocks > 0, item)
+  defp leaves?(item), do: match?(%{moves: %{blocks: blocks, left?: true, refused: []}} when blocks > 0, item)
 
   attr :items, :list, required: true
 
@@ -1265,11 +1307,49 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     """
   end
 
-  # A row that only renames keeps nothing behind: its values move
+  attr :items, :list, required: true
+  attr :plan, :any, required: true
+
+  # The values an apply of `items` leaves under the old names, over its
+  # limit, and the command that moves them
+  defp left_notice(assigns) do
+    ~H"""
+    <RC.notice
+      :if={@items != []}
+      icon="info"
+      headline={gettext("Values stay under the old names until you move them")}
+    >
+      {gettext(
+        "This apply would move values in more blocks or entries than it may while editors’ saves wait for it, so it moves none. It adds the new refs and vars, and each block keeps its value under the old name; nothing is deleted, and until the values move the new names show their defaults. After the apply, move them with this command, as a user who may edit those entries:"
+      )}
+      <ul data-testid="release-left-moves">
+        <li :for={item <- @items} data-uid={item.uid}>
+          {item.name}: {moved_keys(item.moves.renames)} · {ngettext("1 block", "%{count} blocks", item.moves.blocks)}
+          <code :if={Plan.move_command(@plan, item)} class="release-command">{Plan.move_command(@plan, item)}</code>
+        </li>
+      </ul>
+    </RC.notice>
+    """
+  end
+
+  # A row that only renames keeps nothing behind: its values move, wait for
+  # the resolve command, or can't move yet
   defp class_help(%{class: :destructive, items: items} = row) do
-    if Enum.any?(items, & &1[:moves]) and not Enum.any?(items, & &1[:removes]),
-      do: gettext("Renames refs or vars. Blocks’ values move to the new names in the apply."),
-      else: RC.class_help(row.class)
+    cond do
+      not Enum.any?(items, & &1[:moves]) or Enum.any?(items, & &1[:removes]) ->
+        RC.class_help(row.class)
+
+      Enum.any?(items, &match?(%{moves: %{refused: [_ | _]}}, &1)) ->
+        gettext("Renames refs or vars. Blocks’ values can’t move to the new names yet, so this module isn’t applied.")
+
+      Enum.any?(items, &match?(%{moves: %{left?: true}}, &1)) ->
+        gettext(
+          "Renames refs or vars. Blocks keep their values under the old names until the resolve command moves them."
+        )
+
+      true ->
+        gettext("Renames refs or vars. Blocks’ values move to the new names in the apply.")
+    end
   end
 
   defp class_help(row), do: RC.class_help(row.class)

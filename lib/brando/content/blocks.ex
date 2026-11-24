@@ -2022,6 +2022,219 @@ defmodule Brando.Content.Blocks do
     end)
   end
 
+  @doc """
+  Puts the changes an entry save makes to its blocks on the blocks as they
+  are saved, when the form's copy of them is stale: for every block field
+  of `changeset`'s entry, nested blocks too.
+
+  An open form holds its blocks as it loaded them. A module save, a library
+  Reset or Accept, or another save may have written them since, and the
+  form would write its own copy back over that. A saved block whose refs or
+  vars the save writes, and whose saved rows (its `module_version`, refs and
+  vars) differ from what the form loaded, is rebuilt from the saved rows,
+  with this save's changes on top: per ref, the settings it changed; per
+  var, its changes; a var or ref the form adds that the saved rows hold
+  under the same key or name is that row. No module is read: a module save,
+  a Reset and an Accept have synced the saved rows already.
+
+  A block the form holds as it is saved is written as the form sends it.
+  Left alone too: a block whose refs and vars the save does not write
+  (moved, say), a new block (written as it was built), and one whose version
+  the save sets itself (a revision's working copy restores the revision's).
+
+  Run it in the save's transaction, after authorization. A save that writes
+  no block runs no query; one that does reads the written blocks' stamps,
+  refs and vars in a query each. The changeset comes back unchanged when no
+  written block is stale.
+  """
+  @spec sync_written_blocks(changeset) :: changeset
+  def sync_written_blocks(%Changeset{data: %schema{}} = changeset) do
+    fields = written_block_fields(schema, changeset)
+
+    written =
+      for field <- fields,
+          entry_block <- Changeset.get_change(changeset, field),
+          block <- written_blocks(Changeset.get_change(entry_block, :block)),
+          do: block
+
+    with [_ | _] <- written,
+         saved = saved_rows(written),
+         [_ | _] <- Enum.filter(written, &stale?(&1, saved)) do
+      sync = &sync_stale(&1, saved)
+      Enum.reduce(fields, changeset, &update_entry_blocks(&2, &1, sync))
+    else
+      _ -> changeset
+    end
+  end
+
+  defp written_block_fields(schema, changeset) do
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks) do
+      schema.__blocks_fields__()
+      |> Enum.map(&:"entry_#{&1.name}")
+      |> Enum.filter(&Map.has_key?(changeset.changes, &1))
+    else
+      []
+    end
+  end
+
+  defp written_blocks(%Changeset{action: action} = block) when action not in [:replace, :delete] do
+    children = Enum.flat_map(Changeset.get_change(block, :children) || [], &written_blocks/1)
+    if written_module_block?(block), do: [block | children], else: children
+  end
+
+  defp written_blocks(_), do: []
+
+  defp written_module_block?(block), do: written?(block) and not is_nil(Changeset.get_field(block, :module_id))
+
+  # A saved block whose refs or vars the save writes: what a form holding it
+  # from before a sync would write back. A new block is written as it was
+  # built, and one whose version the save sets itself (a revision's,
+  # restored) is at the version its writer says.
+  defp written?(%Changeset{action: :update, data: %{id: id}, changes: changes}) when not is_nil(id),
+    do: not Map.has_key?(changes, :module_version) and (Map.has_key?(changes, :refs) or Map.has_key?(changes, :vars))
+
+  defp written?(_block), do: false
+
+  # The written blocks as they are saved now, by id
+  defp saved_rows(blocks) do
+    ids = Enum.map(blocks, & &1.data.id)
+    stamps = Repo.all(from(b in Block, where: b.id in ^ids, select: {b.id, b.module_version}))
+    refs = Repo.all(from(r in Ref, where: r.block_id in ^ids, order_by: [asc: :sequence, asc: :id]))
+    vars = Repo.all(from(v in Var, where: v.block_id in ^ids, order_by: [asc: :sequence, asc: :id]))
+    refs = Enum.group_by(refs, & &1.block_id)
+    vars = Enum.group_by(vars, & &1.block_id)
+
+    Map.new(stamps, fn {id, version} ->
+      {id, %{module_version: version, refs: Map.get(refs, id, []), vars: Map.get(vars, id, [])}}
+    end)
+  end
+
+  # The form's copy of a block is stale when its saved rows differ from
+  # what the form loaded
+  defp stale?(%Changeset{data: data}, saved) do
+    case Map.fetch(saved, data.id) do
+      {:ok, rows} ->
+        rows.module_version != data.module_version or not same_rows?(data.refs, rows.refs) or
+          not same_rows?(data.vars, rows.vars)
+
+      :error ->
+        false
+    end
+  end
+
+  # Bookkeeping a write sets without changing what the row holds
+  @row_bookkeeping [:inserted_at, :updated_at, :edited_at, :updated_by_id]
+
+  defp same_rows?(%Ecto.Association.NotLoaded{}, _saved), do: true
+  defp same_rows?(loaded, saved), do: row_contents(loaded) == row_contents(saved)
+
+  defp row_contents(rows),
+    do: MapSet.new(rows, fn %schema{} = row -> Map.take(row, schema.__schema__(:fields) -- @row_bookkeeping) end)
+
+  defp update_entry_blocks(changeset, field, sync) do
+    entry_blocks =
+      Enum.map(Changeset.get_change(changeset, field), fn entry_block ->
+        case Changeset.get_change(entry_block, :block) do
+          %Changeset{} = block -> put_nested(entry_block, :block, update_block(block, sync))
+          _ -> entry_block
+        end
+      end)
+
+    put_nested(changeset, field, entry_blocks)
+  end
+
+  defp update_block(%Changeset{action: action} = block, sync) when action not in [:replace, :delete] do
+    block =
+      case Changeset.get_change(block, :children) do
+        children when is_list(children) -> put_nested(block, :children, Enum.map(children, &update_block(&1, sync)))
+        _ -> block
+      end
+
+    sync.(block)
+  end
+
+  defp update_block(block, _sync), do: block
+
+  defp put_nested(%Changeset{changes: changes} = changeset, field, value) do
+    valid? = changeset.valid? and Enum.all?(List.wrap(value), & &1.valid?)
+    %{changeset | changes: Map.put(changes, field, value), valid?: valid?}
+  end
+
+  defp sync_stale(block, saved) do
+    if written_module_block?(block) and stale?(block, saved),
+      do: onto_saved_rows(block, Map.fetch!(saved, block.data.id)),
+      else: block
+  end
+
+  # The block as it is saved, with this save's changes on top: a row the
+  # form changed carries its changes onto the saved row, a row the form
+  # adds that is saved under the same key or name is that row, and a row
+  # saved since the form loaded the block joins as it is.
+  defp onto_saved_rows(%Changeset{data: data, changes: changes} = block, saved) do
+    refs = onto_saved(Changeset.get_assoc(block, :refs), saved.refs, :name, &ref_onto_saved/2)
+    vars = onto_saved(Changeset.get_assoc(block, :vars), saved.vars, :key, &%{&1 | data: &2})
+    data = %{data | module_version: saved.module_version, refs: saved.refs, vars: saved.vars}
+    %{block | data: data, changes: Map.merge(changes, %{refs: refs, vars: vars})}
+  end
+
+  defp onto_saved(form_rows, saved_rows, key, onto) do
+    saved_by_id = Map.new(saved_rows, &{&1.id, &1})
+    {known, added} = Enum.split_with(form_rows, &(&1.data.id != nil))
+    known = for %{data: %{id: id}} = row <- known, Map.has_key?(saved_by_id, id), do: onto.(row, saved_by_id[id])
+    claimed = MapSet.new(known, & &1.data.id)
+    unclaimed = Enum.reject(saved_rows, &MapSet.member?(claimed, &1.id))
+    unclaimed_by_key = Map.new(unclaimed, &{Map.fetch!(&1, key), &1})
+
+    added =
+      Enum.map(added, fn row ->
+        case Map.fetch(unclaimed_by_key, Changeset.get_field(row, key)) do
+          {:ok, saved_row} when row.action not in [:replace, :delete] -> %{onto.(row, saved_row) | action: :update}
+          _ -> row
+        end
+      end)
+
+    claimed = MapSet.union(claimed, MapSet.new(added, & &1.data.id))
+    saved = for row <- saved_rows, not MapSet.member?(claimed, row.id), do: Changeset.change(row)
+    # A saved row is written as one, the rows of an association the save
+    # did not change included
+    Enum.map(known ++ added ++ saved, &if(&1.action, do: &1, else: %{&1 | action: :update}))
+  end
+
+  # The settings a save changes on a ref of the same block type go on the
+  # saved ref's; a save that changes the ref's block type writes its own data
+  defp ref_onto_saved(ref, saved_ref) do
+    with {:ok, value} <- Changeset.fetch_change(ref, :data),
+         true <- same_block_type?(ref.data.data, applied(value)) do
+      %{ref | data: saved_ref, changes: Map.delete(ref.changes, :data)}
+      |> put_data_edits(data_edits(ref))
+    else
+      _ -> %{ref | data: saved_ref}
+    end
+  end
+
+  defp same_block_type?(%{__struct__: type}, %{__struct__: type}), do: true
+  defp same_block_type?(_old, _new), do: false
+
+  # The fields of the ref's block data the save changes
+  defp data_edits(%Changeset{data: %Ref{data: %{data: %{__struct__: kind} = old}}} = ref) do
+    with {:ok, value} <- Changeset.fetch_change(ref, :data),
+         %{data: %{__struct__: ^kind} = new} <- applied(value) do
+      new |> Map.from_struct() |> Enum.reject(fn {key, value} -> Map.get(old, key) == value end) |> Map.new()
+    else
+      _ -> %{}
+    end
+  end
+
+  defp data_edits(_ref), do: %{}
+
+  defp applied(%Changeset{} = changeset), do: Changeset.apply_changes(changeset)
+  defp applied(value), do: value
+
+  defp put_data_edits(ref, edits) when edits == %{}, do: ref
+
+  defp put_data_edits(%Changeset{data: %Ref{data: saved}} = ref, edits),
+    do: Changeset.put_change(ref, :data, %{saved | data: struct(saved.data, edits)})
+
   # A module save migrates every block that uses it, one write at a time and
   # outside a transaction. A block that fails keeps its old data and its old
   # `module_version`, so it stays behind the module and shows up in
@@ -2512,6 +2725,9 @@ defmodule Brando.Content.Blocks do
     |> Changeset.change()
     |> Map.put(:action, :insert)
     |> duplicate_vars(vars, user_id)
+    # A key of its own, as a row added with Add row has, so an upload into
+    # the copy's row reaches it after a reorder (`Block.Render.table/1`)
+    |> BrandoAdmin.Components.Form.Input.SubformHelpers.new_row()
   end
 
   def duplicate_refs(changeset, %Ecto.Association.NotLoaded{}, _) do

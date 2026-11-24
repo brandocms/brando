@@ -5,9 +5,14 @@ const latest = new Map()
 let sequence = 0
 const terminal = status => ['done', 'error', 'cancelled'].includes(status)
 
+// A target in a row is the row's by its key, not its index, so the progress
+// moves with the row when the rows are reordered.
+const rowPath = (target) => (target.row_key ? (target.path || []).filter(segment => typeof segment !== 'number') : target.path || [])
+
 export const uploadTargetKey = (target) => JSON.stringify([
   target.deliver_topic || '', target.kind || '', target.kind?.startsWith('entry_field') ? '' : target.component_id || '',
-  target.var_key || '', target.field || '', target.path || [], target.kind?.endsWith('_gallery') ? 'gallery' : target.asset_type || '',
+  target.var_key || '', target.field || '', rowPath(target), target.kind?.endsWith('_gallery') ? 'gallery' : target.asset_type || '',
+  target.row_key || '',
 ])
 
 const currentRecords = key => Array.from(records.values()).filter(record => record.key === key && record.batch === latest.get(key))

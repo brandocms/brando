@@ -524,7 +524,10 @@ new tab.
 - **A new translation** shows the page applying the proposal makes: the
   source's copy in that language with the proposal's translated texts written
   in, and its links pointing at their versions in that language. The copy is
-  made for the preview and thrown away as soon as the page is rendered.
+  made for the preview and thrown away as soon as the page is rendered. The
+  frame and its shareable link give the page the repo's timeout (15 seconds
+  by default) to render; a page that takes longer is stopped and the preview
+  says so.
 - **Views** appear when a content type has more than one preview target, for
   example the page and its listing.
 - **Desktop / Mobile** set the frame width. **Show changes** outlines the

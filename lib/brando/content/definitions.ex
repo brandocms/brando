@@ -175,6 +175,11 @@ defmodule Brando.Content.Definitions do
   (`Brando.Content.DefinitionApply`) in the same transaction. Options:
   `:source` (`:release` or `:import`, the default), `:release` (the release
   version) and `:batch_id`.
+
+  The result's `renamed` says, for each module whose renames blocks hold a
+  value of, whether the apply moved the values or left them for the resolve
+  command (`left?`, over its limit: `Brando.Content.Definition.Renames`),
+  with the line that says so (`Brando.Content.Definition.Plan.renamed_text/1`).
   """
   def apply(plan, actor, opts \\ []), do: Brando.Content.Definition.Importer.apply(plan, actor, opts)
 

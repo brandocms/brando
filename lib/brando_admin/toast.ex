@@ -9,6 +9,21 @@ defmodule BrandoAdmin.Toast do
     end
   end
 
+  use Gettext, backend: Brando.Gettext
+
+  @doc """
+  Tells the editor in this tab that an upload stays in the library: the row
+  it was uploaded into was removed before it arrived. The editor's other
+  tabs started no such upload.
+  """
+  def upload_row_gone(socket) do
+    Phoenix.LiveView.push_event(socket, "b:toast", %{
+      level: :error,
+      message:
+        gettext("The upload is in the library. Its row was removed while it uploaded, so it was not added to the form.")
+    })
+  end
+
   def send(payload, opts \\ %{type: :mutation, level: :success})
 
   def send(payload, %{type: :mutation} = opts) do

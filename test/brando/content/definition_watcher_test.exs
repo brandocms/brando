@@ -183,6 +183,83 @@ defmodule Brando.Content.DefinitionWatcherTest do
     assert log =~ "  resolve: mix brando.modules resolve --uid hero-test --user #{c.user.id} --drop var:theme --apply"
   end
 
+  test "a rename over the apply's limit logs what the apply left, with the command that moves it", c do
+    assert {:ok, _} = Watcher.sync(c.path, c.user.id)
+    themed_blocks!(c, hero(), 1501)
+    write!(c, rename_theme(c.source))
+
+    log = capture_sync(c)
+    assert log =~ "update module hero-test: moves no values over the apply's limit; blocks keep var theme"
+    assert log =~ "  resolve: mix brando.modules resolve --uid hero-test --user #{c.user.id} --map var:theme=tone --apply"
+  end
+
+  test "renames over the apply's limit together log what the apply left, with each command", c do
+    other = Path.join(c.path, "other.exs")
+
+    File.write!(
+      other,
+      c.source |> String.replace("Example.Hero", "Example.Other") |> String.replace("hero-test", "other-test")
+    )
+
+    assert {:ok, _} = Watcher.sync(c.path, c.user.id)
+    themed_blocks!(c, hero(), 800)
+    themed_blocks!(c, Repo.get_by!(Module, uid: "other-test"), 800)
+    write!(c, rename_theme(c.source))
+    File.write!(other, rename_theme(File.read!(other)))
+
+    log = capture_sync(c)
+
+    for uid <- ["hero-test", "other-test"] do
+      assert log =~ "#{uid}: var theme → tone: the apply moves no values over its limit"
+      assert log =~ "mix brando.modules resolve --uid #{uid} --user #{c.user.id} --map var:theme=tone --apply"
+    end
+  end
+
+  defp rename_theme(source) do
+    source
+    |> String.replace("var :theme, :select do\n", ~s(var :tone, :select do\n      renamed_from "theme"\n))
+    |> String.replace("class={@theme}", "class={@tone}")
+  end
+
+  defp themed_blocks!(c, module, count) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    blocks =
+      for _ <- 1..count,
+          do: %{
+            uid: Brando.Utils.generate_uid(),
+            type: :module,
+            module_id: module.id,
+            module_origin: :local,
+            creator_id: c.user.id,
+            inserted_at: now,
+            updated_at: now
+          }
+
+    {_, inserted} = Repo.insert_all(Brando.Content.Block, blocks, returning: [:id])
+
+    Repo.insert_all(
+      Brando.Content.Var,
+      for(
+        %{id: id} <- inserted,
+        do: %{block_id: id, key: "theme", type: :select, label: %{"en" => "Theme"}, inserted_at: now, updated_at: now}
+      )
+    )
+  end
+
+  defp capture_sync(c) do
+    level = Logger.level()
+    Logger.configure(level: :info)
+
+    try do
+      ExUnit.CaptureLog.capture_log(fn ->
+        Watcher.handle_info(:sync, %{path: c.path, user_id: c.user.id, config: [], timer: nil, status: nil})
+      end)
+    after
+      Logger.configure(level: level)
+    end
+  end
+
   test "file/1 shows nothing when the watcher is not running" do
     assert Watcher.file("hero-test") == nil
   end

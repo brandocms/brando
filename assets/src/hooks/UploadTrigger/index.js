@@ -281,10 +281,21 @@ export default (app) => ({
       // The video picker's opening, handed back with the delivery
       ref: ds.ref || null,
       kind: ds.kind, component_id: ds.componentId, var_key: ds.varKey,
-      field: ds.field || null, file_id: ds.fileId || null, path,
+      field: ds.field || null, file_id: ds.fileId || null, path, row_key: this.rowKey(),
       asset_type: ds.assetType, config_target: ds.configTarget || 'default',
       deliver_topic: deliverTopic, folder: extra.folder || ds.folder || null, folder_id: extra.folder_id || ds.folderId || null,
     }
+  },
+
+  // The row the field is in, which `path` names by its index: the delivery
+  // finds the row by this key, wherever a reorder has put it by then. An
+  // entry field's row is a subform row; a variable's, a block's table row.
+  rowKey() {
+    if (this.el.dataset.rowKey) return this.el.dataset.rowKey
+    const row = this.el.dataset.kind?.startsWith('entry_field')
+      ? this.el.closest('[data-row-key]')
+      : this.el.closest('[data-table-row-key]')
+    return row?.dataset.rowKey || row?.dataset.tableRowKey || null
   },
 
   enqueue(files, extra = {}, handover = null) {
