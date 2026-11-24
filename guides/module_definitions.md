@@ -1216,15 +1216,16 @@ the next edit. The CLI reports this separately from an import rollback.
 
 A module save, or **Reset to shared** and **Accept update** on the shared
 library screen, syncs the blocks in the database while an editor may have one
-of their entries open, with the blocks as the form loaded them. The entry's
-next save syncs each block whose refs or vars it writes and whose
-`module_version` is not its module's current version, in the save's
-transaction (`Brando.Content.Blocks.sync_written_blocks/1`): the block gets
-the module's new refs and vars and its ref and var settings, keeps what the
-editor changed, settings included, and the form shows the synced block after
-the save. A change that does not
-take the module to a new version, such as a ref's settings alone, is not seen
-there.
+of their entries open, with the blocks as the form loaded them. When the
+entry is saved, each block whose refs or vars the save writes is compared
+with its saved rows (`module_version`, refs and vars). A block whose saved
+rows differ from what the form loaded is rebuilt from the saved rows, with
+the save's own changes on top, and synced with the module it uses now, in
+the save's transaction (`Brando.Content.Blocks.sync_written_blocks/1`): it
+gets the module's new refs and vars and its ref and var settings, keeps what
+the editor changed, settings included, and keeps what other saves wrote to
+the refs this save did not change. The form shows the synced block after the
+save. A block the form holds as it is saved is written as the form sends it.
 
 ## Blocks left on an older version
 

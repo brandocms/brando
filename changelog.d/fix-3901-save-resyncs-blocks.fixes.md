@@ -1,1 +1,1 @@
-- Saving an entry that was open while a module was saved, or reset or updated from the shared library, no longer writes the module's old settings back over its blocks: the save brings them up to the module's version and keeps the editor's changes.
+- Saving an entry that was open while a module was saved, or reset or updated from the shared library, no longer writes the module's old settings back over its blocks: a block that changed in the database since the form loaded it is saved from its stored rows with the editor's changes on top, and synced with the module.

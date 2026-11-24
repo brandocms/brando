@@ -567,17 +567,21 @@ blocks are queued for re-render.
 - **Never trust `module_version` from params.** It is not in `@block_attrs`. An
   entry editor opened before a migration must not be able to save its way to
   claiming it is current.
-- **An entry save syncs the blocks it writes that are behind.**
+- **An entry save syncs the blocks it writes whose form copy is stale.**
   `Blocks.sync_written_blocks/1` runs in `Brando.Query.Mutations`'
-  `create_with_changeset`/`update_with_changeset`, after authorization: a
-  saved block whose refs or vars the save writes, and whose stamp as the form
-  loaded it is not its module's current version, goes through `sync_module/2`
-  on top of the form's changeset and of the rows saved since (a var a module
-  save added is one row, not two); ref settings the save itself changes win
-  over the module's. Left alone: new blocks, blocks only moved, and blocks
-  whose `module_version` the save sets (a revision's working copy). Stamps
-  compare by equality: an override and its library module count versions
-  separately, and an Accept's replacement starts at 1.
+  `create_with_changeset`/`update_with_changeset`, after authorization. A
+  saved block whose refs or vars the save writes is stale when its saved
+  `module_version`, refs or vars differ from the changeset's data (timestamps
+  aside); the stamp against the module's version is not the test (equal
+  counters hide a Reset or Accept, a settings-only module save keeps the
+  version, and an unstampable block would sync on every save). A stale block
+  is rebuilt from the saved rows with the save's changes on top (a var or
+  ref the form adds that is saved under the same key or name is that row),
+  then `sync_module/2`; ref settings the save changes win over the module's.
+  A current block is written as the form sends it. Left alone: new blocks,
+  blocks only moved, and blocks whose `module_version` the save sets (a
+  revision's working copy). Three queries per save that writes blocks, none
+  without; modules load only for stale blocks.
 
 ### Classifying a pending module change
 
