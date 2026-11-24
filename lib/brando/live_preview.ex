@@ -109,7 +109,9 @@ defmodule Brando.LivePreview do
     # value_fns see un-mutated data.
     entry = maybe_preload(entry, opts.schema_preloads)
 
-    processed_assigns = process_assigns(opts.assigns, entry, language, cache_key)
+    # A snapshot renders once: its assigns are not kept for a next render
+    assigns_key = if Keyword.get(render_opts, :cache_assigns, true), do: cache_key
+    processed_assigns = process_assigns(opts.assigns, entry, language, assigns_key)
 
     {tpl_module, template} =
       if is_function(opts.template) do
@@ -611,14 +613,23 @@ defmodule Brando.LivePreview do
   preview's whole lifetime even if a deploy or activation replaces the
   current assets. A capture failure fails sharing instead of storing a preview
   tied to ephemeral release files.
+
+  `changeset` may instead be a function that builds the changeset and calls
+  the function it is given with it, returning that function's result: for
+  an entry that exists only in a transaction the builder rolls back (a
+  translation a proposal creates, `Brando.Content.Proposals.with_translation/5`).
+  The entry is authorized and rendered in the builder, and the preview
+  stored once it has returned.
   """
   @decorate span("brando.preview.share", schema: :schema_module, preview_target: :target)
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}, target \\ nil) do
     expiry_days = Brando.config(:preview_expiry_days) || 2
     expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
+    authorize = &Brando.Authorization.Preview.authorize_share/2
 
-    with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset),
-         {:ok, url} <- store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, %{}) do
+    with :ok <- authorize_given(changeset, user, authorize, schema_module, [:create, :export]),
+         {:ok, url} <-
+           store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, %{}, authorize) do
       {:ok, url, expiry_days}
     end
   end
@@ -635,19 +646,28 @@ defmodule Brando.LivePreview do
   It takes the permission to edit the entry as `changeset` leaves it (to
   create it, for a new entry), as a private live preview does, but not the
   export permission `share/5` takes: the link lives minutes and dies with
-  the proposal. Returns `{:ok, url, expires_at}`.
+  the proposal. `changeset` may be a builder, as `share/5` takes it.
+  Returns `{:ok, url, expires_at}`.
   """
-  @spec share_proposal(module(), Ecto.Changeset.t(), Brando.Users.User.t(), Ecto.UUID.t(), atom() | String.t() | nil) ::
+  @spec share_proposal(
+          module(),
+          Ecto.Changeset.t() | function(),
+          Brando.Users.User.t(),
+          Ecto.UUID.t(),
+          atom() | String.t() | nil
+        ) ::
           {:ok, String.t(), DateTime.t()} | {:error, term()}
   @decorate span("brando.preview.share_proposal", schema: :schema_module, preview_target: :target)
   def share_proposal(schema_module, changeset, user, proposal_id, target \\ nil) when is_binary(proposal_id) do
     # Stored to the second
     expires_at = DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.add(@proposal_snapshot_ttl_minutes, :minute)
 
-    with :ok <- Brando.Authorization.Preview.authorize_snapshot(user, changeset),
+    authorize = &Brando.Authorization.Preview.authorize_snapshot/2
+
+    with :ok <- authorize_given(changeset, user, authorize, schema_module, [:create]),
          {:ok, shared_from} <- proposal_shared_from(),
          attrs = Map.put(shared_from, :proposal_id, proposal_id),
-         {:ok, url} <- store_pinned(schema_module, changeset, user, %{}, target, expires_at, attrs) do
+         {:ok, url} <- store_pinned(schema_module, changeset, user, %{}, target, expires_at, attrs, authorize) do
       {:ok, url, expires_at}
     end
   end
@@ -664,14 +684,30 @@ defmodule Brando.LivePreview do
     end
   end
 
-  defp store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, attrs) do
+  # A changeset is authorized before the asset set is pinned; a builder's
+  # (`share/5`) as it builds it, after what holds for any new entry of the
+  # type (`actions` on it) is checked before the set is pinned.
+  defp authorize_given(%Ecto.Changeset{} = changeset, user, authorize, _schema, _actions),
+    do: authorize.(user, changeset)
+
+  defp authorize_given(build, user, _authorize, schema_module, actions) when is_function(build, 1),
+    do: Brando.Authorization.Preview.authorize_type(user, Module.concat([schema_module]), actions)
+
+  defp with_changeset(%Ecto.Changeset{} = changeset, _user, _authorize, fun), do: fun.(changeset)
+
+  defp with_changeset(build, user, authorize, fun),
+    do: build.(fn changeset -> with :ok <- authorize.(user, changeset), do: fun.(changeset) end)
+
+  defp store_pinned(schema_module, changeset, user, updated_entry_assocs, target, expires_at, attrs, authorize) do
+    render = &{:ok, render_snapshot(schema_module, &1, updated_entry_assocs, target)}
+
     with {:ok, scope} <- preview_asset_scope(),
          {:ok, result} <-
-           SiteAssets.with_preview_set(
-             scope,
-             SiteAssets.current_environment(),
-             &store_preview(schema_module, changeset, user, updated_entry_assocs, target, &1, expires_at, attrs)
-           ) do
+           SiteAssets.with_preview_set(scope, SiteAssets.current_environment(), fn asset_set ->
+             changeset
+             |> with_changeset(user, authorize, render)
+             |> store_preview(user, asset_set, expires_at, attrs)
+           end) do
       result
     end
   end
@@ -683,15 +719,18 @@ defmodule Brando.LivePreview do
     end
   end
 
-  defp store_preview(schema_module, changeset, user, updated_entry_assocs, target, asset_set, expires_at, attrs) do
+  defp render_snapshot(schema_module, changeset, updated_entry_assocs, target) do
     cache_key = build_cache_key(:erlang.system_time())
     entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
-    html =
-      schema_module
-      |> render(entry_struct, cache_key, include_meta: true, target: target)
-      |> Utils.term_to_binary()
+    schema_module
+    |> render(entry_struct, cache_key, include_meta: true, target: target, cache_assigns: false)
+    |> Utils.term_to_binary()
+  end
 
+  defp store_preview({:error, _} = error, _user, _asset_set, _expires_at, _attrs), do: error
+
+  defp store_preview({:ok, html}, user, asset_set, expires_at, attrs) do
     key = Utils.random_string(12)
 
     preview = %{
@@ -730,6 +769,8 @@ defmodule Brando.LivePreview do
       _no_tenant -> %{site_id: nil, environment_id: nil}
     end
   end
+
+  defp resolve_cached_var(nil, key, value_fn), do: {key, value_fn.()}
 
   defp resolve_cached_var(cache_key, key, value_fn) do
     case get_var(cache_key, key) do

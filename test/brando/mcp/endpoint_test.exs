@@ -344,8 +344,9 @@ defmodule Brando.MCP.EndpointTest do
         call_tool(tenant, token, "prepare_proposal", %{"summary" => "Translate", "operations" => [op]})
 
       assert %{"applicable" => true, "problems" => []} = review
-      # The translation is made when the proposal is applied: nothing to preview
-      refute review["preview_url"]
+      # The translation is made when the proposal is applied; its page is
+      # previewed from a copy made and thrown away
+      assert review["preview_url"] =~ "?preview=new:english"
 
       MCP.in_tenant(tenant, fn ->
         assert {:ok, _} = Proposals.approve(review["proposal_id"], 1, c.current_user)

@@ -1,0 +1,1 @@
+- A proposal's page preview (`brando_content_preview_proposal` and the review page) shows a translation the proposal creates, with its translated texts and its links in that language, instead of refusing it.

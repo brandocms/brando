@@ -121,6 +121,21 @@ defmodule Brando.Authorization.Preview do
     end
   end
 
+  @doc """
+  Whether `user` may take every one of `actions` on `schema` itself, before
+  any entry of it is built: what `authorize_share/2` (`[:create, :export]`)
+  or `authorize_snapshot/2` (`[:create]`) takes for a new entry that holds
+  whatever it ends up holding.
+  """
+  def authorize_type(user, schema, actions) when is_atom(schema) and is_list(actions) do
+    if Engine.enabled?() do
+      scope = Boundary.actor_scope(user)
+      if Enum.all?(actions, &(Engine.authorize(scope, &1, schema) == :ok)), do: :ok, else: {:error, :forbidden}
+    else
+      :ok
+    end
+  end
+
   def cleanup(key), do: Cachex.del(:cache, cache_key(key))
 
   @doc "The scope `key` was registered under (`register/2`), or nil."
