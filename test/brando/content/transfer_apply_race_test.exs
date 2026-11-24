@@ -76,7 +76,9 @@ defmodule Brando.Content.TransferApplyRaceTest do
         in_prefix(c, fn -> trash!(c.module) end)
         send(recovery.pid, :go)
 
-        assert {:error, _} = Task.await(recovery, 30_000)
+        # Refused for the module, by its name, not for something else
+        assert {:error, message} = Task.await(recovery, 30_000)
+        assert message =~ "Racer"
         assert is_nil(in_prefix(c, fn -> Brando.Repo.get!(Receipt, receipt.id).restored_at end))
       end
 
