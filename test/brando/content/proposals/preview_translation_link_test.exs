@@ -265,7 +265,7 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
       assert for(
                key <- keys,
                is_binary(key) and key =~ "__VAR__employees",
-               {:ok, [%{name: "Om oss"}]} = Cachex.get(:cache, key),
+               match?({:ok, [%{name: "Om oss"}]}, Cachex.get(:cache, key)),
                do: key
              ) == []
     end
