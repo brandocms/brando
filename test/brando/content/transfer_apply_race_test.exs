@@ -119,36 +119,36 @@ defmodule Brando.Content.TransferApplyRaceTest do
     user = unboxed(fn -> Brando.Factory.insert(:random_user, role: :superuser, avatar: nil) end)
     if prefix, do: unboxed(fn -> create_site!(user) end)
 
-    unboxed(fn ->
-      Tenant.with_prefix(prefix, fn ->
-        module =
-          ProposalFixtures.module!(user, "Racer", "<p>{{ tagline }}</p>",
-            vars: [%{type: "string", key: "tagline", label: "Tagline", value: "Default tagline"}]
-          )
+    unboxed(fn -> Tenant.with_prefix(prefix, fn -> content!(prefix, user, path) end) end)
+  end
 
-        [first, second, first_target, second_target] =
-          for title <- ["First", "Second", "First target", "Second target"], do: page!(title, user)
+  defp content!(prefix, user, path) do
+    module =
+      ProposalFixtures.module!(user, "Racer", "<p>{{ tagline }}</p>",
+        vars: [%{type: "string", key: "tagline", label: "Tagline", value: "Default tagline"}]
+      )
 
-        add_block!(second, module, user)
-        add_block!(second_target, module, user)
+    [first, second, first_target, second_target] =
+      for title <- ["First", "Second", "First target", "Second target"], do: page!(title, user)
 
-        definitions_path = Path.join(path, "definitions")
-        {:ok, _} = Definitions.export(definitions_path, user, uids: [module.uid])
-        liquid = Path.join(definitions_path, "content/racer.liquid")
-        File.write!(liquid, String.replace(File.read!(liquid), "<p>{{ tagline }}</p>", "<div>{{ tagline }}</div>"))
-        {:ok, bundle} = Definitions.read(definitions_path)
-        {:ok, definitions} = Definitions.plan(bundle, user)
+    add_block!(second, module, user)
+    add_block!(second_target, module, user)
 
-        %{
-          prefix: prefix,
-          user: user,
-          module: module,
-          sources: [first, second],
-          targets: [first_target, second_target],
-          definitions: definitions
-        }
-      end)
-    end)
+    definitions_path = Path.join(path, "definitions")
+    {:ok, _} = Definitions.export(definitions_path, user, uids: [module.uid])
+    liquid = Path.join(definitions_path, "content/racer.liquid")
+    File.write!(liquid, String.replace(File.read!(liquid), "<p>{{ tagline }}</p>", "<div>{{ tagline }}</div>"))
+    {:ok, bundle} = Definitions.read(definitions_path)
+    {:ok, definitions} = Definitions.plan(bundle, user)
+
+    %{
+      prefix: prefix,
+      user: user,
+      module: module,
+      sources: [first, second],
+      targets: [first_target, second_target],
+      definitions: definitions
+    }
   end
 
   defp entry_plan(c) do
