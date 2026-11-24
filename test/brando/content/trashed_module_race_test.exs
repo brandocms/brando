@@ -129,7 +129,7 @@ defmodule Brando.Content.TrashedModuleRaceTest do
       handler,
       Repo.config()[:telemetry_prefix] ++ [:query],
       fn _event, _measurements, metadata, test ->
-        if self() != test and Process.get(:pause_on_query) && pause?.(metadata) do
+        if (self() != test and Process.get(:pause_on_query)) && pause?.(metadata) do
           :telemetry.detach(handler)
           send(test, :paused)
           receive(do: (:go -> :ok))
@@ -254,7 +254,11 @@ defmodule Brando.Content.TrashedModuleRaceTest do
     Repo.query!("DELETE FROM search_documents WHERE schema = $1 AND entry_id = ANY($2)", [schema, pages])
 
     Repo.delete_all(
-      from(e in Brando.Activity.Event, where: e.user_id == ^user.id or (e.schema == ^schema and e.entry_id in ^pages))
+      from(e in Brando.Activity.Event,
+        where:
+          e.user_id == ^user.id or (e.schema == ^schema and e.entry_id in ^pages) or
+            (e.schema == ^to_string(Module) and e.entry_id == ^module.id)
+      )
     )
 
     Repo.delete_all(from(r in Brando.Revisions.Revision, where: r.creator_id == ^user.id))
