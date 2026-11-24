@@ -103,6 +103,19 @@ defmodule Brando.Translations.LanguageSetTest do
     end
   end
 
+  test "a translation's sibling in its group comes before another version linked to their source", %{user: user} do
+    source = article(user, "no")
+    {:ok, english} = Translations.create_target(Article, source.id, :en, user)
+    # Older than the group's German translation, and linked after it was made
+    independent = article(user, "de")
+    {:ok, german} = Translations.create_target(Article, source.id, :de, user)
+    link(source, independent)
+    assert independent.id < german.id
+
+    assert %{"de" => %{id: id}} = Translations.versions_by_language(Article, english, nil)
+    assert id == german.id
+  end
+
   test "a trashed member is not replaced while the set holds a version in its language outside the trash", %{
     user: user
   } do

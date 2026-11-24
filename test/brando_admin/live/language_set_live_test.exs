@@ -157,6 +157,22 @@ defmodule BrandoAdmin.LanguageSetLiveTest do
     end
   end
 
+  test "linking an entry leaves nothing of what it brings into the set to link", %{conn: conn, current_user: user} do
+    norsk = article(user, "no")
+    english = article(user, "en")
+    german = article(user, "de")
+    link(english, german)
+
+    view = open(conn, user, IndependentArticle, norsk)
+    view |> drawer() |> render_click("get_entries_identifiers", %{})
+    assert has_element?(view, ".entries-identifiers")
+
+    view |> drawer() |> render_click("select_entry", %{"id" => english.id})
+    assert has_element?(view, "#{row(english)} button[phx-click*=remove_entry]")
+    assert has_element?(view, row(german))
+    refute has_element?(view, ".entries-identifiers")
+  end
+
   describe "a person who may not read every version" do
     setup %{current_user: user} do
       source = article(user, "no")

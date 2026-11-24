@@ -245,10 +245,16 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     Enum.reject(identifiers, &(&1.entry_id == entry.id or MapSet.member?(linked, &1.entry_id)))
   end
 
+  # The link brings what the linked entry is linked to into the set: none of
+  # it is left to link
   defp linked(socket, entry_id) do
+    socket = assign_versions(socket)
+    in_set = MapSet.new(socket.assigns.linked, fn {identifier, _version} -> identifier.entry_id end)
+
     socket
-    |> assign_versions()
-    |> update(:entries_identifiers, fn identifiers -> Enum.reject(identifiers || [], &(&1.entry_id == entry_id)) end)
+    |> update(:entries_identifiers, fn identifiers ->
+      Enum.reject(identifiers || [], &(&1.entry_id == entry_id or MapSet.member?(in_set, &1.entry_id)))
+    end)
     |> update(:new_identifiers, &(&1 ++ [entry_id]))
   end
 

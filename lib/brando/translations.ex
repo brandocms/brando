@@ -180,10 +180,12 @@ defmodule Brando.Translations do
   (`trait :translatable, matched_by: [...]`), not followed further.
 
     * `linked`: the versions `actor` may read, `entry` left out, by language,
-      as `%{entry: entry, linked?: linked?, via: via}`. `linked?` is true for
-      one linked to `entry` itself as an alternate, the pair the form can
-      remove; `via` is the language of the version one was reached through,
-      nil for one linked to `entry` or in its group as it.
+      as `%{entry: entry, linked?: linked?, via: via, group?: group?}`.
+      `linked?` is true for one linked to `entry` itself as an alternate, the
+      pair the form can remove; `via` is the language of the version one was
+      reached through, nil for one reached from `entry` itself (a
+      translation's sibling is reached through their source); `group?` is
+      true for a member of `entry`'s group.
     * `matched`: the entries with `entry`'s `matched_by` values outside the
       set that `actor` may read, those in the trash included. Empty for a
       schema without `matched_by`, or for an entry with a nil value.
@@ -207,7 +209,7 @@ defmodule Brando.Translations do
 
     linked =
       for member <- members, version = readable[member.id], member.id != id do
-        %{entry: version, linked?: member.linked?, via: member.via}
+        %{entry: version, linked?: member.linked?, via: member.via, group?: member.group?}
       end
 
     %{
@@ -221,16 +223,16 @@ defmodule Brando.Translations do
   @doc """
   The other language versions of `entry` that `actor` may read, one per
   language, keyed by language code (`language_versions/3`). Where a language
-  has several: one outside the trash before one in it, then one linked to
-  `entry` or in its group before one reached through another version, then
-  one with `entry`'s `matched_by` values, then the lowest id.
+  has several: one outside the trash before one in it, then one reached from
+  `entry` itself or in its group before another reached through a version,
+  then one with `entry`'s `matched_by` values, then the lowest id.
   """
   def versions_by_language(schema, entry, actor),
     do: schema |> language_versions(entry, actor) |> by_language()
 
   @doc "The versions of a set from `language_versions/3`, one per language, as `versions_by_language/3` has them."
   def by_language(%{language: language, linked: linked, matched: matched}) do
-    (Enum.map(linked, &{&1.entry, if(&1.via, do: 1, else: 0)}) ++ Enum.map(matched, &{&1, 2}))
+    (Enum.map(linked, &{&1.entry, if(&1.via && not &1.group?, do: 1, else: 0)}) ++ Enum.map(matched, &{&1, 2}))
     |> Enum.reject(fn {version, _rank} -> to_string(version.language) == language end)
     |> Enum.sort_by(fn {version, rank} -> {match?(%{deleted_at: %DateTime{}}, version), rank, version.id} end)
     |> Enum.uniq_by(fn {version, _rank} -> to_string(version.language) end)
@@ -238,19 +240,20 @@ defmodule Brando.Translations do
   end
 
   # The set of `entry`, whoever looks (`language_versions/3`): its members
-  # as `%{id, language, trashed?, linked?, via}`, `entry` first, its matched
+  # as `%{id, language, trashed?, linked?, via, group?}`, `entry` first, its matched
   # entries as `%{id, language, trashed?}`, the languages taken, and the ids
   # of `entry`'s group. Each entry is visited once: links are stored in pairs.
   defp walk(schema, %{id: id} = entry) do
     reached = reach(schema, [id], %{id => {nil, nil}})
     rows = rows(from(e in schema, where: e.id in ^Map.keys(reached)), schema)
     language_of = Map.new(rows, &{&1.id, &1.language})
+    group = group_entry_ids(schema, id)
 
     members =
       for row <- Enum.sort_by(rows, &(&1.id != id)) do
         {from, kind} = reached[row.id]
         via = if from in [nil, id], do: nil, else: language_of[from]
-        Map.merge(row, %{linked?: from == id and kind == :alternate, via: via})
+        Map.merge(row, %{linked?: from == id and kind == :alternate, via: via, group?: row.id in group})
       end
 
     matched =
@@ -258,8 +261,6 @@ defmodule Brando.Translations do
         nil -> []
         query -> query |> where([e], e.id not in ^Map.keys(reached)) |> rows(schema)
       end
-
-    group = group_entry_ids(schema, id)
 
     taken =
       Enum.uniq([
