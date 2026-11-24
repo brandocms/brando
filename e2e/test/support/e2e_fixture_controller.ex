@@ -2366,7 +2366,7 @@ defmodule E2EFixtureController do
   end
 
   def authorization(conn, %{"role" => role})
-      when role in ["reader", "author", "publisher", "media", "none"] do
+      when role in ["reader", "author", "publisher", "page-deleter", "media", "none"] do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     owner = get_admin_user()
@@ -2392,6 +2392,10 @@ defmodule E2EFixtureController do
 
         "publisher" ->
           base ++ ~w(brando.pages.update brando.pages.publish brando.pages.schedule)
+
+        # Deletes and restores pages, and may not publish them
+        "page-deleter" ->
+          base ++ ~w(brando.pages.update brando.pages.delete brando.pages.restore)
 
         # Manages the media libraries, and may read no pages
         "media" ->
@@ -2855,6 +2859,35 @@ defmodule E2EFixtureController do
 
     {:ok, target} = Brando.Translations.create_target(Brando.Pages.Page, source.id, :no, user)
     {:ok, _} = Brando.Pages.delete_page(target.id, user)
+    json(conn, %{source_id: source.id, target_id: target.id})
+  end
+
+  # A published English page, "Team", the source of a published Norwegian
+  # translation, "Laget" (#3926), with pages synchronized
+  # (`synchronized_pages/2`). With `trashed`, the translation is in the trash;
+  # with `source=draft`, the source is a draft.
+  def translated_page(conn, params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+
+    {:ok, source} =
+      Brando.Pages.create_page(
+        %{
+          title: "Team",
+          uri: "team",
+          language: "en",
+          template: "default.html",
+          status: if(params["source"] == "draft", do: :draft, else: :published)
+        },
+        user
+      )
+
+    {:ok, target} = Brando.Translations.create_target(Brando.Pages.Page, source.id, :no, user)
+    {:ok, target} = Brando.Pages.update_page(target.id, %{title: "Laget", status: :published}, user)
+
+    if params["trashed"] == "true", do: {:ok, _} = Brando.Pages.delete_page(target.id, user)
+
     json(conn, %{source_id: source.id, target_id: target.id})
   end
 

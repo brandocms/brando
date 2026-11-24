@@ -11,6 +11,8 @@ defmodule Brando.SoftDelete.Repo do
 
   alias Ecto.Changeset
 
+  @deleted_at_key {__MODULE__, :deleted_at}
+
   @doc """
   Soft deletes all entries matching the given query.
   """
@@ -198,8 +200,26 @@ defmodule Brando.SoftDelete.Repo do
   def restore_changeset(struct_or_changeset),
     do: struct_or_changeset |> Changeset.change(deleted_at: nil) |> maybe_obfuscate()
 
-  @doc "The deletion timestamp, truncated to seconds."
-  def utc_now, do: DateTime.truncate(DateTime.utc_now(), :second)
+  @doc """
+  The deletion timestamp, truncated to seconds: now, or the one `at/2` holds
+  for this process.
+  """
+  def utc_now, do: Process.get(@deleted_at_key) || DateTime.truncate(DateTime.utc_now(), :second)
+
+  @doc """
+  Runs `fun` with every soft delete in this process stamped `deleted_at`, so
+  entries trashed together share it, as a restore finds them
+  (`Brando.Translations.delete_with_translations/4`).
+  """
+  def at(%DateTime{} = deleted_at, fun) do
+    previous = Process.put(@deleted_at_key, deleted_at)
+
+    try do
+      fun.()
+    after
+      if previous, do: Process.put(@deleted_at_key, previous), else: Process.delete(@deleted_at_key)
+    end
+  end
 
   defp obfuscate(changeset, source, transform) do
     fields = obfuscated_fields(source)
