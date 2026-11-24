@@ -227,7 +227,7 @@ defmodule Mix.Tasks.Brando.Modules do
           "#{item.reason || Enum.join(item.fields, ", ")} (#{item.block_count} blocks, #{item.entry_count} entries)"
 
       Mix.shell().info("#{item.action} #{item.kind} #{item.uid}: #{detail}")
-      if line = Plan.resolve_line(plan, item), do: Mix.shell().info("  " <> line)
+      Enum.each(Plan.resolve_lines(plan, item), &Mix.shell().info("  " <> &1))
     end)
 
     unless Plan.applicable?(plan), do: Mix.raise("Resolve the conflicts or required migrations before importing")
@@ -276,13 +276,19 @@ defmodule Mix.Tasks.Brando.Modules do
 
     if opts[:dry_run], do: Mix.raise("resolve is a dry run unless --apply is given")
     report = uid |> StaleBlocks.report(user) |> unwrap_resolve!()
-    resolutions = resolutions!(report, opts)
+    {resolutions, gone} = resolutions!(report, opts)
+    {resolutions, kept} = StaleBlocks.keep_filled(StaleBlocks.plan(report, resolutions), resolutions)
     plan = StaleBlocks.plan(report, resolutions)
     print_report(report, plan, resolutions)
+    Enum.each(gone, &Mix.shell().info("No block of #{uid} holds a leftover #{&1}: nothing to do for it."))
+    print_kept(kept)
 
     cond do
       report.blocks == [] ->
         :ok
+
+      resolutions == %{} ->
+        Mix.shell().info("Nothing was changed: no block holds a leftover the command names.")
 
       plan.refused != [] ->
         Enum.each(plan.refused, &Mix.shell().error("Refused in block ##{&1.block_id}: #{StaleBlocks.refusal_line(&1)}"))
@@ -326,32 +332,35 @@ defmodule Mix.Tasks.Brando.Modules do
     end
 
     Mix.shell().info("Applied #{length(result.changes)} definition changes; baseline saved")
+    Enum.each(result.renamed, &Mix.shell().info(Plan.renamed_text(&1)))
     refreshed? = report_refresh(result.refresh)
     follow_renders!(run, opts)
     unless refreshed?, do: Mix.raise("Definitions are committed. Retry refresh for the reported UIDs.")
   end
 
+  # The resolutions, and the keys given that no block holds as a leftover
+  # (moved or dropped already)
   defp resolutions!(report, opts) do
-    drops =
-      for key <- Keyword.get_values(opts, :drop), selector <- selectors!(report, key), into: %{}, do: {selector, :drop}
-
     maps =
-      for pair <- Keyword.get_values(opts, :map), into: %{} do
+      for pair <- Keyword.get_values(opts, :map) do
         case String.split(pair, "=", parts: 2) do
-          [old, new] when old != "" and new != "" ->
-            [selector] = selectors!(report, old) |> Enum.take(1)
-            {selector, {:map, new}}
-
-          _ ->
-            Mix.raise("--map expects OLD=NEW, got #{inspect(pair)}")
+          [old, new] when old != "" and new != "" -> {old, &[{hd(&1), {:map, new}}]}
+          _ -> Mix.raise("--map expects OLD=NEW, got #{inspect(pair)}")
         end
       end
 
-    Map.merge(drops, maps)
+    drops = for key <- Keyword.get_values(opts, :drop), do: {key, fn selectors -> Enum.map(selectors, &{&1, :drop}) end}
+
+    Enum.reduce(drops ++ maps, {%{}, []}, fn {key, resolve}, {resolutions, gone} ->
+      case selectors(report, key) do
+        [] -> {resolutions, gone ++ [key]}
+        selectors -> {Map.merge(resolutions, Map.new(resolve.(selectors))), gone}
+      end
+    end)
   end
 
   # `KEY`, `ref:KEY` or `var:KEY`, matched against the leftovers found.
-  defp selectors!(report, key) do
+  defp selectors(report, key) do
     {kinds, key} =
       case String.split(key, ":", parts: 2) do
         ["ref", key] -> {[:ref], key}
@@ -359,10 +368,19 @@ defmodule Mix.Tasks.Brando.Modules do
         _ -> {[:ref, :var], key}
       end
 
-    case for(group <- report.groups, group.kind in kinds, group.key == key, do: {group.kind, key}) do
-      [] -> Mix.raise("No block of #{report.module.uid} holds a leftover #{key}")
-      selectors -> selectors
-    end
+    for group <- report.groups, group.kind in kinds, group.key == key, do: {group.kind, key}
+  end
+
+  defp print_kept([]), do: :ok
+
+  defp print_kept(kept) do
+    Mix.shell().info("\nThese blocks hold a value of their own under the new name, and keep both:")
+
+    Enum.each(kept, fn %{action: {:map, target}} = change ->
+      Mix.shell().info(
+        "  block ##{change.block_id} #{change.kind} #{change.key} stays a leftover; #{target} holds #{inspect(change.replaces)}. Resolve it under Resolve blocks."
+      )
+    end)
   end
 
   defp print_report(report, plan, resolutions) do

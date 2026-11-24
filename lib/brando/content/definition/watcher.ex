@@ -229,9 +229,9 @@ defmodule Brando.Content.Definition.Watcher do
   # What `mix brando.modules import` prints for an update that removes keys
   # blocks hold
   defp removal_lines(plan, item) do
-    case Plan.resolve_line(plan, item) do
-      nil -> []
-      line -> ["#{item.action} #{item.kind} #{item.uid}: #{Plan.removal_text(item)}", "  " <> line]
+    case Plan.resolve_lines(plan, item) do
+      [] -> []
+      lines -> ["#{item.action} #{item.kind} #{item.uid}: #{Plan.removal_text(item)}" | Enum.map(lines, &("  " <> &1))]
     end
   end
 

@@ -2,6 +2,7 @@ defmodule Brando.Content.Definition.Renames do
   # How many entries and blocks one apply moves values in, for all the
   # modules it selects: see the moduledoc
   @limit [entries: 500, blocks: 1500]
+  @max_blocks @limit[:blocks]
 
   @moduledoc """
   The renames a module's definition file declares (`renamed_from:` on a ref
@@ -28,10 +29,14 @@ defmodule Brando.Content.Definition.Renames do
   rolls back when anything is refused now.
 
   The apply holds the definition tables locked while it moves, and every
-  editor's save in the environment waits for it: renames that move values
-  in more than #{@limit[:entries]} entries or #{@limit[:blocks]} blocks, counted
-  across the modules one apply selects, are refused too, and their values
-  are moved with `resolve --map` after an apply without the rename.
+  editor's save in the environment waits for it: when the renames would
+  move values in more than #{@limit[:entries]} entries or #{@limit[:blocks]} blocks,
+  counted across the modules one apply selects, the apply moves none of
+  them. It adds the new keys, the blocks keep each value under the old one
+  as a leftover, and `resolve --map` moves them after the apply (the plan
+  prints the command while the file declares the rename). Only what that
+  command can't move either is refused then: a rename that changes type,
+  and a ref whose slot holds blocks.
 
   Measured on the development machine the limit was set on (pages with
   three blocks each; from the apply's call to the end of its transaction):
@@ -87,38 +92,47 @@ defmodule Brando.Content.Definition.Renames do
   What moving `renames` does to the blocks of the module `record` (stored,
   with its refs and vars), once the module is `module` (with refs and
   vars): `%{renames: [rename with blocks and entries], blocks: count,
-  entries: [entry], unrevisioned: count, refused: [reason]}`. Each reason
-  names the entries `viewer` may read and counts the others. Blocks over
-  the limit are refused as counted, without loading them.
+  entries: [entry], unrevisioned: count, refused: [reason], left?: boolean}`.
+  Each reason names the entries `viewer` may read and counts the others.
+
+  Over the limit the apply moves nothing (`left?`, `leave/1`): blocks over
+  it are counted without loading them, and only what the resolve command
+  can't move either is refused (`refused_if_left`).
   """
   def plan(record, module, renames, viewer) do
     holders = Map.new(renames, &{&1, holder_ids(record.id, [&1])})
     ids = holders |> Map.values() |> List.flatten() |> Enum.uniq() |> Enum.sort()
-
-    if length(ids) > @limit[:blocks],
-      do: counted(record, renames, holders, ids, viewer),
-      else: loaded(record, module, renames, ids, viewer)
-  end
-
-  defp counted(record, renames, holders, ids, viewer) do
     counted = Enum.map(renames, &Map.merge(&1, %{blocks: length(holders[&1]), entries: 0}))
 
-    %{
-      renames: counted,
-      blocks: length(ids),
-      entries: [],
-      unrevisioned: 0,
-      refused: [
-        gettext(
-          "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
-          renames: text(renames),
-          blocks: length(ids),
-          max_blocks: @limit[:blocks],
-          command: resolve_command([{record.uid, counted}], viewer)
-        )
-      ]
-    }
+    refused_if_left =
+      renames
+      |> Enum.zip(counted)
+      |> Enum.flat_map(fn {rename, counted} ->
+        (definition_refusal(counted, record, module, viewer) || []) ++ slot_refusal(rename, holders[rename])
+      end)
+
+    if length(ids) > @limit[:blocks] do
+      %{
+        renames: counted,
+        blocks: length(ids),
+        entries: [],
+        unrevisioned: 0,
+        refused: refused_if_left,
+        refused_if_left: refused_if_left,
+        left?: true
+      }
+    else
+      plan = Map.merge(loaded(record, module, renames, ids, viewer), %{refused_if_left: refused_if_left, left?: false})
+      if over_limit([plan]), do: leave(plan), else: plan
+    end
   end
+
+  @doc """
+  `plan` (`plan/4`'s) as an apply that moves nothing: the blocks keep each
+  value under the old key, for the resolve command, and only what that
+  command can't move either is refused.
+  """
+  def leave(plan), do: %{plan | left?: true, refused: plan.refused_if_left}
 
   defp loaded(record, module, renames, ids, viewer) do
     blocks = load(ids)
@@ -133,7 +147,7 @@ defmodule Brando.Content.Definition.Renames do
 
     refused =
       Enum.flat_map(planned, fn rename ->
-        definition_refusal(rename, record, module) ||
+        definition_refusal(rename, record, module, viewer) ||
           block_refusals(rename, module, fn holders -> entry_text(owners.(holders), viewer) end)
       end)
 
@@ -151,7 +165,7 @@ defmodule Brando.Content.Definition.Renames do
   @doc """
   Whether `moves` (`plan/4`'s, of the modules one apply selects) move more
   together than an apply may while editors' saves wait for it: nil, or
-  the blocks and distinct entries they move (`over_limit_text/2`).
+  the blocks and distinct entries they move.
   """
   def over_limit(moves) do
     blocks = moves |> Enum.map(& &1.blocks) |> Enum.sum()
@@ -162,46 +176,29 @@ defmodule Brando.Content.Definition.Renames do
   end
 
   @doc """
-  The refusal of `modules` (`[{uid, renames}]`) when the moves of an apply
-  are `over_limit/1`, with the resolve command `viewer` runs for each
-  module after an apply without the renames.
+  What an apply leaves of `renames` (with their `blocks`) in the blocks of
+  the module `uid`, and the resolve command `viewer` runs to move it, as a
+  line: nil when no block holds a value of them.
   """
-  def over_limit_text(modules, %{blocks: blocks, entries: entries, modules: count}, viewer) do
-    bindings = [
-      renames: modules |> Enum.flat_map(&elem(&1, 1)) |> text(),
-      blocks: blocks,
-      entries: entries,
-      max_entries: @limit[:entries],
-      max_blocks: @limit[:blocks],
-      command: resolve_command(modules, viewer)
-    ]
+  def left_text(uid, renames, viewer) do
+    case resolve_command([{uid, renames}], viewer) do
+      "" ->
+        nil
 
-    cond do
-      # A module no block holds a value of has no command; the others' moves
-      # are what stop the apply
-      bindings[:command] == "" ->
+      command ->
         gettext(
-          "%{renames} would move no values, but the other renames this apply selects move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once.",
-          bindings
-        )
-
-      count == 1 ->
-        gettext(
-          "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
-          bindings
-        )
-
-      true ->
-        gettext(
-          "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
-          bindings
+          "%{renames}: the apply moves no values over its limit (%{max_entries} entries, %{max_blocks} blocks), and the blocks keep them under the old names; move them with %{command}, as a user who may edit those entries",
+          renames: text(Enum.filter(renames, &(&1.blocks > 0))),
+          max_entries: @limit[:entries],
+          max_blocks: @limit[:blocks],
+          command: command
         )
     end
   end
 
   # The resolve command of each module, as one shell line, that moves the
-  # values of `modules` once their renames are out of the files: only the
-  # renames blocks hold a value of, as resolve refuses a key no block holds
+  # values of `modules`: only the renames blocks hold a value of, as
+  # resolve refuses a key no block holds
   defp resolve_command(modules, viewer) do
     user_id = if is_map(viewer), do: viewer.id
 
@@ -246,29 +243,66 @@ defmodule Brando.Content.Definition.Renames do
     |> Enum.map(&Map.put(&1, :slots, Map.get(slots, &1.id, [])))
   end
 
-  defp definition_refusal(%{kind: :var, from: from, to: to}, record, module) do
+  defp definition_refusal(%{kind: :var, from: from, to: to} = rename, record, module, viewer) do
     source = Enum.find(record.vars, &(&1.key == from))
     target = Enum.find(module.vars, &(&1.key == to))
 
     if source && target && source.type != target.type,
-      do: [changes_type(:var, from, to, source.type, target.type)]
+      do: [changes_type(rename, record.uid, {source.type, target}, viewer)]
   end
 
-  defp definition_refusal(%{kind: :ref, from: from, to: to}, record, module) do
+  defp definition_refusal(%{kind: :ref, from: from, to: to} = rename, record, module, viewer) do
     source = Enum.find(record.refs, &(&1.name == from))
     target = Enum.find(module.refs, &(&1.name == to))
 
     if source && target && StaleBlocks.ref_type(source) != StaleBlocks.ref_type(target),
-      do: [changes_type(:ref, from, to, StaleBlocks.ref_type(source), StaleBlocks.ref_type(target))]
+      do: [changes_type(rename, record.uid, {StaleBlocks.ref_type(source), target}, viewer)]
   end
 
-  defp changes_type(kind, from, to, old_type, new_type) do
-    gettext(
-      "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or move the values with mix brando.modules resolve --map",
-      subject: subject(kind, from, to),
-      old_type: old_type,
-      new_type: new_type
-    )
+  # The resolve command is offered when it converts the values (`StaleBlocks.targets/4`)
+  defp changes_type(rename, uid, {old_type, target}, viewer) do
+    [%{type: new_type, ok?: convertible?}] =
+      StaleBlocks.targets(rename.kind, rename.from, [old_type], %{rename.kind => %{rename.to => target}})
+
+    bindings = [subject: subject(rename.kind, rename.from, rename.to), old_type: old_type, new_type: new_type]
+
+    case convertible? && resolve_command([{uid, [rename]}], viewer) do
+      command when command not in [nil, false, ""] ->
+        gettext(
+          "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
+          Keyword.put(bindings, :command, command)
+        )
+
+      _ ->
+        gettext(
+          "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next",
+          bindings
+        )
+    end
+  end
+
+  # A ref whose slot holds blocks: the resolve command renames the ref, not
+  # the slot, so its values can't be left for it
+  defp slot_refusal(%{kind: :var}, _ids), do: []
+
+  defp slot_refusal(%{kind: :ref} = rename, ids) do
+    case slotted(rename, ids) do
+      0 ->
+        []
+
+      count ->
+        [
+          ngettext(
+            "%{subject}: 1 block holds blocks in the slot of %{from}, which mix brando.modules resolve doesn't move, and the apply moves no values over its limit (%{max_entries} entries, %{max_blocks} blocks): move them out of the slot first, or apply fewer modules at once",
+            "%{subject}: %{count} blocks hold blocks in the slot of %{from}, which mix brando.modules resolve doesn't move, and the apply moves no values over its limit (%{max_entries} entries, %{max_blocks} blocks): move them out of the slot first, or apply fewer modules at once",
+            count,
+            subject: subject(:ref, rename.from, rename.to),
+            from: rename.from,
+            max_entries: @limit[:entries],
+            max_blocks: @limit[:blocks]
+          )
+        ]
+    end
   end
 
   defp block_refusals(%{holders: holders} = rename, module, owners) do
@@ -353,41 +387,50 @@ defmodule Brando.Content.Definition.Renames do
   end
 
   @doc """
-  Of the declared renames this update doesn't carry out (`split/2`), those
-  whose source key blocks of the module `record` hold: after the apply
-  they are leftovers a `resolve --map` would move onto the destination
-  `module` defines. Each has `ok?`: whether a dry run of that mapping finds
-  them, refuses nothing and replaces no block's value, and no block holds
-  blocks in a slot of the old ref, which the mapping doesn't move.
+  Of the declared renames an update doesn't carry out (`split/2`), or a
+  definition already applied keeps, those whose source key `module` (with
+  refs and vars) doesn't define and blocks of the module `record` hold:
+  leftovers a `resolve --map` moves onto the destination. Each has `ok?`:
+  whether a dry run of that mapping finds them and refuses nothing (a block
+  whose destination an editor filled in keeps both, `StaleBlocks.keep_filled/2`),
+  and no block holds blocks in a slot of the old ref, which the mapping
+  doesn't move. Over the apply's limit the blocks aren't loaded for the dry
+  run: the command refuses what it can't move by name.
   """
   def remaps(_record, _module, []), do: []
 
   def remaps(record, module, renames) do
     Enum.flat_map(renames, fn rename ->
-      case holder_ids(record.id, [rename]) do
+      case if(target(module, rename.kind, rename.from), do: [], else: holder_ids(record.id, [rename])) do
         [] ->
           []
 
+        ids when length(ids) > @max_blocks ->
+          [Map.put(rename, :ok?, slotted(rename, ids) == 0)]
+
         ids ->
-          dry_run = StaleBlocks.plan_for(module, ids, %{{rename.kind, rename.from} => {:map, rename.to}})
-          ok? = dry_run.refused == [] and dry_run.changes != [] and dry_run.lost == [] and not slotted?(rename, ids)
+          report = StaleBlocks.report_for(module, ids)
+          resolutions = %{{rename.kind, rename.from} => {:map, rename.to}}
+          {resolutions, _kept} = StaleBlocks.keep_filled(StaleBlocks.plan(report, resolutions), resolutions)
+          dry_run = StaleBlocks.plan(report, resolutions)
+          ok? = dry_run.refused == [] and dry_run.changes != [] and slotted(rename, ids) == 0
           [Map.put(rename, :ok?, ok?)]
       end
     end)
   end
 
-  defp slotted?(%{kind: :var}, _ids), do: false
+  # How many of the blocks `ids` hold blocks in a slot of the renamed ref
+  defp slotted(%{kind: :var}, _ids), do: 0
 
-  defp slotted?(%{kind: :ref, from: from}, ids) do
-    from(s in Block,
-      join: c in Block,
-      on: c.parent_id == s.id,
-      where: s.parent_id in ^ids and s.type == :slot and s.slot_name == ^from,
-      select: 1,
-      limit: 1
+  defp slotted(%{kind: :ref, from: from}, ids) do
+    Repo.one(
+      from(s in Block,
+        join: c in Block,
+        on: c.parent_id == s.id,
+        where: s.parent_id in ^ids and s.type == :slot and s.slot_name == ^from,
+        select: count(s.parent_id, :distinct)
+      )
     )
-    |> Repo.all()
-    |> Enum.any?()
   end
 
   ## Applying
@@ -397,11 +440,16 @@ defmodule Brando.Content.Definition.Renames do
   renames}]`, each module as the apply found it and as it saved it) in the
   apply's transaction, as `person`: the blocks that hold a source key are
   locked and planned again, and anything refused now rolls the apply back.
+  When they move more together than the apply may (`over_limit/1`), none
+  moves: the blocks keep the values for the resolve command (`leave/1`).
   One revision of each entry before and one after, however many modules
   move; each entry and module records the renames in Activity with
   `opts[:release]`.
+
+  Returns each module's plan (`plan/4`) by uid: what the apply moved, or
+  left (`left?`).
   """
-  def move!([], _person, _opts), do: :ok
+  def move!([], _person, _opts), do: %{}
 
   def move!(moves, person, opts) do
     moves =
@@ -411,21 +459,25 @@ defmodule Brando.Content.Definition.Renames do
 
     moves |> Enum.flat_map(&(&1.holders |> Map.values() |> List.flatten())) |> lock!()
     planned = Enum.map(moves, &Map.put(&1, :plan, plan(&1.record, &1.module, &1.renames, person)))
-    plans = Enum.map(planned, & &1.plan)
 
-    refused =
-      case over_limit(plans) do
-        nil ->
-          Enum.flat_map(plans, & &1.refused)
+    planned =
+      if over_limit(Enum.map(planned, & &1.plan)),
+        do: Enum.map(planned, &Map.update!(&1, :plan, fn plan -> leave(plan) end)),
+        else: planned
 
-        totals ->
-          Enum.flat_map(plans, & &1.refused) ++
-            [over_limit_text(Enum.map(planned, &{&1.record.uid, &1.plan.renames}), totals, person)]
-      end
-
+    refused = Enum.flat_map(planned, & &1.plan.refused)
     if refused != [], do: Repo.rollback(changed_since_review(refused))
 
-    entries = plans |> Enum.flat_map(& &1.entries) |> Enum.uniq_by(&{&1.schema, &1.id})
+    case Enum.reject(planned, & &1.plan.left?) do
+      [] -> :ok
+      moving -> write!(moving, person, opts)
+    end
+
+    Map.new(planned, &{&1.record.uid, &1.plan})
+  end
+
+  defp write!(planned, person, opts) do
+    entries = planned |> Enum.flat_map(& &1.plan.entries) |> Enum.uniq_by(&{&1.schema, &1.id})
     details = details(planned, opts[:release])
 
     BlockMoves.write!(entries, person, [before: description(planned, opts[:release]), details: details], fn ->

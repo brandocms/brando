@@ -321,7 +321,7 @@ defmodule Brando.Content.Definitions.Release do
     names = display_names(report.plan.bundle)
 
     moves =
-      for %{moves: %{renames: renames}, uid: uid} <- plan.items,
+      for %{moves: %{renames: renames, left?: false}, uid: uid} <- plan.items,
           moved = Enum.filter(renames, &(&1.blocks > 0)),
           moved != [],
           into: %{},
@@ -516,6 +516,7 @@ defmodule Brando.Content.Definitions.Release do
     |> Enum.each(info)
 
     info.("Applied #{length(result.changes)} definition changes from release #{report.version}")
+    Enum.each(result.renamed, &info.("  " <> Plan.renamed_text(&1)))
     Enum.each(result.refresh, &(&1.status == :failed && info.("  Refresh failed for #{&1.uid}: #{&1.error}")))
   end
 
@@ -641,13 +642,26 @@ defmodule Brando.Content.Definitions.Release do
   def lines(report, label \\ nil) do
     heading = "Module definitions in release #{report.version}#{label && ", " <> label} (#{report.path})"
 
+    {applied, pending} = Enum.split_with(report.items, &(&1.action == :noop))
+    leftovers = Enum.flat_map(applied, &leftover_lines(report.plan, &1))
+
     if report.pending == 0 do
-      [heading, "  Nothing to apply: the database has every definition in the release" <> adopted(report)]
+      [heading, "  Nothing to apply: the database has every definition in the release" <> adopted(report)] ++ leftovers
     else
       [heading, "  " <> summary(report)] ++
         classes(report) ++
-        (report.items |> Enum.reject(&(&1.action == :noop)) |> Enum.flat_map(&item_lines(report.plan, &1))) ++
+        Enum.flat_map(pending, &item_lines(report.plan, &1)) ++
+        leftovers ++
         ["Review: #{admin_url()}", "Apply: " <> apply_hint(report)]
+    end
+  end
+
+  # An applied definition whose blocks still hold keys the files rename,
+  # which an apply over the limit left for the resolve command
+  defp leftover_lines(plan, item) do
+    case Plan.resolve_lines(plan, item) do
+      [] -> []
+      lines -> ["  applied #{item.kind} #{item.name} (#{item.uid}): blocks keep values under renamed keys" | Enum.map(lines, &("    " <> &1))]
     end
   end
 
@@ -689,10 +703,7 @@ defmodule Brando.Content.Definitions.Release do
   # An update that leaves values in blocks is followed by the command that
   # resolves them
   defp item_lines(plan, item) do
-    case Plan.resolve_line(plan, item) do
-      nil -> [item_line(item)]
-      line -> [item_line(item), "    " <> line]
-    end
+    [item_line(item) | Enum.map(Plan.resolve_lines(plan, item), &("    " <> &1))]
   end
 
   defp item_line(item) do
