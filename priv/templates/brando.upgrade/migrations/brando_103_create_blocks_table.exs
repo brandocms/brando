@@ -79,7 +79,9 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
         )
       )
       |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
-      |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties content_templates)))
+      |> Enum.reject(
+        &(&1.table_name in ~w(revisions content_modules sites_globals pages_properties content_templates))
+      )
       |> Enum.map(fn row ->
         blocks_rel =
           row.column_name

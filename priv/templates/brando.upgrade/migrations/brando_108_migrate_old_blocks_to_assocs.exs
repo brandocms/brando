@@ -422,7 +422,10 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   # Markup with Liquid in it, which the page's Liquid pass renders. An HTML
   # ref without params renders its text as it is.
   defp build_legacy_ref_data(%{"type" => "html", "data" => data}),
-    do: %{"type" => "html", "data" => %{"text" => Map.get(data, "text") || "", "params" => [], "values" => %{}}}
+    do: %{
+      "type" => "html",
+      "data" => %{"text" => Map.get(data, "text") || "", "params" => [], "values" => %{}}
+    }
 
   defp build_legacy_ref_data(%{"type" => "svg", "data" => data}),
     do: %{"type" => "svg", "data" => Map.take(data, ["code", "class"])}
@@ -442,7 +445,10 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
     }
 
   defp build_legacy_ref_data(%{"type" => _type, "data" => data}),
-    do: %{"type" => "text", "data" => %{"text" => Map.get(data, "text", ""), "type" => "paragraph"}}
+    do: %{
+      "type" => "text",
+      "data" => %{"text" => Map.get(data, "text", ""), "type" => "paragraph"}
+    }
 
   defp ensure_legacy_wrapper_module do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -479,7 +485,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
               name: "Legacy Content Wrapper",
               namespace: "migration",
               class: "legacy-content",
-              help_text: "Auto-generated module for wrapping legacy villain blocks during migration",
+              help_text:
+                "Auto-generated module for wrapping legacy villain blocks during migration",
               code: module_code,
               refs: module_refs,
               wrapper: false,
@@ -588,7 +595,14 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
                 {_, [%{id: tid}]} =
                   Brando.repo().insert_all(
                     "content_table_templates",
-                    [%{name: "List item (#{ref_name})", creator_id: 1, inserted_at: now, updated_at: now}],
+                    [
+                      %{
+                        name: "List item (#{ref_name})",
+                        creator_id: 1,
+                        inserted_at: now,
+                        updated_at: now
+                      }
+                    ],
                     returning: [:id]
                   )
 
@@ -785,7 +799,9 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       )
     )
     |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
-    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.reject(
+      &(&1.table_name in ~w(revisions content_modules sites_globals pages_properties))
+    )
     |> Enum.map(fn row ->
       data_field = String.to_atom(row.column_name)
 

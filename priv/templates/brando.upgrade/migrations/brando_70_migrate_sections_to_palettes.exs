@@ -18,7 +18,7 @@ defmodule Brando.Repo.Migrations.ContentSectionsToPalettes do
     flush()
 
     query =
-      from m in "content_sections",
+      from(m in "content_sections",
         select: %{
           id: m.id,
           name: m.name,
@@ -29,6 +29,7 @@ defmodule Brando.Repo.Migrations.ContentSectionsToPalettes do
           color_accent: m.color_accent,
           creator_id: m.creator_id
         }
+      )
 
     sections = Brando.Repo.all(query)
 
@@ -41,9 +42,21 @@ defmodule Brando.Repo.Migrations.ContentSectionsToPalettes do
         global: false,
         creator_id: section.creator_id,
         colors: [
-          %Brando.Content.Palette.Color{name: "Background Color", key: "backgroundColor", hex_value: section.color_bg},
-          %Brando.Content.Palette.Color{name: "Foreground Color", key: "foregroundColor", hex_value: section.color_fg},
-          %Brando.Content.Palette.Color{name: "Accent Color", key: "accentColor", hex_value: section.color_accent},
+          %Brando.Content.Palette.Color{
+            name: "Background Color",
+            key: "backgroundColor",
+            hex_value: section.color_bg
+          },
+          %Brando.Content.Palette.Color{
+            name: "Foreground Color",
+            key: "foregroundColor",
+            hex_value: section.color_fg
+          },
+          %Brando.Content.Palette.Color{
+            name: "Accent Color",
+            key: "accentColor",
+            hex_value: section.color_accent
+          }
         ]
       }
 

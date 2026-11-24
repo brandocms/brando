@@ -19,7 +19,9 @@ defmodule Brando.Repo.Migrations.FlattenImagesImageEmbed do
 
     flush()
 
-    query = from t in "images", select: %{id: t.id, image: t.image, config_target: t.config_target}
+    query =
+      from(t in "images", select: %{id: t.id, image: t.image, config_target: t.config_target})
+
     images = Brando.Repo.all(query)
 
     for image <- images do
@@ -34,19 +36,25 @@ defmodule Brando.Repo.Migrations.FlattenImagesImageEmbed do
           |> Enum.map(&to_string/1)
         end
 
-      update_query = from t in "images", where: t.id == ^image.id, update: [set: [
-        title: ^image.image["title"],
-        credits: ^image.image["credits"],
-        alt: ^image.image["alt"],
-        formats: ^processed_formats,
-        path: ^image.image["path"],
-        width: ^image.image["width"],
-        height: ^image.image["height"],
-        sizes: ^image.image["sizes"],
-        cdn: ^image.image["cdn"],
-        dominant_color: ^image.image["dominant_color"],
-        focal: ^image.image["focal"]
-      ]]
+      update_query =
+        from(t in "images",
+          where: t.id == ^image.id,
+          update: [
+            set: [
+              title: ^image.image["title"],
+              credits: ^image.image["credits"],
+              alt: ^image.image["alt"],
+              formats: ^processed_formats,
+              path: ^image.image["path"],
+              width: ^image.image["width"],
+              height: ^image.image["height"],
+              sizes: ^image.image["sizes"],
+              cdn: ^image.image["cdn"],
+              dominant_color: ^image.image["dominant_color"],
+              focal: ^image.image["focal"]
+            ]
+          ]
+        )
 
       Brando.Repo.update_all(update_query, [])
     end

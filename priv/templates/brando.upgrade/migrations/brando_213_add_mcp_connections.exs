@@ -55,7 +55,9 @@ defmodule Brando.Repo.Migrations.Brando213AddMCPConnections do
     create_if_not_exists index(:mcp_grants, [:site_id, :environment_id], prefix: "public")
 
     create_if_not_exists table(:mcp_tokens, prefix: "public") do
-      add :grant_id, references(:mcp_grants, on_delete: :delete_all, prefix: "public"), null: false
+      add :grant_id, references(:mcp_grants, on_delete: :delete_all, prefix: "public"),
+        null: false
+
       add :kind, :string, null: false
       add :token_hash, :binary, null: false
       add :expires_at, :utc_datetime_usec, null: false
