@@ -1300,6 +1300,25 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert [{1, :source_in_proposal, nil}] = problems([set, sync(c.target)], c.user)
     end
 
+    test "counts nothing for a person who may not read the source", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Factory.insert(:random_user, role: :user)
+
+      {:ok, group} =
+        Groups.create(Scope.standalone(c.user), %{name: "Article updaters"}, [
+          Catalog.get(:update, Article).key,
+          "brando.admin.access"
+        ])
+
+      {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, editor.id)
+
+      {:ok, proposal} = Proposals.prepare([sync(c.target)], editor)
+      assert [%{code: :unknown_target}] = proposal.problems
+      assert [%SyncTranslation{takes: nil, digest: nil}] = proposal.operations
+    end
+
     test "is refused with another operation on the same translation", c do
       set = %SetFields{target: {Article, c.target.id}, fields: %{"status" => "published"}}
       assert [{1, :translate_only, nil}] = problems([sync(c.target), set], c.user)

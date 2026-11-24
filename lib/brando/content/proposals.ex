@@ -147,7 +147,7 @@ defmodule Brando.Content.Proposals do
       |> Enum.uniq()
       |> Map.new(fn target -> {target, load!(target, actor)} end)
 
-    operations = Enum.map(operations, &(&1 |> copy_texts(operations, entries) |> count_takes()))
+    operations = Enum.map(operations, &(&1 |> copy_texts(operations, entries) |> count_takes(actor)))
 
     proposal = %Proposal{
       id: Ecto.UUID.generate(),
@@ -165,15 +165,18 @@ defmodule Brando.Content.Proposals do
   end
 
   # What a translation's save takes from its source, counted once its entry
-  # is loaded for the actor: never as the operation given says.
-  defp count_takes(%SyncTranslation{} = op) do
-    case sync_takes(op.target) do
-      {:ok, takes, work} -> %{op | takes: takes, digest: work.digest}
+  # is loaded for the actor, and only when the actor may read the source:
+  # never as the operation given says.
+  defp count_takes(%SyncTranslation{} = op, actor) do
+    with {:ok, takes, work} <- sync_takes(op.target),
+         :ok <- readable_source(elem(op.target, 0), work.source_id, actor) do
+      %{op | takes: takes, digest: work.digest}
+    else
       {:error, _reason} -> %{op | takes: nil, digest: nil}
     end
   end
 
-  defp count_takes(op), do: op
+  defp count_takes(op, _actor), do: op
 
   # A text given as `{:from, uid, ref}` (`Codec`) is that saved block's text,
   # copied as it is stored, so an agent can move a long text to a block of
