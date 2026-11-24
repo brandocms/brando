@@ -9,6 +9,7 @@ defmodule BrandoAdmin.SubformRelationTest do
   alias Brando.SyncTest.ArticleItem
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Image
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Input.Video
 
   @form "#article_form_form"
@@ -566,6 +567,21 @@ defmodule BrandoAdmin.SubformRelationTest do
       assert_push_event(view, "b:validate", %{target: "article[items][" <> _, value: ^image_id})
       save(view)
       assert {saved, image_id} in saved_covers(ctx)
+    end
+
+    # Every row an upload can start in has a key (`SubformHelpers.new_row/1`),
+    # so a row without one at the index is another row
+    test "naming a new row that is gone goes to no row, not to a row without a key", ctx do
+      view = open(ctx)
+      changeset = form_assigns(view).form.source
+      rows = SubformHelpers.current_entries(changeset, :items) ++ [Ecto.Changeset.change(%ArticleItem{}, label: "D")]
+      send_form(view, action: :update_changeset, changeset: Ecto.Changeset.put_assoc(changeset, :items, rows))
+      assert row_labels(render(view)) == ["A", "B", "C", "D"]
+
+      deliver_upload(view, [:items, 3], ctx.image, "new-gone")
+
+      refute_push_event(view, "b:validate", %{target: "article[items]" <> _})
+      assert cover_ids(render(view)) == ["", "", "", ""]
     end
 
     test "without a key goes to the row at its index", ctx do
