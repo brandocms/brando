@@ -13672,11 +13672,6 @@ msgstr ""
 msgid "Not deleted: this entry is the source of synchronized translations. Delete it from its own row to choose what becomes of them."
 msgstr ""
 
-#: lib/brando_admin/live/pages/page_list_live.ex
-#, elixir-autogen, elixir-format
-msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
-msgstr ""
-
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Not filled in: AI changed the template placeholders"
@@ -14137,7 +14132,7 @@ msgstr ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing was deleted: a fragment of this page is the source of synchronized translations. Delete the fragment from its own row to choose what becomes of them, or move the fragments."
+msgid "Nothing was deleted: a fragment is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
 msgstr ""
 
 #: lib/brando_admin/live_view/listing/hooks.ex
@@ -14147,8 +14142,8 @@ msgstr ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Delete it from its own row to choose what becomes of them, or move the fragments."
-msgid_plural "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Delete them from their own rows to choose what becomes of them, or move the fragments."
+msgid "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
+msgid_plural "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Open each and make its translations independent, or make one of them the source, then delete them."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -14825,6 +14820,11 @@ msgstr ""
 #: lib/brando_admin/live/user_two_factor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Or enter the 6-digit code from your authenticator app."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Or move the fragments when you delete the page."
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex

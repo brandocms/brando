@@ -13674,11 +13674,6 @@ msgstr "Ikke slettet: %{entries}."
 msgid "Not deleted: this entry is the source of synchronized translations. Delete it from its own row to choose what becomes of them."
 msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Slett den fra sin egen rad for å velge hva som skjer med dem."
 
-#: lib/brando_admin/live/pages/page_list_live.ex
-#, elixir-autogen, elixir-format
-msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
-msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
-
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Not filled in: AI changed the template placeholders"
@@ -14139,8 +14134,8 @@ msgstr "Ingenting ble slettet: %{translation} ble ikke endret."
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing was deleted: a fragment of this page is the source of synchronized translations. Delete the fragment from its own row to choose what becomes of them, or move the fragments."
-msgstr "Ingenting ble slettet: et fragment på denne siden er kilden til synkroniserte oversettelser. Slett fragmentet fra sin egen rad for å velge hva som skjer med dem, eller flytt fragmentene."
+msgid "Nothing was deleted: a fragment is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
+msgstr "Ingenting ble slettet: et fragment er kilden til synkroniserte oversettelser. Åpne det og gjør oversettelsene selvstendige, eller gjør en av dem til kilde, og slett det så."
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
@@ -14149,10 +14144,10 @@ msgstr "Ingenting ble slettet: oversettelsene er endret siden dialogen ble åpne
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
-msgid "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Delete it from its own row to choose what becomes of them, or move the fragments."
-msgid_plural "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Delete them from their own rows to choose what becomes of them, or move the fragments."
-msgstr[0] "Ingenting ble slettet: fragmentet %{fragments} er kilden til synkroniserte oversettelser. Slett det fra sin egen rad for å velge hva som skjer med dem, eller flytt fragmentene."
-msgstr[1] "Ingenting ble slettet: fragmentene %{fragments} er kilden til synkroniserte oversettelser. Slett dem fra sine egne rader for å velge hva som skjer med dem, eller flytt fragmentene."
+msgid "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
+msgid_plural "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Open each and make its translations independent, or make one of them the source, then delete them."
+msgstr[0] "Ingenting ble slettet: fragmentet %{fragments} er kilden til synkroniserte oversettelser. Åpne det og gjør oversettelsene selvstendige, eller gjør en av dem til kilde, og slett det så."
+msgstr[1] "Ingenting ble slettet: fragmentene %{fragments} er kilden til synkroniserte oversettelser. Åpne hvert av dem og gjør oversettelsene selvstendige, eller gjør en av dem til kilde, og slett dem så."
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
@@ -14828,6 +14823,11 @@ msgstr "Eller"
 #, elixir-autogen, elixir-format
 msgid "Or enter the 6-digit code from your authenticator app."
 msgstr "Eller skriv inn den sekssifrede koden fra autentiseringsappen."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Or move the fragments when you delete the page."
+msgstr "Eller flytt fragmentene når du sletter siden."
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format

@@ -63,7 +63,7 @@ defmodule BrandoAdmin.DeleteSourceDialogTest do
   defp option_values(%{choice: [_fragments, translations]}), do: option_values(%{choice: translations})
   defp option_values(_reply), do: []
 
-  defp trashed_at(entry), do: Repo.get!(Page, entry.id).deleted_at
+  defp trashed_at(%schema{id: id}), do: Repo.get!(schema, id).deleted_at
 
   test "the dialog lists the published translation apart, and offers every choice", c do
     view = open_listing(c.conn)
@@ -151,26 +151,37 @@ defmodule BrandoAdmin.DeleteSourceDialogTest do
     assert trashed_at(c.source) == nil
   end
 
-  test "a page whose fragment is a source is refused, naming the fragment, in the error toast", c do
-    page = Factory.insert(:page, title: "Kontakt", uri: "kontakt", language: :no, creator: c.current_user)
+  describe "a fragment that is the source of synchronized translations" do
+    setup %{current_user: user} do
+      page = Factory.insert(:page, title: "Kontakt", uri: "kontakt", language: :no, creator: user)
 
-    fragment =
-      Factory.insert(:fragment,
-        page_id: page.id,
-        key: "footer",
-        title: "Bunntekst",
-        language: :no,
-        creator: c.current_user
-      )
+      fragment =
+        Factory.insert(:fragment, page_id: page.id, key: "footer", title: "Bunntekst", language: :no, creator: user)
 
-    {:ok, _} = Translations.create_target(Fragment, fragment.id, :en, c.current_user)
+      {:ok, english} = Translations.create_target(Fragment, fragment.id, :en, user)
+      Repo.update_all(from(f in Fragment, where: f.id == ^english.id), set: [title: "Footer"])
+      %{page: page, fragment: fragment}
+    end
 
-    view = open_listing(c.conn)
-    render_click(view, "delete_entry", %{"id" => to_string(page.id), "fragments" => "delete"})
+    test "refuses the page's delete, naming the fragment and its translation, in the error toast", c do
+      view = open_listing(c.conn)
+      render_click(view, "delete_entry", %{"id" => to_string(c.page.id), "fragments" => "delete"})
 
-    assert {message, :error} = toast()
-    assert message =~ "Bunntekst"
-    assert trashed_at(page) == nil
+      assert {message, :error} = toast()
+      assert message =~ "Bunntekst"
+      assert message =~ "Footer"
+      assert trashed_at(c.page) == nil
+    end
+
+    test "refuses the delete from its own row, naming it and its translation, in the error toast", c do
+      view = open_listing(c.conn)
+      render_click(view, "delete_fragment", %{"id" => to_string(c.fragment.id)})
+
+      assert {message, :error} = toast()
+      assert message =~ "Bunntekst"
+      assert message =~ "Footer"
+      assert trashed_at(c.fragment) == nil
+    end
   end
 
   defp open_listing_trash(conn) do

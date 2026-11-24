@@ -521,8 +521,8 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   defp delete_error_message(_schema, _entry_id, :group_has_synchronized_members),
     do: synchronized_members_message()
 
-  defp delete_error_message(_schema, entry_id, {:fragments, :group_has_synchronized_members}),
-    do: BrandoAdmin.LiveView.Listing.DeleteDescription.synchronized_fragments_message(entry_id)
+  defp delete_error_message(schema, entry_id, {:fragments, :group_has_synchronized_members}),
+    do: BrandoAdmin.LiveView.Listing.DeleteDescription.synchronized_fragments_message(schema, entry_id)
 
   defp delete_error_message(schema, _entry_id, {:translation, entry, reason}),
     do: BrandoAdmin.LiveView.Listing.DeleteDescription.translation_refused(schema, entry, translation_reason(reason))

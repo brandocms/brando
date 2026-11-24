@@ -330,22 +330,29 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   end
 
   @doc """
-  Why a page was not deleted with its fragments: the fragments that are the
-  source of synchronized translations, and those translations, by name where
-  the viewer may read them. Text.
+  Why a fragment that is the source of synchronized translations was not
+  deleted, as text: from its own row (`Fragment` and its id), or with its
+  page (`Page` and its id: the page's fragments that are sources). Names the
+  fragments and their translations where the viewer may read them, and what
+  works: making the translations independent or one of them the source,
+  then deleting; for a page, also moving the fragments.
   """
-  def synchronized_fragments_message(page_id) do
-    sources =
-      for fragment <- Brando.Repo.all(from f in Fragment, where: f.page_id == ^page_id and is_nil(f.deleted_at)),
-          group = Brando.Translations.source_group(Fragment, fragment.id),
-          do: {fragment, group}
+  def synchronized_fragments_message(Fragment, fragment_id),
+    do: fragments_message(Brando.Repo.all(from f in Fragment, where: f.id == ^fragment_id), "")
 
-    named_sources =
-      for {fragment, group} <- sources, name = named(Fragment, fragment) do
-        translations =
-          for %{entry: entry} <- group.translations, name = named(Fragment, entry), do: name
+  def synchronized_fragments_message(Brando.Pages.Page, page_id) do
+    fragments =
+      Brando.Repo.all(from f in Fragment, where: f.page_id == ^page_id and is_nil(f.deleted_at), order_by: [asc: f.id])
 
-        case translations do
+    fragments_message(fragments, " " <> gettext("Or move the fragments when you delete the page."))
+  end
+
+  defp fragments_message(fragments, alternative) do
+    names =
+      for fragment <- fragments,
+          %{translations: translations} <- [Brando.Translations.source_group(Fragment, fragment.id)],
+          name = named(Fragment, fragment) do
+        case for(%{entry: entry} <- translations, name = named(Fragment, entry), do: name) do
           [] ->
             name
 
@@ -354,20 +361,23 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         end
       end
 
-    case named_sources do
-      [] ->
-        gettext(
-          "Nothing was deleted: a fragment of this page is the source of synchronized translations. Delete the fragment from its own row to choose what becomes of them, or move the fragments."
-        )
+    message =
+      case names do
+        [] ->
+          gettext(
+            "Nothing was deleted: a fragment is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it."
+          )
 
-      names ->
-        ngettext(
-          "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Delete it from its own row to choose what becomes of them, or move the fragments.",
-          "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Delete them from their own rows to choose what becomes of them, or move the fragments.",
-          length(names),
-          fragments: to_sentence(names)
-        )
-    end
+        names ->
+          ngettext(
+            "Nothing was deleted: the fragment %{fragments} is the source of synchronized translations. Open it and make its translations independent, or make one of them the source, then delete it.",
+            "Nothing was deleted: the fragments %{fragments} are the source of synchronized translations. Open each and make its translations independent, or make one of them the source, then delete them.",
+            length(names),
+            fragments: to_sentence(names)
+          )
+      end
+
+    message <> alternative
   end
 
   defp translation_name(schema, entry), do: named(schema, entry) || gettext("a translation you may not see")
