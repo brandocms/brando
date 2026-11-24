@@ -21,11 +21,21 @@ async function holdUploads(page) {
   })
   return {
     held,
+    hold() {
+      hold = true
+    },
     release() {
       hold = false
       for (const message of held.splice(0)) held.server.send(message)
     },
   }
+}
+
+async function saveAndContinue(page) {
+  await page.getByTestId('split-dropdown-button').click()
+  await page.getByRole('button', { name: /Save and continue editing/ }).click()
+  await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+  await syncLV(page)
 }
 
 async function fixture(page, schema, attributes) {
@@ -91,6 +101,65 @@ test.describe('subform rows', () => {
     await expect(errorToast(page)).toHaveCount(1, { timeout: 20000 })
     await syncLV(page)
     await expect(imageField(rows(page).nth(0))).not.toHaveAttribute('data-asset-id', /./)
+  })
+
+  // The drawer's own upload, finishing after the drawer is closed
+  test("an upload from a row's drawer lands in its row after the rows are reordered", async ({ page }) => {
+    const uploads = await holdUploads(page)
+    uploads.release()
+    await twoRows(page)
+
+    const first = imageField(rows(page).nth(0))
+    await first.locator('input[type=file]').setInputFiles('./fixtures/image.jpg')
+    await expect(first).toHaveAttribute('data-asset-id', /^\d+$/, { timeout: 20000 })
+    const original = await first.getAttribute('data-asset-id')
+    await syncLV(page)
+
+    uploads.hold()
+    // A row's field is one line: its actions are in the Change menu
+    await first.getByRole('button', { name: 'Change', exact: true }).click()
+    await page.getByRole('button', { name: 'Configure', exact: true }).locator('visible=true').click()
+    const details = page.getByRole('dialog', { name: 'Image details', exact: true })
+    await expect(details).toBeVisible()
+    await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+    await expect.poll(() => uploads.held.length).toBeGreaterThan(0)
+    // The upload manager's list covers the drawer's buttons
+    await page.keyboard.press('Escape')
+    await expect(details).toBeHidden()
+
+    await drag(page, rows, 0, 1)
+    await expect(titleOf(rows(page).nth(0))).toHaveValue('Second')
+
+    uploads.release()
+    await expect(imageField(row(page, 'First'))).not.toHaveAttribute('data-asset-id', original, { timeout: 20000 })
+    await expect(imageField(row(page, 'First'))).toHaveAttribute('data-asset-id', /^\d+$/)
+    await syncLV(page)
+    await expect(imageField(row(page, 'Second'))).not.toHaveAttribute('data-asset-id', /./)
+  })
+
+  // The save gives the new row an id while the file uploads into it
+  test('an upload into a new row lands in it after a save', async ({ page }) => {
+    const uploads = await holdUploads(page)
+    await twoRows(page)
+    await saveAndContinue(page)
+    await page.getByRole('button', { name: 'Inline fields' }).click()
+    await expect(rows(page)).toHaveCount(2)
+
+    await page.locator('.subform--table').getByRole('button', { name: 'Add entry' }).click()
+    await expect(rows(page)).toHaveCount(3)
+    await titleOf(rows(page).nth(2)).fill('Third')
+    await syncLV(page)
+
+    await imageField(rows(page).nth(2)).locator('input[type=file]').setInputFiles('./fixtures/image.jpg')
+    await expect.poll(() => uploads.held.length).toBeGreaterThan(0)
+
+    await saveAndContinue(page)
+    await expect(row(page, 'Third')).toHaveAttribute('data-row-key', /^id-/)
+
+    uploads.release()
+    await expect(imageField(row(page, 'Third'))).toHaveAttribute('data-asset-id', /^\d+$/, { timeout: 20000 })
+    await syncLV(page)
+    await expect(errorToast(page)).toHaveCount(0)
   })
 })
 
@@ -173,5 +242,23 @@ test.describe('block table rows', () => {
     await expect(errorToast(page)).toHaveCount(1, { timeout: 20000 })
     await syncLV(page)
     await expect(imageField(rows(page).nth(0))).not.toHaveAttribute('data-asset-id', /./)
+  })
+
+  // The page's first save gives the new rows ids while the file uploads
+  test('an upload into a new row lands in it after a save', async ({ page }) => {
+    const uploads = await holdUploads(page)
+    await twoRows(page)
+
+    await imageField(rows(page).nth(0)).locator('input[type=file]').setInputFiles('./fixtures/image.jpg')
+    await expect.poll(() => uploads.held.length).toBeGreaterThan(0)
+
+    await saveAndContinue(page)
+    await expect(row(page, 'Alice')).toHaveAttribute('data-table-row-key', /^id-/)
+
+    uploads.release()
+    await expect(imageField(row(page, 'Alice'))).toHaveAttribute('data-asset-id', /^\d+$/, { timeout: 20000 })
+    await syncLV(page)
+    await expect(imageField(row(page, 'Bob'))).not.toHaveAttribute('data-asset-id', /./)
+    await expect(errorToast(page)).toHaveCount(0)
   })
 })
