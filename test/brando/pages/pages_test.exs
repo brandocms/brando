@@ -854,6 +854,8 @@ defmodule Brando.PagesTest do
 
     assert Enum.all?(copied, & &1)
     assert MapSet.disjoint?(MapSet.new(copied), MapSet.new(originals))
+    # Four galleries in the original are four in the copy
+    assert copied |> Enum.uniq() |> length() == 4
     # The copy's two refs keep sharing one gallery, as the original's do
     assert ref_two.gallery_id == ref_one.gallery_id
 
