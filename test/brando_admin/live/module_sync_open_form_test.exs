@@ -55,6 +55,29 @@ defmodule BrandoAdmin.ModuleSyncOpenFormTest do
 
   defp saved_block(uid), do: Repo.one!(from(b in Block, where: b.uid == ^uid, preload: [:vars, :refs]))
 
+  test "saves of blocks the form holds as they are saved sync nothing", c do
+    # The blocks are from before version tracking, and the module's body is a
+    # lede the blocks were never synced with
+    Repo.update_all(from(b in Block, where: b.module_id == ^c.text_module.id), set: [module_version: nil])
+    [body] = Repo.preload(c.text_module, :refs, force: true).refs
+    lede = %{body.data | data: %{body.data.data | type: :lede}}
+    body |> Ecto.Changeset.change(data: lede) |> Repo.update!()
+
+    [first | _] = Enum.map(rows(c.identity), & &1.block.uid)
+    view = open(c.conn, c.identity)
+
+    for text <- ["<p>First save</p>", "<p>Second save</p>"] do
+      type(view, first, text)
+      save(view)
+      await(fn -> hd(saved_block(first).refs).data.data.text == text end)
+    end
+
+    block = saved_block(first)
+    assert hd(block.refs).data.data.type == :paragraph
+    assert block.vars == []
+    assert block.module_version == nil
+  end
+
   test "a save after a module save keeps the module's var and settings and the editor's edit", c do
     [first, second | _] = Enum.map(rows(c.identity), & &1.block.uid)
     view = open(c.conn, c.identity)

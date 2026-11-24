@@ -109,6 +109,60 @@ defmodule Brando.Content.LibraryResetOpenFormTest do
     assert body_data(c.library).text == "<p>Edited during the update</p>"
   end
 
+  test "a save after Reset to shared, with the override and the library at the same version", c do
+    # The site made the body a lede with a code change (override v2); the
+    # library is v2 after its update
+    override = override(c.library)
+    customize_lede(override, c.user)
+    page = page!(c.user, c.library)
+    assert body_data(c.library).type == :lede
+
+    form = loaded(page)
+    library_update(c)
+    :ok = SharedLibrary.reset(:module, c.library.id, c.site, @prefix, c.user)
+    assert block(c.library).module_version == form_block(form).module_version
+
+    form_save!(form, c.user, "<p>Edited during the reset</p>")
+
+    assert var_keys(c.library) == ["headline"]
+    assert body_data(c.library).type == :paragraph
+    assert body_data(c.library).text == "<p>Edited during the reset</p>"
+  end
+
+  test "a save after Accept update of an override never edited since it was customized", c do
+    # The body made a lede in place: the override is still v1, as is the
+    # replacement an Accept makes
+    override = override(c.library)
+    [body] = override.refs
+    lede(body)
+    page = page!(c.user, c.library)
+    assert body_data(c.library).type == :lede
+
+    form = loaded(page)
+    library_update(c)
+    free_ref_uids(override)
+    {:ok, _} = SharedLibrary.accept_update(:module, c.library.id, c.site, @prefix, c.user)
+    assert block(c.library).module_version == form_block(form).module_version
+
+    form_save!(form, c.user, "<p>Edited during the update</p>")
+
+    assert var_keys(c.library) == ["headline"]
+    assert body_data(c.library).type == :paragraph
+    assert body_data(c.library).text == "<p>Edited during the update</p>"
+  end
+
+  defp customize_lede(override, user) do
+    [body] = override.refs
+
+    {:ok, _} =
+      Tenant.with_prefix(@prefix, fn ->
+        refs = [%{id: body.id, name: "body", data: %{type: "text", data: %{text: "Body", type: "lede"}}}]
+        Brando.Content.update_module(override, %{code: "<p class=\"site\">{% ref refs.body %}</p>", refs: refs}, user)
+      end)
+  end
+
+  defp form_block(page), do: hd(page.entry_blocks).block
+
   defp module_attrs do
     %{
       name: %{"en" => "Teaser"},

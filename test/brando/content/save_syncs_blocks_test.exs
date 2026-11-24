@@ -43,6 +43,19 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
     |> Ecto.Changeset.put_assoc(:entry_blocks, entry_blocks ++ new_blocks)
   end
 
+  # The form's save of `page` with `params` for the blocks it names by uid
+  defp form_changeset_with(page, user, params_by_uid) do
+    entry_blocks =
+      Enum.map(page.entry_blocks, fn %{block: block} = entry_block ->
+        params = Map.merge(%{"id" => to_string(block.id)}, Map.get(params_by_uid, block.uid, %{}))
+        Page.Blocks.changeset(entry_block, %{"block" => params}, user.id, true)
+      end)
+
+    page
+    |> Page.changeset(%{}, user)
+    |> Ecto.Changeset.put_assoc(:entry_blocks, entry_blocks)
+  end
+
   defp block_params(block, edits) do
     params = %{"id" => to_string(block.id)}
 
@@ -86,7 +99,44 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
     module
   end
 
+  defp add_var(module, user, key) do
+    module = Repo.preload(module, [:vars, :refs], force: true)
+    vars = Enum.map(module.vars, &%{id: &1.id}) ++ [%{type: "string", key: key, label: "Added", value: "Added"}]
+    {:ok, module} = Content.update_module(module, %{vars: vars}, user)
+    module
+  end
+
   defp saved_block(uid), do: Repo.one!(from(b in Block, where: b.uid == ^uid, preload: [:vars, :refs]))
+
+  # The sources of the queries `fun` runs in this process
+  defp queries(fun) do
+    test = self()
+    id = "save-sync-queries-#{System.unique_integer([:positive])}"
+    event = Repo.config()[:telemetry_prefix] ++ [:query]
+
+    :telemetry.attach(
+      id,
+      event,
+      fn _event, _measurements, meta, _ -> if self() == test, do: send(test, {:query, meta.source}) end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(id)
+    end
+
+    collect_queries([])
+  end
+
+  defp collect_queries(sources) do
+    receive do
+      {:query, source} -> collect_queries([source | sources])
+    after
+      0 -> Enum.reverse(sources)
+    end
+  end
 
   defp var_keys(block), do: block.vars |> Enum.map(& &1.key) |> Enum.sort()
   defp ref_data(block, name), do: Enum.find(block.refs, &(&1.name == name)).data.data
@@ -140,6 +190,144 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
     end
   end
 
+  describe "a block whose saved rows changed since the form loaded it" do
+    test "a module save that changes only a ref's settings", c do
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      [first | _] = Enum.map(page.entry_blocks, & &1.block.uid)
+
+      module = Repo.preload(c.text_module, :refs, force: true)
+      [body] = module.refs
+      lede = %{id: body.id, name: "body", data: %{type: "text", data: %{text: "Default body", type: "lede"}}}
+      {:ok, saved_module} = Content.update_module(module, %{refs: [lede]}, c.user)
+      assert saved_module.version == Repo.reload!(c.text_module).version
+      assert ref_data(saved_block(first), "body").type == :lede
+
+      page |> form_changeset(c.user, %{first => "<p>Edited</p>"}) |> save!(c.user)
+
+      block = saved_block(first)
+      assert ref_data(block, "body").type == :lede
+      assert ref_data(block, "body").text == "<p>Edited</p>"
+    end
+
+    test "a ref the save did not change keeps what another save wrote", c do
+      add_var(c.text_module, c.user, "heading")
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      [%{block: %{uid: first, refs: [body], vars: [heading]}} | _] = page.entry_blocks
+
+      save_module(c.text_module, c.user, "body", "credit")
+      saved_body = Repo.get!(Brando.Content.Ref, body.id)
+      other = %{saved_body.data | data: %{saved_body.data.data | text: "<p>Another save</p>"}}
+      saved_body |> Ecto.Changeset.change(data: other) |> Repo.update!()
+
+      # The form sends the block as it holds it, with the var edited
+      params = %{
+        "refs" => [
+          %{"id" => to_string(body.id), "data" => %{"type" => "text", "data" => %{"text" => body.data.data.text}}}
+        ],
+        "vars" => [%{"id" => to_string(heading.id), "value" => "Mine"}]
+      }
+
+      page |> form_changeset_with(c.user, %{first => params}) |> save!(c.user)
+
+      block = saved_block(first)
+      assert ref_data(block, "body").text == "<p>Another save</p>"
+      assert ref_data(block, "body").type == :lede
+      assert var_keys(block) == ["credit", "heading"]
+      assert Enum.find(block.vars, &(&1.key == "heading")).value == "Mine"
+    end
+
+    test "a var the form fetched that a module save added is saved once, with the editor's value", c do
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      [%{block: %{uid: first, refs: [body]}} | _] = page.entry_blocks
+
+      save_module(c.text_module, c.user, "body", "headline")
+
+      # "Fetch missing vars": the module's var, without a primary key
+      params = %{
+        "refs" => [%{"id" => to_string(body.id)}],
+        "vars" => [%{"type" => "string", "key" => "headline", "label" => "Added", "value" => "The editor's"}]
+      }
+
+      page |> form_changeset_with(c.user, %{first => params}) |> save!(c.user)
+
+      block = saved_block(first)
+      assert var_keys(block) == ["headline"]
+      assert hd(block.vars).value == "The editor's"
+    end
+  end
+
+  describe "a block the form holds as it is saved" do
+    # A Case block from before version tracking, with a ref its module no
+    # longer defines: `sync_module/2` never stamps it
+    setup c do
+      page = Brando.Factory.insert(:page, creator: c.user, title: "Case", uri: "case")
+
+      refs = [
+        %{"uid" => Brando.Utils.generate_uid(), "name" => "cover", "data" => %{"type" => "picture", "data" => %{}}},
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "name" => "legacy",
+          "data" => %{"type" => "text", "data" => %{"text" => "<p>Old</p>"}}
+        }
+      ]
+
+      block =
+        %Block{}
+        |> Block.recursive_block_changeset(
+          %{
+            "uid" => "unstampable",
+            "type" => "module",
+            "module_id" => c.case_module.id,
+            "creator_id" => c.user.id,
+            "source" => to_string(Page.Blocks),
+            "refs" => Enum.with_index(refs, &Map.put(&1, "sequence", &2))
+          },
+          c.user
+        )
+        |> Repo.insert!()
+
+      Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+      %{case_page: page}
+    end
+
+    test "keeps the editor's settings over two saves, and nothing is synced", c do
+      page = loaded(c.case_page)
+      [cover, legacy] = hd(page.entry_blocks).block.refs
+
+      alt = %{
+        "refs" => [
+          %{"id" => to_string(cover.id), "data" => %{"type" => "picture", "data" => %{"alt" => "The editor's alt"}}},
+          %{"id" => to_string(legacy.id)}
+        ]
+      }
+
+      page |> form_changeset_with(c.user, %{"unstampable" => alt}) |> save!(c.user)
+      assert ref_data(saved_block("unstampable"), "cover").alt == "The editor's alt"
+
+      text = %{
+        "refs" => [
+          %{"id" => to_string(cover.id)},
+          %{"id" => to_string(legacy.id), "data" => %{"type" => "text", "data" => %{"text" => "<p>New</p>"}}}
+        ]
+      }
+
+      changeset = c.case_page |> loaded() |> form_changeset_with(c.user, %{"unstampable" => text})
+      synced = Blocks.sync_written_blocks(changeset)
+      save!(changeset, c.user)
+
+      block = saved_block("unstampable")
+      assert ref_data(block, "cover").alt == "The editor's alt"
+      assert synced == changeset
+      assert ref_data(block, "legacy").text == "<p>New</p>"
+      assert Enum.map(block.refs, & &1.name) == ["cover", "legacy"]
+      assert block.vars == []
+      assert block.module_version == nil
+    end
+  end
+
   describe "a save with nothing behind" do
     test "writes what the form sent and nothing else", c do
       stamp(c.text_module)
@@ -148,6 +336,22 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
 
       changeset = form_changeset(page, c.user, %{first => "<p>Edited</p>"})
       assert Blocks.sync_written_blocks(changeset) == changeset
+    end
+
+    test "runs no query when the save writes no blocks", c do
+      changeset = Page.changeset(loaded(c.identity), %{"title" => "Renamed"}, c.user)
+      assert queries(fn -> Blocks.sync_written_blocks(changeset) end) == []
+    end
+
+    test "loads no module when no written block is stale", c do
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      edits = Map.new(page.entry_blocks, &{&1.block.uid, "<p>Edited</p>"})
+      changeset = form_changeset(page, c.user, edits)
+
+      sources = queries(fn -> Blocks.sync_written_blocks(changeset) end)
+      refute "content_modules" in sources
+      assert length(sources) <= 3
     end
 
     test "leaves the blocks it does not write alone, though they are behind", c do

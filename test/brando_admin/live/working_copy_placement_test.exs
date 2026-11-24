@@ -295,8 +295,6 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
 
     move!(c, "moved", "boxB", 0, "Moved on")
     stamp!("moved", sync_uid: "moved-sync", module_version: 4)
-    # keepA was synced with the module's current version, 2
-    c.text_module |> Ecto.Changeset.change(version: 2) |> Repo.update!()
     stamp!("keepA", module_version: 2)
     edit!(c, "keepA", "Edited since")
     stamp!("keepB", sequence: 1)
