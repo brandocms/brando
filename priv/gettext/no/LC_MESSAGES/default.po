@@ -6242,6 +6242,7 @@ msgid "Create the entry as a draft"
 msgstr "Opprett oppføringen som utkast"
 
 #: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/content_language_switch.ex
 #, elixir-autogen, elixir-format
 msgid "Create translation"
 msgstr "Opprett oversettelse"
@@ -10362,6 +10363,7 @@ msgstr "I nettstedskartet"
 msgid "In the block"
 msgstr "I blokken"
 
+#: lib/brando_admin/components/content_language_switch.ex
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -12880,6 +12882,11 @@ msgstr "Ingen Markdown-filer ble funnet i denne mappen."
 msgid "No URL"
 msgstr "Ingen URL"
 
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "No access"
+msgstr "Ingen tilgang"
+
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
 msgid "No address to send from is configured."
@@ -13480,6 +13487,11 @@ msgstr "Ingen variabler på denne flaten ennå."
 msgid "No variables yet"
 msgstr "Ingen variabler ennå"
 
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "No version"
+msgstr "Ingen versjon"
+
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
 #, elixir-autogen, elixir-format
 msgid "No version selected"
@@ -13674,6 +13686,11 @@ msgstr "Ikke slettet: %{entries}."
 msgid "Not deleted: this entry is the source of synchronized translations. Delete it from its own row to choose what becomes of them."
 msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Slett den fra sin egen rad for å velge hva som skjer med dem."
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not duplicated: %{block} uses the module “%{module}”, which is in the trash. Restore the module from the trash, or remove the block, first."
+msgstr "Ikke duplisert: %{block} bruker modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen fra papirkurven, eller fjern blokken, først."
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Not filled in: AI changed the template placeholders"
@@ -13779,6 +13796,16 @@ msgstr "Ikke publisert som planlagt: brukeren som planla den, har ikke lenger lo
 msgid "Not required"
 msgstr "Ikke påkrevd"
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: %{block} of the revision uses the module “%{module}”, which is in the trash. Restore the module from the trash first."
+msgstr "Ikke gjenopprettet: %{block} i revisjonen bruker modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen fra papirkurven først."
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: it holds blocks of the module “%{module}”, which is in the trash. Restore the module first."
+msgstr "Ikke gjenopprettet: den har blokker av modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen først."
+
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "Not restored: its source %{source} is in the trash. Restore the source, and its translations come back with it."
@@ -13823,6 +13850,11 @@ msgstr "Ikke lagret"
 #, elixir-autogen, elixir-format
 msgid "Not saved yet"
 msgstr "Ikke lagret ennå"
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved: %{block} uses the module “%{module}”, which is in the trash. Remove the block, or restore the module from the trash, and save again."
+msgstr "Ikke lagret: %{block} bruker modulen «%{module}», som ligger i papirkurven. Fjern blokken, eller gjenopprett modulen fra papirkurven, og lagre igjen."
 
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
@@ -17535,6 +17567,11 @@ msgstr "Versjon #%{from} → versjon #%{to}"
 #, elixir-autogen, elixir-format
 msgid "Revision #%{revision}"
 msgstr "Versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash"
+msgstr "Versjon #%{revision} ble ikke publisert som planlagt: %{block} bruker modulen «%{module}», som ligger i papirkurven"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -24984,6 +25021,11 @@ msgstr "en %{from}-variabel kan ikke bli en %{to}-variabel"
 msgid "a %{type} reference"
 msgstr "en %{type}-referanse"
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "a block inside %{block}"
+msgstr "en blokk i %{block}"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "a change"
@@ -25054,6 +25096,11 @@ msgstr "artefakt slettet"
 #, elixir-autogen, elixir-format
 msgid "avif"
 msgstr "avif"
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "block %{number}"
+msgstr "blokk %{number}"
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -26244,6 +26291,11 @@ msgstr "deg"
 #, elixir-autogen, elixir-format
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
 msgstr "«%{block}» er kopiert. Lim den inn med utklippstavle-knappen ved + mellom blokkene, her eller på en annen side."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "“%{entry}” was not copied. %{reason}"
+msgstr "«%{entry}» ble ikke kopiert. %{reason}"
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format

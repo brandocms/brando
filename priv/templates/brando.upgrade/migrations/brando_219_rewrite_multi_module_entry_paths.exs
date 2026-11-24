@@ -64,7 +64,11 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
       fixed = rewrite(code)
 
       if fixed != code,
-        do: repo().query!(~s(UPDATE "#{prefix}".content_modules SET code = $1 WHERE id = $2), [fixed, id])
+        do:
+          repo().query!(~s(UPDATE "#{prefix}".content_modules SET code = $1 WHERE id = $2), [
+            fixed,
+            id
+          ])
 
       for {line, liquid} <- leftovers(fixed) do
         IO.warn(
@@ -82,10 +86,13 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
     @liquid
     |> Regex.scan(code, return: :index)
     |> Enum.filter(fn [{start, length}] ->
-      binary_part(code, start, length) |> unquoted(& &1) |> then(&(&1 =~ ~r/\.data\.(?:vars|refs)\b/))
+      binary_part(code, start, length)
+      |> unquoted(& &1)
+      |> then(&(&1 =~ ~r/\.data\.(?:vars|refs)\b/))
     end)
     |> Enum.map(fn [{start, length}] ->
-      {code |> binary_part(0, start) |> String.split("\n") |> length(), binary_part(code, start, length)}
+      {code |> binary_part(0, start) |> String.split("\n") |> length(),
+       binary_part(code, start, length)}
     end)
   end
 
@@ -131,7 +138,10 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
       |> Kernel.++([{"entries", :given}])
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
-    for {name, kinds} <- sites, :assign in kinds and length(kinds) > 1, into: MapSet.new(), do: name
+    for {name, kinds} <- sites,
+        :assign in kinds and length(kinds) > 1,
+        into: MapSet.new(),
+        do: name
   end
 
   defp step(liquid, %{skip: nil} = state) do
@@ -145,10 +155,18 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
         case Regex.run(~r/^\s*(\w+)\s+in\s+([\w.\[\]]+)/, args) do
           [_, var, source] ->
             binding =
-              if kind(source, state.bindings) == :list and var not in state.rebound, do: :entry, else: :other
+              if kind(source, state.bindings) == :list and var not in state.rebound,
+                do: :entry,
+                else: :other
 
             loop = {var, Map.fetch(state.bindings, var)}
-            {fixed, %{state | bindings: Map.put(state.bindings, var, binding), loops: [loop | state.loops]}}
+
+            {fixed,
+             %{
+               state
+               | bindings: Map.put(state.bindings, var, binding),
+                 loops: [loop | state.loops]
+             }}
 
           nil ->
             {fixed, %{state | loops: [nil | state.loops]}}
@@ -217,9 +235,15 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
     case {reference(String.trim(head), bindings), filters} do
       {:list, filters} ->
         cond do
-          Enum.all?(filters, &(&1 in @list_filters)) -> :list
-          List.last(filters) in @entry_filters and Enum.all?(Enum.drop(filters, -1), &(&1 in @list_filters)) -> :entry
-          true -> :other
+          Enum.all?(filters, &(&1 in @list_filters)) ->
+            :list
+
+          List.last(filters) in @entry_filters and
+              Enum.all?(Enum.drop(filters, -1), &(&1 in @list_filters)) ->
+            :entry
+
+          true ->
+            :other
         end
 
       {:entry, []} ->
@@ -257,7 +281,11 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
   defp replace_paths(text, [], _suffix), do: text
 
   defp replace_paths(text, vars, suffix) do
-    Regex.replace(~r/(?<![\w.])((?:#{Enum.join(vars, "|")})#{suffix})\.data\.(vars|refs)\b/, text, "\\1.\\2")
+    Regex.replace(
+      ~r/(?<![\w.])((?:#{Enum.join(vars, "|")})#{suffix})\.data\.(vars|refs)\b/,
+      text,
+      "\\1.\\2"
+    )
   end
 
   defp rewrite_filters(liquid, []), do: liquid

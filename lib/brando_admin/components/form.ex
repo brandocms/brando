@@ -5419,7 +5419,9 @@ defmodule BrandoAdmin.Components.Form do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <%!-- `data-entry-form`: where the content language switch sends
+         `create_translation` (`ContentLanguageSwitch`) --%>
+    <div data-entry-form={@entry_id}>
       <Content.modal
         :if={@pending_permalink_redirect}
         id={"#{@id}-permalink-redirect"}
@@ -6787,6 +6789,7 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
       {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
       {:error, reason} when reason in [:forbidden, :try_again] -> refused_save_with_blocks(socket, reason)
+      {:error, {:module_in_trash, _} = reason} -> refused_save_with_blocks(socket, reason)
       {:error, %Changeset{} = changeset} -> failed_save_with_blocks(socket, changeset, save)
     end
   end
@@ -7804,6 +7807,9 @@ defmodule BrandoAdmin.Components.Form do
 
   # A language whose version is in the trash is confirmed first, and the event
   # carries `replace`: that version is deleted for good and the new one created.
+  # From the content language switch it carries `content_language`: the new
+  # entry's language becomes the person's content language, as when the switch
+  # opens a version.
   def handle_event("create_translation", %{"language" => language} = params, socket) do
     %{schema: schema, current_user: user, translation: state} = socket.assigns
     source_id = (state && state.source && state.source.id) || socket.assigns.entry.id
@@ -7816,6 +7822,12 @@ defmodule BrandoAdmin.Components.Form do
     with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
          {:ok, target} <- create.(schema, source_id, language, user) do
       BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+
+      if params["content_language"] in [true, "true"],
+        do:
+          {:ok, _user} =
+            Brando.Users.update_user(user, %{config: %{content_language: language}}, :system, show_notification: false)
+
       {:noreply, push_navigate(socket, to: schema.__admin_route__(:update, [target.id]))}
     else
       error -> {:noreply, translation_action_failed(socket, error)}
@@ -8153,6 +8165,8 @@ defmodule BrandoAdmin.Components.Form do
 
   defp refused_save_text(:try_again),
     do: gettext("Another change to the same content was saved at the same moment, and nothing was saved. Save again.")
+
+  defp refused_save_text({:module_in_trash, refusal}), do: Brando.Content.module_in_trash_message(refusal)
 
   # The errors only: the changes hold what was typed, passwords and email addresses too.
   defp log_rejected_save(changeset) do
@@ -9173,6 +9187,9 @@ defmodule BrandoAdmin.Components.Form do
 
         {:error, :not_duplicable} ->
           gettext("Translations can't be created: this content type can't be copied.")
+
+        {:error, {:module_in_trash, refusal}} ->
+          Brando.Content.module_in_trash_message(refusal, :duplicate)
 
         {:error, :unauthorized} ->
           gettext("You do not have permission to do this.")

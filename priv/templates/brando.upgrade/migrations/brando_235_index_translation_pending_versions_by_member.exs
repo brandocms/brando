@@ -27,7 +27,9 @@ defmodule Brando.Repo.Migrations.Brando235IndexTranslationPendingVersionsByMembe
   end
 
   defp translations?(prefix) do
-    %{rows: [[name]]} = repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}".translation_pending_versions)])
+    %{rows: [[name]]} =
+      repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}".translation_pending_versions)])
+
     not is_nil(name)
   end
 

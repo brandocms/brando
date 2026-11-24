@@ -222,20 +222,22 @@ defmodule Brando.Authorization.Boundary do
          do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
   end
 
-  # A page brings back the fragments trashed with it (`after_restore/3`), and
-  # the source of synchronized translations the translations trashed with it
-  # (`restore_translations/3`), in one transaction: `run/4` gives it one only
-  # with group authorization, so in legacy mode and for `:system` this does,
-  # as `Brando.Pages.delete_page/3` does for the delete. Matched by name, as
-  # `after_restore/3` is.
+  # An entry with blocks, or of a synchronized type, is restored in one
+  # transaction: the module locks of `Brando.Content.guard_restore/1` hold
+  # until it is restored, a page brings back the fragments trashed with it
+  # (`after_restore/3`), and the source of synchronized translations the
+  # translations trashed with it (`restore_translations/3`). `run/4` gives it
+  # one only with group authorization, so in legacy mode and for `:system`
+  # this does.
   def restore(actor, %{__struct__: schema} = entry) do
-    if schema == Brando.Pages.Page or Brando.Translations.synchronized?(schema),
-      do: Repo.transaction(fn -> actor |> restore_with_run(entry) |> ok_or_rollback() end),
-      else: restore_with_run(actor, entry)
+    if (Brando.Blueprint.blueprint?(schema) and schema.has_trait(Brando.Trait.Blocks)) or
+         Brando.Translations.synchronized?(schema),
+       do: Repo.transaction(fn -> commit_or_rollback(restore_with_run(actor, entry)) end),
+       else: restore_with_run(actor, entry)
   end
 
-  defp ok_or_rollback({:ok, value}), do: value
-  defp ok_or_rollback({:error, reason}), do: Repo.rollback(reason)
+  defp commit_or_rollback({:ok, restored}), do: restored
+  defp commit_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp restore_with_run(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
@@ -252,6 +254,7 @@ defmodule Brando.Authorization.Boundary do
     with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
          :ok <- change(user, :update, changeset),
          :ok <- Brando.Translations.guard_restore(schema, entry),
+         :ok <- Brando.Content.guard_restore(entry),
          {:ok, restored} <- Repo.restore(entry),
          {:ok, restored} <- after_restore(restored, entry, user),
          :ok <- restore_translations(restored, entry, user) do

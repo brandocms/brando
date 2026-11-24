@@ -15,7 +15,9 @@ defmodule Brando.Repo.Migrations.Brando232AddFigmaTokenToMCPSettings do
       add_if_not_exists :figma_token, :binary
       add_if_not_exists :figma_token_hint, :text
       add_if_not_exists :figma_token_set_at, :utc_datetime_usec
-      add_if_not_exists :figma_token_set_by_id, references(:users, on_delete: :nilify_all, prefix: "public")
+
+      add_if_not_exists :figma_token_set_by_id,
+                        references(:users, on_delete: :nilify_all, prefix: "public")
     end
   end
 

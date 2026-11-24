@@ -77,6 +77,13 @@ defmodule Brando.Migration.TemplateDriftTest do
     assert TemplateDrift.check(migrations, MapSet.new([100]), templates) == []
   end
 
+  test "a copy made before the templates were formatted is not outdated", %{migrations: migrations} do
+    for text <- Brando.MigrationTemplates.unformatted_244() do
+      copy(migrations, "100_brando_244_add_fragment_alternates.exs", text)
+      assert TemplateDrift.check(migrations, MapSet.new([100])) == []
+    end
+  end
+
   test "the real templates are found" do
     assert [_ | _] = Path.wildcard(Path.join(TemplateDrift.templates_dir(), "brando_*.exs"))
   end

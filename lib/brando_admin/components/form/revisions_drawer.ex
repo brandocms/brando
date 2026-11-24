@@ -565,6 +565,9 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         "Another change to the same content was saved at the same moment, and the revision was not activated. Activate it again."
       )
 
+  defp activation_error(_socket, {:module_in_trash, refusal}),
+    do: Brando.Content.module_in_trash_message(refusal, :revision)
+
   defp activation_error(_socket, _reason), do: gettext("The revision could not be activated.")
 
   defp load_revisions(socket, loaded_revisions \\ []) do

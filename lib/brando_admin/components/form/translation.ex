@@ -178,7 +178,8 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp ai?(%{role: :target, synchronized: true}), do: Brando.AI.configured?()
   defp ai?(_member), do: false
 
-  defp can_create?(schema, user) do
+  @doc "Whether `user` may create translations of `schema`: it can be duplicated, and they may create its entries."
+  def can_create?(schema, user) do
     Translations.duplicable?(schema) and Brando.Authorization.Boundary.authorize(user, :create, schema) == :ok
   end
 

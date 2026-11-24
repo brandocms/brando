@@ -635,6 +635,48 @@ defmodule Brando.Translations.ComputePendingTest do
       assert var.value == "/en/about"
       assert result.work_items == []
     end
+
+    # Switching a link to URL and leaving the address empty used to keep the
+    # entry it pointed to on the row.
+    test "an empty URL link is no link, whatever entry its row still holds" do
+      left_behind = %{url_link("") | identifier_id: 3}
+      source = article(:no, blocks: [block("a", vars: [left_behind])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [url_link("")])])
+
+      assert Sync.identifier_ids(source, Article) == []
+
+      result = compute(source, target, baseline(source))
+      assert result.work_items == []
+    end
+
+    test "a link switched to an empty URL leaves the translation's link text and kind alone" do
+      entry = %Var{key: "cta", type: :link, link_type: :identifier, identifier_id: 3, label: "cta"}
+      base = baseline(article(:no, blocks: [block("a", vars: [entry])]))
+      source = article(:no, blocks: [block("a", vars: [%{url_link("") | identifier_id: 3}])])
+
+      translated = %{entry | identifier_id: 7, link_text: "Read more"}
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [translated])])
+
+      result = compute(source, target, base, identifiers: %{3 => 7})
+      [var] = hd(result.payload.entry_blocks).block.vars
+
+      assert var.link_type == :identifier
+      assert var.link_text == "Read more"
+      assert var.identifier_id == nil
+    end
+
+    test "a link switched to Content with nothing chosen ends the translation's link too" do
+      base = baseline(article(:no, blocks: [block("a", vars: [url_link("https://a.no")])]))
+      emptied = %{url_link("https://a.no") | link_type: :identifier}
+      source = article(:no, blocks: [block("a", vars: [emptied])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [url_link("https://a.en")])])
+
+      result = compute(source, target, base)
+      [var] = hd(result.payload.entry_blocks).block.vars
+
+      assert var.link_type == :identifier
+      assert Var.link_target(var) == nil
+    end
   end
 
   describe "gallery refs" do

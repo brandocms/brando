@@ -120,6 +120,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
         delete_refused(message)
 
+      {:error, {:module_in_trash, refusal}} ->
+        send(self(), {:toast, Brando.Content.module_in_trash_message(refusal)})
+
       {:error, _error} ->
         send(
           self(),
@@ -307,8 +310,19 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       Brando.Translations.copy_batch_to_language(schema, ids, language, user, override_opts)
 
     Enum.each(failed, fn {_id, error} -> log_duplicate_error(singular, error) end)
+    {refused, others} = Enum.split_with(failed, &match?({_id, {:error, {:module_in_trash, _}}}, &1))
 
-    if failed != [], do: send(self(), {:toast, gettext("Some entries could not be copied.")})
+    if others != [], do: send(self(), {:toast, gettext("Some entries could not be copied.")})
+
+    for {id, {:error, {:module_in_trash, refusal}}} <- refused do
+      message =
+        gettext("“%{entry}” was not copied. %{reason}",
+          entry: Brando.Notes.entry_title(schema, Brando.Repo.get!(schema, id)),
+          reason: Brando.Content.module_in_trash_message(refusal, :duplicate)
+        )
+
+      send(self(), {:toast, message})
+    end
 
     if dropped > 0 do
       message =
@@ -339,6 +353,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:ok, _} ->
         send(self(), {:toast, "#{String.capitalize(singular)} duplicated"})
         update_list_entries(schema)
+
+      {:error, {:module_in_trash, refusal}} ->
+        send(self(), {:toast, Brando.Content.module_in_trash_message(refusal, :duplicate)})
 
       {:error, changeset} ->
         log_duplicate_error(singular, changeset)
@@ -649,10 +666,18 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     do: gettext("This language's version is in the trash. Restore it from the trash instead.")
 
   defp translation_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
+
+  defp translation_error_message({:error, {:module_in_trash, refusal}}),
+    do: Brando.Content.module_in_trash_message(refusal, :duplicate)
+
   defp translation_error_message(_error), do: gettext("Could not create the translation")
 
   defp copy_error_message({:error, :language_exists}), do: gettext("This language already has a version.")
   defp copy_error_message({:error, :forbidden}), do: gettext("You do not have permission to do this.")
+
+  defp copy_error_message({:error, {:module_in_trash, refusal}}),
+    do: Brando.Content.module_in_trash_message(refusal, :duplicate)
+
   defp copy_error_message(_error), do: gettext("Could not copy this entry. Nothing was saved.")
 
   # A language the entry is already linked to has its version: a copy would

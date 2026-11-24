@@ -93,6 +93,23 @@
         width: 14px;
         height: 14px;
       }
+
+      /* In an entry's form: what a language without a version to open offers */
+      .hint {
+        color: var(--brando-nav-muted);
+        font-size: var(--brando-text-sm);
+        font-weight: 400;
+      }
+
+      &:disabled {
+        cursor: default;
+        opacity: 0.6;
+
+        &:hover {
+          background: none;
+          color: var(--brando-nav-muted);
+        }
+      }
     }
   }
 }

@@ -39,13 +39,14 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
         %{type: :image, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint),
         Introspect.column_exists?(blueprint.__schema__(:source), field_name, @public) do
       image_field_query =
-        from t in blueprint.__schema__(:source),
+        from(t in blueprint.__schema__(:source),
           select: %{
             id: t.id,
             image: field(t, ^field_name),
             inserted_at: t.inserted_at,
             updated_at: t.updated_at
           }
+        )
 
       image_fields =
         image_field_query
@@ -74,9 +75,10 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
           Brando.Repo.insert_all("images", [new_image], returning: [:id])
 
         update_query =
-          from t in blueprint.__schema__(:source),
+          from(t in blueprint.__schema__(:source),
             where: t.id == ^image_field.id,
             update: [set: [{^field_id_atom, ^new_image_id}]]
+          )
 
         Brando.repo().update_all(update_query, [])
       end
@@ -130,7 +132,9 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
           )
         )
         |> Enum.map(& &1.table_name)
-        |> Enum.reject(&(&1 in ["images", "images_series"] or String.starts_with?(&1, "_legacy_")))
+        |> Enum.reject(
+          &(&1 in ["images", "images_series"] or String.starts_with?(&1, "_legacy_"))
+        )
 
       for fk_table <- fk_tables do
         execute """
@@ -142,7 +146,9 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
   end
 
   defp drop_foreign_keys_to(tables) do
-    for table <- tables, Introspect.table_exists?(table, @public), {from_table, constraint} <- foreign_keys_to(table) do
+    for table <- tables,
+        Introspect.table_exists?(table, @public),
+        {from_table, constraint} <- foreign_keys_to(table) do
       execute ~s(ALTER TABLE "#{from_table}" DROP CONSTRAINT IF EXISTS "#{constraint}")
     end
   end

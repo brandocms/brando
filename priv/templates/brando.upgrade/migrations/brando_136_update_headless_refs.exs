@@ -9,9 +9,10 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
 
     modules =
       Repo.all(
-        from m in "content_modules",
+        from(m in "content_modules",
           select: %{id: m.id, code: m.code},
           where: fragment("? ~ ?", m.code, "refs\\.[a-zA-Z0-9_]+\\.data\\.")
+        )
       )
 
     Enum.each(modules, fn module ->
@@ -49,9 +50,10 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
 
   defp get_refs_for_module(module_id) do
     Repo.all(
-      from r in "content_refs",
+      from(r in "content_refs",
         where: r.module_id == ^module_id,
         select: %{name: r.name, data: r.data}
+      )
     )
   end
 
@@ -97,9 +99,15 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
     Enum.reduce(gallery_refs, code, fn ref_name, acc ->
       acc
       # Handle the data.data.images pattern first (most specific) - convert to gallery.gallery_objects
-      |> String.replace(~r/refs\.#{ref_name}\.data\.data\.images/, "refs.#{ref_name}.gallery.gallery_objects")
+      |> String.replace(
+        ~r/refs\.#{ref_name}\.data\.data\.images/,
+        "refs.#{ref_name}.gallery.gallery_objects"
+      )
       # Replace refs.<ref_name>.data.images with refs.<ref_name>.gallery.gallery_objects
-      |> String.replace(~r/refs\.#{ref_name}\.data\.images/, "refs.#{ref_name}.gallery.gallery_objects")
+      |> String.replace(
+        ~r/refs\.#{ref_name}\.data\.images/,
+        "refs.#{ref_name}.gallery.gallery_objects"
+      )
       # Handle any other data.data patterns for galleries (but not images, which we handled above)
       |> String.replace(~r/refs\.#{ref_name}\.data\.data\.(\w+)/, "refs.#{ref_name}.\\1")
     end)

@@ -25,13 +25,19 @@ defmodule Brando.Repo.Migrations.Brando242AddFigmaOAuthToMCPSettings do
       add_if_not_exists :figma_client_id_hint, :text
       add_if_not_exists :figma_client_secret, :binary
       add_if_not_exists :figma_app_set_at, :utc_datetime_usec
-      add_if_not_exists :figma_app_set_by_id, references(:users, on_delete: :nilify_all, prefix: "public")
+
+      add_if_not_exists :figma_app_set_by_id,
+                        references(:users, on_delete: :nilify_all, prefix: "public")
+
       add_if_not_exists :figma_oauth_access_token, :binary
       add_if_not_exists :figma_oauth_refresh_token, :binary
       add_if_not_exists :figma_oauth_expires_at, :utc_datetime_usec
       add_if_not_exists :figma_oauth_handle, :text
       add_if_not_exists :figma_oauth_connected_at, :utc_datetime_usec
-      add_if_not_exists :figma_oauth_connected_by_id, references(:users, on_delete: :nilify_all, prefix: "public")
+
+      add_if_not_exists :figma_oauth_connected_by_id,
+                        references(:users, on_delete: :nilify_all, prefix: "public")
+
       add_if_not_exists :figma_oauth_needs_reconnect, :boolean, default: false, null: false
       add_if_not_exists :figma_oauth_state_hash, :binary
       add_if_not_exists :figma_oauth_pending, :binary

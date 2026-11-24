@@ -422,6 +422,23 @@ defmodule Brando.Content.ProposalsTest do
   end
 
   describe "stored proposals" do
+    # The module went to the trash after the proposal was approved (#3902)
+    test "apply of a block whose module is in the trash names the module", c do
+      ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user, summary: "One case")
+      assert {:ok, _} = Proposals.approve(proposal.id, 1, c.user)
+      blocks = block_count()
+      appended = {:root, length(roots(c.identity, c.user)) + 1}
+
+      Repo.update_all(from(m in Brando.Content.Module, where: m.id == ^c.case_module.id),
+        set: [deleted_at: DateTime.utc_now()]
+      )
+
+      assert {:error, message} = Proposals.apply(proposal.id, 1, c.user)
+      assert message == Brando.Content.module_in_trash_message(%{module: c.case_module.name, block: appended})
+      assert block_count() == blocks
+    end
+
     test "apply needs the actor's approval of that exact version", c do
       ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user, summary: "One case")
@@ -1400,6 +1417,47 @@ defmodule Brando.Content.ProposalsTest do
 
       bad = [%SetBlockTable{target: target, block_uid: uid, rows: [%{nope: 1}]}]
       assert {:ok, %{problems: [%{code: :unknown_var}]}} = Proposals.propose(bad, c.user)
+    end
+
+    test "a table row's link set to a URL or to null lets go of the template's entry", c do
+      {:ok, identity} = Brando.Content.create_identifier(Page, c.identity)
+
+      template =
+        Repo.insert!(%Brando.Content.TableTemplate{
+          uid: Brando.Utils.generate_uid(),
+          name: "Links",
+          vars: [
+            %Brando.Content.Var{
+              type: :link,
+              key: "cta",
+              label: "Link",
+              sequence: 0,
+              link_type: :identifier,
+              identifier_id: identity.id
+            }
+          ]
+        })
+
+      module = module!(c.user, "Links", "<table></table>", table_template_id: template.id)
+      target = {Page, c.work.id}
+      uid = Brando.Utils.generate_uid()
+
+      ops = [
+        %InsertBlock{target: target, module: module.id, uid: uid},
+        %SetBlockTable{target: target, block_uid: uid, rows: [%{cta: "https://example.com"}, %{cta: nil}, %{}]}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert proposal.problems == []
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      block = load(c.work, c.user).entry_blocks |> List.last() |> Map.get(:block)
+
+      assert Enum.map(block.table_rows, fn %{vars: [var]} -> {var.link_type, var.value, var.identifier_id} end) == [
+               {:url, "https://example.com", nil},
+               {:url, nil, nil},
+               {:identifier, nil, identity.id}
+             ]
     end
 
     test "a selection datasource block's entries are chosen from its options", c do

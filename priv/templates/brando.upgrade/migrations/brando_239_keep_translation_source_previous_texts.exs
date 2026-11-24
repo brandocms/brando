@@ -39,7 +39,9 @@ defmodule Brando.Repo.Migrations.Brando239KeepTranslationSourcePreviousTexts do
   end
 
   defp translations?(prefix) do
-    %{rows: [[name]]} = repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}".translation_work_items)])
+    %{rows: [[name]]} =
+      repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}".translation_work_items)])
+
     not is_nil(name)
   end
 

@@ -8,6 +8,7 @@ defmodule Brando.Pages do
 
   import Ecto.Query
 
+  alias Brando.Content.BlockPreloads
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Pages.Fragment
   alias Brando.Pages.Page
@@ -426,13 +427,8 @@ defmodule Brando.Pages do
   Entries embedding them are queued for rendering once the transaction
   around the call commits.
   """
-  def restore_fragments(%Page{id: id, deleted_at: %{} = deleted_at}, user) do
-    fragments =
-      Brando.Repo.all(
-        from f in Fragment,
-          where: f.page_id == ^id and f.deleted_at == ^deleted_at,
-          order_by: [asc: f.id]
-      )
+  def restore_fragments(%Page{deleted_at: %{}} = page, user) do
+    fragments = list_fragments_trashed_with(page)
 
     result =
       each_fragment(fragments, fn fragment ->
@@ -452,6 +448,20 @@ defmodule Brando.Pages do
   end
 
   def restore_fragments(%Page{}, _user), do: {:ok, []}
+
+  @doc """
+  The fragments `restore_fragments/2` brings back with `page`, the page as
+  it is in the trash.
+  """
+  def list_fragments_trashed_with(%Page{id: id, deleted_at: %{} = deleted_at}) do
+    Brando.Repo.all(
+      from f in Fragment,
+        where: f.page_id == ^id and f.deleted_at == ^deleted_at,
+        order_by: [asc: f.id]
+    )
+  end
+
+  def list_fragments_trashed_with(%Page{}), do: []
 
   # A page's delete or restore, or a transaction around it, may still roll
   # back: its renders wait for the commit, in its site and environment, after
@@ -524,13 +534,7 @@ defmodule Brando.Pages do
 
   def duplicate_fragments(entry, _) do
     entry
-    |> Brando.Repo.preload(
-      fragments: [
-        entry_blocks: [
-          block: [:vars, :children, refs: Brando.Content.Ref.preloads()]
-        ]
-      ]
-    )
+    |> Brando.Repo.preload(fragments: BlockPreloads.for_schema(Fragment))
     |> Map.get(:fragments)
     |> Enum.map(&duplicate_fragment/1)
   end
@@ -547,7 +551,7 @@ defmodule Brando.Pages do
           inserted_at: nil,
           updated_at: nil
         })
-        |> Map.put(:block, duplicate_block(entry_block.block))
+        |> Map.put(:block, Brando.Query.Mutations.duplicate_block(entry_block.block, false))
         |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
       end)
 
@@ -562,57 +566,10 @@ defmodule Brando.Pages do
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
   end
 
-  defp duplicate_block(block) do
-    %{
-      block
-      | id: nil,
-        uid: Brando.Utils.generate_uid(),
-        vars: Enum.map(block.vars || [], &duplicate_block_var/1),
-        children: Enum.map(block.children || [], &duplicate_block/1),
-        refs: duplicate_refs(block.refs || []),
-        creator: nil,
-        fragment: nil,
-        module: nil,
-        identifiers: nil,
-        inserted_at: nil,
-        updated_at: nil
-    }
-    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-  end
-
-  defp duplicate_block_var(var) do
-    %{var | id: nil, inserted_at: nil, updated_at: nil}
-    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-  end
-
-  defp duplicate_refs(refs) do
-    Enum.map(refs, fn ref ->
-      ref
-      |> Map.merge(%{
-        id: nil,
-        block_id: nil,
-        uid: Brando.Utils.generate_uid(),
-        inserted_at: nil,
-        updated_at: nil
-      })
-      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-    end)
-  end
-
   def duplicate_children(entry, _) do
     entry
     |> Brando.Repo.preload(
-      children: [
-        :vars,
-        entry_blocks: [
-          block: [:vars, :children, refs: Brando.Content.Ref.preloads()]
-        ],
-        fragments: [
-          entry_blocks: [
-            block: [:vars, :children, refs: Brando.Content.Ref.preloads()]
-          ]
-        ]
-      ]
+      children: [:vars, fragments: BlockPreloads.for_schema(Fragment)] ++ BlockPreloads.for_schema(Page)
     )
     |> Map.get(:children)
     |> Enum.map(&duplicate_child_page/1)
@@ -630,7 +587,7 @@ defmodule Brando.Pages do
           inserted_at: nil,
           updated_at: nil
         })
-        |> Map.put(:block, duplicate_block(entry_block.block))
+        |> Map.put(:block, Brando.Query.Mutations.duplicate_block(entry_block.block, false))
         |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
       end)
 

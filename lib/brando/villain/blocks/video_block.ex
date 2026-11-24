@@ -51,6 +51,10 @@ defmodule Brando.Villain.Blocks.VideoBlock do
     end
   end
 
+  # The placement's caption and the cover the editor chose: a module sync
+  # keeps them, and the module's settings (poster, playback, classes …) follow it
+  def protected_attrs, do: [:title, :cover_image]
+
   def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target_changeset) do
     Brando.Villain.Block.merge_ref_template(:template_video, ref_src, ref_target_changeset, protected_attrs())
   end

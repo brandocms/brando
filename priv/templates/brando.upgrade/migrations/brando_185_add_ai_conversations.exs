@@ -25,8 +25,9 @@ defmodule Brando.Repo.Migrations.Brando185AddAiConversations do
     create table(:ai_messages, primary_key: false, prefix: "public") do
       add :id, :uuid, primary_key: true
 
-      add :conversation_id, references(:ai_conversations, type: :uuid, prefix: "public", on_delete: :delete_all),
-        null: false
+      add :conversation_id,
+          references(:ai_conversations, type: :uuid, prefix: "public", on_delete: :delete_all),
+          null: false
 
       add :run_id, :uuid
       add :role, :text, null: false
@@ -42,8 +43,9 @@ defmodule Brando.Repo.Migrations.Brando185AddAiConversations do
     create table(:ai_runs, primary_key: false, prefix: "public") do
       add :id, :uuid, primary_key: true
 
-      add :conversation_id, references(:ai_conversations, type: :uuid, prefix: "public", on_delete: :delete_all),
-        null: false
+      add :conversation_id,
+          references(:ai_conversations, type: :uuid, prefix: "public", on_delete: :delete_all),
+          null: false
 
       add :scope, :text, null: false
       add :status, :text, null: false, default: "running"

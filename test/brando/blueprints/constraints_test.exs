@@ -441,4 +441,32 @@ defmodule Brando.Blueprint.ConstraintsTest do
       assert checked(check_message: "unused") == []
     end
   end
+
+  describe "format" do
+    alias Brando.Blueprint.Attributes.Attribute
+
+    defp formatted(title, constraints) do
+      attribute = %Attribute{name: :title, type: :string, opts: %{constraints: constraints}}
+
+      %Brando.Pages.Page{}
+      |> Ecto.Changeset.change(%{title: title})
+      |> Constraints.run_validations(Brando.Pages.Page, [attribute])
+    end
+
+    test "without a message, the error is Ecto's" do
+      assert {"has invalid format", opts} = formatted("Tagline", format: ~r/\.\z/).errors[:title]
+      assert opts[:validation] == :format
+    end
+
+    test "format_message replaces the error under the field" do
+      changeset = formatted("Tagline", format: ~r/\.\z/, format_message: "ends with a full stop")
+
+      assert {"ends with a full stop", opts} = changeset.errors[:title]
+      assert opts[:validation] == :format
+    end
+
+    test "a value matching the format has no error" do
+      refute formatted("Tagline.", format: ~r/\.\z/, format_message: "ends with a full stop").errors[:title]
+    end
+  end
 end

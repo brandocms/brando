@@ -10,7 +10,7 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
     flush()
 
     query =
-      from m in "pages_properties",
+      from(m in "pages_properties",
         select: %{
           id: m.id,
           key: m.key,
@@ -19,6 +19,7 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
           data: m.data,
           page_id: m.page_id
         }
+      )
 
     props = Brando.Repo.all(query)
 
@@ -34,7 +35,6 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
 
       page = Brando.Repo.one(query)
 
-
       new_var =
         %{
           key: prop.key,
@@ -44,15 +44,16 @@ defmodule Brando.Repo.Migrations.EmbedPagePropertiesAsVars do
           value: prop.data["value"]
         }
 
-
-      new_vars = [new_var|(page.vars || [])]
+      new_vars = [new_var | page.vars || []]
 
       query =
         from(m in "pages",
           where: m.id == ^prop.page_id,
-          update: [set: [
-            vars: ^new_vars
-          ]]
+          update: [
+            set: [
+              vars: ^new_vars
+            ]
+          ]
         )
 
       Brando.Repo.update_all(query, [])

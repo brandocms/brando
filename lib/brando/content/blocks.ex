@@ -610,6 +610,279 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Refuses an entry save that adds a block of a module in the trash, which
+  would render as not found:
+  `{:error, {:module_in_trash, %{module: name, block: label}}}`, naming the
+  first such block. Only the blocks the save adds count, at any level: one
+  the entry already holds does not stop its saves. A block of a library
+  module has a module while the library has it, the site's customization in
+  the trash or not.
+
+  Run it in the save's transaction, after authorization. It takes a share
+  lock on the modules of the added blocks, so a module delete
+  (`Brando.Content.guard_delete/2`) and the save cannot pass each other:
+  the delete sees the save's blocks, or the save sees the module in the
+  trash. Before that it takes the lock its writes of refs and vars take,
+  so it queues behind a definition apply, which locks those tables and then
+  updates the modules (`Brando.Content.Definitions.apply/3`), instead of
+  holding a module the apply waits for.
+  """
+  def guard_added_modules(%Changeset{data: %schema{}} = changeset) do
+    added =
+      for field <- block_field_changes(schema, changeset),
+          {entry_block, position} <- changeset |> Changeset.get_change(field) |> kept() |> Enum.with_index(1),
+          %Changeset{} = block <- [Changeset.get_change(entry_block, :block)],
+          added <- added_blocks(block, {:root, position}),
+          do: added
+
+    if added != [], do: lock_block_content_tables()
+    refuse_trashed_modules(added)
+  end
+
+  defp lock_block_content_tables do
+    prefix = Brando.Tenant.current_prefix() || "public"
+    tables = Enum.map_join(~w(content_refs content_vars), ", ", &~s("#{prefix}"."#{&1}"))
+    Ecto.Adapters.SQL.query!(Repo.repo(), "LOCK TABLE " <> tables <> " IN ROW EXCLUSIVE MODE", [])
+  end
+
+  @doc """
+  Refuses to restore `entries` from the trash while one holds a block of a
+  module in the trash: `{:error, {:module_in_trash, %{module: name}}}`.
+  Takes the lock `guard_added_modules/1` takes, in the restore's
+  transaction. It locks each entry's row before it reads its blocks, so a
+  save of the entry still open (which holds that row) commits first and its
+  blocks count.
+  """
+  def guard_restored_modules(entries) do
+    entries =
+      Enum.filter(entries, &(Brando.Blueprint.blueprint?(&1.__struct__) and &1.__struct__.has_trait(Trait.Blocks)))
+
+    Enum.each(entries, &lock_entry_row/1)
+
+    module_ids =
+      for %schema{id: id} <- entries,
+          %{name: name} <- schema.__blocks_fields__(),
+          module_id <- module_ids_in_tree(Module.concat([schema, name |> to_string() |> Macro.camelize()]), id),
+          do: {module_id, nil}
+
+    refuse_trashed_modules(module_ids)
+  end
+
+  @doc """
+  Refuses writing `entry`'s blocks as they are loaded when one of them,
+  not among `held`, is of a module in the trash:
+  `{:error, {:module_in_trash, %{module: name, block: label}}}`, as
+  `guard_added_modules/1` does, with its locks and in the same place: the
+  writer's transaction, before the write.
+
+  For a writer that does not build its tree as an entry changeset (a
+  revision restore, a duplicate): it reads the tree itself, the blocks of
+  `entry`'s block fields and of the rows it has (a subform's, a page's
+  fragments), at every level. `held` holds the blocks the entry has now
+  (`held_module_blocks/1`): writing one of them again does not bring it
+  back. A new entry holds none.
+  """
+  def guard_written_modules(entry, held \\ MapSet.new()) do
+    uses =
+      for {block, place} <- loaded_module_blocks(entry),
+          local_module_block?(block),
+          not MapSet.member?(held, {Map.get(block, :uid), block.module_id}),
+          do: {block.module_id, place}
+
+    if uses != [], do: lock_block_content_tables()
+    refuse_trashed_modules(uses)
+  end
+
+  @doc """
+  What `guard_written_modules/2` lets through again: `{uid, module_id}`
+  of each local module block under `entry` as loaded. Read it before a
+  writer changes the entry's rows (a restore reattaching detached blocks),
+  or those blocks count as held.
+  """
+  def held_module_blocks(entry) do
+    for {%{uid: uid} = block, _place} <- loaded_module_blocks(entry),
+        is_binary(uid) and local_module_block?(block),
+        into: MapSet.new(),
+        do: {uid, block.module_id}
+  end
+
+  @doc """
+  Syncs the module blocks a revision restore has written for `entry` to
+  their modules as they are now, in the restore's transaction: a block
+  whose refs and vars all have a definition behind them is at its module's
+  version, and one holding a ref or var its module has retired keeps it
+  for review and stays behind (`sync_module/2`). `restored` indexes the
+  revision's blocks (`Brando.Content.BlockIdentity.index/1`): a block the
+  revision holds no module version for is behind until the sync says
+  otherwise, since its content may be from before any version. Blocks of a
+  module in the trash are left as they are. Returns the ids of the blocks
+  it wrote.
+  """
+  def sync_restored_blocks(entry, restored) do
+    blocks = for {block, _place} <- loaded_module_blocks(entry), do: block
+
+    unstamped =
+      for %{id: id, uid: uid} <- blocks, is_nil(restored |> Map.get(uid) |> revision_version()), do: id
+
+    if unstamped != [], do: Repo.update_all(from(b in Block, where: b.id in ^unstamped), set: [module_version: nil])
+
+    synced =
+      blocks
+      |> Enum.group_by(&{&1.module_id, normalize_library_origin(&1.module_origin)}, & &1.id)
+      |> Enum.flat_map(fn {{module_id, origin}, ids} ->
+        case sync_source(module_id, origin) do
+          nil -> []
+          module -> sync_blocks_to(ids, module)
+        end
+      end)
+
+    Enum.uniq(unstamped ++ synced)
+  end
+
+  # A revision stored before blocks had a module version holds structs
+  # without the key
+  defp revision_version(nil), do: nil
+  defp revision_version(block), do: Map.get(block, :module_version)
+
+  # A revision stored before blocks had a module origin holds structs
+  # without the key: such a block is local
+  defp local_module_block?(block), do: normalize_library_origin(Map.get(block, :module_origin)) == :local
+
+  # The module blocks under `entry` as loaded, `{block, place}`, with how
+  # the editor finds each (`added_blocks/2`)
+  defp loaded_module_blocks(%schema{} = entry) do
+    if Brando.Blueprint.blueprint?(schema) do
+      fields = if schema.has_trait(Trait.Blocks), do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"), else: []
+
+      in_fields =
+        for field <- fields,
+            {entry_block, position} <- entry |> Map.get(field) |> loaded() |> Enum.with_index(1),
+            %Block{} = block <- [entry_block.block],
+            found <- loaded_tree(block, {:root, position}),
+            do: found
+
+      in_rows =
+        for name <- schema.__schema__(:associations) -- fields,
+            %Ecto.Association.Has{} <- [schema.__schema__(:association, name)],
+            row <- entry |> Map.get(name) |> loaded(),
+            found <- loaded_module_blocks(row),
+            do: found
+
+      in_fields ++ in_rows
+    else
+      []
+    end
+  end
+
+  defp loaded_module_blocks(_row), do: []
+
+  defp loaded_tree(%Block{} = block, place) do
+    place = with_description(place, block.description)
+    children = block.children |> loaded() |> Enum.flat_map(&loaded_tree(&1, inside(place)))
+    if is_nil(block.module_id), do: children, else: [{block, place} | children]
+  end
+
+  defp loaded(rows) when is_list(rows), do: rows
+  defp loaded(%Ecto.Association.NotLoaded{}), do: []
+  defp loaded(%{__struct__: _} = row), do: [row]
+  defp loaded(_rows), do: []
+
+  # The lock an entry's save takes on its row (`store_fenced/3`)
+  defp lock_entry_row(%schema{id: id}),
+    do: Repo.one!(from(e in schema, where: e.id == ^id, lock: "FOR NO KEY UPDATE", select: e.id))
+
+  defp block_field_changes(schema, changeset) do
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks) do
+      for %{name: name} <- schema.__blocks_fields__(),
+          field = :"entry_#{name}",
+          Map.has_key?(changeset.changes, field),
+          do: field
+    else
+      []
+    end
+  end
+
+  defp kept(changesets), do: Enum.reject(changesets, &(&1.action in [:replace, :delete]))
+
+  # The local module of each block this save adds under `block`, with how
+  # the editor finds the block: its description, or its root's position
+  defp added_blocks(%Changeset{action: action} = block, place) when action not in [:replace, :delete] do
+    place = with_description(place, Changeset.get_field(block, :description))
+    children = block |> Changeset.get_change(:children, []) |> kept()
+    descendants = Enum.flat_map(children, &added_blocks(&1, inside(place)))
+
+    with true <- added?(block),
+         module_id when not is_nil(module_id) <- Changeset.get_field(block, :module_id),
+         :local <- normalize_library_origin(Changeset.get_field(block, :module_origin)) do
+      [{module_id, place} | descendants]
+    else
+      _ -> descendants
+    end
+  end
+
+  defp added_blocks(_block, _place), do: []
+
+  defp added?(%Changeset{action: :insert}), do: true
+
+  defp added?(%Changeset{changes: changes}),
+    do: Map.has_key?(changes, :module_id) or Map.has_key?(changes, :module_origin)
+
+  defp with_description(_place, description) when is_binary(description) and description != "",
+    do: {:described, description}
+
+  defp with_description(place, _description), do: place
+
+  defp inside({:inside, _} = place), do: place
+  defp inside(place), do: {:inside, place}
+
+  defp module_ids_in_tree(join_schema, entry_id) do
+    roots = from(j in join_schema, where: j.entry_id == ^entry_id, select: %{id: j.block_id})
+
+    descendants =
+      from(b in Block,
+        join: tree in "entry_block_tree",
+        on: b.parent_id == tree.id,
+        select: %{id: b.id}
+      )
+
+    from(b in Block,
+      join: tree in "entry_block_tree",
+      on: b.id == tree.id,
+      where: not is_nil(b.module_id),
+      distinct: true,
+      select: b.module_id
+    )
+    |> maybe_filter_library_origin(:module_origin, :local)
+    |> recursive_ctes(true)
+    |> with_cte("entry_block_tree", as: ^union_all(roots, ^descendants))
+    |> Repo.all()
+  end
+
+  # Share-locks the modules `uses` name, `{module_id, place}`, in id order,
+  # and refuses the first use of one in the trash
+  defp refuse_trashed_modules([]), do: :ok
+
+  defp refuse_trashed_modules(uses) do
+    ids = uses |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+
+    trashed =
+      from(m in ContentModule,
+        where: m.id in ^ids,
+        order_by: m.id,
+        lock: "FOR SHARE",
+        select: {m.id, m.name, m.deleted_at}
+      )
+      |> Repo.all()
+      |> Map.new(fn {id, name, deleted_at} -> {id, deleted_at && name} end)
+
+    case Enum.find(uses, fn {id, _place} -> trashed[id] end) do
+      nil -> :ok
+      {id, nil} -> {:error, {:module_in_trash, %{module: trashed[id]}}}
+      {id, place} -> {:error, {:module_in_trash, %{module: trashed[id], block: place}}}
+    end
+  end
+
+  @doc """
   Render and update all entries with a block using `fragment_id`
   """
   def render_entries_with_fragment_id(fragment_id) do
@@ -1873,6 +2146,21 @@ defmodule Brando.Content.Blocks do
           Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared)
       end
 
+    sync_blocks_to(block_ids, module)
+  end
+
+  # The module blocks sync to, or nil for one in the trash or gone
+  defp sync_source(module_id, :local) do
+    case Content.get_module(%{matches: %{id: module_id}, preload: [:vars, refs: Ref.preloads()]}) do
+      {:ok, module} -> module
+      {:error, _} -> nil
+    end
+  end
+
+  defp sync_source(module_id, :shared),
+    do: Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared)
+
+  defp sync_blocks_to(block_ids, module) do
     {:ok, blocks} =
       Content.list_blocks(%{
         filter: %{ids: block_ids},

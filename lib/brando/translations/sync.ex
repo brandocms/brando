@@ -244,7 +244,16 @@ defmodule Brando.Translations.Sync do
       Enum.flat_map(loaded(block.children), &block_identifier_ids/1)
   end
 
-  defp var_identifier_ids(vars), do: for(%{identifier_id: id} <- vars, id, do: id)
+  defp var_identifier_ids(vars), do: for(var <- vars, id = linked_identifier_id(var), do: id)
+
+  # The entry a link points to as the page renders it (`Var.link_target/1`):
+  # none for a URL link, whatever identifier its row still holds.
+  defp linked_identifier_id(var) do
+    case Var.link_target(var) do
+      {:identifier, id} -> id
+      _ -> nil
+    end
+  end
 
   defp var_relations(spec), do: for(%{key: :key, name: name} <- spec.subforms, do: name)
 
@@ -477,7 +486,9 @@ defmodule Brando.Translations.Sync do
   defp flatten_var(var, parent_prefix, controlled? \\ false) do
     prefix = "#{parent_prefix}/#{var.key}"
     # A link's kind (an entry or a URL) follows the source like its target does
-    media = {prefix <> "/media", :shared, Map.take(var, [:identifier_id | @media_fks] ++ link_kind(var))}
+    media =
+      {prefix <> "/media", :shared,
+       var |> Map.take(@media_fks ++ link_kind(var)) |> Map.put(:identifier_id, linked_identifier_id(var))}
 
     values =
       cond do
@@ -1053,29 +1064,46 @@ defmodule Brando.Translations.Sync do
             target_var,
             Map.take(source_var, var_shared_fields(source_var) ++ controlled_fields(source_var, controlled))
           )
+          |> drop_left_behind_entry(source_var)
           |> restart_changed_link(source_var, target_var)
       end
     end)
   end
+
+  # A URL link shares no entry, whatever identifier its row still holds.
+  defp drop_left_behind_entry(merged, %{type: :link, identifier_id: id} = source_var) when not is_nil(id) do
+    if linked_identifier_id(source_var),
+      do: merged,
+      else: %{unload(merged, :identifier) | identifier_id: nil}
+  end
+
+  defp drop_left_behind_entry(merged, _source_var), do: merged
 
   # A link that changed kind in the source (an entry to a URL, or back) starts
   # over from the source's value; the translation's old one belonged to the
   # other kind.
   defp restart_changed_link(merged, %{type: :link, link_type: kind} = source_var, %{link_type: old})
        when kind != old do
-    if FollowLinkDefault.empty_link?(source_var),
+    if no_link?(source_var),
       do: merged,
       else: Map.merge(merged, Map.take(source_var, [:value, :link_text]))
   end
 
   defp restart_changed_link(merged, _source_var, _target_var), do: merged
 
+  # A URL link without an address, whatever entry its row still holds, or a
+  # link with neither. A Content link with nothing chosen and an address left
+  # in its row is a link the source ended: its kind is shared.
+  defp no_link?(%{type: :link, link_type: :url} = var), do: is_nil(Var.link_target(var))
+  defp no_link?(var), do: FollowLinkDefault.empty_link?(var)
+
   defp controlled_fields(var, controlled), do: if(var.key in controlled, do: @var_values, else: [])
 
-  # An empty link's kind is only the tab its dialog opens on, which a module
-  # save can move (`FollowLinkDefault`): the translation keeps its own link.
+  # A link to nothing (`Var.link_target/1`) has a kind that is only the tab its
+  # dialog opens on, which a module save can move (`FollowLinkDefault`): the
+  # translation keeps its own link.
   defp var_shared_fields(var) do
-    kind = if FollowLinkDefault.empty_link?(var), do: [], else: link_kind(var)
+    kind = if no_link?(var), do: [], else: link_kind(var)
     [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs ++ kind]
   end
 
@@ -1295,21 +1323,21 @@ defmodule Brando.Translations.Sync do
   end
 
   defp resolve_vars(vars, prefix, map, awaiting) do
-    Enum.map_reduce(vars, awaiting, fn
-      %{identifier_id: nil} = var, awaiting ->
-        {var, awaiting}
+    Enum.map_reduce(vars, awaiting, &resolve_var(&1, linked_identifier_id(&1), prefix, map, &2))
+  end
 
-      %{identifier_id: source_id} = var, awaiting ->
-        case map[source_id] do
-          # Keeps pointing at the source-language entry until its translation
-          # exists: a working link, not an empty one
-          nil ->
-            {var, [awaiting_item("#{prefix}/#{var.key}/identifier/#{source_id}") | awaiting]}
+  defp resolve_var(var, nil, _prefix, _map, awaiting), do: {var, awaiting}
 
-          target_id ->
-            {%{unload(var, :identifier) | identifier_id: target_id}, awaiting}
-        end
-    end)
+  defp resolve_var(var, source_id, prefix, map, awaiting) do
+    case map[source_id] do
+      # Keeps pointing at the source-language entry until its translation
+      # exists: a working link, not an empty one
+      nil ->
+        {var, [awaiting_item("#{prefix}/#{var.key}/identifier/#{source_id}") | awaiting]}
+
+      target_id ->
+        {%{unload(var, :identifier) | identifier_id: target_id}, awaiting}
+    end
   end
 
   # The preloaded association is the source's; the id alone now says where the

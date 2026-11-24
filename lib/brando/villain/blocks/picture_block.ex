@@ -46,6 +46,10 @@ defmodule Brando.Villain.Blocks.PictureBlock do
     end
   end
 
+  # What an editor gives this placement of the picture: a module sync keeps
+  # them, and the module's settings (classes, lazyload, formats …) follow it
+  def protected_attrs, do: [:title, :credits, :alt, :link]
+
   def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target_changeset) do
     Brando.Villain.Block.merge_ref_template(:template_picture, ref_src, ref_target_changeset, protected_attrs())
   end

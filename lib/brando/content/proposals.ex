@@ -105,6 +105,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Transfer.Catalog
   alias Brando.Content.Transfer.Dependencies
   alias Brando.Content.Transfer.Error
+  alias Brando.Content.Var
   alias Brando.Drafts.Params
   alias Brando.Repo
   alias Brando.Translations
@@ -2260,8 +2261,12 @@ defmodule Brando.Content.Proposals do
   defp link_text_problems(_var, key, %{text: text}), do: unsafe(plain_text_problem(text, key))
   defp link_text_problems(_var, _key, _opts), do: []
 
-  defp link_target({:link, target, _opts}), do: target
+  defp link_target({:link, target, _opts}), do: link_value(target)
   defp link_target(value), do: value
+
+  # `{:link, :none, opts}` sets no link, as `null` does.
+  defp link_value(:none), do: nil
+  defp link_value(target), do: target
 
   defp target_schema({:new, _} = target, proposal) do
     case Map.fetch(proposal.targets, target) do
@@ -2351,7 +2356,7 @@ defmodule Brando.Content.Proposals do
   # A link's text shows as it is, so it is plain text; a module can keep it
   # for itself (`link_allow_custom_text`).
   defp value_problems(%{type: :link} = var, key, {:link, target, opts}, actor) do
-    target_problems = if target, do: value_problems(var, key, target, actor), else: []
+    target_problems = if target, do: value_problems(var, key, link_value(target), actor), else: []
     target_problems ++ link_text_problems(var, key, opts)
   end
 
@@ -2411,8 +2416,9 @@ defmodule Brando.Content.Proposals do
   defp settable?(%{type: :datetime}, value) when is_binary(value),
     do: match?({:ok, _, _}, DateTime.from_iso8601(value)) or match?({:ok, _}, NaiveDateTime.from_iso8601(value))
 
-  # A link var takes an address, or an entry (above).
+  # A link var takes an address, an entry (above), or null for no link.
   defp settable?(%{type: :link}, value) when is_binary(value), do: value != ""
+  defp settable?(%{type: :link}, nil), do: true
   defp settable?(_, _), do: false
 
   defp unsupported(%{type: :select}, key, value) when is_binary(value),
@@ -2420,6 +2426,13 @@ defmodule Brando.Content.Proposals do
       problem(
         :unsupported_value,
         dgettext("content_proposals", "%{key} has no option %{value}.", key: key, value: value)
+      )
+
+  defp unsupported(%{type: :link}, key, ""),
+    do:
+      problem(
+        :unsupported_value,
+        dgettext("content_proposals", ~s(%{key} takes null for no link, not "".), key: key)
       )
 
   defp unsupported(_var, key, _value),
@@ -2721,7 +2734,7 @@ defmodule Brando.Content.Proposals do
     same =
       for {key, value} <- values,
           %{} = var <- [Enum.find(block.vars, &(&1.key == key))],
-          saved_value(var) == value,
+          saved?(var, value),
           do: key
 
     if same != [] and length(same) == map_size(values),
@@ -2758,8 +2771,21 @@ defmodule Brando.Content.Proposals do
 
   defp unchanged(_op, _block), do: nil
 
+  # A link compares as stored: an entry by its identifier, and the text and
+  # new-tab setting a structured value gives.
+  defp saved?(%{type: :link} = var, {:link, target, opts}) do
+    options = BlockContent.link_options(opts)
+    (is_nil(target) or saved?(var, link_value(target))) and Map.take(var, Map.keys(options)) == options
+  end
+
+  defp saved?(%{type: :link} = var, {:entry, schema, id}),
+    do: match?({:identifier, _}, Var.link_target(var)) and match?(%{schema: ^schema, entry_id: ^id}, var.identifier)
+
+  defp saved?(var, value), do: saved_value(var) == value
+
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
   defp saved_value(%{type: kind} = var) when kind in [:image, :video, :file], do: {kind, Map.get(var, :"#{kind}_id")}
+  defp saved_value(%{type: :link} = var), do: Var.link_target(var)
   defp saved_value(var), do: var.value
 
   defp ref_text(%{data: %{data: data}}), do: Map.get(data, :text) || Map.get(data, :code) || Map.get(data, :embed_url)
@@ -3496,14 +3522,15 @@ defmodule Brando.Content.Proposals do
   defp var_value(kind, {kind, id}) when kind in [:image, :video, :file], do: %{:"#{kind}_id" => id}
 
   defp var_value(:link, {:link, target, opts}),
-    do: Map.merge(if(target, do: var_value(:link, target), else: %{}), BlockContent.link_options(opts))
+    do: Map.merge(if(target, do: var_value(:link, link_value(target)), else: %{}), BlockContent.link_options(opts))
 
   defp var_value(:link, {:entry, schema, id}) do
     {:ok, identifier} = Content.get_identifier(schema, %{id: id})
     %{link_type: :identifier, identifier_id: identifier.id}
   end
 
-  defp var_value(:link, url), do: %{link_type: :url, value: url}
+  # A URL link holds no entry, and no link holds neither.
+  defp var_value(:link, url), do: %{link_type: :url, value: url, identifier_id: nil}
   defp var_value(_type, value), do: %{value: value}
 
   ## Store, approve and apply
@@ -4385,6 +4412,7 @@ defmodule Brando.Content.Proposals do
   defp restore!(schema, id, revision, user) do
     case Brando.Revisions.set_entry_to_revision(schema, id, revision, user) do
       {:ok, _entry} -> :ok
+      {:error, {:module_in_trash, refusal}} -> Error.fail!(Brando.Content.module_in_trash_message(refusal, :revision))
       {:error, reason} -> Error.fail!(dgettext("content_proposals", "Undo failed: %{reason}", reason: inspect(reason)))
     end
   end
@@ -5177,6 +5205,8 @@ defmodule Brando.Content.Proposals do
   defp translation_failed(:forbidden),
     do: dgettext("content_proposals", "You do not have permission to create a translation of this entry.")
 
+  defp translation_failed({:module_in_trash, refusal}), do: Brando.Content.module_in_trash_message(refusal, :duplicate)
+
   defp translation_failed(%Changeset{} = changeset),
     do:
       dgettext("content_proposals", "Entry validation: %{errors}",
@@ -5266,6 +5296,9 @@ defmodule Brando.Content.Proposals do
             errors: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
           )
         )
+
+      {:error, {:module_in_trash, refusal}} ->
+        Error.fail!(Brando.Content.module_in_trash_message(refusal))
 
       {:error, _} ->
         Error.fail!(dgettext("content_proposals", "You do not have permission to save this entry."))

@@ -14,7 +14,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
   end
 
   describe "PictureBlock apply_ref" do
-    test "applies picture ref correctly" do
+    test "applies the settings of a picture ref and keeps the editor's texts" do
       # Create source ref
       ref_src = %Content.Ref{
         name: "test_picture",
@@ -55,9 +55,9 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
 
       updated_ref = Changeset.apply_changes(result)
 
-      # All attributes should be updated from source
-      assert updated_ref.data.data.title == "Source Title"
-      assert updated_ref.data.data.alt == "Source Alt"
+      # The editor's texts stay, the settings follow the source
+      assert updated_ref.data.data.title == "Target Title"
+      assert updated_ref.data.data.alt == "Target Alt"
       assert updated_ref.data.data.picture_class == "source-class"
       assert updated_ref.data.data.lazyload == true
     end

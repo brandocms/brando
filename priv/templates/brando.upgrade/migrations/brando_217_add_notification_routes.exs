@@ -66,7 +66,9 @@ defmodule Brando.Repo.Migrations.Brando217AddNotificationRoutes do
       create index(:notification_deliveries, [:recipient_id, :state], prefix: prefix)
       create index(:notification_deliveries, [:grouped_into_id], prefix: prefix)
 
-      create unique_index(:notification_deliveries, [:route_id, :event_id, "coalesce(recipient_id, 0)"],
+      create unique_index(
+               :notification_deliveries,
+               [:route_id, :event_id, "coalesce(recipient_id, 0)"],
                prefix: prefix,
                where: "event_id IS NOT NULL",
                name: :notification_deliveries_once_per_event_index

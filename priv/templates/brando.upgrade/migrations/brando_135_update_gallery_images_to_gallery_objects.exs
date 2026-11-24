@@ -62,7 +62,6 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE html ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_images'
     """
-
   end
 
   def down do
@@ -122,6 +121,5 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE html ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_objects'
     """
-
   end
 end

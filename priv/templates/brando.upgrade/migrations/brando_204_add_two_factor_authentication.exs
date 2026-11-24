@@ -39,7 +39,9 @@ defmodule Brando.Repo.Migrations.Brando204AddTwoFactorAuthentication do
       timestamps(updated_at: false)
     end
 
-    create_if_not_exists unique_index(:users_recovery_codes, [:user_id, :hashed_code], prefix: "public")
+    create_if_not_exists unique_index(:users_recovery_codes, [:user_id, :hashed_code],
+                           prefix: "public"
+                         )
 
     create_if_not_exists table(:users_security_events, prefix: "public") do
       add :user_id, references(:users, on_delete: :nilify_all, prefix: "public")

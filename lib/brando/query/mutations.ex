@@ -94,6 +94,7 @@ defmodule Brando.Query.Mutations do
          changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :insert),
          :ok <- Boundary.change(user, :create, changeset),
+         :ok <- ContentBlocks.guard_added_modules(changeset),
          changeset <- ContentBlocks.sync_written_blocks(changeset),
          {:ok, entry} <- Query.insert(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
@@ -214,6 +215,7 @@ defmodule Brando.Query.Mutations do
          changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
          :ok <- Boundary.change(user, Keyword.get(opts, :action, :update), changeset),
+         :ok <- ContentBlocks.guard_added_modules(changeset),
          {changeset, resynced?} = sync_written_blocks(changeset),
          {:ok, entry} <- Query.update(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
@@ -242,6 +244,9 @@ defmodule Brando.Query.Mutations do
       {:error, :forbidden} = err ->
         err
 
+      {:error, {:module_in_trash, _}} = err ->
+        err
+
       err ->
         require Logger
 
@@ -259,7 +264,9 @@ defmodule Brando.Query.Mutations do
   # One transaction, as group authorization runs a save already: the entry,
   # its identifier, revision and Activity are written together, so a save
   # Postgres cancels at any step has written nothing and can be saved again.
-  # `mutation` takes the user `Boundary.run/4` hands it.
+  # A module's delete too: the lock `Content.guard_delete/2` takes holds
+  # until the module is in the trash. `mutation` takes the user
+  # `Boundary.run/4` hands it.
   defp atomically(mutation), do: &in_transaction(mutation, &1)
 
   defp in_transaction(mutation, user) do
@@ -339,10 +346,13 @@ defmodule Brando.Query.Mutations do
   # constraints, so a value another entry holds (a page's URI in the copy's
   # language) comes back as `{:error, changeset}` instead of raising. Its
   # galleries are cloned in the same transaction: a copy that can't be saved
-  # leaves none behind.
+  # leaves none behind. A copy that would bring a module in the trash back
+  # into use, at any level, is refused: the check reads the tree as it is
+  # inserted, under the lock it takes.
   defp insert_copy(cloned_entry, module, user) do
     Repo.transaction(fn ->
-      with {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
+      with :ok <- ContentBlocks.guard_written_modules(cloned_entry),
+           {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
            {:ok, copy} <-
              cloned_entry
              |> Ecto.Changeset.change()
@@ -791,7 +801,8 @@ defmodule Brando.Query.Mutations do
   @decorate span("brando.query.delete", schema: :module, entry_id: :id)
   def delete(context, module, name, id, opts) do
     user = Keyword.get(opts, :user, :system)
-    Boundary.run(user, :delete, module, &do_delete(context, module, name, id, Keyword.put(opts, :user, &1)))
+    mutation = &do_delete(context, module, name, id, Keyword.put(opts, :user, &1))
+    Boundary.run(user, :delete, module, if(module == Content.Module, do: atomically(mutation), else: mutation))
   end
 
   defp do_delete(context, module, name, id, opts) do

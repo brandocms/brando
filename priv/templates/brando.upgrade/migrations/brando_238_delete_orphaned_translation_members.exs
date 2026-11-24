@@ -29,10 +29,16 @@ defmodule Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers do
 
   def up do
     for prefix <- prefixes(), table?(prefix, "translation_group_members") do
-      orphans = Enum.flat_map(entry_tables(prefix), fn {type, table} -> orphans(prefix, type, table) end)
+      orphans =
+        Enum.flat_map(entry_tables(prefix), fn {type, table} -> orphans(prefix, type, table) end)
+
       orphan_ids = Enum.map(orphans, &elem(&1, 0))
       live = live_groups(prefix, orphan_ids)
-      {kept, deleted} = Enum.split_with(orphans, fn {_, group_id, role} -> role == "source" and group_id in live end)
+
+      {kept, deleted} =
+        Enum.split_with(orphans, fn {_, group_id, role} ->
+          role == "source" and group_id in live
+        end)
 
       for {_, group_id, _} <- kept do
         Logger.warning(
@@ -85,7 +91,8 @@ defmodule Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers do
   # schema is still defined, in the environment's schema unless the
   # blueprint names its own
   defp entry_tables(prefix) do
-    %{rows: rows} = repo().query!(~s(SELECT DISTINCT entry_type FROM "#{prefix}".translation_group_members))
+    %{rows: rows} =
+      repo().query!(~s(SELECT DISTINCT entry_type FROM "#{prefix}".translation_group_members))
 
     for [type] <- rows,
         module = schema_module(type),
@@ -105,7 +112,9 @@ defmodule Brando.Repo.Migrations.Brando238DeleteOrphanedTranslationMembers do
   end
 
   defp table?(prefix, table) do
-    %{rows: [[name]]} = repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}"."#{table}")])
+    %{rows: [[name]]} =
+      repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}"."#{table}")])
+
     not is_nil(name)
   end
 
