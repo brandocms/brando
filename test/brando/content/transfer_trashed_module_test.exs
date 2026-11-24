@@ -47,6 +47,37 @@ defmodule Brando.Content.TransferTrashedModuleTest do
       assert staged(plan) == []
     end
 
+    # A preview binds a module only for someone who may read it: this one
+    # loses that between the preview and the import
+    test "names no module to someone who may no longer read modules", c do
+      editor = import_editor!(c.user)
+      readers = module_readers!(c.user, editor)
+      plan = field_plan(c, export_field(c), "replace", nil, editor)
+      assert plan.problems == []
+
+      {:ok, _} =
+        Brando.Authorization.Groups.remove_member(Brando.Authorization.Scope.standalone(c.user), readers.id, editor.id)
+
+      {:ok, _} = Brando.Content.delete_module(c.mapped.id, c.user)
+
+      assert {:error, message} = Transfer.apply(plan, editor)
+      assert message =~ "Destination"
+      refute message =~ "Mapped text"
+      assert blocks(c.target, c.user) == []
+    end
+
+    test "names the module to someone in a group that may read modules", c do
+      editor = import_editor!(c.user)
+      module_readers!(c.user, editor)
+      plan = field_plan(c, export_field(c), "replace", nil, editor)
+      assert plan.problems == []
+      {:ok, _} = Brando.Content.delete_module(c.mapped.id, c.user)
+
+      assert {:error, message} = Transfer.apply(plan, editor)
+      assert message =~ "Mapped text"
+      assert blocks(c.target, c.user) == []
+    end
+
     test "that keeps a held block of such a module, appending to it, goes through", c do
       add_block!(c.target, c.mapped, c.user)
       plan = field_plan(c, export_field(c), "append", %{"module:#{c.module.id}" => c.module.id})
@@ -215,9 +246,9 @@ defmodule Brando.Content.TransferTrashedModuleTest do
     %{field["key"] => %{"schema" => to_string(Page), "id" => c.target.id, "field" => "blocks", "mode" => "replace"}}
   end
 
-  defp field_plan(c, archive, mode \\ "replace", dependencies \\ nil) do
+  defp field_plan(c, archive, mode \\ "replace", dependencies \\ nil, actor \\ nil) do
     targets = Map.new(field_targets(c, archive), fn {key, target} -> {key, %{target | "mode" => mode}} end)
-    assert {:ok, plan} = Transfer.preview(archive, targets, c.user, dependencies: dependencies || c.mapping)
+    assert {:ok, plan} = Transfer.preview(archive, targets, actor || c.user, dependencies: dependencies || c.mapping)
     plan
   end
 
@@ -255,5 +286,15 @@ defmodule Brando.Content.TransferTrashedModuleTest do
     {:ok, group} = Groups.create(Scope.standalone(admin), %{name: "Page importers"}, grants)
     {:ok, :ok} = Groups.add_member(Scope.standalone(admin), group.id, editor.id)
     editor
+  end
+
+  # A group that may read modules, with `editor` in it
+  defp module_readers!(admin, editor) do
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+
+    grants = [Catalog.get(:read, Brando.Content.Module).key]
+    {:ok, group} = Groups.create(Scope.standalone(admin), %{name: "Module readers"}, grants)
+    {:ok, :ok} = Groups.add_member(Scope.standalone(admin), group.id, editor.id)
+    group
   end
 end
