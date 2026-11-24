@@ -38,6 +38,7 @@ defmodule Brando.Content.Proposals.Review do
 
   alias Brando.Content.Proposals.EntryFields
   alias Brando.Content.Proposals.RefConfig
+  alias Brando.Content.Var
   alias Brando.Translations
   alias Brando.Type.I18nString
 
@@ -1031,7 +1032,8 @@ defmodule Brando.Content.Proposals.Review do
   # and a role).
   defp describe(block) do
     Enum.find_value(block.vars || [], fn
-      %{type: :link, identifier: %{title: title} = identifier} when is_binary(title) and title != "" ->
+      %{type: :link, link_type: :identifier, identifier: %{title: title} = identifier}
+      when is_binary(title) and title != "" ->
         if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
           do: Content.Identifier.title_text(identifier)
 
@@ -1083,13 +1085,22 @@ defmodule Brando.Content.Proposals.Review do
   defp saved_value(%{type: type}) when type in [:image, :video], do: nil
   defp saved_value(var), do: option(var, var.value)
 
-  defp saved_link_target(%{identifier: %{title: title} = identifier}) when is_binary(title) do
-    if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
-      do: Content.Identifier.title_text(identifier),
-      else: "##{identifier.entry_id}"
-  end
+  # As the page renders it (`Var.link_target/1`): an entry by its title, an
+  # address as it is.
+  defp saved_link_target(var) do
+    case {Var.link_target(var), var.identifier} do
+      {{:identifier, _}, %{title: title} = identifier} when is_binary(title) ->
+        if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
+          do: Content.Identifier.title_text(identifier),
+          else: "##{identifier.entry_id}"
 
-  defp saved_link_target(var), do: option(var, var.value)
+      {url, _} when is_binary(url) ->
+        url
+
+      _ ->
+        nil
+    end
+  end
 
   # Where a link points, the text it shows and whether it opens a new tab.
   defp link_view(target, text, new_tab) do
@@ -1129,6 +1140,10 @@ defmodule Brando.Content.Proposals.Review do
       _ -> value
     end
   end
+
+  defp option(%{type: :link}, nil), do: dgettext("content_proposals", "no link")
+
+  defp option(var, {:link, :none, opts}), do: link_view(option(var, nil), opts[:text], opts[:new_tab])
 
   defp option(var, {:link, target, opts}),
     do: link_view(target && option(var, target), opts[:text], opts[:new_tab])

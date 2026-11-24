@@ -29,6 +29,15 @@ export default (app) => ({
       }
     })
 
+    // A double-click chooses an option once: its second click, which would
+    // let go of the option the first chose, does not reach LiveView's
+    // listener on `window`.
+    this.el.addEventListener('click', (e) => {
+      if (e.detail > 1 && e.target.closest(this._target)) {
+        e.stopPropagation()
+      }
+    })
+
     if (this.$clearBtn) {
       this.$clearBtn.addEventListener('click', () => {
         this.clear()
@@ -68,7 +77,10 @@ export default (app) => ({
       return
     }
 
-    $visible[0].click()
+    // the match already chosen stays chosen: clicking it again lets go of it
+    if ($visible[0].getAttribute('aria-pressed') !== 'true') {
+      $visible[0].click()
+    }
 
     const $modal = this.el.closest('.modal[data-modal-close]')
     if ($modal) {

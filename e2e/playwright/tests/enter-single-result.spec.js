@@ -47,6 +47,16 @@ test('Enter in the link picker selects the only match and closes the modal', asy
 
   await page.locator('#menu_items_0_link_0_identifier_id-field-base .link-preview').click()
   await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Enter Target Zephyr')
+
+  // Enter on the entry already chosen keeps it: a click on it would let go of it
+  await filter.fill('zephyr')
+  await expect(visible).toHaveCount(1)
+  await filter.press('Enter')
+  await expect(modal).toBeHidden()
+  await syncLV(page)
+
+  await page.locator('#menu_items_0_link_0_identifier_id-field-base .link-preview').click()
+  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Enter Target Zephyr')
 })
 
 test('Enter in a listing filter opens the only matching entry', async ({ page }) => {

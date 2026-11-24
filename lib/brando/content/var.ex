@@ -128,6 +128,19 @@ defmodule Brando.Content.Var do
     ]
   end
 
+  @doc """
+  Where a link var points, read by its `link_type` as the page renders it:
+  `{:identifier, id}`, an address, or `nil` for no link. A URL link with an
+  empty address is no link, whatever identifier its row still holds.
+  """
+  @spec link_target(map()) :: {:identifier, pos_integer()} | String.t() | nil
+  def link_target(%{type: :link, link_type: :identifier, identifier_id: id}) when is_integer(id), do: {:identifier, id}
+
+  def link_target(%{type: :link, link_type: :url, value: url}) when is_binary(url),
+    do: if(String.trim(url) == "", do: nil, else: url)
+
+  def link_target(_var), do: nil
+
   defimpl String.Chars do
     def to_string(%{type: :string, value: value}) do
       value || ""

@@ -760,6 +760,129 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert {:error, _} = insert.(%{"cta" => %{"link" => 5}})
       assert {:error, _} = insert.(%{"cta" => %{"new_tab" => "yes"}})
     end
+
+    test "a link is cleared with null, and a URL link with an empty address is no link", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => entry}
+          }
+        ])
+
+      apply!(proposal, c)
+      assert %{entry: "Naming"} = button_values(c)["cta"]
+
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      assert {:ok, %{applicable: false, problems: [%{code: :unsupported_value}]}} =
+               Tools.call("prepare_proposal", %{"summary" => "Links", "operations" => [set.(%{"cta" => ""})]}, c.context)
+
+      {result, proposal} = propose!(c, [set.(%{"cta" => nil})])
+      assert %{applicable: true} = result
+      refute result[:unchanged]
+
+      apply!(proposal, c)
+      assert button_values(c)["cta"] == nil
+      assert %{identifier_id: nil, value: nil} = cta_var()
+
+      # A row a URL switch left behind still holds its entry: it is no link.
+      {:ok, identifier} = Brando.Content.get_identifier(Page, c.naming)
+
+      cta_var()
+      |> Ecto.Changeset.change(link_type: :url, value: "", identifier_id: identifier.id)
+      |> Brando.Repo.update!()
+
+      assert button_values(c)["cta"] == nil
+      assert %{unchanged: %{operations: [_]}} = elem(propose!(c, [set.(%{"cta" => nil})]), 0)
+    end
+
+    test "in the structured form, a null link clears it and an omitted one keeps it", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => entry}
+          }
+        ])
+
+      apply!(proposal, c)
+
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => %{"text" => "Read"}})])
+      apply!(proposal, c)
+      assert %{entry: "Naming"} = button_values(c)["cta"]
+      assert %{link_text: "Read"} = cta_var()
+
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => %{"link" => nil, "text" => ""}})])
+      apply!(proposal, c)
+      assert button_values(c)["cta"] == nil
+      assert %{identifier_id: nil, value: nil, link_text: nil} = cta_var()
+    end
+
+    test "a link set to where it already points, as it is stored, is unchanged", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+      other = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => entry}
+          }
+        ])
+
+      apply!(proposal, c)
+
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      unchanged? = fn values -> Map.has_key?(elem(propose!(c, [set.(values)]), 0), :unchanged) end
+
+      assert unchanged?.(%{"cta" => entry})
+      assert unchanged?.(%{"cta" => %{"link" => entry}})
+      refute unchanged?.(%{"cta" => other})
+      refute unchanged?.(%{"cta" => %{"link" => entry, "text" => "Read"}})
+
+      link = %{"link" => "https://example.com", "text" => "Go", "new_tab" => true}
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => link})])
+      apply!(proposal, c)
+
+      assert unchanged?.(%{"cta" => link})
+      assert unchanged?.(%{"cta" => %{"text" => "Go"}})
+      refute unchanged?.(%{"cta" => %{link | "new_tab" => false}})
+      refute unchanged?.(%{"cta" => %{link | "text" => ""}})
+    end
+  end
+
+  defp cta_var do
+    import Ecto.Query, only: [from: 2]
+
+    Brando.Repo.one!(
+      from v in Brando.Content.Var, join: b in assoc(v, :block), where: b.uid == "button" and v.key == "cta"
+    )
   end
 
   test "guidance cannot make the assistant invent modules or settings", c do

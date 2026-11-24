@@ -36,6 +36,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.Proposals.Review
   alias Brando.Content.Proposals.TranslationWork
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
+  alias Brando.Content.Var
   alias Brando.Media.Folders
   alias Brando.Type.I18nString
   alias BrandoAdmin.Components.Form.LockedFields
@@ -1298,7 +1299,7 @@ defmodule Brando.Content.Proposals.Tools do
       vars = loaded(Map.get(block, :vars)) ++ Enum.flat_map(loaded(Map.get(block, :table_rows)), &loaded(&1.vars))
 
       Enum.map(loaded(Map.get(block, :block_identifiers)), & &1.identifier_id) ++
-        for(%{type: :link, identifier_id: id} <- vars, is_integer(id), do: id) ++
+        for(%{type: :link} = var <- vars, {:identifier, id} <- [Var.link_target(var)], do: id) ++
         linked_identifier_ids(loaded(Map.get(block, :children)))
     end)
   end
@@ -1404,7 +1405,8 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp settable(%{type: :link, link_allow_custom_text: false}),
     do:
-      ~s(a URL, an entry {"content_type":T,"id":N}, or {"link":URL or entry,"new_tab":true|false}; the module gives it its text)
+      ~s(a URL, an entry {"content_type":T,"id":N}, {"link":URL, entry or null,"new_tab":true|false}, or null for no link; ) <>
+        "the module gives it its text"
 
   defp settable(%{type: type}), do: settable(type)
 
@@ -1419,7 +1421,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp settable(:link),
     do:
-      ~s(a URL, an entry {"content_type":T,"id":N}, or {"link":URL or entry,"text":T,"new_tab":true|false}: ) <>
+      ~s(a URL, an entry {"content_type":T,"id":N}, null for no link, or {"link":URL, entry or null,"text":T,"new_tab":true|false}: ) <>
         ~s(the text the link or button shows, plain, "" for the default; without "link" it keeps where it points)
 
   defp settable(:file), do: ~s({"kind":"file","id":N})
@@ -1705,11 +1707,14 @@ defmodule Brando.Content.Proposals.Tools do
   defp var_value(%{type: :boolean} = var, _), do: var.value_boolean
 
   # A link names the entry it points to; the editor knows a project by its
-  # title. Of an entry the actor may not read, it says only that.
-  defp var_value(%{type: :link, identifier_id: id} = var, dimensions) when is_integer(id),
-    do: var |> link_value(readable?(dimensions[:identifiers], id)) |> link_details(var)
-
-  defp var_value(%{type: :link} = var, _), do: var.value |> shorten() |> link_details(var)
+  # title. Of an entry the actor may not read, it says only that. It reads
+  # as the page renders it (`Var.link_target/1`).
+  defp var_value(%{type: :link} = var, dimensions) do
+    case Var.link_target(var) do
+      {:identifier, id} -> var |> link_value(readable?(dimensions[:identifiers], id)) |> link_details(var)
+      url -> url |> shorten() |> link_details(var)
+    end
+  end
 
   defp var_value(%{type: kind} = var, dimensions) when kind in [:image, :video] do
     case Map.get(var, :"#{kind}_id") do
