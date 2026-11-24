@@ -48,6 +48,14 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
     |> Router.call(Router.init([]))
   end
 
+  defp card_pages(c, opts \\ []) do
+    Brando.Test.Support.put_test_env(Page, translatable: [mode: :synchronized])
+    Brando.ProposalFixtures.card_pages(c.user, opts)
+  end
+
+  defp translate_kicker(units, scope, target, kicker),
+    do: Brando.ProposalFixtures.translate_kicker(units, scope, target, kicker)
+
   describe "a synchronized translation the proposal translates" do
     setup c do
       pages = card_pages(c)
@@ -145,6 +153,85 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
                )
 
       assert message =~ "has problems"
+    end
+  end
+
+  describe "a translation the proposal creates, in one environment of one of several sites" do
+    alias Brando.Tenant
+
+    # Both sites' schemas hold the same rows, so the same ids: each page's
+    # text tells whose it is
+    setup c do
+      pages = card_pages(c)
+      put_test_env(:tenancy_mode, :multi)
+      Tenant.put_prefix(nil)
+      on_exit(fn -> Tenant.put_prefix(nil) end)
+
+      alpha = site("Copy Alpha", "copy-alpha")
+      beta = site("Copy Beta", "copy-beta")
+      alpha_live = environment(alpha, "production")
+      _beta_live = environment(beta, "production")
+      beta_staging = environment(beta, "staging")
+
+      for {environment, site, kicker} <- [
+            {alpha_live, alpha, "Alfas prosjekter"},
+            {beta_staging, beta, "Betas prosjekter"}
+          ] do
+        Tenant.with_prefix(Tenant.prefix(site, environment), fn ->
+          Repo.update_all(from(v in Brando.Content.Var, where: v.key == "kicker"), set: [value: kicker])
+        end)
+      end
+
+      Map.merge(pages, %{prefix: Tenant.prefix(beta, beta_staging)})
+    end
+
+    defp site(name, key) do
+      {:ok, site} =
+        Tenant.Registry.create_site(%{
+          name: name,
+          key: key,
+          languages: ["no", "en"],
+          default_language: "no",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      site
+    end
+
+    # The environment's schema, a copy of `public`'s tables and rows
+    defp environment(site, key) do
+      {:ok, environment} = Tenant.Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
+      prefix = Tenant.prefix(site, environment)
+      Ecto.Adapters.SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
+
+      for [table] <-
+            Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT tablename FROM pg_tables WHERE schemaname = 'public'").rows,
+          not Tenant.SharedTables.member?(table) do
+        Ecto.Adapters.SQL.query!(
+          Repo.repo(),
+          ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|
+        )
+
+        Ecto.Adapters.SQL.query!(Repo.repo(), ~s|INSERT INTO "#{prefix}"."#{table}" SELECT * FROM public."#{table}"|)
+      end
+
+      environment
+    end
+
+    # The page renders where the proposal was prepared, in a process of its own
+    test "renders the copy made in that site's environment", c do
+      Tenant.with_prefix(c.prefix, fn ->
+        id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
+        {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)
+
+        assert {:ok, %{html: html}} =
+                 Brando.Content.Proposals.Preview.render(proposal, {:new, "english"}, c.user, preview_target: :blocks)
+
+        assert html =~ ~s(<h2 class="kicker">Betas prosjekter</h2>)
+        refute html =~ "Alfas prosjekter"
+        refute html =~ "Våre prosjekter"
+      end)
     end
   end
 
