@@ -117,20 +117,21 @@ defmodule Brando.ThreeLanguageTest do
     alias Brando.Authorization.Grant
     alias Brando.Authorization.Group
     alias Brando.Authorization.Membership
+    alias Brando.Repo
 
     n = System.unique_integer([:positive])
     scope = Brando.Authorization.Scope.current(user)
 
     group =
-      Brando.Repo.insert!(%Group{
+      Repo.insert!(%Group{
         key: "three-language-#{n}",
         name: "Three languages #{n}",
         scope_kind: scope.kind,
         site_id: scope.site_id
       })
 
-    Brando.Repo.insert!(%Grant{group_id: group.id, permission_key: "authorization.three_language_articles.read"})
-    Brando.Repo.insert!(%Membership{user_id: user.id, group_id: group.id})
+    Repo.insert!(%Grant{group_id: group.id, permission_key: "authorization.three_language_articles.read"})
+    Repo.insert!(%Membership{user_id: user.id, group_id: group.id})
     user
   end
 end
