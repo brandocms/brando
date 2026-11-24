@@ -106,6 +106,44 @@ defmodule BrandoAdmin.TrashedModuleInUseLiveTest do
     assert Repo.aggregate(Page, :count) == pages
   end
 
+  # The fragment copier reads the block trees whole, nested blocks included
+  test "the listing duplicates a page whose fragment holds a container with a block inside", c do
+    fragment = Factory.insert(:fragment, creator: c.current_user, page_id: c.page.id, key: "boxed")
+
+    {:ok, container} =
+      Brando.Content.create_container(%{name: "Section", namespace: "general", code: "{{ content }}"}, c.current_user)
+
+    source = "Elixir.#{inspect(Fragment)}.Blocks"
+
+    root =
+      Repo.insert!(%Block{
+        uid: "box-#{System.unique_integer([:positive])}",
+        source: source,
+        type: :container,
+        container_id: container.id
+      })
+
+    inner =
+      Repo.insert!(%Block{
+        uid: "inner-#{System.unique_integer([:positive])}",
+        source: source,
+        type: :module,
+        module_id: c.module.id,
+        parent_id: root.id
+      })
+
+    Repo.insert_all(Fragment.Blocks, [%{entry_id: fragment.id, block_id: root.id, sequence: 0}])
+    pages = Repo.aggregate(Page, :count)
+
+    {:ok, view, _html} = live(c.conn, "/admin/pages")
+    render_hook(view, "duplicate_entry", %{"id" => to_string(c.page.id)})
+
+    assert_receive %Broadcast{event: "toast"}, 2_000
+    assert Repo.aggregate(Page, :count) == pages + 1
+    assert Repo.aggregate(from(b in Block, where: b.module_id == ^c.module.id and b.id != ^inner.id), :count) == 1
+    assert Repo.get!(Block, inner.id).parent_id == root.id
+  end
+
   defp assert_undelete_names_module(c) do
     {:ok, view, _html} = live(c.conn, "/admin/pages?status=deleted")
     render_hook(view, "undelete_entry", %{"id" => to_string(c.page.id)})
