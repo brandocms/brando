@@ -571,6 +571,30 @@ defmodule BrandoAdmin.SubformRelationTest do
       assert {saved, image_id} in saved_covers(ctx)
     end
 
+    # An upload that finishes while the save runs is delivered before the
+    # LiveView has heard which key the new row got, still naming the new one
+    test "into a new row goes to that row when its delivery overtakes the save's row keys", ctx do
+      view = open(ctx)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][0][label]"])))
+      |> render_click("add_subentry", %{})
+
+      settle(view)
+      ["new-" <> _ = key] = view |> render() |> row_keys() |> Enum.filter(&String.starts_with?(&1, "new-"))
+
+      stay(view)
+      save_and_stay(view)
+      [saved] = ctx |> saved_covers() |> Enum.map(&elem(&1, 0)) |> Kernel.--([ctx.a.id, ctx.b.id, ctx.c.id])
+
+      deliver_upload(view, [:items, 3], ctx.image, key)
+
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][" <> _, value: ^image_id})
+      save(view)
+      assert {saved, image_id} in saved_covers(ctx)
+    end
+
     # Every row an upload can start in has a key (`SubformHelpers.new_row/1`),
     # so a row without one at the index is another row
     test "naming a new row that is gone goes to no row, not to a row without a key", ctx do

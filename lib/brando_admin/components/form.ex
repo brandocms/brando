@@ -807,7 +807,7 @@ defmodule BrandoAdmin.Components.Form do
       when is_binary(row_key) do
     assigns = Map.delete(assigns, :row_key)
 
-    case keyed_row_path(socket.assigns.form.source, path, row_key) do
+    case keyed_row_path(socket.assigns.form.source, path, saved_row_key(socket, row_key)) do
       {:ok, path} -> update(%{assigns | path: path}, socket)
       :gone -> {:ok, upload_row_gone(socket, assigns)}
     end
@@ -7959,7 +7959,7 @@ defmodule BrandoAdmin.Components.Form do
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     # The other tabs read the entry back: once all of the save is written.
     announce_save(socket, entry, save)
-    announce_saved_rows(save.changeset, entry)
+    socket = remember_saved_rows(socket, save.changeset, entry)
 
     mutation_message =
       Brando.Gettext
@@ -8192,7 +8192,7 @@ defmodule BrandoAdmin.Components.Form do
     {socket, stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     announce_save(socket, entry, save)
-    announce_saved_rows(save.changeset, entry)
+    socket = remember_saved_rows(socket, save.changeset, entry)
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
     {:noreply,
@@ -10925,10 +10925,17 @@ defmodule BrandoAdmin.Components.Form do
   # told its row is gone rather than placed by position. A block's table
   # rows come from the block's own form (`Block`, `"replace_form"`): the
   # save's blocks are built from the edit session, without the rows' keys.
-  defp announce_saved_rows(changeset, entry) do
+  #
+  # The form keeps them too: an upload that finished while the save ran is
+  # already waiting in the LiveView's mailbox, ahead of the message to
+  # `Hooks`, and is delivered naming the new key (`saved_row_key/2`).
+  defp remember_saved_rows(socket, changeset, entry) do
     keys = changeset |> saved_row_keys(entry) |> Map.new()
     if keys != %{}, do: send(self(), {:saved_row_keys, keys})
+    assign(socket, :saved_row_keys, Map.merge(socket.assigns[:saved_row_keys] || %{}, keys))
   end
+
+  defp saved_row_key(socket, key), do: Map.get(socket.assigns[:saved_row_keys] || %{}, key, key)
 
   defp saved_row_keys(%Changeset{changes: changes}, %{} = saved),
     do: Enum.flat_map(changes, fn {field, change} -> saved_row_keys(change, Map.get(saved, field)) end)
