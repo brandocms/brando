@@ -399,20 +399,10 @@ defmodule Brando.Translations do
 
         cond do
           is_nil(trashed) -> {:error, :language_exists}
-          not may_delete_for_good?(actor, trashed) -> {:error, :language_in_trash}
+          not Brando.SoftDelete.Query.may_purge?(actor, trashed) -> {:error, :language_in_trash}
           true -> Brando.SoftDelete.Query.purge_entries(schema, [entry_id], actor, %{"replaced" => true})
         end
     end
-  end
-
-  # What deleting an entry takes: the delete permission, and for a published
-  # one the publish permission too, as trashing it does. A version trashed
-  # while published still has that status.
-  defp may_delete_for_good?(actor, entry) do
-    alias Brando.Authorization.Boundary
-
-    Boundary.authorize(actor, :delete, entry) == :ok and
-      (Map.get(entry, :status) != :published or Boundary.authorize(actor, :publish, entry) == :ok)
   end
 
   defp enrol_target(schema, source_id, language, actor, mark_translate?) do

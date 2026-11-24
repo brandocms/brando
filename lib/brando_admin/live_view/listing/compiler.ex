@@ -8,6 +8,8 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       use BrandoAdmin.LiveView.Listing, schema: MyApp.Projects.Project
   """
 
+  @permanent_deletes [{"delete_entry", "delete_entry_permanently"}, {"delete_selected", "delete_selected_permanently"}]
+
   defmacro __using__(opts), do: build(opts)
 
   @doc "Builds the setup expanded by the public listing LiveView API."
@@ -24,7 +26,7 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
           # events as well as the view's
           on_mount(
             {BrandoAdmin.Reauth,
-             events: unquote(step_up),
+             events: BrandoAdmin.LiveView.Listing.Compiler.with_permanent_deletes(unquote(step_up)),
              replay: {BrandoAdmin.LiveView.Listing.Hooks, :replay_event, [unquote(schema), unquote(overrides)]}}
           )
         end
@@ -45,5 +47,14 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
         |> BrandoAdmin.LiveView.Listing.put_page_title(unquote(page_title))
       end
     end
+  end
+
+  @doc """
+  The `step_up` events with Delete permanently in the trash, which asks as
+  the delete it stands in for does.
+  """
+  def with_permanent_deletes(step_up) do
+    permanent = for {event, permanent} <- @permanent_deletes, event in step_up, do: permanent
+    Enum.uniq(step_up ++ permanent)
   end
 end

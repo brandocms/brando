@@ -1014,6 +1014,22 @@ Several traits change the listing without any listing declaration:
   too, a **Deleted** status button shows the trash, deleted rows name who
   deleted them, and each has **Undelete**. Without `trait :status` the trash
   cannot be reached from the listing.
+
+  In the trash, a listing with `default_actions` offers **Delete permanently**
+  on each row and for a selection, after a confirmation. It deletes the entry
+  for good now, as the trash does after 30 days: its revisions, notes and
+  place in a translation group go with it, and the activity log names who did
+  it. It is offered to whoever may delete the entry, and for an entry that was
+  published when it went to the trash, also publish it. A video whose provider
+  deletes it on purge is deleted at the provider too. Nothing is deleted when
+  something still refers to the entry (the message names what kind of record),
+  or when the entry was restored or trashed again since the menu showed it. A
+  listing with `default_actions false`, or one that handles `delete_entry`
+  itself (`overrides`), offers no Delete permanently, and a listing that asks
+  for `step_up` on `delete_entry` or `delete_selected` asks for it here too.
+
+  A delete from a listing that is refused or fails shows its reason in an
+  error toast, which stays until closed.
 * `trait :sequenced`: drag ordering, and the default order without sorts.
   Dragging also needs the `:reorder` permission.
 * `trait :translatable`: the listing shows the editor's content language,

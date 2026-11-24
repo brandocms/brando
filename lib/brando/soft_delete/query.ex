@@ -250,6 +250,95 @@ defmodule Brando.SoftDelete.Query do
     end
   end
 
+  @doc """
+  Deletes the entry `id` of `schema` from the trash for good, for `actor`, in
+  a transaction of its own: Delete permanently in a listing's trash.
+
+  Only a row still in the trash with `deleted_at` as the person saw it goes,
+  and only when `actor` may delete it for good (`may_purge?/2`), both decided
+  on the locked row. It goes as `purge_entries/4` deletes it, and a video
+  whose provider deletes it on purge also as the scheduled purge deletes it
+  (`Brando.Videos.Uploader.delete_remote/2`).
+
+  Returns `:ok`, or `{:error, reason}` and nothing is deleted: `:not_in_trash`
+  (restored, already deleted, or trashed again since), `:forbidden`,
+  `{:referenced, constraint}`, or for a video its provider's
+  `{:retry, reason}`, `:busy` or `:holdings_unavailable`.
+  """
+  def purge_entry(_schema, _id, nil, _actor), do: {:error, :not_in_trash}
+
+  def purge_entry(schema, id, deleted_at, actor) do
+    case video_deleted_on_purge(schema, id, deleted_at) do
+      nil -> purge_trashed_in_transaction(schema, id, deleted_at, actor)
+      video -> purge_video_entry(video, actor)
+    end
+  end
+
+  @doc """
+  Whether `actor` may delete `entry`, in the trash, for good: the delete
+  permission on it, and for one trashed while published the publish
+  permission too, as trashing it took. It keeps that status in the trash.
+  """
+  def may_purge?(actor, entry) do
+    alias Brando.Authorization.Boundary
+
+    Boundary.authorize(actor, :delete, entry) == :ok and
+      (Map.get(entry, :status) != :published or Boundary.authorize(actor, :publish, entry) == :ok)
+  end
+
+  defp purge_trashed_in_transaction(schema, id, deleted_at, actor) do
+    Repo.transaction(fn ->
+      case Brando.Authorization.Boundary.run(actor, :delete, schema, &purge_trashed(schema, id, deleted_at, &1)) do
+        :ok -> :ok
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> case do
+      {:ok, :ok} -> :ok
+      error -> error
+    end
+  end
+
+  # In the caller's transaction, and rolls nothing back itself: a refusal
+  # has written nothing, and a reference is rolled back to its savepoint
+  defp purge_trashed(schema, id, deleted_at, actor) do
+    trashed = Repo.one(from t in schema, where: t.id == ^id and t.deleted_at == ^deleted_at, lock: "FOR UPDATE")
+
+    cond do
+      is_nil(trashed) -> {:error, :not_in_trash}
+      not may_purge?(actor, trashed) -> {:error, :forbidden}
+      true -> purge_entries(schema, [trashed.id], actor)
+    end
+  end
+
+  defp video_deleted_on_purge(Brando.Videos.Video, id, deleted_at) do
+    video = Repo.one(from v in Brando.Videos.Video, where: v.id == ^id and v.deleted_at == ^deleted_at)
+    if video && Brando.Videos.Uploader.get_delete_timing(video) == :on_purge, do: video
+  end
+
+  defp video_deleted_on_purge(_schema, _id, _deleted_at), do: nil
+
+  # The row goes in `delete_remote/2`'s purge, under the video's lock and
+  # before the provider is asked, and is checked again there. Asked first
+  # too, so a refusal says why and leaves the provider alone.
+  defp purge_video_entry(video, actor) do
+    purge = fn ->
+      match?({:ok, :ok}, Repo.transaction(fn -> purge_trashed(Brando.Videos.Video, video.id, video.deleted_at, actor) end))
+    end
+
+    if may_purge?(actor, video) do
+      case Brando.Videos.Uploader.delete_remote(video, purge) do
+        {:error, :not_purged} -> {:error, :not_in_trash}
+        {:error, reason} when reason in [:busy, :holdings_unavailable] -> {:error, reason}
+        {:error, {:retry, _reason}} = error -> error
+        # Deleted here; any other answer is the provider's, which is not asked again
+        _deleted -> :ok
+      end
+    else
+      {:error, :forbidden}
+    end
+  end
+
   defp purge_rows_now(_schema, []), do: :ok
   defp purge_rows_now(schema, ids), do: purge_rows(schema, ids)
 

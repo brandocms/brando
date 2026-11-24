@@ -1,0 +1,1 @@
+- A listing's trash offers Delete permanently, on a row and for a selection: the entry is deleted for good now, with what the 30-day purge deletes, by someone who may delete it.

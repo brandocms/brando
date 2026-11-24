@@ -303,6 +303,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assigns
       |> assign(:language, language)
       |> assign(:default_actions?, default_actions?)
+      |> assign(:trashed?, not is_nil(Map.get(assigns.entry, :deleted_at)))
       |> assign(:processed_actions, processed_actions)
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
@@ -331,7 +332,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Edit")}
         </.action_button>
         <.action_button
-          :if={BrandoAdmin.Authorization.allowed?(:delete, @entry)}
+          :if={!@trashed? && BrandoAdmin.Authorization.allowed?(:delete, @entry)}
           id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -343,6 +344,19 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           destructive
         >
           {gettext("Delete")}
+        </.action_button>
+        <.action_button
+          :if={@trashed? && may_purge?(@entry)}
+          id={"action_#{@listing.name}_delete_entry_permanently_#{@entry.id}"}
+          entry_id={@entry.id}
+          language={@language}
+          event={JS.push("delete_entry_permanently", value: %{id: @entry.id, deleted_at: @entry.deleted_at})}
+          confirm={gettext("Its revisions and notes are deleted with it. This can't be undone.")}
+          confirm_title={gettext("Delete %{singular} permanently?", singular: String.downcase(@translated_singular))}
+          confirm_label={gettext("Delete permanently")}
+          destructive
+        >
+          {gettext("Delete permanently")}
         </.action_button>
         <.action_button
           :if={
@@ -440,6 +454,13 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       </.action_button>
     </CircleDropdown.render>
     """
+  end
+
+  # As `Brando.SoftDelete.Query.may_purge?/2` decides: one trashed while
+  # published takes the publish permission too
+  defp may_purge?(entry) do
+    BrandoAdmin.Authorization.allowed?(:delete, entry) and
+      (Map.get(entry, :status) != :published or BrandoAdmin.Authorization.allowed?(:publish, entry))
   end
 
   attr :active_sort, :any, default: nil

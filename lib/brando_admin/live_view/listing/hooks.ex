@@ -53,11 +53,21 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     |> attach_listing_info_hooks(schema)
   end
 
-  # Events the view handles itself (the `overrides` option) pass on to it
+  # Events the view handles itself (the `overrides` option) pass on to it. A
+  # view with a delete of its own (the user listing) deletes nothing
+  # permanently from the trash here.
   defp listing_event(event, params, socket, schema, overrides) do
-    if event in overrides,
-      do: {:cont, socket},
-      else: handle_listing_event(event, params, socket, schema)
+    cond do
+      event in overrides ->
+        {:cont, socket}
+
+      event in ~w(delete_entry_permanently delete_selected_permanently) and "delete_entry" in overrides ->
+        delete_refused(gettext("This list does not delete entries permanently. Nothing was deleted."))
+        {:halt, socket}
+
+      true ->
+        handle_listing_event(event, params, socket, schema)
+    end
   end
 
   defp handle_listing_event(
@@ -133,37 +143,34 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
     singular = schema.__naming__().singular
     context = schema.__modules__().context
-    translated_singular = translated_singular(schema)
 
     case apply(context, :"delete_#{singular}", [entry_id, user | delete_opts(schema, params)]) do
       {:ok, _} ->
-        send(
-          self(),
-          {:toast, "#{String.capitalize(translated_singular)} #{gettext("deleted")}"}
-        )
-
+        send(self(), {:toast, "#{String.capitalize(translated_singular(schema))} #{gettext("deleted")}"})
         update_list_entries(schema)
 
-      {:error, :group_has_synchronized_members} ->
-        send(self(), {:toast, synchronized_members_message(schema, entry_id)})
+      {:error, reason} ->
+        delete_refused(delete_error_message(schema, entry_id, reason))
+    end
 
-      {:error, {:fragments, :group_has_synchronized_members}} ->
-        send(self(), {:toast, synchronized_fragment_message()})
+    {:halt, socket}
+  end
 
-      {:error, :module_in_use} ->
-        send(self(), {:toast, module_in_use_message()})
+  # Delete permanently, in the trash: the row goes only if it is still in the
+  # trash as the menu showed it (`deleted_at`)
+  defp handle_listing_event(
+         "delete_entry_permanently",
+         %{"id" => entry_id, "deleted_at" => deleted_at},
+         %{assigns: %{current_user: user}} = socket,
+         schema
+       ) do
+    case purge_entry(schema, entry_id, deleted_at, user) do
+      :ok ->
+        send(self(), {:toast, "#{String.capitalize(translated_singular(schema))} #{gettext("deleted permanently")}"})
+        update_list_entries(schema)
 
-      {:error, {:fragments, :target_not_found}} ->
-        send(
-          self(),
-          {:toast, gettext("The page chosen for the fragments is gone or in the trash. Nothing was deleted.")}
-        )
-
-      {:error, _error} ->
-        send(
-          self(),
-          {:toast, "#{gettext("Error deleting")} #{String.capitalize(translated_singular)}"}
-        )
+      {:error, reason} ->
+        delete_refused(gettext("Not deleted.") <> " " <> purge_error_message(reason, 1))
     end
 
     {:halt, socket}
@@ -175,25 +182,46 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
          %{assigns: %{current_user: user, schema: schema}} = socket,
          _listing_schema
        ) do
-    ids = Jason.decode!(ids)
-
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    for entry_id <- ids do
-      case apply(context, :"delete_#{singular}", [entry_id, user]) do
-        {:error, :group_has_synchronized_members} ->
-          send(self(), {:toast, synchronized_members_message(schema, entry_id)})
-
-        {:error, :module_in_use} ->
-          send(self(), {:toast, module_in_use_message()})
-
-        _ ->
-          :ok
-      end
+    for entry_id <- Jason.decode!(ids) do
+      with {:error, reason} <- apply(context, :"delete_#{singular}", [entry_id, user]),
+           do: delete_refused(delete_error_message(schema, entry_id, reason))
     end
 
     update_list_entries(schema)
+
+    {:halt, socket}
+  end
+
+  # Delete permanently for a selection in the trash: each row as
+  # `delete_entry_permanently` deletes it, in a transaction of its own
+  defp handle_listing_event(
+         "delete_selected_permanently",
+         %{"entries" => entries},
+         %{assigns: %{current_user: user, schema: schema}} = socket,
+         _listing_schema
+       ) do
+    entries = for %{"id" => id} = entry <- Jason.decode!(entries), do: {id, entry["deleted_at"]}
+    names = entry_names(schema, Enum.map(entries, &elem(&1, 0)))
+
+    {deleted, refused} =
+      entries
+      |> Enum.map(fn {id, deleted_at} -> {id, purge_entry(schema, id, deleted_at, user)} end)
+      |> Enum.split_with(&match?({_id, :ok}, &1))
+
+    if deleted != [] do
+      count = length(deleted)
+      send(self(), {:toast, ngettext("1 entry deleted permanently", "%{count} entries deleted permanently", count)})
+      update_list_entries(schema)
+    end
+
+    for {reason, rows} <- Enum.group_by(refused, &elem(elem(&1, 1), 1), &elem(&1, 0)) do
+      listed = Enum.map_join(rows, ", ", &"“#{Map.get(names, &1, "##{&1}")}”")
+      message = gettext("Not deleted: %{entries}.", entries: listed) <> " " <> purge_error_message(reason, length(rows))
+      delete_refused(message)
+    end
 
     {:halt, socket}
   end
@@ -407,6 +435,96 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     Logger.error("(!) Error duplicating #{String.capitalize(singular)}: #{inspect(error, pretty: true)}")
   end
 
+  # A delete from the listing that was refused or failed: the error toast,
+  # which stays until closed
+  defp delete_refused(message), do: send(self(), {:toast, message, :error})
+
+  defp delete_error_message(schema, entry_id, :group_has_synchronized_members),
+    do: synchronized_members_message(schema, entry_id)
+
+  defp delete_error_message(_schema, _entry_id, {:fragments, :group_has_synchronized_members}),
+    do: synchronized_fragment_message()
+
+  defp delete_error_message(_schema, _entry_id, :module_in_use), do: module_in_use_message()
+
+  defp delete_error_message(_schema, _entry_id, {:fragments, :target_not_found}),
+    do: gettext("The page chosen for the fragments is gone or in the trash. Nothing was deleted.")
+
+  defp delete_error_message(_schema, _entry_id, :forbidden), do: gettext("You do not have permission to do this.")
+
+  defp delete_error_message(schema, _entry_id, _reason),
+    do: "#{gettext("Error deleting")} #{String.capitalize(translated_singular(schema))}"
+
+  # Why `count` entries were not deleted permanently
+  defp purge_error_message(:not_in_trash, count),
+    do:
+      ngettext(
+        "It is no longer in the trash as it was shown: restored, deleted, or moved there again since.",
+        "They are no longer in the trash as they were shown: restored, deleted, or moved there again since.",
+        count
+      )
+
+  defp purge_error_message(:forbidden, count),
+    do: ngettext("You may not delete it permanently.", "You may not delete them permanently.", count)
+
+  defp purge_error_message({:referenced, constraint}, count) do
+    case referring_schema(constraint) do
+      nil ->
+        ngettext("Other content still refers to it.", "Other content still refers to them.", count)
+
+      schema ->
+        kind = schema |> Brando.Blueprint.get_plural() |> String.downcase()
+        ngettext("Some %{kind} still refer to it.", "Some %{kind} still refer to them.", count, kind: kind)
+    end
+  end
+
+  defp purge_error_message({:retry, _reason}, _count),
+    do: gettext("The video provider could not be reached. Try again later.")
+
+  defp purge_error_message(:busy, _count),
+    do: gettext("The video is being changed at its provider. Try again in a moment.")
+
+  defp purge_error_message(:holdings_unavailable, _count),
+    do: gettext("Could not check whether another site uses the video. Try again later.")
+
+  defp purge_error_message(_reason, count),
+    do: ngettext("It could not be deleted.", "They could not be deleted.", count)
+
+  # The Blueprint whose table a foreign key `constraint` is on, by Ecto's
+  # name for it, `<table>_<column>_fkey`: the longest table name it starts with
+  defp referring_schema(constraint) when is_binary(constraint) do
+    (Brando.Blueprint.list_blueprints() ++ Brando.Blueprint.brando_blueprints())
+    |> Enum.uniq()
+    |> Enum.filter(fn schema ->
+      source = schema.__schema__(:source)
+      is_binary(source) and String.starts_with?(constraint, source <> "_")
+    end)
+    |> Enum.max_by(&String.length(&1.__schema__(:source)), fn -> nil end)
+  end
+
+  defp referring_schema(_constraint), do: nil
+
+  # The trash's deleted_at as the menu showed it, of the schema's type
+  defp purge_entry(schema, entry_id, deleted_at, user) do
+    deleted_at =
+      case Ecto.Type.cast(schema.__schema__(:type, :deleted_at), deleted_at) do
+        {:ok, deleted_at} -> deleted_at
+        _ -> nil
+      end
+
+    Brando.SoftDelete.Query.purge_entry(schema, entry_id, deleted_at, user)
+  end
+
+  defp entry_names(schema, ids) do
+    import Ecto.Query, only: [from: 2]
+
+    for entry <- Brando.Repo.all(from(t in schema, where: t.id in ^ids)),
+        name = BrandoAdmin.LiveView.Listing.DeleteDescription.entry_name(schema, entry),
+        name != nil,
+        into: %{},
+        do: {entry.id, name}
+  end
+
   defp synchronized_fragment_message,
     do:
       gettext(
@@ -575,6 +693,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
+        {:halt, socket}
+
+      {:toast, message, level}, %{assigns: %{current_user: current_user}} = socket ->
+        BrandoAdmin.Toast.send_to(current_user, message, %{level: level, type: :notification})
         {:halt, socket}
 
       {:set_content_language_and_navigate, language, url}, %{assigns: %{current_user: current_user}} = socket ->

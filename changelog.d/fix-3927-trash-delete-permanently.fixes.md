@@ -1,0 +1,1 @@
+- Delete on an entry in the trash no longer fails with "Error deleting", and a refused or failed delete from a listing shows its reason in an error toast instead of a success one.
