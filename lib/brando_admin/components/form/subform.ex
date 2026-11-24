@@ -134,6 +134,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                 <.inputs_for :let={sub_form} field={@field} skip_hidden>
                   <div
                     id={"#{sub_form.id}-entry"}
+                    data-row-key={SubformHelpers.row_key(sub_form)}
                     class={[
                       "subform-entry",
                       @subform.style == :inline && "inline",

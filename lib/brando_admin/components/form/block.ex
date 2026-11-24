@@ -56,6 +56,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.BlockField.Ops
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.RichTextAI
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Ecto.Changeset
@@ -395,6 +396,25 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> update_changeset_data_block_var(var_key, var_type, data)
     |> update_liquex_block_var(var_key, var_type, data)
     |> then(&{:ok, &1})
+  end
+
+  # An upload into a variable of a table row (`Render.table/1`) names the
+  # row by its key: the rows may have been reordered while it uploaded. It
+  # is delivered again to the variable's component in that row, wherever
+  # the row is now. If the row is gone, the asset stays in the library and
+  # the editor is told.
+  def update(%{event: "table_row_upload", target: %{"row_key" => row_key} = target, asset: asset}, socket) do
+    block_changeset = get_block_changeset(socket.assigns.form.source, socket.assigns.belongs_to)
+    row_keys = SubformHelpers.row_keys(block_changeset, :table_rows)
+
+    if row_key in row_keys do
+      component_id = __MODULE__.Render.table_row_var_id(socket.assigns.uid, row_key, target["var_key"])
+      send(self(), {:asset_ready, %{target | "component_id" => component_id, "row_key" => nil}, asset})
+    else
+      BrandoAdmin.Toast.upload_row_gone(%{id: socket.assigns.current_user_id})
+    end
+
+    {:ok, socket}
   end
 
   def update(%{event: "delete_block", uid: uid, dom_id: _dom_id}, socket), do: {:ok, delete_child(socket, uid)}

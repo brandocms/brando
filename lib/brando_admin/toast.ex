@@ -9,6 +9,20 @@ defmodule BrandoAdmin.Toast do
     end
   end
 
+  use Gettext, backend: Brando.Gettext
+
+  @doc """
+  Tells `user` that an upload stays in the library: the row it was uploaded
+  into was removed before it arrived.
+  """
+  def upload_row_gone(user) do
+    send_to(
+      user,
+      gettext("The upload is in the library. Its row was removed while it uploaded, so it was not added to the form."),
+      %{level: :error, type: :notification}
+    )
+  end
+
   def send(payload, opts \\ %{type: :mutation, level: :success})
 
   def send(payload, %{type: :mutation} = opts) do

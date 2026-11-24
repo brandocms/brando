@@ -608,6 +608,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
             when is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File) or
                    is_struct(asset, Brando.Videos.Video)
 
+  # A variable in a block's table row: the target names the block and the
+  # row's key, and the block delivers it to the row where it is now
+  # (`Block`, `"table_row_upload"`).
+  defp deliver_asset(%{"kind" => kind, "component_id" => block_id, "row_key" => row_key} = target, asset, _socket)
+       when kind in ["block_var", "entry_var", "block_var_gallery", "entry_var_gallery"] and
+              is_binary(block_id) and is_binary(row_key) and is_var_asset(asset) do
+    send_update(BrandoAdmin.Components.Form.Block, id: block_id, event: "table_row_upload", target: target, asset: asset)
+  end
+
   # Scalar vars hold image/file/video FKs — classify by struct (the target's
   # "asset_type" string can lie for e.g. self-hosted video), and refuse
   # anything else rather than writing a foreign id into file_id.
@@ -839,6 +848,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       expected_asset_id: target["expected_asset_id"],
       field: String.to_existing_atom(field),
       path: path,
+      row_key: target["row_key"],
       asset: asset
     )
   end
@@ -859,6 +869,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       asset_type: :gallery,
       field: String.to_existing_atom(field),
       path: target_path(target),
+      row_key: target["row_key"],
       component_id: target["component_id"],
       config_target: target["config_target"],
       asset: refresh_processed_image(image)
@@ -879,6 +890,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       asset_type: :gallery_video,
       field: String.to_existing_atom(field),
       path: target_path(target),
+      row_key: target["row_key"],
       component_id: target["component_id"],
       config_target: target["config_target"],
       asset: video

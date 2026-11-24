@@ -112,6 +112,13 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
   def row_keys(%Changeset{} = changeset, field_name),
     do: changeset |> current_entries(field_name) |> List.wrap() |> Enum.map(&row_key/1)
 
+  @doc """
+  The key of the row `form` is, when `path` (the field's, from its form's
+  name) runs through a list's row; nil otherwise. An upload carries it with
+  the row's index, as the rows may be reordered before it is delivered.
+  """
+  def path_row_key(form, path), do: if(Enum.any?(path, &is_integer/1), do: row_key(form))
+
   @doc "Whether `key` is a new row's, which the row renders as its hidden `_key` input."
   def new_key?("new-" <> _), do: true
   def new_key?(_key), do: false

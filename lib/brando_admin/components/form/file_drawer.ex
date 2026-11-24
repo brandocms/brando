@@ -57,6 +57,7 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
           data-asset-id={@edit_file.file && @edit_file.file.id}
           data-field={@edit_file.field}
           data-path={Jason.encode!(@edit_file.path || [])}
+          data-row-key={Map.get(@edit_file, :row_key)}
           data-config-target={
             @edit_file.field &&
               Brando.Assets.ConfigTarget.serialize({"file", Map.get(@edit_file, :schema) || @schema, @edit_file.field})

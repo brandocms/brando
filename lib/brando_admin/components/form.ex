@@ -799,6 +799,20 @@ defmodule BrandoAdmin.Components.Form do
       else: clear_entry_field_asset(socket, field, path)
   end
 
+  # An upload into a subform row names the row by its key as well as its
+  # index (`row_key` in `Brando.Uploads.AssetIntent`): the rows may have
+  # been reordered while it uploaded. It goes to the row where it is now. If
+  # the row is gone, the asset stays in the library and the editor is told.
+  def update(%{event: "entry_field_upload_complete", row_key: row_key, path: path} = assigns, socket)
+      when is_binary(row_key) do
+    assigns = Map.delete(assigns, :row_key)
+
+    case keyed_row_path(socket.assigns.form.source, path, row_key) do
+      {:ok, path} -> update(%{assigns | path: path}, socket)
+      :gone -> {:ok, upload_row_gone(socket, assigns)}
+    end
+  end
+
   def update(
         %{event: "entry_field_upload_complete", expected_asset_id: expected, field: field, path: path} = assigns,
         socket
@@ -10881,6 +10895,67 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     socket
+  end
+
+  defp upload_row_gone(socket, %{asset_type: asset_type}) do
+    if asset_type in [:image, :gallery], do: send_update(ImagePicker, id: "image-picker", refresh_images: true)
+    BrandoAdmin.Toast.upload_row_gone(socket.assigns.current_user)
+    socket
+  end
+
+  # `path` with the index the row `key` names has now in its list, counted
+  # as the form shows the rows (`SubformHelpers.row_key/1`); the rows above
+  # it in the path are taken by index. A new row's key is gone once the form
+  # is rebuilt from its changeset, so a row without one at the index is
+  # taken for it, as `same_row?/1` does. :gone when the form shows no such
+  # row, or shows it marked for deletion. A path through no list is as it is.
+  defp keyed_row_path(data, path, key) do
+    if Enum.any?(path, &is_integer/1), do: keyed_path(data, path, key), else: {:ok, path}
+  end
+
+  defp keyed_path(data, [field, index | rest], key) when is_atom(field) and is_integer(index) do
+    rows = path_child(data, field)
+
+    cond do
+      not is_list(rows) ->
+        :gone
+
+      Enum.any?(rest, &is_integer/1) ->
+        with row when not is_nil(row) <- form_row_at(rows, index),
+             {:ok, rest} <- keyed_path(row, rest, key),
+             do: {:ok, [field, index | rest]},
+             else: (_ -> :gone)
+
+      true ->
+        case keyed_index(rows, index, key) do
+          nil -> :gone
+          index -> {:ok, [field, index | rest]}
+        end
+    end
+  end
+
+  defp keyed_path(data, [field | rest], key) when is_atom(field) do
+    case path_child(data, field) do
+      %{} = row when not is_struct(row, Ecto.Association.NotLoaded) ->
+        with {:ok, rest} <- keyed_path(row, rest, key), do: {:ok, [field | rest]}
+
+      _ ->
+        :gone
+    end
+  end
+
+  defp keyed_path(_data, path, _key), do: {:ok, path}
+
+  defp keyed_index(rows, index, key) do
+    shown = rows |> shown_rows() |> Enum.map(&elem(&1, 0))
+    index = Enum.find_index(shown, &(SubformHelpers.row_key(&1) == key)) || keyless_index(shown, index, key)
+    row = index && Enum.at(shown, index)
+    if row && not marked_for_deletion?(row), do: index
+  end
+
+  defp keyless_index(shown, index, key) do
+    row = Enum.at(shown, index)
+    if SubformHelpers.new_key?(key) and not is_nil(row) and is_nil(SubformHelpers.row_key(row)), do: index
   end
 
   # The asset id a field shows, unless its row is gone

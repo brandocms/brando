@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.FormId
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
 
@@ -373,6 +374,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     edit_image = %{
       id: image_id,
       path: path,
+      row_key: SubformHelpers.path_row_key(form, path),
       field: field_name,
       relation_field: relation_field,
       schema: form.data.__struct__,

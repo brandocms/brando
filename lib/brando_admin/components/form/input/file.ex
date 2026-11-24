@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
 
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
@@ -213,6 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       edit_file: %{
         id: file_id,
         path: path,
+        row_key: SubformHelpers.path_row_key(field.form, path),
         field: field.field,
         relation_field: relation_field,
         schema: field.form.data.__struct__,

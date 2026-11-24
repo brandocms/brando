@@ -107,6 +107,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
           data-asset-id={@video && @video.id}
           data-field={@edit_video.field}
           data-path={Jason.encode!(@edit_video.path || [])}
+          data-row-key={Map.get(@edit_video, :row_key)}
           data-config-target={
             @edit_video.field &&
               Brando.Assets.ConfigTarget.serialize({"video", Map.get(@edit_video, :schema) || @schema, @edit_video.field})
