@@ -134,6 +134,21 @@ defmodule Brando.Content.Proposals.PreviewTranslationTest do
       assert message =~ "took too long"
     end
 
+    # A template reads the global locale (`Brando.HTML.I18n.translate/1`) or
+    # the site's backend, as well as Brando's own
+    test "renders in the caller's locales", c do
+      id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
+      {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)
+      backends = [Brando.Gettext, Brando.gettext()]
+      Gettext.put_locale("no")
+      for backend <- backends, do: Gettext.put_locale(backend, "no")
+
+      locales = fn _changeset -> [Gettext.get_locale() | Enum.map(backends, &Gettext.get_locale/1)] end
+
+      assert Brando.Content.Proposals.with_translation(proposal, {:new, "english"}, c.user, [], locales) ==
+               ["no", "no", "no"]
+    end
+
     test "is refused once the language is taken", c do
       id = prepare!(mcp(c), [create_op(c.source)], "Add the English page")
       {:ok, proposal} = Brando.Content.Proposals.get(id, c.user)

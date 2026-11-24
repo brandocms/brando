@@ -2858,12 +2858,15 @@ defmodule Brando.Content.Proposals do
   # block without querying, so no database timeout bounds it. What `fun`
   # raises is raised in the caller.
   defp run_before_deadline(fun, timeout) do
-    locale = Gettext.get_locale(Brando.Gettext)
+    # The global locale, which a template can read too, and the backends'
+    locale = Gettext.get_locale()
+    backends = for backend <- [Brando.Gettext, Brando.gettext()], do: {backend, Gettext.get_locale(backend)}
     run = fun |> Brando.Assets.SiteAssets.capture_override() |> Brando.Tenant.capture_context()
 
     task =
       Task.async(fn ->
-        Gettext.put_locale(Brando.Gettext, locale)
+        Gettext.put_locale(locale)
+        for {backend, backend_locale} <- backends, do: Gettext.put_locale(backend, backend_locale)
 
         try do
           {:ok, run.()}
