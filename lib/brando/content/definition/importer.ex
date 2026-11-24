@@ -210,8 +210,7 @@ defmodule Brando.Content.Definition.Importer do
         Phoenix.PubSub.broadcast(Brando.pubsub(), Definitions.topic(), {:definitions_applied, prefix})
         Brando.Repo.after_commit(fn -> Brando.Content.Definitions.ReleaseStatus.changed(prefix) end)
 
-        {:ok,
-         %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id], renamed: renamed}}
+        {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id], renamed: renamed}}
 
       {:error, reason} ->
         {:error, reason}

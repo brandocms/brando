@@ -181,7 +181,15 @@ defmodule Brando.Content.DefinitionRemovalsEnvironmentsTest do
       Var,
       for(
         %{id: id} <- inserted,
-        do: %{block_id: id, key: "theme", type: :select, label: %{"en" => "Theme"}, value: "light", inserted_at: now, updated_at: now}
+        do: %{
+          block_id: id,
+          key: "theme",
+          type: :select,
+          label: %{"en" => "Theme"},
+          value: "light",
+          inserted_at: now,
+          updated_at: now
+        }
       )
     )
   end

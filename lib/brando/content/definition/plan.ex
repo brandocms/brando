@@ -116,7 +116,9 @@ defmodule Brando.Content.Definition.Plan do
   def renamed_text(%{left?: true, uid: uid, text: text}), do: "#{uid}: #{text}"
 
   def renamed_text(%{uid: uid, renames: renames}),
-    do: "#{uid}: moved " <> Enum.map_join(renames, ", ", &"#{&1.kind} #{&1.from} → #{&1.to} in #{count(&1.blocks, "block")}")
+    do:
+      "#{uid}: moved " <>
+        Enum.map_join(renames, ", ", &"#{&1.kind} #{&1.from} → #{&1.to} in #{count(&1.blocks, "block")}")
 
   @doc "An update's `move_text/1` and `removal_text/1`, joined, or nil when it has neither."
   def changes_text(item) do
@@ -144,8 +146,11 @@ defmodule Brando.Content.Definition.Plan do
       when not is_nil(user_id) do
     drops =
       case dropped(item) do
-        [] -> []
-        dropped -> [resolve_command(uid, user_id, Enum.flat_map(dropped, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end), [])]
+        [] ->
+          []
+
+        dropped ->
+          [resolve_command(uid, user_id, Enum.flat_map(dropped, fn {kind, key} -> ["--drop", "#{kind}:#{key}"] end), [])]
       end
 
     List.wrap(move_command(plan, item)) ++ drops

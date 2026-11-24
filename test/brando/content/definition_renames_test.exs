@@ -538,7 +538,7 @@ defmodule Brando.Content.DefinitionRenamesTest do
       {:ok, report} = Release.plan(opts)
       assert [%{moves: %{left?: true}}] = report.items
       assert Proposed.build(report).renames == %{}
-      assert "    resolve: " <> map in Release.lines(report)
+      assert ("    resolve: " <> map) in Release.lines(report)
 
       {:ok, %{batch_id: batch_id, result: result}} =
         Release.apply(:all, opts ++ [wait: false, renames: Release.renames_digest(report)])
@@ -554,7 +554,7 @@ defmodule Brando.Content.DefinitionRenamesTest do
       # The release's report keeps the command while blocks hold the old key
       {:ok, applied} = Release.plan(opts)
       assert applied.pending == 0
-      assert "    resolve: " <> map in Release.lines(applied)
+      assert ("    resolve: " <> map) in Release.lines(applied)
 
       map |> String.split() |> Enum.drop(2) |> run_task()
       assert var(held, "heading").value == "Kept words"
@@ -688,7 +688,12 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert ["  resolve: " <> ^map, "  resolve: " <> ^drop] = Enum.filter(output, &(&1 =~ "resolve:"))
 
       output = import!(c)
-      assert Enum.any?(output, &(&1 =~ "#{c.module.uid}: var tagline → heading: the apply moves no values over its limit"))
+
+      assert Enum.any?(
+               output,
+               &(&1 =~ "#{c.module.uid}: var tagline → heading: the apply moves no values over its limit")
+             )
+
       assert Enum.any?(output, &(&1 =~ map))
       assert var(held, "tagline").value == "Kept words"
       assert var(held, "heading").value == "Default tagline"

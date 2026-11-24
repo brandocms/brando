@@ -1330,7 +1330,9 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         gettext("Renames refs or vars. Blocks’ values can’t move to the new names yet, so this module isn’t applied.")
 
       Enum.any?(items, &match?(%{moves: %{left?: true}}, &1)) ->
-        gettext("Renames refs or vars. Blocks keep their values under the old names until the resolve command moves them.")
+        gettext(
+          "Renames refs or vars. Blocks keep their values under the old names until the resolve command moves them."
+        )
 
       true ->
         gettext("Renames refs or vars. Blocks’ values move to the new names in the apply.")

@@ -660,8 +660,14 @@ defmodule Brando.Content.Definitions.Release do
   # which an apply over the limit left for the resolve command
   defp leftover_lines(plan, item) do
     case Plan.resolve_lines(plan, item) do
-      [] -> []
-      lines -> ["  applied #{item.kind} #{item.name} (#{item.uid}): blocks keep values under renamed keys" | Enum.map(lines, &("    " <> &1))]
+      [] ->
+        []
+
+      lines ->
+        [
+          "  applied #{item.kind} #{item.name} (#{item.uid}): blocks keep values under renamed keys"
+          | Enum.map(lines, &("    " <> &1))
+        ]
     end
   end
 
