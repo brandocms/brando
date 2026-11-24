@@ -21,7 +21,10 @@ defmodule Brando.Repo.Migrations.Brando247AddAutoApplyToMCPGrants do
   def up do
     alter table(:mcp_grants, prefix: "public") do
       add_if_not_exists :auto_apply, :text, null: false, default: "none"
-      add_if_not_exists :auto_apply_set_by_id, references(:users, on_delete: :nilify_all, prefix: "public")
+
+      add_if_not_exists :auto_apply_set_by_id,
+                        references(:users, on_delete: :nilify_all, prefix: "public")
+
       add_if_not_exists :auto_apply_set_at, :utc_datetime_usec
     end
 

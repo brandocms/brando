@@ -16,7 +16,10 @@ defmodule Brando.Repo.Migrations.Brando188RemoveUnusedLegacyWrapper do
       from(m in "content_modules",
         as: :module,
         where: m.class == "legacy-content" and is_nil(m.deleted_at),
-        where: not exists(from(b in "content_blocks", where: b.module_id == parent_as(:module).id, select: 1)),
+        where:
+          not exists(
+            from(b in "content_blocks", where: b.module_id == parent_as(:module).id, select: 1)
+          ),
         select: m.id
       )
 

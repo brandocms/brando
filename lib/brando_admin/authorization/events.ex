@@ -344,7 +344,7 @@ defmodule BrandoAdmin.Authorization.Events do
     "BrandoAdmin.LiveView.Listing.Hooks" => [
       read: ~w(describe_delete edit_entry),
       write:
-        ~w(create_entry_translation create_entry_translation_with_ai delete_entry delete_selected duplicate_entry duplicate_entry_to_language duplicate_selected_to_language rerender_entry set_status translate_entry_to_language undelete_entry)
+        ~w(create_entry_translation create_entry_translation_with_ai delete_entry delete_entry_permanently delete_selected delete_selected_permanently duplicate_entry duplicate_entry_to_language duplicate_selected_to_language rerender_entry set_status translate_entry_to_language undelete_entry)
     ],
     "BrandoAdmin.MCP.ConsentLive" => [
       read: ~w(deny return),

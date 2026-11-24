@@ -4,7 +4,7 @@ defmodule Brando.Migrations.Galleries.Gallery.RenameGalleriesDomain do
   def up do
     rename table(:images_galleries), to: table(:galleries)
     rename table(:images_gallery_images), to: table(:galleries_gallery_objects)
-    
+
     alter table(:galleries_gallery_objects) do
       add :video_id, references(:videos, on_delete: :delete_all)
     end

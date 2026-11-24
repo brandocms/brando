@@ -3,6 +3,7 @@ defmodule Brando.Repo.Migrations.HardenRevisions do
 
   def up do
     execute "ALTER TABLE revisions ADD COLUMN IF NOT EXISTS schema_version integer NOT NULL DEFAULT 0"
+
     execute "ALTER TABLE revisions ADD COLUMN IF NOT EXISTS scheduled boolean NOT NULL DEFAULT false"
 
     execute "UPDATE revisions SET active = false WHERE active IS NULL"
@@ -37,7 +38,9 @@ defmodule Brando.Repo.Migrations.HardenRevisions do
   end
 
   def down do
-    drop_if_exists index(:revisions, [:entry_type, :entry_id], name: :revisions_one_active_per_entry_index)
+    drop_if_exists index(:revisions, [:entry_type, :entry_id],
+                     name: :revisions_one_active_per_entry_index
+                   )
 
     execute "ALTER TABLE revisions DROP COLUMN IF EXISTS scheduled"
   end

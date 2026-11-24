@@ -21,7 +21,9 @@ defmodule Brando.Repo.Migrations.Brando248AddImagesSources do
         timestamps(updated_at: false)
       end
 
-      create_if_not_exists unique_index(:images_sources, [:image_id, :source, :ref, "coalesce(variant, '')"],
+      create_if_not_exists unique_index(
+                             :images_sources,
+                             [:image_id, :source, :ref, "coalesce(variant, '')"],
                              name: :images_sources_image_id_source_ref_variant_index,
                              prefix: prefix
                            )

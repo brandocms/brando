@@ -10,16 +10,18 @@ defmodule Brando.Repo.Migrations.ConvertGlobalsDataValueToValue do
     flush()
 
     query =
-      from c in "sites_global_categories",
+      from(c in "sites_global_categories",
         select: %{
           id: c.id
         }
+      )
 
-    categories = Brando.repo.all(query)
+    categories = Brando.repo().all(query)
 
     for category <- categories do
-      globals_query = from g in "sites_globals",
-        select: %{
+      globals_query =
+        from(g in "sites_globals",
+          select: %{
             id: g.id,
             key: g.key,
             label: g.label,
@@ -28,16 +30,18 @@ defmodule Brando.Repo.Migrations.ConvertGlobalsDataValueToValue do
             global_category_id: g.global_category_id
           },
           where: g.global_category_id == ^category.id
+        )
 
-      globals = Brando.repo.all(globals_query)
+      globals = Brando.repo().all(globals_query)
       category = Map.put(category, :globals, globals)
 
       new_category = process_category(category)
 
       update_query =
-        from c in "sites_global_categories",
+        from(c in "sites_global_categories",
           where: c.id == ^category.id,
           update: [set: [globals: ^new_category.globals]]
+        )
 
       Brando.Repo.update_all(update_query, [])
     end
@@ -93,6 +97,7 @@ defmodule Brando.Repo.Migrations.ConvertGlobalsDataValueToValue do
 
   def process_global(%{type: "datetime", data: %{"value" => value}} = global) do
     {:ok, dt, _} = DateTime.from_iso8601(value)
+
     %{
       type: "datetime",
       value: dt,
@@ -111,6 +116,5 @@ defmodule Brando.Repo.Migrations.ConvertGlobalsDataValueToValue do
   end
 
   def down do
-
   end
 end

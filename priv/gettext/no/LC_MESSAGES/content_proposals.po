@@ -120,6 +120,11 @@ msgstr "%{key} viser teksten modulen gir den."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{key} takes null for no link, not \"\"."
+msgstr "%{key} tar null for ingen lenke, ikke \"\"."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{language} is not one of the site's languages for %{name} entries."
 msgstr "%{language} er ikke et av nettstedets språk for %{name}-oppføringer."
 
@@ -1121,6 +1126,11 @@ msgstr "identifiers er en liste med identifikator-id-er."
 #, elixir-autogen, elixir-format
 msgid "no images"
 msgstr "ingen bilder"
+
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "no link"
+msgstr "ingen lenke"
 
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format

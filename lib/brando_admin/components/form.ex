@@ -5419,7 +5419,9 @@ defmodule BrandoAdmin.Components.Form do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <%!-- `data-entry-form`: where the content language switch sends
+         `create_translation` (`ContentLanguageSwitch`) --%>
+    <div data-entry-form={@entry_id}>
       <Content.modal
         :if={@pending_permalink_redirect}
         id={"#{@id}-permalink-redirect"}
@@ -7805,6 +7807,9 @@ defmodule BrandoAdmin.Components.Form do
 
   # A language whose version is in the trash is confirmed first, and the event
   # carries `replace`: that version is deleted for good and the new one created.
+  # From the content language switch it carries `content_language`: the new
+  # entry's language becomes the person's content language, as when the switch
+  # opens a version.
   def handle_event("create_translation", %{"language" => language} = params, socket) do
     %{schema: schema, current_user: user, translation: state} = socket.assigns
     source_id = (state && state.source && state.source.id) || socket.assigns.entry.id
@@ -7817,6 +7822,12 @@ defmodule BrandoAdmin.Components.Form do
     with :ok <- Brando.Authorization.Boundary.authorize(user, :create, schema),
          {:ok, target} <- create.(schema, source_id, language, user) do
       BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+
+      if params["content_language"] in [true, "true"],
+        do:
+          {:ok, _user} =
+            Brando.Users.update_user(user, %{config: %{content_language: language}}, :system, show_notification: false)
+
       {:noreply, push_navigate(socket, to: schema.__admin_route__(:update, [target.id]))}
     else
       error -> {:noreply, translation_action_failed(socket, error)}

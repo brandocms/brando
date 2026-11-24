@@ -149,6 +149,32 @@ defmodule Mix.Brando.Igniter.InstallFormatTest do
     refute IgniterCase.source(direct, "lib/studio/presence.ex") =~ "marked-by-config"
   end
 
+  test "mix format in a phx.new project leaves every migration copy as it is" do
+    result = Igniter.compose_task(phoenix_project(), "brando.gen.migrations", [])
+    assert result.issues == []
+    dot_formatter = Rewrite.dot_formatter(result.rewrite)
+
+    copies =
+      for {"priv/repo/migrations/" <> name = path, source} <- result.rewrite.sources,
+          name =~ ~r/^\d+_brando_\d+_/,
+          do: {path, Rewrite.Source.get(source, :content)}
+
+    templates = Path.wildcard(Path.join(Brando.Migration.TemplateDrift.templates_dir(), "brando_*.exs"))
+    assert length(copies) == length(templates)
+
+    # The site's migrations formatter: ecto_sql's exported options
+    opts = Rewrite.DotFormatter.formatter_opts_for_file(dot_formatter, @migration)
+    assert {:create_if_not_exists, 1} in opts[:locals_without_parens]
+
+    # What mix format does with them
+    changed =
+      for {path, contents} <- copies,
+          IO.iodata_to_binary([Code.format_string!(contents, opts), ?\n]) != contents,
+          do: path
+
+    assert changed == []
+  end
+
   # Files.create relies on this; an Igniter upgrade that changes it must fail here.
   test "Igniter.format/2 with no paths reads the config and formatter files and formats nothing" do
     unformatted = "defmodule Studio.Loose do\n def a,   do:   1\nend\n"

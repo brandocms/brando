@@ -39,7 +39,7 @@ defmodule Brando.Content.Proposals.Codec do
   for a gallery. In `values`, a media var takes `%{"kind" => …, "id" => …}`,
   `%{"asset" => "image1"}` or `%{"gallery" => […]}`, and a link var an entry
   as `%{"content_type" => …, "id" => …}`, or
-  `%{"link" => url | entry, "text" => text, "new_tab" => boolean}` for its
+  `%{"link" => url | entry | nil, "text" => text, "new_tab" => boolean}` for its
   text and target too (without `"link"` it keeps its target). A text, in `texts` or
   `set_block_text`, may be `%{"from" => %{"block_uid" => uid, "ref" => name}}`:
   the text of a saved block's ref in the same entry and field, which
@@ -620,7 +620,8 @@ defmodule Brando.Content.Proposals.Codec do
   defp snapshot(_), do: nil
 
   # A block variable's value. A link may come with its text or new-tab
-  # setting; without "link" (or "url"), it keeps where it points.
+  # setting; without "link" (or "url"), it keeps where it points, and with
+  # `"link": null` it points nowhere (`:none`).
   defp block_values(values, attachments),
     do: Map.new(values, fn {key, value} -> {key, block_value(value, attachments)} end)
 
@@ -628,6 +629,7 @@ defmodule Brando.Content.Proposals.Codec do
        when is_map_key(map, "link") or is_map_key(map, "text") or is_map_key(map, "new_tab") do
     target =
       cond do
+        is_map_key(map, "link") and is_nil(map["link"]) -> :none
         is_map_key(map, "link") -> link_target!(map["link"], attachments)
         is_map_key(map, "url") -> link_target!(map["url"], attachments)
         is_map_key(map, "content_type") -> link_target!(Map.take(map, ["content_type", "id"]), attachments)
@@ -672,7 +674,12 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp value({:link, target, opts}) do
     opts = Map.new(opts, fn {key, value} -> {to_string(key), value} end)
-    if target, do: Map.put(opts, "link", value(target)), else: opts
+
+    case target do
+      nil -> opts
+      :none -> Map.put(opts, "link", nil)
+      target -> Map.put(opts, "link", value(target))
+    end
   end
 
   defp value({:new, ref}), do: %{"new" => ref}

@@ -492,7 +492,8 @@ must not declare the same field twice. Together they describe the complete
 initial ref data. Export places fields protected by the block type, such as a
 header's `text`, in `default`, and other fields in `config`. Those labels do not
 override Brando's synchronization rules: each block type still decides which
-editor values survive a definition update.
+editor values survive a definition update
+([What a module save changes in a block](#what-a-module-save-changes-in-a-block)).
 
 Refs also support `uid`, `description`, `active`, `collapsed` and `assets`.
 Declaration order determines ref order. A blocks ref can declare
@@ -1245,6 +1246,31 @@ server should do the rendering.
 
 If saving the new lockfile fails after commit, export into a new directory before
 the next edit. The CLI reports this separately from an import rollback.
+
+## What a module save changes in a block
+
+A module save syncs every block that uses the module. On each ref the module
+defines, the block keeps the fields the table below lists, and takes the
+module's other settings for that ref: its classes, lazyload, placeholder,
+formats, playback, a video's poster and the like. The asset an editor chose
+(the picture, video, gallery or file) always stays.
+
+| Ref type | Stays with the block |
+| --- | --- |
+| `picture` | `title` (the caption), `credits`, `alt`, `link` |
+| `video` | `title` (the caption), `cover_image` |
+| `gallery` | `gallery_object_overrides` (each object's caption, credits, alt text and playback) |
+| `file` | `title`, `label`, `description` |
+| `header`, `text`, `markdown`, `comment` | `text` |
+| `html` | `text`, `params`, `values` |
+| `input` | `value` |
+| `svg` | `code` |
+| `map` | `embed_url`, `source` (the address an editor pasted) |
+| `markdown_source` | `source_id`, `policy`, `version_id` |
+
+A picture, video, gallery or file in a `media` ref keeps the same fields, and
+takes the rest from the media ref's template for its type. Vars keep their
+values and take the rest of their definition from the module.
 
 ## Entries open during a module save
 

@@ -70,7 +70,8 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
       ) do
     {mod, refs} =
       Enum.reduce(module_block["data"]["refs"] || [], {module_block, []}, fn
-        %{"data" => %{"type" => "datasource", "data" => ds_data}, "name" => ref_name}, {updated_mod, updated_refs} ->
+        %{"data" => %{"type" => "datasource", "data" => ds_data}, "name" => ref_name},
+        {updated_mod, updated_refs} ->
           ds_module_query =
             from(m in "content_modules",
               select: [:id, :vars, :refs, :wrapper, :code],
@@ -268,7 +269,9 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
       )
     )
     |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
-    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.reject(
+      &(&1.table_name in ~w(revisions content_modules sites_globals pages_properties))
+    )
     |> Enum.map(fn row -> {row.table_name, String.to_atom(row.column_name)} end)
   end
 end

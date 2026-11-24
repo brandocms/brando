@@ -11,7 +11,7 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
     flush()
 
     query =
-      from m in "content_modules",
+      from(m in "content_modules",
         select: %{
           id: m.id,
           name: m.name,
@@ -24,7 +24,9 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
           wrapper: m.wrapper,
           vars: m.vars,
           refs: m.refs
-      }, where: m.multi == true
+        },
+        where: m.multi == true
+      )
 
     modules = Brando.Repo.all(query)
 
@@ -39,13 +41,15 @@ defmodule Brando.Repo.Migrations.RestructureMultiModule do
       query =
         from(m in "content_modules",
           where: m.id == ^module.id,
-          update: [set: [
-            entry_template: ^entry_template,
-            code: ^wrapper_code,
-            wrapper_boolean: true,
-            vars: "[]",
-            refs: "[]"
-          ]]
+          update: [
+            set: [
+              entry_template: ^entry_template,
+              code: ^wrapper_code,
+              wrapper_boolean: true,
+              vars: "[]",
+              refs: "[]"
+            ]
+          ]
         )
 
       Brando.Repo.update_all(query, [])

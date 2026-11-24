@@ -24,7 +24,11 @@ defmodule Brando.Repo.Migrations.Brando244AddFragmentAlternates do
         timestamps()
       end
 
-      create_if_not_exists unique_index(:pages_fragments_alternates, [:entry_id, :linked_entry_id], prefix: prefix)
+      create_if_not_exists unique_index(
+                             :pages_fragments_alternates,
+                             [:entry_id, :linked_entry_id],
+                             prefix: prefix
+                           )
     end
   end
 

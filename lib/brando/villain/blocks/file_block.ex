@@ -30,6 +30,10 @@ defmodule Brando.Villain.Blocks.FileBlock do
     end
   end
 
+  # The texts an editor gives this placement of the file: a module sync keeps
+  # them, and the module's settings (class, download …) follow it
+  def protected_attrs, do: [:title, :label, :description]
+
   def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target_changeset) do
     Brando.Villain.Block.merge_ref_template(:template_file, ref_src, ref_target_changeset, protected_attrs())
   end

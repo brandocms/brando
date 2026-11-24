@@ -684,9 +684,10 @@ defmodule Brando.Content.StaleBlocks do
 
   def var_preview(%Var{type: :link} = var) do
     target =
-      case var.identifier do
-        %{title: title} when is_binary(title) -> title
-        _ -> var.value
+      case {Var.link_target(var), var.identifier} do
+        {{:identifier, _}, %{title: title}} when is_binary(title) -> title
+        {url, _} when is_binary(url) -> url
+        _ -> nil
       end
 
     [var.link_text, target] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" → ") |> plain()

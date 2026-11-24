@@ -17,13 +17,15 @@ defmodule Brando.Migrations.AddSEO do
 
     # migrate values from identity
     identity_query =
-      from identity in "sites_identity",
+      from(identity in "sites_identity",
         select: %{
           description: identity.description,
           title: identity.title,
           image: identity.image,
           url: identity.url
-        }, limit: 1
+        },
+        limit: 1
+      )
 
     identity = Brando.Repo.one(identity_query)
 
@@ -32,6 +34,7 @@ defmodule Brando.Migrations.AddSEO do
       User-agent: *
       Disallow: /admin/
       """
+
       seo = %{
         fallback_meta_title: identity.title,
         fallback_meta_image: identity.image,

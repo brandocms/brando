@@ -4,11 +4,14 @@ defmodule Brando.Repo.Migrations.MigrateGlobalsToVars do
 
   def up do
     # sites_global_sets has embeds_many :globals. transfer these to content_vars and set global_set_id
-    query = from g in "sites_global_sets", select: %{
-      id: g.id,
-      creator_id: g.creator_id,
-      globals: g.globals
-    }
+    query =
+      from(g in "sites_global_sets",
+        select: %{
+          id: g.id,
+          creator_id: g.creator_id,
+          globals: g.globals
+        }
+      )
 
     global_sets = Brando.Repo.all(query)
 
@@ -30,6 +33,7 @@ defmodule Brando.Repo.Migrations.MigrateGlobalsToVars do
   defp process_vars(global_set_id, creator_id, vars) do
     for var <- vars do
       base_var = build_var(var, global_set_id, creator_id)
+
       new_var =
         case var do
           %{"type" => "color"} ->

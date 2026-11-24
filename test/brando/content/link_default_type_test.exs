@@ -128,4 +128,19 @@ defmodule Brando.Content.LinkDefaultTypeTest do
       assert Ecto.Changeset.get_field(changeset, :link_type) == :url
     end
   end
+
+  # The block editor's type switch: a URL link lets go of its entry, so
+  # switching back to Content shows none chosen.
+  test "a link switched to URL lets go of its entry", %{user: user} do
+    var = link_var("cta", link_type: :identifier, identifier_id: 7)
+
+    switched = Content.Block.var_changeset(var, %{"link_type" => "url", "identifier_id" => "7"}, user)
+    assert Ecto.Changeset.get_field(switched, :identifier_id) == nil
+
+    back = switched |> Ecto.Changeset.apply_changes() |> Content.Block.var_changeset(%{"link_type" => "identifier"}, user)
+    assert Ecto.Changeset.get_field(back, :identifier_id) == nil
+
+    kept = Content.Block.var_changeset(var, %{"link_type" => "identifier", "identifier_id" => "7"}, user)
+    assert Ecto.Changeset.get_field(kept, :identifier_id) == 7
+  end
 end

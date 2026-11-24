@@ -206,6 +206,48 @@ defmodule Brando.Translations do
     |> Repo.all()
   end
 
+  @doc """
+  The other language versions of `entry` that `actor` may read, one per
+  language, keyed by language code: the entries linked to it as alternates,
+  those with its `matched_by` values, and, for a member of a synchronized
+  group, the group's other members, those in the trash included. Where a
+  language has a version in the trash and one outside it, the one outside.
+  """
+  def versions_by_language(schema, %{id: id} = entry, actor) do
+    %{linked: linked} = language_versions(schema, entry, actor)
+    language = to_string(entry.language)
+
+    (linked ++ group_versions(schema, id, actor) ++ matched_versions(schema, entry, actor))
+    |> Enum.reject(&(&1.id == id or to_string(&1.language) == language))
+    |> Enum.sort_by(&match?(%{deleted_at: %DateTime{}}, &1))
+    |> Enum.uniq_by(&to_string(&1.language))
+    |> Map.new(&{to_string(&1.language), &1})
+  end
+
+  # The entries of the group `id` is a member of, those in the trash included
+  defp group_versions(schema, id, actor) do
+    case synchronized?(schema) && get_member(schema, id) do
+      %Member{group_id: group_id} ->
+        ids = for %{entry_id: entry_id} <- list_members(group_id), entry_id != id, do: entry_id
+
+        from(e in schema, where: e.id in ^ids, order_by: [asc: e.id])
+        |> readable(schema, actor)
+        |> Repo.all()
+
+      _ ->
+        []
+    end
+  end
+
+  # The entries with `entry`'s `matched_by` values in another language, those
+  # in the trash included
+  defp matched_versions(schema, entry, actor) do
+    case matching_values_query(schema, entry) do
+      nil -> []
+      query -> query |> readable(schema, actor) |> Repo.all()
+    end
+  end
+
   defp alternate_ids(schema, id),
     do: Repo.all(from a in Module.concat(schema, Alternate), where: a.entry_id == ^id, select: a.linked_entry_id)
 
@@ -213,14 +255,18 @@ defmodule Brando.Translations do
   # `entry`'s `matched_by` values; nil without `matched_by`, or when one of
   # `entry`'s values is nil: no other entry shares a value it lacks
   defp same_values_query(schema, entry) do
+    case matching_values_query(schema, entry) do
+      nil -> nil
+      query -> exclude_trashed(query, schema)
+    end
+  end
+
+  defp matching_values_query(schema, entry) do
     values = Enum.map(matched_by(schema), &{&1, Map.get(entry, &1)})
 
     if values != [] and Enum.all?(values, fn {_field, value} -> not is_nil(value) end) do
       query = from(e in schema, where: e.id != ^entry.id and e.language != ^entry.language)
-
-      values
-      |> Enum.reduce(query, fn {field, value}, query -> from(e in query, where: field(e, ^field) == ^value) end)
-      |> exclude_trashed(schema)
+      Enum.reduce(values, query, fn {field, value}, query -> from(e in query, where: field(e, ^field) == ^value) end)
     end
   end
 
@@ -399,20 +445,10 @@ defmodule Brando.Translations do
 
         cond do
           is_nil(trashed) -> {:error, :language_exists}
-          not may_delete_for_good?(actor, trashed) -> {:error, :language_in_trash}
+          not Brando.SoftDelete.Query.may_purge?(actor, trashed) -> {:error, :language_in_trash}
           true -> Brando.SoftDelete.Query.purge_entries(schema, [entry_id], actor, %{"replaced" => true})
         end
     end
-  end
-
-  # What deleting an entry takes: the delete permission, and for a published
-  # one the publish permission too, as trashing it does. A version trashed
-  # while published still has that status.
-  defp may_delete_for_good?(actor, entry) do
-    alias Brando.Authorization.Boundary
-
-    Boundary.authorize(actor, :delete, entry) == :ok and
-      (Map.get(entry, :status) != :published or Boundary.authorize(actor, :publish, entry) == :ok)
   end
 
   defp enrol_target(schema, source_id, language, actor, mark_translate?) do

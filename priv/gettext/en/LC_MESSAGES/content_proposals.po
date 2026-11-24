@@ -120,6 +120,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{key} takes null for no link, not \"\"."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{language} is not one of the site's languages for %{name} entries."
 msgstr ""
 
@@ -1120,6 +1125,11 @@ msgstr ""
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "no images"
+msgstr ""
+
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "no link"
 msgstr ""
 
 #: lib/brando/content/proposals/review.ex

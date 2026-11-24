@@ -258,20 +258,22 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
       cover = Enum.find(refs, &(&1.name == "cover"))
       heading = Enum.find(vars, &(&1.key == "heading"))
 
-      alt = %{
+      # A setting that follows the module on a module save: the module's
+      # cover has no classes
+      classes = %{
         "refs" => [
-          %{"id" => to_string(cover.id), "data" => %{"type" => "picture", "data" => %{"alt" => "A's alt"}}}
+          %{"id" => to_string(cover.id), "data" => %{"type" => "picture", "data" => %{"img_class" => "a-classes"}}}
         ]
       }
 
-      editor_a |> form_changeset_with(c.user, %{uid => alt}) |> save!(c.user)
+      editor_a |> form_changeset_with(c.user, %{uid => classes}) |> save!(c.user)
 
       # B saves before the reload of A's save reaches B's block field
       vars = %{"vars" => [%{"id" => to_string(heading.id), "value" => "B's heading"}]}
       editor_b |> form_changeset_with(c.user, %{uid => vars}) |> save!(c.user)
 
       block = saved_block(uid)
-      assert ref_data(block, "cover").alt == "A's alt"
+      assert ref_data(block, "cover").img_class == "a-classes"
       assert Enum.find(block.vars, &(&1.key == "heading")).value == "B's heading"
     end
 

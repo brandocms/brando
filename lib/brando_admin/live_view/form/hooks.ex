@@ -2,6 +2,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   @moduledoc """
   Runtime hooks for the public `BrandoAdmin.LiveView.Form` entry point.
   """
+  import Ecto.Query, only: [from: 2]
   import Phoenix.LiveView
   import Phoenix.Component
   use Gettext, backend: Brando.Gettext
@@ -20,6 +21,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         |> assign_schema(schema)
         |> assign_entry_id(entry_id)
         |> assign_title()
+        |> assign_language_entry()
         |> assign(:mutation_listeners, %{})
         |> attach_translate_with_ai()
 
@@ -251,6 +253,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
      |> assign_action(:update)
      |> assign_entry_id(entry_id)
      |> assign_title()
+     |> assign_language_entry()
      |> then(&if(frontend?(&1), do: &1, else: Tabs.arm(&1, &1.assigns.schema, entry_id)))}
   end
 
@@ -1512,6 +1515,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # changes it holds from the saver by its tab.
   defp handle_hooks_block_sync_info({:entry_saved, %{tab: from} = saved}, socket) do
     schema = socket.assigns[:schema]
+    # A save may change the entry's language
+    socket = assign_language_entry(socket)
 
     if schema && from != BrandoAdmin.Presence.tab() do
       send_update(BrandoAdmin.Components.Form,
@@ -1693,6 +1698,20 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp assign_entry_id(socket, entry_id) do
     assign(socket, :entry_id, entry_id)
+  end
+
+  # The entry the content language switch opens the language versions of
+  # (`BrandoAdmin.Components.ContentLanguageSwitch`), with its language: only
+  # for a schema with languages. Without it the switch sets the preference only.
+  defp assign_language_entry(%{assigns: %{schema: schema, entry_id: id}} = socket) do
+    language = if id && schema.has_trait(Brando.Trait.Translatable), do: entry_language(schema, id)
+    assign(socket, :content_language_entry, language && %{schema: schema, id: id, language: to_string(language)})
+  end
+
+  defp entry_language(schema, id) do
+    Brando.Repo.one(from e in schema, where: e.id == ^id, select: e.language)
+  rescue
+    Ecto.Query.CastError -> nil
   end
 
   # Only a picture of what is coming: a blueprint it can't describe gets the

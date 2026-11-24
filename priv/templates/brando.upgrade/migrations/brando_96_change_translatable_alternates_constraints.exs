@@ -18,7 +18,9 @@ defmodule Brando.Repo.Migrations.ChangeTranslatableAlternatesConstraints do
 
         alter table(alternate_source) do
           modify :entry_id, references(blueprint.__schema__(:source), on_delete: :delete_all)
-          modify :linked_entry_id, references(blueprint.__schema__(:source), on_delete: :delete_all)
+
+          modify :linked_entry_id,
+                 references(blueprint.__schema__(:source), on_delete: :delete_all)
         end
       end
     end

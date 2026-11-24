@@ -41,13 +41,19 @@ defmodule Brando.Repo.Migrations.Brando170AddAuthorizationGroups do
            )
 
     create table(:authorization_group_permissions, prefix: "public", primary_key: false) do
-      add :group_id, references(:authorization_groups, prefix: "public", on_delete: :delete_all), primary_key: true
+      add :group_id, references(:authorization_groups, prefix: "public", on_delete: :delete_all),
+        primary_key: true
+
       add :permission_key, :text, primary_key: true
     end
 
     create table(:authorization_user_groups, prefix: "public", primary_key: false) do
-      add :user_id, references(:users, prefix: "public", on_delete: :delete_all), primary_key: true
-      add :group_id, references(:authorization_groups, prefix: "public", on_delete: :delete_all), primary_key: true
+      add :user_id, references(:users, prefix: "public", on_delete: :delete_all),
+        primary_key: true
+
+      add :group_id, references(:authorization_groups, prefix: "public", on_delete: :delete_all),
+        primary_key: true
+
       timestamps(type: :utc_datetime_usec, updated_at: false)
     end
 

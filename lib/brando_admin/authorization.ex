@@ -418,7 +418,15 @@ defmodule BrandoAdmin.Authorization do
   defp event_action(subject, _) when subject in [:frontend_assets, :shared_library, :utilities], do: :update
 
   defp event_action(_, event)
-       when event in ["delete_entry", "delete_selected", "delete_user", "confirm_transfer_delete", "delete_unused"],
+       when event in [
+              "delete_entry",
+              "delete_entry_permanently",
+              "delete_selected",
+              "delete_selected_permanently",
+              "delete_user",
+              "confirm_transfer_delete",
+              "delete_unused"
+            ],
        do: :delete
 
   # The media libraries' "Sort by use", drag, paste and new folder organize

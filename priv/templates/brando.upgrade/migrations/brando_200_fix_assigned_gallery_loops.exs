@@ -37,8 +37,14 @@ defmodule Brando.Repo.Migrations.Brando200FixAssignedGalleryLoops do
   def up do
     for prefix <- prefixes(), {id, code} <- modules(prefix) do
       case rewrite(code) do
-        ^code -> :ok
-        fixed -> repo().query!(~s(UPDATE "#{prefix}".content_modules SET code = $1 WHERE id = $2), [fixed, id])
+        ^code ->
+          :ok
+
+        fixed ->
+          repo().query!(~s(UPDATE "#{prefix}".content_modules SET code = $1 WHERE id = $2), [
+            fixed,
+            id
+          ])
       end
     end
   end
@@ -48,7 +54,8 @@ defmodule Brando.Repo.Migrations.Brando200FixAssignedGalleryLoops do
   @doc false
   def rewrite(code) do
     gallery_vars =
-      for [_, var] <- Regex.scan(~r/\{%-?\s*assign\s+(\w+)\s*=\s*#{@gallery_source}\s*-?%\}/, code),
+      for [_, var] <-
+            Regex.scan(~r/\{%-?\s*assign\s+(\w+)\s*=\s*#{@gallery_source}\s*-?%\}/, code),
           into: MapSet.new(),
           do: var
 
@@ -71,7 +78,10 @@ defmodule Brando.Repo.Migrations.Brando200FixAssignedGalleryLoops do
              false <- reads_object?(body, var) do
           fixed = Regex.replace(@liquid, body, &object_to_image(&1, var))
 
-          code = binary_part(code, 0, body_start) <> fixed <> binary_part(code, body_end, byte_size(code) - body_end)
+          code =
+            binary_part(code, 0, body_start) <>
+              fixed <> binary_part(code, body_end, byte_size(code) - body_end)
+
           rewrite_loops(code, gallery_vars, nth + 1)
         else
           _ -> rewrite_loops(code, gallery_vars, nth + 1)
