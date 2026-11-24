@@ -259,6 +259,7 @@ defmodule Brando.Content.Definition.Importer do
       |> Enum.map(&plan_item!(&1, ctx))
       |> limit_moves(settings.selection)
       |> Enum.map(&refuse_moves/1)
+
     scope = References.scope()
 
     # The renames are no part of a definition's digest: a changed one

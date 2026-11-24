@@ -115,6 +115,62 @@ defmodule BrandoAdmin.ModuleFilesTest do
            )
   end
 
+  test "an import whose rename is over the apply's limit says what it leaves, with the command", c do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    blocks =
+      for _ <- 1..1501,
+          do: %{
+            uid: Brando.Utils.generate_uid(),
+            type: :module,
+            module_id: c.module.id,
+            module_origin: :local,
+            creator_id: c.current_user.id,
+            inserted_at: now,
+            updated_at: now
+          }
+
+    {_, inserted} = Repo.insert_all(Brando.Content.Block, blocks, returning: [:id])
+
+    Repo.insert_all(
+      Brando.Content.Var,
+      for(
+        %{id: id} <- inserted,
+        do: %{block_id: id, key: "theme", type: :select, label: %{"en" => "Theme"}, inserted_at: now, updated_at: now}
+      )
+    )
+
+    {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
+    {:ok, archive} = view |> export() |> Archive.read()
+
+    files =
+      Map.new(archive.files, fn {name, body} ->
+        if String.ends_with?(name, ".exs") do
+          renamed =
+            String.replace(
+              body,
+              ~s(var "theme", "select" do\n),
+              ~s(var "tone", "select" do\n      renamed_from "theme"\n)
+            )
+
+          assert renamed != body
+          {name, String.replace(renamed, "class={@theme}", "class={@tone}")}
+        else
+          {name, body}
+        end
+      end)
+
+    {:ok, binary} = Archive.pack(files)
+    upload(view, binary)
+    command = "mix brando.modules resolve --uid hero-test --user #{c.current_user.id} --map var:theme=tone --apply"
+    assert view |> element("[data-testid=module-files-left][data-uid=hero-test]") |> render() =~ command
+
+    view |> element("#module-files-apply") |> render_click()
+
+    assert view |> element("#module-files-result [data-testid=module-files-left][data-uid=hero-test]") |> render() =~
+             command
+  end
+
   test "conflicts disable apply and stale previews cannot overwrite admin edits", c do
     {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
     binary = edited(export(view), "desired")

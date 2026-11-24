@@ -1127,7 +1127,6 @@ defmodule Brando.Content.DefinitionRenamesTest do
     Enum.map(inserted, & &1.id)
   end
 
-  # `count` pages, each with one block of `module` holding `key`
   def send_query(_event, _measurements, metadata, test_pid) do
     if self() == test_pid, do: send(test_pid, {:query, metadata.query, metadata.params})
   end
@@ -1156,6 +1155,7 @@ defmodule Brando.Content.DefinitionRenamesTest do
     end
   end
 
+  # `count` pages, each with one block of `module` holding `key`
   defp entry_blocks!(c, module, key, count) do
     ids = bare_blocks!(c, module, key, count)
     Repo.update_all(from(b in Block, where: b.id in ^ids), set: [source: Page.Blocks])
