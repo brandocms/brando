@@ -41,6 +41,9 @@ defmodule Brando.Translations do
   # A work item as it is carried, resolved and opened again
   @item_fields [:path, :kind, :source_digest, :source_previous, :minor]
 
+  # The group whose source `delete_with_translations/5` deletes
+  @deleting_group {__MODULE__, :deleting_group}
+
   @doc "Whether `schema` declares `trait :translatable, mode: :synchronized`."
   def synchronized?(schema) when is_atom(schema) do
     Code.ensure_loaded?(schema) and function_exported?(schema, :__translatable_config__, 0) and
@@ -377,7 +380,9 @@ defmodule Brando.Translations do
   end
 
   defp replace_target(schema, source_id, language, actor, mark_translate?) do
-    with {:ok, source_member} <- source_member(schema, source_id, actor),
+    with :ok <- lock_for_enrolment(schema, source_id),
+         {:ok, source_member} <- source_member(schema, source_id, actor),
+         :ok <- lock_group!(source_member.group_id),
          :ok <- purge_trashed_version(schema, source_member, language, actor),
          {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
       target
@@ -406,13 +411,25 @@ defmodule Brando.Translations do
   end
 
   defp enrol_target(schema, source_id, language, actor, mark_translate?) do
-    with {:ok, source_member} <- source_member(schema, source_id, actor),
+    with :ok <- lock_for_enrolment(schema, source_id),
+         {:ok, source_member} <- source_member(schema, source_id, actor),
+         :ok <- lock_group!(source_member.group_id),
          :ok <- ensure_language_free(schema, source_member, language),
          {:ok, target} <- insert_target(schema, source_member, source_id, language, actor, mark_translate?) do
       target
     else
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  # A new translation waits for a delete of its source and its group
+  # (`in_source_delete/5`), taking the locks in its order: the page tree for
+  # pages, the source's entry, then its group. A source trashed meanwhile is
+  # not found to copy; a delete that waited finds the new member.
+  defp lock_for_enrolment(schema, source_id) do
+    if schema == Brando.Pages.Page, do: Brando.Pages.lock_page_tree()
+    Repo.all(from e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE")
+    :ok
   end
 
   @doc """
@@ -1676,6 +1693,7 @@ defmodule Brando.Translations do
   def guard_delete(module, %{id: id}) do
     with true <- synchronized?(module),
          %Member{role: :source, group_id: group_id} <- get_member(module, id),
+         true <- Process.get(@deleting_group) != group_id,
          true <-
            exists?(from m in Member, where: m.group_id == ^group_id and m.role == :target and m.synchronized == true) do
       {:error, :group_has_synchronized_members}
@@ -1706,6 +1724,290 @@ defmodule Brando.Translations do
       _ ->
         false
     end
+  end
+
+  ## Deleting a source
+
+  @doc """
+  The group of the source `entry_id`, as its delete asks about it: nil unless
+  the entry is the source of a group with a synchronized translation, in the
+  trash or not (the delete `guard_delete/2` refuses).
+
+      %{fingerprint: "…",
+        source: %{entry: entry, ...},
+        translations: [%{entry: entry, language: "en", published: true, in_trash: false}],
+        independent: [%{entry: entry, language: "de", published: false, in_trash: false}]}
+
+  `translations` are the synchronized ones; `independent` the language
+  versions that no longer follow the source, which a delete leaves alone.
+  `fingerprint` stands for the group as read: its members, their roles, and
+  whether each is published or in the trash. `delete_with_translations/5`
+  and `delete_keeping_translations/6` take it back, and change nothing when
+  the group no longer matches it.
+  """
+  def source_group(schema, entry_id) do
+    with true <- synchronized?(schema),
+         {:ok, id} <- Ecto.Type.cast(:id, entry_id),
+         %Member{role: :source, group_id: group_id} <- get_member(schema, id) do
+      describe_group(schema, list_members(group_id))
+    else
+      _ -> nil
+    end
+  end
+
+  defp describe_group(schema, members) do
+    ids = Enum.map(members, & &1.entry_id)
+    entries = Map.new(Repo.all(from e in schema, where: e.id in ^ids), &{&1.id, &1})
+
+    rows =
+      for %Member{entry_id: id} = member <- members, entry = entries[id] do
+        %{
+          member: member,
+          entry: entry,
+          language: member.language,
+          published: Map.get(entry, :status) == :published,
+          in_trash: Map.get(entry, :deleted_at) != nil
+        }
+      end
+
+    {[source], others} = Enum.split_with(rows, &(&1.member.role == :source))
+    {translations, independent} = Enum.split_with(others, & &1.member.synchronized)
+
+    if translations != [] do
+      %{
+        group_id: source.member.group_id,
+        fingerprint: fingerprint(rows),
+        source: source,
+        translations: translations,
+        independent: independent
+      }
+    end
+  end
+
+  defp fingerprint(rows) do
+    rows
+    |> Enum.map(&{&1.entry.id, &1.member.role, &1.member.synchronized, &1.published, &1.in_trash})
+    |> Enum.sort()
+    |> :erlang.phash2()
+    |> Integer.to_string()
+  end
+
+  @doc """
+  Deletes the source `source_id` and its synchronized translations, in one
+  transaction, each through its context's delete as the listing deletes it:
+  `:delete` on each, and `:publish` for a published one. Entries with a
+  trash go there together, at the source's `deleted_at`, keeping their place
+  in the group, and a restore of the source brings them back
+  (`trashed_with_source/2`). A translation already in the trash stays there
+  with its own `deleted_at`; one trashed in that same second is set a second
+  earlier, so the restore leaves it. Without a trash they are deleted for
+  good. Independent versions are left alone.
+
+  `fingerprint` is `source_group/2`'s, from what the editor confirmed: a group
+  that changed since (`{:error, :group_changed}`) or a refused delete
+  (`{:error, {:translation, entry, reason}}`, or the source's own reason)
+  deletes nothing. `opts`: `:source_args` and `:translation_args`, more
+  arguments for the context's delete of the source and of each translation
+  (a page's fragment choice).
+  """
+  def delete_with_translations(schema, source_id, fingerprint, actor, opts \\ []) do
+    in_source_delete(schema, source_id, fingerprint, actor, fn user, group ->
+      at = Brando.SoftDelete.Repo.utc_now()
+      keep_apart_from_source(schema, group, at)
+
+      Brando.SoftDelete.Repo.at(at, fn ->
+        live = for %{in_trash: false, entry: entry} <- group.translations, do: entry
+
+        with {:ok, translations} <- delete_translations(schema, live, user, Keyword.get(opts, :translation_args, [])),
+             {:ok, source} <- delete_entry(schema, group.source.entry.id, user, Keyword.get(opts, :source_args, [])) do
+          {:ok, %{source: source, translations: translations}}
+        end
+      end)
+    end)
+  end
+
+  @doc """
+  Deletes the source `source_id` and keeps its translations, in one
+  transaction. With a `successor_id`, that synchronized translation becomes
+  the source (`transfer_source/3`; `:update` on it and on the source) and the
+  others follow it; with nil, every synchronized translation is made
+  independent (`make_independent/3`; `:update` on each). Either way a
+  translation in the trash stays there, made independent (`:update` on it).
+  The source is then deleted through its context's delete; after a transfer
+  it goes as a translation of its successor. `{:ok, %{source: source,
+  translations: []}}`, as `delete_with_translations/5` answers.
+
+  `fingerprint` and the errors are those of `delete_with_translations/5`;
+  a successor that is not a synchronized translation in this group, outside
+  the trash, is refused with `{:error, :not_a_synchronized_target}`. `opts`:
+  `:source_args`.
+  """
+  def delete_keeping_translations(schema, source_id, successor_id, fingerprint, actor, opts \\ []) do
+    in_source_delete(schema, source_id, fingerprint, actor, fn user, group ->
+      with :ok <- keep_translations(schema, group, successor_id, user),
+           {:ok, source} <- delete_entry(schema, group.source.entry.id, user, Keyword.get(opts, :source_args, [])) do
+        {:ok, %{source: source, translations: []}}
+      end
+    end)
+  end
+
+  defp keep_translations(schema, group, nil, user), do: detach_translations(schema, group.translations, user)
+
+  defp keep_translations(schema, group, successor_id, user) do
+    {trashed, live} = Enum.split_with(group.translations, & &1.in_trash)
+
+    with {:ok, id} <- Ecto.Type.cast(:id, successor_id),
+         %{entry: successor} <- Enum.find(live, &(&1.entry.id == id)) || {:error, :not_a_synchronized_target},
+         :ok <- Brando.Authorization.Boundary.authorize(user, :update, successor),
+         :ok <- Brando.Authorization.Boundary.authorize(user, :update, group.source.entry),
+         {:ok, _member} <- transfer_source(schema, successor.id, user) do
+      detach_translations(schema, trashed, user)
+    else
+      :error -> {:error, :not_a_synchronized_target}
+      error -> error
+    end
+  end
+
+  defp detach_translations(schema, translations, user) do
+    Enum.reduce_while(translations, :ok, fn %{entry: entry}, :ok ->
+      with :ok <- Brando.Authorization.Boundary.authorize(user, :update, entry),
+           {:ok, _member} <- make_independent(schema, entry.id, user) do
+        {:cont, :ok}
+      else
+        {:error, reason} -> {:halt, {:error, {:translation, entry, reason}}}
+      end
+    end)
+  end
+
+  defp delete_translations(schema, entries, user, args) do
+    Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, deleted} ->
+      case delete_entry(schema, entry.id, user, args) do
+        {:ok, done} -> {:cont, {:ok, [done | deleted]}}
+        {:error, reason} -> {:halt, {:error, {:translation, entry, reason}}}
+      end
+    end)
+  end
+
+  defp delete_entry(schema, id, user, args),
+    do: apply(schema.__modules__().context, :"delete_#{schema.__naming__().singular}", [id, user | args])
+
+  # `Boundary.run/4` gives the deletes the actor's scope and, with group
+  # authorization, its transaction; the one here holds them together in
+  # legacy mode. Under the locks a delete of a translation group takes, in
+  # the order the others take them: the page tree for pages, the group's
+  # entries, then the group, which a synchronization, a transfer and an
+  # enrolment (`lock_for_enrolment/2`) take after the entry. The group is
+  # read again under them.
+  defp in_source_delete(schema, source_id, fingerprint, actor, fun) do
+    Repo.transaction(fn ->
+      actor
+      |> Brando.Authorization.Boundary.run(:delete, schema, fn user ->
+        with {:ok, group} <- lock_source_group(schema, source_id, fingerprint) do
+          deleting_group(group.group_id, fn -> fun.(user, group) end)
+        end
+      end)
+      |> case do
+        {:ok, result} -> result
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp lock_source_group(schema, source_id, fingerprint) do
+    if schema == Brando.Pages.Page, do: Brando.Pages.lock_page_tree()
+
+    with {:ok, id} <- Ecto.Type.cast(:id, source_id),
+         %Member{role: :source, group_id: group_id} <- get_member(schema, id) do
+      ids = group_id |> list_members() |> Enum.map(& &1.entry_id)
+      Repo.all(from e in schema, where: e.id in ^ids, order_by: [asc: e.id], select: e.id, lock: "FOR UPDATE")
+      lock_group!(group_id)
+
+      case source_group(schema, id) do
+        %{fingerprint: ^fingerprint} = group -> {:ok, group}
+        _ -> {:error, :group_changed}
+      end
+    else
+      _ -> {:error, :group_changed}
+    end
+  end
+
+  # `guard_delete/2` lets the source of this group go while `fun` runs
+  defp deleting_group(group_id, fun) do
+    Process.put(@deleting_group, group_id)
+
+    try do
+      fun.()
+    after
+      Process.delete(@deleting_group)
+    end
+  end
+
+  # A restore brings back the translations in the trash at the source's
+  # `deleted_at`, stored to the second. One trashed on its own in that second
+  # is set a second earlier, with its notes, so it stays in the trash.
+  defp keep_apart_from_source(schema, group, at) do
+    ids = for %{in_trash: true, entry: %{deleted_at: ^at, id: id}} <- group.translations, do: id
+
+    if ids != [] do
+      earlier = DateTime.add(at, -1)
+      Repo.update_all(from(e in schema, where: e.id in ^ids), set: [deleted_at: earlier])
+      Brando.Notes.entries_trash_moved(schema, ids, at, earlier)
+    end
+  end
+
+  @doc """
+  The synchronized translations of the source `trashed` (as it was in the
+  trash) that went to the trash with it (`delete_with_translations/5`): those
+  at its `deleted_at`. `Brando.Authorization.Boundary.restore/2` restores
+  them with the source.
+  """
+  def trashed_with_source(schema, %{id: id, deleted_at: %{} = deleted_at}) do
+    with true <- synchronized?(schema),
+         %Member{role: :source, group_id: group_id} <- get_member(schema, id) do
+      ids =
+        Repo.all(
+          from m in Member,
+            where: m.group_id == ^group_id and m.role == :target and m.synchronized == true,
+            select: m.entry_id
+        )
+
+      Repo.all(from e in schema, where: e.id in ^ids and e.deleted_at == ^deleted_at, order_by: [asc: e.id])
+    else
+      _ -> []
+    end
+  end
+
+  def trashed_with_source(_schema, _entry), do: []
+
+  @doc """
+  Refuses to restore a synchronized translation on its own while its source
+  is in the trash: restoring the source brings back the translations deleted
+  with it. `{:error, {:source_in_trash, source}}`.
+  """
+  def guard_restore(schema, %{id: id}) do
+    with true <- synchronized?(schema),
+         %Member{role: :target, synchronized: true, group_id: group_id} <- get_member(schema, id),
+         %Member{entry_id: source_id} <- Repo.one(from m in Member, where: m.group_id == ^group_id and m.role == :source),
+         %{deleted_at: %{}} = source <- Repo.get(schema, source_id) do
+      {:error, {:source_in_trash, source}}
+    else
+      _ -> :ok
+    end
+  end
+
+  @doc """
+  After the source `entry` is restored from the trash, its group is
+  synchronized again once the restore commits, as after a source save: a
+  save whose synchronization ran while the group was in the trash is not
+  lost.
+  """
+  def source_restored(%schema{id: id}) do
+    with true <- synchronized?(schema),
+         %Member{role: :source, group_id: group_id} <- get_member(schema, id) do
+      Repo.after_commit(Brando.Tenant.capture_context(fn -> enqueue_sync(group_id, false) end))
+    end
+
+    :ok
   end
 
   @doc """

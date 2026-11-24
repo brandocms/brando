@@ -222,20 +222,24 @@ defmodule Brando.Authorization.Boundary do
          do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
   end
 
-  # A page brings back the fragments trashed with it (`after_restore/3`), in
-  # one transaction: `run/4` gives it one only with group authorization, so
-  # in legacy mode and for `:system` this does, as `Brando.Pages.delete_page/3`
-  # does for the delete. Matched by name, as `after_restore/3` is.
-  def restore(actor, %{__struct__: Brando.Pages.Page} = page) do
-    Repo.transaction(fn ->
-      case restore_with_run(actor, page) do
-        {:ok, restored} -> restored
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  # A page brings back the fragments trashed with it (`after_restore/3`), and
+  # the source of synchronized translations the translations trashed with it
+  # (`restore_translations/3`), in one transaction: `run/4` gives it one only
+  # with group authorization, so in legacy mode and for `:system` this does,
+  # as `Brando.Pages.delete_page/3` does for the delete. Matched by name, as
+  # `after_restore/3` is.
+  def restore(actor, %{__struct__: schema} = entry) do
+    if schema == Brando.Pages.Page or Brando.Translations.synchronized?(schema) do
+      Repo.transaction(fn ->
+        case restore_with_run(actor, entry) do
+          {:ok, restored} -> restored
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    else
+      restore_with_run(actor, entry)
+    end
   end
-
-  def restore(actor, entry), do: restore_with_run(actor, entry)
 
   defp restore_with_run(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
@@ -251,8 +255,10 @@ defmodule Brando.Authorization.Boundary do
   defp restore_entry(user, %{__struct__: schema} = entry) do
     with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
          :ok <- change(user, :update, changeset),
+         :ok <- Brando.Translations.guard_restore(schema, entry),
          {:ok, restored} <- Repo.restore(entry),
-         {:ok, restored} <- after_restore(restored, entry, user) do
+         {:ok, restored} <- after_restore(restored, entry, user),
+         :ok <- restore_translations(restored, entry, user) do
       Brando.Activity.restored(restored, user)
       Brando.Notes.entry_restored(schema, entry)
       Brando.Cache.entry_changed(restored)
@@ -289,6 +295,35 @@ defmodule Brando.Authorization.Boundary do
   end
 
   defp after_restore(entry, _trashed, _user), do: {:ok, entry}
+
+  # The source of synchronized translations brings back those trashed with
+  # it (`trashed` is the source as it was in the trash), each as a restore of
+  # its own: one refused leaves the group in the trash,
+  # `{:error, {:translation, entry, reason}}`
+  defp restore_translations(%{__struct__: schema} = restored, trashed, user) do
+    schema
+    |> Brando.Translations.trashed_with_source(trashed)
+    |> Enum.reduce_while(:ok, fn translation, :ok ->
+      with :ok <- authorize(user, :restore, translation),
+           {:ok, _restored} <- restore_translation(user, translation) do
+        {:cont, :ok}
+      else
+        {:error, reason} -> {:halt, {:error, {:translation, translation, reason}}}
+      end
+    end)
+    |> case do
+      :ok -> Brando.Translations.source_restored(restored)
+      error -> error
+    end
+  end
+
+  # A unique value it held before the trash (a page's address) taken
+  # meanwhile: a refusal, which the caller rolls back with the group
+  defp restore_translation(user, translation) do
+    restore_entry(user, translation)
+  rescue
+    error in Ecto.ConstraintError -> {:error, {:taken, error.constraint}}
+  end
 
   def change(:system, _, _), do: :ok
 

@@ -21,7 +21,8 @@ function empty(message) {
   return message && typeof message === 'object' ? !message.html : !message
 }
 
-// A radio group under the message (`choice`: `{ name, legend, options }`),
+// A radio group under the message (`choice`: `{ name, legend, options }`, or
+// a list of them),
 // as a delete dialog asks what becomes of what the entry holds. An option
 // may carry a `select` (`{ name, label, selected, options }`), enabled while
 // its option is checked. All of it is text.
@@ -124,8 +125,10 @@ function openDialog({ title, message, tone, buttons, choice }) {
     dialog.appendChild($body)
   }
 
-  const built = choice && choice.options && choice.options.length ? buildChoice(choice) : null
-  if (built) dialog.appendChild(built.$fieldset)
+  // One choice, or several (a page's fragments and its translations)
+  const choices = [].concat(choice || []).filter(c => c.options && c.options.length).map(buildChoice)
+  choices.forEach(({ $fieldset }) => dialog.appendChild($fieldset))
+  const built = choices.length ? { values: () => Object.assign({}, ...choices.map(c => c.values())) } : null
 
   const $actions = document.createElement('div')
   $actions.className = 'admin-dialog-actions'

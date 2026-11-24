@@ -16,7 +16,10 @@ import { alertConfirm, alertWarning } from '../../alerts'
  *
  * A reply may also carry a `choice` (see `alertConfirm`): the values chosen
  * are added to the event's push, as a page's delete says where its
- * fragments go.
+ * fragments go. Its `values` go with the push too (the translation group as
+ * the dialog showed it), and `opener`, this element's id: the server pushes
+ * `b:confirm-click-again` with it to open the dialog again, described anew,
+ * when what it showed has changed.
  *
  * A reply with `refused` says why the action can't be done (a module that
  * blocks use): a warning with only OK, and nothing is pushed.
@@ -31,6 +34,13 @@ function withValues(event, values) {
 
   return JSON.stringify(commands)
 }
+
+// The server asks for a dialog again (`b:confirm-click-again`, with the
+// opener's id): a click on it describes the entry anew
+window.addEventListener('phx:b:confirm-click-again', ({ detail }) => {
+  const opener = detail && detail.id && document.getElementById(detail.id)
+  if (opener) opener.click()
+})
 
 export default app => ({
   mounted() {
@@ -49,13 +59,15 @@ export default app => ({
       this.el.closest('.dropdown-content')?.classList.add('hidden')
       const destructive = this.el.hasAttribute('phx-confirm-click-destructive')
 
-      const confirm = ({ title, message, html, confirm, cancel, choice }) =>
+      const confirm = ({ title, message, html, confirm, cancel, choice, values }) =>
         alertConfirm(
           title,
           typeof html === 'string' ? { html } : message,
           confirmed => {
             if (confirmed !== false) {
-              app.liveSocket.execJS(this.el, withValues(event, confirmed))
+              const chosen = typeof confirmed === 'object' ? confirmed : {}
+              const sent = values ? { ...values, ...chosen, opener: this.el.id } : confirmed
+              app.liveSocket.execJS(this.el, withValues(event, sent))
             }
           },
           { confirmText: confirm, cancelText: cancel, destructive, choice }
