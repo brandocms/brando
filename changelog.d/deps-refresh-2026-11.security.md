@@ -2,4 +2,5 @@
   bucket names that could redirect or reshape a signed request, and the instance metadata token
   request following redirects), `db_connection` 2.10.3, `ecto` 3.14.3 (unbounded query cache growth)
   and `idna` 8.0.0 (slow rejection of over-long labels).
-  Run `mix deps.update ex_aws ex_aws_s3 db_connection ecto idna`.
+  Run `mix deps.update ex_aws ex_aws_s3 db_connection ecto idna swoosh jsv` (swoosh and jsv
+  hold idna below 8 until they move too).
