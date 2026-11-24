@@ -622,7 +622,10 @@ defmodule Brando.Content.Blocks do
   lock on the modules of the added blocks, so a module delete
   (`Brando.Content.guard_delete/2`) and the save cannot pass each other:
   the delete sees the save's blocks, or the save sees the module in the
-  trash.
+  trash. Before that it takes the lock its writes of refs and vars take,
+  so it queues behind a definition apply, which locks those tables and then
+  updates the modules (`Brando.Content.Definition.Importer`), instead of
+  holding a module the apply waits for.
   """
   def guard_added_modules(%Changeset{data: %schema{}} = changeset) do
     added =
@@ -632,7 +635,14 @@ defmodule Brando.Content.Blocks do
           added <- added_blocks(block, {:root, position}),
           do: added
 
+    if added != [], do: lock_block_content_tables()
     refuse_trashed_modules(added)
+  end
+
+  defp lock_block_content_tables do
+    prefix = Brando.Tenant.current_prefix() || "public"
+    tables = Enum.map_join(~w(content_refs content_vars), ", ", &~s("#{prefix}"."#{&1}"))
+    Ecto.Adapters.SQL.query!(Repo.repo(), "LOCK TABLE " <> tables <> " IN ROW EXCLUSIVE MODE", [])
   end
 
   @doc """
