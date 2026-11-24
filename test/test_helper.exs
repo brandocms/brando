@@ -57,6 +57,17 @@ defmodule BrandoIntegrationWeb.Villain.Filters do
   use Brando.Villain.Filters
 end
 
+# Articles in three languages (test/support/three_language_articles.exs): the
+# installation's two and German, for the compile of that file only
+languages = Application.fetch_env!(:brando, :languages)
+Application.put_env(:brando, :languages, languages ++ [[value: "de", text: "Deutsch"]])
+
+try do
+  Code.require_file("support/three_language_articles.exs", __DIR__)
+after
+  Application.put_env(:brando, :languages, languages)
+end
+
 defmodule Brando.Villain.ParserTest.Parser do
   @moduledoc false
   use Brando.Villain.Parser

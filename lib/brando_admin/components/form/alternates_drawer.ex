@@ -19,23 +19,26 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     {:ok, socket}
   end
 
-  # The entry's language versions the editor may read: those linked to it,
-  # and those with its keys in another language that are not
-  # (`Brando.Translations.language_versions/3`). Identifiers are made from
-  # the entries, as the listing makes them: not every schema keeps them.
+  # The entry's language versions the editor may read, from one read of its
+  # set (`Brando.Translations.language_versions/3`): those linked to it, to
+  # it or through another version, and those with its keys in another
+  # language that are not. Identifiers are made from the entries, as the
+  # listing makes them: not every schema keeps them.
   defp assign_versions(socket) do
     entry = socket.assigns.entry
-    %{linked: linked, unlinked: unlinked} = Translations.language_versions(entry.__struct__, entry, actor(socket))
+    %{linked: linked, matched: matched} = Translations.language_versions(entry.__struct__, entry, actor(socket))
 
     socket
-    |> assign(:identifiers, identifiers(linked))
-    |> assign(:unlinked_identifiers, identifiers(unlinked))
+    |> assign(:linked, for(version <- linked, identifier = identifier(version.entry), do: {identifier, version}))
+    |> assign(:unlinked_identifiers, identifiers(Enum.reject(matched, &match?(%{deleted_at: %DateTime{}}, &1))))
   end
 
   # A schema without an identifier template makes none. A linked version in
   # the trash is listed as deleted, so its link can still be removed.
-  defp identifiers(entries) do
-    for entry <- entries, identifier = Identifier.identifier_for(entry), do: trashed(identifier, entry)
+  defp identifiers(entries), do: for(entry <- entries, identifier = identifier(entry), do: identifier)
+
+  defp identifier(entry) do
+    if identifier = Identifier.identifier_for(entry), do: trashed(identifier, entry)
   end
 
   defp trashed(identifier, %{deleted_at: %DateTime{}}), do: %{identifier | status: :deleted}
@@ -67,14 +70,17 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
         </:info>
         <section class="alternates-section alternates-linked">
           <h3>{gettext("Currently linked entries")}</h3>
-          <div :if={@identifiers != []} class="identifier-list">
+          <div :if={@linked != []} class="identifier-list">
             <Entries.dumb_identifier
-              :for={identifier <- @identifiers}
+              :for={{identifier, version} <- @linked}
               :key={identifier.entry_id}
               identifier={identifier}
               select={open(identifier)}
             >
-              <:delete>
+              <:detail :if={version.via}>
+                {gettext("Linked through %{language}", language: String.upcase(version.via))}
+              </:detail>
+              <:delete :if={version.linked?}>
                 <button
                   type="button"
                   aria-label={gettext("Remove")}
@@ -90,7 +96,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
               </:delete>
             </Entries.dumb_identifier>
           </div>
-          <p :if={@identifiers == []} class="alternates-empty">{gettext("No linked entries yet.")}</p>
+          <p :if={@linked == []} class="alternates-empty">{gettext("No linked entries yet.")}</p>
           <button
             class="btn"
             type="button"
@@ -180,9 +186,13 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   def handle_event("remove_entry", %{"id" => id}, socket) do
     entry = socket.assigns.entry
 
-    case alternate(entry).delete(id, entry.id, actor(socket)) do
-      {:error, _} = error -> {:noreply, refused(socket, error)}
-      _ -> {:noreply, unlinked(socket, id)}
+    if removable?(socket, id) do
+      case alternate(entry).delete(id, entry.id, actor(socket)) do
+        {:error, _} = error -> {:noreply, refused(socket, error)}
+        _ -> {:noreply, unlinked(socket, id)}
+      end
+    else
+      {:noreply, socket}
     end
   end
 
@@ -198,6 +208,14 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
 
   defp alternate(entry), do: Module.concat(entry.__struct__, Alternate)
 
+  # Only a pair the drawer offers to remove: a version linked to the entry
+  # itself, not one linked through another version
+  defp removable?(socket, id),
+    do:
+      Enum.any?(socket.assigns.linked, fn {_identifier, version} ->
+        version.linked? and to_string(version.entry.id) == to_string(id)
+      end)
+
   defp actor(socket), do: socket.assigns[:current_user] || BrandoAdmin.Authorization.current_actor()
 
   defp refused(socket, {:error, :forbidden}) do
@@ -212,7 +230,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
   # entries for a schema that keeps none
   defp candidates(socket) do
     %schema{} = entry = socket.assigns.entry
-    linked = MapSet.new(socket.assigns.identifiers, & &1.entry_id)
+    linked = MapSet.new(socket.assigns.linked, fn {identifier, _version} -> identifier.entry_id end)
 
     identifiers =
       if schema.__persist_identifier__() do

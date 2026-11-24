@@ -824,6 +824,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :identifier, :map, required: true
   attr :select, :any, default: false
   slot :delete
+  slot :detail
   slot :inner_block
 
   def dumb_identifier(%{identifier: identifier} = assigns) when not is_nil(identifier) do
@@ -845,6 +846,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         <:delete :if={@delete != []}>
           {render_slot(@delete)}
         </:delete>
+        <:detail :if={@detail != []}>{render_slot(@detail)}</:detail>
         {render_slot(@inner_block)}
       </.identifier_content>
     </article>
@@ -857,12 +859,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   attr :selectable, :boolean, default: false
   attr :selected, :boolean, default: false
   slot :delete
+  slot :detail
   slot :inner_block
 
   def identifier_content(assigns) do
     ~H"""
     <IdentifierRow.content identifier={@identifier} draggable={@draggable} selectable={@selectable} selected={@selected}>
       <:delete :if={@delete != []}>{render_slot(@delete)}</:delete>
+      <:detail :if={@detail != []}>{render_slot(@detail)}</:detail>
       {render_slot(@inner_block)}
     </IdentifierRow.content>
     """

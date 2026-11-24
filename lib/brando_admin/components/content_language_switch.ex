@@ -61,10 +61,10 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   # What each language does in an entry's form: `:open` its version (with
   # its URL), `:create` a translation, or nothing, saying why (`:trashed`,
   # `:none`, `:unavailable` for a version the editor may not read). Read
-  # when the list opens, and again for a choice: the versions the editor may
-  # read (`Translations.versions_by_language/3`), and on a synchronized type
-  # the languages without one (`Translations.missing_languages/2`), as the
-  # form's translation panel and the language versions drawer have them.
+  # when the list opens, and again for a choice, from one read of the entry's
+  # language versions (`Translations.language_versions/3`): the versions the
+  # editor may read, and the languages without one, as the form's
+  # translation panel and the language versions drawer have them.
   defp assign_options(%{assigns: %{entry: %{schema: schema, id: id}, current_user: user}} = socket) do
     entry = Brando.Repo.get(schema, id)
     assign(socket, :options, if(entry, do: options(schema, entry, user), else: %{}))
@@ -73,8 +73,9 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
   defp assign_options(socket), do: assign(socket, :options, %{})
 
   defp options(schema, entry, user) do
-    versions = Translations.versions_by_language(schema, entry, user)
-    missing = Translations.missing_languages(schema, entry)
+    set = Translations.language_versions(schema, entry, user)
+    versions = Translations.by_language(set)
+    missing = Translations.missing_in(schema, set)
     create? = Translations.synchronized?(schema) and Translation.can_create?(schema, user)
     type_languages = for value <- Ecto.Enum.values(schema, :language), do: to_string(value)
 
