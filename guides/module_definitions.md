@@ -1258,7 +1258,7 @@ always stays.
 | Ref type | Stays with the block |
 | --- | --- |
 | `picture` | `title` (the caption), `credits`, `alt`, `link` |
-| `video` | `title` (the caption), `poster`, `cover_image` |
+| `video` | `title` (the caption), `cover_image` |
 | `gallery` | `gallery_object_overrides` (each object's caption, credits, alt text and playback) |
 | `file` | `title`, `label`, `description` |
 | `header`, `text`, `markdown`, `comment` | `text` |

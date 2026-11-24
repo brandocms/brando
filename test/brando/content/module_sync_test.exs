@@ -245,7 +245,7 @@ defmodule Brando.Content.ModuleSyncTest do
       assert_picture_kept(synced_ref(block, module(refs: [module_ref]), "hero"))
     end
 
-    test "a video keeps its caption, cover and video" do
+    test "a video keeps its caption, cover and video, and its poster follows the module" do
       cover = %PictureBlock.Data{credits: "Cover by Kari"}
 
       placed =
@@ -253,20 +253,22 @@ defmodule Brando.Content.ModuleSyncTest do
           type: "video",
           data: %VideoBlock.Data{
             title: "<p>Kari's caption</p>",
-            poster: "/media/poster.jpg",
+            poster: "/media/a.jpg",
             cover_image: cover,
             video_class: "old"
           }
         }
 
-      module_ref = ref("clip", %VideoBlock{type: "video", data: %VideoBlock.Data{video_class: "from-module"}})
+      module_ref =
+        ref("clip", %VideoBlock{type: "video", data: %VideoBlock.Data{poster: "/media/b.jpg", video_class: "from-module"}})
+
       block = block(refs: [%{ref("clip", placed, id: 1) | video_id: 9}])
 
       synced = synced_ref(block, module(refs: [module_ref]), "clip")
 
       assert synced.video_id == 9
       assert synced.data.data.title == "<p>Kari's caption</p>"
-      assert synced.data.data.poster == "/media/poster.jpg"
+      assert synced.data.data.poster == "/media/b.jpg"
       assert synced.data.data.cover_image.credits == "Cover by Kari"
       assert synced.data.data.video_class == "from-module"
     end
