@@ -429,6 +429,31 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert {Article, c.source.id} in Proposals.apply_lock_order(proposal)
     end
 
+    # Its alternate link refers to the source, so making it waits on the source
+    test "the source of a translation the proposal creates without translating it is locked in that order", c do
+      op = %CreateTranslation{source: {Article, c.source.id}, language: "en", ref: "english"}
+      {:ok, proposal} = Proposals.propose([op], c.user)
+      assert Proposals.apply_lock_order(proposal) == [{Article, c.source.id}]
+    end
+
+    # Another version made the group's source after the apply took its locks
+    # (`Translations.transfer_source/3`): with two languages the race cannot be
+    # staged, so the check is called with the locks the apply took before.
+    test "refuses a translation whose source is not among the locks the apply took", c do
+      target = create_translation(c)
+      {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)
+
+      error =
+        assert_raise Brando.Content.Transfer.Error, fn ->
+          Repo.transaction(fn -> Proposals.check_translated_sources!(proposal, locked: [{Article, target.id}]) end)
+        end
+
+      assert Exception.message(error) =~ "Prepare the proposal again"
+
+      assert {:ok, :ok} =
+               Repo.transaction(fn -> Proposals.check_translated_sources!(proposal, locked: [{Article, c.source.id}]) end)
+    end
+
     test "refuses a batch whose source text changed, naming the unit", c do
       target = create_translation(c)
       {:ok, proposal} = Proposals.propose([translate(target, english(c))], c.user)

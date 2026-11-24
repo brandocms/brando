@@ -2811,13 +2811,16 @@ defmodule Brando.Content.Proposals do
   (`Brando.Repo.after_commit/1`: broadcasts, cache evictions) never runs, no
   query result read in it is cached, and jobs are rows the rollback removes.
 
-  The copy's rows, and the locks on its source, are held while `fun` runs.
-  Called on its own, as the review page's frame calls it, that is for no
-  longer than the transaction's timeout (`:timeout`, the repo's default
-  otherwise): a `fun` that outlasts it gets the connection dropped, and
-  `{:error, message}` is returned. Called on a connection already checked
-  out, as a snapshot is under the site's asset lock, the transaction has no
-  deadline of its own, and they are held until `fun` returns.
+  The copy is made and `fun` runs in a process of their own, on a
+  connection of its own, carrying the caller's site, authorization scope,
+  pinned asset set and locale. The copy's rows, and the locks on its sources
+  and translation groups, are held while `fun` runs, for no longer than the
+  timeout (`:timeout`, the repo's default otherwise), counted from when the
+  copy starts: at the deadline the process is stopped, its connection with
+  it, so the copy is rolled back and the locks released, and
+  `{:error, message}` is returned. That holds wherever it is called from,
+  the review page's frame or a snapshot rendered under the site's asset
+  lock, which the caller holds until it returns.
 
   It checks what `materialize/3` checks, with `shared: true` as it takes it,
   and the texts the proposal translates against their sources, under the
@@ -2832,30 +2835,48 @@ defmodule Brando.Content.Proposals do
     %CreateTranslation{} = op = translation(proposal.operations, target)
     ref = make_ref()
     timeout = opts[:timeout] || Repo.repo().config()[:timeout] || 15_000
-    started = System.monotonic_time(:millisecond)
 
-    rolled_back =
-      try do
-        Repo.transaction(
-          fn ->
-            Brando.Cache.Query.skip_in_transaction()
-            Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
-          end,
-          timeout: timeout
-        )
-      rescue
-        # The connection is dropped once the transaction outlasts its
-        # timeout. Any other connection error is not the render's doing.
-        error in DBConnection.ConnectionError ->
-          if System.monotonic_time(:millisecond) - started >= timeout,
-            do: {:error, {ref, :timeout}},
-            else: reraise(error, __STACKTRACE__)
-      end
+    copy = fn ->
+      Repo.transaction(
+        fn ->
+          Brando.Cache.Query.skip_in_transaction()
+          Repo.rollback({ref, with_copy(proposal, target, op, actor, opts, fun)})
+        end,
+        timeout: :infinity
+      )
+    end
 
-    case rolled_back do
-      {:error, {^ref, :timeout}} -> {:error, preview_timed_out()}
-      {:error, {^ref, result}} -> result
-      {:error, reason} -> {:error, translation_failed(reason)}
+    case run_before_deadline(copy, timeout) do
+      :timeout -> {:error, preview_timed_out()}
+      {:ok, {:error, {^ref, result}}} -> result
+      {:ok, {:error, reason}} -> {:error, translation_failed(reason)}
+    end
+  end
+
+  # `fun` in a process of its own, with what the caller's process holds that
+  # the copy and its render read, stopped at the deadline: a render can
+  # block without querying, so no database timeout bounds it. What `fun`
+  # raises is raised in the caller.
+  defp run_before_deadline(fun, timeout) do
+    locale = Gettext.get_locale(Brando.Gettext)
+    run = fun |> Brando.Assets.SiteAssets.capture_override() |> Brando.Tenant.capture_context()
+
+    task =
+      Task.async(fn ->
+        Gettext.put_locale(Brando.Gettext, locale)
+
+        try do
+          {:ok, run.()}
+        catch
+          kind, reason -> {:raised, kind, reason, __STACKTRACE__}
+        end
+      end)
+
+    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
+      {:ok, {:raised, kind, reason, stacktrace}} -> :erlang.raise(kind, reason, stacktrace)
+      {:ok, result} -> result
+      {:exit, reason} -> exit(reason)
+      nil -> :timeout
     end
   end
 
@@ -2874,8 +2895,8 @@ defmodule Brando.Content.Proposals do
         # Under the sources' locks, as applying checks them, taken in the
         # order applying takes them (`apply_lock_order/1`): a preview and an
         # apply that took two sources in opposite order would deadlock
-        lock_translated_sources!(proposal)
-        check_translated_sources!(proposal, lock_groups: false)
+        locked = lock_sources!(proposal)
+        check_translated_sources!(proposal, lock_groups: false, locked: locked)
         user = user!(actor)
         entry = create_translations!(proposal, target, user)
 
@@ -4770,14 +4791,12 @@ defmodule Brando.Content.Proposals do
     # The connection, locked until the commit, and the person, checked now
     if opts[:auto], do: AutoApply.authorize!(opts[:auto], actor)
 
-    locked =
-      for target <- apply_lock_order(proposal),
-          entry = lock_target!(target, proposal, actor),
-          do: entry
+    order = apply_lock_order(proposal)
+    locked = for target <- order, entry = lock_target!(target, proposal, actor), do: entry
 
     Transfer.lock_records!(%{fields: Enum.map(locked, &%{entry: &1}), bindings: %{}})
     entries = current!(proposal, actor)
-    check_translated_sources!(proposal)
+    check_translated_sources!(proposal, locked: order)
     check_follows_source!(proposal)
     # The revision each entry is at now: undo restores it.
     revisions = Map.new(entries, fn {target, entry} -> {target, revision_before(target, entry, user)} end)
@@ -4844,36 +4863,45 @@ defmodule Brando.Content.Proposals do
   @doc """
   The rows an apply locks first, as `{schema, id}`, sorted as
   `Brando.Content.Transfer.lock_records!/1` sorts them: the proposal's
-  entries and the sources its `translate` operations translate.
+  entries, the sources its `translate` and `sync_translation` operations
+  translate, and the sources of the translations it creates.
 
-  Sources are read from their group's members, without refreshing a
-  translation's pending version, which takes the group lock: a source locked
-  after that, or after the entries, could deadlock with a transfer import or
-  a Create translation that locks the source first.
+  A path that takes both kinds of lock takes these first, sorted, then the
+  translation groups' locks. Sources are read from their group's members,
+  without refreshing a translation's pending version, which takes the group
+  lock: a source locked after that, or after the entries, could deadlock
+  with a transfer import or a Create translation that locks the source
+  first. A translation's alternate link refers to its source, so creating
+  it waits for a lock on the source too: a source left out of the sorted
+  locks would be reached out of order.
   """
   @spec apply_lock_order(Proposal.t()) :: [{module(), pos_integer()}]
   def apply_lock_order(proposal) do
     proposal.fingerprints
     |> Map.keys()
-    |> Enum.concat(translated_sources(proposal))
-    |> Enum.uniq()
-    |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+    |> Enum.concat(operation_sources(proposal))
+    |> sorted_locks()
   end
 
-  defp lock_translated_sources!(proposal) do
-    proposal
-    |> translated_sources()
-    |> Enum.uniq()
-    |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
-    |> Enum.each(fn {schema, id} -> lock_source!(schema, id) end)
+  # A preview locks the sources only: it changes no entry. Returns them.
+  defp lock_sources!(proposal) do
+    sources = proposal |> operation_sources() |> sorted_locks()
+    Enum.each(sources, &lock_row!/1)
+    sources
   end
 
-  defp translated_sources(proposal) do
-    for %type{target: target} <- proposal.operations,
-        type in [Translate, SyncTranslation],
-        source = translated_source(target, proposal),
-        do: source
+  defp sorted_locks(rows), do: rows |> Enum.uniq() |> Enum.sort_by(fn {schema, id} -> {to_string(schema), id} end)
+
+  defp operation_sources(proposal) do
+    for op <- proposal.operations, source = operation_source(op, proposal), do: source
   end
+
+  defp operation_source(%CreateTranslation{source: {_schema, id} = source}, _proposal) when is_integer(id), do: source
+
+  defp operation_source(%type{target: target}, proposal) when type in [Translate, SyncTranslation],
+    do: translated_source(target, proposal)
+
+  defp operation_source(_op, _proposal), do: nil
 
   defp translated_source({:new, _} = target, proposal) do
     case translation(proposal.operations, target) do
@@ -4897,8 +4925,7 @@ defmodule Brando.Content.Proposals do
     if Map.has_key?(proposal.fingerprints, target) do
       load!(target, actor, lock: true)
     else
-      {schema, id} = target
-      lock_source!(schema, id)
+      lock_row!(target)
       nil
     end
   end
@@ -4932,14 +4959,23 @@ defmodule Brando.Content.Proposals do
   Called inside the apply's transaction, before any translation is created
   or saved: a source saved after the recheck at approval would otherwise
   have its new text overwritten by the translation of the text before. It
-  holds the group of a `sync_translation`'s translation until the commit;
-  `lock_groups: false` leaves that out, for a caller that saves nothing.
+  holds the group of a translation that a `translate` or `sync_translation`
+  saves until the commit: the sync that recomputes the translation's
+  pending version takes that lock, so the version checked here is the one
+  the save takes. `lock_groups: false` leaves that out, for a caller that
+  saves nothing.
+
+  `locked:` names the sources the caller locked first, sorted
+  (`apply_lock_order/1`); the groups are locked after them. A translation
+  whose source is not among them has another source since (another version
+  was made its group's source), and is refused as stale rather than locked
+  out of order.
   """
   @spec check_translated_sources!(Proposal.t(), keyword()) :: :ok
   def check_translated_sources!(proposal, opts \\ []) do
     problems =
       for %Translate{} = op <- proposal.operations,
-          problem <- translated_source_problems(op, proposal),
+          problem <- translated_source_problems(op, proposal, opts),
           do: problem
 
     problems = problems ++ Enum.flat_map(proposal.operations, &synced_source_problems(&1, proposal, opts))
@@ -4948,9 +4984,9 @@ defmodule Brando.Content.Proposals do
     :ok
   end
 
-  defp translated_source_problems(%Translate{target: {:new, _} = target} = op, proposal) do
+  defp translated_source_problems(%Translate{target: {:new, _} = target} = op, proposal, opts) do
     %CreateTranslation{source: {schema, source_id}, language: language} = translation(proposal.operations, target)
-    lock_source!(schema, source_id)
+    lock_source!({schema, source_id}, opts)
 
     case Work.new_translation_units(schema, source_id) do
       {:ok, %{units: units}} ->
@@ -4961,11 +4997,9 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # The apply locked the source already (`apply_lock_order/1`); locking it
-  # again, before the work is read, holds when the check runs on its own.
-  defp translated_source_problems(%Translate{target: {schema, id} = target} = op, proposal) do
-    with {source_schema, source_id} <- translated_source(target, proposal),
-         do: lock_source!(source_schema, source_id)
+  defp translated_source_problems(%Translate{target: {schema, id} = target} = op, proposal, opts) do
+    with {_schema, _id} = source <- translated_source(target, proposal), do: lock_source!(source, opts)
+    lock_group!(target, opts)
 
     case Work.translation_units(schema, id) do
       {:ok, work} -> source_check(op, %{type: to_string(schema), id: id, language: work.language}, work.units)
@@ -4973,27 +5007,45 @@ defmodule Brando.Content.Proposals do
     end
   end
 
-  # The source locked, as for a translate batch, and the translation's group,
-  # until the apply commits: the sync that recomputes the pending version
-  # takes it, so the version checked here is the one the save takes. A
-  # caller that saves nothing (`lock_groups: false`, the preview of another
+  # A caller that saves nothing (`lock_groups: false`, the preview of another
   # entry of the proposal) rechecks without holding the group while it renders.
-  defp synced_source_problems(%SyncTranslation{target: {schema, id} = target} = op, proposal, opts) when is_integer(id) do
-    with {schema, source_id} <- translated_source(target, proposal), do: lock_source!(schema, source_id)
-
-    if Keyword.get(opts, :lock_groups, true) do
-      with %{group_id: group_id} <- Translations.get_member(schema, id), do: Translations.lock_group!(group_id)
-    end
-
+  defp synced_source_problems(%SyncTranslation{target: {_schema, id} = target} = op, proposal, opts)
+       when is_integer(id) do
+    with {_schema, _id} = source <- translated_source(target, proposal), do: lock_source!(source, opts)
+    lock_group!(target, opts)
     sync_recheck(op)
   end
 
   defp synced_source_problems(_op, _proposal, _opts), do: []
 
-  defp lock_source!(schema, source_id) do
-    Repo.one(from(e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE"))
+  defp lock_group!({schema, id}, opts) do
+    if Keyword.get(opts, :lock_groups, true) do
+      with %{group_id: group_id} <- Translations.get_member(schema, id), do: Translations.lock_group!(group_id)
+    end
+  end
+
+  # The caller locked its sources already, sorted; locking one again, before
+  # the work is read, holds when the check runs on its own.
+  defp lock_source!(source, opts) do
+    case Keyword.fetch(opts, :locked) do
+      {:ok, locked} -> source in locked || Error.fail!(source_changed())
+      :error -> lock_row!(source)
+    end
+
     :ok
   end
+
+  defp lock_row!({schema, id}) do
+    Repo.one(from(e in schema, where: e.id == ^id, select: e.id, lock: "FOR UPDATE"))
+    :ok
+  end
+
+  defp source_changed,
+    do:
+      dgettext(
+        "content_proposals",
+        "Another version has become the source of a translation in this proposal since it was approved. Prepare the proposal again."
+      )
 
   defp source_check(op, scope, units) do
     case Work.check(op.source_digest, scope, units, %{texts: op.texts, reviewed: op.reviewed}) do
