@@ -346,10 +346,13 @@ defmodule Brando.Query.Mutations do
   # constraints, so a value another entry holds (a page's URI in the copy's
   # language) comes back as `{:error, changeset}` instead of raising. Its
   # galleries are cloned in the same transaction: a copy that can't be saved
-  # leaves none behind.
+  # leaves none behind. A copy that would bring a module in the trash back
+  # into use, at any level, is refused: the check reads the tree as it is
+  # inserted, under the lock it takes.
   defp insert_copy(cloned_entry, module, user) do
     Repo.transaction(fn ->
-      with {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
+      with :ok <- ContentBlocks.guard_written_modules(cloned_entry),
+           {:ok, cloned_entry} <- clone_galleries(cloned_entry, module, user),
            {:ok, copy} <-
              cloned_entry
              |> Ecto.Changeset.change()

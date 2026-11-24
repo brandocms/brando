@@ -252,6 +252,32 @@ defmodule Brando.Activity do
     end)
   end
 
+  @doc """
+  Record that scheduled publishing did not publish `revision` of `entry`
+  because it would bring back a block of a module in the trash, and
+  dropped the schedule. `refusal` names the module and the block
+  (`Brando.Content.Blocks.guard_written_modules/2`).
+  """
+  def scheduled_revision_module_in_trash(entry, user, revision, %{module: module, block: block}) do
+    guard(entry, fn ->
+      record(:updated, entry, user,
+        revision: revision,
+        details: %{
+          "scheduled_revision" => %{"reason" => "module_in_trash", "module" => module, "block" => encode_place(block)}
+        }
+      )
+    end)
+  end
+
+  @doc "A block's place as `scheduled_revision_module_in_trash/4` stores it, decoded."
+  def decode_place(%{"described" => description}), do: {:described, description}
+  def decode_place(%{"root" => position}), do: {:root, position}
+  def decode_place(%{"inside" => place}), do: {:inside, decode_place(place)}
+
+  defp encode_place({:described, description}), do: %{"described" => description}
+  defp encode_place({:root, position}), do: %{"root" => position}
+  defp encode_place({:inside, place}), do: %{"inside" => encode_place(place)}
+
   @doc "Record that `copy` was made from `original`."
   def duplicated(copy, original, user) do
     guard(copy, fn ->

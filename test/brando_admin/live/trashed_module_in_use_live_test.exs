@@ -72,6 +72,111 @@ defmodule BrandoAdmin.TrashedModuleInUseLiveTest do
     end
   end
 
+  # #3923: where the editor activates a revision or duplicates an entry
+  test "the revisions drawer names the module when it refuses a revision that would bring back its block", c do
+    put_block!(Page, c.page, c.module)
+    {:ok, old} = Brando.Revisions.create_revision(c.page, c.current_user)
+    Repo.delete_all(from(j in Page.Blocks, where: j.entry_id == ^c.page.id))
+    {:ok, _} = Brando.Revisions.create_revision(c.page, c.current_user)
+    {:ok, _} = Brando.Content.delete_module(c.module.id, c.current_user)
+
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    drawer = view |> cid_of("#page_form-revisions-drawer-tab-activity") |> then(&with_target(view, &1))
+    drawer |> render_hook("activate_revision", %{"value" => to_string(old.revision)})
+
+    assert_push_event(view, "b:alert", %{type: "error", message: message})
+    assert message == Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :revision)
+    assert message =~ "Teaser"
+    assert Repo.aggregate(from(j in Page.Blocks, where: j.entry_id == ^c.page.id), :count) == 0
+  end
+
+  test "the listing names the module when it refuses to duplicate an entry holding its block", c do
+    put_block!(Page, c.page, c.module)
+    Repo.soft_delete!(c.module)
+    pages = Repo.aggregate(Page, :count)
+
+    {:ok, view, _html} = live(c.conn, "/admin/pages")
+    render_hook(view, "duplicate_entry", %{"id" => to_string(c.page.id)})
+
+    assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
+
+    assert message ==
+             Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+
+    assert Repo.aggregate(Page, :count) == pages
+  end
+
+  test "the entry form's Create translation names the module when it refuses the copy", c do
+    {:ok, article} =
+      Brando.SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "draft"}, c.current_user)
+
+    put_block!(Brando.SyncTest.Article, article, c.module)
+    Repo.soft_delete!(c.module)
+
+    {view, _html} = live_form(c.conn, "/admin/articles/update/#{article.id}", "article_form")
+    [cid] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#article_title", "phx-target")
+    view |> with_target("[data-phx-component='#{cid}']") |> render_click("create_translation", %{"language" => "en"})
+
+    assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
+
+    assert message ==
+             Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+
+    assert Brando.Translations.alternate_languages(Brando.SyncTest.Article, article.id) == []
+  end
+
+  test "the listing's Copy to language for a selection names each entry it refused and the module", c do
+    put_block!(Page, c.page, c.module)
+    Repo.soft_delete!(c.module)
+
+    {:ok, view, _html} = live(c.conn, "/admin/pages")
+    render_click(view, "duplicate_selected_to_language", %{"ids" => Jason.encode!([c.page.id]), "language" => "no"})
+
+    assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
+    assert message =~ "Om oss"
+
+    assert message =~
+             Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+  end
+
+  # The fragment copier reads the block trees whole, nested blocks included
+  test "the listing duplicates a page whose fragment holds a container with a block inside", c do
+    fragment = Factory.insert(:fragment, creator: c.current_user, page_id: c.page.id, key: "boxed")
+
+    {:ok, container} =
+      Brando.Content.create_container(%{name: "Section", namespace: "general", code: "{{ content }}"}, c.current_user)
+
+    source = "Elixir.#{inspect(Fragment)}.Blocks"
+
+    root =
+      Repo.insert!(%Block{
+        uid: "box-#{System.unique_integer([:positive])}",
+        source: source,
+        type: :container,
+        container_id: container.id
+      })
+
+    inner =
+      Repo.insert!(%Block{
+        uid: "inner-#{System.unique_integer([:positive])}",
+        source: source,
+        type: :module,
+        module_id: c.module.id,
+        parent_id: root.id
+      })
+
+    Repo.insert_all(Fragment.Blocks, [%{entry_id: fragment.id, block_id: root.id, sequence: 0}])
+    pages = Repo.aggregate(Page, :count)
+
+    {:ok, view, _html} = live(c.conn, "/admin/pages")
+    render_hook(view, "duplicate_entry", %{"id" => to_string(c.page.id)})
+
+    assert_receive %Broadcast{event: "toast"}, 2_000
+    assert Repo.aggregate(Page, :count) == pages + 1
+    assert Repo.aggregate(from(b in Block, where: b.module_id == ^c.module.id and b.id != ^inner.id), :count) == 1
+    assert Repo.get!(Block, inner.id).parent_id == root.id
+  end
+
   defp assert_undelete_names_module(c) do
     {:ok, view, _html} = live(c.conn, "/admin/pages?status=deleted")
     render_hook(view, "undelete_entry", %{"id" => to_string(c.page.id)})

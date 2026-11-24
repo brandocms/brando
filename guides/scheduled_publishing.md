@@ -271,9 +271,10 @@ The publisher worker allows 10 attempts and a 60-second timeout per attempt.
 Oban retries failures; an accepted schedule is not a guarantee that the content
 will publish successfully. A failed revision restore preserves the current
 entry, and a final failed attempt releases its scheduled retention flag. A
-revision refused by validation or because its entry is in the trash is not
-retried, and one refused only by a unique index is retried on its first two
-attempts (see above).
+revision refused by validation, because its entry is in the trash, or because
+it would bring back a block of a module in the trash is not retried: its
+schedule is dropped, and Activity says why. One refused only by a unique index
+is retried on its first two attempts (see above).
 Check the job's error and the content's current validation/authorization before
 retrying. The actor is loaded again at execution, so changed access can matter.
 

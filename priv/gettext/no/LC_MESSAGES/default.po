@@ -13628,6 +13628,11 @@ msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettels
 msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
 msgstr "Ikke slettet: denne oppføringen er kilden til synkroniserte oversettelser. Gjør dem selvstendige, eller gjør en av dem til kilde, først."
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not duplicated: %{block} uses the module “%{module}”, which is in the trash. Restore the module from the trash, or remove the block, first."
+msgstr "Ikke duplisert: %{block} bruker modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen fra papirkurven, eller fjern blokken, først."
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Not filled in: AI changed the template placeholders"
@@ -13732,6 +13737,11 @@ msgstr "Ikke publisert som planlagt: brukeren som planla den, har ikke lenger lo
 #, elixir-autogen, elixir-format
 msgid "Not required"
 msgstr "Ikke påkrevd"
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: %{block} of the revision uses the module “%{module}”, which is in the trash. Restore the module from the trash first."
+msgstr "Ikke gjenopprettet: %{block} i revisjonen bruker modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen fra papirkurven først."
 
 #: lib/brando/content.ex
 #, elixir-autogen, elixir-format
@@ -17457,6 +17467,11 @@ msgstr "Versjon #%{from} → versjon #%{to}"
 #, elixir-autogen, elixir-format
 msgid "Revision #%{revision}"
 msgstr "Versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash"
+msgstr "Versjon #%{revision} ble ikke publisert som planlagt: %{block} bruker modulen «%{module}», som ligger i papirkurven"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -26105,6 +26120,11 @@ msgstr "deg"
 #, elixir-autogen, elixir-format
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
 msgstr "«%{block}» er kopiert. Lim den inn med utklippstavle-knappen ved + mellom blokkene, her eller på en annen side."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "“%{entry}” was not copied. %{reason}"
+msgstr "«%{entry}» ble ikke kopiert. %{reason}"
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format

@@ -13626,6 +13626,11 @@ msgstr ""
 msgid "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
 msgstr ""
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not duplicated: %{block} uses the module “%{module}”, which is in the trash. Restore the module from the trash, or remove the block, first."
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Not filled in: AI changed the template placeholders"
@@ -13729,6 +13734,11 @@ msgstr ""
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not required"
+msgstr ""
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: %{block} of the revision uses the module “%{module}”, which is in the trash. Restore the module from the trash first."
 msgstr ""
 
 #: lib/brando/content.ex
@@ -17454,6 +17464,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Revision #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -26100,6 +26115,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "“%{entry}” was not copied. %{reason}"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex

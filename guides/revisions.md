@@ -32,6 +32,11 @@ old draft can therefore make a currently published entry a draft. Use scheduled
 revision publication when the intended operation is explicitly “restore this
 snapshot and publish it.”
 
+An activated revision's blocks are synced to their modules as they are now, so none shows a module's
+old settings while counting as up to date. A block holding a ref or var its module has retired since
+keeps it, and shows as behind its module until it is resolved. A revision that would bring back a
+block of a module in the trash is not activated: the message names the module and the block.
+
 For anyone but a superuser, a field the form locks keeps its value when a revision is activated or
 loaded as a working copy, whatever the snapshot holds; the rest of the revision restores.
 

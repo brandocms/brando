@@ -4412,6 +4412,7 @@ defmodule Brando.Content.Proposals do
   defp restore!(schema, id, revision, user) do
     case Brando.Revisions.set_entry_to_revision(schema, id, revision, user) do
       {:ok, _entry} -> :ok
+      {:error, {:module_in_trash, refusal}} -> Error.fail!(Brando.Content.module_in_trash_message(refusal, :revision))
       {:error, reason} -> Error.fail!(dgettext("content_proposals", "Undo failed: %{reason}", reason: inspect(reason)))
     end
   end
@@ -5203,6 +5204,8 @@ defmodule Brando.Content.Proposals do
 
   defp translation_failed(:forbidden),
     do: dgettext("content_proposals", "You do not have permission to create a translation of this entry.")
+
+  defp translation_failed({:module_in_trash, refusal}), do: Brando.Content.module_in_trash_message(refusal, :duplicate)
 
   defp translation_failed(%Changeset{} = changeset),
     do:

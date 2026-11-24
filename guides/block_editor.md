@@ -200,7 +200,11 @@ back into use: a save that adds a block of it, in an editor opened before the
 delete, is refused with a message naming the module and the block, and
 restoring an entry that holds one of its blocks (a page, with the fragments
 trashed with it) is refused with a message naming the module to restore
-first. Blocks an entry already holds don't stop its saves. The delete and
+first. Activating a revision that would bring back a block of it, and
+duplicating an entry that holds one, are refused the same way, naming the
+module and the block; a scheduled revision refused for it is not published,
+and its schedule is dropped with a note in Activity. Blocks an entry already
+holds don't stop its saves, nor a revision that keeps them. The delete and
 such a save or restore can't pass each other: whichever reaches the module
 first finishes, and the other is refused. A site's
 customization of a library module goes to the trash all the same, since its
