@@ -422,6 +422,23 @@ defmodule Brando.Content.ProposalsTest do
   end
 
   describe "stored proposals" do
+    # The module went to the trash after the proposal was approved (#3902)
+    test "apply of a block whose module is in the trash names the module", c do
+      ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user, summary: "One case")
+      assert {:ok, _} = Proposals.approve(proposal.id, 1, c.user)
+      blocks = block_count()
+      appended = {:root, length(roots(c.identity, c.user)) + 1}
+
+      Repo.update_all(from(m in Brando.Content.Module, where: m.id == ^c.case_module.id),
+        set: [deleted_at: DateTime.utc_now()]
+      )
+
+      assert {:error, message} = Proposals.apply(proposal.id, 1, c.user)
+      assert message == Brando.Content.module_in_trash_message(%{module: c.case_module.name, block: appended})
+      assert block_count() == blocks
+    end
+
     test "apply needs the actor's approval of that exact version", c do
       ops = [%InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user, summary: "One case")
