@@ -1250,10 +1250,10 @@ the next edit. The CLI reports this separately from an import rollback.
 ## What a module save changes in a block
 
 A module save syncs every block that uses the module. On each ref the module
-defines, the block keeps what an editor gave it, and takes the module's other
-settings for that ref: its classes, lazyload, placeholder, formats, playback
-and the like. The asset an editor chose (the picture, video, gallery or file)
-always stays.
+defines, the block keeps the fields the table below lists, and takes the
+module's other settings for that ref: its classes, lazyload, placeholder,
+formats, playback, a video's poster and the like. The asset an editor chose
+(the picture, video, gallery or file) always stays.
 
 | Ref type | Stays with the block |
 | --- | --- |
