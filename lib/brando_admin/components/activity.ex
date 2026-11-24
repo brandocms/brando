@@ -810,7 +810,8 @@ defmodule BrandoAdmin.Components.Activity do
          _states
        ),
        do: [
-         gettext("Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash",
+         gettext(
+           "Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash",
            revision: revision,
            block: refused["block"] |> Brando.Activity.decode_place() |> Brando.Content.block_place(),
            module: Brando.Type.I18nString.localized(refused["module"]) || ""

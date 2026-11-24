@@ -28,6 +28,7 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
     # trashed. The restore would join the root again.
     setup c do
       container = container!(c.user)
+
       root =
         Map.merge(rows(), %{
           type: :container,
@@ -36,6 +37,7 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
           source: source(),
           children: [block(c.module)]
         })
+
       page = page!(c.user, [root])
       [%{block_id: root_id}] = loaded(page).entry_blocks
       {:ok, page} = page |> loaded() |> Page.changeset(%{title: "Emptied"}, c.user) |> put_roots([]) |> update(c.user)
@@ -298,7 +300,12 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
   defp module_params(user, uid, module, text) do
     refs =
       for {%{name: name}, n} <- module |> Repo.preload(:refs) |> Map.fetch!(:refs) |> Enum.with_index(),
-          do: %{"uid" => uid(), "name" => name, "sequence" => n, "data" => %{"type" => "text", "data" => %{"text" => text}}}
+          do: %{
+            "uid" => uid(),
+            "name" => name,
+            "sequence" => n,
+            "data" => %{"type" => "text", "data" => %{"text" => text}}
+          }
 
     %{"uid" => uid, "type" => "module", "module_id" => module.id, "creator_id" => user.id, "refs" => refs}
   end
@@ -308,7 +315,9 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
 
     params =
       Map.update(params, "children", [], fn children ->
-        children |> Enum.with_index() |> Enum.map(fn {child, n} -> Map.merge(child, %{"source" => source(), "sequence" => n}) end)
+        children
+        |> Enum.with_index()
+        |> Enum.map(fn {child, n} -> Map.merge(child, %{"source" => source(), "sequence" => n}) end)
       end)
 
     block = %Block{} |> Block.recursive_block_changeset(params, user) |> Repo.insert!()

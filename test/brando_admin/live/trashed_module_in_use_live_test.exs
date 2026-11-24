@@ -99,7 +99,10 @@ defmodule BrandoAdmin.TrashedModuleInUseLiveTest do
     render_hook(view, "duplicate_entry", %{"id" => to_string(c.page.id)})
 
     assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
-    assert message == Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+
+    assert message ==
+             Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+
     assert Repo.aggregate(Page, :count) == pages
   end
 
