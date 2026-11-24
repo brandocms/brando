@@ -664,6 +664,19 @@ defmodule Brando.Translations.ComputePendingTest do
       assert var.link_text == "Read more"
       assert var.identifier_id == nil
     end
+
+    test "a link switched to Content with nothing chosen ends the translation's link too" do
+      base = baseline(article(:no, blocks: [block("a", vars: [url_link("https://a.no")])]))
+      emptied = %{url_link("https://a.no") | link_type: :identifier}
+      source = article(:no, blocks: [block("a", vars: [emptied])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [url_link("https://a.en")])])
+
+      result = compute(source, target, base)
+      [var] = hd(result.payload.entry_blocks).block.vars
+
+      assert var.link_type == :identifier
+      assert Var.link_target(var) == nil
+    end
   end
 
   describe "gallery refs" do

@@ -1091,8 +1091,11 @@ defmodule Brando.Translations.Sync do
 
   defp restart_changed_link(merged, _source_var, _target_var), do: merged
 
-  defp no_link?(%{type: :link} = var), do: is_nil(Var.link_target(var))
-  defp no_link?(_var), do: false
+  # A URL link without an address, whatever entry its row still holds, or a
+  # link with neither. A Content link with nothing chosen and an address left
+  # in its row is a link the source ended: its kind is shared.
+  defp no_link?(%{type: :link, link_type: :url} = var), do: is_nil(Var.link_target(var))
+  defp no_link?(var), do: FollowLinkDefault.empty_link?(var)
 
   defp controlled_fields(var, controlled), do: if(var.key in controlled, do: @var_values, else: [])
 
