@@ -713,7 +713,8 @@ defmodule Brando.Content.Blocks do
   revision's blocks (`Brando.Content.BlockIdentity.index/1`): a block the
   revision holds no module version for is behind until the sync says
   otherwise, since its content may be from before any version. Blocks of a
-  module in the trash are left as they are.
+  module in the trash are left as they are. Returns the ids of the blocks
+  it wrote.
   """
   def sync_restored_blocks(entry, restored) do
     blocks = for {block, _place} <- loaded_module_blocks(entry), do: block
@@ -723,9 +724,17 @@ defmodule Brando.Content.Blocks do
 
     if unstamped != [], do: Repo.update_all(from(b in Block, where: b.id in ^unstamped), set: [module_version: nil])
 
-    blocks
-    |> Enum.group_by(&{&1.module_id, normalize_library_origin(&1.module_origin)}, & &1.id)
-    |> Enum.each(fn {{module_id, origin}, ids} -> sync_blocks(ids, module_id, origin) end)
+    synced =
+      blocks
+      |> Enum.group_by(&{&1.module_id, normalize_library_origin(&1.module_origin)}, & &1.id)
+      |> Enum.flat_map(fn {{module_id, origin}, ids} ->
+        case sync_source(module_id, origin) do
+          nil -> []
+          module -> sync_blocks_to(ids, module)
+        end
+      end)
+
+    Enum.uniq(unstamped ++ synced)
   end
 
   # A revision stored before blocks had a module version holds structs
@@ -2118,10 +2127,22 @@ defmodule Brando.Content.Blocks do
       "brando.block_count": length(block_ids)
     })
 
-    case sync_source(module_id, normalize_library_origin(origin)) do
-      nil -> []
-      module -> sync_blocks_to(block_ids, module)
-    end
+    module =
+      case normalize_library_origin(origin) do
+        :local ->
+          {:ok, module} =
+            Content.get_module(%{
+              matches: %{id: module_id},
+              preload: [:vars, refs: Ref.preloads()]
+            })
+
+          module
+
+        :shared ->
+          Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared)
+      end
+
+    sync_blocks_to(block_ids, module)
   end
 
   # The module blocks sync to, or nil for one in the trash or gone

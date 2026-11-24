@@ -153,10 +153,9 @@ defmodule Brando.Worker.EntryPublisher do
         Revisions.drop_schedule_in_trash(schema, id, revision, user, fn -> current_revision_job?(job) end)
         {:cancel, :in_trash}
 
-      # The revision would bring back a block of a module in the trash.
-      # Trying again gives the same answer until someone restores the
-      # module, and then the revision may be stale: the schedule is
-      # dropped, with a note in Activity naming the module and the block.
+      # The revision would bring back a block of a module in the trash:
+      # trying again gives the same answer. The schedule is dropped, with a
+      # note in Activity naming the module and the block.
       {:error, {:module_in_trash, refusal}} ->
         Revisions.drop_schedule_with_trashed_module(schema, id, revision, user, refusal, fn ->
           current_revision_job?(job)

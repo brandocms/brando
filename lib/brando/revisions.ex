@@ -486,7 +486,7 @@ defmodule Brando.Revisions do
 
         with :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
              {:ok, updated_entry} <- Query.update(changeset),
-             :ok <- sync_restored_blocks(entry_schema, updated_entry, target_entry),
+             {:ok, updated_entry} <- sync_restored_blocks(entry_schema, updated_entry, target_entry),
              {:ok, updated_entry} <- recompute_derived(updated_entry),
              {:ok, identifier_result} <- Content.update_identifier(entry_schema, updated_entry),
              {:ok, _} <- Brando.Publisher.schedule_publishing(updated_entry, changeset, user) do
@@ -541,7 +541,8 @@ defmodule Brando.Revisions do
   end
 
   # The restored blocks are at their modules as they are now, or behind
-  # them; none shows a revision's old settings while it counts as current
+  # them; none shows a revision's old settings while it counts as current.
+  # The entry comes back as synced, for whoever has it open.
   defp sync_restored_blocks(entry_schema, entry, target_entry) do
     restored =
       if function_exported?(entry_schema, :__blocks_fields__, 0),
@@ -551,7 +552,10 @@ defmodule Brando.Revisions do
           |> BlockIdentity.index(),
         else: %{}
 
-    Content.Blocks.sync_restored_blocks(entry, restored)
+    case Content.Blocks.sync_restored_blocks(entry, restored) do
+      [] -> {:ok, entry}
+      _synced -> {:ok, load_for_restore(entry_schema, entry.id)}
+    end
   end
 
   # A page's trail is computed from its parents, not content of the revision:
@@ -729,8 +733,8 @@ defmodule Brando.Revisions do
   # Removing a root block deletes its entry-specific join row while the shared
   # content block remains. Recreate that link before casting the historical
   # tree so Ecto can match and update the existing nested block instead of
-  # trying to insert a new belongs_to alongside the old `block_id`.
-  # Whether it relinked any.
+  # trying to insert a new belongs_to alongside the old `block_id`. Whether
+  # it relinked any.
   defp restore_missing_block_links!(entry_schema, entry_id, target_entry) do
     function_exported?(entry_schema, :__blocks_fields__, 0) and
       entry_schema.__blocks_fields__()

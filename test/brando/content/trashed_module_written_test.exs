@@ -178,7 +178,12 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
 
       for uid <- ["moved", "kept", "in-place"], do: stamp!(uid, module_version: 2)
 
-      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, c.user)
+      assert {:ok, restored} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, c.user)
+
+      # as whoever has the entry open gets it
+      returned = Map.new(restored.entry_blocks, &{&1.block.uid, &1.block.module_version})
+      assert returned["kept"] == row("kept").module_version
+      assert returned["in-place"] == row("in-place").module_version
 
       for {uid, module} <- [{"moved", retired}, {"kept", kept}, {"in-place", retired}] do
         module = Repo.get!(Brando.Content.Module, module.id)
