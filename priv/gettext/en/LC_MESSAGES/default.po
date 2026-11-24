@@ -13649,6 +13649,11 @@ msgstr ""
 msgid "Not required"
 msgstr ""
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: it holds blocks of the module “%{module}”, which is in the trash. Restore the module first."
+msgstr ""
+
 #: lib/brando/videos.ex
 #, elixir-autogen, elixir-format
 msgid "Not restored: the library already has this video as “%{title}”. Use that one, or delete it first."
@@ -13682,6 +13687,11 @@ msgstr ""
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Not saved yet"
+msgstr ""
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved: %{block} uses the module “%{module}”, which is in the trash. Remove the block, or restore the module from the trash, and save again."
 msgstr ""
 
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
@@ -24668,6 +24678,11 @@ msgstr ""
 msgid "a %{type} reference"
 msgstr ""
 
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "a block inside %{block}"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "a change"
@@ -24732,6 +24747,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "avif"
+msgstr ""
+
+#: lib/brando/content.ex
+#, elixir-autogen, elixir-format
+msgid "block %{number}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex

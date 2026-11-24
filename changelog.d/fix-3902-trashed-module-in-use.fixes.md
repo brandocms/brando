@@ -1,0 +1,1 @@
+- A module in the trash no longer comes back into use: a save that adds a block of it, or restoring an entry that holds one, is refused with a message naming the module, and a module delete and such a save no longer pass each other.
