@@ -650,6 +650,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   defp translation_reason(:forbidden), do: gettext("You do not have permission to do this.")
   defp translation_reason({:taken, _constraint}), do: gettext("Another entry has its address now.")
+  defp translation_reason({:module_in_trash, refusal}), do: Brando.Content.module_in_trash_message(refusal)
   defp translation_reason(_reason), do: gettext("It could not be changed.")
 
   defp module_in_use_message,
