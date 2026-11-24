@@ -984,7 +984,7 @@ defmodule Brando.Content.Proposals do
   defp sync_problems(%SyncTranslation{target: {schema, _id} = target} = op, proposal, actor) do
     case sync_takes(target) do
       {:ok, takes, work} ->
-        if Enum.any?(proposal.operations, &({schema, work.source_id} in op_targets(&1))),
+        if Enum.any?(proposal.operations, &({schema, work.source_id} in changed_targets(&1))),
           do: [source_in_proposal()],
           else: readable_take_problems(op, takes, work, actor)
 
@@ -2875,7 +2875,7 @@ defmodule Brando.Content.Proposals do
         # order applying takes them (`apply_lock_order/1`): a preview and an
         # apply that took two sources in opposite order would deadlock
         lock_translated_sources!(proposal)
-        check_translated_sources!(proposal)
+        check_translated_sources!(proposal, lock_groups: false)
         user = user!(actor)
         entry = create_translations!(proposal, target, user)
 
@@ -4127,9 +4127,16 @@ defmodule Brando.Content.Proposals do
             units: Enum.join(names, ", ")
           )
 
-    synced = Enum.find_value(problems, &(&1.code == :sync_changed && &1.message))
+    # Whatever else a recheck found says so itself: a sync that changed, has
+    # nothing left to take, or is no longer of a synchronized translation
+    others =
+      for %{code: code, message: message} <- problems,
+          code != :source_changed,
+          is_binary(message),
+          uniq: true,
+          do: message
 
-    case Enum.reject([texts, synced], &is_nil/1) do
+    case Enum.reject([texts | others], &is_nil/1) do
       [] -> dgettext("content_proposals", "Resolve every blocking problem before applying.")
       messages -> Enum.join(messages, " ")
     end
@@ -4924,16 +4931,18 @@ defmodule Brando.Content.Proposals do
 
   Called inside the apply's transaction, before any translation is created
   or saved: a source saved after the recheck at approval would otherwise
-  have its new text overwritten by the translation of the text before.
+  have its new text overwritten by the translation of the text before. It
+  holds the group of a `sync_translation`'s translation until the commit;
+  `lock_groups: false` leaves that out, for a caller that saves nothing.
   """
-  @spec check_translated_sources!(Proposal.t()) :: :ok
-  def check_translated_sources!(proposal) do
+  @spec check_translated_sources!(Proposal.t(), keyword()) :: :ok
+  def check_translated_sources!(proposal, opts \\ []) do
     problems =
       for %Translate{} = op <- proposal.operations,
           problem <- translated_source_problems(op, proposal),
           do: problem
 
-    problems = problems ++ Enum.flat_map(proposal.operations, &synced_source_problems(&1, proposal))
+    problems = problems ++ Enum.flat_map(proposal.operations, &synced_source_problems(&1, proposal, opts))
 
     if problems != [], do: Error.fail!(recheck_failed(problems))
     :ok
@@ -4966,14 +4975,20 @@ defmodule Brando.Content.Proposals do
 
   # The source locked, as for a translate batch, and the translation's group,
   # until the apply commits: the sync that recomputes the pending version
-  # takes it, so the version checked here is the one the save takes.
-  defp synced_source_problems(%SyncTranslation{target: {schema, id} = target} = op, proposal) do
+  # takes it, so the version checked here is the one the save takes. A
+  # caller that saves nothing (`lock_groups: false`, the preview of another
+  # entry of the proposal) rechecks without holding the group while it renders.
+  defp synced_source_problems(%SyncTranslation{target: {schema, id} = target} = op, proposal, opts) when is_integer(id) do
     with {schema, source_id} <- translated_source(target, proposal), do: lock_source!(schema, source_id)
-    with %{group_id: group_id} <- Translations.get_member(schema, id), do: Translations.lock_group!(group_id)
+
+    if Keyword.get(opts, :lock_groups, true) do
+      with %{group_id: group_id} <- Translations.get_member(schema, id), do: Translations.lock_group!(group_id)
+    end
+
     sync_recheck(op)
   end
 
-  defp synced_source_problems(_op, _proposal), do: []
+  defp synced_source_problems(_op, _proposal, _opts), do: []
 
   defp lock_source!(schema, source_id) do
     Repo.one(from(e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE"))
