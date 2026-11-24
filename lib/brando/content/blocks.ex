@@ -2378,6 +2378,9 @@ defmodule Brando.Content.Blocks do
     |> Changeset.change()
     |> Map.put(:action, :insert)
     |> duplicate_vars(vars, user_id)
+    # A key of its own, as a row added with Add row has, so an upload into
+    # the copy's row reaches it after a reorder (`Block.Render.table/1`)
+    |> BrandoAdmin.Components.Form.Input.SubformHelpers.new_row()
   end
 
   def duplicate_refs(changeset, %Ecto.Association.NotLoaded{}, _) do

@@ -539,7 +539,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
+  # The keys of the rows a save gave an id (`Form`, `announce_saved_rows`).
+  defp handle_asset_delivery_info({:saved_row_keys, keys}, socket),
+    do: {:halt, assign(socket, :saved_row_keys, Map.merge(socket.assigns[:saved_row_keys] || %{}, keys))}
+
   defp handle_asset_delivery_info({:asset_ready, target, asset}, socket) do
+    target = saved_row(target, socket)
+
     # Gallery additions must land ONE PER RENDER CYCLE — parallel uploads
     # deliver in quick succession and LiveView batches the resulting
     # send_updates, making the block process multiple adds against the same
@@ -589,6 +595,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_asset_delivery_info(_, socket), do: {:cont, socket}
 
+  # An upload started in a new row names the key the row had then; a save
+  # since has given the row an id, which the form names it by now.
+  defp saved_row(%{"row_key" => "new-" <> _ = key} = target, socket),
+    do: %{target | "row_key" => Map.get(socket.assigns[:saved_row_keys] || %{}, key, key)}
+
+  defp saved_row(target, _socket), do: target
+
   defp upload_elsewhere_message,
     do: gettext("The upload finished in a tab that is no longer editing. It is in the library, not in the entry.")
 
@@ -607,6 +620,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   defguardp is_var_asset(asset)
             when is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File) or
                    is_struct(asset, Brando.Videos.Video)
+
+  # A variable in a block's table row: the target names the block and the
+  # row's key, and the block delivers it to the row where it is now
+  # (`Block`, `"table_row_upload"`).
+  defp deliver_asset(%{"kind" => kind, "component_id" => block_id, "row_key" => row_key} = target, asset, _socket)
+       when kind in ["block_var", "entry_var", "block_var_gallery", "entry_var_gallery"] and
+              is_binary(block_id) and is_binary(row_key) and is_var_asset(asset) do
+    send_update(BrandoAdmin.Components.Form.Block, id: block_id, event: "table_row_upload", target: target, asset: asset)
+  end
 
   # Scalar vars hold image/file/video FKs — classify by struct (the target's
   # "asset_type" string can lie for e.g. self-hosted video), and refuse
@@ -839,6 +861,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       expected_asset_id: target["expected_asset_id"],
       field: String.to_existing_atom(field),
       path: path,
+      row_key: target["row_key"],
       asset: asset
     )
   end
@@ -859,6 +882,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       asset_type: :gallery,
       field: String.to_existing_atom(field),
       path: target_path(target),
+      row_key: target["row_key"],
       component_id: target["component_id"],
       config_target: target["config_target"],
       asset: refresh_processed_image(image)
@@ -879,6 +903,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       asset_type: :gallery_video,
       field: String.to_existing_atom(field),
       path: target_path(target),
+      row_key: target["row_key"],
       component_id: target["component_id"],
       config_target: target["config_target"],
       asset: video

@@ -799,6 +799,20 @@ defmodule BrandoAdmin.Components.Form do
       else: clear_entry_field_asset(socket, field, path)
   end
 
+  # An upload into a subform row names the row by its key as well as its
+  # index (`row_key` in `Brando.Uploads.AssetIntent`): the rows may have
+  # been reordered while it uploaded. It goes to the row where it is now. If
+  # the row is gone, the asset stays in the library and the editor is told.
+  def update(%{event: "entry_field_upload_complete", row_key: row_key, path: path} = assigns, socket)
+      when is_binary(row_key) do
+    assigns = Map.delete(assigns, :row_key)
+
+    case keyed_row_path(socket.assigns.form.source, path, saved_row_key(socket, row_key)) do
+      {:ok, path} -> update(%{assigns | path: path}, socket)
+      :gone -> {:ok, upload_row_gone(socket, assigns)}
+    end
+  end
+
   def update(
         %{event: "entry_field_upload_complete", expected_asset_id: expected, field: field, path: path} = assigns,
         socket
@@ -1199,6 +1213,7 @@ defmodule BrandoAdmin.Components.Form do
       |> struct()
       |> Changeset.change(attrs)
       |> Map.put(:action, :insert)
+      |> SubformHelpers.new_row()
 
     rows = Changeset.get_embed(changeset, field) ++ [row]
     updated = Changeset.put_embed(changeset, field, rows)
@@ -7944,6 +7959,7 @@ defmodule BrandoAdmin.Components.Form do
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     # The other tabs read the entry back: once all of the save is written.
     announce_save(socket, entry, save)
+    socket = remember_saved_rows(socket, save.changeset, entry)
 
     mutation_message =
       Brando.Gettext
@@ -8176,6 +8192,7 @@ defmodule BrandoAdmin.Components.Form do
     {socket, stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
     announce_save(socket, entry, save)
+    socket = remember_saved_rows(socket, save.changeset, entry)
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
     {:noreply,
@@ -10834,7 +10851,20 @@ defmodule BrandoAdmin.Components.Form do
   # or whose row is gone (removed, or moved under a removed one) stays in
   # the library, and the editor is told. So does one for a locked field,
   # and one whose field shows another video by then, picked since.
+  # A drawer in a row names the row by its key too (`row_key`): the video
+  # goes to the row where it is now, as an upload manager's delivery does.
   defp deliver_uploaded_video(socket, nil, _video), do: video_left_in_library(socket)
+
+  defp deliver_uploaded_video(socket, %{edit_video: %{row_key: row_key, path: path} = edit_video} = target, video)
+       when is_binary(row_key) do
+    case keyed_row_path(socket.assigns.form.source, path, row_key) do
+      {:ok, path} ->
+        deliver_uploaded_video(socket, %{target | edit_video: %{edit_video | row_key: nil, path: path}}, video)
+
+      :gone ->
+        video_left_in_library(socket)
+    end
+  end
 
   defp deliver_uploaded_video(socket, %{edit_video: %{path: path, field: field} = edit_video} = target, video) do
     changeset = socket.assigns.form.source
@@ -10881,6 +10911,91 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     socket
+  end
+
+  defp upload_row_gone(socket, %{asset_type: asset_type}) do
+    if asset_type in [:image, :gallery], do: send_update(ImagePicker, id: "image-picker", refresh_images: true)
+    BrandoAdmin.Toast.upload_row_gone(socket)
+  end
+
+  # The keys this save's new rows had, by the saved rows' keys: an upload
+  # started in a new row still names its new key, and is delivered to the
+  # saved row (`Hooks`, `:saved_row_keys`). A list whose saved rows are not
+  # the changeset's, one for one in order, gives none, so the upload is
+  # told its row is gone rather than placed by position. A block's table
+  # rows come from the block's own form (`Block`, `"replace_form"`): the
+  # save's blocks are built from the edit session, without the rows' keys.
+  #
+  # The form keeps them too: an upload that finished while the save ran is
+  # already waiting in the LiveView's mailbox, ahead of the message to
+  # `Hooks`, and is delivered naming the new key (`saved_row_key/2`).
+  defp remember_saved_rows(socket, changeset, entry) do
+    keys = changeset |> saved_row_keys(entry) |> Map.new()
+    if keys != %{}, do: send(self(), {:saved_row_keys, keys})
+    assign(socket, :saved_row_keys, Map.merge(socket.assigns[:saved_row_keys] || %{}, keys))
+  end
+
+  defp saved_row_key(socket, key), do: Map.get(socket.assigns[:saved_row_keys] || %{}, key, key)
+
+  defp saved_row_keys(%Changeset{changes: changes}, %{} = saved),
+    do: Enum.flat_map(changes, fn {field, change} -> saved_row_keys(change, Map.get(saved, field)) end)
+
+  defp saved_row_keys([%Changeset{} | _] = rows, saved) when is_list(saved) do
+    rows
+    |> Enum.reject(&(&1.action in [:replace, :delete]))
+    |> SubformHelpers.saved_pairs(saved)
+    |> Enum.flat_map(fn {row, saved} -> SubformHelpers.saved_row_key(row, saved) ++ saved_row_keys(row, saved) end)
+  end
+
+  defp saved_row_keys(_change, _saved), do: []
+
+  # `path` with the index the row `key` names has now in its list, counted
+  # as the form shows the rows (`SubformHelpers.row_key/1`); the rows above
+  # it in the path are taken by index. :gone when the form shows no such
+  # row, or shows it marked for deletion: every row is given a key when it
+  # is added (`SubformHelpers.new_row/1`), so a row without one is another
+  # row. A path through no list is as it is.
+  defp keyed_row_path(data, path, key) do
+    if Enum.any?(path, &is_integer/1), do: keyed_path(data, path, key), else: {:ok, path}
+  end
+
+  defp keyed_path(data, [field, index | rest], key) when is_atom(field) and is_integer(index) do
+    rows = path_child(data, field)
+
+    cond do
+      not is_list(rows) ->
+        :gone
+
+      Enum.any?(rest, &is_integer/1) ->
+        with row when not is_nil(row) <- form_row_at(rows, index),
+             {:ok, rest} <- keyed_path(row, rest, key),
+             do: {:ok, [field, index | rest]},
+             else: (_ -> :gone)
+
+      true ->
+        case keyed_index(rows, key) do
+          nil -> :gone
+          index -> {:ok, [field, index | rest]}
+        end
+    end
+  end
+
+  defp keyed_path(data, [field | rest], key) when is_atom(field) do
+    case path_child(data, field) do
+      %{} = row when not is_struct(row, Ecto.Association.NotLoaded) ->
+        with {:ok, rest} <- keyed_path(row, rest, key), do: {:ok, [field | rest]}
+
+      _ ->
+        :gone
+    end
+  end
+
+  defp keyed_path(_data, path, _key), do: {:ok, path}
+
+  defp keyed_index(rows, key) do
+    shown = rows |> shown_rows() |> Enum.map(&elem(&1, 0))
+    index = Enum.find_index(shown, &(SubformHelpers.row_key(&1) == key))
+    if index && not marked_for_deletion?(Enum.at(shown, index)), do: index
   end
 
   # The asset id a field shows, unless its row is gone

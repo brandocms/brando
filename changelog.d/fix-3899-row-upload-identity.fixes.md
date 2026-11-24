@@ -1,0 +1,1 @@
+- An image, file or video uploaded into a subform row or a block's table row lands in that row when the rows are reordered, or the entry is saved, while it uploads; if the row was removed, it stays in the library and the editor is told.

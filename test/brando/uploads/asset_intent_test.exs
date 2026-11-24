@@ -54,6 +54,21 @@ defmodule Brando.Uploads.AssetIntentTest do
              AssetIntent.normalize(Map.put(base, :path, ["definitely_not_an_existing_field_atom_xyz"]))
   end
 
+  test "carries the key of the row a target is in, and refuses another shape" do
+    base = %{kind: "entry_field", field: "title", path: ["title", 1], asset_type: "image", deliver_topic: @topic}
+
+    assert {:ok, %{"row_key" => "id-12"}} = AssetIntent.normalize(Map.put(base, :row_key, "id-12"))
+
+    assert {:ok, %{"row_key" => "new-28dRdii7fUD2aV"}} =
+             AssetIntent.normalize(Map.put(base, :row_key, "new-28dRdii7fUD2aV"))
+
+    assert {:ok, %{"row_key" => nil}} = AssetIntent.normalize(Map.put(base, :row_key, ""))
+    assert {:ok, %{"row_key" => nil}} = AssetIntent.normalize(base)
+    assert {:error, "Invalid upload row"} = AssetIntent.normalize(Map.put(base, :row_key, "12"))
+    assert {:error, "Invalid upload row"} = AssetIntent.normalize(Map.put(base, :row_key, "id-1<b>"))
+    assert {:error, "Invalid upload row"} = AssetIntent.normalize(Map.put(base, :row_key, 12))
+  end
+
   test "requires adapter identity for vars and refs" do
     assert {:error, "Missing component id"} =
              AssetIntent.normalize(%{

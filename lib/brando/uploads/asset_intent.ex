@@ -49,6 +49,7 @@ defmodule Brando.Uploads.AssetIntent do
     folder_id
     ref
     file_id
+    row_key
   )
 
   # Opaque client-generated correlation token. It is echoed back to the owning
@@ -56,6 +57,11 @@ defmodule Brando.Uploads.AssetIntent do
   # registered for that file. Never interpolated into a query or an atom, but
   # kept to a conservative charset since it does reach the DOM as an id.
   @ref_format ~r/^[A-Za-z0-9_-]{1,64}$/
+
+  # The row of a list the target is in (`SubformHelpers.row_key/1`: `id-…`
+  # or a new row's `new-…`). The browser sends it with the row's index in
+  # `path`, so the delivery finds the row where it is by then.
+  @row_key_format ~r/^(id|new)-[A-Za-z0-9_-]{1,64}$/
 
   # Upload targets that only accept some asset types. Kinds not listed accept any.
   @compatible_asset_types %{
@@ -87,6 +93,7 @@ defmodule Brando.Uploads.AssetIntent do
          {:ok, topic} <- deliver_topic(target["deliver_topic"]),
          {:ok, path} <- path(target["path"]),
          {:ok, ref} <- ref(target["ref"]),
+         {:ok, row_key} <- row_key(target["row_key"]),
          :ok <- validate_destination(kind, target),
          :ok <- validate_expected_asset_id(target["expected_asset_id"]) do
       {:ok,
@@ -96,7 +103,8 @@ defmodule Brando.Uploads.AssetIntent do
        |> Map.put("config_target", config_target(target["config_target"]))
        |> Map.put("deliver_topic", topic)
        |> Map.put("path", path)
-       |> Map.put("ref", ref)}
+       |> Map.put("ref", ref)
+       |> Map.put("row_key", row_key)}
     end
   rescue
     ArgumentError -> {:error, "Invalid upload configuration target"}
@@ -229,6 +237,15 @@ defmodule Brando.Uploads.AssetIntent do
   end
 
   defp ref(_), do: {:error, "Invalid upload ref"}
+
+  defp row_key(nil), do: {:ok, nil}
+  defp row_key(""), do: {:ok, nil}
+
+  defp row_key(key) when is_binary(key) do
+    if Regex.match?(@row_key_format, key), do: {:ok, key}, else: {:error, "Invalid upload row"}
+  end
+
+  defp row_key(_), do: {:error, "Invalid upload row"}
 
   defp config_target(nil), do: "default"
   defp config_target(target), do: Brando.Assets.ConfigTarget.serialize(target)
