@@ -44,8 +44,8 @@ test.describe('Multi blocks: dropping media', () => {
     }))
   })
 
-  const createPage = async (page, title, group, module) => {
-    await page.setViewportSize({ width: 1440, height: 1400 })
+  const createPage = async (page, title, group, module, height = 1400) => {
+    await page.setViewportSize({ width: 1440, height })
     await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(title)
@@ -76,7 +76,10 @@ test.describe('Multi blocks: dropping media', () => {
   // The row's own block element, which takes a drop anywhere on it
   const rowBlock = row => row.locator('.block').first()
 
-  // A second row of `module` below the first
+  // A second row of `module` below the first. The editor scrolls to a block
+  // 250 ms after adding it (`b:scroll_to`), to where it is by then: a test
+  // that drags in this page needs a window that holds the whole page, or the
+  // scroll can come in the middle of the drag.
   const addRow = async (page, module) => {
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: group }).click()
@@ -88,6 +91,8 @@ test.describe('Multi blocks: dropping media', () => {
 
   // `entry` dragged by its handle into `row`'s children
   const moveTo = async (page, entry, row) => {
+    // the whole page in the window, so that no scroll moves it (addRow)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
     const handle = await entry.locator('.sort-handle').first().boundingBox()
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
     await page.mouse.down()
@@ -216,8 +221,7 @@ test.describe('Multi blocks: dropping media', () => {
   // with it: what the field was told by the drop goes with the upload, not
   // with the element.
   test('an entry moved to another row while its upload waits goes when the upload is cancelled', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 2200 })
-    await createPage(page, 'Media drop moved', group, 'Image Row')
+    await createPage(page, 'Media drop moved', group, 'Image Row', 2200)
     await addRow(page, 'Image Row')
     const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
 
@@ -358,8 +362,7 @@ test.describe('Multi blocks: dropping media', () => {
       const frame = JSON.parse(String(payload))
       if (frame[4]?.event === 'media_drop_settled') settled.push(frame[4].value)
     }))
-    await page.setViewportSize({ width: 1440, height: 2200 })
-    await createPage(page, 'Media drop provider moved', group, 'Video Row')
+    await createPage(page, 'Media drop provider moved', group, 'Video Row', 2200)
     await addRow(page, 'Video Row')
     const [first, second] = [rows(page).nth(0), rows(page).nth(1)]
 
