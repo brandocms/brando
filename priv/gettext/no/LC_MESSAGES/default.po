@@ -13801,10 +13801,20 @@ msgstr "Ikke påkrevd"
 msgid "Not restored: %{block} of the revision uses the module “%{module}”, which is in the trash. Restore the module from the trash first."
 msgstr "Ikke gjenopprettet: %{block} i revisjonen bruker modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen fra papirkurven først."
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: another entry has its address. It is still in the trash."
+msgstr "Ikke gjenopprettet: en annen oppføring har adressen. Den ligger fortsatt i papirkurven."
+
 #: lib/brando/content.ex
 #, elixir-autogen, elixir-format
 msgid "Not restored: it holds blocks of the module “%{module}”, which is in the trash. Restore the module first."
 msgstr "Ikke gjenopprettet: den har blokker av modulen «%{module}», som ligger i papirkurven. Gjenopprett modulen først."
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: it is no longer in the trash."
+msgstr "Ikke gjenopprettet: den ligger ikke lenger i papirkurven."
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format

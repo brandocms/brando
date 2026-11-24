@@ -32,15 +32,17 @@ defmodule Brando.SoftDelete.Repo do
               Ecto.Schema.t()
 
   @doc """
-  Restores struct
+  Restores struct. Its freed fields come back free of collisions, a draft's
+  too unless `draft_address: :keep` (`restore_changeset/2`). A row restored
+  or gone since it was read is an error on `deleted_at`.
   """
-  @callback restore(struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t()) ::
+  @callback restore(struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(), opts :: keyword()) ::
               {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
   @doc """
   Restores struct, raises on error
   """
-  @callback restore!(struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t()) ::
+  @callback restore!(struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(), opts :: keyword()) ::
               Ecto.Schema.t()
 
   defmacro __using__(_opts) do
@@ -69,17 +71,17 @@ defmodule Brando.SoftDelete.Repo do
         |> Brando.Cache.Query.evict()
       end
 
-      def restore(struct_or_changeset) do
+      def restore(struct_or_changeset, opts \\ []) do
         struct_or_changeset
-        |> Brando.SoftDelete.Repo.restore_changeset()
-        |> update()
+        |> Brando.SoftDelete.Repo.restore_changeset(opts)
+        |> update(stale_error_field: :deleted_at)
         |> maybe_create_identifier()
         |> Brando.Cache.Query.evict()
       end
 
-      def restore!(struct_or_changeset) do
+      def restore!(struct_or_changeset, opts \\ []) do
         struct_or_changeset
-        |> Brando.SoftDelete.Repo.restore_changeset()
+        |> Brando.SoftDelete.Repo.restore_changeset(opts)
         |> update!()
         |> maybe_create_identifier()
         |> Brando.Cache.Query.evict()
@@ -151,9 +153,9 @@ defmodule Brando.SoftDelete.Repo do
   # Repo only carries the database calls.
 
   @doc "Restores the obfuscated fields of a soft-deleted entry to their original values."
-  def maybe_obfuscate(%Changeset{data: data} = changeset), do: obfuscate(changeset, data, &normalize_field/1)
+  def maybe_obfuscate(%Changeset{data: data} = changeset), do: restore_obfuscated(changeset, data, [])
 
-  def maybe_obfuscate(%{} = struct), do: struct |> Changeset.change() |> obfuscate(struct, &normalize_field/1)
+  def maybe_obfuscate(%{} = struct), do: struct |> Changeset.change() |> restore_obfuscated(struct, [])
 
   def maybe_obfuscate(changeset), do: changeset
 
@@ -196,9 +198,32 @@ defmodule Brando.SoftDelete.Repo do
 
   def soft_delete_slug_changeset(struct_or_changeset), do: Changeset.change(struct_or_changeset, deleted_at: utc_now())
 
-  @doc "Clears an entry's deletion and restores its obfuscated fields."
-  def restore_changeset(struct_or_changeset),
-    do: struct_or_changeset |> Changeset.change(deleted_at: nil) |> maybe_obfuscate()
+  @doc """
+  Clears an entry's deletion and restores its obfuscated fields, each to its
+  value before the trash or, when another entry holds that now, to the first
+  free of `value-1` … in the scope a save of the type checks
+  (`Brando.Blueprint.Unique.avoid_collisions/4`). A draft is given a free
+  value too, unless `draft_address: :keep`.
+
+  The update applies only while the row holds the `deleted_at` it was read
+  with: a row restored, trashed again or gone since is stale.
+  """
+  def restore_changeset(struct_or_changeset, opts \\ []) do
+    %Changeset{data: data} = changeset = Changeset.change(struct_or_changeset)
+
+    changeset
+    |> clear_deleted_at()
+    |> restore_obfuscated(data, opts)
+  end
+
+  # The lock only filters the update: its change applies in `prepare_changes`, which an update without changes skips
+  defp clear_deleted_at(%Changeset{data: %{deleted_at: deleted_at}} = changeset) when not is_nil(deleted_at) do
+    changeset
+    |> Changeset.optimistic_lock(:deleted_at, fn _deleted_at -> nil end)
+    |> Changeset.change(deleted_at: nil)
+  end
+
+  defp clear_deleted_at(changeset), do: Changeset.change(changeset, deleted_at: nil)
 
   @doc """
   The deletion timestamp, truncated to seconds: now, or the one `at/2` holds
@@ -227,6 +252,15 @@ defmodule Brando.SoftDelete.Repo do
     changeset
     |> force_obfuscated(source, fields, transform)
     |> Brando.Utils.Schema.avoid_field_collision(fields)
+  end
+
+  defp restore_obfuscated(changeset, %{__struct__: module} = source, opts) do
+    fields = obfuscated_fields(source)
+    drafts? = Keyword.get(opts, :draft_address, :free) == :free
+
+    changeset
+    |> force_obfuscated(source, fields, &normalize_field/1)
+    |> Brando.Blueprint.Unique.avoid_collisions(module, fields, drafts: drafts?)
   end
 
   defp randomize_obfuscated(changeset, source),

@@ -13801,9 +13801,19 @@ msgstr ""
 msgid "Not restored: %{block} of the revision uses the module “%{module}”, which is in the trash. Restore the module from the trash first."
 msgstr ""
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: another entry has its address. It is still in the trash."
+msgstr ""
+
 #: lib/brando/content.ex
 #, elixir-autogen, elixir-format
 msgid "Not restored: it holds blocks of the module “%{module}”, which is in the trash. Restore the module first."
+msgstr ""
+
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: it is no longer in the trash."
 msgstr ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex

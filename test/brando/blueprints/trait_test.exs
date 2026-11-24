@@ -20,6 +20,7 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.Pages.Fragment,
                Brando.Pages.Page,
                Brando.Persons.Person,
+               Brando.RestoreTest.Project,
                Brando.Users.User,
                Brando.Videos.Video
              ]

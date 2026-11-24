@@ -73,6 +73,59 @@ defmodule Brando.Blueprint.Unique do
   end
 
   @doc """
+  Prepares `changeset` so each of `fields` gets a value no other live row of
+  `module` holds, in the scope a save checks (`prevent_collision`, `:with`):
+  its value, or the first free of `value-1` … `value-29`, else an error on
+  the field. A field `module` doesn't declare unique is checked across the
+  table. Unlike a save, a draft is checked too, unless `drafts: false`.
+
+  Adds the unique constraints `module` declares, so a value taken all the
+  same is a changeset error rather than a raise. For a restore from the
+  trash (`Brando.SoftDelete.Repo.restore_changeset/2`).
+  """
+  @spec avoid_collisions(Changeset.t(), module(), [atom()], keyword()) :: Changeset.t()
+  def avoid_collisions(changeset, module, fields, opts \\ []) do
+    changeset =
+      if Keyword.get(opts, :drafts, true) or Changeset.get_field(changeset, :status) != :draft,
+        do: Enum.reduce(fields, changeset, &avoid_field_collision(&2, module, &1)),
+        else: changeset
+
+    put_unique_constraints(changeset, module)
+  end
+
+  defp avoid_field_collision(changeset, module, field) do
+    case collision_source(changeset, module, unique_opts(module, field)) do
+      nil -> changeset
+      source -> Collision.do_avoid_field_collision([field], changeset, source)
+    end
+  end
+
+  defp unique_opts(module, field) do
+    module
+    |> Attributes.__attributes__()
+    |> Enum.find_value(fn
+      %{name: ^field, opts: opts} -> Map.get(opts, :unique)
+      _attribute -> nil
+    end)
+  end
+
+  # The rows a value collides with: none (`nil`) when a scope field is NULL,
+  # which the index treats as distinct
+  defp collision_source(changeset, module, unique_opts) when is_list(unique_opts) do
+    case Keyword.get(unique_opts, :prevent_collision) do
+      filter_fn when is_function(filter_fn, 1) ->
+        scope_fields = Keyword.get(unique_opts, :with)
+        unless nil_scope?(changeset, scope_fields), do: scope_callback(filter_fn, scope_fields).(changeset)
+
+      collision_scope ->
+        scope_fields = UniqueFields.scope(unique_opts, collision_scope)
+        unless nil_scope?(changeset, scope_fields), do: filter_by_fields(module, scope_fields, changeset)
+    end
+  end
+
+  defp collision_source(_changeset, module, _unique), do: module
+
+  @doc """
   Returns `value`, or the first of `value-2`, `value-3`, … that no other row
   of `module` holds for the unique attribute `field`. A field that isn't
   unique gets `value` back.

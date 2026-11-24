@@ -88,10 +88,19 @@ use the current authorization scope even when including deleted rows. Selecting
 
 `trait :soft_delete, obfuscated_fields: [:slug]` frees a unique value on deletion
 by appending a marker and random suffix. Pages use this for `uri`. Restoration
-tries to normalize the original value and resolves a collision if another entry
-has claimed it. Inspect the **returned** restored URI; do not assume a former
-public URL is still available. A database conflict outside those configured
-collision rules may still return an error or raise a constraint exception.
+gives the entry its original value back or, when another entry has claimed it,
+the first free of `value-1` … `value-29`, in the scope a save of the type
+checks (a page's address is unique per language). A draft gets a free value
+too. Inspect the **returned** restored URI; do not assume a former public URL
+is still available.
+
+A restore that can't give the entry a free value, or meets a unique value
+taken all the same, returns `{:error, {:taken, field}}` from
+`Brando.Authorization.Boundary.restore/2`, and the entry stays in the trash. An
+entry restored or deleted for good since it was read returns
+`{:error, :not_in_trash}`. The listing's **Undelete** shows either as a message.
+A database conflict on a unique index the Blueprint doesn't declare may still
+raise a constraint exception.
 
 Restoration clears deletion, recreates the identifier where applicable, and
 evicts query caches. It is not a replacement for all domain-specific update

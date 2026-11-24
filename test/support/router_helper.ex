@@ -272,6 +272,27 @@ defmodule BrandoAdmin.SlugScopeTest.IndependentTableArticleListLive do
   end
 end
 
+defmodule BrandoAdmin.RestoreTest.ProjectListLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Listing, schema: Brando.RestoreTest.Project
+
+  alias BrandoAdmin.Components.Content
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Content.List}
+      id={"content_listing_#{@schema}_default"}
+      schema={@schema}
+      current_user={@current_user}
+      uri={@uri}
+      params={@params}
+      listing={:default}
+    />
+    """
+  end
+end
+
 # The route a new translation redirects to; not rendered in tests
 defmodule BrandoAdmin.SlugScopeTest.IndependentTableArticleFormLive do
   @moduledoc false
@@ -579,6 +600,7 @@ defmodule BrandoIntegrationWeb.Router do
          :update
 
     live "/slug-scope/table-articles", BrandoAdmin.SlugScopeTest.IndependentTableArticleListLive
+    live "/restore/projects", BrandoAdmin.RestoreTest.ProjectListLive
     live "/slug-scope/table-articles/update/:entry_id", BrandoAdmin.SlugScopeTest.IndependentTableArticleFormLive, :update
     live "/articles/user-context", BrandoAdmin.SyncTest.ArticleUserContextListLive
     live "/articles/filters", BrandoAdmin.SyncTest.ArticleFiltersListLive

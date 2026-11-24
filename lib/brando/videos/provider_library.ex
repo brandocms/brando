@@ -439,13 +439,15 @@ defmodule Brando.Videos.ProviderLibrary do
   end
 
   # A record the purge deletes without the video's lock (imported, or not
-  # deleted at the provider on purge) may go between the read and the write.
-  # With groups authorization, the change's check locks the row first and
-  # refuses one that is gone (`{:error, :forbidden}`).
+  # deleted at the provider on purge) may go between the read and the write,
+  # which then finds it stale (`:not_in_trash`). With groups authorization,
+  # the change's check locks the row first and refuses one that is gone
+  # (`{:error, :forbidden}`).
   defp restore_unless_live(nil, _user, restore) do
-    restore.()
-  rescue
-    Ecto.StaleEntryError -> {:error, :not_found}
+    case restore.() do
+      {:error, :not_in_trash} -> {:error, :not_found}
+      result -> result
+    end
   end
 
   defp restore_unless_live(live, user, _restore),

@@ -97,12 +97,12 @@ defmodule Brando.Repo do
     soft_delete_repo().soft_delete_all(entry, put_prefix(opts, entry))
   end
 
-  def restore(entry) do
-    soft_delete_repo().restore(entry)
+  def restore(entry, opts \\ []) do
+    soft_delete_repo().restore(entry, opts)
   end
 
-  def restore!(entry) do
-    soft_delete_repo().restore!(entry)
+  def restore!(entry, opts \\ []) do
+    soft_delete_repo().restore!(entry, opts)
   end
 
   defp soft_delete_repo, do: Brando.SoftDelete.Repo.ensure_used!(repo())
