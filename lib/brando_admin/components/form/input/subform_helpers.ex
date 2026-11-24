@@ -119,6 +119,31 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
   """
   def path_row_key(form, path), do: if(Enum.any?(path, &is_integer/1), do: row_key(form))
 
+  @doc """
+  `rows` paired with `saved`, the same rows as a save returned or reloaded
+  them; [] when `saved` is not `rows` one for one, in order.
+  """
+  def saved_pairs(rows, saved) when is_list(rows) and is_list(saved) do
+    pairs = Enum.zip(rows, saved)
+    if length(rows) == length(saved) and Enum.all?(pairs, &same_saved_row?/1), do: pairs, else: []
+  end
+
+  defp same_saved_row?({%Changeset{data: data} = row, saved}),
+    do: is_nil(saved_key(data)) or row_key(row) == row_key(saved)
+
+  defp same_saved_row?({row, saved}), do: row_key(row) == row_key(saved)
+
+  @doc """
+  `[{new key, saved key}]` when `row` was new and `saved` is the row the
+  save made of it: an upload started in the row names its new key.
+  """
+  def saved_row_key(row, saved) do
+    with "new-" <> _ = key <- row_key(row),
+         "id-" <> _ = saved_key <- row_key(saved),
+         do: [{key, saved_key}],
+         else: (_ -> [])
+  end
+
   @doc "Whether `key` is a new row's, which the row renders as its hidden `_key` input."
   def new_key?("new-" <> _), do: true
   def new_key?(_key), do: false

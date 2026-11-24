@@ -10922,7 +10922,9 @@ defmodule BrandoAdmin.Components.Form do
   # started in a new row still names its new key, and is delivered to the
   # saved row (`Hooks`, `:saved_row_keys`). A list whose saved rows are not
   # the changeset's, one for one in order, gives none, so the upload is
-  # told its row is gone rather than placed by position.
+  # told its row is gone rather than placed by position. A block's table
+  # rows come from the block's own form (`Block`, `"replace_form"`): the
+  # save's blocks are built from the edit session, without the rows' keys.
   defp announce_saved_rows(changeset, entry) do
     keys = changeset |> saved_row_keys(entry) |> Map.new()
     if keys != %{}, do: send(self(), {:saved_row_keys, keys})
@@ -10932,22 +10934,13 @@ defmodule BrandoAdmin.Components.Form do
     do: Enum.flat_map(changes, fn {field, change} -> saved_row_keys(change, Map.get(saved, field)) end)
 
   defp saved_row_keys([%Changeset{} | _] = rows, saved) when is_list(saved) do
-    rows = Enum.reject(rows, &(&1.action in [:replace, :delete]))
-    pairs = if length(rows) == length(saved), do: Enum.zip(rows, saved), else: []
-
-    if Enum.all?(pairs, fn {row, saved} -> row.data.id in [nil, saved.id] end),
-      do: Enum.flat_map(pairs, fn {row, saved} -> saved_row_key(row, saved) ++ saved_row_keys(row, saved) end),
-      else: []
+    rows
+    |> Enum.reject(&(&1.action in [:replace, :delete]))
+    |> SubformHelpers.saved_pairs(saved)
+    |> Enum.flat_map(fn {row, saved} -> SubformHelpers.saved_row_key(row, saved) ++ saved_row_keys(row, saved) end)
   end
 
   defp saved_row_keys(_change, _saved), do: []
-
-  defp saved_row_key(row, %{id: id}) when not is_nil(id) do
-    key = SubformHelpers.row_key(row)
-    if SubformHelpers.new_key?(key), do: [{key, "id-#{id}"}], else: []
-  end
-
-  defp saved_row_key(_row, _saved), do: []
 
   # `path` with the index the row `key` names has now in its list, counted
   # as the form shows the rows (`SubformHelpers.row_key/1`); the rows above

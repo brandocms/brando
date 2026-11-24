@@ -485,8 +485,16 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     for child_form <- children_forms do
       child_uid = Changeset.get_field(child_form.source, :uid)
-      send_update(__MODULE__, id: "#{id}-child-#{child_uid}", event: "replace_form", form: child_form)
+
+      send_update(__MODULE__,
+        id: "#{id}-child-#{child_uid}",
+        event: "replace_form",
+        form: child_form,
+        saved?: msg[:saved?]
+      )
     end
+
+    if msg[:saved?], do: announce_saved_rows(socket.assigns[:form], block_cs, belongs_to)
 
     socket
     |> assign(:replaced, {socket.assigns[:form], form, System.monotonic_time(:millisecond)})
@@ -3475,6 +3483,24 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign(:ref_media_selection, selection)
     end
   end
+
+  # After a save the table rows this block showed as new have ids: an upload
+  # started in one names its new key (`Hooks`, `:saved_row_keys`). Only from
+  # the block's own form: the save's blocks come from the edit session,
+  # without the rows' keys.
+  defp announce_saved_rows(%Phoenix.HTML.Form{source: shown}, saved_block, belongs_to) do
+    shown_rows = shown |> get_block_changeset(belongs_to) |> SubformHelpers.current_entries(:table_rows)
+    saved_rows = SubformHelpers.current_entries(saved_block, :table_rows)
+
+    keys =
+      shown_rows
+      |> SubformHelpers.saved_pairs(saved_rows)
+      |> Enum.flat_map(fn {row, saved} -> SubformHelpers.saved_row_key(row, saved) end)
+
+    if keys != [], do: send(self(), {:saved_row_keys, Map.new(keys)})
+  end
+
+  defp announce_saved_rows(_form, _saved_block, _belongs_to), do: nil
 
   @doc """
   Gets the block changeset depending on whether it belongs to the root or not.

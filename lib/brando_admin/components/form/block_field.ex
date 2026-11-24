@@ -2799,7 +2799,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end)
 
     for {uid, form} <- forms, scope == :all or subtree_dirty?(state, uid) or not holds_persisted?(socket, form) do
-      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form, saved?: scope == :changed)
     end
 
     socket
@@ -2811,7 +2811,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp reseed_from_rows(socket, entry_blocks_forms, base, scope) do
     for form <- entry_blocks_forms, scope == :all or not holds_persisted?(socket, form) do
-      send_update(Block, id: "block-#{get_form_block_uid(form)}", event: "replace_form", form: form)
+      send_update(Block,
+        id: "block-#{get_form_block_uid(form)}",
+        event: "replace_form",
+        form: form,
+        saved?: scope == :changed
+      )
     end
 
     socket
