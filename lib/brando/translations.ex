@@ -503,13 +503,31 @@ defmodule Brando.Translations do
     end
   end
 
+  # Under the group's lock, as a transfer takes it: a delete of the source
+  # with its translations (`in_source_delete/5`) reads the group under it,
+  # and finds this one independent or waits for it. The member is read again
+  # under it.
   defp detach(schema, member, actor) do
-    supersede_pending(member.id)
-    split_or_rollback(schema, member, actor)
+    lock_group!(member.group_id)
 
-    member
-    |> Changeset.change(synchronized: false, detached_at: now())
-    |> Repo.update!()
+    case Repo.get(Member, member.id) do
+      %Member{role: :target, synchronized: true} = member ->
+        supersede_pending(member.id)
+        split_or_rollback(schema, member, actor)
+
+        member
+        |> Changeset.change(synchronized: false, detached_at: now())
+        |> Repo.update!()
+
+      %Member{role: :target} = member ->
+        member
+
+      %Member{role: :source} ->
+        Repo.rollback(:is_source)
+
+      nil ->
+        Repo.rollback(:not_enrolled)
+    end
   end
 
   defp split_or_rollback(schema, member, actor) do

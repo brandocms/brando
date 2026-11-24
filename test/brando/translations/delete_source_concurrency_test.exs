@@ -106,4 +106,46 @@ defmodule Brando.Translations.DeleteSourceConcurrencyTest do
       assert %{role: :target} = Translations.get_member(Article, target_id)
     end)
   end
+
+  test "a delete waits for a translation being made independent, and then deletes nothing", c do
+    %{entry_id: german_id} =
+      unboxed(fn ->
+        %{group_id: group_id} = Translations.get_member(Article, c.source.id)
+        Repo.one!(from(m in Member, where: m.group_id == ^group_id and m.language == "de"))
+      end)
+
+    shown = unboxed(fn -> Translations.source_group(Article, c.source.id).fingerprint end)
+    test = self()
+
+    detach =
+      Task.async(fn ->
+        unboxed(fn ->
+          Brando.Repo.transaction(fn ->
+            {:ok, member} = Translations.make_independent(Article, german_id, c.user)
+            send(test, :detached)
+
+            receive do
+              :commit -> member
+            end
+          end)
+        end)
+      end)
+
+    assert_receive :detached, 10_000
+
+    delete =
+      Task.async(fn -> unboxed(fn -> Translations.delete_with_translations(Article, c.source.id, shown, c.user) end) end)
+
+    # The delete waits for the detach's lock on the group
+    assert Task.yield(delete, 500) == nil
+    send(detach.pid, :commit)
+
+    assert {:ok, %Member{synchronized: false}} = Task.await(detach, 10_000)
+    assert {:error, :group_changed} = Task.await(delete, 10_000)
+
+    unboxed(fn ->
+      assert Repo.get(Article, c.source.id)
+      assert Repo.get(Article, german_id)
+    end)
+  end
 end
