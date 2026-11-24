@@ -472,13 +472,16 @@ defmodule Brando.Content.Definition.Renames do
     moves |> Enum.flat_map(&(&1.holders |> Map.values() |> List.flatten())) |> lock!()
     planned = Enum.map(moves, &Map.put(&1, :plan, plan(&1.record, &1.module, &1.renames, person)))
 
-    planned =
-      if over_limit(Enum.map(planned, & &1.plan)),
-        do: Enum.map(planned, &Map.update!(&1, :plan, fn plan -> leave(plan) end)),
-        else: planned
+    together? = over_limit(Enum.map(planned, & &1.plan)) != nil
+    planned = if together?, do: Enum.map(planned, &Map.update!(&1, :plan, fn plan -> leave(plan) end)), else: planned
 
-    refused = Enum.flat_map(planned, & &1.plan.refused)
-    if refused != [], do: Repo.rollback(changed_since_review(refused))
+    # Left together, what is refused is what the resolve command can't move
+    # either, which a review of each module alone doesn't refuse
+    case Enum.flat_map(planned, & &1.plan.refused) do
+      [] -> :ok
+      refused when together? -> Repo.rollback(Enum.join(refused, "; "))
+      refused -> Repo.rollback(changed_since_review(refused))
+    end
 
     case Enum.reject(planned, & &1.plan.left?) do
       [] -> :ok

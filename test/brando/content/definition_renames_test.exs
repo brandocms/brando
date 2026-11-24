@@ -795,6 +795,43 @@ defmodule Brando.Content.DefinitionRenamesTest do
       refute reason =~ "tagline"
     end
 
+    test "over the limit together in an apply without a selection, a ref whose slot holds blocks is refused as such",
+         c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
+
+      footnote!(c, first_block(c.identity), "body")
+      bare_blocks!(c, c.module, "tagline", 800)
+      bare_blocks!(c, card, "title", 800)
+      path = c.path <> "-slot-together"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      rename_tagline!(c)
+      rename_body!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
+        )
+      )
+
+      {:ok, bundle} = Definitions.read(path)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      assert Enum.all?(plan.items, &(&1.action == :update))
+      assert {:error, reason} = Definitions.apply(plan, c.user)
+      assert reason =~ ~s(ref "copy" renamed from "body": 1 block holds blocks in the slot of body)
+      # Nothing changed since the review: the reason isn't worded so
+      [changed, _] = String.split(Renames.changed_since_review(["X"]), "X")
+      refute reason =~ changed
+    end
+
     test "over the limit in one module, leaves the renames of every module the apply selects", c do
       card =
         ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
