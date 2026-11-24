@@ -261,8 +261,9 @@ defmodule Brando.Query.Mutations do
   # One transaction, as group authorization runs a save already: the entry,
   # its identifier, revision and Activity are written together, so a save
   # Postgres cancels at any step has written nothing and can be saved again.
-  # A delete too: the lock `Content.guard_delete/2` takes holds until the
-  # entry is in the trash. `mutation` takes the user `Boundary.run/4` hands it.
+  # A module's delete too: the lock `Content.guard_delete/2` takes holds
+  # until the module is in the trash. `mutation` takes the user
+  # `Boundary.run/4` hands it.
   defp atomically(mutation), do: &in_transaction(mutation, &1)
 
   defp in_transaction(mutation, user) do
@@ -794,7 +795,8 @@ defmodule Brando.Query.Mutations do
   @decorate span("brando.query.delete", schema: :module, entry_id: :id)
   def delete(context, module, name, id, opts) do
     user = Keyword.get(opts, :user, :system)
-    Boundary.run(user, :delete, module, atomically(&do_delete(context, module, name, id, Keyword.put(opts, :user, &1))))
+    mutation = &do_delete(context, module, name, id, Keyword.put(opts, :user, &1))
+    Boundary.run(user, :delete, module, if(module == Content.Module, do: atomically(mutation), else: mutation))
   end
 
   defp do_delete(context, module, name, id, opts) do

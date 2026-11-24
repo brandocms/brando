@@ -222,17 +222,22 @@ defmodule Brando.Authorization.Boundary do
          do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
   end
 
-  # One transaction: a page brings back the fragments trashed with it
-  # (`after_restore/3`), and the module locks of `Brando.Content.guard_restore/1`
-  # hold until the entry is restored. `run/4` gives it one only with group
-  # authorization, so in legacy mode and for `:system` this does.
-  def restore(actor, entry) do
-    Repo.transaction(fn ->
-      case restore_with_run(actor, entry) do
-        {:ok, restored} -> restored
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  # An entry with blocks is restored in one transaction: the module locks of
+  # `Brando.Content.guard_restore/1` hold until it is restored, and a page
+  # brings back the fragments trashed with it (`after_restore/3`). `run/4`
+  # gives it one only with group authorization, so in legacy mode and for
+  # `:system` this does.
+  def restore(actor, %{__struct__: schema} = entry) do
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Brando.Trait.Blocks) do
+      Repo.transaction(fn ->
+        case restore_with_run(actor, entry) do
+          {:ok, restored} -> restored
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    else
+      restore_with_run(actor, entry)
+    end
   end
 
   defp restore_with_run(actor, %{__struct__: schema} = entry) do
