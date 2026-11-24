@@ -9177,6 +9177,9 @@ defmodule BrandoAdmin.Components.Form do
         {:error, :not_duplicable} ->
           gettext("Translations can't be created: this content type can't be copied.")
 
+        {:error, {:module_in_trash, refusal}} ->
+          Brando.Content.module_in_trash_message(refusal, :duplicate)
+
         {:error, :unauthorized} ->
           gettext("You do not have permission to do this.")
 

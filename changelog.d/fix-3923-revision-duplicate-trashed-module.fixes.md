@@ -1,3 +1,4 @@
 - A module in the trash no longer comes back through a revision: activating a revision, or a scheduled one, that would bring back a block of it is refused with a message naming the module and the block, and the scheduled revision's schedule is dropped with a note in Activity.
 - Duplicating an entry that holds a block of a module in the trash is refused, naming the module and the block.
 - An activated revision's blocks are synced to their modules as they are now, or show as behind them when they hold a ref or var the module has retired, instead of showing old settings while counting as up to date.
+- Duplicating a page whose fragment or child page holds a container with blocks inside no longer fails.

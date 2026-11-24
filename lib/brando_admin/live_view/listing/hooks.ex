@@ -215,8 +215,19 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       Brando.Translations.copy_batch_to_language(schema, ids, language, user, override_opts)
 
     Enum.each(failed, fn {_id, error} -> log_duplicate_error(singular, error) end)
+    {refused, others} = Enum.split_with(failed, &match?({_id, {:error, {:module_in_trash, _}}}, &1))
 
-    if failed != [], do: send(self(), {:toast, gettext("Some entries could not be copied.")})
+    if others != [], do: send(self(), {:toast, gettext("Some entries could not be copied.")})
+
+    for {id, {:error, {:module_in_trash, refusal}}} <- refused do
+      message =
+        gettext("“%{entry}” was not copied. %{reason}",
+          entry: Brando.Notes.entry_title(schema, Brando.Repo.get!(schema, id)),
+          reason: Brando.Content.module_in_trash_message(refusal, :duplicate)
+        )
+
+      send(self(), {:toast, message})
+    end
 
     if dropped > 0 do
       message =
