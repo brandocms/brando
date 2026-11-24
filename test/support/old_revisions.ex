@@ -1,7 +1,8 @@
 defmodule Brando.OldRevisions do
   @moduledoc """
-  Revisions as Brando stored them before blocks had a `module_version`
-  (2026-09-05) and a `sync_uid` (2026-09-24). A revision is a
+  Revisions as Brando stored them before blocks had a `module_origin`
+  (v0.50.0), a `module_version` (2026-09-05) and a `sync_uid`
+  (2026-09-24). A revision is a
   `term_to_binary` snapshot of the entry, so its block and table row structs
   lack those keys entirely, and dot access on them raises.
   """
@@ -26,8 +27,8 @@ defmodule Brando.OldRevisions do
     :ok
   end
 
-  defp forget(%{__struct__: mod} = struct) when mod in [Block, TableRow],
-    do: struct |> Map.drop([:module_version, :sync_uid]) |> forget_values()
+  defp forget(%Block{} = block), do: block |> Map.drop([:module_origin, :module_version, :sync_uid]) |> forget_values()
+  defp forget(%TableRow{} = row), do: row |> Map.drop([:module_version, :sync_uid]) |> forget_values()
 
   defp forget(%{__meta__: _} = struct), do: forget_values(struct)
   defp forget(list) when is_list(list), do: Enum.map(list, &forget/1)

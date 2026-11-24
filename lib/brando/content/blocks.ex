@@ -686,7 +686,7 @@ defmodule Brando.Content.Blocks do
     uses =
       for {block, place} <- loaded_module_blocks(entry),
           local_module_block?(block),
-          not MapSet.member?(held, {block.uid, block.module_id}),
+          not MapSet.member?(held, {Map.get(block, :uid), block.module_id}),
           do: {block.module_id, place}
 
     if uses != [], do: lock_block_content_tables()
@@ -744,7 +744,9 @@ defmodule Brando.Content.Blocks do
   defp revision_version(nil), do: nil
   defp revision_version(block), do: Map.get(block, :module_version)
 
-  defp local_module_block?(block), do: normalize_library_origin(block.module_origin) == :local
+  # A revision stored before blocks had a module origin holds structs
+  # without the key: such a block is local
+  defp local_module_block?(block), do: normalize_library_origin(Map.get(block, :module_origin)) == :local
 
   # The module blocks under `entry` as loaded, `{block, place}`, with how
   # the editor finds each (`added_blocks/2`)

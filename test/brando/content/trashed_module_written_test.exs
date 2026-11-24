@@ -75,6 +75,13 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
       assert scheduled?(c.page, 0)
     end
 
+    test "from before blocks had a module origin is refused by name", c do
+      :ok = Brando.OldRevisions.forget_block_identity!(c.page, 0)
+
+      assert {:error, {:module_in_trash, %{module: %{"en" => "Teaser"}, block: {:inside, {:root, 1}}}}} =
+               Revisions.set_entry_to_revision(Page, c.page.id, 0, c.user)
+    end
+
     test "goes once the module is restored", c do
       {:ok, _} = Brando.Authorization.Boundary.restore(:system, Repo.get!(Brando.Content.Module, c.module.id))
 
@@ -125,6 +132,26 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
       assert [%{revision: 0, details: %{"scheduled_revision" => refused}}] = scheduled_activity(c.page)
       assert %{"reason" => "module_in_trash", "module" => %{"en" => "Teaser"}, "block" => block} = refused
       assert Brando.Activity.decode_place(block) == {:root, 1}
+    end
+
+    test "from before blocks had a module origin is cancelled the same way", c do
+      :ok = Brando.OldRevisions.forget_block_identity!(c.page, 0)
+      publish_at = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
+
+      {:ok, job} =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          Brando.Publisher.schedule_revision(Page, c.page.id, 0, publish_at, c.user)
+        end)
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [scheduled_at: DateTime.utc_now()])
+
+      assert %{cancelled: 1} =
+               Oban.Testing.with_testing_mode(:manual, fn ->
+                 Oban.drain_queue(queue: :default, with_scheduled: true)
+               end)
+
+      refute scheduled?(c.page, 0)
+      assert [%{details: %{"scheduled_revision" => %{"reason" => "module_in_trash"}}}] = scheduled_activity(c.page)
     end
 
     # The job's cleanup runs after the refusal released the lock: by then
