@@ -151,8 +151,8 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
     end
 
     # Saving the pending version as it is: the card counts what it takes and
-    # says the texts stay as they are
-    test "a sync_translation says what it takes and that the texts stay", %{conn: conn, current_user: user} do
+    # the texts it leaves to translate
+    test "a sync_translation says what it takes and the texts it leaves", %{conn: conn, current_user: user} do
       alias Brando.Translations
 
       {:ok, source} =
@@ -174,7 +174,7 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
       assert card =~ "English"
       text = view |> render() |> Floki.parse_document!() |> Floki.find(".assistant-placement") |> Floki.text()
       assert text =~ "1 source-controlled value"
-      assert text =~ "Its texts are not changed: 1 is left to translate."
+      assert text =~ "Leaves 1 text to translate."
     end
 
     # A review unit: the source before and now, the translation before and now

@@ -236,18 +236,23 @@ defmodule Brando.Content.Proposals.Review do
   # What a sync_translation takes from the source, as counted when the
   # proposal was prepared, what it leaves in block fields its form does not
   # show (`left`), and, while it can be applied, how many texts its save
-  # leaves to translate.
+  # leaves to translate, a translate beside it answering some.
   defp sync_changes(target, proposal) do
     ops = for {%SyncTranslation{target: ^target} = op, index} <- Enum.with_index(proposal.operations), do: {op, index}
     context = ops != [] && translate_context(target, proposal)
     open? = proposal.status in ~w(pending approved)
+    # The texts a translate on the same translation answers, in the same save
+    answered =
+      for %Translate{target: ^target} = op <- proposal.operations,
+          key <- Map.keys(texts_of(op)) ++ reviewed_of(op),
+          do: key
 
     for {op, index} <- ops do
       %{
         type: :sync_translation,
         language: context && to_string(context.language),
         takes: Map.new(~w(links media values left)a, &{&1, Map.get(op.takes || %{}, to_string(&1), 0)}),
-        open: if(context && open?, do: length(context.pending.open)),
+        open: if(context && open?, do: length(context.pending.open -- answered)),
         live?: target in (proposal.effects[:live] || []),
         operations: [index]
       }

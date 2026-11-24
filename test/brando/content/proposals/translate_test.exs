@@ -1270,6 +1270,17 @@ defmodule Brando.Content.Proposals.TranslateTest do
       assert change.open > 0
     end
 
+    test "the review leaves out of its open texts those a translate beside it answers", c do
+      {:ok, alone} = Proposals.propose([sync(c.target)], c.user)
+      assert [%{changes: [%{type: :sync_translation, open: open}]}] = Review.entries(alone)
+
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([sync(c.target), op], c.user)
+      changes = hd(Review.entries(proposal)).changes
+      assert %{open: answered} = Enum.find(changes, &(&1.type == :sync_translation))
+      assert answered == open - 1
+    end
+
     test "is refused on a translation with nothing to take", c do
       {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
       {:ok, _} = approve_and_apply(proposal, c.user)

@@ -1639,7 +1639,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         @change.takes.left
       )}
     </p>
-    <p class="assistant-placement">{sync_note(@change)}</p>
+    <p :if={sync_note(@change) != ""} class="assistant-placement">{sync_note(@change)}</p>
     """
   end
 
@@ -1949,18 +1949,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
     gettext("Takes %{changes}.", changes: Enum.join(taken, ", "))
   end
 
+  # The texts the save leaves to translate, those a translate beside it
+  # answers left out (`Review`)
   defp sync_note(change) do
     texts =
-      if change.open in [nil, 0],
-        do: gettext("Its texts are not changed."),
-        else:
-          ngettext(
-            "Its texts are not changed: %{count} is left to translate.",
-            "Its texts are not changed: %{count} are left to translate.",
-            change.open
-          )
+      if change.open not in [nil, 0],
+        do: ngettext("Leaves %{count} text to translate.", "Leaves %{count} texts to translate.", change.open)
 
-    if change.live?, do: texts <> " " <> gettext("The published page changes when this is applied."), else: texts
+    live = if change.live?, do: gettext("The published page changes when this is applied.")
+    [texts, live] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
   end
 
   ## Events

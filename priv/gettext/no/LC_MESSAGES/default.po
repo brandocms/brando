@@ -10730,18 +10730,6 @@ msgid_plural "Its %{count} submissions are deleted with it."
 msgstr[0] "Innsendingen slettes sammen med det."
 msgstr[1] "De %{count} innsendingene slettes sammen med det."
 
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Its texts are not changed."
-msgstr "Tekstene endres ikke."
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Its texts are not changed: %{count} is left to translate."
-msgid_plural "Its texts are not changed: %{count} are left to translate."
-msgstr[0] "Tekstene endres ikke: %{count} gjenstår å oversette."
-msgstr[1] "Tekstene endres ikke: %{count} gjenstår å oversette."
-
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
@@ -11061,6 +11049,13 @@ msgstr "Utelat denne endringen fra forslaget"
 #, elixir-autogen, elixir-format
 msgid "Leave this field empty"
 msgstr "La dette feltet stå tomt"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves %{count} text to translate."
+msgid_plural "Leaves %{count} texts to translate."
+msgstr[0] "%{count} tekst gjenstår å oversette."
+msgstr[1] "%{count} tekster gjenstår å oversette."
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format

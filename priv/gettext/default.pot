@@ -10728,18 +10728,6 @@ msgid_plural "Its %{count} submissions are deleted with it."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Its texts are not changed."
-msgstr ""
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Its texts are not changed: %{count} is left to translate."
-msgid_plural "Its texts are not changed: %{count} are left to translate."
-msgstr[0] ""
-msgstr[1] ""
-
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
@@ -11059,6 +11047,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Leave this field empty"
 msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves %{count} text to translate."
+msgid_plural "Leaves %{count} texts to translate."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
