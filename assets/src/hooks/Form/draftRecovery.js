@@ -86,10 +86,15 @@ export default function draftRecovery(hook) {
     if (pending) { event.preventDefault(); event.returnValue = '' }
   }
   const beforeNavigate = event => {
-    if (!pending || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-    const link = event.target.closest('a[data-phx-link]')
-    if (!link || link.hasAttribute('download') || link.target === '_blank') return
-    if (new URL(link.href).pathname === window.location.pathname) return
+    if (!pending || event.defaultPrevented || event.button !== 0) return
+    // A control the server answers by navigating away, such as the content
+    // language switch's languages, says so with `data-leaves-form`; a
+    // modifier key leaves this tab with it too, and opens a link elsewhere.
+    const leaves = event.target.closest('[data-leaves-form]')
+    const link = leaves ? null : event.target.closest('a[data-phx-link]')
+    if (!leaves && (!link || link.hasAttribute('download') || link.target === '_blank')) return
+    if (link && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
+    if (link && new URL(link.href).pathname === window.location.pathname) return
     if (!window.confirm(hook.el.dataset.draftLeaveMessage)) {
       event.preventDefault()
       event.stopImmediatePropagation()

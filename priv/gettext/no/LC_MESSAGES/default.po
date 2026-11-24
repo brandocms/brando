@@ -6197,6 +6197,7 @@ msgid "Create the entry as a draft"
 msgstr "Opprett oppføringen som utkast"
 
 #: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/content_language_switch.ex
 #, elixir-autogen, elixir-format
 msgid "Create translation"
 msgstr "Opprett oversettelse"
@@ -10294,6 +10295,7 @@ msgstr "I nettstedskartet"
 msgid "In the block"
 msgstr "I blokken"
 
+#: lib/brando_admin/components/content_language_switch.ex
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -12751,6 +12753,11 @@ msgstr "Ingen Markdown-filer ble funnet i denne mappen."
 msgid "No URL"
 msgstr "Ingen URL"
 
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "No access"
+msgstr "Ingen tilgang"
+
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
 msgid "No address to send from is configured."
@@ -13350,6 +13357,11 @@ msgstr "Ingen variabler på denne flaten ennå."
 #, elixir-autogen, elixir-format
 msgid "No variables yet"
 msgstr "Ingen variabler ennå"
+
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "No version"
+msgstr "Ingen versjon"
 
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
 #, elixir-autogen, elixir-format

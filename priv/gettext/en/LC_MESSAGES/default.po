@@ -6197,6 +6197,7 @@ msgid "Create the entry as a draft"
 msgstr ""
 
 #: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/content_language_switch.ex
 #, elixir-autogen, elixir-format
 msgid "Create translation"
 msgstr "Create translation"
@@ -10294,6 +10295,7 @@ msgstr ""
 msgid "In the block"
 msgstr ""
 
+#: lib/brando_admin/components/content_language_switch.ex
 #: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -12751,6 +12753,11 @@ msgstr ""
 msgid "No URL"
 msgstr ""
 
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "No access"
+msgstr ""
+
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
 msgid "No address to send from is configured."
@@ -13349,6 +13356,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "No variables yet"
+msgstr ""
+
+#: lib/brando_admin/components/content_language_switch.ex
+#, elixir-autogen, elixir-format
+msgid "No version"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
