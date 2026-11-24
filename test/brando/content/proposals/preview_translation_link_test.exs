@@ -418,6 +418,104 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
     assert {:ok, %Proposals.Receipt{}} = Task.await(apply, 15_000)
   end
 
+  describe "a translation the proposal creates, in one environment of one of several sites" do
+    alias Brando.Tenant
+    alias Brando.Tenant.Registry
+
+    # Both sites' schemas hold the same rows, so the same ids: each page's
+    # text tells whose it is. Each site has an asset set of its own.
+    setup do
+      Support.put_test_env(:tenancy_mode, :multi)
+      Tenant.put_prefix(nil)
+      Tenant.Cache.clear()
+
+      alpha = site("Link Alpha", "link-alpha")
+      beta = site("Link Beta", "link-beta")
+      alpha_live = environment(alpha, "production")
+      beta_live = environment(beta, "production")
+      beta_staging = environment(beta, "staging")
+
+      on_exit(fn ->
+        Tenant.put_prefix(nil)
+        Tenant.Cache.clear()
+
+        for {site, environment} <- [{alpha, alpha_live}, {beta, beta_live}, {beta, beta_staging}],
+            do: sql!(~s|DROP SCHEMA IF EXISTS "#{Tenant.prefix(site, environment)}" CASCADE|)
+      end)
+
+      for {environment, site, kicker} <- [
+            {alpha_live, alpha, "Alfas prosjekter"},
+            {beta_staging, beta, "Betas prosjekter"}
+          ] do
+        Tenant.with_prefix(Tenant.prefix(site, environment), fn ->
+          Repo.update_all(from(v in Brando.Content.Var, where: v.key == "kicker"), set: [value: kicker])
+        end)
+      end
+
+      sets = Map.new([alpha, beta], &{&1.key, active_set(&1)})
+      %{prefix: Tenant.prefix(beta, beta_staging), beta_staging: beta_staging, beta: beta, sets: sets}
+    end
+
+    defp site(name, key) do
+      {:ok, site} =
+        Registry.create_site(%{
+          name: name,
+          key: key,
+          languages: ["no", "en"],
+          default_language: "no",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      site
+    end
+
+    # The environment's schema, a copy of `public`'s tables and rows
+    defp environment(site, key) do
+      {:ok, environment} = Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
+      prefix = Tenant.prefix(site, environment)
+      sql!(~s(CREATE SCHEMA "#{prefix}"))
+
+      for [table] <- sql!("SELECT tablename FROM pg_tables WHERE schemaname = 'public'").rows,
+          not Tenant.SharedTables.member?(table) do
+        sql!(~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+        sql!(~s|INSERT INTO "#{prefix}"."#{table}" SELECT * FROM public."#{table}"|)
+      end
+
+      environment
+    end
+
+    defp sql!(query), do: Ecto.Adapters.SQL.query!(Repo.repo(), query)
+
+    defp active_set(site) do
+      path = Brando.SiteAssetsFixtures.create_set(site, site.key, "js-#{site.key}", "#{site.key}.css")
+      {:ok, set} = SiteAssets.register_set(site, path, %{})
+      {:ok, set} = SiteAssets.activate_set(set.id)
+      set
+    end
+
+    # The snapshot is stored for the site and environment it was shared
+    # from, with that site's copy and asset set
+    for via <- [:tool, :admin] do
+      test "the #{via} link stores the copy made in that site's environment, with its asset set", c do
+        Tenant.with_prefix(c.prefix, fn ->
+          proposal = prepare!(c, [create_op(c.source)])
+          assert {:ok, _url} = link(c, proposal, %{"new" => "english"}, unquote(via))
+        end)
+
+        stored = Repo.one!(from(p in Brando.Sites.Preview, order_by: [desc: p.id], limit: 1))
+        assert stored.site_id == c.beta.id
+        assert stored.environment_id == c.beta_staging.id
+        assert stored.asset_set_id == c.sets[c.beta.key].id
+
+        html = Brando.Utils.binary_to_term(stored.html)
+        assert html =~ ~s(<h2 class="kicker">Betas prosjekter</h2>)
+        refute html =~ "Alfas prosjekter"
+        refute html =~ "Våre prosjekter"
+      end
+    end
+  end
+
   describe "shared by one who may create pages but not export them" do
     alias Brando.Authorization.Catalog, as: Grants
     alias Brando.Authorization.Groups
