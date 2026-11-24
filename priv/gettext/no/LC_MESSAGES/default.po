@@ -2989,6 +2989,11 @@ msgstr "Og %{count} til"
 msgid "Another change to the same content was saved at the same moment, and nothing was saved. Save again."
 msgstr "En annen endring av det samme innholdet ble lagret i samme øyeblikk, og ingenting ble lagret. Lagre igjen."
 
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Another change to the same content was saved at the same moment, and the revision was not activated. Activate it again."
+msgstr "En annen endring av det samme innholdet ble lagret i samme øyeblikk, og versjonen ble ikke aktivert. Aktiver den igjen."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Another client ID than the one saved removes the connection, and Figma has to be connected again. The same client ID with a new secret keeps it."

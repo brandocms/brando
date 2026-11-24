@@ -1,0 +1,4 @@
+- A Mix task, a release `eval` or a freshly started node finds an identifier's entry and the blocks of a translation's schema before anything has loaded the schema.
+- The assistant's preview of a saved entry renders a page template that reads a relation or the alternates.
+- Activating a revision while a release apply moves values in the same blocks says to activate it again, instead of closing the form.
+- A save that its callback rolls back no longer tells editors it was saved: the "updated" toast goes out once the save has committed.

@@ -1019,7 +1019,8 @@ blocks locked, and rolls back everything, definitions included, with
 An editor who saves one of those blocks at the same moment can make the
 database stop the apply; nothing is applied, and you try again. Or the
 database stops the editor's save instead: their form stays open with what
-they typed, and they save again.
+they typed, and they save again. An editor activating a revision of an entry
+with those blocks is told the same way to activate it again.
 
 Every editor's save in the environment waits while values move, so one
 apply moves values in at most 500 entries or 1,500 blocks, counted across
