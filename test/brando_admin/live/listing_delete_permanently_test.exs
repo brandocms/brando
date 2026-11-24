@@ -298,7 +298,9 @@ defmodule BrandoAdmin.ListingDeletePermanentlyTest do
             do: event
 
       assert "delete_entry_permanently" in guarded
-      refute "delete_selected_permanently" in guarded
+      # A selection of one row is that row: it asks as the row menu does
+      assert "delete_selected_permanently" in guarded
+      refute "delete_selected" in guarded
     end
   end
 

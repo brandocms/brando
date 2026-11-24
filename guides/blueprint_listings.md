@@ -1025,8 +1025,9 @@ Several traits change the listing without any listing declaration:
   something still refers to the entry (the message names what kind of record),
   or when the entry was restored or trashed again since the menu showed it. A
   listing with `default_actions false`, or one that handles `delete_entry`
-  itself (`overrides`), offers no Delete permanently, and a listing that asks
-  for `step_up` on `delete_entry` or `delete_selected` asks for it here too.
+  itself (`overrides`), offers no Delete permanently. With `step_up` on
+  `delete_entry`, both Delete permanently actions ask for it; with `step_up`
+  on `delete_selected` only, the selection's does.
 
   A delete from a listing that is refused or fails shows its reason in an
   error toast, which stays until closed.
