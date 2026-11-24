@@ -296,8 +296,7 @@ defmodule Brando.Mixfile do
       {:phoenix_html, "~> 4.4"},
 
       # hashing/passwords
-      {:bcrypt_elixir, "~> 3.0"},
-      {:comeonin, "~> 5.0"},
+      {:bcrypt_elixir, "~> 3.0 or ~> 4.0"},
       {:base62, "~> 1.2"},
 
       # two-factor authentication: TOTP codes and the enrollment QR code
