@@ -823,6 +823,45 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert Repo.aggregate(from(v in Var, where: v.key == "title" and not is_nil(v.block_id)), :count) == 10
     end
 
+    test "across the modules an apply selects, counting one refused on its own, whose values are then left", c do
+      card =
+        ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",
+          vars: [%{type: "string", key: "title", label: "Title", value: "Default title"}]
+        )
+
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      leftover!(held, "heading", "Typed later")
+      bare_blocks!(c, c.module, "tagline", 800)
+      bare_blocks!(c, card, "title", 800)
+      path = c.path <> "-refused-one"
+      {:ok, _} = Definitions.export(path, c.user, uids: [c.module.uid, card.uid])
+      on_exit(fn -> File.rm_rf!(path) end)
+      c = %{c | path: path, exs: Path.join(path, "content/teaser.exs")}
+      rename_tagline!(c)
+      card_exs = Path.join(path, "content/card.exs")
+
+      File.write!(
+        card_exs,
+        String.replace(
+          File.read!(card_exs),
+          ~s(var "title", "string" do\n),
+          ~s(var "name", "string" do\n      renamed_from "title"\n)
+        )
+      )
+
+      # Alone, the module would replace the value an editor entered
+      {:ok, bundle} = Definitions.read(path)
+      assert {:ok, alone} = Definitions.plan(bundle, c.user, select: [c.module.uid])
+      assert %{action: :migration_required} = Enum.find(alone.items, &(&1.uid == c.module.uid))
+
+      # Together over the limit, both leave their values, and the block keeps both
+      assert {:ok, plan} = Definitions.plan(bundle, c.user, select: [c.module.uid, card.uid])
+      assert [%{action: :update, moves: %{left?: true}}, %{action: :update, moves: %{left?: true}}] = plan.items
+      assert {:ok, %{renamed: [%{left?: true}, %{left?: true}]}} = Definitions.apply(plan, c.user)
+      assert var(held, "tagline").value == "Kept words"
+      assert var(held, "heading").value == "Typed later"
+    end
+
     test "to as many blocks across the modules an apply selects, and the apply decides under its lock", c do
       card =
         ProposalFixtures.module!(c.user, "Card", "<p>{{ title }}</p>",

@@ -253,7 +253,12 @@ defmodule Brando.Content.Definition.Importer do
       snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
-    items = bundle |> Model.definitions() |> Enum.map(&plan_item!(&1, ctx)) |> limit_moves(settings.selection)
+    items =
+      bundle
+      |> Model.definitions()
+      |> Enum.map(&plan_item!(&1, ctx))
+      |> limit_moves(settings.selection)
+      |> Enum.map(&refuse_moves/1)
     scope = References.scope()
 
     # The renames are no part of a definition's digest: a changed one
@@ -385,8 +390,9 @@ defmodule Brando.Content.Definition.Importer do
 
   # The values an update of a module moves under its declared renames
   # (`Renames`), and the renames it leaves to a resolve. A move refused in
-  # any block makes the update need a migration. A conflict gets only the
-  # moves an apply of the files' version makes, for the review to preview.
+  # any block makes the update need a migration once the selection's moves
+  # are counted together (`refuse_moves/1`). A conflict gets only the moves
+  # an apply of the files' version makes, for the review to preview.
   defp moves({:update, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx) do
     case Renames.declared(ctx.bundle, uid) do
       [] ->
@@ -396,12 +402,7 @@ defmodule Brando.Content.Definition.Importer do
         module = Changeset.apply_changes(changeset)
         {active, rest} = Renames.split(renames, ModuleDiff.diff(record, changeset))
         moves = if active != [], do: Renames.plan(record, module, active, ctx.viewer)
-        remaps = Renames.remaps(record, module, rest)
-
-        case moves do
-          %{refused: [_ | _] = refused} -> {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
-          _ -> {action, moves, remaps}
-        end
+        {action, moves, Renames.remaps(record, module, rest)}
     end
   end
 
@@ -435,9 +436,10 @@ defmodule Brando.Content.Definition.Importer do
     if refused != [], do: Repo.rollback(Renames.changed_since_review(refused))
   end
 
-  # The selected updates' moves together: when they are more than one
-  # apply moves (`Renames.over_limit/1`), the apply moves none of them
-  # (`Renames.leave/1`). With nothing selected (a review of a whole
+  # The selected updates' moves together, refused ones too: when they are
+  # more than one apply moves (`Renames.over_limit/1`), the apply moves none
+  # of them (`Renames.leave/1`), and only what the resolve command can't
+  # move either stays refused. With nothing selected (a review of a whole
   # release, an import) each module is judged on its own; `Renames.move!/3`
   # decides what one apply then moves together.
   defp limit_moves(items, nil), do: items
@@ -450,18 +452,17 @@ defmodule Brando.Content.Definition.Importer do
 
     if Renames.over_limit(Enum.map(moving, &elem(&1, 1))) do
       uids = Map.new(moving)
-      Enum.map(items, &if(uids[&1.uid], do: leave(&1), else: &1))
+      Enum.map(items, &if(uids[&1.uid], do: %{&1 | moves: Renames.leave(&1.moves)}, else: &1))
     else
       items
     end
   end
 
-  defp leave(item) do
-    case Renames.leave(item.moves) do
-      %{refused: []} = moves -> %{item | moves: moves}
-      %{refused: refused} = moves -> %{item | action: :migration_required, reason: Enum.join(refused, "; "), moves: moves}
-    end
-  end
+  # An update whose moves are refused needs a migration, and leaves nothing
+  defp refuse_moves(%{action: :update, moves: %{refused: [_ | _] = refused}} = item),
+    do: %{item | action: :migration_required, reason: Enum.join(refused, "; "), removes: nil}
+
+  defp refuse_moves(item), do: item
 
   # The values the selected module updates move, as the person who applies:
   # `plan` with each item's moves as the apply made them under its lock
