@@ -5419,7 +5419,9 @@ defmodule BrandoAdmin.Components.Form do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <%!-- `data-entry-form`: where the content language switch sends
+         `create_translation` (`ContentLanguageSwitch`) --%>
+    <div data-entry-form={@entry_id}>
       <Content.modal
         :if={@pending_permalink_redirect}
         id={"#{@id}-permalink-redirect"}

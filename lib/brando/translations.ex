@@ -206,6 +206,38 @@ defmodule Brando.Translations do
     |> Repo.all()
   end
 
+  @doc """
+  The other language versions of `entry` that `actor` may read, one per
+  language, keyed by language code: those `language_versions/3` lists and, for
+  a member of a synchronized group, the group's other members. Where a
+  language has a version in the trash and one outside it, the one outside.
+  """
+  def versions_by_language(schema, %{id: id} = entry, actor) do
+    %{linked: linked, unlinked: unlinked} = language_versions(schema, entry, actor)
+    language = to_string(entry.language)
+
+    (linked ++ group_versions(schema, id, actor) ++ unlinked)
+    |> Enum.reject(&(&1.id == id or to_string(&1.language) == language))
+    |> Enum.sort_by(&match?(%{deleted_at: %DateTime{}}, &1))
+    |> Enum.uniq_by(&to_string(&1.language))
+    |> Map.new(&{to_string(&1.language), &1})
+  end
+
+  # The entries of the group `id` is a member of, those in the trash included
+  defp group_versions(schema, id, actor) do
+    case synchronized?(schema) && get_member(schema, id) do
+      %Member{group_id: group_id} ->
+        ids = for %{entry_id: entry_id} <- list_members(group_id), entry_id != id, do: entry_id
+
+        from(e in schema, where: e.id in ^ids, order_by: [asc: e.id])
+        |> readable(schema, actor)
+        |> Repo.all()
+
+      _ ->
+        []
+    end
+  end
+
   defp alternate_ids(schema, id),
     do: Repo.all(from a in Module.concat(schema, Alternate), where: a.entry_id == ^id, select: a.linked_entry_id)
 
