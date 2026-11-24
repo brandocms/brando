@@ -502,10 +502,12 @@ defmodule Brando.Content.Transfer do
   # A module put in the trash since the preview is refused by name, before
   # the preview is taken again, which would find only that something changed
   defp guard_trashed_modules!(plan, actor) do
+    bindings = preview_bindings(plan.archive.bundle, plan.bindings)
+
     plan.fields
     |> Enum.group_by(& &1.destination.key)
     |> Enum.each(fn {_key, [field | _] = fields} ->
-      written = field.entry |> field_changeset(field_params(fields, plan.bindings, actor), actor) |> Changeset.apply_changes()
+      written = field.entry |> field_changeset(field_params(fields, bindings, actor), actor) |> Changeset.apply_changes()
       refuse_trashed_modules!(written, field.entry, field.destination.title, plan.bindings, actor)
     end)
   end
