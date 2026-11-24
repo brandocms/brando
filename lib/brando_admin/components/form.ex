@@ -10851,7 +10851,20 @@ defmodule BrandoAdmin.Components.Form do
   # or whose row is gone (removed, or moved under a removed one) stays in
   # the library, and the editor is told. So does one for a locked field,
   # and one whose field shows another video by then, picked since.
+  # A drawer in a row names the row by its key too (`row_key`): the video
+  # goes to the row where it is now, as an upload manager's delivery does.
   defp deliver_uploaded_video(socket, nil, _video), do: video_left_in_library(socket)
+
+  defp deliver_uploaded_video(socket, %{edit_video: %{row_key: row_key, path: path} = edit_video} = target, video)
+       when is_binary(row_key) do
+    case keyed_row_path(socket.assigns.form.source, path, row_key) do
+      {:ok, path} ->
+        deliver_uploaded_video(socket, %{target | edit_video: %{edit_video | row_key: nil, path: path}}, video)
+
+      :gone ->
+        video_left_in_library(socket)
+    end
+  end
 
   defp deliver_uploaded_video(socket, %{edit_video: %{path: path, field: field} = edit_video} = target, video) do
     changeset = socket.assigns.form.source

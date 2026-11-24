@@ -569,6 +569,48 @@ defmodule BrandoAdmin.SubformRelationTest do
       assert {saved, image_id} in saved_covers(ctx)
     end
 
+    # A provider (here Bunny) upload from a row's video drawer completes
+    # through the form's own handler, not the upload manager
+    test "a provider video from a row's drawer goes to its row after the rows are reordered", ctx do
+      put_test_env(:default_video_upload_strategy, :bunny)
+
+      put_test_env(Brando.Videos.Uploaders.Bunny,
+        api_key: "key",
+        library_id: "77",
+        req_options: [plug: {Req.Test, :row_bunny}]
+      )
+
+      Req.Test.stub(:row_bunny, fn conn ->
+        Req.Test.json(conn, %{"guid" => "6f2c1a3e-1111-2222-3333-444455556666", "videoLibraryId" => 77})
+      end)
+
+      view = open(ctx)
+      view |> with_target(cid_of(view, @row_clip)) |> render_click("open_video", %{})
+
+      render_hook(view, "get_video_upload_url", %{
+        "request_ref" => "row-a",
+        "filename" => "clip.mp4",
+        "size" => 1_000,
+        "mime_type" => "video/mp4"
+      })
+
+      assert_push_event(view, "video_upload_url_ready", %{request_ref: "row-a", video_id: video_id, upload_token: token})
+
+      params =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "sort_items_ids"], ["1", "2", "0"])
+        |> Map.put("_target", ["article", "sort_items_ids"])
+
+      view |> element(@form) |> render_change(params)
+      assert row_labels(render(view)) == ["B", "C", "A"]
+
+      render_hook(view, "video_upload_complete", %{"request_ref" => "row-a", "upload_token" => token})
+
+      assert clip_ids(render(view)) == ["", "", to_string(video_id)]
+    end
+
     # Every row an upload can start in has a key (`SubformHelpers.new_row/1`),
     # so a row without one at the index is another row
     test "naming a new row that is gone goes to no row, not to a row without a key", ctx do
@@ -838,6 +880,13 @@ defmodule BrandoAdmin.SubformRelationTest do
     |> Floki.find(@row_cover)
     |> Floki.attribute("value")
     |> List.first()
+  end
+
+  defp clip_ids(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(~s(#{@form} input[name^="article[items]"][name$="[clip_id]"]))
+    |> Floki.attribute("value")
   end
 
   defp row_keys(html) do
