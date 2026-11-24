@@ -10915,8 +10915,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp upload_row_gone(socket, %{asset_type: asset_type}) do
     if asset_type in [:image, :gallery], do: send_update(ImagePicker, id: "image-picker", refresh_images: true)
-    BrandoAdmin.Toast.upload_row_gone(socket.assigns.current_user)
-    socket
+    BrandoAdmin.Toast.upload_row_gone(socket)
   end
 
   # The keys this save's new rows had, by the saved rows' keys: an upload

@@ -538,7 +538,9 @@ defmodule BrandoAdmin.SubformRelationTest do
 
       deliver_upload(view, [:items, 1], ctx.image, "id-#{ctx.b.id}")
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+      # This tab only: not on the channel every tab of the editor's listens on
+      assert_push_event(view, "b:toast", %{level: :error})
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast"}
       refute_push_event(view, "b:validate", %{target: "article[items]" <> _})
       assert cover_ids(render(view)) == ["", ""]
     end

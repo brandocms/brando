@@ -410,11 +410,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     if row_key in row_keys do
       component_id = __MODULE__.Render.table_row_var_id(socket.assigns.uid, row_key, target["var_key"])
       send(self(), {:asset_ready, %{target | "component_id" => component_id, "row_key" => nil}, asset})
+      {:ok, socket}
     else
-      BrandoAdmin.Toast.upload_row_gone(%{id: socket.assigns.current_user_id})
+      {:ok, BrandoAdmin.Toast.upload_row_gone(socket)}
     end
-
-    {:ok, socket}
   end
 
   def update(%{event: "delete_block", uid: uid, dom_id: _dom_id}, socket), do: {:ok, delete_child(socket, uid)}

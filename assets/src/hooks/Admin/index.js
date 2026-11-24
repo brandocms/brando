@@ -40,6 +40,9 @@ export default app => ({
       }
     })
 
+    // A toast for this tab only; `userChannel`'s reach every tab of the user
+    this.handleEvent('b:toast', ({ level, message }) => app.toast.notification(level, message))
+
     // watch navigation scroll
     const $navigation = Dom.find('#navigation')
     if ($navigation) {
