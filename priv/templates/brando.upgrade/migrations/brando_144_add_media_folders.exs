@@ -14,7 +14,9 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
     create index(:media_folders, [:parent_id], name: :media_folders_parent_idx)
     create unique_index(:media_folders, [:scope, :path], name: :media_folders_scope_path_idx)
 
-    create unique_index(:media_folders, [:scope, :parent_id, :name], name: :media_folders_scope_parent_name_idx)
+    create unique_index(:media_folders, [:scope, :parent_id, :name],
+             name: :media_folders_scope_parent_name_idx
+           )
 
     alter table(:images) do
       add :folder_id, references(:media_folders, on_delete: :nilify_all)
@@ -45,7 +47,11 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
     drop_if_exists index(:videos, [:folder_id], name: :videos_folder_id_idx)
     drop_if_exists index(:files, [:folder_id], name: :files_folder_id_idx)
     drop_if_exists index(:images, [:folder_id], name: :images_folder_id_idx)
-    drop_if_exists index(:media_folders, [:scope, :parent_id, :name], name: :media_folders_scope_parent_name_idx)
+
+    drop_if_exists index(:media_folders, [:scope, :parent_id, :name],
+                     name: :media_folders_scope_parent_name_idx
+                   )
+
     drop_if_exists index(:media_folders, [:scope, :path], name: :media_folders_scope_path_idx)
     drop_if_exists index(:media_folders, [:parent_id], name: :media_folders_parent_idx)
     drop_if_exists index(:media_folders, [:scope], name: :media_folders_scope_idx)
@@ -82,7 +88,10 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
 
       with relative when is_binary(relative) <- relative_folder_for_path(full_path, scope),
            folder_id when is_integer(folder_id) <- ensure_folder(scope, relative) do
-        repo().query!("UPDATE images SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [folder_id, id])
+        repo().query!("UPDATE images SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [
+          folder_id,
+          id
+        ])
       else
         _ -> :ok
       end
@@ -109,7 +118,10 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
 
       with relative when is_binary(relative) <- relative_folder_for_path(full_path, upload_root),
            folder_id when is_integer(folder_id) <- ensure_folder(upload_root, relative) do
-        repo().query!("UPDATE files SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [folder_id, id])
+        repo().query!("UPDATE files SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [
+          folder_id,
+          id
+        ])
       else
         _ -> :ok
       end
@@ -148,7 +160,10 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
 
       with relative when is_binary(relative) <- relative_folder_for_path(full_path, upload_root),
            folder_id when is_integer(folder_id) <- ensure_folder(upload_root, relative) do
-        repo().query!("UPDATE videos SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [folder_id, id])
+        repo().query!("UPDATE videos SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [
+          folder_id,
+          id
+        ])
       else
         _ -> :ok
       end
@@ -343,7 +358,9 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
 
   defp image_upload_root(config_target) do
     try do
-      case Brando.Images.get_config_for(%{config_target: normalize_config_target(config_target, "default")}) do
+      case Brando.Images.get_config_for(%{
+             config_target: normalize_config_target(config_target, "default")
+           }) do
         {:ok, %{upload_path: upload_path}} -> normalize_path(upload_path)
         _ -> "images/default"
       end
@@ -354,7 +371,9 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
 
   defp file_upload_root(config_target) do
     try do
-      case Brando.Files.get_config_for(%{config_target: normalize_config_target(config_target, "default")}) do
+      case Brando.Files.get_config_for(%{
+             config_target: normalize_config_target(config_target, "default")
+           }) do
         {:ok, %{upload_path: upload_path}} -> normalize_path(upload_path)
         _ -> "files/default"
       end
@@ -365,7 +384,9 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
 
   defp video_upload_root(config_target) do
     try do
-      case Brando.Videos.get_config_for(%{config_target: normalize_config_target(config_target, "default")}) do
+      case Brando.Videos.get_config_for(%{
+             config_target: normalize_config_target(config_target, "default")
+           }) do
         {:ok, %{upload_path: upload_path}} -> normalize_path(upload_path)
         _ -> "videos/default"
       end

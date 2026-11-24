@@ -14,7 +14,10 @@ defmodule Brando.Repo.Migrations.Brando236AddKindToAiGuidanceVersions do
     end
 
     drop_if_exists index(:ai_guidance_versions, [:scope, :inserted_at], prefix: "public")
-    create_if_not_exists index(:ai_guidance_versions, [:scope, :kind, :inserted_at], prefix: "public")
+
+    create_if_not_exists index(:ai_guidance_versions, [:scope, :kind, :inserted_at],
+                           prefix: "public"
+                         )
   end
 
   def down do

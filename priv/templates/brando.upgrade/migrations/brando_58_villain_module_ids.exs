@@ -22,7 +22,9 @@ defmodule Brando.Repo.Migrations.MigrateVillainModuleIds do
       )
     )
     |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
-    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.reject(
+      &(&1.table_name in ~w(revisions content_modules sites_globals pages_properties))
+    )
     |> Enum.map(&{&1.table_name, &1.column_name})
   end
 end

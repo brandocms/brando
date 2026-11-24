@@ -218,6 +218,7 @@ definition_locals_without_parens = [
     "{mix,.formatter}.exs",
     "priv/*/seeds.exs",
     "{config,lib,test,credo}/**/*.{ex,exs,heex}"
-  ]
-  # subdirectories: ["priv/*/migrations", "priv/templates/brando.upgrade/migrations"]
+  ],
+  # Formatted as a new site formats the copies `mix brando.gen.migrations` makes
+  subdirectories: ["priv/templates/brando.upgrade/migrations"]
 ]

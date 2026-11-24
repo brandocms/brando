@@ -19,6 +19,37 @@ defmodule Brando.MigrationTemplates do
   @doc "The path of `file` among the shipped versions of the template `name`"
   def history(name, file), do: Path.join([@templates, "..", "history", name, file])
 
+  @doc """
+  `brando_244_add_fragment_alternates.exs` as it was before the templates
+  were formatted, and the copy `mix brando.gen.migrations` made of it then.
+  """
+  def unformatted_244 do
+    template = File.read!(path("brando_244_add_fragment_alternates.exs"))
+
+    formatted = """
+          create_if_not_exists unique_index(
+                                 :pages_fragments_alternates,
+                                 [:entry_id, :linked_entry_id],
+                                 prefix: prefix
+                               )
+    """
+
+    for layout <- [
+          """
+                create_if_not_exists unique_index(:pages_fragments_alternates, [:entry_id, :linked_entry_id], prefix: prefix)
+          """,
+          """
+                create_if_not_exists unique_index(
+                                       :pages_fragments_alternates,
+                                       [:entry_id, :linked_entry_id], prefix: prefix)
+          """
+        ] do
+      text = String.replace(template, formatted, layout)
+      if text == template, do: raise("brando_244's unique_index call is no longer laid out as unformatted_244/0 expects")
+      text
+    end
+  end
+
   @doc "Every `brando_2xx` template, in the order `mix brando.gen.migrations` copies them"
   def brando_2xx do
     @templates

@@ -11,7 +11,11 @@ defmodule Brando.Repo.Migrations.Brando241AddProposalToPreviews do
   def up do
     alter table(:sites_previews, prefix: "public") do
       add_if_not_exists :proposal_id,
-                        references(:content_proposals, type: :binary_id, prefix: "public", on_delete: :delete_all)
+                        references(:content_proposals,
+                          type: :binary_id,
+                          prefix: "public",
+                          on_delete: :delete_all
+                        )
     end
 
     create_if_not_exists index(:sites_previews, [:proposal_id], prefix: "public")

@@ -85,6 +85,11 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     assert numbers -- Enum.uniq(numbers) == []
   end
 
+  test "the templates' formatter is not taken for a template" do
+    assert File.exists?(Path.join(Brando.Migration.TemplateDrift.templates_dir(), ".formatter.exs"))
+    refute Enum.any?(Mix.Brando.Install.Templates.manifest(), fn {_, source, _} -> source =~ ".formatter.exs" end)
+  end
+
   test "framework migration command preserves historical files and does not recreate baseline tables" do
     historical = "priv/repo/migrations/20100101000000_brando_01_set_image_as_jsonb.exs"
     content = "# Historical customized migration\n"
@@ -160,6 +165,19 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     rerun = Igniter.compose_task(applied, "brando.gen.migrations", ["--refresh"])
     assert rerun.issues == []
     Igniter.Test.assert_unchanged(rerun)
+  end
+
+  test "framework migration command with --refresh leaves a copy made before the templates were formatted" do
+    path = "priv/repo/migrations/20260101000404_brando_244_add_fragment_alternates.exs"
+
+    for text <- Brando.MigrationTemplates.unformatted_244() do
+      result =
+        IgniterCase.phoenix_project(files: %{path => text})
+        |> Igniter.compose_task("brando.gen.migrations", ["--refresh"])
+
+      assert result.issues == []
+      Igniter.Test.assert_unchanged(result, path)
+    end
   end
 
   test "framework migration command copies tenant migrations only when tenancy is on" do

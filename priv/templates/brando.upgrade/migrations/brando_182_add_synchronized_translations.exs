@@ -22,6 +22,7 @@ defmodule Brando.Repo.Migrations.Brando182AddSynchronizedTranslations do
     end
 
     execute "UPDATE content_blocks SET sync_uid = uid WHERE sync_uid IS NULL"
+
     execute "UPDATE content_table_rows SET sync_uid = md5(random()::text || id::text) WHERE sync_uid IS NULL"
 
     create_if_not_exists index(:content_blocks, [:sync_uid])
@@ -74,7 +75,9 @@ defmodule Brando.Repo.Migrations.Brando182AddSynchronizedTranslations do
            )
 
     create table(:translation_work_items) do
-      add :pending_version_id, references(:translation_pending_versions, on_delete: :delete_all), null: false
+      add :pending_version_id, references(:translation_pending_versions, on_delete: :delete_all),
+        null: false
+
       add :path, :text, null: false
       add :kind, :text, null: false
       add :source_digest, :text

@@ -87,7 +87,8 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
           new_video = %{
             url: video_struct["url"],
             source: video_struct["source"],
-            filename: (video_struct["source"] == :file && Path.basename(video_struct["url"])) || nil,
+            filename:
+              (video_struct["source"] == :file && Path.basename(video_struct["url"])) || nil,
             remote_id: video_struct["remote_id"],
             width: video_struct["width"],
             height: video_struct["height"],

@@ -33,22 +33,35 @@ defmodule Brando.Repo.Migrations.Brando163AddSharedContentLibrary do
     end
 
     execute "ALTER TABLE content_blocks DROP CONSTRAINT IF EXISTS content_blocks_module_id_fkey"
+
     execute "ALTER TABLE content_blocks DROP CONSTRAINT IF EXISTS content_blocks_container_id_fkey"
+
     execute "ALTER TABLE content_blocks DROP CONSTRAINT IF EXISTS content_blocks_palette_id_fkey"
+
     execute "ALTER TABLE content_containers DROP CONSTRAINT IF EXISTS content_containers_palette_id_fkey"
 
-    create unique_index(:content_modules, [:source_module_id], where: "source_module_id IS NOT NULL")
+    create unique_index(:content_modules, [:source_module_id],
+             where: "source_module_id IS NOT NULL"
+           )
 
-    create unique_index(:content_containers, [:source_container_id], where: "source_container_id IS NOT NULL")
+    create unique_index(:content_containers, [:source_container_id],
+             where: "source_container_id IS NOT NULL"
+           )
 
-    create unique_index(:content_palettes, [:source_palette_id], where: "source_palette_id IS NOT NULL")
+    create unique_index(:content_palettes, [:source_palette_id],
+             where: "source_palette_id IS NOT NULL"
+           )
+
     create index(:content_blocks, [:module_origin, :module_id])
     create index(:content_blocks, [:container_origin, :container_id])
     create index(:content_blocks, [:palette_origin, :palette_id])
 
     create table(:site_enabled_modules, prefix: "public") do
       add :site_id, references(:sites, prefix: "public", on_delete: :delete_all), null: false
-      add :module_id, references(:content_modules, prefix: "public", on_delete: :delete_all), null: false
+
+      add :module_id, references(:content_modules, prefix: "public", on_delete: :delete_all),
+        null: false
+
       timestamps(type: :utc_datetime_usec)
     end
 
@@ -56,7 +69,10 @@ defmodule Brando.Repo.Migrations.Brando163AddSharedContentLibrary do
 
     create table(:site_enabled_containers, prefix: "public") do
       add :site_id, references(:sites, prefix: "public", on_delete: :delete_all), null: false
-      add :container_id, references(:content_containers, prefix: "public", on_delete: :delete_all), null: false
+
+      add :container_id,
+          references(:content_containers, prefix: "public", on_delete: :delete_all), null: false
+
       timestamps(type: :utc_datetime_usec)
     end
 
@@ -64,7 +80,10 @@ defmodule Brando.Repo.Migrations.Brando163AddSharedContentLibrary do
 
     create table(:site_enabled_palettes, prefix: "public") do
       add :site_id, references(:sites, prefix: "public", on_delete: :delete_all), null: false
-      add :palette_id, references(:content_palettes, prefix: "public", on_delete: :delete_all), null: false
+
+      add :palette_id, references(:content_palettes, prefix: "public", on_delete: :delete_all),
+        null: false
+
       timestamps(type: :utc_datetime_usec)
     end
 

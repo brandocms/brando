@@ -3,8 +3,9 @@ defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
   import Ecto.Query
 
   def up do
-    query = from m in "pages_modules", select: %{id: m.id, vars: m.vars}
+    query = from(m in "pages_modules", select: %{id: m.id, vars: m.vars})
     modules = Brando.Repo.all(query)
+
     for module <- modules do
       # convert from string map to list of objects
       vars =
@@ -12,6 +13,7 @@ defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
         |> Enum.map(fn
           {k, v} ->
             Map.put(v, "name", k)
+
           var ->
             var
         end)
@@ -27,6 +29,5 @@ defmodule Brando.Repo.Migrations.ConvertModuleVarsToList do
   end
 
   def down do
-
   end
 end
