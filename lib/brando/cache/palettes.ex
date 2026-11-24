@@ -7,6 +7,7 @@ defmodule Brando.Cache.Palettes do
   alias Brando.Cache
   alias Brando.Content
   alias Brando.Content.Palette
+  alias Brando.Content.SharedLibrary
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -45,11 +46,28 @@ defmodule Brando.Cache.Palettes do
   end
 
   @doc false
-  # What `Brando.Cache` stores for the cache
+  # What `Brando.Cache` stores for the cache. `palettes` are the environment's own, for the admin's colour inputs,
+  # which look them up by local id. The CSS holds every palette the site's
+  # content resolves (`SharedLibrary.list_for_rendering/3`): its own, and the
+  # shared ones enabled for it or used by its blocks, a customized one in
+  # place of its shared one. Its own are all kept, and a shared one whose
+  # namespace and key one of them has is left out. It reads the allowlist
+  # from the database: on another node, the refresh that forgets the cached
+  # one may run after the one that rebuilds this cache.
   def load do
-    {:ok, palettes} = get_palettes()
-    [palettes: palettes, palettes_css: get_palettes_css(palettes)]
+    {:ok, palettes} = Content.list_palettes()
+
+    {own, shared} =
+      :palette
+      |> SharedLibrary.list_for_current_tenant(cached_allowlist: false)
+      |> Enum.split_with(&(&1.library_origin == :local))
+
+    owned = MapSet.new(own, &css_name/1)
+    css_palettes = own ++ Enum.reject(shared, &MapSet.member?(owned, css_name(&1)))
+    [palettes: palettes, palettes_css: process_palettes(css_palettes)]
   end
+
+  defp css_name(palette), do: {palette.namespace, palette.key}
 
   @doc """
   Update palette cache, once the transaction around the caller has
@@ -63,14 +81,6 @@ defmodule Brando.Cache.Palettes do
   end
 
   def update({:error, changeset}), do: {:error, changeset}
-
-  defp get_palettes do
-    Content.list_palettes()
-  end
-
-  defp get_palettes_css(palettes) do
-    process_palettes(palettes)
-  end
 
   defp process_palettes(palettes) do
     palettes

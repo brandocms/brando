@@ -766,6 +766,8 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
     gettext("This entry is still enabled, customized, or referenced by: %{sites}", sites: names)
   end
 
+  defp error_message(:not_customized), do: gettext("This environment already uses the shared version.")
+
   defp error_message(reason) when is_atom(reason), do: reason |> Atom.to_string() |> String.replace("_", " ")
   defp error_message(reason), do: inspect(reason)
 end

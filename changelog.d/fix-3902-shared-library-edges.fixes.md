@@ -1,0 +1,3 @@
+- **Customize** on the shared library screen restores an environment's customization from the trash with its edits, instead of failing.
+- **Reset to shared** after a concurrent **Accept update** discards the new customization, and says so when the environment already uses the shared version.
+- A site's palette CSS includes the shared palettes its content uses, and shared library actions rebuild it.

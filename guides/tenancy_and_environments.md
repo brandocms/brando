@@ -1465,7 +1465,11 @@ and records its source ID and source version. Blocks keep their shared identity,
 so they immediately resolve to that environment's customization without a
 content rewrite. Other environments and sites are unaffected. **Reset to
 shared** removes only the customization, and Brando queues the environment's
-entries that use it for rendering with the shared version. Customizing, resetting and accepting
+entries that use it for rendering with the shared version. When the
+environment's customization is in the trash, **Customize** restores it with
+its edits, as a restore from the trash does, so it takes the restore
+permission too; **Accept update** refuses a customization in the trash.
+Customizing, resetting and accepting
 updates of modules and containers takes a superuser, as any change to their
 code does; a site manager does these for palettes.
 
@@ -1476,6 +1480,13 @@ continues using its local version and receives an **Update available** badge.
 The administrator can inspect a field-level diff, replace the customization
 with the current shared version, which queues the environment's entries that
 use it for rendering, or dismiss that version's notification.
+
+A site's palette CSS holds its own palettes and the shared palettes its
+content can use: those enabled for the site, and those its blocks still use
+after they were disabled. A customized palette takes the place of its shared
+one, and the site's own palette wins over a shared one with the same namespace
+and key. Enabling, disabling, customizing, resetting, accepting an update and
+editing a shared palette rebuild the CSS in the environments that use it.
 
 The allowlist is cached per site. Mutations update the cache immediately; no
 application restart is required. When upgrading an existing application, run
