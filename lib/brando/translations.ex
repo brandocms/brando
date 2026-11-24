@@ -1815,15 +1815,17 @@ defmodule Brando.Translations do
       at = Brando.SoftDelete.Repo.utc_now()
       keep_apart_from_source(schema, group, at)
 
-      Brando.SoftDelete.Repo.at(at, fn ->
-        live = for %{in_trash: false, entry: entry} <- group.translations, do: entry
-
-        with {:ok, translations} <- delete_translations(schema, live, user, Keyword.get(opts, :translation_args, [])),
-             {:ok, source} <- delete_entry(schema, group.source.entry.id, user, Keyword.get(opts, :source_args, [])) do
-          {:ok, %{source: source, translations: translations}}
-        end
-      end)
+      Brando.SoftDelete.Repo.at(at, fn -> delete_group(schema, group, user, opts) end)
     end)
+  end
+
+  defp delete_group(schema, group, user, opts) do
+    live = for %{in_trash: false, entry: entry} <- group.translations, do: entry
+
+    with {:ok, translations} <- delete_translations(schema, live, user, Keyword.get(opts, :translation_args, [])),
+         {:ok, source} <- delete_entry(schema, group.source.entry.id, user, Keyword.get(opts, :source_args, [])) do
+      {:ok, %{source: source, translations: translations}}
+    end
   end
 
   @doc """
@@ -1901,16 +1903,17 @@ defmodule Brando.Translations do
   defp in_source_delete(schema, source_id, fingerprint, actor, fun) do
     Repo.transaction(fn ->
       actor
-      |> Brando.Authorization.Boundary.run(:delete, schema, fn user ->
-        with {:ok, group} <- lock_source_group(schema, source_id, fingerprint) do
-          deleting_group(group.group_id, fn -> fun.(user, group) end)
-        end
-      end)
+      |> Brando.Authorization.Boundary.run(:delete, schema, &in_locked_group(schema, source_id, fingerprint, &1, fun))
       |> case do
         {:ok, result} -> result
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+  end
+
+  defp in_locked_group(schema, source_id, fingerprint, user, fun) do
+    with {:ok, group} <- lock_source_group(schema, source_id, fingerprint),
+         do: deleting_group(group.group_id, fn -> fun.(user, group) end)
   end
 
   defp lock_source_group(schema, source_id, fingerprint) do

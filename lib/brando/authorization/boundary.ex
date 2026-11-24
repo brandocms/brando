@@ -229,17 +229,13 @@ defmodule Brando.Authorization.Boundary do
   # as `Brando.Pages.delete_page/3` does for the delete. Matched by name, as
   # `after_restore/3` is.
   def restore(actor, %{__struct__: schema} = entry) do
-    if schema == Brando.Pages.Page or Brando.Translations.synchronized?(schema) do
-      Repo.transaction(fn ->
-        case restore_with_run(actor, entry) do
-          {:ok, restored} -> restored
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-    else
-      restore_with_run(actor, entry)
-    end
+    if schema == Brando.Pages.Page or Brando.Translations.synchronized?(schema),
+      do: Repo.transaction(fn -> actor |> restore_with_run(entry) |> ok_or_rollback() end),
+      else: restore_with_run(actor, entry)
   end
+
+  defp ok_or_rollback({:ok, value}), do: value
+  defp ok_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp restore_with_run(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->

@@ -60,7 +60,7 @@ defmodule BrandoAdmin.DeleteSourceDialogTest do
   end
 
   defp option_values(%{choice: %{name: "translations", options: options}}), do: Enum.map(options, & &1.value)
-  defp option_values(%{choice: choices}) when is_list(choices), do: option_values(%{choice: List.last(choices)})
+  defp option_values(%{choice: [_fragments, translations]}), do: option_values(%{choice: translations})
   defp option_values(_reply), do: []
 
   defp trashed_at(entry), do: Repo.get!(Page, entry.id).deleted_at
