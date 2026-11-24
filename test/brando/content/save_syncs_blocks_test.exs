@@ -296,6 +296,64 @@ defmodule Brando.Content.SaveSyncsBlocksTest do
     end
   end
 
+  describe "the page a save stores" do
+    # The form renders its own copy of the blocks before it saves
+    # (`Blocks.render_block_fields/1`); a save that rebuilt a stale block
+    # from its saved rows renders the entry again once it has committed
+    defp rendered_save(changeset, user) do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        changeset |> Blocks.render_block_fields() |> save!(user)
+        all_enqueued(worker: Brando.Worker.EntryRenderer, args: %{entry_id: changeset.data.id})
+      end)
+    end
+
+    defp rendered(page), do: Repo.get!(Page, page.id).rendered_blocks
+
+    test "after a module save shows the module's settings and var with the editor's edit", c do
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      [first | _] = Enum.map(page.entry_blocks, & &1.block.uid)
+      save_module(c.text_module, c.user, "body", "heading")
+
+      [job] = page |> form_changeset(c.user, %{first => "<p>Edited</p>"}) |> rendered_save(c.user)
+      refute rendered(page) =~ ~s(<div class="lede"><p>Edited</p></div>)
+
+      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
+      assert rendered(page) =~ ~s(<p>Added</p><div class="lede"><p>Edited</p></div>)
+    end
+
+    test "shows the text another save wrote to a ref this save did not change", c do
+      add_var(c.text_module, c.user, "heading")
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      [%{block: %{uid: first, refs: [body], vars: [heading]}} | _] = page.entry_blocks
+
+      saved_body = Repo.get!(Brando.Content.Ref, body.id)
+      other = %{saved_body.data | data: %{saved_body.data.data | text: "<p>Another save</p>"}}
+      saved_body |> Ecto.Changeset.change(data: other) |> Repo.update!()
+
+      params = %{
+        "refs" => [%{"id" => to_string(body.id)}],
+        "vars" => [%{"id" => to_string(heading.id), "value" => "Mine"}]
+      }
+
+      [job] = page |> form_changeset_with(c.user, %{first => params}) |> rendered_save(c.user)
+      refute rendered(page) =~ "<p>Another save</p>"
+
+      assert {:ok, _} = perform_job(Brando.Worker.EntryRenderer, job.args)
+      assert rendered(page) =~ ~s(<p>Mine</p><div class="paragraph"><p>Another save</p></div>)
+    end
+
+    test "a save with nothing stale queues no render of the entry", c do
+      stamp(c.text_module)
+      page = loaded(c.identity)
+      [first | _] = Enum.map(page.entry_blocks, & &1.block.uid)
+
+      assert [] = page |> form_changeset(c.user, %{first => "<p>Edited</p>"}) |> rendered_save(c.user)
+      assert rendered(page) =~ "<p>Edited</p>"
+    end
+  end
+
   describe "a block the form holds as it is saved" do
     # A Case block from before version tracking, with a ref its module no
     # longer defines: `sync_module/2` never stamps it

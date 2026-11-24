@@ -214,7 +214,7 @@ defmodule Brando.Query.Mutations do
          changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
          :ok <- Boundary.change(user, Keyword.get(opts, :action, :update), changeset),
-         changeset <- ContentBlocks.sync_written_blocks(changeset),
+         {changeset, resynced?} = sync_written_blocks(changeset),
          {:ok, entry} <- Query.update(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, identifier_result} <- Content.update_identifier(module, entry),
@@ -224,6 +224,7 @@ defmodule Brando.Query.Mutations do
         identifier_id = get_identifier_id(identifier_result)
         render_entry? = render_entry?(module, changeset, rendered_status)
         enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?)
+        if resynced?, do: render_after_commit(module, entry)
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -883,6 +884,21 @@ defmodule Brando.Query.Mutations do
   defp maybe_broadcast(module, entry, action, true) do
     topic = Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(module)}")
     Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:mutation, module, entry, action}) end)
+  end
+
+  # Whether the save writes blocks other than as its caller sent them,
+  # rendered or not (`Brando.Content.Blocks.sync_written_blocks/1`)
+  defp sync_written_blocks(changeset) do
+    synced = ContentBlocks.sync_written_blocks(changeset)
+    {synced, synced != changeset}
+  end
+
+  # A save that rebuilt a stale block from its saved rows stored the HTML
+  # its caller rendered from its own copy: the entry renders from what it
+  # wrote once that has committed
+  defp render_after_commit(module, entry) do
+    args = %{schema: to_string(module), entry_id: entry.id}
+    Repo.after_commit(fn -> ContentBlocks.enqueue_entry_for_render(args) end)
   end
 
   # A status change shows or hides the entry where its own blocks load it
