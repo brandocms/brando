@@ -1377,6 +1377,35 @@ defmodule Brando.Content.Proposals.TranslateTest do
       refute to_string(Repo.get!(Article, c.target.id).rendered_blocks) =~ "third.jpg"
     end
 
+    test "is told stale at apply when the source took its change back", c do
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+      Translations.source_saved(load(c.source.id))
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: nil}, c.user)
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "Prepare the sync_translation again"
+    end
+
+    test "names both a changed text and a changed sync at apply", c do
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([sync(c.target), op], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel", year: 2001}, c.user)
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "Translate those texts again"
+      assert message =~ "Prepare the sync_translation again"
+    end
+
     test "the codec decodes and encodes it" do
       map = %{"op" => "sync_translation", "target" => %{"content_type" => "Brando.SyncTest.Article", "id" => 5}}
       assert {:ok, %SyncTranslation{target: {Article, 5}, takes: nil} = op} = Codec.decode(map)

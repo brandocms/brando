@@ -4005,19 +4005,20 @@ defmodule Brando.Content.Proposals do
   defp recheck_failed(problems) do
     names = for %{code: :source_changed} = problem <- problems, uniq: true, do: Map.get(problem, :label, problem.key)
 
-    cond do
-      synced = Enum.find(problems, &(&1.code == :sync_changed)) ->
-        synced.message
+    texts =
+      if names != [],
+        do:
+          dgettext(
+            "content_proposals",
+            "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again.",
+            units: Enum.join(names, ", ")
+          )
 
-      names == [] ->
-        dgettext("content_proposals", "Resolve every blocking problem before applying.")
+    synced = Enum.find_value(problems, &(&1.code == :sync_changed && &1.message))
 
-      true ->
-        dgettext(
-          "content_proposals",
-          "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again.",
-          units: Enum.join(names, ", ")
-        )
+    case Enum.reject([texts, synced], &is_nil/1) do
+      [] -> dgettext("content_proposals", "Resolve every blocking problem before applying.")
+      messages -> Enum.join(messages, " ")
     end
   end
 
