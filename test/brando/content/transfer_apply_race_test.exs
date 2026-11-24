@@ -157,7 +157,8 @@ defmodule Brando.Content.TransferApplyRaceTest do
 
     targets =
       Map.new(Enum.zip(archive.bundle["entries"], c.targets), fn {%{"key" => key}, target} ->
-        {key, %{"mode" => "update", "id" => target.id, "publication" => "preserve", "attributes" => %{"uri" => target.uri}}}
+        {key,
+         %{"mode" => "update", "id" => target.id, "publication" => "preserve", "attributes" => %{"uri" => target.uri}}}
       end)
 
     plan!(archive, targets, c.user)
@@ -222,7 +223,9 @@ defmodule Brando.Content.TransferApplyRaceTest do
 
   defp remove_site do
     unboxed(fn ->
-      %{rows: schemas} = @repo.query!("SELECT nspname FROM pg_namespace WHERE starts_with(nspname, $1)", ["tenant_#{@site}_"])
+      %{rows: schemas} =
+        @repo.query!("SELECT nspname FROM pg_namespace WHERE starts_with(nspname, $1)", ["tenant_#{@site}_"])
+
       for [schema] <- schemas, do: Brando.Environments.Schema.drop(schema)
       @repo.delete_all(from(s in Site, where: s.key == @site), prefix: "public")
     end)
