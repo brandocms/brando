@@ -32,6 +32,7 @@ defmodule Brando.SoftDelete.QueryTest do
              Fragment,
              Page,
              Person,
+             Brando.RestoreTest.Project,
              User,
              Video
            ]
@@ -52,6 +53,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Fragment, 0},
              {Page, 0},
              {Person, 0},
+             {Brando.RestoreTest.Project, 0},
              {User, 0},
              {Video, 0}
            ]
@@ -91,6 +93,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Fragment, 1},
              {Page, 1},
              {Person, 0},
+             {Brando.RestoreTest.Project, 0},
              {User, 2},
              {Video, 0}
            ]
@@ -117,6 +120,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Fragment, 1},
              {Page, 0},
              {Person, 0},
+             {Brando.RestoreTest.Project, 0},
              {User, 0},
              {Video, 0}
            ]

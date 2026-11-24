@@ -250,18 +250,34 @@ defmodule Brando.Authorization.Boundary do
          do: ProviderLibrary.guard_restore(user, video, &restore_entry(user, &1))
   end
 
-  defp restore_entry(user, %{__struct__: schema} = entry) do
-    with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
+  # `opts` go to `Brando.Repo.restore/2`
+  defp restore_entry(user, %{__struct__: schema} = entry, opts \\ []) do
+    with :ok <- in_trash(entry),
+         changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
          :ok <- change(user, :update, changeset),
          :ok <- Brando.Translations.guard_restore(schema, entry),
          :ok <- Brando.Content.guard_restore(entry),
-         {:ok, restored} <- Repo.restore(entry),
+         {:ok, restored} <- restore_row(entry, opts),
          {:ok, restored} <- after_restore(restored, entry, user),
          :ok <- restore_translations(restored, entry, user) do
       Brando.Activity.restored(restored, user)
       Brando.Notes.entry_restored(schema, entry)
       Brando.Cache.entry_changed(restored)
       {:ok, restored}
+    end
+  end
+
+  defp in_trash(%{deleted_at: nil}), do: {:error, :not_in_trash}
+  defp in_trash(_entry), do: :ok
+
+  # The restore changes only `deleted_at` and the fields freed in the trash:
+  # an error on `deleted_at` is the row restored or gone since it was read,
+  # any other an address it can't have (`{:taken, field}`)
+  defp restore_row(entry, opts) do
+    case Repo.restore(entry, opts) do
+      {:error, %Ecto.Changeset{errors: [{:deleted_at, _error} | _]}} -> {:error, :not_in_trash}
+      {:error, %Ecto.Changeset{errors: [{field, _error} | _]}} -> {:error, {:taken, field}}
+      result -> result
     end
   end
 
@@ -317,9 +333,10 @@ defmodule Brando.Authorization.Boundary do
   end
 
   # A unique value it held before the trash (a page's address) taken
-  # meanwhile: a refusal, which the caller rolls back with the group
+  # meanwhile: a refusal, which the caller rolls back with the group. A draft
+  # is not given another, as a restore on its own gives it.
   defp restore_translation(user, translation) do
-    restore_entry(user, translation)
+    restore_entry(user, translation, draft_address: :keep)
   rescue
     error in Ecto.ConstraintError -> {:error, {:taken, error.constraint}}
   end

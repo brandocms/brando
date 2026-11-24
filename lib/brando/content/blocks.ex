@@ -788,8 +788,9 @@ defmodule Brando.Content.Blocks do
   defp loaded(_rows), do: []
 
   # The lock an entry's save takes on its row (`store_fenced/3`)
+  # A row deleted for good meanwhile has no blocks left: its restore finds it stale
   defp lock_entry_row(%schema{id: id}),
-    do: Repo.one!(from(e in schema, where: e.id == ^id, lock: "FOR NO KEY UPDATE", select: e.id))
+    do: Repo.one(from(e in schema, where: e.id == ^id, lock: "FOR NO KEY UPDATE", select: e.id))
 
   defp block_field_changes(schema, changeset) do
     if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks) do

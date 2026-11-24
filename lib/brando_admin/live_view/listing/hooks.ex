@@ -123,6 +123,18 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:error, {:module_in_trash, refusal}} ->
         send(self(), {:toast, Brando.Content.module_in_trash_message(refusal)})
 
+      {:error, {:taken, _field}} ->
+        delete_refused(
+          gettext("Not restored: another entry has its address, and no address close to it is free. It is still in the trash.")
+        )
+
+      # Restored, or deleted for good, since the list was drawn
+      {:error, :not_in_trash} ->
+        no_longer_in_trash(schema)
+
+      {:error, {_singular, :not_found}} ->
+        no_longer_in_trash(schema)
+
       {:error, _error} ->
         send(
           self(),
@@ -539,6 +551,11 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   # A delete from the listing that was refused or failed: the error toast,
   # which stays until closed
   defp delete_refused(message), do: send(self(), {:toast, message, :error})
+
+  defp no_longer_in_trash(schema) do
+    delete_refused(gettext("Not restored: it is no longer in the trash."))
+    update_list_entries(schema)
+  end
 
   defp delete_error_message(_schema, _entry_id, :group_has_synchronized_members),
     do: synchronized_members_message()
