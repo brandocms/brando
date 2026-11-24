@@ -1301,6 +1301,11 @@ msgstr "Gjenopprettet"
 msgid "Recovery is no longer authorized."
 msgstr "Du har ikke lenger tilgang til å gjenopprette innholdet."
 
+#: lib/brando/content/transfer/entries.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery needs attention: %{problems}"
+msgstr "Gjenopprettingen trenger oppmerksomhet: %{problems}"
+
 #: lib/brando/content/transfer/labels.ex
 #, elixir-autogen, elixir-format
 msgid "References"

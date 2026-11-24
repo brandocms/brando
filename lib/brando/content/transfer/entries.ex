@@ -944,7 +944,13 @@ defmodule Brando.Content.Transfer.Entries do
 
   defp recovery_plan!(bundle, targets, mappings, actor) do
     plan = preview!(%{bundle: bundle, files: %{}}, targets, actor, dependencies: mappings)
-    unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
+
+    unless Transfer.applicable?(plan),
+      do:
+        Error.fail!(
+          dgettext("content_transfer", "Recovery needs attention: %{problems}", problems: Enum.join(plan.problems, " "))
+        )
+
     plan
   end
 

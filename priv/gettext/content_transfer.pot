@@ -1308,6 +1308,11 @@ msgstr ""
 msgid "Recovery is no longer authorized."
 msgstr ""
 
+#: lib/brando/content/transfer/entries.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery needs attention: %{problems}"
+msgstr ""
+
 #: lib/brando/content/transfer/labels.ex
 #, elixir-autogen, elixir-format
 msgid "References"
