@@ -5267,6 +5267,9 @@ defmodule Brando.Content.Proposals do
           )
         )
 
+      {:error, {:module_in_trash, refusal}} ->
+        Error.fail!(Brando.Content.module_in_trash_message(refusal))
+
       {:error, _} ->
         Error.fail!(dgettext("content_proposals", "You do not have permission to save this entry."))
     end

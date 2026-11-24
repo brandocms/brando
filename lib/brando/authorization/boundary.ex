@@ -222,20 +222,19 @@ defmodule Brando.Authorization.Boundary do
          do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
   end
 
-  # A page brings back the fragments trashed with it (`after_restore/3`), in
-  # one transaction: `run/4` gives it one only with group authorization, so
-  # in legacy mode and for `:system` this does, as `Brando.Pages.delete_page/3`
-  # does for the delete. Matched by name, as `after_restore/3` is.
-  def restore(actor, %{__struct__: Brando.Pages.Page} = page) do
-    Repo.transaction(fn ->
-      case restore_with_run(actor, page) do
-        {:ok, restored} -> restored
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  # An entry with blocks is restored in one transaction: the module locks of
+  # `Brando.Content.guard_restore/1` hold until it is restored, and a page
+  # brings back the fragments trashed with it (`after_restore/3`). `run/4`
+  # gives it one only with group authorization, so in legacy mode and for
+  # `:system` this does.
+  def restore(actor, %{__struct__: schema} = entry) do
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Brando.Trait.Blocks),
+      do: Repo.transaction(fn -> commit_or_rollback(restore_with_run(actor, entry)) end),
+      else: restore_with_run(actor, entry)
   end
 
-  def restore(actor, entry), do: restore_with_run(actor, entry)
+  defp commit_or_rollback({:ok, restored}), do: restored
+  defp commit_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp restore_with_run(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
@@ -251,6 +250,7 @@ defmodule Brando.Authorization.Boundary do
   defp restore_entry(user, %{__struct__: schema} = entry) do
     with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
          :ok <- change(user, :update, changeset),
+         :ok <- Brando.Content.guard_restore(entry),
          {:ok, restored} <- Repo.restore(entry),
          {:ok, restored} <- after_restore(restored, entry, user) do
       Brando.Activity.restored(restored, user)

@@ -54,7 +54,8 @@ defmodule Brando.Content.ModuleChangesRenderTest do
       page = page!(c.user, c.module)
       {:ok, trashed_page} = Brando.Pages.delete_page(page.id, c.user)
       {:ok, deleted} = Brando.Content.delete_module(c.module.id, c.user)
-      {:ok, _} = Boundary.restore(c.user, trashed_page)
+      # As a site has it from before a restore checked the page's modules
+      {:ok, _} = Brando.Repo.restore(trashed_page)
       {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
       refute rendered(page) =~ "<p>teaser</p>"
 

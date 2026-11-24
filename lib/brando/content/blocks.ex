@@ -610,6 +610,160 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Refuses an entry save that adds a block of a module in the trash, which
+  would render as not found:
+  `{:error, {:module_in_trash, %{module: name, block: label}}}`, naming the
+  first such block. Only the blocks the save adds count, at any level: one
+  the entry already holds does not stop its saves. A block of a library
+  module has a module while the library has it, the site's customization in
+  the trash or not.
+
+  Run it in the save's transaction, after authorization. It takes a share
+  lock on the modules of the added blocks, so a module delete
+  (`Brando.Content.guard_delete/2`) and the save cannot pass each other:
+  the delete sees the save's blocks, or the save sees the module in the
+  trash. Before that it takes the lock its writes of refs and vars take,
+  so it queues behind a definition apply, which locks those tables and then
+  updates the modules (`Brando.Content.Definitions.apply/3`), instead of
+  holding a module the apply waits for.
+  """
+  def guard_added_modules(%Changeset{data: %schema{}} = changeset) do
+    added =
+      for field <- block_field_changes(schema, changeset),
+          {entry_block, position} <- changeset |> Changeset.get_change(field) |> kept() |> Enum.with_index(1),
+          %Changeset{} = block <- [Changeset.get_change(entry_block, :block)],
+          added <- added_blocks(block, {:root, position}),
+          do: added
+
+    if added != [], do: lock_block_content_tables()
+    refuse_trashed_modules(added)
+  end
+
+  defp lock_block_content_tables do
+    prefix = Brando.Tenant.current_prefix() || "public"
+    tables = Enum.map_join(~w(content_refs content_vars), ", ", &~s("#{prefix}"."#{&1}"))
+    Ecto.Adapters.SQL.query!(Repo.repo(), "LOCK TABLE " <> tables <> " IN ROW EXCLUSIVE MODE", [])
+  end
+
+  @doc """
+  Refuses to restore `entries` from the trash while one holds a block of a
+  module in the trash: `{:error, {:module_in_trash, %{module: name}}}`.
+  Takes the lock `guard_added_modules/1` takes, in the restore's
+  transaction. It locks each entry's row before it reads its blocks, so a
+  save of the entry still open (which holds that row) commits first and its
+  blocks count.
+  """
+  def guard_restored_modules(entries) do
+    entries =
+      Enum.filter(entries, &(Brando.Blueprint.blueprint?(&1.__struct__) and &1.__struct__.has_trait(Trait.Blocks)))
+
+    Enum.each(entries, &lock_entry_row/1)
+
+    module_ids =
+      for %schema{id: id} <- entries,
+          %{name: name} <- schema.__blocks_fields__(),
+          module_id <- module_ids_in_tree(Module.concat([schema, name |> to_string() |> Macro.camelize()]), id),
+          do: {module_id, nil}
+
+    refuse_trashed_modules(module_ids)
+  end
+
+  # The lock an entry's save takes on its row (`store_fenced/3`)
+  defp lock_entry_row(%schema{id: id}),
+    do: Repo.one!(from(e in schema, where: e.id == ^id, lock: "FOR NO KEY UPDATE", select: e.id))
+
+  defp block_field_changes(schema, changeset) do
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks) do
+      for %{name: name} <- schema.__blocks_fields__(),
+          field = :"entry_#{name}",
+          Map.has_key?(changeset.changes, field),
+          do: field
+    else
+      []
+    end
+  end
+
+  defp kept(changesets), do: Enum.reject(changesets, &(&1.action in [:replace, :delete]))
+
+  # The local module of each block this save adds under `block`, with how
+  # the editor finds the block: its description, or its root's position
+  defp added_blocks(%Changeset{action: action} = block, place) when action not in [:replace, :delete] do
+    place = with_description(place, Changeset.get_field(block, :description))
+    children = block |> Changeset.get_change(:children, []) |> kept()
+    descendants = Enum.flat_map(children, &added_blocks(&1, inside(place)))
+
+    with true <- added?(block),
+         module_id when not is_nil(module_id) <- Changeset.get_field(block, :module_id),
+         :local <- normalize_library_origin(Changeset.get_field(block, :module_origin)) do
+      [{module_id, place} | descendants]
+    else
+      _ -> descendants
+    end
+  end
+
+  defp added_blocks(_block, _place), do: []
+
+  defp added?(%Changeset{action: :insert}), do: true
+
+  defp added?(%Changeset{changes: changes}),
+    do: Map.has_key?(changes, :module_id) or Map.has_key?(changes, :module_origin)
+
+  defp with_description(_place, description) when is_binary(description) and description != "",
+    do: {:described, description}
+
+  defp with_description(place, _description), do: place
+
+  defp inside({:inside, _} = place), do: place
+  defp inside(place), do: {:inside, place}
+
+  defp module_ids_in_tree(join_schema, entry_id) do
+    roots = from(j in join_schema, where: j.entry_id == ^entry_id, select: %{id: j.block_id})
+
+    descendants =
+      from(b in Block,
+        join: tree in "entry_block_tree",
+        on: b.parent_id == tree.id,
+        select: %{id: b.id}
+      )
+
+    from(b in Block,
+      join: tree in "entry_block_tree",
+      on: b.id == tree.id,
+      where: not is_nil(b.module_id),
+      distinct: true,
+      select: b.module_id
+    )
+    |> maybe_filter_library_origin(:module_origin, :local)
+    |> recursive_ctes(true)
+    |> with_cte("entry_block_tree", as: ^union_all(roots, ^descendants))
+    |> Repo.all()
+  end
+
+  # Share-locks the modules `uses` name, `{module_id, place}`, in id order,
+  # and refuses the first use of one in the trash
+  defp refuse_trashed_modules([]), do: :ok
+
+  defp refuse_trashed_modules(uses) do
+    ids = uses |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+
+    trashed =
+      from(m in ContentModule,
+        where: m.id in ^ids,
+        order_by: m.id,
+        lock: "FOR SHARE",
+        select: {m.id, m.name, m.deleted_at}
+      )
+      |> Repo.all()
+      |> Map.new(fn {id, name, deleted_at} -> {id, deleted_at && name} end)
+
+    case Enum.find(uses, fn {id, _place} -> trashed[id] end) do
+      nil -> :ok
+      {id, nil} -> {:error, {:module_in_trash, %{module: trashed[id]}}}
+      {id, place} -> {:error, {:module_in_trash, %{module: trashed[id], block: place}}}
+    end
+  end
+
+  @doc """
   Render and update all entries with a block using `fragment_id`
   """
   def render_entries_with_fragment_id(fragment_id) do

@@ -420,13 +420,8 @@ defmodule Brando.Pages do
   Entries embedding them are queued for rendering once the transaction
   around the call commits.
   """
-  def restore_fragments(%Page{id: id, deleted_at: %{} = deleted_at}, user) do
-    fragments =
-      Brando.Repo.all(
-        from f in Fragment,
-          where: f.page_id == ^id and f.deleted_at == ^deleted_at,
-          order_by: [asc: f.id]
-      )
+  def restore_fragments(%Page{deleted_at: %{}} = page, user) do
+    fragments = list_fragments_trashed_with(page)
 
     result =
       each_fragment(fragments, fn fragment ->
@@ -446,6 +441,20 @@ defmodule Brando.Pages do
   end
 
   def restore_fragments(%Page{}, _user), do: {:ok, []}
+
+  @doc """
+  The fragments `restore_fragments/2` brings back with `page`, the page as
+  it is in the trash.
+  """
+  def list_fragments_trashed_with(%Page{id: id, deleted_at: %{} = deleted_at}) do
+    Brando.Repo.all(
+      from f in Fragment,
+        where: f.page_id == ^id and f.deleted_at == ^deleted_at,
+        order_by: [asc: f.id]
+    )
+  end
+
+  def list_fragments_trashed_with(%Page{}), do: []
 
   # A page's delete or restore, or a transaction around it, may still roll
   # back: its renders wait for the commit, in its site and environment, after

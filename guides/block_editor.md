@@ -195,9 +195,14 @@ A module that blocks use can't be moved to the trash while an entry outside
 the trash holds one of them: `Brando.Content.delete_module/2` returns
 `{:error, :module_in_use}`, and the admin's Delete names those entries
 (`Brando.Content.list_entries_using_module/1`). Take the blocks out of them,
-or move the entries to the trash, first. The check covers saved blocks at
-the moment of the delete: a block added in an editor that is still open, or
-an entry restored from the trash later, can still hold the module. A site's
+or move the entries to the trash, first. Nor does a module in the trash come
+back into use: a save that adds a block of it, in an editor opened before the
+delete, is refused with a message naming the module and the block, and
+restoring an entry that holds one of its blocks (a page, with the fragments
+trashed with it) is refused with a message naming the module to restore
+first. Blocks an entry already holds don't stop its saves. The delete and
+such a save or restore can't pass each other: whichever reaches the module
+first finishes, and the other is refused. A site's
 customization of a library module goes to the trash all the same, since its
 blocks then render as the library module. That is not a **Reset to shared**:
 the customization stays in the trash, and to customize the module again,
