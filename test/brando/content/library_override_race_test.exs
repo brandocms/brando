@@ -103,25 +103,22 @@ defmodule Brando.Content.LibraryOverrideRaceTest do
   # Runs `fun` in a transaction that commits when told to
   defp hold(fun) do
     test = self()
-
-    holder =
-      Task.async(fn ->
-        unboxed(fn ->
-          Repo.transaction(fn ->
-            result = fun.()
-            send(test, :holding)
-
-            receive do
-              :commit -> result
-            after
-              10_000 -> raise "never told to commit"
-            end
-          end)
-        end)
-      end)
-
+    holder = Task.async(fn -> unboxed(fn -> hold_transaction(fun, test) end) end)
     assert_receive :holding, 10_000
     holder
+  end
+
+  defp hold_transaction(fun, test), do: Repo.transaction(fn -> run_and_hold(fun, test) end)
+
+  defp run_and_hold(fun, test) do
+    result = fun.()
+    send(test, :holding)
+
+    receive do
+      :commit -> result
+    after
+      10_000 -> raise "never told to commit"
+    end
   end
 
   defp wait_for_lock_waiter(attempts \\ 500)
