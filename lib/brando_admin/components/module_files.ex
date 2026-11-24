@@ -205,6 +205,10 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 <p :if={item[:removes]} data-testid="module-files-removal" data-uid={item.uid}>
                   {Plan.removal_text(item)}
                 </p>
+                <p :if={left?(item)} class="module-files-left" data-testid="module-files-left" data-uid={item.uid}>
+                  {Plan.move_text(item)}
+                  <code :if={Plan.move_command(@plan, item)}>{Plan.move_command(@plan, item)}</code>
+                </p>
                 <label :if={item.state == :never_applied or item.uid in @replace} class="module-files-replace">
                   <input
                     type="checkbox"
@@ -264,6 +268,16 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 class="btn btn--sm"
                 data-testid="module-files-resolve"
               >{gettext("Resolve blocks")}</.link>
+            </div>
+            <div
+              :for={renamed <- @result.renamed}
+              :if={renamed.left?}
+              class="module-files-feedback"
+              data-testid="module-files-left"
+              data-uid={renamed.uid}
+            >
+              <strong>{renamed.name}</strong>
+              <span>{renamed.text}</span>
             </div>
             <div
               :for={refresh <- @result.refresh}
@@ -373,6 +387,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
     case Definitions.apply(plan, socket.assigns.current_user) do
       {:ok, result} ->
         BrandoAdmin.LiveView.Listing.update_list_entries(Module)
+        result = %{result | renamed: Enum.map(result.renamed, &Map.put(&1, :name, definition_name(plan, &1)))}
         result = Map.put(result, :removals, removals(plan))
         socket = assign(socket, plan: nil, result: result, error: nil, download: nil)
 
@@ -512,6 +527,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
       %{uid: item.uid, name: definition_name(plan, item), text: Plan.removal_text(item), module_id: module.id}
     end
   end
+
+  # An update whose renames' values the apply leaves for the resolve command
+  defp left?(item), do: match?(%{action: :update, moves: %{left?: true, blocks: blocks}} when blocks > 0, item)
 
   defp definition_name(plan, item) do
     definition = Enum.find(Model.definitions(plan.bundle), &(&1["uid"] == item.uid))

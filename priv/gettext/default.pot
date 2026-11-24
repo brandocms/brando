@@ -1123,22 +1123,7 @@ msgstr ""
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{renames} would move no values, but the other renames this apply selects move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once."
-msgstr ""
-
-#: lib/brando/content/definition/renames.ex
-#, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries with the other renames this apply selects, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): apply fewer of these modules at once, or take renamed_from out of the file and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
-msgstr ""
-
-#: lib/brando/content/definition/renames.ex
-#, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks of %{entries} entries, more than an apply moves while editors' saves wait for it (%{max_entries} entries, %{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
-msgstr ""
-
-#: lib/brando/content/definition/renames.ex
-#, elixir-autogen, elixir-format
-msgid "%{renames} would move values in %{blocks} blocks, more than an apply moves while editors' saves wait for it (%{max_blocks} blocks): take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one."
+msgid "%{renames}: the apply moves no values over its limit (%{max_entries} entries, %{max_blocks} blocks), and the blocks keep them under the old names; move them with %{command}, as a user who may edit those entries"
 msgstr ""
 
 #: lib/brando_admin/live/ai/guidance_live.ex
@@ -1183,8 +1168,20 @@ msgstr ""
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
-msgid "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or move the values with mix brando.modules resolve --map"
+msgid "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next"
 msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries; it names any block whose value it can't convert, and then changes nothing. Without renamed_from the plan's resolve line drops them instead: don't run that one."
+msgstr ""
+
+#: lib/brando/content/definition/renames.ex
+#, elixir-autogen, elixir-format
+msgid "%{subject}: 1 block holds blocks in the slot of %{from}, which mix brando.modules resolve doesn't move, and the apply moves no values over its limit (%{max_entries} entries, %{max_blocks} blocks): move them out of the slot first, or apply fewer modules at once"
+msgid_plural "%{subject}: %{count} blocks hold blocks in the slot of %{from}, which mix brando.modules resolve doesn't move, and the apply moves no values over its limit (%{max_entries} entries, %{max_blocks} blocks): move them out of the slot first, or apply fewer modules at once"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
@@ -16533,6 +16530,21 @@ msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "Renamed refs and vars keep their values under the old names: the module’s row has the command that moves them."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Renames refs or vars. Blocks keep their values under the old names until the resolve command moves them."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Renames refs or vars. Blocks’ values can’t move to the new names yet, so this module isn’t applied."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "Renames refs or vars. Blocks’ values move to the new names in the apply."
 msgstr ""
 
@@ -21046,6 +21058,11 @@ msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "The release renames some of them, and the apply left their values for this command, which moves them. Run it as a user who may edit those entries:"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "The release’s definitions can’t be planned"
 msgstr ""
 
@@ -21553,6 +21570,11 @@ msgstr ""
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "This apply is already reverted."
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This apply would move values in more blocks or entries than it may while editors’ saves wait for it, so it moves none. It adds the new refs and vars, and each block keeps its value under the old name; nothing is deleted, and until the values move the new names show their defaults. After the apply, move them with this command, as a user who may edit those entries:"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -23453,6 +23475,11 @@ msgstr ""
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "Values move to the renamed refs and vars"
+msgstr ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Values stay under the old names until you move them"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex

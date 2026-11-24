@@ -184,21 +184,20 @@ defmodule Brando.Content.Definition.Importer do
         unless current.fingerprint == plan.fingerprint and Plan.applicable?(current),
           do: Repo.rollback("target changed after planning; create a new plan")
 
-        changes =
+        {changes, current} =
           Brando.Activity.with_batch(opts[:batch_id], fn ->
             changes = persist!(current, records, actor, creator)
-            move!(current, records, changes, creator, opts)
-            changes
+            {changes, move!(current, records, changes, creator, opts)}
           end)
 
         Baselines.record!(current, changes, records.snapshots, actor, opts)
         # The caller's own records of the apply, in its transaction
         if in_transaction = opts[:in_transaction], do: in_transaction.(current, changes)
-        changes
+        {changes, renamed(current, creator)}
       end)
 
     case result do
-      {:ok, changes} ->
+      {:ok, {changes, renamed}} ->
         bundle =
           plan.bundle
           |> Map.merge(%{
@@ -211,7 +210,7 @@ defmodule Brando.Content.Definition.Importer do
         Phoenix.PubSub.broadcast(Brando.pubsub(), Definitions.topic(), {:definitions_applied, prefix})
         Brando.Repo.after_commit(fn -> Brando.Content.Definitions.ReleaseStatus.changed(prefix) end)
 
-        {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id]}}
+        {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id], renamed: renamed}}
 
       {:error, reason} ->
         {:error, reason}
@@ -254,7 +253,13 @@ defmodule Brando.Content.Definition.Importer do
       snapshots: Map.new(Model.definitions(snapshot), &{{&1["kind"], &1["uid"]}, &1})
     }
 
-    items = bundle |> Model.definitions() |> Enum.map(&plan_item!(&1, ctx)) |> limit_moves(settings.selection, ctx.viewer)
+    items =
+      bundle
+      |> Model.definitions()
+      |> Enum.map(&plan_item!(&1, ctx))
+      |> limit_moves(settings.selection)
+      |> Enum.map(&refuse_moves/1)
+
     scope = References.scope()
 
     # The renames are no part of a definition's digest: a changed one
@@ -386,8 +391,9 @@ defmodule Brando.Content.Definition.Importer do
 
   # The values an update of a module moves under its declared renames
   # (`Renames`), and the renames it leaves to a resolve. A move refused in
-  # any block makes the update need a migration. A conflict gets only the
-  # moves an apply of the files' version makes, for the review to preview.
+  # any block makes the update need a migration once the selection's moves
+  # are counted together (`refuse_moves/1`). A conflict gets only the moves
+  # an apply of the files' version makes, for the review to preview.
   defp moves({:update, _reason} = action, %{"kind" => "module", "uid" => uid}, record, changeset, ctx) do
     case Renames.declared(ctx.bundle, uid) do
       [] ->
@@ -397,12 +403,7 @@ defmodule Brando.Content.Definition.Importer do
         module = Changeset.apply_changes(changeset)
         {active, rest} = Renames.split(renames, ModuleDiff.diff(record, changeset))
         moves = if active != [], do: Renames.plan(record, module, active, ctx.viewer)
-        remaps = Renames.remaps(record, module, rest)
-
-        case moves do
-          %{refused: [_ | _] = refused} -> {{:migration_required, Enum.join(refused, "; ")}, moves, remaps}
-          _ -> {action, moves, remaps}
-        end
+        {action, moves, Renames.remaps(record, module, rest)}
     end
   end
 
@@ -412,6 +413,12 @@ defmodule Brando.Content.Definition.Importer do
     moves = if active != [], do: Renames.plan(record, Changeset.apply_changes(changeset), active, ctx.viewer)
     {action, moves, []}
   end
+
+  # Applied already: blocks may still hold the old keys the files rename,
+  # left for the resolve command by an apply over the limit
+  defp moves({:noop, _reason} = action, %{"kind" => "module", "uid" => uid}, record, _changeset, ctx)
+       when not is_nil(record),
+       do: {action, nil, Renames.left(record, Renames.declared(ctx.bundle, uid))}
 
   defp moves(action, _definition, _record, _changeset, _ctx), do: {action, nil, []}
 
@@ -430,35 +437,36 @@ defmodule Brando.Content.Definition.Importer do
     if refused != [], do: Repo.rollback(Renames.changed_since_review(refused))
   end
 
-  # The selected updates' moves together, refused when they are more than
-  # one apply moves (`Renames.over_limit/1`). With nothing selected (a
-  # review of a whole release, an import) each module stays within its own
-  # limit and can be chosen; `Renames.move!/3` refuses what one apply then
-  # moves together.
-  defp limit_moves(items, nil, _viewer), do: items
+  # The selected updates' moves together, refused ones too: when they are
+  # more than one apply moves (`Renames.over_limit/1`), the apply moves none
+  # of them (`Renames.leave/1`), and only what the resolve command can't
+  # move either stays refused. With nothing selected (a review of a whole
+  # release, an import) each module is judged on its own; `Renames.move!/3`
+  # decides what one apply then moves together.
+  defp limit_moves(items, nil), do: items
 
-  defp limit_moves(items, selection, viewer) do
+  defp limit_moves(items, selection) do
     moving =
       for %{action: :update, moves: %{} = moves} = item <- items,
           MapSet.member?(selection, item.uid),
           do: {item.uid, moves}
 
-    case Renames.over_limit(Enum.map(moving, &elem(&1, 1))) do
-      nil ->
-        items
-
-      totals ->
-        uids = Map.new(moving)
-        Enum.map(items, &if(moves = uids[&1.uid], do: over_limit(&1, moves, totals, viewer), else: &1))
+    if Renames.over_limit(Enum.map(moving, &elem(&1, 1))) do
+      uids = Map.new(moving)
+      Enum.map(items, &if(uids[&1.uid], do: %{&1 | moves: Renames.leave(&1.moves)}, else: &1))
+    else
+      items
     end
   end
 
-  defp over_limit(item, moves, totals, viewer) do
-    reason = Renames.over_limit_text([{item.uid, moves.renames}], totals, viewer)
-    %{item | action: :migration_required, reason: reason, moves: %{moves | refused: [reason]}}
-  end
+  # An update whose moves are refused needs a migration, and leaves nothing
+  defp refuse_moves(%{action: :update, moves: %{refused: [_ | _] = refused}} = item),
+    do: %{item | action: :migration_required, reason: Enum.join(refused, "; "), removes: nil}
 
-  # The values the selected module updates move, as the person who applies
+  defp refuse_moves(item), do: item
+
+  # The values the selected module updates move, as the person who applies:
+  # `plan` with each item's moves as the apply made them under its lock
   defp move!(plan, records, changes, person, opts) do
     saved = Map.new(changes, &{{&1.kind, &1.uid}, &1.id})
 
@@ -474,7 +482,20 @@ defmodule Brando.Content.Definition.Importer do
         }
       end
 
-    Renames.move!(moves, person, release: opts[:release])
+    made = Renames.move!(moves, person, release: opts[:release])
+    %{plan | items: Enum.map(plan.items, &if(moves = made[&1.uid], do: %{&1 | moves: moves}, else: &1))}
+  end
+
+  # What the apply did with each module's renames that blocks hold a value
+  # of: `%{uid, renames, left?, text}`, `text` the line that says what it
+  # left and the command that moves it
+  defp renamed(plan, person) do
+    for %{action: :update, moves: %{renames: renames, left?: left?}, uid: uid} = item <- plan.items,
+        Plan.selected?(plan, item),
+        held = Enum.filter(renames, &(&1.blocks > 0)),
+        held != [] do
+      %{uid: uid, renames: held, left?: left?, text: if(left?, do: Renames.left_text(uid, held, person))}
+    end
   end
 
   defp action(%{mode: :database}, {:deleted, _source}, _classify),

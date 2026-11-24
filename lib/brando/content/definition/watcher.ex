@@ -222,18 +222,32 @@ defmodule Brando.Content.Definition.Watcher do
   defp apply_changes(plan, path, user, changes) do
     with {:ok, result} <- Definitions.apply(plan, user),
          {:ok, :ok} <- Definitions.write_baseline(path, result) do
-      {:ok, changes}
+      {:ok, Enum.map(changes, &left_lines(&1, result.renamed))}
     end
   end
 
   # What `mix brando.modules import` prints for an update that removes keys
-  # blocks hold
+  # blocks hold, or leaves values under keys the files rename
   defp removal_lines(plan, item) do
-    case Plan.resolve_line(plan, item) do
-      nil -> []
-      line -> ["#{item.action} #{item.kind} #{item.uid}: #{Plan.removal_text(item)}", "  " <> line]
+    case Plan.resolve_lines(plan, item) do
+      [] -> []
+      lines -> [header(item, Plan.changes_text(item)) | Enum.map(lines, &("  " <> &1))]
     end
   end
+
+  defp header(item, nil), do: "#{item.action} #{item.kind} #{item.uid}"
+  defp header(item, text), do: "#{item.action} #{item.kind} #{item.uid}: #{text}"
+
+  # The values the apply left that the plan had it move (the modules were
+  # over the limit together), with the command that moves them
+  defp left_lines(%{moves: %{left?: false}} = change, renamed) do
+    case Enum.find(renamed, &(&1.uid == change.uid and &1.left?)) do
+      nil -> change
+      left -> %{change | removal: change.removal ++ [Plan.renamed_text(left)]}
+    end
+  end
+
+  defp left_lines(change, _renamed), do: change
 
   # UIDs are opaque; the log names definitions the way the admin does
   defp names(bundle) do

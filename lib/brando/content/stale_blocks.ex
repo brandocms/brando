@@ -137,12 +137,12 @@ defmodule Brando.Content.StaleBlocks do
   end
 
   @doc """
-  What `resolutions` would do to the blocks `block_ids` were `module` (with
-  its refs and vars) their module's definition: a dry run of a resolve
-  after an apply that leaves the module so (`plan/2`).
+  The report of the blocks `block_ids` were `module` (with its refs and
+  vars) their module's definition (`report/2`): for a dry run of a resolve
+  after an apply that leaves the module so.
   """
-  @spec plan_for(Module.t(), [integer()], resolutions()) :: map()
-  def plan_for(module, block_ids, resolutions) do
+  @spec report_for(Module.t(), [integer()]) :: map()
+  def report_for(module, block_ids) do
     blocks =
       from(b in Block,
         where: b.id in ^block_ids,
@@ -151,7 +151,20 @@ defmodule Brando.Content.StaleBlocks do
       )
       |> Repo.all()
 
-    module |> build_report(blocks) |> plan(resolutions)
+    build_report(module, blocks)
+  end
+
+  @doc """
+  `resolutions` that keep, in each block, a leftover `plan` (of them) would
+  map onto a ref or var holding a value of its own (one an editor entered
+  there): the block keeps both, and the value stays a leftover. Returns the
+  resolutions and the changes kept so. `mix brando.modules resolve` moves
+  so: a rename's leftovers wait for it while editors may fill in the new key.
+  """
+  @spec keep_filled(map(), resolutions()) :: {resolutions(), [map()]}
+  def keep_filled(plan, resolutions) do
+    kept = Enum.filter(plan.changes, &match?(%{action: {:map, _}, replaces: replaces} when replaces != nil, &1))
+    {Enum.into(kept, resolutions, &{{&1.block_id, &1.kind, &1.key}, :keep}), kept}
   end
 
   ## Applying

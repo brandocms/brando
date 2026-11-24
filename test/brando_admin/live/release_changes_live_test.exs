@@ -408,6 +408,54 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
       assert has_element?(view, "[data-testid=release-move-refusals] li[data-uid=#{c.case_module.uid}]", "wide")
     end
 
+    test "over the apply's limit, lists the values left for the command, which the applied row shows too",
+         %{conn: conn} = c do
+      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+      {_, blocks} =
+        Repo.insert_all(
+          Brando.Content.Block,
+          for(
+            _ <- 1..1500,
+            do: %{
+              uid: Brando.Utils.generate_uid(),
+              type: :module,
+              module_id: c.case_module.id,
+              module_origin: :local,
+              creator_id: c.user.id,
+              inserted_at: now,
+              updated_at: now
+            }
+          ),
+          returning: [:id]
+        )
+
+      Repo.insert_all(
+        Brando.Content.Var,
+        for(
+          %{id: id} <- blocks,
+          do: %{block_id: id, key: "wide", type: :boolean, label: %{"en" => "Wide"}, inserted_at: now, updated_at: now}
+        )
+      )
+
+      command = "mix brando.modules resolve --uid #{c.case_module.uid} --user #{c.user.id} --map var:wide=full --apply"
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        view |> element("[data-testid=release-row][data-uid=#{c.case_module.uid}]") |> render_click()
+        refute has_element?(view, "[data-testid=release-moves]")
+        assert has_element?(view, "[data-testid=release-left-moves] li[data-uid=#{c.case_module.uid}]", "wide → full")
+        assert has_element?(view, "[data-testid=release-left-moves] code", command)
+
+        view |> element("[data-testid=release-apply]") |> render_click()
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+        assert %{value_boolean: true} = Repo.get_by(Brando.Content.Var, block_id: c.block.id, key: "wide")
+
+        view |> element("[data-testid=release-applied-row][data-uid=#{c.case_module.uid}]") |> render_click()
+        assert has_element?(view, "[data-testid=release-move-command]", command)
+      end)
+    end
+
     test "is refused at apply when the files' renames changed after the review", %{conn: conn} = c do
       manual(fn ->
         {:ok, view, _html} = live(conn, @path)

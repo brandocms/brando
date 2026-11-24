@@ -40,6 +40,7 @@
   .module-files-change > summary > span:first-child { display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }
   .module-files-change strong { font-size: var(--brando-text-xl); font-weight: 500; }
   .module-files-change code { font-size: var(--brando-text-xs); color: var(--brando-muted); overflow-wrap: anywhere; }
+  .module-files-left code { display: block; margin-top: 4px; font-family: var(--brando-font-mono); color: var(--brando-ink); }
   .module-files-kind { font-size: var(--brando-text-xs); color: var(--brando-muted); }
   .module-files-change > summary::after { content: '+'; color: var(--brando-muted); }
   .module-files-change[open] > summary::after { content: '−'; }
