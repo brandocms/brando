@@ -1212,6 +1212,19 @@ server should do the rendering.
 If saving the new lockfile fails after commit, export into a new directory before
 the next edit. The CLI reports this separately from an import rollback.
 
+## Entries open during a module save
+
+A module save, or **Reset to shared** and **Accept update** on the shared
+library screen, syncs the blocks in the database while an editor may have one
+of their entries open, with the blocks as the form loaded them. The entry's
+next save syncs each block it writes whose `module_version` is not its
+module's current version, in the save's transaction
+(`Brando.Content.Blocks.sync_written_blocks/1`): the block gets the module's
+new refs and vars and its ref and var settings, keeps what the editor changed,
+and the form shows the synced block after the save. A change that does not
+take the module to a new version, such as a ref's settings alone, is not seen
+there.
+
 ## Blocks left on an older version
 
 A module save migrates every block that uses it, but never deletes what the

@@ -1867,7 +1867,20 @@ defmodule Brando.Content.Blocks do
       "brando.block_count": length(block_ids)
     })
 
-    {:ok, module} = sync_target(module_id, origin)
+    module =
+      case normalize_library_origin(origin) do
+        :local ->
+          {:ok, module} =
+            Content.get_module(%{
+              matches: %{id: module_id},
+              preload: [:vars, refs: Ref.preloads()]
+            })
+
+          module
+
+        :shared ->
+          Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared)
+      end
 
     {:ok, blocks} =
       Content.list_blocks(%{
@@ -1885,18 +1898,15 @@ defmodule Brando.Content.Blocks do
   end
 
   # The module a block with `module_id` and `origin` resolves to now, with
-  # what `sync_module/2` reads: a shared one is the site's override of it, if
-  # it has one.
-  defp sync_target(module_id, origin) do
-    case normalize_library_origin(origin) do
-      :local ->
-        Content.get_module(%{matches: %{id: module_id}, preload: [:vars, refs: Ref.preloads()]})
+  # what `sync_module/2` reads, as `sync_blocks/3` finds it: a shared one is
+  # the site's override of it, if it has one.
+  defp sync_target(module_id, :local),
+    do: Content.get_module(%{matches: %{id: module_id}, preload: [:vars, refs: Ref.preloads()]})
 
-      :shared ->
-        case Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared) do
-          nil -> {:error, :not_found}
-          module -> {:ok, module}
-        end
+  defp sync_target(module_id, :shared) do
+    case Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared) do
+      nil -> {:error, :not_found}
+      module -> {:ok, module}
     end
   end
 
@@ -1928,20 +1938,22 @@ defmodule Brando.Content.Blocks do
           block <- written_blocks(Changeset.get_change(entry_block, :block)),
           do: block
 
-    versions = written |> Enum.map(&module_reference/1) |> Enum.uniq() |> current_versions()
+    {versions, shared} = written |> Enum.map(&module_reference/1) |> Enum.uniq() |> current_versions()
 
     case Enum.filter(written, &behind?(&1, versions)) do
       [] ->
         changeset
 
       behind ->
-        modules = behind_modules(behind)
+        modules = behind_modules(behind, shared)
         saved = saved_blocks(behind)
         sync = &sync_behind(&1, versions, modules, saved)
         Enum.reduce(fields, changeset, &update_entry_blocks(&2, &1, sync))
     end
   end
 
+  # The current version of each module, by reference, and the shared modules
+  # it resolved to find theirs
   defp current_versions(references) do
     {local, shared} = Enum.split_with(references, &match?({_id, :local}, &1))
     local_ids = Enum.map(local, &elem(&1, 0))
@@ -1950,30 +1962,34 @@ defmodule Brando.Content.Blocks do
       from(m in ContentModule, where: m.id in ^local_ids, select: {{m.id, :local}, coalesce(m.version, 1)})
       |> Repo.all()
 
-    shared_versions =
+    shared_modules =
       for {id, :shared} = reference <- shared,
           {:ok, module} <- [sync_target(id, :shared)],
-          do: {reference, module.version || 1}
+          into: %{},
+          do: {reference, module}
 
-    Map.new(local_versions ++ shared_versions)
+    shared_versions = Enum.map(shared_modules, fn {reference, module} -> {reference, module.version || 1} end)
+    {Map.new(local_versions ++ shared_versions), shared_modules}
   end
 
-  defp behind_modules(blocks) do
+  defp behind_modules(blocks, shared_modules) do
     for reference <- blocks |> Enum.map(&module_reference/1) |> Enum.uniq(),
-        {:ok, module} <- [sync_target(elem(reference, 0), elem(reference, 1))],
+        {:ok, module} <- [behind_module(reference, shared_modules)],
         into: %{},
         do: {reference, module}
   end
 
+  defp behind_module({_id, :shared} = reference, shared_modules), do: Map.fetch(shared_modules, reference)
+  defp behind_module({id, :local}, _shared_modules), do: sync_target(id, :local)
+
   defp written_block_fields(schema, changeset) do
-    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks),
-      do:
-        for(
-          %{name: name} <- schema.__blocks_fields__(),
-          Map.has_key?(changeset.changes, :"entry_#{name}"),
-          do: :"entry_#{name}"
-        ),
-      else: []
+    if Brando.Blueprint.blueprint?(schema) and schema.has_trait(Trait.Blocks) do
+      schema.__blocks_fields__()
+      |> Enum.map(&:"entry_#{&1.name}")
+      |> Enum.filter(&Map.has_key?(changeset.changes, &1))
+    else
+      []
+    end
   end
 
   defp written_blocks(%Changeset{action: action} = block) when action not in [:replace, :delete] do

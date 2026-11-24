@@ -1,0 +1,1 @@
+- Saving an entry that was open while a module was saved, or reset or updated from the shared library, no longer writes the module's old settings back over its blocks: the save brings them up to the module's version and keeps the editor's changes.
