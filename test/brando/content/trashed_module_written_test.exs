@@ -137,6 +137,70 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
     end
   end
 
+  # A revision stored before blocks had a module version, written over
+  # blocks that have one: a block in place and one moved since, which the
+  # restore inserts again under its old row's stamp. Each holds a ref its
+  # module has retired since; another module only moved on.
+  describe "the module version of the blocks a revision restores" do
+    test "is their module's, or behind it while they hold a ref it retired", c do
+      kept = module!(c.user, "Kept", ["body"])
+      retired = module!(c.user, "Retired", ["body", "text"])
+      container = container!(c.user)
+      page = Factory.insert(:page, creator: c.user)
+
+      insert_root!(page, 0, c.user, %{
+        "uid" => "box-a",
+        "type" => "container",
+        "container_id" => container.id,
+        "children" => [module_params(c.user, "moved", retired, "Old moved")]
+      })
+
+      insert_root!(page, 1, c.user, %{"uid" => "box-b", "type" => "container", "container_id" => container.id})
+      insert_root!(page, 2, c.user, module_params(c.user, "kept", kept, "Old kept"))
+      insert_root!(page, 3, c.user, module_params(c.user, "in-place", retired, "Old in place"))
+      stamp!("moved", sync_uid: "moved-sync")
+
+      {:ok, revision} = Revisions.create_revision(page, c.user)
+      :ok = Brando.OldRevisions.forget_block_identity!(page, revision.revision)
+
+      # since: both modules moved on, one retiring `body`; the blocks were
+      # synced and resolved, and one moved to the other box as a new row
+      for module <- [kept, retired], do: Repo.update_all(module_query(module), set: [version: 2])
+      Repo.delete_all(from(r in Brando.Content.Ref, where: r.module_id == ^retired.id and r.name == "body"))
+
+      Repo.delete!(row("moved"))
+      moved = Repo.insert!(%Block{uid: "moved", type: :module, module_id: retired.id, source: source()})
+      stamp!("moved", parent_id: row("box-b").id, sync_uid: "moved-sync")
+
+      for uid <- ["moved", "in-place"] do
+        Repo.delete_all(from(r in Brando.Content.Ref, where: r.block_id == ^row(uid).id and r.name == "body"))
+      end
+
+      for uid <- ["moved", "kept", "in-place"], do: stamp!(uid, module_version: 2)
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, c.user)
+
+      for {uid, module} <- [{"moved", retired}, {"kept", kept}, {"in-place", retired}] do
+        module = Repo.get!(Brando.Content.Module, module.id)
+        block = row(uid)
+        assert block.module_version == module.version or block.id in Brando.Content.Blocks.list_stale_block_ids(module)
+      end
+
+      assert row("kept").module_version == 2
+      stale = Brando.Content.Blocks.list_stale_block_ids(retired.id)
+
+      for uid <- ["moved", "in-place"] do
+        assert row(uid).id in stale
+        assert body(uid) =~ "Old"
+      end
+
+      moved_back = row("moved")
+      assert moved_back.id != moved.id
+      assert moved_back.parent_id == row("box-a").id
+      assert moved_back.sync_uid == "moved-sync"
+    end
+  end
+
   describe "duplicating an entry" do
     test "holding a block of a module in the trash is refused by name, and copies nothing", c do
       page = page!(c.user, [Map.put(block(c.module), :description, "Front teaser")])
@@ -204,6 +268,55 @@ defmodule Brando.Content.TrashedModuleWrittenTest do
 
     Repo.insert!(%ArticleAuthorLink.Blocks{entry_id: hd(author.links).id, block_id: block.id, sequence: 0})
     source
+  end
+
+  defp module!(user, name, ref_names) do
+    refs = for name <- ref_names, do: %{name: name, uid: uid(), data: %{type: "text", data: %{text: "Default"}}}
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          name: %{"en" => name},
+          help_text: %{},
+          code: Enum.map_join(ref_names, &"{% ref refs.#{&1} %}"),
+          refs: refs,
+          vars: []
+        ),
+        user
+      )
+
+    module
+  end
+
+  defp module_query(module), do: from(m in Brando.Content.Module, where: m.id == ^module.id)
+
+  defp module_params(user, uid, module, text) do
+    refs =
+      for {%{name: name}, n} <- module |> Repo.preload(:refs) |> Map.fetch!(:refs) |> Enum.with_index(),
+          do: %{"uid" => uid(), "name" => name, "sequence" => n, "data" => %{"type" => "text", "data" => %{"text" => text}}}
+
+    %{"uid" => uid, "type" => "module", "module_id" => module.id, "creator_id" => user.id, "refs" => refs}
+  end
+
+  defp insert_root!(page, sequence, user, params) do
+    params = Map.put(params, "source", source())
+
+    params =
+      Map.update(params, "children", [], fn children ->
+        children |> Enum.with_index() |> Enum.map(fn {child, n} -> Map.merge(child, %{"source" => source(), "sequence" => n}) end)
+      end)
+
+    block = %Block{} |> Block.recursive_block_changeset(params, user) |> Repo.insert!()
+    Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: sequence})
+  end
+
+  defp row(uid), do: Repo.get_by!(Block, uid: uid)
+
+  defp stamp!(uid, fields), do: Repo.update_all(from(b in Block, where: b.uid == ^uid), set: fields)
+
+  defp body(uid) do
+    [ref] = Repo.all(from(r in Brando.Content.Ref, where: r.block_id == ^row(uid).id and r.name == "body"))
+    ref.data.data.text
   end
 
   # In the trash as the delete puts it there
