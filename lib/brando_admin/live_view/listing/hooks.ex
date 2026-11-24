@@ -154,6 +154,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
          %{assigns: %{current_user: user}} = socket,
          schema
        ) do
+    if {:before_delete, 3} in schema.__info__(:functions) do
+      schema.before_delete(entry_id, socket, self())
+    end
+
     case delete_source(schema, entry_id, choice, params, user) do
       {:ok, %{translations: []}} ->
         send(self(), {:toast, "#{String.capitalize(translated_singular(schema))} #{gettext("deleted")}"})
@@ -509,8 +513,8 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   # which stays until closed
   defp delete_refused(message), do: send(self(), {:toast, message, :error})
 
-  defp delete_error_message(schema, entry_id, :group_has_synchronized_members),
-    do: synchronized_members_message(schema, entry_id)
+  defp delete_error_message(_schema, _entry_id, :group_has_synchronized_members),
+    do: synchronized_members_message()
 
   defp delete_error_message(_schema, entry_id, {:fragments, :group_has_synchronized_members}),
     do: BrandoAdmin.LiveView.Listing.DeleteDescription.synchronized_fragments_message(entry_id)
@@ -625,7 +629,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     do: gettext("A module that blocks use was not deleted. Delete on its row lists the entries using it.")
 
   # A selection, or a delete without the dialog's choice
-  defp synchronized_members_message(_schema, _entry_id),
+  defp synchronized_members_message,
     do:
       gettext(
         "Not deleted: this entry is the source of synchronized translations. Delete it from its own row to choose what becomes of them."
