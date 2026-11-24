@@ -870,17 +870,15 @@ defmodule Brando.Query.Mutations do
   # taken now.
   defp maybe_notify(entry, action, user, true) do
     case Brando.Blueprint.Identifier.identifier_for(entry) do
-      nil ->
-        :ok
-
-      identifier ->
-        message = Gettext.gettext(Brando.Gettext, action)
-        prefix = Brando.Tenant.current_prefix()
-
-        Repo.after_commit(fn ->
-          Brando.Tenant.with_prefix(prefix, fn -> Notifications.push_mutation(message, identifier, user) end)
-        end)
+      nil -> :ok
+      identifier -> notify_after_commit(Gettext.gettext(Brando.Gettext, action), identifier, user)
     end
+  end
+
+  defp notify_after_commit(message, identifier, user) do
+    prefix = Brando.Tenant.current_prefix()
+    push = fn -> Notifications.push_mutation(message, identifier, user) end
+    Repo.after_commit(fn -> Brando.Tenant.with_prefix(prefix, push) end)
   end
 
   defp maybe_broadcast(_module, _entry, _action, false), do: :ok
