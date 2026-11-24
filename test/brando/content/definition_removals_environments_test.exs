@@ -122,6 +122,70 @@ defmodule Brando.Content.DefinitionRemovalsEnvironmentsTest do
     assert theme(@staging, c.holders[@staging]).value == "dark"
   end
 
+  # brandocms/brando#3900
+  test "a rename over the apply's limit leaves the values, and the status's --map line moves them in that environment",
+       c do
+    File.write!(
+      Path.join(Release.path(), "hero.exs"),
+      "test/fixtures/definitions/hero.exs.txt"
+      |> File.read!()
+      |> String.replace("var :theme, :select do", ~s(var :tone, :select do\n      renamed_from "theme"))
+      |> String.replace("@theme", "@tone")
+    )
+
+    Tenant.with_prefix(@production, fn -> themed_blocks!(c.user, 1500) end)
+    Tenant.with_prefix(@production, fn -> {:ok, _} = Release.apply(:all, user: c.user.id, wait: false) end)
+    assert theme(@production, c.holders[@production]).value == "dark"
+
+    {:ok, agent} = Agent.start_link(fn -> [] end)
+    info = fn line -> Agent.update(agent, &[line | &1]) end
+    :ok = Release.status(site: "acme", environment: "production", user: c.user.id, info: info)
+    text = agent |> Agent.get(& &1) |> Enum.reverse()
+    resolve = Enum.find_value(text, &(String.starts_with?(&1, "    resolve: ") && String.trim_leading(&1)))
+
+    assert resolve ==
+             "resolve: mix brando.modules resolve --uid hero-test --user #{c.user.id} " <>
+               "--site acme --environment production --map var:theme=tone --apply"
+
+    previous = Mix.shell()
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(previous) end)
+    Mix.Task.reenable("brando.modules")
+    resolve |> String.split() |> Enum.drop(3) |> Mix.Tasks.Brando.Modules.run()
+
+    tone = Tenant.with_prefix(@production, fn -> Repo.get_by(Var, block_id: c.holders[@production].id, key: "tone") end)
+    assert tone.value == "dark"
+    assert theme(@production, c.holders[@production]) == nil
+    assert theme(@staging, c.holders[@staging]).value == "dark"
+  end
+
+  defp themed_blocks!(user, count) do
+    module = Repo.get_by!(Module, uid: "hero-test")
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    blocks =
+      for _ <- 1..count,
+          do: %{
+            uid: Brando.Utils.generate_uid(),
+            type: :module,
+            module_id: module.id,
+            module_origin: :local,
+            creator_id: user.id,
+            inserted_at: now,
+            updated_at: now
+          }
+
+    {_, inserted} = Repo.insert_all(Block, blocks, returning: [:id])
+
+    Repo.insert_all(
+      Var,
+      for(
+        %{id: id} <- inserted,
+        do: %{block_id: id, key: "theme", type: :select, label: %{"en" => "Theme"}, value: "light", inserted_at: now, updated_at: now}
+      )
+    )
+  end
+
   # brandocms/brando#3844
   test "a rename moves the values of the environment it applies to, and no other's", c do
     File.write!(

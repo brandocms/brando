@@ -528,6 +528,41 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert var(held, "heading").value == "Kept words"
     end
 
+    test "over the limit, previews no move, records none and can revert, before and after the resolve moves them", c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      rename_tagline!(c)
+      opts = [path: c.path, version: "2.0.0", user: c.user.id]
+      map = "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
+
+      {:ok, report} = Release.plan(opts)
+      assert [%{moves: %{left?: true}}] = report.items
+      assert Proposed.build(report).renames == %{}
+      assert "    resolve: " <> map in Release.lines(report)
+
+      {:ok, %{batch_id: batch_id, result: result}} =
+        Release.apply(:all, opts ++ [wait: false, renames: Release.renames_digest(report)])
+
+      assert [%{left?: true}] = result.renamed
+      assert var(held, "tagline").value == "Kept words"
+      assert revisions(c.identity) == []
+      batch = Batches.get(batch_id)
+      assert [item] = batch.definitions["items"]
+      refute Map.has_key?(item, "moves")
+      assert {:ok, %{revert: [_], irreversible: []}} = Batches.preview(batch, c.user)
+
+      # The release's report keeps the command while blocks hold the old key
+      {:ok, applied} = Release.plan(opts)
+      assert applied.pending == 0
+      assert "    resolve: " <> map in Release.lines(applied)
+
+      map |> String.split() |> Enum.drop(2) |> run_task()
+      assert var(held, "heading").value == "Kept words"
+      {:ok, resolved} = Release.plan(opts)
+      refute Enum.any?(Release.lines(resolved), &(&1 =~ "resolve:"))
+      assert {:ok, %{revert: [_], irreversible: []}} = Batches.preview(batch, c.user)
+    end
+
     test "previews a conflict the operator takes the release's version of with the values moved, as the apply moves them",
          c do
       held = c.identity |> first_block() |> set!("tagline", "Kept words")
@@ -791,6 +826,57 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert {:ok, %{renamed: [%{uid: uid, left?: false}]}} = Definitions.apply(over, c.user)
       assert uid == card.uid
       assert Repo.aggregate(from(v in Var, where: v.key == "title" and not is_nil(v.block_id)), :count) == 0
+    end
+  end
+
+  describe "the resolve command after an apply that left the values" do
+    setup c do
+      held = c.identity |> first_block() |> set!("tagline", "Kept words")
+      other = c.naming |> first_block() |> set!("tagline", "Other words")
+      bare_blocks!(c, c.module, "tagline", 1500)
+      %{held: held, other: other}
+    end
+
+    test "keeps a value an editor entered under the new key first, and lists the block", c do
+      rename_tagline!(c)
+      import!(c)
+      set!(c.held, "heading", "Typed first")
+
+      plan = plan!(c)
+      [item] = plan.items
+      command = Brando.Content.Definition.Plan.move_command(plan, item)
+      output = command |> String.split() |> Enum.drop(2) |> run_task()
+
+      assert Enum.any?(output, &(&1 =~ "block ##{c.held.id} var tagline stays a leftover; heading holds \"Typed first\""))
+      refute Enum.any?(output, &(&1 =~ "will be lost"))
+      assert var(c.held, "heading").value == "Typed first"
+      assert var(c.held, "tagline").value == "Kept words"
+      assert var(c.other, "heading").value == "Other words"
+      assert var(c.other, "tagline") == nil
+    end
+
+    test "says what is left when a --map pair's source is gone already", c do
+      rename_tagline!(c)
+      rename_body!(c)
+      import!(c)
+
+      plan = plan!(c)
+      [item] = plan.items
+      command = Brando.Content.Definition.Plan.move_command(plan, item)
+      assert command =~ "--map ref:body=copy --map var:tagline=heading"
+
+      run_task(~w(resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply))
+      assert var(c.held, "heading").value == "Kept words"
+
+      output = command |> String.split() |> Enum.drop(2) |> run_task()
+      assert Enum.any?(output, &(&1 =~ "No block of #{c.module.uid} holds a leftover var:tagline"))
+      assert ref(c.held, "copy").data.data.text == "<p>Identity 0</p>"
+      assert ref(c.held, "body") == nil
+
+      # Everything moved: both pairs are named, nothing raises
+      output = command |> String.split() |> Enum.drop(2) |> run_task()
+      assert Enum.any?(output, &(&1 =~ "0 blocks are behind"))
+      assert Enum.any?(output, &(&1 =~ "No block of #{c.module.uid} holds a leftover ref:body"))
     end
   end
 
