@@ -523,7 +523,14 @@ defmodule BrandoAdmin.ReadScopesTest do
     end
 
     test "a block is not named after a link or selection the viewer may not read", c do
-      link = %Brando.Content.Var{type: :link, key: "link", label: "Link", identifier: c.identifier}
+      link = %Brando.Content.Var{
+        type: :link,
+        key: "link",
+        label: "Link",
+        link_type: :identifier,
+        identifier_id: c.identifier.id,
+        identifier: c.identifier
+      }
       text = %Brando.Content.Var{type: :string, key: "name", label: "Name", value: "Visible excerpt"}
       selected = %Brando.Content.BlockIdentifier{identifier_id: c.identifier.id, identifier: c.identifier}
 
