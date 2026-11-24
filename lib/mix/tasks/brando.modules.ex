@@ -291,7 +291,7 @@ defmodule Mix.Tasks.Brando.Modules do
       report.blocks == [] ->
         :ok
 
-      resolutions == %{} ->
+      resolutions == %{} and gone != [] ->
         Mix.shell().info("Nothing was changed: no block holds a leftover the command names.")
 
       plan.refused != [] ->

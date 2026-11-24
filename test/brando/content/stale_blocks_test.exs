@@ -877,6 +877,22 @@ defmodule Brando.Content.StaleBlocksTest do
       assert version(block) == 3
     end
 
+    test "resolve --apply without --drop or --map brings a block without leftovers onto the version", c do
+      {_page, block} = page_with_block(c, [], [])
+      args = ["resolve", "--uid", c.module.uid, "--user", to_string(c.user.id), "--apply"]
+
+      assert run_task(args) =~ "Resolved 1 blocks; 1 are now on version 3, 0 remain."
+      assert version(block) == 3
+    end
+
+    test "resolve --apply naming only leftovers no block holds changes nothing", c do
+      {_page, block} = page_with_block(c, [], [])
+      args = ["resolve", "--uid", c.module.uid, "--user", to_string(c.user.id), "--drop", "var:gone", "--apply"]
+
+      assert run_task(args) =~ "Nothing was changed"
+      assert version(block) == 1
+    end
+
     test "resolve says which entries are in the trash and which History cannot restore", c do
       {page, _block} = page_with_block(c, [link_var()], [])
       page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
