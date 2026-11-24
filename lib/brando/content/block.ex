@@ -394,8 +394,8 @@ defmodule Brando.Content.Block do
     field = &Ecto.Changeset.get_field(changeset, &1)
 
     if field.(:type) == :link and field.(:link_type) == :url and not is_nil(field.(:identifier_id)),
-       do: put_change(changeset, :identifier_id, nil),
-       else: changeset
+      do: put_change(changeset, :identifier_id, nil),
+      else: changeset
   end
 
   # A restored revision's values were stored once, and print as text whatever

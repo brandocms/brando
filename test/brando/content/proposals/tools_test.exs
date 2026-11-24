@@ -796,7 +796,10 @@ defmodule Brando.Content.Proposals.ToolsTest do
 
       # A row a URL switch left behind still holds its entry: it is no link.
       {:ok, identifier} = Brando.Content.get_identifier(Page, c.naming)
-      cta_var() |> Ecto.Changeset.change(link_type: :url, value: "", identifier_id: identifier.id) |> Brando.Repo.update!()
+
+      cta_var()
+      |> Ecto.Changeset.change(link_type: :url, value: "", identifier_id: identifier.id)
+      |> Brando.Repo.update!()
 
       assert button_values(c)["cta"] == nil
       assert %{unchanged: %{operations: [_]}} = elem(propose!(c, [set.(%{"cta" => nil})]), 0)
