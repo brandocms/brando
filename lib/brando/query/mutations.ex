@@ -865,10 +865,21 @@ defmodule Brando.Query.Mutations do
 
   defp maybe_notify(_entry, _action, _user, false), do: :ok
 
+  # Once the save has committed, as `maybe_broadcast/4`: a save its callback
+  # rolls back was never saved. The toast is for the write's environment,
+  # taken now.
   defp maybe_notify(entry, action, user, true) do
     case Brando.Blueprint.Identifier.identifier_for(entry) do
-      nil -> :ok
-      identifier -> Notifications.push_mutation(Gettext.gettext(Brando.Gettext, action), identifier, user)
+      nil ->
+        :ok
+
+      identifier ->
+        message = Gettext.gettext(Brando.Gettext, action)
+        prefix = Brando.Tenant.current_prefix()
+
+        Repo.after_commit(fn ->
+          Brando.Tenant.with_prefix(prefix, fn -> Notifications.push_mutation(message, identifier, user) end)
+        end)
     end
   end
 
