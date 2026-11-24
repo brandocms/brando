@@ -763,6 +763,24 @@ defmodule Brando.Content.DefinitionRenamesTest do
       refute reason =~ "body"
     end
 
+    test "over the limit of entries, a plan after the apply offers the --map line without loading the blocks", c do
+      entry_blocks!(c, c.module, "tagline", 501)
+      rename_tagline!(c)
+      import!(c)
+
+      {items, queries} = queries_of(fn -> plan!(c).items end)
+      assert [%{action: :noop, remaps: [%{kind: :var, from: "tagline", ok?: true}]}] = items
+
+      # No query loads the holders, their vars or their refs
+      loads =
+        for {query, params} <- queries,
+            Enum.any?(params, &(is_list(&1) and length(&1) > 500)),
+            query =~ ~r/FROM "content_(blocks|vars|refs)" AS c0 WHERE \(c0\."(id|block_id)" = ANY/,
+            do: query
+
+      assert loads == []
+    end
+
     test "over the limit, a ref whose slot holds blocks is refused, as resolve doesn't move them", c do
       footnote!(c, first_block(c.identity), "body")
       bare_blocks!(c, c.module, "tagline", 1500)
@@ -1071,6 +1089,34 @@ defmodule Brando.Content.DefinitionRenamesTest do
   end
 
   # `count` pages, each with one block of `module` holding `key`
+  def send_query(_event, _measurements, metadata, test_pid) do
+    if self() == test_pid, do: send(test_pid, {:query, metadata.query, metadata.params})
+  end
+
+  # What `fun` returns, and the queries it ran: `{sql, params}`
+  defp queries_of(fun) do
+    handler = "renames-#{System.unique_integer([:positive])}"
+    event = Repo.repo().config()[:telemetry_prefix] ++ [:query]
+    :ok = :telemetry.attach(handler, event, &__MODULE__.send_query/4, self())
+
+    result =
+      try do
+        fun.()
+      after
+        :telemetry.detach(handler)
+      end
+
+    {result, collect_queries([])}
+  end
+
+  defp collect_queries(queries) do
+    receive do
+      {:query, query, params} -> collect_queries([{query, params} | queries])
+    after
+      0 -> Enum.reverse(queries)
+    end
+  end
+
   defp entry_blocks!(c, module, key, count) do
     ids = bare_blocks!(c, module, key, count)
     Repo.update_all(from(b in Block, where: b.id in ^ids), set: [source: Page.Blocks])

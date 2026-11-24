@@ -416,7 +416,7 @@ defmodule Brando.Content.Definition.Importer do
   # left for the resolve command by an apply over the limit
   defp moves({:noop, _reason} = action, %{"kind" => "module", "uid" => uid}, record, _changeset, ctx)
        when not is_nil(record),
-       do: {action, nil, Renames.remaps(record, record, Renames.declared(ctx.bundle, uid))}
+       do: {action, nil, Renames.left(record, Renames.declared(ctx.bundle, uid))}
 
   defp moves(action, _definition, _record, _changeset, _ctx), do: {action, nil, []}
 

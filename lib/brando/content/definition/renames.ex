@@ -386,24 +386,37 @@ defmodule Brando.Content.Definition.Renames do
   end
 
   @doc """
-  Of the declared renames an update doesn't carry out (`split/2`), or a
-  definition already applied keeps, those whose source key `module` (with
-  refs and vars) doesn't define and blocks of the module `record` hold:
-  leftovers a `resolve --map` moves onto the destination. Each has `ok?`:
-  whether a dry run of that mapping finds them and refuses nothing (a block
-  whose destination an editor filled in keeps both, `StaleBlocks.keep_filled/2`),
-  and no block holds blocks in a slot of the old ref, which the mapping
-  doesn't move. Over the apply's limit the blocks aren't loaded for the dry
-  run: the command refuses what it can't move by name.
+  Of the declared renames an update doesn't carry out (`split/2`), those
+  whose source key `module` (with refs and vars) doesn't define and blocks
+  of the module `record` hold: leftovers a `resolve --map` moves onto the
+  destination. Each has `ok?`: whether a dry run of that mapping finds them
+  and refuses nothing (a block whose destination an editor filled in keeps
+  both, `StaleBlocks.keep_filled/2`), and no block holds blocks in a slot
+  of the old ref, which the mapping doesn't move. Over the apply's limit
+  the blocks aren't loaded for the dry run: the command refuses what it
+  can't move by name.
   """
   def remaps(_record, _module, []), do: []
 
-  def remaps(record, module, renames) do
+  def remaps(record, module, renames),
+    do: for({rename, ids} <- held(record, module, renames), do: Map.put(rename, :ok?, remap?(module, rename, ids)))
+
+  @doc """
+  Of the declared renames of the module `record` (with refs and vars),
+  applied already, those whose source key blocks still hold: values an
+  apply left for `resolve --map` (`leave/1`), as `remaps/3` gives them. The
+  blocks aren't loaded for a dry run, as for any rename an apply left: the
+  command refuses what it can't move by name.
+  """
+  def left(record, renames),
+    do: for({rename, ids} <- held(record, record, renames), do: Map.put(rename, :ok?, slotted(rename, ids) == 0))
+
+  defp held(record, module, renames) do
     for rename <- renames,
         !target(module, rename.kind, rename.from),
         ids = holder_ids(record.id, [rename]),
         ids != [],
-        do: Map.put(rename, :ok?, remap?(module, rename, ids))
+        do: {rename, ids}
   end
 
   defp remap?(module, rename, ids) do
