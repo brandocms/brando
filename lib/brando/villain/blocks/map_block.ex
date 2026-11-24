@@ -23,4 +23,7 @@ defmodule Brando.Villain.Blocks.MapBlock do
       attribute :source, :enum, values: [:gmaps]
     end
   end
+
+  # The address an editor pasted: a module sync keeps it
+  def protected_attrs, do: [:embed_url, :source]
 end

@@ -579,8 +579,8 @@ blocks are queued for re-render.
   the settings it changed; a var or ref the form adds that is saved under
   the same key or name is that row). No `sync_module/2` and no module read:
   a module save, Reset and Accept have synced the saved rows, and a sync
-  would put the module's settings over another editor's on refs that
-  protect none (a picture's alt). The form rendered its stale copy, so
+  would put the module's settings over another editor's (a picture's
+  classes, a video's playback). The form rendered its stale copy, so
   `update_with_changeset` queues the entry's render after commit when the
   sync changed the changeset. A current block is written as the form sends
   it. Left alone: new blocks, blocks only moved, and blocks whose

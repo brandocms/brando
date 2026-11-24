@@ -190,6 +190,151 @@ defmodule Brando.Content.ModuleSyncTest do
     end
   end
 
+  describe "the fields an editor sets on a media ref" do
+    # An editor's own texts for one placement of a picture, video, gallery or
+    # file, and the asset they chose, stay with the block on a module save;
+    # the module's settings follow the module.
+    alias VillainBlocks.{FileBlock, GalleryBlock, GalleryObjectOverride, MapBlock, MediaBlock, PictureBlock, VideoBlock}
+
+    defp synced_ref(block, module, name) do
+      block
+      |> Blocks.sync_module(module)
+      |> Changeset.get_assoc(:refs)
+      |> Enum.map(&Changeset.apply_changes/1)
+      |> Enum.find(&(&1.name == name))
+    end
+
+    defp placed_picture do
+      %PictureBlock{
+        type: "picture",
+        data: %PictureBlock.Data{
+          title: "<p>Kari's caption</p>",
+          credits: "Photo: Kari",
+          alt: "Two boats in a harbour",
+          link: "https://example.com/boats",
+          img_class: "old"
+        }
+      }
+    end
+
+    defp assert_picture_kept(%Ref{} = ref) do
+      assert ref.image_id == 7
+      assert ref.data.data.title == "<p>Kari's caption</p>"
+      assert ref.data.data.credits == "Photo: Kari"
+      assert ref.data.data.alt == "Two boats in a harbour"
+      assert ref.data.data.link == "https://example.com/boats"
+      assert ref.data.data.img_class == "from-module"
+    end
+
+    test "a picture keeps its title, credits, alt, link and image" do
+      module_ref = ref("hero", %PictureBlock{type: "picture", data: %PictureBlock.Data{img_class: "from-module"}})
+      block = block(refs: [%{ref("hero", placed_picture(), id: 1) | image_id: 7}])
+
+      assert_picture_kept(synced_ref(block, module(refs: [module_ref]), "hero"))
+    end
+
+    test "a picture in a media ref keeps them too" do
+      module_ref =
+        ref("hero", %MediaBlock{
+          type: "media",
+          data: %MediaBlock.Data{template_picture: %PictureBlock.Data{img_class: "from-module"}}
+        })
+
+      block = block(refs: [%{ref("hero", placed_picture(), id: 1) | image_id: 7}])
+
+      assert_picture_kept(synced_ref(block, module(refs: [module_ref]), "hero"))
+    end
+
+    test "a video keeps its caption, cover and video, and its poster follows the module" do
+      cover = %PictureBlock.Data{credits: "Cover by Kari"}
+
+      placed =
+        %VideoBlock{
+          type: "video",
+          data: %VideoBlock.Data{
+            title: "<p>Kari's caption</p>",
+            poster: "/media/a.jpg",
+            cover_image: cover,
+            video_class: "old"
+          }
+        }
+
+      module_ref =
+        ref("clip", %VideoBlock{type: "video", data: %VideoBlock.Data{poster: "/media/b.jpg", video_class: "from-module"}})
+
+      block = block(refs: [%{ref("clip", placed, id: 1) | video_id: 9}])
+
+      synced = synced_ref(block, module(refs: [module_ref]), "clip")
+
+      assert synced.video_id == 9
+      assert synced.data.data.title == "<p>Kari's caption</p>"
+      assert synced.data.data.poster == "/media/b.jpg"
+      assert synced.data.data.cover_image.credits == "Cover by Kari"
+      assert synced.data.data.video_class == "from-module"
+    end
+
+    test "a gallery keeps the overrides of its objects and its gallery" do
+      override = %GalleryObjectOverride{
+        object_id: "3",
+        object_type: :image,
+        alt: "A boat",
+        use_default_alt: false
+      }
+
+      placed =
+        %GalleryBlock{type: "gallery", data: %GalleryBlock.Data{gallery_object_overrides: [override], class: "old"}}
+
+      module_ref = ref("photos", %GalleryBlock{type: "gallery", data: %GalleryBlock.Data{class: "from-module"}})
+      block = block(refs: [%{ref("photos", placed, id: 1) | gallery_id: 5}])
+
+      synced = synced_ref(block, module(refs: [module_ref]), "photos")
+
+      assert synced.gallery_id == 5
+      assert [%GalleryObjectOverride{alt: "A boat", use_default_alt: false}] = synced.data.data.gallery_object_overrides
+      assert synced.data.data.class == "from-module"
+    end
+
+    test "a file keeps its title, label, description and file" do
+      placed =
+        %FileBlock{
+          type: "file",
+          data: %FileBlock.Data{title: "Annual report", label: "Download", description: "The 2026 report", class: "old"}
+        }
+
+      module_ref =
+        ref("doc", %MediaBlock{
+          type: "media",
+          data: %MediaBlock.Data{template_file: %FileBlock.Data{class: "from-module"}}
+        })
+
+      block = block(refs: [%{ref("doc", placed, id: 1) | file_id: 4}])
+
+      synced = synced_ref(block, module(refs: [module_ref]), "doc")
+
+      assert synced.file_id == 4
+      assert synced.data.data.title == "Annual report"
+      assert synced.data.data.label == "Download"
+      assert synced.data.data.description == "The 2026 report"
+      assert synced.data.data.class == "from-module"
+    end
+
+    test "a map keeps the address an editor pasted" do
+      placed =
+        %MapBlock{
+          type: "map",
+          data: %MapBlock.Data{embed_url: "https://www.google.com/maps/embed?pb=harbour", source: :gmaps}
+        }
+
+      module_ref = ref("map", %MapBlock{type: "map", data: %MapBlock.Data{}})
+      block = block(refs: [ref("map", placed, id: 1)])
+
+      synced = synced_ref(block, module(refs: [module_ref]), "map")
+
+      assert synced.data.data.embed_url == "https://www.google.com/maps/embed?pb=harbour"
+      assert synced.data.data.source == :gmaps
+    end
+  end
+
   describe "a clean migration" do
     test "stamps the block with the module's current version" do
       module = module(refs: [ref("h2", header_data("From module"))])
