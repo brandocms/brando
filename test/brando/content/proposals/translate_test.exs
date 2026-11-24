@@ -15,6 +15,7 @@ defmodule Brando.Content.Proposals.TranslateTest do
   alias Brando.Content.Proposals.Proposal
   alias Brando.Content.Proposals.Review
   alias Brando.Content.Proposals.SetFields
+  alias Brando.Content.Proposals.SyncTranslation
   alias Brando.Content.Proposals.Translate
   alias Brando.Content.Var
   alias Brando.Factory
@@ -1079,7 +1080,9 @@ defmodule Brando.Content.Proposals.TranslateTest do
         {var.key, Repo.insert!(%{var | label: %{"en" => var.key}, block_id: child.id, sequence: sequence})}
       end)
 
-    struct(Article.Blocks, %{entry_id: c.source.id, block_id: parent.id, sequence: 1}) |> Repo.insert!()
+    struct(values[:join] || Article.Blocks, %{entry_id: c.source.id, block_id: parent.id, sequence: 1})
+    |> Repo.insert!()
+
     Translations.source_saved(load(c.source.id))
     vars
   end
@@ -1188,6 +1191,268 @@ defmodule Brando.Content.Proposals.TranslateTest do
 
     test "is rendered with the new video's thumbnail", c do
       assert apply_translate(c) =~ ~s(<img class="poster" src="images/poster.jpg">)
+    end
+  end
+
+  describe "sync_translation" do
+    # A translation with a card linking to an article translated after it was
+    # made (relinked), a cover the source replaced (shared_update), a card
+    # linking to an article with no English version (awaiting_translation),
+    # and its texts still to translate.
+    setup c do
+      {other, identifier} = create_linked_article(c)
+      {_untranslated, waiting} = create_linked_article(c)
+
+      %{"cover" => cover} =
+        add_cards(c, identifier_id: identifier.id, image_id: Factory.insert(:image, path: "images/first.jpg").id)
+
+      waiting_vars = add_cards(c, identifier_id: waiting.id)
+      target = create_translation(c)
+      translate_linked_article(c, other)
+
+      cover |> Ecto.Changeset.change(image_id: Factory.insert(:image, path: "images/second.jpg").id) |> Repo.update!()
+      Translations.source_saved(load(c.source.id))
+
+      %{target: target, waiting_vars: waiting_vars, cover: cover}
+    end
+
+    defp sync(target), do: %SyncTranslation{target: {Article, target.id}}
+
+    defp kinds(id), do: id |> open_items() |> Enum.map(&elem(&1, 0)) |> Enum.frequencies()
+
+    test "takes the links and media and leaves the texts and the awaited link open", c do
+      before = kinds(c.target.id)
+      assert %{relinked: 1, shared_update: 1, awaiting_translation: 1, translate: texts} = before
+      assert texts > 0
+
+      # What it takes is counted when it is prepared, never as it is given
+      {:ok, proposal} = Proposals.propose([%{sync(c.target) | takes: %{"links" => 9}}], c.user)
+      assert proposal.problems == []
+      assert [%SyncTranslation{takes: %{"links" => 1, "media" => 1, "values" => 0}}] = proposal.operations
+
+      {:ok, receipt} = approve_and_apply(proposal, c.user)
+      assert kinds(c.target.id) == %{awaiting_translation: 1, translate: texts}
+
+      rendered = Repo.get!(Article, c.target.id).rendered_blocks
+      assert rendered =~ ~s(<a class="card">Project</a>)
+      assert rendered =~ "second.jpg"
+      refute rendered =~ "first.jpg"
+
+      resolved = receipt.mappings["translated"][Proposal.key({Article, c.target.id})]
+      assert resolved |> Enum.map(& &1["kind"]) |> Enum.sort() == ["relinked", "shared_update"]
+
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+      assert kinds(c.target.id) == before
+    end
+
+    test "is one save with a translate on the same translation", c do
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([sync(c.target), op], c.user)
+      assert proposal.problems == []
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      assert %{title: "Title"} = Repo.get!(Article, c.target.id)
+      kinds = kinds(c.target.id)
+      refute Map.has_key?(kinds, :relinked)
+      refute Map.has_key?(kinds, :shared_update)
+    end
+
+    test "the review and the effects say what it takes", c do
+      {:ok, _} = SyncTest.update_article(c.target.id, %{status: :published}, c.user)
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      assert proposal.effects.live == [{Article, c.target.id}]
+
+      assert [%{translation?: true, changes: [change]}] = Review.entries(proposal)
+
+      assert %{type: :sync_translation, language: "en", takes: %{links: 1, media: 1, values: 0}, live?: true} =
+               change
+
+      assert change.open > 0
+    end
+
+    test "the review leaves out of its open texts those a translate beside it answers", c do
+      {:ok, alone} = Proposals.propose([sync(c.target)], c.user)
+      assert [%{changes: [%{type: :sync_translation, open: open}]}] = Review.entries(alone)
+
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([sync(c.target), op], c.user)
+      changes = hd(Review.entries(proposal)).changes
+      assert %{open: answered} = Enum.find(changes, &(&1.type == :sync_translation))
+      assert answered == open - 1
+    end
+
+    test "is refused on a translation with nothing to take", c do
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      assert [{0, :up_to_date, nil}] = problems([sync(c.target)], c.user)
+    end
+
+    test "is refused on the source, on an entry outside a group and on a new translation", c do
+      assert [{0, :not_translation, nil}] = problems([%SyncTranslation{target: {Article, c.source.id}}], c.user)
+
+      {:ok, lone} =
+        SyncTest.create_article(
+          %{title: "Alene", slug: "alene-#{System.unique_integer([:positive])}", language: "no", status: "draft"},
+          c.user
+        )
+
+      assert [{0, :not_translation, nil}] = problems([%SyncTranslation{target: {Article, lone.id}}], c.user)
+
+      create = %CreateTranslation{source: {Article, c.source.id}, language: "de", ref: "de"}
+      assert {1, :not_translation, nil} in problems([create, %SyncTranslation{target: {:new, "de"}}], c.user)
+    end
+
+    # Saving the source recomputes the pending version before the
+    # translation is saved, when the sync runs in the save (as it does
+    # inline): the save would take the source's change uncounted
+    test "is refused with a change to its source in the same proposal", c do
+      set = %SetFields{target: {Article, c.source.id}, fields: %{"year" => 2002}}
+      assert [{1, :source_in_proposal, nil}] = problems([set, sync(c.target)], c.user)
+    end
+
+    test "counts nothing for a person who may not read the source", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      alias Brando.Authorization.{Catalog, Groups, Scope}
+      editor = Factory.insert(:random_user, role: :user)
+
+      {:ok, group} =
+        Groups.create(Scope.standalone(c.user), %{name: "Article updaters"}, [
+          Catalog.get(:update, Article).key,
+          "brando.admin.access"
+        ])
+
+      {:ok, :ok} = Groups.add_member(Scope.standalone(c.user), group.id, editor.id)
+
+      {:ok, proposal} = Proposals.prepare([sync(c.target)], editor)
+      assert [%{code: :unknown_target}] = proposal.problems
+      assert [%SyncTranslation{takes: nil, digest: nil}] = proposal.operations
+    end
+
+    test "counts a link the source switched to a URL as a value, not media", c do
+      c.waiting_vars["project"]
+      |> Ecto.Changeset.change(link_type: :url, identifier_id: nil, value: "https://example.com/")
+      |> Repo.update!()
+
+      Translations.source_saved(load(c.source.id))
+
+      {:ok, proposal} = Proposals.prepare([sync(c.target)], c.user)
+      assert [%SyncTranslation{takes: %{"links" => 1, "media" => 1, "values" => 1}}] = proposal.operations
+    end
+
+    test "is refused a second time on the same translation, beside any translate", c do
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      assert [{2, :duplicate_sync, nil}] = problems([sync(c.target), op, sync(c.target)], c.user)
+    end
+
+    test "is refused with another operation on the same translation", c do
+      set = %SetFields{target: {Article, c.target.id}, fields: %{"status" => "published"}}
+      assert [{1, :translate_only, nil}] = problems([sync(c.target), set], c.user)
+    end
+
+    test "is refused at apply when the source changed what it takes", c do
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      Repo.update!(Ecto.Changeset.change(c.waiting_vars["cover"], image_id: Factory.insert(:image).id))
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "changed"
+      assert %{relinked: 1} = kinds(c.target.id)
+    end
+
+    test "is refused at apply when the source replaced a value it takes with another", c do
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      # Still one media item, now another image than the one approved
+      third = Factory.insert(:image, path: "images/third.jpg")
+      Repo.update!(Ecto.Changeset.change(Repo.reload!(c.cover), image_id: third.id))
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "changed"
+      refute to_string(Repo.get!(Article, c.target.id).rendered_blocks) =~ "third.jpg"
+    end
+
+    test "is told stale at apply when the source took its change back", c do
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = approve_and_apply(proposal, c.user)
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+      Translations.source_saved(load(c.source.id))
+      {:ok, proposal} = Proposals.propose([sync(c.target)], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: nil}, c.user)
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "Prepare the sync_translation again"
+    end
+
+    test "names both a changed text and a changed sync at apply", c do
+      op = translate(c.target, %{"title" => "Title"}, keys: ["title"])
+      {:ok, proposal} = Proposals.propose([sync(c.target), op], c.user)
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      {:ok, _} = SyncTest.update_article(c.source.id, %{title: "Ny tittel", year: 2001}, c.user)
+      Translations.source_saved(load(c.source.id))
+
+      assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert message =~ "Translate those texts again"
+      assert message =~ "Prepare the sync_translation again"
+    end
+
+    test "the codec decodes and encodes it" do
+      map = %{"op" => "sync_translation", "target" => %{"content_type" => "Brando.SyncTest.Article", "id" => 5}}
+      assert {:ok, %SyncTranslation{target: {Article, 5}, takes: nil} = op} = Codec.decode(map)
+      assert Codec.encode(op) == map
+
+      takes = %{"links" => 1, "media" => 0, "values" => 2}
+      assert Codec.encode(%{op | takes: takes}) == Map.put(map, "takes", takes)
+      assert {:ok, %SyncTranslation{target: {:new, "en"}}} = Codec.decode(%{map | "target" => %{"new" => "en"}})
+    end
+  end
+
+  describe "sync_translation and a block field its form does not show" do
+    # The cover of a card in `notes`, which only the `notes` form shows,
+    # replaced in the source: the default form's save keeps it as saved
+    setup c do
+      %{"cover" => cover} =
+        add_cards(c, join: Article.Notes, image_id: Factory.insert(:image, path: "images/first.jpg").id)
+
+      target = create_translation(c)
+      cover |> Ecto.Changeset.change(image_id: Factory.insert(:image, path: "images/second.jpg").id) |> Repo.update!()
+      Translations.source_saved(load(c.source.id))
+      %{target: target}
+    end
+
+    test "is refused when the save could take nothing", c do
+      assert [{:shared_update, "entry_notes/" <> _}] =
+               Enum.filter(open_items(c.target.id), &(elem(&1, 0) == :shared_update))
+
+      assert [{0, :not_in_form, nil}] = problems([%SyncTranslation{target: {Article, c.target.id}}], c.user)
+    end
+
+    test "counts what the save takes, and says what it leaves", c do
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+
+      {:ok, proposal} = Proposals.propose([%SyncTranslation{target: {Article, c.target.id}}], c.user)
+      assert proposal.problems == []
+
+      assert [%SyncTranslation{takes: %{"links" => 0, "media" => 0, "values" => 1, "left" => 1}}] =
+               proposal.operations
+
+      assert [%{changes: [%{type: :sync_translation, takes: %{values: 1, left: 1}}]}] = Review.entries(proposal)
+
+      {:ok, _} = approve_and_apply(proposal, c.user)
+      assert Repo.get!(Article, c.target.id).year == 2001
+
+      assert [{:shared_update, "entry_notes/" <> _}] =
+               Enum.filter(open_items(c.target.id), &(elem(&1, 0) == :shared_update))
     end
   end
 

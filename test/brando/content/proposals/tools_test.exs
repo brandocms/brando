@@ -151,12 +151,14 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert %{role: "source", versions: [%{language: "en", id: id, synchronized: true}], note: note} = outline.languages
     assert id == english.id
     assert note =~ "structure and media"
+    assert note =~ "sync_translation"
 
     # The translation is told it follows its source, until it is independent.
     outline = call!("entry_outline", %{"content_type" => "Brando.SyncTest.Article", "id" => english.id}, c.context)
     assert %{role: "target", versions: [%{id: source_id, synchronized: true}], note: note} = outline.languages
     assert source_id == source.id
     assert note =~ "synchronized translation"
+    assert note =~ "sync_translation"
 
     {:ok, _} = Brando.Translations.make_independent(Brando.SyncTest.Article, english.id, c.user)
     outline = call!("entry_outline", %{"content_type" => "Brando.SyncTest.Article", "id" => english.id}, c.context)

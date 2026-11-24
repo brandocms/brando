@@ -274,7 +274,7 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "A translate operation in this proposal fills in this translation, and it can be the only kind of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
+msgid "A translate or sync_translation operation in this proposal saves this translation, and those can be the only kinds of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -330,6 +330,16 @@ msgstr ""
 #: lib/brando/content/proposals/image_replacement.ex
 #, elixir-autogen, elixir-format
 msgid "An image cannot be replaced with itself."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Another operation in this proposal changes this translation's source, and sync_translation takes only what the source holds when it is prepared. Put the change to the source in a proposal of its own, and prepare sync_translation once it is applied."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Another sync_translation in this proposal already saves this translation. Leave this one out."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -709,6 +719,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "The source of a translation changed its links, media or source-controlled values after this proposal was prepared. Prepare the sync_translation again."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The source of this translation is not available to you."
 msgstr ""
 
@@ -981,6 +996,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "This translation is up to date with its source: its links, media and source-controlled values are the source's, and there is nothing for sync_translation to take. Leave it out; its texts are answered with translate."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "Two new entries use the same reference."
 msgstr ""
 
@@ -1022,6 +1042,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown proposal origin."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "What this translation's source changed is in block fields its main form does not show, which sync_translation cannot take: they are taken when the translation is saved in the form that shows them. Leave sync_translation out."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -1129,6 +1154,11 @@ msgstr ""
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "source is a saved entry: {content_type, id}."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "sync_translation names the translation an operation in this proposal creates: a new copy is its source's, with nothing to take from it. Leave sync_translation out."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

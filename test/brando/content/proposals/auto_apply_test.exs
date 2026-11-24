@@ -281,8 +281,23 @@ defmodule Brando.Content.Proposals.AutoApplyTest do
       assert Repo.get!(Article, target.id).title == "Tittel"
     end
 
+    test "a sync_translation of a translation that exists", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{year: 2001}, c.user)
+      {:ok, source} = Translations.load_entry(Article, c.source.id)
+      Translations.source_saved(source)
+
+      op = %{"op" => "sync_translation", "target" => %{"content_type" => @article, "id" => target.id}}
+      result = prepare(c, c.grant, [op])
+      assert %{"applied" => false, "not_applied" => reason} = result
+      assert reason =~ "only a proposal whose every operation"
+      assert %Record{status: "pending", approved_at: nil, problems: []} = record(result["proposal_id"])
+      refute receipt?(result["proposal_id"])
+      assert Repo.get!(Article, target.id).year == nil
+    end
+
     test "an unknown operation is refused, as without apply", c do
-      args = %{"summary" => "Sync", "operations" => [%{"op" => "sync_translation"}], "apply" => "if_allowed"}
+      args = %{"summary" => "Sync", "operations" => [%{"op" => "sync_everything"}], "apply" => "if_allowed"}
       assert %{isError: true} = call(c, c.grant, "prepare_proposal", args)
       refute Repo.exists?(Record)
     end

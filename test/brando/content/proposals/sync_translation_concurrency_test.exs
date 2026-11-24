@@ -1,0 +1,140 @@
+defmodule Brando.Content.Proposals.SyncTranslationConcurrencyTest do
+  # A sync_translation's apply against the translation sync that recomputes
+  # the translation's pending version, on real connections with commits
+  # between them: outside the sandbox, so the locks are real. The apply
+  # stops after its recheck, before the save, until the test lets it go on.
+  use ExUnit.Case, async: false
+
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.Content.Proposals
+  alias Brando.Content.Proposals.Receipt
+  alias Brando.Content.Proposals.Record
+  alias Brando.Content.Proposals.SyncTranslation
+  alias Brando.SyncTest.Article
+  alias Brando.Translations
+  alias BrandoIntegration.Repo
+  alias Ecto.Adapters.SQL.Sandbox
+
+  @handler __MODULE__
+
+  setup do
+    slug = "sync-race-#{System.unique_integer([:positive])}"
+
+    {user, source, target} =
+      unboxed(fn ->
+        user = Brando.Factory.insert(:random_user, role: :superuser, avatar: nil, config: %Brando.Users.UserConfig{})
+
+        {:ok, source} =
+          Brando.SyncTest.create_article(
+            %{title: "Tittel", slug: slug, language: "no", status: "published", year: 2000},
+            user
+          )
+
+        {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+        # The source's year, which the translation's pending version takes
+        {:ok, _} = Brando.SyncTest.update_article(source.id, %{year: 2001}, user)
+        {user, source, target}
+      end)
+
+    on_exit(fn ->
+      :telemetry.detach(@handler)
+      unboxed(fn -> clean_up(user) end)
+    end)
+
+    %{user: user, source: source, target: target}
+  end
+
+  # What the setup and the test wrote, which no sandbox rolls back
+  defp clean_up(user) do
+    articles = Repo.all(from(a in Article, where: a.creator_id == ^user.id, select: a.id))
+    schema = to_string(Article)
+
+    Repo.query!(
+      "DELETE FROM translation_groups WHERE id IN (SELECT group_id FROM translation_group_members WHERE entry_type = $1 AND entry_id = ANY($2))",
+      [schema, articles]
+    )
+
+    Repo.query!("DELETE FROM content_identifiers WHERE schema = $1 AND entry_id = ANY($2)", [schema, articles])
+    Repo.query!("DELETE FROM search_documents WHERE schema = $1 AND entry_id = ANY($2)", [schema, articles])
+    Repo.delete_all(from(r in Receipt, where: r.actor_id == ^user.id))
+    Repo.delete_all(from(r in Record, where: r.actor_id == ^user.id))
+
+    Repo.delete_all(
+      from(e in Brando.Activity.Event,
+        where: e.user_id == ^user.id or e.approver_id == ^user.id or (e.schema == ^schema and e.entry_id in ^articles)
+      )
+    )
+
+    Repo.delete_all(from(r in Brando.Revisions.Revision, where: r.creator_id == ^user.id))
+    Repo.delete_all(from(a in Article, where: a.id in ^articles))
+    Repo.delete_all(from(u in Brando.Users.User, where: u.id == ^user.id))
+  end
+
+  defp unboxed(fun), do: Sandbox.unboxed_run(Repo, fun)
+
+  test "a pending version recomputed after the recheck is not what the apply saves", c do
+    {:ok, proposal} =
+      unboxed(fn -> Proposals.propose([%SyncTranslation{target: {Article, c.target.id}}], c.user) end)
+
+    assert proposal.problems == []
+    {:ok, _} = unboxed(fn -> Proposals.approve(proposal.id, proposal.version, c.user) end)
+
+    # The source saved again, its sync not run yet
+    unboxed(fn -> Repo.update_all(from(a in Article, where: a.id == ^c.source.id), set: [year: 2002]) end)
+
+    {task, pid} = start_apply(c, proposal, :revision)
+    %{group_id: group_id} = unboxed(fn -> Translations.get_member(Article, c.target.id) end)
+    sync = Task.async(fn -> unboxed(fn -> Translations.sync_group(group_id) end) end)
+
+    # The sync waits for the apply's lock on the group, or commits first
+    early = Task.yield(sync, 500)
+    send(pid, {:resume, :revision})
+
+    assert {:ok, %Receipt{}} = Task.await(task, 10_000)
+    assert {:ok, _} = if(early, do: elem(early, 1), else: Task.await(sync, 10_000))
+    assert unboxed(fn -> Repo.get!(Article, c.target.id).year end) == 2001
+  end
+
+  # The apply, in a task of its own that stops at `point`
+  defp start_apply(c, proposal, point) do
+    :ok = :telemetry.attach(@handler, Repo.config()[:telemetry_prefix] ++ [:query], &__MODULE__.pause_at/4, nil)
+    parent = self()
+
+    task =
+      Task.async(fn ->
+        unboxed(fn ->
+          Process.put(@handler, {parent, point})
+          Proposals.apply(proposal.id, proposal.version, c.user)
+        end)
+      end)
+
+    assert_receive {:paused, ^point, pid}, 5_000
+    {task, pid}
+  end
+
+  # Telemetry handler, in the apply's process only: it stops once at its
+  # point until the test lets it go on.
+  @doc false
+  def pause_at(_event, _measurements, metadata, _config) do
+    with {test_pid, point} <- Process.get(@handler),
+         ^point <- pause_point(metadata),
+         false <- Process.get({@handler, point}, false) do
+      Process.put({@handler, point}, true)
+      send(test_pid, {:paused, point, self()})
+
+      receive do
+        {:resume, ^point} -> :ok
+      after
+        10_000 -> :ok
+      end
+    end
+
+    :ok
+  end
+
+  # The revision the translation is at, read after the recheck and before
+  # the save
+  defp pause_point(%{source: "revisions", query: "SELECT" <> _}), do: :revision
+  defp pause_point(_metadata), do: nil
+end

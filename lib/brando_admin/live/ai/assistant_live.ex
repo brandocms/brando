@@ -1622,6 +1622,27 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  # Saving a translation's pending version as it is: what it takes from its
+  # source, counted when the proposal was prepared, and the texts it leaves.
+  defp change(%{change: %{type: :sync_translation}} = assigns) do
+    ~H"""
+    <span class="assistant-change-title" data-testid="assistant-sync-translation">
+      {if @change.language,
+        do: gettext("Update the %{language} version from its source", language: language_label(@change.language)),
+        else: gettext("Update the translation from its source")}
+    </span>
+    <p class="assistant-placement">{sync_takes(@change.takes)}</p>
+    <p :if={@change.takes.left > 0} class="assistant-placement" data-testid="assistant-sync-left">
+      {ngettext(
+        "%{count} change in a block field its main form does not show stays open.",
+        "%{count} changes in block fields its main form does not show stay open.",
+        @change.takes.left
+      )}
+    </p>
+    <p :if={sync_note(@change) != ""} class="assistant-placement">{sync_note(@change)}</p>
+    """
+  end
+
   defp change(%{change: %{type: :fields}} = assigns) do
     ~H"""
     <span class="assistant-change-title">{gettext("Change fields")}</span>
@@ -1904,6 +1925,40 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp pending_note(_pending), do: nil
+
+  defp sync_takes(%{links: 0, media: 0, values: 0}),
+    do: gettext("Takes the blocks its source added, moved or removed since the last save.")
+
+  defp sync_takes(%{links: links, media: media, values: values}) do
+    taken =
+      Enum.reject(
+        [
+          links > 0 &&
+            ngettext(
+              "%{count} link now pointing at this language's version",
+              "%{count} links now pointing at this language's versions",
+              links
+            ),
+          media > 0 &&
+            ngettext("%{count} media selection from the source", "%{count} media selections from the source", media),
+          values > 0 && ngettext("%{count} source-controlled value", "%{count} source-controlled values", values)
+        ],
+        &(&1 == false)
+      )
+
+    gettext("Takes %{changes}.", changes: Enum.join(taken, ", "))
+  end
+
+  # The texts the save leaves to translate, those a translate beside it
+  # answers left out (`Review`)
+  defp sync_note(change) do
+    texts =
+      if change.open not in [nil, 0],
+        do: ngettext("Leaves %{count} text to translate.", "Leaves %{count} texts to translate.", change.open)
+
+    live = if change.live?, do: gettext("The published page changes when this is applied.")
+    [texts, live] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+  end
 
   ## Events
 

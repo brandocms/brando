@@ -179,6 +179,13 @@ msgstr[0] "%{count} endring"
 msgstr[1] "%{count} endringer"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} change in a block field its main form does not show stays open."
+msgid_plural "%{count} changes in block fields its main form does not show stay open."
+msgstr[0] "%{count} endring i et blokkfelt hovedskjemaet ikke viser, forblir åpen."
+msgstr[1] "%{count} endringer i blokkfelt hovedskjemaet ikke viser, forblir åpne."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} changed block"
@@ -432,12 +439,26 @@ msgid_plural "%{count} jobs"
 msgstr[0] "%{count} jobb"
 msgstr[1] "%{count} jobber"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} link now pointing at this language's version"
+msgid_plural "%{count} links now pointing at this language's versions"
+msgstr[0] "%{count} lenke som nå peker til versjonen på dette språket"
+msgstr[1] "%{count} lenker som nå peker til versjonene på dette språket"
+
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} link waiting"
 msgid_plural "%{count} links waiting"
 msgstr[0] "%{count} lenke venter"
 msgstr[1] "%{count} lenker venter"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} media selection from the source"
+msgid_plural "%{count} media selections from the source"
+msgstr[0] "%{count} medievalg fra kilden"
+msgstr[1] "%{count} medievalg fra kilden"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -606,6 +627,13 @@ msgid "%{count} size"
 msgid_plural "%{count} sizes"
 msgstr[0] "%{count} størrelse"
 msgstr[1] "%{count} størrelser"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} source-controlled value"
+msgid_plural "%{count} source-controlled values"
+msgstr[0] "%{count} kildestyrt verdi"
+msgstr[1] "%{count} kildestyrte verdier"
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -11022,6 +11050,13 @@ msgstr "Utelat denne endringen fra forslaget"
 msgid "Leave this field empty"
 msgstr "La dette feltet stå tomt"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Leaves %{count} text to translate."
+msgid_plural "Leaves %{count} texts to translate."
+msgstr[0] "%{count} tekst gjenstår å oversette."
+msgstr[1] "%{count} tekster gjenstår å oversette."
+
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Leaves every proposal for review"
@@ -19795,6 +19830,16 @@ msgstr "Ta tilbake redigeringen"
 msgid "Take its blocks out of these entries, or move them to the trash, first."
 msgstr "Ta først blokkene dens ut av disse oppføringene, eller flytt oppføringene til papirkurven."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Takes %{changes}."
+msgstr "Henter %{changes}."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Takes the blocks its source added, moved or removed since the last save."
+msgstr "Henter blokkene kilden har lagt til, flyttet eller fjernet siden forrige lagring."
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
@@ -20967,6 +21012,11 @@ msgstr "Det foreslåtte innholdet i nettstedets egne maler. Ingenting lagres."
 #, elixir-autogen, elixir-format
 msgid "The proposed side is rendered by the server with the release’s definitions; nothing is saved."
 msgstr "Siden til høyre gjengis av serveren med releasens definisjoner; ingenting lagres."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The published page changes when this is applied."
+msgstr "Den publiserte siden endres når dette tas i bruk."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -22904,10 +22954,20 @@ msgstr "Oppdatering"
 msgid "Update policy"
 msgstr "Oppdateringsregel"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Update the %{language} version from its source"
+msgstr "Oppdater versjonen på %{language} fra kilden"
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Update the identifiers used to reference content."
 msgstr "Oppdater identifikatorene som brukes til å referere til innhold."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Update the translation from its source"
+msgstr "Oppdater oversettelsen fra kilden"
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format

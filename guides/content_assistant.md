@@ -193,8 +193,10 @@ as an editor's save, so they get pending versions with the source's structure,
 media and new text to translate.
 
 A synchronized translation follows its source, so a proposal changes it in
-two ways only. Its text is translation work, written with `translate`
-([Translating with a proposal](#translating-with-a-proposal)). Its own
+three ways only. Its text is translation work, written with `translate`
+([Translating with a proposal](#translating-with-a-proposal)), and what its
+source changed besides text is taken with `sync_translation` ([Taking the
+source's changes](#taking-the-sources-changes)). Its own
 fields, those the synchronization leaves to each language, are set with
 `set_fields`: its status, and the fields that are neither text nor
 source-controlled, such as an article's slug or a page's address, template
@@ -255,7 +257,9 @@ result only without its `source_previous` is listed without it. A text in a fiel
   but a superuser) is listed in its place with `locked` and a `reason`: it is
   not answerable either, and is outside the batch's token. Links waiting for a translation and values updated from
   the source are listed under `other` with the first batch, as many as fit,
-  with their count in `other_total`; they are not answered with text.
+  with their count in `other_total`; they are not answered with text. The
+  *relinked* and *shared_update* ones are taken with `sync_translation`
+  ([Taking the source's changes](#taking-the-sources-changes)).
 - **On a source**, its language versions with their open work, and the
   languages without one. A version in the trash is marked `in_trash`, without
   its work; its language is still taken. With `language` naming one of those, the units a new
@@ -308,8 +312,8 @@ any other `{`; the attribute's other text, such as an image's alt text or a
 link's address, may be translated around it. The editor must be able to edit
 the translation and read its source, and a field the forms lock is refused
 as in `set_fields`. Problems are in the admin's language and name the unit
-by its label; its key is the problem's `key`. `translate` is the only operation a proposal may have on
-the translation it translates: another operation on the same entry is
+by its label; its key is the problem's `key`. `translate` and `sync_translation` are the only operations a proposal may have on
+the translation they save: another operation on the same entry is
 refused, while other entries in the proposal are not affected.
 
 The review shows each unit with its label, the source's text and the
@@ -333,6 +337,44 @@ and each batch once more against its source, locked, inside the apply: a
 source changed since makes the proposal stale, and the message names the
 units. **Undo** puts the texts back and opens the work the apply resolved
 again, so the translation's work list is as it was.
+
+### Taking the source's changes
+
+A translation's work that is not text, listed under `other`, is taken with a
+`sync_translation` operation:
+
+```json
+{"op": "sync_translation", "target": {"content_type": T, "id": N}}
+```
+
+Applied, it saves the translation's pending version as it is, as saving its
+form without editing it does: links now pointing at this language's versions
+(*relinked*), and media and source-controlled values the source changed
+(*shared_update*), follow the source, and those items are resolved. Its texts
+are saved as the pending version holds them, a block the source added with
+its text in the source's language, and stay to translate; a link waiting for
+its target's translation (*awaiting_translation*) stays open until that
+version exists. The save restores the block fields of the translation's main
+form only: a change in a block field only another form shows stays open, to
+be taken when the translation is saved in that form. With a `translate` on
+the same translation in the proposal, the two are one save.
+
+It is refused when the proposal is prepared on a translation with nothing to
+take (the problem says it is up to date, or that its changes are in block
+fields its main form does not show), on `{"new": R}`, whose copy is its
+source's, on an entry that is not a synchronized translation, in a proposal
+that also changes the translation's source (that change goes in a proposal of
+its own), and a second time on the same translation. What it takes is counted
+when it is prepared; the review card and `list_proposals`
+(`synced_translations`) show the number of links, media selections and
+source-controlled values, and the changes it leaves in block fields its main
+form does not show (`left`), and the card how many texts stay to translate,
+leaving out those a `translate` beside it answers. A published translation's
+page changes when it is applied. What it takes is checked again when the
+proposal is approved and applied, value by value, under the source's and the
+translation group's locks, held through the save: a source that changed or
+took back any of it since makes the proposal stale, and the message says so.
+**Undo** puts the translation back and opens the resolved items again.
 
 ## Build with AI from the block editor
 

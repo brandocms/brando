@@ -191,10 +191,15 @@ translation** does ([Language versions](content_assistant.md#language-versions))
 and translate a synchronized version with `translate`, answering each batch
 `translation_work` read; both in one proposal create the version and fill it in
 ([Translating with a proposal](content_assistant.md#translating-with-a-proposal)).
-On a synchronized translation, `translate` is the only operation besides a
-`set_fields` on the fields that are its language's own, such as its status or
-slug; the others are refused, with a problem that says to change the source
-or to use `translate` ([Language versions](content_assistant.md#language-versions)).
+`sync_translation` saves a synchronized translation's pending version as it
+is, taking the links, media and source-controlled values its source changed
+(`translation_work`'s `other` items), while its texts stay to translate
+([Taking the source's changes](content_assistant.md#taking-the-sources-changes)).
+On a synchronized translation, `translate` and `sync_translation` are the only
+operations besides a `set_fields` on the fields that are its language's own,
+such as its status or slug; the others are refused, with a problem that says
+to change the source or to use `translate`
+([Language versions](content_assistant.md#language-versions)).
 
 With them, three tools that add images to the media library (below):
 `brando_media_prepare_upload`, `brando_media_finish_upload` and

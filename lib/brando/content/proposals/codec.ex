@@ -31,6 +31,7 @@ defmodule Brando.Content.Proposals.Codec do
       %{"op" => "set_block_selection", "target" => target, "block_uid" => uid, "identifiers" => [id]}
       %{"op" => "replace_image_file", "asset" => %{"kind" => "image", "id" => old}, "with" => %{"kind" => "image", "id" => new}}
       %{"op" => "translate", "target" => target, "source_digest" => token, "texts" => %{key => text}, "reviewed" => [key]}
+      %{"op" => "sync_translation", "target" => target}
 
   A `target` is `%{"content_type" => …, "id" => 12}` or `%{"new" => ref}`. An
   `asset` is `%{"kind" => "image" | "video" | "file", "id" => 3}`, the alias
@@ -61,6 +62,7 @@ defmodule Brando.Content.Proposals.Codec do
     SetBlockValues,
     SetFields,
     SetRefConfig,
+    SyncTranslation,
     Translate
   }
 
@@ -115,6 +117,15 @@ defmodule Brando.Content.Proposals.Codec do
       source_digest: string!(map["source_digest"], "source_digest"),
       texts: if(is_nil(map["texts"]), do: %{}, else: map["texts"]),
       reviewed: if(is_nil(map["reviewed"]), do: [], else: map["reviewed"])
+    }
+
+  # `takes` and `digest` are stored with a prepared proposal; prepare counts
+  # them again.
+  defp decode!("sync_translation", map, _),
+    do: %SyncTranslation{
+      target: target!(map["target"]),
+      takes: snapshot(map["takes"]),
+      digest: if(is_binary(map["digest"]), do: map["digest"])
     }
 
   defp decode!("set_fields", map, attachments),
@@ -289,6 +300,12 @@ defmodule Brando.Content.Proposals.Codec do
       "texts" => op.texts,
       "reviewed" => op.reviewed
     }
+
+  def encode(%SyncTranslation{target: target, takes: takes, digest: digest}) do
+    %{"op" => "sync_translation", "target" => target(target)}
+    |> then(&if(takes, do: Map.put(&1, "takes", takes), else: &1))
+    |> then(&if(digest, do: Map.put(&1, "digest", digest), else: &1))
+  end
 
   def encode(%SetFields{} = op),
     do: %{

@@ -40,9 +40,16 @@ defmodule Brando.Content.Proposals do
   (`Brando.Translations.Work`): checked against the units as they are now,
   and saved as the translation's form saves it
   (`Brando.Translations.save_work/5`), not through the plain update the other
-  operations use. It is the only operation a proposal may have on the
-  translation it translates (`:translate_only`); on `{:new, ref}` it fills
+  operations use. It and `SyncTranslation` are the only operations a proposal
+  may have on the translation they save (`:translate_only`); on `{:new, ref}` it fills
   in the translation a `CreateTranslation` creates, once it is created.
+
+  A `SyncTranslation` saves a synchronized translation's pending version as
+  it is, through the same save: its links, media and source-controlled
+  values follow the source, and its texts stay to translate. It is allowed
+  only where the pending version has something to take, and checked again
+  at approve and apply against what it took when prepared. With a
+  `Translate` on the same translation, the two are one save.
 
   A synchronized translation follows its source, so on one every other
   operation is refused (`:follows_source`), checked at prepare and again at
@@ -92,6 +99,7 @@ defmodule Brando.Content.Proposals do
   alias Brando.Content.Proposals.SetBlockValues
   alias Brando.Content.Proposals.SetFields
   alias Brando.Content.Proposals.SetRefConfig
+  alias Brando.Content.Proposals.SyncTranslation
   alias Brando.Content.Proposals.Translate
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.Catalog
@@ -139,7 +147,7 @@ defmodule Brando.Content.Proposals do
       |> Enum.uniq()
       |> Map.new(fn target -> {target, load!(target, actor)} end)
 
-    operations = Enum.map(operations, &copy_texts(&1, operations, entries))
+    operations = Enum.map(operations, &(&1 |> copy_texts(operations, entries) |> count_takes(actor)))
 
     proposal = %Proposal{
       id: Ecto.UUID.generate(),
@@ -155,6 +163,20 @@ defmodule Brando.Content.Proposals do
     problems = if problems == [], do: check_changesets(proposal, entries, user), else: problems
     %{proposal | problems: problems, effects: effects(proposal)}
   end
+
+  # What a translation's save takes from its source, counted once its entry
+  # is loaded for the actor, and only when the actor may read the source:
+  # never as the operation given says.
+  defp count_takes(%SyncTranslation{} = op, actor) do
+    with {:ok, takes, work} <- sync_takes(op.target),
+         :ok <- readable_source(elem(op.target, 0), work.source_id, actor) do
+      %{op | takes: takes, digest: work.digest}
+    else
+      {:error, _reason} -> %{op | takes: nil, digest: nil}
+    end
+  end
+
+  defp count_takes(op, _actor), do: op
 
   # A text given as `{:from, uid, ref}` (`Codec`) is that saved block's text,
   # copied as it is stored, so an agent can move a long text to a block of
@@ -354,6 +376,13 @@ defmodule Brando.Content.Proposals do
   defp check_operation(%Translate{} = op, proposal, actor, trees),
     do: {translate_problems(op, proposal, actor), trees}
 
+  # One per translation: it is one save, whatever else is answered beside it
+  defp check_operation(%SyncTranslation{target: target} = op, proposal, actor, trees) do
+    if Map.has_key?(trees, {:sync_translation, target}),
+      do: {[sync_once()], trees},
+      else: {sync_problems(op, proposal, actor), Map.put(trees, {:sync_translation, target}, true)}
+  end
+
   defp check_operation(op, proposal, actor, trees) do
     cond do
       Enum.any?(op_targets(op), &translation(proposal.operations, &1)) ->
@@ -485,7 +514,7 @@ defmodule Brando.Content.Proposals do
         :translate_only,
         dgettext(
           "content_proposals",
-          "A translate operation in this proposal fills in this translation, and it can be the only kind of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
+          "A translate or sync_translation operation in this proposal saves this translation, and those can be the only kinds of operation on it: its structure follows its source, and its text is saved as its translation form saves it. Put this change in another proposal, or the text in the translate operation."
         )
       )
 
@@ -616,9 +645,13 @@ defmodule Brando.Content.Proposals do
 
   def translation(_operations, _target), do: nil
 
-  @doc "Whether a `Translate` among `operations` translates `target`."
+  @doc """
+  Whether a `Translate` or a `SyncTranslation` among `operations` saves
+  `target` as its translation form saves it.
+  """
   @spec translated?([struct()], Proposal.target()) :: boolean()
-  def translated?(operations, target), do: Enum.any?(operations, &match?(%Translate{target: ^target}, &1))
+  def translated?(operations, target),
+    do: Enum.any?(operations, &(match?(%Translate{target: ^target}, &1) or match?(%SyncTranslation{target: ^target}, &1)))
 
   @doc """
   The entries `operations` only copy blocks from. They are read, to copy
@@ -710,6 +743,7 @@ defmodule Brando.Content.Proposals do
   defp freeze(%DeleteBlock{} = op), do: %{op | target: target(op.target), field: to_string(op.field)}
   defp freeze(%ReplaceImageFile{} = op), do: op
   defp freeze(%Translate{} = op), do: %{op | target: target(op.target)}
+  defp freeze(%SyncTranslation{} = op), do: %{op | target: target(op.target)}
 
   # The files a replacement swaps, as they are now: never as the operation
   # given says.
@@ -925,6 +959,156 @@ defmodule Brando.Content.Proposals do
 
       {:error, reason} ->
         {:error, not_a_translation(reason)}
+    end
+  end
+
+  ## Sync a translation
+
+  # Allowed where the translation's pending version has something to take
+  # from its source, and checked again at approve and apply against what it
+  # took when prepared: the reviewer approved those changes.
+  defp sync_problems(%SyncTranslation{target: {:new, _}}, _proposal, _actor),
+    do: [
+      problem(
+        :not_translation,
+        dgettext(
+          "content_proposals",
+          "sync_translation names the translation an operation in this proposal creates: a new copy is its source's, with nothing to take from it. Leave sync_translation out."
+        )
+      )
+    ]
+
+  # A change to the source in the same proposal would reach the save
+  # uncounted, were the translation's pending version recomputed from it
+  # before the translation is saved: it is refused.
+  defp sync_problems(%SyncTranslation{target: {schema, _id} = target} = op, proposal, actor) do
+    case sync_takes(target) do
+      {:ok, takes, work} ->
+        if Enum.any?(proposal.operations, &({schema, work.source_id} in changed_targets(&1))),
+          do: [source_in_proposal()],
+          else: readable_take_problems(op, takes, work, actor)
+
+      {:error, reason} ->
+        [not_a_translation(reason)]
+    end
+  end
+
+  defp readable_take_problems(%SyncTranslation{target: {schema, _id}} = op, takes, work, actor) do
+    case readable_source(schema, work.source_id, actor) do
+      :ok -> sync_take_problems(op, takes, work)
+      {:error, problem} -> [problem]
+    end
+  end
+
+  # At apply, under the source's and the group's locks: the actor's access
+  # was checked as the proposal was approved.
+  defp sync_recheck(%SyncTranslation{target: target} = op) do
+    case sync_takes(target) do
+      {:ok, takes, work} -> sync_take_problems(op, takes, work)
+      {:error, reason} -> [not_a_translation(reason)]
+    end
+  end
+
+  # What the save takes is compared first, whole: the same counts may hold
+  # other values, and a change the source took back is a change too.
+  defp sync_take_problems(op, takes, work) do
+    cond do
+      op.digest != work.digest -> [sync_changed()]
+      work.changed? or Enum.any?(takes, fn {kind, count} -> kind != "left" and count > 0 end) -> []
+      takes["left"] > 0 -> [not_in_form()]
+      true -> [up_to_date()]
+    end
+  end
+
+  defp up_to_date,
+    do:
+      problem(
+        :up_to_date,
+        dgettext(
+          "content_proposals",
+          "This translation is up to date with its source: its links, media and source-controlled values are the source's, and there is nothing for sync_translation to take. Leave it out; its texts are answered with translate."
+        )
+      )
+
+  defp sync_once,
+    do:
+      problem(
+        :duplicate_sync,
+        dgettext(
+          "content_proposals",
+          "Another sync_translation in this proposal already saves this translation. Leave this one out."
+        )
+      )
+
+  defp source_in_proposal,
+    do:
+      problem(
+        :source_in_proposal,
+        dgettext(
+          "content_proposals",
+          "Another operation in this proposal changes this translation's source, and sync_translation takes only what the source holds when it is prepared. Put the change to the source in a proposal of its own, and prepare sync_translation once it is applied."
+        )
+      )
+
+  defp not_in_form,
+    do:
+      problem(
+        :not_in_form,
+        dgettext(
+          "content_proposals",
+          "What this translation's source changed is in block fields its main form does not show, which sync_translation cannot take: they are taken when the translation is saved in the form that shows them. Leave sync_translation out."
+        )
+      )
+
+  defp sync_changed,
+    do:
+      problem(
+        :sync_changed,
+        dgettext(
+          "content_proposals",
+          "The source of a translation changed its links, media or source-controlled values after this proposal was prepared. Prepare the sync_translation again."
+        )
+      )
+
+  # What saving the translation's pending version takes from its source: its
+  # open links, media and source-controlled values (`Work`'s other items),
+  # counted, with the translation's work, the digest of what the save takes
+  # and whether it changes anything the source controls (a block removed
+  # raises no item) (`Translations.pending_takes/2`).
+  defp sync_takes({schema, id}) when is_atom(schema) and schema != :new and is_integer(id) do
+    with {:ok, work} <- Work.translation_units(schema, id),
+         {:ok, pending} <- Translations.pending_takes(schema, id) do
+      assets =
+        for %{type: type, name: name} <- Brando.Blueprint.Assets.__assets__(schema),
+            type in [:image, :file, :video, :gallery],
+            do: to_string(name)
+
+      counts = work.units |> Enum.map(&take_kind(&1, assets, pending)) |> Enum.frequencies()
+      takes = Map.new(~w(links media values left), &{&1, Map.get(counts, &1, 0)})
+      {:ok, takes, Map.merge(work, Map.take(pending, [:digest, :changed?]))}
+    end
+  end
+
+  defp sync_takes(_target), do: {:error, :unlinked}
+
+  # An item in a block field the save keeps as saved stays open (`"left"`)
+  defp take_kind(%{kind: kind, key: key} = unit, assets, pending) when kind in ~w(relinked shared_update) do
+    if hd(String.split(key, "/", parts: 2)) in pending.left_out,
+      do: "left",
+      else: taken_kind(unit, assets, pending.shared)
+  end
+
+  defp take_kind(_unit, _assets, _pending), do: nil
+
+  defp taken_kind(%{kind: "relinked"}, _assets, _shared), do: "links"
+
+  # A link variable keeps its target and kind under `/media` too: the source
+  # changing where it points is a source-controlled value
+  defp taken_kind(%{kind: "shared_update", key: key}, assets, shared) do
+    cond do
+      match?(%{link_type: _}, shared[key]) -> "values"
+      key in assets or String.ends_with?(key, ["/media", "/gallery"]) -> "media"
+      true -> "values"
     end
   end
 
@@ -2691,7 +2875,7 @@ defmodule Brando.Content.Proposals do
         # order applying takes them (`apply_lock_order/1`): a preview and an
         # apply that took two sources in opposite order would deadlock
         lock_translated_sources!(proposal)
-        check_translated_sources!(proposal)
+        check_translated_sources!(proposal, lock_groups: false)
         user = user!(actor)
         entry = create_translations!(proposal, target, user)
 
@@ -3932,16 +4116,29 @@ defmodule Brando.Content.Proposals do
   # an entry that changed, the proposal is stale, and the message names the
   # units.
   defp recheck_failed(problems) do
-    case for(%{code: :source_changed} = problem <- problems, uniq: true, do: Map.get(problem, :label, problem.key)) do
-      [] ->
-        dgettext("content_proposals", "Resolve every blocking problem before applying.")
+    names = for %{code: :source_changed} = problem <- problems, uniq: true, do: Map.get(problem, :label, problem.key)
 
-      names ->
-        dgettext(
-          "content_proposals",
-          "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again.",
-          units: Enum.join(names, ", ")
-        )
+    texts =
+      if names != [],
+        do:
+          dgettext(
+            "content_proposals",
+            "The source of a translation changed after this proposal was prepared, in %{units}. Translate those texts again.",
+            units: Enum.join(names, ", ")
+          )
+
+    # Whatever else a recheck found says so itself: a sync that changed, has
+    # nothing left to take, or is no longer of a synchronized translation
+    others =
+      for %{code: code, message: message} <- problems,
+          code != :source_changed,
+          is_binary(message),
+          uniq: true,
+          do: message
+
+    case Enum.reject([texts | others], &is_nil/1) do
+      [] -> dgettext("content_proposals", "Resolve every blocking problem before applying.")
+      messages -> Enum.join(messages, " ")
     end
   end
 
@@ -4672,7 +4869,10 @@ defmodule Brando.Content.Proposals do
   end
 
   defp translated_sources(proposal) do
-    for %Translate{target: target} <- proposal.operations, source = translated_source(target, proposal), do: source
+    for %type{target: target} <- proposal.operations,
+        type in [Translate, SyncTranslation],
+        source = translated_source(target, proposal),
+        do: source
   end
 
   defp translated_source({:new, _} = target, proposal) do
@@ -4708,14 +4908,17 @@ defmodule Brando.Content.Proposals do
   # now be refused. Read under the apply's row locks; the membership itself
   # is not locked, so a transfer committing during the save is still missed.
   defp check_follows_source!(proposal) do
-    if Enum.any?(proposal.operations, &(not match?(%Translate{}, &1) and follows_source_problems(&1) != [])),
-      do:
-        Error.fail!(
-          dgettext(
-            "content_proposals",
-            "An entry in this proposal has become a synchronized translation since it was approved. Prepare the proposal again."
-          )
-        )
+    if Enum.any?(
+         proposal.operations,
+         &(&1.__struct__ not in [Translate, SyncTranslation] and follows_source_problems(&1) != [])
+       ),
+       do:
+         Error.fail!(
+           dgettext(
+             "content_proposals",
+             "An entry in this proposal has become a synchronized translation since it was approved. Prepare the proposal again."
+           )
+         )
 
     :ok
   end
@@ -4723,18 +4926,23 @@ defmodule Brando.Content.Proposals do
   @doc """
   Checks every `translate` batch of `proposal` against its source again,
   under the source's lock, and raises a transfer error naming
-  the units whose source text changed.
+  the units whose source text changed. A `sync_translation` is checked to
+  take what it took when the proposal was prepared.
 
   Called inside the apply's transaction, before any translation is created
   or saved: a source saved after the recheck at approval would otherwise
-  have its new text overwritten by the translation of the text before.
+  have its new text overwritten by the translation of the text before. It
+  holds the group of a `sync_translation`'s translation until the commit;
+  `lock_groups: false` leaves that out, for a caller that saves nothing.
   """
-  @spec check_translated_sources!(Proposal.t()) :: :ok
-  def check_translated_sources!(proposal) do
+  @spec check_translated_sources!(Proposal.t(), keyword()) :: :ok
+  def check_translated_sources!(proposal, opts \\ []) do
     problems =
       for %Translate{} = op <- proposal.operations,
           problem <- translated_source_problems(op, proposal),
           do: problem
+
+    problems = problems ++ Enum.flat_map(proposal.operations, &synced_source_problems(&1, proposal, opts))
 
     if problems != [], do: Error.fail!(recheck_failed(problems))
     :ok
@@ -4764,6 +4972,23 @@ defmodule Brando.Content.Proposals do
       {:error, reason} -> Error.fail!(not_a_translation(reason).message)
     end
   end
+
+  # The source locked, as for a translate batch, and the translation's group,
+  # until the apply commits: the sync that recomputes the pending version
+  # takes it, so the version checked here is the one the save takes. A
+  # caller that saves nothing (`lock_groups: false`, the preview of another
+  # entry of the proposal) rechecks without holding the group while it renders.
+  defp synced_source_problems(%SyncTranslation{target: {schema, id} = target} = op, proposal, opts) when is_integer(id) do
+    with {schema, source_id} <- translated_source(target, proposal), do: lock_source!(schema, source_id)
+
+    if Keyword.get(opts, :lock_groups, true) do
+      with %{group_id: group_id} <- Translations.get_member(schema, id), do: Translations.lock_group!(group_id)
+    end
+
+    sync_recheck(op)
+  end
+
+  defp synced_source_problems(_op, _proposal, _opts), do: []
 
   defp lock_source!(schema, source_id) do
     Repo.one(from(e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE"))

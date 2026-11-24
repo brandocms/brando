@@ -150,6 +150,33 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
       assert has_element?(view, ~s([data-testid="assistant-translate-pending"]))
     end
 
+    # Saving the pending version as it is: the card counts what it takes and
+    # the texts it leaves to translate
+    test "a sync_translation says what it takes and the texts it leaves", %{conn: conn, current_user: user} do
+      alias Brando.Translations
+
+      {:ok, source} =
+        Brando.SyncTest.create_article(
+          %{title: "Fjordhuset", slug: "fjordhuset-sync-card", language: "no", status: "published"},
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Brando.SyncTest.Article, source.id, :en, user)
+      {:ok, _} = Brando.SyncTest.update_article(source.id, %{year: 2001}, user)
+      {:ok, source} = Translations.load_entry(Brando.SyncTest.Article, source.id)
+      Translations.source_saved(source)
+
+      op = %{"op" => "sync_translation", "target" => %{"content_type" => "Brando.SyncTest.Article", "id" => target.id}}
+      {view, proposal} = propose(conn, user, [op])
+      assert proposal.problems == []
+
+      card = view |> element(~s([data-testid="assistant-sync-translation"])) |> render()
+      assert card =~ "English"
+      text = view |> render() |> Floki.parse_document!() |> Floki.find(".assistant-placement") |> Floki.text()
+      assert text =~ "1 source-controlled value"
+      assert text =~ "Leaves 1 text to translate."
+    end
+
     # A review unit: the source before and now, the translation before and now
     test "shows a review unit's source and translation before and now", %{conn: conn, current_user: user} do
       alias Brando.Translations
