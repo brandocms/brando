@@ -222,6 +222,9 @@ defmodule BrandoIntegrationWeb.ArticleHTML do
       <ul>
         <li :for={row <- @entry.related_entries}>{row.identifier.title}</li>
       </ul>
+      <nav>
+        <a :for={alternate <- @entry.alternate_entries}>{alternate.title}</a>
+      </nav>
     </main>
     """
   end
@@ -332,7 +335,8 @@ defmodule BrandoIntegrationWeb.LivePreview do
     schema_preloads children: from(p in Brando.Pages.Page, where: p.status == :published)
   end
 
-  # The article's related entries, by their identifiers (PreviewProposalTest)
+  # The article's related entries, by their identifiers, and its alternates
+  # (PreviewProposalTest, RenderSavedTest)
   preview_target Brando.SyncTest.Article do
     name :related
     label "Related"
