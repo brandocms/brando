@@ -48,20 +48,27 @@ defmodule BrandoAdmin.TranslationListingTrashTest do
   # The listing's toast, from the user's channel
   defp delete_toast(view, id) do
     render_click(view, "delete_entry", %{"id" => to_string(id)})
-    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message}}
-    message
+    assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message} = payload}
+    {message, payload[:level]}
   end
 
-  test "refusing to delete the source says when a translation in the trash counts", %{conn: conn} = c do
+  # The row's dialog asks what becomes of a translation in the trash as of
+  # one outside it (#3926), so a delete without its choice sends the editor
+  # there in both cases, with one refusal
+  test "a delete of the source without the dialog's choice is refused alike, a translation in the trash or not",
+       %{conn: conn} = c do
     Brando.endpoint().subscribe("user:#{c.current_user.id}")
     {:ok, view, _html} = live(conn, "/admin/pages")
 
-    in_trash = delete_toast(view, c.source.id)
+    render_hook(view, "describe_delete", %{"id" => to_string(c.source.id)})
+    assert_reply(view, %{choice: %{name: "translations"}})
+
+    assert {in_trash, :error} = delete_toast(view, c.source.id)
     {:ok, _} = Brando.Authorization.Boundary.restore(c.current_user, Repo.get!(Page, c.target.id))
-    synchronized = delete_toast(view, c.source.id)
+    assert {synchronized, :error} = delete_toast(view, c.source.id)
 
     refute Repo.get!(Page, c.source.id).deleted_at
-    assert in_trash != synchronized
+    assert in_trash == synchronized
   end
 
   defp replaced_by(c) do
