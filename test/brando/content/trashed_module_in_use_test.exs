@@ -60,6 +60,13 @@ defmodule Brando.Content.TrashedModuleInUseTest do
       assert Brando.Content.module_in_trash_message(refusal) =~ "Teaser"
     end
 
+    test "names a module that has a name only in another language" do
+      refusal = %{module: %{"fr" => "Accroche"}, block: {:root, 1}}
+
+      assert Brando.Content.module_in_trash_message(refusal) =~ "Accroche"
+      assert Brando.Content.module_in_trash_message(Map.delete(refusal, :block)) =~ "Accroche"
+    end
+
     # The entry holds one already: a second, under its container, is refused,
     # and without it the save goes through
     test "counts a new block under a saved root, though the entry holds one of the module", c do

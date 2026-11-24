@@ -245,10 +245,7 @@ defmodule Brando.Content do
   defp block_place({:root, position}), do: gettext("block %{number}", number: position)
   defp block_place({:inside, place}), do: gettext("a block inside %{block}", block: block_place(place))
 
-  defp translated_name(name) when is_map(name),
-    do: name[Gettext.get_locale(Brando.Gettext)] || name[Brando.Languages.default_language()] || name["en"] || ""
-
-  defp translated_name(name), do: name
+  defp translated_name(name), do: Brando.Type.I18nString.localized(name) || ""
 
   @doc """
   Duplicates the module `id` as a new module: a new lineage at v1, as an
