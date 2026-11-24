@@ -1010,7 +1010,9 @@ The first version moves values that keep their type. The plan refuses
 (`migration_required`, naming the blocks and the entries you may open) a
 rename that also changes the type (rename in one release and change the type
 in the next; when `resolve --map` converts the values, the refusal also
-prints the command that moves them after an apply without `renamed_from`), a block whose stored value doesn't fit the new key (stored
+prints the command that moves them after an apply without `renamed_from`;
+the command names any block whose value it can't convert, such as a text
+with a line break becoming a string, and then changes nothing), a block whose stored value doesn't fit the new key (stored
 under another type, or not one of a select's options), and a block that
 already holds a value of its own under the new key, a leftover from an
 older version of the module. A value that is empty or equal to the

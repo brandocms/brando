@@ -268,7 +268,7 @@ defmodule Brando.Content.Definition.Renames do
     case convertible? && resolve_command([{uid, [rename]}], viewer) do
       command when command not in [nil, false, ""] ->
         gettext(
-          "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
+          "%{subject} changes type (%{old_type} → %{new_type}): rename it in one release and change the type in the next, or take renamed_from out of the file, and after the apply move the values with %{command}, as a user who may edit those entries; it names any block whose value it can't convert, and then changes nothing. Without renamed_from the plan's resolve line drops them instead: don't run that one.",
           Keyword.put(bindings, :command, command)
         )
 

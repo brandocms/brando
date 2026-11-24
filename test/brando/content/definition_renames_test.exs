@@ -228,6 +228,9 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert reason =~
                "mix brando.modules resolve --uid #{c.module.uid} --user #{c.user.id} --map var:tagline=heading --apply"
 
+      # A stored value may still not convert: the command names those blocks
+      assert reason =~ "names any block whose value it can't convert"
+
       # resolve refuses a string that becomes a colour: no command
       edit!(c, ~s(var "heading", "text" do), ~s(var "heading", "color" do))
       edit!(c, ~s("Default tagline"), ~s("#000000"))
