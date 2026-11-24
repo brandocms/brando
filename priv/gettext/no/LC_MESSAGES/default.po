@@ -17377,7 +17377,7 @@ msgstr "Versjon #%{revision}"
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Revision #%{revision} was not published as scheduled: %{block} uses the module “%{module}”, which is in the trash"
-msgstr "Revisjon #%{revision} ble ikke publisert som planlagt: %{block} bruker modulen «%{module}», som ligger i papirkurven"
+msgstr "Versjon #%{revision} ble ikke publisert som planlagt: %{block} bruker modulen «%{module}», som ligger i papirkurven"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
