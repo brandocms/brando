@@ -1342,7 +1342,7 @@ By hand, change every one of these the application declares before fetching
 
 ```elixir
 # mix.exs
-{:phoenix, "~> 1.8.16"},
+{:phoenix, "~> 1.8.17"},
 {:phoenix_live_view, "~> 1.2.0"},
 {:phoenix_html, "~> 4.4"},
 {:ecto, "~> 3.14"},
@@ -1354,7 +1354,7 @@ By hand, change every one of these the application declares before fetching
 {:igniter, "~> 0.8", only: [:dev, :test]},
 ```
 
-Brando pins `phoenix` 1.8.16 and `phoenix_live_view` 1.2.13 exactly. If the
+Brando pins `phoenix` 1.8.17 and `phoenix_live_view` 1.2.15 exactly. If the
 application also declares `sentry` (`~> 14.0`), `oban` (`~> 2.23`), `cachex`
 (`~> 4.0`), `image`, `req` or another of Brando's dependencies, compare it with
 Brando's `mix.exs` as well. In particular:

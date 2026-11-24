@@ -262,11 +262,11 @@ importers:
         specifier: ^2.7.8
         version: 2.7.8
       phoenix:
-        specifier: 1.8.16
-        version: 1.8.16
+        specifier: 1.8.17
+        version: 1.8.17
       phoenix_live_view:
-        specifier: 1.2.13
-        version: 1.2.13
+        specifier: 1.2.15
+        version: 1.2.15
       slugify:
         specifier: 1.6.9
         version: 1.6.9
@@ -971,11 +971,11 @@ packages:
   parse-headers@2.0.6:
     resolution: {integrity: sha512-Tz11t3uKztEW5FEVZnj1ox8GKblWn+PvHY9TmJV5Mll2uHEwRdR/5Li1OlXoECjLYkApdhWy44ocONwXLiKO5A==}
 
-  phoenix@1.8.16:
-    resolution: {integrity: sha512-bNNJkYBnES2MHo8XjBg6ROK7iU7FeYfkANpTnYzh2ecOipI+8ZF1wiiWdvqv2YfV4MVb9yFJBE2BPF+RXgXXuw==}
+  phoenix@1.8.17:
+    resolution: {integrity: sha512-lu+Cnz+o6QGG3rmTg4rAJbnBLSEjKDTtkD3PeTC3DLBP0zjBfEmQ7yOZniMTRpmMowlrUVRfoC693xxv+Yqa4Q==}
 
-  phoenix_live_view@1.2.13:
-    resolution: {integrity: sha512-HsDIXeM5R6p8ZBrcND6qZm5LtWnmp3pVF4K+zqBRsvEpL7CWPr7brJQyFXhuGhU5LuyEtOk8E2sFkomR6lz2Kw==}
+  phoenix_live_view@1.2.15:
+    resolution: {integrity: sha512-TMZWjlAeN9dgLFOpKe0spY1vUV8hINkG5b4BX1gdcEtt0nd0HBX3N7ZTCMAYksLkosPP1rAkqEO9R5Y24FDSUA==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -1809,9 +1809,9 @@ snapshots:
 
   parse-headers@2.0.6: {}
 
-  phoenix@1.8.16: {}
+  phoenix@1.8.17: {}
 
-  phoenix_live_view@1.2.13: {}
+  phoenix_live_view@1.2.15: {}
 
   picocolors@1.1.1: {}
 

@@ -55,7 +55,7 @@ defmodule E2eProject.MixProject do
       {:tidewave, "~> 0.1", only: [:dev, :test, :e2e]},
       {:igniter, "~> 0.6"},
       # phoenix
-      {:phoenix, "1.8.16"},
+      {:phoenix, "1.8.17"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -69,7 +69,7 @@ defmodule E2eProject.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "1.2.13"},
+      {:phoenix_live_view, "1.2.15"},
       # Brando parses HTML with lazy_html at runtime (an optional Brando
       # dependency), and Phoenix.LiveViewTest does in tests
       {:lazy_html, "~> 0.1.13"},

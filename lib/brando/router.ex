@@ -383,12 +383,15 @@ defmodule Brando.Router do
         verb -> verb |> to_string() |> String.upcase()
       end
 
+    # The tuple is the one Phoenix's own `__match_route__/3` clauses return
+    # (`Phoenix.Router.__call__/5` reads it). Since Phoenix 1.8.17 `prepare` is
+    # the route's `{private, assigns}` as data, which `__call__/5` hands to
+    # `Phoenix.Router.Route.prepare/3`, rather than an expression to close over.
     clauses =
       for host <- hosts do
         quote line: route.line do
           defp __match_route_without_admin__(unquote(verb), unquote(path), unquote(host)) do
-            {unquote(route_metadata(route, path_params)),
-             fn var!(conn, :conn), %{path_params: var!(path_params, :conn)} -> unquote(prepare) end,
+            {unquote(route_metadata(route, path_params)), unquote(prepare),
              &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}
           end
         end

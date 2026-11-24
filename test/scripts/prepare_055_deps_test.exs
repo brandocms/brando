@@ -75,7 +75,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
 
     defp deps do
       [
-        {:phoenix, "~> 1.8.16"},
+        {:phoenix, "~> 1.8.17"},
         {:ecto, "~> 3.14"},
         {:ecto_sql, "~> 3.14"},
         {:phoenix_html, "~> 4.4"},
