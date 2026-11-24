@@ -115,11 +115,11 @@ defmodule BrandoAdmin.Pages.PageListLive do
           {:toast,
            gettext(
              "Not deleted: this entry is the source of synchronized translations. Make them independent, or make one of them the source, first."
-           )}
+           ), :error}
         )
 
       {:error, _error} ->
-        send(self(), {:toast, gettext("Error deleting fragment")})
+        send(self(), {:toast, gettext("Error deleting fragment"), :error})
     end
 
     {:noreply, socket}

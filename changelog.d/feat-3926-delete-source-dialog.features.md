@@ -1,0 +1,1 @@
+- Deleting the source of synchronized translations from a listing opens a dialog that offers to delete it with its translations (restored with it from the trash), or to delete only it, with one translation made the source or all of them independent.

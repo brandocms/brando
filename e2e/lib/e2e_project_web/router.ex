@@ -72,6 +72,7 @@ defmodule E2eProjectWeb.Router do
       post "/field-ai/:action", E2EFixtureController, :field_ai
       post "/synchronized-pages/:action", E2EFixtureController, :synchronized_pages
       post "/trashed-page-translation", E2EFixtureController, :trashed_page_translation
+      post "/translated-page", E2EFixtureController, :translated_page
       post "/trashed-projects", E2EFixtureController, :trashed_projects
       post "/alt-text-image", E2EFixtureController, :alt_text_image
       post "/text-sinks/:action", E2EFixtureController, :text_sinks

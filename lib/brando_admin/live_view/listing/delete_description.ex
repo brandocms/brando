@@ -147,21 +147,28 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   defp delete_option(schema, group, []) do
     live = Enum.reject(group.translations, & &1.in_trash)
 
-    if Enum.all?(live, &may_delete?/1) do
-      %{
-        value: "delete",
-        label: gettext("Delete them with it"),
-        hint:
-          if(schema.has_trait(SoftDelete),
-            do: gettext("They are moved to the trash with it, and come back when it is restored."),
-            else: gettext("They are deleted with it. This can't be undone.")
-          ),
-        checked: false
-      }
-    end
+    if Enum.all?(live, &may_delete?/1), do: Map.merge(%{value: "delete", checked: false}, delete_text(schema, live))
   end
 
   defp delete_option(_schema, _group, _hidden), do: nil
+
+  # Every translation in the trash already: they stay there, in the group
+  defp delete_text(_schema, []),
+    do: %{
+      label: gettext("Leave them in the trash"),
+      hint: gettext("They keep their place in the group, and can be restored once it is.")
+    }
+
+  defp delete_text(schema, _live) do
+    %{
+      label: gettext("Delete them with it"),
+      hint:
+        if(schema.has_trait(SoftDelete),
+          do: gettext("They are moved to the trash with it, and come back when it is restored."),
+          else: gettext("They are deleted with it. This can't be undone.")
+        )
+    }
+  end
 
   defp may_delete?(%{entry: entry, published: published}),
     do: allowed?(:delete, entry) and (not published or allowed?(:publish, entry))
@@ -175,7 +182,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
       %{
         value: "transfer",
         label: gettext("Keep them, and make this one the source:"),
-        hint: gettext("The other translations follow it."),
+        hint: if(length(group.translations) > 1, do: gettext("The other translations follow it.")),
         checked: false,
         select: %{
           name: "translations_source",
