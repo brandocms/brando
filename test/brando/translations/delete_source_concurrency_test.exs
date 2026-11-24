@@ -7,7 +7,9 @@ defmodule Brando.Translations.DeleteSourceConcurrencyTest do
   use ExUnit.Case, async: false
 
   import Ecto.Query, only: [from: 2]
+  import Brando.Test.Support, only: [put_test_env: 2]
 
+  alias Brando.Pages.Fragment
   alias Brando.SyncTest.Article
   alias Brando.Translations
   alias Brando.Translations.Member
@@ -147,5 +149,89 @@ defmodule Brando.Translations.DeleteSourceConcurrencyTest do
       assert Repo.get(Article, c.source.id)
       assert Repo.get(Article, german_id)
     end)
+  end
+
+  describe "replacing a translation in the trash" do
+    setup %{user: user} do
+      put_test_env(Fragment, translatable: [mode: :synchronized])
+      key = "replace-race-#{System.unique_integer([:positive])}"
+
+      {source, trashed} =
+        unboxed(fn ->
+          # The translation is the older entry, with the lower id, as the
+          # former source is after a transfer of the role
+          trashed = Brando.Factory.insert(:fragment, parent_key: key, key: "footer", language: :en, creator: user)
+          source = Brando.Factory.insert(:fragment, parent_key: key, key: "footer", language: :no, creator: user)
+          {:ok, _} = Translations.enroll_source(Fragment, source.id, user)
+          %{group_id: group_id} = Translations.get_member(Fragment, source.id)
+
+          Repo.insert!(%Member{
+            group_id: group_id,
+            entry_type: to_string(Fragment),
+            entry_id: trashed.id,
+            language: "en",
+            role: :target,
+            synchronized: true
+          })
+
+          Repo.update_all(from(f in Fragment, where: f.id == ^trashed.id), set: [deleted_at: DateTime.utc_now()])
+          {source, trashed}
+        end)
+
+      on_exit(fn -> unboxed(fn -> clean_up_fragments(key) end) end)
+      %{fragment: source, trashed: trashed}
+    end
+
+    # A delete of the source with its translations locks the group's entries
+    # in id order, the translation in the trash first. The replace waits for
+    # it before it locks the source, so the delete can take the source next.
+    test "locks the group's entries in the order a delete of the source does", c do
+      test = self()
+
+      delete =
+        Task.async(fn ->
+          unboxed(fn ->
+            Brando.Repo.transaction(fn ->
+              Repo.query!("SELECT id FROM pages_fragments WHERE id = $1 FOR UPDATE", [c.trashed.id])
+              send(test, :locked)
+
+              receive do
+                :next -> :ok
+              end
+
+              result = Repo.query("SELECT id FROM pages_fragments WHERE id = $1 FOR UPDATE NOWAIT", [c.fragment.id])
+              Repo.rollback(result)
+            end)
+          end)
+        end)
+
+      assert_receive :locked, 10_000
+
+      replace =
+        Task.async(fn ->
+          unboxed(fn -> Translations.replace_trashed_target(Fragment, c.fragment.id, :en, c.user) end)
+        end)
+
+      assert Task.yield(replace, 500) == nil
+      send(delete.pid, :next)
+
+      assert {:error, {:ok, %Postgrex.Result{}}} = Task.await(delete, 10_000)
+      assert {:ok, %Fragment{language: :en}} = Task.await(replace, 10_000)
+    end
+  end
+
+  defp clean_up_fragments(key) do
+    fragments = Repo.all(from(f in Fragment, where: f.parent_key == ^key, select: f.id))
+    schema = to_string(Fragment)
+
+    Repo.query!(
+      "DELETE FROM translation_groups WHERE id IN (SELECT group_id FROM translation_group_members WHERE entry_type = $1 AND entry_id = ANY($2))",
+      [schema, fragments]
+    )
+
+    Repo.query!("DELETE FROM content_identifiers WHERE schema = $1 AND entry_id = ANY($2)", [schema, fragments])
+    Repo.query!("DELETE FROM search_documents WHERE schema = $1 AND entry_id = ANY($2)", [schema, fragments])
+    Repo.delete_all(from(e in Brando.Activity.Event, where: e.schema == ^schema and e.entry_id in ^fragments))
+    Repo.delete_all(from(f in Fragment, where: f.id in ^fragments))
   end
 end

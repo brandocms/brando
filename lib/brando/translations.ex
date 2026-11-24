@@ -380,7 +380,7 @@ defmodule Brando.Translations do
   end
 
   defp replace_target(schema, source_id, language, actor, mark_translate?) do
-    with :ok <- lock_for_enrolment(schema, source_id),
+    with :ok <- lock_for_replace(schema, source_id),
          {:ok, source_member} <- source_member(schema, source_id, actor),
          :ok <- lock_group!(source_member.group_id),
          :ok <- purge_trashed_version(schema, source_member, language, actor),
@@ -429,6 +429,25 @@ defmodule Brando.Translations do
   defp lock_for_enrolment(schema, source_id) do
     if schema == Brando.Pages.Page, do: Brando.Pages.lock_page_tree()
     Repo.all(from e in schema, where: e.id == ^source_id, select: e.id, lock: "FOR UPDATE")
+    :ok
+  end
+
+  # The trashed version is purged under its entry's lock: every entry of the
+  # group is locked first, in the order a delete of the source with its
+  # translations takes them (`lock_source_group/3`), before the group.
+  defp lock_for_replace(schema, source_id) do
+    if schema == Brando.Pages.Page, do: Brando.Pages.lock_page_tree()
+
+    case get_member(schema, source_id) do
+      %Member{group_id: group_id} -> lock_entries(schema, [source_id | member_entry_ids(group_id)])
+      nil -> lock_entries(schema, [source_id])
+    end
+  end
+
+  defp member_entry_ids(group_id), do: group_id |> list_members() |> Enum.map(& &1.entry_id)
+
+  defp lock_entries(schema, ids) do
+    Repo.all(from e in schema, where: e.id in ^ids, order_by: [asc: e.id], select: e.id, lock: "FOR UPDATE")
     :ok
   end
 
@@ -1939,8 +1958,7 @@ defmodule Brando.Translations do
 
     with {:ok, id} <- Ecto.Type.cast(:id, source_id),
          %Member{role: :source, group_id: group_id} <- get_member(schema, id) do
-      ids = group_id |> list_members() |> Enum.map(& &1.entry_id)
-      Repo.all(from e in schema, where: e.id in ^ids, order_by: [asc: e.id], select: e.id, lock: "FOR UPDATE")
+      lock_entries(schema, member_entry_ids(group_id))
       lock_group!(group_id)
 
       case source_group(schema, id) do
