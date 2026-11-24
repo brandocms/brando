@@ -296,6 +296,55 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  test "accepts format_message beside format" do
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :tagline, :string, constraints: [format: ~r/\.\z/, format_message: "ends with a full stop"]
+          end
+        end
+      )
+
+    assert module.__schema__(:type, :tagline) == :string
+  end
+
+  test "rejects format_message without format" do
+    assert_raise Spark.Error.DslError, ~r/:format_message needs a :format constraint/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :tagline, :string, constraints: [format_message: "ends with a full stop"]
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects a format_message that is not a string" do
+    assert_raise Spark.Error.DslError, ~r/constraint :format_message has an unsupported value/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :tagline, :string, constraints: [format: ~r/\.\z/, format_message: :full_stop]
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects format_message on an asset, which has no format" do
+    assert_raise Spark.Error.DslError, ~r/unsupported options \[:format_message\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, constraints: [format_message: "unused"], cfg: :default
+          end
+        end
+      )
+    end
+  end
+
   test "rejects cast callbacks the changeset runner cannot execute" do
     assert_raise Spark.Error.DslError, ~r/unsupported `:cast` option/, fn ->
       compile_blueprint(
