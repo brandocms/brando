@@ -190,6 +190,27 @@ defmodule Brando.Content.Proposals.CreateTranslationTest do
     assert {:ok, %{status: "pending", problems: [%{code: :language_exists}]}} = Proposals.get(proposal.id, c.user)
   end
 
+  test "an apply that would copy a block of a module in the trash names the module", c do
+    {:ok, proposal} = Proposals.propose([op(c)], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    Repo.soft_delete!(c.module)
+
+    assert {:error, message} = Proposals.apply(proposal.id, proposal.version, c.user)
+    assert message == Brando.Content.module_in_trash_message(%{module: %{"en" => "Text"}, block: {:root, 1}}, :duplicate)
+  end
+
+  test "undo that would bring back a block of a module in the trash names the module", c do
+    # The fixture adds the block past the revisions: the one undo goes back to holds it
+    {:ok, _} = Brando.Revisions.create_revision(Repo.get!(Article, c.source.id), c.user)
+    delete = %Brando.Content.Proposals.DeleteBlock{target: {Article, c.source.id}, block_uid: c.block_uid}
+    {:ok, proposal} = Proposals.propose([delete], c.user)
+    {:ok, _} = approve_and_apply(proposal, c.user)
+    Repo.soft_delete!(c.module)
+
+    assert {:error, message} = Proposals.undo(proposal.id, c.user)
+    assert message == Brando.Content.module_in_trash_message(%{module: %{"en" => "Text"}, block: {:root, 1}}, :revision)
+  end
+
   test "a later failure rolls the translation back with the rest of the apply", c do
     create = %CreateEntry{
       schema: Page,

@@ -106,6 +106,39 @@ defmodule BrandoAdmin.TrashedModuleInUseLiveTest do
     assert Repo.aggregate(Page, :count) == pages
   end
 
+  test "the entry form's Create translation names the module when it refuses the copy", c do
+    {:ok, article} =
+      Brando.SyncTest.create_article(%{title: "Tittel", slug: "tittel", language: "no", status: "draft"}, c.current_user)
+
+    put_block!(Brando.SyncTest.Article, article, c.module)
+    Repo.soft_delete!(c.module)
+
+    {view, _html} = live_form(c.conn, "/admin/articles/update/#{article.id}", "article_form")
+    [cid] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#article_title", "phx-target")
+    view |> with_target("[data-phx-component='#{cid}']") |> render_click("create_translation", %{"language" => "en"})
+
+    assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
+
+    assert message ==
+             Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+
+    assert Brando.Translations.alternate_languages(Brando.SyncTest.Article, article.id) == []
+  end
+
+  test "the listing's Copy to language for a selection names each entry it refused and the module", c do
+    put_block!(Page, c.page, c.module)
+    Repo.soft_delete!(c.module)
+
+    {:ok, view, _html} = live(c.conn, "/admin/pages")
+    render_click(view, "duplicate_selected_to_language", %{"ids" => Jason.encode!([c.page.id]), "language" => "no"})
+
+    assert_receive %Broadcast{event: "toast", payload: %{payload: message}}, 2_000
+    assert message =~ "Om oss"
+
+    assert message =~
+             Brando.Content.module_in_trash_message(%{module: %{"en" => "Teaser"}, block: {:root, 1}}, :duplicate)
+  end
+
   # The fragment copier reads the block trees whole, nested blocks included
   test "the listing duplicates a page whose fragment holds a container with a block inside", c do
     fragment = Factory.insert(:fragment, creator: c.current_user, page_id: c.page.id, key: "boxed")

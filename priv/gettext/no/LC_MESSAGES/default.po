@@ -25988,6 +25988,11 @@ msgstr "deg"
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
 msgstr "«%{block}» er kopiert. Lim den inn med utklippstavle-knappen ved + mellom blokkene, her eller på en annen side."
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "“%{entry}” was not copied. %{reason}"
+msgstr "«%{entry}» ble ikke kopiert. %{reason}"
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "“%{title}” moved to %{date}"
