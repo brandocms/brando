@@ -157,6 +157,84 @@ defmodule Brando.Content.DefinitionRenamesConcurrencyTest do
     end)
   end
 
+  test "a revision restore that Postgres cancels to break a deadlock with the apply raises, and the apply lands", %{
+    path: path
+  } do
+    {user, page, block, plan} = unboxed(fn -> rename_fixture!(path) end)
+
+    # A revision with other words in the block; the block then holds what
+    # the plan was made from again
+    revision =
+      unboxed(fn ->
+        write_tagline!(block, "Older words")
+        {:ok, %{revision: number}} = Page |> @repo.get!(page.id) |> Brando.Revisions.create_revision(user)
+        write_tagline!(block, "Kept words")
+        number
+      end)
+
+    test = self()
+    handler = "renames-restore-#{System.unique_integer([:positive])}"
+
+    apply =
+      Task.async(fn ->
+        receive do
+          :start -> unboxed(fn -> Definitions.apply(plan, user) end)
+        end
+      end)
+
+    # The apply stops once it holds the definition tables, before it locks
+    # the blocks
+    :telemetry.attach(
+      handler,
+      @repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, apply_pid ->
+        if self() == apply_pid and metadata.query =~ "LOCK TABLE" do
+          send(test, :locked)
+
+          receive do
+            :go -> :ok
+          end
+        end
+      end,
+      apply.pid
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    send(apply.pid, :start)
+    assert_receive :locked, 10_000
+
+    # The restore writes the block's row, then waits for the apply's table
+    # lock to write its vars; the apply then waits for the block
+    restore =
+      Task.async(fn ->
+        unboxed(fn ->
+          send(test, {:editor, backend_pid()})
+
+          try do
+            Brando.Revisions.set_entry_to_revision(Page, page.id, revision, user)
+          rescue
+            error -> error
+          end
+        end)
+      end)
+
+    await_blocked!()
+    send(apply.pid, :go)
+
+    assert {:ok, _} = Task.await(apply, 30_000)
+    assert %Postgrex.Error{postgres: %{code: :deadlock_detected}} = Task.await(restore, 30_000)
+
+    unboxed(fn ->
+      assert [%Var{key: "heading", value: "Kept words"}] =
+               @repo.all(from(v in Var, where: v.block_id == ^block.id and v.key in ["heading", "tagline"]))
+    end)
+  end
+
+  defp write_tagline!(block, value) do
+    @repo.update_all(from(v in Var, where: v.block_id == ^block.id and v.key == "tagline"), set: [value: value])
+    @repo.update_all(from(b in Block, where: b.id == ^block.id), set: [rendered_html: "<p>#{value}</p>"])
+  end
+
   # The entry `page` as the editor saves it: `block` rendered again, with
   # `value` typed into its tagline
   defp editor_save(page, block, value) do

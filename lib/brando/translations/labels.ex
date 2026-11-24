@@ -30,7 +30,7 @@ defmodule Brando.Translations.Labels do
   """
   def block_index(schema, payload) do
     fields =
-      if function_exported?(schema, :__blocks_fields__, 0),
+      if Code.ensure_loaded?(schema) and function_exported?(schema, :__blocks_fields__, 0),
         do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
         else: []
 

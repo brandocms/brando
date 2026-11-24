@@ -5,6 +5,7 @@ defmodule Brando.QueryTest do
   import Ecto.Query
   alias Brando.Factory
   alias Brando.Pages.Page
+  alias Phoenix.Socket.Broadcast
 
   # The cache tests fill the query cache with rows the sandbox rolls back
   setup do
@@ -74,6 +75,15 @@ defmodule Brando.QueryTest do
       fn entry ->
         {:ok, entry, :delete}
       end
+    end
+  end
+
+  # A save its callback fails, as `Pages.update_breadcrumbs/1` can
+  defmodule FailingCallbackContext do
+    use Brando.Query
+
+    mutation :update, Page do
+      fn _entry -> {:error, :callback_failed} end
     end
   end
 
@@ -297,6 +307,11 @@ defmodule Brando.QueryTest do
     end
   end
 
+  defp subscribe_toasts do
+    Brando.endpoint().subscribe("lobby")
+    on_exit(fn -> Brando.endpoint().unsubscribe("lobby") end)
+  end
+
   defp collect_queries(ref) do
     receive do
       {^ref, query} -> [query | collect_queries(ref)]
@@ -311,14 +326,38 @@ defmodule Brando.QueryTest do
     test "a save inside a transaction is announced once it has committed" do
       page = Factory.insert(:page, title: "Before")
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(Page)}"))
+      subscribe_toasts()
 
       {:ok, _} =
         Brando.Repo.transaction(fn ->
           {:ok, _} = __MODULE__.Context.update_page(Ecto.Changeset.change(page, title: "After"), :system)
           refute_received {:mutation, Page, _, :updated}
+          refute_received %Broadcast{event: "toast"}
         end)
 
       assert_received {:mutation, Page, %{title: "After"}, :updated}
+      assert_received %Broadcast{event: "toast", payload: %{payload: %{identifier: %{entry_id: id}}}}
+      assert id == page.id
+    end
+
+    test "a save its callback rolls back tells no one it was saved" do
+      page = Factory.insert(:page, title: "Before")
+      subscribe_toasts()
+
+      assert {:error, :callback_failed} =
+               FailingCallbackContext.update_page(Ecto.Changeset.change(page, title: "After"), :system)
+
+      refute_received %Broadcast{event: "toast"}
+      assert Brando.Repo.get!(Page, page.id).title == "Before"
+    end
+
+    test "a save outside a transaction is announced at once" do
+      page = Factory.insert(:page, title: "Before")
+      subscribe_toasts()
+
+      {:ok, _} = __MODULE__.Context.update_page(page.id, %{title: "After"}, :system)
+
+      assert_received %Broadcast{event: "toast", payload: %{payload: %{action: "updated"}}}
     end
 
     test "mutation :create" do

@@ -64,7 +64,7 @@ defmodule Brando.Content.Proposals.Preview do
   def render_saved(schema, id, actor) do
     with true <- LivePreview.has_live_preview_target(schema) || {:error, :no_preview_target},
          {:ok, entry} <- Error.protect(fn -> Brando.Content.Transfer.Catalog.load!(schema, id, actor, :read) end) do
-      entry |> Ecto.Changeset.change() |> initialize(actor, nil, false)
+      entry |> page_entry(nil) |> initialize(actor, nil, false)
     end
   end
 

@@ -505,13 +505,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     # `set_entry_to_revision/5` restores these colours empty
     cleared = cleared_colors(socket, revision_number)
 
-    case Brando.Revisions.set_entry_to_revision(
-           entry_schema(socket),
-           socket.assigns.entry_id,
-           revision_number,
-           socket.assigns.current_user,
-           form: socket.assigns.form_blueprint
-         ) do
+    case restore(socket, revision_number) do
       {:ok, new_entry} ->
         send_update(BrandoAdmin.Components.Form,
           id: socket.assigns.form_id,
@@ -533,6 +527,24 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     end
   end
 
+  # Postgres cancelled the restore to break a wait on the same rows (an
+  # editor's save, a release apply moving values in the entry's blocks). The
+  # restore is one transaction: nothing was written
+  defp restore(socket, revision_number) do
+    Brando.Revisions.set_entry_to_revision(
+      entry_schema(socket),
+      socket.assigns.entry_id,
+      revision_number,
+      socket.assigns.current_user,
+      form: socket.assigns.form_blueprint
+    )
+  rescue
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:deadlock_detected, :serialization_failure],
+        do: {:error, :try_again},
+        else: reraise(error, __STACKTRACE__)
+  end
+
   # A revision that no longer validates, such as a fragment key that no
   # longer fits its format or a nested record missing a field it now
   # requires: which fields, and why
@@ -546,6 +558,12 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         gettext("The revision could not be activated. %{reasons}. Load it, correct this and save it.", reasons: reasons)
     end
   end
+
+  defp activation_error(_socket, :try_again),
+    do:
+      gettext(
+        "Another change to the same content was saved at the same moment, and the revision was not activated. Activate it again."
+      )
 
   defp activation_error(_socket, _reason), do: gettext("The revision could not be activated.")
 

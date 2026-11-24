@@ -210,7 +210,7 @@ defmodule Brando.Translations.Sync do
   @doc "The `{module_origin, module_id}` of every block in `entries`, at any depth."
   def module_refs(entries, schema) do
     fields =
-      if function_exported?(schema, :__blocks_fields__, 0),
+      if Code.ensure_loaded?(schema) and function_exported?(schema, :__blocks_fields__, 0),
         do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
         else: []
 
@@ -280,7 +280,7 @@ defmodule Brando.Translations.Sync do
     fields = Enum.flat_map(attributes -- @excluded_fields, &field_class(&1, source_controlled, text_fields))
 
     blocks_fields =
-      if function_exported?(schema, :__blocks_fields__, 0),
+      if Code.ensure_loaded?(schema) and function_exported?(schema, :__blocks_fields__, 0),
         do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
         else: []
 
@@ -552,7 +552,7 @@ defmodule Brando.Translations.Sync do
   """
   def own_new_ref_galleries(%schema{} = payload) do
     fields =
-      if function_exported?(schema, :__blocks_fields__, 0),
+      if Code.ensure_loaded?(schema) and function_exported?(schema, :__blocks_fields__, 0),
         do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
         else: []
 

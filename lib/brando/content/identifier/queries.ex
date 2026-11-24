@@ -83,7 +83,7 @@ defmodule Brando.Content.Identifier.Queries do
   """
   @spec get_entry_for_identifier(Identifier.t()) :: {:ok, map()} | {:error, atom()}
   def get_entry_for_identifier(%Identifier{entry_id: entry_id, schema: schema}) do
-    if function_exported?(schema, :__info__, 1) do
+    if Code.ensure_loaded?(schema) do
       context = schema.__modules__().context
       singular = schema.__naming__().singular
       preloads = Brando.Blueprint.preloads_for(schema)

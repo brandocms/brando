@@ -84,4 +84,41 @@ defmodule Brando.Content.Identifier.QueriesTest do
       assert List.first(identifiers).title == "Page 1"
     end
   end
+
+  describe "get_entry_for_identifier/1" do
+    # A Mix task, a release `eval` or a fresh node names a schema nothing has
+    # loaded yet.
+    @tag :tmp_dir
+    test "loads the entry of a schema that is not loaded yet", %{tmp_dir: dir} do
+      domain = "UnloadedIdentifier#{System.unique_integer([:positive])}"
+      context = Module.concat(Brando, domain)
+      schema = Module.concat(context, Thing)
+
+      Module.create(context, quote(do: def(get_thing(opts), do: {:ok, opts})), Macro.Env.location(__ENV__))
+
+      Brando.Test.UnloadedModule.compile(
+        quote do
+          defmodule unquote(schema) do
+            use Brando.Blueprint,
+              application: "Brando",
+              domain: unquote(domain),
+              schema: "Thing",
+              singular: "thing",
+              plural: "things",
+              gettext_module: Brando.Gettext
+
+            attributes do
+              attribute :title, :string
+            end
+          end
+        end,
+        dir
+      )
+
+      refute :code.is_loaded(schema)
+
+      assert {:ok, %{matches: %{id: 7}}} =
+               Queries.get_entry_for_identifier(%Brando.Content.Identifier{entry_id: 7, schema: schema})
+    end
+  end
 end
