@@ -1,0 +1,1 @@
+- A duplicated page's fragments and child pages get galleries of their own: changing a gallery in the copy no longer changes the original's.
