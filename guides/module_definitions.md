@@ -1035,8 +1035,10 @@ together (on the Release changes screen, or with
 `mix brando.modules apply --release --uid`) that are over it together;
 each module within it on its own is planned as moving, and the apply
 decides with the blocks locked, so a count that crossed the limit since the
-review moves or leaves accordingly. The apply's output says what it moved
-and what it left, with the command that moves the rest:
+review moves or leaves accordingly. The apply's output (the Mix task, the
+release apply, the Release changes and Module files screens and the
+definition watcher's log) says what it moved and what it left, with the
+command that moves the rest:
 
 ```
 update module kulturslider: moves no values over the apply's limit; blocks keep var title (renamed to heading) in 1600 blocks for the resolve command
