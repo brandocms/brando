@@ -784,6 +784,22 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert loads == []
     end
 
+    # The admin removed the new key after the apply left the values: the
+    # command would be refused, so the plan sends the operator to Resolve blocks
+    test "a rename an apply left is not offered the --map line once the module lacks the new key", c do
+      entry_blocks!(c, c.module, "tagline", 501)
+      rename_tagline!(c)
+      import!(c)
+
+      {:ok, bundle} = Definitions.read(c.path)
+      renames = Renames.declared(bundle, c.module.uid)
+      record = c |> module() |> Repo.preload([:refs, :vars])
+      assert [%{from: "tagline", to: "heading", ok?: true}] = Renames.left(record, renames)
+
+      without = %{record | vars: Enum.reject(record.vars, &(&1.key == "heading"))}
+      assert [%{from: "tagline", ok?: false}] = Renames.left(without, renames)
+    end
+
     test "over the limit, a ref whose slot holds blocks is refused, as resolve doesn't move them", c do
       footnote!(c, first_block(c.identity), "body")
       bare_blocks!(c, c.module, "tagline", 1500)

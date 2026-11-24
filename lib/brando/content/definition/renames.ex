@@ -406,10 +406,14 @@ defmodule Brando.Content.Definition.Renames do
   applied already, those whose source key blocks still hold: values an
   apply left for `resolve --map` (`leave/1`), as `remaps/3` gives them. The
   blocks aren't loaded for a dry run, as for any rename an apply left: the
-  command refuses what it can't move by name.
+  command refuses what it can't move by name. A new key the module lacks
+  by now (removed in the admin since) has no command to offer.
   """
-  def left(record, renames),
-    do: for({rename, ids} <- held(record, record, renames), do: Map.put(rename, :ok?, slotted(rename, ids) == 0))
+  def left(record, renames) do
+    for {rename, ids} <- held(record, record, renames) do
+      Map.put(rename, :ok?, target(record, rename.kind, rename.to) != nil and slotted(rename, ids) == 0)
+    end
+  end
 
   defp held(record, module, renames) do
     for rename <- renames,
