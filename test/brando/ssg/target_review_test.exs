@@ -79,7 +79,8 @@ defmodule Brando.SSG.TargetReviewTest do
     end
   end
 
-  defp answer(["-e", _ssh, "--max-size=" <> _, _timeout, "--", _remote, dir], _paths, opts) do
+  defp answer(["-e", _ssh, "-rlp", "--max-size=" <> _ | rest], _paths, opts) do
+    dir = List.last(rest)
     if text = opts[:htaccess], do: File.write!(Path.join(dir, ".htaccess"), text)
     {"", 0}
   end
@@ -131,7 +132,9 @@ defmodule Brando.SSG.TargetReviewTest do
                          @target
                        ]}
 
-      assert_received {:rsync, ["-e", _ssh, "--max-size=" <> _, "--timeout=30", "--", @target <> "/.htaccess", _dir]}
+      assert_received {:rsync,
+                       ["-e", _ssh, "-rlp", "--max-size=32768", "--info=skip1", "--timeout=30", "--filter=+ /.htaccess",
+                        "--filter=- *", "--", @target <> "/", _dir]}
 
       assert {:ok, %{reviewed: false, found: ^found, keep: [".well-known/", "cgi-bin/"]}} =
                TargetReview.status(c.site, c.superuser)

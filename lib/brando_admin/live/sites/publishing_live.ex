@@ -203,6 +203,17 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                 <input type="number" min="1" max="65535" name="deploy[port]" value={deploy_value(@site, :port) || 22} />
               </label>
             </div>
+            <div :if={@strategy == "rsync"} class="publishing-htaccess-option">
+              <label class="environment-check">
+                <input type="checkbox" name="deploy[htaccess]" value="true" checked={deploy_value(@site, :htaccess)} />
+                <span>{gettext("The host is Apache or LiteSpeed")}</span>
+              </label>
+              <p>
+                {gettext(
+                  "Each deploy writes the redirects, the 404 page and caching into Brando's block in the target's .htaccess, and leaves _redirects.json out. The host's own lines stay. Open the site after the first deploy: a host that forbids these directives answers 500."
+                )}
+              </p>
+            </div>
             <label>
               <span>{gettext("Public CDN URL (optional)")}</span>
               <input name="deploy[cdn_url]" value={deploy_value(@site, :cdn_url)} placeholder="https://www.example.com" />
@@ -746,7 +757,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
       cdn_url: blank_to_nil(params["cdn_url"]),
       webhook_url: blank_to_nil(params["webhook_url"]),
       auto_deploy: params["auto_deploy"] == "true",
-      retention_count: parse_integer(params["retention_count"], 10)
+      retention_count: parse_integer(params["retention_count"], 10),
+      htaccess: params["htaccess"] == "true"
     }
 
     user = socket.assigns.current_user
@@ -999,10 +1011,20 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
     # Ticks are for the list they were made on
     digest = fn target -> target && target.found && target.found.digest end
-    ticked = if digest.(target) == digest.(socket.assigns[:target]), do: socket.assigns[:ticked], else: MapSet.new()
+
+    ticked =
+      if digest.(target) == digest.(socket.assigns[:target]),
+        do: socket.assigns[:ticked],
+        else: default_ticked(target)
 
     assign(socket, target: target, ticked: ticked || MapSet.new())
   end
+
+  # The host's .htaccess is kept unless the admin says otherwise
+  defp default_ticked(%{reviewed: false, found: %{paths: paths}}),
+    do: if(".htaccess" in paths, do: MapSet.new([".htaccess"]), else: MapSet.new())
+
+  defp default_ticked(_target), do: MapSet.new()
 
   # The public key, for those who may change it; the private key stays in its file
   defp assign_key(socket, site) do
