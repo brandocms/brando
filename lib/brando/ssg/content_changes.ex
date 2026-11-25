@@ -24,9 +24,10 @@ defmodule Brando.SSG.ContentChanges do
 
   A mark errs towards changed: a save that changes nothing a build renders
   (a draft, a note) may mark. It can also be lost: the process that saved
-  stopped between the commit and the mark, or the write failed, which is
-  logged and never fails the save. `changed_since?/1` therefore also reads
-  the environment's activity log, which is written with the save.
+  stopped between the commit and the mark, or the write failed or waited
+  too long for another session's lock, which is logged and never fails the
+  save. `changed_since?/1` therefore also reads the environment's activity
+  log, which is written with the save.
 
   Once a mark is written, `{:ssg_content_changed, environment_id}` goes out on
   the site's `Brando.SSG.Builds.topic/1`, at most once a second for each
@@ -48,6 +49,9 @@ defmodule Brando.SSG.ContentChanges do
   require Logger
 
   @interval 1_000
+  # How long a save that has committed waits for another session holding its
+  # environment's mark, in milliseconds
+  @lock_wait 1_000
   @waiters Brando.SSG.ContentChanges.TaskSupervisor
 
   # What an MCP client asked for, and notes beside an entry: the changes a
@@ -184,12 +188,34 @@ defmodule Brando.SSG.ContentChanges do
   defp mark(site_id, environment_ids) do
     if Brando.Repo.repo().in_transaction?(),
       do: mark_after_transaction(site_id, environment_ids),
-      else: site_id |> write(environment_ids) |> announce()
+      else: site_id |> write_now(environment_ids) |> announce()
   end
 
-  defp write(site_id, environment_ids) do
-    case Brando.Repo.repo().query(@mark, [site_id, environment_ids]) do
-      {:ok, %{rows: rows}} ->
+  # In the saving process, whose save has committed: it waits only a moment
+  # for another session's lock on the mark, and leaves the change to the
+  # activity log when that is not enough
+  defp write_now(site_id, environment_ids) do
+    repo = Brando.Repo.repo()
+
+    written(fn ->
+      repo.transaction(fn ->
+        repo.query!("SET LOCAL lock_timeout = #{@lock_wait}")
+
+        case upsert(site_id, environment_ids) do
+          {:ok, rows} -> rows
+          {:error, error} -> repo.rollback(error)
+        end
+      end)
+    end)
+  end
+
+  defp write(site_id, environment_ids), do: written(fn -> upsert(site_id, environment_ids) end)
+
+  # The environment and site of each mark written; nothing when it failed,
+  # which is logged
+  defp written(upsert) do
+    case upsert.() do
+      {:ok, rows} ->
         rows
 
       {:error, error} ->
@@ -200,6 +226,10 @@ defmodule Brando.SSG.ContentChanges do
     error ->
       log_failure(error)
       []
+  end
+
+  defp upsert(site_id, environment_ids) do
+    with {:ok, %{rows: rows}} <- Brando.Repo.repo().query(@mark, [site_id, environment_ids]), do: {:ok, rows}
   end
 
   defp log_failure(error) do

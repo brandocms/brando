@@ -199,6 +199,36 @@ defmodule Brando.SSG.ContentChangesTest do
       end)
     end
 
+    # A row lock or table lock another session holds on the marks
+    test "made outside a transaction waits only a moment for another session's lock on the marks", c do
+      session = own_session()
+      test = self()
+
+      holder =
+        in_session(session, fn ->
+          Brando.Repo.repo().transaction(fn ->
+            Brando.Repo.repo().query!("LOCK TABLE public.ssg_content_changes IN EXCLUSIVE MODE")
+            send(test, :locked)
+
+            receive do
+              :release -> :ok
+            end
+          end)
+        end)
+
+      assert_receive :locked
+      toucher = Task.async(fn -> ContentChanges.touch_environment(c.production) end)
+
+      try do
+        assert {:ok, :ok} = Task.yield(toucher, 5_000), "the save waited for the lock"
+      after
+        send(holder.pid, :release)
+        Task.await(holder)
+      end
+
+      refute ContentChanges.changed_at(c.production)
+    end
+
     test "rolled back in a transaction begun on the repo itself stays undone, and raises nothing", c do
       page = page!(c.site, c.production, c.user)
 
@@ -496,6 +526,19 @@ defmodule Brando.SSG.ContentChangesTest do
   defp table?(schema, table) do
     %{rows: [[name]]} = Brando.Repo.repo().query!("SELECT to_regclass($1)::text", [~s("#{schema}".#{table})])
     not is_nil(name)
+  end
+
+  # A session of the test database outside the test's sandbox: what it
+  # writes others see once it has committed
+  defp own_session do
+    start_supervised!({BrandoIntegration.Repo, name: nil, pool: DBConnection.ConnectionPool, pool_size: 2})
+  end
+
+  defp in_session(session, fun) do
+    Task.async(fn ->
+      BrandoIntegration.Repo.put_dynamic_repo(session)
+      fun.()
+    end)
   end
 
   # What `at_mark` returns at each statement that writes a mark while `fun`
