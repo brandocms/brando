@@ -93,9 +93,10 @@ defmodule Brando.SSG.PublishingTest do
     |> Brando.Repo.all(prefix: "public")
   end
 
-  defp set_job_state(%Oban.Job{id: id}, state) do
+  # Oban sets `attempted_at` when a job starts executing
+  defp set_job_state(%Oban.Job{id: id}, state, attempted_at \\ DateTime.utc_now()) do
     from(job in Oban.Job, where: job.id == ^id)
-    |> Brando.Repo.update_all([set: [state: state]], prefix: "public")
+    |> Brando.Repo.update_all([set: [state: state, attempted_at: attempted_at]], prefix: "public")
   end
 
   # Runs a job as Oban would, and leaves its row as Oban would after the result
@@ -364,6 +365,28 @@ defmodule Brando.SSG.PublishingTest do
       assert %{state: :failed, failed: :build} = Publishing.status(site(c), c.production)
       assert {:ok, again} = Publishing.publish(c.site, c.production, c.user)
       assert Builds.get_build(again.id).status == :deployed
+    end
+
+    test "left executing past its timeout, as after a restart: failed, and a new Publish builds again", c do
+      manual(fn -> {:ok, _build} = Publishing.publish(c.site, c.production, c.user) end)
+      [job] = jobs("Brando.Worker.SSGBuild")
+      [build] = Builds.list_builds(c.site)
+      {:ok, _building} = Builds.update(build, %{status: :building, started_at: DateTime.utc_now()})
+      set_job_state(job, "executing", DateTime.add(DateTime.utc_now(), -SSGBuild.timeout(job) - 1000, :millisecond))
+
+      assert %{state: :failed, failed: :build} = Publishing.status(site(c), c.production)
+      assert {:ok, again} = Publishing.publish(c.site, c.production, c.user)
+      assert Builds.get_build(again.id).status == :deployed
+    end
+
+    test "a deploy job left executing past its timeout no longer reads as publishing", c do
+      {:ok, ready} = Publishing.publish(c.site, c.production, c.user, deploy: false)
+      manual(fn -> {:ok, _job} = Publishing.publish_build(c.site, c.production, ready.id, c.user) end)
+      [job] = jobs("Brando.Worker.SSGDeploy")
+      set_job_state(job, "executing", DateTime.add(DateTime.utc_now(), -SSGDeploy.timeout(job) - 1000, :millisecond))
+
+      # Neither publishing nor ready: the deploy it owes has no job that can run
+      refute match?(%{state: :publishing}, Publishing.status(site(c), c.production))
     end
 
     test "after it wrote ready: its retry deploys what the build owes", c do

@@ -20,8 +20,11 @@ defmodule Brando.SSG.Publishing do
   sees the same:
 
     * `:publishing` — a build of the environment has a job that can still
-      run (`Oban` states available, executing, retryable, or scheduled and
-      due), for building it or for deploying it. `:step` says `:waiting` (the
+      run (`Oban` states available, retryable, scheduled and due, or
+      executing within its worker's timeout), for building it or for
+      deploying it. A job left executing longer lost its node (a restart):
+      Oban's Lifeline rescues it only after an hour, if the application
+      runs it at all. `:step` says `:waiting` (the
       job waits for the serial queue), `:building` or `:deploying`;
     * `:failed` — the environment's latest attempt failed: its build
       (`failed: :build`; also a build left queued or building with no job to
@@ -62,7 +65,7 @@ defmodule Brando.SSG.Publishing do
 
   @public_opts [prefix: "public"]
   @workers ["Brando.Worker.SSGBuild", "Brando.Worker.SSGDeploy"]
-  @runnable ["available", "executing", "retryable"]
+  @runnable ["available", "retryable"]
 
   @type status ::
           %{state: :publishing, step: :waiting | :building | :deploying, build: Build.t(), deployed: Build.t() | nil}
@@ -234,16 +237,22 @@ defmodule Brando.SSG.Publishing do
     end
   end
 
-  # A job of the build that can still run: waiting, running, to be retried,
-  # or scheduled for a time that has come
+  # A job of the build that can still run: waiting, to be retried, scheduled
+  # for a time that has come, or running within its worker's timeout (as
+  # `Brando.Images.SizeRun.remaining/1` counts)
   defp runnable_job do
     now = DateTime.utc_now()
+    build_since = DateTime.add(now, -SSGBuild.timeout(%Oban.Job{}), :millisecond)
+    deploy_since = DateTime.add(now, -SSGDeploy.timeout(%Oban.Job{}), :millisecond)
 
     dynamic(
       [build, job],
       job.queue == "ssg_builds" and job.worker in @workers and
         fragment("(?->>'build_id')::bigint", job.args) == build.id and
-        (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now))
+        (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now) or
+           (job.state == "executing" and
+              ((job.worker == "Brando.Worker.SSGBuild" and job.attempted_at > ^build_since) or
+                 (job.worker == "Brando.Worker.SSGDeploy" and job.attempted_at > ^deploy_since))))
     )
   end
 
