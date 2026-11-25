@@ -61,6 +61,7 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
+  alias Brando.Cache.Query, as: QueryCache
   alias Brando.Content.Proposals.CreateEntry
   alias Brando.Content.Proposals.ReplaceImageFile
   alias Brando.Content.Proposals.SetFields
@@ -71,10 +72,9 @@ defmodule Brando.Content.Proposals.ImageReplacement do
   alias Brando.Images.Image
   alias Brando.Images.Intake
   alias Brando.Repo
+  alias Brando.Tenant
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Uploads.ContentType
-
-  require Logger
 
   @svg "image/svg+xml"
   # Proportions within 1% of each other are the same picture's
@@ -683,6 +683,15 @@ defmodule Brando.Content.Proposals.ImageReplacement do
     Images.Source.hand_over(new, replaced)
     Repo.delete!(new)
 
+    prefix = Tenant.current_prefix()
+
+    Repo.after_commit(fn ->
+      Tenant.with_prefix(prefix, fn ->
+        QueryCache.evict(replaced)
+        QueryCache.evict_entry(Image, new_id)
+      end)
+    end)
+
     # The entries that show OLD link its previous files until they are
     # rendered again, and a cached page longer
     Brando.Media.OrphanCleanup.hold_image_files(old)
@@ -722,20 +731,6 @@ defmodule Brando.Content.Proposals.ImageReplacement do
       )
 
     deleted
-  end
-
-  @doc "Once the proposal is committed: what reads the images afresh."
-  @spec after_commit([map()]) :: :ok
-  def after_commit(replaced) do
-    for %{"image" => id} <- replaced do
-      Brando.Cache.Query.evict_entry(Image, id)
-    end
-
-    :ok
-  rescue
-    error ->
-      Logger.warning("[Brando.Content.Proposals.ImageReplacement] " <> Exception.message(error))
-      :ok
   end
 
   defp problem(code, message), do: %{code: code, message: message}
