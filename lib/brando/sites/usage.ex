@@ -174,4 +174,11 @@ defmodule Brando.Sites.Usage do
   @doc false
   def broadcast_measured(site_id),
     do: Phoenix.PubSub.broadcast(Brando.pubsub(), @topic, {:site_usage_measured, site_id})
+
+  @doc false
+  def subscribe_overview, do: Phoenix.PubSub.subscribe(Brando.pubsub(), @topic <> ":overview")
+
+  @doc false
+  def broadcast_overview(scope),
+    do: Phoenix.PubSub.broadcast(Brando.pubsub(), @topic <> ":overview", {:site_usage_measured, scope})
 end

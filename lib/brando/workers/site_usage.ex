@@ -56,15 +56,25 @@ defmodule Brando.Worker.SiteUsage do
 
   defp run(%{"all" => true}) do
     today = Date.utc_today()
-    Enum.each(Registry.list_sites(), &measure(&1, today))
+    sites = Registry.list_sites()
+    schemas = Measure.tenant_schemas()
+    Enum.each(sites, &measure(&1, today, {:daily, schemas}))
     pruned = Usage.prune(today)
+    Usage.broadcast_overview(:all)
     Logger.info("==> [CRON] Measured site usage; deleted #{pruned} rows older than #{Usage.retention_months()} months")
     :ok
   end
 
-  defp measure(site, today) do
-    :ok = Usage.put_measurement(site.id, today, Measure.site(site))
-    Usage.broadcast_measured(site.id)
+  defp measure(site, today, scope \\ :manual) do
+    measurement =
+      case scope do
+        :manual -> Measure.site(site)
+        {:daily, schemas} -> Measure.site(site, schemas)
+      end
+
+    :ok = Usage.put_measurement(site.id, today, measurement)
+    :ok = Usage.broadcast_measured(site.id)
+    if scope == :manual, do: Usage.broadcast_overview(site.id), else: :ok
   rescue
     error ->
       Logger.error("[Brando.Sites.Usage] Could not measure #{site.key}: #{Exception.message(error)}")

@@ -1565,9 +1565,10 @@ config :brando, Brando.Sites.Usage,
 
 **Storage** comes from `Brando.Worker.SiteUsage`, once a day at 05:45 UTC on
 its own `site_usage` queue: it measures every site and stores the snapshot on
-the day's row, then deletes rows past the retention period. A site whose
-measuring fails keeps its last snapshot, and the screen says which day a
-figure is from; a day with traffic and no measurement shows storage as
+the day's row, then deletes rows past the retention period. The daily job
+lists tenant schemas once at the start. Open Sites screens refresh when the
+sweep finishes. A site whose measuring fails keeps its last snapshot, and
+the screen says which day a figure is from; a day with traffic and no measurement shows storage as
 unknown, never as zero, and no change is shown without two measurements in
 the 30 days. Folders are walked without following links inside them, and kept
 builds are measured whatever the site's delivery is today; the builds are

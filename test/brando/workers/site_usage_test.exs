@@ -194,6 +194,18 @@ defmodule Brando.Worker.SiteUsageTest do
       refute_receive {:EXIT, _port, _reason}, 100
     end
 
+    test "a sweep skips a schema dropped since discovery, and a manual sample discovers new schemas", %{acme: acme} do
+      dropped = "tenant_usage-job-acme_staging"
+      created = "tenant_usage-job-acme_production"
+      Repo.repo().query!(~s(CREATE SCHEMA "#{dropped}"))
+      inventory = Measure.tenant_schemas()
+      Repo.repo().query!(~s(DROP SCHEMA "#{dropped}"))
+      bytes = create_schema(created, 1)
+
+      assert Measure.site(acme, inventory).databases == []
+      assert [%{"schema" => ^created, "bytes" => ^bytes}] = Measure.site(acme).databases
+    end
+
     test "a schema that does not exist has no size" do
       assert Measure.schema_bytes("tenant_usage-job-gone_production") == nil
     end
