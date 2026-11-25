@@ -29,7 +29,7 @@ defmodule Brando.MCP.Uploads do
   have all arrived. `take/3` (`brando_media_finish_upload`) hands the file
   to the connection that prepared it, once; the directory is removed when
   the upload is finished, and anything not finished within `keep_minutes`
-  (60) of preparing it is removed when the next upload is prepared and
+  (60) of preparing it is removed when that connection prepares another upload and
   nightly (`Brando.MCP.prune/0`). A connection has at most `max_pending`
   (10) uploads waiting at once that can still be finished: one whose bytes
   were refused, whose URL passed its time with nothing sent, or whose PUT
@@ -51,6 +51,8 @@ defmodule Brando.MCP.Uploads do
 
   require Logger
 
+  @inventory ".pending-by-grant"
+  @prepare_error "The upload could not be prepared on the server. Try again."
   @id_bytes 16
   @secret_bytes 32
   # Bandit waits for a whole `read_length` within `read_timeout`, so the
@@ -163,13 +165,75 @@ defmodule Brando.MCP.Uploads do
   @spec prepare(Grant.t(), MCP.tenant(), String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
   def prepare(%Grant{} = grant, tenant, filename, folder) do
     with :ok <- ensure_root(),
-         _swept = sweep(),
-         :ok <- room(grant) do
-      create(grant, tenant, filename, folder)
+         {:ok, result} <- Repo.transaction(fn -> reserve(grant, tenant, filename, folder) end) do
+      result
     else
-      {:error, message} when is_binary(message) -> {:error, message}
-      _ -> {:error, "The upload could not be prepared on the server. Try again."}
+      _ -> {:error, @prepare_error}
     end
+  rescue
+    _error in [File.Error, Postgrex.Error, DBConnection.ConnectionError] -> {:error, @prepare_error}
+  end
+
+  # All nodes sharing the staging area use the same database. Only another
+  # preparation for this grant waits while its inventory is checked and updated.
+  defp reserve(grant, tenant, filename, folder) do
+    ensure_inventory!()
+    lock!("grant-#{grant.id}")
+    ensure_directory!(bucket(grant.id))
+    with :ok <- room(grant), do: create(grant, tenant, filename, folder)
+  end
+
+  defp lock!(key) do
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "brando-mcp-upload:" <> key
+    ])
+  end
+
+  defp inventory, do: Path.join(root(), @inventory)
+  defp bucket(grant_id) when is_integer(grant_id), do: Path.join(inventory(), Integer.to_string(grant_id))
+  defp marker(grant_id, id), do: Path.join(bucket(grant_id), id)
+
+  defp ensure_directory!(path) do
+    case File.mkdir(path) do
+      :ok ->
+        :ok
+
+      {:error, :eexist} ->
+        unless match?(%File.Stat{type: :directory}, File.lstat!(path)),
+          do: raise(File.Error, reason: :enotdir, action: "use upload inventory", path: path)
+
+      {:error, reason} ->
+        raise File.Error, reason: reason, action: "create upload inventory", path: path
+    end
+  end
+
+  # Existing URLs and their directories keep their names. Adopt uploads
+  # prepared before the inventory existed once, before admitting a new one.
+  defp ensure_inventory! do
+    ensure_directory!(inventory())
+    ready = Path.join(inventory(), ".ready")
+
+    unless File.regular?(ready) do
+      lock!("inventory")
+
+      unless File.regular?(ready), do: build_inventory!(ready)
+    end
+  end
+
+  defp build_inventory!(ready) do
+    for id <- File.ls!(root()),
+        valid_id?(id),
+        {:ok, %{"grant_id" => grant_id}} <- [read_meta(id)],
+        is_integer(grant_id) do
+      track!(grant_id, id)
+    end
+
+    File.touch!(ready)
+  end
+
+  defp track!(grant_id, id) do
+    ensure_directory!(bucket(grant_id))
+    File.touch!(marker(grant_id, id))
   end
 
   defp room(grant) do
@@ -181,6 +245,7 @@ defmodule Brando.MCP.Uploads do
   end
 
   defp create(grant, tenant, filename, folder) do
+    {_cfg, limit, types} = limits()
     id = random(@id_bytes)
     secret = random(@secret_bytes)
     now = System.system_time(:second)
@@ -198,10 +263,7 @@ defmodule Brando.MCP.Uploads do
     }
 
     with :ok <- File.mkdir(dir),
-         :ok <- File.chmod(dir, 0o700),
-         :ok <- File.write(Path.join(dir, @meta), Jason.encode!(meta)) do
-      {_cfg, limit, types} = limits()
-
+         :ok <- write_reservation(dir, id, meta) do
       {:ok,
        %{
          upload_id: id,
@@ -211,7 +273,19 @@ defmodule Brando.MCP.Uploads do
          types: types
        }}
     else
-      _ -> {:error, "The upload could not be prepared on the server. Try again."}
+      _ -> {:error, @prepare_error}
+    end
+  end
+
+  defp write_reservation(dir, id, meta) do
+    with :ok <- File.chmod(dir, 0o700),
+         :ok <- File.write(Path.join(dir, @meta), Jason.encode!(meta)),
+         :ok <- File.touch(marker(meta["grant_id"], id)) do
+      :ok
+    else
+      error ->
+        File.rm_rf(dir)
+        error
     end
   end
 
@@ -239,14 +313,36 @@ defmodule Brando.MCP.Uploads do
   defp pending_count(grant_id) do
     now = System.system_time(:second)
 
-    list_ids()
-    |> Enum.count(fn id ->
-      case read_meta(id) do
-        {:ok, %{"grant_id" => ^grant_id} = meta} -> usable?(id, meta, now)
-        _ -> false
-      end
-    end)
+    grant_id
+    |> bucket()
+    |> File.ls!()
+    |> Enum.filter(&valid_id?/1)
+    |> Enum.count(&pending?(&1, grant_id, now))
   end
+
+  defp pending?(id, grant_id, now) do
+    meta = read_meta(id)
+
+    cond do
+      stale?(id, meta, now) ->
+        with {:ok, _} <- File.rm_rf(dir(id)), do: File.rm(marker(grant_id, id))
+        false
+
+      meta == :error and File.lstat(dir(id)) == {:error, :enoent} ->
+        File.rm(marker(grant_id, id))
+        false
+
+      true ->
+        # A stalled or refused upload can still be finished to learn why it
+        # failed. Retain its marker so later prepares remove its files at expiry.
+        held?(id, meta, grant_id, now)
+    end
+  end
+
+  defp held?(id, {:ok, %{"grant_id" => grant_id} = meta}, grant_id, now), do: usable?(id, meta, now)
+  # A temporarily unreadable reservation still holds its place.
+  defp held?(_id, :error, _, _), do: true
+  defp held?(_, _, _, _), do: false
 
   defp usable?(id, meta, now) do
     dir = dir(id)
@@ -291,18 +387,64 @@ defmodule Brando.MCP.Uploads do
   def sweep do
     now = System.system_time(:second)
 
-    list_ids()
-    |> Enum.count(fn id ->
-      stale? =
-        case read_meta(id) do
-          {:ok, %{"keep_until" => keep_until}} when is_integer(keep_until) -> keep_until < now
-          _ -> older_than?(dir(id), keep_seconds(), now)
-        end
+    indexed? =
+      match?({:ok, _}, checked_root()) and match?({:ok, %{type: :directory}}, File.lstat(inventory())) and
+        File.regular?(Path.join(inventory(), ".ready"))
 
-      if stale?, do: File.rm_rf(dir(id))
-      stale?
-    end)
+    count = Enum.count(list_ids(), &sweep_upload(&1, now, indexed?))
+    if indexed?, do: sweep_buckets()
+    count
   end
+
+  defp sweep_upload(id, now, indexed?) do
+    meta = read_meta(id)
+
+    if stale?(id, meta, now) do
+      match?({:ok, [_ | _]}, File.rm_rf(dir(id)))
+    else
+      if indexed?, do: track_missing(id, meta)
+      false
+    end
+  end
+
+  # During a rolling deployment older nodes can still create an upload without
+  # a marker. A sweep picks up anything staged since the initial adoption.
+  defp track_missing(id, {:ok, %{"grant_id" => grant_id}}) when is_integer(grant_id) do
+    unless File.regular?(marker(grant_id, id)) do
+      Repo.transaction(fn -> track_existing(grant_id, id) end)
+    end
+  end
+
+  defp track_missing(_id, _meta), do: :ok
+
+  defp track_existing(grant_id, id) do
+    lock!("grant-#{grant_id}")
+    if File.dir?(dir(id)), do: track!(grant_id, id)
+  end
+
+  # A process may have stopped between removing a directory and its marker.
+  # Clean each grant under the prepare lock, including its now-empty bucket.
+  defp sweep_buckets do
+    for name <- File.ls!(inventory()),
+        {id, ""} <- [Integer.parse(name)],
+        name == Integer.to_string(id),
+        match?({:ok, %{type: :directory}}, File.lstat(bucket(id))) do
+      Repo.transaction(fn -> sweep_bucket(id) end)
+    end
+  end
+
+  defp sweep_bucket(grant_id) do
+    lock!("grant-#{grant_id}")
+    path = bucket(grant_id)
+
+    with {:ok, names} <- File.ls(path) do
+      for id <- names, valid_id?(id), File.lstat(dir(id)) == {:error, :enoent}, do: File.rm(marker(grant_id, id))
+      File.rmdir(path)
+    end
+  end
+
+  defp stale?(_id, {:ok, %{"keep_until" => until}}, now) when is_integer(until), do: until < now
+  defp stale?(id, _meta, now), do: older_than?(dir(id), keep_seconds(), now)
 
   # A directory being made has no meta yet for a moment
   defp older_than?(path, seconds, now) do
