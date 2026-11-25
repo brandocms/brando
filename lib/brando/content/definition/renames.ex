@@ -99,30 +99,44 @@ defmodule Brando.Content.Definition.Renames do
   can't move either is refused (`refused_if_left`).
   """
   def plan(record, module, renames, viewer) do
-    holders = Map.new(renames, &{&1, holder_ids(record.id, [&1])})
-    ids = holders |> Map.values() |> List.flatten() |> Enum.uniq() |> Enum.sort()
-    counted = Enum.map(renames, &Map.merge(&1, %{blocks: length(holders[&1]), entries: 0}))
+    {count, ids} = count_and_ids(record.id, renames)
+
+    plan =
+      if count > @limit[:blocks] do
+        counted = count_renames(record.id, renames, count)
+        %{renames: counted, blocks: count, entries: [], unrevisioned: 0, refused: []}
+      else
+        loaded(record, module, renames, ids || [], viewer)
+      end
 
     refused_if_left =
-      renames
-      |> Enum.zip(counted)
-      |> Enum.flat_map(fn {rename, counted} ->
-        (definition_refusal(counted, record, module, viewer) || []) ++ slot_refusal(rename, holders[rename])
+      Enum.flat_map(plan.renames, fn rename ->
+        (definition_refusal(rename, record, module, viewer) || []) ++ slot_refusal(rename, record.id)
       end)
 
-    if length(ids) > @limit[:blocks] do
-      %{
-        renames: counted,
-        blocks: length(ids),
-        entries: [],
-        unrevisioned: 0,
-        refused: refused_if_left,
-        refused_if_left: refused_if_left,
-        left?: true
-      }
-    else
-      plan = Map.merge(loaded(record, module, renames, ids, viewer), %{refused_if_left: refused_if_left, left?: false})
-      if over_limit([plan]), do: leave(plan), else: plan
+    plan = Map.merge(plan, %{refused_if_left: refused_if_left, left?: false})
+    if over_limit([plan]), do: leave(plan), else: plan
+  end
+
+  # Count and conditionally fetch under one statement snapshot. PostgreSQL
+  # evaluates the ID subquery only in the within-limit branch of the CASE.
+  defp count_and_ids(module_id, renames) do
+    holders = holder_query(module_id, renames)
+    ids = from(b in holders, select: fragment("array_agg(? ORDER BY ?)", b.id, b.id))
+
+    Repo.one(
+      from(b in holders,
+        select: {count(), fragment("CASE WHEN count(*) <= ? THEN ? END", ^@limit[:blocks], subquery(ids))}
+      )
+    )
+  end
+
+  defp count_renames(_module_id, [rename], count), do: [Map.merge(rename, %{blocks: count, entries: 0})]
+
+  defp count_renames(module_id, renames, _count) do
+    for rename <- renames do
+      blocks = Repo.aggregate(holder_query(module_id, [rename]), :count)
+      Map.merge(rename, %{blocks: blocks, entries: 0})
     end
   end
 
@@ -209,6 +223,10 @@ defmodule Brando.Content.Definition.Renames do
 
   # The blocks of the module, here, that hold a source key
   defp holder_ids(module_id, renames) do
+    Repo.all(from(b in holder_query(module_id, renames), select: b.id, order_by: b.id))
+  end
+
+  defp holder_query(module_id, renames) do
     keys = for %{kind: :var, from: from} <- renames, do: from
     names = for %{kind: :ref, from: from} <- renames, do: from
     vars = from(v in Var, where: v.key in ^keys and not is_nil(v.block_id), select: v.block_id)
@@ -216,11 +234,8 @@ defmodule Brando.Content.Definition.Renames do
 
     from(b in Block,
       where: b.module_id == ^module_id and b.module_origin == :local,
-      where: b.id in subquery(vars) or b.id in subquery(refs),
-      order_by: b.id,
-      select: b.id
+      where: b.id in subquery(vars) or b.id in subquery(refs)
     )
-    |> Repo.all()
   end
 
   defp load([]), do: []
@@ -282,10 +297,12 @@ defmodule Brando.Content.Definition.Renames do
 
   # A ref whose slot holds blocks: the resolve command renames the ref, not
   # the slot, so its values can't be left for it
-  defp slot_refusal(%{kind: :var}, _ids), do: []
+  defp slot_refusal(%{kind: :var}, _module_id), do: []
 
-  defp slot_refusal(%{kind: :ref} = rename, ids) do
-    case slotted(rename, ids) do
+  defp slot_refusal(%{kind: :ref} = rename, module_id) do
+    holders = from(b in holder_query(module_id, [rename]), select: b.id)
+
+    case Repo.one(from(s in occupied_slots(rename.from), where: s.parent_id in subquery(holders))) do
       0 ->
         []
 
@@ -439,13 +456,15 @@ defmodule Brando.Content.Definition.Renames do
   defp slotted(%{kind: :var}, _ids), do: 0
 
   defp slotted(%{kind: :ref, from: from}, ids) do
-    Repo.one(
-      from(s in Block,
-        join: c in Block,
-        on: c.parent_id == s.id,
-        where: s.parent_id in ^ids and s.type == :slot and s.slot_name == ^from,
-        select: count(s.parent_id, :distinct)
-      )
+    Repo.one(from(s in occupied_slots(from), where: s.parent_id in ^ids))
+  end
+
+  defp occupied_slots(name) do
+    from(s in Block,
+      join: c in Block,
+      on: c.parent_id == s.id,
+      where: s.type == :slot and s.slot_name == ^name,
+      select: count(s.parent_id, :distinct)
     )
   end
 

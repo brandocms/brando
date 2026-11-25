@@ -1,0 +1,1 @@
+- Planning a definition rename above the block limit counts affected blocks without loading all their IDs.
