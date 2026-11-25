@@ -788,11 +788,6 @@ msgstr "%{count} ord"
 msgid "%{day}: %{requests} requests"
 msgstr "%{day}: %{requests} forespørsler"
 
-#: lib/brando_admin/components/release_changes.ex
-#, elixir-autogen, elixir-format
-msgid "%{dependency} also prevents reverting %{definitions}."
-msgstr "%{dependency} hindrer også tilbakestilling av %{definitions}."
-
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} gets an email with a link to choose a new password. The current password works until then."
@@ -21846,6 +21841,11 @@ msgstr "Denne adressen kan ikke brukes til en video."
 #, elixir-autogen, elixir-format
 msgid "This address is on a private or local network, which webhooks may not call."
 msgstr "Denne adressen er på et privat eller lokalt nettverk, som webhooks ikke kan kalle."
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "This also prevents reverting %{definitions}."
+msgstr "Dette hindrer også tilbakestilling av %{definitions}."
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format

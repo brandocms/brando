@@ -854,10 +854,10 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
         banner =
           render_component(&BrandoAdmin.Components.ReleaseChanges.banner/1,
             batch: batch,
-            changed_since: Enum.map(preview.conflicts, &Map.put(&1, :name, "Paper"))
+            changed_since: preview.conflicts
           )
 
-        assert banner =~ "#{palette_uid} also prevents reverting swatch."
+        assert banner =~ "Swatch"
         assert {:ok, %{reverted: [%{uid: ^independent_uid}]}} = Batches.revert(batch, c.user)
         assert Repo.get!(Module, independent.id).code == independent.code
         assert Repo.get_by!(Module, uid: "swatch").code =~ "<p>Release</p>"

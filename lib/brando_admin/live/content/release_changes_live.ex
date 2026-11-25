@@ -198,17 +198,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
       batch ->
         status = Batches.status(batch, socket.assigns.current_user)
-        names = Map.new(batch.definitions["items"] || [], &{&1["uid"], &1["name"]})
-        changed = Enum.map(status.changed_since, &Map.put(&1, :name, names[&1.uid]))
-        irreversible = Enum.map(status.irreversible, &Map.put(&1, :name, names[&1.uid]))
-
         uids = Enum.map(batch.definitions["items"] || [], & &1["uid"])
         applied_entries = uids |> Entries.sources() |> Entries.list() |> readable()
 
         socket
         |> assign(
           batch: batch,
-          batch_status: %{status | changed_since: changed, irreversible: irreversible},
+          batch_status: status,
           applied_entries: applied_entries
         )
         |> assign_renders(status.renders)
