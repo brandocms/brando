@@ -1,3 +1,4 @@
+import filePicker from '../shared/filePicker'
 import { partition, validate, humanSize } from '../shared/mediaBatch'
 
 /**
@@ -43,7 +44,8 @@ import { partition, validate, humanSize } from '../shared/mediaBatch'
  */
 export default (app) => ({
   mounted() {
-    this.el.addEventListener('click', (event) => {
+    this.picker = filePicker()
+    this.onClick = (event) => {
       // "Upload new" on an entry: one file from disk replaces that entry's
       // asset, exactly like dropping it on the card.
       const replacer = event.target.closest('[data-pick-replace]')
@@ -62,7 +64,8 @@ export default (app) => ({
       event.preventDefault()
       event.stopPropagation()
       this.openPicker(picker.dataset.pick)
-    })
+    }
+    this.el.addEventListener('click', this.onClick)
 
     this.el.addEventListener('dragenter', (event) => {
       event.preventDefault()
@@ -113,7 +116,12 @@ export default (app) => ({
     })
   },
 
-  // A hidden input per media type, created on demand. `accept` narrows the OS
+  destroyed() {
+    this.picker.close()
+    this.el.removeEventListener('click', this.onClick)
+  },
+
+  // One chooser for all media types. `accept` narrows the OS
   // dialog, but everything still goes through the same validation as a drop —
   // the dialog's filter is a convenience, not a guarantee. With `onPick` the
   // dialog takes one file and hands it over instead of adding entries.
@@ -126,20 +134,7 @@ export default (app) => ({
 
     if (!accept.length) return
 
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.multiple = !onPick
-    input.accept = accept.join(',')
-    input.style.display = 'none'
-
-    input.addEventListener('change', (event) => {
-      const files = Array.from(event.target.files || [])
-      if (files.length) onPick ? onPick(files) : this.intake(files)
-      input.remove()
-    })
-
-    this.el.appendChild(input)
-    input.click()
+    this.picker.open(this.el, accept, !onPick, onPick || ((files) => this.intake(files)))
   },
 
   imageAccept() {
