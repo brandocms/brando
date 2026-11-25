@@ -1,3 +1,4 @@
+import filePicker from '../shared/filePicker'
 import { partition } from '../shared/mediaBatch'
 import { settle } from '../shared/mediaDropHandover'
 
@@ -36,6 +37,7 @@ import { settle } from '../shared/mediaDropHandover'
  */
 export default (app) => ({
   mounted() {
+    this.picker = filePicker()
     this.block = this.el.closest('.block')
 
     this.onDragOver = (event) => {
@@ -62,10 +64,13 @@ export default (app) => ({
     this.block.addEventListener('dragover', this.onDragOver)
     this.block.addEventListener('dragleave', this.onDragLeave)
     this.block.addEventListener('drop', this.onDrop)
-    this.el.addEventListener('click', () => this.openPicker())
+    this.onClick = () => this.openPicker()
+    this.el.addEventListener('click', this.onClick)
   },
 
   destroyed() {
+    this.picker.close()
+    this.el.removeEventListener('click', this.onClick)
     clearTimeout(this.dragTimer)
     this.block.removeEventListener('dragenter', this.onDragOver)
     this.block.removeEventListener('dragover', this.onDragOver)
@@ -102,20 +107,7 @@ export default (app) => ({
   openPicker() {
     const kinds = this.kinds()
     const accept = Object.values(kinds).flatMap((kind) => [...(kind.extensions || []), ...(kind.mimetypes || [])])
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.multiple = true
-    input.accept = accept.join(',')
-    input.style.display = 'none'
-
-    input.addEventListener('change', (event) => {
-      const files = Array.from(event.target.files || [])
-      input.remove()
-      if (files.length) this.intake(files)
-    })
-
-    document.body.appendChild(input)
-    input.click()
+    this.picker.open(document.body, accept, true, (files) => this.intake(files))
   },
 
   intake(files) {

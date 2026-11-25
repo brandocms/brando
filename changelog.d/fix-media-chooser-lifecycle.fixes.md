@@ -1,0 +1,1 @@
+- Cancelling a media chooser or leaving its block or transformer releases the file input.
