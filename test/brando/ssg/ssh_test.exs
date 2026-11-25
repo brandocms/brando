@@ -373,6 +373,33 @@ defmodule Brando.SSG.SSHTest do
       assert File.read!(DeployFiles.path(c.site, :known_hosts)) == rebuilt <> "\n"
     end
 
+    # A deploy reads the host keys again for its real run: a replaced server's
+    # keys must not arrive between its checks and that run
+    test "other host keys wait for a running deploy, the same ones do not", c do
+      :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222", other_host_key()) <> "\n")
+      {:ok, changed} = SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222")))
+
+      lock_conn =
+        start_supervised!(
+          {Postgrex, Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])}
+        )
+
+      key = Brando.Tenant.Lock.deploy_key(c.site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      assert {:error, :deploy_running} = SSH.accept_host_keys(c.site, c.superuser, changed)
+      assert [%{data: old}] = SSH.accepted_keys(c.site, @target, 2222)
+      assert old == other_host_key()
+
+      {:ok, same} =
+        SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222", other_host_key())))
+
+      assert :ok = SSH.accept_host_keys(c.site, c.superuser, same)
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      assert :ok = SSH.accept_host_keys(c.site, c.superuser, changed)
+    end
+
     # The source directory is the dry run's own: what is in it is not removed with it
     test "removes only the empty directory it made", c do
       :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222") <> "\n")

@@ -2666,8 +2666,9 @@ port, unless other keys were accepted after the test, which then asks for a
 new one. A host that answers with some of the accepted keys and no other is
 accepted (`ssh-keyscan` may lose one of its connections). When the host
 offers a key that is not among those accepted, the test shows both, and
-accepting the new ones is for a host you know was rebuilt or replaced. A
-test's answer is not shown when the settings were saved or the key rotated
+accepting the new ones is for a host you know was rebuilt or replaced; it
+waits for a running deploy, and asks to try again when that takes more than a
+few seconds. A test's answer is not shown when the settings were saved or the key rotated
 while it ran. With accepted keys, the test runs `rsync -an` from an empty
 directory to the target, which sends and deletes nothing, and says whether
 ssh, the key and rsync on the host work, or what the host answered; for a

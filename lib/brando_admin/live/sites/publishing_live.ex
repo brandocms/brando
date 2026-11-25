@@ -1076,6 +1076,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp connection_error(:host_keys_changed),
     do: gettext("Other host keys were accepted after the test. Test the connection again.")
 
+  defp connection_error(:deploy_running), do: review_error(:deploy_running)
   defp connection_error(:host_key_not_accepted), do: gettext("No host key is accepted for the target's host and port.")
 
   defp connection_error(:host_key_rejected),
