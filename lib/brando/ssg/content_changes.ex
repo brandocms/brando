@@ -150,19 +150,13 @@ defmodule Brando.SSG.ContentChanges do
     end
   end
 
+  # An environment being copied over has its schema dropped and cloned again
   defp logged_since?(prefix, since) do
     from(event in Event, where: event.inserted_at >= ^since and event.action not in ^@not_changes)
     |> Brando.Repo.repo().exists?(prefix: prefix)
-  end
-
-  @doc """
-  The database's clock, which dates marks: a build's `started_at` is taken
-  from it, so a node whose clock differs does not misplace a change.
-  """
-  @spec now() :: DateTime.t()
-  def now do
-    %{rows: [[now]]} = Brando.Repo.repo().query!("SELECT clock_timestamp() AT TIME ZONE 'UTC'")
-    DateTime.from_naive!(now, "Etc/UTC")
+  rescue
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:undefined_table, :invalid_schema_name], do: true, else: reraise(error, __STACKTRACE__)
   end
 
   @doc """

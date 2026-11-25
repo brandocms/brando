@@ -304,6 +304,12 @@ defmodule Brando.SSG.ContentChangesTest do
       refute ContentChanges.changed_since?(c.build)
     end
 
+    # An environment copied over drops and clones its schema again
+    test "is true, and raises nothing, while the environment's schema is gone", c do
+      Brando.Repo.repo().query!(~s(DROP SCHEMA "#{Tenant.prefix(c.site, c.production)}" CASCADE))
+      assert ContentChanges.changed_since?(c.build)
+    end
+
     test "is true when the build's environment is gone", c do
       assert ContentChanges.changed_since?(%{c.build | environment: nil})
     end
