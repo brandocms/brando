@@ -1,7 +1,7 @@
 defmodule Brando.SSG.Publishing do
   @moduledoc """
-  Publishing a static site in one step, as the admin's Publish button does
-  (`BrandoAdmin.Nav`): the state of the environment the site publishes from
+  Publishing a static site in one step, as the Publish button in the admin's
+  navigation does: the state of the environment the site publishes from
   (`status/2`), and the actions on it (`publish/4`, `publish_build/4`,
   `retry/3`). Each action decides from the database what it applies to when
   it runs, under the lock that queues a site's builds, and authorizes its
