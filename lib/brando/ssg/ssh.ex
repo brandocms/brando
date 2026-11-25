@@ -197,13 +197,14 @@ defmodule Brando.SSG.SSH do
 
   defp accept_tested(site, %{target: target, port: port} = test) do
     with {:ok, ^target, ^port} <- stored_target(site) |> same_target(target, port),
-         :ok <- check_target(target, site) do
-      DeployFiles.with_lock(site, fn ->
-        if key_set(accepted_keys(site, target, port)) == key_set(test.accepted_keys),
-          do: write_known_hosts(site, target, port, test.host_keys),
-          else: {:error, :host_keys_changed}
-      end)
-    end
+         :ok <- check_target(target, site),
+         do: DeployFiles.with_lock(site, fn -> accept_unchanged(site, test) end)
+  end
+
+  defp accept_unchanged(site, %{target: target, port: port} = test) do
+    if key_set(accepted_keys(site, target, port)) == key_set(test.accepted_keys),
+      do: write_known_hosts(site, target, port, test.host_keys),
+      else: {:error, :host_keys_changed}
   end
 
   defp same_target({:ok, target, port}, target, port), do: {:ok, target, port}
