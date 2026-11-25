@@ -53,6 +53,11 @@ msgstr "%{block}: %{error}"
 msgid "%{browser} on %{system}"
 msgstr "%{browser} på %{system}"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "%{built} of %{total} pages built"
+msgstr "%{built} av %{total} sider bygget"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{built}/%{total} built"
@@ -1263,7 +1268,7 @@ msgstr "%{used} av %{total} enheter brukt"
 msgid "%{used} used in the proposal · %{free} not used"
 msgstr "%{used} brukt i forslaget · %{free} ikke brukt"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "%{version} is deployed"
 msgstr "%{version} er publisert"
@@ -3068,6 +3073,13 @@ msgstr "Anker på denne siden"
 msgid "And %{count} more"
 msgstr "Og %{count} til"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "And 1 more change"
+msgid_plural "And %{count} more changes"
+msgstr[0] "Og 1 endring til"
+msgstr[1] "Og %{count} endringer til"
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Another change to the same content was saved at the same moment, and nothing was saved. Save again."
@@ -4099,6 +4111,21 @@ msgstr "Bla gjennom denne mappen"
 msgid "Build"
 msgstr "Bygg"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Build %{version}"
+msgstr "Bygg %{version}"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Build %{version} is ready"
+msgstr "Bygg %{version} er klart"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Build %{version} was published %{when}."
+msgstr "Bygg %{version} ble publisert %{when}."
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Build and preview only"
@@ -4149,6 +4176,7 @@ msgstr "Bygg galleriet ditt"
 msgid "Build, preview, deploy, and roll back versioned static artifacts"
 msgstr "Bygg, forhåndsvis, publiser og rull tilbake versjonerte statiske artefakter"
 
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -4580,6 +4608,11 @@ msgstr "Endringer venter på å bli lagret som gjenopprettingskopi. Hold rediger
 msgid "Changes by entry"
 msgstr "Endringer per oppføring"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Changes saved after it was built are not in it."
+msgstr "Endringer lagret etter at det ble bygget, er ikke med."
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Image is reprocessing."
@@ -4601,6 +4634,11 @@ msgstr "Endringene vises overalt der det brukes."
 #, elixir-autogen, elixir-format
 msgid "Changes show on the page as you type"
 msgstr "Endringene vises på siden mens du skriver"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Changes to media and some settings are not listed."
+msgstr "Endringer i media og enkelte innstillinger er ikke listet opp."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -5978,7 +6016,7 @@ msgstr "Klarte ikke opprette omdirigeringen"
 msgid "Could not create the translation"
 msgstr "Kunne ikke opprette oversettelsen"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Could not deploy %{version}"
 msgstr "Klarte ikke å publisere %{version}"
@@ -6003,6 +6041,11 @@ msgstr "Klarte ikke å slå den opp"
 #, elixir-autogen, elixir-format
 msgid "Could not look the videos up"
 msgstr "Klarte ikke å slå opp videoene"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Could not publish the site."
+msgstr "Kunne ikke publisere nettstedet."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -6054,7 +6097,7 @@ msgstr "Kunne ikke gjenopprette: %{reason}"
 msgid "Could not revert the frontend assets"
 msgstr "Kunne ikke bytte til frontend-filene fra releasen"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Could not roll back to %{version}"
 msgstr "Klarte ikke å rulle tilbake til %{version}"
@@ -7122,7 +7165,7 @@ msgstr "Publiser automatisk"
 msgid "Deploy automatically after a successful build"
 msgstr "Publiser automatisk etter et vellykket bygg"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy of %{version} is queued"
 msgstr "Publisering av %{version} står i kø"
@@ -7148,7 +7191,12 @@ msgstr "Publiser via %{strategy} til %{target}"
 msgid "Deployed"
 msgstr "Publisert"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Deploying"
+msgstr "Publiserer"
+
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Deploying %{version}"
 msgstr "Publiserer %{version}"
@@ -10884,6 +10932,11 @@ msgstr "Det slutter å virke med en gang. %{name} kan koble det til igjen."
 msgid "It stops working at once. You can connect it again from the app."
 msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "It was built without publishing it. Look at the preview, then publish it."
+msgstr "Det ble bygget uten å bli publisert. Se på forhåndsvisningen, og publiser det."
+
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
@@ -11742,6 +11795,11 @@ msgstr "Laster versjoner …"
 #, elixir-autogen, elixir-format
 msgid "Loading searches…"
 msgstr "Henter søk …"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Loading the changes…"
+msgstr "Henter endringene …"
 
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
@@ -13311,6 +13369,11 @@ msgstr "Ingen grense"
 msgid "No linked entries yet."
 msgstr "Ingen sammenkoblede innlegg ennå."
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "No listed changes."
+msgstr "Ingen endringer i listen."
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "No loose blocks."
@@ -13983,6 +14046,11 @@ msgstr "Ikke publisert som planlagt: brukeren som planla den, er deaktivert elle
 msgid "Not published as scheduled: the user who scheduled it may no longer publish it"
 msgstr "Ikke publisert som planlagt: brukeren som planla den, har ikke lenger lov til å publisere den"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Not published yet"
+msgstr "Ikke publisert ennå"
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not required"
@@ -14398,6 +14466,11 @@ msgstr "Ingenting ble fjernet: %{reason}"
 msgid "Nothing was restored: %{translation} could not be restored with it."
 msgstr "Ingenting ble gjenopprettet: %{translation} kunne ikke gjenopprettes med den."
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was started: publishing changed since the panel opened. It shows what it is now."
+msgstr "Ingenting ble startet: publiseringen endret seg etter at panelet ble åpnet. Det viser nå hvordan den står."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing yet: connect Figma through an app, or add an access token, below."
@@ -14812,6 +14885,7 @@ msgstr "Åpne %{filename}"
 msgid "Open %{url} in a new tab"
 msgstr "Åpne %{url} i en ny fane"
 
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open Publishing"
@@ -14874,6 +14948,11 @@ msgstr "Åpne på siden"
 #, elixir-autogen, elixir-format
 msgid "Open or close the live preview"
 msgstr "Åpne eller lukk direkte forhåndsvisning"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Open preview"
+msgstr "Åpne forhåndsvisning"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -15773,6 +15852,11 @@ msgstr "Forhåndsvis som"
 msgid "Preview before and after"
 msgstr "Forhåndsvis før og etter"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Preview first"
+msgstr "Forhåndsvis først"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Preview hosts in the guide"
@@ -16004,6 +16088,7 @@ msgstr "Publisering feilet"
 msgid "Publication queued"
 msgstr "Publisering satt i kø"
 
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Publish"
@@ -16015,6 +16100,16 @@ msgstr "Publiser"
 msgid "Publish at"
 msgstr "Publiseringstidspunkt"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Publish changes"
+msgstr "Publiser endringer"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Publish latest changes instead"
+msgstr "Publiser de siste endringene i stedet"
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "Publish or delete entries, change them without your review, or delete media"
@@ -16024,6 +16119,11 @@ msgstr "Publisere eller slette innhold, endre det uten din gjennomgang, eller sl
 #, elixir-autogen, elixir-format
 msgid "Publish the entry to test its page."
 msgstr "Publiser oppføringen for å teste siden."
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Publish this build"
+msgstr "Publiser dette bygget"
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
@@ -16044,6 +16144,7 @@ msgstr "Publiser når det utføres"
 #: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/command_palette_live.ex
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -16090,12 +16191,33 @@ msgstr "Publisert til %{target}. Dette er forespørslene denne installasjonen be
 msgid "Publishes"
 msgstr "Publiseres"
 
+#: lib/brando_admin/live/nav.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Publishing"
 msgstr "Publisering"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing failed"
+msgstr "Publiseringen mislyktes"
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing failed: %{version} was not deployed"
+msgstr "Publiseringen mislyktes: %{version} ble ikke publisert"
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing failed: build %{version} failed"
+msgstr "Publiseringen mislyktes: bygg %{version} mislyktes"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing has already started."
+msgstr "Publiseringen er allerede i gang."
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
@@ -16294,6 +16416,11 @@ msgstr "Klar til gjennomgang"
 #, elixir-autogen, elixir-format
 msgid "Ready to apply"
 msgstr "Klar til å tas i bruk"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Ready: publish this build"
+msgstr "Klart: publiser dette bygget"
 
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -17956,17 +18083,17 @@ msgstr "Rull tilbake"
 msgid "Roll back to %{version}?"
 msgstr "Rulle tilbake til %{version}?"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Rollback to %{version} is queued"
 msgstr "Tilbakerulling til %{version} står i kø"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Rolled back to %{version}"
 msgstr "Rullet tilbake til %{version}"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_deploy.ex
 #, elixir-autogen, elixir-format
 msgid "Rolling back to %{version}"
 msgstr "Ruller tilbake til %{version}"
@@ -18755,6 +18882,11 @@ msgstr "Sikkerhetslogg"
 #, elixir-autogen, elixir-format
 msgid "See all results for “%{query}”"
 msgstr "Se alle treff for «%{query}»"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "See the build's log"
+msgstr "Se byggets logg"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -20931,6 +21063,11 @@ msgstr "Blueprinten kobler ingen forfatter. En utvikler kan legge til en med fel
 msgid "The blueprint maps no image. A developer can add one with the :image field type."
 msgstr "Blueprinten kobler ikke noe bilde. En utvikler kan legge til et med felttypen :image."
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "The build failed"
+msgstr "Bygget mislyktes"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The changes are saved. Pages are re-rendered in the background."
@@ -21046,6 +21183,11 @@ msgstr "Leveringen stoppet med en feil"
 #, elixir-autogen, elixir-format
 msgid "The delivery was sent again."
 msgstr "Leveringen ble sendt på nytt."
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "The deploy failed"
+msgstr "Publiseringen av bygget mislyktes"
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -21761,6 +21903,11 @@ msgstr "Innloggingsreglene er lagret."
 msgid "The site"
 msgstr "Nettstedet"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "The site could not be built, so nothing was published. The site online is unchanged."
+msgstr "Nettstedet kunne ikke bygges, så ingenting ble publisert. Nettstedet på nett er uendret."
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The site has a new SSH key"
@@ -21786,6 +21933,21 @@ msgstr "Nettstedet har ikke et bygg av frontend som forhåndsvisningen kan deles
 #, elixir-autogen, elixir-format
 msgid "The site has no identity in this language, so its pages give no structured data."
 msgstr "Nettstedet har ingen identitet på dette språket, så sidene gir ingen strukturerte data."
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "The site is built, then deployed. Changes saved meanwhile go out with the next publish."
+msgstr "Nettstedet bygges, så publiseres det. Endringer lagret i mellomtiden kommer med neste publisering."
+
+#: lib/brando/notifications/message.ex
+#, elixir-autogen, elixir-format
+msgid "The site online is unchanged. The build's log says why."
+msgstr "Nettstedet på nett er uendret. Byggets logg forteller hvorfor."
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "The site was built, but could not be deployed. The site online is unchanged."
+msgstr "Nettstedet ble bygget, men kunne ikke publiseres. Nettstedet på nett er uendret."
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -23198,6 +23360,7 @@ msgstr "Prøv et ressursnavn, som Sider, eller en handling, som Publiser."
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/nav.ex
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr "Prøv igjen"
@@ -23559,6 +23722,11 @@ msgstr "Upublisert"
 #, elixir-autogen, elixir-format
 msgid "Unpublished as scheduled: %{title}"
 msgstr "Avpublisert som planlagt: %{title}"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Unpublished changes"
+msgstr "Upubliserte endringer"
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
@@ -24551,6 +24719,11 @@ msgstr[1] "Venter på versjoner av %{entries} på %{language}. Frem til da lenke
 msgid "Waiting for a linked translation"
 msgstr "Venter på en koblet oversettelse"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for another build"
+msgstr "Venter på et annet bygg"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
@@ -24725,6 +24898,11 @@ msgstr "Det som er sendt til alle webhooks i dette miljøet, nyeste først."
 #, elixir-autogen, elixir-format
 msgid "What will be lost"
 msgstr "Dette går tapt"
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "What will go out"
+msgstr "Dette blir publisert"
 
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
@@ -25261,6 +25439,11 @@ msgstr[1] "Du har ikke lov til å slette dem for godt."
 #, elixir-autogen, elixir-format
 msgid "You may not move or delete these fragments, so the page can't be deleted."
 msgstr "Du har ikke tilgang til å flytte eller slette disse fragmentene, så siden kan ikke slettes."
+
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "You may not publish this site."
+msgstr "Du har ikke tilgang til å publisere dette nettstedet."
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
