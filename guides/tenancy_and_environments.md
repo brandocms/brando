@@ -2457,7 +2457,7 @@ It shows one state, read from the database, so every admin sees the same:
 | State | When |
 |---|---|
 | **Publishing** | A build of the environment is waiting for the build before it, building (pages built of the total) or deploying |
-| **Publishing failed** | The latest build failed, or its deploy did; also a build whose job stopped and will not run again |
+| **Publishing failed** | The latest build failed, or its deploy did; also a build whose job stopped and will not run again, or was left running past its time by a restart |
 | **Ready: publish this build** | The latest build was made with Preview first, after the deployed one, and its files are still there |
 | **Publish changes** | Nothing is deployed, the deployed build's environment is gone, or the environment's content changed after the deployed build started |
 | **Published** | Otherwise, with when the build was deployed |
