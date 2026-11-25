@@ -8,8 +8,8 @@ defmodule Brando.SSG.DeployFiles do
   The directory is 0700 and each file 0600. A file is written whole, to a
   temporary file in the directory renamed over the old one, so a reader
   finds the old file or the new one and never part of either. A change is
-  made holding the site's `Brando.Tenant.Lock.deploy_files_key/1`
-  (`with_lock/2`); a deploy reads without it.
+  made holding the lock of the site's deploy files (`with_lock/2`); a
+  deploy reads without it.
 
   Nothing is kept where the installation serves files from: when the
   directory's real path (links followed) is inside the media directory,

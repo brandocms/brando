@@ -89,14 +89,14 @@ defmodule Brando.SSG.SSH do
   """
   @spec ensure_key(Site.t(), term()) :: {:ok, String.t()} | {:error, term()}
   def ensure_key(%Site{} = site, actor) do
-    acting(site, actor, fn site ->
-      DeployFiles.with_lock(site, fn ->
-        case public_key(site) do
-          {:error, :no_key} -> write_key(site)
-          result -> result
-        end
-      end)
-    end)
+    acting(site, actor, fn site -> DeployFiles.with_lock(site, fn -> key_or_new(site) end) end)
+  end
+
+  defp key_or_new(site) do
+    case public_key(site) do
+      {:error, :no_key} -> write_key(site)
+      result -> result
+    end
   end
 
   @doc """
@@ -188,15 +188,16 @@ defmodule Brando.SSG.SSH do
   """
   @spec accept_host_keys(Site.t(), term(), test_result()) :: :ok | {:error, term()}
   def accept_host_keys(%Site{} = site, actor, %{target: target, port: port, host_keys: [_ | _] = host_keys}) do
-    acting(site, actor, fn site ->
-      with {:ok, ^target, ^port} <- stored_target(site) |> same_target(target, port),
-           :ok <- check_target(target, site) do
-        DeployFiles.with_lock(site, fn -> write_known_hosts(site, target, port, host_keys) end)
-      end
-    end)
+    acting(site, actor, &accept_tested(&1, target, port, host_keys))
   end
 
   def accept_host_keys(%Site{}, _actor, _result), do: {:error, :no_host_keys}
+
+  defp accept_tested(site, target, port, host_keys) do
+    with {:ok, ^target, ^port} <- stored_target(site) |> same_target(target, port),
+         :ok <- check_target(target, site),
+         do: DeployFiles.with_lock(site, fn -> write_known_hosts(site, target, port, host_keys) end)
+  end
 
   defp same_target({:ok, target, port}, target, port), do: {:ok, target, port}
   defp same_target({:ok, _target, _port}, _tested, _tested_port), do: {:error, :target_changed}
