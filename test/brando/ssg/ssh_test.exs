@@ -562,7 +562,7 @@ defmodule Brando.SSG.SSHTest do
       {:ok, build} = Builds.update(build, %{status: :queued, auto_deploy: true})
       put_test_env(:ssg_deploy_runner, runner(""))
 
-      assert {:error, {:deploy_failed, :deploy_key_missing}} = perform_job(SSGBuild, %{"build_id" => build.id})
+      assert {:cancel, {:deploy_failed, :deploy_key_missing}} = perform_job(SSGBuild, %{"build_id" => build.id})
 
       ready = Builds.get_build(build.id)
       assert ready.status == :ready
@@ -587,7 +587,7 @@ defmodule Brando.SSG.SSHTest do
                perform_job(SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
 
       {:ok, auto} = c.site |> ready_build(c.environment) |> Builds.update(%{status: :queued, auto_deploy: true})
-      assert {:error, {:deploy_failed, _}} = perform_job(SSGBuild, %{"build_id" => auto.id})
+      assert {:cancel, {:deploy_failed, _}} = perform_job(SSGBuild, %{"build_id" => auto.id})
 
       for build <- [build, auto] do
         log = Builds.get_build(build.id).build_log
