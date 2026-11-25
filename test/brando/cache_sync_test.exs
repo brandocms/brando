@@ -131,18 +131,18 @@ defmodule Brando.CacheSyncTest do
       Brando.Repo.transaction(fn ->
         {:ok, _site} = Registry.create_site(site_attrs("acme"))
         Cache.invalidate()
-        refute_received {:brando_cache_sync, _origin, _refresh}
+        refute_received {:brando_cache_sync, _origin, {Cache, :registry}}
       end)
 
       assert_received {:brando_cache_sync, _origin, {Cache, :registry}}
-      refute_received {:brando_cache_sync, _origin, _refresh}
+      refute_received {:brando_cache_sync, _origin, {Cache, :registry}}
 
       Brando.Repo.transaction(fn ->
         {:ok, _site} = Registry.create_site(site_attrs("rolled-back"))
         Brando.Repo.rollback(:undone)
       end)
 
-      refute_received {:brando_cache_sync, _origin, _refresh}
+      refute_received {:brando_cache_sync, _origin, {Cache, :registry}}
       refute Cache.get_site("rolled-back")
     end
 
