@@ -80,8 +80,8 @@ defmodule Brando.SSG.TargetHtaccess do
 
   @doc """
   Fetches and merges the target's `.htaccess` for `mode`, writing the merged
-  file in `dir` (which the caller removes), and says what the real run
-  sends. `keep` is the keep list. Takes the deploy's `:runner`.
+  file in `dir` (the caller's `Brando.SSG.SSH.with_temporary_dir/2`), and
+  says what the real run sends. `keep` is the keep list. Takes the deploy's `:runner`.
   """
   @spec prepare(mode(), Build.t(), String.t(), pos_integer(), [TargetPaths.path()], String.t(), keyword()) ::
           {:ok, step()} | {:error, term()}
@@ -174,32 +174,27 @@ defmodule Brando.SSG.TargetHtaccess do
   @spec fetch(Site.t(), String.t(), pos_integer(), keyword()) ::
           {:ok, binary() | nil, non_neg_integer()} | {:error, term()}
   def fetch(%Site{} = site, target, port, opts) do
-    dir = Path.join(System.tmp_dir!(), "brando-ssg-htaccess-#{System.unique_integer([:positive])}")
-    File.mkdir_p!(dir)
+    SSH.with_temporary_dir("brando-ssg-htaccess", fn dir ->
+      # The target's root with its `.htaccess` alone: no such file is no
+      # error. A link stays a link, and is refused below.
+      args = [
+        "-rlp",
+        "--max-size=#{@limit}",
+        "--info=skip1",
+        "--timeout=30",
+        "--filter=+ /#{@name}",
+        "--filter=- *",
+        "--",
+        String.trim_trailing(target, "/") <> "/",
+        dir <> "/"
+      ]
 
-    # The target's root with its `.htaccess` alone: no such file is no
-    # error. A link stays a link, and is refused below.
-    args = [
-      "-rlp",
-      "--max-size=#{@limit}",
-      "--info=skip1",
-      "--timeout=30",
-      "--filter=+ /#{@name}",
-      "--filter=- *",
-      "--",
-      String.trim_trailing(target, "/") <> "/",
-      dir <> "/"
-    ]
-
-    try do
       case SSH.rsync(site, target, port, args, opts) do
         {:ok, output} -> read_fetched(Path.join(dir, @name), output)
         {:error, {:rsync_failed, _status, _output} = reason} -> {:error, {:htaccess_not_fetched, reason}}
         {:error, _reason} = error -> error
       end
-    after
-      File.rm_rf(dir)
-    end
+    end)
   end
 
   defp read_fetched(path, output) do

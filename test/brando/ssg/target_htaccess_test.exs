@@ -129,6 +129,14 @@ defmodule Brando.SSG.TargetHtaccessTest do
     {"", 0}
   end
 
+  # The first name under `tmp` that `arg` is a path in, or nil
+  defp temporary_dir(arg, tmp) do
+    case Path.relative_to(arg, tmp) do
+      ^arg -> nil
+      relative -> relative |> Path.split() |> hd()
+    end
+  end
+
   defp ready_build(c, files \\ @build_files) do
     {:ok, build} = Builds.request_build(c.site, c.environment, [])
     File.mkdir_p!(build.build_path)
@@ -201,6 +209,29 @@ defmodule Brando.SSG.TargetHtaccessTest do
       assert File.read!(Path.join(build.build_path, ".htaccess")) == "the build's own\n"
       assert File.exists?(Path.join(build.build_path, "_redirects.json"))
       refute DeployFiles.exists?(c.site, :filter)
+    end
+
+    test "lists, fetches and merges in directories only this account may enter, removed after", c do
+      test_pid = self()
+      tmp = System.tmp_dir!()
+      inner = runner(htaccess: @host_lines)
+
+      spy = fn "rsync", args, opts ->
+        for "brando-ssg" <> _rest = name <- Enum.map(args, &temporary_dir(&1, tmp)) do
+          dir = Path.join(tmp, name)
+          send(test_pid, {:temporary, dir, Bitwise.band(File.stat!(dir).mode, 0o777)})
+        end
+
+        inner.("rsync", args, opts)
+      end
+
+      assert {:ok, _deployed} = c |> ready_build() |> Deploy.deploy(runner: spy)
+
+      dirs = for {:temporary, dir, mode} <- Process.info(self(), :messages) |> elem(1), do: {dir, mode}
+      # The listing's, the fetch's and the merged file's
+      assert length(Enum.uniq_by(dirs, &elem(&1, 0))) == 3
+      assert Enum.all?(dirs, fn {_dir, mode} -> mode == 0o700 end)
+      refute Enum.any?(dirs, fn {dir, _mode} -> File.exists?(dir) end)
     end
 
     test "writes the block alone, readable by the web server, when the target has no .htaccess", c do

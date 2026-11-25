@@ -319,11 +319,10 @@ defmodule Brando.SSG.TargetReview do
   # written it), in the last write before it.
   defp run(%Build{site: site} = build, source, state, plan, htaccess, keep, opts) do
     %{target: target, port: port} = state
-    dir = temporary_dir("brando-ssg-merged")
     block? = block_written?(state) or htaccess == :write
     uploading = Map.merge(state, %{uploaded: union(state.uploaded, plan.upload), block: block?})
 
-    try do
+    SSH.with_temporary_dir("brando-ssg-merged", fn dir ->
       with {:ok, step} <- TargetHtaccess.prepare(htaccess, build, target, port, keep, dir, opts),
            :ok <- DeployFiles.write(site, :filter, [step.rules, plan.rules]),
            :ok <- write_state(site, uploading, :uploaded_list),
@@ -336,9 +335,7 @@ defmodule Brando.SSG.TargetReview do
                opts
              ),
            do: {:ok, step.notes}
-    after
-      File.rm_rf(dir)
-    end
+    end)
   end
 
   # From before the `.htaccess` step, a state has no `:block`
@@ -418,17 +415,14 @@ defmodule Brando.SSG.TargetReview do
   # Everything the target holds: a dry run that would delete it all, from an
   # empty directory. Always `-n`: without it these arguments delete.
   defp listing(site, target, port, opts) do
-    empty = temporary_dir("brando-ssg-listing")
     nonce = TargetPaths.nonce()
 
-    try do
+    SSH.with_temporary_dir("brando-ssg-listing", fn empty ->
       args = ["-an", "--delete", TargetPaths.listing_format(nonce), "--", empty <> "/", target]
 
       with {:ok, output} <- SSH.rsync(site, target, port, args, opts),
            do: limited(TargetPaths.parse_listing(output, nonce))
-    after
-      File.rm_rf(empty)
-    end
+    end)
   end
 
   defp limited(paths) do
@@ -443,12 +437,6 @@ defmodule Brando.SSG.TargetReview do
       {:error, :htaccess_too_large} -> :too_large
       {:error, _reason} = error -> error
     end
-  end
-
-  defp temporary_dir(prefix) do
-    dir = Path.join(System.tmp_dir!(), "#{prefix}-#{System.unique_integer([:positive])}")
-    File.mkdir_p!(dir)
-    dir
   end
 
   ## The state file
