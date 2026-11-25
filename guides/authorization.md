@@ -21,7 +21,10 @@ and content transfer, see [User accounts and sessions](users.md).
    **Review groups** to review seeded groups and permission keys
    before the configuration switch. Map custom/conditional application rules to
    explicit permissions and resource policies. The old rule DSL is not translated
-   silently and is not combined with the new resolver.
+   silently and is not combined with the new resolver. The groups are made now,
+   from today's presets: every site's Editor group has View, Build and Deploy on
+   builds and deployments, so the editors of a static site can publish it, which
+   legacy mode does not let them. Untick those for Editor to keep it as it was.
 4. Configure `config :brando, authorization_mode: :groups` and restart the application.
 5. Test with representative accounts on every site and environment, including
    direct URLs and denied writes. Review `/admin/groups` for each scope.
@@ -159,7 +162,10 @@ target panels or a build's log, which names the server and its paths.
 A site made since 0.55 gives its Editor group View, Build and Deploy, so its
 editors publish their changes, and leaves Configure to Admin. Presets are
 seeded once, so an existing site's Editor group keeps the grants it has: tick
-Build and Deploy for it on the group screen. A configuration exported before
+Build and Deploy for it on the group screen. Groups prepared for the switch
+from legacy mode are seeded then, so there Editor has View, Build and Deploy
+on every site: untick them to keep a static site's editors from publishing,
+as in legacy mode. A configuration exported before
 Configure existed imports as written: a group in it with Build or Deploy and
 no Configure gets no Configure.
 
