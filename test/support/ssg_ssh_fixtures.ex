@@ -30,12 +30,12 @@ defmodule Brando.SSGSSHFixtures do
   end
 
   @doc """
-  An editor of `site` in a group with the publishing `capability` (a name
-  such as `"brando.publishing.build"`), made by `superuser`, for tests with
-  capabilities on.
+  An editor of `site` in a group with the publishing `capabilities` (a name
+  such as `"brando.publishing.build"`, or a list of them), made by
+  `superuser`, for tests with capabilities on.
   """
-  def publishing_member(site, superuser, capability) do
-    user = Brando.Factory.insert(:random_user, role: :editor)
+  def publishing_member(site, superuser, capabilities) do
+    user = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
     {:ok, _} = Brando.Tenant.Access.grant(user, site, :editor)
     scope = Brando.Authorization.Scope.site(superuser, site)
 
@@ -43,7 +43,7 @@ defmodule Brando.SSGSSHFixtures do
       Brando.Authorization.Groups.create(
         scope,
         %{name: "Publishing #{System.unique_integer([:positive])}"},
-        ["brando.admin.access", "brando.publishing.read", capability]
+        ["brando.admin.access", "brando.publishing.read" | List.wrap(capabilities)]
       )
 
     {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)

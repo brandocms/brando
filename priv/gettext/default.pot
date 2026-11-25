@@ -854,6 +854,11 @@ msgstr ""
 msgid "%{host} cannot be both the domain and one of its redirect hosts."
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} matches %{pattern}, which the installation keeps for static sites' build previews."
+msgstr ""
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{host}, port %{port}"
@@ -3637,6 +3642,11 @@ msgstr ""
 msgid "Automatic"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic deployment"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic jobs"
@@ -4105,6 +4115,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Build library"
+msgstr ""
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Build makes a version of the static site to preview, Schedule makes one at a set time, and Deploy puts a build online or rolls back to an earlier one. Configure sets where and how the site deploys: the target, its SSH and host keys, the files a deploy may delete there, and the CDN and webhook URLs."
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -5372,6 +5387,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
 #: lib/brando_admin/components/form/input/gallery.ex
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Configure"
 msgstr ""
@@ -6049,11 +6065,6 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Could not save revision"
-msgstr ""
-
-#: lib/brando_admin/live/sites/publishing_live.ex
-#, elixir-autogen, elixir-format
-msgid "Could not save static deployment settings."
 msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex
@@ -7158,6 +7169,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deploys to"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploys via %{strategy}"
 msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex
@@ -8905,6 +8921,11 @@ msgstr ""
 #: lib/brando_admin/work.ex
 #, elixir-format, elixir-autogen
 msgid "Failed"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Failed URLs"
 msgstr ""
 
 #: lib/brando_admin/components/two_factor.ex
@@ -13238,6 +13259,11 @@ msgstr ""
 msgid "No host key is accepted for the target's host and port."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "No host key is accepted for the target. Someone who may configure publishing tests the connection here and accepts the host's key."
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "No image"
@@ -14483,6 +14509,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -14514,6 +14541,7 @@ msgstr ""
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -15741,6 +15769,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Preview before and after"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Preview hosts in the guide"
 msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex
@@ -19788,6 +19821,11 @@ msgstr ""
 msgid "Someone is mentioned in a note."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Someone who may configure publishing changes where and how the site deploys."
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sort"
@@ -21729,6 +21767,11 @@ msgstr ""
 msgid "The site has no SSH key yet."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site has no SSH key yet. Someone who may configure publishing makes one here and adds it to the host before the first deploy."
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -21853,6 +21896,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The target is not one this site may deploy to."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is not reviewed. Someone who may configure publishing reviews what it holds here before the first deploy."
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -22471,6 +22519,11 @@ msgstr ""
 msgid "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "This host matches %{pattern}, which the installation keeps for static sites' build previews."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -22726,6 +22779,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex

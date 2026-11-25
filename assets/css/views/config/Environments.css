@@ -351,6 +351,14 @@
     width: 25%;
   }
 
+  /* The guide link under the message that the site has no preview host */
+  .publishing-no-preview-host a {
+    display: inline-block;
+    margin-top: 8px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   .publishing-builds td.environment-actions {
     white-space: normal;
 
@@ -971,6 +979,28 @@
 
     .environment-log__note--empty {
       display: none;
+    }
+  }
+
+  /* The deployment settings, for those who may not change them */
+  .publishing-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 40px;
+    margin: 16px 0;
+
+    dt {
+      @font mono;
+      margin-bottom: 4px;
+      color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+      font-size: var(--brando-text-2xs);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    dd {
+      margin: 0;
     }
   }
 

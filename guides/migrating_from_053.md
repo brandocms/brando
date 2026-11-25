@@ -725,6 +725,17 @@ sender first, before the first compile.
   its images named after its next import. Run `mix brando.gen.migrations`
   for it, then `mix brando.migrate`. See
   [Build from Figma](mcp.md#build-from-figma).
+- **Configuring publishing apart from building and deploying.** Saving a
+  static site's deployment settings, its SSH key and host keys, and the
+  review of the target's files now take Configure on Builds & deployments
+  (`brando.publishing.configure`); Build, Deploy and Schedule no longer give
+  them. `brando_249` gives Configure to every group that has Build, Deploy or
+  Schedule, so nobody loses what they could do. Until it has run, only
+  superusers can change those settings. Run `mix brando.gen.migrations` for
+  it, then `mix brando.migrate`. A site made from now on gives its Editor
+  group View, Build and Deploy; an existing site's Editor group stays as it
+  is: tick Build and Deploy for it under Users → Groups to let editors
+  publish. See [Scopes and defaults](authorization.md#scopes-and-defaults).
 - **When a static site's content changed.** `brando_250` adds
   `ssg_content_changes` in `public`, when each environment's content last
   changed, and `ssg_builds.started_at`, when a build began. Both start

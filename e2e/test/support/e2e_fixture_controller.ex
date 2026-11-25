@@ -349,11 +349,17 @@ defmodule E2EFixtureController do
         "multi-site-rsync-unknown" ->
           MultiSiteHosts.setup(get_admin_user(), rsync: :unknown)
 
+        "multi-site-rsync-publisher" ->
+          MultiSiteHosts.setup(get_admin_user(), rsync: :unknown, publisher: true)
+
         "multi-site-deploy-targets" ->
           MultiSiteHosts.setup(get_admin_user(), deploy_targets: true)
 
         "multi-site-static-published" ->
           MultiSiteHosts.setup(get_admin_user(), published: true)
+
+        "multi-site-static-no-preview-host" ->
+          MultiSiteHosts.setup(get_admin_user(), published: true, no_preview_host: true)
 
         "multi-site-queued" ->
           MultiSiteHosts.setup(get_admin_user(), queued: true)

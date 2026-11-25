@@ -213,6 +213,7 @@ defmodule Brando.Tenant do
       _ -> :ok
     end
 
+    :ok = Brando.SSG.PreviewHost.validate_config!()
     Brando.Site.Frontend.validate_config!()
   end
 

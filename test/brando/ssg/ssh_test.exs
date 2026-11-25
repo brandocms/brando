@@ -195,31 +195,38 @@ defmodule Brando.SSG.SSHTest do
       assert {:ok, _public_key} = SSH.ensure_key(c.other, manager)
     end
 
-    test "with capabilities, an account without publishing is refused", c do
+    # A new site's Editor group may build and deploy, not configure
+    test "with capabilities, an editor of the site is refused", c do
       put_test_env(:authorization_mode, :groups)
       editor = Brando.Factory.insert(:random_user, role: :editor)
       {:ok, _} = Access.grant(editor, c.site, :editor)
       {:ok, _} = Brando.Authorization.Migration.run()
-      refute Builds.can_manage?(editor, c.site)
+      assert Builds.can_manage?(editor, c.site)
+      refute Builds.can_configure?(editor, c.site)
 
       refused_everything(c, editor)
       assert {:ok, _public_key} = SSH.ensure_key(c.site, c.superuser)
     end
 
-    # The Publishing screen opens for a build grant; the key and host keys are the deploy's
-    test "with capabilities, building alone is refused and deploying may", c do
+    # Building, deploying and scheduling open the Publishing screen; the key
+    # and host keys are configuring's
+    test "with capabilities, building, deploying and scheduling are refused and configuring may", c do
       put_test_env(:authorization_mode, :groups)
       {:ok, _} = Brando.Authorization.Migration.run()
-      builder = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.build")
-      assert Builds.can_manage?(builder, c.site)
 
-      refused_everything(c, builder)
+      publisher =
+        Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, [
+          "brando.publishing.build",
+          "brando.publishing.deploy",
+          "brando.publishing.schedule"
+        ])
 
-      assert {:ok, _public_key} =
-               SSH.ensure_key(
-                 c.site,
-                 Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
-               )
+      assert Builds.can_manage?(publisher, c.site)
+      refused_everything(c, publisher)
+
+      configurer = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.configure")
+      refute Builds.can_manage?(configurer, c.site)
+      assert {:ok, _public_key} = SSH.ensure_key(c.site, configurer)
     end
   end
 

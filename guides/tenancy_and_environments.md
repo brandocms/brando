@@ -891,6 +891,18 @@ is not a full host name such as `www.example.com`: one without a dot
 Brando answers on such a host, but the file holds full host names only,
 whatever `admit` says.
 
+With a preview host pattern ([Preview hosts](#preview-hosts)) the file also
+holds each active static site's preview host, admitted as a bound host is. One
+wildcard DNS record for the pattern (`*.preview.example.com`), made once by
+hand and pointing at the installation, lets each one in as its site appears,
+and the proxy certifies each over HTTP-01 like any other host: no wildcard
+certificate, so no DNS-01 or DNS provider API. A preview host leaves the file
+when its site is suspended, archived, deleted or switched to dynamic delivery.
+The System check names a preview host the DNS check does not admit. The
+pattern answers whether the file is on or not; only the file is skipped. Keep
+the session cookie's `Domain` off the pattern's base: a cookie for
+`.example.com` reaches `acme.preview.example.com`, where a build's scripts run.
+
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
 waits for its DNS, and every five minutes otherwise. A host whose lookup
@@ -1055,7 +1067,8 @@ site's catch-all: a site's host answers with its own 404 page, or with its
 own page at `/admin` when it has one, and a host bound to no site answers
 with the plain 404. Nothing redirects to the admin's host, and deciding costs
 no database query. With `:none` and `:single` the admin answers on every
-host.
+host. A static site's [preview host](#preview-hosts) is such a host too: the
+admin's routes, and an admin LiveView joined from it, refuse there.
 
 Nothing else on a site's host names the admin either: its default
 `robots.txt` has no `Disallow: /admin/`, `Brando.MCP.BodyLimit` and
@@ -2415,8 +2428,20 @@ write a redirect on a listed path as a relative path, or take the path off the
 SSG module's list. A custom `:fetcher` gets `redirect: false` and returns a
 redirect with its `:headers`.
 
-Open `/admin/config/publishing` while a static site is selected. The deployment
-form supports:
+Open `/admin/config/publishing` while a static site is selected. Who may do
+what there, with capabilities on: **Build**, **Schedule** and **Deploy** on
+Builds & deployments make builds, schedule them, and deploy and roll them back;
+**Configure** saves the deployment settings below, makes and rotates the SSH
+key, accepts host keys and reviews the target's files (see
+[Groups and authorization](authorization.md#scopes-and-defaults)). Without
+Configure the screen shows the builds, the strategy and whether builds deploy
+automatically, but not the target, its URLs or a build's log; a deploy, or a
+build that deploys itself, to a target that waits for a key, a host key or a
+review is refused at once and says that someone who may configure publishing
+has to set it up. Without capabilities, whoever manages the site
+(an admin, a site's manager with several sites, a superuser) does all of it.
+
+The deployment form supports:
 
 - **Served by this installation** (`local`), with no target: the live
   environment's domain answers from the published build
@@ -2577,10 +2602,12 @@ A build finished while a deploy or rollback of the site is running prunes
 nothing and says so in its log; the next build prunes. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
 the build's own site (another site's host, or with several sites one of the
-installation's own hosts such as the admin's, answers `404`); with several sites
-the Publishing screen links it on the build environment's domain, or the live
-environment's, so that domain must reach the application, not only the static
-host, and with neither it shows no link. A preview shows the build as it was
+installation's own hosts such as the admin's, answers `404`). With several sites
+the Publishing screen links it on the site's preview host when the installation
+sets a preview host pattern ([Preview hosts](#preview-hosts)), and otherwise on
+the build environment's domain, or the live environment's, so that domain must
+reach the application, not only the static host. With no such host it says
+that the site has no host for previews, in the place of the link. A preview shows the build as it was
 built: its pages' root-relative URLs, and absolute ones on the site's own
 hosts, load the build's assets and media and link to its pages under the
 preview's path, and a path the build has no file for answers its `404.html`.
@@ -2589,6 +2616,59 @@ posting and the page from being framed elsewhere. The Publishing screen links
 to each build's preview every time it opens, so a build keeps its token itself,
 where a shared entry preview keeps only its key's hash: anyone who can read the
 database can open a build's preview until it expires.
+
+### Preview hosts
+
+A build's preview runs the build's scripts with the page's origin, so it opens
+only on a host of the build's own site. A site deployed with `rsync` or `s3`
+points its public domain at the static host, not at the installation, so
+without more it has no host for previews. One pattern gives every static site
+a preview host of its own:
+
+```elixir
+config :brando, Brando.SSG, preview_host: "{site_key}.preview.example.com"
+```
+
+The pattern is a string that names `{site_key}` once, as the whole first
+label, followed by a host name of at least two labels. A value that is no
+string, or a string of any other form, is refused at boot, and so is a pattern
+one of the installation's own hosts matches (the admin at
+`admin.example.com` under `{site_key}.example.com`); the System check reports
+each. It applies with `tenancy_mode: :multi`; with `:single` or `:none` a
+preview link is a path on any host, and the setting has no effect.
+
+Each active static site, whatever its deploy strategy, then has the preview
+host `<site key>.preview.example.com`, and the Publishing screen links every
+build's preview there, for every environment of the site, also when an
+environment has a domain of its own: Brando cannot tell whether that domain
+reaches the installation, and the public domain of a site deployed elsewhere
+would take the token in the link to the static host. Nothing is uploaded: the
+host answers from the build the installation keeps.
+
+A preview host answers a build preview of its own site
+(`/__ssg_preview__/<token>/…`) and none of the installation's pages: every
+other path that reaches the router, the site's pages, shared previews
+(`/__p__/…`), the lockdown page, the admin and its sockets included, answers
+`404` there. The installation's public files (compiled assets, media) answer
+as on any host. Every response carries `X-Robots-Tag: noindex`. The token in
+the link is the access, so a locked site's previews open there. A
+build whose environment has been deleted, a suspended or archived site, and a
+site switched to dynamic delivery have no preview there, and the Publishing
+screen links none.
+
+An environment domain or redirect host that matches the pattern is refused
+when it is saved. One saved before the pattern was set keeps answering as it
+did, also when other hosts are added to its redirect list or removed from it,
+and the site whose key it carries has no preview host while it is bound; the
+System check names both sites. A site key longer than 63 bytes, or a host
+longer than 253, gets no preview host either.
+
+Setup, once: a wildcard DNS record for the pattern (`*.preview.example.com`)
+pointing at the installation. With the [served hosts file](#hosts-and-the-reverse-proxy)
+each site's preview host is admitted and written as a bound host is, so the
+proxy gets an ordinary certificate for it over HTTP-01. Choose a pattern no
+session cookie's `Domain` covers: a cookie set for `.example.com` is sent to
+`acme.preview.example.com`, where a build's scripts run.
 
 <!-- usage-rules:start topic="tenancy" -->
 
@@ -2657,8 +2737,8 @@ rsync before it had a key shows **Make key** instead, which keeps a key made
 meanwhile from another screen. **Rotate key**, after a confirmation, replaces
 the key, and deploys use the new one at once. The old public key stays
 authorized on the host until someone removes it from `authorized_keys` there.
-With capabilities on, SSH access takes the deploy grant on publishing, as
-saving the deployment settings does.
+With capabilities on, SSH access takes Configure on publishing, as saving the
+deployment settings does.
 
 **Test connection** checks the target as a deploy does, then fetches the host's
 keys with `ssh-keyscan` on the target's port and shows their SHA256
@@ -2717,7 +2797,7 @@ installed from a distribution's split packages needs its `ssh` package
 (`erlang-ssh` on Debian and Ubuntu) where the release is built.
 
 Making, rotating, testing and accepting are for those who may save the deploy
-settings; rotating and accepting ask for the password, a code or a passkey
+settings (Configure); rotating and accepting ask for the password, a code or a passkey
 when the session has not confirmed lately.
 
 ### What an rsync deploy deletes
@@ -2788,8 +2868,10 @@ Brando uploaded and those confirmed, and the last listing) is the file
 `sites/{site_key}/ssg/deploy/target_state`, written whole. Names on the target
 come from the host and are shown escaped and cut; a name rsync prints in a way
 that cannot be read back is shown, but never confirmed. Reviewing, keeping,
-deleting and the keep list are for those who may save the deploy settings,
-and confirming, deleting and taking a path off the keep list ask for a recent
+deleting and the keep list are for those who may save the deploy settings
+(Configure); **Delete the rest** deploys, so it also takes Deploy, and is
+refused before it confirms anything without it. A deploy keeps the list of
+what it uploaded itself, whoever runs it. Confirming, deleting and taking a path off the keep list ask for a recent
 confirmation. A file the host puts at a path where the build has a directory
 in the moment between the listing and the run is the one thing a deploy can
 still replace. A target that holds more than 100,000 paths cannot be deployed

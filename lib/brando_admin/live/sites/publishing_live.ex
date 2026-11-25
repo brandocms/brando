@@ -18,6 +18,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   # Builds, deploys and rollbacks report on their rows
   on_mount BrandoAdmin.Work
 
+  # Refusals of a deploy that only someone who may configure publishing can lift
+  @set_up_by_configure [:deploy_key_missing, :host_key_not_accepted, :target_not_reviewed]
+
   alias Brando.Environments.Environment
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
@@ -50,7 +53,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          |> assign(:socket_connected, true)
          |> assign(:site, site)
          |> assign(:admin_uri, socket.host_uri)
-         |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
+         |> assign_authority()
          |> assign(:default_scheduled_at, default_scheduled_at())
          |> assign(:connection_test, nil)
          |> assign(:connection_test_ref, nil)
@@ -82,7 +85,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
       </Content.header>
 
       <div class="environment-management-live">
-        <div :if={!@can_manage?} class="environment-notice warning">
+        <div :if={!@can_manage? && !@can_configure?} class="environment-notice warning">
           {gettext("Only site administrators and superusers can publish static builds.")}
         </div>
 
@@ -90,7 +93,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           <header>
             <div>
               <h2>{@site.name}</h2>
-              <p>{deploy_summary(@site)}</p>
+              <p>{deploy_summary(@site, @can_configure?)}</p>
             </div>
             <span class="badge badge--success"><span class="badge-dot"></span>{gettext("Static delivery")}</span>
           </header>
@@ -166,7 +169,22 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           </form>
         </section>
 
-        <section class="environment-panel">
+        <section :if={!@can_configure?} class="environment-panel" id="publishing-settings">
+          <h2>{gettext("Deployment target")}</h2>
+          <dl class="publishing-settings">
+            <div>
+              <dt>{gettext("Strategy")}</dt>
+              <dd>{strategy_label(@site)}</dd>
+            </div>
+            <div :if={deploy_configured?(@site)}>
+              <dt>{gettext("Automatic deployment")}</dt>
+              <dd>{if auto_deploy?(@site), do: gettext("On"), else: gettext("Off")}</dd>
+            </div>
+          </dl>
+          <p>{gettext("Someone who may configure publishing changes where and how the site deploys.")}</p>
+        </section>
+
+        <section :if={@can_configure?} class="environment-panel">
           <h2>{gettext("Deployment target")}</h2>
           <p>
             {gettext(
@@ -245,22 +263,15 @@ defmodule BrandoAdmin.Sites.PublishingLive do
               />
               <span>{gettext("Default new builds to automatic deployment")}</span>
             </label>
-            <button
-              type="submit"
-              class="btn"
-              disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
-            >
-              {gettext("Save deployment settings")}
-            </button>
+            <button type="submit" class="btn">{gettext("Save deployment settings")}</button>
           </form>
         </section>
 
         <.ssh_access
-          :if={@can_manage? && rsync_saved?(@site)}
+          :if={@can_configure? && rsync_saved?(@site)}
           public_key={@public_key}
           key_problem={@key_problem}
           connection_test={@connection_test}
-          can_deploy?={BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
         />
 
         <.target_files
@@ -284,6 +295,25 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
           <div :if={@builds == []} class="environment-notice">
             {gettext("No static builds have been requested yet.")}
+          </div>
+
+          <div
+            :if={no_preview_host?(@builds, @site, @admin_uri)}
+            id="publishing-no-preview-host"
+            class="environment-notice warning publishing-no-preview-host"
+          >
+            <div>
+              {gettext(
+                "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
+              )}
+            </div>
+            <a
+              href="https://hexdocs.pm/brando/tenancy_and_environments.html#preview-hosts"
+              target="_blank"
+              rel="noopener"
+            >
+              {gettext("Preview hosts in the guide")} ↗
+            </a>
           </div>
 
           <div :if={@builds != []} class="environment-table-wrap environment-stacking">
@@ -332,9 +362,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   <td>{format_datetime(build.scheduled_at || build.inserted_at)}</td>
                   <td class="environment-actions">
                     <a
-                      :if={previewable?(build) && preview_url(build, @site, @admin_uri)}
+                      :if={previewable?(build) && Builds.preview_url(build, @site, @admin_uri)}
                       class="btn btn--sm"
-                      href={preview_url(build, @site, @admin_uri)}
+                      href={Builds.preview_url(build, @site, @admin_uri)}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -379,9 +409,10 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     >
                       {gettext("Roll back")}
                     </button>
-                    <details :if={build.build_log != "" || build.failed_urls != []}>
-                      <summary>{gettext("Log")}</summary>
-                      <pre>{build.build_log}</pre>
+                    <%!-- The log names the server and its paths --%>
+                    <details :if={(@can_configure? && build.build_log != "") || build.failed_urls != []}>
+                      <summary>{if @can_configure?, do: gettext("Log"), else: gettext("Failed URLs")}</summary>
+                      <pre :if={@can_configure?}>{build.build_log}</pre>
                       <ul :if={build.failed_urls != []}>
                         <li :for={failed_url <- build.failed_urls}>{failed_url}</li>
                       </ul>
@@ -400,7 +431,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   attr :public_key, :string
   attr :key_problem, :atom
   attr :connection_test, :any
-  attr :can_deploy?, :boolean
 
   # The site's own key and the host keys it accepted (Brando.SSG.SSH)
   defp ssh_access(assigns) do
@@ -434,7 +464,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           type="button"
           class="btn"
           phx-click="test_connection"
-          disabled={!@can_deploy? || @connection_test == :running}
+          disabled={@connection_test == :running}
         >
           {if @connection_test == :running, do: gettext("Testing…"), else: gettext("Test connection")}
         </button>
@@ -442,7 +472,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           :if={@public_key || @key_problem == :unreadable_key}
           type="button"
           class="btn"
-          disabled={!@can_deploy?}
           phx-click="rotate_deploy_key"
           data-confirm={
             gettext(
@@ -457,14 +486,13 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           :if={is_nil(@public_key) && is_nil(@key_problem)}
           type="button"
           class="btn btn--primary"
-          disabled={!@can_deploy?}
           phx-click="make_deploy_key"
         >
           {gettext("Make key")}
         </button>
       </div>
 
-      <.connection_result :if={is_tuple(@connection_test)} result={@connection_test} can_deploy?={@can_deploy?} />
+      <.connection_result :if={is_tuple(@connection_test)} result={@connection_test} />
     </section>
     """
   end
@@ -572,7 +600,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             :if={!@target.reviewed}
             type="button"
             class="btn btn--primary"
-            disabled={!@can_deploy?}
             phx-click="confirm_target_review"
             phx-value-digest={@target.found.digest}
             data-confirm={gettext("Confirm? The first deploy deletes every entry you did not tick.")}
@@ -584,7 +611,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             :if={@target.reviewed}
             type="button"
             class="btn"
-            disabled={!@can_deploy?}
             phx-click="keep_unknown_files"
           >
             {gettext("Keep ticked")}
@@ -615,7 +641,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             <button
               type="button"
               class="btn btn--sm"
-              disabled={!@can_deploy?}
               phx-click="remove_keep_path"
               phx-value-path={path}
             >
@@ -628,7 +653,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             <span>{gettext("Path to keep")}</span>
             <input name="keep_path" placeholder="uploads/" autocomplete="off" spellcheck="false" />
           </label>
-          <button type="submit" class="btn" disabled={!@can_deploy?}>{gettext("Add")}</button>
+          <button type="submit" class="btn">{gettext("Add")}</button>
         </form>
       </div>
     </section>
@@ -658,7 +683,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   end
 
   attr :result, :any
-  attr :can_deploy?, :boolean
 
   defp connection_result(%{result: {:error, reason}} = assigns) do
     assigns = assign(assigns, :message, connection_error(reason))
@@ -710,7 +734,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
         <button
           type="button"
           class="btn btn--primary"
-          disabled={!@can_deploy?}
           phx-click="accept_host_keys"
           data-confirm={gettext("Accept these host keys for %{host}?", host: host_label(@test))}
           data-confirm-ok={gettext("Accept host key")}
@@ -763,22 +786,22 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
     user = socket.assigns.current_user
 
-    with true <- can_manage?(user, socket.assigns.site),
-         {:ok, site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
-      # The key is made with the first rsync settings; where it may not be
-      # kept, or one is there that cannot be read, the panel says why
-      with true <- rsync_saved?(site),
-           {:error, reason} when reason not in [:served, :unsafe_path, :unreadable_key] <- SSH.ensure_key(site, user),
-           do: toast_error(socket, key_error(reason))
+    case Builds.update_deploy_config(socket.assigns.site, attrs, user) do
+      {:ok, site} ->
+        # The key is made with the first rsync settings; where it may not be
+        # kept, or one is there that cannot be read, the panel says why
+        with true <- rsync_saved?(site),
+             {:error, reason} when reason not in [:served, :unsafe_path, :unreadable_key] <- SSH.ensure_key(site, user),
+             do: toast_error(socket, key_error(reason))
 
-      send(self(), {:toast, gettext("Static deployment settings saved")})
-      {:noreply, socket |> forget_connection_test() |> refresh() |> assign_strategy()}
-    else
+        send(self(), {:toast, gettext("Static deployment settings saved")})
+        {:noreply, socket |> forget_connection_test() |> refresh() |> assign_strategy()}
+
       {:error, %Ecto.Changeset{} = changeset} ->
         toast_error(socket, BrandoAdmin.Utils.format_changeset_errors(changeset))
 
-      _error ->
-        toast_error(socket, gettext("Could not save static deployment settings."))
+      {:error, :forbidden} ->
+        toast_error(socket, connection_error(:forbidden))
     end
   end
 
@@ -888,6 +911,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          {build_id, ""} <- Integer.parse(id),
          %Build{site_id: site_id} = build <- Enum.find(socket.assigns.builds, &(&1.id == build_id)),
          true <- site_id == socket.assigns.site.id,
+         :ok <- target_set_up(socket.assigns.site, build),
          {:ok, _job} <-
            %{"build_id" => build_id, "action" => action, "creator_id" => user.id}
            |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{site_id}"])
@@ -900,12 +924,20 @@ defmodule BrandoAdmin.Sites.PublishingLive do
            |> Oban.insert() do
       {:noreply, socket}
     else
+      {:error, :site_not_found} -> {:noreply, redirect(socket, to: "/admin")}
+      {:error, reason} when reason in @set_up_by_configure -> toast_error(socket, set_up_by_configure(reason))
       _error -> toast_error(socket, gettext("Could not queue the publishing action."))
     end
   end
 
   @impl Phoenix.LiveView
   def handle_info({:ssg_build_updated, _build}, socket), do: {:noreply, refresh(socket)}
+
+  # A grant changed while the screen is open (`BrandoAdmin.Authorization`)
+  def refresh_authorization(%{assigns: %{socket_connected: true}} = socket),
+    do: socket |> assign_authority() |> refresh()
+
+  def refresh_authorization(socket), do: socket
 
   # An answer for settings saved since, here or elsewhere, or a key rotated
   # here since, is dropped
@@ -962,19 +994,25 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   end
 
   defp queue_build(socket, params, scheduled_at) do
+    auto_deploy? = params["auto_deploy"] == "true"
+
     with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
          %Environment{} = environment <- environment(socket, params["environment_id"]),
+         # A build that deploys itself is refused as its deploy would be
+         :ok <- if(auto_deploy?, do: target_set_up(socket.assigns.site), else: :ok),
          {:ok, build} <-
            Builds.request_build(socket.assigns.site, environment,
              creator_id: socket.assigns.current_user.id,
              note: blank_to_nil(params["note"]),
-             auto_deploy: params["auto_deploy"] == "true",
+             auto_deploy: auto_deploy?,
              scheduled_at: scheduled_at
            ) do
       # An immediate build reports on its row (BrandoAdmin.Work); a scheduled one waits
       if scheduled_at, do: send(self(), {:toast, gettext("Scheduled static build %{version}", version: build.version)})
       {:noreply, refresh(socket)}
     else
+      {:error, :site_not_found} -> {:noreply, redirect(socket, to: "/admin")}
+      {:error, reason} when reason in @set_up_by_configure -> toast_error(socket, set_up_by_configure(reason))
       _error -> toast_error(socket, gettext("Could not queue the static build."))
     end
   end
@@ -988,21 +1026,34 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   defp environment(_socket, _id), do: nil
 
-  defp refresh(socket) do
-    site = Registry.get_site(socket.assigns.site.id)
+  # Publishing (build, deploy, schedule) and configuring it are apart
+  defp assign_authority(socket) do
+    user = socket.assigns.current_user
+    site = socket.assigns.site
 
-    socket
-    |> assign(:site, site)
-    |> assign(:environments, site.environments |> Enum.sort_by(&{not &1.live, &1.name}))
-    |> assign(:builds, Builds.list_builds(site))
-    |> assign_key(site)
-    |> assign_target(site)
+    assign(socket, can_manage?: can_manage?(user, site), can_configure?: Builds.can_configure?(user, site))
   end
 
-  # Remote file names, for those who may manage the site's publishing
+  # A site deleted while the screen is open goes where the mount sends it
+  defp refresh(socket) do
+    case Registry.get_site(socket.assigns.site.id) do
+      nil ->
+        redirect(socket, to: "/admin")
+
+      site ->
+        socket
+        |> assign(:site, site)
+        |> assign(:environments, site.environments |> Enum.sort_by(&{not &1.live, &1.name}))
+        |> assign(:builds, Builds.list_builds(site))
+        |> assign_key(site)
+        |> assign_target(site)
+    end
+  end
+
+  # Remote file names, for those who may configure the site's publishing
   defp assign_target(socket, site) do
     target =
-      with true <- socket.assigns.can_manage? and rsync_saved?(site),
+      with true <- socket.assigns.can_configure? and rsync_saved?(site),
            {:ok, %{} = target} <- TargetReview.status(site, socket.assigns.current_user) do
         target
       else
@@ -1029,7 +1080,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   # The public key, for those who may change it; the private key stays in its file
   defp assign_key(socket, site) do
     {public_key, problem} =
-      if socket.assigns.can_manage? and rsync_saved?(site) do
+      if socket.assigns.can_configure? and rsync_saved?(site) do
         case DeployFiles.check_location(site) do
           :ok -> site |> SSH.public_key() |> key_or_problem()
           {:error, problem} -> {nil, problem}
@@ -1150,6 +1201,39 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   defp can_manage?(user, site), do: Builds.can_manage?(user, site)
 
+  # A deploy the target refuses until someone who may configure publishing
+  # sets it up is said at once, not in a log only they may read: a deploy of
+  # `build`, or of a build made now. The settings as stored: they may have
+  # changed since the screen showed them.
+  defp target_set_up(site, build \\ nil) do
+    with %Site{} = stored <- Registry.get_site(site.id),
+         {:error, reason} when reason in @set_up_by_configure <-
+           if(build, do: TargetReview.deployable(stored, build), else: TargetReview.deployable(stored)) do
+      {:error, reason}
+    else
+      nil -> {:error, :site_not_found}
+      _deployable -> :ok
+    end
+  end
+
+  defp set_up_by_configure(:deploy_key_missing),
+    do:
+      gettext(
+        "The site has no SSH key yet. Someone who may configure publishing makes one here and adds it to the host before the first deploy."
+      )
+
+  defp set_up_by_configure(:host_key_not_accepted),
+    do:
+      gettext(
+        "No host key is accepted for the target. Someone who may configure publishing tests the connection here and accepts the host's key."
+      )
+
+  defp set_up_by_configure(:target_not_reviewed),
+    do:
+      gettext(
+        "The target is not reviewed. Someone who may configure publishing reviews what it holds here before the first deploy."
+      )
+
   # An E2E test's SQL sandbox, for the reads of the connection test's task
   defp sandbox_owner(socket) do
     if Application.get_env(Brando.otp_app(), :sql_sandbox, false), do: get_connect_info(socket, :user_agent)
@@ -1214,6 +1298,16 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp local_delivery_offered?(site),
     do: DeployConfig.local_delivery_allowed?() or deploy_value(site, :strategy) == :local
 
+  # The target is for those who may configure publishing: it names the
+  # server and its path
+  defp deploy_summary(site, false = _can_configure?) do
+    if deploy_configured?(site) and deploy_value(site, :strategy) in [:rsync, :s3],
+      do: gettext("Deploys via %{strategy}", strategy: strategy_label(site)),
+      else: deploy_summary(site)
+  end
+
+  defp deploy_summary(site, true), do: deploy_summary(site)
+
   defp deploy_summary(%{deploy_config: %{strategy: :local}} = site) do
     case live_domain(site) do
       nil -> gettext("Served by this installation once the live environment has a domain.")
@@ -1226,6 +1320,16 @@ defmodule BrandoAdmin.Sites.PublishingLive do
        do: gettext("Deploy via %{strategy} to %{target}", strategy: strategy, target: target)
 
   defp deploy_summary(_site), do: gettext("No deployment target configured; builds and previews remain available.")
+
+  defp strategy_label(site) do
+    case deploy_value(site, :strategy) do
+      :local -> gettext("Served by this installation")
+      :rsync -> "Rsync"
+      :s3 -> "Amazon S3"
+      :cloudflare_pages -> "Cloudflare Pages"
+      nil -> gettext("Build and preview only")
+    end
+  end
 
   defp local_delivery_note(%{published_build: version} = site) when is_binary(version) do
     if Site.local_delivery?(site),
@@ -1252,37 +1356,18 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp previewable?(build),
     do: build.status in [:ready, :deployed, :archived] and is_nil(build.pruned_at)
 
-  # A preview opens only on a host of the build's own site
-  # (`Brando.SSG.PreviewController`), which with several sites need not be
-  # the admin's: link to the build environment's domain, or the live one's.
-  # With no such domain there is no host to link to, and no link.
-  defp preview_url(build, site, admin_uri) do
-    path = "/__ssg_preview__/#{build.preview_token}/"
+  # A previewable build with no host to open its preview on
+  # (`Brando.SSG.Builds.preview_url/3`), said once for the screen. With the
+  # preview host pattern set, a build whose environment was deleted has no
+  # link whatever the site's hosts are, so it says nothing about them
+  defp no_preview_host?(builds, site, admin_uri) do
+    pattern? = Brando.SSG.PreviewHost.enabled?()
 
-    if Brando.Tenant.mode() == :multi do
-      with %URI{} = uri <- admin_uri,
-           domain when is_binary(domain) <- preview_domain(build, site) do
-        URI.to_string(%{uri | host: domain, path: path, query: nil, fragment: nil})
-      else
-        _ -> nil
-      end
-    else
-      path
-    end
+    Enum.any?(builds, fn build ->
+      previewable?(build) and not (pattern? and is_nil(build.environment)) and
+        is_nil(Builds.preview_url(build, site, admin_uri))
+    end)
   end
-
-  defp preview_domain(build, site),
-    do: environment_domain(build.environment) || environment_domain(Brando.Tenant.Cache.get_live_env(site.key))
-
-  # A host that would answer 404 is no link: one that does not route, or one
-  # of the installation's own, where a preview does not open.
-  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "" do
-    if (not String.contains?(domain, ":") and Brando.Tenant.Cache.get_env_by_domain(domain)) &&
-         not Brando.Tenant.InstallationHosts.member?(domain),
-       do: domain
-  end
-
-  defp environment_domain(_environment), do: nil
 
   # The CDN in front, or the live domain the installation serves the build on
   defp public_url(build, site, admin_uri) do
