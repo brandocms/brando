@@ -2,6 +2,7 @@
 
 ## Build & Test Commands
 - Fresh worktree: `scripts/worktree-setup` (deps, private test DB, pnpm 12 installs, Git hooks; prints the env to use)
+- The root unit suite resets only PostgreSQL databases created by its test setup. If an existing database predates the disposable fixture mark, choose an unused name with `scripts/worktree-setup my_new_slug` and use the environment it prints. `MIX_ENV=test mix ecto.setup` and `scripts/test-partitions` provision new databases with the same check.
 - Git hooks and the Gettext merge driver: Git runs copies under the clone's Git directory, so checkout, merge and rebase run nothing from the branch; a push still runs the checked-out tree's `scripts/check`. `scripts/worktree-setup` installs the copies only when they are missing or their interpreter is gone; `scripts/install-git-helpers` replaces them, so run it from a trusted checkout when `mix check` says a copy is stale or a clone still runs them from the tree (setup on a branch forked before the copies does that, so rebase such a branch first).
 - Whole unit suite as CI runs it, in partitions: `scripts/test-partitions` (split by `test/timings.tsv`; its `--help` says how to refresh that from a CI run). CI runs the suite on the newest Elixir and OTP only, in six shards, and compiles lib and tests on the oldest supported (1.18.1, OTP 27.2).
 - Before pushing: `mix check` (CI's fast gates; the pre-push hook runs `--fast`, `SKIP_CHECK=1` bypasses)

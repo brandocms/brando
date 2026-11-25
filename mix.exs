@@ -161,6 +161,7 @@ defmodule Brando.Mixfile do
   def cli do
     [
       preferred_envs: [
+        "test.db.create": :test,
         # `ex_doc` and `inch_ex` are `only: :docs`, so `mix docs` in the default
         # env could never find the task.
         docs: :docs,
@@ -199,8 +200,11 @@ defmodule Brando.Mixfile do
   #
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
+    create = if Mix.env() == :test, do: "test.db.create", else: "ecto.create"
+
     [
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "test.db.create": "run --no-start -e Brando.Test.Database.provision!()",
+      "ecto.setup": [create, "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       "ecto.seed": ["run priv/repo/seeds.exs"],
       # ExDoc writes its own llms.txt; ours replaces it with one that describes
