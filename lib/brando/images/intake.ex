@@ -159,12 +159,17 @@ defmodule Brando.Images.Intake do
   lock, and returns what to report for it (`{:stored, image}` or
   `{:stored, image, tag}`). Sizes are queued once the row is committed.
 
+  Pass `{:owned, path}` for a completed private staging file whose bytes the
+  caller keeps immutable throughout this call. Its verified SHA-256 also
+  describes the byte-for-byte copy. Ordinary paths can change, so storage
+  hashes their destination independently.
+
   Returns `{:stored, image}`, `{:stored, image, tag}`, `{:reused, image}` or
   `{:error, message}`.
   """
-  @spec store(Path.t(), String.t(), String.t(), context(), (Image.t() -> term()), map()) :: term()
-  def store(path, filename, type, ctx, on_new \\ &{:stored, &1}, attrs \\ %{}) do
-    hash = hash(path)
+  @spec store(Path.t() | {:owned, Path.t()}, String.t(), String.t(), context(), (Image.t() -> term()), map()) :: term()
+  def store(source, filename, type, ctx, on_new \\ &{:stored, &1}, attrs \\ %{}) do
+    {path, hash, copied_hash} = fingerprint(source)
 
     case existing(hash, ctx) do
       %Image{} = image ->
@@ -178,16 +183,24 @@ defmodule Brando.Images.Intake do
 
         hash
         |> Images.with_file_lock(ctx.config_target, fn ->
-          reuse_or_store(hash, path, filename, type, ctx, folder_id, on_new, attrs)
+          meta = %{path: path, config_target: ctx.config_target, folder_id: folder_id, image_attrs: attrs}
+          reuse_or_store(hash, meta, filename, type, ctx, on_new, copied_hash)
         end)
         |> queue_sizes(ctx.actor)
     end
   end
 
+  defp fingerprint({:owned, path}) do
+    digest = hash(path)
+    {path, digest, digest}
+  end
+
+  defp fingerprint(path), do: {path, hash(path), nil}
+
   # Looked for again under the lock: the same file stored meanwhile is reused
-  defp reuse_or_store(hash, path, filename, type, ctx, folder_id, on_new, attrs) do
+  defp reuse_or_store(hash, meta, filename, type, ctx, on_new, copied_hash) do
     with nil <- existing(hash, ctx),
-         {:stored, image} <- store_new(path, filename, type, ctx, folder_id, attrs) do
+         {:stored, image} <- store_new(meta, filename, type, ctx, copied_hash) do
       on_new.(image)
     else
       %Image{} = image -> {:reused, image}
@@ -195,11 +208,10 @@ defmodule Brando.Images.Intake do
     end
   end
 
-  defp store_new(path, filename, type, ctx, folder_id, attrs) do
-    meta = %{path: path, config_target: ctx.config_target, folder_id: folder_id, image_attrs: attrs}
-    entry = %{client_name: filename, client_type: type, client_size: File.stat!(path).size}
+  defp store_new(meta, filename, type, ctx, copied_hash) do
+    entry = %{client_name: filename, client_type: type, client_size: File.stat!(meta.path).size}
 
-    case Uploads.store_upload(meta, entry, ctx.cfg, ctx.actor) do
+    case Uploads.store_upload(meta, entry, ctx.cfg, ctx.actor, copied_hash) do
       {:ok, %Image{} = image} -> {:stored, image}
       {:error, message} -> {:error, message}
     end

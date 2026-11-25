@@ -13,7 +13,8 @@ defmodule Brando.Uploads.Store do
   """
   defstruct upload_entry: nil,
             cfg: nil,
-            meta: nil
+            meta: nil,
+            copied_hash: nil
 
   @type t :: %__MODULE__{}
   @type img_config :: Brando.Type.ImageConfig.t()
@@ -43,8 +44,10 @@ defmodule Brando.Uploads.Store do
 
   Finally returns an image struct
   """
+  def handle_upload(meta, upload_entry, cfg, user, copied_hash \\ nil)
+
   @decorate span("brando.uploads.handle", config_target: [:meta, :config_target])
-  def handle_upload(%{uploader: "S3"} = meta, upload_entry, cfg, user) do
+  def handle_upload(%{uploader: "S3"} = meta, upload_entry, cfg, user, _copied_hash) do
     Tracing.set_attributes(%{"brando.asset_type": asset_type(cfg)})
 
     with :ok <- Brando.Authorization.Media.authorize_config(user, cfg),
@@ -54,7 +57,7 @@ defmodule Brando.Uploads.Store do
   end
 
   @decorate span("brando.uploads.handle", config_target: [:meta, :config_target])
-  def handle_upload(meta, upload_entry, cfg, user) do
+  def handle_upload(meta, upload_entry, cfg, user, copied_hash) do
     Tracing.set_attributes(%{"brando.asset_type": asset_type(cfg)})
 
     with :ok <- Brando.Authorization.Media.authorize_config(user, cfg),
@@ -66,7 +69,9 @@ defmodule Brando.Uploads.Store do
          {:ok, upload} <- check_pixels(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
-      handle_upload_type(upload, user)
+      # Only the unchanged local copy of an owned staging file can reuse its hash.
+      hash = if match?(%ImageConfig{overwrite: false}, cfg), do: copied_hash
+      handle_upload_type(%{upload | copied_hash: hash}, user)
     end
   end
 
@@ -145,7 +150,6 @@ defmodule Brando.Uploads.Store do
 
     image_params = %{
       config_target: upload.meta.config_target,
-      content_hash: content_hash(upload.meta.media_path),
       path: upload.meta.media_path,
       width: svg_size.width,
       height: svg_size.height,
@@ -159,6 +163,7 @@ defmodule Brando.Uploads.Store do
     # What the uploader gave with the file, as for other images below
     image_params
     |> Map.merge(upload.meta[:image_attrs] || %{})
+    |> Map.put(:content_hash, stored_hash(upload))
     |> Images.create_image(user)
     |> run_completed_callback(upload.cfg, user)
   end
@@ -192,7 +197,7 @@ defmodule Brando.Uploads.Store do
     end
   end
 
-  def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: cfg}, user) do
+  def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: cfg} = upload, user) do
     media_path = meta.media_path
 
     full_path = Images.Utils.media_path(media_path)
@@ -205,7 +210,6 @@ defmodule Brando.Uploads.Store do
 
       image_params = %{
         config_target: meta.config_target,
-        content_hash: content_hash(media_path),
         path: media_path,
         width: width,
         height: height,
@@ -220,6 +224,7 @@ defmodule Brando.Uploads.Store do
       # focal point and texts, set as the image is created
       image_params
       |> Map.merge(meta[:image_attrs] || %{})
+      |> Map.put(:content_hash, stored_hash(upload))
       |> Images.create_image(user)
     else
       # Refused before anything decodes it. Server and direct uploads are
@@ -233,6 +238,9 @@ defmodule Brando.Uploads.Store do
         {:error, {:handle_upload_type, "Failed to read image dimensions."}}
     end
   end
+
+  defp stored_hash(%__MODULE__{copied_hash: hash}) when is_binary(hash), do: hash
+  defp stored_hash(upload), do: content_hash(upload.meta.media_path)
 
   # SHA-256 of the stored original, read in chunks; nil when it can't be read
   defp content_hash(media_path) do
