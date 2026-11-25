@@ -413,6 +413,16 @@ defmodule Brando.SSG.TargetReviewTest do
       end)
     end
 
+    # Saved, a confirmation of unknown files is carried out by any later deploy
+    test "a confirmation of unknown files is saved only for someone who may configure and deploy", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      configurer = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.configure")
+
+      assert {:error, :forbidden} = TargetReview.confirm(c.site, configurer, :unknown, c.found.digest, [])
+      assert %{confirmed: [], found: %{}} = state(c.site)
+    end
+
     # What a deploy writes of the target's state is the deploy's own
     test "a deploy by someone who may deploy but not configure keeps the target's lists", c do
       newer = ready_build(c.site, c.environment)
