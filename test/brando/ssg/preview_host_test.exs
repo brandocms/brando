@@ -231,6 +231,8 @@ defmodule Brando.SSG.PreviewHostTest do
           "index.html" => ~s(<a href="/about">About</a><a href="#{site_url}/contact">Contact</a>)
         })
 
+      # The served hosts file is off: only the file is skipped
+      refute Brando.Tenant.ServedHosts.enabled?()
       conn = dispatch("shop.preview.test", preview_path(build))
       prefix = "/__ssg_preview__/#{build.preview_token}"
       # Its links stay on the preview host, the site's public domain's too
