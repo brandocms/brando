@@ -715,6 +715,9 @@ defmodule Brando.MCP.FigmaTest do
 
       assert %{"distinct_images" => 4, "images" => [turned, upright, half, three]} = import!(tenant, token)
 
+      assert_receive {:webhook_request, %{path: "/img/p"}}
+      refute_received {:webhook_request, %{path: "/img/p"}}
+
       assert %{
                "rotation" => 90,
                "applied" => ["rotated 90°"],
@@ -1581,11 +1584,13 @@ defmodule Brando.MCP.FigmaTest do
         layer("48:2", [fill("small")])
       ])
 
+      tmp = figma_tmp_dirs()
       assert %{"images" => [%{"error" => error}, %{"asset" => %{"id" => id}}]} = import!(tenant, token, %{"fit" => true})
 
       assert error ==
                ~s[The image "Photo 48:1" (48:1, image ref big) was scaled down, but the copy could not be written to a temporary file.]
 
+      assert figma_tmp_dirs() -- tmp == []
       assert [%Image{id: ^id}] = images()
     end
 
