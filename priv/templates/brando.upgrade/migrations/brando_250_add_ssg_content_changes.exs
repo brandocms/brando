@@ -14,7 +14,9 @@ defmodule Brando.Repo.Migrations.Brando250AddSSGContentChanges do
 
   def up do
     create_if_not_exists table(:ssg_content_changes, primary_key: false, prefix: "public") do
-      add :environment_id, references(:environments, on_delete: :delete_all, prefix: "public"), primary_key: true
+      add :environment_id, references(:environments, on_delete: :delete_all, prefix: "public"),
+        primary_key: true
+
       add :changed_at, :utc_datetime_usec, null: false
     end
 
