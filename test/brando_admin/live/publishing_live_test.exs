@@ -1138,6 +1138,24 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       refute_received {:ran, _, _}
     end
 
+    test "the summary names every strategy a site may have stored", context do
+      user = publisher(context)
+
+      for strategy <- [nil | Ecto.Enum.values(Brando.Sites.DeployConfig, :strategy)] do
+        target =
+          case strategy do
+            :rsync -> "deploy@example.test:/srv/www"
+            :s3 -> "s3://publishing-site/releases"
+            _strategy -> "publishing"
+          end
+
+        {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{strategy: strategy, target: target}})
+
+        {:ok, view, _html} = open_as(context, user)
+        assert has_element?(view, "#publishing-settings dd")
+      end
+    end
+
     test "an Editor of a site made since may open Publishing from the menu, build and deploy", context do
       editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
       {:ok, _} = Brando.Tenant.Access.grant(editor, context.site, :editor)

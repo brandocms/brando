@@ -1290,6 +1290,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
       :local -> gettext("Served by this installation")
       :rsync -> "Rsync"
       :s3 -> "Amazon S3"
+      :cloudflare_pages -> "Cloudflare Pages"
       nil -> gettext("Build and preview only")
     end
   end
