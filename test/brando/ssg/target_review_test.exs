@@ -311,6 +311,28 @@ defmodule Brando.SSG.TargetReviewTest do
       assert deployed.build_log =~ "The target holds 1 paths Brando did not put there"
       refute DeployFiles.exists?(c.site, :filter)
     end
+
+    test "that copied, with more unknown files than are listed afterwards, does not say nothing was copied", c do
+      Brando.SSGSSHFixtures.review_target(c.site, @target)
+      build = ready_build(c.site, c.environment)
+      listings = :counters.new(1, [])
+      many = for n <- 1..100_001, do: "f#{n}"
+
+      # The listing before the run is short; the one after it is not
+      runner = fn "rsync", args, _opts ->
+        if Enum.any?(args, &String.starts_with?(&1, "--out-format=")) do
+          :counters.add(listings, 1, 1)
+          answer(args, if(:counters.get(listings, 1) == 1, do: ["host.html"], else: many), [])
+        else
+          {"", 0}
+        end
+      end
+
+      assert {:ok, deployed} = Deploy.deploy(build, runner: runner)
+      assert :counters.get(listings, 1) == 2
+      assert deployed.build_log =~ "100001"
+      refute deployed.build_log =~ "nothing was copied"
+    end
   end
 
   describe "unknown files" do

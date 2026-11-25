@@ -404,7 +404,12 @@ defmodule Brando.SSG.TargetReview do
          :ok <- write_state(site, %{state | found: found}) do
       if paths == [], do: [], else: ["The target holds #{length(paths)} paths Brando did not put there: see Publishing"]
     else
-      {:error, reason} -> ["Could not list what the target holds beyond the build: #{failure_message(reason)}"]
+      # The build is copied by now: this listing only tells the screen
+      {:error, {:listing_cut_short, count, limit}} ->
+        ["The target holds #{count} paths Brando did not put there, more than the #{limit} Publishing lists"]
+
+      {:error, reason} ->
+        ["Could not list what the target holds beyond the build: #{failure_message(reason)}"]
     end
   end
 
