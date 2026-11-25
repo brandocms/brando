@@ -203,6 +203,7 @@ defmodule Brando.SSG.ContentChangesTest do
     # the cache held it before the save
     test "is marked after the evictions that go with it", c do
       page = page!(c.site, c.production, c.user)
+      preserve_query_cache(Page)
 
       Tenant.with_prefix(Tenant.prefix(c.site, c.production), fn ->
         key = Brando.Cache.Query.hash_query({:list, "pages", :marked})

@@ -194,19 +194,17 @@ defmodule Brando.SSG.ContentChanges do
   # In the saving process, whose save has committed: it waits only a moment
   # for another session's lock on the mark, and leaves the change to the
   # activity log when that is not enough
-  defp write_now(site_id, environment_ids) do
+  defp write_now(site_id, environment_ids),
+    do: written(fn -> Brando.Repo.repo().transaction(fn -> upsert_bounded(site_id, environment_ids) end) end)
+
+  defp upsert_bounded(site_id, environment_ids) do
     repo = Brando.Repo.repo()
+    repo.query!("SET LOCAL lock_timeout = #{@lock_wait}")
 
-    written(fn ->
-      repo.transaction(fn ->
-        repo.query!("SET LOCAL lock_timeout = #{@lock_wait}")
-
-        case upsert(site_id, environment_ids) do
-          {:ok, rows} -> rows
-          {:error, error} -> repo.rollback(error)
-        end
-      end)
-    end)
+    case upsert(site_id, environment_ids) do
+      {:ok, rows} -> rows
+      {:error, error} -> repo.rollback(error)
+    end
   end
 
   defp write(site_id, environment_ids), do: written(fn -> upsert(site_id, environment_ids) end)
