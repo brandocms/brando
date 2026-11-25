@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
       connected?(socket) ->
         seeder = Brando.Tenant.Seeder.configured()
         # Measurements as they land, for a superuser, who alone sees them
-        if Boundary.superuser?(socket.assigns.current_user), do: Usage.subscribe()
+        if Boundary.superuser?(socket.assigns.current_user), do: Usage.subscribe_overview()
 
         {:ok,
          socket
@@ -1347,9 +1347,9 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_info({:site_usage_measured, site_id}, socket) do
+  def handle_info({:site_usage_measured, scope}, socket) do
     socket = put_overview(socket)
-    {:noreply, if(site_id == socket.assigns.selected, do: usage_days(socket, :reload), else: socket)}
+    {:noreply, if(scope in [:all, socket.assigns.selected], do: usage_days(socket, :reload), else: socket)}
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}

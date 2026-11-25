@@ -182,6 +182,63 @@ defmodule BrandoAdmin.Sites.SiteUsageLiveTest do
     end
   end
 
+  test "a daily sweep discovers schemas once and refreshes each open overview once", %{conn: conn, acme: acme, beta: beta} do
+    put_test_env(:sites_path, Path.join(Brando.config(:media_path), "build-roots"))
+
+    for n <- 1..5 do
+      {:ok, _site} =
+        Registry.create_site(%{name: "Sweep #{n}", key: "sweep-#{n}", languages: ["en"], default_language: "en"})
+    end
+
+    for site <- [acme, beta] do
+      File.mkdir_p!(Storage.media_root(site))
+      File.write!(Path.join(Storage.media_root(site), "photo"), String.duplicate("x", 512))
+    end
+
+    {:ok, first, _html} = live(conn, "/admin/sites?site=acme")
+    {:ok, second, _html} = live(conn, "/admin/sites?site=beta")
+    viewers = [first.pid, second.pid]
+    handler = "usage-sweep-#{System.unique_integer([:positive])}"
+    owner = self()
+
+    :telemetry.attach(
+      handler,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, metadata, _config ->
+        cond do
+          self() == owner and String.starts_with?(metadata.query, "SELECT nspname FROM pg_namespace") ->
+            send(owner, :inventory_query)
+
+          self() in viewers and metadata.source == "sites_usage_days" ->
+            send(owner, :usage_query)
+
+          true ->
+            :ok
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    Usage.subscribe()
+    :ok = Brando.Worker.SiteUsage.perform(%Oban.Job{args: %{"all" => true}})
+    assert has_element?(first, "#usage-storage-facts-#{acme.id}", "512 B")
+    assert has_element?(second, "#usage-storage-facts-#{beta.id}", "512 B")
+
+    site_ids = Enum.map(Registry.list_sites(), & &1.id)
+    for id <- site_ids, do: assert_received({:site_usage_measured, ^id})
+    {:messages, messages} = Process.info(self(), :messages)
+    # One inventory plus two overview queries and one detail query per viewer.
+    assert {Enum.count(messages, &(&1 == :inventory_query)), usage_queries()} == {1, 6}
+
+    # A subsequent manual refresh updates both lists but only the selected detail.
+    File.write!(Path.join(Storage.media_root(acme), "photo"), String.duplicate("x", 768))
+    :ok = Brando.Worker.SiteUsage.perform(%Oban.Job{args: %{"site_id" => acme.id}})
+    assert has_element?(first, "#usage-storage-facts-#{acme.id}", "768 B")
+    assert has_element?(second, "#site-list-usage-#{acme.id}", "768 B")
+    assert usage_queries() == 5
+  end
+
   test "before the usage table's migration has run, the screen opens and says so", %{conn: conn, acme: acme} do
     Brando.Repo.repo().query!("DROP TABLE public.sites_usage_days")
 

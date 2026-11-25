@@ -25,13 +25,19 @@ defmodule Brando.Sites.Usage.Measure do
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Storage
 
+  @type measurement :: %{media_bytes: non_neg_integer(), builds_bytes: non_neg_integer(), databases: [map()]}
+
   @doc "The site's sizes, as `Brando.Sites.Usage.put_measurement/3` takes them."
-  @spec site(Site.t()) :: %{media_bytes: non_neg_integer(), builds_bytes: non_neg_integer(), databases: [map()]}
-  def site(%Site{} = site) do
+  @spec site(Site.t()) :: measurement()
+  def site(%Site{} = site), do: site(site, tenant_schemas())
+
+  @doc "Measures a site against a schema inventory from `tenant_schemas/0`."
+  @spec site(Site.t(), [String.t()]) :: measurement()
+  def site(%Site{} = site, schemas) do
     %{
       media_bytes: directory_bytes(Storage.media_root(site)),
       builds_bytes: builds_bytes(site),
-      databases: databases(site)
+      databases: databases(site, schemas)
     }
   end
 
@@ -110,6 +116,19 @@ defmodule Brando.Sites.Usage.Measure do
     end
   end
 
+  @doc "The tenant schema names visible at the start of a measurement or daily sweep."
+  @spec tenant_schemas() :: [String.t()]
+  def tenant_schemas do
+    %{rows: rows} =
+      Ecto.Adapters.SQL.query!(
+        Brando.Repo.repo(),
+        "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant\\_%' ESCAPE '\\' ORDER BY nspname",
+        []
+      )
+
+    Enum.map(rows, fn [name] -> name end)
+  end
+
   # The site's schemas are named `tenant_<site>_<environment>`, and an
   # archive of one `…_archive_<timestamp>` (`Brando.Environments`); keys hold
   # no underscore. An archive whose name would be too long is cut to its
@@ -119,19 +138,12 @@ defmodule Brando.Sites.Usage.Measure do
   @own ~r/^([a-z0-9-]+)(_archive_\d{14})?$/
   @cut ~r/^(.{31})_archive_\d{14}_([a-f0-9]{8})$/
 
-  defp databases(%Site{} = site) do
+  defp databases(%Site{} = site, schemas) do
     prefix = "tenant_#{site.key}_"
     cut = cut_names(site)
     logged = logged_archives(site)
 
-    %{rows: rows} =
-      Ecto.Adapters.SQL.query!(
-        Brando.Repo.repo(),
-        "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant\\_%' ESCAPE '\\' ORDER BY nspname",
-        []
-      )
-
-    for [schema] <- rows,
+    for schema <- schemas,
         {environment, archive?} <- [own(schema, prefix) || cut_archive(schema, cut, logged)],
         bytes = schema_bytes(schema),
         is_integer(bytes) do

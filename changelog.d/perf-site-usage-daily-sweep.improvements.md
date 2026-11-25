@@ -1,0 +1,1 @@
+- The daily site usage job lists database schemas once and refreshes open Sites screens once per sweep.

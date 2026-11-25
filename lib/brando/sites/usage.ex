@@ -174,4 +174,13 @@ defmodule Brando.Sites.Usage do
   @doc false
   def broadcast_measured(site_id),
     do: Phoenix.PubSub.broadcast(Brando.pubsub(), @topic, {:site_usage_measured, site_id})
+
+  @doc "Subscribes to overview refreshes after a manual measurement or when a daily sweep ends."
+  @spec subscribe_overview() :: :ok | {:error, term()}
+  def subscribe_overview, do: Phoenix.PubSub.subscribe(Brando.pubsub(), @topic <> ":overview")
+
+  @doc "Requests an overview refresh for a measured site ID or when the daily sweep ends (`:all`)."
+  @spec broadcast_overview(pos_integer() | :all) :: :ok | {:error, term()}
+  def broadcast_overview(scope),
+    do: Phoenix.PubSub.broadcast(Brando.pubsub(), @topic <> ":overview", {:site_usage_measured, scope})
 end
