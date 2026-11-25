@@ -1,0 +1,1 @@
+- `mix brando.fragments.pair` rejects positional arguments before pairing any fragment keys.

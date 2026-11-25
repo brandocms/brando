@@ -186,6 +186,17 @@ defmodule Brando.Translations.PairingTest do
       assert output =~ "Linked 0 key(s)"
     end
 
+    test "rejects a fragment key before applying the plan" do
+      fragment!(:no, "contact")
+      fragment!(:en, "contact")
+
+      assert_raise Mix.Error, ~r/unexpected argument footer\/address/, fn ->
+        Mix.Tasks.Brando.Fragments.Pair.run(["--apply", "footer/address"])
+      end
+
+      assert links() == []
+    end
+
     test "takes a site and an environment only in tenant mode" do
       assert_raise Mix.Error, ~r/tenant mode/, fn ->
         Mix.Tasks.Brando.Fragments.Pair.run(["--site", "acme", "--environment", "production"])
