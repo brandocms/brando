@@ -55,9 +55,14 @@ defmodule Brando.Content.Proposals.TranslationWork do
                  "translate operation in the same proposal."
 
   @doc "Runs the tool for `args` as `actor`."
-  def run(args, actor), do: read(args, actor, true)
+  def run(args, actor) do
+    with :changed <- read(args, actor),
+         :changed <- read(args, actor) do
+      Error.fail!(dgettext_unavailable())
+    end
+  end
 
-  defp read(args, actor, retry?) do
+  defp read(args, actor) do
     schema = schema!(args["content_type"])
     entry = Catalog.load!(schema, args["id"], actor, :read)
     after_key = after_key!(args)
@@ -78,11 +83,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
       %{source: %{id: _}} = state ->
         result = translation(schema, entry, state, args["language"], after_key, actor)
 
-        cond do
-          Translations.current_work_state?(state) -> result
-          retry? -> read(args, actor, false)
-          true -> Error.fail!(dgettext_unavailable())
-        end
+        if Translations.current_work_state?(state), do: result, else: :changed
 
       _ ->
         Error.fail!(dgettext_unavailable())
