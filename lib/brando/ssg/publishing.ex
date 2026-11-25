@@ -33,8 +33,7 @@ defmodule Brando.SSG.Publishing do
     * `:ready` — the latest attempt is ready, started after the deployed
       build, was built without a deploy, and its files are still there. Not
       a Markdown publication's build: it deploys only as the publication's
-      newest (`Brando.MarkdownSources.Publication`), and one whose deploy
-      was skipped never does;
+      newest, and one whose deploy was skipped never does;
     * `:changes` — nothing is deployed, the deployed build's environment is
       gone, or the environment's content changed after the deployed build
       started (`Brando.SSG.ContentChanges`);

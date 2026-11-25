@@ -12,9 +12,9 @@ defmodule Brando.Worker.SSGBuild do
   that finds it ready, its deploy neither done nor given up, deploys it (the
   one before stopped in between). The deploy is skipped when a build that
   started later is the deployed one by then, or when the build's Markdown
-  publication was superseded (`Brando.MarkdownSources.Publication`), and
-  the build then owes nothing. A failed build, and a deploy that failed, are recorded and told
-  to the environment's `failed_job` routes (`Brando.SSG.Publishing`).
+  publication was superseded, and the build then owes nothing. A failed
+  build, and a deploy that failed, are recorded and told to the
+  environment's `failed_job` routes (`Brando.SSG.Publishing`).
   """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3, unique: [period: :infinity, fields: [:args]]

@@ -14,8 +14,8 @@ defmodule Brando.Worker.SSGDeploy do
   `"unless_superseded" => true` (the Publish button, `Brando.SSG.Publishing`)
   deploys nothing when a build that started later is the deployed one by the
   time the job runs. A Markdown publication's build deploys nothing once the
-  publication is superseded (`Brando.MarkdownSources.Publication`); the
-  build then owes no deploy. Neither is a failure.
+  publication is superseded; the build then owes no deploy. Neither is a
+  failure.
 
   A deploy that gives up (refused, or failed on its last attempt) records it
   on the build (`deploy_failed_at`, cleared when the next deploy of it
