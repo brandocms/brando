@@ -6,8 +6,10 @@ defmodule Brando.SSG.PreviewController do
   build's own site: another site's host, or none, answers 404, so the
   artifact's markup runs only in its own site's origin. With several sites it
   never opens on one of the installation's own hosts, such as the admin's, even
-  for a site bound to it. The response carries a restrictive
-  Content-Security-Policy.
+  for a site bound to it. On a static site's preview host
+  (`Brando.SSG.PreviewHost`) `Brando.Plug.Tenant` has resolved the build's
+  site and environment from the token before it gets here. The response
+  carries a restrictive Content-Security-Policy.
 
   The preview is the build's own: its HTML and CSS name the build's files
   under the preview's path (`Brando.SSG.PreviewRewrite`), so it loads the

@@ -358,6 +358,9 @@ defmodule E2EFixtureController do
         "multi-site-static-published" ->
           MultiSiteHosts.setup(get_admin_user(), published: true)
 
+        "multi-site-static-no-preview-host" ->
+          MultiSiteHosts.setup(get_admin_user(), published: true, no_preview_host: true)
+
         "multi-site-queued" ->
           MultiSiteHosts.setup(get_admin_user(), queued: true)
 

@@ -22,7 +22,8 @@ defmodule E2E.MultiSiteHosts do
   site the installation serves itself (the deploy strategy `:local`), for the
   publishing screen; `:published` adds three builds to it, the newest
   deployed and so published, with a ready one before it and one whose three
-  URLs failed. `:queued` adds Norwegian to Acme and schedules a copy from
+  URLs failed; with `:no_preview_host` too, Acme's environments then have no
+  domain, so the publishing screen has no host for its previews. `:queued` adds Norwegian to Acme and schedules a copy from
   its production to its staging environment for tomorrow, with Oban in
   manual mode, so the sites screen shows the seeding queued and the
   environments screen the pending copy. `:deploy_targets` makes Acme static
@@ -161,6 +162,8 @@ defmodule E2E.MultiSiteHosts do
     if opts[:static] || opts[:published] || opts[:deploy_targets],
       do: serve_statically(acme, acme_live, admin, opts[:published])
 
+    if opts[:no_preview_host], do: unbind(acme)
+
     if opts[:rsync], do: deploy_with_rsync(acme, admin, opts[:rsync])
     if opts[:publisher], do: publisher(acme, acme_live, admin)
 
@@ -204,6 +207,17 @@ defmodule E2E.MultiSiteHosts do
     end
 
     :ok
+  end
+
+  # No environment of the site has a host left to open a build's preview on
+  defp unbind(site) do
+    Repo.update_all(
+      from(e in Environment, where: e.site_id == ^site.id),
+      [set: [domain: nil, redirect_hosts: []]],
+      prefix: "public"
+    )
+
+    Cache.warm()
   end
 
   defp serve_statically(site, live, admin, published?) do

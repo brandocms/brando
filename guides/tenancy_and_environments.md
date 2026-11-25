@@ -891,6 +891,18 @@ is not a full host name such as `www.example.com`: one without a dot
 Brando answers on such a host, but the file holds full host names only,
 whatever `admit` says.
 
+With a preview host pattern ([Preview hosts](#preview-hosts)) the file also
+holds each active static site's preview host, admitted as a bound host is. One
+wildcard DNS record for the pattern (`*.preview.example.com`), made once by
+hand and pointing at the installation, lets each one in as its site appears,
+and the proxy certifies each over HTTP-01 like any other host: no wildcard
+certificate, so no DNS-01 or DNS provider API. A preview host leaves the file
+when its site is suspended, archived, deleted or switched to dynamic delivery.
+The System check names a preview host the DNS check does not admit. The
+pattern answers whether the file is on or not; only the file is skipped. Keep
+the session cookie's `Domain` off the pattern's base: a cookie for
+`.example.com` reaches `acme.preview.example.com`, where a build's scripts run.
+
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
 waits for its DNS, and every five minutes otherwise. A host whose lookup
@@ -1055,7 +1067,8 @@ site's catch-all: a site's host answers with its own 404 page, or with its
 own page at `/admin` when it has one, and a host bound to no site answers
 with the plain 404. Nothing redirects to the admin's host, and deciding costs
 no database query. With `:none` and `:single` the admin answers on every
-host.
+host. A static site's [preview host](#preview-hosts) is such a host too: the
+admin's routes, and an admin LiveView joined from it, refuse there.
 
 Nothing else on a site's host names the admin either: its default
 `robots.txt` has no `Disallow: /admin/`, `Brando.MCP.BodyLimit` and
@@ -2588,10 +2601,12 @@ A build finished while a deploy or rollback of the site is running prunes
 nothing and says so in its log; the next build prunes. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
 the build's own site (another site's host, or with several sites one of the
-installation's own hosts such as the admin's, answers `404`); with several sites
-the Publishing screen links it on the build environment's domain, or the live
-environment's, so that domain must reach the application, not only the static
-host, and with neither it shows no link. A preview shows the build as it was
+installation's own hosts such as the admin's, answers `404`). With several sites
+the Publishing screen links it on the site's preview host when the installation
+sets a preview host pattern ([Preview hosts](#preview-hosts)), and otherwise on
+the build environment's domain, or the live environment's, so that domain must
+reach the application, not only the static host. With no such host it says
+that the site has no host for previews, in the place of the link. A preview shows the build as it was
 built: its pages' root-relative URLs, and absolute ones on the site's own
 hosts, load the build's assets and media and link to its pages under the
 preview's path, and a path the build has no file for answers its `404.html`.
@@ -2600,6 +2615,59 @@ posting and the page from being framed elsewhere. The Publishing screen links
 to each build's preview every time it opens, so a build keeps its token itself,
 where a shared entry preview keeps only its key's hash: anyone who can read the
 database can open a build's preview until it expires.
+
+### Preview hosts
+
+A build's preview runs the build's scripts with the page's origin, so it opens
+only on a host of the build's own site. A site deployed with `rsync` or `s3`
+points its public domain at the static host, not at the installation, so
+without more it has no host for previews. One pattern gives every static site
+a preview host of its own:
+
+```elixir
+config :brando, Brando.SSG, preview_host: "{site_key}.preview.example.com"
+```
+
+The pattern is a string that names `{site_key}` once, as the whole first
+label, followed by a host name of at least two labels. A value that is no
+string, or a string of any other form, is refused at boot, and so is a pattern
+one of the installation's own hosts matches (the admin at
+`admin.example.com` under `{site_key}.example.com`); the System check reports
+each. It applies with `tenancy_mode: :multi`; with `:single` or `:none` a
+preview link is a path on any host, and the setting has no effect.
+
+Each active static site, whatever its deploy strategy, then has the preview
+host `<site key>.preview.example.com`, and the Publishing screen links every
+build's preview there, for every environment of the site, also when an
+environment has a domain of its own: Brando cannot tell whether that domain
+reaches the installation, and the public domain of a site deployed elsewhere
+would take the token in the link to the static host. Nothing is uploaded: the
+host answers from the build the installation keeps.
+
+A preview host answers a build preview of its own site
+(`/__ssg_preview__/<token>/…`) and none of the installation's pages: every
+other path that reaches the router, the site's pages, shared previews
+(`/__p__/…`), the lockdown page, the admin and its sockets included, answers
+`404` there. The installation's public files (compiled assets, media) answer
+as on any host. Every response carries `X-Robots-Tag: noindex`. The token in
+the link is the access, so a locked site's previews open there. A
+build whose environment has been deleted, a suspended or archived site, and a
+site switched to dynamic delivery have no preview there, and the Publishing
+screen links none.
+
+An environment domain or redirect host that matches the pattern is refused
+when it is saved. One saved before the pattern was set keeps answering as it
+did, also when other hosts are added to its redirect list or removed from it,
+and the site whose key it carries has no preview host while it is bound; the
+System check names both sites. A site key longer than 63 bytes, or a host
+longer than 253, gets no preview host either.
+
+Setup, once: a wildcard DNS record for the pattern (`*.preview.example.com`)
+pointing at the installation. With the [served hosts file](#hosts-and-the-reverse-proxy)
+each site's preview host is admitted and written as a bound host is, so the
+proxy gets an ordinary certificate for it over HTTP-01. Choose a pattern no
+session cookie's `Domain` covers: a cookie set for `.example.com` is sent to
+`acme.preview.example.com`, where a build's scripts run.
 
 <!-- usage-rules:start topic="tenancy" -->
 

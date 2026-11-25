@@ -60,6 +60,7 @@ defmodule Brando.Doctor do
     Checks.ReleaseDependencies,
     Checks.DependencySources,
     Checks.DeployHosts,
+    Checks.PreviewHosts,
     Checks.TestDatabase
   ]
 

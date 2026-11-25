@@ -205,6 +205,92 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
            )
   end
 
+  describe "with a preview host pattern" do
+    setup context do
+      put_test_env(Brando.SSG, preview_host: "{site_key}.preview.test")
+
+      build =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, build} = Builds.request_build(context.site, context.environment, creator_id: context.current_user.id)
+          build
+        end)
+
+      File.mkdir_p!(build.build_path)
+      {:ok, ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+      %{build: ready}
+    end
+
+    test "links a build's preview on the site's preview host, also when its environment has a domain", context do
+      {:ok, _environment} =
+        Registry.update_environment(context.environment, %{domain: "static-acme.test"}, actor: :system)
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      assert has_element?(
+               view,
+               ~s(#ssg-build-#{context.build.id} a[href="http://#{context.site.key}.preview.test/__ssg_preview__/#{context.build.preview_token}/"])
+             )
+
+      refute has_element?(view, "#publishing-no-preview-host")
+    end
+
+    test "links no preview of a build whose environment was deleted, and says nothing of a missing host",
+         context do
+      {:ok, staging} = Registry.create_environment(context.site, %{name: "Staging", key: "staging", live: false})
+
+      build =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, build} = Builds.request_build(context.site, staging, creator_id: context.current_user.id)
+          build
+        end)
+
+      File.mkdir_p!(build.build_path)
+      {:ok, _ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+      {:ok, _deleted} = Registry.delete_environment(staging)
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="__ssg_preview__"]))
+      assert has_element?(view, ~s(#ssg-build-#{context.build.id} a[href*="__ssg_preview__"]))
+      refute has_element?(view, "#publishing-no-preview-host")
+    end
+
+    test "says once that the site has no host for previews when it has none", context do
+      # An environment bound to the host before the pattern was set holds it
+      {:ok, old_staging} =
+        Registry.create_environment(context.site, %{name: "Old staging", key: "old-staging", live: false})
+
+      old_staging
+      |> Ecto.Changeset.change(domain: "#{context.site.key}.preview.test")
+      |> Brando.Repo.update!(prefix: "public")
+
+      Cache.invalidate()
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      refute has_element?(view, ~s(#ssg-build-#{context.build.id} a[href*="__ssg_preview__"]))
+      assert has_element?(view, "#publishing-no-preview-host a[href*=\"#preview-hosts\"]")
+    end
+  end
+
+  test "says that the site has no host for previews without the pattern or a domain", context do
+    build =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, build} = Builds.request_build(context.site, context.environment, creator_id: context.current_user.id)
+        build
+      end)
+
+    File.mkdir_p!(build.build_path)
+    {:ok, _ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+    assert has_element?(view, "#publishing-no-preview-host")
+
+    {:ok, _environment} = Registry.update_environment(context.environment, %{domain: "static-acme.test"}, actor: :system)
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+    refute has_element?(view, "#publishing-no-preview-host")
+  end
+
   test "offers automatic deployment only with a deployment target", context do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
     assert has_element?(view, ~s(#build-static-site input[name="build[auto_deploy]"]))
