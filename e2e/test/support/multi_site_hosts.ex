@@ -28,7 +28,9 @@ defmodule E2E.MultiSiteHosts do
   environments screen the pending copy. `:deploy_targets` makes Acme static
   with two allowed S3 targets, for the sites screen's lists. `:rsync` makes
   Acme static, deploying with rsync to an allowed target, with its SSH key
-  made, for the publishing screen's SSH access. `:many_sites` adds
+  made, for the publishing screen's SSH access; `rsync: :review` adds its
+  host key accepted and a listing of the target to review, `rsync: :unknown`
+  a reviewed target with files Brando did not put there. `:many_sites` adds
   eleven more sites with a live environment each, the first with a long name,
   and a schema for Acme's staging environment and the long-named site, which
   the navigation's switcher can switch to. `:usage` gives Acme 30 days of
@@ -156,7 +158,7 @@ defmodule E2E.MultiSiteHosts do
     if opts[:static] || opts[:published] || opts[:deploy_targets],
       do: serve_statically(acme, acme_live, admin, opts[:published])
 
-    if opts[:rsync], do: deploy_with_rsync(acme, admin)
+    if opts[:rsync], do: deploy_with_rsync(acme, admin, opts[:rsync])
 
     if opts[:deploy_targets] do
       {:ok, _acme} =
@@ -228,7 +230,7 @@ defmodule E2E.MultiSiteHosts do
     Cache.warm()
   end
 
-  defp deploy_with_rsync(site, admin) do
+  defp deploy_with_rsync(site, admin, found) do
     target = "deploy@static.example.com:/srv/sites/acme"
 
     {:ok, site} =
@@ -241,7 +243,46 @@ defmodule E2E.MultiSiteHosts do
       })
 
     {:ok, _public_key} = Brando.SSG.SSH.ensure_key(site, admin)
+    if found in [:review, :unknown], do: target_found(site, target, found)
     Cache.warm()
+  end
+
+  @host_key "AAAAC3NzaC1lZDI1NTE5AAAAIMRFzTKqWAU2MmY9UVN3ZoZSvU9eRSHMLtR+ApYIr5Ru"
+
+  # The files `Brando.SSG.TargetReview` keeps, as a test of the target writes them
+  defp target_found(site, target, found) do
+    alias Brando.SSG.DeployFiles
+
+    :ok = DeployFiles.write(site, :known_hosts, "[static.example.com]:2222 ssh-ed25519 #{@host_key}\n")
+
+    paths =
+      case found do
+        :review ->
+          ~w(.htaccess .well-known/ .well-known/acme-challenge/ .well-known/acme-challenge/a1 cgi-bin/ cgi-bin/mail.cgi
+             index.php old-site/ old-site/about.html old-site/contact.html old-site/img/ old-site/img/logo.png wp-content/
+             wp-content/uploads/ wp-content/uploads/2023.jpg)
+
+        :unknown ->
+          ["error_log", "backup-2025.zip", "stats/", "stats/index.html", "stats/usage.png"]
+      end
+
+    htaccess = "# BEGIN WordPress\nRewriteEngine On\nRewriteRule ^index\\.php$ - [L]\n# END WordPress\n"
+
+    state = %{
+      target: target,
+      port: 2222,
+      host_keys: [{"ssh-ed25519", @host_key}],
+      reviewed: found == :unknown,
+      uploaded: if(found == :unknown, do: ["index.html"], else: []),
+      confirmed: [],
+      found: %{
+        paths: paths,
+        digest: Brando.SSG.TargetPaths.digest(paths),
+        htaccess: if(found == :review, do: {:ok, htaccess})
+      }
+    }
+
+    :ok = DeployFiles.write(site, :target_state, :erlang.term_to_binary(state))
   end
 
   # Jobs the inline Oban of the E2E server would run at once

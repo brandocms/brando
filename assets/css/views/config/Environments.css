@@ -1062,13 +1062,18 @@
 
   .publishing-review h3 {
     margin: 0;
-    font-size: var(--brando-text-base);
-    font-weight: 500;
+    font-size: var(--brando-text-md);
+    font-weight: 600;
   }
 
   .publishing-review h3 + p {
-    margin-top: 4px;
+    max-width: 62ch;
+    margin: 4px 0 0;
+    color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
+    font-size: var(--brando-text-sm);
+    line-height: 1.55;
   }
+
 
   .publishing-review-files,
   .publishing-keep {
@@ -1101,10 +1106,20 @@
       min-width: 0;
     }
 
+    li > code {
+      margin-right: auto;
+    }
+
     code {
       font-size: var(--brando-text-sm);
       overflow-wrap: anywhere;
     }
+  }
+
+  .publishing-htaccess summary {
+    cursor: pointer;
+    font-size: var(--brando-text-sm);
+    font-weight: 500;
   }
 
   .publishing-entry-files,

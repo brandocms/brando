@@ -593,8 +593,10 @@ defmodule BrandoAdmin.Sites.PublishingLive do
       </form>
 
       <div class="publishing-keep">
-        <h3>{gettext("Keep list")}</h3>
-        <p>{gettext("Paths relative to the target, a directory ending in /. A deploy never deletes them.")}</p>
+        <div>
+          <h3>{gettext("Keep list")}</h3>
+          <p>{gettext("Paths relative to the target, a directory ending in /. A deploy never deletes them.")}</p>
+        </div>
         <ul class="publishing-entries">
           <li :for={path <- @target.keep}>
             <code>{path}</code>
