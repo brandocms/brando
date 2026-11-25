@@ -12,6 +12,7 @@ defmodule Brando.Worker.SSGDeploy do
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
+  alias Brando.SSG.SSH
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args} = job)
@@ -60,7 +61,22 @@ defmodule Brando.Worker.SSGDeploy do
     {:cancel, reason}
   end
 
-  defp outcome({:error, reason}, _build, _job), do: {:error, reason}
+  defp outcome({:error, {:rsync_failed, _status, _output} = reason}, build, _job) do
+    Builds.append_log(build, "Deployment failed: #{SSH.failure_message(reason)}")
+    {:error, reason}
+  end
+
+  defp outcome({:error, reason}, build, _job) do
+    # A step on the Publishing screen comes first (`Brando.SSG.SSH`)
+    case SSH.refusal_message(reason) do
+      nil ->
+        {:error, reason}
+
+      message ->
+        Builds.append_log(build, "Deployment refused: #{message}")
+        {:cancel, reason}
+    end
+  end
 
   defp local_refusal(:local_delivery_not_configured),
     do: "the site is no longer served by this installation. Make a build with its current settings."

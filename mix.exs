@@ -282,6 +282,10 @@ defmodule Brando.Mixfile do
     ]
   end
 
+  # `:ssh` reads and writes the keys a static site's rsync deploy uses
+  # (`Brando.SSG.SSH`), and must be in a release
+  def application, do: [extra_applications: [:ssh]]
+
   defp deps do
     [
       {:phoenix, "1.8.17"},

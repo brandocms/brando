@@ -5,10 +5,15 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Changing where a site deploys to (its target and webhook), building (which
-  # may deploy at once), deploying and rolling back ask for the password, a
-  # code or a passkey when the session has not confirmed lately.
-  on_mount({BrandoAdmin.Reauth, events: ~w(save_deploy_config deploy rollback request_build schedule_build)})
+  # Changing where a site deploys to (its target and webhook, its SSH key and
+  # accepted host keys), building (which may deploy at once), deploying and
+  # rolling back ask for the password, a code or a passkey when the session
+  # has not confirmed lately.
+  on_mount(
+    {BrandoAdmin.Reauth,
+     events: ~w(save_deploy_config rotate_deploy_key accept_host_keys deploy rollback request_build schedule_build)}
+  )
+
   # Builds, deploys and rollbacks report on their rows
   on_mount BrandoAdmin.Work
 
@@ -17,16 +22,14 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   alias Brando.Sites.Site
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
-  alias Brando.Tenant
-  alias Brando.Tenant.Access
+  alias Brando.SSG.DeployFiles
+  alias Brando.SSG.SSH
   alias Brando.Tenant.Registry
   alias Brando.Worker.SSGBuild
   alias Brando.Worker.SSGDeploy
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Work, as: WorkComponent
   alias BrandoAdmin.Work
-
-  @manager_roles [:admin, :superuser]
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -46,6 +49,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          |> assign(:admin_uri, socket.host_uri)
          |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
          |> assign(:default_scheduled_at, default_scheduled_at())
+         |> assign(:connection_test, nil)
          |> refresh()
          |> assign_strategy()}
 
@@ -178,14 +182,20 @@ defmodule BrandoAdmin.Sites.PublishingLive do
               <.icon name="info" />
               <span>{local_delivery_note(@site)}</span>
             </div>
-            <label :if={@strategy != "local"}>
-              <span>{gettext("Target")}</span>
-              <input
-                name="deploy[target]"
-                value={deploy_value(@site, :target)}
-                placeholder="deploy@example.com:/srv/www or s3://bucket/prefix"
-              />
-            </label>
+            <div :if={@strategy != "local"} class="publishing-target">
+              <label>
+                <span>{gettext("Target")}</span>
+                <input
+                  name="deploy[target]"
+                  value={deploy_value(@site, :target)}
+                  placeholder="deploy@example.com:/srv/www or s3://bucket/prefix"
+                />
+              </label>
+              <label :if={@strategy == "rsync"} class="publishing-port">
+                <span>{gettext("SSH port")}</span>
+                <input type="number" min="1" max="65535" name="deploy[port]" value={deploy_value(@site, :port) || 22} />
+              </label>
+            </div>
             <label>
               <span>{gettext("Public CDN URL (optional)")}</span>
               <input name="deploy[cdn_url]" value={deploy_value(@site, :cdn_url)} placeholder="https://www.example.com" />
@@ -226,6 +236,14 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             </button>
           </form>
         </section>
+
+        <.ssh_access
+          :if={@can_manage? && rsync_saved?(@site)}
+          public_key={@public_key}
+          key_problem={@key_problem}
+          connection_test={@connection_test}
+          can_deploy?={BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+        />
 
         <section class="environment-panel publishing-builds">
           <header>
@@ -353,6 +371,152 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     """
   end
 
+  attr :public_key, :string
+  attr :key_problem, :atom
+  attr :connection_test, :any
+  attr :can_deploy?, :boolean
+
+  # The site's own key and the host keys it accepted (Brando.SSG.SSH)
+  defp ssh_access(assigns) do
+    ~H"""
+    <section class="environment-panel publishing-ssh" id="publishing-ssh">
+      <h2>{gettext("SSH access")}</h2>
+      <p>
+        {gettext(
+          "Deploys connect with this site's own key, and only to a host whose key you accepted here. Add the public key to the authorized_keys file of the target's user on the host, then test the connection."
+        )}
+      </p>
+
+      <div :if={@key_problem} class="alert environment-hint" role="alert">
+        <.icon name="triangle-alert" />
+        <span>{key_problem_message(@key_problem)}</span>
+      </div>
+
+      <div :if={@public_key} id="publishing-public-key" class="publishing-public-key" phx-hook="Brando.CopyText">
+        <label>
+          <span>{gettext("Public key")}</span>
+          <input type="text" readonly value={@public_key} spellcheck="false" autocomplete="off" data-copy-source />
+        </label>
+        <button type="button" class="btn" data-copy-button data-copied={gettext("Copied")}>
+          {gettext("Copy")}
+        </button>
+      </div>
+
+      <div class="environment-actions publishing-ssh-actions">
+        <button
+          :if={@public_key}
+          type="button"
+          class="btn"
+          phx-click="test_connection"
+          disabled={!@can_deploy? || @connection_test == :running}
+        >
+          {if @connection_test == :running, do: gettext("Testing…"), else: gettext("Test connection")}
+        </button>
+        <button
+          :if={@public_key || @key_problem == :unreadable_key}
+          type="button"
+          class="btn"
+          disabled={!@can_deploy?}
+          phx-click="rotate_deploy_key"
+          data-confirm={
+            gettext(
+              "Replace the site's key with a new one? Deploys use the new key at once, so add it to the host first. The old key stays authorized on the host until you remove it from authorized_keys there."
+            )
+          }
+          data-confirm-ok={gettext("Rotate key")}
+        >
+          {gettext("Rotate key")}
+        </button>
+        <button
+          :if={is_nil(@public_key) && is_nil(@key_problem)}
+          type="button"
+          class="btn btn--primary"
+          disabled={!@can_deploy?}
+          phx-click="rotate_deploy_key"
+        >
+          {gettext("Make key")}
+        </button>
+      </div>
+
+      <.connection_result :if={is_tuple(@connection_test)} result={@connection_test} can_deploy?={@can_deploy?} />
+    </section>
+    """
+  end
+
+  attr :result, :any
+  attr :can_deploy?, :boolean
+
+  defp connection_result(%{result: {:error, reason}} = assigns) do
+    assigns = assign(assigns, :message, connection_error(reason))
+
+    ~H"""
+    <div class="alert environment-hint publishing-ssh-result" role="status" data-testid="connection-result">
+      <.icon name="triangle-alert" />
+      <span>{@message}</span>
+    </div>
+    """
+  end
+
+  defp connection_result(%{result: {:ok, test}} = assigns) do
+    assigns = assign(assigns, :test, test)
+
+    ~H"""
+    <div class="publishing-ssh-result" data-testid="connection-result" data-state={@test.host_key_state}>
+      <div :if={@test.host_key_state == :new} class="alert environment-hint" role="status">
+        <.icon name="info" />
+        <span>
+          {gettext(
+            "No host key is accepted for %{host}. Compare these fingerprints with the host's own before you accept them.",
+            host: host_label(@test)
+          )}
+        </span>
+      </div>
+      <div :if={@test.host_key_state == :changed} class="alert environment-hint" role="alert">
+        <.icon name="triangle-alert" />
+        <span>
+          {gettext(
+            "The host's keys are not the ones accepted for %{host}. Accept them only if you know why the host changed, such as a rebuilt server.",
+            host: host_label(@test)
+          )}
+        </span>
+      </div>
+
+      <dl class="publishing-fingerprints">
+        <div>
+          <dt>{gettext("Host keys")}</dt>
+          <dd :for={key <- @test.host_keys}><code>{key.type} {key.fingerprint}</code></dd>
+        </div>
+        <div :if={@test.host_key_state == :changed}>
+          <dt>{gettext("Accepted keys")}</dt>
+          <dd :for={key <- @test.accepted_keys}><code>{key.type} {key.fingerprint}</code></dd>
+        </div>
+      </dl>
+
+      <div :if={@test.host_key_state != :accepted} class="environment-actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          disabled={!@can_deploy?}
+          phx-click="accept_host_keys"
+          data-confirm={gettext("Accept these host keys for %{host}?", host: host_label(@test))}
+          data-confirm-ok={gettext("Accept host key")}
+        >
+          {gettext("Accept host key")}
+        </button>
+      </div>
+
+      <div :if={@test.dry_run == :ok} class="alert environment-hint" role="status">
+        <.icon name="circle-check" />
+        <span>{gettext("Connected: ssh, the site's key and rsync on the host work.")}</span>
+      </div>
+      <div :if={match?({:error, _}, @test.dry_run)} class="alert environment-hint" role="alert">
+        <.icon name="triangle-alert" />
+        <span>{connection_error(elem(@test.dry_run, 1))}</span>
+      </div>
+    </div>
+    """
+  end
+
   @impl Phoenix.LiveView
   def handle_event("refresh", _params, socket), do: {:noreply, refresh(socket)}
 
@@ -375,16 +539,22 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     attrs = %{
       strategy: deploy_strategy(params["strategy"]),
       target: blank_to_nil(params["target"]),
+      port: parse_integer(params["port"], 22),
       cdn_url: blank_to_nil(params["cdn_url"]),
       webhook_url: blank_to_nil(params["webhook_url"]),
       auto_deploy: params["auto_deploy"] == "true",
       retention_count: parse_integer(params["retention_count"], 10)
     }
 
-    with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
-         {:ok, _site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
+    user = socket.assigns.current_user
+
+    with true <- can_manage?(user, socket.assigns.site),
+         {:ok, site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
+      # The key is made with the first rsync settings; where it cannot be
+      # kept, the panel says why
+      if rsync_saved?(site), do: SSH.ensure_key(site, user)
       send(self(), {:toast, gettext("Static deployment settings saved")})
-      {:noreply, socket |> refresh() |> assign_strategy()}
+      {:noreply, socket |> assign(:connection_test, nil) |> refresh() |> assign_strategy()}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         toast_error(socket, BrandoAdmin.Utils.format_changeset_errors(changeset))
@@ -393,6 +563,46 @@ defmodule BrandoAdmin.Sites.PublishingLive do
         toast_error(socket, gettext("Could not save static deployment settings."))
     end
   end
+
+  def handle_event("rotate_deploy_key", _params, socket) do
+    case SSH.rotate_key(socket.assigns.site, socket.assigns.current_user) do
+      {:ok, _public_key} ->
+        send(self(), {:toast, gettext("The site has a new SSH key")})
+        {:noreply, socket |> assign(:connection_test, nil) |> refresh()}
+
+      {:error, reason} ->
+        toast_error(socket, connection_error(reason))
+    end
+  end
+
+  # Runs beside the screen: the host may take its time to answer
+  def handle_event("test_connection", _params, %{assigns: %{connection_test: :running}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("test_connection", _params, socket) do
+    site = socket.assigns.site
+    user = socket.assigns.current_user
+
+    {:noreply,
+     socket
+     |> assign(:connection_test, :running)
+     |> start_async(:connection_test, fn -> SSH.test_connection(site, user) end)}
+  end
+
+  # What is accepted is what the test showed, not a second fetch
+  def handle_event("accept_host_keys", _params, %{assigns: %{connection_test: {:ok, test}}} = socket) do
+    case SSH.accept_host_keys(socket.assigns.site, socket.assigns.current_user, test) do
+      :ok ->
+        send(self(), {:toast, gettext("Host key accepted")})
+        handle_event("test_connection", %{}, socket)
+
+      {:error, reason} ->
+        toast_error(socket, connection_error(reason))
+    end
+  end
+
+  def handle_event("accept_host_keys", _params, socket),
+    do: toast_error(socket, gettext("Test the connection first."))
 
   # The job reports on the build's row, or as a toast elsewhere (BrandoAdmin.Work)
   def handle_event(action, %{"id" => id}, socket) when action in ["deploy", "rollback"] do
@@ -420,6 +630,12 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   @impl Phoenix.LiveView
   def handle_info({:ssg_build_updated, _build}, socket), do: {:noreply, refresh(socket)}
+
+  @impl Phoenix.LiveView
+  def handle_async(:connection_test, {:ok, result}, socket), do: {:noreply, assign(socket, :connection_test, result)}
+
+  def handle_async(:connection_test, {:exit, _reason}, socket),
+    do: {:noreply, assign(socket, :connection_test, {:error, :test_failed})}
 
   defp deploy_messages("deploy", version) do
     [
@@ -473,19 +689,79 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     |> assign(:site, site)
     |> assign(:environments, site.environments |> Enum.sort_by(&{not &1.live, &1.name}))
     |> assign(:builds, Builds.list_builds(site))
+    |> assign_key(site)
   end
 
-  defp can_manage?(user, site) do
-    if Brando.Authorization.enabled?() do
-      scope = Brando.Authorization.Scope.site(user, site)
-      Enum.any?([:build, :deploy, :schedule], &Brando.Authorization.can?(scope, &1, :publishing))
-    else
-      case Tenant.mode() do
-        :multi -> Access.can_manage?(user, site)
-        _other -> user.role in @manager_roles
+  # The public key, for those who may change it; the private key stays in its file
+  defp assign_key(socket, site) do
+    {public_key, problem} =
+      cond do
+        not (socket.assigns.can_manage? and rsync_saved?(site)) -> {nil, nil}
+        match?({:error, _}, DeployFiles.check_location(site)) -> {nil, elem(DeployFiles.check_location(site), 1)}
+        true -> site |> SSH.public_key() |> key_or_problem()
       end
-    end
+
+    assign(socket, public_key: public_key, key_problem: problem)
   end
+
+  defp key_or_problem({:ok, public_key}), do: {public_key, nil}
+  defp key_or_problem({:error, :no_key}), do: {nil, nil}
+  defp key_or_problem({:error, :unreadable_key}), do: {nil, :unreadable_key}
+
+  defp rsync_saved?(%{deploy_config: %{strategy: :rsync, target: target}}) when target not in [nil, ""], do: true
+  defp rsync_saved?(_site), do: false
+
+  defp host_label(%{target: target, port: 22}), do: DeployConfig.rsync_host(target)
+  defp host_label(%{target: target, port: port}), do: "#{DeployConfig.rsync_host(target)}, port #{port}"
+
+  defp key_problem_message(:served),
+    do:
+      gettext(
+        "Brando keeps no SSH key for this site: its deploy directory is inside a directory the installation serves (media or static files). Set :sites_path in the config outside them."
+      )
+
+  defp key_problem_message(:unsafe_path),
+    do:
+      gettext(
+        "Brando keeps no SSH key for this site: the path of its deploy directory has characters ssh reads specially. Set :sites_path in the config to a path of letters, digits and . _ + @ - /."
+      )
+
+  defp key_problem_message(:unreadable_key),
+    do: gettext("The site's SSH key could not be read. Rotate it to make a new one.")
+
+  # What ssh, rsync or the host said is escaped and cut (`Brando.SSG.SSH.remote_output/1`)
+  defp connection_error(:forbidden), do: gettext("You may not change this site's deployment settings.")
+  defp connection_error(:not_rsync), do: gettext("Save rsync deployment settings first.")
+  defp connection_error(:no_key), do: gettext("The site has no SSH key yet.")
+  defp connection_error(:unreadable_key), do: key_problem_message(:unreadable_key)
+  defp connection_error(:deploy_files_served), do: key_problem_message(:served)
+  defp connection_error(:deploy_files_unsafe_path), do: key_problem_message(:unsafe_path)
+  defp connection_error({:error, reason}), do: connection_error(reason)
+  defp connection_error(:invalid_deploy_target), do: gettext("The target is not one this site may deploy to.")
+
+  defp connection_error(:deploy_target_lookup_failed),
+    do: gettext("The target's host could not be looked up. Try again in a moment.")
+
+  defp connection_error(:target_changed),
+    do: gettext("The deployment settings changed after the test. Test the connection again.")
+
+  defp connection_error(:host_key_not_accepted), do: gettext("No host key is accepted for the target's host and port.")
+
+  defp connection_error(:host_key_rejected),
+    do: gettext("The host's key is not the one accepted for it. Test the connection to compare the fingerprints.")
+
+  defp connection_error({:program_missing, program}),
+    do: gettext("%{program} is not installed on this server.", program: program)
+
+  defp connection_error({:no_host_keys, output}),
+    do: gettext("The host answered with no SSH host keys: %{output}", output: output)
+
+  defp connection_error({:rsync_failed, status, output}),
+    do: gettext("rsync exited with status %{status}: %{output}", status: status, output: SSH.remote_output(output))
+
+  defp connection_error(_reason), do: gettext("Could not test the connection.")
+
+  defp can_manage?(user, site), do: Builds.can_manage?(user, site)
 
   defp parse_future_datetime(value) when is_binary(value) do
     with {:ok, naive} <- NaiveDateTime.from_iso8601(value <> ":00"),

@@ -112,6 +112,14 @@ defmodule Brando.Tenant.Lock do
   @spec deploy_key(pos_integer()) :: String.t()
   def deploy_key(site_id), do: "ssg-deploy:#{site_id}"
 
+  @doc """
+  The lock a change to a site's files under `ssg/deploy/` holds
+  (`Brando.SSG.DeployFiles`): its key, its accepted host keys. A deploy reads
+  them without it, as each is written whole.
+  """
+  @spec deploy_files_key(pos_integer()) :: String.t()
+  def deploy_files_key(site_id), do: "ssg-deploy-files:#{site_id}"
+
   @doc "The lock a site's lifecycle operation (provisioning, archiving, deletion) holds."
   @spec lifecycle_key(String.t()) :: String.t()
   def lifecycle_key(site_key), do: "brando:site-lifecycle:#{site_key}"

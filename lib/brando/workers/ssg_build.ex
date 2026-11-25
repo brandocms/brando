@@ -15,6 +15,7 @@ defmodule Brando.Worker.SSGBuild do
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
+  alias Brando.SSG.SSH
   alias BrandoAdmin.Work
 
   require Logger
@@ -216,7 +217,7 @@ defmodule Brando.Worker.SSGBuild do
   end
 
   defp record_deploy_failure(build, reason) do
-    Builds.append_log(build, "Automatic deployment failed: #{inspect(reason)}")
+    Builds.append_log(build, automatic_deploy_log(reason))
 
     report(build, fn user, key ->
       Work.fail(user, key, gettext("Static build %{version} is ready, but deployment failed", version: build.version),
@@ -225,6 +226,18 @@ defmodule Brando.Worker.SSGBuild do
     end)
 
     {:error, {:deploy_failed, reason}}
+  end
+
+  # As the deploy job logs it (`Brando.Worker.SSGDeploy`): what a remote host
+  # said is escaped and cut
+  defp automatic_deploy_log({:rsync_failed, _status, _output} = reason),
+    do: "Automatic deployment failed: #{SSH.failure_message(reason)}"
+
+  defp automatic_deploy_log(reason) do
+    case SSH.refusal_message(reason) do
+      nil -> "Automatic deployment failed: #{inspect(reason)}"
+      message -> "Automatic deployment refused: #{message}"
+    end
   end
 
   defp fail_build(build, reason, result) do

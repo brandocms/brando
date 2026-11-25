@@ -35,6 +35,7 @@ import ShortcutSheetHook from './hooks/ShortcutSheet'
 import MultiSelectPickerHook from './hooks/MultiSelectPicker'
 import PasskeyHook from './hooks/Passkey'
 import WebhookSecretHook from './hooks/WebhookSecret'
+import CopyTextHook from './hooks/CopyText'
 import BlockSlotHook from './hooks/BlockSlot'
 import MuxUploaderHook from './hooks/MuxUploader'
 import BunnyUploaderHook from './hooks/BunnyUploader'
@@ -117,6 +118,7 @@ export default (app) => {
     'Brando.MultiSelectPicker': MultiSelectPickerHook(app),
     'Brando.Passkey': PasskeyHook(app),
     'Brando.WebhookSecret': WebhookSecretHook(app),
+    'Brando.CopyText': CopyTextHook(app),
     'Brando.BlockSlot': BlockSlotHook(app),
     'Brando.MuxUploader': MuxUploaderHook(app),
     'Brando.BunnyUploader': BunnyUploaderHook(app),

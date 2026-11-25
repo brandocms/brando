@@ -38,6 +38,7 @@ defmodule Brando.MarkdownSources.PublicationTest do
         deploy_config: %{strategy: :rsync, target: "deploy@example.test:/srv/docs"}
       })
 
+    Brando.SSGSSHFixtures.trust_hosts(site, ["example.test"])
     {:ok, environment} = Registry.create_environment(site, %{name: "Production", key: "production", live: true})
     prefix = Brando.Tenant.prefix(site, environment)
     # Clone the actual migrated content tables inside the sandbox transaction.
@@ -120,7 +121,18 @@ defmodule Brando.MarkdownSources.PublicationTest do
 
     put_test_env(:ssg_builder, Builder)
 
-    put_test_env(:ssg_deploy_runner, fn "rsync", ["-az", "--delete", "--", source, "deploy@example.test:/srv/docs"], _ ->
+    put_test_env(:ssg_deploy_runner, fn "rsync",
+                                        [
+                                          "-e",
+                                          _ssh,
+                                          _timeout,
+                                          "-az",
+                                          "--delete",
+                                          "--",
+                                          source,
+                                          "deploy@example.test:/srv/docs"
+                                        ],
+                                        _ ->
       File.cp_r!(source, destination)
       {"", 0}
     end)
