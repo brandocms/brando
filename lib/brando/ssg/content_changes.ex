@@ -165,6 +165,16 @@ defmodule Brando.SSG.ContentChanges do
     DateTime.from_naive!(now, "Etc/UTC")
   end
 
+  @doc """
+  The database's clock, which dates marks: a build's `started_at` is taken
+  from it, so a node whose clock differs does not misplace a change.
+  """
+  @spec now() :: DateTime.t()
+  def now do
+    %{rows: [[now]]} = Brando.Repo.repo().query!("SELECT clock_timestamp() AT TIME ZONE 'UTC'")
+    DateTime.from_naive!(now, "Etc/UTC")
+  end
+
   # Once per transaction for each environment or site, after the rest of its
   # after-commit work: a build that starts once it is marked reads no cache
   # entry the transaction's evictions and rebuilds have yet to refresh
@@ -249,6 +259,11 @@ defmodule Brando.SSG.ContentChanges do
         log_failure(RuntimeError.exception(inspect(reason)))
         nil
     end
+  catch
+    # The supervisor is not running, or restarting
+    :exit, reason ->
+      log_failure(RuntimeError.exception(inspect(reason)))
+      nil
   end
 
   defp wait_and_write(lock, taken, site_id, environment_ids) do

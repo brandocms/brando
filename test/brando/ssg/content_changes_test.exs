@@ -4,6 +4,7 @@ defmodule Brando.SSG.ContentChangesTest do
   use Brando.ConnCase, async: false
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Brando.Activity.Event
   alias Brando.Assets.SiteAssets
@@ -154,6 +155,19 @@ defmodule Brando.SSG.ContentChangesTest do
 
       assert_receive {:ssg_content_changed, _}, 2_000
       assert DateTime.compare(ContentChanges.changed_at(c.production), ended) == :gt
+      assert title(c.site, c.production, page) == "Saved"
+    end
+
+    test "in a transaction begun on the repo itself is saved when no waiter can start", c do
+      page = page!(c.site, c.production, c.user)
+      waiters = Brando.SSG.ContentChanges.TaskSupervisor
+      :ok = Supervisor.terminate_child(Brando.Supervisor, waiters)
+      on_exit(fn -> Supervisor.restart_child(Brando.Supervisor, waiters) end)
+
+      capture_log(fn ->
+        assert {:ok, _} = Brando.Repo.repo().transaction(fn -> update_page!(c.site, c.production, page, c.user) end)
+      end)
+
       assert title(c.site, c.production, page) == "Saved"
     end
 
