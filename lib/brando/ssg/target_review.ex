@@ -1,0 +1,528 @@
+defmodule Brando.SSG.TargetReview do
+  @moduledoc """
+  What an rsync deploy may delete on its target: a path Brando uploaded or an
+  admin confirmed, never one on the keep list (`Brando.Sites.DeployConfig`'s
+  `:keep_paths`). The receiving rsync enforces it, with filter rules that
+  protect every other path (`Brando.SSG.TargetPaths.plan/3`), so a file that
+  appears on the target at any moment is never deleted. Dry runs only
+  report.
+
+  The target's state is one file (`Brando.SSG.DeployFiles`'s
+  `:target_state`), read and written holding the deploy lock
+  (`Brando.Tenant.Lock.deploy_key/1`): the target, port and accepted host
+  keys it is for, whether an admin reviewed it, the paths Brando may have
+  uploaded, the paths an admin confirmed, and what the target was last found
+  to hold (`found`): the review's listing before the first deploy, the
+  unknown files after each. A changed target or port, or other accepted host
+  keys, makes the target unreviewed and its lists unused.
+
+  - `review/3`, after a connection test, lists an unreviewed target and
+    fetches its `.htaccess`; `confirm/5` keeps what the admin ticked and
+    confirms the rest of the listing it names (a digest).
+  - `deploy/4` refuses a target that is not the reviewed one, then: lists the
+    target to refuse a collision rsync would clear the way for, adds the
+    build's paths to the uploaded list, runs rsync with the rules, keeps the
+    build's paths as the uploaded list, and lists the unknown files.
+  - `keep/3` adds ticked unknown entries to the keep list; `confirm/5` with
+    `:unknown` confirms the rest, and `delete_unknown/4` queues a deploy of
+    the site's deployed build when the job runs.
+
+  Each acts for someone who may manage the site's publishing
+  (`Brando.SSG.Builds.can_manage?/2`), on the site as stored.
+  """
+
+  alias Brando.Sites.DeployConfig
+  alias Brando.Sites.Site
+  alias Brando.SSG.Build
+  alias Brando.SSG.Builds
+  alias Brando.SSG.DeployFiles
+  alias Brando.SSG.SSH
+  alias Brando.SSG.TargetPaths
+  alias Brando.Tenant.Lock
+  alias Brando.Tenant.Registry
+
+  require Logger
+
+  # A listing longer than this is cut short, and confirms nothing
+  @listing_limit 100_000
+  @htaccess_limit 32_768
+  @lock_timeout :timer.seconds(5)
+  @name_limit 200
+
+  @typedoc """
+  What the target was last found to hold: its paths, a digest the screen
+  names it by, and for a review the `.htaccess` at its root (`{:ok, text}`,
+  `:too_large`, `{:error, reason}`, or nil when there is none).
+  """
+  @type found :: %{paths: [TargetPaths.path()], digest: String.t(), htaccess: term()}
+
+  @type state :: %{
+          target: String.t(),
+          port: pos_integer(),
+          host_keys: [{String.t(), String.t()}],
+          reviewed: boolean(),
+          uploaded: [TargetPaths.path()],
+          confirmed: [TargetPaths.path()],
+          found: found() | nil
+        }
+
+  @typedoc "What the Publishing screen shows of the site's target."
+  @type status :: %{
+          target: String.t(),
+          port: pos_integer(),
+          reviewed: boolean(),
+          found: found() | nil,
+          keep: [TargetPaths.path()]
+        }
+
+  ## The screen
+
+  @doc """
+  The state of the site's stored rsync target, for `actor`: reviewed or not,
+  and what it was last found to hold. Nil without rsync settings.
+  """
+  @spec status(Site.t(), term()) :: {:ok, status() | nil} | {:error, term()}
+  def status(%Site{} = site, actor) do
+    acting(site, actor, fn site ->
+      with {:ok, target, port} <- stored_target(site),
+           {:ok, state} <- read_state(site) do
+        current = for_target(state, target, port, host_keys(site, target, port))
+
+        {:ok,
+         %{
+           target: target,
+           port: port,
+           reviewed: match?(%{reviewed: true}, current),
+           found: current && current.found,
+           keep: keep_paths(site)
+         }}
+      else
+        {:error, :not_rsync} -> {:ok, nil}
+        error -> error
+      end
+    end)
+  end
+
+  @doc """
+  Lists the site's stored target when it is not reviewed, for `actor`, and
+  keeps the listing for `confirm/5`: `{:ok, :reviewed}` for a reviewed
+  target. A listing that fails or is cut short is an error, not an empty
+  target. Takes the deploy's `:runner`.
+  """
+  @spec review(Site.t(), term(), keyword()) :: {:ok, :reviewed | found()} | {:error, term()}
+  def review(%Site{} = site, actor, opts \\ []) do
+    acting(site, actor, fn site ->
+      with {:ok, target, port} <- stored_target(site),
+           keys = host_keys(site, target, port),
+           {:ok, state} <- read_state(site) do
+        if match?(%{reviewed: true}, for_target(state, target, port, keys)),
+          do: {:ok, :reviewed},
+          else: list_for_review(site, target, port, keys, opts)
+      end
+    end)
+  end
+
+  defp list_for_review(site, target, port, keys, opts) do
+    with {:ok, paths} <- listing(site, target, port, opts) do
+      found = %{
+        paths: paths,
+        digest: TargetPaths.digest({target, port, keys, paths}),
+        htaccess: if(".htaccess" in paths, do: fetch_htaccess(site, target, port, opts))
+      }
+
+      locked(site, fn ->
+        site = Registry.get_site(site.id)
+
+        cond do
+          stored_target(site) != {:ok, target, port} or host_keys(site, target, port) != keys ->
+            {:error, :target_changed}
+
+          # Another admin confirmed while this listed
+          match?({:ok, %{reviewed: true}}, current_state(site, target, port)) ->
+            {:ok, :reviewed}
+
+          true ->
+            state = %{
+              target: target,
+              port: port,
+              host_keys: keys,
+              reviewed: false,
+              uploaded: [],
+              confirmed: [],
+              found: found
+            }
+
+            with :ok <- write_state(site, state), do: {:ok, found}
+        end
+      end)
+    end
+  end
+
+  @doc """
+  Confirms the listing named by `digest`, for `actor`: the ticked top-level
+  entries are kept (added to the keep list when their names may be on it,
+  left alone otherwise), the rest of the listing may be deleted. `kind` is
+  `:review` for a target not reviewed yet, which it makes reviewed, or
+  `:unknown` for the unknown files of a reviewed one. Refused when the
+  stored listing is another (`:stale_listing`) or the target changed.
+  """
+  @spec confirm(Site.t(), term(), :review | :unknown, String.t(), [String.t()]) :: :ok | {:error, term()}
+  def confirm(%Site{} = site, actor, kind, digest, ticked) when kind in [:review, :unknown] and is_binary(digest) do
+    acting(site, actor, fn site ->
+      locked(site, fn ->
+        site = Registry.get_site(site.id)
+
+        with {:ok, target, port} <- stored_target(site),
+             {:ok, state} <- current_state(site, target, port),
+             :ok <- confirmable(state, kind, digest),
+             {:ok, keep} <- keep_ticked(site, state.found, ticked) do
+          ticked = MapSet.new(ticked)
+
+          confirmed =
+            for path <- state.found.paths,
+                not TargetPaths.kept?(path, keep),
+                TargetPaths.top(path) not in ticked,
+                TargetPaths.rule_path?(path),
+                do: path
+
+          write_state(site, %{state | reviewed: true, confirmed: union(state.confirmed, confirmed), found: nil})
+        end
+      end)
+    end)
+  end
+
+  defp confirmable(%{found: %{digest: digest}, reviewed: reviewed}, kind, digest)
+       when (kind == :review and not reviewed) or (kind == :unknown and reviewed),
+       do: :ok
+
+  defp confirmable(_state, _kind, _digest), do: {:error, :stale_listing}
+
+  @doc "Adds the ticked top-level entries of the unknown files to the keep list, for `actor`."
+  @spec keep(Site.t(), term(), [String.t()]) :: :ok | {:error, term()}
+  def keep(%Site{} = site, actor, ticked) do
+    acting(site, actor, fn site ->
+      locked(site, fn ->
+        site = Registry.get_site(site.id)
+
+        with {:ok, target, port} <- stored_target(site),
+             {:ok, %{found: %{}} = state} <- current_state(site, target, port),
+             {:ok, _keep} <- keep_ticked(site, state.found, ticked),
+             do: :ok
+      end)
+    end)
+  end
+
+  @doc """
+  Confirms the unknown files named by `digest` but the ticked ones (as
+  `confirm/5`), for `actor`, and queues a deploy of whichever build is the
+  site's deployed one when the job runs, which deletes them.
+  """
+  @spec delete_unknown(Site.t(), term(), String.t(), [String.t()]) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def delete_unknown(%Site{} = site, actor, digest, ticked) do
+    with :ok <- confirm(site, actor, :unknown, digest, ticked) do
+      %{"site_id" => site.id, "action" => "redeploy", "creator_id" => actor.id}
+      |> Brando.Worker.SSGDeploy.new(tags: ["ssg-deploy", "site:#{site.id}"])
+      |> Oban.insert()
+    end
+  end
+
+  @doc "Adds `path` to the keep list, for `actor`."
+  @spec add_keep_path(Site.t(), term(), String.t()) :: :ok | {:error, term()}
+  def add_keep_path(%Site{} = site, actor, path) do
+    if TargetPaths.keep_entry?(path),
+      do: change_keep(site, actor, &Enum.uniq(&1 ++ [path])),
+      else: {:error, :invalid_keep_path}
+  end
+
+  @doc "Takes `path` off the keep list, for `actor`."
+  @spec remove_keep_path(Site.t(), term(), String.t()) :: :ok | {:error, term()}
+  def remove_keep_path(%Site{} = site, actor, path), do: change_keep(site, actor, &List.delete(&1, path))
+
+  defp change_keep(site, actor, fun) do
+    acting(site, actor, fn site ->
+      locked(site, fn ->
+        site = Registry.get_site(site.id)
+        save_keep(site, fun.(keep_paths(site)))
+      end)
+    end)
+  end
+
+  # The ticked names of the listing that may be on the keep list, added to it
+  defp keep_ticked(site, found, ticked) do
+    tops = found.paths |> Enum.map(&TargetPaths.top/1) |> MapSet.new()
+    added = Enum.filter(ticked, &(&1 in tops and TargetPaths.keep_entry?(&1)))
+    keep = Enum.uniq(keep_paths(site) ++ added)
+
+    with :ok <- save_keep(site, keep), do: {:ok, keep}
+  end
+
+  defp save_keep(site, keep) do
+    if keep == keep_paths(site) do
+      :ok
+    else
+      case Registry.update_site(site, %{deploy_config: %{keep_paths: keep}}) do
+        {:ok, _site} -> :ok
+        {:error, changeset} -> {:error, {:invalid_keep_paths, changeset}}
+      end
+    end
+  end
+
+  ## Deploying
+
+  @doc """
+  Deploys the build to `target` on `port` with the site's reviewed state, as
+  the moduledoc says. Call it holding the deploy lock. Returns lines for the
+  build log. Takes the deploy's `:runner`.
+  """
+  @spec deploy(Build.t(), String.t(), pos_integer(), keyword()) :: {:ok, [String.t()]} | {:error, term()}
+  def deploy(%Build{site: %Site{} = site} = build, target, port, opts) do
+    keys = host_keys(site, target, port)
+    keep = keep_paths(site)
+
+    with {:ok, _ssh_args} <- SSH.rsync_ssh_args(site, target, port),
+         {:ok, state} <- read_state(site),
+         {:ok, state} <- reviewed(state, site, target, port, keys) do
+      plan = TargetPaths.plan(build.build_path, state.uploaded ++ state.confirmed, keep)
+      source = String.trim_trailing(build.build_path, "/") <> "/"
+
+      with {:ok, listing} <- listing(site, target, port, opts),
+           :ok <- check_collisions(plan, listing),
+           :ok <- write_state(site, %{state | uploaded: union(state.uploaded, plan.upload)}, :uploaded_list),
+           :ok <- DeployFiles.write(site, :filter, plan.rules),
+           {:ok, _output} <-
+             SSH.rsync(site, target, port, ["-az", "--delete"] ++ filter_args(site) ++ ["--", source, target], opts) do
+        deployed = %{state | uploaded: plan.upload, confirmed: [], found: nil}
+
+        # Failing here leaves the union: more than this build, nothing unknown
+        case write_state(site, deployed) do
+          :ok ->
+            {:ok, list_unknown(site, deployed, source, keep, opts)}
+
+          {:error, reason} ->
+            Logger.warning("SSG target state of site #{site.key} not written: #{inspect(reason)}")
+            {:ok, []}
+        end
+      end
+    end
+  after
+    File.rm(DeployFiles.path(build.site, :filter))
+  end
+
+  defp filter_args(site), do: ["--from0", "--filter=merge " <> DeployFiles.path(site, :filter)]
+
+  # The build's own target: one reviewed, with the host keys accepted now
+  defp reviewed(state, site, target, port, keys) do
+    case for_target(state, target, port, keys) do
+      %{reviewed: true} = state ->
+        {:ok, state}
+
+      _other ->
+        if match?({:ok, ^target, ^port}, stored_target(site)),
+          do: {:error, :target_not_reviewed},
+          else: {:error, :build_for_another_target}
+    end
+  end
+
+  # rsync clears a path the build needs for a directory whatever the rules
+  # say, and fails on one the build needs for a file. Refused here when the
+  # path holds what it may not delete; a file that appears there during the
+  # run is the limit of this check.
+  defp check_collisions(plan, listing) do
+    on_target = MapSet.new(listing)
+    deletable = MapSet.new(plan.deletable)
+
+    Enum.find_value(plan.upload, :ok, fn path ->
+      if TargetPaths.directory?(path) do
+        name = String.trim_trailing(path, "/")
+        if name in on_target and name not in deletable, do: {:error, {:target_collision, name}}
+      else
+        directory = path <> "/"
+
+        if directory in on_target and
+             Enum.any?(listing, &(String.starts_with?(&1, directory) and &1 not in deletable)),
+           do: {:error, {:target_collision, path}}
+      end
+    end)
+  end
+
+  # What the target holds beyond the build and the keep list, for the screen.
+  # Its failure does not fail the deploy.
+  defp list_unknown(site, state, source, keep, opts) do
+    nonce = TargetPaths.nonce()
+
+    args =
+      ["-an", "--delete"] ++
+        filter_args(site) ++ [TargetPaths.listing_format(nonce), "--", source, state.target]
+
+    with :ok <- DeployFiles.write(site, :filter, TargetPaths.keep_rules(keep)),
+         {:ok, output} <- SSH.rsync(site, state.target, state.port, args, opts),
+         {:ok, paths} <- limited(TargetPaths.parse_listing(output, nonce)),
+         found = %{paths: paths, digest: TargetPaths.digest({state.target, state.port, state.host_keys, paths})},
+         :ok <- write_state(site, %{state | found: found}) do
+      if paths == [], do: [], else: ["The target holds #{length(paths)} paths Brando did not put there: see Publishing"]
+    else
+      {:error, reason} -> ["Could not list what the target holds beyond the build: #{failure_message(reason)}"]
+    end
+  end
+
+  ## Listing the target
+
+  # Everything the target holds: a dry run that would delete it all, from an
+  # empty directory. Always `-n`: without it these arguments delete.
+  defp listing(site, target, port, opts) do
+    empty = temporary_dir("brando-ssg-listing")
+    nonce = TargetPaths.nonce()
+
+    try do
+      args = ["-an", "--delete", TargetPaths.listing_format(nonce), "--", empty <> "/", target]
+
+      with {:ok, output} <- SSH.rsync(site, target, port, args, opts),
+           do: limited(TargetPaths.parse_listing(output, nonce))
+    after
+      File.rm_rf(empty)
+    end
+  end
+
+  defp limited(paths) when length(paths) > @listing_limit, do: {:error, :listing_cut_short}
+  defp limited(paths), do: {:ok, Enum.sort(paths)}
+
+  defp fetch_htaccess(site, target, port, opts) do
+    dir = temporary_dir("brando-ssg-htaccess")
+    remote = String.trim_trailing(target, "/") <> "/.htaccess"
+
+    try do
+      args = ["--max-size=#{@htaccess_limit}", "--timeout=30", "--", remote, dir <> "/"]
+
+      with {:ok, _output} <- SSH.rsync(site, target, port, args, opts) do
+        case File.read(Path.join(dir, ".htaccess")) do
+          {:ok, text} -> {:ok, text}
+          # rsync skips a larger file
+          {:error, :enoent} -> :too_large
+          {:error, reason} -> {:error, reason}
+        end
+      end
+    after
+      File.rm_rf(dir)
+    end
+  end
+
+  defp temporary_dir(prefix) do
+    dir = Path.join(System.tmp_dir!(), "#{prefix}-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    dir
+  end
+
+  ## The state file
+
+  defp locked(site, fun) do
+    case Lock.with_timeout(Lock.deploy_key(site.id), @lock_timeout, fun) do
+      {:ok, result} -> result
+      :busy -> {:error, :deploy_running}
+    end
+  end
+
+  # The state when it is for the site's target, port and accepted host keys
+  defp current_state(site, target, port) do
+    with {:ok, state} <- read_state(site) do
+      case for_target(state, target, port, host_keys(site, target, port)) do
+        nil -> {:error, :target_changed}
+        state -> {:ok, state}
+      end
+    end
+  end
+
+  defp for_target(%{target: target, port: port, host_keys: keys} = state, target, port, keys) when keys != [], do: state
+  defp for_target(_state, _target, _port, _keys), do: nil
+
+  defp read_state(site) do
+    case DeployFiles.read(site, :target_state) do
+      {:ok, binary} -> decode_state(binary)
+      {:error, :enoent} -> {:ok, nil}
+      {:error, reason} -> {:error, {:target_state_unreadable, reason}}
+    end
+  end
+
+  defp decode_state(binary) do
+    case :erlang.binary_to_term(binary, [:safe]) do
+      %{target: _, port: _, host_keys: _, reviewed: _, uploaded: _, confirmed: _, found: _} = state -> {:ok, state}
+      _other -> {:error, {:target_state_unreadable, :format}}
+    end
+  rescue
+    ArgumentError -> {:error, {:target_state_unreadable, :format}}
+  end
+
+  defp write_state(site, state, step \\ :state) do
+    case DeployFiles.write(site, :target_state, :erlang.term_to_binary(state)) do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:target_state_not_written, step, reason}}
+    end
+  end
+
+  defp host_keys(site, target, port),
+    do: site |> SSH.accepted_keys(target, port) |> Enum.map(&{&1.type, &1.data}) |> Enum.sort()
+
+  defp keep_paths(%Site{deploy_config: %DeployConfig{keep_paths: keep}}) when is_list(keep), do: keep
+  defp keep_paths(%Site{}), do: %DeployConfig{}.keep_paths
+
+  defp union(paths, more), do: paths |> Enum.concat(more) |> Enum.uniq() |> Enum.sort()
+
+  defp stored_target(%Site{deploy_config: %DeployConfig{strategy: :rsync, target: target, port: port}})
+       when is_binary(target) and target != "",
+       do: {:ok, target, port || 22}
+
+  defp stored_target(%Site{}), do: {:error, :not_rsync}
+
+  # The site as stored, for someone who may manage its publishing
+  defp acting(%Site{id: id}, actor, fun) do
+    case Registry.get_site(id) do
+      %Site{} = site -> if Builds.can_manage?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      nil -> {:error, :site_not_found}
+    end
+  end
+
+  ## What is said
+
+  @doc """
+  A path read from the target, to show: as it is when it is plain, else
+  quoted with its control characters escaped; cut to a length.
+  """
+  @spec display(String.t()) :: String.t()
+  def display(path) do
+    plain? =
+      String.valid?(path) and not Regex.match?(~r/[\x00-\x1f\x7f]/, path) and path == String.trim(path) and
+        String.length(path) <= @name_limit
+
+    if plain?, do: path, else: inspect(path, printable_limit: @name_limit, binaries: :as_strings)
+  end
+
+  @doc """
+  Why a deploy was refused for a reason of this module's, to write in the
+  build log; nil for other reasons. A refusal is not retried.
+  """
+  @spec refusal_message(term()) :: String.t() | nil
+  def refusal_message(:target_not_reviewed),
+    do:
+      "the target is not reviewed for its host keys. On Publishing, use Test connection and confirm what the target holds before the first deploy."
+
+  def refusal_message(:build_for_another_target),
+    do: "the build was made for another target or port than the reviewed one, and must be built again."
+
+  def refusal_message({:target_collision, path}),
+    do:
+      "the build and the target have a file and a directory at #{display(path)}, and the target's holds what Brando may not delete. Keep or delete it on the host, or confirm it on Publishing."
+
+  def refusal_message({:target_state_unreadable, _reason}),
+    do: "the target's state could not be read. On Publishing, test the connection and review the target again."
+
+  def refusal_message({:target_state_not_written, :uploaded_list, reason}),
+    do: "the list of files Brando uploads could not be written (#{inspect(reason)}), so nothing was copied."
+
+  def refusal_message(:listing_cut_short),
+    do: "the target holds more than #{@listing_limit} paths, too many to list before the deploy."
+
+  def refusal_message(_reason), do: nil
+
+  @doc "A failure of this module's or `Brando.SSG.SSH`'s, to show."
+  @spec failure_message(term()) :: String.t()
+  def failure_message(reason), do: refusal_message(reason) || SSH.failure_message(reason)
+end

@@ -269,7 +269,9 @@ defmodule Brando.SSG.SSH do
     end
   end
 
-  defp accepted_keys(site, target, port) do
+  @doc "The host keys the site accepted for `target`'s host on `port`."
+  @spec accepted_keys(Site.t(), String.t(), pos_integer()) :: [host_key()]
+  def accepted_keys(%Site{} = site, target, port) do
     name = known_host(target, port)
 
     case DeployFiles.read(site, :known_hosts) do

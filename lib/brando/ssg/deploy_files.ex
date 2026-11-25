@@ -3,7 +3,9 @@ defmodule Brando.SSG.DeployFiles do
   A static site's deploy files, in `<site root>/ssg/deploy/`
   (`Brando.Tenant.Storage.site_root/1`), beside its builds and deleted with
   the site: the private key its rsync deploys use (`:key`) and the host keys
-  it accepted (`:known_hosts`), both kept by `Brando.SSG.SSH`.
+  it accepted (`:known_hosts`), both kept by `Brando.SSG.SSH`; the state of
+  its reviewed target (`:target_state`) and a deploy's rsync filter rules
+  (`:filter`), kept by `Brando.SSG.TargetReview` under the deploy lock.
 
   The directory is 0700 and each file 0600. A file is written whole, to a
   temporary file in the directory renamed over the old one, so a reader
@@ -24,9 +26,9 @@ defmodule Brando.SSG.DeployFiles do
   alias Brando.Tenant.Storage
   alias Brando.Utils
 
-  @files %{key: "id_ed25519", known_hosts: "known_hosts"}
+  @files %{key: "id_ed25519", known_hosts: "known_hosts", target_state: "target_state", filter: "rsync_filter"}
 
-  @type name :: :key | :known_hosts
+  @type name :: :key | :known_hosts | :target_state | :filter
 
   @doc "The site's deploy directory."
   @spec dir(Site.t()) :: String.t()
@@ -85,7 +87,8 @@ defmodule Brando.SSG.DeployFiles do
 
   @doc """
   Writes the site's file `name` whole, mode 0600, in a directory that may
-  hold it (`check_location/1`). Call it inside `with_lock/2`.
+  hold it (`check_location/1`). Call it inside `with_lock/2`, or for
+  `:target_state` and `:filter` holding the deploy lock.
   """
   @spec write(Site.t(), name(), iodata()) :: :ok | {:error, term()}
   def write(%Site{} = site, name, contents) do

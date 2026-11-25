@@ -21,7 +21,10 @@ defmodule Brando.Sites.DeployConfig do
   `s3://bucket/optional-prefix`. Florist application releases are configured
   separately.
 
-  An rsync deploy mirrors the build with `--delete`, and anyone who may
+  An rsync deploy mirrors the build with `--delete`, deleting only what
+  Brando uploaded or an admin confirmed and never a path on `:keep_paths`
+  (`Brando.SSG.TargetReview`): relative paths, a directory's ending in `/`,
+  `.well-known/` and `cgi-bin/` unless changed, at most 100. Anyone who may
   deploy can set the target, so it is held
   to that remote form: no local paths, no loopback hosts, no `..` in the
   path, no rsync daemon or URL syntax, and no user or host that rsync or ssh
@@ -110,9 +113,12 @@ defmodule Brando.Sites.DeployConfig do
     field :webhook_url, :string
     field :auto_deploy, :boolean, default: false
     field :retention_count, :integer, default: 10
+    field :keep_paths, {:array, :string}, default: [".well-known/", "cgi-bin/"]
   end
 
-  @fields [:strategy, :target, :port, :cdn_url, :webhook_url, :auto_deploy, :retention_count]
+  @fields [:strategy, :target, :port, :cdn_url, :webhook_url, :auto_deploy, :retention_count, :keep_paths]
+
+  @keep_paths_limit 100
 
   @lookup_timeout :timer.seconds(3)
   @lookup_kept :timer.seconds(60)
@@ -141,8 +147,22 @@ defmodule Brando.Sites.DeployConfig do
     |> validate_strategy_target(site, lookup)
     |> validate_number(:port, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535)
     |> validate_number(:retention_count, greater_than_or_equal_to: 1, less_than_or_equal_to: 100)
+    |> validate_keep_paths()
     |> validate_http_url(:cdn_url)
     |> validate_webhook_url()
+  end
+
+  # Paths an rsync deploy never deletes (`Brando.SSG.TargetReview`)
+  defp validate_keep_paths(changeset) do
+    changeset
+    |> update_change(:keep_paths, &Enum.uniq/1)
+    |> validate_length(:keep_paths, max: @keep_paths_limit)
+    |> validate_change(:keep_paths, fn :keep_paths, paths ->
+      case Enum.reject(paths, &Brando.SSG.TargetPaths.keep_entry?/1) do
+        [] -> []
+        [path | _rest] -> [keep_paths: gettext("has a path that is not plain: %{path}", path: inspect(path))]
+      end
+    end)
   end
 
   # Served from the site's own directory: there is nothing to name

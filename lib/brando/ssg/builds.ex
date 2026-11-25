@@ -284,6 +284,14 @@ defmodule Brando.SSG.Builds do
   defp site_auto_deploy?(%Site{deploy_config: %DeployConfig{auto_deploy: auto_deploy}}), do: auto_deploy == true
   defp site_auto_deploy?(%Site{}), do: false
 
+  @doc "The site's deployed build, or nil."
+  @spec deployed_build(pos_integer()) :: Build.t() | nil
+  def deployed_build(site_id) do
+    from(build in Build, where: build.site_id == ^site_id and build.status == :deployed, limit: 1)
+    |> Repo.one(@public_opts)
+    |> preload()
+  end
+
   @doc """
   Whether `user` may manage `site`'s publishing, as the Publishing screen
   asks before each action: build, deploy or schedule with capabilities on,

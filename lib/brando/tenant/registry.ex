@@ -109,14 +109,20 @@ defmodule Brando.Tenant.Registry do
 
   defp deploy_config_attrs?(_attrs), do: false
 
-  # The site's allowed targets as stored, not as a struct read before a
-  # superuser changed them: a deploy target is checked against them, and a
-  # change to them is told from what is there
+  # The site's allowed targets and deployment settings as stored, not as a
+  # struct read before a superuser or another admin changed them: a deploy
+  # target is checked against them, a change to them is told from what is
+  # there, and the settings a save leaves out (the keep list,
+  # `Brando.SSG.TargetReview`) stay as stored
   defp with_stored_deploy_targets(%Site{id: id} = site) when is_integer(id) do
-    query = from(s in Site, where: s.id == ^id, select: {s.allowed_rsync_targets, s.allowed_s3_targets})
+    query =
+      from(s in Site,
+        where: s.id == ^id,
+        select: {s.allowed_rsync_targets, s.allowed_s3_targets, s.deploy_config}
+      )
 
     case Repo.one(query, @public_opts) do
-      {rsync, s3} -> %{site | allowed_rsync_targets: rsync, allowed_s3_targets: s3}
+      {rsync, s3, config} -> %{site | allowed_rsync_targets: rsync, allowed_s3_targets: s3, deploy_config: config}
       nil -> site
     end
   end

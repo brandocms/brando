@@ -5,6 +5,10 @@ defmodule Brando.Worker.SSGDeploy do
   The admin queues it with `BrandoAdmin.Work.track/4`, so the job reports
   its outcome to whoever asked, on the build's key
   (`Brando.Worker.SSGBuild.work_key/1`).
+
+  `"redeploy"` with a `"site_id"` deploys again whichever build is the
+  site's deployed one when the job runs, so a newer deploy queued before it
+  stays live (`Brando.SSG.TargetReview.delete_unknown/4`).
   """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3
@@ -13,6 +17,7 @@ defmodule Brando.Worker.SSGDeploy do
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
   alias Brando.SSG.SSH
+  alias Brando.SSG.TargetReview
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args} = job)
@@ -20,6 +25,13 @@ defmodule Brando.Worker.SSGDeploy do
     case Builds.get_build(build_id) do
       %Build{} = build -> action |> run(build, args["creator_id"]) |> outcome(build, job)
       nil -> {:cancel, :build_not_found}
+    end
+  end
+
+  def perform(%Oban.Job{args: %{"site_id" => site_id, "action" => "redeploy"} = args} = job) do
+    case Builds.deployed_build(site_id) do
+      %Build{} = build -> "deploy" |> run(build, args["creator_id"]) |> outcome(build, job)
+      nil -> {:cancel, :no_deployed_build}
     end
   end
 
@@ -67,8 +79,9 @@ defmodule Brando.Worker.SSGDeploy do
   end
 
   defp outcome({:error, reason}, build, _job) do
-    # A step on the Publishing screen comes first (`Brando.SSG.SSH`)
-    case SSH.refusal_message(reason) do
+    # A step on the Publishing screen comes first (`Brando.SSG.SSH`,
+    # `Brando.SSG.TargetReview`)
+    case SSH.refusal_message(reason) || TargetReview.refusal_message(reason) do
       nil ->
         {:error, reason}
 
