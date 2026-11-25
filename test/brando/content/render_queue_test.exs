@@ -427,6 +427,23 @@ defmodule Brando.Content.RenderQueueTest do
       end)
     end
 
+    test "module and string schemas merge only into an exact stored JSON identity" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for extra <- [%{"tenant_prefix" => nil}, %{"entry_id" => "17"}] do
+          %{"schema" => to_string(Fragment), "entry_id" => 17}
+          |> Map.merge(extra)
+          |> EntryRenderer.new()
+          |> Ecto.Changeset.delete_change(:unique)
+          |> Oban.insert!()
+        end
+
+        [{:ok, inserted}] = RenderQueue.enqueue_map(%{Fragment => [17], to_string(Fragment) => [17]})
+        [{:ok, merged}] = RenderQueue.enqueue_many(to_string(Fragment), [17])
+        assert inserted.id == merged.id
+        assert length(all_enqueued(worker: EntryRenderer)) == 3
+      end)
+    end
+
     # A named statement switches to a generic plan after five runs on a
     # connection, which joins thousands of keys in a nested loop
     test "looks up the waiting renders with an unnamed statement, planned for its keys" do
