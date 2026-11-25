@@ -5,10 +5,14 @@ defmodule Brando.Test.Database do
   A run that was killed leaves the rows its tests had committed (a Site, a
   Superuser) and the schemas they made, which fail the next run's tests, and
   the databases of the upgrade tests (`Brando.UpgradeFromVillainCase`),
-  named by `upgrade_database/2`. So a run empties its database and seeds it,
+  named by `upgrade_database/1`. So a run empties its database and seeds it,
   as a new one would be, and drops those databases, when no other session
   uses the database. Faster than dropping the database, which waits for a
   checkpoint.
+
+  Only databases provisioned by Brando’s unit-test tools are eligible. Their
+  database comments identify the kind of fixture, the database OID and its
+  name, so copying or renaming a database does not authorize resetting it.
 
   Several sessions share a machine's Postgres, and two runs in one checkout
   share its database. Each run holds an advisory lock on the database,
@@ -28,13 +32,81 @@ defmodule Brando.Test.Database do
   # a busy server
   @ddl [timeout: :infinity]
 
+  # Stored on the database itself, outside any schema we reset. Use the
+  # catalog value, independent of the connection's search path and settings.
+  @identity "pg_catalog.format('Brando %s test fixture %s %s', $1::text, oid, datname)"
+  @marked "pg_catalog.shobj_description(oid, 'pg_database') = " <> @identity
+
+  @doc """
+  Creates a disposable unit-test database, or verifies a previously provisioned
+  one. Only a successful creation authorizes writing the mark.
+  """
+  def provision!(config \\ Repo.config(), kind \\ :unit) when kind in [:unit, :upgrade] do
+    {:ok, _} = Application.ensure_all_started(:postgrex)
+
+    name = Keyword.fetch!(config, :database)
+    maintenance = Keyword.put(config, :database, Keyword.get(config, :maintenance_database, "postgres"))
+    {:ok, conn} = Postgrex.start_link(connection_options(maintenance))
+
+    try do
+      # Two setups can provision the same new partition. The second must see
+      # the first's mark before it decides whether the database is disposable.
+      query!(conn, "SELECT pg_catalog.pg_advisory_lock($1, pg_catalog.hashtext($2))", [@lock, name], @ddl)
+
+      case Ecto.Adapters.Postgres.storage_up(config) do
+        :ok ->
+          [[statement]] =
+            query!(
+              conn,
+              """
+              SELECT pg_catalog.format('COMMENT ON DATABASE %I IS %L', datname, #{@identity})
+              FROM pg_catalog.pg_database WHERE datname = $2
+              """,
+              [to_string(kind), name]
+            )
+
+          query!(conn, statement, [])
+          :ok
+
+        {:error, :already_up} when kind == :unit ->
+          require_fixture!(conn, kind, name)
+
+        {:error, reason} ->
+          raise "Could not create test database #{inspect(name)}: #{inspect(reason)}"
+      end
+    after
+      GenServer.stop(conn)
+    end
+  end
+
+  @doc false
+  def require_fixture!(conn, kind, name \\ nil) when kind in [:unit, :upgrade] do
+    [[database, marked?]] =
+      query!(
+        conn,
+        """
+        SELECT datname, #{@marked} FROM pg_catalog.pg_database
+        WHERE datname = coalesce($2::text, current_database())
+        """,
+        [to_string(kind), name]
+      )
+
+    unless marked? do
+      raise "Database #{inspect(database)} is not provisioned as a disposable Brando #{kind} test database. " <>
+              "Select a fresh database name and run scripts/worktree-setup."
+    end
+
+    :ok
+  end
+
   @doc """
   Starts the test repo, on its database emptied and seeded when no other
   session uses it. The lock's connection is linked to the caller, and its
   lock goes with it.
   """
   def start_repo! do
-    {:ok, conn} = Postgrex.start_link(connection_options())
+    {:ok, conn} = Postgrex.start_link(connection_options(Repo.config()))
+    require_fixture!(conn, :unit)
     exclusive? = query!(conn, "SELECT pg_try_advisory_lock($1)", [@lock]) == [[true]]
 
     # Before the repo connects: its connections would count as another session
@@ -51,7 +123,7 @@ defmodule Brando.Test.Database do
 
       # Without tables, not migrated: test_helper.exs says how to rebuild it
       tables?(conn) ->
-        empty!()
+        empty!(conn)
         Code.eval_file("priv/repo/seeds.exs")
         drop_upgrade_databases!(conn)
 
@@ -91,9 +163,9 @@ defmodule Brando.Test.Database do
 
   defp database, do: Repo.config()[:database]
 
-  defp connection_options do
-    Repo.config()
-    |> Keyword.take([:hostname, :port, :socket_dir, :username, :password, :database, :ssl, :parameters])
+  defp connection_options(config) do
+    config
+    |> Keyword.drop([:name, :pool, :ownership_pool, :pool_overflow, :url])
     |> Keyword.put(:pool_size, 1)
   end
 
@@ -120,8 +192,9 @@ defmodule Brando.Test.Database do
       []
   end
 
-  defp empty! do
-    Repo.query!(
+  defp empty!(conn) do
+    query!(
+      conn,
       """
       DO $$
       DECLARE name text;
@@ -148,8 +221,18 @@ defmodule Brando.Test.Database do
   # Only this database's: no run uses them while none uses this one, but a
   # console may
   defp drop_upgrade_databases!(conn) do
-    for [name] <- query!(conn, "SELECT datname FROM pg_database", []), upgrade_database?(name, database()) do
-      case Postgrex.query(conn, ~s(DROP DATABASE IF EXISTS "#{name}"), [], @ddl) do
+    candidates =
+      query!(
+        conn,
+        """
+        SELECT datname, pg_catalog.format('DROP DATABASE IF EXISTS %I', datname)
+        FROM pg_catalog.pg_database WHERE #{@marked}
+        """,
+        ["upgrade"]
+      )
+
+    for [name, statement] <- candidates, upgrade_database?(name, database()) do
+      case Postgrex.query(conn, statement, [], @ddl) do
         {:ok, _} -> :ok
         {:error, %Postgrex.Error{postgres: %{code: :object_in_use}}} -> IO.puts(:stderr, "Not dropped, in use: #{name}")
       end

@@ -55,7 +55,7 @@ defmodule Brando.UpgradeFromVillainCase do
     database = Brando.Test.Database.upgrade_database(Repo.config()[:database])
     storage = Repo.config() |> Keyword.put(:database, database) |> Keyword.merge(@ddl)
 
-    :ok = Ecto.Adapters.Postgres.storage_up(storage)
+    :ok = Brando.Test.Database.provision!(storage, :upgrade)
     # A connection the pool has not closed yet does not hold the drop up
     on_exit(fn -> :ok = Ecto.Adapters.Postgres.storage_down(Keyword.put(storage, :force_drop, true)) end)
 

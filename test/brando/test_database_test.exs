@@ -2,6 +2,95 @@ defmodule Brando.Test.DatabaseTest do
   use ExUnit.Case, async: true
 
   alias Brando.Test.Database
+  alias BrandoIntegration.Repo
+
+  test "setup and startup refuse a populated, unmarked database and keep its contents" do
+    config = isolated_database()
+    :ok = Ecto.Adapters.Postgres.storage_up(config)
+    on_exit(fn -> drop(config) end)
+
+    with_connection(config, fn conn ->
+      Postgrex.query!(conn, "CREATE TABLE sentinel AS SELECT 25 AS value", [])
+      Postgrex.query!(conn, "CREATE SCHEMA retained", [])
+      assert_raise RuntimeError, ~r/not provisioned/, fn -> Database.require_fixture!(conn, :unit) end
+    end)
+
+    assert_raise RuntimeError, ~r/not provisioned/, fn -> Database.provision!(config) end
+
+    with_connection(config, fn conn ->
+      assert %{rows: [[25, true]]} =
+               Postgrex.query!(conn, "SELECT value, to_regnamespace('retained') IS NOT NULL FROM sentinel", [])
+    end)
+  end
+
+  test "a newly provisioned database is recognized on later connections only for its fixture kind" do
+    config = isolated_database()
+    first = Task.async(fn -> Database.provision!(config) end)
+    second = Task.async(fn -> Database.provision!(config) end)
+    assert :ok = Task.await(first, :timer.seconds(30))
+    on_exit(fn -> drop(config) end)
+    assert :ok = Task.await(second, :timer.seconds(30))
+    assert :ok = Database.provision!(config)
+
+    with_connection(config, fn conn ->
+      assert :ok = Database.require_fixture!(conn, :unit)
+      assert_raise RuntimeError, ~r/not provisioned/, fn -> Database.require_fixture!(conn, :upgrade) end
+    end)
+
+    # A database created FROM TEMPLATE can have exactly the same tables.
+    # Restoring its comment as well still cannot authorize resetting the copy.
+    copy = isolated_database()
+    :ok = Ecto.Adapters.Postgres.storage_up(Keyword.put(copy, :template, config[:database]))
+    on_exit(fn -> drop(copy) end)
+
+    with_connection(copy, fn conn ->
+      %{rows: [[restore_comment]]} =
+        Postgrex.query!(
+          conn,
+          """
+          SELECT format('COMMENT ON DATABASE %I IS %L', current_database(), shobj_description(oid, 'pg_database'))
+          FROM pg_database WHERE datname = $1
+          """,
+          [config[:database]]
+        )
+
+      Postgrex.query!(conn, restore_comment, [])
+      assert_raise RuntimeError, ~r/not provisioned/, fn -> Database.require_fixture!(conn, :unit) end
+    end)
+  end
+
+  test "an upgrade test never reuses an existing database" do
+    config = isolated_database()
+    :ok = Database.provision!(config, :upgrade)
+    on_exit(fn -> drop(config) end)
+
+    with_connection(config, fn conn ->
+      assert :ok = Database.require_fixture!(conn, :upgrade)
+      assert_raise RuntimeError, ~r/not provisioned/, fn -> Database.require_fixture!(conn, :unit) end
+    end)
+
+    assert_raise RuntimeError, ~r/already_up/, fn -> Database.provision!(config, :upgrade) end
+  end
+
+  defp isolated_database do
+    name = "brando_fixture_" <> Base.encode16(:crypto.strong_rand_bytes(12), case: :lower)
+    Repo.config() |> Keyword.delete(:url) |> Keyword.put(:database, name)
+  end
+
+  defp with_connection(config, fun) do
+    {:ok, conn} =
+      config
+      |> Keyword.take([:hostname, :port, :socket_dir, :username, :password, :database, :ssl, :parameters])
+      |> Postgrex.start_link()
+
+    try do
+      fun.(conn)
+    after
+      GenServer.stop(conn)
+    end
+  end
+
+  defp drop(config), do: Ecto.Adapters.Postgres.storage_down(config)
 
   test "an upgrade test's database is named after the test database, with a random suffix" do
     name = Database.upgrade_database("brando_test")

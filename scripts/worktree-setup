@@ -86,7 +86,7 @@ test_compile() {
 # Seeds once: priv/repo/seeds.exs inserts rows unconditionally.
 test_database() {
   BRANDO_TEST_DATABASE_URL="$test_db_url" MIX_ENV=test tool mix do \
-    ecto.create --quiet + ecto.migrate --quiet + \
+    test.db.create + ecto.migrate --quiet + \
     run -e 'BrandoIntegration.Repo.start_link()
       if BrandoIntegration.Repo.aggregate(Brando.Sites.Identity, :count) == 0,
         do: Code.eval_file("priv/repo/seeds.exs")'
