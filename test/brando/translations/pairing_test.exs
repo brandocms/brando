@@ -81,6 +81,7 @@ defmodule Brando.Translations.PairingTest do
     Repo.insert!(%Fragment.Alternate{entry_id: other.id, linked_entry_id: no.id})
 
     plan = Pairing.plan(Fragment)
+
     assert Enum.map(plan, &{&1.values, &1.links}) == [
              {["footer", "contact"], links()},
              {["footer", "help"], links()}
