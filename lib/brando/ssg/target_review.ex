@@ -281,8 +281,8 @@ defmodule Brando.SSG.TargetReview do
 
     with {:ok, listing} <- listing(site, target, port, opts),
          :ok <- check_collisions(plan, listing),
-         :ok <- write_state(site, %{state | uploaded: union(state.uploaded, plan.upload)}, :uploaded_list),
          :ok <- DeployFiles.write(site, :filter, plan.rules),
+         :ok <- write_state(site, %{state | uploaded: union(state.uploaded, plan.upload)}, :uploaded_list),
          {:ok, _output} <-
            SSH.rsync(site, target, port, ["-az", "--delete"] ++ filter_args(site) ++ ["--", source, target], opts) do
       deployed = %{state | uploaded: plan.upload, confirmed: [], found: nil}

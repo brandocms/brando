@@ -270,6 +270,20 @@ defmodule Brando.SSG.TargetReviewTest do
       assert TargetReview.refusal_message({:target_state_not_written, :uploaded_list, :eisdir}) =~ "nothing was copied"
     end
 
+    test "whose filter cannot be written counts none of the build's paths as uploaded", c do
+      Brando.SSGSSHFixtures.review_target(c.site, @target)
+      build = ready_build(c.site, c.environment)
+      listing = runner(["host.html"])
+
+      blocking = fn "rsync", args, opts ->
+        File.mkdir_p!(Path.join(DeployFiles.path(c.site, :filter), "blocked"))
+        listing.("rsync", args, opts)
+      end
+
+      assert {:error, _reason} = Deploy.deploy(build, runner: blocking)
+      assert %{uploaded: []} = state(c.site)
+    end
+
     test "keeps the build's paths as uploaded, and what else the target holds as unknown", c do
       Brando.SSGSSHFixtures.review_target(c.site, @target)
       build = ready_build(c.site, c.environment)
