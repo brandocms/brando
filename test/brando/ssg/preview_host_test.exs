@@ -427,6 +427,14 @@ defmodule Brando.SSG.PreviewHostTest do
       assert Builds.preview_url(build, context.shop, context.admin) == url
     end
 
+    test "with the pattern, is nil for a build whose environment was deleted", context do
+      assert {:ok, _deleted} = Registry.delete_environment(context.staging)
+      build = Builds.get_build(context.build.id)
+
+      assert build.environment == nil
+      assert Builds.preview_url(build, context.shop, context.admin) == nil
+    end
+
     test "without the pattern, is on the build environment's domain, else the live one's", context do
       put_test_env(Brando.SSG, [])
       path = "/__ssg_preview__/#{context.build.preview_token}/"

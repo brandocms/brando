@@ -1272,9 +1272,14 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     do: build.status in [:ready, :deployed, :archived] and is_nil(build.pruned_at)
 
   # A previewable build with no host to open its preview on
-  # (`Brando.SSG.Builds.preview_url/3`), said once for the screen
-  defp no_preview_host?(builds, site, admin_uri),
-    do: Enum.any?(builds, &(previewable?(&1) and is_nil(Builds.preview_url(&1, site, admin_uri))))
+  # (`Brando.SSG.Builds.preview_url/3`), said once for the screen. A build
+  # whose environment was deleted has none on the preview host, which says
+  # nothing about the site's
+  defp no_preview_host?(builds, site, admin_uri) do
+    Enum.any?(builds, fn build ->
+      previewable?(build) and not is_nil(build.environment) and is_nil(Builds.preview_url(build, site, admin_uri))
+    end)
+  end
 
   # The CDN in front, or the live domain the installation serves the build on
   defp public_url(build, site, admin_uri) do

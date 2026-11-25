@@ -234,6 +234,27 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       refute has_element?(view, "#publishing-no-preview-host")
     end
 
+    test "links no preview of a build whose environment was deleted, and says nothing of a missing host",
+         context do
+      {:ok, staging} = Registry.create_environment(context.site, %{name: "Staging", key: "staging", live: false})
+
+      build =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, build} = Builds.request_build(context.site, staging, creator_id: context.current_user.id)
+          build
+        end)
+
+      File.mkdir_p!(build.build_path)
+      {:ok, _ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+      {:ok, _deleted} = Registry.delete_environment(staging)
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="__ssg_preview__"]))
+      assert has_element?(view, ~s(#ssg-build-#{context.build.id} a[href*="__ssg_preview__"]))
+      refute has_element?(view, "#publishing-no-preview-host")
+    end
+
     test "says once that the site has no host for previews when it has none", context do
       # An environment bound to the host before the pattern was set holds it
       {:ok, old_staging} =

@@ -121,7 +121,8 @@ defmodule Brando.SSG.Builds do
       preview host, also when an environment has a domain of its own: Brando
       cannot tell whether that domain reaches this installation, and the
       public domain of a site deployed elsewhere would take the token in the
-      link to that server;
+      link to that server. None for a build whose environment was deleted,
+      which the preview host does not answer;
     * without one, the build environment's domain, else the live
       environment's, when the installation answers it for this site.
   """
@@ -140,9 +141,16 @@ defmodule Brando.SSG.Builds do
   end
 
   defp preview_domain(build, site) do
-    if Brando.SSG.PreviewHost.enabled?(),
-      do: Brando.SSG.PreviewHost.host(site),
-      else: site_domain(build.environment, site) || site_domain(Brando.Tenant.Cache.get_live_env(site.key), site)
+    cond do
+      not Brando.SSG.PreviewHost.enabled?() ->
+        site_domain(build.environment, site) || site_domain(Brando.Tenant.Cache.get_live_env(site.key), site)
+
+      match?(%Environment{}, build.environment) ->
+        Brando.SSG.PreviewHost.host(site)
+
+      true ->
+        nil
+    end
   end
 
   # A host that would answer 404 is no link: one that does not route, one
