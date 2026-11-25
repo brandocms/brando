@@ -135,6 +135,7 @@ defmodule Brando.Worker.SSGBuild do
     with {:ok, building} <-
            Builds.update(build, %{
              status: :building,
+             started_at: build.started_at || DateTime.utc_now(),
              build_log: build.build_log <> log_line(build_start_message(build))
            }),
          result <- call_builder(building),

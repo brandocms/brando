@@ -841,6 +841,7 @@ defmodule Brando.Environments do
 
       Cache.invalidate()
       announce(site.id)
+      Brando.SSG.ContentChanges.touch_environment(target)
       # Its definitions and what was applied there are the source's now
       Brando.Content.Definitions.changed(target_prefix)
       prune_archives_under_lock(site, opts[:keep_archives] || @default_archive_keep)

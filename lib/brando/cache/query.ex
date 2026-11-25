@@ -34,6 +34,7 @@ defmodule Brando.Cache.Query do
 
   alias Brando.Cache.Freshness
   alias Brando.CacheSync
+  alias Brando.SSG.ContentChanges
   alias Brando.Tracing
 
   @type changeset :: Ecto.Changeset.t()
@@ -192,8 +193,10 @@ defmodule Brando.Cache.Query do
   # in between still sees the old row and caches it again. The second runs
   # under the tenant prefix of the write, which may be gone by then, and
   # once per cache entry however many writes the transaction makes.
-  # `evicted` runs after the last eviction.
+  # `evicted` runs after the last eviction. The write's environment is
+  # marked as changed (`Brando.SSG.ContentChanges`).
   defp evict_committed(key, evict, evicted \\ fn -> :ok end) do
+    ContentChanges.touch(elem(key, 1))
     evict.()
     prefix = Brando.Tenant.current_prefix()
 

@@ -50,6 +50,7 @@ defmodule Brando.Assets.SiteAssets do
   alias Brando.Environments.Environment
   alias Brando.Repo
   alias Brando.Sites.Site
+  alias Brando.SSG.ContentChanges
   alias Brando.Tenant
   alias Brando.Tenant.Lock
   alias Brando.Tenant.Registry
@@ -316,6 +317,13 @@ defmodule Brando.Assets.SiteAssets do
 
     :ok
   end
+
+  @doc """
+  Whether `put_build_set/1` installed a set for the current request: the
+  process answers a static build's request (`Brando.Plug.Tenant`).
+  """
+  @spec build_set?() :: boolean()
+  def build_set?, do: Process.get(@request_override_key, false)
 
   defp put_request_override(cached) do
     Process.put(@override_key, cached)
@@ -1165,6 +1173,7 @@ defmodule Brando.Assets.SiteAssets do
       |> case do
         {1, [updated]} ->
           environment_changed(environment)
+          ContentChanges.touch_environment(environment)
           Tenant.Cache.invalidate()
           updated
 
@@ -1255,7 +1264,14 @@ defmodule Brando.Assets.SiteAssets do
   defp active_changed(scope_key) do
     Repo.after_commit({__MODULE__, :active, scope_key}, fn -> drop_active(scope_key) end)
     CacheSync.broadcast(__MODULE__, {:active, scope_key})
+    scope_changed(scope_key)
   end
+
+  # What renders with the scope's active set: every environment of its site,
+  # or in `:single` of every site. A site's environments never render with a
+  # standalone set in `:multi`.
+  defp scope_changed({:site_id, site_id}), do: ContentChanges.touch_site(site_id)
+  defp scope_changed(:standalone), do: unless(Tenant.mode() == :multi, do: ContentChanges.touch_site(nil))
 
   defp drop_active(scope_key) do
     drop(cache_key(scope_key))
