@@ -1497,7 +1497,8 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   def banner(assigns) do
     renders = assigns.renders || %{total: 0, pending: 0, failed: 0, rendered: 0, failures: []}
     items = assigns.batch.definitions["items"] || []
-    assigns = assign(assigns, r: renders, items: items, rendering?: renders.pending > 0)
+    names = Map.new(items, &{&1["uid"], &1["name"]})
+    assigns = assign(assigns, r: renders, items: items, names: names, rendering?: renders.pending > 0)
 
     ~H"""
     <section class={["release-banner", !@rendering? && "is-done"]} role="status" data-testid="release-banner">
@@ -1544,17 +1545,21 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         <div :for={item <- @irreversible} class="release-banner-conflict" data-testid="release-irreversible">
           <.icon name="triangle-alert" />
           <span>
-            <strong>{gettext("%{name} can’t be reverted without a migration", name: item.name || item.uid)}</strong>
+            <strong>{gettext("%{name} can’t be reverted without a migration",
+              name: item[:name] || @names[item.uid] || item.uid
+            )}</strong>
             ({item.reason}). {gettext("Revert leaves it as the apply left it.")}
+            {dependent_revert_note(item, @names)}
           </span>
         </div>
         <div :for={item <- @changed_since} class="release-banner-conflict">
           <.icon name="triangle-alert" />
           <span>
-            <strong>{gettext("%{name} changed here after the apply", name: item.name || item.uid)}</strong>
+            <strong>{gettext("%{name} changed here after the apply", name: item[:name] || @names[item.uid] || item.uid)}</strong>
             ({person(item.edited)}, {date(item.edited && item.edited.at)}). {gettext(
               "Revert leaves it as it is and lists it as a conflict."
             )}
+            {dependent_revert_note(item, @names)}
           </span>
         </div>
       </div>
@@ -1595,4 +1600,10 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     </section>
     """
   end
+
+  defp dependent_revert_note(%{prevents_revert: [_ | _] = uids}, names) do
+    gettext("This also prevents reverting %{definitions}.", definitions: Enum.map_join(uids, ", ", &(names[&1] || &1)))
+  end
+
+  defp dependent_revert_note(_item, _names), do: nil
 end

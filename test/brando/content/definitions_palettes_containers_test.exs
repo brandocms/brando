@@ -855,6 +855,45 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       end)
     end
 
+    test "a palette conflict leaves its dependent tree and reverts an independent module", c do
+      source = Path.join(c.path, "modules")
+      File.mkdir_p!(source)
+      write_module!(source, c.palette.uid)
+
+      import!(read!(source), c.user)
+      independent = Brando.ProposalFixtures.module!(c.user, "Independent", "<div>Independent</div>", [])
+      independent_uid = independent.uid
+      release = Path.join(c.path, "module-release")
+      assert {:ok, _} = Definitions.export(release, c.user, uids: ["swatch", independent_uid])
+      File.rm!(Path.join(release, "modules.lock.json"))
+      c = %{c | release: release}
+      assert {:ok, _} = Release.plan(release_opts(c, []))
+      for path <- Path.wildcard(Path.join(release, "**/*.liquid")), do: File.write!(path, "<p>Release</p>")
+      edit_release!(c, "palettes/paper.exs", "#fff9f4", "#f0f0f0")
+
+      manual(fn ->
+        assert {:ok, %{batch_id: batch_id}} = Release.apply(["swatch", independent_uid], release_opts(c, wait: false))
+        assert {:ok, _} = Brando.Content.update_palette(c.palette.id, %{name: "Edited here"}, c.user)
+        batch = Batches.get(batch_id)
+        assert {:ok, preview} = Batches.preview(batch, c.user)
+        assert Enum.map(preview.revert, & &1.uid) == [independent_uid]
+        assert [%{uid: palette_uid, prevents_revert: ["swatch"]}] = preview.conflicts
+        assert palette_uid == c.palette.uid
+
+        banner =
+          render_component(&BrandoAdmin.Components.ReleaseChanges.banner/1,
+            batch: batch,
+            changed_since: preview.conflicts
+          )
+
+        assert banner =~ "Swatch"
+        assert {:ok, %{reverted: [%{uid: ^independent_uid}]}} = Batches.revert(batch, c.user)
+        assert Repo.get!(Module, independent.id).code == independent.code
+        assert Repo.get_by!(Module, uid: "swatch").code =~ "<p>Release</p>"
+        assert Repo.get!(Palette, c.palette.id).name == "Edited here"
+      end)
+    end
+
     test "a revert lists a container whose previous palette is now in the trash as a conflict", c do
       night_release!(c)
 

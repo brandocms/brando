@@ -71,8 +71,14 @@ defmodule Brando.Content.Definition.Importer do
 
     selection =
       case Keyword.get(opts, :select) do
-        nil -> nil
-        selected -> select_trees!(bundle, Enum.uniq(selected ++ replace ++ discard))
+        nil ->
+          nil
+
+        selected ->
+          (selected ++ replace ++ discard)
+          |> Enum.uniq()
+          |> Enum.flat_map(selection_expander(bundle))
+          |> MapSet.new()
       end
 
     %{
@@ -88,7 +94,8 @@ defmodule Brando.Content.Definition.Importer do
   # the table templates the tree uses and the palettes their vars name; a
   # container brings its palette: what the export selects too. Each is in
   # the bundle, or here.
-  defp select_trees!(bundle, uids) do
+  @doc false
+  def selection_expander(bundle) do
     modules = Map.new(bundle["modules"], &{&1["uid"], &1})
     containers = Map.new(bundle["containers"], &{&1["uid"], &1})
     others = MapSet.new(bundle["table_templates"] ++ bundle["palettes"], & &1["uid"])
@@ -96,7 +103,7 @@ defmodule Brando.Content.Definition.Importer do
     parents = parents(bundle["modules"])
     lookup = %{modules: modules, containers: containers, others: others, palettes: palettes, parents: parents}
 
-    uids |> Enum.flat_map(&select_tree!(&1, bundle, lookup)) |> MapSet.new()
+    &select_tree!(&1, bundle, lookup)
   end
 
   defp select_tree!(uid, bundle, lookup) do

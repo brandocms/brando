@@ -307,7 +307,9 @@ that failed. Activity records the apply with the release version.
 **Keep** and **Revert** wait for the renders. Revert applies again the
 definitions the apply replaced, through the same plan and apply, and
 re-renders their entries; a module edited here after the apply is left as
-it is and listed as a conflict, and a module the apply created stays. An
+it is and listed as a conflict, and a module the apply created stays. The
+banner names the definitions a conflict or a migration also prevents reverting.
+Independent definitions can still be reverted. An
 apply can be reverted, with no time limit, until someone keeps it or the
 next release apply confirms it. Each environment has its own applies.
 

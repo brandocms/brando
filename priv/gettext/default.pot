@@ -21838,6 +21838,11 @@ msgstr ""
 msgid "This address is on a private or local network, which webhooks may not call."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "This also prevents reverting %{definitions}."
+msgstr ""
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "This app cannot be connected"

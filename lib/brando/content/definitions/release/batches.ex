@@ -17,7 +17,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.{Baselines, Model, Plan, References, Snapshot}
+  alias Brando.Content.Definition.{Baselines, Importer, Model, Plan, References, Snapshot}
   alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions, StaleBlocks}
   alias Brando.Content.Definitions.Release
   alias Brando.Repo
@@ -122,7 +122,8 @@ defmodule Brando.Content.Definitions.Release.Batches do
   edit or a later import (each with `edited`, who and when), which it leaves
   as they are; `irreversible` those it can't undo without a migration (a child
   the apply moved or removed, a ref it retyped, values it moved under renamed
-  keys); `created` the definitions the apply created, which stay.
+  keys). Each blocker names the dependent updates it holds in `prevents_revert`.
+  `created` lists the definitions the apply created, which stay.
   """
   def preview(%DefinitionBatch{} = batch, user) do
     with :ok <- Release.authorize(user),
@@ -173,9 +174,9 @@ defmodule Brando.Content.Definitions.Release.Batches do
   # The items to restore; those changed here since the apply (conflicts), by
   # an edit or a later import; and those a revert can't undo without a
   # migration, or that moved values. A tree with either in it is left out
-  # whole: an apply writes whole trees, and a container with its palette.
+  # whole, together with any selection that needs a blocked dependency.
   defp split(plan, uids, superseded, moved) do
-    items = Enum.filter(plan.items, &(&1.uid in uids))
+    items = Enum.filter(plan.items, &Plan.selected?(plan, &1))
 
     {conflicts, rest} =
       Enum.split_with(items, &(&1.action == :conflict or Map.has_key?(superseded, &1.uid)))
@@ -183,16 +184,24 @@ defmodule Brando.Content.Definitions.Release.Batches do
     conflicts = Enum.map(conflicts, &Map.update!(&1, :edited, fn edited -> edited || superseded[&1.uid] end))
 
     irreversible = irreversible(rest, moved)
-    blocked = MapSet.new(conflicts ++ irreversible, &tree_root(&1.uid, plan.bundle))
-    palettes = Map.new(plan.bundle["containers"] || [], &{&1["uid"], &1["palette"]})
+    blocked = MapSet.new(conflicts ++ irreversible, & &1.uid)
+    candidates = Enum.filter(rest, &(&1.action == :update and &1.uid in uids and not MapSet.member?(blocked, &1.uid)))
 
-    revert =
-      Enum.filter(rest, fn item ->
-        item.action == :update and not MapSet.member?(blocked, tree_root(item.uid, plan.bundle)) and
-          not (item.kind == "container" and MapSet.member?(blocked, palettes[item.uid]))
-      end)
+    if MapSet.size(blocked) == 0 do
+      {candidates, conflicts, irreversible}
+    else
+      expand = Importer.selection_expander(plan.bundle)
 
-    {revert, conflicts, irreversible}
+      dependencies =
+        for item <- candidates, uid <- expand.(item.uid), MapSet.member?(blocked, uid), do: {uid, item.uid}
+
+      held = MapSet.new(dependencies, &elem(&1, 1))
+      dependents = Enum.group_by(dependencies, &elem(&1, 0), &elem(&1, 1))
+      explain = &Map.put(&1, :prevents_revert, Map.get(dependents, &1.uid, []) |> Enum.uniq() |> Enum.sort())
+
+      {Enum.reject(candidates, &MapSet.member?(held, &1.uid)), Enum.map(conflicts, explain),
+       Enum.map(irreversible, explain)}
+    end
   end
 
   defp irreversible(items, moved) do
@@ -211,11 +220,6 @@ defmodule Brando.Content.Definitions.Release.Batches do
         later && later.id != row.id,
         into: %{},
         do: {row.uid, %{at: later.applied_at, by: later.applied_by}}
-  end
-
-  defp tree_root(uid, bundle) do
-    parents = for module <- bundle["modules"], child <- module["children"], into: %{}, do: {child, module["uid"]}
-    root(uid, parents)
   end
 
   defp root(uid, parents), do: if(parent = parents[uid], do: root(parent, parents), else: uid)
