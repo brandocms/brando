@@ -406,8 +406,9 @@ defmodule Brando.Uploads.Store do
          } = upload
        ) do
     with {:ok, joined_dest} <- Storage.media_file(Path.join(relative_upload_path(cfg), fname)),
-         dest = copy_destination(joined_dest, cfg),
-         {:ok, media_path} <- copied_media_path(src, dest, media_target_path, cfg) do
+         {:ok, dest} <- copy_to_destination(src, joined_dest, cfg) do
+      media_path = Path.join(media_target_path, Path.basename(dest))
+
       {:ok,
        put_in(
          upload.meta,
@@ -433,18 +434,35 @@ defmodule Brando.Uploads.Store do
 
   defp relative_upload_path(cfg), do: Map.get(cfg, :upload_path)
 
-  defp copy_destination(joined_dest, cfg) do
-    if !Map.get(cfg, :overwrite) && File.exists?(joined_dest) do
-      Path.join(Path.dirname(joined_dest), unique_filename(Path.basename(joined_dest)))
-    else
-      joined_dest
+  defp copy_to_destination(src, dest, %{overwrite: true}) do
+    case File.cp(src, dest) do
+      :ok -> {:ok, dest}
+      {:error, reason} -> {:error, reason, dest}
     end
   end
 
-  defp copied_media_path(src, dest, media_target_path, cfg) do
-    case File.cp(src, dest, on_conflict: fn _, _ -> cfg.overwrite end) do
-      :ok -> {:ok, Path.join(media_target_path, Path.basename(dest))}
-      {:error, reason} -> {:error, reason, dest}
+  defp copy_to_destination(src, dest, _cfg), do: copy_exclusively(src, dest, dest)
+
+  # Claim the name before copying: a simultaneous upload with another file's
+  # bytes must choose a different name, even when both stores start together.
+  defp copy_exclusively(src, requested, dest) do
+    case File.write(dest, "", [:exclusive]) do
+      :ok ->
+        case File.cp(src, dest) do
+          :ok ->
+            {:ok, dest}
+
+          {:error, reason} ->
+            File.rm(dest)
+            {:error, reason, dest}
+        end
+
+      {:error, :eexist} ->
+        sibling = Path.join(Path.dirname(requested), unique_filename(Path.basename(requested)))
+        copy_exclusively(src, requested, sibling)
+
+      {:error, reason} ->
+        {:error, reason, dest}
     end
   end
 
