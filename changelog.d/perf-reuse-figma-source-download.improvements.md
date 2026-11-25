@@ -1,0 +1,1 @@
+- Importing a Figma picture at several rotations downloads its original once per import call.

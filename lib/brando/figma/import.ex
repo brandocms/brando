@@ -34,7 +34,8 @@ defmodule Brando.Figma.Import do
 
   Figma's download URLs are fetched through `Brando.Webhooks.URLGuard`
   (public `https` addresses only, no redirects) and written to a temporary
-  file, at most the config's size limit. A few download at once; they are
+  file per source picture, shared by its turns until the last is stored,
+  at most the config's size limit. A few download at once; they are
   stored one after the other, in the caller's site environment and
   authorization scope. An image over the size limit is refused with the
   limit, its size when Figma's answer gives it, and what to do.
@@ -221,40 +222,56 @@ defmodule Brando.Figma.Import do
 
     limit = limits.fit || limits.site
 
-    try do
+    sources =
       keys
+      |> Enum.uniq_by(&elem(&1, 0))
       |> Enum.with_index()
-      |> Task.async_stream(
-        fn {{ref, _turn} = key, index} -> {key, download(urls[ref], Path.join(dir, "#{index}"), limit)} end,
-        max_concurrency: @concurrency,
-        timeout: @download_timeout + 5_000,
-        on_timeout: :kill_task,
-        ordered: true
-      )
-      |> Stream.zip(Enum.with_index(keys))
-      |> Map.new(fn {downloaded, {key, index}} ->
-        result =
-          case downloaded do
-            {:ok, {^key, {:ok, path}}} ->
-              path |> store(key, {uses[key], frame_uses[key]}, ctx, limits) |> recorded(key, ctx)
+      |> Map.new(fn {{ref, _} = first, index} -> {ref, {first, Path.join(dir, "#{index}")}} end)
 
-            {:ok, {^key, {:error, {:too_large, size}}}} ->
-              {:error, too_large(key, uses[key], size, limits)}
+    last_use = Map.new(keys, fn {ref, _} = key -> {ref, key} end)
 
-            {:ok, {^key, {:error, message}}} ->
-              {:error, message}
+    try do
+      {results, _downloads} =
+        keys
+        |> Task.async_stream(
+          fn {ref, _} = key ->
+            {first, path} = Map.fetch!(sources, ref)
+            if first == key, do: download(urls[ref], path, limit), else: :reuse
+          end,
+          max_concurrency: @concurrency,
+          timeout: @download_timeout + 5_000,
+          on_timeout: :kill_task,
+          ordered: true
+        )
+        |> Stream.zip(keys)
+        |> Enum.map_reduce(%{}, fn {reply, {ref, _} = key}, downloads ->
+          download =
+            case reply do
+              {:ok, :reuse} -> Map.fetch!(downloads, ref)
+              {:ok, result} -> result
+              {:exit, _reason} -> {:error, "The download took too long."}
+            end
 
-            {:exit, _reason} ->
-              {:error, "The download took too long."}
-          end
+          result = store_download(download, key, {uses[key], frame_uses[key]}, ctx, limits)
+          {_first, source} = Map.fetch!(sources, ref)
+          for path <- Path.wildcard(source <> "-*"), do: File.rm(path)
+          if last_use[ref] == key, do: File.rm(source)
+          {{key, result}, Map.put(downloads, ref, download)}
+        end)
 
-        discard(Path.join(dir, "#{index}"))
-        {key, result}
-      end)
+      Map.new(results)
     after
       File.rm_rf(dir)
     end
   end
+
+  defp store_download({:ok, path}, key, uses, ctx, limits),
+    do: path |> store(key, uses, ctx, limits) |> recorded(key, ctx)
+
+  defp store_download({:error, {:too_large, size}}, key, {uses, _frame_uses}, _ctx, limits),
+    do: {:error, too_large(key, uses, size, limits)}
+
+  defp store_download({:error, message}, _key, _uses, _ctx, _limits), do: {:error, message}
 
   # The picture each stored or reused image holds, for read_frame to name it
   # (`put_assets/2`)
@@ -278,9 +295,6 @@ defmodule Brando.Figma.Import do
   # import gives those layers
   defp variant(0), do: nil
   defp variant(turn), do: Integer.to_string(turn)
-
-  # A download and the copies made of it, once its image is stored or refused
-  defp discard(path), do: Enum.each([path | Path.wildcard(path <> "-*")], &File.rm/1)
 
   defp download(nil, _path, _limit), do: {:error, "Figma gave no download for this image."}
 
