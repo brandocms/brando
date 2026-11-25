@@ -198,6 +198,21 @@ defmodule Brando.Villain.RawOnRichTextTest do
       assert html =~ "&lt;img"
     end
 
+    test "keeps repeated plain values from named arguments unmarked in nested results" do
+      alias Brando.Villain.TemplateView
+
+      TemplateView.rich_text_scope(fn ->
+        rich = TemplateView.read_as_rich_text("&lt;b&gt;")
+        plain = "&lt;em&gt;"
+        derived = "&lt;i&gt;"
+        result = [[plain, derived], plain, 1]
+
+        assert TemplateView.keep_rich_text(result, [rich, options: [[plain]]]) == result
+        refute TemplateView.read_as_rich_text?(plain)
+        assert TemplateView.read_as_rich_text?(derived)
+      end)
+    end
+
     test "marks the text items of nested lists" do
       Brando.Villain.TemplateView.rich_text_scope(fn ->
         rich = Brando.Villain.TemplateView.read_as_rich_text("&lt;b&gt;")

@@ -554,7 +554,12 @@ defmodule Brando.Villain.TemplateView do
   """
   @spec keep_rich_text(term(), term()) :: term()
   def keep_rich_text(result, inputs) when is_binary(result) or is_list(result) do
-    if rich_input?(inputs), do: mark_texts(result, plain_texts(inputs, [])), else: result
+    if rich_input?(inputs) do
+      plain = plain_texts(inputs, [])
+      mark_texts(result, if(is_list(result), do: MapSet.new(plain), else: plain))
+    else
+      result
+    end
   end
 
   def keep_rich_text(result, _inputs), do: result
