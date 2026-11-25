@@ -40,6 +40,9 @@ module.exports = defineConfig({
     gracefulShutdown: { signal: 'SIGTERM', timeout: process.env.BRANDO_E2E_COVER ? 60000 : 5000 },
   },
   testDir: './tests',
+  // These need a server of their own started with BRANDO_E2E_MULTI_SITE=1
+  // (config/e2e.exs); the suite's server is single-site
+  testIgnore: process.env.BRANDO_E2E_MULTI_SITE === '1' ? [] : ['multi-site/**'],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   timeout: 60000,
