@@ -431,15 +431,19 @@ defmodule Brando.SSG.SSH do
     end
   end
 
-  # As saving the deployment settings asks: a build or schedule grant opens
-  # the Publishing screen, and only a deploy grant reaches the key
-  defp may_act?(%Brando.Users.User{} = user, site) do
+  @doc """
+  Whether `user` may change where `site` deploys and act on its target, as
+  saving the deployment settings asks: a build or schedule grant opens the
+  Publishing screen, and only a deploy grant reaches the key and the target.
+  """
+  @spec may_act?(term(), Site.t()) :: boolean()
+  def may_act?(%Brando.Users.User{} = user, %Site{} = site) do
     if Brando.Authorization.enabled?(),
       do: Brando.Authorization.can?(Brando.Authorization.Scope.site(user, site), :deploy, :publishing),
       else: Builds.can_manage?(user, site)
   end
 
-  defp may_act?(_actor, _site), do: false
+  def may_act?(_actor, _site), do: false
 
   @doc """
   What a remote host said (rsync's or ssh's output), to show: cut to a

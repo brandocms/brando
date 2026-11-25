@@ -368,5 +368,35 @@ defmodule Brando.SSG.TargetReviewTest do
       {:ok, _} = Brando.Authorization.Migration.run()
       refused_everything(c, editor)
     end
+
+    # The Publishing screen opens for a build or schedule grant; the target's files are the deploy's
+    test "with capabilities, building or scheduling alone is refused and deploying may", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      for capability <- ["brando.publishing.build", "brando.publishing.schedule"] do
+        member = publishing_member(c, capability)
+        assert Builds.can_manage?(member, c.site)
+        refused_everything(c, member)
+      end
+
+      assert {:ok, %{reviewed: false}} = TargetReview.status(c.site, publishing_member(c, "brando.publishing.deploy"))
+    end
+
+    defp publishing_member(c, capability) do
+      user = Brando.Factory.insert(:random_user, role: :editor)
+      {:ok, _} = Access.grant(user, c.site, :editor)
+      scope = Brando.Authorization.Scope.site(c.superuser, c.site)
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(
+          scope,
+          %{name: "Publishing #{System.unique_integer([:positive])}"},
+          ["brando.admin.access", "brando.publishing.read", capability]
+        )
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
+      user
+    end
   end
 end

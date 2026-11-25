@@ -27,14 +27,13 @@ defmodule Brando.SSG.TargetReview do
     `:unknown` confirms the rest, and `delete_unknown/4` queues a deploy of
     the site's deployed build when the job runs.
 
-  Each acts for someone who may manage the site's publishing
-  (`Brando.SSG.Builds.can_manage?/2`), on the site as stored.
+  Each acts for someone who may change where the site deploys
+  (`Brando.SSG.SSH.may_act?/2`), on the site as stored.
   """
 
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
   alias Brando.SSG.Build
-  alias Brando.SSG.Builds
   alias Brando.SSG.DeployFiles
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetPaths
@@ -458,10 +457,10 @@ defmodule Brando.SSG.TargetReview do
 
   defp stored_target(%Site{}), do: {:error, :not_rsync}
 
-  # The site as stored, for someone who may manage its publishing
+  # The site as stored, for someone who may change where it deploys
   defp acting(%Site{id: id}, actor, fun) do
     case Registry.get_site(id) do
-      %Site{} = site -> if Builds.can_manage?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      %Site{} = site -> if SSH.may_act?(actor, site), do: fun.(site), else: {:error, :forbidden}
       nil -> {:error, :site_not_found}
     end
   end
