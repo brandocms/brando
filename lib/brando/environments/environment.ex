@@ -158,7 +158,7 @@ defmodule Brando.Environments.Environment do
     changeset =
       changeset
       |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts ->
-        Enum.flat_map(hosts, &redirect_host_error(&1, changeset.data.redirect_hosts || []))
+        Enum.flat_map(hosts, &redirect_host_error(&1, bound_hosts(changeset.data)))
       end)
       |> validate_domain_not_redirected(domain, hosts)
 
@@ -183,6 +183,11 @@ defmodule Brando.Environments.Environment do
   end
 
   # A host stored before the preview host pattern was set may stay
+  # The hosts the stored environment answers on already: one of them that
+  # moves from the domain to the redirect list was bound before, too
+  defp bound_hosts(%{domain: domain, redirect_hosts: redirect_hosts}),
+    do: Enum.reject([domain | redirect_hosts || []], &is_nil/1)
+
   defp redirect_host_error(host, stored_hosts) do
     cond do
       not valid_host?(host) ->

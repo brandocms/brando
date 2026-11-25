@@ -1272,12 +1272,15 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     do: build.status in [:ready, :deployed, :archived] and is_nil(build.pruned_at)
 
   # A previewable build with no host to open its preview on
-  # (`Brando.SSG.Builds.preview_url/3`), said once for the screen. A build
-  # whose environment was deleted has none on the preview host, which says
-  # nothing about the site's
+  # (`Brando.SSG.Builds.preview_url/3`), said once for the screen. With the
+  # preview host pattern set, a build whose environment was deleted has no
+  # link whatever the site's hosts are, so it says nothing about them
   defp no_preview_host?(builds, site, admin_uri) do
+    pattern? = Brando.SSG.PreviewHost.enabled?()
+
     Enum.any?(builds, fn build ->
-      previewable?(build) and not is_nil(build.environment) and is_nil(Builds.preview_url(build, site, admin_uri))
+      previewable?(build) and not (pattern? and is_nil(build.environment)) and
+        is_nil(Builds.preview_url(build, site, admin_uri))
     end)
   end
 
