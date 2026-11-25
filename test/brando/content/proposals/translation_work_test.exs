@@ -72,6 +72,30 @@ defmodule Brando.Content.Proposals.TranslationWorkTest do
   defp args(id, extra \\ %{}), do: Map.merge(%{"content_type" => @type_name, "id" => id}, extra)
 
   describe "a synchronized translation" do
+    test "restarts the read when a source transfer changes the target's role", c do
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      event = BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query]
+      handler = make_ref()
+      owner = self()
+
+      :telemetry.attach(
+        handler,
+        event,
+        fn _, _, metadata, _ ->
+          if self() == owner and metadata.source == Article.__schema__(:source) and metadata.params == [c.source.id] and
+               !Process.put(handler, true) do
+            {:ok, _} = Translations.transfer_source(Article, target.id, c.user)
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+      result = Tools.call("translation_work", args(target.id), c.context)
+      assert Process.get(handler)
+      assert {:ok, %{role: "source"}} = result
+    end
+
     test "lists its open work as units, with a token for the batch", c do
       {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
       result = call!(args(target.id), c.context)

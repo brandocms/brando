@@ -1,0 +1,1 @@
+- Translation proposals read work from the authorized source and recheck the membership if the source changes during the read.
