@@ -665,6 +665,18 @@ defmodule Brando.Content.DefinitionRenamesTest do
       assert [%{key: "title"}] = Repo.preload(Repo.get!(Module, card.id), :vars).vars
     end
 
+    test "counts overlapping ref and var holders once at the block limit", c do
+      bare_blocks!(c, c.module, "tagline", 1494)
+      rename_tagline!(c)
+      rename_body!(c)
+      assert [%{moves: %{blocks: 1500, renames: renames, left?: false}}] = plan!(c).items
+      assert Map.new(renames, &{&1.kind, &1.blocks}) == %{var: 1500, ref: 6}
+
+      bare_blocks!(c, c.module, "tagline", 1)
+      assert [%{moves: %{blocks: 1501, renames: renames, left?: true}}] = plan!(c).items
+      assert Map.new(renames, &{&1.kind, &1.blocks}) == %{var: 1501, ref: 6}
+    end
+
     test "to as many blocks as an apply moves while editors' saves wait, counted before they are loaded", c do
       bare_blocks!(c, c.module, "tagline", 1500)
       rename_tagline!(c)
