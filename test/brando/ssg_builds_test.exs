@@ -142,6 +142,8 @@ defmodule Brando.SSGBuildsTest do
       "own.example.test"
     ])
 
+    Brando.SSGSSHFixtures.review_target(site, "deploy@example.test:/srv/www")
+
     %{site: Registry.get_site(site.id), environment: environment, root: root}
   end
 
@@ -381,7 +383,18 @@ defmodule Brando.SSGBuildsTest do
     assert deployed_first.status == :deployed
 
     assert_receive {:command, "rsync",
-                    ["-e", "ssh " <> _, "--timeout=300", "-az", "--delete", "--", _, "deploy@example.test:/srv/www"]}
+                    [
+                      "-e",
+                      "ssh " <> _,
+                      "--timeout=300",
+                      "-az",
+                      "--delete",
+                      "--from0",
+                      "--filter=merge " <> _,
+                      "--",
+                      _,
+                      "deploy@example.test:/srv/www"
+                    ]}
 
     assert {:ok, deployed_second} = Deploy.deploy(second, runner: runner)
     assert deployed_second.status == :deployed
@@ -515,9 +528,23 @@ defmodule Brando.SSGBuildsTest do
       %{other_key: other.key, build: ready_build(context.site, context.environment)}
     end
 
+    # An rsync target reviewed, as one is before its first deploy
     defp with_target(build, strategy, target) do
       {:ok, build} = Builds.update(build, %{deploy_config: %{"strategy" => strategy, "target" => target}})
+      if strategy == "rsync", do: rsync_site(build.site_id, target)
       build
+    end
+
+    # A deploy goes only to the site's own reviewed target
+    defp rsync_site(site_id, target) do
+      site = Registry.get_site(site_id)
+      config = %{(site.deploy_config || %DeployConfig{}) | strategy: :rsync, target: target, port: 22}
+
+      Ecto.Query.from(s in Brando.Sites.Site, where: s.id == ^site_id)
+      |> Brando.Repo.update_all([set: [deploy_config: config]], prefix: "public")
+
+      Cache.invalidate()
+      Brando.SSGSSHFixtures.review_target(Registry.get_site(site_id), target)
     end
 
     defp recording_runner(command, args, _opts) do

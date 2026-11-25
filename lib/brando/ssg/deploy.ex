@@ -20,7 +20,7 @@ defmodule Brando.SSG.Deploy do
   alias Brando.Sites.Site
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
-  alias Brando.SSG.SSH
+  alias Brando.SSG.TargetReview
   alias Brando.Tenant.Lock
   alias Brando.Webhooks.Client
   alias Brando.Webhooks.URLGuard
@@ -30,7 +30,11 @@ defmodule Brando.SSG.Deploy do
 
   @public_opts [prefix: "public"]
 
-  @doc "Deploys a ready or archived build using its snapshotted configuration."
+  @doc """
+  Deploys a ready or archived build using its snapshotted configuration.
+  With `only_if_deployed: true`, only while it is still the site's deployed
+  build once the deploy lock is held (`{:error, :build_no_longer_deployed}`).
+  """
   @spec deploy(Build.t(), keyword()) :: {:ok, Build.t()} | {:error, term()}
   def deploy(%Build{} = build, opts \\ []) do
     Brando.Authorization.Operations.run(:deploy, :publishing, build.site_id, opts, fn ->
@@ -107,6 +111,7 @@ defmodule Brando.SSG.Deploy do
          true <- build.site.status == :active,
          :ok <- still_static(build.site),
          true <- build.status in [:ready, :deployed, :archived],
+         :ok <- still_deployed(build, opts),
          true <- managed_build_path?(build),
          true <- is_nil(build.pruned_at) and File.dir?(build.build_path),
          {:ok, deployed} <-
@@ -119,6 +124,10 @@ defmodule Brando.SSG.Deploy do
     end
   end
 
+  defp still_deployed(%Build{status: status}, opts) do
+    if opts[:only_if_deployed] && status != :deployed, do: {:error, :build_no_longer_deployed}, else: :ok
+  end
+
   # Read under the deploy lock, which a change of delivery takes too
   # (`Brando.Tenant.Setup.update_delivery/4`): a site switched to dynamic
   # while this build waited gets nothing copied or published
@@ -127,9 +136,13 @@ defmodule Brando.SSG.Deploy do
 
   defp deploy_and_mark(build, opts) do
     with :ok <- made_for_current_delivery(build),
-         :ok <- run_strategy(build, opts),
-         do: mark_deployed(build)
+         {:ok, notes} <- build |> run_strategy(opts) |> with_notes(),
+         do: mark_deployed(build, notes)
   end
+
+  # Lines a strategy has for the build log
+  defp with_notes(:ok), do: {:ok, []}
+  defp with_notes(result), do: result
 
   # A build carries the config it was made with: one made for a static host
   # would copy there, and archive the build the installation serves, while
@@ -165,23 +178,20 @@ defmodule Brando.SSG.Deploy do
   defp deploy_rsync(_build, target, _opts) when target in [nil, ""],
     do: {:error, :deploy_target_not_configured}
 
-  # With the site's own key and accepted host keys (`Brando.SSG.SSH`), read
-  # when the deploy runs; the port is the build's, 22 for a build from
-  # before the port
+  # With the site's own key and accepted host keys (`Brando.SSG.SSH`), and
+  # deleting only what Brando uploaded or an admin confirmed
+  # (`Brando.SSG.TargetReview`), all read when the deploy runs; the port is
+  # the build's, 22 for a build from before the port
   defp deploy_rsync(build, target, opts) do
-    # `--` ends the options: neither operand can be read as one
-    args = ["-az", "--delete", "--", String.trim_trailing(build.build_path, "/") <> "/", target]
-
     # The build carries the config it was made with, which may predate the
     # check on save; the site's allowed targets are read afresh with the build
     case DeployConfig.check_rsync_target(target, build.site) do
       :ok ->
         port = build.deploy_config["port"] || 22
 
-        case SSH.rsync(build.site, target, port, args, opts) do
-          {:ok, _output} -> :ok
+        case TargetReview.deploy(build, target, port, opts) do
           {:error, :host_key_not_accepted} -> {:error, unaccepted_host(build.site, target, port)}
-          {:error, _reason} = error -> error
+          result -> result
         end
 
       {:error, :lookup_failed} ->
@@ -298,7 +308,7 @@ defmodule Brando.SSG.Deploy do
 
   defp managed_build_path?(%Build{}), do: false
 
-  defp mark_deployed(build) do
+  defp mark_deployed(build, notes) do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
@@ -314,7 +324,7 @@ defmodule Brando.SSG.Deploy do
       case Builds.update(build, %{
              status: :deployed,
              deployed_at: now,
-             build_log: build.build_log <> log_line("Artifact deployed")
+             build_log: build.build_log <> Enum.map_join(notes, &log_line/1) <> log_line("Artifact deployed")
            }) do
         {:ok, deployed} -> deployed
         {:error, changeset} -> Repo.rollback(changeset)

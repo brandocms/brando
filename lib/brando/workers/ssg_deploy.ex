@@ -5,6 +5,11 @@ defmodule Brando.Worker.SSGDeploy do
   The admin queues it with `BrandoAdmin.Work.track/4`, so the job reports
   its outcome to whoever asked, on the build's key
   (`Brando.Worker.SSGBuild.work_key/1`).
+
+  `"redeploy"` with a `"site_id"` deploys again whichever build is the
+  site's deployed one when the job runs, so a newer deploy queued before it
+  stays live (`Brando.SSG.TargetReview.delete_unknown/4`), and nothing when
+  another build became the deployed one while it waited for the deploy lock.
   """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3
@@ -13,6 +18,7 @@ defmodule Brando.Worker.SSGDeploy do
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
   alias Brando.SSG.SSH
+  alias Brando.SSG.TargetReview
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args} = job)
@@ -23,11 +29,19 @@ defmodule Brando.Worker.SSGDeploy do
     end
   end
 
+  def perform(%Oban.Job{args: %{"site_id" => site_id, "action" => "redeploy"} = args} = job) do
+    case Builds.deployed_build(site_id) do
+      %Build{} = build -> "redeploy" |> run(build, args["creator_id"]) |> outcome(build, job)
+      nil -> {:cancel, :no_deployed_build}
+    end
+  end
+
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
 
   defp run("deploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id)
   defp run("rollback", build, creator_id), do: Deploy.rollback(build.site, build, creator_id: creator_id)
+  defp run("redeploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id, only_if_deployed: true)
 
   defp outcome({:ok, _deployed}, _build, _job), do: :ok
 
@@ -36,6 +50,16 @@ defmodule Brando.Worker.SSGDeploy do
     Builds.append_log(build, refused_target_log())
 
     {:cancel, :invalid_deploy_target}
+  end
+
+  # The newer deploy deleted what was confirmed, or the next one does
+  defp outcome({:error, :build_no_longer_deployed} = error, build, _job) do
+    Builds.append_log(
+      build,
+      "Deployment skipped: another build was deployed while this one waited, and stays live. The next deploy deletes the files confirmed for deletion."
+    )
+
+    {:cancel, elem(error, 1)}
   end
 
   # DNS may answer on the next attempt
@@ -67,8 +91,9 @@ defmodule Brando.Worker.SSGDeploy do
   end
 
   defp outcome({:error, reason}, build, _job) do
-    # A step on the Publishing screen comes first (`Brando.SSG.SSH`)
-    case SSH.refusal_message(reason) do
+    # A step on the Publishing screen comes first (`Brando.SSG.SSH`,
+    # `Brando.SSG.TargetReview`)
+    case SSH.refusal_message(reason) || TargetReview.refusal_message(reason) do
       nil ->
         {:error, reason}
 

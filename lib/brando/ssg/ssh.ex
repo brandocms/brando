@@ -29,6 +29,7 @@ defmodule Brando.SSG.SSH do
   alias Brando.Sites.Site
   alias Brando.SSG.Builds
   alias Brando.SSG.DeployFiles
+  alias Brando.Tenant.Lock
   alias Brando.Tenant.Registry
 
   # Seconds: to connect, for ssh-keyscan's answer, and for rsync's silence
@@ -36,6 +37,7 @@ defmodule Brando.SSG.SSH do
   @keyscan_timeout 10
   @test_io_timeout 30
   @deploy_io_timeout 300
+  @lock_timeout :timer.seconds(5)
 
   @remote_output_limit 2_000
 
@@ -186,7 +188,9 @@ defmodule Brando.SSG.SSH do
   `actor`: they replace those accepted before for the same host and port.
   Refused when the site's stored target or port is no longer the one tested,
   the keys accepted for it are no longer those the test saw
-  (`:host_keys_changed`), or a deploy would refuse the target.
+  (`:host_keys_changed`), or a deploy would refuse the target. Keys other
+  than those accepted wait for a running deploy, which reads them again for
+  its real run (`:deploy_running` after a few seconds).
   """
   @spec accept_host_keys(Site.t(), term(), test_result()) :: :ok | {:error, term()}
   def accept_host_keys(%Site{} = site, actor, %{target: _, port: _, host_keys: [_ | _], accepted_keys: _} = test) do
@@ -198,7 +202,20 @@ defmodule Brando.SSG.SSH do
   defp accept_tested(site, %{target: target, port: port} = test) do
     with {:ok, ^target, ^port} <- stored_target(site) |> same_target(target, port),
          :ok <- check_target(target, site),
-         do: DeployFiles.with_lock(site, fn -> accept_unchanged(site, test) end)
+         do: outside_deploy(site, test, fn -> accept_locked(site, test) end)
+  end
+
+  defp accept_locked(site, test), do: DeployFiles.with_lock(site, fn -> accept_unchanged(site, test) end)
+
+  defp outside_deploy(site, test, fun) do
+    if key_set(test.host_keys) == key_set(test.accepted_keys) do
+      fun.()
+    else
+      case Lock.with_timeout(Lock.deploy_key(site.id), @lock_timeout, fun) do
+        {:ok, result} -> result
+        :busy -> {:error, :deploy_running}
+      end
+    end
   end
 
   defp accept_unchanged(site, %{target: target, port: port} = test) do
@@ -281,7 +298,9 @@ defmodule Brando.SSG.SSH do
     end
   end
 
-  defp accepted_keys(site, target, port) do
+  @doc "The host keys the site accepted for `target`'s host on `port`."
+  @spec accepted_keys(Site.t(), String.t(), pos_integer()) :: [host_key()]
+  def accepted_keys(%Site{} = site, target, port) do
     name = known_host(target, port)
 
     case DeployFiles.read(site, :known_hosts) do
@@ -429,15 +448,19 @@ defmodule Brando.SSG.SSH do
     end
   end
 
-  # As saving the deployment settings asks: a build or schedule grant opens
-  # the Publishing screen, and only a deploy grant reaches the key
-  defp may_act?(%Brando.Users.User{} = user, site) do
+  @doc """
+  Whether `user` may change where `site` deploys and act on its target, as
+  saving the deployment settings asks: a build or schedule grant opens the
+  Publishing screen, and only a deploy grant reaches the key and the target.
+  """
+  @spec may_act?(term(), Site.t()) :: boolean()
+  def may_act?(%Brando.Users.User{} = user, %Site{} = site) do
     if Brando.Authorization.enabled?(),
       do: Brando.Authorization.can?(Brando.Authorization.Scope.site(user, site), :deploy, :publishing),
       else: Builds.can_manage?(user, site)
   end
 
-  defp may_act?(_actor, _site), do: false
+  def may_act?(_actor, _site), do: false
 
   @doc """
   What a remote host said (rsync's or ssh's output), to show: cut to a

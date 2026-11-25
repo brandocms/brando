@@ -16,6 +16,7 @@ defmodule Brando.Worker.SSGBuild do
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
   alias Brando.SSG.SSH
+  alias Brando.SSG.TargetReview
   alias BrandoAdmin.Work
 
   require Logger
@@ -234,7 +235,7 @@ defmodule Brando.Worker.SSGBuild do
     do: "Automatic deployment failed: #{SSH.failure_message(reason)}"
 
   defp automatic_deploy_log(reason) do
-    case SSH.refusal_message(reason) do
+    case SSH.refusal_message(reason) || TargetReview.refusal_message(reason) do
       nil -> "Automatic deployment failed: #{inspect(reason)}"
       message -> "Automatic deployment refused: #{message}"
     end
