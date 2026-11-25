@@ -892,7 +892,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          {build_id, ""} <- Integer.parse(id),
          %Build{site_id: site_id} = build <- Enum.find(socket.assigns.builds, &(&1.id == build_id)),
          true <- site_id == socket.assigns.site.id,
-         :ok <- target_set_up(socket.assigns.site),
+         :ok <- target_set_up(socket.assigns.site, build),
          {:ok, _job} <-
            %{"build_id" => build_id, "action" => action, "creator_id" => user.id}
            |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{site_id}"])
@@ -905,6 +905,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
            |> Oban.insert() do
       {:noreply, socket}
     else
+      {:error, :site_not_found} -> {:noreply, redirect(socket, to: "/admin")}
       {:error, reason} when reason in @set_up_by_configure -> toast_error(socket, set_up_by_configure(reason))
       _error -> toast_error(socket, gettext("Could not queue the publishing action."))
     end
@@ -974,19 +975,25 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   end
 
   defp queue_build(socket, params, scheduled_at) do
+    auto_deploy? = params["auto_deploy"] == "true"
+
     with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
          %Environment{} = environment <- environment(socket, params["environment_id"]),
+         # A build that deploys itself is refused as its deploy would be
+         :ok <- if(auto_deploy?, do: target_set_up(socket.assigns.site), else: :ok),
          {:ok, build} <-
            Builds.request_build(socket.assigns.site, environment,
              creator_id: socket.assigns.current_user.id,
              note: blank_to_nil(params["note"]),
-             auto_deploy: params["auto_deploy"] == "true",
+             auto_deploy: auto_deploy?,
              scheduled_at: scheduled_at
            ) do
       # An immediate build reports on its row (BrandoAdmin.Work); a scheduled one waits
       if scheduled_at, do: send(self(), {:toast, gettext("Scheduled static build %{version}", version: build.version)})
       {:noreply, refresh(socket)}
     else
+      {:error, :site_not_found} -> {:noreply, redirect(socket, to: "/admin")}
+      {:error, reason} when reason in @set_up_by_configure -> toast_error(socket, set_up_by_configure(reason))
       _error -> toast_error(socket, gettext("Could not queue the static build."))
     end
   end
@@ -1008,15 +1015,20 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     assign(socket, can_manage?: can_manage?(user, site), can_configure?: Builds.can_configure?(user, site))
   end
 
+  # A site deleted while the screen is open goes where the mount sends it
   defp refresh(socket) do
-    site = Registry.get_site(socket.assigns.site.id)
+    case Registry.get_site(socket.assigns.site.id) do
+      nil ->
+        redirect(socket, to: "/admin")
 
-    socket
-    |> assign(:site, site)
-    |> assign(:environments, site.environments |> Enum.sort_by(&{not &1.live, &1.name}))
-    |> assign(:builds, Builds.list_builds(site))
-    |> assign_key(site)
-    |> assign_target(site)
+      site ->
+        socket
+        |> assign(:site, site)
+        |> assign(:environments, site.environments |> Enum.sort_by(&{not &1.live, &1.name}))
+        |> assign(:builds, Builds.list_builds(site))
+        |> assign_key(site)
+        |> assign_target(site)
+    end
   end
 
   # Remote file names, for those who may configure the site's publishing
@@ -1171,11 +1183,16 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp can_manage?(user, site), do: Builds.can_manage?(user, site)
 
   # A deploy the target refuses until someone who may configure publishing
-  # sets it up is said at once, not in a log only they may read. The
-  # settings as stored: they may have changed since the screen showed them.
-  defp target_set_up(site) do
-    case TargetReview.deployable(Registry.get_site(site.id)) do
-      {:error, reason} when reason in @set_up_by_configure -> {:error, reason}
+  # sets it up is said at once, not in a log only they may read: a deploy of
+  # `build`, or of a build made now. The settings as stored: they may have
+  # changed since the screen showed them.
+  defp target_set_up(site, build \\ nil) do
+    with %Site{} = stored <- Registry.get_site(site.id),
+         {:error, reason} when reason in @set_up_by_configure <-
+           if(build, do: TargetReview.deployable(stored, build), else: TargetReview.deployable(stored)) do
+      {:error, reason}
+    else
+      nil -> {:error, :site_not_found}
       _deployable -> :ok
     end
   end

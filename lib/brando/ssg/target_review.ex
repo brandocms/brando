@@ -303,6 +303,21 @@ defmodule Brando.SSG.TargetReview do
   end
 
   @doc """
+  As `deployable/1`, for a deploy of `build`, which copies to the target it
+  was made for: `:ok` for a build made for another strategy or target than
+  the site's stored rsync target, whose deploy refuses it itself
+  (`:build_target_changed`).
+  """
+  @spec deployable(Site.t(), Build.t()) :: :ok | {:error, term()}
+  def deployable(%Site{} = site, %Build{deploy_config: config}) do
+    made_for = {:ok, config["target"], config["port"] || 22}
+
+    if config["strategy"] == "rsync" and stored_target(site) == made_for,
+      do: deployable(site),
+      else: :ok
+  end
+
+  @doc """
   Deploys the build to `target` on `port` with the site's reviewed state, as
   the moduledoc says. Call it holding the deploy lock. Returns lines for the
   build log. Takes the deploy's `:runner`.
