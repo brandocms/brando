@@ -855,6 +855,11 @@ msgstr "%{fragment} (oversatt som %{translations})"
 msgid "%{host} cannot be both the domain and one of its redirect hosts."
 msgstr "%{host} kan ikke være både domenet og en av omdirigeringsvertene."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{host}, port %{port}"
+msgstr "%{host}, port %{port}"
+
 #: lib/brando/environments/environment.ex
 #, elixir-autogen, elixir-format
 msgid "%{host}: enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
@@ -1109,6 +1114,11 @@ msgstr "Endringen til %{name} erstattes når du tar releasen i bruk. Den tas var
 #, elixir-autogen, elixir-format
 msgid "%{name}’s edit stays and this module is left out of the apply. The release file is then out of date: Block modules marks it until a developer exports the module (Block modules → Export, or mix brando.modules export) and commits it to priv/modules."
 msgstr "Endringen til %{name} blir stående, og modulen holdes utenfor. Releasens fil er da utdatert: Blokkmoduler markerer den til en utvikler eksporterer modulen (Blokkmoduler → Eksporter, eller mix brando.modules export) og committer den til priv/modules."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{program} is not installed on this server."
+msgstr "%{program} er ikke installert på denne serveren."
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -2038,10 +2048,25 @@ msgstr "Godta"
 msgid "Accept all"
 msgstr "Godta alle"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Accept host key"
+msgstr "Godta vertsnøkkel"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Accept these host keys for %{host}?"
+msgstr "Godta disse vertsnøklene for %{host}?"
+
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
 msgid "Accept update"
 msgstr "Godta oppdatering"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Accepted keys"
+msgstr "Godtatte nøkler"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -3982,6 +4007,16 @@ msgstr "Brando kan ikke se når dette arkivet ble tatt, og kan derfor ikke oppda
 msgid "Brando could not read the app's description from its website. Try again in a moment."
 msgstr "Brando kunne ikke lese appens beskrivelse fra nettstedet dens. Prøv igjen om litt."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando keeps no SSH key for this site: its deploy directory is inside a directory the installation serves (media or static files). Set :sites_path in the config outside them."
+msgstr "Brando lagrer ingen SSH-nøkkel for dette nettstedet: publiseringsmappen ligger i en mappe installasjonen serverer (media eller statiske filer). Sett :sites_path i konfigurasjonen utenfor dem."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando keeps no SSH key for this site: the path of its deploy directory has characters ssh reads specially. Set :sites_path in the config to a path of letters, digits and . _ + @ - /."
+msgstr "Brando lagrer ingen SSH-nøkkel for dette nettstedet: stien til publiseringsmappen har tegn ssh tolker spesielt. Sett :sites_path i konfigurasjonen til en sti med bokstaver, sifre og . _ + @ - /."
+
 #: lib/brando_admin/components/form/entry_header.ex
 #, elixir-autogen, elixir-format
 msgid "Breadcrumb"
@@ -5523,6 +5558,11 @@ msgstr "Tilkoblede verktøy kan da ikke lenger lese Figma, før den kobles til i
 msgid "Connected tools then read Figma with the access token ending in %{hint} again. The app stays, to connect again."
 msgstr "Tilkoblede verktøy leser da Figma med tilgangstokenet som slutter på %{hint} igjen. Appen blir værende, så den kan kobles til igjen."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Connected: ssh, the site's key and rsync on the host work."
+msgstr "Tilkoblet: ssh, nettstedets nøkkel og rsync på verten virker."
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "Connecting AI tools needs two-factor authentication, which is off for your account."
@@ -5749,6 +5789,7 @@ msgstr "Samtale"
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #: lib/brando_admin/components/form/structured_data.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Copied"
@@ -5776,6 +5817,7 @@ msgid "Copied from another entry"
 msgstr "Kopiert fra en annen oppføring"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Copy"
@@ -6029,6 +6071,11 @@ msgstr "Kunne ikke lagre opplastet fil"
 #, elixir-autogen, elixir-format
 msgid "Could not switch preview"
 msgstr "Kunne ikke bytte forhåndsvisning"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not test the connection."
+msgstr "Klarte ikke teste tilkoblingen."
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
@@ -7055,6 +7102,11 @@ msgstr "Publiserer %{version}"
 #, elixir-autogen, elixir-format
 msgid "Deployment target"
 msgstr "Publiseringsmål"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploys connect with this site's own key, and only to a host whose key you accepted here. Add the public key to the authorized_keys file of the target's user on the host, then test the connection."
+msgstr "Publiseringer kobler til med nettstedets egen nøkkel, og bare til en vert du har godtatt nøkkelen til her. Legg den offentlige nøkkelen i authorized_keys-filen til målets bruker på verten, og test deretter tilkoblingen."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
@@ -9978,6 +10030,16 @@ msgstr "Kampanjeoppdatering på forsiden"
 msgid "Horizontal rule"
 msgstr "Horisontal linje"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Host key accepted"
+msgstr "Vertsnøkkelen er godtatt"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Host keys"
+msgstr "Vertsnøkler"
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Hosted or remote video"
@@ -11855,6 +11917,11 @@ msgstr "Vedlikehold"
 msgid "Make independent"
 msgstr "Gjør selvstendig"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Make key"
+msgstr "Lag nøkkel"
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Make room for more"
@@ -13078,6 +13145,16 @@ msgstr "Ingen veiledning er lagret her ennå."
 #, elixir-autogen, elixir-format
 msgid "No hidden fields."
 msgstr "Ingen skjulte felter."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "No host key is accepted for %{host}. Compare these fingerprints with the host's own before you accept them."
+msgstr "Ingen vertsnøkkel er godtatt for %{host}. Sammenlign disse fingeravtrykkene med vertens egne før du godtar dem."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "No host key is accepted for the target's host and port."
+msgstr "Ingen vertsnøkkel er godtatt for målets vert og port."
 
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
@@ -14905,6 +14982,11 @@ msgid_plural "Other content still refers to them."
 msgstr[0] "Annet innhold viser fortsatt til den."
 msgstr[1] "Annet innhold viser fortsatt til dem."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Other host keys were accepted after the test. Test the connection again."
+msgstr "Andre vertsnøkler ble godtatt etter testen. Test tilkoblingen på nytt."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Other languages"
@@ -15769,6 +15851,11 @@ msgstr "Behold tre"
 #, elixir-autogen, elixir-format
 msgid "Public CDN URL (optional)"
 msgstr "Offentlig CDN-URL (valgfritt)"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Public key"
+msgstr "Offentlig nøkkel"
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -16924,6 +17011,11 @@ msgstr "Erstatt bildet og behold innstillingene for denne referansen."
 msgid "Replace the live content, if the target is the live environment"
 msgstr "Erstatt live-innholdet, hvis målet er live-miljøet"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the site's key with a new one? Deploys use the new key at once: add it to the host before the next deploy. The old key stays authorized on the host until you remove it from authorized_keys there."
+msgstr "Erstatte nettstedets nøkkel med en ny? Publiseringer bruker den nye nøkkelen med en gang: legg den til på verten før neste publisering. Den gamle nøkkelen har fortsatt tilgang til verten til du fjerner den fra authorized_keys der."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Replace the table in %{block}"
@@ -17733,6 +17825,11 @@ msgstr "Rot"
 msgid "Root folder"
 msgstr "Rotmappe"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rotate key"
+msgstr "Bytt nøkkel"
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Rotate secret"
@@ -17820,6 +17917,16 @@ msgstr "SEO-seksjoner"
 #, elixir-autogen, elixir-format
 msgid "SEO settings"
 msgstr "SEO-innstillinger"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "SSH access"
+msgstr "SSH-tilgang"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "SSH port"
+msgstr "SSH-port"
 
 #: lib/brando_admin/components/form/input/blocks/media_block.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -17961,6 +18068,11 @@ msgstr "Lagre reglene"
 #, elixir-autogen, elixir-format
 msgid "Save route"
 msgstr "Lagre rute"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save rsync deployment settings first."
+msgstr "Lagre publiseringsinnstillinger for rsync først."
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
@@ -20180,6 +20292,11 @@ msgstr "Tenancy er deaktivert. Sett tenancy_mode til single eller multi før du 
 msgid "Test"
 msgstr "Test"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test connection"
+msgstr "Test tilkobling"
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Test event"
@@ -20194,6 +20311,16 @@ msgstr "Testvarsel"
 #, elixir-autogen, elixir-format
 msgid "Test notification from %{site}"
 msgstr "Testvarsel fra %{site}"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test the connection first."
+msgstr "Test tilkoblingen først."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Testing…"
+msgstr "Tester …"
 
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
@@ -20757,6 +20884,11 @@ msgstr "Leveringen stoppet med en feil"
 msgid "The delivery was sent again."
 msgstr "Leveringen ble sendt på nytt."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The deployment settings changed after the test. Test the connection again."
+msgstr "Publiseringsinnstillingene er endret etter testen. Test tilkoblingen på nytt."
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "The description opens by repeating the title."
@@ -20921,11 +21053,26 @@ msgstr "Frontenden som følger med gjeldende release, er aktiv til Florist regis
 "Frontend-filene som følger med gjeldende release, forblir aktive til Florist "
 "registrerer et bygg."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The host answered with no SSH host keys: %{output}"
+msgstr "Verten svarte uten SSH-vertsnøkler: %{output}"
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The host name could not be found"
 msgstr "Vertsnavnet ble ikke funnet"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The host's key is not the one accepted for it. Test the connection to compare the fingerprints."
+msgstr "Vertens nøkkel er ikke den som er godtatt for den. Test tilkoblingen for å sammenligne fingeravtrykkene."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The host's keys are not the ones accepted for %{host}. Accept them only if you know why the host changed, such as a rebuilt server."
+msgstr "Vertens nøkler er ikke de som er godtatt for %{host}. Godta dem bare hvis du vet hvorfor verten er endret, for eksempel en server som er bygget på nytt."
 
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
@@ -21446,6 +21593,16 @@ msgstr "Innloggingsreglene er lagret."
 msgid "The site"
 msgstr "Nettstedet"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site has a new SSH key"
+msgstr "Nettstedet har fått en ny SSH-nøkkel"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site has no SSH key yet."
+msgstr "Nettstedet har ingen SSH-nøkkel ennå."
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -21461,6 +21618,16 @@ msgstr "Nettstedet har ingen identitet på dette språket, så sidene gir ingen 
 #, elixir-autogen, elixir-format
 msgid "The site's"
 msgstr "Nettstedets"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's SSH key could not be read. Rotate it to make a new one."
+msgstr "Klarte ikke lese nettstedets SSH-nøkkel. Bytt den for å lage en ny."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's SSH key could not be written."
+msgstr "Klarte ikke skrive nettstedets SSH-nøkkel."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -21537,10 +21704,20 @@ msgstr "De strukturerte dataene kunne ikke sjekkes."
 msgid "The tab you were editing this entry in was closed."
 msgstr "Fanen du redigerte dette elementet i, ble lukket."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is not one this site may deploy to."
+msgstr "Målet er ikke et dette nettstedet kan publisere til."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
 msgstr "Målet er live-miljøet: kopieringen erstatter det besøkende ser. Kryss av for «Erstatt live-innholdet» for å fortsette."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target's host could not be looked up. Try again in a moment."
+msgstr "Klarte ikke slå opp målets vert. Prøv igjen om litt."
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #, elixir-autogen, elixir-format
@@ -24830,6 +25007,11 @@ msgstr "Du kan verken slette oversettelsene eller endre dem så de blir værende
 msgid "You may no longer manage these settings, so Figma was not connected."
 msgstr "Du kan ikke lenger administrere disse innstillingene, så Figma ble ikke koblet til."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "You may not change this site's deployment settings."
+msgstr "Du kan ikke endre publiseringsinnstillingene for dette nettstedet."
+
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
 msgid "You may not delete every translation, so they can't be deleted with it."
@@ -26069,6 +26251,11 @@ msgstr "påkr."
 #, elixir-autogen, elixir-format
 msgid "retrying"
 msgstr "prøver igjen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "rsync exited with status %{status}: %{output}"
+msgstr "rsync avsluttet med status %{status}: %{output}"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format

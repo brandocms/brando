@@ -1,6 +1,6 @@
 defmodule Brando.Sites.DeployConfigTest do
-  # An rsync deploy mirrors the build with --delete, as the server's user and
-  # SSH identity, to the target anyone who may deploy can set. It takes only
+  # An rsync deploy mirrors the build with --delete, with the site's own SSH
+  # key, to the target anyone who may deploy can set. It takes only
   # a remote [user@]host:/absolute/path on another server, among the
   # destinations the operator lists for that site. An S3 deploy empties its
   # target the same way, under the application's one set of credentials.
@@ -78,6 +78,29 @@ defmodule Brando.Sites.DeployConfigTest do
     assert_received {:looked_up, :inet}
     assert_received {:looked_up, :inet}
     refute DeployConfig.valid_rsync_target?("deploy@down.example.com:/srv/www", @site_key)
+  end
+
+  describe "an rsync target's port" do
+    defp port(port) do
+      DeployConfig.changeset(
+        %DeployConfig{},
+        %{strategy: :rsync, target: "deploy@example.com:/srv/www", port: port},
+        @site_key
+      )
+    end
+
+    test "is 22 unless set, and any port from 1 to 65535" do
+      assert %DeployConfig{port: 22} = %DeployConfig{}
+
+      for valid <- [1, 22, 2222, 65_535], do: assert(port(valid).valid?, inspect(valid))
+      for invalid <- [0, -1, 65_536, "ssh"], do: refute(port(invalid).valid?, inspect(invalid))
+    end
+
+    # An entry names no port: the site's key opens only what it was installed on
+    test "is allowed on any port of a listed target" do
+      put_test_env(DeployConfig, resolver: &resolve/2, rsync_targets: ["deploy@example.com:/srv/www"])
+      assert port(2222).valid?
+    end
   end
 
   describe "the default lookup, with the hosts file and name servers stubbed" do

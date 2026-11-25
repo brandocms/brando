@@ -20,6 +20,7 @@ defmodule Brando.SSG.Deploy do
   alias Brando.Sites.Site
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
+  alias Brando.SSG.SSH
   alias Brando.Tenant.Lock
   alias Brando.Webhooks.Client
   alias Brando.Webhooks.URLGuard
@@ -164,8 +165,10 @@ defmodule Brando.SSG.Deploy do
   defp deploy_rsync(_build, target, _opts) when target in [nil, ""],
     do: {:error, :deploy_target_not_configured}
 
+  # With the site's own key and accepted host keys (`Brando.SSG.SSH`), read
+  # when the deploy runs; the port is the build's, 22 for a build from
+  # before the port
   defp deploy_rsync(build, target, opts) do
-    runner = Keyword.get(opts, :runner) || Application.get_env(:brando, :ssg_deploy_runner, &System.cmd/3)
     # `--` ends the options: neither operand can be read as one
     args = ["-az", "--delete", "--", String.trim_trailing(build.build_path, "/") <> "/", target]
 
@@ -173,9 +176,12 @@ defmodule Brando.SSG.Deploy do
     # check on save; the site's allowed targets are read afresh with the build
     case DeployConfig.check_rsync_target(target, build.site) do
       :ok ->
-        case runner.("rsync", args, stderr_to_stdout: true) do
-          {_output, 0} -> :ok
-          {output, exit_status} -> {:error, {:rsync_failed, exit_status, output}}
+        port = build.deploy_config["port"] || 22
+
+        case SSH.rsync(build.site, target, port, args, opts) do
+          {:ok, _output} -> :ok
+          {:error, :host_key_not_accepted} -> {:error, unaccepted_host(build.site, target, port)}
+          {:error, _reason} = error -> error
         end
 
       {:error, :lookup_failed} ->
@@ -186,6 +192,13 @@ defmodule Brando.SSG.Deploy do
     end
   rescue
     exception -> {:error, {:rsync_failed, Exception.message(exception)}}
+  end
+
+  # A host accepted for the site's settings is no help to a build made for others
+  defp unaccepted_host(%Site{deploy_config: config}, target, port) do
+    if match?(%DeployConfig{target: ^target}, config) and (config.port || 22) == port,
+      do: :host_key_not_accepted,
+      else: :build_target_changed
   end
 
   defp deploy_s3(_build, target, _opts) when target in [nil, ""],

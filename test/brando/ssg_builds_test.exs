@@ -134,6 +134,14 @@ defmodule Brando.SSGBuildsTest do
         actor: :system
       )
 
+    # Its key and accepted host keys: the rsync deploys here run a fake runner
+    Brando.SSGSSHFixtures.trust_hosts(site, [
+      "example.test",
+      "static.example.test",
+      "acme-www.example.test",
+      "own.example.test"
+    ])
+
     %{site: Registry.get_site(site.id), environment: environment, root: root}
   end
 
@@ -371,7 +379,9 @@ defmodule Brando.SSGBuildsTest do
 
     assert {:ok, deployed_first} = Deploy.deploy(first, runner: runner)
     assert deployed_first.status == :deployed
-    assert_receive {:command, "rsync", ["-az", "--delete", "--", _, "deploy@example.test:/srv/www"]}
+
+    assert_receive {:command, "rsync",
+                    ["-e", "ssh " <> _, "--timeout=300", "-az", "--delete", "--", _, "deploy@example.test:/srv/www"]}
 
     assert {:ok, deployed_second} = Deploy.deploy(second, runner: runner)
     assert deployed_second.status == :deployed

@@ -2420,7 +2420,9 @@ form supports:
 - **Served by this installation** (`local`), with no target: the live
   environment's domain answers from the published build
   ([Served by this installation](#served-by-this-installation));
-- `rsync`, with a target such as `deploy@example.com:/srv/www`;
+- `rsync`, with a target such as `deploy@example.com:/srv/www` and its SSH
+  port (22 by default; see
+  [SSH for rsync targets](#ssh-for-rsync-targets));
 - `s3`, with `s3://bucket/prefix` or, for a bucket of its own, `s3://bucket`;
 - an optional public CDN URL;
 - an optional completion webhook, posted after each deploy or rollback. Like
@@ -2433,14 +2435,14 @@ form supports:
 - artifact retention from 1 through 100 builds (10 by default).
 
 An rsync target is a remote destination, `[user@]host:/absolute/path`. The
-deploy mirrors the build there with `--delete`, as the server's user and with
-its SSH identity, so it must be another server: local paths, `localhost` and
+deploy mirrors the build there with `--delete`, over SSH with the site's own
+key, so it must be another server: local paths, `localhost` and
 loopback names and addresses (however written), hosts that resolve to one of
 this server's addresses, paths with `.`, `..` or empty segments,
 `host::module` and `rsync://` targets, and users or hosts beginning with `-`
 are refused, both when the settings are saved and when a build deploys. A
 name can still reach this server in ways a check cannot see (DNS that
-changes after the check, an SSH config alias, a public address behind NAT),
+changes after the check, a public address behind NAT),
 so to limit the destinations anyone who may deploy can choose, list them in
 config (below).
 
@@ -2452,9 +2454,9 @@ name servers in the system's resolver configuration through Erlang's
 `:inet_res`, with one limit of 3 seconds for both families together
 (`config :brando, Brando.Sites.DeployConfig, lookup_timeout:` in
 milliseconds). A name the name servers say does not exist, or that has no
-address records, passes, as an SSH config alias may name it; so does a
-name only the operating system's own resolver knows (mDNS, per-domain
-resolvers). A name server that fails or refuses the query, a query that
+address records, passes, and so does a name only the operating system's
+own resolver knows (mDNS, per-domain resolvers): a deploy to a name nothing
+knows fails to connect. A name server that fails or refuses the query, a query that
 times out, no name server to ask, or a lookup the limit cuts short refuses
 the save: the target says its host could not be looked up, and to try
 again. The answer is kept on that node for a minute, so saving again does
@@ -2635,6 +2637,82 @@ Brando owns asset registration/activation and the versioned static artifact
 lifecycle. If the application overrides `config :brando, Oban`, re-declare a
 serial `ssg_builds` queue because an application-level Oban configuration
 replaces, rather than merges with, Brando's defaults.
+
+### SSH for rsync targets
+
+Each site deploys with its own SSH key, to a host whose key an admin accepted
+for it on the Publishing screen. The server user's SSH config, keys, agent and
+known hosts play no part, so the target names the real host, and a port other
+than 22 goes in the **SSH port** field beside it: an alias from
+`~/.ssh/config` does not resolve.
+
+When rsync settings are first saved, Brando makes the site an ed25519 key
+pair. **SSH access** on the Publishing screen shows its public key, one line
+with the comment `brando-<site key>`, with a copy button: add it to
+`~/.ssh/authorized_keys` of the target's user on the host. A site saved with
+rsync before it had a key shows **Make key** instead, which keeps a key made
+meanwhile from another screen. **Rotate key**, after a confirmation, replaces
+the key, and deploys use the new one at once. The old public key stays
+authorized on the host until someone removes it from `authorized_keys` there.
+With capabilities on, SSH access takes the deploy grant on publishing, as
+saving the deployment settings does.
+
+**Test connection** checks the target as a deploy does, then fetches the host's
+keys with `ssh-keyscan` on the target's port and shows their SHA256
+fingerprints. Compare them with the host's own (`ssh-keygen -lf` on its host
+key files, or what the hosting provider lists) and press **Accept host key**:
+the keys shown are stored, replacing any accepted before for that host and
+port, unless other keys were accepted after the test, which then asks for a
+new one. A host that answers with some of the accepted keys and no other is
+accepted (`ssh-keyscan` may lose one of its connections). When the host
+offers a key that is not among those accepted, the test shows both, and
+accepting the new ones is for a host you know was rebuilt or replaced. A
+test's answer is not shown when the settings were saved or the key rotated
+while it ran. With accepted keys, the test runs `rsync -an` from an empty
+directory to the target, which sends and deletes nothing, and says whether
+ssh, the key and rsync on the host work, or what the host answered. The test
+runs beside the screen, with a time limit on each step. `ssh-keyscan` opens
+one connection for each type of host key without logging in, which OpenSSH
+9.8 and later counts against the source (`PerSourcePenalties`): pressed many
+times in a row, the test can be turned away by the host for a while.
+
+Every rsync to the target runs with these ssh options and a five-minute limit
+on silence (`--timeout=300`):
+
+```text
+ssh -i <site>/ssg/deploy/id_ed25519 -p <port> -F none -o IdentitiesOnly=yes
+    -o IdentityAgent=none -o BatchMode=yes -o StrictHostKeyChecking=yes
+    -o UserKnownHostsFile=<site>/ssg/deploy/known_hosts
+    -o GlobalKnownHostsFile=/dev/null -o CheckHostIP=no -o ConnectTimeout=10
+```
+
+A build keeps the port it was made with, as it keeps its target: change the
+port and it takes a new build. The key and the accepted host keys are read
+when the deploy runs. A deploy for a site with no key, to a host and port with
+no accepted key, or to a host whose key is not the accepted one, is refused:
+the build's log names the step on the Publishing screen (for a build made for
+another target or port than the site's settings, a new build), the deploy is not
+tried again, and after an automatic deploy the build stays ready.
+
+The key and the accepted host keys are files in the site's
+`sites/{site_key}/ssg/deploy/` (`id_ed25519` and `known_hosts`), beside its
+builds and deleted with the site. The directory is readable by the server's
+user alone, and only the private key is kept: the public key shown is derived
+from it. No key is made, and **SSH access** says why, when that directory is
+inside the media directory or the endpoint's `priv/static` (links followed),
+which the installation serves, or when its path holds characters other than
+letters, digits and `. _ + @ - /`, which ssh or rsync read specially: set
+`:sites_path` outside them.
+
+The server needs `rsync`, `ssh` and `ssh-keyscan` (OpenSSH); a missing one is
+named in the test's result and the build's log. Brando reads and writes the
+keys with Erlang's `:ssh` application, which a release includes; an Erlang
+installed from a distribution's split packages needs its `ssh` package
+(`erlang-ssh` on Debian and Ubuntu) where the release is built.
+
+Making, rotating, testing and accepting are for those who may save the deploy
+settings; rotating and accepting ask for the password, a code or a passkey
+when the session has not confirmed lately.
 
 ### A site's allowed deploy targets
 

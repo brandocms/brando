@@ -15,12 +15,14 @@ defmodule Brando.Sites.DeployConfig do
       config :brando, Brando.Sites.DeployConfig, local_delivery: false
 
   `:rsync` targets are remote rsync destinations, `[user@]host:/absolute/path`
-  such as `deploy@example.com:/srv/www`; `:s3` targets use
+  such as `deploy@example.com:/srv/www`, reached over SSH on `:port` (22
+  unless set) with the site's own key and accepted host keys
+  (`Brando.SSG.SSH`); `:s3` targets use
   `s3://bucket/optional-prefix`. Florist application releases are configured
   separately.
 
-  An rsync deploy mirrors the build with `--delete` as the server's user and
-  SSH identity, and anyone who may deploy can set the target, so it is held
+  An rsync deploy mirrors the build with `--delete`, and anyone who may
+  deploy can set the target, so it is held
   to that remote form: no local paths, no loopback hosts, no `..` in the
   path, no rsync daemon or URL syntax, and no user or host that rsync or ssh
   could read as an option. An S3 deploy deletes every key under its target
@@ -56,6 +58,9 @@ defmodule Brando.Sites.DeployConfig do
   A parent in one site's entries grants that site everything under it, other
   sites' directories included, so keep the sites' entries apart.
 
+  An entry names a user, host and path, not a port: a target on any port
+  passes, as the site's key opens only what its public key was installed on.
+
   With `tenancy_mode: :multi` no `:rsync` or `:s3` target passes unless
   config or the site's own entries allow it. With one site, an unset config
   list allows any target of the right form.
@@ -66,8 +71,9 @@ defmodule Brando.Sites.DeployConfig do
   form validates or when a save leaves both as they were. Each
   address family is looked up in the hosts file, and when it has no entry
   there, asked of the name servers through `:inet_res`. A name the name
-  servers say does not exist, or that has no address records, passes, as
-  an SSH config alias may name it. A name server that fails (SERVFAIL) or
+  servers say does not exist, or that has no address records, passes: the
+  system's resolver may still know it, and a deploy to a name nothing
+  knows fails to connect. A name server that fails (SERVFAIL) or
   refuses, a query that times out, or no name server to ask, is a lookup
   that failed, and refuses the save, as the host could not be checked. Both
   families get one time limit together, `:lookup_timeout` (3 seconds), and a
@@ -99,13 +105,14 @@ defmodule Brando.Sites.DeployConfig do
   embedded_schema do
     field :strategy, Ecto.Enum, values: [:local, :s3, :rsync, :cloudflare_pages]
     field :target, :string
+    field :port, :integer, default: 22
     field :cdn_url, :string
     field :webhook_url, :string
     field :auto_deploy, :boolean, default: false
     field :retention_count, :integer, default: 10
   end
 
-  @fields [:strategy, :target, :cdn_url, :webhook_url, :auto_deploy, :retention_count]
+  @fields [:strategy, :target, :port, :cdn_url, :webhook_url, :auto_deploy, :retention_count]
 
   @lookup_timeout :timer.seconds(3)
   @lookup_kept :timer.seconds(60)
@@ -132,6 +139,7 @@ defmodule Brando.Sites.DeployConfig do
     |> require_target_for_strategy()
     |> validate_local_delivery()
     |> validate_strategy_target(site, lookup)
+    |> validate_number(:port, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535)
     |> validate_number(:retention_count, greater_than_or_equal_to: 1, less_than_or_equal_to: 100)
     |> validate_http_url(:cdn_url)
     |> validate_webhook_url()
@@ -215,6 +223,20 @@ defmodule Brando.Sites.DeployConfig do
   end
 
   def check_rsync_target(_target, _site), do: {:error, :invalid}
+
+  @doc """
+  The host of an rsync target in the remote form, as ssh is given it: an
+  IPv6 literal without its brackets. Nil for any other target.
+  """
+  @spec rsync_host(term()) :: String.t() | nil
+  def rsync_host(target) when is_binary(target) do
+    case Regex.named_captures(@rsync_target, target) do
+      %{"host" => host} -> host |> String.trim_leading("[") |> String.trim_trailing("]")
+      nil -> nil
+    end
+  end
+
+  def rsync_host(_target), do: nil
 
   # A bucket of plain characters, and a prefix that reaches S3 as written: no
   # query or fragment for a parser to drop, no escapes, no unexpanded `{...}`.

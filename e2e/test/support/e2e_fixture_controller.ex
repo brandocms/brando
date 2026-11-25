@@ -340,6 +340,9 @@ defmodule E2EFixtureController do
         "multi-site-static" ->
           MultiSiteHosts.setup(get_admin_user(), static: true)
 
+        "multi-site-rsync" ->
+          MultiSiteHosts.setup(get_admin_user(), rsync: true)
+
         "multi-site-deploy-targets" ->
           MultiSiteHosts.setup(get_admin_user(), deploy_targets: true)
 

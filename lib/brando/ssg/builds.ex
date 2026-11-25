@@ -285,6 +285,27 @@ defmodule Brando.SSG.Builds do
   defp site_auto_deploy?(%Site{}), do: false
 
   @doc """
+  Whether `user` may manage `site`'s publishing, as the Publishing screen
+  asks before each action: build, deploy or schedule with capabilities on,
+  else a site's manager with several sites (`Brando.Tenant.Access`), or an
+  admin or superuser.
+  """
+  @spec can_manage?(term(), Site.t()) :: boolean()
+  def can_manage?(%Brando.Users.User{} = user, %Site{} = site) do
+    if Brando.Authorization.enabled?() do
+      scope = Brando.Authorization.Scope.site(user, site)
+      Enum.any?([:build, :deploy, :schedule], &Brando.Authorization.can?(scope, &1, :publishing))
+    else
+      case Tenant.mode() do
+        :multi -> Brando.Tenant.Access.can_manage?(user, site)
+        _other -> user.role in [:admin, :superuser]
+      end
+    end
+  end
+
+  def can_manage?(_user, _site), do: false
+
+  @doc """
   Whether a site's deployment settings say where builds deploy to: a strategy
   and a target, or `local`, which the installation serves itself and has no
   target.
@@ -294,10 +315,13 @@ defmodule Brando.SSG.Builds do
   def deploy_target?(%{"strategy" => "local"}), do: true
   def deploy_target?(config), do: config["strategy"] not in [nil, ""] and config["target"] not in [nil, ""]
 
+  # What a build deploys with. Anything else is read from the site when the
+  # deploy runs: its key and accepted host keys (`Brando.SSG.SSH`).
+  @snapshot_fields [:strategy, :target, :port, :cdn_url, :webhook_url, :auto_deploy, :retention_count]
+
   defp deploy_config(%Site{deploy_config: %DeployConfig{} = config}) do
     config
-    |> Map.from_struct()
-    |> Map.drop([:__meta__])
+    |> Map.take(@snapshot_fields)
     |> Map.new(fn {key, value} -> {to_string(key), encode(value)} end)
   end
 
