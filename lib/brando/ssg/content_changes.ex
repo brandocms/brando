@@ -55,10 +55,11 @@ defmodule Brando.SSG.ContentChanges do
   @not_changes [:tool_called, :note_added, :note_resolved, :note_reopened]
 
   # Every environment named, of a static site; nil for every site or every
-  # environment of it. Never moves a mark back: nodes' clocks differ a little.
+  # environment of it. Dated by the database's clock, as builds start
+  # (`now/0`), and never moved back.
   @mark """
   INSERT INTO public.ssg_content_changes AS change (environment_id, changed_at)
-  SELECT environment.id, $3::timestamp
+  SELECT environment.id, clock_timestamp() AT TIME ZONE 'UTC'
   FROM public.environments AS environment
   JOIN public.sites AS site ON site.id = environment.site_id
   WHERE site.delivery_mode = 'static'
@@ -154,6 +155,16 @@ defmodule Brando.SSG.ContentChanges do
     |> Brando.Repo.repo().exists?(prefix: prefix)
   end
 
+  @doc """
+  The database's clock, which dates marks: a build's `started_at` is taken
+  from it, so a node whose clock differs does not misplace a change.
+  """
+  @spec now() :: DateTime.t()
+  def now do
+    %{rows: [[now]]} = Brando.Repo.repo().query!("SELECT clock_timestamp() AT TIME ZONE 'UTC'")
+    DateTime.from_naive!(now, "Etc/UTC")
+  end
+
   # Once per transaction for each environment or site, after the rest of its
   # after-commit work: a build that starts once it is marked reads no cache
   # entry the transaction's evictions and rebuilds have yet to refresh
@@ -173,7 +184,7 @@ defmodule Brando.SSG.ContentChanges do
   end
 
   defp write(site_id, environment_ids) do
-    case Brando.Repo.repo().query(@mark, [site_id, environment_ids, NaiveDateTime.utc_now()]) do
+    case Brando.Repo.repo().query(@mark, [site_id, environment_ids]) do
       {:ok, %{rows: rows}} ->
         rows
 

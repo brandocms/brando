@@ -14,6 +14,7 @@ defmodule Brando.Worker.SSGBuild do
 
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
+  alias Brando.SSG.ContentChanges
   alias Brando.SSG.Deploy
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetReview
@@ -135,7 +136,7 @@ defmodule Brando.Worker.SSGBuild do
     with {:ok, building} <-
            Builds.update(build, %{
              status: :building,
-             started_at: build.started_at || DateTime.utc_now(),
+             started_at: build.started_at || ContentChanges.now(),
              build_log: build.build_log <> log_line(build_start_message(build))
            }),
          result <- call_builder(building),
