@@ -2435,9 +2435,10 @@ Builds & deployments make builds, schedule them, and deploy and roll them back;
 key, accepts host keys and reviews the target's files (see
 [Groups and authorization](authorization.md#scopes-and-defaults)). Without
 Configure the screen shows the builds, the strategy and whether builds deploy
-automatically, but not the target, its URLs or a build's log; a deploy that
-waits for a key, a host key or a review says that someone who may configure
-publishing has to set it up. Without capabilities, whoever manages the site
+automatically, but not the target, its URLs or a build's log; a deploy, or a
+build that deploys itself, to a target that waits for a key, a host key or a
+review is refused at once and says that someone who may configure publishing
+has to set it up. Without capabilities, whoever manages the site
 (an admin, a site's manager with several sites, a superuser) does all of it.
 
 ### The Publish button

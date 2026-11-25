@@ -1017,6 +1017,20 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     end
   end
 
+  # The deletion's broadcast sends the view to the access-denied page; a
+  # build's broadcast already on its way reaches the view first
+  test "a site deleted while the screen is open sends it to the dashboard", context do
+    {:ok, build} = Builds.request_build(context.site, context.environment, [])
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    :sys.suspend(view.pid)
+    send(view.pid, {:ssg_build_updated, build})
+    {:ok, _site} = Registry.delete_site(context.site)
+    :sys.resume(view.pid)
+
+    assert_redirect(view, "/admin")
+  end
+
   describe "with capabilities, configuring is apart from building and deploying" do
     setup do
       put_test_env(:authorization_mode, :groups)
@@ -1222,6 +1236,73 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       assert length(Enum.uniq([failed | messages])) == 4
       assert Builds.get_build(ready.id).status == :ready
       refute_received {:ran, _, _}
+    end
+
+    test "the summary names every strategy a site may have stored", context do
+      user = publisher(context)
+
+      for strategy <- [nil | Ecto.Enum.values(Brando.Sites.DeployConfig, :strategy)] do
+        target =
+          case strategy do
+            :rsync -> "deploy@example.test:/srv/www"
+            :s3 -> "s3://publishing-site/releases"
+            _strategy -> "publishing"
+          end
+
+        {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{strategy: strategy, target: target}})
+
+        {:ok, view, _html} = open_as(context, user)
+        assert has_element?(view, "#publishing-settings dd")
+      end
+    end
+
+    # The deploy decides about a build made for another target: the site's
+    # rsync settings set up since are not its
+    test "a build made for another target deploys and rolls back without the stored target's setup", context do
+      {:ok, site} =
+        Registry.update_site(context.site, %{
+          deploy_config: %{strategy: :s3, target: "s3://publishing-site/releases"}
+        })
+
+      {:ok, s3_build} = Builds.request_build(site, context.environment, creator: context.current_user)
+      {:ok, s3_build} = Builds.update(s3_build, %{status: :archived, built_at: DateTime.utc_now()})
+
+      {:ok, _site} =
+        Registry.update_site(site, %{deploy_config: %{strategy: :rsync, target: "deploy@example.test:/srv/www"}})
+
+      user = member(context, "brando.publishing.deploy")
+      {:ok, view, _html} = open_as(context, user)
+
+      # The job runs inline: with the bucket no longer allowed it fails at
+      # once, with retries left, rather than calling out
+      put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["deploy@example.test:/srv/www"], s3_targets: [])
+      view |> element("#ssg-build-#{s3_build.id} button[phx-click=rollback]") |> render_click()
+
+      BrandoAdmin.Work.Registry.sync()
+      assert has_element?(view, "#ssg-build-#{s3_build.id} .work-status[data-status=running]")
+      BrandoAdmin.Work.finish(user, Brando.Worker.SSGBuild.work_key(s3_build.id), nil, global: true)
+    end
+
+    # The build's log, which says why its deploy failed, is theirs who may configure
+    test "a build that deploys itself to a target that waits for its setup is refused at once", context do
+      put_test_env(:ssg_builder, Builder)
+      user = publisher(context)
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = open_as(context, user)
+
+      view
+      |> form("#build-static-site", build: %{environment_id: context.environment.id, auto_deploy: "true"})
+      |> render_submit()
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+      assert Builds.list_builds(context.site) == []
+
+      # Built without deploying, it waits for no one
+      view
+      |> form("#build-static-site", build: %{environment_id: context.environment.id})
+      |> render_submit()
+
+      assert [%{auto_deploy: false}] = Builds.list_builds(context.site)
     end
 
     test "an Editor of a site made since may open Publishing from the menu, build and deploy", context do
