@@ -1179,7 +1179,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   Appends one child per dropped file to this multi block, in the order of
   `kinds` (`:image` or `:video` per file), each a block of the `media_drop`
   child module with its ref ready for the file
-  (`ContentBlocks.build_media_drop_block/5`), put in as "add child" puts
+  (`ContentBlocks.build_media_drop_blocks/5`), put in as "add child" puts
   one in. Returns the socket and, per file, the child's uid, the id of its
   ref's upload field (`MediaField`), which the browser hands the file to,
   and the token that upload reports back with. The block field keeps the
@@ -1189,24 +1189,29 @@ defmodule BrandoAdmin.Components.Form.Block do
   def insert_media_drop_children(socket, kinds) do
     %{module_reference: reference, ref_name: ref_name} = socket.assigns.media_drop
 
-    {socket, children} =
-      Enum.reduce(kinds, {socket, []}, fn kind, {socket, children} ->
-        block_cs =
-          ContentBlocks.build_media_drop_block(
-            reference,
-            ref_name,
-            kind,
-            socket.assigns.current_user_id,
-            socket.assigns.block_module
-          )
+    assigns = socket.assigns
 
+    {children, forms} =
+      reference
+      |> ContentBlocks.build_media_drop_blocks(ref_name, kinds, assigns.current_user_id, assigns.block_module)
+      |> Enum.with_index(length(assigns.block_list))
+      |> Enum.map_reduce(assigns.children_forms, fn {block_cs, sequence}, forms ->
         uid = Changeset.get_field(block_cs, :uid)
-        socket = put_new_child(socket, block_cs, length(socket.assigns.block_list))
+        form = to_change_form(block_cs, %{sequence: sequence}, assigns.current_user_id)
         child = %{uid: uid, field: media_drop_field_id(block_cs, ref_name), token: Brando.Utils.random_string(16)}
-        {socket, [child | children]}
+        emit_block_op(socket, {:insert_child, assigns.uid, uid, sequence, Ops.block_diff_params(block_cs)})
+        {child, Map.put(forms, uid, form)}
       end)
 
-    children = Enum.reverse(children)
+    uids = Enum.map(children, & &1.uid)
+
+    socket =
+      assign(socket,
+        has_children?: assigns.has_children? or children != [],
+        children_forms: forms,
+        block_list: assigns.block_list ++ uids,
+        changesets: assigns.changesets ++ Enum.map(uids, &{&1, nil})
+      )
 
     send_update(BlockField,
       id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",

@@ -404,6 +404,46 @@ defmodule Brando.Content.ModuleMediaDropTest do
   end
 
   describe "the block for a dropped file" do
+    test "a full drop loads one child module for the batch", %{user: user} do
+      {_row, card} = image_row(user)
+      put_test_env(:tenancy_mode, :single)
+      existing = Enum.map(1..500, &Integer.to_string/1)
+
+      socket =
+        Phoenix.Component.assign(%Phoenix.LiveView.Socket{},
+          uid: "row",
+          media_drop: %{module_reference: {:local, card.id}, ref_name: "visual"},
+          current_user_id: user.id,
+          block_module: Brando.Pages.Page.Blocks,
+          form_id: "page",
+          block_field: :blocks,
+          has_children?: true,
+          children_forms: %{},
+          block_list: existing,
+          changesets: Enum.map(existing, &{&1, nil})
+        )
+
+      counter = :counters.new(1, [])
+      handler = make_ref()
+      event = Repo.repo().config()[:telemetry_prefix] ++ [:query]
+      :ok = :telemetry.attach(handler, event, &__MODULE__.count_modules/4, {self(), counter})
+
+      try do
+        {socket, children} =
+          Brando.Tenant.with_public(fn ->
+            BrandoAdmin.Components.Form.Block.insert_media_drop_children(socket, List.duplicate(:image, 20))
+          end)
+
+        uids = Enum.map(children, & &1.uid)
+        assert length(Enum.uniq(uids)) == 20
+        assert socket.assigns.block_list == existing ++ uids
+        assert Enum.map(socket.assigns.changesets, &elem(&1, 0)) == socket.assigns.block_list
+        assert :counters.get(counter, 1) == 1
+      after
+        :telemetry.detach(handler)
+      end
+    end
+
     test "a media ref becomes a picture or a video with the ref's template for it", %{user: user} do
       {_row, card} = image_row(user)
 
@@ -431,4 +471,9 @@ defmodule Brando.Content.ModuleMediaDropTest do
       assert %MediaBlock{} = refs["visual"]
     end
   end
+
+  def count_modules(_, _, %{source: "content_modules"}, {caller, counter}) when self() == caller,
+    do: :counters.add(counter, 1, 1)
+
+  def count_modules(_, _, _, _), do: :ok
 end
