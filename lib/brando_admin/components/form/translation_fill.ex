@@ -179,13 +179,10 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
       text when the variable allows no custom text
     * a block text in a block field the form has none of
   """
-  def fillable(%{schema: schema, form_blueprint: blueprint, current_user: user} = assigns) do
-    context =
-      case assigns do
-        %{form: form} -> visibility(blueprint, form)
-        %{translation_visibility: context} -> context
-      end
+  def fillable(%{form: form, form_blueprint: blueprint} = assigns), do: fillable(assigns, visibility(blueprint, form))
+  def fillable(%{translation_visibility: context} = assigns), do: fillable(assigns, context)
 
+  defp fillable(%{schema: schema, form_blueprint: blueprint, current_user: user} = assigns, context) do
     rows = index_rows(context.rows, assigns[:translation])
     locked = schema |> LockedFields.keys(blueprint, user) |> Enum.map(&to_string/1)
     inputs = top_inputs(blueprint)
