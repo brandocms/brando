@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.PublishingLiveTest do
   use Brando.LiveCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.SSG.Builds
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
@@ -486,5 +488,125 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 
     refute has_element?(view, ~s(#static-deploy-config option[value="local"]))
+  end
+
+  describe "SSH access" do
+    setup context do
+      host_key = Brando.SSGSSHFixtures.host_key()
+      test_pid = self()
+
+      put_test_env(:ssg_deploy_runner, fn program, args, _opts ->
+        send(test_pid, {:ran, program, args})
+
+        case program do
+          "ssh-keyscan" -> {"[example.test]:2222 ssh-ed25519 #{host_key}\n", 0}
+          "rsync" -> {"", 0}
+        end
+      end)
+
+      %{known_hosts: Brando.SSG.DeployFiles.path(context.site, :known_hosts)}
+    end
+
+    test "save, copy the key, test, accept the host key, and test again", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      # Saved before keys were made: the key is made from here
+      refute has_element?(view, "#publishing-public-key")
+      assert has_element?(view, "#publishing-ssh button[phx-click=rotate_deploy_key]:not([data-confirm])")
+      refute has_element?(view, "#publishing-ssh button[phx-click=test_connection]")
+
+      view
+      |> form("#static-deploy-config", deploy: %{strategy: "rsync", target: "deploy@example.test:/srv/www", port: "2222"})
+      |> render_submit()
+
+      site = Registry.get_site(context.site.id)
+      assert site.deploy_config.port == 2222
+      assert {:ok, public_key} = Brando.SSG.SSH.public_key(site)
+      assert has_element?(view, ~s(#publishing-public-key[phx-hook="Brando.CopyText"] input[value="#{public_key}"]))
+      refute inspect(:sys.get_state(view.pid).socket.assigns) =~ "PRIVATE KEY"
+
+      view |> element("#publishing-ssh button[phx-click=test_connection]") |> render_click()
+      render_async(view)
+      assert has_element?(view, "[data-testid=connection-result][data-state=new]")
+      refute has_element?(view, "[data-testid=dry-run-ok]")
+      assert_received {:ran, "ssh-keyscan", ["-T", "10", "-t", "rsa,ecdsa,ed25519", "-p", "2222", "--", "example.test"]}
+
+      view |> element("#publishing-ssh button[phx-click=accept_host_keys]") |> render_click()
+      render_async(view)
+      assert File.read!(context.known_hosts) =~ "[example.test]:2222 ssh-ed25519 "
+      assert has_element?(view, "[data-testid=connection-result][data-state=accepted]")
+      assert has_element?(view, "[data-testid=dry-run-ok]")
+      refute has_element?(view, "#publishing-ssh button[phx-click=accept_host_keys]")
+      assert_received {:ran, "rsync", ["-e", "ssh -i " <> _, "-an" | _]}
+    end
+
+    test "the port shows for rsync alone", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      assert has_element?(view, ~s(#static-deploy-config input[name="deploy[port]"][value="22"]))
+
+      render_change(view, "change_deploy_config", %{"deploy" => %{"strategy" => "s3"}})
+      refute has_element?(view, ~s(#static-deploy-config input[name="deploy[port]"]))
+    end
+
+    test "rotating asks first, and says the old key stays on the host", context do
+      Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      assert view
+             |> element("#publishing-ssh button[phx-click=rotate_deploy_key][data-confirm]")
+             |> render() =~ "authorized_keys"
+    end
+
+    test "a user who may open the screen but not publish sees no key and can do nothing", context do
+      editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _} = Brando.Tenant.Access.grant(editor, context.site, :editor)
+      Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+      conn = context.conn |> recycle() |> log_in_user(editor)
+      {:ok, view, html} = live(conn, "/admin/config/publishing")
+
+      refute html =~ "ssh-ed25519"
+      refute has_element?(view, "#publishing-ssh")
+      {:ok, public_key} = Brando.SSG.SSH.public_key(context.site)
+
+      for event <- ~w(rotate_deploy_key test_connection accept_host_keys) do
+        render_click(view, event, %{})
+        render_async(view)
+      end
+
+      assert {:ok, ^public_key} = Brando.SSG.SSH.public_key(context.site)
+      refute File.exists?(context.known_hosts)
+      refute_received {:ran, _, _}
+      refute render(view) =~ "ssh-ed25519"
+    end
+  end
+
+  describe "SSH access takes a recent confirmation" do
+    setup %{conn: conn} = context do
+      token = get_session(conn, :user_token)
+      at = NaiveDateTime.add(NaiveDateTime.utc_now(), -30 * 60, :second)
+
+      Brando.Repo.update_all(
+        from(t in Brando.Users.UserToken, where: t.token == ^token),
+        set: [confirmed_at: at]
+      )
+
+      Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+      :ok
+    end
+
+    test "to rotate the key", context do
+      {:ok, before} = Brando.SSG.SSH.public_key(context.site)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      assert render_click(view, "rotate_deploy_key", %{}) =~ "reauth-modal"
+      assert {:ok, ^before} = Brando.SSG.SSH.public_key(context.site)
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      refute Brando.SSG.SSH.public_key(context.site) == {:ok, before}
+    end
+
+    test "to accept a host key", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      assert render_click(view, "accept_host_keys", %{}) =~ "reauth-modal"
+    end
   end
 end

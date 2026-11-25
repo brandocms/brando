@@ -1,0 +1,1 @@
+- The Publishing screen's SSH access shows a static site's public key with a copy button, rotates the key, and tests the connection to its rsync target, showing the host's key fingerprints to accept before a deploy.

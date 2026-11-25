@@ -26,7 +26,9 @@ defmodule E2E.MultiSiteHosts do
   its production to its staging environment for tomorrow, with Oban in
   manual mode, so the sites screen shows the seeding queued and the
   environments screen the pending copy. `:deploy_targets` makes Acme static
-  with two allowed S3 targets, for the sites screen's lists. `:many_sites` adds
+  with two allowed S3 targets, for the sites screen's lists. `:rsync` makes
+  Acme static, deploying with rsync to an allowed target, with its SSH key
+  made, for the publishing screen's SSH access. `:many_sites` adds
   eleven more sites with a live environment each, the first with a long name,
   and a schema for Acme's staging environment and the long-named site, which
   the navigation's switcher can switch to. `:usage` gives Acme 30 days of
@@ -154,6 +156,8 @@ defmodule E2E.MultiSiteHosts do
     if opts[:static] || opts[:published] || opts[:deploy_targets],
       do: serve_statically(acme, acme_live, admin, opts[:published])
 
+    if opts[:rsync], do: deploy_with_rsync(acme, admin)
+
     if opts[:deploy_targets] do
       {:ok, _acme} =
         Registry.update_site_deploy_targets(
@@ -221,6 +225,22 @@ defmodule E2E.MultiSiteHosts do
       ready
     end
 
+    Cache.warm()
+  end
+
+  defp deploy_with_rsync(site, admin) do
+    target = "deploy@static.example.com:/srv/sites/acme"
+
+    {:ok, site} =
+      Registry.update_site_deploy_targets(Registry.get_site(site.id), %{allowed_rsync_targets: [target]}, :system)
+
+    {:ok, site} =
+      Registry.update_site(site, %{
+        delivery_mode: :static,
+        deploy_config: %{strategy: :rsync, target: target, port: 2222}
+      })
+
+    {:ok, _public_key} = Brando.SSG.SSH.ensure_key(site, admin)
     Cache.warm()
   end
 

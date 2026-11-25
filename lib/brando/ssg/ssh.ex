@@ -204,18 +204,16 @@ defmodule Brando.SSG.SSH do
 
   defp write_known_hosts(site, target, port, host_keys) do
     name = known_host(target, port)
+    added = for %{type: type, data: data} <- host_keys, do: "#{name} #{type} #{data}"
 
     kept =
       case DeployFiles.read(site, :known_hosts) do
-        {:ok, text} -> text |> lines() |> Enum.reject(&(entry_host(&1) == name))
-        {:error, :enoent} -> []
-        {:error, reason} -> throw({:known_hosts, reason})
+        {:ok, text} -> {:ok, text |> lines() |> Enum.reject(&(entry_host(&1) == name))}
+        {:error, :enoent} -> {:ok, []}
+        {:error, _reason} = error -> error
       end
 
-    added = for %{type: type, data: data} <- host_keys, do: "#{name} #{type} #{data}"
-    DeployFiles.write(site, :known_hosts, Enum.map(kept ++ added, &[&1, "\n"]))
-  catch
-    {:known_hosts, reason} -> {:error, reason}
+    with {:ok, kept} <- kept, do: DeployFiles.write(site, :known_hosts, Enum.map(kept ++ added, &[&1, "\n"]))
   end
 
   defp stored_target(%Site{deploy_config: %DeployConfig{strategy: :rsync, target: target, port: port}})
@@ -249,11 +247,13 @@ defmodule Brando.SSG.SSH do
 
   defp entry_host(line), do: line |> String.split(" ", parts: 2) |> hd() |> String.downcase()
 
-  # Only lines for the host asked, of a key that reads back as one
+  # Only lines for the host asked, of a key that reads back as one. One
+  # connection for each type of host key a server has: OpenSSH (9.8 and
+  # later) holds back a source that opens many without logging in.
   defp scan(target, port, opts) do
     name = known_host(target, port)
     host = DeployConfig.rsync_host(target)
-    args = ["-T", to_string(@keyscan_timeout), "-p", to_string(port), "--", host]
+    args = ["-T", to_string(@keyscan_timeout), "-t", "rsa,ecdsa,ed25519", "-p", to_string(port), "--", host]
 
     with {:ok, {output, _status}} <- run(opts, "ssh-keyscan", args) do
       keys =
@@ -323,11 +323,13 @@ defmodule Brando.SSG.SSH do
   """
   @spec rsync_ssh_args(Site.t(), String.t(), pos_integer()) :: {:ok, [String.t()]} | {:error, term()}
   def rsync_ssh_args(%Site{} = site, target, port) when is_integer(port) do
+    location = DeployFiles.check_location(site)
+
     cond do
-      DeployFiles.check_location(site) == {:error, :served} ->
+      location == {:error, :served} ->
         {:error, :deploy_files_served}
 
-      DeployFiles.check_location(site) == {:error, :unsafe_path} ->
+      location == {:error, :unsafe_path} ->
         {:error, :deploy_files_unsafe_path}
 
       not DeployFiles.exists?(site, :key) ->

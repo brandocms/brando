@@ -1,0 +1,3 @@
+- A static site deployed with `rsync` now connects with its own SSH key and only to a host whose key was accepted on the Publishing screen; the server user's SSH config, keys, agent and known hosts are no longer used, and a port other than 22 goes in the new SSH port field.
+  For each site that deploys with rsync, open Publishing, press Make key under SSH access, add the public key to `~/.ssh/authorized_keys` of the target's user, then press Test connection and Accept host key.
+  A target that named an alias from `~/.ssh/config` must name the real host, with its port in the SSH port field, and takes a new build.

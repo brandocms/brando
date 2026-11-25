@@ -235,7 +235,7 @@ defmodule Brando.SSG.SSHTest do
         )
 
       assert {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner(output))
-      assert_received {:ran, "ssh-keyscan", ["-T", "10", "-p", "2222", "--", "example.test"]}
+      assert_received {:ran, "ssh-keyscan", ["-T", "10", "-t", "rsa,ecdsa,ed25519", "-p", "2222", "--", "example.test"]}
 
       assert [%{type: "ssh-ed25519", data: ed25519, fingerprint: "SHA256:" <> _}, %{type: "ecdsa-sha2-nistp256"}] =
                test.host_keys
@@ -317,7 +317,7 @@ defmodule Brando.SSG.SSHTest do
           Registry.update_site(c.site, %{deploy_config: %{target: "deploy@[2001:db8::1]:/srv/www", port: port}})
 
         {:ok, test} = SSH.test_connection(site, c.superuser, runner: runner(keyscan_line(entry)))
-        assert_received {:ran, "ssh-keyscan", ["-T", "10", "-p", _, "--", "2001:db8::1"]}
+        assert_received {:ran, "ssh-keyscan", ["-T", "10", "-t", "rsa,ecdsa,ed25519", "-p", _, "--", "2001:db8::1"]}
         assert :ok = SSH.accept_host_keys(site, c.superuser, test)
         assert File.read!(DeployFiles.path(site, :known_hosts)) =~ "#{entry} ssh-ed25519 #{host_key()}\n"
       end

@@ -50,6 +50,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
          |> assign(:default_scheduled_at, default_scheduled_at())
          |> assign(:connection_test, nil)
+         |> assign(:sandbox, sandbox_owner(socket))
          |> refresh()
          |> assign_strategy()}
 
@@ -420,7 +421,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           phx-click="rotate_deploy_key"
           data-confirm={
             gettext(
-              "Replace the site's key with a new one? Deploys use the new key at once, so add it to the host first. The old key stays authorized on the host until you remove it from authorized_keys there."
+              "Replace the site's key with a new one? Deploys use the new key at once: add it to the host before the next deploy. The old key stays authorized on the host until you remove it from authorized_keys there."
             )
           }
           data-confirm-ok={gettext("Rotate key")}
@@ -450,7 +451,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     assigns = assign(assigns, :message, connection_error(reason))
 
     ~H"""
-    <div class="alert environment-hint publishing-ssh-result" role="status" data-testid="connection-result">
+    <div class="alert environment-hint" role="alert" data-testid="connection-result">
       <.icon name="triangle-alert" />
       <span>{@message}</span>
     </div>
@@ -505,11 +506,11 @@ defmodule BrandoAdmin.Sites.PublishingLive do
         </button>
       </div>
 
-      <div :if={@test.dry_run == :ok} class="alert environment-hint" role="status">
+      <div :if={@test.dry_run == :ok} class="alert environment-hint" role="status" data-testid="dry-run-ok">
         <.icon name="circle-check" />
         <span>{gettext("Connected: ssh, the site's key and rsync on the host work.")}</span>
       </div>
-      <div :if={match?({:error, _}, @test.dry_run)} class="alert environment-hint" role="alert">
+      <div :if={match?({:error, _}, @test.dry_run)} class="alert environment-hint" role="alert" data-testid="dry-run-failed">
         <.icon name="triangle-alert" />
         <span>{connection_error(elem(@test.dry_run, 1))}</span>
       </div>
@@ -582,11 +583,15 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   def handle_event("test_connection", _params, socket) do
     site = socket.assigns.site
     user = socket.assigns.current_user
+    sandbox = socket.assigns.sandbox
 
     {:noreply,
      socket
      |> assign(:connection_test, :running)
-     |> start_async(:connection_test, fn -> SSH.test_connection(site, user) end)}
+     |> start_async(:connection_test, fn ->
+       if sandbox, do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
+       SSH.test_connection(site, user)
+     end)}
   end
 
   # What is accepted is what the test showed, not a second fetch
@@ -695,10 +700,13 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   # The public key, for those who may change it; the private key stays in its file
   defp assign_key(socket, site) do
     {public_key, problem} =
-      cond do
-        not (socket.assigns.can_manage? and rsync_saved?(site)) -> {nil, nil}
-        match?({:error, _}, DeployFiles.check_location(site)) -> {nil, elem(DeployFiles.check_location(site), 1)}
-        true -> site |> SSH.public_key() |> key_or_problem()
+      if socket.assigns.can_manage? and rsync_saved?(site) do
+        case DeployFiles.check_location(site) do
+          :ok -> site |> SSH.public_key() |> key_or_problem()
+          {:error, problem} -> {nil, problem}
+        end
+      else
+        {nil, nil}
       end
 
     assign(socket, public_key: public_key, key_problem: problem)
@@ -712,7 +720,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp rsync_saved?(_site), do: false
 
   defp host_label(%{target: target, port: 22}), do: DeployConfig.rsync_host(target)
-  defp host_label(%{target: target, port: port}), do: "#{DeployConfig.rsync_host(target)}, port #{port}"
+
+  defp host_label(%{target: target, port: port}),
+    do: gettext("%{host}, port %{port}", host: DeployConfig.rsync_host(target), port: port)
 
   defp key_problem_message(:served),
     do:
@@ -762,6 +772,11 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp connection_error(_reason), do: gettext("Could not test the connection.")
 
   defp can_manage?(user, site), do: Builds.can_manage?(user, site)
+
+  # An E2E test's SQL sandbox, for the reads of the connection test's task
+  defp sandbox_owner(socket) do
+    if Application.get_env(Brando.otp_app(), :sql_sandbox, false), do: get_connect_info(socket, :user_agent)
+  end
 
   defp parse_future_datetime(value) when is_binary(value) do
     with {:ok, naive} <- NaiveDateTime.from_iso8601(value <> ":00"),

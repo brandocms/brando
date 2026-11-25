@@ -184,6 +184,8 @@ defmodule Brando.SSG.Deploy do
       {:error, :invalid} ->
         {:error, :invalid_deploy_target}
     end
+  rescue
+    exception -> {:error, {:rsync_failed, Exception.message(exception)}}
   end
 
   defp deploy_s3(_build, target, _opts) when target in [nil, ""],
