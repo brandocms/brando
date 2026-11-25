@@ -892,6 +892,22 @@ defmodule Brando.Translations do
     end
   end
 
+  @doc "Whether the source, target membership and pending version still match the state used to build translation work."
+  def current_work_state?(%{member: member, source: source, pending: pending}) do
+    current =
+      Repo.one(
+        from m in Member,
+          join: s in Member,
+          on: s.group_id == m.group_id and s.role == :source,
+          left_join: v in PendingVersion,
+          on: v.member_id == m.id and v.status == :pending,
+          where: m.id == ^member.id and m.role == :target and m.synchronized,
+          select: {s.entry_id, m.last_synced_generation, v.id}
+      )
+
+    current == {source.id, member.last_synced_generation, pending && pending.id}
+  end
+
   @doc """
   Called by the editor after it saved a synchronized target.
 

@@ -99,35 +99,43 @@ defmodule Brando.Translations.Work do
       %{member: %Member{synchronized: false}} ->
         {:error, :independent}
 
-      %{member: member, source: %{id: _} = source, pending: pending} ->
-        read_translation(schema, entry_id, member, source, pending)
+      %{source: %{id: _}} = state ->
+        read_translation(schema, entry_id, state)
 
       _ ->
         {:error, :source_not_found}
     end
   end
 
-  defp read_translation(schema, entry_id, member, %{id: source_id, language: source_language}, pending) do
+  defp read_translation(schema, entry_id, %{source: %{id: source_id}} = state) do
     with {:ok, entry} <- Translations.load_entry(schema, entry_id, with_deleted: true),
          {:ok, source} <- Translations.load_entry(schema, source_id) do
-      payload = if pending, do: Translations.pending_content(pending, entry), else: entry
-      items = if pending, do: pending.work_items, else: []
-      uids = Translations.module_uids([source, payload], schema)
-
-      {units, positions} = open_work(schema, payload, source, items, uids)
-
-      {:ok,
-       %{
-         units: units,
-         positions: positions,
-         source_id: source_id,
-         source_language: source_language,
-         language: member.language,
-         version_id: pending && pending.id
-       }}
+      {:ok, translation_units(entry, source, state)}
     else
       _ -> {:error, :source_not_found}
     end
+  end
+
+  @doc "Builds work from a fully loaded target, its authorized source and the pending version read with its membership."
+  def translation_units(%schema{} = entry, %schema{id: id} = source, %{
+        member: member,
+        source: %{id: id, language: language},
+        pending: pending
+      }) do
+    payload = if pending, do: Translations.pending_content(pending, entry), else: entry
+    items = if pending, do: pending.work_items, else: []
+    uids = Translations.module_uids([source, payload], schema)
+
+    {units, positions} = open_work(schema, payload, source, items, uids)
+
+    %{
+      units: units,
+      positions: positions,
+      source_id: source.id,
+      source_language: language,
+      language: member.language,
+      version_id: pending && pending.id
+    }
   end
 
   @doc """

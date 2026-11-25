@@ -56,49 +56,68 @@ defmodule Brando.Content.Proposals.TranslationWork do
 
   @doc "Runs the tool for `args` as `actor`."
   def run(args, actor) do
+    with :changed <- read(args, actor),
+         :changed <- read(args, actor) do
+      Error.fail!(dgettext_unavailable())
+    end
+  end
+
+  defp read(args, actor) do
     schema = schema!(args["content_type"])
     entry = Catalog.load!(schema, args["id"], actor, :read)
     after_key = after_key!(args)
 
     case Translations.synchronized?(schema) && Translations.editor_state(schema, entry.id) do
-      false -> not_synchronized(schema, entry)
-      nil -> source(schema, entry, args["language"], after_key, actor)
-      %{member: %{role: :source}} -> source(schema, entry, args["language"], after_key, actor)
-      %{member: %{synchronized: false}} -> independent(schema, entry)
-      %{source: %{id: source_id}} -> translation(schema, entry, source_id, args["language"], after_key, actor)
+      false ->
+        not_synchronized(schema, entry)
+
+      nil ->
+        source(schema, entry, args["language"], after_key, actor)
+
+      %{member: %{role: :source}} ->
+        source(schema, entry, args["language"], after_key, actor)
+
+      %{member: %{synchronized: false}} ->
+        independent(schema, entry)
+
+      %{source: %{id: _}} = state ->
+        result = translation(schema, entry, state, args["language"], after_key, actor)
+
+        if Translations.current_work_state?(state), do: result, else: :changed
+
+      _ ->
+        Error.fail!(dgettext_unavailable())
     end
   end
 
-  defp translation(schema, entry, source_id, language, after_key, actor) do
-    readable_source!(schema, source_id, actor)
+  defp translation(schema, entry, state, language, after_key, actor) do
+    source = readable_source!(schema, state.source.id, actor)
     own = to_string(entry.language)
 
     if language not in [nil, "", own],
       do: Error.fail!("This entry is the #{own} version. language names a new translation, on its source.")
 
-    case Work.translation_units(schema, entry.id) do
-      {:ok, work} ->
-        {answerable, other} = work.units |> lock_units(schema, actor) |> Enum.split_with(&(&1.answerable or &1[:locked]))
-        first? = not Work.follows?(answerable, work.positions, after_key)
+    preloads = Brando.Blueprint.preloads_for(schema)
+    [entry, source] = Brando.Repo.preload([entry, source], preloads)
+    work = Work.translation_units(entry, source, state)
 
-        schema
-        |> head(entry)
-        |> Map.merge(%{
-          role: "translation",
-          source: %{content_type: Codec.content_type(schema), id: work.source_id, language: work.source_language},
-          total: Enum.count(answerable, & &1.answerable),
-          note: @answer_note
-        })
-        |> put_other(other, first?)
-        |> put_batch(answerable, work.positions, after_key, %{
-          type: to_string(schema),
-          id: entry.id,
-          language: work.language
-        })
+    {answerable, other} = work.units |> lock_units(schema, actor) |> Enum.split_with(&(&1.answerable or &1[:locked]))
+    first? = not Work.follows?(answerable, work.positions, after_key)
 
-      {:error, _} ->
-        Error.fail!(dgettext_unavailable())
-    end
+    schema
+    |> head(entry)
+    |> Map.merge(%{
+      role: "translation",
+      source: %{content_type: Codec.content_type(schema), id: work.source_id, language: work.source_language},
+      total: Enum.count(answerable, & &1.answerable),
+      note: @answer_note
+    })
+    |> put_other(other, first?)
+    |> put_batch(answerable, work.positions, after_key, %{
+      type: to_string(schema),
+      id: entry.id,
+      language: work.language
+    })
   end
 
   # A text in a field the actor may not change through a proposal is listed
@@ -319,7 +338,7 @@ defmodule Brando.Content.Proposals.TranslationWork do
   # translation had none
   defp readable_source!(schema, source_id, actor) do
     case Error.protect(fn -> Catalog.load!(schema, source_id, actor, :read) end) do
-      {:ok, _source} -> :ok
+      {:ok, source} -> source
       {:error, _} -> Error.fail!(dgettext_unavailable())
     end
   end
