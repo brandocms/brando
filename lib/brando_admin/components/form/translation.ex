@@ -1087,6 +1087,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
 
   defp skipped_reason("html_changed"), do: gettext("Not filled in: AI lost the formatting or links")
   defp skipped_reason("placeholders_changed"), do: gettext("Not filled in: AI changed the template placeholders")
+  defp skipped_reason("too_long"), do: gettext("Not filled in: text exceeds the AI translation limit")
   defp skipped_reason(_code), do: gettext("Not filled in: AI returned no text")
 
   attr :state, :map, required: true
