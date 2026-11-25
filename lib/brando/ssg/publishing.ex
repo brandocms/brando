@@ -265,17 +265,24 @@ defmodule Brando.SSG.Publishing do
   # `Brando.Images.SizeRun.remaining/1` counts)
   defp runnable_job do
     now = DateTime.utc_now()
-    build_since = DateTime.add(now, -SSGBuild.timeout(%Oban.Job{}), :millisecond)
-    deploy_since = DateTime.add(now, -SSGDeploy.timeout(%Oban.Job{}), :millisecond)
 
     dynamic(
       [build, job],
       job.queue == "ssg_builds" and job.worker in @workers and
         fragment("(?->>'build_id')::bigint", job.args) == build.id and
-        (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now) or
-           (job.state == "executing" and
-              ((job.worker == "Brando.Worker.SSGBuild" and job.attempted_at > ^build_since) or
-                 (job.worker == "Brando.Worker.SSGDeploy" and job.attempted_at > ^deploy_since))))
+        (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now) or ^executing(now))
+    )
+  end
+
+  defp executing(now) do
+    build_since = DateTime.add(now, -SSGBuild.timeout(%Oban.Job{}), :millisecond)
+    deploy_since = DateTime.add(now, -SSGDeploy.timeout(%Oban.Job{}), :millisecond)
+
+    dynamic(
+      [_build, job],
+      job.state == "executing" and
+        ((job.worker == "Brando.Worker.SSGBuild" and job.attempted_at > ^build_since) or
+           (job.worker == "Brando.Worker.SSGDeploy" and job.attempted_at > ^deploy_since))
     )
   end
 
