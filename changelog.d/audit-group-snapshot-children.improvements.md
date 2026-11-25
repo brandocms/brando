@@ -1,0 +1,1 @@
+- Exporting a large module library groups child modules once per snapshot.

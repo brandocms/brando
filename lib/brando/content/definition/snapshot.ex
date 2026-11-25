@@ -21,7 +21,8 @@ defmodule Brando.Content.Definition.Snapshot do
     containers = Repo.all(from(c in Container, where: is_nil(c.deleted_at) and not is_nil(c.uid), order_by: c.id))
     Value.unique!(Enum.map(modules, & &1.uid), "stored module UIDs")
     Value.unique!(Enum.map(tables, & &1.uid), "stored table-template UIDs")
-    selected = select!(modules, module_uids(opts[:uids], palettes, containers))
+    by_parent = Enum.group_by(modules, & &1.parent_id)
+    selected = select!(modules, by_parent, module_uids(opts[:uids], palettes, containers))
 
     Enum.each(selected, fn module ->
       if module.source_module_id,
@@ -50,16 +51,16 @@ defmodule Brando.Content.Definition.Snapshot do
         {vars, bindings} =
           associations(module.vars, &Model.stored_var_record(&1, subject), Model.var_assets(), bindings, uids)
 
-        children = Enum.filter(modules, &(&1.parent_id == module.id)) |> Enum.map(& &1.uid)
+        children = Map.get(by_parent, module.id, [])
 
         definition =
           module
-          |> without_stale_media_drop(modules)
+          |> without_stale_media_drop(children)
           |> Model.module_record()
           |> Map.merge(%{
             "refs" => refs,
             "vars" => vars,
-            "children" => children,
+            "children" => Enum.map(children, & &1.uid),
             "table_template" => Map.get(table_uids, module.table_template_id)
           })
 
@@ -109,9 +110,7 @@ defmodule Brando.Content.Definition.Snapshot do
   # moved, its ref renamed or retyped, the module no longer multi) is left
   # out, as if unset: the module renders no drop zone, an import of the
   # export plans a noop, and `Brando.Doctor.Checks.ModuleMediaDrop` names it.
-  defp without_stale_media_drop(module, modules) do
-    children = Enum.filter(modules, &(&1.parent_id == module.id))
-
+  defp without_stale_media_drop(module, children) do
     if Module.media_drop_issue(module, children),
       do: %{module | media_drop_child: nil, media_drop_ref: nil},
       else: module
@@ -252,15 +251,14 @@ defmodule Brando.Content.Definition.Snapshot do
       do: Error.raise!("scope", "select a site/environment; shared public definitions are not supported")
   end
 
-  defp select!(modules, nil) do
+  defp select!(modules, _by_parent, nil) do
     by_id = Map.new(modules, &{&1.id, &1})
     Enum.reject(modules, &root!(&1, by_id, MapSet.new()).source_module_id)
   end
 
-  defp select!(modules, uids) do
+  defp select!(modules, by_parent, uids) do
     missing = uids -- Enum.map(modules, & &1.uid)
     if missing != [], do: Error.raise!("export", "unknown UIDs #{inspect(missing)}")
-    by_parent = Enum.group_by(modules, & &1.parent_id)
     by_id = Map.new(modules, &{&1.id, &1})
     roots = modules |> Enum.filter(&(&1.uid in uids)) |> Enum.map(&root!(&1, by_id, MapSet.new()))
     roots |> Enum.flat_map(&descendants(&1, by_parent, MapSet.new())) |> Enum.uniq_by(& &1.id)
