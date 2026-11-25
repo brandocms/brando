@@ -298,12 +298,12 @@ defmodule Brando.SSG.TargetReview do
          {:ok, notes} <- run(build, source, state, plan, htaccess, keep, opts) do
       deployed = Map.merge(state, %{uploaded: plan.upload, confirmed: [], found: nil, block: htaccess == :write})
       # The merged file is the host's, not unknown
-      keep = if htaccess == :write, do: keep ++ TargetHtaccess.replaced(htaccess), else: keep
+      known = if htaccess == :write, do: keep ++ TargetHtaccess.replaced(htaccess), else: keep
 
       # Failing here leaves the union: more than this build, nothing unknown
       case write_state(site, deployed) do
         :ok ->
-          {:ok, notes ++ list_unknown(site, deployed, source, keep, opts)}
+          {:ok, notes ++ list_unknown(site, deployed, source, known, opts)}
 
         {:error, reason} ->
           Logger.warning("SSG target state of site #{site.key} not written: #{inspect(reason)}")
