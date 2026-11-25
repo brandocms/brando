@@ -33,17 +33,33 @@ defmodule Brando.SSG.TargetPaths do
   A deploy of the build at `build_path`: its paths, the paths the receiver
   may delete (`deletable`, those Brando uploaded or an admin confirmed, less
   what `keep` covers) and the filter rules that let it delete only those.
+  The build's files at the `hidden` paths are not sent (`H`, which the
+  receiver does not read: the target's file of that name is deleted when it
+  is deletable).
   """
-  @spec plan(String.t(), [path()], [path()]) :: plan()
-  def plan(build_path, deletable, keep) do
+  @spec plan(String.t(), [path()], [path()], [path()]) :: plan()
+  def plan(build_path, deletable, keep, hidden \\ []) do
     deletable = deletable |> Enum.reject(&kept?(&1, keep)) |> Enum.filter(&rule_path?/1) |> Enum.uniq() |> Enum.sort()
 
     %{
-      upload: build_paths(build_path),
+      upload: build_path |> build_paths() |> Enum.reject(&(&1 in hidden)),
       deletable: deletable,
-      rules: [keep_rules(keep), Enum.map(deletable, &rule("R", pattern(&1, ""))), rule("P", "*")]
+      rules: [
+        Enum.map(hidden, &rule("H", pattern(&1, ""))),
+        keep_rules(keep),
+        Enum.map(deletable, &rule("R", pattern(&1, ""))),
+        rule("P", "*")
+      ]
     }
   end
+
+  @doc """
+  A rule that protects `path` (`:protect`) or lets the receiver delete it
+  (`:delete`), to put before a plan's rules, which it then overrides.
+  """
+  @spec path_rule(:protect | :delete, path()) :: iodata()
+  def path_rule(:protect, path), do: rule("P", pattern(path, ""))
+  def path_rule(:delete, path), do: rule("R", pattern(path, ""))
 
   @doc "Rules that protect what `keep` covers and nothing else."
   @spec keep_rules([path()]) :: iodata()
