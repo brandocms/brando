@@ -13,7 +13,9 @@ defmodule Brando.Worker.SSGDeploy do
 
   `"unless_superseded" => true` (the Publish button, `Brando.SSG.Publishing`)
   deploys nothing when a build that started later is the deployed one by the
-  time the job runs.
+  time the job runs. A Markdown publication's build deploys nothing once the
+  publication is superseded (`Brando.MarkdownSources.Publication`); the
+  build then owes no deploy. Neither is a failure.
 
   A deploy that gives up (refused, or failed on its last attempt) records it
   on the build (`deploy_failed_at`, cleared when the next deploy of it
@@ -86,9 +88,10 @@ defmodule Brando.Worker.SSGDeploy do
   defp run("redeploy", build, args),
     do: Deploy.deploy(build, creator_id: args["creator_id"], only_if_deployed: true)
 
-  # Neither is a failure: the site online is newer than this build
-  defp given_up({:cancel, reason} = result, _build, _job) when reason in [:build_no_longer_deployed, :superseded],
-    do: result
+  # None is a failure: the site online, or the publication, is newer than this build
+  defp given_up({:cancel, reason} = result, _build, _job)
+       when reason in [:build_no_longer_deployed, :superseded, :markdown_publication_superseded],
+       do: result
 
   defp given_up({:cancel, _reason} = result, build, _job), do: deploy_failed(result, build)
 
@@ -116,6 +119,20 @@ defmodule Brando.Worker.SSGDeploy do
   defp outcome({:error, :superseded}, build, _job) do
     Builds.append_log(build, "Deployment skipped: a build that started later was deployed meanwhile, and stays live.")
     {:cancel, :superseded}
+  end
+
+  # The publication queued a newer build, or its source changed: this build
+  # never deploys, and owes no automatic deploy (`Brando.SSG.Publishing`
+  # would read one owed with no job left as failed)
+  defp outcome({:error, :markdown_publication_superseded}, build, _job) do
+    {:ok, build} = Builds.update(build, %{auto_deploy: false})
+
+    Builds.append_log(
+      build,
+      "Deployment skipped: its Markdown publication was superseded by a newer build or a change to the source."
+    )
+
+    {:cancel, :markdown_publication_superseded}
   end
 
   # The newer deploy deleted what was confirmed, or the next one does

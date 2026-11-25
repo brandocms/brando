@@ -31,7 +31,10 @@ defmodule Brando.SSG.Publishing do
       finish it), or its deploy (`failed: :deploy`; given up, or owed by a
       ready build with no job left to do it);
     * `:ready` — the latest attempt is ready, started after the deployed
-      build, was built without a deploy, and its files are still there;
+      build, was built without a deploy, and its files are still there. Not
+      a Markdown publication's build: it deploys only as the publication's
+      newest (`Brando.MarkdownSources.Publication`), and one whose deploy
+      was skipped never does;
     * `:changes` — nothing is deployed, or the environment's content changed
       after the deployed build started (`Brando.SSG.ContentChanges`);
     * `:published` — otherwise.
@@ -326,7 +329,7 @@ defmodule Brando.SSG.Publishing do
        when not is_nil(build.deploy_failed_at) or build.auto_deploy == true,
        do: %{state: :failed, failed: :deploy, build: build, deployed: deployed}
 
-  defp attempt(%Build{status: :ready} = build, deployed) do
+  defp attempt(%Build{status: :ready, markdown_context: context} = build, deployed) when map_size(context) == 0 do
     if started_after?(build, deployed) and files?(build), do: %{state: :ready, build: build, deployed: deployed}
   end
 

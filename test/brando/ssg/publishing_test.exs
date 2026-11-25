@@ -472,6 +472,42 @@ defmodule Brando.SSG.PublishingTest do
     end
   end
 
+  describe "a Markdown publication's deploy skipped for a newer build" do
+    test "is no failure, and the build is not offered again", c do
+      context = %{"tenant_prefix" => Tenant.prefix(c.site, c.production), "source_id" => 0}
+
+      markdown =
+        manual(fn ->
+          {:ok, markdown} =
+            Builds.request_build(c.site, c.production,
+              creator_id: c.user.id,
+              auto_deploy: true,
+              markdown_context: context
+            )
+
+          # Queued from the Publishing screen meanwhile, without a deploy
+          {:ok, _newer} = Builds.request_build(c.site, c.staging, creator_id: c.user.id)
+          markdown
+        end)
+
+      job = Enum.find(jobs("Brando.Worker.SSGBuild"), &(&1.args["build_id"] == markdown.id))
+      assert :ok = perform(SSGBuild, job)
+      assert %Build{status: :ready, auto_deploy: false, deploy_failed_at: nil} = Builds.get_build(markdown.id)
+      assert %{state: :changes} = Publishing.status(site(c), c.production)
+
+      # A deploy failed before; Try again meets the newer build: skipped, not failed
+      {:ok, _failed} =
+        Builds.update(Builds.get_build(markdown.id), %{auto_deploy: true, deploy_failed_at: DateTime.utc_now()})
+
+      assert %{state: :failed, failed: :deploy} = Publishing.status(site(c), c.production)
+      manual(fn -> {:ok, %Oban.Job{}} = Publishing.retry(c.site, c.production, c.user) end)
+
+      assert {:cancel, :markdown_publication_superseded} = perform(SSGDeploy, hd(jobs("Brando.Worker.SSGDeploy")))
+      assert %Build{status: :ready, deploy_failed_at: nil} = Builds.get_build(markdown.id)
+      assert %{state: :changes} = Publishing.status(site(c), c.production)
+    end
+  end
+
   describe "notifications" do
     setup c do
       put_test_env(Brando.Notifications, failed_jobs: true)

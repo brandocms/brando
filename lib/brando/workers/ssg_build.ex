@@ -11,8 +11,9 @@ defmodule Brando.Worker.SSGBuild do
   A build with `auto_deploy` owes its deploy once it is ready: an attempt
   that finds it ready, its deploy neither done nor given up, deploys it (the
   one before stopped in between). The deploy is skipped when a build that
-  started later is the deployed one by then, and the build then owes
-  nothing. A failed build, and a deploy that failed, are recorded and told
+  started later is the deployed one by then, or when the build's Markdown
+  publication was superseded (`Brando.MarkdownSources.Publication`), and
+  the build then owes nothing. A failed build, and a deploy that failed, are recorded and told
   to the environment's `failed_job` routes (`Brando.SSG.Publishing`).
   """
 
@@ -167,12 +168,9 @@ defmodule Brando.Worker.SSGBuild do
       {:ok, final} ->
         finish(final)
 
-      {:error, :superseded} ->
+      {:error, reason} when reason in [:superseded, :markdown_publication_superseded] ->
         {:ok, ready} =
-          Builds.update(ready, %{
-            auto_deploy: false,
-            build_log: ready.build_log <> log_line("Not deployed: a build that started later was deployed meanwhile")
-          })
+          Builds.update(ready, %{auto_deploy: false, build_log: ready.build_log <> log_line(skipped_message(reason))})
 
         finish(ready)
 
@@ -180,6 +178,11 @@ defmodule Brando.Worker.SSGBuild do
         record_deploy_failure(ready, reason)
     end
   end
+
+  defp skipped_message(:superseded), do: "Not deployed: a build that started later was deployed meanwhile"
+
+  defp skipped_message(:markdown_publication_superseded),
+    do: "Not deployed: its Markdown publication was superseded by a newer build or a change to the source"
 
   defp finish(build) do
     :ok = prune_and_log(build)
