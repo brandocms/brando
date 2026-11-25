@@ -919,7 +919,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
            |> Work.track(
              user,
              SSGBuild.work_key(build_id),
-             [global: true, timeout: to_timeout(hour: 1)] ++ deploy_messages(action, build.version)
+             [global: true, timeout: to_timeout(hour: 1)] ++ SSGDeploy.work_messages(action, build.version)
            )
            |> Oban.insert() do
       {:noreply, socket}
@@ -972,24 +972,6 @@ defmodule BrandoAdmin.Sites.PublishingLive do
         send(self(), {:toast, done})
         {:noreply, socket |> assign(ticked: MapSet.new(), review_error: nil) |> refresh()}
     end
-  end
-
-  defp deploy_messages("deploy", version) do
-    [
-      queued: gettext("Deploy of %{version} is queued", version: version),
-      running: gettext("Deploying %{version}", version: version),
-      done: gettext("%{version} is deployed", version: version),
-      failed: gettext("Could not deploy %{version}", version: version)
-    ]
-  end
-
-  defp deploy_messages("rollback", version) do
-    [
-      queued: gettext("Rollback to %{version} is queued", version: version),
-      running: gettext("Rolling back to %{version}", version: version),
-      done: gettext("Rolled back to %{version}", version: version),
-      failed: gettext("Could not roll back to %{version}", version: version)
-    ]
   end
 
   defp queue_build(socket, params, scheduled_at) do

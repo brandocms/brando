@@ -20,8 +20,9 @@ defmodule Brando.Notifications.Routing do
         (the content event `entry.unpublished` with the actor
         `"scheduler"`);
       * `failed_job` — a background job of this environment was given up
-        (Oban discarded it), or a webhook delivery failed for good and the
-        webhook was paused;
+        (Oban discarded it), a webhook delivery failed for good and the
+        webhook was paused, or a static build of this environment failed or
+        its deploy was given up;
     * optionally, the content types whose events it sends. Failed jobs are
       not about an entry and pass any content-type filter.
 
@@ -397,6 +398,39 @@ defmodule Brando.Notifications.Routing do
     end
   rescue
     error in Postgrex.Error -> missing_table(error, __STACKTRACE__)
+  end
+
+  @doc """
+  A static build failed (`kind` `:build`), or its deploy was given up
+  (`:deploy`), at `at`: goes to the routes that send `failed_job`, naming the
+  build with a link to its row on the Publishing screen. Run in the build's
+  environment (`Brando.SSG.Publishing.notify_failed/2`). Once for each
+  failure, also when it is told twice, and not held back by other failures
+  within `failed_job_interval/0`: each is a site not put online.
+  """
+  def publish_failed(%{id: id, version: version}, kind, %DateTime{} = at) when kind in [:build, :deploy] do
+    if failed_jobs?() do
+      notification =
+        Map.put(base("failed_job"), "build", %{
+          "version" => version,
+          "kind" => to_string(kind),
+          "admin_url" => admin_url("/admin/config/publishing#ssg-build-#{id}")
+        })
+
+      notify("failed_job", notification, event_id: failure_id(id, kind, at))
+    else
+      :ok
+    end
+  rescue
+    error in Postgrex.Error -> missing_table(error, __STACKTRACE__)
+  end
+
+  # The same failure gives the same id, which a route delivers once
+  defp failure_id(build_id, kind, at) do
+    <<id::binary-size(16), _rest::binary>> =
+      :crypto.hash(:sha256, "ssg-build-failed:#{build_id}:#{kind}:#{DateTime.to_unix(at, :microsecond)}")
+
+    Ecto.UUID.cast!(id)
   end
 
   # At most one failed-job notification per worker in `failed_job_interval/0`,

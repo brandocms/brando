@@ -581,7 +581,7 @@ defmodule Brando.Activity do
 
   @doc """
   Events, newest first. Filters: `:id`, `:user_id`, `:schema` (module or string),
-  `:action`, `:since` (`DateTime`), `:q` (title search), `:schema_in` (the
+  `:action`, `:action_not_in` (actions to leave out), `:since` (`DateTime`), `:q` (title search), `:schema_in` (the
   schemas the reader may see), `:readable_entries`, `:actor` (a kind, see
   `actor_kind/1`), `:client` (an MCP client's name) and `:proposal_id`.
   Options: `:limit` (default 50), `:offset`.
@@ -618,6 +618,7 @@ defmodule Brando.Activity do
       {:schema_in, schemas}, query -> where(query, [e], e.schema in ^Enum.map(schemas, &to_string/1))
       {:readable_entries, {scope, schemas}}, query -> where(query, ^readable_entries(scope, schemas))
       {:action, action}, query -> where(query, [e], e.action == ^action)
+      {:action_not_in, actions}, query -> where(query, [e], e.action not in ^actions)
       {:since, since}, query -> where(query, [e], e.inserted_at >= ^since)
       {:entry_id, id}, query -> where(query, [e], e.entry_id == ^id)
       {:actor, kind}, query when kind in @actor_kinds -> where(query, [e], e.source in ^kind_sources(kind))

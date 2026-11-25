@@ -16,7 +16,6 @@ defmodule BrandoAdmin.Sites.ActivityLive do
 
   alias Brando.Activity
   alias Brando.Users.SecurityLog
-  alias BrandoAdmin.Authorization, as: AdminAuthorization
   alias BrandoAdmin.Components.Activity, as: Events
   alias BrandoAdmin.Components.Activity.Comparison
   alias BrandoAdmin.Components.Content
@@ -65,7 +64,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   defp close_unreadable_comparison(%{assigns: %{comparison: %{event: %{id: id}}}} = socket) do
     readable? =
       Brando.Authorization.with_snapshots(fn ->
-        readable_filters() |> Map.put(:id, id) |> Activity.count() > 0
+        Events.readable_filters() |> Map.put(:id, id) |> Activity.count() > 0
       end)
 
     if readable?, do: socket, else: assign(socket, :comparison, nil)
@@ -85,36 +84,6 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   # `brando.activity.read` permission decides (`__authorization__/0`).
   defp allowed?(user) do
     Brando.Authorization.enabled?() or match?(%{role: role} when role in [:admin, :superuser], user)
-  end
-
-  # Events of schemas the user may not read stay out of the log; changes to
-  # webhooks and notification routes show to those who manage them, and
-  # cleared caches to those who may use Utilities.
-  defp readable_schemas do
-    if Brando.Authorization.enabled?() do
-      readable = Enum.filter(Activity.schemas(), &AdminAuthorization.allowed?(:read, &1))
-
-      readable =
-        if AdminAuthorization.allowed?(:manage, :webhooks),
-          do: [Brando.Webhooks.Webhook | readable],
-          else: readable
-
-      readable =
-        if AdminAuthorization.allowed?(:manage, :notifications),
-          do: [Brando.Notifications.Route | readable],
-          else: readable
-
-      # Connected AI tools: connections, their tool calls and the switch
-      readable =
-        if AdminAuthorization.allowed?(:manage, :mcp),
-          do: [Brando.MCP.Grant, Brando.MCP.Setting | readable],
-          else: readable
-
-      # Clearing the content caches, from Utilities
-      if AdminAuthorization.allowed?(:read, :utilities),
-        do: [Brando.Cache | readable],
-        else: readable
-    end
   end
 
   defp assign_options(socket) do
@@ -218,22 +187,8 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       action: parse_action(filters["action"]),
       since: since(filters["period"])
     })
-    |> Map.merge(readable_filters())
+    |> Map.merge(Events.readable_filters())
   end
-
-  # The read grant and the record policy
-  defp readable_filters do
-    readable = readable_schemas()
-    %{schema_in: readable, readable_entries: readable_entries(readable)}
-  end
-
-  # A record read policy hides some entries of a type the user may read: their
-  # events go too. Webhooks, notification routes, MCP connections and the
-  # caches are not content, and stay with the permission that manages them.
-  @not_content [Brando.Webhooks.Webhook, Brando.Notifications.Route, Brando.MCP.Grant, Brando.MCP.Setting, Brando.Cache]
-
-  defp readable_entries(nil), do: nil
-  defp readable_entries(readable), do: {Brando.Authorization.Boundary.current_scope(), readable -- @not_content}
 
   # A kind of actor (`Brando.Activity.actor_kind/1`), or one MCP client: `mcp:Claude Code`
   defp parse_actor("mcp:" <> client) when client != "", do: %{actor: :mcp, client: client}

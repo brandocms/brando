@@ -14,6 +14,11 @@ defmodule Brando.Notifications.JobFailures do
   failing jobs makes one message, not hundreds. Without tenancy every job
   counts; with it, only jobs that belong to a site environment do.
 
+  A static build or deploy that Oban gives up is recorded on its build and
+  notified once by `Brando.SSG.Publishing.given_up/1`, whatever
+  `failed_job_interval` says: those jobs belong to a build, not to an
+  environment's schema.
+
   Notification deliveries and dispatches themselves are never notified, nor
   `Brando.Worker.NoteMentions`, which queues mention and summary email: a
   route that failed, or a summary of a failed-job notification, would queue
@@ -39,7 +44,21 @@ defmodule Brando.Notifications.JobFailures do
     :telemetry.attach_many(@handler, [[:oban, :job, :exception], [:oban, :job, :stop]], &__MODULE__.handle_event/4, nil)
   end
 
+  @static_publishing ["Brando.Worker.SSGBuild", "Brando.Worker.SSGDeploy"]
+
   @doc "The telemetry handler: queues a dispatch for a discarded job. Never raises."
+  def handle_event(_event, _measurements, %{state: :discard, job: %Oban.Job{worker: worker} = job}, _config)
+      when worker in @static_publishing do
+    Brando.SSG.Publishing.given_up(job)
+    :ok
+  rescue
+    error ->
+      Logger.warning("[Brando.Notifications] Could not record a given-up static build: " <> Exception.message(error))
+      :ok
+  catch
+    _kind, _reason -> :ok
+  end
+
   def handle_event(_event, _measurements, %{state: :discard, job: %Oban.Job{} = job} = meta, _config) do
     if Brando.Notifications.Routing.failed_jobs?() and job.worker not in @ignored do
       job |> args(meta) |> queue()

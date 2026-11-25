@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Activity do
 
   alias Brando.Content.Transfer.Labels
   alias Brando.Utils.Datetime
+  alias BrandoAdmin.Authorization, as: AdminAuthorization
   alias BrandoAdmin.Components.TextDiff
 
   @trash_days 30
@@ -96,6 +97,55 @@ defmodule BrandoAdmin.Components.Activity do
       []
     end
   end
+
+  @doc """
+  The `Brando.Activity.list/2` filters that keep the reader to what they may
+  see: events of schemas they may read, and with a record read policy, of
+  entries they may read. Changes to webhooks and notification routes show to
+  those who manage them, connected AI tools to those who manage MCP, and
+  cleared caches to those who may use Utilities. Without group authorization,
+  none: the log is for administrators there. Asked in the reader's admin
+  view (`BrandoAdmin.Authorization.allowed?/2`).
+  """
+  def readable_filters do
+    readable = readable_schemas()
+    %{schema_in: readable, readable_entries: readable_entries(readable)}
+  end
+
+  defp readable_schemas do
+    if Brando.Authorization.enabled?() do
+      readable = Enum.filter(Brando.Activity.schemas(), &AdminAuthorization.allowed?(:read, &1))
+
+      readable =
+        if AdminAuthorization.allowed?(:manage, :webhooks),
+          do: [Brando.Webhooks.Webhook | readable],
+          else: readable
+
+      readable =
+        if AdminAuthorization.allowed?(:manage, :notifications),
+          do: [Brando.Notifications.Route | readable],
+          else: readable
+
+      # Connected AI tools: connections, their tool calls and the switch
+      readable =
+        if AdminAuthorization.allowed?(:manage, :mcp),
+          do: [Brando.MCP.Grant, Brando.MCP.Setting | readable],
+          else: readable
+
+      # Clearing the content caches, from Utilities
+      if AdminAuthorization.allowed?(:read, :utilities),
+        do: [Brando.Cache | readable],
+        else: readable
+    end
+  end
+
+  # A record read policy hides some entries of a type the user may read: their
+  # events go too. Webhooks, notification routes, MCP connections and the
+  # caches are not content, and stay with the permission that manages them.
+  @not_content [Brando.Webhooks.Webhook, Brando.Notifications.Route, Brando.MCP.Grant, Brando.MCP.Setting, Brando.Cache]
+
+  defp readable_entries(nil), do: nil
+  defp readable_entries(readable), do: {Brando.Authorization.Boundary.current_scope(), readable -- @not_content}
 
   @doc "The schema module an event names, if it is still a known Blueprint."
   def schema(name) when is_binary(name), do: Brando.Blueprint.from_name(name)

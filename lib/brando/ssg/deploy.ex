@@ -34,6 +34,9 @@ defmodule Brando.SSG.Deploy do
   Deploys a ready or archived build using its snapshotted configuration.
   With `only_if_deployed: true`, only while it is still the site's deployed
   build once the deploy lock is held (`{:error, :build_no_longer_deployed}`).
+  With `unless_superseded: true`, not when the site's deployed build started
+  later than this one by then (`{:error, :superseded}`): an automatic deploy,
+  or one from the Publish button, does not put older content back online.
   """
   @spec deploy(Build.t(), keyword()) :: {:ok, Build.t()} | {:error, term()}
   def deploy(%Build{} = build, opts \\ []) do
@@ -112,6 +115,7 @@ defmodule Brando.SSG.Deploy do
          :ok <- still_static(build.site),
          true <- build.status in [:ready, :deployed, :archived],
          :ok <- still_deployed(build, opts),
+         :ok <- not_superseded(build, opts),
          true <- managed_build_path?(build),
          true <- is_nil(build.pruned_at) and File.dir?(build.build_path),
          {:ok, deployed} <-
@@ -126,6 +130,21 @@ defmodule Brando.SSG.Deploy do
 
   defp still_deployed(%Build{status: status}, opts) do
     if opts[:only_if_deployed] && status != :deployed, do: {:error, :build_no_longer_deployed}, else: :ok
+  end
+
+  defp not_superseded(build, opts) do
+    if opts[:unless_superseded] do
+      later =
+        from(other in Build,
+          where:
+            other.site_id == ^build.site_id and other.status == :deployed and other.id != ^build.id and
+              coalesce(other.started_at, other.inserted_at) > ^(build.started_at || build.inserted_at)
+        )
+
+      if Repo.repo().exists?(later, @public_opts), do: {:error, :superseded}, else: :ok
+    else
+      :ok
+    end
   end
 
   # Read under the deploy lock, which a change of delivery takes too
