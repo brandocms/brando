@@ -48,6 +48,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.Visibility
+  alias BrandoAdmin.LiveView.Form.Tabs
   alias Ecto.Changeset
 
   @doc "Whether the form offers Translate with AI: a synchronized translation, AI configured."
@@ -72,7 +73,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   def start(socket, keys) do
     assigns = socket.assigns
 
-    with true <- available?(assigns) and assigns.tab_editing? and connected?(socket),
+    with true <- available?(assigns) and assigns.tab_editing? and Tabs.editing?() and connected?(socket),
          true <- may_write?(assigns),
          false <- running?(assigns[:translation_fill]),
          version_id when is_integer(version_id) <- Translation.version_id(assigns),
@@ -157,7 +158,13 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
           into: %{},
           do: {key, entries}
 
-    %{shown: shown, rows: rows}
+    visible_blocks =
+      for block <- blueprint.blocks || [],
+          not Visibility.hidden?(block.opts, form),
+          into: MapSet.new(),
+          do: to_string(block.name)
+
+    %{shown: shown, rows: rows, visible_blocks: visible_blocks}
   end
 
   @doc """
@@ -186,7 +193,6 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     rows = index_rows(context.rows, assigns[:translation])
     locked = schema |> LockedFields.keys(blueprint, user) |> Enum.map(&to_string/1)
     inputs = top_inputs(blueprint)
-    block_fields = Enum.map(blueprint.blocks || [], &to_string(&1.name))
     meta = meta_fields(schema)
 
     fn
@@ -194,7 +200,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
         false
 
       key, {:block, _uid, _module, path} = target when is_list(path) ->
-        not address?(schema, target) and block_field(key) in block_fields
+        not address?(schema, target) and MapSet.member?(context.visible_blocks, block_field(key))
 
       _key, {:field, field} ->
         field not in locked and (field in meta or MapSet.member?(context.shown, field))
@@ -319,6 +325,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     fill = %{
       run: run,
       status: :running,
+      generation: Tabs.edit_generation(),
       entry_id: entry.id,
       version_id: work.version_id,
       keys: candidates,
@@ -493,13 +500,17 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   """
   def finish(socket, run, result) do
     case socket.assigns[:translation_fill] do
-      %{run: ^run} = fill -> finish_run(socket, fill, result)
+      %{run: ^run, status: :running} = fill -> finish_run(socket, fill, result)
       _ -> {socket, []}
     end
   end
 
   defp finish_run(socket, fill, result) do
     cond do
+      is_nil(fill.generation) or fill.generation != Tabs.edit_generation() or not socket.assigns.tab_editing? or
+          not may_write?(socket.assigns) ->
+        {assign(socket, :translation_fill, nil), []}
+
       not current?(socket, fill) ->
         {assign(socket, :translation_fill, %{fill | status: :dropped}), []}
 
@@ -524,7 +535,9 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   defp fill(socket, fill, texts, problems) do
     targets = targets(socket.assigns.translation)
     skipped = Map.new(problems, fn {key, [problem | _]} -> {key, {:skipped, problem.code}} end)
-    {field_texts, block_texts} = Enum.split_with(texts, fn {key, _text} -> form_target?(targets[key]) end)
+    eligible? = fillable(socket.assigns)
+    {eligible, ineligible} = Enum.split_with(texts, fn {key, _} -> eligible?.(key, targets[key]) end)
+    {field_texts, block_texts} = Enum.split_with(eligible, fn {key, _text} -> form_target?(targets[key]) end)
 
     for {field, entries} <- block_targets(Enum.map(block_texts, &elem(&1, 0)), targets) do
       texts = for {key, uid, rest} <- entries, do: {key, uid, rest, Map.fetch!(texts, key)}
@@ -533,12 +546,10 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
         id: "#{socket.assigns.id}-blocks-#{field}",
         event: "translation_fill",
         run: fill.run,
+        generation: fill.generation,
         texts: texts
       )
     end
-
-    # A text the editor no longer has where it was (a block removed since)
-    lost = for {key, _text} <- block_texts, not Map.has_key?(targets, key), into: %{}, do: {key, :kept}
 
     held = held_fields(socket)
 
@@ -551,8 +562,7 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
     marks =
       fill.marks
       |> Map.merge(skipped)
-      |> Map.merge(lost)
-      |> Map.merge(Map.new(kept, fn {key, _} -> {key, :kept} end))
+      |> Map.merge(Map.new(ineligible ++ kept, fn {key, _} -> {key, :kept} end))
 
     socket = assign(socket, :translation_fill, %{fill | status: :done, marks: marks})
     {socket, Enum.map(writes, fn {key, text} -> {key, targets[key], text} end)}

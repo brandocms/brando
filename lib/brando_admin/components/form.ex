@@ -314,6 +314,11 @@ defmodule BrandoAdmin.Components.Form do
       |> then(&if(changed?, do: tell_block_fields_access(&1, editing?), else: &1))
 
     socket =
+      if not editing? and TranslationFill.running?(socket.assigns.translation_fill),
+        do: assign(socket, :translation_fill, nil),
+        else: socket
+
+    socket =
       cond do
         Map.has_key?(message, :handover) ->
           {socket, copy} = Drafts.adopt(socket, message.handover)

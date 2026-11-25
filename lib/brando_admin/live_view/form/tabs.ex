@@ -75,6 +75,12 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   @doc "Whether the form in this process edits the entry."
   def editing?, do: current().mode == :editing
 
+  @doc "Identifies this period of edit ownership for asynchronous writes, or nil when read-only."
+  def edit_generation do
+    access = current()
+    if access.mode == :editing, do: Map.get(access, :generation, 0)
+  end
+
   @doc """
   Read what the browser tab sent on connecting. Only in mount: LiveView
   drops connect params after it, and a create form arms its claim later.
@@ -397,7 +403,9 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   the copy, or offer the others), `%{late_handover: copy}`.
   """
   def publish(socket, state, extra \\ nil) do
-    access = %{mode: state.mode, other: state.other, closed?: state.closed?}
+    previous = current()
+    generation = if state.mode == previous.mode, do: Map.get(previous, :generation, 0), else: make_ref()
+    access = %{mode: state.mode, other: state.other, closed?: state.closed?, generation: generation}
     Process.put(@key, access)
 
     if form_id = form_id(socket) do

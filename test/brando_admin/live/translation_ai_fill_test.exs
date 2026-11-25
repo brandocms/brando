@@ -186,6 +186,77 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       %{source: source, target: target}
     end
 
+    test "a translation reply after another tab takes over leaves the fields and blocks alone",
+         %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(put_connect_params(conn, %{"brando_tab" => "owner", "brando_tab_seq" => 1}), target.id)
+      other = open(put_connect_params(conn, %{"brando_tab" => "other", "brando_tab_seq" => 1}), target.id)
+      uid = block_uid(target.id)
+
+      translate_all(view)
+      assert_receive {:ai_waiting, model}, 2_000
+      other |> element("[data-testid='tab-notice'] button[phx-click='brando_tab_claim']") |> render_click()
+      assert_push_event(view, "b:draft-release", %{}, 5_000)
+      send(model, :answer)
+      render_async(view, 5_000)
+      assert title(view) == "Tittel"
+      assert block_text(view, uid) == "Første avsnitt"
+      assert title(other) == "Tittel"
+    end
+
+    test "a block field hidden while its translation runs keeps its text", %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      key = block_key(target.id)
+      uid = block_uid(target.id)
+      translate_one(view, key)
+      assert_receive {:ai_waiting, model}, 2_000
+      edit_title(view, "Hide the blocks")
+      send(model, :answer)
+      render_async(view, 5_000)
+      assert has_element?(view, "#{item(key)}[data-ai='kept']")
+      assert block_text(view, uid) == "Første avsnitt"
+    end
+
+    test "a subtitle hidden while its translation runs keeps its value", %{conn: conn, current_user: user} do
+      {:ok, source} =
+        SyncTest.create_article(
+          %{
+            title: "Tittel",
+            slug: "tittel",
+            subtitle: "Undertittel",
+            featured: true,
+            language: "no",
+            status: "published"
+          },
+          user
+        )
+
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}/partial", "article_form")
+      version = Translations.get_pending_version(Article, target.id)
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+      await_selector(view, "#{item("subtitle")} [data-testid=translation-ai-item]")
+      answer_when_told(&("EN " <> &1["source"]))
+      translate_one(view, "subtitle")
+      assert_receive {:ai_waiting, model}, 2_000
+
+      change_main(view, fn params ->
+        params |> put_in(["article", "featured"], "false") |> Map.put("_target", ["article", "featured"])
+      end)
+
+      refute has_element?(view, "#{item("subtitle")} [data-testid=translation-ai-item]")
+      send(model, :answer)
+      render_async(view, 5_000)
+      assert has_element?(view, "#{item("subtitle")}[data-ai='kept']")
+
+      change_main(view, fn params ->
+        params |> put_in(["article", "featured"], "true") |> Map.put("_target", ["article", "featured"])
+      end)
+
+      assert get_in(form_params(render(view), "#article_form_form"), ["article", "subtitle"]) == "Undertittel"
+    end
+
     test "fills every open text as unsaved changes, and the save resolves them", %{conn: conn, target: target} do
       answer(&("EN " <> &1["source"]))
       view = open(conn, target.id)
