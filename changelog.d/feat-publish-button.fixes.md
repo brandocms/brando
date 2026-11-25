@@ -1,0 +1,1 @@
+- A static build whose job stopped after the build was ready deploys it when the job runs again, as its automatic deployment said, and a deploy that gives up is recorded on the build rather than only in its log.

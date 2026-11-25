@@ -2440,6 +2440,63 @@ waits for a key, a host key or a review says that someone who may configure
 publishing has to set it up. Without capabilities, whoever manages the site
 (an admin, a site's manager with several sites, a superuser) does all of it.
 
+### The Publish button
+
+Most editors never open the Publishing screen: the navigation has a
+**Publish** button under the site and environment switcher. It shows on a
+static site with a deploy target (or served by this installation), to anyone
+with Build and Deploy (without capabilities, whoever manages the site), and
+only in the environment the site publishes from: the environment of the
+deployed build, or the live environment when nothing is deployed or that
+environment is gone. Publishing another environment stays on the Publishing
+screen. The button asks for no password.
+
+It shows one state, read from the database, so every admin sees the same:
+
+| State | When |
+|---|---|
+| **Publishing** | A build of the environment is waiting for the build before it, building (pages built of the total) or deploying |
+| **Publishing failed** | The latest build failed, or its deploy did; also a build whose job stopped and will not run again |
+| **Ready: publish this build** | The latest build was made with Preview first, after the deployed one, and its files are still there |
+| **Publish changes** | Nothing is deployed, or the environment's content changed after the deployed build started |
+| **Published** | Otherwise, with when the build was deployed |
+
+A change is any save of the environment's content that a build renders:
+entries, pages, fragments, globals, navigation, media, the asset set it uses,
+or a copy of another environment over it. A build of a scheduled time counts
+once that time has come.
+
+The button opens a panel:
+
+- With changes, **What will go out** lists the activity log's events since
+  the deployed build started, newest first, twenty at most with a count of
+  the rest, and only of the kinds of content the user may read. Changes to
+  media and to some settings are not in the log, so not in the list.
+  **Publish** builds the environment and deploys the build when it is ready,
+  whatever the site's automatic deployment says. **Preview first** builds
+  without deploying, when the build will have a preview link.
+- A ready build has **Open preview** while its preview link is valid,
+  **Publish this build**, which deploys exactly that build, and, when
+  content changed after it was built, **Publish latest changes instead**.
+- After a failure, **Try again** deploys the same build again after a failed
+  deploy, and builds and deploys again after a failed build. Someone with
+  Configure gets a link to the build's row on the Publishing screen, where
+  its log is.
+
+Each action is decided when it is pressed, from what is stored then, not
+from what the panel showed: pressing Publish while the environment is
+publishing starts nothing, two people pressing at once start one build, and a
+Publish this build from a panel opened before another build went online
+starts nothing. A build of another environment in the site's queue does not
+stop Publish: the new build waits behind it. A deploy from the button, and an
+automatic one, stops without touching the target when a build that started
+later has gone online meanwhile.
+
+A failed build, and a deploy given up, go once each to the environment's
+notification routes that send failed jobs
+([notifications](notifications.md)), with a link to the build; with
+`failed_jobs: false`, nowhere.
+
 The deployment form supports:
 
 - **Served by this installation** (`local`), with no target: the live
