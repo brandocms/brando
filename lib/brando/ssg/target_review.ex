@@ -296,16 +296,13 @@ defmodule Brando.SSG.TargetReview do
 
   defp filter_args(site), do: ["--from0", "--filter=merge " <> DeployFiles.path(site, :filter)]
 
-  # The build's own target: one reviewed, with the host keys accepted now
+  # The build's own target, still the site's: one reviewed, with the host
+  # keys accepted now
   defp reviewed(state, site, target, port, keys) do
-    case for_target(state, target, port, keys) do
-      %{reviewed: true} = state ->
-        {:ok, state}
-
-      _other ->
-        if match?({:ok, ^target, ^port}, stored_target(site)),
-          do: {:error, :target_not_reviewed},
-          else: {:error, :build_target_changed}
+    cond do
+      not match?({:ok, ^target, ^port}, stored_target(site)) -> {:error, :build_target_changed}
+      match?(%{reviewed: true}, for_target(state, target, port, keys)) -> {:ok, state}
+      true -> {:error, :target_not_reviewed}
     end
   end
 

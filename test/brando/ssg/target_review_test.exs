@@ -229,6 +229,15 @@ defmodule Brando.SSG.TargetReviewTest do
       assert Builds.get_build(build.id).build_log =~ Brando.SSG.SSH.refusal_message(:build_target_changed)
     end
 
+    test "of a build made for the reviewed target, after the site moved to another, is refused", c do
+      Brando.SSGSSHFixtures.review_target(c.site, @target)
+      build = ready_build(c.site, c.environment)
+      {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{target: "deploy@example.test:/srv/#{c.site.key}"}})
+
+      assert {:error, :build_target_changed} = Deploy.deploy(build, runner: runner([]))
+      refute_received {:rsync, _}
+    end
+
     test "whose uploaded list cannot be written stops before the real run", c do
       Brando.SSGSSHFixtures.review_target(c.site, @target)
       build = ready_build(c.site, c.environment)
