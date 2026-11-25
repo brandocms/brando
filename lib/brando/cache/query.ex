@@ -194,9 +194,8 @@ defmodule Brando.Cache.Query do
   # under the tenant prefix of the write, which may be gone by then, and
   # once per cache entry however many writes the transaction makes.
   # `evicted` runs after the last eviction. The write's environment is
-  # marked as changed (`Brando.SSG.ContentChanges`).
+  # marked as changed (`Brando.SSG.ContentChanges`) after the evictions.
   defp evict_committed(key, evict, evicted \\ fn -> :ok end) do
-    ContentChanges.touch(elem(key, 1))
     evict.()
     prefix = Brando.Tenant.current_prefix()
 
@@ -211,6 +210,7 @@ defmodule Brando.Cache.Query do
       evicted.()
     end
 
+    ContentChanges.touch(elem(key, 1))
     CacheSync.broadcast_gathered(__MODULE__, {prefix, elem(key, 1)})
   end
 

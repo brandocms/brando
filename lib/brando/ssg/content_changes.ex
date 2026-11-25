@@ -24,9 +24,10 @@ defmodule Brando.SSG.ContentChanges do
 
   A mark errs towards changed: a save that changes nothing a build renders
   (a draft, a note) may mark. It can also be lost: the process that saved
-  stopped between the commit and the mark, or the write failed, which is
-  logged and never fails the save. `changed_since?/1` therefore also reads
-  the environment's activity log, which is written with the save.
+  stopped between the commit and the mark, or the write failed or waited
+  too long for another session's lock, which is logged and never fails the
+  save. `changed_since?/1` therefore also reads the environment's activity
+  log, which is written with the save.
 
   Once a mark is written, `{:ssg_content_changed, environment_id}` goes out on
   the site's `Brando.SSG.Builds.topic/1`, at most once a second for each
@@ -48,6 +49,9 @@ defmodule Brando.SSG.ContentChanges do
   require Logger
 
   @interval 1_000
+  # How long a save that has committed waits for another session holding its
+  # environment's mark, in milliseconds
+  @lock_wait 1_000
   @waiters Brando.SSG.ContentChanges.TaskSupervisor
 
   # What an MCP client asked for, and notes beside an entry: the changes a
@@ -55,10 +59,11 @@ defmodule Brando.SSG.ContentChanges do
   @not_changes [:tool_called, :note_added, :note_resolved, :note_reopened]
 
   # Every environment named, of a static site; nil for every site or every
-  # environment of it. Never moves a mark back: nodes' clocks differ a little.
+  # environment of it. Dated by the database's clock, as builds start
+  # (`now/0`), and never moved back.
   @mark """
   INSERT INTO public.ssg_content_changes AS change (environment_id, changed_at)
-  SELECT environment.id, $3::timestamp
+  SELECT environment.id, clock_timestamp() AT TIME ZONE 'UTC'
   FROM public.environments AS environment
   JOIN public.sites AS site ON site.id = environment.site_id
   WHERE site.delivery_mode = 'static'
@@ -149,14 +154,30 @@ defmodule Brando.SSG.ContentChanges do
     end
   end
 
+  # An environment being copied over has its schema dropped and cloned again
   defp logged_since?(prefix, since) do
     from(event in Event, where: event.inserted_at >= ^since and event.action not in ^@not_changes)
     |> Brando.Repo.repo().exists?(prefix: prefix)
+  rescue
+    error in Postgrex.Error ->
+      if error.postgres[:code] in [:undefined_table, :invalid_schema_name], do: true, else: reraise(error, __STACKTRACE__)
   end
 
-  # Once per transaction for each environment or site
+  @doc """
+  The database's clock, which dates marks: a build's `started_at` is taken
+  from it, so a node whose clock differs does not misplace a change.
+  """
+  @spec now() :: DateTime.t()
+  def now do
+    %{rows: [[now]]} = Brando.Repo.repo().query!("SELECT clock_timestamp() AT TIME ZONE 'UTC'")
+    DateTime.from_naive!(now, "Etc/UTC")
+  end
+
+  # Once per transaction for each environment or site, after the rest of its
+  # after-commit work: a build that starts once it is marked reads no cache
+  # entry the transaction's evictions and rebuilds have yet to refresh
   defp hold(key, site_id, environment_ids) do
-    Brando.Repo.after_commit({__MODULE__, key}, fn -> mark(site_id, environment_ids) end)
+    Brando.Repo.after_commit({__MODULE__, key}, fn -> mark(site_id, environment_ids) end, late: true)
   end
 
   # Inside a transaction begun on the repo itself, `Brando.Repo.after_commit/2`
@@ -167,12 +188,32 @@ defmodule Brando.SSG.ContentChanges do
   defp mark(site_id, environment_ids) do
     if Brando.Repo.repo().in_transaction?(),
       do: mark_after_transaction(site_id, environment_ids),
-      else: site_id |> write(environment_ids) |> announce()
+      else: site_id |> write_now(environment_ids) |> announce()
   end
 
-  defp write(site_id, environment_ids) do
-    case Brando.Repo.repo().query(@mark, [site_id, environment_ids, NaiveDateTime.utc_now()]) do
-      {:ok, %{rows: rows}} ->
+  # In the saving process, whose save has committed: it waits only a moment
+  # for another session's lock on the mark, and leaves the change to the
+  # activity log when that is not enough
+  defp write_now(site_id, environment_ids),
+    do: written(fn -> Brando.Repo.repo().transaction(fn -> upsert_bounded(site_id, environment_ids) end) end)
+
+  defp upsert_bounded(site_id, environment_ids) do
+    repo = Brando.Repo.repo()
+    repo.query!("SET LOCAL lock_timeout = #{@lock_wait}")
+
+    case upsert(site_id, environment_ids) do
+      {:ok, rows} -> rows
+      {:error, error} -> repo.rollback(error)
+    end
+  end
+
+  defp write(site_id, environment_ids), do: written(fn -> upsert(site_id, environment_ids) end)
+
+  # The environment and site of each mark written; nothing when it failed,
+  # which is logged
+  defp written(upsert) do
+    case upsert.() do
+      {:ok, rows} ->
         rows
 
       {:error, error} ->
@@ -183,6 +224,10 @@ defmodule Brando.SSG.ContentChanges do
     error ->
       log_failure(error)
       []
+  end
+
+  defp upsert(site_id, environment_ids) do
+    with {:ok, %{rows: rows}} <- Brando.Repo.repo().query(@mark, [site_id, environment_ids]), do: {:ok, rows}
   end
 
   defp log_failure(error) do
@@ -236,6 +281,11 @@ defmodule Brando.SSG.ContentChanges do
         log_failure(RuntimeError.exception(inspect(reason)))
         nil
     end
+  catch
+    # The supervisor is not running, or restarting
+    :exit, reason ->
+      log_failure(RuntimeError.exception(inspect(reason)))
+      nil
   end
 
   defp wait_and_write(lock, taken, site_id, environment_ids) do

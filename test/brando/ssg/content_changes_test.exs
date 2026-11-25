@@ -4,6 +4,7 @@ defmodule Brando.SSG.ContentChangesTest do
   use Brando.ConnCase, async: false
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Brando.Activity.Event
   alias Brando.Assets.SiteAssets
@@ -157,6 +158,106 @@ defmodule Brando.SSG.ContentChangesTest do
       assert title(c.site, c.production, page) == "Saved"
     end
 
+    # The waiter on the test's connection, the transaction on a session of
+    # its own: the waiter cannot wait for the connection, only for the lock
+    test "in a transaction begun on the repo itself is marked only once that has ended", c do
+      session = own_session()
+      test = self()
+
+      saver =
+        in_session(session, fn ->
+          Brando.Repo.repo().transaction(fn ->
+            ContentChanges.touch_environment(c.production)
+            send(test, :touched)
+
+            receive do
+              :commit -> :ok
+            end
+          end)
+        end)
+
+      assert_receive :touched
+      assert waiter_waiting?(session)
+      refute_received {:ssg_content_changed, _}
+
+      send(saver.pid, :commit)
+      assert {:ok, :ok} = Task.await(saver)
+      assert_receive {:ssg_content_changed, production_id}, 2_000
+      assert production_id == c.production.id
+    end
+
+    test "in a transaction begun on the repo itself is saved when no waiter can start", c do
+      page = page!(c.site, c.production, c.user)
+      waiters = Brando.SSG.ContentChanges.TaskSupervisor
+      :ok = Supervisor.terminate_child(Brando.Supervisor, waiters)
+      on_exit(fn -> Supervisor.restart_child(Brando.Supervisor, waiters) end)
+
+      capture_log(fn ->
+        assert {:ok, _} = Brando.Repo.repo().transaction(fn -> update_page!(c.site, c.production, page, c.user) end)
+      end)
+
+      assert title(c.site, c.production, page) == "Saved"
+    end
+
+    # A build that reads the content once it is marked must not find it as
+    # the cache held it before the save
+    test "is marked after the evictions that go with it", c do
+      page = page!(c.site, c.production, c.user)
+      preserve_query_cache(Page)
+
+      Tenant.with_prefix(Tenant.prefix(c.site, c.production), fn ->
+        key = Brando.Cache.Query.hash_query({:list, "pages", :marked})
+
+        {cached, _} =
+          at_marks(
+            fn -> Brando.Cache.Query.get(key) end,
+            fn ->
+              Brando.Cache.Query.put(key, :as_it_was)
+              Brando.Cache.Query.evict({:ok, page})
+
+              Brando.Repo.transaction(fn ->
+                Brando.Cache.Query.evict({:ok, page})
+                # As another process reading before the commit caches it
+                Brando.Cache.Query.put(key, :as_it_was)
+              end)
+            end
+          )
+
+        assert [_ | _] = cached
+        assert Enum.all?(cached, &is_nil/1)
+      end)
+    end
+
+    # A row lock or table lock another session holds on the marks
+    test "made outside a transaction waits only a moment for another session's lock on the marks", c do
+      session = own_session()
+      test = self()
+
+      holder =
+        in_session(session, fn ->
+          Brando.Repo.repo().transaction(fn ->
+            Brando.Repo.repo().query!("LOCK TABLE public.ssg_content_changes IN EXCLUSIVE MODE")
+            send(test, :locked)
+
+            receive do
+              :release -> :ok
+            end
+          end)
+        end)
+
+      assert_receive :locked
+      toucher = Task.async(fn -> ContentChanges.touch_environment(c.production) end)
+
+      try do
+        assert {:ok, :ok} = Task.yield(toucher, 5_000), "the save waited for the lock"
+      after
+        send(holder.pid, :release)
+        Task.await(holder)
+      end
+
+      refute ContentChanges.changed_at(c.production)
+    end
+
     test "rolled back in a transaction begun on the repo itself stays undone, and raises nothing", c do
       page = page!(c.site, c.production, c.user)
 
@@ -260,6 +361,12 @@ defmodule Brando.SSG.ContentChangesTest do
       log!(c.site, c.staging, :updated)
       ContentChanges.touch_environment(c.staging)
       refute ContentChanges.changed_since?(c.build)
+    end
+
+    # An environment copied over drops and clones its schema again
+    test "is true, and raises nothing, while the environment's schema is gone", c do
+      Brando.Repo.repo().query!(~s(DROP SCHEMA "#{Tenant.prefix(c.site, c.production)}" CASCADE))
+      assert ContentChanges.changed_since?(c.build)
     end
 
     test "is true when the build's environment is gone", c do
@@ -450,8 +557,48 @@ defmodule Brando.SSG.ContentChangesTest do
     not is_nil(name)
   end
 
-  # How many statements wrote a mark while `fun` ran
-  defp counting_marks(fun) do
+  # A session of the test database outside the test's sandbox: what it
+  # writes others see once it has committed
+  defp own_session do
+    start_supervised!({BrandoIntegration.Repo, name: nil, pool: DBConnection.ConnectionPool, pool_size: 2})
+  end
+
+  defp in_session(session, fun) do
+    Task.async(fn ->
+      BrandoIntegration.Repo.put_dynamic_repo(session)
+      fun.()
+    end)
+  end
+
+  # A session of this database waits for an advisory lock
+  defp waiter_waiting?(session, tries \\ 40) do
+    %{rows: [[waiting]]} =
+      session
+      |> in_session(fn ->
+        Brando.Repo.repo().query!("""
+        SELECT count(*) FROM pg_locks
+        WHERE locktype = 'advisory' AND NOT granted
+          AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+        """)
+      end)
+      |> Task.await()
+
+    cond do
+      waiting > 0 ->
+        true
+
+      tries == 0 ->
+        false
+
+      true ->
+        Process.sleep(50)
+        waiter_waiting?(session, tries - 1)
+    end
+  end
+
+  # What `at_mark` returns at each statement that writes a mark while `fun`
+  # runs, in the process that writes it
+  defp at_marks(at_mark, fun) do
     test = self()
     handler = "content-changes-#{System.unique_integer([:positive])}"
 
@@ -459,24 +606,30 @@ defmodule Brando.SSG.ContentChangesTest do
       handler,
       [:brando_integration, :repo, :query],
       fn _event, _measurements, %{query: query}, _config ->
-        if query =~ "INSERT INTO public.ssg_content_changes", do: send(test, :marked)
+        if query =~ "INSERT INTO public.ssg_content_changes", do: send(test, {:at_mark, at_mark.()})
       end,
       nil
     )
 
     try do
       result = fun.()
-      {count_received(:marked), result}
+      {received_at_marks([]), result}
     after
       :telemetry.detach(handler)
     end
   end
 
-  defp count_received(message, count \\ 0) do
+  defp received_at_marks(values) do
     receive do
-      ^message -> count_received(message, count + 1)
+      {:at_mark, value} -> received_at_marks([value | values])
     after
-      0 -> count
+      0 -> Enum.reverse(values)
     end
+  end
+
+  # How many statements wrote a mark while `fun` ran
+  defp counting_marks(fun) do
+    {marks, result} = at_marks(fn -> :marked end, fun)
+    {length(marks), result}
   end
 end
