@@ -1,0 +1,1 @@
+- Pending brando_245 migrations index palette and container UIDs before allocating them, speeding up upgrades on sites with many definitions.

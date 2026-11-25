@@ -27,11 +27,11 @@ defmodule Brando.Repo.Migrations.Brando245AddUidsToPalettesAndContainers do
 
       flush()
 
-      backfill(prefix, "content_palettes", "'palette-' || namespace || '-' || key")
-      backfill(prefix, "content_containers", "'container-' || namespace || '-' || name")
-
       create_if_not_exists unique_index(:content_palettes, [:uid], prefix: prefix)
       create_if_not_exists unique_index(:content_containers, [:uid], prefix: prefix)
+
+      backfill(prefix, "content_palettes", "'palette-' || namespace || '-' || key")
+      backfill(prefix, "content_containers", "'container-' || namespace || '-' || name")
     end
   end
 
