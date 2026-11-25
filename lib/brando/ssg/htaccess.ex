@@ -121,6 +121,10 @@ defmodule Brando.SSG.Htaccess do
 
   defp rest_or_empty(rest), do: if(String.trim(rest) == "", do: :empty, else: {:ok, rest})
 
+  @doc "Whether `content`, a live `.htaccess`, holds a whole Brando block."
+  @spec block?(binary()) :: boolean()
+  def block?(content), do: match?({:ok, _before, after_block} when is_binary(after_block), without_blocks(content))
+
   # The host's lines before the first block and those after it (nil when
   # there is no block), every block taken out
   defp without_blocks(content) do

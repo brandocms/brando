@@ -321,4 +321,14 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
     assert {:ok, _deployed} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
     assert File.read!(Path.join(c.remote, ".htaccess")) == merged
   end
+
+  test "a review that finds Brando's block on the target has it removed with the option off", c do
+    block = "# BEGIN Brando\nRewriteRule ^old$ /new [R=301,L]\n# END Brando\n"
+    put_files(c.remote, [{".htaccess", "Options -Indexes\n" <> block}])
+    review_and_confirm(c, [".htaccess"])
+
+    assert {:ok, _deployed} = c |> ready_build([{"index.html", "1"}]) |> Deploy.deploy(runner: runner(c))
+
+    assert File.read!(Path.join(c.remote, ".htaccess")) == "Options -Indexes\n"
+  end
 end

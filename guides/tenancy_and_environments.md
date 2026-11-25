@@ -2839,7 +2839,8 @@ The rules are inside `<IfModule mod_rewrite.c>` and the headers inside
 site without that part instead of answering 500.
 
 Turn the option off, and the next deploy removes the block and leaves the
-host's lines (the target's state remembers that a block was written); a file
+host's lines (the target's state remembers that a block was written, or that
+the review found one); a file
 left with nothing else in it is deleted, or left empty when the keep list
 holds `.htaccess`. A build with a `.htaccess` of its own then replaces the
 host's file, as any other file of the build.

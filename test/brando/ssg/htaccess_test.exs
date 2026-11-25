@@ -289,6 +289,15 @@ defmodule Brando.SSG.HtaccessTest do
     end
   end
 
+  describe "block?/1" do
+    test "is a whole block, not a BEGIN line alone or a host's file" do
+      assert Htaccess.block?("A\n# BEGIN Brando\nB\n# END Brando\n")
+      refute Htaccess.block?("A\n# BEGIN Brando\nB\n")
+      refute Htaccess.block?("A\n# END Brando\n")
+      refute Htaccess.block?("\n")
+    end
+  end
+
   describe "merge/2" do
     @block "# BEGIN Brando\nErrorDocument 404 /404.html\n# END Brando\n"
 

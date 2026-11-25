@@ -37,6 +37,7 @@ defmodule Brando.SSG.TargetReview do
   alias Brando.Sites.Site
   alias Brando.SSG.Build
   alias Brando.SSG.DeployFiles
+  alias Brando.SSG.Htaccess
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetHtaccess
   alias Brando.SSG.TargetPaths
@@ -156,7 +157,7 @@ defmodule Brando.SSG.TargetReview do
           uploaded: [],
           confirmed: [],
           found: found,
-          block: block_written_to?(site, target)
+          block: block_written_to?(site, target) or block_found?(found)
         }
 
         with :ok <- write_state(site, state), do: {:ok, shown(found, site)}
@@ -349,6 +350,11 @@ defmodule Brando.SSG.TargetReview do
       _other -> false
     end
   end
+
+  # A block on the target counts as written: the state of another target
+  # may have replaced the one that said so
+  defp block_found?(%{htaccess: {:ok, text}}), do: Htaccess.block?(text)
+  defp block_found?(_found), do: false
 
   defp filter_args(site), do: ["--from0", "--filter=merge " <> DeployFiles.path(site, :filter)]
 
