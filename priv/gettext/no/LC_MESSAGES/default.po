@@ -4121,11 +4121,6 @@ msgstr "Bygg %{version}"
 msgid "Build %{version} is ready"
 msgstr "Bygg %{version} er klart"
 
-#: lib/brando_admin/live/nav.ex
-#, elixir-autogen, elixir-format
-msgid "Build %{version} was published %{when}."
-msgstr "Bygg %{version} ble publisert %{when}."
-
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Build and preview only"

@@ -4121,11 +4121,6 @@ msgstr ""
 msgid "Build %{version} is ready"
 msgstr ""
 
-#: lib/brando_admin/live/nav.ex
-#, elixir-autogen, elixir-format
-msgid "Build %{version} was published %{when}."
-msgstr ""
-
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Build and preview only"

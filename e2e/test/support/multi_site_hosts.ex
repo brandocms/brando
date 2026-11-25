@@ -39,7 +39,10 @@ defmodule E2E.MultiSiteHosts do
   and a schema for Acme's staging environment and the long-named site, which
   the navigation's switcher can switch to. `:usage` gives Acme 30 days of
   usage, measured and with traffic, and adds Gamma, with traffic and no
-  measurement, for the sites screen's usage; Beta has none.
+  measurement, for the sites screen's usage; Beta has none. `:publish`,
+  with `:published`, puts the navigation's Publish button in a state:
+  `:changes` (two pages created since the deploy), `:ready` (a build made
+  without deploying it), `:failed` or `:publishing` (a build halfway).
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -163,6 +166,7 @@ defmodule E2E.MultiSiteHosts do
       do: serve_statically(acme, acme_live, admin, opts[:published])
 
     if opts[:no_preview_host], do: unbind(acme)
+    if opts[:publish], do: publish_state(acme, acme_live, admin, opts[:publish])
 
     if opts[:rsync], do: deploy_with_rsync(acme, admin, opts[:rsync])
     if opts[:publisher], do: publisher(acme, acme_live, admin)
@@ -246,6 +250,51 @@ defmodule E2E.MultiSiteHosts do
     end
 
     Cache.warm()
+  end
+
+  # After `:published`: two pages created since the deployed build, a build
+  # made with Preview first, a failed build, or a build that is building
+  defp publish_state(site, live, admin, :changes) do
+    Tenant.with_prefix(Tenant.prefix(site, live), fn ->
+      for {title, uri} <- [{"Opening hours", "opening-hours"}, {"Spring campaign", "spring-campaign"}] do
+        {:ok, _page} =
+          Brando.Pages.create_page(
+            %{title: title, uri: uri, language: "en", template: "default.html", status: :published},
+            admin
+          )
+      end
+    end)
+  end
+
+  defp publish_state(site, live, admin, :ready), do: build(site, live, admin)
+
+  defp publish_state(site, live, admin, :failed) do
+    {:ok, _failed} =
+      Brando.SSG.Builds.update(build(site, live, admin, false), %{
+        status: :failed,
+        built_at: DateTime.utc_now(),
+        build_log: "Build failed: the renderer did not answer\n"
+      })
+  end
+
+  # Its job is running, as far as the button can tell
+  defp publish_state(site, live, admin, :publishing) do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, build} =
+        Brando.SSG.Builds.request_build(Registry.get_site(site.id), live, creator: admin, auto_deploy: true)
+
+      {:ok, _building} =
+        Brando.SSG.Builds.update(build, %{
+          status: :building,
+          started_at: DateTime.utc_now(),
+          url_count: 40,
+          processed_urls: 12
+        })
+
+      Repo.update_all(from(job in Oban.Job, where: job.worker == "Brando.Worker.SSGBuild"), [set: [state: "executing"]],
+        prefix: "public"
+      )
+    end)
   end
 
   defp deploy_with_rsync(site, admin, found) do

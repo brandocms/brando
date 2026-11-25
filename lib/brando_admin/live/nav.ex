@@ -429,10 +429,7 @@ defmodule BrandoAdmin.Nav do
     ~H"""
     <h3 class="publish-panel__title">{gettext("Published")}</h3>
     <p class="publish-panel__note">
-      {gettext("Build %{version} was published %{when}.",
-        version: @publish.deployed.version,
-        when: Events.when_label(@publish.deployed.deployed_at)
-      )}
+      {gettext("Build %{version}", version: @publish.deployed.version)} · {Events.when_label(@publish.deployed.deployed_at)}
     </p>
     <div :if={@panel && @panel.read?} class="publish-panel__actions">
       <.link class="btn" navigate="/admin/config/publishing">{gettext("Open Publishing")}</.link>
