@@ -125,6 +125,41 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
 
   def actionable(_assigns), do: MapSet.new()
 
+  @doc "Tracks the form values that affect which translation actions the panel shows."
+  def assign_visibility(socket) do
+    context =
+      if available?(socket.assigns) do
+        visibility(socket.assigns.form_blueprint, socket.assigns.form)
+      end
+
+    assign(socket, :translation_visibility, context)
+  end
+
+  # Row changesets include their pending params and removal actions. Keep the
+  # raw list here so an unrelated validation can compare it without wrapping
+  # every stored row. Top-level visibility functions still see the entire form.
+  defp visibility(blueprint, form) do
+    inputs = top_inputs(blueprint)
+
+    shown =
+      for {name, %Brando.Blueprint.Forms.Input{opts: opts}} <- inputs,
+          not Visibility.hidden?(opts, form),
+          into: MapSet.new(),
+          do: name
+
+    changeset = form.source
+
+    rows =
+      for {key, %Brando.Blueprint.Forms.Subform{name: name}} <- inputs,
+          many?(changeset.data.__struct__, name),
+          entries = Map.get(changeset.changes, name, Map.get(changeset.data, name)),
+          is_list(entries),
+          into: %{},
+          do: {key, entries}
+
+    %{shown: shown, rows: rows}
+  end
+
   @doc """
   Whether this editor's form can fill the text an item points at, as a
   function of the item's key and target; what a run sends and what has an
@@ -144,9 +179,16 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
       text when the variable allows no custom text
     * a block text in a block field the form has none of
   """
-  def fillable(%{schema: schema, form_blueprint: blueprint, current_user: user, form: form}) do
+  def fillable(%{schema: schema, form_blueprint: blueprint, current_user: user} = assigns) do
+    context =
+      case assigns do
+        %{form: form} -> visibility(blueprint, form)
+        %{translation_visibility: context} -> context
+      end
+
+    rows = index_rows(context.rows, assigns[:translation])
     locked = schema |> LockedFields.keys(blueprint, user) |> Enum.map(&to_string/1)
-    inputs = for input <- top_inputs(blueprint), into: %{}, do: {to_string(input.name), input}
+    inputs = top_inputs(blueprint)
     block_fields = Enum.map(blueprint.blocks || [], &to_string(&1.name))
     meta = meta_fields(schema)
 
@@ -158,10 +200,13 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
         not address?(schema, target) and block_field(key) in block_fields
 
       _key, {:field, field} ->
-        field not in locked and (field in meta or shown?(inputs[field], form))
+        field not in locked and (field in meta or MapSet.member?(context.shown, field))
 
-      _key, {:row, subform, _row, _field} = target ->
-        subform not in locked and fillable_row?(schema, inputs[subform], form.source, target)
+      _key, {:row, subform, key, field} = target ->
+        row = get_in(rows, [subform, key])
+
+        subform not in locked and not address?(schema, target) and row_shown?(inputs[subform], row, field) and
+          not hidden_link_text?(schema, subform, row, field)
 
       _key, _target ->
         false
@@ -200,45 +245,48 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
         %{fields: fields} <- fieldsets,
         %{name: name} = input <- fields,
         name != nil,
-        do: input
+        into: %{},
+        do: {to_string(name), input}
   end
 
-  defp top_inputs(_blueprint), do: []
+  defp top_inputs(_blueprint), do: %{}
 
-  defp shown?(%Brando.Blueprint.Forms.Input{opts: opts}, form), do: not Visibility.hidden?(opts, form)
-  defp shown?(_input, _form), do: false
+  defp index_rows(rows, %{items: items}) do
+    names = for %{target: {:row, name, _, _}} <- items, uniq: true, do: name
+    index_rows(Map.take(rows, names), nil)
+  end
 
-  # A subform its own component draws, with no inputs declared: the component
-  # shows its rows' fields (a page's variables)
-  defp row_shown?(%Brando.Blueprint.Forms.Subform{component: component, sub_fields: []}, changeset, target)
+  defp index_rows(rows, _) do
+    Map.new(rows, fn {name, entries} -> {name, Enum.reduce(entries, %{}, &index_row/2)} end)
+  end
+
+  defp index_row(%Changeset{action: action}, index) when action in [:replace, :delete], do: index
+
+  defp index_row(entry, index) do
+    row = Changeset.change(entry)
+    Map.put_new(index, row_key(row), row)
+  end
+
+  defp row_shown?(_input, nil, _field), do: false
+
+  # A subform its own component draws, with no inputs declared
+  defp row_shown?(%Brando.Blueprint.Forms.Subform{component: component, sub_fields: []}, row, field)
        when component != nil,
-       do: field_value(changeset, target) != :error
+       do: match?({:ok, _}, field_name(row, field))
 
-  # The row's field has an input in the subform, and the row shows it
-  defp row_shown?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, changeset, {:row, subform, key, field}) do
-    with %{opts: opts} <- Enum.find(inputs, &(match?(%{name: name} when name != nil, &1) and to_string(&1.name) == field)),
-         {:ok, _relation, rows} <- rows(changeset, subform),
-         {_index, row} <- find_row(rows, key) do
-      not Visibility.hidden?(opts, Phoenix.HTML.FormData.to_form(row, []))
-    else
+  defp row_shown?(%Brando.Blueprint.Forms.Subform{sub_fields: inputs}, row, field) do
+    case Enum.find(inputs, &(match?(%{name: name} when name != nil, &1) and to_string(&1.name) == field)) do
+      %{opts: opts} -> not Visibility.hidden?(opts, Phoenix.HTML.FormData.to_form(row, []))
       _ -> false
     end
   end
 
-  defp row_shown?(_subform, _changeset, _target), do: false
+  defp row_shown?(_subform, _row, _field), do: false
 
-  # A link variable's text, which the variable draws an input for only when
-  # it allows custom text (`RenderVar`)
-  defp hidden_link_text?(schema, changeset, {:row, subform, key, "link_text"}) do
-    variables?(schema, subform) and field_value(changeset, {:row, subform, key, "link_allow_custom_text"}) != true
-  end
+  defp hidden_link_text?(schema, subform, row, "link_text"),
+    do: variables?(schema, subform) and Changeset.get_field(row, :link_allow_custom_text) != true
 
-  defp hidden_link_text?(_schema, _changeset, _target), do: false
-
-  defp fillable_row?(schema, subform_input, changeset, target) do
-    not address?(schema, target) and row_shown?(subform_input, changeset, target) and
-      not hidden_link_text?(schema, changeset, target)
-  end
+  defp hidden_link_text?(_schema, _subform, _row, _field), do: false
 
   # The block field a block text's key is in: `entry_<field>/…`
   defp block_field("entry_" <> rest), do: rest |> String.split("/", parts: 2) |> hd()
@@ -663,10 +711,12 @@ defmodule BrandoAdmin.Components.Form.TranslationFill do
   defp find_row(rows, key) do
     rows
     |> Enum.with_index()
-    |> Enum.find_value(fn {%Changeset{data: %schema{}} = row, index} ->
-      field = if :uid in schema.__schema__(:fields), do: :uid, else: :key
-      if to_string(Changeset.get_field(row, field)) == key, do: {index, row}
-    end)
+    |> Enum.find_value(fn {row, index} -> if row_key(row) == key, do: {index, row} end)
+  end
+
+  defp row_key(%Changeset{data: %schema{}} = row) do
+    field = if :uid in schema.__schema__(:fields), do: :uid, else: :key
+    to_string(Changeset.get_field(row, field))
   end
 
   defp existing_atom(name) do

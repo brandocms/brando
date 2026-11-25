@@ -68,6 +68,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
         |> assign(:translation, state)
         |> assign(:translation_acknowledged, nil)
     end
+    |> TranslationFill.assign_visibility()
   end
 
   def assign_state(socket), do: assign(socket, :translation, nil)
