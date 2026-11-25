@@ -4582,7 +4582,6 @@ defmodule Brando.Content.Proposals do
       end)
 
     with {:ok, {receipt, saved}} <- result do
-      ImageReplacement.after_commit(receipt.mappings["replaced_images"] || [])
       Enum.each(saved, &after_apply(&1, actor))
       {:ok, receipt}
     end

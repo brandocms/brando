@@ -1,0 +1,1 @@
+- Cached image lookups and lists show the surviving image and its new file as soon as a replacement commits.

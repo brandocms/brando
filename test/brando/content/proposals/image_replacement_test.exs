@@ -17,7 +17,7 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.{Codec, CreateEntry, ImageReplacement, InsertBlock, ReplaceImageFile}
   alias Brando.Content.Usage
-  alias Brando.{Factory, Repo}
+  alias Brando.{Factory, Images, Repo}
   alias Brando.Images.Image
   alias Brando.Pages.Page
   alias Ecto.Changeset
@@ -67,6 +67,30 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
              %{{"b", nil} => old.id, {"b", "90"} => old.id}
 
     assert Repo.all(from(s in Brando.Images.Source, select: s.image_id)) == [old.id, old.id]
+  end
+
+  defp cached_images(old, donor) do
+    get = fn id -> Images.get_image(%{matches: %{id: id}, cache: true}) end
+    {:ok, list} = Images.list_images(%{cache: true})
+    {get.(old.id), get.(donor.id), Map.new(list, &{&1.id, &1.path})}
+  end
+
+  test "cached lookups and lists reflect a committed replacement before processing", c do
+    old = image!("a", {800, 600})
+    donor = image!("b", {1600, 1200})
+    {:ok, proposal} = Proposals.propose([replace(old, donor)], c.user)
+
+    assert {{:ok, _}, {:ok, _}, before} = cached_images(old, donor)
+    assert before[old.id] == old.path
+    assert before[donor.id] == donor.path
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _receipt} = approve_and_apply(proposal, c.user)
+      assert {{:ok, updated}, {:error, _}, after_apply} = cached_images(old, donor)
+      assert updated.path == donor.path
+      assert after_apply[old.id] == donor.path
+      refute Map.has_key?(after_apply, donor.id)
+    end)
   end
 
   test "OLD takes NEW's file and keeps its id, texts, focal point, folder and references; NEW goes", c do
@@ -434,9 +458,12 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
       Factory.insert(:page, uri: "about-replaced", language: "en", creator: c.user)
       events = Repo.aggregate(Event, :count)
 
+      before = cached_images(old, new)
+
       # It fails at the entry's save, after the replacement ran
       assert {:error, _} = Proposals.apply(proposal.id, proposal.version, c.user)
       unchanged!(old)
+      assert cached_images(old, new) == before
       assert Repo.get(Image, new.id)
       assert File.exists?(Brando.Images.Utils.media_path(new.path))
       assert Repo.aggregate(Event, :count) == events
