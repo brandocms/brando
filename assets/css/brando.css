@@ -92,6 +92,7 @@
 @import "./components/SideBar/ContentLanguageSelector.css";
 @import "./components/SideBar/CurrentUser.css";
 @import "./components/SideBar/TenantSwitcher.css";
+@import "./components/SideBar/Publish.css";
 @import "./components/SideBar/NavigationHeader.css";
 @import "./components/SideBar/NavigationMenu.css";
 @import "./components/SideBar/NavigationMenuSection.css";

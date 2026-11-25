@@ -1,0 +1,227 @@
+/* The Publish button under the site and environment switcher, and its panel
+   (`BrandoAdmin.Nav`, `Brando.SSG.Publishing`). A joined row like the
+   switcher's: its state is in the label and the detail line, and its tone
+   follows: muted when published, attention for unpublished changes, error
+   when publishing failed. */
+.tenant-switcher + .publish {
+  margin-top: -10px;
+}
+
+.publish {
+  margin-bottom: 18px;
+}
+
+.publish__button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--brando-line);
+  border-radius: var(--brando-radius-md);
+  background: var(--brando-surface);
+  color: var(--brando-ink);
+  font-family: var(--brando-font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 120ms ease;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    border-color: var(--brando-line-strong);
+    background: var(--brando-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 2px;
+  }
+
+  > [data-icon] {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: var(--brando-muted);
+  }
+}
+
+.publish__copy {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  min-width: 0;
+}
+
+.publish__label {
+  overflow: hidden;
+  font: 500 var(--brando-text-md)/18px var(--brando-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publish__detail {
+  overflow: hidden;
+  color: var(--brando-muted);
+  font: var(--brando-text-xs)/16px var(--brando-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publish--published .publish__label {
+  color: var(--brando-muted);
+  font-weight: 400;
+}
+
+.publish--changes .publish__button {
+  border-color: var(--brando-attention-line);
+  background: var(--brando-attention);
+
+  > [data-icon],
+  .publish__label,
+  .publish__detail {
+    color: var(--brando-attention-ink);
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    border-color: var(--brando-attention-ink);
+  }
+}
+
+.publish--failed .publish__button {
+  border-color: var(--brando-error-line);
+  background: var(--brando-error);
+
+  > [data-icon],
+  .publish__label,
+  .publish__detail {
+    color: var(--brando-error-ink);
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    border-color: var(--brando-error-ink);
+  }
+}
+
+.publish--ready .publish__button > [data-icon] {
+  color: var(--brando-accent);
+}
+
+.publish--publishing .publish__button > [data-icon] {
+  color: var(--brando-accent);
+  animation: publish-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .publish--publishing .publish__button > [data-icon] {
+    animation: none;
+  }
+}
+
+@keyframes publish-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* In the top layer, placed by the FloatingDropdown hook */
+.publish-panel {
+  position: fixed;
+  inset: auto;
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  margin: 0;
+  padding: 16px;
+  overflow-y: auto;
+  border: 1px solid var(--brando-line);
+  border-radius: var(--brando-radius-lg);
+  background: var(--brando-surface);
+  color: var(--brando-ink);
+  box-shadow: var(--brando-shadow-md);
+  font: var(--brando-text-sm)/18px var(--brando-font-sans);
+
+  &:popover-open {
+    display: grid;
+    gap: 8px;
+  }
+}
+
+.publish-panel__title {
+  margin: 0;
+  font: 500 var(--brando-text-lg)/20px var(--brando-font-sans);
+}
+
+.publish-panel__note {
+  margin: 0;
+  color: var(--brando-muted);
+  font: var(--brando-text-sm)/18px var(--brando-font-sans);
+}
+
+.publish-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+/* What will go out: joined rows, title first, then what happened and when */
+.publish-panel__changes {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--brando-line);
+  border-radius: var(--brando-radius-md);
+  list-style: none;
+}
+
+.publish-change {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+
+  & + .publish-change {
+    border-top: 1px solid var(--brando-line-soft);
+  }
+}
+
+.publish-change__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  min-width: 0;
+
+  .activity-entry {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--brando-ink);
+    font: 500 var(--brando-text-sm)/18px var(--brando-font-sans);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  a.activity-entry:hover {
+    color: var(--brando-accent);
+    text-decoration: underline;
+  }
+
+  .activity-entry.is-gone {
+    color: var(--brando-muted);
+    text-decoration: line-through;
+  }
+
+  .activity-type {
+    color: var(--brando-muted);
+    font: var(--brando-text-xs)/16px var(--brando-font-sans);
+  }
+}
+
+.publish-change__meta {
+  color: var(--brando-muted);
+  font: var(--brando-text-xs)/16px var(--brando-font-sans);
+}

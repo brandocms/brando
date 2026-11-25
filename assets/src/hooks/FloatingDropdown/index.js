@@ -14,6 +14,10 @@ import { autoUpdate, computePosition, flip, hide, offset, shift } from '@floatin
 // go to the first and last, Enter and Space choose, Escape closes and Tab
 // leaves. The actions keep a roving tabindex, so Tab leaves the menu instead
 // of walking through it; it is set through `this.js()` so patches keep it.
+//
+// A menu with `data-open-event` pushes that event to its LiveView each time
+// it opens, for a panel that reads what it shows when it opens (the Publish
+// button's).
 const ITEMS = ':is(button, a[href], [role="menuitem"]):not(:disabled, [aria-disabled="true"])'
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End'])
 
@@ -92,6 +96,7 @@ export default () => ({
     const open = this.isOpen()
     const opened = open && this.trigger.getAttribute('aria-expanded') !== 'true'
     this.js().setAttribute(this.trigger, 'aria-expanded', String(open))
+    if (opened && this.el.dataset.openEvent) this.pushEvent(this.el.dataset.openEvent, {})
     if (opened && this.choiceMenu) {
       const choice = this.menu.querySelector('input:checked:not(:disabled)') || this.menu.querySelector('input:not(:disabled)')
       choice?.focus({ preventScroll: true })
