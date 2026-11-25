@@ -1,0 +1,1 @@
+- The Publishing screen lists what an rsync target holds before its first deploy, keeps a list of paths deploys never delete, and after each deploy shows the files on the target Brando did not put there, to keep or delete.

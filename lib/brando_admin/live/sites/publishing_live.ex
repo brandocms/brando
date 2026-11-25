@@ -545,7 +545,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             </span>
             <span :if={entry.kept} class="badge">{gettext("Kept")}</span>
             <span :if={!entry.kept && !TargetPaths.keep_entry?(entry.name)} class="publishing-entry-note">
-              {gettext("not kept by name: deploys leave it while it is ticked")}
+              {gettext("cannot go on the keep list: tick it to leave it on the target")}
             </span>
           </li>
         </ul>

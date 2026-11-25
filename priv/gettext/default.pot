@@ -307,6 +307,7 @@ msgstr ""
 #: lib/brando_admin/components/file_picker.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/sites/asset_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} file"
 msgid_plural "%{count} files"
@@ -1682,6 +1683,21 @@ msgstr ""
 msgid "A definition in this apply was applied again since. Review the revert again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy deletes only files Brando uploaded or that you confirmed here, and never a path on the keep list. Other files on the target stay."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy is running. Try again when it has finished."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "A deploy of the deployed build is queued: it deletes the entries you did not tick"
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "A deploy of this site is running. Try again when it has finished."
@@ -1792,6 +1808,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "A password reset link was sent to %{email}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "A path to keep is relative, of letters, digits and . _ ~ + @ , - and spaces, with no . or .. segment."
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -2240,6 +2261,7 @@ msgstr ""
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/assets/provider_library_panel.ex
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
@@ -5395,6 +5417,7 @@ msgstr ""
 msgid "Configure video"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm"
@@ -5426,6 +5449,11 @@ msgstr ""
 #: lib/brando_admin/live/user_two_factor_live.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm with your passkey: your fingerprint, face, PIN or security key."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm? The first deploy deletes every entry you did not tick."
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
@@ -5940,6 +5968,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Could not generate a suggestion. Try again."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not list the target: %{reason}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -6701,6 +6734,7 @@ msgstr ""
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #: lib/brando_admin/live_view/listing/delete_description.ex
@@ -6833,9 +6867,19 @@ msgstr ""
 msgid "Delete selected"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the entries you did not tick? A deploy of the deployed build deletes them."
+msgstr ""
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Delete the job?"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the rest"
 msgstr ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
@@ -7104,6 +7148,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deploys connect with this site's own key, and only to a host whose key you accepted here. Add the public key to the authorized_keys file of the target's user on the host, then test the connection."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploys leave them. Keep the ticked ones, or delete the rest with a new deploy of the deployed build."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
@@ -9094,6 +9143,11 @@ msgstr ""
 msgid "Files matching “%{query}”"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Files on the target"
+msgstr ""
+
 #: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Fill in this field."
@@ -10688,6 +10742,11 @@ msgid_plural "They could not be deleted."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "It could not be fetched."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "It has %{count} row now."
@@ -10719,6 +10778,11 @@ msgstr[1] ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "It is kept, but not shown on the page."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "It is larger than 32 KB and is not shown."
 msgstr ""
 
 #: lib/brando_admin/live_view/listing/hooks.ex
@@ -10958,6 +11022,11 @@ msgstr ""
 msgid "Keep it under 70 characters, with the words people search for."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep list"
+msgstr ""
+
 #: lib/brando_admin/live/user_login_live.ex
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in for 60 days"
@@ -10993,6 +11062,11 @@ msgstr ""
 msgid "Keep this apply?"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Keep ticked"
+msgstr ""
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Keeps the version edited here"
@@ -11001,6 +11075,11 @@ msgstr ""
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "Keeps the version here"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kept"
 msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
@@ -15215,6 +15294,11 @@ msgstr ""
 msgid "Paste this into the app as the MCP server's URL."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Path added to the keep list"
+msgstr ""
+
 #: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Path creation failed"
@@ -15223,6 +15307,21 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Path from the repository root. Use From a folder to add several files at once."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Path removed from the keep list"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Path to keep"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paths relative to the target, a directory ending in /. A deploy never deletes them."
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -16635,6 +16734,7 @@ msgstr ""
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -17558,6 +17658,11 @@ msgstr ""
 msgid "Review and edit group permissions and memberships before enabling group authorization."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review before the first deploy"
+msgstr ""
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -17610,6 +17715,11 @@ msgstr ""
 msgid "Review the module definitions a release brings, apply them, and keep or revert an apply. It writes the release's templates, which are code, without making the person a superuser."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Review the target before its first deploy: once the connection test connects, it lists what the target holds."
+msgstr ""
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Review upcoming content and manage the publishing queue."
@@ -17643,6 +17753,16 @@ msgstr ""
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Reviewed"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reviewed. The last deploy found no files on the target that Brando did not put there."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reviewed. The next deploy deletes what you confirmed, and nothing else Brando did not upload."
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -21692,7 +21812,32 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "The target holds files Brando did not put there"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target holds these entries. Tick what to keep: the first deploy deletes the rest. Deeper paths can be added to the keep list below."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target holds too many files to list, so it cannot be reviewed here."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is empty."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
 msgid "The target is not one this site may deploy to."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is reviewed. Deploys delete only what Brando uploads from now on."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -21703,6 +21848,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The target's host could not be looked up. Try again in a moment."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target's state could not be read. Test the connection to review the target again."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target, port or accepted host keys changed. Test the connection again."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
@@ -21718,6 +21873,11 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The thumbnail was set on the video it was picked for"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The ticked entries are on the keep list"
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_drawer.ex
@@ -24429,6 +24589,11 @@ msgstr ""
 msgid "What the site stores, measured once a day, and the requests this installation answered on the site’s hosts, per UTC day."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "What the target holds changed since this page showed it. Look at the current list before you confirm."
+msgstr ""
+
 #: lib/brando_admin/live/forms/inbox_live.ex
 #, elixir-autogen, elixir-format
 msgid "What visitors have sent with the site's forms"
@@ -25360,6 +25525,11 @@ msgstr ""
 msgid "cannot be seeded: the installation has no superuser to create its content as"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "cannot go on the keep list: tick it to leave it on the target"
+msgstr ""
+
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "changed"
@@ -25613,6 +25783,11 @@ msgstr ""
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
 msgid "has a host that could not be looked up. Try again in a moment"
+msgstr ""
+
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "has a path that is not plain: %{path}"
 msgstr ""
 
 msgid "has already been taken"

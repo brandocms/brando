@@ -2434,7 +2434,9 @@ form supports:
 
 An rsync target is a remote destination, `[user@]host:/absolute/path`. The
 deploy mirrors the build there with `--delete`, over SSH with the site's own
-key, so it must be another server: local paths, `localhost` and
+key, deleting only what Brando uploaded or an admin confirmed (see
+[What an rsync deploy deletes](#what-an-rsync-deploy-deletes)), so it must be
+another server: local paths, `localhost` and
 loopback names and addresses (however written), hosts that resolve to one of
 this server's addresses, paths with `.`, `..` or empty segments,
 `host::module` and `rsync://` targets, and users or hosts beginning with `-`
@@ -2662,7 +2664,9 @@ port. When the host offers other keys than those accepted, the test shows
 both, and accepting the new ones is for a host you know was rebuilt or
 replaced. With accepted keys, the test runs `rsync -an` from an empty
 directory to the target, which sends and deletes nothing, and says whether
-ssh, the key and rsync on the host work, or what the host answered. The test
+ssh, the key and rsync on the host work, or what the host answered; for a
+target not reviewed yet, it then lists what the target holds (see
+[What an rsync deploy deletes](#what-an-rsync-deploy-deletes)). The test
 runs beside the screen, with a time limit on each step. `ssh-keyscan` opens
 one connection for each type of host key without logging in, which OpenSSH
 9.8 and later counts against the source (`PerSourcePenalties`): pressed many
@@ -2704,6 +2708,77 @@ installed from a distribution's split packages needs its `ssh` package
 Making, rotating, testing and accepting are for those who may save the deploy
 settings; rotating and accepting ask for the password, a code or a passkey
 when the session has not confirmed lately.
+
+### What an rsync deploy deletes
+
+A deploy deletes a path on the target only when Brando uploaded it or an admin
+confirmed it, and never a path on the site's keep list. The receiving rsync
+enforces this: the deploy hands it filter rules that let it delete exactly
+those paths and protect every other one, so a file the host puts there at any
+moment, also while the deploy runs, stays. A shared host's document root
+keeps what the host put there: certificate validation files under
+`.well-known/`, `cgi-bin/`, a `.htaccess`.
+
+The **keep list**, under **Files on the target** on the Publishing screen,
+holds paths relative to the target, a directory's ending in `/`:
+`.well-known/` and `cgi-bin/` unless changed, at most 100, of letters, digits,
+`. _ ~ + @ , -` and spaces inside a name, with no `.` or `..` segment. A kept
+path is never deleted, whatever else says it may be; a file of the same name in
+the build is still uploaded. The list stays when the target changes.
+
+**Before the first deploy to a target**, review it. Once **Test connection**
+connects, it lists everything the target holds (a dry run with `--delete`
+from an empty directory, which deletes nothing) and fetches a `.htaccess` at
+its root to show (up to 32 KB). The screen shows the top-level entries with
+the number of files in each, those the keep list covers ticked: tick what else
+to keep, add deeper paths to the keep list, and press **Confirm**. Ticked
+entries go on the keep list (a name with other characters than the list takes
+is left on the target, but not listed); the first deploy deletes the rest.
+Confirm names the listing the screen showed: when another admin's test has
+listed the target again since, it is refused and the screen shows the current
+listing. A listing that failed, or found more than 100,000 paths, cannot be
+confirmed.
+
+A deploy to a target that is not the reviewed one is refused, the automatic
+deploy after a build too, with a build-log line that names the review and the
+build left ready. A review is for one target, port and set of accepted host
+keys: changing the target or port, or accepting other host keys (a rebuilt or
+replaced server), makes the target unreviewed, and a build made for an
+earlier target or port must be built again.
+
+Each deploy, holding the site's deploy lock:
+
+1. lists the target, and refuses a path where the build has a directory and
+   the target a file Brando may not delete, or the build a file and the target
+   a directory holding one: rsync would clear the way for the directory
+   whatever the rules say, and fails on the file. The build log names the
+   path;
+2. adds the build's paths to those Brando may have uploaded, so a run that
+   fails halfway leaves nothing Brando put there unknown (when the list cannot
+   be written, nothing is copied);
+3. runs rsync with the rules; once it succeeds, the build's paths are what
+   Brando uploaded and the confirmed paths are spent;
+4. lists what the target holds beyond the build and the keep list, the files
+   Brando did not put there, for the screen. The build log says how many; a
+   failure here does not fail the deploy.
+
+**Unknown files** show under **Files on the target**, top-level entries with
+their counts. Deploys leave them. **Keep ticked** puts the ticked ones on the
+keep list. **Delete the rest** confirms the others, as Confirm does for the
+listing it names, and queues a deploy of whichever build is deployed when the
+job runs: a newer deploy in between stays live, and deletes them itself. A
+rollback goes through the same steps.
+
+The target's state (which target, port and host keys it is for, the paths
+Brando uploaded and those confirmed, and the last listing) is the file
+`sites/{site_key}/ssg/deploy/target_state`, written whole. Names on the target
+come from the host and are shown escaped and cut; a name rsync prints in a way
+that cannot be read back is shown, but never confirmed. Reviewing, keeping,
+deleting and the keep list are for those who may save the deploy settings,
+and confirming, deleting and taking a path off the keep list ask for a recent
+confirmation. A file the host puts at a path where the build has a directory
+in the moment between the listing and the run is the one thing a deploy can
+still replace.
 
 ### A site's allowed deploy targets
 
