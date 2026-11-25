@@ -90,7 +90,7 @@ defmodule Brando.Translations.Labels do
   def label({:block, _uid, module_name, rest}, _labels), do: Enum.join([module_name | block_part(rest)], " › ")
 
   def label({:row, subform, _uid, field}, labels),
-    do: "#{labels[subform] || humanize(subform)} › #{labels[field] || humanize(field)}"
+    do: "#{labels[subform] || humanize(subform)} › #{labels[subform <> "/" <> field] || humanize(field)}"
 
   def label({:field, field}, labels), do: labels[field] || labels[field <> "_id"] || humanize(field)
 
@@ -129,8 +129,8 @@ defmodule Brando.Translations.Labels do
 
   @doc """
   The labels of `schema`'s default form, by field name, translated in the
-  schema's domain as the inputs show them; a subform's fields are listed by
-  their own names.
+  schema's domain as the inputs show them; a subform's fields are listed under
+  their subform, as `"subform/field"`.
   """
   def field_labels(schema) do
     naming = schema.__naming__()
@@ -142,7 +142,7 @@ defmodule Brando.Translations.Labels do
         for tab <- tabs, fieldset <- tab.fields, input <- fieldset.fields, reduce: %{} do
           acc ->
             acc
-            |> put_label(input, gettext_module, domain)
+            |> put_label(input, "", gettext_module, domain)
             |> put_sub_labels(input, gettext_module, domain)
         end
 
@@ -151,18 +151,18 @@ defmodule Brando.Translations.Labels do
     end
   end
 
-  defp put_label(acc, %{name: name} = input, gettext_module, domain) do
+  defp put_label(acc, %{name: name} = input, prefix, gettext_module, domain) do
     text = Map.get(input, :label) || (Map.get(input, :opts) || [])[:label]
 
     if is_binary(text),
-      do: Map.put(acc, to_string(name), Gettext.dgettext(gettext_module, domain, text)),
+      do: Map.put(acc, prefix <> to_string(name), Gettext.dgettext(gettext_module, domain, text)),
       else: acc
   end
 
-  defp put_label(acc, _input, _gettext_module, _domain), do: acc
+  defp put_label(acc, _input, _prefix, _gettext_module, _domain), do: acc
 
-  defp put_sub_labels(acc, %Brando.Blueprint.Forms.Subform{sub_fields: fields}, gettext_module, domain),
-    do: Enum.reduce(fields, acc, &put_label(&2, &1, gettext_module, domain))
+  defp put_sub_labels(acc, %Brando.Blueprint.Forms.Subform{name: name, sub_fields: fields}, gettext_module, domain),
+    do: Enum.reduce(fields, acc, &put_label(&2, &1, "#{name}/", gettext_module, domain))
 
   defp put_sub_labels(acc, _input, _gettext_module, _domain), do: acc
 
