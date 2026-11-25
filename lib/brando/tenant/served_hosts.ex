@@ -30,7 +30,12 @@ defmodule Brando.Tenant.ServedHosts do
 
   Every host the registry binds (`Brando.Tenant.Cache.bound_hosts/0`): each
   environment's domain and its redirect hosts, which need a route and a
-  certificate for their redirect to be reached. Only a full host name is
+  certificate for their redirect to be reached. With a preview host pattern
+  (`Brando.SSG.PreviewHost`), each active static site's preview host too,
+  admitted as a bound host is; below, "bound host" covers them. One wildcard
+  DNS record for the pattern lets each one in as its site appears, and it
+  leaves the file when its site is suspended, archived, deleted or no longer
+  static. Only a full host name is
   written: valid (`Brando.Environments.Environment.valid_host?/1`), with a
   dot, and not an IP address. A bound host without a dot (`intranet`), an
   address, or a host stored before Brando checked it is still answered on,
@@ -160,6 +165,7 @@ defmodule Brando.Tenant.ServedHosts do
   use GenServer
 
   alias Brando.Environments.Environment
+  alias Brando.SSG.PreviewHost
   alias Brando.Tenant.Cache
 
   require Logger
@@ -422,7 +428,7 @@ defmodule Brando.Tenant.ServedHosts do
 
   # Every bound host gets a state at once: the one it has, or `:checking`
   defp mark_bound do
-    {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+    {bound, invalid} = Enum.split_with(candidate_hosts(), &servable?/1)
     previous = status()
 
     hosts =
@@ -820,7 +826,7 @@ defmodule Brando.Tenant.ServedHosts do
   # waits for the next one, which follows at once.
   defp apply_write(state, job, result) do
     %{file: file} = state.settings
-    {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+    {bound, invalid} = Enum.split_with(candidate_hosts(), &servable?/1)
     admitted = MapSet.new(result.hosts)
     # Answers are kept for bound hosts not in the file only
     outside = bound |> MapSet.new() |> MapSet.difference(admitted)
@@ -936,7 +942,7 @@ defmodule Brando.Tenant.ServedHosts do
   # runs or waits already, or answered and no write has decided on it yet
   defp look_up_missing(%{settings: %{admit: :dns}} = state) do
     candidates =
-      Cache.bound_hosts()
+      candidate_hosts()
       |> Enum.filter(&servable?/1)
       |> Enum.reject(&(MapSet.member?(state.admitted, &1) or MapSet.member?(state.fresh, &1)))
 
@@ -1125,7 +1131,11 @@ defmodule Brando.Tenant.ServedHosts do
   defp family_name(:inet), do: "IPv4"
   defp family_name(:inet6), do: "IPv6"
 
-  defp servable_bound_hosts, do: Enum.filter(Cache.bound_hosts(), &servable?/1)
+  defp servable_bound_hosts, do: Enum.filter(candidate_hosts(), &servable?/1)
+
+  # Every read of the hosts the file may hold goes through here: the bound
+  # hosts and the static sites' preview hosts
+  defp candidate_hosts, do: Enum.sort(Enum.uniq(Cache.bound_hosts() ++ PreviewHost.hosts()))
 
   # A stored domain is not checked again until it changes, and the file is read
   # by root: only a host name with a dot that is not an IP address gets a line.

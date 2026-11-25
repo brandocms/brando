@@ -42,6 +42,9 @@ defmodule Brando.Plug.SiteAssets do
   are public and the header allows no credentials, so it exposes nothing a
   request without cookies would not get. Admin paths, preview pages and
   everything the router answers are left alone.
+
+  Every response on a static site's preview host (`Brando.SSG.PreviewHost`)
+  carries `X-Robots-Tag: noindex, nofollow`, whichever plug sends it.
   """
 
   import Plug.Conn, only: [get_resp_header: 2, halt: 1, put_resp_header: 3, register_before_send: 2, send_file: 3]
@@ -49,6 +52,7 @@ defmodule Brando.Plug.SiteAssets do
   alias Brando.Assets.SiteAssets
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.SSG.LocalDelivery
+  alias Brando.SSG.PreviewHost
   alias Brando.Tenant.Frontend
 
   @behaviour Plug
@@ -58,14 +62,24 @@ defmodule Brando.Plug.SiteAssets do
   def init(opts), do: opts
 
   @impl Plug
-  def call(%Plug.Conn{method: method} = conn, opts) when method in @allowed_methods do
+  def call(conn, opts), do: conn |> no_index_preview_host() |> serve(opts)
+
+  defp serve(%Plug.Conn{method: method} = conn, opts) when method in @allowed_methods do
     case LocalDelivery.call(conn, opts) do
       %Plug.Conn{halted: true} = served -> served
       conn -> serve_asset(conn)
     end
   end
 
-  def call(conn, _opts), do: conn
+  defp serve(conn, _opts), do: conn
+
+  # Whatever answers on a static site's preview host, this plug, a plug after
+  # it or the router, tells crawlers to leave it alone
+  defp no_index_preview_host(conn) do
+    if PreviewHost.preview_host?(conn.host),
+      do: register_before_send(conn, &put_resp_header(&1, "x-robots-tag", "noindex, nofollow")),
+      else: conn
+  end
 
   @doc """
   Whether the endpoint's asset pipeline would answer `conn` with a file: this

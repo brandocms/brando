@@ -8,7 +8,8 @@ defmodule Brando.Environments.Environment do
 
   `domain` decides which site answers on a host, and everything that resolves
   a host trusts it. A new value must be a bare host and not one the
-  installation itself uses (`Brando.Tenant.InstallationHosts`); who may set it
+  installation itself uses (`Brando.Tenant.InstallationHosts`), nor one that
+  matches the static sites' preview host pattern (`Brando.SSG.PreviewHost`); who may set it
   is `Brando.Tenant.Registry`'s check. A stored value is not checked again
   until it changes.
 
@@ -27,6 +28,7 @@ defmodule Brando.Environments.Environment do
   import Ecto.Changeset
 
   alias Brando.Sites.Site
+  alias Brando.SSG.PreviewHost
   alias Brando.Tenant.InstallationHosts
 
   @schema_prefix "public"
@@ -121,6 +123,14 @@ defmodule Brando.Environments.Environment do
         InstallationHosts.member?(domain) ->
           [domain: gettext("The installation itself uses this host, for its admin, media or CDN.")]
 
+        PreviewHost.matches?(domain) ->
+          [
+            domain:
+              gettext("This host matches %{pattern}, which the installation keeps for static sites' build previews.",
+                pattern: PreviewHost.pattern()
+              )
+          ]
+
         true ->
           []
       end
@@ -183,6 +193,16 @@ defmodule Brando.Environments.Environment do
         [
           redirect_hosts:
             gettext("%{host}: the installation itself uses this host, for its admin, media or CDN.", host: host)
+        ]
+
+      PreviewHost.matches?(host) ->
+        [
+          redirect_hosts:
+            gettext(
+              "%{host} matches %{pattern}, which the installation keeps for static sites' build previews.",
+              host: host,
+              pattern: PreviewHost.pattern()
+            )
         ]
 
       true ->
