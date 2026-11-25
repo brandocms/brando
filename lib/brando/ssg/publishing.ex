@@ -219,8 +219,10 @@ defmodule Brando.SSG.Publishing do
     environment && environment.id
   end
 
-  # A build of the environment that a job can still build or deploy. A
-  # rollback or a redeploy of an older build is not one.
+  # A build of the environment that a job can still build or deploy: its
+  # build job while it is queued, building or owes its deploy, or a deploy
+  # job of a ready build. A rollback or a redeploy of an older build is not
+  # one.
   defp running(environment, deployed) do
     now = DateTime.utc_now()
 
@@ -230,7 +232,11 @@ defmodule Brando.SSG.Publishing do
         job.queue == "ssg_builds" and job.worker in @workers and
           fragment("(?->>'build_id')::bigint", job.args) == build.id and
           (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now)),
-      where: build.environment_id == ^environment.id and build.status in [:queued, :building, :ready],
+      where:
+        build.environment_id == ^environment.id and
+          (build.status in [:queued, :building] or
+             (build.status == :ready and
+                (job.worker == "Brando.Worker.SSGDeploy" or (build.auto_deploy and is_nil(build.deploy_failed_at))))),
       order_by: [desc: job.id],
       limit: 1,
       select: {build, job.state}

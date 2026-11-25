@@ -256,7 +256,8 @@ defmodule Brando.Worker.SSGBuild do
       )
     end)
 
-    {:error, {:deploy_failed, reason}}
+    # The build is done; another attempt would not deploy it
+    {:cancel, {:deploy_failed, reason}}
   end
 
   # As the deploy job logs it (`Brando.Worker.SSGDeploy`): what a remote host
