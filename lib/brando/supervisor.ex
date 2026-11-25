@@ -70,6 +70,11 @@ defmodule Brando.Supervisor do
       # Refreshes this node's site and environment caches when another node
       # writes them
       Brando.CacheSync,
+      # Tells who follows a static site's builds that its content changed,
+      # and records a change made in a transaction begun on the repo itself
+      # once that has ended
+      Brando.SSG.ContentChanges,
+      {Task.Supervisor, name: Brando.SSG.ContentChanges.TaskSupervisor},
       # Keeps the file of hosts the reverse proxy serves; idle without a file
       # configured (`Brando.Tenant.ServedHosts`), and its DNS lookups
       {Task.Supervisor, name: Brando.Tenant.ServedHosts.TaskSupervisor},

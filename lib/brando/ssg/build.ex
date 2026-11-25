@@ -44,6 +44,8 @@ defmodule Brando.SSG.Build do
     field :preview_token, :string
     field :preview_expires_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
+    # When it went from queued to building: it holds the content as it was then
+    field :started_at, :utc_datetime_usec
     field :built_at, :utc_datetime_usec
     field :deployed_at, :utc_datetime_usec
     field :pruned_at, :utc_datetime_usec
@@ -78,6 +80,7 @@ defmodule Brando.SSG.Build do
     :deploy_config,
     :markdown_context,
     :scheduled_at,
+    :started_at,
     :built_at,
     :deployed_at,
     :pruned_at

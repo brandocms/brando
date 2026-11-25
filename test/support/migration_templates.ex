@@ -304,7 +304,7 @@ defmodule Brando.MigrationTemplates do
   @doc "What the 2xx migrations add in `public` only: tables"
   def public_tables do
     ~w(users_security users_recovery_codes users_security_events users_security_policy users_passkeys
-       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes sites_usage_days)
+       mcp_settings mcp_grants mcp_tokens mcp_authorization_codes sites_usage_days ssg_content_changes)
   end
 
   @doc "What the 2xx migrations add in `public` only: columns by table"
@@ -314,7 +314,8 @@ defmodule Brando.MigrationTemplates do
       "users_tokens" => ~w(ip user_agent last_used_at confirmed_at),
       "content_proposals" => ~w(origin client),
       "sites_previews" => ~w(site_id environment_id proposal_id),
-      "environments" => ~w(asset_set_id redirect_hosts)
+      "environments" => ~w(asset_set_id redirect_hosts),
+      "ssg_builds" => ~w(started_at)
     }
   end
 

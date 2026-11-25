@@ -298,6 +298,7 @@ defmodule Brando.Cache do
     context = context()
     rebuild = Tenant.capture_context(fn -> rebuild_for_write(cache) end)
     Brando.Repo.after_commit({__MODULE__, cache, context}, rebuild)
+    Brando.SSG.ContentChanges.touch()
     unless Tenant.outside_site?(), do: CacheSync.broadcast(__MODULE__, {cache, context})
     :ok
   end

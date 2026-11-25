@@ -41,6 +41,7 @@ defmodule Brando.Tenant.SharedTables do
     schema_migrations
     site_asset_sets
     ssg_builds
+    ssg_content_changes
     site_enabled_containers
     site_enabled_modules
     site_enabled_palettes
