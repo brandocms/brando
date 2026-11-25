@@ -2840,9 +2840,8 @@ site without that part instead of answering 500.
 
 Turn the option off, and the next deploy removes the block and leaves the
 host's lines (the target's state remembers that a block was written, or that
-the review found one); a file
-left with nothing else in it is deleted, or left empty when the keep list
-holds `.htaccess`. A build with a `.htaccess` of its own then replaces the
+the review found one); a file left with nothing else in it is deleted, or
+left empty when the keep list holds `.htaccess`. A build with a `.htaccess` of its own then replaces the
 host's file, as any other file of the build.
 
 Where the host answers differently from the installation:
@@ -2857,6 +2856,9 @@ Where the host answers differently from the installation:
 - the block takes the target directory to be the document root: the 404
   page is `/404.html`, and the check that a page of the build wins over a
   rule looks under the document root;
+- the check that a page wins over a rule that is not exact asks whether the
+  file exists on the host, so a file only the host has, such as a kept
+  `legacy/index.html`, wins too where the installation would redirect;
 - an encoded slash (`%2F`) in a path is a 404 before any rule runs, and a
   directory's path without its trailing slash is first redirected to the
   path with one;
