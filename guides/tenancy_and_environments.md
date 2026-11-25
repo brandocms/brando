@@ -2633,12 +2633,15 @@ would take the token in the link to the static host. Nothing is uploaded: the
 host answers from the build the installation keeps.
 
 A preview host answers a build preview of its own site
-(`/__ssg_preview__/<token>/…`) and nothing else: the site's pages, shared
-previews (`/__p__/…`), the lockdown page, the admin and its sockets all
-answer `404` there, and every response carries `X-Robots-Tag: noindex`. The
-token in the link is the access, so a locked site's previews open there. A
+(`/__ssg_preview__/<token>/…`) and none of the installation's pages: every
+other path that reaches the router, the site's pages, shared previews
+(`/__p__/…`), the lockdown page, the admin and its sockets included, answers
+`404` there. The installation's public files (compiled assets, media) answer
+as on any host. Every response carries `X-Robots-Tag: noindex`. The token in
+the link is the access, so a locked site's previews open there. A
 build whose environment has been deleted, a suspended or archived site, and a
-site switched to dynamic delivery have no preview there.
+site switched to dynamic delivery have no preview there, and the Publishing
+screen links none.
 
 An environment domain or redirect host that matches the pattern is refused
 when it is saved. One saved before the pattern was set keeps answering as it
