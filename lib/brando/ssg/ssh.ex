@@ -232,13 +232,17 @@ defmodule Brando.SSG.SSH do
     end
   end
 
+  # ssh-keyscan opens one connection per key type, and a server may drop
+  # one: some of the accepted keys, and no other, are the accepted host
   defp host_key_state(host_keys, accepted) do
     cond do
       accepted == [] -> :new
-      MapSet.new(host_keys, &{&1.type, &1.data}) == MapSet.new(accepted, &{&1.type, &1.data}) -> :accepted
+      MapSet.subset?(key_set(host_keys), key_set(accepted)) -> :accepted
       true -> :changed
     end
   end
+
+  defp key_set(keys), do: MapSet.new(keys, &{&1.type, &1.data})
 
   # The entry ssh looks the host up under: as given, lowercased, or with
   # another port than 22 `[host]:port` (an IPv6 literal without its brackets)

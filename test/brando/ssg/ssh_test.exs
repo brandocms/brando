@@ -15,6 +15,7 @@ defmodule Brando.SSG.SSHTest do
   alias Brando.Worker.SSGDeploy
 
   @target "deploy@example.test:/srv/www"
+  @ecdsa "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNiw+UN6mduux8D2zTfkVfFnbo8/vrxqTreMhENSYiB/mLQL0B70JsZl/PRIMV3qpB3agkH5NHm9wdTzO6iOj9s="
 
   defmodule Builder do
     @moduledoc false
@@ -336,6 +337,21 @@ defmodule Brando.SSG.SSHTest do
       put_test_env(DeployConfig, rsync_targets: ["deploy@other.example.test:/srv/www"])
       assert {:error, :invalid_deploy_target} = SSH.accept_host_keys(c.site, c.superuser, test)
       refute File.exists?(DeployFiles.path(c.site, :known_hosts))
+    end
+
+    # ssh-keyscan opens one connection per key type, and a server may drop one
+    test "a host that shows some of its accepted keys is accepted", c do
+      ecdsa_line = "[example.test]:2222 ecdsa-sha2-nistp256 #{@ecdsa}"
+      :ok = DeployFiles.write(c.site, :known_hosts, "#{keyscan_line("[example.test]:2222")}\n#{ecdsa_line}\n")
+
+      {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222")))
+      assert test.host_key_state == :accepted
+      assert test.dry_run == :ok
+
+      # A key beside them that is not accepted is a change
+      output = "#{keyscan_line("[example.test]:2222")}\n#{keyscan_line("[example.test]:2222", other_host_key())}\n"
+      {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner(output))
+      assert test.host_key_state == :changed
     end
 
     test "stores an IPv6 host as ssh looks it up, on port 22 and another", c do
