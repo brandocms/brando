@@ -497,7 +497,9 @@ upload, and the URL answers only at the endpoint it was made for. It expires
 10 minutes after it is prepared; the bytes must have all arrived 10 minutes
 after the PUT starts, and the upload must be finished within the hour.
 Simultaneous preparations share the same 10 pending slots per connection,
-including across server nodes. An upload whose bytes were
+when the server nodes run the same version. During a rolling upgrade,
+`Brando.MCP.Uploads.sweep/0` reconciles uploads prepared by older nodes.
+It runs nightly and can also be called once all nodes have upgraded. An upload whose bytes were
 refused, whose URL expired with nothing sent, or whose PUT stopped without
 an answer and is past its 10 minutes, does not count, and finishing it says
 it failed. A request whose

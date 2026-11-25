@@ -241,6 +241,51 @@ defmodule Brando.MCP.MediaTest do
       refute Enum.any?(others, &File.dir?(Path.join(Uploads.root(), &1)))
     end
 
+    test "a released slot still gets its expired staging directory removed on prepare",
+         %{tenant: tenant, token: token, dir: dir} do
+      mcp_env(upload_dir: dir, upload_url_minutes: -1)
+      {unused, _url} = prepare!(tenant, token)
+      prepare!(tenant, token)
+      assert unused in pending()
+      expire!(unused)
+      prepare!(tenant, token)
+      refute unused in pending()
+    end
+
+    test "the sweep repairs an unindexed upload and retires markers left by an interrupted discard",
+         %{tenant: tenant, grant: grant, token: token, dir: dir} do
+      mcp_env(upload_dir: dir, upload_max_pending: 1)
+      {id, _url} = prepare!(tenant, token)
+      bucket = Path.join([Uploads.root(), ".pending-by-grant", to_string(grant.id)])
+      marker = Path.join(bucket, id)
+      File.rm!(marker)
+      Uploads.sweep()
+      assert File.exists?(marker)
+      assert {:error, "This connection has 1 uploads" <> _} = Uploads.prepare(grant, tenant, "other.jpg", nil)
+
+      File.rm_rf!(Path.join(Uploads.root(), id))
+      Uploads.sweep()
+      refute File.exists?(bucket)
+      assert {:ok, _} = Uploads.prepare(grant, tenant, "final.jpg", nil)
+    end
+
+    test "a staged image holds the slot until it is finished, including while its metadata is unreadable",
+         %{tenant: tenant, token: token, grant: grant, dir: dir} do
+      mcp_env(upload_dir: dir, upload_max_pending: 1)
+      {id, url} = prepare!(tenant, token)
+      assert put_bytes(url, @jpg).status == 200
+      denied = {:error, "This connection has 1 uploads waiting" <> _} = Uploads.prepare(grant, tenant, "other.jpg", nil)
+
+      meta = Path.join([Uploads.root(), id, "meta.json"])
+      saved = File.read!(meta)
+      File.write!(meta, "")
+      assert Uploads.prepare(grant, tenant, "another.jpg", nil) == denied
+      File.write!(meta, saved)
+
+      assert %{"structuredContent" => %{"asset" => _}} = call(tenant, token, "finish_upload", %{"upload_id" => id})
+      assert {:ok, _} = Uploads.prepare(grant, tenant, "next.jpg", nil)
+    end
+
     test "a connection has at most so many uploads waiting", %{tenant: tenant, token: token} do
       mcp_env(upload_dir: Uploads.root(), upload_max_pending: 2)
       prepare!(tenant, token)
