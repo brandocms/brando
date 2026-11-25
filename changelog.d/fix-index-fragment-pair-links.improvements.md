@@ -1,0 +1,1 @@
+- Planning fragment pairs groups alternate links in one pass, speeding up sites with many fragment keys.

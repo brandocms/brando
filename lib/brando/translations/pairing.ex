@@ -45,12 +45,23 @@ defmodule Brando.Translations.Pairing do
   def plan(schema) do
     fields = fields!(schema)
     entries = candidates(schema, fields)
-    links = links(schema, Enum.map(entries, & &1.id))
+    values_by_id = Map.new(entries, &{&1.id, &1.values})
+
+    links_by_values =
+      schema
+      |> links(Map.keys(values_by_id))
+      |> Enum.flat_map(fn {a, b} = link ->
+        # A link across groups belongs to both. A trashed endpoint has no group.
+        for values <- Enum.uniq([values_by_id[a], values_by_id[b]]), values != nil, do: {values, link}
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     entries
     |> Enum.group_by(& &1.values)
     |> Enum.sort_by(fn {values, _} -> Enum.map(values, &to_string/1) end)
-    |> Enum.map(fn {values, group} -> group(values, Enum.sort_by(group, &{&1.language, &1.id}), links) end)
+    |> Enum.map(fn {values, group} ->
+      group(values, Enum.sort_by(group, &{&1.language, &1.id}), Map.get(links_by_values, values, []))
+    end)
   end
 
   @doc """
@@ -112,9 +123,8 @@ defmodule Brando.Translations.Pairing do
     )
   end
 
-  defp group(values, entries, links) do
+  defp group(values, entries, touching) do
     ids = MapSet.new(entries, & &1.id)
-    touching = Enum.filter(links, fn {a, b} -> a in ids or b in ids end)
     pairs = for %{id: a} <- entries, %{id: b} <- entries, a != b, do: {a, b}
     missing = pairs -- touching
 
