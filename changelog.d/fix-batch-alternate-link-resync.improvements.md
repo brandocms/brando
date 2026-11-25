@@ -1,0 +1,1 @@
+- Fragment pairing schedules each affected translation group once per run, including when repairing an interrupted run.

@@ -21,7 +21,7 @@ defmodule Brando.Translations.Pairing do
   renamed, moved to another language, trashed or deleted, or linked by an
   editor since, leaves the group as it is, reported as `:changed`. Linking
   copies no content and joins no synchronized group. What follows a link
-  (`Brando.Translations.alternate_added/3`) is re-synchronized for every
+  (`Brando.Translations.alternates_added/2`) is re-synchronized for every
   linked group, those linked already included, so a run that stopped before
   that is repaired by the next.
   """
@@ -73,17 +73,23 @@ defmodule Brando.Translations.Pairing do
   def apply(schema, plan) do
     fields = fields!(schema)
 
-    # Again for a group linked already: a run that stopped after writing its
-    # links may not have re-synchronized what follows them
-    for %{status: :linked, links: links} <- plan, do: linked(schema, Enum.uniq_by(links, &Enum.sort(Tuple.to_list(&1))))
+    # Include already linked groups to repair a run interrupted after commit.
+    previous = linked_entry_ids(plan)
+    Enum.each(previous, &CacheQuery.evict_entry(schema, &1))
 
-    for %{status: :link} = group <- plan, do: apply_group(schema, fields, group)
+    applied = for %{status: :link} = group <- plan, do: apply_group(schema, fields, group)
+    Translations.alternates_added(schema, previous ++ linked_entry_ids(applied))
+    applied
+  end
+
+  defp linked_entry_ids(groups) do
+    for %{status: :linked, entries: entries} <- groups, entry <- entries, do: entry.id
   end
 
   defp apply_group(schema, fields, group) do
     case Repo.transaction(fn -> link_group(schema, fields, group) end) do
-      {:ok, pairs} ->
-        linked(schema, pairs)
+      {:ok, _} ->
+        Enum.each(group.entries, &CacheQuery.evict_entry(schema, &1.id))
         %{group | status: :linked}
 
       {:error, :changed} ->
@@ -150,7 +156,6 @@ defmodule Brando.Translations.Pairing do
       now = NaiveDateTime.utc_now(:second)
       rows = for {a, b} <- missing, do: %{entry_id: a, linked_entry_id: b, inserted_at: now, updated_at: now}
       Repo.insert_all(Module.concat(schema, Alternate), rows)
-      Enum.uniq_by(missing, fn {a, b} -> Enum.sort([a, b]) end)
     else
       Repo.rollback(:changed)
     end
@@ -165,14 +170,5 @@ defmodule Brando.Translations.Pairing do
     end)
     |> then(&if(:deleted_at in schema.__schema__(:fields), do: where(&1, [e], is_nil(e.deleted_at)), else: &1))
     |> Repo.all()
-  end
-
-  # As `Alternate.add/3` does once its rows are in
-  defp linked(schema, pairs) do
-    for {a, b} <- pairs do
-      CacheQuery.evict_entry(schema, a)
-      CacheQuery.evict_entry(schema, b)
-      Translations.alternate_added(schema, a, b)
-    end
   end
 end
