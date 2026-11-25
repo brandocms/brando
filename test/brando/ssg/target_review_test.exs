@@ -226,7 +226,7 @@ defmodule Brando.SSG.TargetReviewTest do
       assert {:cancel, :build_target_changed} =
                perform_job(SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
 
-      assert Builds.get_build(build.id).build_log =~ "must be built again"
+      assert Builds.get_build(build.id).build_log =~ Brando.SSG.SSH.refusal_message(:build_target_changed)
     end
 
     test "whose uploaded list cannot be written stops before the real run", c do
