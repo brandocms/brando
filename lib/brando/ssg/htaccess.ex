@@ -124,21 +124,20 @@ defmodule Brando.SSG.Htaccess do
   # The host's lines before the first block and those after it (nil when
   # there is no block), every block taken out
   defp without_blocks(content) do
-    content
-    |> lines()
-    |> Enum.reduce_while({:out, [], nil}, fn line, {state, before, after_block} ->
-      case {state, marker(line)} do
-        {:out, :begin} -> {:cont, {:in, before, after_block || []}}
-        {:out, _line} when is_nil(after_block) -> {:cont, {:out, [line | before], nil}}
-        {:out, _line} -> {:cont, {:out, before, [line | after_block]}}
-        {:in, :end} -> {:cont, {:out, before, after_block}}
-        {:in, _line} -> {:cont, {:in, before, after_block}}
-      end
-    end)
-    |> case do
+    case content |> lines() |> Enum.reduce({:out, [], nil}, &take_line/2) do
       {:in, _before, _after} -> :unterminated
       {:out, before, nil} -> {:ok, join_reversed(before), nil}
       {:out, before, after_block} -> {:ok, join_reversed(before), join_reversed(after_block)}
+    end
+  end
+
+  defp take_line(line, {state, before, after_block}) do
+    case {state, marker(line)} do
+      {:out, :begin} -> {:in, before, after_block || []}
+      {:out, _line} when is_nil(after_block) -> {:out, [line | before], nil}
+      {:out, _line} -> {:out, before, [line | after_block]}
+      {:in, :end} -> {:out, before, after_block}
+      {:in, _line} -> {:in, before, after_block}
     end
   end
 
