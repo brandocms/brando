@@ -457,8 +457,6 @@ defmodule Brando.SSG.SSHTest do
 
       Brando.SSGSSHFixtures.trust_hosts(c.other, ["example.test"])
       build = ready_build(c.site, c.environment)
-      # A later change of port is the next build's
-      {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
 
       assert {:ok, %{status: :deployed}} = Deploy.deploy(build, runner: runner(""))
 
@@ -481,8 +479,9 @@ defmodule Brando.SSG.SSHTest do
     end
 
     test "of a build from before the port goes to 22", c do
-      c.site |> Brando.SSGSSHFixtures.trust_hosts(["example.test"]) |> Brando.SSGSSHFixtures.review_target(@target)
-      build = ready_build(c.site, c.environment)
+      {:ok, site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
+      site |> Brando.SSGSSHFixtures.trust_hosts(["example.test"]) |> Brando.SSGSSHFixtures.review_target(@target)
+      build = ready_build(site, c.environment)
       {:ok, build} = Builds.update(build, %{deploy_config: Map.delete(build.deploy_config, "port")})
 
       assert {:ok, _deployed} = Deploy.deploy(build, runner: runner(""))
