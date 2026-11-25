@@ -9,7 +9,7 @@ defmodule Brando.SSG.TargetReview do
 
   The target's state is one file (`Brando.SSG.DeployFiles`'s
   `:target_state`), read and written holding the deploy lock
-  (`Brando.Tenant.Lock.deploy_key/1`): the target, port and accepted host
+  that `Brando.SSG.Deploy` holds: the target, port and accepted host
   keys it is for, whether an admin reviewed it, the paths Brando may have
   uploaded, the paths an admin confirmed, and what the target was last found
   to hold (`found`): the review's listing before the first deploy, the
