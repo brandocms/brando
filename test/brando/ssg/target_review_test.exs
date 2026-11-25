@@ -133,8 +133,19 @@ defmodule Brando.SSG.TargetReviewTest do
                        ]}
 
       assert_received {:rsync,
-                       ["-e", _ssh, "-rlp", "--max-size=32768", "--info=skip1", "--timeout=30", "--filter=+ /.htaccess",
-                        "--filter=- *", "--", @target <> "/", _dir]}
+                       [
+                         "-e",
+                         _ssh,
+                         "-rlp",
+                         "--max-size=32768",
+                         "--info=skip1",
+                         "--timeout=30",
+                         "--filter=+ /.htaccess",
+                         "--filter=- *",
+                         "--",
+                         @target <> "/",
+                         _dir
+                       ]}
 
       assert {:ok, %{reviewed: false, found: ^found, keep: [".well-known/", "cgi-bin/"]}} =
                TargetReview.status(c.site, c.superuser)

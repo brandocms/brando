@@ -262,7 +262,8 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
     assert unknown(c) == ["host.html"]
   end
 
-  test "for an Apache host, the merged .htaccess arrives, _redirects.json goes, and the block leaves with the option", c do
+  test "for an Apache host, the merged .htaccess arrives, _redirects.json goes, and the block leaves with the option",
+       c do
     put_files(c.remote, [{".htaccess", "Options -Indexes\n"}])
     review_and_confirm(c, [".htaccess"])
     redirects = ~s({"version": 1, "redirects": [{"pattern": "/old$", "target": "/new", "status": 301, "exact": true}]})

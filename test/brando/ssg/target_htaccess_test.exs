@@ -163,8 +163,19 @@ defmodule Brando.SSG.TargetHtaccessTest do
       assert {:ok, deployed} = Deploy.deploy(build, runner: runner(htaccess: {@host_lines, 0o640}))
 
       assert_received {:rsync,
-                       ["-e", _ssh, "-rlp", "--max-size=32768", "--info=skip1", "--timeout=30", "--filter=+ /.htaccess",
-                        "--filter=- *", "--", @target <> "/", _dir]}
+                       [
+                         "-e",
+                         _ssh,
+                         "-rlp",
+                         "--max-size=32768",
+                         "--info=skip1",
+                         "--timeout=30",
+                         "--filter=+ /.htaccess",
+                         "--filter=- *",
+                         "--",
+                         @target <> "/",
+                         _dir
+                       ]}
 
       assert_received {:real_run, rules, [{".htaccess", merged, 0o640}], [source, @target]}
       assert source == build.build_path <> "/"
