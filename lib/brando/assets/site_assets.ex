@@ -1268,10 +1268,10 @@ defmodule Brando.Assets.SiteAssets do
   end
 
   # What renders with the scope's active set: every environment of its site,
-  # or in `:single` of every site. A site's environments never render with a
-  # standalone set in `:multi`.
+  # or in `:single` of every site. In `:multi` a site's environments never
+  # render with a standalone set.
   defp scope_changed({:site_id, site_id}), do: ContentChanges.touch_site(site_id)
-  defp scope_changed(:standalone), do: unless(Tenant.mode() == :multi, do: ContentChanges.touch_site(nil))
+  defp scope_changed(:standalone), do: if(Tenant.mode() == :single, do: ContentChanges.touch_site(nil))
 
   defp drop_active(scope_key) do
     drop(cache_key(scope_key))

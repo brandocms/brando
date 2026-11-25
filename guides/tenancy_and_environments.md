@@ -338,12 +338,13 @@ authentication, session, and migration-history tables stay in `public`
 permanently, as do authorization, which shared library items each site
 enables, entry drafts, the content assistant's guidance, conversations and
 proposals, content transfer receipts, form submissions, Markdown webhook
-deliveries, connected AI tools (MCP) and each site's usage, along with every
+deliveries, connected AI tools (MCP), each site's usage and when each static
+environment's content last changed, along with every
 `oban_*` table, since Oban is configured against `public`:
 
 ```text
 sites  sites_previews  sites_usage_days  environments  environment_operation_logs
-site_asset_sets  ssg_builds  uploads_pending_intents  schema_migrations
+site_asset_sets  ssg_builds  ssg_content_changes  uploads_pending_intents  schema_migrations
 site_enabled_modules  site_enabled_containers  site_enabled_palettes
 users  users_tokens  user_tokens  user_sites  users_passkeys
 users_security  users_recovery_codes  users_security_events  users_security_policy

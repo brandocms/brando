@@ -725,6 +725,12 @@ sender first, before the first compile.
   its images named after its next import. Run `mix brando.gen.migrations`
   for it, then `mix brando.migrate`. See
   [Build from Figma](mcp.md#build-from-figma).
+- **When a static site's content changed.** `brando_250` adds
+  `ssg_content_changes` in `public`, when each environment's content last
+  changed, and `ssg_builds.started_at`, when a build began. Both start
+  empty: a build made before compares by when it was queued, and edits made
+  before count through the environment's activity log. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`.
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
