@@ -247,22 +247,29 @@ defmodule Brando.Translations.WorkTest do
       assert second_uid == second.uid
     end
 
-    test "a table row without sync_uid is found by its position, as Sync keys it", c do
-      row = Repo.insert!(%TableRow{block_id: c.block.id, sequence: 1})
+    test "missing and repeated row identities keep each cell's own format", c do
+      for {sync_uid, index} <- [{nil, 1}, {"row1", 2}] do
+        row = Repo.insert!(%TableRow{block_id: c.block.id, sync_uid: sync_uid, sequence: index})
 
-      Repo.insert!(%Var{
-        key: "note",
-        type: :rich_text,
-        value: "<p>Merknad</p>",
-        label: %{"en" => "note"},
-        table_row_id: row.id,
-        sequence: 0
-      })
+        Repo.insert!(%Var{
+          key: "cell",
+          type: :rich_text,
+          value: "<p>Merknad</p>",
+          label: %{"en" => "Cell"},
+          table_row_id: row.id,
+          sequence: 0
+        })
+      end
 
       source = load(c.source.id)
-      assert [%{path: path} = item] = text_items(source, "/vars/note/value")
-      assert path =~ "/rows/#"
-      assert [%{format: "html"}] = Work.units(Article, source, source, [item])
+      items = text_items(source, "/vars/cell/value")
+      prefix = "entry_blocks/#{c.block.uid}/rows/"
+
+      assert Enum.map(Work.units(Article, source, source, items), &{&1.key, &1.format}) == [
+               {prefix <> "row1/vars/cell/value", "plain"},
+               {prefix <> "#1/vars/cell/value", "html"},
+               {prefix <> "#2/vars/cell/value", "html"}
+             ]
     end
   end
 

@@ -257,9 +257,17 @@ defmodule Brando.Translations.Work do
   end
 
   defp context(schema, entry) do
+    blocks = Labels.block_index(schema, entry)
+
+    row_formats =
+      for {identity, %{block: %{table_rows: rows}}} <- blocks, is_list(rows) and rows != [], into: %{} do
+        {identity, row_formats(rows)}
+      end
+
     %{
       entry: entry,
-      blocks: Labels.block_index(schema, entry),
+      blocks: blocks,
+      row_formats: row_formats,
       labels: Labels.field_labels(schema),
       inputs: input_types(schema)
     }
@@ -322,7 +330,7 @@ defmodule Brando.Translations.Work do
     case rest do
       ["refs", name, "text"] -> block |> find(:refs, :name, name) |> ref_format()
       ["vars", key, "value"] -> block |> find(:vars, :key, key) |> var_format()
-      ["rows", row, "vars", key, "value"] -> block |> row_var(row, key) |> var_format()
+      ["rows", row, "vars", key, "value"] -> get_in(ctx.row_formats, [identity, row, key]) || "plain"
       _ -> "plain"
     end
   end
@@ -350,15 +358,18 @@ defmodule Brando.Translations.Work do
     end
   end
 
-  # Rows by their identity, as `Sync` keys them
-  defp row_var(block, row, key) do
-    rows = if is_list(block.table_rows), do: block.table_rows, else: []
-
-    case Enum.find(Sync.row_identities(rows), fn {_row, identity} -> identity == row end) do
-      nil -> nil
-      {found, _identity} -> find(found, :vars, :key, key)
-    end
+  # Keep the first matching row and variable, as the path lookup does.
+  defp row_formats(rows) do
+    Enum.reduce(Sync.row_identities(rows), %{}, fn {row, identity}, acc ->
+      Map.put_new_lazy(acc, identity, fn -> var_formats(Map.get(row, :vars)) end)
+    end)
   end
+
+  defp var_formats(vars) when is_list(vars) do
+    Enum.reduce(vars, %{}, fn var, formats -> Map.put_new(formats, to_string(Map.get(var, :key)), var_format(var)) end)
+  end
+
+  defp var_formats(_vars), do: %{}
 
   # Input types of the default form by field name, and a subform's by
   # "subform/field". A page's variables are keyed by their own key below.
