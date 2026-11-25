@@ -1549,7 +1549,8 @@ kept static builds, each environment's database with its archives under it,
 the change in storage over the 30 days, its requests and bytes per day with a
 small trend, and the installation's total next to the free space on the media
 volume. "Measure now" measures one site at once, as for a site just imported,
-and the screen shows it when it lands. Nobody else sees any of it: in groups
+and the screen shows it when it lands. Oban retries a failed manual measurement
+up to a total of three attempts. Nobody else sees any of it: in groups
 mode, reading the screen takes only the Sites read permission, so a delegated
 reader sees the screen without usage, and "Measure now" is refused for them.
 In `:none` and `:single` nothing is counted, measured or shown.

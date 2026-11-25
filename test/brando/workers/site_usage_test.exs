@@ -290,6 +290,32 @@ defmodule Brando.Worker.SiteUsageTest do
       assert :ok = perform_job(SiteUsage, %{"site_id" => beta.id})
     end
 
+    test "Oban retries a failed manual measurement and announces its successful attempt", %{acme: acme} do
+      Usage.subscribe()
+      media = Storage.media_root(acme)
+      write(media, 1)
+      site_id = acme.id
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, job} = SiteUsage.measure_now(acme)
+
+        assert capture_log(fn ->
+                 assert %{failure: 1} = Oban.drain_queue(queue: :site_usage)
+               end) =~ "Could not measure"
+
+        assert %{state: "retryable", attempt: 1} = Repo.get!(Oban.Job, job.id)
+        assert Usage.days(acme, today()) == []
+        refute_received {:site_usage_measured, ^site_id}
+
+        File.rm!(media)
+        write(Path.join(media, "image.jpg"), 25)
+        assert %{success: 1} = Oban.drain_queue(queue: :site_usage, with_scheduled: true)
+        assert %{state: "completed", attempt: 2} = Repo.get!(Oban.Job, job.id)
+        assert [%Day{media_bytes: 25}] = Usage.days(acme, today())
+        assert_receive {:site_usage_measured, ^site_id}
+      end)
+    end
+
     test "does nothing outside :multi, also a job queued before the mode changed", %{acme: acme} do
       for mode <- [:none, :single] do
         put_test_env(:tenancy_mode, mode)
