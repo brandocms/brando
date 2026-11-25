@@ -1,0 +1,1 @@
+- Translate with AI keeps another editor's field change when their update and the model's reply arrive together.
