@@ -13896,6 +13896,11 @@ msgstr ""
 msgid "Not filled in: AI returned no text"
 msgstr ""
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: text exceeds the AI translation limit"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"

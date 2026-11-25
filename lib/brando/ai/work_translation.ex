@@ -17,7 +17,8 @@ defmodule Brando.AI.WorkTranslation do
   and the reply is a JSON object of texts by item. Each text is checked as
   `Brando.Translations.Work.answer_problems/2` checks an answer: a text that
   lost the source's HTML tags or template placeholders, or that the reply
-  left out, is returned as a problem for its unit instead of a text.
+  left out, is returned as a problem for its unit instead of a text. A unit
+  over the batch limit is also returned as a problem without sending it.
   """
   alias Brando.Translations.Work
 
@@ -41,14 +42,22 @@ defmodule Brando.AI.WorkTranslation do
   @spec translate([Work.unit()], String.t(), String.t(), keyword()) :: {:ok, result()} | {:error, term()}
   def translate(units, source_language, target_language, opts \\ []) do
     progress = Keyword.get(opts, :progress, fn _step -> :ok end)
-    units = Enum.filter(units, &translatable?/1)
-    batches = batches(units, Keyword.get(opts, :batch_chars, @batch_chars))
+    limit = Keyword.get(opts, :batch_chars, @batch_chars)
+    sized = for unit <- units, translatable?(unit), do: {unit, unit_size(unit)}
+    {within_limit, oversized} = Enum.split_with(sized, fn {_unit, size} -> size <= limit end)
+
+    problems =
+      Map.new(oversized, fn {unit, _size} ->
+        {unit.key, [%{key: unit.key, code: "too_long", message: "The text exceeds the translation batch limit."}]}
+      end)
+
+    batches = batches(within_limit, limit)
     total = length(batches)
     progress.({0, total})
 
     batches
     |> Enum.with_index(1)
-    |> Enum.reduce_while({:ok, %{texts: %{}, problems: %{}}}, fn {batch, done}, {:ok, acc} ->
+    |> Enum.reduce_while({:ok, %{texts: %{}, problems: problems}}, fn {batch, done}, {:ok, acc} ->
       case translate_batch(batch, source_language, target_language, opts) do
         {:ok, replies} ->
           progress.({done, total})
@@ -79,16 +88,17 @@ defmodule Brando.AI.WorkTranslation do
     end
   end
 
+  defp unit_size(unit) do
+    current = if unit.kind == "review", do: Map.get(unit, :current)
+    String.length(unit.source) + String.length(current || "") + String.length(previous_source(unit) || "")
+  end
+
   # Units numbered within their batch, at least one unit per batch
   defp batches(units, limit) do
     units
     |> Enum.chunk_while(
       {[], 0},
-      fn unit, {batch, size} ->
-        unit_size =
-          String.length(unit.source) + String.length(Map.get(unit, :current) || "") +
-            String.length(previous_source(unit) || "")
-
+      fn {unit, unit_size}, {batch, size} ->
         if batch != [] and size + unit_size > limit,
           do: {:cont, Enum.reverse(batch), {[unit], unit_size}},
           else: {:cont, {[unit | batch], size + unit_size}}

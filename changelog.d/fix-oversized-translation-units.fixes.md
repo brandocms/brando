@@ -1,0 +1,1 @@
+- AI translation skips an item that exceeds the batch limit and translates the other items.

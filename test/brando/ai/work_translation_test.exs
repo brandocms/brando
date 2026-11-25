@@ -164,4 +164,41 @@ defmodule Brando.AI.WorkTranslationTest do
     Brando.AIStub.reply("Sorry, I can't")
     assert {:error, :invalid_response} = WorkTranslation.translate([unit("title", "translate", "Tittel")], "no", "en")
   end
+
+  test "oversized texts stay whole and are reported, while in-budget siblings are sent" do
+    test = self()
+
+    Brando.AIStub.reply(fn prompt ->
+      send(test, {:batch, items(prompt)})
+      ~s({"1": "ok"})
+    end)
+
+    exact = unit("exact", "translate", "abcde")
+    large = unit("large", "translate", "abcdef")
+    html = unit("html", "translate", "<p>{{ user }}</p>", format: "html")
+    review = unit("review", "review", "a", current: "bc") |> Map.put(:source_previous, "def")
+
+    assert {:ok, %{texts: texts, problems: problems}} =
+             WorkTranslation.translate([large, exact, html, review], "no", "en", batch_chars: 5)
+
+    assert texts == %{"exact" => "ok"}
+    assert Map.keys(problems) |> Enum.sort() == ["html", "large", "review"]
+
+    for {key, [%{code: code, key: problem_key}]} <- problems do
+      assert problem_key == key
+      assert code == "too_long"
+    end
+
+    assert_received {:batch, [%{"source" => "abcde"}]}
+    refute_received {:batch, _}
+  end
+
+  test "HTML and review units exactly at the limit retain all of their texts" do
+    answer(& &1["source"])
+    html = unit("html", "translate", "<b>x</b>", format: "html")
+    review = unit("review", "review", "abc", current: "de") |> Map.put(:source_previous, "fgh")
+
+    assert {:ok, %{texts: %{"html" => "<b>x</b>", "review" => "abc"}, problems: %{}}} =
+             WorkTranslation.translate([html, review], "no", "en", batch_chars: 8)
+  end
 end
