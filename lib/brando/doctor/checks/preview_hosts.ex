@@ -36,9 +36,7 @@ defmodule Brando.Doctor.Checks.PreviewHosts do
 
       Brando.Tenant.mode() != :multi ->
         skipped(
-          dgettext("doctor", "preview_host has no effect with tenancy_mode %{mode}",
-            mode: inspect(Brando.Tenant.mode())
-          )
+          dgettext("doctor", "preview_host has no effect with tenancy_mode %{mode}", mode: inspect(Brando.Tenant.mode()))
         )
 
       true ->
@@ -105,8 +103,7 @@ defmodule Brando.Doctor.Checks.PreviewHosts do
      dgettext("doctor", "%{site}: its preview host is an environment's domain or redirect host of %{owner}",
        site: site.key,
        owner: owner.key
-     ),
-     dgettext("doctor", "remove the host from that environment to give the site its preview host")}
+     ), dgettext("doctor", "remove the host from that environment to give the site its preview host")}
   end
 
   defp cookie(domain) do
