@@ -1,0 +1,1 @@
+- Dropping several files on a multi block resolves their child module once and appends the children together in drop order.

@@ -44,9 +44,17 @@ defmodule Brando.Content.Blocks do
   """
   @spec build_module_block(term(), integer() | nil, integer() | nil, module(), atom()) :: changeset
   def build_module_block(module_reference, user_id, parent_id, source, type) do
-    {module_origin, module_id} = Content.SharedLibrary.reference(module_reference)
-    module = Content.fetch_module(module_id, module_origin)
+    module_reference
+    |> module_definition()
+    |> new_module_block(user_id, parent_id, source, type)
+  end
 
+  defp module_definition(reference) do
+    {origin, id} = Content.SharedLibrary.reference(reference)
+    {Content.fetch_module(id, origin), origin, id}
+  end
+
+  defp new_module_block({module, module_origin, module_id}, user_id, parent_id, source, type) do
     refs =
       (module.refs || [])
       |> remove_pk_from_refs()
@@ -90,8 +98,24 @@ defmodule Brando.Content.Blocks do
   """
   @spec build_media_drop_block(term(), String.t(), :image | :video, integer() | nil, module()) :: changeset
   def build_media_drop_block(module_reference, ref_name, kind, user_id, source) do
-    block_cs = build_module_block(module_reference, user_id, nil, source, :module_entry)
+    [block] = build_media_drop_blocks(module_reference, ref_name, [kind], user_id, source)
+    block
+  end
 
+  @doc "Builds one fresh child per dropped file, resolving their module once for the whole drop."
+  def build_media_drop_blocks(_reference, _ref_name, [], _user_id, _source), do: []
+
+  def build_media_drop_blocks(reference, ref_name, kinds, user_id, source) do
+    definition = module_definition(reference)
+
+    Enum.map(kinds, fn kind ->
+      definition
+      |> new_module_block(user_id, nil, source, :module_entry)
+      |> put_drop_ref(ref_name, kind)
+    end)
+  end
+
+  defp put_drop_ref(block_cs, ref_name, kind) do
     refs =
       block_cs
       |> Changeset.get_assoc(:refs, :struct)
