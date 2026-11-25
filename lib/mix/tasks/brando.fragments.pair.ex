@@ -10,6 +10,8 @@ defmodule Mix.Tasks.Brando.Fragments.Pair do
       mix brando.fragments.pair --apply
       mix brando.fragments.pair --site acme --environment production --apply
 
+  The command checks every fragment key in the environment and takes no positional arguments.
+
   Without `--apply` it changes nothing: it lists the keys it would link and
   the ones it cannot. It cannot link a key that two fragments hold in one
   language, nor one held by a fragment already linked to another fragment
@@ -41,7 +43,7 @@ defmodule Mix.Tasks.Brando.Fragments.Pair do
 
   @impl Mix.Task
   def run(args) do
-    {opts, _} = OptionParser.parse!(args, strict: @switches)
+    {opts, []} = Mix.Brando.parse_options!("brando.fragments.pair", args, @switches)
     Mix.Task.run("app.start")
     prefix = context!(opts)
 
