@@ -1051,9 +1051,106 @@
     }
   }
 
+  /* What a deploy may delete on the target: the listing, the keep list */
+  .publishing-review > p + * {
+    margin-top: 24px;
+  }
+
+  .publishing-review > * + * {
+    margin-top: 24px;
+  }
+
+  .publishing-review h3 {
+    margin: 0;
+    font-size: var(--brando-text-base);
+    font-weight: 500;
+  }
+
+  .publishing-review h3 + p {
+    margin-top: 4px;
+  }
+
+  .publishing-review-files,
+  .publishing-keep {
+    display: grid;
+    gap: 16px;
+  }
+
+  .publishing-entries {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      min-height: 44px;
+      padding: 8px 12px;
+    }
+
+    li + li {
+      border-top: 1px solid var(--brando-line);
+    }
+
+    label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    code {
+      font-size: var(--brando-text-sm);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .publishing-entry-files,
+  .publishing-entry-note {
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    font-size: var(--brando-text-sm);
+  }
+
+  .publishing-htaccess pre {
+    max-height: 320px;
+    margin: 8px 0 0;
+    overflow: auto;
+    font-size: var(--brando-text-sm);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .publishing-review-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .publishing-keep-add {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+
+    label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .btn {
+      min-height: 40px;
+    }
+  }
+
   @media (max-width: 600px) {
     .publishing-target {
       grid-template-columns: 1fr;
+    }
+
+    .publishing-keep-add {
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .publishing-public-key {

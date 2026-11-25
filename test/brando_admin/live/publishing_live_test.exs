@@ -579,6 +579,187 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     end
   end
 
+  describe "files on the target" do
+    setup context do
+      {:ok, _public_key} = Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+
+      :ok =
+        Brando.SSG.DeployFiles.write(
+          context.site,
+          :known_hosts,
+          Brando.SSGSSHFixtures.keyscan_line("example.test") <> "\n"
+        )
+
+      {:ok, listed} = Agent.start_link(fn -> [] end)
+      test_pid = self()
+
+      # The target holds what `listed` says: a listing names it on rsync's lines
+      put_test_env(:ssg_deploy_runner, fn
+        "ssh-keyscan", _args, _opts ->
+          {Brando.SSGSSHFixtures.keyscan_line("example.test") <> "\n", 0}
+
+        "rsync", args, _opts ->
+          send(test_pid, {:rsync, args})
+
+          case Enum.find(args, &String.starts_with?(&1, "--out-format=")) do
+            nil ->
+              {"", 0}
+
+            "--out-format=" <> format ->
+              nonce = format |> String.split(" ") |> hd()
+              {Enum.map_join(Agent.get(listed, & &1), &"#{nonce} *deleting  |#{&1}\n"), 0}
+          end
+      end)
+
+      %{listed: listed}
+    end
+
+    defp ready_build(context) do
+      {:ok, build} = Builds.request_build(Registry.get_site(context.site.id), context.environment, [])
+      File.mkdir_p!(build.build_path)
+      File.write!(Path.join(build.build_path, "index.html"), "built")
+      {:ok, ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+      ready
+    end
+
+    defp test_connection(view) do
+      view |> element("#publishing-ssh button[phx-click=test_connection]") |> render_click()
+      render_async(view)
+    end
+
+    defp tick(view, names), do: render_change(view, "tick_target_files", %{"keep" => names})
+
+    defp state(context),
+      do: context.site |> Brando.SSG.DeployFiles.read(:target_state) |> elem(1) |> :erlang.binary_to_term()
+
+    test "review, confirm and deploy", context do
+      Agent.update(context.listed, fn _ -> ["old.html", "mine/", "mine/notes.txt", ".well-known/", ".well-known/x"] end)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      refute has_element?(view, "#target-files")
+
+      test_connection(view)
+      assert has_element?(view, "[data-testid=dry-run-ok]")
+      assert has_element?(view, "#target-files[data-kind=review]")
+      assert has_element?(view, ~s(#target-files input[value=".well-known/"][checked][disabled]))
+      assert has_element?(view, ~s{#target-files input[value="old.html"]:not([checked])})
+
+      tick(view, ["mine/"])
+
+      view
+      |> element("#publishing-review button[phx-click=confirm_target_review][data-confirm]")
+      |> render_click()
+
+      assert %{reviewed: true, confirmed: ["old.html"]} = state(context)
+      assert "mine/" in Registry.get_site(context.site.id).deploy_config.keep_paths
+      assert has_element?(view, "#publishing-review li", "mine/")
+      refute has_element?(view, "#target-files")
+
+      Agent.update(context.listed, fn _ -> [] end)
+      build = ready_build(context)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      view |> element("#ssg-build-#{build.id} button[phx-click=deploy]") |> render_click()
+
+      assert Builds.get_build(build.id).status == :deployed
+      assert %{uploaded: ["index.html"], confirmed: []} = state(context)
+    end
+
+    test "unknown files are kept, or deleted by a deploy of the build deployed when it runs", context do
+      Brando.SSGSSHFixtures.review_target(context.site, "deploy@example.test:/srv/www")
+      first = ready_build(context)
+      Agent.update(context.listed, fn _ -> ["stray.html", "logs/", "logs/a.log"] end)
+      {:ok, _deployed} = Brando.SSG.Deploy.deploy(first, creator: context.current_user)
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      assert has_element?(view, "#target-files[data-kind=unknown]")
+      assert has_element?(view, "#target-files li", "stray.html")
+
+      tick(view, ["logs/"])
+      view |> element("#publishing-review button[phx-click=keep_unknown_files]") |> render_click()
+      assert "logs/" in Registry.get_site(context.site.id).deploy_config.keep_paths
+      assert has_element?(view, ~s(#target-files input[value="logs/"][checked][disabled]))
+
+      # The job runs inline here: it deploys the deployed build again, which
+      # deletes them (Brando.SSG.TargetReviewTest has a newer deploy between)
+      Agent.update(context.listed, fn _ -> [] end)
+      flush_rsync()
+
+      view
+      |> element("#publishing-review button[phx-click=delete_unknown_files][data-confirm]")
+      |> render_click()
+
+      assert_received {:rsync, ["-e", _ssh, _timeout, "-az", "--delete", "--from0", "--filter=merge " <> _ | _]}
+      assert Builds.get_build(first.id).status == :deployed
+      assert %{confirmed: [], uploaded: ["index.html"]} = state(context)
+      refute has_element?(view, "#target-files")
+    end
+
+    test "a Confirm for a listing that is no longer the stored one is refused, and the current one shown", context do
+      Agent.update(context.listed, fn _ -> ["old.html"] end)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      test_connection(view)
+      assert has_element?(view, "#target-files li", "old.html")
+
+      # Another admin's test finds more
+      Agent.update(context.listed, fn _ -> ["old.html", "theirs.html"] end)
+      {:ok, _found} = Brando.SSG.TargetReview.review(context.site, context.current_user)
+
+      view |> element("#publishing-review button[phx-click=confirm_target_review]") |> render_click()
+      assert %{reviewed: false} = state(context)
+      assert has_element?(view, "#target-files li", "theirs.html")
+    end
+
+    test "the keep list takes and loses a path", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      view |> form("#add-keep-path", %{keep_path: "uploads/"}) |> render_submit()
+      assert has_element?(view, "#publishing-review li", "uploads/")
+
+      view
+      |> element(~s(#publishing-review button[phx-click=remove_keep_path][phx-value-path="cgi-bin/"]))
+      |> render_click()
+
+      assert Registry.get_site(context.site.id).deploy_config.keep_paths == [".well-known/", "uploads/"]
+    end
+
+    test "a user who may open the screen but not publish sees no file names and can do nothing", context do
+      Agent.update(context.listed, fn _ -> ["secret-file.html"] end)
+      {:ok, %{digest: digest}} = Brando.SSG.TargetReview.review(context.site, context.current_user)
+
+      editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _} = Brando.Tenant.Access.grant(editor, context.site, :editor)
+      conn = context.conn |> recycle() |> log_in_user(editor)
+      {:ok, view, html} = live(conn, "/admin/config/publishing")
+      flush_rsync()
+
+      refute html =~ "secret-file"
+
+      for {event, params} <- [
+            {"confirm_target_review", %{"digest" => digest}},
+            {"keep_unknown_files", %{}},
+            {"delete_unknown_files", %{"digest" => digest}},
+            {"add_keep_path", %{"keep_path" => "x/"}},
+            {"remove_keep_path", %{"path" => ".well-known/"}},
+            {"test_connection", %{}}
+          ] do
+        render_click(view, event, params)
+        render_async(view)
+      end
+
+      refute render(view) =~ "secret-file"
+      assert %{reviewed: false} = state(context)
+      assert Registry.get_site(context.site.id).deploy_config.keep_paths == [".well-known/", "cgi-bin/"]
+      refute_received {:rsync, _}
+    end
+
+    defp flush_rsync do
+      receive do
+        {:rsync, _args} -> flush_rsync()
+      after
+        0 -> :ok
+      end
+    end
+  end
+
   describe "SSH access takes a recent confirmation" do
     setup %{conn: conn} = context do
       token = get_session(conn, :user_token)
@@ -607,6 +788,21 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     test "to accept a host key", context do
       {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
       assert render_click(view, "accept_host_keys", %{}) =~ "reauth-modal"
+    end
+
+    test "to confirm a review, delete unknown files or take a path off the keep list", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      for {event, params} <- [
+            {"confirm_target_review", %{"digest" => "d"}},
+            {"delete_unknown_files", %{"digest" => "d"}},
+            {"remove_keep_path", %{"path" => ".well-known/"}}
+          ] do
+        assert render_click(view, event, params) =~ "reauth-modal"
+        render_click(view, "brando:reauth:cancel", %{})
+      end
+
+      assert Registry.get_site(context.site.id).deploy_config.keep_paths == [".well-known/", "cgi-bin/"]
     end
   end
 end

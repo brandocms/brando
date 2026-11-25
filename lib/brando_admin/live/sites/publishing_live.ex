@@ -6,12 +6,13 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   use Gettext, backend: Brando.Gettext
 
   # Changing where a site deploys to (its target and webhook, its SSH key and
-  # accepted host keys), building (which may deploy at once), deploying and
-  # rolling back ask for the password, a code or a passkey when the session
-  # has not confirmed lately.
+  # accepted host keys) or what a deploy may delete there, building (which
+  # may deploy at once), deploying and rolling back ask for the password, a
+  # code or a passkey when the session has not confirmed lately.
   on_mount(
     {BrandoAdmin.Reauth,
-     events: ~w(save_deploy_config rotate_deploy_key accept_host_keys deploy rollback request_build schedule_build)}
+     events:
+       ~w(save_deploy_config rotate_deploy_key accept_host_keys confirm_target_review delete_unknown_files remove_keep_path deploy rollback request_build schedule_build)}
   )
 
   # Builds, deploys and rollbacks report on their rows
@@ -24,6 +25,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   alias Brando.SSG.Builds
   alias Brando.SSG.DeployFiles
   alias Brando.SSG.SSH
+  alias Brando.SSG.TargetPaths
+  alias Brando.SSG.TargetReview
   alias Brando.Tenant.Registry
   alias Brando.Worker.SSGBuild
   alias Brando.Worker.SSGDeploy
@@ -50,6 +53,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
          |> assign(:default_scheduled_at, default_scheduled_at())
          |> assign(:connection_test, nil)
+         |> assign(:review_error, nil)
+         |> assign(:ticked, MapSet.new())
          |> assign(:sandbox, sandbox_owner(socket))
          |> refresh()
          |> assign_strategy()}
@@ -243,6 +248,14 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           public_key={@public_key}
           key_problem={@key_problem}
           connection_test={@connection_test}
+          can_deploy?={BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+        />
+
+        <.target_files
+          :if={@target}
+          target={@target}
+          ticked={@ticked}
+          review_error={@review_error}
           can_deploy?={BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
         />
 
@@ -444,6 +457,192 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     """
   end
 
+  attr :target, :map
+  attr :ticked, :any
+  attr :review_error, :any
+  attr :can_deploy?, :boolean
+
+  # What a deploy may delete on the target (Brando.SSG.TargetReview)
+  defp target_files(assigns) do
+    assigns =
+      assign(assigns,
+        entries:
+          if(assigns.target.found, do: TargetPaths.top_level(assigns.target.found.paths, assigns.target.keep), else: [])
+      )
+
+    ~H"""
+    <section class="environment-panel publishing-review" id="publishing-review">
+      <h2>{gettext("Files on the target")}</h2>
+      <p>
+        {gettext(
+          "A deploy deletes only files Brando uploaded or that you confirmed here, and never a path on the keep list. Other files on the target stay."
+        )}
+      </p>
+
+      <div :if={@review_error} class="alert environment-hint" role="alert" data-testid="review-error">
+        <.icon name="triangle-alert" />
+        <span>{review_error(@review_error)}</span>
+      </div>
+
+      <div :if={!@target.reviewed && is_nil(@target.found)} class="alert environment-hint" role="status">
+        <.icon name="info" />
+        <span>
+          {gettext(
+            "Review the target before its first deploy: once the connection test connects, it lists what the target holds."
+          )}
+        </span>
+      </div>
+
+      <div :if={@target.reviewed && @entries == []} class="alert environment-hint" role="status" data-testid="target-reviewed">
+        <.icon name="circle-check" />
+        <span :if={is_nil(@target.found)}>
+          {gettext("Reviewed. The next deploy deletes what you confirmed, and nothing else Brando did not upload.")}
+        </span>
+        <span :if={@target.found}>
+          {gettext("Reviewed. The last deploy found no files on the target that Brando did not put there.")}
+        </span>
+      </div>
+
+      <form
+        :if={@target.found && (!@target.reviewed || @entries != [])}
+        id="target-files"
+        class="publishing-review-files"
+        phx-change="tick_target_files"
+        data-kind={if @target.reviewed, do: "unknown", else: "review"}
+      >
+        <div>
+          <h3>
+            {if @target.reviewed,
+              do: gettext("The target holds files Brando did not put there"),
+              else: gettext("Review before the first deploy")}
+          </h3>
+          <p :if={!@target.reviewed}>
+            {gettext(
+              "The target holds these entries. Tick what to keep: the first deploy deletes the rest. Deeper paths can be added to the keep list below."
+            )}
+          </p>
+          <p :if={@target.reviewed}>
+            {gettext("Deploys leave them. Keep the ticked ones, or delete the rest with a new deploy of the deployed build.")}
+          </p>
+        </div>
+
+        <div :if={@entries == []} class="environment-notice">{gettext("The target is empty.")}</div>
+
+        <ul :if={@entries != []} class="publishing-entries">
+          <li :for={entry <- @entries}>
+            <label class="environment-check">
+              <input
+                type="checkbox"
+                name="keep[]"
+                value={entry.name}
+                checked={entry.kept || MapSet.member?(@ticked, entry.name)}
+                disabled={entry.kept}
+              />
+              <code>{TargetReview.display(entry.name)}</code>
+            </label>
+            <span class="publishing-entry-files">
+              {ngettext("%{count} file", "%{count} files", entry.files)}
+            </span>
+            <span :if={entry.kept} class="badge">{gettext("Kept")}</span>
+            <span :if={!entry.kept && !TargetPaths.keep_entry?(entry.name)} class="publishing-entry-note">
+              {gettext("not kept by name: deploys leave it while it is ticked")}
+            </span>
+          </li>
+        </ul>
+
+        <details :if={@target.found[:htaccess]} class="publishing-htaccess">
+          <summary>.htaccess</summary>
+          <.htaccess value={@target.found.htaccess} />
+        </details>
+
+        <div class="environment-actions publishing-review-actions">
+          <button
+            :if={!@target.reviewed}
+            type="button"
+            class="btn btn--primary"
+            disabled={!@can_deploy?}
+            phx-click="confirm_target_review"
+            phx-value-digest={@target.found.digest}
+            data-confirm={gettext("Confirm? The first deploy deletes every entry you did not tick.")}
+            data-confirm-ok={gettext("Confirm")}
+          >
+            {gettext("Confirm")}
+          </button>
+          <button
+            :if={@target.reviewed}
+            type="button"
+            class="btn"
+            disabled={!@can_deploy?}
+            phx-click="keep_unknown_files"
+          >
+            {gettext("Keep ticked")}
+          </button>
+          <button
+            :if={@target.reviewed}
+            type="button"
+            class="btn btn--danger"
+            disabled={!@can_deploy?}
+            phx-click="delete_unknown_files"
+            phx-value-digest={@target.found.digest}
+            data-confirm={gettext("Delete the entries you did not tick? A deploy of the deployed build deletes them.")}
+            data-confirm-ok={gettext("Delete")}
+          >
+            {gettext("Delete the rest")}
+          </button>
+        </div>
+      </form>
+
+      <div class="publishing-keep">
+        <h3>{gettext("Keep list")}</h3>
+        <p>{gettext("Paths relative to the target, a directory ending in /. A deploy never deletes them.")}</p>
+        <ul class="publishing-entries">
+          <li :for={path <- @target.keep}>
+            <code>{path}</code>
+            <button
+              type="button"
+              class="btn btn--sm"
+              disabled={!@can_deploy?}
+              phx-click="remove_keep_path"
+              phx-value-path={path}
+            >
+              {gettext("Remove")}
+            </button>
+          </li>
+        </ul>
+        <form id="add-keep-path" class="publishing-keep-add" phx-submit="add_keep_path">
+          <label>
+            <span>{gettext("Path to keep")}</span>
+            <input name="keep_path" placeholder="uploads/" autocomplete="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="btn" disabled={!@can_deploy?}>{gettext("Add")}</button>
+        </form>
+      </div>
+    </section>
+    """
+  end
+
+  attr :value, :any
+
+  defp htaccess(%{value: {:ok, text}} = assigns) do
+    assigns = assign(assigns, :text, if(String.valid?(text), do: text, else: inspect(text)))
+
+    ~H"""
+    <pre>{@text}</pre>
+    """
+  end
+
+  defp htaccess(%{value: :too_large} = assigns) do
+    ~H"""
+    <p>{gettext("It is larger than 32 KB and is not shown.")}</p>
+    """
+  end
+
+  defp htaccess(assigns) do
+    ~H"""
+    <p>{gettext("It could not be fetched.")}</p>
+    """
+  end
+
   attr :result, :any
   attr :can_deploy?, :boolean
 
@@ -585,12 +784,17 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     user = socket.assigns.current_user
     sandbox = socket.assigns.sandbox
 
+    # Once it connects, an unreviewed target is listed for its review
     {:noreply,
      socket
      |> assign(:connection_test, :running)
      |> start_async(:connection_test, fn ->
        if sandbox, do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
-       SSH.test_connection(site, user)
+
+       case SSH.test_connection(site, user) do
+         {:ok, %{dry_run: :ok}} = result -> {result, TargetReview.review(site, user)}
+         result -> {result, nil}
+       end
      end)}
   end
 
@@ -608,6 +812,43 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   def handle_event("accept_host_keys", _params, socket),
     do: toast_error(socket, gettext("Test the connection first."))
+
+  # The ticks are the server's: Confirm, Keep and Delete act on them
+  def handle_event("tick_target_files", params, socket),
+    do: {:noreply, assign(socket, :ticked, MapSet.new(List.wrap(params["keep"])))}
+
+  def handle_event("confirm_target_review", %{"digest" => digest}, socket) do
+    socket.assigns.site
+    |> TargetReview.confirm(socket.assigns.current_user, :review, digest, MapSet.to_list(socket.assigns.ticked))
+    |> target_changed(socket, gettext("The target is reviewed. Deploys delete only what Brando uploads from now on."))
+  end
+
+  def handle_event("keep_unknown_files", _params, socket) do
+    socket.assigns.site
+    |> TargetReview.keep(socket.assigns.current_user, MapSet.to_list(socket.assigns.ticked))
+    |> target_changed(socket, gettext("The ticked entries are on the keep list"))
+  end
+
+  def handle_event("delete_unknown_files", %{"digest" => digest}, socket) do
+    socket.assigns.site
+    |> TargetReview.delete_unknown(socket.assigns.current_user, digest, MapSet.to_list(socket.assigns.ticked))
+    |> target_changed(
+      socket,
+      gettext("A deploy of the deployed build is queued: it deletes the entries you did not tick")
+    )
+  end
+
+  def handle_event("add_keep_path", %{"keep_path" => path}, socket) do
+    socket.assigns.site
+    |> TargetReview.add_keep_path(socket.assigns.current_user, String.trim(path))
+    |> target_changed(socket, gettext("Path added to the keep list"))
+  end
+
+  def handle_event("remove_keep_path", %{"path" => path}, socket) do
+    socket.assigns.site
+    |> TargetReview.remove_keep_path(socket.assigns.current_user, path)
+    |> target_changed(socket, gettext("Path removed from the keep list"))
+  end
 
   # The job reports on the build's row, or as a toast elsewhere (BrandoAdmin.Work)
   def handle_event(action, %{"id" => id}, socket) when action in ["deploy", "rollback"] do
@@ -637,10 +878,31 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   def handle_info({:ssg_build_updated, _build}, socket), do: {:noreply, refresh(socket)}
 
   @impl Phoenix.LiveView
-  def handle_async(:connection_test, {:ok, result}, socket), do: {:noreply, assign(socket, :connection_test, result)}
+  def handle_async(:connection_test, {:ok, {result, review}}, socket) do
+    review_error =
+      case review do
+        {:error, reason} -> reason
+        _listed -> nil
+      end
+
+    {:noreply, socket |> assign(connection_test: result, review_error: review_error) |> refresh()}
+  end
 
   def handle_async(:connection_test, {:exit, _reason}, socket),
     do: {:noreply, assign(socket, :connection_test, {:error, :test_failed})}
+
+  # The screen shows what is stored now, whichever way it went
+  defp target_changed(result, socket, done) do
+    case result do
+      {:error, reason} ->
+        socket = refresh(socket)
+        toast_error(socket, review_error(reason))
+
+      _done ->
+        send(self(), {:toast, done})
+        {:noreply, socket |> assign(ticked: MapSet.new(), review_error: nil) |> refresh()}
+    end
+  end
 
   defp deploy_messages("deploy", version) do
     [
@@ -695,6 +957,24 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     |> assign(:environments, site.environments |> Enum.sort_by(&{not &1.live, &1.name}))
     |> assign(:builds, Builds.list_builds(site))
     |> assign_key(site)
+    |> assign_target(site)
+  end
+
+  # Remote file names, for those who may manage the site's publishing
+  defp assign_target(socket, site) do
+    target =
+      with true <- socket.assigns.can_manage? and rsync_saved?(site),
+           {:ok, %{} = target} <- TargetReview.status(site, socket.assigns.current_user) do
+        target
+      else
+        _none -> nil
+      end
+
+    # Ticks are for the list they were made on
+    digest = fn target -> target && target.found && target.found.digest end
+    ticked = if digest.(target) == digest.(socket.assigns[:target]), do: socket.assigns[:ticked], else: MapSet.new()
+
+    assign(socket, target: target, ticked: ticked || MapSet.new())
   end
 
   # The public key, for those who may change it; the private key stays in its file
@@ -770,6 +1050,30 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     do: gettext("rsync exited with status %{status}: %{output}", status: status, output: SSH.remote_output(output))
 
   defp connection_error(_reason), do: gettext("Could not test the connection.")
+
+  defp review_error(:forbidden), do: connection_error(:forbidden)
+  defp review_error(:not_rsync), do: connection_error(:not_rsync)
+
+  defp review_error(:stale_listing),
+    do: gettext("What the target holds changed since this page showed it. Look at the current list before you confirm.")
+
+  defp review_error(:target_changed),
+    do: gettext("The target, port or accepted host keys changed. Test the connection again.")
+
+  defp review_error(:deploy_running), do: gettext("A deploy is running. Try again when it has finished.")
+
+  defp review_error(:listing_cut_short),
+    do: gettext("The target holds too many files to list, so it cannot be reviewed here.")
+
+  defp review_error(:invalid_keep_path),
+    do: gettext("A path to keep is relative, of letters, digits and . _ ~ + @ , - and spaces, with no . or .. segment.")
+
+  defp review_error({:invalid_keep_paths, changeset}), do: BrandoAdmin.Utils.format_changeset_errors(changeset)
+
+  defp review_error({:target_state_unreadable, _reason}),
+    do: gettext("The target's state could not be read. Test the connection to review the target again.")
+
+  defp review_error(reason), do: gettext("Could not list the target: %{reason}", reason: connection_error(reason))
 
   defp can_manage?(user, site), do: Builds.can_manage?(user, site)
 
