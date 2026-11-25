@@ -27,6 +27,7 @@ const SORTABLE_RUNTIME_CLASSES = [
 
 // Block inputs while another editor's changes arrive (field presence,
 // #2992): see `Presence/pendingInputs.js`.
+window.addEventListener('pagehide', pending.clear)
 document.addEventListener('input', ({ target }) => pending.typed(target), true)
 document.addEventListener('focusin', ({ target }) => pending.focused(target), true)
 
