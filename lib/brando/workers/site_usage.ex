@@ -50,8 +50,6 @@ defmodule Brando.Worker.SiteUsage do
       # Deleted since it was queued
       nil -> :ok
     end
-
-    :ok
   end
 
   defp run(%{"all" => true}) do
@@ -68,5 +66,6 @@ defmodule Brando.Worker.SiteUsage do
   rescue
     error ->
       Logger.error("[Brando.Sites.Usage] Could not measure #{site.key}: #{Exception.message(error)}")
+      {:error, error}
   end
 end
