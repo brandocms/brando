@@ -21834,17 +21834,17 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "The target holds %{count} paths, more than the %{limit} Brando lists, so it cannot be reviewed here."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
 msgid "The target holds files Brando did not put there"
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The target holds these entries. Tick what to keep: the first deploy deletes the rest. Deeper paths can be added to the keep list below."
-msgstr ""
-
-#: lib/brando_admin/live/sites/publishing_live.ex
-#, elixir-autogen, elixir-format
-msgid "The target holds too many files to list, so it cannot be reviewed here."
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex

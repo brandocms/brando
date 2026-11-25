@@ -531,8 +531,20 @@ defmodule Brando.SSGBuildsTest do
     # An rsync target reviewed, as one is before its first deploy
     defp with_target(build, strategy, target) do
       {:ok, build} = Builds.update(build, %{deploy_config: %{"strategy" => strategy, "target" => target}})
-      if strategy == "rsync", do: Brando.SSGSSHFixtures.review_target(Registry.get_site(build.site_id), target)
+      if strategy == "rsync", do: rsync_site(build.site_id, target)
       build
+    end
+
+    # A deploy goes only to the site's own reviewed target
+    defp rsync_site(site_id, target) do
+      site = Registry.get_site(site_id)
+      config = %{(site.deploy_config || %DeployConfig{}) | strategy: :rsync, target: target, port: 22}
+
+      Ecto.Query.from(s in Brando.Sites.Site, where: s.id == ^site_id)
+      |> Brando.Repo.update_all([set: [deploy_config: config]], prefix: "public")
+
+      Cache.invalidate()
+      Brando.SSGSSHFixtures.review_target(Registry.get_site(site_id), target)
     end
 
     defp recording_runner(command, args, _opts) do

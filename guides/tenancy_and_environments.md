@@ -2666,8 +2666,9 @@ port, unless other keys were accepted after the test, which then asks for a
 new one. A host that answers with some of the accepted keys and no other is
 accepted (`ssh-keyscan` may lose one of its connections). When the host
 offers a key that is not among those accepted, the test shows both, and
-accepting the new ones is for a host you know was rebuilt or replaced. A
-test's answer is not shown when the settings were saved or the key rotated
+accepting the new ones is for a host you know was rebuilt or replaced; it
+waits for a running deploy, and asks to try again when that takes more than a
+few seconds. A test's answer is not shown when the settings were saved or the key rotated
 while it ran. With accepted keys, the test runs `rsync -an` from an empty
 directory to the target, which sends and deletes nothing, and says whether
 ssh, the key and rsync on the host work, or what the host answered; for a
@@ -2730,8 +2731,9 @@ The **keep list**, under **Files on the target** on the Publishing screen,
 holds paths relative to the target, a directory's ending in `/`:
 `.well-known/` and `cgi-bin/` unless changed, at most 100, of letters, digits,
 `. _ ~ + @ , -` and spaces inside a name, with no `.` or `..` segment. A kept
-path is never deleted, whatever else says it may be; a file of the same name in
-the build is still uploaded. The list stays when the target changes.
+path is never deleted, whatever else says it may be, and an entry keeps its
+path and everything under it, with or without the `/`; a file of the same name
+in the build is still uploaded. The list stays when the target changes.
 
 **Before the first deploy to a target**, review it. Once **Test connection**
 connects, it lists everything the target holds (a dry run with `--delete`
@@ -2743,10 +2745,10 @@ ticked: tick what else to keep, add deeper paths to the keep list, and press
 entries go on the keep list (a ticked name with characters the list does not
 take is not confirmed, so it stays, but it shows again among the unknown
 files); the first deploy deletes the rest.
-Confirm names the listing the screen showed: when another admin's test has
-listed the target again since, it is refused and the screen shows the current
-listing. A listing that failed, or found more than 100,000 paths, cannot be
-confirmed.
+Confirm names the listing the screen showed, with the keep list that marked
+it: when another admin's test has listed the target again since, or the keep
+list changed, it is refused and the screen shows the current listing. A
+listing that failed, or found more than 100,000 paths, cannot be confirmed.
 
 A deploy to a target that is not the reviewed one is refused, the automatic
 deploy after a build too, with a build-log line that names the review and the
@@ -2787,7 +2789,9 @@ deleting and the keep list are for those who may save the deploy settings,
 and confirming, deleting and taking a path off the keep list ask for a recent
 confirmation. A file the host puts at a path where the build has a directory
 in the moment between the listing and the run is the one thing a deploy can
-still replace.
+still replace. A target that holds more than 100,000 paths cannot be deployed
+to: each deploy lists the whole target first, and refuses with a build-log line
+that says how many paths it found.
 
 ### Apache and LiteSpeed targets
 

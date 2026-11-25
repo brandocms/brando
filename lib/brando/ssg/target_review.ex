@@ -29,14 +29,13 @@ defmodule Brando.SSG.TargetReview do
     `:unknown` confirms the rest, and `delete_unknown/4` queues a deploy of
     the site's deployed build when the job runs.
 
-  Each acts for someone who may manage the site's publishing
-  (`Brando.SSG.Builds.can_manage?/2`), on the site as stored.
+  Each acts for someone who may change where the site deploys
+  (`Brando.SSG.SSH.may_act?/2`), on the site as stored.
   """
 
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
   alias Brando.SSG.Build
-  alias Brando.SSG.Builds
   alias Brando.SSG.DeployFiles
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetHtaccess
@@ -53,7 +52,8 @@ defmodule Brando.SSG.TargetReview do
 
   @typedoc """
   What the target was last found to hold: its paths, a digest the screen
-  names it by, and for a review the `.htaccess` at its root (`{:ok, text}`,
+  names it by (with the keep list it was shown with, from `status/2` and
+  `review/3`), and for a review the `.htaccess` at its root (`{:ok, text}`,
   `:too_large`, `{:error, reason}`, or nil when there is none).
   """
   @type found :: %{paths: [TargetPaths.path()], digest: String.t(), htaccess: term()}
@@ -97,7 +97,7 @@ defmodule Brando.SSG.TargetReview do
            target: target,
            port: port,
            reviewed: match?(%{reviewed: true}, current),
-           found: current && current.found,
+           found: current && current.found && shown(current.found, site),
            keep: keep_paths(site)
          }}
       else
@@ -159,7 +159,7 @@ defmodule Brando.SSG.TargetReview do
           block: block_written_to?(site, target)
         }
 
-        with :ok <- write_state(site, state), do: {:ok, found}
+        with :ok <- write_state(site, state), do: {:ok, shown(found, site)}
     end
   end
 
@@ -179,7 +179,7 @@ defmodule Brando.SSG.TargetReview do
   defp confirm_stored(site, kind, digest, ticked) do
     with {:ok, target, port} <- stored_target(site),
          {:ok, state} <- current_state(site, target, port),
-         :ok <- confirmable(state, kind, digest),
+         :ok <- confirmable(state, kind, digest, site),
          {:ok, keep} <- keep_ticked(site, state.found, ticked) do
       ticked = MapSet.new(ticked)
 
@@ -194,11 +194,16 @@ defmodule Brando.SSG.TargetReview do
     end
   end
 
-  defp confirmable(%{found: %{digest: digest}, reviewed: reviewed}, kind, digest)
-       when (kind == :review and not reviewed) or (kind == :unknown and reviewed),
-       do: :ok
+  defp confirmable(%{found: %{} = found, reviewed: reviewed}, kind, digest, site)
+       when (kind == :review and not reviewed) or (kind == :unknown and reviewed) do
+    if shown(found, site).digest == digest, do: :ok, else: {:error, :stale_listing}
+  end
 
-  defp confirmable(_state, _kind, _digest), do: {:error, :stale_listing}
+  defp confirmable(_state, _kind, _digest, _site), do: {:error, :stale_listing}
+
+  # A listing as the screen shows it, with the keep list that marks it: its
+  # digest names both
+  defp shown(found, site), do: %{found | digest: TargetPaths.digest({found.digest, keep_paths(site)})}
 
   @doc "Adds the ticked top-level entries of the unknown files to the keep list, for `actor`."
   @spec keep(Site.t(), term(), [String.t()]) :: :ok | {:error, term()}
@@ -288,13 +293,9 @@ defmodule Brando.SSG.TargetReview do
     plan = TargetPaths.plan(build.build_path, state.uploaded ++ state.confirmed, keep, TargetHtaccess.hidden(htaccess))
     plan = %{plan | upload: plan.upload -- TargetHtaccess.replaced(htaccess)}
     source = String.trim_trailing(build.build_path, "/") <> "/"
-    # A run that fails halfway may have written the block
-    uploading =
-      Map.merge(state, %{uploaded: union(state.uploaded, plan.upload), block: block_written?(state) or htaccess == :write})
 
     with {:ok, listing} <- listing(site, target, port, opts),
          :ok <- check_collisions(plan, listing),
-         :ok <- write_state(site, uploading, :uploaded_list),
          {:ok, notes} <- run(build, source, state, plan, htaccess, keep, opts) do
       deployed = Map.merge(state, %{uploaded: plan.upload, confirmed: [], found: nil, block: htaccess == :write})
       # The merged file is the host's, not unknown
@@ -313,14 +314,19 @@ defmodule Brando.SSG.TargetReview do
   end
 
   # The real run: the merged `.htaccess` first, as rsync keeps the first of
-  # two files of one name, then the build
+  # two files of one name, then the build. The build's paths count as
+  # uploaded, and a block as written (a run that fails halfway may have
+  # written it), in the last write before it.
   defp run(%Build{site: site} = build, source, state, plan, htaccess, keep, opts) do
     %{target: target, port: port} = state
     dir = temporary_dir("brando-ssg-merged")
+    block? = block_written?(state) or htaccess == :write
+    uploading = Map.merge(state, %{uploaded: union(state.uploaded, plan.upload), block: block?})
 
     try do
       with {:ok, step} <- TargetHtaccess.prepare(htaccess, build, target, port, keep, dir, opts),
            :ok <- DeployFiles.write(site, :filter, [step.rules, plan.rules]),
+           :ok <- write_state(site, uploading, :uploaded_list),
            {:ok, _output} <-
              SSH.rsync(
                site,
@@ -349,16 +355,13 @@ defmodule Brando.SSG.TargetReview do
 
   defp filter_args(site), do: ["--from0", "--filter=merge " <> DeployFiles.path(site, :filter)]
 
-  # The build's own target: one reviewed, with the host keys accepted now
+  # The build's own target, still the site's: one reviewed, with the host
+  # keys accepted now
   defp reviewed(state, site, target, port, keys) do
-    case for_target(state, target, port, keys) do
-      %{reviewed: true} = state ->
-        {:ok, state}
-
-      _other ->
-        if match?({:ok, ^target, ^port}, stored_target(site)),
-          do: {:error, :target_not_reviewed},
-          else: {:error, :build_target_changed}
+    cond do
+      not match?({:ok, ^target, ^port}, stored_target(site)) -> {:error, :build_target_changed}
+      match?(%{reviewed: true}, for_target(state, target, port, keys)) -> {:ok, state}
+      true -> {:error, :target_not_reviewed}
     end
   end
 
@@ -424,7 +427,8 @@ defmodule Brando.SSG.TargetReview do
   end
 
   defp limited(paths) do
-    if length(paths) > @listing_limit, do: {:error, :listing_cut_short}, else: {:ok, Enum.sort(paths)}
+    count = length(paths)
+    if count > @listing_limit, do: {:error, {:listing_cut_short, count, @listing_limit}}, else: {:ok, Enum.sort(paths)}
   end
 
   defp fetch_htaccess(site, target, port, opts) do
@@ -503,10 +507,10 @@ defmodule Brando.SSG.TargetReview do
 
   defp stored_target(%Site{}), do: {:error, :not_rsync}
 
-  # The site as stored, for someone who may manage its publishing
+  # The site as stored, for someone who may change where it deploys
   defp acting(%Site{id: id}, actor, fun) do
     case Registry.get_site(id) do
-      %Site{} = site -> if Builds.can_manage?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      %Site{} = site -> if SSH.may_act?(actor, site), do: fun.(site), else: {:error, :forbidden}
       nil -> {:error, :site_not_found}
     end
   end
@@ -545,8 +549,9 @@ defmodule Brando.SSG.TargetReview do
   def refusal_message({:target_state_not_written, :uploaded_list, reason}),
     do: "the list of files Brando uploads could not be written (#{inspect(reason)}), so nothing was copied."
 
-  def refusal_message(:listing_cut_short),
-    do: "the target holds more than #{@listing_limit} paths, too many to list before the deploy."
+  def refusal_message({:listing_cut_short, count, limit}),
+    do:
+      "the target holds #{count} paths, more than the #{limit} a deploy lists before it runs, so nothing was copied. Remove files from the target to deploy to it."
 
   def refusal_message(reason), do: TargetHtaccess.refusal_message(reason)
 

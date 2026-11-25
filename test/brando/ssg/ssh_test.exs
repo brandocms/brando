@@ -210,27 +210,16 @@ defmodule Brando.SSG.SSHTest do
     test "with capabilities, building alone is refused and deploying may", c do
       put_test_env(:authorization_mode, :groups)
       {:ok, _} = Brando.Authorization.Migration.run()
-      builder = publishing_member(c, "brando.publishing.build")
+      builder = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.build")
       assert Builds.can_manage?(builder, c.site)
 
       refused_everything(c, builder)
-      assert {:ok, _public_key} = SSH.ensure_key(c.site, publishing_member(c, "brando.publishing.deploy"))
-    end
 
-    defp publishing_member(c, capability) do
-      user = Brando.Factory.insert(:random_user, role: :editor)
-      {:ok, _} = Access.grant(user, c.site, :editor)
-      scope = Brando.Authorization.Scope.site(c.superuser, c.site)
-
-      {:ok, group} =
-        Brando.Authorization.Groups.create(
-          scope,
-          %{name: "Publishing #{System.unique_integer([:positive])}"},
-          ["brando.admin.access", "brando.publishing.read", capability]
-        )
-
-      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
-      user
+      assert {:ok, _public_key} =
+               SSH.ensure_key(
+                 c.site,
+                 Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
+               )
     end
   end
 
@@ -373,6 +362,33 @@ defmodule Brando.SSG.SSHTest do
       assert File.read!(DeployFiles.path(c.site, :known_hosts)) == rebuilt <> "\n"
     end
 
+    # A deploy reads the host keys again for its real run: a replaced server's
+    # keys must not arrive between its checks and that run
+    test "other host keys wait for a running deploy, the same ones do not", c do
+      :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222", other_host_key()) <> "\n")
+      {:ok, changed} = SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222")))
+
+      lock_conn =
+        start_supervised!(
+          {Postgrex, Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])}
+        )
+
+      key = Brando.Tenant.Lock.deploy_key(c.site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      assert {:error, :deploy_running} = SSH.accept_host_keys(c.site, c.superuser, changed)
+      assert [%{data: old}] = SSH.accepted_keys(c.site, @target, 2222)
+      assert old == other_host_key()
+
+      {:ok, same} =
+        SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222", other_host_key())))
+
+      assert :ok = SSH.accept_host_keys(c.site, c.superuser, same)
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      assert :ok = SSH.accept_host_keys(c.site, c.superuser, changed)
+    end
+
     # The source directory is the dry run's own: what is in it is not removed with it
     test "removes only the empty directory it made", c do
       :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222") <> "\n")
@@ -458,8 +474,6 @@ defmodule Brando.SSG.SSHTest do
 
       Brando.SSGSSHFixtures.trust_hosts(c.other, ["example.test"])
       build = ready_build(c.site, c.environment)
-      # A later change of port is the next build's
-      {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
 
       assert {:ok, %{status: :deployed}} = Deploy.deploy(build, runner: runner(""))
 
@@ -482,8 +496,9 @@ defmodule Brando.SSG.SSHTest do
     end
 
     test "of a build from before the port goes to 22", c do
-      c.site |> Brando.SSGSSHFixtures.trust_hosts(["example.test"]) |> Brando.SSGSSHFixtures.review_target(@target)
-      build = ready_build(c.site, c.environment)
+      {:ok, site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
+      site |> Brando.SSGSSHFixtures.trust_hosts(["example.test"]) |> Brando.SSGSSHFixtures.review_target(@target)
+      build = ready_build(site, c.environment)
       {:ok, build} = Builds.update(build, %{deploy_config: Map.delete(build.deploy_config, "port")})
 
       assert {:ok, _deployed} = Deploy.deploy(build, runner: runner(""))

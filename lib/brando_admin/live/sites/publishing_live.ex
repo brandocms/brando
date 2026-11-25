@@ -1098,6 +1098,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp connection_error(:host_keys_changed),
     do: gettext("Other host keys were accepted after the test. Test the connection again.")
 
+  defp connection_error(:deploy_running), do: review_error(:deploy_running)
   defp connection_error(:host_key_not_accepted), do: gettext("No host key is accepted for the target's host and port.")
 
   defp connection_error(:host_key_rejected),
@@ -1130,8 +1131,12 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   defp review_error(:deploy_running), do: gettext("A deploy is running. Try again when it has finished.")
 
-  defp review_error(:listing_cut_short),
-    do: gettext("The target holds too many files to list, so it cannot be reviewed here.")
+  defp review_error({:listing_cut_short, count, limit}),
+    do:
+      gettext("The target holds %{count} paths, more than the %{limit} Brando lists, so it cannot be reviewed here.",
+        count: count,
+        limit: limit
+      )
 
   defp review_error(:invalid_keep_path),
     do: gettext("A path to keep is relative, of letters, digits and . _ ~ + @ , - and spaces, with no . or .. segment.")

@@ -162,7 +162,12 @@ defmodule Brando.SSG.TargetReviewTest do
                TargetReview.review(c.site, c.superuser, runner: runner(["a.html"], status: 23))
 
       many = for n <- 1..100_001, do: "f#{n}"
-      assert {:error, :listing_cut_short} = TargetReview.review(c.site, c.superuser, runner: runner(many))
+
+      assert {:error, {:listing_cut_short, 100_001, 100_000} = reason} =
+               TargetReview.review(c.site, c.superuser, runner: runner(many))
+
+      assert TargetReview.refusal_message(reason) =~ "100001 paths"
+      assert TargetReview.refusal_message(reason) =~ "100000"
       assert {:ok, %{found: nil}} = TargetReview.status(c.site, c.superuser)
     end
 
@@ -183,6 +188,17 @@ defmodule Brando.SSG.TargetReviewTest do
 
       assert %{reviewed: true, confirmed: ["old.html"]} = state(c.site)
       assert "new.html" in Registry.get_site(c.site.id).deploy_config.keep_paths
+    end
+
+    test "is confirmed only with the keep list it was shown with", c do
+      %{digest: shown} = review(c, ["cgi-bin/", "cgi-bin/run", "old.html"])
+      # Another admin takes cgi-bin/ off the keep list
+      assert :ok = TargetReview.remove_keep_path(c.site, c.superuser, "cgi-bin/")
+
+      assert {:error, :stale_listing} = TargetReview.confirm(c.site, c.superuser, :review, shown, [])
+      assert {:ok, %{found: %{digest: current}}} = TargetReview.status(c.site, c.superuser)
+      assert :ok = TargetReview.confirm(c.site, c.superuser, :review, current, ["cgi-bin/"])
+      assert %{confirmed: ["old.html"]} = state(c.site)
     end
 
     test "is for the target, port and host keys it listed", c do
@@ -242,6 +258,15 @@ defmodule Brando.SSG.TargetReviewTest do
       assert Builds.get_build(build.id).build_log =~ Brando.SSG.SSH.refusal_message(:build_target_changed)
     end
 
+    test "of a build made for the reviewed target, after the site moved to another, is refused", c do
+      Brando.SSGSSHFixtures.review_target(c.site, @target)
+      build = ready_build(c.site, c.environment)
+      {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{target: "deploy@example.test:/srv/#{c.site.key}"}})
+
+      assert {:error, :build_target_changed} = Deploy.deploy(build, runner: runner([]))
+      refute_received {:rsync, _}
+    end
+
     test "whose uploaded list cannot be written stops before the real run", c do
       Brando.SSGSSHFixtures.review_target(c.site, @target)
       build = ready_build(c.site, c.environment)
@@ -261,6 +286,20 @@ defmodule Brando.SSG.TargetReviewTest do
       assert "-an" in args
       refute_received {:rsync, _}
       assert TargetReview.refusal_message({:target_state_not_written, :uploaded_list, :eisdir}) =~ "nothing was copied"
+    end
+
+    test "whose filter cannot be written counts none of the build's paths as uploaded", c do
+      Brando.SSGSSHFixtures.review_target(c.site, @target)
+      build = ready_build(c.site, c.environment)
+      listing = runner(["host.html"])
+
+      blocking = fn "rsync", args, opts ->
+        File.mkdir_p!(Path.join(DeployFiles.path(c.site, :filter), "blocked"))
+        listing.("rsync", args, opts)
+      end
+
+      assert {:error, _reason} = Deploy.deploy(build, runner: blocking)
+      assert %{uploaded: []} = state(c.site)
     end
 
     test "keeps the build's paths as uploaded, and what else the target holds as unknown", c do
@@ -286,9 +325,12 @@ defmodule Brando.SSG.TargetReviewTest do
     test "are kept, or confirmed for a deploy of the deployed build when the job runs", c do
       assert :ok = TargetReview.keep(c.site, c.superuser, ["logs/"])
       assert "logs/" in Registry.get_site(c.site.id).deploy_config.keep_paths
+      # The screen shows the listing again with the keep list that marks it
+      assert {:ok, %{found: shown}} = TargetReview.status(c.site, c.superuser)
+      refute shown.digest == c.found.digest
 
       Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, job} = TargetReview.delete_unknown(c.site, c.superuser, c.found.digest, [])
+        assert {:ok, job} = TargetReview.delete_unknown(c.site, c.superuser, shown.digest, [])
         assert %{confirmed: ["stray.html"]} = state(c.site)
 
         # A newer build is deployed before the job runs: it stays live
@@ -301,6 +343,19 @@ defmodule Brando.SSG.TargetReviewTest do
         assert Builds.get_build(newer.id).status == :deployed
         assert Builds.get_build(c.first.id).status == :archived
       end)
+    end
+
+    # The job reads the deployed build before it holds the deploy lock: a
+    # deploy on another node may make another build the deployed one meanwhile
+    test "are deleted by the job's deploy only while its build is still the deployed one", c do
+      newer = ready_build(c.site, c.environment)
+      assert {:ok, _deployed} = Deploy.deploy(newer, runner: runner([]))
+      first = Builds.get_build(c.first.id)
+
+      untouched = fn "rsync", _args, _opts -> flunk("the target was touched") end
+      assert {:error, :build_no_longer_deployed} = Deploy.deploy(first, runner: untouched, only_if_deployed: true)
+      assert Builds.get_build(newer.id).status == :deployed
+      assert Builds.get_build(first.id).status == :archived
     end
 
     test "are confirmed only as shown", c do
@@ -371,6 +426,24 @@ defmodule Brando.SSG.TargetReviewTest do
       {:ok, _} = Access.grant(editor, c.site, :editor)
       {:ok, _} = Brando.Authorization.Migration.run()
       refused_everything(c, editor)
+    end
+
+    # The Publishing screen opens for a build or schedule grant; the target's files are the deploy's
+    test "with capabilities, building or scheduling alone is refused and deploying may", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      for capability <- ["brando.publishing.build", "brando.publishing.schedule"] do
+        member = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, capability)
+        assert Builds.can_manage?(member, c.site)
+        refused_everything(c, member)
+      end
+
+      assert {:ok, %{reviewed: false}} =
+               TargetReview.status(
+                 c.site,
+                 Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
+               )
     end
   end
 end

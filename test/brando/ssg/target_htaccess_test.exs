@@ -220,7 +220,7 @@ defmodule Brando.SSG.TargetHtaccessTest do
       assert_received {:real_run, "P /.htaccess\0" <> _rules, [], _sources}
     end
 
-    test "stops before the real run when the target's .htaccess cannot be merged", c do
+    test "stops before the real run, counting nothing as uploaded, when the target's .htaccess cannot be merged", c do
       build = ready_build(c)
 
       for {answer, reason} <- [
@@ -232,6 +232,8 @@ defmodule Brando.SSG.TargetHtaccessTest do
           ] do
         assert {:error, ^reason} = Deploy.deploy(build, runner: runner(htaccess: answer))
         refute_received {:real_run, _rules, _merged, _sources}
+        assert %{uploaded: []} = state(c.site)
+        refute state(c.site)[:block]
         assert TargetReview.refusal_message(reason) =~ "nothing was copied"
       end
     end

@@ -30,7 +30,11 @@ defmodule Brando.SSG.Deploy do
 
   @public_opts [prefix: "public"]
 
-  @doc "Deploys a ready or archived build using its snapshotted configuration."
+  @doc """
+  Deploys a ready or archived build using its snapshotted configuration.
+  With `only_if_deployed: true`, only while it is still the site's deployed
+  build once the deploy lock is held (`{:error, :build_no_longer_deployed}`).
+  """
   @spec deploy(Build.t(), keyword()) :: {:ok, Build.t()} | {:error, term()}
   def deploy(%Build{} = build, opts \\ []) do
     Brando.Authorization.Operations.run(:deploy, :publishing, build.site_id, opts, fn ->
@@ -107,6 +111,7 @@ defmodule Brando.SSG.Deploy do
          true <- build.site.status == :active,
          :ok <- still_static(build.site),
          true <- build.status in [:ready, :deployed, :archived],
+         :ok <- still_deployed(build, opts),
          true <- managed_build_path?(build),
          true <- is_nil(build.pruned_at) and File.dir?(build.build_path),
          {:ok, deployed} <-
@@ -117,6 +122,10 @@ defmodule Brando.SSG.Deploy do
       false -> {:error, :build_not_deployable}
       {:error, _reason} = error -> error
     end
+  end
+
+  defp still_deployed(%Build{status: status}, opts) do
+    if opts[:only_if_deployed] && status != :deployed, do: {:error, :build_no_longer_deployed}, else: :ok
   end
 
   # Read under the deploy lock, which a change of delivery takes too
