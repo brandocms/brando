@@ -106,17 +106,16 @@ defmodule Brando.Pages.DeletePageFragmentsTest do
       parent = page!(user, %{title: "Parent", uri: "parent"})
       page = page!(user, %{title: "Child", uri: "parent/child", parent_id: parent.id})
       other = page!(user, %{title: "Other", uri: "other"})
-      header = fragment!(user, page, "header")
-      footer = fragment!(user, other, "footer")
+      %{id: header_id} = fragment!(user, page, "header")
+      %{id: footer_id} = fragment!(user, other, "footer")
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:mutations:Brando.Pages.Fragment"))
 
       {:ok, _} = Pages.delete_page(page.id, user)
-      assert_receive {:mutation, Fragment, %{id: id, page_id: page_id}, :updated}
-      assert {id, page_id} == {header.id, parent.id}
+      assert_receive {:mutation, Fragment, %{id: ^header_id, page_id: page_id}, :updated}
+      assert page_id == parent.id
 
       {:ok, _} = Pages.delete_page(other.id, user, fragments: :delete)
-      assert_receive {:mutation, Fragment, %{id: id, deleted_at: %DateTime{}}, :deleted}
-      assert id == footer.id
+      assert_receive {:mutation, Fragment, %{id: ^footer_id, deleted_at: %DateTime{}}, :deleted}
     end
   end
 

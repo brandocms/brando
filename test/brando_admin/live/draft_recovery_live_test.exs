@@ -38,6 +38,7 @@ defmodule BrandoAdmin.DraftRecoveryLiveTest do
     |> with_target(form_cid(view))
     |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
 
+    assert_push_event(view, "b:draft-saved", %{id: "page_form", generation: 1, request_id: 1}, 10_000)
     assert_status(view, "Recovery copy saved at")
   end
 

@@ -258,6 +258,16 @@ defmodule Brando.SSG.ContentChangesTest do
       refute ContentChanges.changed_at(c.production)
     end
 
+    test "made outside a transaction leaves the lock wait of an enclosing transaction as it was", c do
+      repo = Brando.Repo.repo()
+      before = repo.query!("SHOW lock_timeout").rows
+
+      ContentChanges.touch_environment(c.production)
+
+      assert ContentChanges.changed_at(c.production)
+      assert repo.query!("SHOW lock_timeout").rows == before
+    end
+
     test "rolled back in a transaction begun on the repo itself stays undone, and raises nothing", c do
       page = page!(c.site, c.production, c.user)
 

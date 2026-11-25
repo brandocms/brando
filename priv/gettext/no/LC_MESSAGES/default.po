@@ -13956,6 +13956,11 @@ msgstr "Ikke fylt inn: KI mistet formateringen eller lenkene"
 msgid "Not filled in: AI returned no text"
 msgstr "Ikke fylt inn: KI ga ingen tekst"
 
+#: lib/brando_admin/components/form/translation.ex
+#, elixir-autogen, elixir-format
+msgid "Not filled in: text exceeds the AI translation limit"
+msgstr "Ikke fylt inn: Teksten er for lang for KI-oversettelse"
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"
