@@ -541,6 +541,21 @@ msgstr ""
 msgid "%{setting} %{entry} for %{site}"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{site}: its key is longer than a DNS label (63 bytes)"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{site}: its preview host is an environment's domain or redirect host of %{owner}"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{site}: its preview host is longer than 253 bytes"
+msgstr ""
+
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
 msgid "%{site}: no frontend"
@@ -977,6 +992,11 @@ msgstr ""
 msgid "Palette [%{namespace}] %{name}: %{item}"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "Preview hosts"
+msgstr ""
+
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "Release dependencies"
@@ -1115,6 +1135,16 @@ msgstr ""
 #: lib/brando/doctor/checks/dependency_sources.ex
 #, elixir-autogen, elixir-format
 msgid "a deploy ships whatever the Yalc copy holds: switch to the npm release with mix brando.assets.setup --npm, or give the package its npm version in package.json and run pnpm install"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "a preview host per static site under %{base}"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "a site with a shorter key gets a preview host"
 msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
@@ -1264,6 +1294,16 @@ msgstr ""
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "checked outside MIX_ENV=test, whose dependencies can differ"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "choose a preview_host base no session cookie's domain covers, or drop the domain option: a build's scripts run on its preview host"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "choose a shorter preview_host base"
 msgstr ""
 
 #: lib/brando/doctor/checks/colors.ex
@@ -1704,6 +1744,11 @@ msgstr ""
 msgid "no node on the PATH"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "no preview_host set"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no production mail adapter"
@@ -1820,6 +1865,46 @@ msgstr ""
 msgid "placeholder sender address"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "point the wildcard DNS record %{record} at this installation"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview host bound to an environment"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview host too long"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview hosts not admitted"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview_host does not name {site_key} once, as its first label"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview_host has no effect with tenancy_mode %{mode}"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview_host has no host name of two labels after {site_key}."
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview_host is no string"
+msgstr ""
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "priv/static/robots.txt is not served (not in %{setting}); delete it"
@@ -1843,6 +1928,11 @@ msgstr ""
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
 msgid "remove the entry, or correct its site key, in config :brando, site_frontends"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "remove the host from that environment to give the site its preview host"
 msgstr ""
 
 #: lib/brando/doctor/checks/deprecations.ex
@@ -1935,6 +2025,11 @@ msgstr ""
 msgid "served from SEO settings"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "session cookie sent to preview hosts"
+msgstr ""
+
 #: lib/brando/doctor/checks/deploy_hosts.ex
 #, elixir-autogen, elixir-format
 msgid "set PHX_HOST in them to the host each release serves before deploying; the installer writes it from --domain only when the files are new"
@@ -1945,9 +2040,19 @@ msgstr ""
 msgid "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "set preview_host to {site_key} followed by a host name no installation host is directly under, such as {site_key}.preview.example.com"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "site key too long for a preview host"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -2005,6 +2110,11 @@ msgstr ""
 msgid "the endpoint's Plug.Static only: could not be read"
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "the installation's host %{host} matches preview_host"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
@@ -2013,6 +2123,11 @@ msgstr ""
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
+msgstr ""
+
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "the session cookie's domain %{domain} covers the preview hosts"
 msgstr ""
 
 #: lib/brando/doctor/checks/fragment_pages.ex

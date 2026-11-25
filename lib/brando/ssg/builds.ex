@@ -108,6 +108,65 @@ defmodule Brando.SSG.Builds do
     |> Repo.one(@public_opts)
   end
 
+  @doc """
+  Where `build`'s preview opens, a build of `site` with its environment
+  preloaded, or nil when no host of the site can open it.
+
+  With `tenancy_mode: :single` or `:none` it is the preview's path, which
+  opens on any host. With `:multi` a preview opens only on a host of its own
+  site that is not the installation's (`Brando.SSG.PreviewController`), so
+  the URL takes the scheme and port of `base_uri`, the admin's, and:
+
+    * with a preview host pattern (`Brando.SSG.PreviewHost`), the site's
+      preview host, also when an environment has a domain of its own: Brando
+      cannot tell whether that domain reaches this installation, and the
+      public domain of a site deployed elsewhere would take the token in the
+      link to that server. None for a build whose environment was deleted,
+      which the preview host does not answer;
+    * without one, the build environment's domain, else the live
+      environment's, when the installation answers it for this site.
+  """
+  @spec preview_url(Build.t(), Site.t(), URI.t() | nil) :: String.t() | nil
+  def preview_url(%Build{} = build, %Site{} = site, base_uri) do
+    path = "/__ssg_preview__/#{build.preview_token}/"
+
+    if Tenant.mode() == :multi do
+      with %URI{} = uri <- base_uri,
+           host when is_binary(host) <- preview_domain(build, site) do
+        URI.to_string(%{uri | host: host, path: path, query: nil, fragment: nil})
+      end
+    else
+      path
+    end
+  end
+
+  defp preview_domain(build, site) do
+    cond do
+      not Brando.SSG.PreviewHost.enabled?() ->
+        site_domain(build.environment, site) || site_domain(Brando.Tenant.Cache.get_live_env(site.key), site)
+
+      match?(%Environment{}, build.environment) ->
+        Brando.SSG.PreviewHost.host(site)
+
+      true ->
+        nil
+    end
+  end
+
+  # A host that would answer 404 is no link: one that does not route, one
+  # bound to another site, or one of the installation's own
+  defp site_domain(%{domain: domain}, %Site{id: site_id}) when is_binary(domain) and domain != "" do
+    with false <- String.contains?(domain, ":"),
+         {%Site{id: ^site_id}, _environment} <- Brando.Tenant.Cache.get_env_by_domain(domain),
+         false <- Brando.Tenant.InstallationHosts.member?(domain) do
+      domain
+    else
+      _no_host -> nil
+    end
+  end
+
+  defp site_domain(_environment, _site), do: nil
+
   defp where_site(query, :any), do: query
   defp where_site(query, %Site{id: site_id}), do: from(build in query, where: build.site_id == ^site_id)
 

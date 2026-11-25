@@ -854,6 +854,11 @@ msgstr ""
 msgid "%{host} cannot be both the domain and one of its redirect hosts."
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} matches %{pattern}, which the installation keeps for static sites' build previews."
+msgstr ""
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{host}, port %{port}"
@@ -15766,6 +15771,11 @@ msgstr ""
 msgid "Preview before and after"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Preview hosts in the guide"
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
@@ -22509,6 +22519,11 @@ msgstr ""
 msgid "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "This host matches %{pattern}, which the installation keeps for static sites' build previews."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -22764,6 +22779,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex

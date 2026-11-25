@@ -1911,4 +1911,96 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.ls!(tmp_dir) == []
     end
   end
+
+  describe "preview hosts" do
+    setup do
+      # The process reads the tenancy mode as a site's supervision tree does
+      put_test_env(:tenancy_mode, :multi, global: true)
+      put_test_env(Brando.SSG, preview_host: "{site_key}.preview.test")
+      :ok
+    end
+
+    defp create_static_site(key) do
+      {:ok, site} =
+        Registry.create_site(%{
+          name: String.capitalize(key),
+          key: key,
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :static
+        })
+
+      ServedHosts.check()
+      site
+    end
+
+    test "each static site's is looked up, admitted and written as a bound host is", %{path: file} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver)
+
+      shop = create_static_site("shop")
+      assert_received {:looked_up, "shop.preview.test"}
+      assert %{hosts: %{"shop.preview.test" => :unresolved}} = ServedHosts.check()
+      assert File.read!(file) == ""
+
+      DNS.answer("shop.preview.test", [@here])
+      assert %{hosts: %{"shop.preview.test" => :served} = hosts} = ServedHosts.check()
+      assert lines(file) == ["shop.preview.test"]
+      # The dynamic site from the setup has none
+      refute Map.has_key?(hosts, "acme.preview.test")
+
+      {:ok, _shop} = Registry.update_site(Registry.get_site(shop.id), %{status: :suspended})
+      %{hosts: hosts} = ServedHosts.check()
+      refute Map.has_key?(hosts, "shop.preview.test")
+      assert File.read!(file) == ""
+    end
+
+    test "goes when its site is switched to dynamic, also when its lookup answers after that", %{path: file} do
+      :persistent_term.put({BlockingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({BlockingResolver, :pid}) end)
+      shop = create_static_site("shop")
+      DNS.answer("shop.preview.test", [@here])
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: BlockingResolver)
+
+      check = Task.async(fn -> ServedHosts.check() end)
+      assert_receive {:looking_up, "shop.preview.test", lookup}
+      {:ok, _shop} = Registry.update_site(Registry.get_site(shop.id), %{delivery_mode: :dynamic})
+      send(lookup, :answer)
+
+      assert %{hosts: hosts} = Task.await(check)
+      refute Map.has_key?(hosts, "shop.preview.test")
+      assert File.read!(file) == ""
+    end
+
+    test "with admit: :always, is written at once and goes with its site", %{path: file} do
+      put_test_env(ServedHosts, file: file, admit: :always)
+      shop = create_static_site("shop")
+
+      assert %{hosts: %{"shop.preview.test" => :served}} = ServedHosts.check()
+      assert lines(file) == ["shop.preview.test"]
+
+      {:ok, _} = Registry.update_site(Registry.get_site(shop.id), %{delivery_mode: :dynamic})
+      ServedHosts.check()
+      assert File.read!(file) == ""
+    end
+
+    test "a site whose preview host an environment binds has none: the binding is written", %{path: file} do
+      put_test_env(ServedHosts, file: file, admit: :always)
+      {:ok, beta} = create_site("beta")
+      bind_raw(beta, "production", "shop.preview.test")
+      create_static_site("shop")
+
+      assert %{hosts: %{"shop.preview.test" => :served}} = ServedHosts.check()
+      assert lines(file) == ["shop.preview.test"]
+      assert Brando.SSG.PreviewHost.hosts() == []
+    end
+
+    test "none without tenancy_mode :multi" do
+      create_static_site("shop")
+      put_test_env(:tenancy_mode, :single, global: true)
+      assert Brando.SSG.PreviewHost.hosts() == []
+    end
+  end
 end

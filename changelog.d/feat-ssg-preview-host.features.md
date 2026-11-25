@@ -1,0 +1,2 @@
+- A static site deployed elsewhere gets a build preview host of its own, from one pattern for the installation (`config :brando, Brando.SSG, preview_host: "{site_key}.preview.example.com"`, `tenancy_mode: :multi`); the Publishing screen links every build's preview there, and says when a site has no host for previews.
+  Point one wildcard DNS record (`*.preview.example.com`) at the installation; with the served hosts file each site's preview host is admitted and certified over HTTP-01 like a bound host. Choose a pattern no session cookie's `Domain` covers.
