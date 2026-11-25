@@ -7855,6 +7855,11 @@ msgstr ""
 msgid "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Each deploy writes the redirects, the 404 page and caching into Brando's block in the target's .htaccess, and leaves _redirects.json out. The host's own lines stay. Open the site after the first deploy: a host that forbids these directives answers 500."
+msgstr ""
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Each file becomes a new %{module}"
@@ -21174,6 +21179,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The host answered with no SSH host keys: %{output}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The host is Apache or LiteSpeed"
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex

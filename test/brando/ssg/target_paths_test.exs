@@ -52,6 +52,21 @@ defmodule Brando.SSG.TargetPathsTest do
              "P /kept\\[1]/***\0R /b\\c\0R /old.html\0R /st\\*r\0P *\0"
   end
 
+  test "hides a path from the sender, which leaves the upload and comes first" do
+    build = Path.join(System.tmp_dir!(), "brando-plan-hidden-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf(build) end)
+    File.mkdir_p!(build)
+    File.write!(Path.join(build, "index.html"), "i")
+    File.write!(Path.join(build, "_redirects.json"), "{}")
+
+    plan = TargetPaths.plan(build, ["_redirects.json"], [], ["_redirects.json"])
+
+    assert plan.upload == ["index.html"]
+    assert IO.iodata_to_binary(plan.rules) == "H /_redirects.json\0R /_redirects.json\0P *\0"
+    assert IO.iodata_to_binary(TargetPaths.path_rule(:protect, ".htaccess")) == "P /.htaccess\0"
+    assert IO.iodata_to_binary(TargetPaths.path_rule(:delete, ".htaccess")) == "R /.htaccess\0"
+  end
+
   test "summarises the top-level entries with their files" do
     assert TargetPaths.top_level(["a/", "a/b/", "a/b/c", "a/d", "x.html"], ["x.html"]) == [
              %{name: "a/", files: 2, kept: false},

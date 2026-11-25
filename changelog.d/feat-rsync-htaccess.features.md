@@ -1,0 +1,1 @@
+- An rsync target can be marked as an Apache or LiteSpeed host on the Publishing screen: each deploy then writes the build's redirects, 404 page and caching into Brando's block in the target's `.htaccess`, keeping the host's own lines, and leaves `_redirects.json` out.
