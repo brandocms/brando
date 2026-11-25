@@ -421,28 +421,16 @@ defmodule Brando.SSG.TargetReviewTest do
       {:ok, _} = Brando.Authorization.Migration.run()
 
       for capability <- ["brando.publishing.build", "brando.publishing.schedule"] do
-        member = publishing_member(c, capability)
+        member = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, capability)
         assert Builds.can_manage?(member, c.site)
         refused_everything(c, member)
       end
 
-      assert {:ok, %{reviewed: false}} = TargetReview.status(c.site, publishing_member(c, "brando.publishing.deploy"))
-    end
-
-    defp publishing_member(c, capability) do
-      user = Brando.Factory.insert(:random_user, role: :editor)
-      {:ok, _} = Access.grant(user, c.site, :editor)
-      scope = Brando.Authorization.Scope.site(c.superuser, c.site)
-
-      {:ok, group} =
-        Brando.Authorization.Groups.create(
-          scope,
-          %{name: "Publishing #{System.unique_integer([:positive])}"},
-          ["brando.admin.access", "brando.publishing.read", capability]
-        )
-
-      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
-      user
+      assert {:ok, %{reviewed: false}} =
+               TargetReview.status(
+                 c.site,
+                 Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
+               )
     end
   end
 end

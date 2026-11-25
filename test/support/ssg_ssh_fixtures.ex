@@ -30,6 +30,27 @@ defmodule Brando.SSGSSHFixtures do
   end
 
   @doc """
+  An editor of `site` in a group with the publishing `capability` (a name
+  such as `"brando.publishing.build"`), made by `superuser`, for tests with
+  capabilities on.
+  """
+  def publishing_member(site, superuser, capability) do
+    user = Brando.Factory.insert(:random_user, role: :editor)
+    {:ok, _} = Brando.Tenant.Access.grant(user, site, :editor)
+    scope = Brando.Authorization.Scope.site(superuser, site)
+
+    {:ok, group} =
+      Brando.Authorization.Groups.create(
+        scope,
+        %{name: "Publishing #{System.unique_integer([:positive])}"},
+        ["brando.admin.access", "brando.publishing.read", capability]
+      )
+
+    {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
+    user
+  end
+
+  @doc """
   Writes `site`'s target state as reviewed for `target` on `port`, with the
   host keys it accepted there and nothing uploaded or confirmed. Accept the
   host first (`trust_hosts/2`).
