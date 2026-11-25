@@ -434,7 +434,40 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # `lead` with the rows only `other` has: after the nearest row before it
   # in `other` that is in the list, else before the nearest one after it,
   # else last.
+  defp interleave(order, order), do: order
+
   defp interleave(lead, other) do
+    anchors = MapSet.new(lead)
+
+    if unique_keys?(lead, anchors) and unique_keys?(other, MapSet.new(other)) do
+      {prefix, anchored} = Enum.split_while(other, &(not MapSet.member?(anchors, &1)))
+      insert_runs(lead, prefix, anchored, anchors)
+    else
+      interleave_repeated_keys(lead, other)
+    end
+  end
+
+  defp unique_keys?(order, keys), do: MapSet.size(keys) == length(order) and not MapSet.member?(keys, nil)
+
+  defp insert_runs(lead, prefix, [], _anchors), do: lead ++ prefix
+
+  defp insert_runs(lead, prefix, [first | rest], anchors) do
+    {_, following} =
+      Enum.reduce(rest, {first, %{}}, fn key, {anchor, following} ->
+        if MapSet.member?(anchors, key) do
+          {key, following}
+        else
+          {anchor, Map.update(following, anchor, [key], &[key | &1])}
+        end
+      end)
+
+    Enum.flat_map(lead, fn key ->
+      before = if key == first, do: prefix, else: []
+      before ++ [key | Enum.reverse(Map.get(following, key, []))]
+    end)
+  end
+
+  defp interleave_repeated_keys(lead, other) do
     other
     |> Enum.with_index()
     |> Enum.reduce(lead, fn {key, index}, list ->
