@@ -348,9 +348,9 @@ defmodule Brando.MigrationTemplates do
   Runs a migrations directory as `mix brando.migrate` does, then unloads the
   migration modules so the next run compiles them afresh
   """
-  def migrate(directory, direction) do
+  def migrate(directory, direction, repo \\ Repo) do
     versions =
-      Ecto.Migrator.run(Repo, [directory], direction, all: true, log: false, migration_lock: false)
+      Ecto.Migrator.run(repo, [directory], direction, all: true, log: false, migration_lock: false)
 
     for file <- Path.wildcard(Path.join(directory, "*.exs")),
         [_, module] <- [Regex.run(~r/defmodule (\S+) do/, File.read!(file))] do
