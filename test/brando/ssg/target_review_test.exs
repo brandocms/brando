@@ -172,6 +172,17 @@ defmodule Brando.SSG.TargetReviewTest do
       assert "new.html" in Registry.get_site(c.site.id).deploy_config.keep_paths
     end
 
+    test "is confirmed only with the keep list it was shown with", c do
+      %{digest: shown} = review(c, ["cgi-bin/", "cgi-bin/run", "old.html"])
+      # Another admin takes cgi-bin/ off the keep list
+      assert :ok = TargetReview.remove_keep_path(c.site, c.superuser, "cgi-bin/")
+
+      assert {:error, :stale_listing} = TargetReview.confirm(c.site, c.superuser, :review, shown, [])
+      assert {:ok, %{found: %{digest: current}}} = TargetReview.status(c.site, c.superuser)
+      assert :ok = TargetReview.confirm(c.site, c.superuser, :review, current, ["cgi-bin/"])
+      assert %{confirmed: ["old.html"]} = state(c.site)
+    end
+
     test "is for the target, port and host keys it listed", c do
       %{digest: digest} = review(c, ["old.html"])
       {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{port: 2222}})
@@ -282,9 +293,12 @@ defmodule Brando.SSG.TargetReviewTest do
     test "are kept, or confirmed for a deploy of the deployed build when the job runs", c do
       assert :ok = TargetReview.keep(c.site, c.superuser, ["logs/"])
       assert "logs/" in Registry.get_site(c.site.id).deploy_config.keep_paths
+      # The screen shows the listing again with the keep list that marks it
+      assert {:ok, %{found: shown}} = TargetReview.status(c.site, c.superuser)
+      refute shown.digest == c.found.digest
 
       Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, job} = TargetReview.delete_unknown(c.site, c.superuser, c.found.digest, [])
+        assert {:ok, job} = TargetReview.delete_unknown(c.site, c.superuser, shown.digest, [])
         assert %{confirmed: ["stray.html"]} = state(c.site)
 
         # A newer build is deployed before the job runs: it stays live

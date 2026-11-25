@@ -50,7 +50,8 @@ defmodule Brando.SSG.TargetReview do
 
   @typedoc """
   What the target was last found to hold: its paths, a digest the screen
-  names it by, and for a review the `.htaccess` at its root (`{:ok, text}`,
+  names it by (with the keep list it was shown with, from `status/2` and
+  `review/3`), and for a review the `.htaccess` at its root (`{:ok, text}`,
   `:too_large`, `{:error, reason}`, or nil when there is none).
   """
   @type found :: %{paths: [TargetPaths.path()], digest: String.t(), htaccess: term()}
@@ -93,7 +94,7 @@ defmodule Brando.SSG.TargetReview do
            target: target,
            port: port,
            reviewed: match?(%{reviewed: true}, current),
-           found: current && current.found,
+           found: current && current.found && shown(current.found, site),
            keep: keep_paths(site)
          }}
       else
@@ -145,7 +146,7 @@ defmodule Brando.SSG.TargetReview do
 
       true ->
         state = %{target: target, port: port, host_keys: keys, reviewed: false, uploaded: [], confirmed: [], found: found}
-        with :ok <- write_state(site, state), do: {:ok, found}
+        with :ok <- write_state(site, state), do: {:ok, shown(found, site)}
     end
   end
 
@@ -165,7 +166,7 @@ defmodule Brando.SSG.TargetReview do
   defp confirm_stored(site, kind, digest, ticked) do
     with {:ok, target, port} <- stored_target(site),
          {:ok, state} <- current_state(site, target, port),
-         :ok <- confirmable(state, kind, digest),
+         :ok <- confirmable(state, kind, digest, site),
          {:ok, keep} <- keep_ticked(site, state.found, ticked) do
       ticked = MapSet.new(ticked)
 
@@ -180,11 +181,16 @@ defmodule Brando.SSG.TargetReview do
     end
   end
 
-  defp confirmable(%{found: %{digest: digest}, reviewed: reviewed}, kind, digest)
-       when (kind == :review and not reviewed) or (kind == :unknown and reviewed),
-       do: :ok
+  defp confirmable(%{found: %{} = found, reviewed: reviewed}, kind, digest, site)
+       when (kind == :review and not reviewed) or (kind == :unknown and reviewed) do
+    if shown(found, site).digest == digest, do: :ok, else: {:error, :stale_listing}
+  end
 
-  defp confirmable(_state, _kind, _digest), do: {:error, :stale_listing}
+  defp confirmable(_state, _kind, _digest, _site), do: {:error, :stale_listing}
+
+  # A listing as the screen shows it, with the keep list that marks it: its
+  # digest names both
+  defp shown(found, site), do: %{found | digest: TargetPaths.digest({found.digest, keep_paths(site)})}
 
   @doc "Adds the ticked top-level entries of the unknown files to the keep list, for `actor`."
   @spec keep(Site.t(), term(), [String.t()]) :: :ok | {:error, term()}

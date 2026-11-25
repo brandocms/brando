@@ -2743,9 +2743,9 @@ to keep, add deeper paths to the keep list, and press **Confirm**. Ticked
 entries go on the keep list (a ticked name with characters the list does not
 take is not confirmed, so it stays, but it shows again among the unknown
 files); the first deploy deletes the rest.
-Confirm names the listing the screen showed: when another admin's test has
-listed the target again since, it is refused and the screen shows the current
-listing. A listing that failed, or found more than 100,000 paths, cannot be
+Confirm names the listing the screen showed, with the keep list that marked
+it: when another admin's test has listed the target again since, or the keep
+list changed, it is refused and the screen shows the current listing. A listing that failed, or found more than 100,000 paths, cannot be
 confirmed.
 
 A deploy to a target that is not the reviewed one is refused, the automatic
