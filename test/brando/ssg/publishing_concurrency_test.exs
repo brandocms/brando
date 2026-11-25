@@ -86,8 +86,12 @@ defmodule Brando.SSG.PublishingConcurrencyTest do
       |> Brando.Repo.repo().one(prefix: "pg_catalog")
 
     cond do
-      waiting >= count -> :ok
-      attempts == 0 -> flunk("the Publish calls did not wait for the build lock")
+      waiting >= count ->
+        :ok
+
+      attempts == 0 ->
+        flunk("the Publish calls did not wait for the build lock")
+
       true ->
         Process.sleep(10)
         await_waiters(count, attempts - 1)
