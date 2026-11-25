@@ -95,6 +95,49 @@ defmodule Brando.Uploads.ReceivedUploadTest do
         _ -> []
       end)
 
+  test "simultaneous images with one name keep their own bytes and hash", %{dir: dir, user: user} do
+    cfg = image_cfg(%{overwrite: false})
+    parent = self()
+
+    uploads =
+      for n <- 1..8 do
+        bytes = String.replace(@svg, "</svg>", "<title>#{n}</title></svg>")
+        path = temp(dir, bytes)
+
+        Task.async(fn ->
+          send(parent, {:ready, self()})
+
+          receive do
+            :store -> :ok
+          end
+
+          {:ok, image} = Uploads.store_upload(meta(path), entry("same.svg", "image/svg+xml"), cfg, user)
+          assert File.read!(Utils.media_path(image.path)) == bytes
+          assert image.content_hash == Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
+          image.path
+        end)
+      end
+
+    for %{pid: pid} <- uploads, do: assert_receive({:ready, ^pid}, 5_000)
+    for %{pid: pid} <- uploads, do: send(pid, :store)
+    paths = Task.await_many(uploads)
+    assert length(Enum.uniq(paths)) == length(uploads)
+  end
+
+  test "an intentional overwrite stores the new bytes under the configured name", %{
+    dir: dir,
+    target_dir: target,
+    user: user
+  } do
+    cfg = file_cfg(%{overwrite: true})
+
+    for bytes <- ["first", "second"] do
+      {:ok, file} = Uploads.store_upload(meta(temp(dir, bytes)), entry("same.txt", "text/plain"), cfg, user)
+      assert file.filename == "same.txt"
+      assert File.read!(Path.join(target, file.filename)) == bytes
+    end
+  end
+
   describe "a client name never selects a directory" do
     test "with slugify off, dot-dot segments stay inside the upload path", %{dir: dir, root: root, user: user} = ctx do
       name = "../../received_upload_escape_#{System.unique_integer([:positive])}.txt"
