@@ -123,18 +123,22 @@ defmodule BrandoAdmin.Nav do
     environment = socket.assigns[:current_environment]
 
     if publish_watch?(site, environment) and may_publish?(socket, site) do
-      status = if Builds.deploy_target?(site), do: Publishing.status(site, environment), else: :elsewhere
-      publish = if status == :elsewhere, do: nil, else: status
-      previous = socket.assigns[:publish]
-
-      socket
-      |> watch_publishing(site)
-      |> assign(:publish, publish)
-      |> then(fn socket ->
-        if opts[:reload_panel] || moved?(previous, publish), do: reload_panel(socket), else: socket
-      end)
+      publish = publish_status(site, environment)
+      reload? = opts[:reload_panel] || moved?(socket.assigns[:publish], publish)
+      socket = socket |> watch_publishing(site) |> assign(:publish, publish)
+      if reload?, do: reload_panel(socket), else: socket
     else
       socket |> unwatch_publishing() |> assign(publish: nil, publish_panel: nil)
+    end
+  end
+
+  # Shown when the site has somewhere to deploy to and publishes from here
+  defp publish_status(site, environment) do
+    with true <- Builds.deploy_target?(site),
+         %{} = status <- Publishing.status(site, environment) do
+      status
+    else
+      _hidden -> nil
     end
   end
 
@@ -151,14 +155,12 @@ defmodule BrandoAdmin.Nav do
   defp watch_publishing(socket, site) do
     topic = Builds.topic(site)
 
-    cond do
-      not connected?(socket) or socket.assigns.publish_topic == topic ->
-        socket
-
-      true ->
-        socket = unwatch_publishing(socket)
-        Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
-        assign(socket, :publish_topic, topic)
+    if not connected?(socket) or socket.assigns.publish_topic == topic do
+      socket
+    else
+      socket = unwatch_publishing(socket)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+      assign(socket, :publish_topic, topic)
     end
   end
 

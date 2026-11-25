@@ -45,7 +45,7 @@ defmodule Brando.SSG.Publishing do
   from `given_up/1` for a job Oban gives up without the worker saying so.
   """
 
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query, only: [dynamic: 2, from: 2]
 
   alias Brando.Environments.Environment
   alias Brando.Repo
@@ -135,21 +135,16 @@ defmodule Brando.SSG.Publishing do
   @spec retry(Site.t(), Environment.t(), term()) :: {:ok, Build.t() | Oban.Job.t()} | {:error, term()}
   def retry(%Site{} = site, %Environment{} = environment, user) do
     locked(site, environment, user, [:build, :deploy], fn site, environment ->
-      case status(site, environment) do
-        %{state: :failed, failed: :deploy, build: build} ->
-          if files?(build), do: deploy(build, user), else: build(site, environment, user, true)
-
-        %{state: :failed, failed: :build} ->
-          build(site, environment, user, true)
-
-        :elsewhere ->
-          {:error, :not_publishing_environment}
-
-        _status ->
-          {:error, :stale}
-      end
+      try_again(site, environment, user, status(site, environment))
     end)
   end
+
+  defp try_again(site, environment, user, %{state: :failed, failed: :deploy, build: build}),
+    do: if(files?(build), do: deploy(build, user), else: build(site, environment, user, true))
+
+  defp try_again(site, environment, user, %{state: :failed, failed: :build}), do: build(site, environment, user, true)
+  defp try_again(_site, _environment, _user, :elsewhere), do: {:error, :not_publishing_environment}
+  defp try_again(_site, _environment, _user, _status), do: {:error, :stale}
 
   @doc "Whether a ready build's files are still there: retention may have pruned them."
   @spec files?(Build.t()) :: boolean()
@@ -224,19 +219,10 @@ defmodule Brando.SSG.Publishing do
   # job of a ready build. A rollback or a redeploy of an older build is not
   # one.
   defp running(environment, deployed) do
-    now = DateTime.utc_now()
-
     from(build in Build,
       join: job in Oban.Job,
-      on:
-        job.queue == "ssg_builds" and job.worker in @workers and
-          fragment("(?->>'build_id')::bigint", job.args) == build.id and
-          (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now)),
-      where:
-        build.environment_id == ^environment.id and
-          (build.status in [:queued, :building] or
-             (build.status == :ready and
-                (job.worker == "Brando.Worker.SSGDeploy" or (build.auto_deploy and is_nil(build.deploy_failed_at))))),
+      on: ^runnable_job(),
+      where: ^owes_work(environment),
       order_by: [desc: job.id],
       limit: 1,
       select: {build, job.state}
@@ -246,6 +232,32 @@ defmodule Brando.SSG.Publishing do
       nil -> nil
       {build, job_state} -> %{state: :publishing, step: step(build, job_state), build: build, deployed: deployed}
     end
+  end
+
+  # A job of the build that can still run: waiting, running, to be retried,
+  # or scheduled for a time that has come
+  defp runnable_job do
+    now = DateTime.utc_now()
+
+    dynamic(
+      [build, job],
+      job.queue == "ssg_builds" and job.worker in @workers and
+        fragment("(?->>'build_id')::bigint", job.args) == build.id and
+        (job.state in @runnable or (job.state == "scheduled" and job.scheduled_at <= ^now))
+    )
+  end
+
+  # Of the environment: queued or building, or ready with a deploy job or an
+  # automatic deploy owed
+  defp owes_work(environment) do
+    owed_deploy = dynamic([build, _job], build.auto_deploy and is_nil(build.deploy_failed_at))
+
+    dynamic(
+      [build, job],
+      build.environment_id == ^environment.id and
+        (build.status in [:queued, :building] or
+           (build.status == :ready and (job.worker == "Brando.Worker.SSGDeploy" or ^owed_deploy)))
+    )
   end
 
   defp step(_build, job_state) when job_state != "executing", do: :waiting
@@ -271,24 +283,22 @@ defmodule Brando.SSG.Publishing do
       )
       |> Repo.one(@public_opts)
 
-    case latest do
-      %Build{status: status} = build when status in [:failed, :queued, :building] ->
-        %{state: :failed, failed: :build, build: build, deployed: deployed}
-
-      %Build{status: :ready, deploy_failed_at: %DateTime{}} = build ->
-        %{state: :failed, failed: :deploy, build: build, deployed: deployed}
-
-      %Build{status: :ready, auto_deploy: true} = build ->
-        %{state: :failed, failed: :deploy, build: build, deployed: deployed}
-
-      %Build{status: :ready} = build ->
-        if started_after?(build, deployed) and files?(build),
-          do: %{state: :ready, build: build, deployed: deployed}
-
-      _deployed_or_none ->
-        nil
-    end
+    attempt(latest, deployed)
   end
+
+  defp attempt(%Build{status: status} = build, deployed) when status in [:failed, :queued, :building],
+    do: %{state: :failed, failed: :build, build: build, deployed: deployed}
+
+  # Given up, or owed with no job left to do it
+  defp attempt(%Build{status: :ready} = build, deployed)
+       when not is_nil(build.deploy_failed_at) or build.auto_deploy == true,
+       do: %{state: :failed, failed: :deploy, build: build, deployed: deployed}
+
+  defp attempt(%Build{status: :ready} = build, deployed) do
+    if started_after?(build, deployed) and files?(build), do: %{state: :ready, build: build, deployed: deployed}
+  end
+
+  defp attempt(_deployed_or_none, _deployed), do: nil
 
   defp started_after?(_build, nil), do: true
   defp started_after?(build, deployed), do: DateTime.after?(started(build), started(deployed))

@@ -8,8 +8,8 @@ defmodule Brando.SSG.PublishingConcurrencyTest do
 
   alias Brando.SSG.Builds
   alias Brando.SSG.Publishing
-  alias Brando.Test.Support
   alias Brando.Tenant.Registry
+  alias Brando.Test.Support
 
   setup_all do
     Brando.Test.Committed.template()

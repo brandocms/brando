@@ -31,7 +31,7 @@ defmodule Brando.Worker.SSGDeploy do
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetReview
 
-  @doc "What a `\"deploy\"` or `\"rollback\"` job of `version` reports (`BrandoAdmin.Work.track/4`)."
+  @doc "What a deploy or rollback job of `version` reports (`BrandoAdmin.Work.track/4`)."
   @spec work_messages(String.t(), String.t()) :: keyword()
   def work_messages("deploy", version) do
     [

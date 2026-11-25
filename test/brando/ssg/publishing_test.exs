@@ -454,7 +454,7 @@ defmodule Brando.SSG.PublishingTest do
         assert Builds.get_build(first.id).status == :failed
 
         {:ok, _second} = Publishing.retry(c.site, c.production, c.user)
-        {:error, _reason} = perform(SSGBuild, List.last(jobs("Brando.Worker.SSGBuild")))
+        {:error, _reason} = perform(SSGBuild, Enum.max_by(jobs("Brando.Worker.SSGBuild"), & &1.id))
       end)
 
       deliveries = deliveries(c, c.production, c.production_route)
