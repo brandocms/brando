@@ -443,6 +443,39 @@ defmodule Brando.Content.Proposals.ImageReplacementTest do
     end
   end
 
+  test "checks a batch of image owners with one record lookup per schema", c do
+    old = image!("a", {800, 600})
+    new = image!("b", {1600, 1200})
+    place!(c, c.identity, old)
+
+    for _ <- 1..12, do: Factory.insert(:random_user, avatar: nil, avatar_id: old.id)
+
+    op = ImageReplacement.snapshot(replace(old, new), c.user)
+    counts = :counters.new(2, [])
+    handler = make_ref()
+    event = Repo.repo().config()[:telemetry_prefix] ++ [:query]
+    :ok = :telemetry.attach(handler, event, &__MODULE__.count_owner_reads/4, {self(), counts})
+
+    try do
+      assert ImageReplacement.problems(op, [op], c.user) == []
+    after
+      :telemetry.detach(handler)
+    end
+
+    assert :counters.get(counts, 1) == 1
+    assert :counters.get(counts, 2) == 1
+  end
+
+  # Count full record fetches by primary key, excluding the asset usage queries
+  # and the legacy authorization check that selects just the actor's role.
+  def count_owner_reads(_, _, %{source: source, query: sql}, {caller, counts})
+      when caller == self() and source in ["users", "pages"] do
+    if Regex.match?(~r/SELECT [up]0\."id", .* WHERE \([up]0\."id" =/s, sql),
+      do: :counters.add(counts, if(source == "users", do: 1, else: 2), 1)
+  end
+
+  def count_owner_reads(_, _, _, _), do: :ok
+
   test "a person who may change images but not every entry that shows OLD is refused, by name", c do
     put_test_env(:authorization_mode, :groups)
     {:ok, _} = Brando.Authorization.Migration.run()
