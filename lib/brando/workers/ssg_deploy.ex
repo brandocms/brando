@@ -8,7 +8,8 @@ defmodule Brando.Worker.SSGDeploy do
 
   `"redeploy"` with a `"site_id"` deploys again whichever build is the
   site's deployed one when the job runs, so a newer deploy queued before it
-  stays live (`Brando.SSG.TargetReview.delete_unknown/4`).
+  stays live (`Brando.SSG.TargetReview.delete_unknown/4`), and nothing when
+  another build became the deployed one while it waited for the deploy lock.
   """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3
@@ -30,7 +31,7 @@ defmodule Brando.Worker.SSGDeploy do
 
   def perform(%Oban.Job{args: %{"site_id" => site_id, "action" => "redeploy"} = args} = job) do
     case Builds.deployed_build(site_id) do
-      %Build{} = build -> "deploy" |> run(build, args["creator_id"]) |> outcome(build, job)
+      %Build{} = build -> "redeploy" |> run(build, args["creator_id"]) |> outcome(build, job)
       nil -> {:cancel, :no_deployed_build}
     end
   end
@@ -40,6 +41,7 @@ defmodule Brando.Worker.SSGDeploy do
 
   defp run("deploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id)
   defp run("rollback", build, creator_id), do: Deploy.rollback(build.site, build, creator_id: creator_id)
+  defp run("redeploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id, only_if_deployed: true)
 
   defp outcome({:ok, _deployed}, _build, _job), do: :ok
 
@@ -48,6 +50,16 @@ defmodule Brando.Worker.SSGDeploy do
     Builds.append_log(build, refused_target_log())
 
     {:cancel, :invalid_deploy_target}
+  end
+
+  # The newer deploy deleted what was confirmed, or the next one does
+  defp outcome({:error, :build_no_longer_deployed} = error, build, _job) do
+    Builds.append_log(
+      build,
+      "Deployment skipped: another build was deployed while this one waited, and stays live. The next deploy deletes the files confirmed for deletion."
+    )
+
+    {:cancel, elem(error, 1)}
   end
 
   # DNS may answer on the next attempt

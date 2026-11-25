@@ -313,6 +313,19 @@ defmodule Brando.SSG.TargetReviewTest do
       end)
     end
 
+    # The job reads the deployed build before it holds the deploy lock: a
+    # deploy on another node may make another build the deployed one meanwhile
+    test "are deleted by the job's deploy only while its build is still the deployed one", c do
+      newer = ready_build(c.site, c.environment)
+      assert {:ok, _deployed} = Deploy.deploy(newer, runner: runner([]))
+      first = Builds.get_build(c.first.id)
+
+      untouched = fn "rsync", _args, _opts -> flunk("the target was touched") end
+      assert {:error, :build_no_longer_deployed} = Deploy.deploy(first, runner: untouched, only_if_deployed: true)
+      assert Builds.get_build(newer.id).status == :deployed
+      assert Builds.get_build(first.id).status == :archived
+    end
+
     test "are confirmed only as shown", c do
       assert {:error, :stale_listing} = TargetReview.delete_unknown(c.site, c.superuser, "another", [])
       assert {:error, :stale_listing} = TargetReview.confirm(c.site, c.superuser, :review, c.found.digest, [])
