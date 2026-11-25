@@ -9,7 +9,7 @@ defmodule Brando.Content.Definitions.Release.Review do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.{Baselines, Model}
+  alias Brando.Content.Definition.{Baselines, Model, References}
   alias Brando.Content.DefinitionApply
   alias Brando.Repo
 
@@ -150,7 +150,12 @@ defmodule Brando.Content.Definitions.Release.Review do
     {here, _records} = Brando.Content.Definition.Snapshot.take!(all_tables: true)
     kind = release && release["kind"]
     current = Enum.find(Model.definitions(here), &(&1["uid"] == uid and (is_nil(kind) or &1["kind"] == kind)))
-    %{release: release, here: current, applied: applied(uid)}
+
+    %{
+      release: References.canonical(release, plan.references),
+      here: References.canonical(current, here["references"]),
+      applied: applied(uid)
+    }
   end
 
   # The definition as last applied here (or found equal to the files),
@@ -181,11 +186,14 @@ defmodule Brando.Content.Definitions.Release.Review do
       |> Enum.reject(fn {_field, value} -> value in [nil, "", false] or value == %{} end)
       |> Enum.map(fn {field, value} -> "#{field}: #{inline(value, language)}" end)
 
-    refs = for ref <- definition["refs"] || [], do: "ref #{ref["name"]} (#{type(ref)})#{described(ref["description"])}"
+    refs =
+      for ref <- definition["refs"] || [],
+          do: "ref #{ref["name"]} (#{type(ref)})#{described(ref["description"])}#{binding_text(ref)}"
 
     vars =
       for var <- definition["vars"] || [],
-          do: "var #{var["key"]} (#{var["type"]})#{described(text(var["label"], language))}#{default(var["value"])}"
+          do:
+            "var #{var["key"]} (#{var["type"]})#{described(text(var["label"], language))}#{default(var["value"])}#{binding_text(var)}"
 
     colors =
       for color <- definition["colors"] || [],
@@ -193,6 +201,12 @@ defmodule Brando.Content.Definitions.Release.Review do
 
     code = if definition["code"], do: ["", "template:" | String.split(definition["code"], ~r/\r\n|\n|\r/)], else: []
     Enum.join(fields ++ refs ++ vars ++ colors ++ code, "\n")
+  end
+
+  defp bound_assets(field), do: Map.reject(field["assets"] || %{}, fn {_kind, token} -> is_nil(token) end)
+
+  defp binding_text(field) do
+    field |> bound_assets() |> Enum.sort() |> Enum.map_join(fn {kind, token} -> ", #{kind}=#{token}" end)
   end
 
   defp inline(%{} = map, language), do: text(map, language) |> inline(language)
@@ -255,14 +269,24 @@ defmodule Brando.Content.Definitions.Release.Review do
     end)
   end
 
-  defp comparable(map), do: Map.drop(map, ["sequence", "uid", "assets"])
+  defp comparable(map), do: map |> Map.drop(~w(sequence uid)) |> Map.put("assets", bound_assets(map))
 
-  defp changed_fields(b, a),
-    do:
+  defp changed_fields(b, a) do
+    fields =
       (Map.keys(b) ++ Map.keys(a))
       |> Enum.uniq()
-      |> Enum.reject(&(&1 in ~w(sequence uid)))
+      |> Enum.reject(&(&1 in ~w(sequence uid assets)))
       |> Enum.filter(&(b[&1] != a[&1]))
+
+    before = bound_assets(b)
+    later = bound_assets(a)
+    kinds = Map.keys(Map.merge(before, later)) |> Enum.sort()
+
+    fields ++
+      for kind <- kinds, before[kind] != later[kind] do
+        "#{kind}: #{before[kind] || "—"} → #{later[kind] || "—"}"
+      end
+  end
 
   defp type(%{"type" => type}) when is_binary(type), do: type
   defp type(%{"data" => %{"type" => type}}), do: type
