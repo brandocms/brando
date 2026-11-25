@@ -725,6 +725,17 @@ sender first, before the first compile.
   its images named after its next import. Run `mix brando.gen.migrations`
   for it, then `mix brando.migrate`. See
   [Build from Figma](mcp.md#build-from-figma).
+- **Configuring publishing apart from building and deploying.** Saving a
+  static site's deployment settings, its SSH key and host keys, and the
+  review of the target's files now take Configure on Builds & deployments
+  (`brando.publishing.configure`); Build, Deploy and Schedule no longer give
+  them. `brando_249` gives Configure to every group that has Build, Deploy or
+  Schedule, so nobody loses what they could do. Until it has run, only
+  superusers can change those settings. Run `mix brando.gen.migrations` for
+  it, then `mix brando.migrate`. A site made from now on gives its Editor
+  group View, Build and Deploy; an existing site's Editor group stays as it
+  is: tick Build and Deploy for it under Users → Groups to let editors
+  publish. See [Scopes and defaults](authorization.md#scopes-and-defaults).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

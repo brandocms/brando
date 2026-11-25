@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Sites.PublishingDeployTargetsTest do
-  # Someone who may deploy one site reaches only that site's destination: the
-  # deploy runs with the server's one SSH identity and one set of S3 credentials,
-  # and the other site's rights are never consulted.
+  # Someone who may configure one site's publishing reaches only that site's
+  # destination: the deploy runs with the server's one SSH identity and one set
+  # of S3 credentials, and the other site's rights are never consulted.
   use Brando.LiveCase
 
   alias Brando.Authorization.Groups
@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Sites.PublishingDeployTargetsTest do
     {Registry.get_site(site.id), environment}
   end
 
-  defp deploy_holder(context) do
+  defp configure_holder(context) do
     put_test_env(:authorization_mode, :groups)
     {:ok, _} = Migration.run()
     user = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Sites.PublishingDeployTargetsTest do
       Groups.create(scope, %{name: "Alpha publishers #{System.unique_integer([:positive])}"}, [
         "brando.admin.access",
         "brando.publishing.read",
-        "brando.publishing.deploy"
+        "brando.publishing.configure"
       ])
 
     {:ok, :ok} = Groups.add_member(scope, group.id, user.id)
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Sites.PublishingDeployTargetsTest do
 
   defp saved_target(site), do: Registry.get_site(site.id).deploy_config.target
 
-  for {mode, person} <- [groups: :deploy_holder, legacy: :legacy_site_admin] do
+  for {mode, person} <- [groups: :configure_holder, legacy: :legacy_site_admin] do
     describe "#{mode} mode" do
       test "a person on one site cannot save another site's destination", context do
         own = saved_target(context.site_a)

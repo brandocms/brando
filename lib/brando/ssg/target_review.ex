@@ -29,13 +29,15 @@ defmodule Brando.SSG.TargetReview do
     `:unknown` confirms the rest, and `delete_unknown/4` queues a deploy of
     the site's deployed build when the job runs.
 
-  Each acts for someone who may change where the site deploys
-  (`Brando.SSG.SSH.may_act?/2`), on the site as stored.
+  Each acts for someone who may configure the site's publishing
+  (`Brando.SSG.Builds.can_configure?/2`), on the site as stored;
+  `delete_unknown/4` also for someone who may deploy it.
   """
 
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
   alias Brando.SSG.Build
+  alias Brando.SSG.Builds
   alias Brando.SSG.DeployFiles
   alias Brando.SSG.Htaccess
   alias Brando.SSG.SSH
@@ -222,11 +224,13 @@ defmodule Brando.SSG.TargetReview do
   @doc """
   Confirms the unknown files named by `digest` but the ticked ones (as
   `confirm/5`), for `actor`, and queues a deploy of whichever build is the
-  site's deployed one when the job runs, which deletes them.
+  site's deployed one when the job runs, which deletes them. `actor` must
+  also be one who may deploy: any later deploy carries out a confirmation.
   """
   @spec delete_unknown(Site.t(), term(), String.t(), [String.t()]) :: {:ok, Oban.Job.t()} | {:error, term()}
   def delete_unknown(%Site{} = site, actor, digest, ticked) do
-    with :ok <- confirm(site, actor, :unknown, digest, ticked) do
+    with :ok <- Brando.Authorization.Operations.authorize(actor, :deploy, :publishing, site.id),
+         :ok <- confirm(site, actor, :unknown, digest, ticked) do
       %{"site_id" => site.id, "action" => "redeploy", "creator_id" => actor.id}
       |> Brando.Worker.SSGDeploy.new(tags: ["ssg-deploy", "site:#{site.id}"])
       |> Oban.insert()
@@ -270,6 +274,26 @@ defmodule Brando.SSG.TargetReview do
   end
 
   ## Deploying
+
+  @doc """
+  Why a deploy to the site's stored rsync target would be refused before it
+  copies anything: the site has no key (`:deploy_key_missing`), no host key
+  is accepted (`:host_key_not_accepted`), or the target is not reviewed
+  (`:target_not_reviewed`), among the refusals of `deploy/4`. `:ok`
+  otherwise, and for another strategy.
+  """
+  @spec deployable(Site.t()) :: :ok | {:error, term()}
+  def deployable(%Site{} = site) do
+    with {:ok, target, port} <- stored_target(site),
+         {:ok, _ssh_args} <- SSH.rsync_ssh_args(site, target, port),
+         {:ok, state} <- read_state(site),
+         {:ok, _state} <- reviewed(state, site, target, port, host_keys(site, target, port)) do
+      :ok
+    else
+      {:error, :not_rsync} -> :ok
+      error -> error
+    end
+  end
 
   @doc """
   Deploys the build to `target` on `port` with the site's reviewed state, as
@@ -506,10 +530,10 @@ defmodule Brando.SSG.TargetReview do
 
   defp stored_target(%Site{}), do: {:error, :not_rsync}
 
-  # The site as stored, for someone who may change where it deploys
+  # The site as stored, for someone who may configure its publishing
   defp acting(%Site{id: id}, actor, fun) do
     case Registry.get_site(id) do
-      %Site{} = site -> if SSH.may_act?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      %Site{} = site -> if Builds.can_configure?(actor, site), do: fun.(site), else: {:error, :forbidden}
       nil -> {:error, :site_not_found}
     end
   end

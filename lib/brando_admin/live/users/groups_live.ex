@@ -1032,6 +1032,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
       :assign,
       :build,
       :deploy,
+      :configure,
       :promote
     ]
 
@@ -1064,6 +1065,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp action_label(:export), do: gettext("Export")
   defp action_label(:build), do: gettext("Build")
   defp action_label(:deploy), do: gettext("Deploy")
+  defp action_label(:configure), do: gettext("Configure")
   defp action_label(:promote), do: gettext("Promote")
   defp action_label(:reorder), do: gettext("Reorder")
   defp action_label(:manage), do: gettext("Manage")
@@ -1105,6 +1107,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp resource_label(permission), do: permission.label
 
   # What a permission gives that its name does not say
+  defp resource_note(%{subject: :publishing}),
+    do:
+      gettext(
+        "Build makes a version of the static site to preview, Schedule makes one at a set time, and Deploy puts a build online or rolls back to an earlier one. Configure sets where and how the site deploys: the target, its SSH and host keys, the files a deploy may delete there, and the CDN and webhook URLs."
+      )
+
   defp resource_note(%{subject: :webhooks}),
     do:
       gettext(

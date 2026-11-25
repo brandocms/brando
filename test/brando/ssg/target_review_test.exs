@@ -380,6 +380,51 @@ defmodule Brando.SSG.TargetReviewTest do
       assert Builds.get_build(first.id).status == :archived
     end
 
+    # Any later deploy carries a confirmation out: one left by someone who
+    # may not deploy would be deployed by the next person who may
+    test "are deleted only by someone who may configure and deploy, and nothing is confirmed otherwise", c do
+      newer = ready_build(c.site, c.environment)
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      configurer = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.configure")
+      deployer = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        for actor <- [configurer, deployer] do
+          assert {:error, :forbidden} = TargetReview.delete_unknown(c.site, actor, c.found.digest, [])
+          assert %{confirmed: []} = state(c.site)
+        end
+
+        refute_enqueued(worker: SSGDeploy)
+
+        # The next deploy deletes nothing
+        assert {:ok, _deployed} = Deploy.deploy(newer, creator: deployer, runner: runner(["stray.html"]))
+        assert %{confirmed: [], uploaded: ["index.html"]} = state(c.site)
+
+        both =
+          Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, [
+            "brando.publishing.configure",
+            "brando.publishing.deploy"
+          ])
+
+        {:ok, %{found: found}} = TargetReview.status(c.site, both)
+        assert {:ok, _job} = TargetReview.delete_unknown(c.site, both, found.digest, [])
+        assert %{confirmed: ["stray.html"]} = state(c.site)
+      end)
+    end
+
+    # What a deploy writes of the target's state is the deploy's own
+    test "a deploy by someone who may deploy but not configure keeps the target's lists", c do
+      newer = ready_build(c.site, c.environment)
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      deployer = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
+
+      assert {:ok, deployed} = Deploy.deploy(newer, creator: deployer, runner: runner(["stray.html"]))
+      assert deployed.status == :deployed
+      assert %{reviewed: true, uploaded: ["index.html"], found: %{paths: ["stray.html"]}} = state(c.site)
+    end
+
     test "are confirmed only as shown", c do
       assert {:error, :stale_listing} = TargetReview.delete_unknown(c.site, c.superuser, "another", [])
       assert {:error, :stale_listing} = TargetReview.confirm(c.site, c.superuser, :review, c.found.digest, [])
@@ -442,20 +487,23 @@ defmodule Brando.SSG.TargetReviewTest do
       assert {:ok, %{reviewed: false}} = TargetReview.status(c.other, manager)
     end
 
-    test "with capabilities, an account without publishing is refused", c do
+    # A new site's Editor group may build and deploy, not configure
+    test "with capabilities, an editor of the site is refused", c do
       put_test_env(:authorization_mode, :groups)
       editor = Brando.Factory.insert(:random_user, role: :editor)
       {:ok, _} = Access.grant(editor, c.site, :editor)
       {:ok, _} = Brando.Authorization.Migration.run()
+      assert Builds.can_manage?(editor, c.site)
       refused_everything(c, editor)
     end
 
-    # The Publishing screen opens for a build or schedule grant; the target's files are the deploy's
-    test "with capabilities, building or scheduling alone is refused and deploying may", c do
+    # Building, deploying and scheduling open the Publishing screen; the
+    # target's files are configuring's
+    test "with capabilities, building, deploying or scheduling is refused and configuring may", c do
       put_test_env(:authorization_mode, :groups)
       {:ok, _} = Brando.Authorization.Migration.run()
 
-      for capability <- ["brando.publishing.build", "brando.publishing.schedule"] do
+      for capability <- ["brando.publishing.build", "brando.publishing.deploy", "brando.publishing.schedule"] do
         member = Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, capability)
         assert Builds.can_manage?(member, c.site)
         refused_everything(c, member)
@@ -464,7 +512,7 @@ defmodule Brando.SSG.TargetReviewTest do
       assert {:ok, %{reviewed: false}} =
                TargetReview.status(
                  c.site,
-                 Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.deploy")
+                 Brando.SSGSSHFixtures.publishing_member(c.site, c.superuser, "brando.publishing.configure")
                )
     end
   end
