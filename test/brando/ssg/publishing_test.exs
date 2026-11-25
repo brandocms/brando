@@ -335,6 +335,24 @@ defmodule Brando.SSG.PublishingTest do
       assert Builds.get_build(other_build.id).status == :ready
     end
 
+    test "Publish this build and Try again tell every sidebar once the deploy is queued", c do
+      {:ok, ready} = Publishing.publish(c.site, c.production, c.user, deploy: false)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Builds.topic(c.site))
+
+      manual(fn -> {:ok, _job} = Publishing.publish_build(c.site, c.production, ready.id, c.user) end)
+      assert_receive {:ssg_build_updated, %Build{id: id}}
+      assert id == ready.id
+      assert %{state: :publishing} = Publishing.status(site(c), c.production)
+
+      [job] = jobs("Brando.Worker.SSGDeploy")
+      set_job_state(job, "cancelled")
+      :ok = Publishing.deploy_failed(Builds.get_build(ready.id))
+      assert_receive {:ssg_build_updated, %Build{deploy_failed_at: %DateTime{}}}
+
+      manual(fn -> {:ok, _job} = Publishing.retry(c.site, c.production, c.user) end)
+      assert_receive {:ssg_build_updated, %Build{id: ^id, deploy_failed_at: nil}}
+    end
+
     test "two clicks on Publish this build give one deploy", c do
       {:ok, ready} = Publishing.publish(c.site, c.production, c.user, deploy: false)
 

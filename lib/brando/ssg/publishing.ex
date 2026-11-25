@@ -194,7 +194,8 @@ defmodule Brando.SSG.Publishing do
   # It waits behind any build on the serial queue, and reports to `user` as
   # a deploy from the Publishing screen does. A failure recorded for the
   # build is cleared with the queueing: the build owes this deploy now, and
-  # reads as publishing, not failed, while it waits.
+  # reads as publishing, not failed, while it waits. Once the job is
+  # committed every navigation watching the site reads its state again.
   defp deploy(build, user) do
     job =
       %{"build_id" => build.id, "action" => "deploy", "creator_id" => user.id, "unless_superseded" => true}
@@ -214,6 +215,14 @@ defmodule Brando.SSG.Publishing do
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+    |> case do
+      {:ok, _job} = queued ->
+        Builds.broadcast(%{build | deploy_failed_at: nil})
+        queued
+
+      error ->
+        error
+    end
   end
 
   ## Status
