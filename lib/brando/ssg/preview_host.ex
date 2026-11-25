@@ -121,13 +121,13 @@ defmodule Brando.SSG.PreviewHost do
   """
   @spec site(String.t() | nil) :: {:ok, Site.t()} | :error | nil
   def site(host) do
-    if preview_host?(host) do
-      key = site_key(host)
+    if preview_host?(host), do: site_for(normalize(host))
+  end
 
-      case Cache.get_site(key) do
-        %Site{} = site -> if host(site) == normalize(host), do: {:ok, site}, else: :error
-        nil -> :error
-      end
+  defp site_for(host) do
+    case Cache.get_site(site_key(host)) do
+      %Site{} = site -> if host(site) == host, do: {:ok, site}, else: :error
+      nil -> :error
     end
   end
 
