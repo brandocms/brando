@@ -29,7 +29,7 @@ defmodule Brando.Sites.Usage.Measure do
   @spec site(Site.t()) :: %{media_bytes: non_neg_integer(), builds_bytes: non_neg_integer(), databases: [map()]}
   def site(%Site{} = site), do: site(site, tenant_schemas())
 
-  @doc false
+  @doc "Measures a site against a schema inventory from `tenant_schemas/0`."
   def site(%Site{} = site, schemas) do
     %{
       media_bytes: directory_bytes(Storage.media_root(site)),
