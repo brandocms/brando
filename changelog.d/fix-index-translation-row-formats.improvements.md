@@ -1,0 +1,1 @@
+- Building translation work for tables looks up each cell’s format without walking all of its rows again.
