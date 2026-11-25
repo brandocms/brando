@@ -1,0 +1,1 @@
+- A pending AI translation leaves newly hidden fields alone and stops writing when another tab takes over editing.
