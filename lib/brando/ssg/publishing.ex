@@ -406,6 +406,14 @@ defmodule Brando.SSG.Publishing do
     end
   end
 
+  # A redeploy names no build: it deploys the site's deployed one
+  def given_up(%Oban.Job{worker: "Brando.Worker.SSGDeploy", args: %{"site_id" => site_id}}) do
+    case Builds.deployed_build(site_id) do
+      %Build{} = build -> deploy_failed(build)
+      nil -> :ok
+    end
+  end
+
   def given_up(%Oban.Job{}), do: :ok
 
   defp build_given_up(%Build{id: id} = build) do

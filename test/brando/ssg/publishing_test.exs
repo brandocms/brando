@@ -595,5 +595,19 @@ defmodule Brando.SSG.PublishingTest do
       assert %{state: :failed, failed: :deploy} = Publishing.status(site(c), c.production)
       assert [_one] = deliveries(c, c.production, c.production_route)
     end
+
+    test "a redeploy Oban gives up is recorded on the deployed build and told", c do
+      {:ok, deployed} = Publishing.publish(c.site, c.production, c.user)
+      job = %Oban.Job{worker: "Brando.Worker.SSGDeploy", args: %{"site_id" => c.site.id, "action" => "redeploy"}}
+
+      :ok = Publishing.given_up(job)
+      at = Builds.get_build(deployed.id).deploy_failed_at
+      assert %DateTime{} = at
+      :ok = Publishing.given_up(job)
+      assert Builds.get_build(deployed.id).deploy_failed_at == at
+
+      assert [%{notification: %{"build" => %{"kind" => "deploy"}}}] =
+               deliveries(c, c.production, c.production_route)
+    end
   end
 end
