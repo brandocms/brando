@@ -570,9 +570,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end
 
     {socket, filled, kept} =
-      if generation != nil and generation == BrandoAdmin.LiveView.Form.Tabs.edit_generation() and not read_only?(socket),
-        do: fill_texts(socket, texts, baseline),
-        else: {socket, [], Enum.map(texts, &elem(&1, 0))}
+      if generation != nil and generation == BrandoAdmin.LiveView.Form.Tabs.edit_generation() and
+           not socket.assigns.hidden and not read_only?(socket),
+         do: fill_texts(socket, texts, baseline),
+         else: {socket, [], Enum.map(texts, &elem(&1, 0))}
 
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,

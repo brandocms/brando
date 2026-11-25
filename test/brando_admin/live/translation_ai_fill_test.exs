@@ -204,6 +204,20 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       assert title(other) == "Tittel"
     end
 
+    test "a block field hidden while its translation runs keeps its text", %{conn: conn, target: target} do
+      answer_when_told(&("EN " <> &1["source"]))
+      view = open(conn, target.id)
+      key = block_key(target.id)
+      uid = block_uid(target.id)
+      translate_one(view, key)
+      assert_receive {:ai_waiting, model}, 2_000
+      edit_title(view, "Hide the blocks")
+      send(model, :answer)
+      render_async(view, 5_000)
+      assert has_element?(view, "#{item(key)}[data-ai='kept']")
+      assert block_text(view, uid) == "Første avsnitt"
+    end
+
     test "a subtitle hidden while its translation runs keeps its value", %{conn: conn, current_user: user} do
       {:ok, source} =
         SyncTest.create_article(
