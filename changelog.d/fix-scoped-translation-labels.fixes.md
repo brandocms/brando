@@ -1,0 +1,1 @@
+- Translation work in the editor and proposals uses each subform field’s own label when names overlap.
