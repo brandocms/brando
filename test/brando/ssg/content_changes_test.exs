@@ -306,6 +306,21 @@ defmodule Brando.SSG.ContentChangesTest do
       assert ContentChanges.changed_at(c.staging)
     end
 
+    test "standalone marks every static site's environments in :single, and none in :multi", c do
+      {:ok, set} = register_set(nil, "standalone-set")
+      assert {:ok, _} = SiteAssets.activate_set(set.id)
+      refute marks?()
+
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, c.site.key)
+      {:ok, set} = register_set(nil, "single-set")
+      assert {:ok, _} = SiteAssets.activate_set(set.id)
+
+      assert ContentChanges.changed_at(c.production)
+      assert ContentChanges.changed_at(c.staging)
+      refute ContentChanges.changed_at(c.dynamic_production)
+    end
+
     test "for one environment marks that one", c do
       {:ok, set} = register_set(c.site, "staging-set")
       assert {:ok, _} = SiteAssets.activate_environment_set(set.id, c.staging)
