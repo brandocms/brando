@@ -80,6 +80,24 @@ defmodule Brando.Sites.DeployConfigTest do
     refute DeployConfig.valid_rsync_target?("deploy@down.example.com:/srv/www", @site_key)
   end
 
+  describe "the keep list" do
+    defp keep(paths), do: DeployConfig.changeset(%DeployConfig{}, %{keep_paths: paths}, @site_key)
+
+    test "has .well-known/ and cgi-bin/ unless set" do
+      assert %DeployConfig{keep_paths: [".well-known/", "cgi-bin/"]} = %DeployConfig{}
+    end
+
+    test "takes up to 100 relative paths of plain characters" do
+      assert keep([".well-known/", "uploads/2024/", "robots.txt", "Old Site/index.html", "æøå"]).valid?
+      assert keep(Enum.map(1..100, &"p#{&1}")).valid?
+      refute keep(Enum.map(1..101, &"p#{&1}")).valid?
+
+      for invalid <- ["/etc", "../up", "a/./b", "a/../b", ".", "a//b", "a*", "a[1]", "a\\b", "a\nb", " a", "a "] do
+        refute keep([invalid]).valid?, inspect(invalid)
+      end
+    end
+  end
+
   describe "an rsync target's port" do
     defp port(port) do
       DeployConfig.changeset(
