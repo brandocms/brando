@@ -166,7 +166,13 @@ defmodule Brando.SSG.SSHTest do
       assert {:error, :forbidden} = SSH.rotate_key(c.site, user)
       assert {:error, :forbidden} = SSH.test_connection(c.site, user, runner: runner(keyscan_line("[example.test]:2222")))
 
-      scan = %{target: @target, port: 2222, host_keys: [%{type: "ssh-ed25519", data: host_key(), fingerprint: "x"}]}
+      scan = %{
+        target: @target,
+        port: 2222,
+        host_keys: [%{type: "ssh-ed25519", data: host_key(), fingerprint: "x"}],
+        accepted_keys: []
+      }
+
       assert {:error, :forbidden} = SSH.accept_host_keys(c.site, user, scan)
 
       refute File.exists?(DeployFiles.dir(c.site))
@@ -352,6 +358,19 @@ defmodule Brando.SSG.SSHTest do
       output = "#{keyscan_line("[example.test]:2222")}\n#{keyscan_line("[example.test]:2222", other_host_key())}\n"
       {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner(output))
       assert test.host_key_state == :changed
+    end
+
+    test "is not accepted over host keys someone accepted after it", c do
+      :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222", other_host_key()) <> "\n")
+      {:ok, stale} = SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222")))
+
+      # Another admin tests the rebuilt host and accepts its keys
+      rebuilt = "[example.test]:2222 ecdsa-sha2-nistp256 #{@ecdsa}"
+      {:ok, fresh} = SSH.test_connection(c.site, c.superuser, runner: runner(rebuilt))
+      assert :ok = SSH.accept_host_keys(c.site, c.superuser, fresh)
+
+      assert {:error, :host_keys_changed} = SSH.accept_host_keys(c.site, c.superuser, stale)
+      assert File.read!(DeployFiles.path(c.site, :known_hosts)) == rebuilt <> "\n"
     end
 
     test "stores an IPv6 host as ssh looks it up, on port 22 and another", c do

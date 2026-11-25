@@ -185,19 +185,25 @@ defmodule Brando.SSG.SSH do
   Accepts the host keys a connection test showed (`test_connection/3`), for
   `actor`: they replace those accepted before for the same host and port.
   Refused when the site's stored target or port is no longer the one tested,
-  or a deploy would refuse the target.
+  the keys accepted for it are no longer those the test saw
+  (`:host_keys_changed`), or a deploy would refuse the target.
   """
   @spec accept_host_keys(Site.t(), term(), test_result()) :: :ok | {:error, term()}
-  def accept_host_keys(%Site{} = site, actor, %{target: target, port: port, host_keys: [_ | _] = host_keys}) do
-    acting(site, actor, &accept_tested(&1, target, port, host_keys))
+  def accept_host_keys(%Site{} = site, actor, %{target: _, port: _, host_keys: [_ | _], accepted_keys: _} = test) do
+    acting(site, actor, &accept_tested(&1, test))
   end
 
   def accept_host_keys(%Site{}, _actor, _result), do: {:error, :no_host_keys}
 
-  defp accept_tested(site, target, port, host_keys) do
+  defp accept_tested(site, %{target: target, port: port} = test) do
     with {:ok, ^target, ^port} <- stored_target(site) |> same_target(target, port),
-         :ok <- check_target(target, site),
-         do: DeployFiles.with_lock(site, fn -> write_known_hosts(site, target, port, host_keys) end)
+         :ok <- check_target(target, site) do
+      DeployFiles.with_lock(site, fn ->
+        if key_set(accepted_keys(site, target, port)) == key_set(test.accepted_keys),
+          do: write_known_hosts(site, target, port, test.host_keys),
+          else: {:error, :host_keys_changed}
+      end)
+    end
   end
 
   defp same_target({:ok, target, port}, target, port), do: {:ok, target, port}
