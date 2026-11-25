@@ -89,12 +89,14 @@ defmodule Brando.SSG.TargetHtaccessTest do
       send(test_pid, {:rsync, args})
 
       cond do
-        "-rlp" in args -> fetch(List.last(args), Keyword.get(opts, :htaccess))
+        "-rlp" in args -> args |> fetched_into() |> fetch(Keyword.get(opts, :htaccess))
         "-az" in args -> real_run(test_pid, args)
         true -> {"", 0}
       end
     end
   end
+
+  defp fetched_into(["-e", _ssh, "-rlp", _max, _info, _timeout, _only, _rest, "--", _remote, dir]), do: dir
 
   defp fetch(_dir, nil), do: {"", 0}
   defp fetch(_dir, :too_large), do: {".htaccess is over max-size\n", 0}

@@ -79,8 +79,7 @@ defmodule Brando.SSG.TargetReviewTest do
     end
   end
 
-  defp answer(["-e", _ssh, "-rlp", "--max-size=" <> _ | rest], _paths, opts) do
-    dir = List.last(rest)
+  defp answer(["-e", _ssh, "-rlp", "--max-size=" <> _, _info, _timeout, _only, _rest, "--", _remote, dir], _paths, opts) do
     if text = opts[:htaccess], do: File.write!(Path.join(dir, ".htaccess"), text)
     {"", 0}
   end
