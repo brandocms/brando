@@ -562,14 +562,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # field op, through the edit session like typed text, and the blocks are
   # shown from the store again. The Form hears what was filled and what kept
   # the editor's text.
-  def update(%{event: "translation_fill", run: run, texts: texts}, socket) do
+  def update(%{event: "translation_fill", run: run, generation: generation, texts: texts}, socket) do
     baseline =
       case socket.assigns[:translation_fill] do
         %{run: ^run, baseline: baseline} -> baseline
         _ -> %{}
       end
 
-    {socket, filled, kept} = fill_texts(socket, texts, baseline)
+    {socket, filled, kept} =
+      if generation != nil and generation == BrandoAdmin.LiveView.Form.Tabs.edit_generation() and not read_only?(socket),
+        do: fill_texts(socket, texts, baseline),
+        else: {socket, [], Enum.map(texts, &elem(&1, 0))}
 
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,
