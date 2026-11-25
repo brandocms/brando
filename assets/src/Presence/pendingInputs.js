@@ -65,6 +65,15 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
   const rendered = new WeakMap()
   // block uid → { at, inputs: [{ name, value, server, typed, focus }] }, from a block that went
   const carried = new Map()
+  const forget = uid => {
+    clearTimeout(carried.get(uid)?.timer)
+    carried.delete(uid)
+  }
+  const clear = () => {
+    for (const uid of carried.keys()) forget(uid)
+    focusedEl = null
+    blurred = { el: null, at: -Infinity }
+  }
   // The element with the focus, as focus events last said, and the one
   // that last lost it: a browser takes the focus from an element as it
   // takes the element out of the page, or does not, and sends no focusout.
@@ -159,7 +168,11 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
         typed: typedValues.get(input) || [],
         focus: input === focusedEl || (input === blurred.el && now() - blurred.at < REMOVAL_BLUR_MS),
       }))
-    if (inputs.length) carried.set(uid, { at: now(), inputs })
+    if (inputs.length) {
+      forget(uid)
+      const timer = setTimeout(() => carried.delete(uid), PENDING_INPUT_MS)
+      carried.set(uid, { at: now(), inputs, timer })
+    }
   }
 
   // Block `uid` mounted: what its last element held is put back where the
@@ -168,7 +181,7 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
   const came = (blockEl, uid) => {
     const carry = uid && carried.get(uid)
     if (!carry) return
-    carried.delete(uid)
+    forget(uid)
     if (now() - carry.at >= PENDING_INPUT_MS) return
 
     const inputs = ownInputs(blockEl)
@@ -202,5 +215,5 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
     blurred = { el, at: now() }
   }
 
-  return { typed, patching, left, went, came, focused, unfocused }
+  return { typed, patching, left, went, came, focused, unfocused, clear }
 }

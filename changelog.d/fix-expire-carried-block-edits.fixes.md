@@ -1,0 +1,1 @@
+- The block editor releases pending text from removed blocks when their recovery window closes.

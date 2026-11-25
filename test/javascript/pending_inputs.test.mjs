@@ -503,3 +503,32 @@ test("rich text left before its echo is not put back over another editor's newer
   assert.equal(newRichText.value, '<p>B2</p>')
   assert.deepEqual(newRichText.sent, [])
 })
+
+test('a carry expires without a remount, and replacing it starts a new window', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const { inputs } = setup()
+  const carry = (uid, value) => {
+    const field = textInput('name', '')
+    field.value = value
+    inputs.typed(field)
+    inputs.went(blockElement([field]), uid)
+  }
+  const recover = uid => {
+    const field = textInput('name', '')
+    inputs.came(blockElement([field]), uid)
+    return field.value
+  }
+
+  // The injected wall clock stays still. Only timer-driven removal can
+  // release the deleted block before came() reads its timestamp.
+  carry('deleted', 'one')
+  carry('moved', 'old')
+  t.mock.timers.tick(1000)
+  carry('moved', 'new')
+  t.mock.timers.tick(1000)
+  assert.equal(recover('deleted'), '')
+  assert.equal(recover('moved'), 'new')
+  carry('leaving-page', 'pending')
+  inputs.clear()
+  assert.equal(recover('leaving-page'), '')
+})
