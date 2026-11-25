@@ -1,0 +1,1 @@
+- The Publishing screen no longer links a build's preview on a domain the cache binds to another site.

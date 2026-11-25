@@ -856,6 +856,11 @@ msgstr "%{fragment} (oversatt som %{translations})"
 msgid "%{host} cannot be both the domain and one of its redirect hosts."
 msgstr "%{host} kan ikke være både domenet og en av omdirigeringsvertene."
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} matches %{pattern}, which the installation keeps for static sites' build previews."
+msgstr "%{host} passer med %{pattern}, som installasjonen holder av til forhåndsvisning av statiske nettsteders bygg."
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{host}, port %{port}"
@@ -15745,6 +15750,11 @@ msgstr "Forhåndsvis som"
 msgid "Preview before and after"
 msgstr "Forhåndsvis før og etter"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Preview hosts in the guide"
+msgstr "Verter for forhåndsvisning i veiledningen"
+
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
@@ -22475,6 +22485,11 @@ msgstr "Dette skjemaet viser ikke disse feltene:"
 msgid "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
 msgstr "Gruppen ble endret mens du redigerte. Last inn siste versjon før du lagrer. Utkastet ditt er beholdt."
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "This host matches %{pattern}, which the installation keeps for static sites' build previews."
+msgstr "Denne verten passer med %{pattern}, som installasjonen holder av til forhåndsvisning av statiske nettsteders bygg."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -22731,6 +22746,11 @@ msgstr "Nettstedet kan ikke sende e-post nå. Be en administrator om å tilbakes
 #, elixir-autogen, elixir-format
 msgid "This site cannot send email, so no reset link was sent."
 msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble sendt."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
+msgstr "Dette nettstedet har ingen vert for forhåndsvisning. Et miljødomene som peker til denne installasjonen, eller installasjonens innstilling preview_host, gir det en."
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
