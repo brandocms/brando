@@ -328,7 +328,7 @@ defmodule Brando.MCP.MediaTest do
       assert [%Image{id: ^id, path: path, folder_id: folder_id, content_hash: hash}] = images()
       assert path =~ ~r{/uploads/[^/]+\.jpg$}
       assert %Folder{name: "uploads"} = Brando.Repo.get!(Folder, folder_id)
-      assert is_binary(hash)
+      assert hash == Brando.Images.Intake.hash(Brando.Images.Utils.media_path(path))
 
       # The pending bytes are gone once finished
       assert pending() == []
@@ -429,6 +429,7 @@ defmodule Brando.MCP.MediaTest do
 
       for image <- images do
         assert image.path =~ ~r/\.svg$/
+        assert image.content_hash == Brando.Images.Intake.hash(Brando.Images.Utils.media_path(image.path))
         assert %{x: 20, y: 75, mode: :position} = image.focal
         assert Map.values(image.title) == ["Logo"]
         assert Map.values(image.alt) == ["The logo"]

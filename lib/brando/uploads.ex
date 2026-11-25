@@ -135,11 +135,12 @@ defmodule Brando.Uploads do
 
   What was checked before the bytes moved was only what the client declared, so
   the file's real size and the entry's name go through `validate_intake/4` again
-  here, and the real size is what gets recorded.
+  here, and the real size is what gets recorded. The optional digest is for
+  `Brando.Images.Intake`'s completed, immutable local staging file only.
   """
-  def store_upload(meta, entry, cfg, user) do
+  def store_upload(meta, entry, cfg, user, copied_hash \\ nil) do
     with {:ok, entry} <- validate_received(meta, entry, cfg),
-         {:ok, asset} <- Store.handle_upload(meta, entry, cfg, user) do
+         {:ok, asset} <- Store.handle_upload(meta, entry, cfg, user, copied_hash) do
       {:ok, asset}
     else
       error ->

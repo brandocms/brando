@@ -338,7 +338,9 @@ defmodule Brando.Figma.Import do
       # create it; an image the library has keeps its own: an editor may have set it
       {on_new, attrs} = crop_focal(crop)
 
-      path
+      source = if Keyword.get(Brando.config(Figma) || [], :downloader), do: path, else: {:owned, path}
+
+      source
       |> Intake.store(Intake.filename(name, ext, "figma"), type, ctx, on_new, attrs)
       |> upright(turned == turn)
       |> fitted(fitted)

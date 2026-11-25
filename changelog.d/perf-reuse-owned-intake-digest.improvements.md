@@ -1,0 +1,1 @@
+- Importing a new image from a tool reuses the digest of its completed staging file, saving a full read of the stored original.

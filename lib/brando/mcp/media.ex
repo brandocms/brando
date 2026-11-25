@@ -173,7 +173,7 @@ defmodule Brando.MCP.Media do
         ctx = Intake.context(actor, upload.folder)
         name = Path.rootname(upload.filename)
 
-        upload.path
+        {:owned, upload.path}
         |> Intake.store(Intake.filename(name, upload.ext, "upload"), upload.type, ctx, &{:stored, &1}, attrs)
         |> result(ctx, attrs)
       after
@@ -326,7 +326,7 @@ defmodule Brando.MCP.Media do
            {:ok, type, ext} <- Intake.image_type(head, ctx.cfg) do
         name = name && Path.rootname(name)
 
-        path
+        {:owned, path}
         |> Intake.store(Intake.filename(name, ext, "image"), type, ctx, &{:stored, &1}, attrs)
         |> result(ctx, attrs)
       else

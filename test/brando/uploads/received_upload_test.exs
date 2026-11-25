@@ -138,6 +138,12 @@ defmodule Brando.Uploads.ReceivedUploadTest do
     end
   end
 
+  test "an independent upload always takes its digest from the stored file", %{dir: dir, user: user} do
+    meta = Map.merge(meta(temp(dir, @svg)), %{copied_hash: "ignored", image_attrs: %{content_hash: "ignored"}})
+    assert {:ok, image} = Uploads.store_upload(meta, entry("new.svg", "image/svg+xml"), image_cfg(), user)
+    assert image.content_hash == Brando.Images.Intake.hash(Utils.media_path(image.path))
+  end
+
   describe "a client name never selects a directory" do
     test "with slugify off, dot-dot segments stay inside the upload path", %{dir: dir, root: root, user: user} = ctx do
       name = "../../received_upload_escape_#{System.unique_integer([:positive])}.txt"
