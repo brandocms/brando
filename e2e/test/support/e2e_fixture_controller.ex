@@ -349,6 +349,9 @@ defmodule E2EFixtureController do
         "multi-site-rsync-unknown" ->
           MultiSiteHosts.setup(get_admin_user(), rsync: :unknown)
 
+        "multi-site-rsync-publisher" ->
+          MultiSiteHosts.setup(get_admin_user(), rsync: :unknown, publisher: true)
+
         "multi-site-deploy-targets" ->
           MultiSiteHosts.setup(get_admin_user(), deploy_targets: true)
 

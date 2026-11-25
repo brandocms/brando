@@ -30,7 +30,10 @@ defmodule E2E.MultiSiteHosts do
   Acme static, deploying with rsync to an allowed target, with its SSH key
   made, for the publishing screen's SSH access; `rsync: :review` adds its
   host key accepted and a listing of the target to review, `rsync: :unknown`
-  a reviewed target with files Brando did not put there. `:many_sites` adds
+  a reviewed target with files Brando did not put there. `:publisher`, with
+  `:rsync` and groups authorization (`BRANDO_AUTHORIZATION_MODE=groups`),
+  adds a ready and a failed build and makes the E2E admin an editor of Acme
+  who may build and deploy, not configure publishing. `:many_sites` adds
   eleven more sites with a live environment each, the first with a long name,
   and a schema for Acme's staging environment and the long-named site, which
   the navigation's switcher can switch to. `:usage` gives Acme 30 days of
@@ -159,6 +162,7 @@ defmodule E2E.MultiSiteHosts do
       do: serve_statically(acme, acme_live, admin, opts[:published])
 
     if opts[:rsync], do: deploy_with_rsync(acme, admin, opts[:rsync])
+    if opts[:publisher], do: publisher(acme, acme_live, admin)
 
     if opts[:deploy_targets] do
       {:ok, _acme} =
@@ -248,6 +252,43 @@ defmodule E2E.MultiSiteHosts do
   end
 
   @host_key "AAAAC3NzaC1lZDI1NTE5AAAAIMRFzTKqWAU2MmY9UVN3ZoZSvU9eRSHMLtR+ApYIr5Ru"
+
+  # Out of the installation's groups, into a group of Acme's that publishes
+  defp publisher(site, live, admin) do
+    alias Brando.Authorization.{Groups, Migration, Scope}
+
+    {:ok, _} = Migration.run()
+    build(site, live, admin)
+
+    {:ok, _failed} =
+      Brando.SSG.Builds.update(build(site, live, admin, false), %{
+        status: :failed,
+        built_at: DateTime.utc_now(),
+        url_count: 3,
+        processed_urls: 1,
+        failed_urls: ["/about (HTTP 500)"],
+        build_log: "Deploying to deploy@static.example.com:/srv/sites/acme\nBuild failed: 1 URL failed\n"
+      })
+
+    scope = Scope.site(admin, site)
+
+    {:ok, group} =
+      Groups.create(
+        scope,
+        %{name: "Publishers"},
+        ~w(brando.admin.access brando.profile.read brando.profile.update brando.publishing.read brando.publishing.build brando.publishing.deploy)
+      )
+
+    {:ok, :ok} = Groups.add_member(scope, group.id, admin.id)
+
+    Repo.delete_all(from(m in "authorization_user_groups", where: m.user_id == ^admin.id and m.group_id != ^group.id),
+      prefix: "public"
+    )
+
+    admin |> Ecto.Changeset.change(role: :editor) |> Repo.update!()
+    {:ok, _} = Access.grant(Repo.get!(Brando.Users.User, admin.id), site, :editor)
+    Cache.warm()
+  end
 
   # The files `Brando.SSG.TargetReview` keeps, as a test of the target writes them
   defp target_found(site, target, found) do
