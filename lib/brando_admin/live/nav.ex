@@ -237,11 +237,7 @@ defmodule BrandoAdmin.Nav do
   # scheme and port are the endpoint's.
   defp preview_url(build, socket) do
     build = %{build | environment: socket.assigns.current_environment}
-
-    case Builds.preview_url(build, socket.assigns.current_site, Brando.endpoint().struct_url()) do
-      url when is_binary(url) -> url
-      _none -> nil
-    end
+    Builds.preview_url(build, socket.assigns.current_site, Brando.endpoint().struct_url())
   end
 
   defp may_configure?(socket) do
