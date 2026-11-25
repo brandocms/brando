@@ -30,7 +30,11 @@ defmodule Brando.Authorization.Catalog do
     {:sites, "brando.sites", "Sites", "Installation", [:read, :create, :update, :delete], [:installation]},
     {:environments, "brando.environments", "Environments", "Settings", [:read, :create, :update, :delete, :promote],
      [:site]},
-    {:publishing, "brando.publishing", "Builds & deployments", "Settings", [:read, :build, :deploy, :schedule], [:site]},
+    # Building, deploying and scheduling put content online; `configure`
+    # decides where and how: the deployment settings, the SSH key and host
+    # keys, and what a deploy may delete on the target (`Brando.SSG.Builds`).
+    {:publishing, "brando.publishing", "Builds & deployments", "Settings",
+     [:read, :build, :deploy, :schedule, :configure], [:site]},
     {:frontend_assets, "brando.frontend_assets", "Frontend assets", "Installation", [:read, :update], [:installation]},
     {:shared_library, "brando.shared_library", "Shared content library", "Installation", [:read, :update],
      [:installation]},
@@ -212,10 +216,12 @@ defmodule Brando.Authorization.Catalog do
   defp in_preset?(:admin, permission), do: permission.delegable
 
   # Editors fill in global values, as in legacy mode, but leave the
-  # definitions (keys, types, options) to whoever sets the sets up.
+  # definitions (keys, types, options) to whoever sets the sets up. They put
+  # a static site's content online, and leave how it is published to Admin.
   defp in_preset?(:editor, permission) do
     permission.section in ["Content", "Media"] or permission.subject in [:backend, :profile] or
       {permission.subject, permission.action} == {Brando.Sites.GlobalSet, :update_values} or
+      (permission.subject == :publishing and permission.action in [:read, :build, :deploy]) or
       (permission.action == :read and
          permission.subject in [
            Brando.Content.Module,

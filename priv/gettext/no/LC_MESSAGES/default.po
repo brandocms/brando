@@ -3644,6 +3644,11 @@ msgstr "Auto – tilpasser seg innholdet"
 msgid "Automatic"
 msgstr "Automatisk"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic deployment"
+msgstr "Automatisk publisering"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic jobs"
@@ -4113,6 +4118,11 @@ msgstr "Bygghistorikk"
 #, elixir-autogen, elixir-format
 msgid "Build library"
 msgstr "Byggbibliotek"
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Build makes a version of the static site to preview, Schedule makes one at a set time, and Deploy puts a build online or rolls back to an earlier one. Configure sets where and how the site deploys: the target, its SSH and host keys, the files a deploy may delete there, and the CDN and webhook URLs."
+msgstr "Bygg lager en versjon av det statiske nettstedet til forhåndsvisning, Legg i kø lager en til et fastsatt tidspunkt, og Publiser legger et bygg ut på nett eller ruller tilbake til et tidligere. Konfigurer bestemmer hvor og hvordan nettstedet publiseres: målet, SSH- og vertsnøklene, filene en publisering kan slette der, og CDN- og webhook-adressene."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -5379,6 +5389,7 @@ msgstr "Konfigurasjonen er importert. %{created} grupper opprettet, %{updated} o
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
 #: lib/brando_admin/components/form/input/gallery.ex
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Configure"
 msgstr "Konfigurer"
@@ -6057,11 +6068,6 @@ msgstr "Klarte ikke lagre modulen. Sjekk de markerte feltene."
 #, elixir-autogen, elixir-format
 msgid "Could not save revision"
 msgstr "Klarte ikke lagre versjonen"
-
-#: lib/brando_admin/live/sites/publishing_live.ex
-#, elixir-autogen, elixir-format
-msgid "Could not save static deployment settings."
-msgstr "Klarte ikke lagre innstillingene for statisk publisering."
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
@@ -7166,6 +7172,11 @@ msgstr "Publiseringer lar dem ligge. Behold de avkryssede, eller slett resten me
 #, elixir-autogen, elixir-format
 msgid "Deploys to"
 msgstr "Publiseres til"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploys via %{strategy}"
+msgstr "Publiseres med %{strategy}"
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
@@ -8913,6 +8924,11 @@ msgstr "Facebook, LinkedIn"
 #, elixir-format, elixir-autogen
 msgid "Failed"
 msgstr "Mislyktes"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Failed URLs"
+msgstr "Adresser som feilet"
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
@@ -13245,6 +13261,11 @@ msgstr "Ingen vertsnøkkel er godtatt for %{host}. Sammenlign disse fingeravtryk
 msgid "No host key is accepted for the target's host and port."
 msgstr "Ingen vertsnøkkel er godtatt for målets vert og port."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "No host key is accepted for the target. Someone who may configure publishing tests the connection here and accepts the host's key."
+msgstr "Ingen vertsnøkkel er godtatt for målet. Noen som kan konfigurere publisering, tester tilkoblingen her og godtar vertens nøkkel."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "No image"
@@ -14490,6 +14511,7 @@ msgstr "Yrke"
 #: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -14521,6 +14543,7 @@ msgstr "Frakoblet"
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -19800,6 +19823,11 @@ msgstr "Noen"
 msgid "Someone is mentioned in a note."
 msgstr "Noen nevnes i et notat."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Someone who may configure publishing changes where and how the site deploys."
+msgstr "Noen som kan konfigurere publisering, endrer hvor og hvordan nettstedet publiseres."
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Sort"
@@ -21743,6 +21771,11 @@ msgstr "Nettstedet har fått en ny SSH-nøkkel"
 msgid "The site has no SSH key yet."
 msgstr "Nettstedet har ingen SSH-nøkkel ennå."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site has no SSH key yet. Someone who may configure publishing makes one here and adds it to the host before the first deploy."
+msgstr "Nettstedet har ingen SSH-nøkkel ennå. Noen som kan konfigurere publisering, lager en her og legger den til på verten før første publisering."
+
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -21868,6 +21901,11 @@ msgstr "Målet er tomt."
 #, elixir-autogen, elixir-format
 msgid "The target is not one this site may deploy to."
 msgstr "Målet er ikke et dette nettstedet kan publisere til."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The target is not reviewed. Someone who may configure publishing reviews what it holds here before the first deploy."
+msgstr "Målet er ikke gjennomgått. Noen som kan konfigurere publisering, går gjennom innholdet her før første publisering."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format

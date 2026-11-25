@@ -982,6 +982,28 @@
     }
   }
 
+  /* The deployment settings, for those who may not change them */
+  .publishing-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 40px;
+    margin: 16px 0;
+
+    dt {
+      @font mono;
+      margin-bottom: 4px;
+      color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+      font-size: var(--brando-text-2xs);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    dd {
+      margin: 0;
+    }
+  }
+
   /* An rsync target's port beside it, narrow: it holds five digits */
   .publishing-target {
     display: grid;

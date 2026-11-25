@@ -2427,8 +2427,20 @@ write a redirect on a listed path as a relative path, or take the path off the
 SSG module's list. A custom `:fetcher` gets `redirect: false` and returns a
 redirect with its `:headers`.
 
-Open `/admin/config/publishing` while a static site is selected. The deployment
-form supports:
+Open `/admin/config/publishing` while a static site is selected. Who may do
+what there, with capabilities on: **Build**, **Schedule** and **Deploy** on
+Builds & deployments make builds, schedule them, and deploy and roll them back;
+**Configure** saves the deployment settings below, makes and rotates the SSH
+key, accepts host keys and reviews the target's files (see
+[Groups and authorization](authorization.md#scopes-and-defaults)). Without
+Configure the screen shows the builds, the strategy and whether builds deploy
+automatically, but not the target, its URLs or a build's log; a deploy, or a
+build that deploys itself, to a target that waits for a key, a host key or a
+review is refused at once and says that someone who may configure publishing
+has to set it up. Without capabilities, whoever manages the site
+(an admin, a site's manager with several sites, a superuser) does all of it.
+
+The deployment form supports:
 
 - **Served by this installation** (`local`), with no target: the live
   environment's domain answers from the published build
@@ -2724,8 +2736,8 @@ rsync before it had a key shows **Make key** instead, which keeps a key made
 meanwhile from another screen. **Rotate key**, after a confirmation, replaces
 the key, and deploys use the new one at once. The old public key stays
 authorized on the host until someone removes it from `authorized_keys` there.
-With capabilities on, SSH access takes the deploy grant on publishing, as
-saving the deployment settings does.
+With capabilities on, SSH access takes Configure on publishing, as saving the
+deployment settings does.
 
 **Test connection** checks the target as a deploy does, then fetches the host's
 keys with `ssh-keyscan` on the target's port and shows their SHA256
@@ -2784,7 +2796,7 @@ installed from a distribution's split packages needs its `ssh` package
 (`erlang-ssh` on Debian and Ubuntu) where the release is built.
 
 Making, rotating, testing and accepting are for those who may save the deploy
-settings; rotating and accepting ask for the password, a code or a passkey
+settings (Configure); rotating and accepting ask for the password, a code or a passkey
 when the session has not confirmed lately.
 
 ### What an rsync deploy deletes
@@ -2855,8 +2867,10 @@ Brando uploaded and those confirmed, and the last listing) is the file
 `sites/{site_key}/ssg/deploy/target_state`, written whole. Names on the target
 come from the host and are shown escaped and cut; a name rsync prints in a way
 that cannot be read back is shown, but never confirmed. Reviewing, keeping,
-deleting and the keep list are for those who may save the deploy settings,
-and confirming, deleting and taking a path off the keep list ask for a recent
+deleting and the keep list are for those who may save the deploy settings
+(Configure); **Delete the rest** deploys, so it also takes Deploy, and is
+refused before it confirms anything without it. A deploy keeps the list of
+what it uploaded itself, whoever runs it. Confirming, deleting and taking a path off the keep list ask for a recent
 confirmation. A file the host puts at a path where the build has a directory
 in the moment between the listing and the run is the one thing a deploy can
 still replace. A target that holds more than 100,000 paths cannot be deployed

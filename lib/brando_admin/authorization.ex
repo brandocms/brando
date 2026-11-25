@@ -401,11 +401,13 @@ defmodule BrandoAdmin.Authorization do
     end
   end
 
+  # Anything but building and deploying configures how the site publishes
   defp event_action(:publishing, event) do
     case event do
       "request_build" -> :build
       "schedule_build" -> :schedule
-      _ -> :deploy
+      event when event in ["deploy", "rollback"] -> :deploy
+      _ -> :configure
     end
   end
 

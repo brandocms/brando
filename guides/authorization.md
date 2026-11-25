@@ -21,7 +21,10 @@ and content transfer, see [User accounts and sessions](users.md).
    **Review groups** to review seeded groups and permission keys
    before the configuration switch. Map custom/conditional application rules to
    explicit permissions and resource policies. The old rule DSL is not translated
-   silently and is not combined with the new resolver.
+   silently and is not combined with the new resolver. The groups are made now,
+   from today's presets: every site's Editor group has View, Build and Deploy on
+   builds and deployments, so the editors of a static site can publish it, which
+   legacy mode does not let them. Untick those for Editor to keep it as it was.
 4. Configure `config :brando, authorization_mode: :groups` and restart the application.
 5. Test with representative accounts on every site and environment, including
    direct URLs and denied writes. Review `/admin/groups` for each scope.
@@ -112,8 +115,7 @@ for Superusers.
 
 User starts without backend access. Editor receives content/media capabilities,
 including publishing and scheduling entries, read access to reusable
-definitions, and filling in global values. Builds and deployments of a static site (`brando.publishing`) are
-a Settings permission, which Editor does not get. Admin adds site settings,
+definitions, and filling in global values. Admin adds site settings,
 builds and deployments, and group administration. Superuser is a protected installation group;
 its members have all supported capabilities across active sites. It cannot be
 renamed into an ordinary group, deleted, or stripped of its permissions. At least
@@ -142,6 +144,30 @@ keys, options and labels. Edit includes Edit values, and a group administrator
 who holds Edit may grant Edit values. A save with Edit values alone changes
 values only, whatever the request carries; anything else is refused. A
 group with only View sees the values without a Save button.
+
+Builds and deployments of a static site (`brando.publishing`) has five
+actions. **View** opens the Publishing screen. **Build** makes a build to
+preview, **Schedule** makes one at a set time, and **Deploy** puts a build
+online, rolls back to an earlier one, and lets a build deploy as soon as it is
+ready. **Configure** sets where and how the site deploys: the deployment
+settings (strategy, target, port, CDN and webhook URLs, automatic deployment,
+retention, the Apache option), the site's SSH key and the host keys it
+accepts, and what a deploy may delete on the target (its review and keep
+list). Build, Deploy and Schedule do not include Configure. Deleting the
+files a review left on the target takes Configure and Deploy, as it deploys.
+Without Configure the screen shows the builds, the strategy and whether
+builds deploy automatically, and none of the target, its URLs, the SSH and
+target panels or a build's log, which names the server and its paths.
+
+A site made since 0.55 gives its Editor group View, Build and Deploy, so its
+editors publish their changes, and leaves Configure to Admin. Presets are
+seeded once, so an existing site's Editor group keeps the grants it has: tick
+Build and Deploy for it on the group screen. Groups prepared for the switch
+from legacy mode are seeded then, so there Editor has View, Build and Deploy
+on every site: untick them to keep a static site's editors from publishing,
+as in legacy mode. A configuration exported before
+Configure existed imports as written: a group in it with Build or Deploy and
+no Configure gets no Configure.
 
 Membership in several groups combines their grants. There are no group hierarchies,
 implicit priority, or explicit-deny rules in v1. Missing and unknown permissions

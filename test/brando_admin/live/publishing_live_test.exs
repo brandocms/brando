@@ -1017,6 +1017,319 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     end
   end
 
+  # The deletion's broadcast sends the view to the access-denied page; a
+  # build's broadcast already on its way reaches the view first
+  test "a site deleted while the screen is open sends it to the dashboard", context do
+    {:ok, build} = Builds.request_build(context.site, context.environment, [])
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    :sys.suspend(view.pid)
+    send(view.pid, {:ssg_build_updated, build})
+    {:ok, _site} = Registry.delete_site(context.site)
+    :sys.resume(view.pid)
+
+    assert_redirect(view, "/admin")
+  end
+
+  describe "with capabilities, configuring is apart from building and deploying" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      test_pid = self()
+
+      put_test_env(:ssg_deploy_runner, fn program, args, _opts ->
+        send(test_pid, {:ran, program, args})
+        {"", 0}
+      end)
+
+      :ok
+    end
+
+    defp member(context, capabilities),
+      do: Brando.SSGSSHFixtures.publishing_member(context.site, context.current_user, capabilities)
+
+    defp publisher(context), do: member(context, ["brando.publishing.build", "brando.publishing.deploy"])
+
+    defp open_as(context, user), do: live(context.conn |> recycle() |> log_in_user(user), "/admin/config/publishing")
+
+    defp ready_build_for(context) do
+      {:ok, build} = Builds.request_build(context.site, context.environment, creator: context.current_user)
+      File.mkdir_p!(build.build_path)
+      File.write!(Path.join(build.build_path, "index.html"), "built")
+      {:ok, ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+      ready
+    end
+
+    defp flush_ran do
+      receive do
+        {:ran, _program, _args} -> flush_ran()
+      after
+        0 -> :ok
+      end
+    end
+
+    # A webhook URL can carry a token; a log names the server and its paths
+    test "someone who may build and deploy sees the builds and a summary, and no target, URL, key or log", context do
+      {:ok, site} =
+        Registry.update_site(context.site, %{
+          deploy_config: %{webhook_url: "https://hooks.example.com/hook-sentinel", auto_deploy: true}
+        })
+
+      {:ok, _public_key} = Brando.SSG.SSH.ensure_key(site, context.current_user)
+      {:ok, build} = Builds.request_build(site, context.environment, creator: context.current_user)
+
+      {:ok, failed} =
+        Builds.update(build, %{
+          status: :failed,
+          build_log: "rsync to deploy@example.test:/srv/www log-sentinel",
+          failed_urls: ["/en/failed-page"]
+        })
+
+      {:ok, view, html} = open_as(context, publisher(context))
+
+      for page <- [html, render(view)] do
+        refute page =~ "hook-sentinel"
+        refute page =~ "log-sentinel"
+        refute page =~ "example.test"
+        refute page =~ "ssh-ed25519"
+        assert page =~ "/en/failed-page"
+      end
+
+      assert has_element?(view, "#publishing-settings")
+      refute has_element?(view, "#static-deploy-config")
+      refute has_element?(view, "#publishing-ssh")
+      refute has_element?(view, "#publishing-review")
+      refute has_element?(view, ".environment-notice.warning")
+      assert has_element?(view, "#ssg-build-#{failed.id}")
+      assert has_element?(view, "#build-static-site button[type=submit]:not([disabled])")
+      # The per-build tick is the deploy's
+      assert has_element?(view, ~s|#build-static-site input[name="build[auto_deploy]"][checked]:not([disabled])|)
+    end
+
+    test "someone who may configure sees the settings, the key and the log", context do
+      {:ok, _public_key} = Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+      {:ok, build} = Builds.request_build(context.site, context.environment, creator: context.current_user)
+      {:ok, failed} = Builds.update(build, %{status: :failed, build_log: "log-sentinel"})
+
+      {:ok, view, html} = open_as(context, member(context, "brando.publishing.configure"))
+
+      assert html =~ "log-sentinel"
+      assert has_element?(view, "#ssg-build-#{failed.id} details pre")
+      assert has_element?(view, "#static-deploy-config button[type=submit]:not([disabled])")
+      assert has_element?(view, "#publishing-ssh")
+      refute has_element?(view, "#publishing-settings")
+      refute has_element?(view, ".environment-notice.warning")
+      # Building is not configuring's
+      assert has_element?(view, "#build-static-site button[type=submit][disabled]")
+    end
+
+    test "the notice that nothing can be done here is for someone who may only view", context do
+      {:ok, view, _html} = open_as(context, member(context, []))
+      assert has_element?(view, ".environment-notice.warning")
+      assert has_element?(view, "#publishing-settings")
+    end
+
+    test "a crafted event to configure from someone who may build and deploy writes nothing", context do
+      {:ok, public_key} = Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+      user = publisher(context)
+      {:ok, view, _html} = open_as(context, user)
+      flush_ran()
+
+      for {event, params} <- [
+            {"save_deploy_config", %{"deploy" => %{"strategy" => "s3", "target" => "s3://publishing-site/releases"}}},
+            {"make_deploy_key", %{}},
+            {"rotate_deploy_key", %{}},
+            {"test_connection", %{}},
+            {"accept_host_keys", %{}},
+            {"confirm_target_review", %{"digest" => "d"}},
+            {"keep_unknown_files", %{}},
+            {"delete_unknown_files", %{"digest" => "d"}},
+            {"add_keep_path", %{"keep_path" => "x/"}},
+            {"remove_keep_path", %{"path" => ".well-known/"}}
+          ] do
+        render_click(view, event, params)
+        render_async(view)
+      end
+
+      site = Registry.get_site(context.site.id)
+      assert %{strategy: :rsync, target: "deploy@example.test:/srv/www"} = site.deploy_config
+      assert site.deploy_config.keep_paths == [".well-known/", "cgi-bin/"]
+      assert {:ok, ^public_key} = Brando.SSG.SSH.public_key(site)
+      refute File.exists?(Brando.SSG.DeployFiles.path(site, :target_state))
+      refute_received {:ran, _, _}
+
+      # The save is refused where it writes, not only on the screen
+      assert {:error, :forbidden} = Builds.update_deploy_config(site, %{retention_count: 3}, user)
+    end
+
+    test "a configure grant removed while the screen is open refuses the next save", context do
+      scope = Brando.Authorization.Scope.site(context.current_user, context.site)
+      user = member(context, [])
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(scope, %{name: "Configure publishing"}, [
+          "brando.admin.access",
+          "brando.publishing.read",
+          "brando.publishing.configure"
+        ])
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
+      {:ok, view, _html} = open_as(context, user)
+      assert has_element?(view, "#static-deploy-config")
+
+      {:ok, _group} =
+        Brando.Authorization.Groups.update(
+          scope,
+          group.id,
+          %{},
+          ["brando.admin.access", "brando.publishing.read"],
+          group.lock_version
+        )
+
+      render_submit(view, "save_deploy_config", %{
+        "deploy" => %{"strategy" => "s3", "target" => "s3://publishing-site/releases"}
+      })
+
+      assert Registry.get_site(context.site.id).deploy_config.strategy == :rsync
+      refute has_element?(view, "#static-deploy-config")
+    end
+
+    test "someone who may deploy but not configure deploys to a reviewed target", context do
+      Brando.SSGSSHFixtures.trust_hosts(context.site, ["example.test"])
+      Brando.SSGSSHFixtures.review_target(context.site, "deploy@example.test:/srv/www")
+      ready = ready_build_for(context)
+
+      {:ok, view, _html} = open_as(context, member(context, "brando.publishing.deploy"))
+      view |> element("#ssg-build-#{ready.id} button[phx-click=deploy]") |> render_click()
+
+      assert Builds.get_build(ready.id).status == :deployed
+      assert_received {:ran, "rsync", _args}
+    end
+
+    # The log that says why is theirs who may configure
+    test "a deploy to a target that waits for its setup says so at once, and queues nothing", context do
+      ready = ready_build_for(context)
+      user = member(context, "brando.publishing.deploy")
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = open_as(context, user)
+
+      not_set_up = fn ->
+        view |> element("#ssg-build-#{ready.id} button[phx-click=deploy]") |> render_click()
+        assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+        message
+      end
+
+      # No key, then no host key, then no review: each says what is missing
+      messages =
+        for step <- [
+              fn -> :ok end,
+              fn -> Brando.SSG.DeployFiles.write(context.site, :key, "not a key\n") end,
+              fn -> Brando.SSGSSHFixtures.trust_hosts(context.site, ["example.test"]) end
+            ] do
+          step.()
+          not_set_up.()
+        end
+
+      render_click(view, "deploy", %{"id" => "0"})
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: failed}}
+
+      assert length(Enum.uniq([failed | messages])) == 4
+      assert Builds.get_build(ready.id).status == :ready
+      refute_received {:ran, _, _}
+    end
+
+    test "the summary names every strategy a site may have stored", context do
+      user = publisher(context)
+
+      for strategy <- [nil | Ecto.Enum.values(Brando.Sites.DeployConfig, :strategy)] do
+        target =
+          case strategy do
+            :rsync -> "deploy@example.test:/srv/www"
+            :s3 -> "s3://publishing-site/releases"
+            _strategy -> "publishing"
+          end
+
+        {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{strategy: strategy, target: target}})
+
+        {:ok, view, _html} = open_as(context, user)
+        assert has_element?(view, "#publishing-settings dd")
+      end
+    end
+
+    # The deploy decides about a build made for another target: the site's
+    # rsync settings set up since are not its
+    test "a build made for another target deploys and rolls back without the stored target's setup", context do
+      {:ok, site} =
+        Registry.update_site(context.site, %{
+          deploy_config: %{strategy: :s3, target: "s3://publishing-site/releases"}
+        })
+
+      {:ok, s3_build} = Builds.request_build(site, context.environment, creator: context.current_user)
+      {:ok, s3_build} = Builds.update(s3_build, %{status: :archived, built_at: DateTime.utc_now()})
+
+      {:ok, _site} =
+        Registry.update_site(site, %{deploy_config: %{strategy: :rsync, target: "deploy@example.test:/srv/www"}})
+
+      user = member(context, "brando.publishing.deploy")
+      {:ok, view, _html} = open_as(context, user)
+
+      # The job runs inline: with the bucket no longer allowed it fails at
+      # once, with retries left, rather than calling out
+      put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["deploy@example.test:/srv/www"], s3_targets: [])
+      view |> element("#ssg-build-#{s3_build.id} button[phx-click=rollback]") |> render_click()
+
+      BrandoAdmin.Work.Registry.sync()
+      assert has_element?(view, "#ssg-build-#{s3_build.id} .work-status[data-status=running]")
+      BrandoAdmin.Work.finish(user, Brando.Worker.SSGBuild.work_key(s3_build.id), nil, global: true)
+    end
+
+    # The build's log, which says why its deploy failed, is theirs who may configure
+    test "a build that deploys itself to a target that waits for its setup is refused at once", context do
+      put_test_env(:ssg_builder, Builder)
+      user = publisher(context)
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = open_as(context, user)
+
+      view
+      |> form("#build-static-site", build: %{environment_id: context.environment.id, auto_deploy: "true"})
+      |> render_submit()
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+      assert Builds.list_builds(context.site) == []
+
+      # Built without deploying, it waits for no one
+      view
+      |> form("#build-static-site", build: %{environment_id: context.environment.id})
+      |> render_submit()
+
+      assert [%{auto_deploy: false}] = Builds.list_builds(context.site)
+    end
+
+    test "an Editor of a site made since may open Publishing from the menu, build and deploy", context do
+      editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _} = Brando.Tenant.Access.grant(editor, context.site, :editor)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      site = Registry.get_site(context.site.id)
+
+      assert Builds.can_manage?(editor, site)
+      refute Builds.can_configure?(editor, site)
+
+      Brando.Tenant.put_prefix(Brando.Tenant.prefix(site, context.environment))
+
+      urls =
+        for menu <- BrandoAdmin.Menu.get_menu(editor, site),
+            item <- menu.items,
+            entry <- [item | Map.get(item, :items) || []],
+            do: entry[:url]
+
+      assert "/admin/config/publishing" in urls
+
+      {:ok, view, _html} = open_as(context, editor)
+      assert has_element?(view, "#publishing-settings")
+      assert has_element?(view, "#build-static-site button[type=submit]:not([disabled])")
+    end
+  end
+
   describe "SSH access takes a recent confirmation" do
     setup %{conn: conn} = context do
       token = get_session(conn, :user_token)

@@ -29,13 +29,16 @@ defmodule Brando.SSG.TargetReview do
     `:unknown` confirms the rest, and `delete_unknown/4` queues a deploy of
     the site's deployed build when the job runs.
 
-  Each acts for someone who may change where the site deploys
-  (`Brando.SSG.SSH.may_act?/2`), on the site as stored.
+  Each acts for someone who may configure the site's publishing
+  (`Brando.SSG.Builds.can_configure?/2`), on the site as stored;
+  `confirm/5` with `:unknown` and `delete_unknown/4` also for someone who
+  may deploy it.
   """
 
   alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
   alias Brando.SSG.Build
+  alias Brando.SSG.Builds
   alias Brando.SSG.DeployFiles
   alias Brando.SSG.Htaccess
   alias Brando.SSG.SSH
@@ -169,13 +172,21 @@ defmodule Brando.SSG.TargetReview do
   entries are kept (added to the keep list when their names may be on it,
   left alone otherwise), the rest of the listing may be deleted. `kind` is
   `:review` for a target not reviewed yet, which it makes reviewed, or
-  `:unknown` for the unknown files of a reviewed one. Refused when the
-  stored listing is another (`:stale_listing`) or the target changed.
+  `:unknown` for the unknown files of a reviewed one, which `actor` must
+  also be one who may deploy: any later deploy carries the confirmation out.
+  Refused when the stored listing is another (`:stale_listing`) or the
+  target changed.
   """
   @spec confirm(Site.t(), term(), :review | :unknown, String.t(), [String.t()]) :: :ok | {:error, term()}
   def confirm(%Site{} = site, actor, kind, digest, ticked) when kind in [:review, :unknown] and is_binary(digest) do
-    acting(site, actor, fn site -> locked(site, &confirm_stored(&1, kind, digest, ticked)) end)
+    with :ok <- may_confirm(site, actor, kind),
+         do: acting(site, actor, fn site -> locked(site, &confirm_stored(&1, kind, digest, ticked)) end)
   end
+
+  defp may_confirm(site, actor, :unknown),
+    do: Brando.Authorization.Operations.authorize(actor, :deploy, :publishing, site.id)
+
+  defp may_confirm(_site, _actor, :review), do: :ok
 
   defp confirm_stored(site, kind, digest, ticked) do
     with {:ok, target, port} <- stored_target(site),
@@ -270,6 +281,41 @@ defmodule Brando.SSG.TargetReview do
   end
 
   ## Deploying
+
+  @doc """
+  Why a deploy to the site's stored rsync target would be refused before it
+  copies anything: the site has no key (`:deploy_key_missing`), no host key
+  is accepted (`:host_key_not_accepted`), or the target is not reviewed
+  (`:target_not_reviewed`), among the refusals of `deploy/4`. `:ok`
+  otherwise, and for another strategy.
+  """
+  @spec deployable(Site.t()) :: :ok | {:error, term()}
+  def deployable(%Site{} = site) do
+    with {:ok, target, port} <- stored_target(site),
+         {:ok, _ssh_args} <- SSH.rsync_ssh_args(site, target, port),
+         {:ok, state} <- read_state(site),
+         {:ok, _state} <- reviewed(state, site, target, port, host_keys(site, target, port)) do
+      :ok
+    else
+      {:error, :not_rsync} -> :ok
+      error -> error
+    end
+  end
+
+  @doc """
+  As `deployable/1`, for a deploy of `build`, which copies to the target it
+  was made for: `:ok` for a build made for another strategy or target than
+  the site's stored rsync target, whose deploy refuses it itself
+  (`:build_target_changed`).
+  """
+  @spec deployable(Site.t(), Build.t()) :: :ok | {:error, term()}
+  def deployable(%Site{} = site, %Build{deploy_config: config}) do
+    made_for = {:ok, config["target"], config["port"] || 22}
+
+    if config["strategy"] == "rsync" and stored_target(site) == made_for,
+      do: deployable(site),
+      else: :ok
+  end
 
   @doc """
   Deploys the build to `target` on `port` with the site's reviewed state, as
@@ -506,10 +552,10 @@ defmodule Brando.SSG.TargetReview do
 
   defp stored_target(%Site{}), do: {:error, :not_rsync}
 
-  # The site as stored, for someone who may change where it deploys
+  # The site as stored, for someone who may configure its publishing
   defp acting(%Site{id: id}, actor, fun) do
     case Registry.get_site(id) do
-      %Site{} = site -> if SSH.may_act?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      %Site{} = site -> if Builds.can_configure?(actor, site), do: fun.(site), else: {:error, :forbidden}
       nil -> {:error, :site_not_found}
     end
   end

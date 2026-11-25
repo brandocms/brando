@@ -373,6 +373,29 @@ defmodule Brando.SSG.Builds do
   def can_manage?(_user, _site), do: false
 
   @doc """
+  Whether `user` may configure `site`'s publishing: its deployment settings,
+  its SSH key and accepted host keys, and the target's review and keep list.
+  With capabilities on, `:configure` on publishing, which building, deploying
+  and scheduling do not give; else as `can_manage?/2`.
+  """
+  @spec can_configure?(term(), Site.t()) :: boolean()
+  def can_configure?(%Brando.Users.User{} = user, %Site{} = site) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.site(user, site), :configure, :publishing),
+      else: can_manage?(user, site)
+  end
+
+  def can_configure?(_user, _site), do: false
+
+  @doc "Saves `site`'s deployment settings, for `user` (`can_configure?/2`)."
+  @spec update_deploy_config(Site.t(), map(), term()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t() | :forbidden}
+  def update_deploy_config(%Site{} = site, attrs, user) do
+    if can_configure?(user, site),
+      do: Brando.Tenant.Registry.update_site(site, %{deploy_config: attrs}),
+      else: {:error, :forbidden}
+  end
+
+  @doc """
   Whether a site's deployment settings say where builds deploy to: a strategy
   and a target, or `local`, which the installation serves itself and has no
   target.
