@@ -1,0 +1,1 @@
+- Liquid filters that return long lists of mixed rich text and plain text render faster.
