@@ -15061,6 +15061,11 @@ msgid_plural "Other content still refers to them."
 msgstr[0] "Annet innhold viser fortsatt til den."
 msgstr[1] "Annet innhold viser fortsatt til dem."
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Other host keys were accepted after the test. Test the connection again."
+msgstr "Andre vertsnøkler ble godtatt etter testen. Test tilkoblingen på nytt."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Other languages"
@@ -21738,6 +21743,11 @@ msgstr "Nettstedets"
 #, elixir-autogen, elixir-format
 msgid "The site's SSH key could not be read. Rotate it to make a new one."
 msgstr "Klarte ikke lese nettstedets SSH-nøkkel. Bytt den for å lage en ny."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's SSH key could not be written."
+msgstr "Klarte ikke skrive nettstedets SSH-nøkkel."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format

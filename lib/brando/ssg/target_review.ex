@@ -305,7 +305,7 @@ defmodule Brando.SSG.TargetReview do
       _other ->
         if match?({:ok, ^target, ^port}, stored_target(site)),
           do: {:error, :target_not_reviewed},
-          else: {:error, :build_for_another_target}
+          else: {:error, :build_target_changed}
     end
   end
 
@@ -492,9 +492,6 @@ defmodule Brando.SSG.TargetReview do
   def refusal_message(:target_not_reviewed),
     do:
       "the target is not reviewed for its host keys. On Publishing, use Test connection and confirm what the target holds before the first deploy."
-
-  def refusal_message(:build_for_another_target),
-    do: "the build was made for another target or port than the reviewed one, and must be built again."
 
   def refusal_message({:target_collision, path}),
     do:

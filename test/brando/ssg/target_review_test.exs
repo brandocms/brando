@@ -223,7 +223,7 @@ defmodule Brando.SSG.TargetReviewTest do
       {:ok, site} = Registry.update_site(c.site, %{deploy_config: %{port: 2222}})
       Brando.SSGSSHFixtures.review_target(site, @target, 2222)
 
-      assert {:cancel, :build_for_another_target} =
+      assert {:cancel, :build_target_changed} =
                perform_job(SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
 
       assert Builds.get_build(build.id).build_log =~ "must be built again"

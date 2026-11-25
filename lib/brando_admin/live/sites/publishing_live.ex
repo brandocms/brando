@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   on_mount(
     {BrandoAdmin.Reauth,
      events:
-       ~w(save_deploy_config rotate_deploy_key accept_host_keys confirm_target_review delete_unknown_files remove_keep_path deploy rollback request_build schedule_build)}
+       ~w(save_deploy_config make_deploy_key rotate_deploy_key accept_host_keys confirm_target_review delete_unknown_files remove_keep_path deploy rollback request_build schedule_build)}
   )
 
   # Builds, deploys and rollbacks report on their rows
@@ -53,6 +53,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
          |> assign(:default_scheduled_at, default_scheduled_at())
          |> assign(:connection_test, nil)
+         |> assign(:connection_test_ref, nil)
          |> assign(:review_error, nil)
          |> assign(:ticked, MapSet.new())
          |> assign(:sandbox, sandbox_owner(socket))
@@ -446,7 +447,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           type="button"
           class="btn btn--primary"
           disabled={!@can_deploy?}
-          phx-click="rotate_deploy_key"
+          phx-click="make_deploy_key"
         >
           {gettext("Make key")}
         </button>
@@ -752,11 +753,14 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
     with true <- can_manage?(user, socket.assigns.site),
          {:ok, site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
-      # The key is made with the first rsync settings; where it cannot be
-      # kept, the panel says why
-      if rsync_saved?(site), do: SSH.ensure_key(site, user)
+      # The key is made with the first rsync settings; where it may not be
+      # kept, or one is there that cannot be read, the panel says why
+      with true <- rsync_saved?(site),
+           {:error, reason} when reason not in [:served, :unsafe_path, :unreadable_key] <- SSH.ensure_key(site, user),
+           do: toast_error(socket, key_error(reason))
+
       send(self(), {:toast, gettext("Static deployment settings saved")})
-      {:noreply, socket |> assign(:connection_test, nil) |> refresh() |> assign_strategy()}
+      {:noreply, socket |> forget_connection_test() |> refresh() |> assign_strategy()}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         toast_error(socket, BrandoAdmin.Utils.format_changeset_errors(changeset))
@@ -766,14 +770,22 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     end
   end
 
+  # Keeps a key made since the screen showed none
+  def handle_event("make_deploy_key", _params, socket) do
+    case SSH.ensure_key(socket.assigns.site, socket.assigns.current_user) do
+      {:ok, _public_key} -> {:noreply, socket |> forget_connection_test() |> refresh()}
+      {:error, reason} -> toast_error(socket, key_error(reason))
+    end
+  end
+
   def handle_event("rotate_deploy_key", _params, socket) do
     case SSH.rotate_key(socket.assigns.site, socket.assigns.current_user) do
       {:ok, _public_key} ->
         send(self(), {:toast, gettext("The site has a new SSH key")})
-        {:noreply, socket |> assign(:connection_test, nil) |> refresh()}
+        {:noreply, socket |> forget_connection_test() |> refresh()}
 
       {:error, reason} ->
-        toast_error(socket, connection_error(reason))
+        toast_error(socket, key_error(reason))
     end
   end
 
@@ -785,18 +797,22 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     site = socket.assigns.site
     user = socket.assigns.current_user
     sandbox = socket.assigns.sandbox
+    ref = make_ref()
 
     # Once it connects, an unreviewed target is listed for its review
     {:noreply,
      socket
-     |> assign(:connection_test, :running)
+     |> assign(connection_test: :running, connection_test_ref: ref)
      |> start_async(:connection_test, fn ->
        if sandbox, do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
 
-       case SSH.test_connection(site, user) do
-         {:ok, %{dry_run: :ok}} = result -> {result, TargetReview.review(site, user)}
-         result -> {result, nil}
-       end
+       result =
+         case SSH.test_connection(site, user) do
+           {:ok, %{dry_run: :ok}} = result -> {result, TargetReview.review(site, user)}
+           result -> {result, nil}
+         end
+
+       {ref, result}
      end)}
   end
 
@@ -879,19 +895,28 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   @impl Phoenix.LiveView
   def handle_info({:ssg_build_updated, _build}, socket), do: {:noreply, refresh(socket)}
 
+  # An answer for settings saved since, here or elsewhere, or a key rotated
+  # here since, is dropped
   @impl Phoenix.LiveView
-  def handle_async(:connection_test, {:ok, {result, review}}, socket) do
+  def handle_async(:connection_test, {:ok, {ref, {result, review}}}, %{assigns: %{connection_test_ref: ref}} = socket) do
     review_error =
       case review do
         {:error, reason} -> reason
         _listed -> nil
       end
 
-    {:noreply, socket |> assign(connection_test: result, review_error: review_error) |> refresh()}
+    {:noreply,
+     socket
+     |> assign(connection_test: if(tested_stored?(result, socket.assigns.site), do: result), review_error: review_error)
+     |> refresh()}
   end
 
-  def handle_async(:connection_test, {:exit, _reason}, socket),
+  def handle_async(:connection_test, {:ok, _dropped}, socket), do: {:noreply, socket}
+
+  def handle_async(:connection_test, {:exit, _reason}, %{assigns: %{connection_test: :running}} = socket),
     do: {:noreply, assign(socket, :connection_test, {:error, :test_failed})}
+
+  def handle_async(:connection_test, {:exit, _reason}, socket), do: {:noreply, socket}
 
   # The screen shows what is stored now, whichever way it went
   defp target_changed(result, socket, done) do
@@ -994,6 +1019,17 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     assign(socket, public_key: public_key, key_problem: problem)
   end
 
+  defp forget_connection_test(socket), do: assign(socket, connection_test: nil, connection_test_ref: nil)
+
+  defp tested_stored?({:ok, %{target: target, port: port}}, site) do
+    case Registry.get_site(site.id) do
+      %{deploy_config: %{strategy: :rsync, target: ^target} = config} -> (config.port || 22) == port
+      _changed -> false
+    end
+  end
+
+  defp tested_stored?({:error, _reason}, _site), do: true
+
   defp key_or_problem({:ok, public_key}), do: {public_key, nil}
   defp key_or_problem({:error, :no_key}), do: {nil, nil}
   defp key_or_problem({:error, :unreadable_key}), do: {nil, :unreadable_key}
@@ -1037,6 +1073,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp connection_error(:target_changed),
     do: gettext("The deployment settings changed after the test. Test the connection again.")
 
+  defp connection_error(:host_keys_changed),
+    do: gettext("Other host keys were accepted after the test. Test the connection again.")
+
   defp connection_error(:host_key_not_accepted), do: gettext("No host key is accepted for the target's host and port.")
 
   defp connection_error(:host_key_rejected),
@@ -1052,6 +1091,11 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     do: gettext("rsync exited with status %{status}: %{output}", status: status, output: SSH.remote_output(output))
 
   defp connection_error(_reason), do: gettext("Could not test the connection.")
+
+  # Making or rotating the key
+  defp key_error(reason) when reason in [:served, :unsafe_path], do: key_problem_message(reason)
+  defp key_error(:forbidden), do: connection_error(:forbidden)
+  defp key_error(_reason), do: gettext("The site's SSH key could not be written.")
 
   defp review_error(:forbidden), do: connection_error(:forbidden)
   defp review_error(:not_rsync), do: connection_error(:not_rsync)

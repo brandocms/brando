@@ -18,8 +18,9 @@ defmodule Brando.SSG.SSH do
   from an empty directory, so nothing is sent or deleted).
   `accept_host_keys/3` stores the keys a test showed.
 
-  Each acts for someone who may manage the site's publishing
-  (`Brando.SSG.Builds.can_manage?/2`), on the site's settings as stored.
+  Each acts for someone who may deploy the site (with capabilities on;
+  otherwise who may manage its publishing, `Brando.SSG.Builds.can_manage?/2`),
+  on the site's settings as stored.
   Commands run through the deploy's runner (`:runner`, or the `:brando,
   :ssg_deploy_runner` config, `System.cmd/3` by default) with time limits.
   """
@@ -184,19 +185,26 @@ defmodule Brando.SSG.SSH do
   Accepts the host keys a connection test showed (`test_connection/3`), for
   `actor`: they replace those accepted before for the same host and port.
   Refused when the site's stored target or port is no longer the one tested,
-  or a deploy would refuse the target.
+  the keys accepted for it are no longer those the test saw
+  (`:host_keys_changed`), or a deploy would refuse the target.
   """
   @spec accept_host_keys(Site.t(), term(), test_result()) :: :ok | {:error, term()}
-  def accept_host_keys(%Site{} = site, actor, %{target: target, port: port, host_keys: [_ | _] = host_keys}) do
-    acting(site, actor, &accept_tested(&1, target, port, host_keys))
+  def accept_host_keys(%Site{} = site, actor, %{target: _, port: _, host_keys: [_ | _], accepted_keys: _} = test) do
+    acting(site, actor, &accept_tested(&1, test))
   end
 
   def accept_host_keys(%Site{}, _actor, _result), do: {:error, :no_host_keys}
 
-  defp accept_tested(site, target, port, host_keys) do
+  defp accept_tested(site, %{target: target, port: port} = test) do
     with {:ok, ^target, ^port} <- stored_target(site) |> same_target(target, port),
          :ok <- check_target(target, site),
-         do: DeployFiles.with_lock(site, fn -> write_known_hosts(site, target, port, host_keys) end)
+         do: DeployFiles.with_lock(site, fn -> accept_unchanged(site, test) end)
+  end
+
+  defp accept_unchanged(site, %{target: target, port: port} = test) do
+    if key_set(accepted_keys(site, target, port)) == key_set(test.accepted_keys),
+      do: write_known_hosts(site, target, port, test.host_keys),
+      else: {:error, :host_keys_changed}
   end
 
   defp same_target({:ok, target, port}, target, port), do: {:ok, target, port}
@@ -231,13 +239,17 @@ defmodule Brando.SSG.SSH do
     end
   end
 
+  # ssh-keyscan opens one connection per key type, and a server may drop
+  # one: some of the accepted keys, and no other, are the accepted host
   defp host_key_state(host_keys, accepted) do
     cond do
       accepted == [] -> :new
-      MapSet.new(host_keys, &{&1.type, &1.data}) == MapSet.new(accepted, &{&1.type, &1.data}) -> :accepted
+      MapSet.subset?(key_set(host_keys), key_set(accepted)) -> :accepted
       true -> :changed
     end
   end
+
+  defp key_set(keys), do: MapSet.new(keys, &{&1.type, &1.data})
 
   # The entry ssh looks the host up under: as given, lowercased, or with
   # another port than 22 `[host]:port` (an IPv6 literal without its brackets)
@@ -300,18 +312,20 @@ defmodule Brando.SSG.SSH do
 
   defp lines(text), do: text |> String.split(["\r\n", "\n"]) |> Enum.reject(&(String.trim(&1) == ""))
 
+  # From a directory of its own, made new under a random name; removed only
+  # while still empty
   defp dry_run(site, target, port, opts) do
-    empty = Path.join(System.tmp_dir!(), "brando-ssh-test-#{System.unique_integer([:positive])}")
+    empty = Path.join(System.tmp_dir!(), "brando-ssh-test-#{Base.url_encode64(:crypto.strong_rand_bytes(12))}")
 
-    try do
-      File.mkdir_p!(empty)
-
-      case rsync(site, target, port, ["-an", "--timeout=#{@test_io_timeout}", "--", empty <> "/", target], opts) do
-        {:ok, _output} -> :ok
-        {:error, _reason} = error -> error
+    with :ok <- File.mkdir(empty) do
+      try do
+        case rsync(site, target, port, ["-an", "--timeout=#{@test_io_timeout}", "--", empty <> "/", target], opts) do
+          {:ok, _output} -> :ok
+          {:error, _reason} = error -> error
+        end
+      after
+        File.rmdir(empty)
       end
-    after
-      File.rm_rf(empty)
     end
   end
 
@@ -409,13 +423,23 @@ defmodule Brando.SSG.SSH do
 
   ## Who acts, and what is said
 
-  # The site as stored, for someone who may manage its publishing
+  # The site as stored, for someone who may change where it deploys
   defp acting(%Site{id: id}, actor, fun) do
     case Registry.get_site(id) do
-      %Site{} = site -> if Builds.can_manage?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      %Site{} = site -> if may_act?(actor, site), do: fun.(site), else: {:error, :forbidden}
       nil -> {:error, :site_not_found}
     end
   end
+
+  # As saving the deployment settings asks: a build or schedule grant opens
+  # the Publishing screen, and only a deploy grant reaches the key
+  defp may_act?(%Brando.Users.User{} = user, site) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.site(user, site), :deploy, :publishing),
+      else: Builds.can_manage?(user, site)
+  end
+
+  defp may_act?(_actor, _site), do: false
 
   @doc """
   What a remote host said (rsync's or ssh's output), to show: cut to a
@@ -439,6 +463,10 @@ defmodule Brando.SSG.SSH do
   def refusal_message(:host_key_not_accepted),
     do:
       "no host key is accepted for the target's host and port. On Publishing, use Test connection and accept the host key."
+
+  def refusal_message(:build_target_changed),
+    do:
+      "the build was made for another target or port than the site's deployment settings. Make a new build, then deploy it."
 
   def refusal_message(:host_key_rejected),
     do:

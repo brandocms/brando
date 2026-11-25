@@ -511,7 +511,7 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
       # Saved before keys were made: the key is made from here
       refute has_element?(view, "#publishing-public-key")
-      assert has_element?(view, "#publishing-ssh button[phx-click=rotate_deploy_key]:not([data-confirm])")
+      assert has_element?(view, "#publishing-ssh button[phx-click=make_deploy_key]:not([data-confirm])")
       refute has_element?(view, "#publishing-ssh button[phx-click=test_connection]")
 
       view
@@ -556,6 +556,82 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
              |> render() =~ "authorized_keys"
     end
 
+    test "making a key keeps one made since the screen opened", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      # Another admin makes the key, and installs it on the host
+      {:ok, made} = Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+
+      view |> element("#publishing-ssh button[phx-click=make_deploy_key]") |> render_click()
+      assert {:ok, ^made} = Brando.SSG.SSH.public_key(context.site)
+      assert has_element?(view, ~s(#publishing-public-key input[value="#{made}"]))
+    end
+
+    test "a key that cannot be written says so, on rotate and on save", context do
+      Brando.endpoint().subscribe("user:#{context.current_user.id}")
+      # No key to read, and nowhere to write one: the deploy directory is a link to nothing
+      dir = Brando.SSG.DeployFiles.dir(context.site)
+      File.mkdir_p!(Path.dirname(dir))
+      File.ln_s!(Path.join(Path.dirname(dir), "missing/deploy"), dir)
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{"strategy" => "rsync", "target" => "deploy@example.test:/srv/www"}
+      })
+
+      assert_toast_said("could not be written")
+
+      # A key that cannot be read, and a rotation that cannot replace it
+      File.rm!(dir)
+      File.mkdir_p!(Path.join(Brando.SSG.DeployFiles.path(context.site, :key), "taken"))
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      view |> element("#publishing-ssh button[phx-click=rotate_deploy_key]") |> render_click()
+      assert_toast_said("could not be written")
+    end
+
+    # The panel says the key cannot be read, and to rotate it: nothing was written
+    test "a save beside a key that cannot be read reports no failed write", context do
+      Brando.endpoint().subscribe("user:#{context.current_user.id}")
+      {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{port: 22}})
+      key = Brando.SSG.DeployFiles.path(context.site, :key)
+      File.mkdir_p!(Path.dirname(key))
+      File.write!(key, "not a key")
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{"strategy" => "rsync", "target" => "deploy@example.test:/srv/www"}
+      })
+
+      assert render(view) =~ "publishing-ssh"
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}, 300
+    end
+
+    test "an accept over keys accepted since the test asks for a new test", context do
+      Brando.endpoint().subscribe("user:#{context.current_user.id}")
+      {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{port: 2222}})
+      {:ok, _key} = Brando.SSG.SSH.ensure_key(context.site, context.current_user)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      view |> element("#publishing-ssh button[phx-click=test_connection]") |> render_click()
+      render_async(view)
+
+      # Another admin accepts the host's keys meanwhile
+      File.write!(context.known_hosts, "[example.test]:2222 ssh-ed25519 #{Brando.SSGSSHFixtures.other_host_key()}\n")
+
+      view |> element("#publishing-ssh button[phx-click=accept_host_keys]") |> render_click()
+      assert_toast_said("Test the connection again")
+    end
+
+    # Among the toasts sent, which arrive in no set order
+    defp assert_toast_said(text) do
+      receive do
+        %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message}} ->
+          if message =~ text, do: :ok, else: assert_toast_said(text)
+      after
+        1_000 -> flunk("No toast said #{inspect(text)}")
+      end
+    end
+
     test "a user who may open the screen but not publish sees no key and can do nothing", context do
       editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
       {:ok, _} = Brando.Tenant.Access.grant(editor, context.site, :editor)
@@ -567,7 +643,7 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       refute has_element?(view, "#publishing-ssh")
       {:ok, public_key} = Brando.SSG.SSH.public_key(context.site)
 
-      for event <- ~w(rotate_deploy_key test_connection accept_host_keys) do
+      for event <- ~w(make_deploy_key rotate_deploy_key test_connection accept_host_keys) do
         render_click(view, event, %{})
         render_async(view)
       end
@@ -757,6 +833,75 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       after
         0 -> :ok
       end
+    end
+  end
+
+  # The host may take its time: what changes meanwhile makes the answer old
+  describe "a connection test's answer" do
+    setup context do
+      host_key = Brando.SSGSSHFixtures.host_key()
+      test_pid = self()
+
+      put_test_env(:ssg_deploy_runner, fn
+        "ssh-keyscan", _args, _opts ->
+          send(test_pid, {:scanning, self()})
+
+          receive do
+            :answer -> {"[example.test]:2222 ssh-ed25519 #{host_key}\n", 0}
+          end
+
+        "rsync", _args, _opts ->
+          {"", 0}
+      end)
+
+      {:ok, site} = Registry.update_site(context.site, %{deploy_config: %{port: 2222}})
+      {:ok, _key} = Brando.SSG.SSH.ensure_key(site, context.current_user)
+      Brando.SSG.DeployFiles.write(site, :known_hosts, "[example.test]:2222 ssh-ed25519 #{host_key}\n")
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      %{view: view}
+    end
+
+    defp start_test(view) do
+      view |> element("#publishing-ssh button[phx-click=test_connection]") |> render_click()
+      assert_receive {:scanning, scanner}
+      scanner
+    end
+
+    defp answer(view, scanner) do
+      send(scanner, :answer)
+      render_async(view)
+    end
+
+    test "shows when nothing changed", %{view: view} do
+      answer(view, start_test(view))
+      assert has_element?(view, "[data-testid=dry-run-ok]")
+    end
+
+    test "is dropped after a save here", %{view: view} do
+      scanner = start_test(view)
+
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{"strategy" => "rsync", "target" => "deploy@example.test:/srv/www", "port" => "22"}
+      })
+
+      answer(view, scanner)
+      refute has_element?(view, "[data-testid=connection-result]")
+    end
+
+    test "is dropped after a save elsewhere", %{view: view} = context do
+      scanner = start_test(view)
+      {:ok, _site} = Registry.update_site(Registry.get_site(context.site.id), %{deploy_config: %{port: 22}})
+
+      answer(view, scanner)
+      refute has_element?(view, "[data-testid=connection-result]")
+    end
+
+    test "is dropped after a rotation", %{view: view} do
+      scanner = start_test(view)
+      view |> element("#publishing-ssh button[phx-click=rotate_deploy_key]") |> render_click()
+
+      answer(view, scanner)
+      refute has_element?(view, "[data-testid=connection-result]")
     end
   end
 

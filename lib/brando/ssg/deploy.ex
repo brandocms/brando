@@ -178,7 +178,12 @@ defmodule Brando.SSG.Deploy do
     # check on save; the site's allowed targets are read afresh with the build
     case DeployConfig.check_rsync_target(target, build.site) do
       :ok ->
-        TargetReview.deploy(build, target, build.deploy_config["port"] || 22, opts)
+        port = build.deploy_config["port"] || 22
+
+        case TargetReview.deploy(build, target, port, opts) do
+          {:error, :host_key_not_accepted} -> {:error, unaccepted_host(build.site, target, port)}
+          result -> result
+        end
 
       {:error, :lookup_failed} ->
         {:error, :deploy_target_lookup_failed}
@@ -188,6 +193,13 @@ defmodule Brando.SSG.Deploy do
     end
   rescue
     exception -> {:error, {:rsync_failed, Exception.message(exception)}}
+  end
+
+  # A host accepted for the site's settings is no help to a build made for others
+  defp unaccepted_host(%Site{deploy_config: config}, target, port) do
+    if match?(%DeployConfig{target: ^target}, config) and (config.port || 22) == port,
+      do: :host_key_not_accepted,
+      else: :build_target_changed
   end
 
   defp deploy_s3(_build, target, _opts) when target in [nil, ""],

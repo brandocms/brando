@@ -2650,19 +2650,25 @@ When rsync settings are first saved, Brando makes the site an ed25519 key
 pair. **SSH access** on the Publishing screen shows its public key, one line
 with the comment `brando-<site key>`, with a copy button: add it to
 `~/.ssh/authorized_keys` of the target's user on the host. A site saved with
-rsync before it had a key shows **Make key** instead. **Rotate key**, after a
-confirmation, replaces the key, and deploys use the new one at once. The old
-public key stays authorized on the host until someone removes it from
-`authorized_keys` there.
+rsync before it had a key shows **Make key** instead, which keeps a key made
+meanwhile from another screen. **Rotate key**, after a confirmation, replaces
+the key, and deploys use the new one at once. The old public key stays
+authorized on the host until someone removes it from `authorized_keys` there.
+With capabilities on, SSH access takes the deploy grant on publishing, as
+saving the deployment settings does.
 
 **Test connection** checks the target as a deploy does, then fetches the host's
 keys with `ssh-keyscan` on the target's port and shows their SHA256
 fingerprints. Compare them with the host's own (`ssh-keygen -lf` on its host
 key files, or what the hosting provider lists) and press **Accept host key**:
 the keys shown are stored, replacing any accepted before for that host and
-port. When the host offers other keys than those accepted, the test shows
-both, and accepting the new ones is for a host you know was rebuilt or
-replaced. With accepted keys, the test runs `rsync -an` from an empty
+port, unless other keys were accepted after the test, which then asks for a
+new one. A host that answers with some of the accepted keys and no other is
+accepted (`ssh-keyscan` may lose one of its connections). When the host
+offers a key that is not among those accepted, the test shows both, and
+accepting the new ones is for a host you know was rebuilt or replaced. A
+test's answer is not shown when the settings were saved or the key rotated
+while it ran. With accepted keys, the test runs `rsync -an` from an empty
 directory to the target, which sends and deletes nothing, and says whether
 ssh, the key and rsync on the host work, or what the host answered; for a
 target not reviewed yet, it then lists what the target holds (see
@@ -2686,7 +2692,8 @@ A build keeps the port it was made with, as it keeps its target: change the
 port and it takes a new build. The key and the accepted host keys are read
 when the deploy runs. A deploy for a site with no key, to a host and port with
 no accepted key, or to a host whose key is not the accepted one, is refused:
-the build's log names the step on the Publishing screen, the deploy is not
+the build's log names the step on the Publishing screen (for a build made for
+another target or port than the site's settings, a new build), the deploy is not
 tried again, and after an automatic deploy the build stays ready.
 
 The key and the accepted host keys are files in the site's

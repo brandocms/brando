@@ -15061,6 +15061,11 @@ msgid_plural "Other content still refers to them."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Other host keys were accepted after the test. Test the connection again."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Other languages"
@@ -21735,6 +21740,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The site's SSH key could not be read. Rotate it to make a new one."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's SSH key could not be written."
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex

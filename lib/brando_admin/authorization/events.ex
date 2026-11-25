@@ -405,7 +405,7 @@ defmodule BrandoAdmin.Authorization.Events do
     "BrandoAdmin.Sites.PublishingLive" => [
       read: ~w(change_deploy_config refresh tick_target_files),
       write:
-        ~w(accept_host_keys add_keep_path confirm_target_review delete_unknown_files deploy keep_unknown_files remove_keep_path request_build rollback rotate_deploy_key save_deploy_config schedule_build test_connection)
+        ~w(accept_host_keys add_keep_path confirm_target_review delete_unknown_files deploy keep_unknown_files make_deploy_key remove_keep_path request_build rollback rotate_deploy_key save_deploy_config schedule_build test_connection)
     ],
     "BrandoAdmin.Sites.SEOLive" => [
       read: ~w(audit_scope cancel_batch confirm_batch redirect_404 sort tab toggle_picker toggle_row),

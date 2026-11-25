@@ -15,6 +15,7 @@ defmodule Brando.SSG.SSHTest do
   alias Brando.Worker.SSGDeploy
 
   @target "deploy@example.test:/srv/www"
+  @ecdsa "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNiw+UN6mduux8D2zTfkVfFnbo8/vrxqTreMhENSYiB/mLQL0B70JsZl/PRIMV3qpB3agkH5NHm9wdTzO6iOj9s="
 
   defmodule Builder do
     @moduledoc false
@@ -165,7 +166,13 @@ defmodule Brando.SSG.SSHTest do
       assert {:error, :forbidden} = SSH.rotate_key(c.site, user)
       assert {:error, :forbidden} = SSH.test_connection(c.site, user, runner: runner(keyscan_line("[example.test]:2222")))
 
-      scan = %{target: @target, port: 2222, host_keys: [%{type: "ssh-ed25519", data: host_key(), fingerprint: "x"}]}
+      scan = %{
+        target: @target,
+        port: 2222,
+        host_keys: [%{type: "ssh-ed25519", data: host_key(), fingerprint: "x"}],
+        accepted_keys: []
+      }
+
       assert {:error, :forbidden} = SSH.accept_host_keys(c.site, user, scan)
 
       refute File.exists?(DeployFiles.dir(c.site))
@@ -197,6 +204,33 @@ defmodule Brando.SSG.SSHTest do
 
       refused_everything(c, editor)
       assert {:ok, _public_key} = SSH.ensure_key(c.site, c.superuser)
+    end
+
+    # The Publishing screen opens for a build grant; the key and host keys are the deploy's
+    test "with capabilities, building alone is refused and deploying may", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      builder = publishing_member(c, "brando.publishing.build")
+      assert Builds.can_manage?(builder, c.site)
+
+      refused_everything(c, builder)
+      assert {:ok, _public_key} = SSH.ensure_key(c.site, publishing_member(c, "brando.publishing.deploy"))
+    end
+
+    defp publishing_member(c, capability) do
+      user = Brando.Factory.insert(:random_user, role: :editor)
+      {:ok, _} = Access.grant(user, c.site, :editor)
+      scope = Brando.Authorization.Scope.site(c.superuser, c.site)
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(
+          scope,
+          %{name: "Publishing #{System.unique_integer([:positive])}"},
+          ["brando.admin.access", "brando.publishing.read", capability]
+        )
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
+      user
     end
   end
 
@@ -311,6 +345,57 @@ defmodule Brando.SSG.SSHTest do
       refute File.exists?(DeployFiles.path(c.site, :known_hosts))
     end
 
+    # ssh-keyscan opens one connection per key type, and a server may drop one
+    test "a host that shows some of its accepted keys is accepted", c do
+      ecdsa_line = "[example.test]:2222 ecdsa-sha2-nistp256 #{@ecdsa}"
+      :ok = DeployFiles.write(c.site, :known_hosts, "#{keyscan_line("[example.test]:2222")}\n#{ecdsa_line}\n")
+
+      {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222")))
+      assert test.host_key_state == :accepted
+      assert test.dry_run == :ok
+
+      # A key beside them that is not accepted is a change
+      output = "#{keyscan_line("[example.test]:2222")}\n#{keyscan_line("[example.test]:2222", other_host_key())}\n"
+      {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner(output))
+      assert test.host_key_state == :changed
+    end
+
+    test "is not accepted over host keys someone accepted after it", c do
+      :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222", other_host_key()) <> "\n")
+      {:ok, stale} = SSH.test_connection(c.site, c.superuser, runner: runner(keyscan_line("[example.test]:2222")))
+
+      # Another admin tests the rebuilt host and accepts its keys
+      rebuilt = "[example.test]:2222 ecdsa-sha2-nistp256 #{@ecdsa}"
+      {:ok, fresh} = SSH.test_connection(c.site, c.superuser, runner: runner(rebuilt))
+      assert :ok = SSH.accept_host_keys(c.site, c.superuser, fresh)
+
+      assert {:error, :host_keys_changed} = SSH.accept_host_keys(c.site, c.superuser, stale)
+      assert File.read!(DeployFiles.path(c.site, :known_hosts)) == rebuilt <> "\n"
+    end
+
+    # The source directory is the dry run's own: what is in it is not removed with it
+    test "removes only the empty directory it made", c do
+      :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222") <> "\n")
+
+      runner = fn
+        "ssh-keyscan", _args, _opts ->
+          {keyscan_line("[example.test]:2222"), 0}
+
+        "rsync", args, _opts ->
+          source = Enum.at(args, -2)
+          assert File.ls!(source) == []
+          File.write!(Path.join(source, "other"), "not the dry run's")
+          send(self(), {:source, source})
+          {"", 0}
+      end
+
+      {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner)
+      assert test.dry_run == :ok
+      assert_received {:source, source}
+      assert File.read!(Path.join(source, "other")) == "not the dry run's"
+      File.rm_rf!(source)
+    end
+
     test "stores an IPv6 host as ssh looks it up, on port 22 and another", c do
       for {port, entry} <- [{22, "2001:db8::1"}, {2222, "[2001:db8::1]:2222"}] do
         {:ok, site} =
@@ -403,6 +488,19 @@ defmodule Brando.SSG.SSHTest do
       assert {:ok, _deployed} = Deploy.deploy(build, runner: runner(""))
       assert_received {:ran, "rsync", ["-e", ssh | _]}
       assert ssh == expected_ssh(c.site, 22)
+    end
+
+    test "of a build for another port than the site's says to build again", c do
+      build = ready_build(c.site, c.environment)
+      {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
+      # The site's new port is accepted, the build's is not
+      Brando.SSGSSHFixtures.trust_hosts(c.site, ["example.test"])
+
+      assert {:cancel, :build_target_changed} =
+               perform_job(SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+
+      assert Builds.get_build(build.id).build_log =~ SSH.refusal_message(:build_target_changed)
+      refute_received {:ran, _, _}
     end
 
     test "is refused without a key or an accepted host key, on the deploy job, and not retried", c do
