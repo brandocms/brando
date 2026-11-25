@@ -1,0 +1,1 @@
+- Release changes shows the previous and incoming asset bindings when a ref or variable changes its palette or media.

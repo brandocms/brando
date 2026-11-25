@@ -9,6 +9,7 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
   alias Brando.{Factory, Repo, Tenant}
 
   import Ecto.Query, only: [from: 2]
+  import Phoenix.LiveViewTest, only: [render_component: 2]
 
   @fixtures "test/fixtures/definitions/styles"
 
@@ -381,6 +382,35 @@ defmodule Brando.Content.DefinitionsPalettesContainersTest do
       module = Repo.get_by!(Module, uid: "swatch") |> Repo.preload(:vars)
       assert [%{palette_id: palette_id}] = module.vars
       assert palette_id == Repo.get_by!(Palette, uid: palette.uid).id
+    end
+
+    test "the release review compares resolved palette bindings in both views", c do
+      paper = palette!(c.user)
+      night = palette!(c.user, %{"name" => "Night", "key" => "night"})
+      write_module!(c.path, paper.uid)
+      import!(read!(c.path), c.user)
+
+      write_module!(c.path, night.uid)
+      bundle = read!(c.path)
+      assert {:ok, plan} = Definitions.plan(bundle, c.user)
+      %{here: here, release: release} = Review.definitions(%{plan: plan}, "swatch")
+      structure = Review.structure(here, release)
+      assert [%{change: :changed}] = structure.vars
+      detail = render_component(&BrandoAdmin.Components.ReleaseChanges.structure/1, name: "Swatch", structure: structure)
+      assert detail =~ "palette:#{paper.id} → palette:#{night.id}"
+      assert Review.definition_text(here) =~ "palette:#{paper.id}"
+      assert Review.definition_text(release) =~ "palette:#{night.id}"
+
+      alternate =
+        bundle
+        |> put_in(["modules", Access.at(0), "vars", Access.at(0), "assets", "palette"], "legacy-palette")
+        |> Map.put("references", %{"legacy-palette" => %{"kind" => "palette", "id" => paper.id}})
+        |> Map.put("source", Brando.Content.Definition.References.scope())
+
+      assert {:ok, plan} = Definitions.plan(alternate, c.user)
+      %{here: here, release: release} = Review.definitions(%{plan: plan}, "swatch")
+      assert [%{change: :same}] = Review.structure(here, release).vars
+      assert Review.definition_text(here) == Review.definition_text(release)
     end
 
     test "a file written with a mapped palette id still imports", c do

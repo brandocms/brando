@@ -259,7 +259,8 @@ re-render. Each row has four tabs:
 - **Template**: the template's diff, highlighted, or the definition's when
   only its fields change.
 - **Refs & vars**: what changes in the refs, vars and fields, and what that
-  does to the blocks that use them.
+  does to the blocks that use them. Changed asset bindings show their previous
+  and incoming identifiers.
 - **Entries**: the entries that use the tree, with their type, language,
   status and links, searchable and sortable.
 - **Preview**: an entry's page as it is and with the release's modules,
