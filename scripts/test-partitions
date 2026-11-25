@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the unit suite as N partitions at once, each in its own BEAM with its
-# own TMPDIR, test database and media directory (config/test.exs appends
-# MIX_TEST_PARTITION to both). Most of the suite is synchronous, so one
+# own TMPDIR and test database (config/test.exs appends MIX_TEST_PARTITION
+# to the database name). Most of the suite is synchronous, so one
 # `mix test` leaves most cores idle. CI's mix test jobs run this.
 #
 #   scripts/test-partitions                    4 partitions

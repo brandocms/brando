@@ -2,9 +2,13 @@ alias BrandoIntegration.Repo, as: Repo
 
 :erlang.system_flag(:backtrace_depth, 30)
 
-# Clear the media directory (one per partition, config/test.exs)
-File.rm_rf!(Application.fetch_env!(:brando, :media_path))
-File.mkdir_p!(Application.fetch_env!(:brando, :media_path))
+# A second run of the same partition can outlive this one. Each removes only
+# the directory it created. Child processes use the same configured root.
+media_path = Path.join(System.tmp_dir!(), "brando-test-media-" <> Base.url_encode64(:crypto.strong_rand_bytes(12)))
+File.mkdir!(media_path)
+System.at_exit(fn _status -> File.rm_rf!(media_path) end)
+System.put_env("BRANDO_TEST_MEDIA_PATH", media_path)
+Application.put_env(:brando, :media_path, media_path)
 
 # Emptied and seeded first, unless another session uses the database
 :ok = Brando.Test.Database.start_repo!()
@@ -536,7 +540,6 @@ Brando.Cache.Navigation.set()
 {:ok, _} = LLMDB.load()
 
 fixture_src = Path.expand(".", __DIR__) <> "/fixtures/sample.jpg"
-media_path = Brando.config(:media_path)
 
 File.mkdir_p!(Path.join([media_path, "images", "avatars"]))
 File.cp!(fixture_src, Path.join([media_path, "images", "avatars", "27i97a.jpeg"]))
