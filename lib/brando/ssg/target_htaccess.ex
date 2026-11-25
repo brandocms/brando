@@ -10,7 +10,8 @@ defmodule Brando.SSG.TargetHtaccess do
   the real run, the target's live `.htaccess` is fetched and merged, and the
   merged file is sent in that run, ahead of the build's files: rsync keeps
   the first of two files of one name, so a `.htaccess` of the build's own is
-  not sent. The merged file is protected on the target and never on the
+  not sent; when the target's file is the merge already, nothing is sent and
+  the build's own is hidden from the sender. The merged file is protected on the target and never on the
   uploaded list. With the option, `_redirects.json` is hidden from the
   sender, so the one an earlier deploy uploaded is deleted.
 
@@ -106,8 +107,15 @@ defmodule Brando.SSG.TargetHtaccess do
       else: {:ok, %{sources: [], rules: TargetPaths.path_rule(:delete, @name), notes: []}}
   end
 
+  # The target's file is the merge already: a build's own is not sent either
   defp merged(current, {:ok, current}, _mode, _keep, _dir),
-    do: {:ok, %{sources: [], rules: TargetPaths.path_rule(:protect, @name), notes: []}}
+    do:
+      {:ok,
+       %{
+         sources: [],
+         rules: [TargetPaths.path_rule(:hide, @name), TargetPaths.path_rule(:protect, @name)],
+         notes: []
+       }}
 
   defp merged(_current, {:ok, text}, mode, _keep, dir), do: send_file(text, mode, dir)
 

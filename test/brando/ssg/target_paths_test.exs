@@ -76,6 +76,7 @@ defmodule Brando.SSG.TargetPathsTest do
     assert IO.iodata_to_binary(plan.rules) == "H /_redirects.json\0R /_redirects.json\0P *\0"
     assert IO.iodata_to_binary(TargetPaths.path_rule(:protect, ".htaccess")) == "P /.htaccess\0"
     assert IO.iodata_to_binary(TargetPaths.path_rule(:delete, ".htaccess")) == "R /.htaccess\0"
+    assert IO.iodata_to_binary(TargetPaths.path_rule(:hide, ".htaccess")) == "H /.htaccess\0"
   end
 
   test "summarises the top-level entries with their files" do

@@ -54,11 +54,13 @@ defmodule Brando.SSG.TargetPaths do
   end
 
   @doc """
-  A rule that protects `path` (`:protect`) or lets the receiver delete it
-  (`:delete`), to put before a plan's rules, which it then overrides.
+  A rule that protects `path` (`:protect`), lets the receiver delete it
+  (`:delete`) or keeps the sender from sending it (`:hide`), to put before a
+  plan's rules, which it then overrides.
   """
-  @spec path_rule(:protect | :delete, path()) :: iodata()
+  @spec path_rule(:protect | :delete | :hide, path()) :: iodata()
   def path_rule(:protect, path), do: rule("P", pattern(path, ""))
+  def path_rule(:hide, path), do: rule("H", pattern(path, ""))
   def path_rule(:delete, path), do: rule("R", pattern(path, ""))
 
   @doc "Rules that protect what `keep` covers (`kept?/2`) and nothing else."

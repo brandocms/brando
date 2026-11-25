@@ -307,4 +307,18 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
     assert File.read!(Path.join(c.remote, ".htaccess")) == "Options -Indexes\nHeader set X-Host 1\n"
     assert unknown(c) == []
   end
+
+  test "with the option, the build's own .htaccess stays off the target when the merge is already there", c do
+    put_files(c.remote, [{".htaccess", "Options -Indexes\n"}])
+    review_and_confirm(c, [".htaccess"])
+    {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{htaccess: true}})
+    files = [{"index.html", "1"}, {".htaccess", "the build's own\n"}]
+
+    assert {:ok, _deployed} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    merged = File.read!(Path.join(c.remote, ".htaccess"))
+    assert String.starts_with?(merged, "Options -Indexes\n# BEGIN Brando\n")
+
+    assert {:ok, _deployed} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    assert File.read!(Path.join(c.remote, ".htaccess")) == merged
+  end
 end

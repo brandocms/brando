@@ -217,7 +217,7 @@ defmodule Brando.SSG.TargetHtaccessTest do
 
       assert {:ok, _deployed} = Deploy.deploy(build, runner: runner(htaccess: current))
 
-      assert_received {:real_run, "P /.htaccess\0" <> _rules, [], _sources}
+      assert_received {:real_run, "H /.htaccess\0P /.htaccess\0" <> _rules, [], _sources}
     end
 
     test "stops before the real run, counting nothing as uploaded, when the target's .htaccess cannot be merged", c do
