@@ -15,11 +15,12 @@ defmodule Brando.Environments.Environment do
 
   `redirect_hosts` are hosts that redirect permanently to `domain`, such as
   `www.example.com` to `example.com`. Each follows the rules for `domain`,
-  and an environment with any must have a domain. A host is bound once in the
-  whole installation, as one environment's domain or one redirect host: the
-  database refuses a second binding, also from concurrent writes (a trigger
-  on `environments` under an advisory lock, besides the unique index on
-  `domain`).
+  and an environment with any must have a domain; a host already in the list
+  is not checked against the preview host pattern again when the list
+  changes. A host is bound once in the whole installation, as one
+  environment's domain or one redirect host: the database refuses a second
+  binding, also from concurrent writes (a trigger on `environments` under an
+  advisory lock, besides the unique index on `domain`).
   """
 
   use Ecto.Schema
@@ -156,7 +157,9 @@ defmodule Brando.Environments.Environment do
 
     changeset =
       changeset
-      |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts -> Enum.flat_map(hosts, &redirect_host_error/1) end)
+      |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts ->
+        Enum.flat_map(hosts, &redirect_host_error(&1, changeset.data.redirect_hosts || []))
+      end)
       |> validate_domain_not_redirected(domain, hosts)
 
     cond do
@@ -179,7 +182,8 @@ defmodule Brando.Environments.Environment do
     end
   end
 
-  defp redirect_host_error(host) do
+  # A host stored before the preview host pattern was set may stay
+  defp redirect_host_error(host, stored_hosts) do
     cond do
       not valid_host?(host) ->
         [
@@ -195,7 +199,7 @@ defmodule Brando.Environments.Environment do
             gettext("%{host}: the installation itself uses this host, for its admin, media or CDN.", host: host)
         ]
 
-      PreviewHost.matches?(host) ->
+      host not in stored_hosts and PreviewHost.matches?(host) ->
         [
           redirect_hosts:
             gettext(

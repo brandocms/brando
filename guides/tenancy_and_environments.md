@@ -2641,8 +2641,9 @@ site switched to dynamic delivery have no preview there.
 
 An environment domain or redirect host that matches the pattern is refused
 when it is saved. One saved before the pattern was set keeps answering as it
-did, and the site whose key it carries has no preview host while it is bound;
-the System check names both sites. A site key longer than 63 bytes, or a host
+did, also when other hosts are added to its redirect list or removed from it,
+and the site whose key it carries has no preview host while it is bound; the
+System check names both sites. A site key longer than 63 bytes, or a host
 longer than 253, gets no preview host either.
 
 Setup, once: a wildcard DNS record for the pattern (`*.preview.example.com`)

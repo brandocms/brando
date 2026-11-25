@@ -369,6 +369,25 @@ defmodule Brando.SSG.PreviewHostTest do
       assert {:ok, _} = Registry.update_environment(context.staging, %{domain: "shop.preview.test"}, actor: :system)
     end
 
+    test "bound before the pattern was set stay in a redirect list that changes", context do
+      put_test_env(Brando.SSG, [])
+      {:ok, live} = Registry.update_environment(context.live, %{redirect_hosts: ["beta.preview.test"]}, actor: :system)
+      put_test_env(Brando.SSG, preview_host: @pattern)
+
+      assert {:ok, live} =
+               Registry.update_environment(live, %{redirect_hosts: ["beta.preview.test", "shop.test"]}, actor: :system)
+
+      assert live.redirect_hosts == ["beta.preview.test", "shop.test"]
+
+      assert {:error, changeset} =
+               Registry.update_environment(live, %{redirect_hosts: live.redirect_hosts ++ ["gamma.preview.test"]},
+                 actor: :system
+               )
+
+      assert [{message, _}] = Keyword.get_values(changeset.errors, :redirect_hosts)
+      assert message =~ "gamma.preview.test"
+    end
+
     test "bound before the pattern was set keep answering, and the site they name gets no preview host", context do
       put_test_env(Brando.SSG, [])
       blog = create_site("blog", :dynamic)
