@@ -10,7 +10,8 @@ defmodule Mix.Tasks.Brando.Fragments.Pair do
       mix brando.fragments.pair --apply
       mix brando.fragments.pair --site acme --environment production --apply
 
-  The command checks every fragment key in the environment and takes no positional arguments.
+  The command checks every fragment key in the environment and takes no
+  positional arguments.
 
   Without `--apply` it changes nothing: it lists the keys it would link and
   the ones it cannot. It cannot link a key that two fragments hold in one
