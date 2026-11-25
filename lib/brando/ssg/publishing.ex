@@ -35,8 +35,9 @@ defmodule Brando.SSG.Publishing do
       a Markdown publication's build: it deploys only as the publication's
       newest (`Brando.MarkdownSources.Publication`), and one whose deploy
       was skipped never does;
-    * `:changes` — nothing is deployed, or the environment's content changed
-      after the deployed build started (`Brando.SSG.ContentChanges`);
+    * `:changes` — nothing is deployed, the deployed build's environment is
+      gone, or the environment's content changed after the deployed build
+      started (`Brando.SSG.ContentChanges`);
     * `:published` — otherwise.
 
   The latest attempt is the build that started last (`started_at`; for one
@@ -85,8 +86,6 @@ defmodule Brando.SSG.Publishing do
     deployed = deployed_build(site)
 
     if publishing_environment_id(site, deployed) == environment.id do
-      deployed = if deployed && deployed.environment_id == environment.id, do: deployed
-
       running(environment, deployed) || latest(environment, deployed) || published(site, environment, deployed)
     else
       :elsewhere
@@ -341,6 +340,10 @@ defmodule Brando.SSG.Publishing do
   defp started(build), do: build.started_at || build.inserted_at
 
   defp published(_site, _environment, nil), do: %{state: :changes, deployed: nil}
+
+  # The deployed build's environment is gone: this one was never published
+  defp published(_site, %Environment{id: id}, %Build{environment_id: built_from} = deployed) when built_from != id,
+    do: %{state: :changes, deployed: deployed}
 
   defp published(site, environment, deployed) do
     if ContentChanges.changed_since?(%{deployed | site: site, environment: environment}),

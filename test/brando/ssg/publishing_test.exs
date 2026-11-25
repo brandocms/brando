@@ -149,7 +149,18 @@ defmodule Brando.SSG.PublishingTest do
       {:ok, build} = Builds.request_build(c.site, c.staging, creator_id: c.user.id, auto_deploy: true)
       from(b in Build, where: b.id == ^build.id) |> Brando.Repo.update_all([set: [environment_id: nil]], prefix: "public")
 
-      assert %{state: :changes, deployed: nil} = Publishing.status(site(c), c.production)
+      assert %{state: :changes, deployed: %Build{id: id}} = Publishing.status(site(c), c.production)
+      assert id == build.id
+    end
+
+    test "keeps the deployed build when its environment is gone: an older ready build is no Ready", c do
+      {:ok, older} = Publishing.publish(c.site, c.production, c.user, deploy: false)
+      {:ok, deployed} = Builds.request_build(c.site, c.staging, creator_id: c.user.id, auto_deploy: true)
+      from(b in Build, where: b.id == ^deployed.id) |> Brando.Repo.update_all([set: [environment_id: nil]], prefix: "public")
+
+      assert %{state: :changes, deployed: %Build{id: id}} = Publishing.status(site(c), c.production)
+      assert id == deployed.id
+      assert {:error, :stale} = Publishing.publish_build(c.site, c.production, older.id, c.user)
     end
   end
 
