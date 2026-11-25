@@ -1565,16 +1565,17 @@ config :brando, Brando.Sites.Usage,
 
 **Storage** comes from `Brando.Worker.SiteUsage`, once a day at 05:45 UTC on
 its own `site_usage` queue: it measures every site and stores the snapshot on
-the day's row, then deletes rows past the retention period. If a file disappears during the walk, its size is skipped. If file metadata
-cannot be read, the site keeps its last snapshot, and the screen says which day a
+the day's row, then deletes rows past the retention period. A site whose
+measuring fails keeps its last snapshot, and the screen says which day a
 figure is from; a day with traffic and no measurement shows storage as
 unknown, never as zero, and no change is shown without two measurements in
 the 30 days. Folders are walked without following links inside them, and kept
 builds are measured whatever the site's delivery is today; the builds are
 reached from the site's folder only through folders that are no links. A
-sizing query that fails fails the site's measurement, so it keeps its last
-snapshot rather than a smaller total. Brando's default Oban configuration has
-the queue and the cron entry with `tenancy_mode: :multi` only. An application
+file that disappears during the walk is skipped. If a file's metadata cannot
+be read or a sizing query fails, the site keeps its last complete snapshot.
+Brando's default Oban configuration has the queue and the cron entry with
+`tenancy_mode: :multi` only. An application
 with its own `config :brando, Oban` adds both itself on a `:multi`
 installation; the System check names them when they are missing there:
 
