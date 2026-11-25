@@ -799,7 +799,8 @@ each shown only when its condition holds:
 * **Duplicate**: when the context has `duplicate_<singular>/2` and the user
   may duplicate the entry and create entries.
 * **Duplicate to [language]**: for translatable schemas in independent mode
-  with more than one language, one item per language. **Translate to
+  with more than one language, one item per missing language. The menu uses
+  the form’s language set, including versions reached through other alternates. **Translate to
   [language]** is added when [AI](blueprint_forms.md#site-prompts) is
   configured.
 * **Create translation [language]**: for synchronized translatable schemas.

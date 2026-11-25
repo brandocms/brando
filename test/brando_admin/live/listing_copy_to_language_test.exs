@@ -131,7 +131,9 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
 
   test "a language the page already has is not offered, and is refused if asked for", c do
     Brando.AIStub.configure()
-    Page.Alternate.add(c.en_index.id, c.no_index.id)
+    middle = Factory.insert(:page, uri: "middle", language: :en)
+    Page.Alternate.add(c.en_index.id, middle.id)
+    Page.Alternate.add(middle.id, c.no_index.id)
     Brando.endpoint().subscribe("user:#{c.current_user.id}")
 
     view = open_listing(c.conn)

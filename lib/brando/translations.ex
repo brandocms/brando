@@ -375,7 +375,61 @@ defmodule Brando.Translations do
   The site's languages (`Brando.Languages`) of `schema` that `entry` has no
   version in yet: not taken in its set (`language_versions/3`), whoever looks.
   """
-  def missing_languages(schema, entry), do: missing_in(schema, walk(schema, entry))
+  def missing_languages(schema, entry) do
+    if synchronized?(schema),
+      do: missing_in(schema, walk(schema, entry)),
+      else: Map.fetch!(copy_languages(schema, [entry]), entry.id)
+  end
+
+  @doc "Available copy languages for each listing row of an independent translatable schema."
+  def copy_languages(_schema, []), do: %{}
+
+  def copy_languages(schema, entries) do
+    ids = Enum.map(entries, & &1.id)
+    reached = if schema.has_alternates?(), do: linked_copy_languages(schema, ids), else: []
+    taken = Enum.group_by(reached ++ matched_copy_languages(schema, ids, matched_by(schema)), &elem(&1, 0), &elem(&1, 1))
+
+    Map.new(entries, fn entry ->
+      languages = [to_string(entry.language) | Map.get(taken, entry.id, [])]
+      {entry.id, missing_in(schema, %{taken: languages})}
+    end)
+  end
+
+  # UNION visits each (root, entry) only once, including links through the trash.
+  defp linked_copy_languages(schema, ids) do
+    roots = from e in schema, where: e.id in ^ids, select: %{root: e.id, id: e.id}
+
+    next =
+      from a in Module.concat(schema, Alternate),
+        join: r in "reached",
+        on: r.id == a.entry_id,
+        select: %{root: r.root, id: a.linked_entry_id}
+
+    from(e in schema,
+      join: r in "reached",
+      on: e.id == r.id,
+      distinct: true,
+      select: {type(r.root, e.id), type(e.language, :string)}
+    )
+    |> exclude_trashed(schema)
+    |> recursive_ctes(true)
+    |> with_cte("reached", as: ^union(roots, ^next))
+    |> Repo.all()
+  end
+
+  defp matched_copy_languages(_schema, _ids, []), do: []
+
+  defp matched_copy_languages(schema, ids, fields) do
+    # A nil match field never matches another entry, as in matching_values_query/2.
+    query = from e in schema, join: root in ^schema, on: root.id in ^ids and e.language != root.language
+
+    fields
+    |> Enum.reduce(query, fn key, acc -> where(acc, [e, root], field(e, ^key) == field(root, ^key)) end)
+    |> exclude_trashed(schema)
+    |> select([e, root], {root.id, type(e.language, :string)})
+    |> distinct(true)
+    |> Repo.all()
+  end
 
   @doc "The site's languages of `schema` that a set from `language_versions/3` has no version in, as `missing_languages/2`."
   def missing_in(schema, %{taken: taken}) do

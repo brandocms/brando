@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           data-sortable-selector=".child-row"
         >
           <.child_row
-            :for={child_entry <- Map.get(@entry, child_field, [])}
+            :for={child_entry <- with_copy_languages(Map.get(@entry, child_field, []))}
             :key={child_entry.id}
             entry={child_entry}
             schema={@schema}
@@ -296,7 +296,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     synchronized? = Brando.Translations.synchronized?(assigns.schema)
 
     duplicate_langs? =
-      assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
+      default_actions? && assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
         Enum.count(Brando.Languages.languages()) > 1 && not synchronized?
 
     {translation_source_id, translation_langs} =
@@ -319,10 +319,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:translations_in_trash, Map.get(assigns.entry, :translations_in_trash) || [])
       |> assign(:ai_configured?, ai_configured?)
       |> assign(:translated_singular, translated_singular)
-      |> assign(
-        :duplicate_langs,
-        get_duplication_langs(assigns.content_language, duplicate_langs?) -- linked_languages(assigns.entry)
-      )
+      |> assign(:duplicate_langs, Map.get(assigns.entry, :copy_languages, []))
 
     ~H"""
     <CircleDropdown.render id={@id}>
@@ -989,7 +986,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     <div id={@id} class="child-chips" role="group" aria-label={@label}>
       <span class="child-chips-label" aria-hidden="true">{@label}</span>
       <.child_chip
-        :for={entry <- @entries}
+        :for={entry <- with_copy_languages(@entries)}
         :key={entry.id}
         entry={entry}
         icon={@icon}
@@ -1184,21 +1181,17 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     {(source && source.entry_id) || entry.id, languages}
   end
 
-  # Languages the entry already has a version in, through its alternates: a
-  # copy into one of those would give it a second.
-  defp linked_languages(%{alternate_entries: alternates}) when is_list(alternates) do
-    for %{language: language} = alternate <- alternates, is_nil(Map.get(alternate, :deleted_at)), do: to_string(language)
+  @doc false
+  def with_copy_languages([%schema{} | _] = entries) do
+    if schema.has_trait(Trait.Translatable) and not Brando.Translations.synchronized?(schema) do
+      languages = Brando.Translations.copy_languages(schema, entries)
+      Enum.map(entries, &Map.put(&1, :copy_languages, languages[&1.id]))
+    else
+      entries
+    end
   end
 
-  defp linked_languages(_entry), do: []
-
-  defp get_duplication_langs(_, false), do: []
-
-  defp get_duplication_langs(content_language, true) do
-    Brando.Languages.languages()
-    |> Enum.map(& &1[:value])
-    |> Enum.reject(&(&1 == content_language))
-  end
+  def with_copy_languages(entries), do: entries
 
   defp superuser?(%{role: :superuser}), do: true
   defp superuser?(_user), do: false

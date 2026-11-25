@@ -546,6 +546,7 @@ defmodule BrandoAdmin.Components.Content.List do
     entries =
       entries
       |> decorate(listing.decorate, current_user)
+      |> decorate(&Row.with_copy_languages/1)
       |> decorate(&put_translation_status(&1, schema, current_user))
       |> decorate(&put_trashed_by(&1, schema))
 

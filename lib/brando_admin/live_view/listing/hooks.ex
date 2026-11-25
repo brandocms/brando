@@ -700,9 +700,13 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   # give the entry two. The row menu leaves those languages out; this covers a
   # listing that hasn't caught up.
   defp ensure_no_version_in(schema, entry_id, language) do
-    if language in Brando.Translations.alternate_languages(schema, entry_id),
-      do: {:error, :language_exists},
-      else: :ok
+    case Brando.Repo.get(schema, entry_id) do
+      nil ->
+        {:error, :not_found}
+
+      entry ->
+        if language in Brando.Translations.missing_languages(schema, entry), do: :ok, else: {:error, :language_exists}
+    end
   end
 
   # The copy's language and the caller's `changes`, then a free value in that
