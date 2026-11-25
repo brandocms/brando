@@ -1,0 +1,1 @@
+- Typing in a translation with many pending row items updates the AI actions only when their visibility changes.

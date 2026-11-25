@@ -538,6 +538,18 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       await(fn -> has_element?(view, "#{item("title")}[data-ai='filled']") end)
       refute has_element?(view, "#{item("subtitle")}[data-ai]")
       refute has_element?(view, "#{item(key)}[data-ai]")
+
+      # A visibility control redraws the action immediately. Typing a title
+      # afterward leaves both the row index and the actionable set alone.
+      change_main(view, fn params ->
+        params |> put_in(["article", "featured"], "true") |> Map.put("_target", ["article", "featured"])
+      end)
+
+      assert has_element?(view, "#{item("subtitle")} [data-testid=translation-ai-item]")
+
+      assert count_calls(view.pid, {BrandoAdmin.Components.Form.TranslationFill, :actionable, 1}, fn ->
+               edit_title(view, "Edited title")
+             end) == 0
     end
 
     test "a subform in a fieldset only superusers may change is not sent to anyone else",

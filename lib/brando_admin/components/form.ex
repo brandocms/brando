@@ -3055,6 +3055,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:form, form)
+    |> TranslationFill.assign_visibility()
     |> assign(:hidden_block_fields, hidden_block_fields)
     |> assign_header_status(form)
   end
@@ -5872,7 +5873,7 @@ defmodule BrandoAdmin.Components.Form do
                   schema: @schema,
                   form_blueprint: @form_blueprint,
                   current_user: @current_user,
-                  form: @form
+                  translation_visibility: @translation_visibility
                 })
               }
               editing={@tab_editing?}
