@@ -286,15 +286,23 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             {gettext("No static builds have been requested yet.")}
           </div>
 
-          <div :if={no_preview_host?(@builds, @site, @admin_uri)} class="environment-notice warning" id="publishing-no-preview-host">
-            {gettext(
-              "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
-            )}
+          <div
+            :if={no_preview_host?(@builds, @site, @admin_uri)}
+            id="publishing-no-preview-host"
+            class="environment-notice warning publishing-no-preview-host"
+          >
+            <div>
+              {gettext(
+                "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
+              )}
+            </div>
             <a
               href="https://hexdocs.pm/brando/tenancy_and_environments.html#preview-hosts"
               target="_blank"
               rel="noopener"
-            >{gettext("Preview hosts in the guide")}</a>
+            >
+              {gettext("Preview hosts in the guide")} ↗
+            </a>
           </div>
 
           <div :if={@builds != []} class="environment-table-wrap environment-stacking">
